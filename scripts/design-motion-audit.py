@@ -79,7 +79,7 @@ KNOWN_EXEMPT = {
     # collapse the first check demands) and hands it down as `t`, which
     # FlowFigure applies as `.opacity(t)`. Splitting a second entrance state
     # into the child would put two clocks on one tile — the exact double-deal
-    # BerryRain's "ONE gesture deals ONE shower" lesson forbids. The audit
+    # TileRain's "ONE gesture deals ONE shower" lesson forbids. The audit
     # can't follow a value across a struct boundary, so: a conscious ruling.
     "AgentPanelGrid.swift:FlowFigure": "entrance is FigureView's shared clock, passed as t",
     # Same shape as FlowFigure above: `FigureView` owns the one `grown` clock
@@ -87,7 +87,7 @@ KNOWN_EXEMPT = {
     # check demands) and hands it down as `t`. DialFigure gates each mark's
     # opacity on `t` reaching its own hour — that IS the radar sweep — and
     # RiverFigure masks its width by `t`. A second entrance state inside either
-    # child would put two clocks on one tile, the double-deal BerryRain's
+    # child would put two clocks on one tile, the double-deal TileRain's
     # "ONE gesture deals ONE shower" lesson forbids. The audit cannot follow a
     # value across a struct boundary, so: conscious rulings, not snoozes.
     "AgentPanelGrid.swift:DialFigure": "entrance is FigureView's shared clock, passed as t",
@@ -110,7 +110,7 @@ KNOWN_EXEMPT = {
     # It also already HAS its one entrance, one level up and shared, which is
     # the FlowFigure shape above: the tiles ride `WalletNFTShelfCard`, whose
     # section carries `RowEntrance`. A per-tile entrance would be a second
-    # clock on one card — the double-deal BerryRain's "ONE gesture deals ONE
+    # clock on one card — the double-deal TileRain's "ONE gesture deals ONE
     # shower" lesson forbids, and it would animate eight tiles independently
     # inside a strip that arrives as one object. A conscious ruling.
     "DemoNFTArt.swift:DemoNFTArt": "seeded decoration, not a magnitude; entrance is the card's RowEntrance",

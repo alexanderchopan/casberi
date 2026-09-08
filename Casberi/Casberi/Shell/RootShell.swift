@@ -843,18 +843,25 @@ struct RootShell: View {
                     withAnimation(DS.Motion.standard) { sceneState.route.present(.apps) }
                 }
             }
-            // `-berryPulse <s>` bumps the refresh pulse after a delay — plays
-            // the pull-to-refresh delight (avatar spin + berry rain) without
-            // a gesture, for headless verification and screen recordings.
-            let berryDelay = UserDefaults.standard.double(forKey: "berryPulse")
-            if berryDelay > 0 {
+            // `-rainPulse <s>` bumps the refresh pulse after a delay — plays
+            // the pull-to-refresh delight (avatar spin + the tile shower)
+            // without a gesture, for headless verification and screen
+            // recordings. **It was `-berryPulse` until prd §655 (2026-09-08)**
+            // — grep that name in anything written before today; the shower
+            // has rained no berries since §619, and the app's mark is an
+            // octopus rather than a berry in the first place.
+            let rainDelay = UserDefaults.standard.double(forKey: "rainPulse")
+            if rainDelay > 0 {
                 Task { @MainActor in
-                    try? await Task.sleep(for: .seconds(berryDelay))
-                    // The roster a real All-feed pull would set (prd §619),
-                    // so a recording shows the tiles and not the berries.
-                    chrome.refreshRoster = BridgeRefresh.roster(store: bridges)
-                    chrome.refreshPulse += 1
-                    NSLog("[Casberi] berryPulse: dealt \(chrome.refreshRoster.count) tiles")
+                    try? await Task.sleep(for: .seconds(rainDelay))
+                    // The roster a real All-feed pull would set (prd §619).
+                    // On a device with nothing connected this is EMPTY, which
+                    // since §655 deals nothing rather than berries — that is
+                    // the honest reading (no source was asked), and it is why
+                    // the log says the count.
+                    let roster = BridgeRefresh.roster(store: bridges)
+                    chrome.rain(sources: roster)
+                    NSLog("[Casberi] rainPulse: dealt \(roster.count) tiles")
                 }
             }
             // `-groupProbe YES` — is the REAL app-group container reachable and

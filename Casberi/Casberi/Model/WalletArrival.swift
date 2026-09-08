@@ -9,11 +9,14 @@ import Observation
 /// fences the wallet needs and Stripe did not.
 ///
 /// **It publishes a pulse, never a view.** The rain already exists
-/// (`BerryRain`, driven off `ShellChrome.refreshPulse`), so nothing new is
-/// drawn: the room bumps the pulse it already bumps for a pull-to-refresh, in
-/// the receiving wallet's own rail stop. That is also why this type holds an
-/// address rather than a colour — `Model` does not know about hues, and the
-/// stop is `WalletFace`'s to decide.
+/// (`TileRain`, driven off `ShellChrome.refreshPulse`), so nothing new is
+/// drawn: the room bumps the pulse it already bumps for a pull-to-refresh.
+/// It rained in the receiving wallet's own rail stop until prd §655
+/// (2026-09-08) made every shower in the app the app's own TILES, with no
+/// exception — a Wallet tile now, and the stop still travels on the crown's
+/// retint (§159). That is why this type holds an address rather than a
+/// colour, and why the address survives the change unread: `Model` does not
+/// know about hues, and the stop was `WalletFace`'s to decide.
 ///
 /// ## The four fences, and why each one is not optional
 ///
@@ -47,12 +50,23 @@ final class WalletArrival {
     /// Bumped once per pass that landed at least one qualifying arrival —
     /// never once per transfer. Four USDC transfers in one sync are one
     /// arrival to look at, and four showers stacked on each other is the
-    /// "one gesture, one shower" rule `BerryRain` already earned.
+    /// "one gesture, one shower" rule `TileRain` already earned.
     private(set) var pulse = 0
 
-    /// The wallet the money reached, for the rain's hue. The FIRST qualifying
-    /// arrival of the pass: with several, any pick is arbitrary, and the first
-    /// is the one whose row is highest in the feed the shower falls over.
+    /// The wallet the money reached. The FIRST qualifying arrival of the
+    /// pass: with several, any pick is arbitrary, and the first is the one
+    /// whose row is highest in the feed the shower falls over.
+    ///
+    /// **NOTHING READS IT SINCE prd §655 (2026-09-08), and it is kept
+    /// deliberately.** It existed to colour the shower in that wallet's face
+    /// stop (§501's own reason for holding an ADDRESS rather than a colour:
+    /// `Model` does not know about hues, and the stop is `WalletFace`'s to
+    /// decide) — and the shower is Wallet TILES now, which carry their own
+    /// brand. This is the announcement's one fact about WHICH account, it
+    /// costs a string per sync, and the next reader that wants to say which
+    /// wallet arrived — a toast, a scroll-to, a row highlight — needs exactly
+    /// this and cannot recover it afterwards. `_ = address` is not needed:
+    /// an unread stored property is not a warning, and this doc is why.
     private(set) var address: String?
 
     @MainActor

@@ -76,8 +76,9 @@ struct FramesSendCard: View {
             keyAddress = try FramesKey.create()
             createError = nil
             // The arrival is worth a moment — it is the only thing this seat
-            // makes rather than reads.
-            chrome.refreshPulse &+= 1
+            // makes rather than reads. The seat's own tile falls (prd §655);
+            // a bare bump rained the last pull's roster.
+            chrome.rain(sources: [FramesIdentity.source])
         } catch {
             // The keychain's own answer, never a bare "it failed" (§531): a
             // code with no remedy is a dead end.
@@ -97,7 +98,7 @@ struct FramesSendCard: View {
                 _ = try await FramesSend.claimFaucet(for: address)
                 topUpNote = nil
                 await FramesLiveState.shared.refresh()
-                chrome.refreshPulse &+= 1
+                chrome.rain(sources: [FramesIdentity.source])
             } catch let failure as FramesSend.Failure {
                 if case .faucet(let verdict) = failure {
                     topUpNote = Self.faucetNote(verdict)

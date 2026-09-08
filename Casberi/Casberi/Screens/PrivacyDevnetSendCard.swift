@@ -135,7 +135,10 @@ struct PrivacyDevnetSendCard: View {
             }
             PrivacyDevnetLiveState.shared.setMine(made)
             Task { await PrivacyDevnetLiveState.shared.refresh() }
-            chrome.refreshPulse &+= 1
+            // The seat's own tile falls (prd §655), and the hue is stated
+            // rather than inherited — a bare bump kept whatever the last
+            // pull left in BOTH.
+            chrome.rain(sources: [PrivacyDevnetIdentity.source])
         } catch {
             // The keychain's own answer, never a bare "it failed" (§531): a
             // code with no remedy is a dead end.
@@ -155,7 +158,7 @@ struct PrivacyDevnetSendCard: View {
                 _ = try await PrivacyDevnetSend.claim(address: address)
                 topUpNote = nil
                 await PrivacyDevnetLiveState.shared.refresh()
-                chrome.refreshPulse &+= 1
+                chrome.rain(sources: [PrivacyDevnetIdentity.source])
             } catch let failure as PrivacyDevnetSend.Failure {
                 if case .faucet(let verdict) = failure {
                     // **The rate limit and a real failure read the SAME way**

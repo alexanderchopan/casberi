@@ -342,7 +342,7 @@ struct HegotaKeySheet: View {
             // Making a key changes nothing `HegotaRoomSource.identity`
             // reads either, so without this the room kept showing "Create
             // an account" after one had just been made.
-            chrome.refreshPulse += 1
+            chrome.rain(sources: [HegotaIdentity.source])
         } catch {
             keyFailure = Self.keySentence(for: error)
         }

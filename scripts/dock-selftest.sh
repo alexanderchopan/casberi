@@ -325,7 +325,7 @@ grep -q 'DSHaptic.snap()' "$TMP/chrome.nc" \
   || { echo "✗ the fold's hysteresis crossing no longer snaps."; fail=1; }
 grep -q 'DSHaptic.spring()' "$TMP/main.nc" && grep -q 'DSHaptic.fly()' "$TMP/main.nc" \
   || { echo "✗ MainSurface lost the folder's spring or the card's fly."; fail=1; }
-grep -q 'DSHaptic.pour()' "Casberi/Casberi/Design/BerryRain.swift" \
+grep -q 'DSHaptic.pour()' "Casberi/Casberi/Design/TileRain.swift" \
   || { echo "✗ the rain no longer pours in the hand."; fail=1; }
 # A pointer magnifies the strip; a trackpad turns the page.
 grep -q 'onContinuousHover' "$TMP/chips.nc" && grep -q 'if let hoverX { x = hoverX }' "$TMP/chips.nc" \

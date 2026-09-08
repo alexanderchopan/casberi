@@ -153,12 +153,15 @@ struct HegotaSendCard: View {
         }
     }
 
-    /// The pour IS the confirmation (prd §553) — `BerryRain` is mounted once in
+    /// The pour IS the confirmation (prd §553) — `TileRain` is mounted once in
     /// `MainSurface` and driven by this counter, so a success here costs a
     /// bump rather than a view of its own.
+    /// **THE SEAT'S OWN TILE FALLS (prd §655).** This set the hue and the
+    /// pulse and never the roster — which is not "no tiles", it is "whatever
+    /// the last pull left", so a top up tapped after a pull on All rained the
+    /// whole connected sweep. `pour` states all three.
     private func pour() {
-        chrome.refreshHue = Self.mark
-        chrome.refreshPulse &+= 1
+        chrome.rain(sources: [HegotaIdentity.source])
     }
 
     // MARK: - Who it spends from

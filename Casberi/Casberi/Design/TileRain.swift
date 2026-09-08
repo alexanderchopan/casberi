@@ -6,6 +6,16 @@ import UIKit
 /// both ride ShellChrome.refreshPulse). Purely decorative: hit-testing off,
 /// gone in under two seconds, skipped entirely under Reduce Motion.
 ///
+/// **WAS `BerryRain` UNTIL prd §655 (2026-09-08), and the old name was wrong
+/// TWICE.** It rained no berries after §619 gave it tiles, and it never should
+/// have claimed one anyway — **the app's mark is an OCTOPUS, not a berry**
+/// (user, 2026-09-08, correcting a misreading this file's own doc had been
+/// repeating: its deleted drop palette was commented "the icon's berry
+/// blues"). `TileRain` says what falls, and rhymes with `TileDrop`, the
+/// onboarding heap it was already documented as rhyming with. The hook is
+/// `-rainPulse` now; it was `-berryPulse`, which is what to grep for in
+/// anything written before today.
+///
 /// **THE DROPS ARE THE APPS THE PULL IS ASKING (prd §619, 2026-09-05 — user:
 /// "the rain is trite … what if it was little apps instead").** The berries
 /// were confetti: sixteen circles that said "something happened" and nothing
@@ -23,12 +33,23 @@ import UIKit
 /// (`TileDrop`) and the empty feed's pile: the app's tiles fall when there is
 /// nothing yet, and the same tiles fall on every refresh after.
 ///
-/// **The berries survive for ONE case**: a pull or arrival scoped to a single
-/// WATCHED WALLET rains in that wallet's own face colour (prd §171, §501),
-/// because "which wallet" is an identity no tile carries — a Wallet tile
-/// would say less than the colour does. An empty roster with a hue is that
-/// case; an empty roster with no hue is the default berry blue, which is
-/// what a headless pulse with no store to read still deals.
+/// **THE BERRIES ARE GONE — every shower is tiles now (prd §655, 2026-09-08;
+/// user: "there are a few places in the app like Wallet where the confetti is
+/// literally confetti and not app tiles … any confetti should be app
+/// tiles").** §619 kept one berry case alive: a pull or arrival scoped to a
+/// single WATCHED WALLET rained in that wallet's own face colour (§171,
+/// §501), on the reasoning that "which wallet" is an identity no tile
+/// carries. That was true and it was not enough — one surface raining
+/// confetti reads as confetti everywhere, and the wallet's stop is already
+/// said at full strength by the crown's retint (§159), its rail seat and its
+/// row. So a wallet moment rains WALLET tiles, and this file has one branch.
+///
+/// **An empty roster deals NOTHING, and that is the honest reading** rather
+/// than a fallback: no source was asked, so no tile falls. It is reachable
+/// only with nothing connected, where the door's spin and the pull's own
+/// `DSHaptic.success()` still answer the gesture. Keeping a berry there would
+/// be keeping the whole confetti path alive for the one screen that has
+/// least to celebrate.
 ///
 /// The fall runs on CORE ANIMATION, not SwiftUI (2026-07-28, user: "the rain
 /// pour always lags on pages"). It was 16 SwiftUI views animating `.offset`
@@ -43,19 +64,15 @@ import UIKit
 /// solid, which is the whole reason CoreAnimation runs out of process. A tile
 /// is the same layer with the brand asset as its `contents` and one extra
 /// rotation track — the render server does not care what it is falling.
-struct BerryRain: View {
+struct TileRain: View {
     /// ShellChrome.refreshPulse — each bump deals one shower. The pull is the
     /// rain's ONLY trigger (user ruling 2026-08-11): source moments, starred
     /// releases, connects, big imports, the away haul and the colour picker
     /// all used to deal it too, and together they had it firing constantly —
     /// each celebration keeps its toast/bloom/haptic, none of them rain.
     let trigger: Int
-    /// A source's own brand hue (ShellChrome.refreshHue), read once per
-    /// shower — the berries' colour for the wallet-scoped case above. Ignored
-    /// when a roster is present: a tile carries its own brand.
-    var hue: Color? = nil
     /// The sources this shower stands for (ShellChrome.refreshRoster), read
-    /// once per shower. Empty deals berries.
+    /// once per shower. Empty deals nothing — see the note above.
     var roster: [String] = []
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -63,62 +80,33 @@ struct BerryRain: View {
         // Reduce Motion never reaches the view as a pour: the trigger it sees
         // stays 0, so no shower is ever dealt (and flipping the setting off
         // mid-session simply lets the next real bump through).
-        BerryRainLayer(pour: reduceMotion ? 0 : trigger, hue: hue, roster: roster)
+        TileRainLayer(pour: reduceMotion ? 0 : trigger, roster: roster)
             .allowsHitTesting(false)
     }
 
     // MARK: - The deal
 
-    /// The icon's berry blues, weighted to the bright end — the deep navies
-    /// of the mark itself disappear on the dark page (first cut, 2026-07-14).
-    private static let berry: [Color] = [
-        Color.fixed("#0a84ff"), Color.fixed("#3f9fff"),
-        Color.fixed("#0a84ff"), Color.fixed("#1266c4"),
-    ]
-
-    /// Deterministic per shower (a seeded LCG, never system randomness) — two
-    /// runs of the same pulse deal the same drops, so a recording or a screen
-    /// sweep reproduces. A source hue swaps in for the default berry blues,
-    /// mixed full/dim the same way so the shape of the shower never changes,
-    /// only its color.
-    /// 16 was tuned against an iPhone's ~390pt width. Drop x-positions
-    /// already scale to `bounds.width` at render time, so the same 16 drops
-    /// spread across a wide Mac window (up to 3-4x that width) read as
-    /// visibly sparser — the shower thinning out exactly where there's most
-    /// room for it (Mac polish, 2026-07-28). `dropCount(for:)` scales the
-    /// COUNT to match, floored at the original 16 (never thinner than the
-    /// tuned iPhone shower) and capped at 48 (3x) so an ultra-wide display
-    /// doesn't deal hundreds of drops.
-    static func dropCount(for width: CGFloat) -> Int {
-        min(48, max(16, Int((width / 390) * 16)))
-    }
-
-    /// Tiles are bigger than berries and each one is a claim, so fewer fall:
-    /// eight across an iPhone (the same scaling to width, capped at 24). A
-    /// roster longer than this is cut at the count; shorter repeats.
+    /// Tiles are each a claim, so the shower is sparse: eight across an
+    /// iPhone. The count scales to width and is capped at 24 (Mac polish,
+    /// 2026-07-28 — the same x-positions spread over a 3-4x wider window read
+    /// as a shower thinning out exactly where there is most room for it), and
+    /// floored at the tuned iPhone eight. A roster longer than this is cut at
+    /// the count, never sampled, so the first tiles down are always the first
+    /// sources swept; a roster shorter repeats, so one connected app still
+    /// reads as a shower rather than as a single falling square.
     static func tileCount(for width: CGFloat) -> Int {
         min(24, max(8, Int((width / 390) * 8)))
     }
 
-    fileprivate static func deal(seed: Int, hue: Color? = nil, roster: [String] = [],
-                                 count: Int = 16) -> [Drop] {
-        let palette = hue.map { [$0, $0.opacity(0.8), $0.opacity(0.6), $0.opacity(0.9)] } ?? berry
+    /// Deterministic per shower (a seeded LCG, never system randomness) — two
+    /// runs of the same pulse deal the same drops, so a recording or a screen
+    /// sweep reproduces.
+    fileprivate static func deal(seed: Int, roster: [String], count: Int) -> [Drop] {
+        guard !roster.isEmpty else { return [] }
         var state = UInt64(bitPattern: Int64(seed)) &* 2654435761 | 1
         func next() -> Double {
             state = state &* 6364136223846793005 &+ 1442695040888963407
             return Double(state >> 33) / Double(UInt32.max)
-        }
-        if roster.isEmpty {
-            return (0..<count).map { i in
-                Drop(id: i,
-                     x: CGFloat(next()),
-                     diameter: 8 + CGFloat(next()) * 12,
-                     delay: next() * 0.35,
-                     duration: 0.9 + next() * 0.5,
-                     sway: CGFloat(next() * 44 - 22),
-                     color: palette[Int(next() * 4) % 4],
-                     tile: nil, spin: 0)
-            }
         }
         // Tiles fall in ROSTER ORDER — the first source swept is the first
         // tile down — so the delay is the tile's rank plus a little jitter,
@@ -132,7 +120,6 @@ struct BerryRain: View {
                  delay: Double(i) * step + next() * 0.06,
                  duration: 1.0 + next() * 0.4,
                  sway: CGFloat(next() * 36 - 18),
-                 color: .clear,
                  tile: roster[i % roster.count],
                  spin: CGFloat(next() * 0.5 - 0.25))
         }
@@ -169,8 +156,7 @@ struct BerryRain: View {
 // non-pull shower under the same user ruling; `.connectBloom` alone carries
 // the connect payoff now.
 
-/// One dealt drop — where it starts, how it falls. A berry when `tile` is
-/// nil; a source's tile otherwise.
+/// One dealt drop — which source's tile it is, where it starts, how it falls.
 fileprivate struct Drop: Identifiable {
     let id: Int
     let x: CGFloat        // 0…1 across the width
@@ -178,34 +164,32 @@ fileprivate struct Drop: Identifiable {
     let delay: Double
     let duration: Double
     let sway: CGFloat     // horizontal drift over the whole fall, in points
-    let color: Color
-    let tile: String?
-    let spin: CGFloat     // radians of tilt over the whole fall (tiles only)
+    let tile: String
+    let spin: CGFloat     // radians of tilt over the whole fall
 }
 
 /// The shower's host — an empty, untouchable view that owns nothing between
 /// pours and hands each one straight to the render server.
-fileprivate struct BerryRainLayer: UIViewRepresentable {
+fileprivate struct TileRainLayer: UIViewRepresentable {
     /// The pulse to deal. 0 means "never pour" (idle, or Reduce Motion).
     let pour: Int
-    let hue: Color?
     let roster: [String]
 
-    func makeUIView(context: Context) -> BerryRainView { BerryRainView() }
+    func makeUIView(context: Context) -> TileRainView { TileRainView() }
 
-    func updateUIView(_ view: BerryRainView, context: Context) {
-        view.pour(pour, hue: hue, roster: roster)
+    func updateUIView(_ view: TileRainView, context: Context) {
+        view.pour(pour, roster: roster)
     }
 }
 
 /// Deals one shower of `CALayer`s per pulse and forgets them when they land.
 /// Nothing is retained between showers: idle, this is an empty view.
-fileprivate final class BerryRainView: UIView {
+fileprivate final class TileRainView: UIView {
     /// The last pulse actually dealt — a pulse is poured exactly once, however
     /// many times SwiftUI re-runs `updateUIView` for the same value.
     private var dealt = 0
     /// A pulse that arrived before the view had a size (see `layoutSubviews`).
-    private var waiting: (pulse: Int, hue: Color?, roster: [String])?
+    private var waiting: (pulse: Int, roster: [String])?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -216,32 +200,31 @@ fileprivate final class BerryRainView: UIView {
         layer.masksToBounds = true
     }
 
-    required init?(coder: NSCoder) { fatalError("BerryRainView is code-only") }
+    required init?(coder: NSCoder) { fatalError("TileRainView is code-only") }
 
-    func pour(_ pulse: Int, hue: Color?, roster: [String]) {
+    func pour(_ pulse: Int, roster: [String]) {
         guard pulse > 0, pulse != dealt else { return }
         dealt = pulse
         // A pulse can land before the first layout pass (the overlay mounts and
         // a refresh fires in the same beat) — hold it rather than dropping it
         // on the floor, since `dealt` has already claimed the pulse.
         guard bounds.width > 0, bounds.height > 0 else {
-            waiting = (pulse, hue, roster)
+            waiting = (pulse, roster)
             return
         }
-        deal(pulse, hue: hue, roster: roster)
+        deal(pulse, roster: roster)
     }
 
     override func layoutSubviews() {
         super.layoutSubviews()
         guard let held = waiting, bounds.width > 0, bounds.height > 0 else { return }
         waiting = nil
-        deal(held.pulse, hue: held.hue, roster: held.roster)
+        deal(held.pulse, roster: held.roster)
     }
 
-    private func deal(_ pulse: Int, hue: Color?, roster: [String]) {
-        let count = roster.isEmpty ? BerryRain.dropCount(for: bounds.width)
-                                   : BerryRain.tileCount(for: bounds.width)
-        let drops = BerryRain.deal(seed: pulse, hue: hue, roster: roster, count: count)
+    private func deal(_ pulse: Int, roster: [String]) {
+        let drops = TileRain.deal(seed: pulse, roster: roster,
+                                   count: TileRain.tileCount(for: bounds.width))
         // One shower, one pour, felt (2026-09-06, the haptic grammar) —
         // here rather than at the pulse's writers, so a bump that deals no
         // drops (no bounds yet) feels like nothing, which it is.
@@ -267,17 +250,12 @@ fileprivate final class BerryRainView: UIView {
             let dot = CALayer()
             dot.bounds = CGRect(x: 0, y: 0,
                                 width: drop.diameter, height: drop.diameter)
-            if let tile = drop.tile {
-                dot.contents = BerryRain.face(for: tile, scale: scale)
-                dot.contentsGravity = .resizeAspectFill
-                dot.contentsScale = scale
-                dot.cornerRadius = DS.Radius.appIcon(drop.diameter)
-                dot.cornerCurve = .continuous
-                dot.masksToBounds = true
-            } else {
-                dot.cornerRadius = drop.diameter / 2
-                dot.backgroundColor = UIColor(drop.color).cgColor
-            }
+            dot.contents = TileRain.face(for: drop.tile, scale: scale)
+            dot.contentsGravity = .resizeAspectFill
+            dot.contentsScale = scale
+            dot.cornerRadius = DS.Radius.appIcon(drop.diameter)
+            dot.cornerCurve = .continuous
+            dot.masksToBounds = true
             let x = drop.x * bounds.width
             let from = CGPoint(x: x, y: -30)
             let to = CGPoint(x: x + drop.sway, y: bounds.height + 30)
@@ -293,21 +271,16 @@ fileprivate final class BerryRainView: UIView {
             fall.fromValue = NSValue(cgPoint: from)
             fall.toValue = NSValue(cgPoint: to)
             let fade = CABasicAnimation(keyPath: "opacity")
-            fade.fromValue = drop.tile == nil ? 0.95 : 1
+            fade.fromValue = 1
             fade.toValue = 0
-            var tracks: [CAAnimation] = [fall, fade]
-            if drop.tile != nil {
-                // A tile tumbles a little as it falls — a quarter turn at
-                // most, either way, so it still reads as its app at the
-                // bottom. Berries are round and have nothing to tumble.
-                let tilt = CABasicAnimation(keyPath: "transform.rotation.z")
-                tilt.fromValue = -drop.spin
-                tilt.toValue = drop.spin
-                tracks.append(tilt)
-            }
+            // A tile tumbles a little as it falls — a quarter turn at most,
+            // either way, so it still reads as its app at the bottom.
+            let tilt = CABasicAnimation(keyPath: "transform.rotation.z")
+            tilt.fromValue = -drop.spin
+            tilt.toValue = drop.spin
 
             let group = CAAnimationGroup()
-            group.animations = tracks
+            group.animations = [fall, fade, tilt]
             group.duration = drop.duration
             group.beginTime = start + drop.delay
             group.timingFunction = CAMediaTimingFunction(name: .easeIn)

@@ -132,14 +132,15 @@ struct VibenetSendCard: View {
                 VibenetSend.landClaimReceipt(txHash: claimed.transactionHash,
                                              account: account, in: modelContext)
                 DSHaptic.success()
-                // The pour IS the confirmation (§553) — `BerryRain` is mounted
+                // The pour IS the confirmation (§553) — `TileRain` is mounted
                 // once in `MainSurface` and driven by this counter, so a
                 // success costs a bump rather than a view of its own. The
                 // crown is the proof, and the pulse is what re-reads it: money
                 // that arrived while the screen went on saying what it said
                 // before is a top up that looks like it failed.
-                chrome.refreshHue = Self.mark
-                chrome.refreshPulse &+= 1
+                // The seat's own tile falls (prd §655) — naming the roster
+                // is what keeps this from raining the last pull's sweep.
+                chrome.rain(sources: [VibenetIdentity.source])
             } catch let refusal as VibenetSend.FaucetRefusal {
                 topUpNote = Self.faucetNote(refusal.verdict)
             } catch {

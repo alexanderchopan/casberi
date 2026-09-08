@@ -1,51 +1,46 @@
 # Handoff: Casberi App Icon
 
 ## Overview
-The Casberi app icon: a berry built from seven opaque drupelets in one hue. It carries the name (cache + berry) and the product thesis — many things, one container. Chosen mark: **"Falloff, opaque"** — light enters from the top-left and fades across the cluster; every drupelet is a solid pre-mixed tone; front drupelets occlude back ones the way a real berry does.
+The Casberi app icon: **an octopus** — a rounded mantle with two eyes and five suckered arms, in one hot pink on a plain ground. Many arms, one animal: the product thesis (many things, one container) said as a creature rather than as a diagram.
+
+**This file described a BERRY until 2026-09-08, and it was wrong** (user: "the apps' mark is not a berri it is an octopus"). The berry — seven blue drupelets, hex-packed, named for *cache + berry* — was the earlier mark, and its generator (`icon-svg.js`) and three `casberi-icon-*.svg` outputs were deleted with this rewrite, because they emitted art the app has not shipped for some time and nothing else referenced them. Two things had been quietly reading the stale claim: `Design/BerryRain.swift`'s drop palette, commented "the icon's berry blues", and several `design/*/…mocks.html` boards drawing `.berry` confetti. Both are gone (the shower is `TileRain` now — see prd §655).
 
 ## About the Design Files
-The PNG/SVG files in this bundle are **final icon art**, generated from a single geometry source (`icon-svg.js`). They are ready to place in the Xcode asset catalog as-is. The HTML exploration board (in the parent project) is a design reference only.
+`casberi-mark.svg` is the mark's geometry source. The three 1024 PNGs in the app's asset catalog are the final icon art — they are what ships, and they are not generated from anything in this folder any more.
 
 ## Fidelity
-**High-fidelity, final.** Use the 1024 PNGs directly. Do not re-draw, recolor, add gradients, or bake a corner radius.
+**High-fidelity, final.** Use the shipped PNGs directly. Do not re-draw, recolor, add gradients, or bake a corner radius — iOS applies the squircle.
 
 ## The Mark
 
-### Geometry (1024 × 1024 canvas)
-Seven circles, radius **108**, on a hex-packed cluster:
+### Geometry (100 × 100 viewBox, scaled to 1024)
+The head group is rotated **−9°** about (50, 46), so the animal leans; the arms are drawn upright underneath it.
 
-| Drupelet | cx, cy | Tone level |
-|----------|--------|-----------|
-| Center | 512, 548 | 0.45 |
-| Top-left | 426, 388 | 1.00 |
-| Top-right | 598, 388 | 0.60 |
-| Right | 684, 548 | 0.32 |
-| Bottom-right | 598, 708 | 0.20 |
-| Bottom-left | 426, 708 | 0.32 |
-| Left | 340, 548 | 0.60 |
+| Part | Definition |
+|------|-----------|
+| Mantle | one filled path, `M33,46 C29,42 28,34 31,26 C35,14 48,8 59,13 C70,18 73,31 68,40 C66,43 68,45 68,46 Z` |
+| Eyes | two filled circles, (44, 33) and (58.5, 36.5), r **3.7** |
+| Arms | five open strokes, width **8**, round caps, no fill |
+| Suckers | thirteen open circles, stroke width **1.4**, grouped 2 · 3 · 3 · 3 · 2 along the arms |
 
-**Draw order: dimmest first, brightest last** (front drupelets occlude back ones). Fills are opaque — each tone is the brand hue pre-mixed toward the ground at the level above: `tone = mix(#0A84FF, ground, 1 − level)`. No alpha, no compounding overlaps.
+The suckers **taper outward** — r 2.6 nearest the mantle, then 1.9, then 1.3 at the arm's tip. That taper is the whole reason the arms read as arms at small sizes rather than as five loose curves, so it is the last thing to simplify.
 
-### Color rules
-- One hue only: iOS systemBlue dark **#0A84FF**.
-- Magnitude renders as tone steps of that hue (the levels above). No second hue, no gradient.
-- Orange, red, green are reserved for state elsewhere in the product — never in the mark.
-- No wordmark, no mascot, no face, no glyph clichés.
+### Colour
+| Role | Value |
+|------|-------|
+| Mark | `#FF2D87` |
+| Eyes and suckers | `#000` — knocked out of the mark, not painted over it |
+| Ground (dark) | `#000000` |
 
-### Canvas rules
-- Square art, **no baked corner radius** — iOS applies the superellipse mask.
-- Verified legible at 60px and 29px.
+The eyes and suckers being the GROUND rather than a colour is what keeps the mark to one ink. It also means the mark cannot be recoloured by swapping a single fill: the negative shapes have to travel with it.
 
-## iOS 18 icon modes (Asset Catalog)
-Xcode 16+: one `AppIcon` asset with three appearances (Any, Dark, Tinted):
-- **Any/Light** → `casberi-final-berry-opaque-1024-light.png` (white ground, blue mark).
-- **Dark** → `casberi-final-berry-opaque-1024-dark.png` (black #000 ground, blue mark).
-- **Tinted** → `casberi-final-berry-opaque-1024-tinted.png` (grayscale luminance master on black; the system applies the user's tint).
+### Small sizes
+`casberi-mark-small.svg` (29pt) is a **deliberately different drawing**, not the same file scaled. Five arms and thirteen suckers turn to mud below about 40pt, so the small mark drops to **three arms, no suckers**, with the eyes enlarged to r **5** and the arm stroke thickened to **9**. Reach for it whenever the mark is rendered under ~40pt; scaling the full mark down instead is the failure this file exists to prevent.
 
-## Assets
-- `casberi-final-berry-opaque-1024-{dark,light,tinted}.png` — 1024×1024 masters.
-- `casberi-final-berry-opaque-{dark,light,tinted}.svg` — vector source per mode.
-- `icon-svg.js` — the generator (single source of truth for geometry; `CasberiIconSVG(dir, mode)`, final mark is `dir: '1D'`).
+## Files
+- `casberi-mark.svg` — the full mark, 1024 (geometry source).
+- `casberi-mark-small.svg` — the 29pt mark: three arms, no suckers, heavier stroke.
+- Shipped art lives in `Casberi/Casberi/Assets.xcassets/AppIcon.appiconset/` — `casberi-octopus-1024-{light,dark,tinted}.png`, wired in `Contents.json` as the universal iOS icon plus its dark and tinted luminosity variants.
 
-## Provenance
-Explored 2026-07-03 on the exploration board (`Casberi App Icons.dc.html`): eight directions → berry-as-vessel chosen → opacity arrangements iterated → opaque falloff selected. Runner-up (treemap / bento cut) masters also exist in the project's `icons/` folder if ever needed for marketing surfaces.
+## Unverified
+The **light** and **tinted** PNGs were not opened during this rewrite — only the dark one was, and the geometry above is read from `casberi-mark.svg`. Apple's tinted variant is greyscale-mapped by the system, so if it ever reads wrong it is that PNG rather than anything documented here.

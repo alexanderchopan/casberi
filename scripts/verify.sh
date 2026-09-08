@@ -479,6 +479,41 @@ if [[ -r "$NIGHTLY_LOG" ]] && [[ -s "$NIGHTLY_LOG" ]]; then
   fi
 fi
 
+# ── Last nightly LIVE verdict (REPORTS, never gates — 2026-09-08, prd §654) ──
+# The devnet drift detectors — Hegotá's frame-shape census, vibenet's contracts
+# diff, Frames' and Privacy's genesis + envelope rows — all live in
+# `live-integrations.sh`, which by contract stays out of this pass and which,
+# until §654, NOTHING RAN. `scripts/nightly-live.sh` (a 02:45 LaunchAgent)
+# runs it and writes one row per night to this ledger, with the flagged rows
+# indented beneath. Same reasoning as the Mac ledger above: a third party on
+# a different day never gates a pass on this tree, and staleness is a fact of
+# its own. The flagged rows are printed because "amber=3" tells nobody whether
+# a devnet restarted or Jupiter 503'd.
+LIVE_LOG="$ROOT/scripts/output/nightly-live.log"
+if [[ -r "$LIVE_LOG" ]] && [[ -s "$LIVE_LOG" ]]; then
+  # The last UNINDENTED line is the row; indented lines beneath it are its
+  # flagged detail.
+  _lrow=$(grep -E '^[0-9]{4}-' "$LIVE_LOG" | tail -1)
+  _lts=${_lrow%% *}
+  _lepoch=$(date -j -f "%Y-%m-%dT%H:%M:%S" "$_lts" +%s 2>/dev/null || print 0)
+  _lage=$(( ($(date +%s) - _lepoch) / 3600 ))
+  _lverdict=$(print -r -- "$_lrow" | awk '{print $3, $4}')
+  if (( _lepoch == 0 )); then
+    print -P "%F{yellow}⚠ last live nightly: unreadable ledger row — $LIVE_LOG%f"
+  elif (( _lage > 36 )); then
+    print -P "%F{yellow}⚠ last live nightly ran ${_lage}h ago (lid closed? a missed night is skipped, not queued): $_lverdict%f"
+  elif [[ "$_lrow" == *"  CLEAN  "* ]]; then
+    print -P "%F{green}✓ last live nightly (${_lage}h ago): every third-party row clean%f"
+  else
+    print -P "%F{yellow}⚠ last live nightly (${_lage}h ago) flagged $_lverdict — third parties, not this tree:%f"
+    # Everything indented after the last row, up to 8 lines.
+    awk -v row="$_lrow" 'found && /^    / {print} $0==row {found=1}' "$LIVE_LOG" | head -8 \
+      | sed 's/^    /    /' | while IFS= read -r _l; do print -P "%F{yellow}$_l%f"; done
+  fi
+else
+  print -P "%F{yellow}⚠ no live nightly ledger yet — bootstrap scripts/com.casberi.nightly-live.plist (see scripts/nightly-live.sh)%f"
+fi
+
 # ── Context budget: CLAUDE.md stays a rule sheet ─────────────────────
 # CLAUDE.md is loaded into EVERY session before the user types a word, so its
 # size is a tax on every piece of work done in this repo. On 2026-09-05 it had
@@ -1310,6 +1345,21 @@ harness "Telegram export pure-logic self-test" "Telegram export pure-logic self-
 # record of what an unprovable fold rule costs (a gate that measured THINGS
 # while the feed drew ROWS, wrong for a month, found by eye).
 harness "Feed-fold self-test" "feed-fold self-test" "scripts/feed-fold-selftest.sh" "the feed-fold self-test failed — run scripts/feed-fold-selftest.sh"
+
+# The bound that keeps a long list from costing a sheet drag ten seconds of
+# wall clock (prd §657, build 539's `0x8BADF00D`). The person room drew EVERY
+# row the corpus holds about one person into one `List` section inside a
+# drag-resizable sheet — and UIKit re-runs a sheet's whole list update
+# synchronously on every drag offset, with SwiftUI resolving each row's index
+# by a linear walk. Backgrounded at ~16% of a core (§614's throttle), that
+# render exceeded the watchdog's ten-second wall.
+#
+# Mechanical because NOTHING here can reach it: the build is clean, every
+# static audit passed on the crashing binary, and no simulator backgrounds an
+# app under a CPU quota. What this proves is the arithmetic and the wiring —
+# that the slice bounds, that the opener appears only when rows were held back,
+# and that the room still draws THROUGH the window rather than around it.
+harness "Row-window self-test" "row-window self-test" "scripts/row-window-selftest.sh" "the row-window self-test failed — run scripts/row-window-selftest.sh"
 
 # "Is this address a feed?" — the discriminator every RSS follow hangs off
 # (2026-08-16), from a user report of following a site that publishes none.
@@ -2285,6 +2335,21 @@ python3 "$ROOT/scripts/hero-tint-audit.py" --self-test >/dev/null \
 python3 "$ROOT/scripts/hero-tint-audit.py" \
   || fail "a screen draws more than one hero tile, or hand-rolls one (prd §563) — see the output above"
 print -P "%F{green}✓ hero-tint audit%f"
+
+# **A SHOWER STANDS FOR THE SOURCES IT NAMES, and confetti is gone (prd §655).**
+# `TileRain` has one branch now — source tiles — and `ShellChrome.rain(sources:)`
+# is the only door, because `refreshRoster` is STORED STATE and a pulse bump is
+# not a reset. Eight writers set the hue and the pulse by hand and never
+# mentioned the roster, so they rained the LAST PULL'S set: pull on All, walk
+# into the Hegotá room, tap top up, and Photos and Gmail and Strava fall over a
+# devnet faucet claim. It compiles, it renders smoothly, it honours Reduce
+# Motion, and no other check here can see it.
+step "Rain-tiles audit"
+python3 "$ROOT/scripts/rain-tiles-audit.py" --self-test >/dev/null \
+  || fail "the rain-tiles audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/rain-tiles-audit.py" \
+  || fail "a shower deals confetti or stands for an unnamed set (prd §655) — see the output above"
+print -P "%F{green}✓ rain-tiles audit%f"
 
 step "Design-motion audit"
 python3 "$ROOT/scripts/design-motion-audit.py" >/dev/null \

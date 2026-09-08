@@ -438,14 +438,23 @@ struct WalletBalanceHeadline: View {
                 }
         .frame(maxWidth: .infinity, alignment: .leading)
             // THE RAIN, WHERE THE MONEY LANDED (prd §501). Nothing new is
-            // drawn: this is the shower a pull-to-refresh already deals,
-            // poured in the receiving wallet's own face stop so the moment
-            // says WHICH account without a word.
+            // drawn: this is the shower a pull-to-refresh already deals.
+            //
+            // **IT RAINS WALLET TILES, not berries (prd §655, 2026-09-08 —
+            // user: "the confetti is literally confetti and not app tiles …
+            // Wallet should be app tiles of just the wallet icon").** §501
+            // poured this in the receiving wallet's own face stop so the
+            // moment could say WHICH account without a word, and §619 kept
+            // the berries alive for exactly that. The ruling above overrides
+            // it: EVERY shower in the app is the app's own tiles, and a
+            // shower that is confetti anywhere is confetti everywhere in the
+            // eye that sees it. The face colour is not lost — the crown
+            // retints on the same beat (§159), and the wallet's row and rail
+            // stop carry the stop at full strength — so what the rain gave
+            // up is a second telling of something already on screen, and
+            // what it gained is the one grammar.
             .onChange(of: arrivals.pulse) { _, _ in
-                guard let address = arrivals.address else { return }
-                chrome.refreshHue = WalletFace.tint(for: address)
-                chrome.refreshRoster = []   // berries in the wallet's colour, not tiles (prd §619)
-                chrome.refreshPulse += 1
+                chrome.rain(sources: ["Wallet"])
             }
     }
 

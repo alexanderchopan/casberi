@@ -34,7 +34,7 @@ import UIKit
 /// - **CoreAnimation.** Each tile is a `CALayer` with the brand asset as its
 ///   `contents` (the symbol fallbacks are rendered once through
 ///   `ImageRenderer`), driven by two `CAKeyframeAnimation`s the render server
-///   plays out of process — `BerryRain`'s lesson (2026-07-28): SwiftUI
+///   plays out of process — `TileRain`'s lesson (2026-07-28): SwiftUI
 ///   interpolates on the main actor, and a first launch is exactly when that
 ///   actor is busiest. The fall stays smooth while the app warms up under it.
 ///

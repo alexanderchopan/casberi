@@ -709,10 +709,14 @@ struct FeedScreen: View {
                 readAt: saved.readAt, pulse: saved.pulse)
             VibenetState.save(trimmed)
         }
-        chrome.refreshPulse += 1
+        // NAMED, not inherited (prd §655): these bumps exist to move the
+        // room's memoised head, but the pulse is `TileRain`'s only trigger,
+        // so each one deals a shower too — and without a roster that shower
+        // was the last pull's whole sweep falling over a vibenet unwatch.
+        chrome.rain(sources: [VibenetIdentity.source])
         Task {
             _ = await VibenetRoomSource.compose()
-            chrome.refreshPulse += 1
+            chrome.rain(sources: [VibenetIdentity.source])
         }
     }
 
@@ -950,7 +954,7 @@ struct FeedScreen: View {
         guard PrivacyDevnetWatch.shared.add(address) else { return }
         PrivacyDevnetBridge.registerBridge(store: bridges)
         Task { await PrivacyDevnetLiveState.shared.refresh() }
-        chrome.refreshPulse &+= 1
+        chrome.rain(sources: [PrivacyDevnetIdentity.source])
     }
 
     /// Send on Ethrex Privacy.
@@ -1279,7 +1283,7 @@ struct FeedScreen: View {
             // create branch needed (2026-08-30): read the chain now, then bump
             // the term this screen's memoised head recomputes on.
             _ = await VibenetRoomSource.compose()
-            chrome.refreshPulse += 1
+            chrome.rain(sources: [VibenetIdentity.source])
         } catch let f as VibenetSend.Failure {
             chrome.flash(vibenetSendFailureText(f), tone: .failure)
         } catch {
@@ -4530,6 +4534,14 @@ struct FeedScreen: View {
                     .dsSheetDismiss { feedSheet = nil }
             }
             .dsNavSheet()
+            // A sheet covers `RootShell`'s haptic listener, and this room is
+            // not a `DSTray` (which carries its own) — so its `DSHaptic` calls
+            // bump a counter nothing is listening to unless one is mounted
+            // here. `RootShell.rootPresented`'s note states the rule: a root
+            // sheet that is not a tray and fires its own haptics needs one.
+            // Only on THIS door — pushed, the room is under the shell's copy
+            // and a second listener would buzz twice.
+            .background(DSHapticSink())
         case .vibenetKeys(let items, let newKeyIDs):
             // A tapped key SCOPES THE ROOM to its account (prd §470),
             // which is the follow-up the tray previously dead-ended on.
@@ -4606,6 +4618,7 @@ struct FeedScreen: View {
         case .hegotaSend:
             DevnetSendSheet(
                 venue: String(localized: "Hegot\u{00E1}"),
+                seat: HegotaIdentity.source,
                 tint: DS.tint,
                 unit: "ETH",
                 candidates: hegotaSendCandidates,
@@ -4626,6 +4639,7 @@ struct FeedScreen: View {
                 case .framesSend:
             DevnetSendSheet(
                 venue: String(localized: "Frames"),
+                seat: FramesIdentity.source,
                 tint: DS.tint,
                 unit: String(localized: "test ETH"),
                 candidates: framesSendCandidates,
@@ -4705,6 +4719,7 @@ struct FeedScreen: View {
         case .privacyDevnetSend:
             DevnetSendSheet(
                 venue: String(localized: "Privacy Devnet"),
+                seat: PrivacyDevnetIdentity.source,
                 tint: DS.brandHue(for: PrivacyDevnetIdentity.source) ?? DS.tint,
                 unit: String(localized: "test ETH"),
                 candidates: privacyDevnetSendCandidates,
@@ -4742,6 +4757,7 @@ struct FeedScreen: View {
             // handed and shields the amount.
             DevnetSendSheet(
                 venue: String(localized: "Privacy Devnet"),
+                seat: PrivacyDevnetIdentity.source,
                 tint: DS.brandHue(for: PrivacyDevnetIdentity.source) ?? DS.tint,
                 unit: String(localized: "test ETH"),
                 candidates: [],
@@ -4755,6 +4771,7 @@ struct FeedScreen: View {
         case .vibenetSend(let account):
             DevnetSendSheet(
                 venue: String(localized: "vibenet"),
+                seat: VibenetIdentity.source,
                 tint: DS.brandHue(for: VibenetIdentity.source) ?? Color.fixed("#0052ff"),
                 unit: "ETH",
                 candidates: vibenetSendCandidates,
@@ -4827,7 +4844,7 @@ struct FeedScreen: View {
                 // the term this screen's memoised head recomputes on.
                 Task {
                     _ = await VibenetRoomSource.compose()
-                    chrome.refreshPulse += 1
+                    chrome.rain(sources: [VibenetIdentity.source])
                 }
             }
         case .vibenetWatch:
@@ -4845,7 +4862,7 @@ struct FeedScreen: View {
                 // same dismissal asked for twice.
                 Task {
                     _ = await VibenetRoomSource.compose()
-                    chrome.refreshPulse += 1
+                    chrome.rain(sources: [VibenetIdentity.source])
                 }
             }
         case .vibenetAuthorize(let account, let epoch, let sequence, let editing):
@@ -6332,7 +6349,7 @@ struct FeedScreen: View {
                                     onWatched: {
                                         Task {
                                             _ = await VibenetRoomSource.compose()
-                                            chrome.refreshPulse += 1
+                                            chrome.rain(sources: [VibenetIdentity.source])
                                         }
                                     },
                                     onRequestWatch: { feedSheet = .vibenetWatch },
@@ -12124,28 +12141,21 @@ struct FeedScreen: View {
     /// The one pull, however it's triggered — a real gesture (`.refreshable`)
     /// or Mac's ⌘R (`chrome.refreshRequest`, see the `.onChange` above). Kept
     /// as one function so the two triggers can never drift into dealing the
-    /// hue/pulse/sync sequence differently.
+    /// roster/pulse/sync sequence differently.
     private func performPull() async {
-        // A pull inside one source's own feed rains in ITS hue instead
-        // of the app's default berry blue — "All" keeps the default
-        // (delight pass 2026-07-21). Set once; both this bump and
-        // refreshFeed()'s own read the same stored hue.
-        // Scoped to one wallet, the rain falls in THAT wallet's colour
-        // (prd §171, 2026-07-22) — the crown already retints on a scope
-        // switch (§159), so the refresh that follows should agree. Every
-        // other room keeps the source's hue; "All" keeps the default berry.
-        chrome.refreshHue = roomTakesWalletScope
-            ? (selectedWallet.map(WalletFace.tint) ?? DS.washHue(for: source))
-            : (source == "All" ? nil : DS.washHue(for: source))
         // WHAT FALLS (prd §619): the sources this pull asks. All → the whole
         // connected sweep; a folded category → its connected members; a
-        // source's own room → that source. A pull scoped to ONE WALLET keeps
-        // the berries in that wallet's colour (the hue above, §171) — the
-        // roster is emptied so the rain says "which wallet", which no tile
-        // can, rather than "Wallet", which the room already does.
-        chrome.refreshRoster = roomTakesWalletScope && selectedWallet != nil
-            ? []
-            : source == "All" ? BridgeRefresh.roster(store: bridges)
+        // source's own room → that source.
+        //
+        // **A WALLET-SCOPED PULL FALLS AS ITS SEAT'S TILES TOO (prd §655).**
+        // It used to empty the roster so the shower could say "which wallet"
+        // in a hue (§171) rather than "Wallet", which the room already does —
+        // and that was the app's last berry. The hue this set (`refreshHue`)
+        // is deleted with the berries; the wallet's stop still travels on
+        // `chrome.pourHue` (set by `land()`), which is what retints the
+        // crown (§159) and was always the stronger telling of the same fact.
+        let roster: [String] = source == "All"
+            ? BridgeRefresh.roster(store: bridges)
             : CategoryFold.isCategory(source) ? BridgeRefresh.roster(store: bridges, category: source)
             : [source]
         // BEFORE the pulse, not after (2026-08-05). The pulse is what re-fires
@@ -12159,7 +12169,7 @@ struct FeedScreen: View {
         // self-reinforcing: the error's obvious remedy is another pull, and
         // another pull reproduced it exactly. Invalidating first makes the
         // reload a genuinely fresh read with nothing to race.
-        chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
+        chrome.rain(sources: roster)   // spins the avatar door, deals the shower
         await refreshFeed()
     }
 

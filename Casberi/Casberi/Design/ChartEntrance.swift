@@ -43,7 +43,7 @@ import SwiftUI
 ///   is worth one word per call. `MicroMotion`'s own modifiers read the
 ///   environment instead; that difference is this file's, deliberately.
 /// - **These are appear-once animations, so plain SwiftUI is correct.** The
-///   2026-07-28 `BerryRain` ruling — decorative motion during a refresh must
+///   2026-07-28 `TileRain` ruling — decorative motion during a refresh must
 ///   be CoreAnimation, because every ingest in this app is `@MainActor` and
 ///   starves a SwiftUI interpolation — is about motion that runs WHILE the
 ///   main thread is blocked. An entrance fires once, on appear, off the

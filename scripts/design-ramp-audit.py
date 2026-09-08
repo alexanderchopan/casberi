@@ -199,7 +199,7 @@ KNOWN_EXEMPT = {
     # a varying `diameter` never re-renders"). Putting it on the Mark ramp
     # would tie a render resolution to a layout decision and re-render the
     # cache whenever a rung moved.
-    ("Casberi/Casberi/Design/BerryRain.swift", "face"),
+    ("Casberi/Casberi/Design/TileRain.swift", "face"),
 }
 
 # Check 3's own rulings, keyed by (file, enclosing symbol, SIZE). The size is in

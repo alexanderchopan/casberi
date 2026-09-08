@@ -555,7 +555,7 @@ final class ShellChrome {
     /// feed alike — the per-tab distinction died with the tabs). MainSurface
     /// hangs the refresh delight off it: the avatar door's spin (TopDoors,
     /// restored 2026-07-14 — the tab-drop rewire had orphaned it) and the
-    /// berry rain (BerryRain, user ask same day).
+    /// berry rain (TileRain, user ask same day).
     var refreshPulse = 0
 
     /// True for the half-second between tapping Exit in the demo and the rows
@@ -578,22 +578,36 @@ final class ShellChrome {
     /// Zero whenever the list is at rest, and never written under Reduce
     /// Motion (the writer gates, so the door simply never winds).
     var pullTension: CGFloat = 0
-    /// The hue the NEXT `refreshPulse` bump should rain in — a specific
-    /// source's own brand hue when the pull happened inside its feed (set by
-    /// FeedScreen's `performPull`, cleared to nil for "All"). nil rains the
-    /// app's default berry blue (delight pass 2026-07-21). The pull is the
-    /// only writer since 2026-08-11, and since 2026-08-19 the only thing that
-    /// rains at all — the moment bus that used to set this is gone.
-    var refreshHue: Color? = nil
     /// The sources the NEXT `refreshPulse` bump stands for — one tile falls
     /// per name, in this order (prd §619, 2026-09-05: the rain is the apps
-    /// the pull is asking, not confetti). Set by the pull from
-    /// `BridgeRefresh.roster`; left EMPTY by the wallet-scoped pull and the
-    /// wallet arrival (§171/§501), whose identity is a colour no tile has —
-    /// those keep the berries in `refreshHue`. A writer that bumps the pulse
-    /// without setting this inherits the last roster, which is the right
-    /// default for every in-room bump (the room's sources have not changed).
-    var refreshRoster: [String] = []
+    /// the pull is asking, not confetti). Written only through `rain` below.
+    /// EMPTY deals nothing at all, which is reachable only with no source
+    /// connected: `refreshHue` and the berry drops it coloured are deleted
+    /// (prd §655, 2026-09-08) — every shower in the app is tiles, so a hue
+    /// nothing renders would be a stored value pretending to be a setting.
+    private(set) var refreshRoster: [String] = []
+
+    /// **ONE DOOR FOR A SHOWER, AND IT NAMES WHAT FALLS (prd §655,
+    /// 2026-09-08).** Every writer used to set the hue and the pulse by hand
+    /// and simply not mention the roster — which does not mean "no tiles",
+    /// it means "whatever the last pull left". So a Hegotá top up, tapped
+    /// after a pull on All, rained Photos and Gmail and Strava: the roster is
+    /// stored state and a bump is not a reset. Naming the sources is now the
+    /// only way to bump (`refreshRoster` is `private(set)`), so the shower
+    /// can never stand for a set nobody asked about.
+    ///
+    /// **`rain`, not `pour`** — `pourHue`/`pourDose` next door are §524's
+    /// PAGE pour, a wash at the top of a surface, and the two have nothing
+    /// to do with each other.
+    ///
+    /// `sources` are seat names (`Bridge.name` / `Thing.source`) — the same
+    /// strings `BridgeRefresh.roster` returns and `BridgeIcon` resolves. Pass
+    /// the ONE seat a moment belongs to; the pull passes its whole sweep.
+    @MainActor
+    func rain(sources: [String]) {
+        refreshRoster = sources
+        refreshPulse &+= 1
+    }
 
     /// Mac's ⌘R (Mac polish, 2026-07-28): a trackpad's overscroll gesture is
     /// the only trigger `.refreshable` gives Catalyst, and unlike a real

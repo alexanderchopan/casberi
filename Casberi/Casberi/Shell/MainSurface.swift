@@ -2666,8 +2666,8 @@ struct MainSurface: View {
             // Refresh delight (2026-07-14): every pull on this one surface
             // bumps chrome.refreshPulse — the berry rain falls over the
             // content and the avatar door spins (below). Decorative only;
-            // hit-testing is off inside BerryRain.
-            .overlay { BerryRain(trigger: chrome.refreshPulse, hue: chrome.refreshHue,
+            // hit-testing is off inside TileRain.
+            .overlay { TileRain(trigger: chrome.refreshPulse,
                                  roster: chrome.refreshRoster) }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)

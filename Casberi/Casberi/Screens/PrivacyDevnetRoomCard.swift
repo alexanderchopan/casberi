@@ -1061,7 +1061,7 @@ struct PrivacyDevnetRoomList: View {
 /// four chains. It read as a very careful instrument that never once said
 /// "look at this".
 ///
-/// **A SENTENCE, NEVER A SHOWER.** `BerryRain`'s one-gesture-one-shower ruling
+/// **A SENTENCE, NEVER A SHOWER.** `TileRain`'s one-gesture-one-shower ruling
 /// forbids a second pour over the send sheet's own, and neither of these
 /// follows a gesture at all — they follow a sweep. A toast carrying the seat's
 /// mark is the register this app already uses for "your first X", and

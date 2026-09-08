@@ -495,7 +495,7 @@ struct FramesRoomList: View {
             //
             // **A sentence, not a second shower.** The send that produced it
             // rained seconds ago, and dealing another over it is the stutter
-            // `BerryRain`'s "one gesture, one shower" ruling forbids in a
+            // `TileRain`'s "one gesture, one shower" ruling forbids in a
             // different costume. The toast carries the seat's own mark and a
             // success haptic, which is the register this app already uses for
             // "your first X".

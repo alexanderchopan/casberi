@@ -878,6 +878,12 @@ struct DevnetAdvancedSheet: View {
 struct DevnetSendSheet: View {
     /// What this room is, for the picker's own footnote.
     let venue: String
+    /// The seat this room IS — `Bridge.name` / `Thing.source`, which is what
+    /// `BridgeIcon` resolves and what the send's shower rains one tile of (prd
+    /// §655). Distinct from `venue`, which is the shortened word a person
+    /// reads ("Hegotá", "vibenet"); a tile needs the catalog spelling
+    /// ("Hegota Devnet", "Base Vibenet") or it falls back to a blank glyph.
+    let seat: String
     let tint: Color
     /// The word beside the figure. A WORD and never a chip: both devnets move
     /// native ETH and only that (`VibenetSend.sendValue` takes a `valueWei` and
@@ -1825,8 +1831,11 @@ struct DevnetSendSheet: View {
                 return
             }
             DSHaptic.success()
-            chrome.refreshHue = tint
-            chrome.refreshPulse &+= 1
+            // This room's own tile falls (prd §655). Setting the hue and the
+            // pulse alone left the ROSTER at whatever the last pull wrote, so
+            // a send made after a pull on All rained the whole connected
+            // sweep — every app in the app, over a devnet transfer.
+            chrome.rain(sources: [seat])
             dismiss()
         }
     }
@@ -1847,8 +1856,7 @@ struct DevnetSendSheet: View {
                 return
             }
             DSHaptic.success()
-            chrome.refreshHue = tint
-            chrome.refreshPulse &+= 1
+            chrome.rain(sources: [seat])
             dismiss()
         }
     }
