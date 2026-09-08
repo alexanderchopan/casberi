@@ -1648,6 +1648,25 @@ harness "Feed-reading pure-logic self-test" "feed-reading self-test" "scripts/fe
 # words are still in the store. That bug was invisible for exactly one year.
 harness "Reading-draw self-test" "reading-draw self-test" "scripts/reading-draw-selftest.sh" "the reading-draw self-test failed — run scripts/reading-draw-selftest.sh"
 
+# The extractor itself (prd §645 pass 5, 2026-09-08). `ReadableParse` was
+# `private` inside `LinkTitle.swift` — a file that imports SwiftData and
+# reaches `Thing`, `OEmbed` and `ProductMeta` — so NOTHING could compile it and
+# every claim about what the app extracts from a page was a claim. Since pass 1
+# its output is drawn on the sheet at `reading20` rather than merely indexed,
+# and pass 5 moved the two constants that bound it. What this catches renders
+# as an ordinary sheet holding the wrong words: the cap back at a lede's
+# length, so every article ends mid-sentence in an ellipsis; the paragraph
+# limit back to a handful, which does NOT protect the excerpt from chrome but
+# guarantees it (a news page's first six paragraphs are share rows and
+# topic-subscribe blurbs, and its first sentence is paragraph nine); the
+# content region not narrowed, so a page WITH a `<main>` is read from its
+# navigation down; the prose test or the script strip dropped, so menu items
+# and a page's own JavaScript are drawn as an article. It also pins the ONE
+# bound across two binaries — the share extension clamps the same column in
+# another process, and a literal in either is the same article read at two
+# lengths depending on whether you pasted it or shared it.
+harness "Readable-body self-test" "readable-body self-test" "scripts/readable-body-selftest.sh" "the readable-body self-test failed — run scripts/readable-body-selftest.sh"
+
 # Radicle (prd §400, 2026-08-18). The ONLY proof this bridge has: nothing on
 # this host can open a patch, merge one or close an issue, so no probe and no
 # sweep can ever exercise its landing paths — one degree weaker than Stripe's

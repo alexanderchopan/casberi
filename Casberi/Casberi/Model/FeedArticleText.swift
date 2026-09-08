@@ -70,11 +70,34 @@ enum FeedArticleText {
     /// Between requests.
     static let pace: Duration = .milliseconds(1200)
 
-    /// A summary this long or longer is already substance — the publisher
-    /// gave us the article's opening, and a scrape would mostly repeat it.
-    /// Feeds that ship `content:encoded` land well past this and are skipped
-    /// entirely, which is most of the good ones.
-    static let thinSummary = 400
+    /// A summary this long or longer is already substance, so the row is left
+    /// alone. Feeds that ship `content:encoded` land well past this and are
+    /// skipped entirely, which is most of the good ones.
+    ///
+    /// **400 until prd §645 pass 5 (2026-09-08), and its reasoning was a
+    /// RETRIEVAL argument** — *"the publisher gave us the article's opening,
+    /// and a scrape would mostly repeat it."* True of an index and false of a
+    /// reader: 400 characters is about 65 words, which is a standfirst, and
+    /// since pass 1 the row draws whatever it holds. So a story whose feed
+    /// gave two paragraphs used to be a story the app refused to go and read.
+    ///
+    /// 1,200 is about 200 words — still recognisably a lede rather than a
+    /// piece — and it does not disturb the case this bound was written for: a
+    /// `content:encoded` feed ships the whole article here and lands in the
+    /// thousands, so it still skips. The widening is a real cost and worth
+    /// naming: rows between 400 and 1,200 characters of summary are now
+    /// fetched that were not, at the sweep's same pace (`perPass`, `pace`,
+    /// `window`, `maxAttempts` all unchanged) and from publishers the person
+    /// followed. The receipts entry is unchanged too — `fetchReadable` is
+    /// already handed this bridge's name (see `sweep`).
+    ///
+    /// **NOT MEASURED, unlike the two constants pass 5 moved in
+    /// `ReadableParse`.** No machine here can enumerate what a real corpus's
+    /// feed summaries look like — that needs somebody's actual follows — so
+    /// this is a stated rule, not a reading. If it turns out to fetch a lot of
+    /// rows whose scrape then loses the duplicate test in `ArticleBody`, the
+    /// number is what to move.
+    static let thinSummary = 1_200
 
     /// How far back a row can be and still be worth reading. See the type doc.
     static let window: TimeInterval = 30 * 86400

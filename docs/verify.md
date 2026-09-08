@@ -263,3 +263,70 @@ branch — these are drift guards over source text. Whether the drawn lede reads
 as an article or as a nav scrap is a question about `LinkTitle`'s extractor
 against real pages: eleven of them were measured for the §645 amendment (three
 of the five that drew anything drew chrome), and it needs the network.
+
+## Readable-body self-test (`scripts/readable-body-selftest.sh`, 2026-09-08) → prd §645
+
+**What it drives.** `Casberi/Casberi/Model/ReadableParse.swift` and
+`Casberi/Shared/ReadableBody.swift`, both Foundation-only by design, compiled
+WHOLE AND UNMODIFIED. `IngestSupport.decodeHTMLEntities` is stubbed as
+identity — a shared utility with its own callers, and entity decoding is not
+this file's subject.
+
+**Why the file exists now and could not before.** The parse chain
+(`parseReadable`, `contentRegion`, `metaDescription`, `paragraphs`,
+`firstCapture`, `parseTitle`) was `private` inside `LinkTitle.swift`, which
+imports SwiftData and reaches `Thing`, `OEmbed` and `ProductMeta`. Nothing on
+this machine could compile it, so every claim about what the app extracts from
+a web page was a claim. §645 pass 1 put that output on the thing sheet at
+`reading20` rather than merely in the index, and pass 5 moved the two constants
+that bound it — extracting the parse into its own file was the price of being
+able to check either. **No behaviour moved with it**: `LinkTitle` still owns
+the fetch, the receipts entry and `enrich`.
+
+**The measurement that set the constants, and why it inverted the spec's own
+prediction.** `docs/reading-spec.md` A.5 opens by warning that raising the
+paragraph limit makes a `contentRegion` MISS worse, because a page with no
+`<main>`/`<article>` marker returns its whole body and paragraph 40 is the
+footer. True, and it is not the shape of the problem. Fifteen real pages
+through this exact code said the opposite thing louder: **leading chrome sits
+in exactly the slots a six-paragraph limit spends.** A Verge article's first
+six `<p>`s are "News Close News Posts from this topic will be added to your
+daily email digest…" three times over, a share row and a byline; its first
+real sentence is paragraph **nine**. A GitHub repo page spends paragraphs 0
+and 1 on "Fork 10.8k Star 70.3k" and reaches the README at 2. So the small
+limit never protected the excerpt from chrome — it guaranteed the excerpt was
+nothing but chrome, because the article never got a slot to displace it. And
+the marker is not the predictor either: simonwillison.net found NO marker and
+drew clean prose, while GitHub found a `<main>` and drew a file listing.
+
+Measured again through the SHIPPED constants (200 / 8,000), of the nine pages
+that draw anything **five now arrive whole** (2,498–4,832 characters) and four
+long ones are cut at 8,000 (~1,300 words). At 1,200, all nine were cut.
+
+**Why 200 and 8,000.** 8,000 is `ObsidianNote.retrievalLimit` — the same
+number for the same reason on the same column, and its argument is quoted
+where it is used. 200 is chosen so the paragraph limit CANNOT bind first: the
+first cut of this pass used 60, and the harness's pathological fixture caught
+it — a page written in short paragraphs hit the paragraph limit at ~4,500
+characters and was cut by the wrong bound. No page measured for §645 reached
+even 40 paragraphs, so 200 only stops the regex loop running away.
+
+**ONE bound across two binaries.** The share extension clamps the same column
+in another process, from Safari's own reader text, and since pass 1 both are
+DRAWN. `LinkTitle.enrich` cannot reconcile them — it bails on a row already
+wearing a real title, which is exactly what a Safari share arrives with, so the
+extension's clamp is final for that row. A literal in either binary is the same
+article read at two lengths depending on whether you pasted it or shared it;
+two drift guards read the appex for that, one of them comment-stripped.
+
+**Nine mutations, and the two that earned their place.** The one A.5 names —
+the cap back to a lede, asserted against a fixture whose article is longer than
+it and must NOT end in `…`. And the one this pass's own first cut failed, which
+is why it is here: a paragraph limit that still looks generous but binds before
+the cap.
+
+**What it cannot prove.** Whether a REAL page's markup yields prose — the
+fixtures are shaped from measured pages but are still fixtures, and the
+measurement itself needs the network, which no harness here may touch. And
+nothing renders: how 8,000 characters SIT under a preview card is a device
+question.

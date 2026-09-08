@@ -73,7 +73,12 @@ final class ShareViewController: UIViewController {
         let excerpt = (pageInfo?["excerpt"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
         let body = [excerpt, article].compactMap { $0 }.first { !$0.isEmpty } ?? ""
         if body.count >= 40 {
-            thing.enrichedText = String(body.prefix(1200))
+            // `ReadableBody.limit`, not a literal: the app clamps the same
+            // column in another process, both are DRAWN since prd §645 pass 1,
+            // and `LinkTitle.enrich` will not re-fetch this row — it bails on
+            // anything already wearing a real title, which is what a Safari
+            // share arrives with. So this clamp is final for a shared link.
+            thing.enrichedText = String(body.prefix(ReadableBody.limit))
         }
         return thing
     }

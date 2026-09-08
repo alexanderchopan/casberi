@@ -50504,3 +50504,88 @@ iOS build, the new harness and its eight mutations, `feed-reading-selftest.sh`,
 `swiftdata-liveness-audit.py` and `mutation-liveness-audit.py`. What no check
 here can see is how a 1,200-character wall of scraped prose SITS under a
 preview card on a real sheet.
+
+## §645 amendment 2 — pass 5: the cap was not protecting the excerpt, it was guaranteeing it was chrome (2026-09-08)
+
+`docs/reading-spec.md` A.5 says this pass opens with a measurement and that
+skipping it is how the pass goes wrong. It was taken, and **it inverted the
+spec's own prediction** — which is the entry.
+
+**What A.5 predicted.** `contentRegion` returns the WHOLE page when it finds no
+`<main>`/`<article>` marker, so raising the paragraph limit makes a miss worse:
+paragraph 40 is the footer. True as far as it goes.
+
+**What fifteen real pages said instead.** Leading chrome sits in exactly the
+slots a six-paragraph limit spends. A Verge article's first six `<p>`s are
+"News Close News Posts from this topic will be added to your daily email digest
+and your homepage feed" three times over, a share row and a byline; **its first
+real sentence is paragraph nine**, so at a limit of six the sheet drew chrome
+and nothing else. A GitHub repo page spends paragraphs 0 and 1 on "Fork 10.8k
+Star 70.3k" and reaches the README's prose at 2. **The small limit never
+protected the excerpt from chrome — it guaranteed the excerpt was nothing but
+chrome, because the article never got a slot to displace it.** The de-dupe then
+does the rest: eight identical subscribe blurbs collapse to one, so a wider
+limit reads better rather than noisier.
+
+**And the marker is not the predictor.** simonwillison.net found NO marker and
+drew clean prose; GitHub found a `<main>` and drew a file listing. The footer
+risk A.5 named is real and much smaller — two of twelve paragraphs on the one
+measured example, at the END, where a reader can see the piece has finished. A
+stray line after an article is a finished article; a piece cut at 1,200
+characters mid-sentence is not.
+
+**What shipped.**
+
+- **`ReadableParse.maxParagraphs = 200`** (was 6) and
+  **`ReadableBody.limit = 8_000`** (was 1,200, twice). 8,000 is
+  `ObsidianNote.retrievalLimit` — deliberately the same number for the same
+  reason on the same column, and its argument is quoted where it is used.
+  200 is chosen so the paragraph limit CANNOT bind first; **the first cut used
+  60 and the harness caught it** — a page written in short paragraphs hit the
+  paragraph limit at ~4,500 characters and was cut by the wrong bound. Measured
+  through the shipped constants, five of the nine pages that draw anything now
+  arrive whole (2,498–4,832 characters) and four long ones are cut at ~1,300
+  words. At 1,200, all nine were cut.
+- **ONE bound across two binaries.** The cap was 1,200 in two places that could
+  not see each other: `LinkTitle` in the app, and `ShareViewController` in the
+  appex, which stores Safari's own reader text. Since pass 1 both are DRAWN,
+  and `LinkTitle.enrich` cannot reconcile them — it bails on a row already
+  wearing a real title, which is exactly what a Safari share arrives with, so
+  the extension's clamp is final for that row. The number moved to
+  `Casberi/Shared/ReadableBody.swift`, which all three targets compile.
+- **`FeedArticleText.thinSummary` 400 → 1,200.** Its stated reason was a
+  RETRIEVAL argument — "the publisher gave us the article's opening, and a
+  scrape would mostly repeat it" — and 400 characters is about 65 words, which
+  is a standfirst. **Stated, not measured**, and the entry says so: no machine
+  here can enumerate what a real corpus's feed summaries look like. The cost is
+  named where the constant is: rows between 400 and 1,200 characters of summary
+  are now fetched that were not, at the sweep's unchanged pace, from publishers
+  the person followed. A `content:encoded` feed still lands in the thousands
+  and still skips.
+- **The parse became its own file so it could be checked.**
+  `ReadableParse.swift` — the six functions were `private` inside a file that
+  imports SwiftData, so nothing could compile them and every claim about what
+  the app extracts was a claim. `scripts/readable-body-selftest.sh` compiles it
+  whole: 22 assertions, 9 mutations, including the one A.5 names (the cap back
+  to a lede, asserted against an article longer than it that must NOT end in
+  "…") and the one this pass's own first cut failed.
+
+**NOT done, and it is a ruling rather than a step.** A.5's item 4 — widening
+`FeedArticleText.sources` past `["RSS", "Substack"]` — is left open, because
+the spec itself says it carries a question §455 never had to answer: **which
+hosts a scrape is fair on.** Half of it is already settled by shipped
+behaviour, and that is worth saying plainly: `LinkTitle.enrich` has scraped
+every link a person PASTES for a year, and the share extension has stored
+Safari's reader text for every link they SHARE. What item 4 would widen is the
+background sweep over rows a BRIDGE landed — pages nobody chose one at a time.
+That is a different consent question from the two already answered, it belongs
+to the user, and nothing in passes 1 or 5 depends on it. The three abstentions
+(YouTube, Reddit, Podcasts) and their reasons stand either way.
+
+**Not seen on a device or a simulator.** Clean iOS build; `readable-body`,
+`reading-draw` and `feed-reading` self-tests; the liveness, mutation-liveness,
+network-reach, catalog-sync and prd-index audits. **`NetworkReach` is
+unchanged and that is correct** — no call site was widened, so there is no new
+host and no build-214 exposure; `thinSummary` changes only WHICH rows an
+already-ledgered call site fetches. What no check here can see is how 8,000
+characters sit under a preview card on a real sheet.
