@@ -22,16 +22,36 @@ CasberiSharePreprocessor.prototype = {
                 || document.querySelector("main")
                 || document.querySelector("#content")
                 || document.querySelector('[role="main"]');
-            var body = text(el) || text(document.body);
+            var root = el || document.body;
+            var body = text(root);
             // Spaces collapse; NEWLINES are kept, as the paragraph breaks the
             // thing sheet draws (prd §645 amendment 4). innerText separates
             // block elements with blank lines, and collapsing them to one
             // space was half of the wall of text.
-            return body
+            body = body
                 .replace(/[ \t\u00a0\r]+/g, " ")
-                .replace(/ ?\n ?/g, "\n")
+                .replace(/ ?\n ?/g, "\n");
+            return markHeadings(root, body)
                 .replace(/\n{3,}/g, "\n\n")
                 .trim();
+        }
+        // The page's section titles, marked the way the app's own parse marks
+        // them (`# ` for an <h2>, `## ` for an <h3> — prd §645 amendment 5):
+        // innerText puts a heading on a line of its own, so the line that
+        // equals the heading's text is that heading. The page is never
+        // modified; this rewrites the copy.
+        function markHeadings(root, body) {
+            var hs = root.querySelectorAll("h2, h3");
+            for (var i = 0; i < hs.length; i++) {
+                var t = text(hs[i]).replace(/\s+/g, " ").trim();
+                if (t.length < 3 || t.length > 120) continue;
+                var idx = body.indexOf("\n" + t + "\n");
+                if (idx < 0) continue;
+                var mark = hs[i].tagName === "H2" ? "# " : "## ";
+                body = body.slice(0, idx) + "\n\n" + mark + t + "\n\n"
+                     + body.slice(idx + t.length + 2);
+            }
+            return body;
         }
         var selection = "";
         try { selection = (window.getSelection() || "").toString(); } catch (e) {}

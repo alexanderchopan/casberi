@@ -69,6 +69,9 @@ struct NoteProse: View {
     /// `NoteSheetSource.markdownSources`. False draws one paragraph exactly as
     /// this view always has.
     var markdown: Bool = false
+    /// Are `# …` lines section titles in a NON-markdown body? A scraped
+    /// article only — see `NoteSheet.blocks(_:markdown:headings:)`.
+    var headings: Bool = false
     /// Does `[[this]]` mean something here? Obsidian only.
     var wikilinks: Bool = false
     /// Walks an inline wikilink. nil leaves them drawn but inert, which is why
@@ -103,7 +106,7 @@ struct NoteProse: View {
     @State private var expanded = false
 
     private var blocks: [NoteSheet.Block] {
-        NoteSheet.blocks(text, markdown: markdown)
+        NoteSheet.blocks(text, markdown: markdown, headings: headings)
     }
 
     private var shown: [NoteSheet.Block] {

@@ -503,6 +503,17 @@ print("The body's own structure (prd §399)")
 // the whole point of the per-source fact. A dash somebody typed is a dash.
 check("a non-markdown body takes no markers",
       NoteSheet.blocks("- milk\n- bread", markdown: false) == [.paragraph("- milk\n- bread")])
+// …unless the ONE marker a scraped article carries is asked for by name
+// (prd §645 amendment 5): `headings: true` admits `# …` lines and nothing
+// else, so a section title draws as one while a dash stays a dash.
+check("headings: true admits a section title in a non-markdown body",
+      NoteSheet.blocks("# How it works\n\nBody.", markdown: false, headings: true)
+        == [.heading(level: 1, text: "How it works"), .paragraph("Body.")])
+check("…and still takes no other marker",
+      NoteSheet.blocks("# Title\n\n- milk", markdown: false, headings: true)
+        == [.heading(level: 1, text: "Title"), .paragraph("- milk")])
+check("without the flag a # line is prose",
+      NoteSheet.blocks("# Title", markdown: false) == [.paragraph("# Title")])
 // …but a blank line ends a paragraph for EVERY source (2026-08-21). The flag
 // governs markers, not splitting. Without this the body is one block, `folded`
 // has nothing to cut between, and every non-markdown source keeps the

@@ -80,7 +80,7 @@ grep -q 'ReadableBody.limit' "$PARSE" \
 # whitespace to one space was half of the wall of text.
 JS="Casberi/ShareExtension/SharePreprocessor.js"
 [[ -f "$JS" ]] || { echo "✗ $JS not found"; exit 1; }
-if grep -qF 'replace(/\s+/g, " ")' "$JS"; then
+if grep -qF 'body.replace(/\s+/g, " ")' "$JS"; then
   echo "✗ SharePreprocessor.js collapses newlines again — a shared page is one paragraph"
   exit 1
 fi
@@ -242,6 +242,11 @@ check("inline script never reaches the body",
       !(ReadableParse.parseReadable(in: scripted) ?? "").contains("gotcha"))
 check("…and the paragraph around it survives",
       (ReadableParse.parseReadable(in: scripted) ?? "").contains("The story begins here"))
+// The floor on its own: a scrap that PASSES the prose test (it has a full
+// stop) and sits under 24 characters is still not a paragraph.
+let scrapBeside = "<html><body><main>" + p("Log in.") + prose(1) + "</main></body></html>"
+check("a short scrap beside a real paragraph is dropped by the floor alone",
+      !(ReadableParse.parseReadable(in: scrapBeside) ?? "").contains("Log in."))
 check("a page whose only text is under the 24-char floor returns nil",
       ReadableParse.parseReadable(in: "<html><body><main>" + p("Too short.")
                                       + "</main></body></html>") == nil)
@@ -319,6 +324,46 @@ check("compose: no article means the description",
       ReadableBody.compose(description: "A lede.", article: "") == "A lede.")
 check("compose: no description means the article",
       ReadableBody.compose(description: nil, article: "The piece.") == "The piece.")
+
+// ── section titles (prd §645 amendment 5) ─────────────────────────────────
+print("\nsection titles")
+func h2(_ s: String) -> String { "<h2 class=\"x\">\(s)</h2>" }
+func h3(_ s: String) -> String { "<h3>\(s)</h3>" }
+let sectioned = "<html><body><main><h1>The Title</h1>" + prose(1)
+    + h2("How it works") + prose(2) + prose(3)
+    + h3("A finer <em>point</em>") + prose(4)
+    + h2("Related stories") + h2("Most popular")
+    + "</main></body></html>"
+let sec = ReadableParse.parseReadable(in: sectioned) ?? ""
+let secBlocks = sec.components(separatedBy: sep)
+check("an <h2> is a `# ` line between its paragraphs",
+      secBlocks.contains("# How it works"))
+check("…in document order", secBlocks.firstIndex(of: "# How it works") == 1)
+check("an <h3> is a `## ` line, inner tags stripped",
+      secBlocks.contains("## A finer point"))
+check("the page's <h1> is not in the body", !sec.contains("The Title"))
+check("a heading with no paragraph under it is dropped",
+      !sec.contains("Related stories") && !sec.contains("Most popular"))
+check("a heading takes no 24-character floor",
+      ReadableParse.blocks(in: h2("Why") + prose(1), limit: 10)
+        .contains(.heading(level: 1, "Why")))
+check("…but has its own bound",
+      !(ReadableParse.parseReadable(in: "<main>" + h2("Hi") + prose(1) + "</main>") ?? "")
+        .contains("# Hi"))
+check("`paragraphs(in:)` still returns paragraphs only",
+      ReadableParse.paragraphs(in: h2("How it works") + prose(1), limit: 10).count == 1)
+// The draw-time half: a marked body from the share script.
+check("paragraphed keeps a heading as its own block",
+      ReadableBody.paragraphed("# Title" + sep + flat).components(separatedBy: sep).first == "# Title")
+check("…and does not fold it into a sentence group",
+      ReadableBody.paragraphed("# Title" + sep + flat).components(separatedBy: sep).count == 1 + 4)
+check("a trailing heading is dropped at draw time",
+      ReadableBody.paragraphed("Body here." + sep + "# Related") == "Body here.")
+check("a heading straight before another is dropped, the second kept",
+      ReadableBody.paragraphed("# One" + sep + "# Two" + sep + "Body here.")
+        == "# Two" + sep + "Body here.")
+check("a paragraph that merely starts with # is not a heading",
+      !ReadableBody.isHeading("#1 in the charts. It sold.") && !ReadableBody.isHeading("####### deep"))
 
 print(failures == 0 ? "\nAll assertions passed." : "\n\(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
@@ -402,13 +447,13 @@ mutate "script stripping dropped" ReadableParse.swift \
 # 6. The de-dupe dropped, so eight identical chrome blocks are drawn eight
 #    times — the thing that makes a wide limit safe.
 mutate "the de-dupe dropped" ReadableParse.swift \
-  '.filter { $0.count > 24 && seen.insert($0).inserted }' \
-  '.filter { $0.count > 24 }'
+  'guard text.count > 24, seen.insert(text).inserted else { continue }' \
+  'guard text.count > 24 else { continue }'
 
 # 7. The 24-character floor dropped, so nav scraps rejoin.
 mutate "the short-piece floor dropped" ReadableParse.swift \
-  '.filter { $0.count > 24 && seen.insert($0).inserted }' \
-  '.filter { _ in true }'
+  'guard text.count > 24, seen.insert(text).inserted else { continue }' \
+  'guard seen.insert(text).inserted else { continue }'
 
 # 8. The "nothing readable" floor dropped, so a page with one fragment returns
 #    a body and the sheet draws a scrap under a preview card.
@@ -423,8 +468,30 @@ mutate "paragraphs joined with a space again" ReadableParse.swift \
 
 # 9b. The draw-time rule dropped: a flat body stays flat.
 mutate "the sentence-grouping rule dropped" ReadableBody.swift \
-  '.flatMap(grouped)' \
-  '.map { $0 }'
+  'out.append(contentsOf: grouped(block))' \
+  'out.append(block)'
+
+# 9e. Headings out of the walk again — the parse reads only <p>, and a long
+#     explainer loses its section titles (prd §645 amendment 5).
+mutate "headings dropped from the walk" ReadableParse.swift \
+  '<(p|h2|h3)\\b[^>]*>(.*?)</\\1\\s*>' \
+  '<(p)\\b[^>]*>(.*?)</\\1\\s*>'
+
+# 9f. A heading no longer held for its paragraph, so "Related stories" is
+#     drawn as a section title over nothing.
+mutate "a heading with no section is kept (parse)" ReadableParse.swift \
+  'pendingHeading = String(repeating: "#", count: level) + " " + text' \
+  'lines.append(String(repeating: "#", count: level) + " " + text)'
+
+# 9g. The draw-time half of the same rule, for a body the share script marked.
+mutate "a heading with no section is kept (draw)" ReadableBody.swift \
+  'if let next, !isHeading(next) { out.append(block) }' \
+  'out.append(block)'
+
+# 9h. An <h2> stored at level 2, so it indents under its own paragraphs.
+mutate "an h2 stored one level deep" ReadableParse.swift \
+  'out.append(.heading(level: tag == "h2" ? 1 : 2, text))' \
+  'out.append(.heading(level: tag == "h2" ? 2 : 3, text))'
 
 # 9c. The abbreviation guard dropped, so "Mr." ends a paragraph.
 mutate "the abbreviation guard dropped" ReadableBody.swift \

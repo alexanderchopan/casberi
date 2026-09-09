@@ -67,11 +67,31 @@ enum ReadableBody {
     static func paragraphed(_ text: String) -> String {
         let normalised = text.replacingOccurrences(of: "\\n[ \\t]*\\n", with: separator,
                                                    options: .regularExpression)
-        return normalised.components(separatedBy: separator)
+        let blocks = normalised.components(separatedBy: separator)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
-            .flatMap(grouped)
-            .joined(separator: separator)
+        // A section title is left as it is, and one with no section under it
+        // — the last block, or a title straight before another — is dropped
+        // (§645 amendment 5). The parse already holds a heading until a
+        // paragraph follows; this is the same rule for a body the share
+        // extension's script marked, which cannot see what follows.
+        var out: [String] = []
+        for (i, block) in blocks.enumerated() {
+            if isHeading(block) {
+                let next = i + 1 < blocks.count ? blocks[i + 1] : nil
+                if let next, !isHeading(next) { out.append(block) }
+                continue
+            }
+            out.append(contentsOf: grouped(block))
+        }
+        return out.joined(separator: separator)
+    }
+
+    /// A `# …` line — the one marker a scraped body carries.
+    static func isHeading(_ block: String) -> Bool {
+        let hashes = block.prefix(while: { $0 == "#" })
+        return !hashes.isEmpty && hashes.count <= 6 && block.dropFirst(hashes.count).hasPrefix(" ")
+            && !block.contains("\n")
     }
 
     /// One block, as the paragraphs it should be.

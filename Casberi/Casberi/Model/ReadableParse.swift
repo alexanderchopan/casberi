@@ -84,30 +84,66 @@ enum ReadableParse {
     /// 2026-09-08. That was the right bound for text nobody could read — see
     /// the constants for the fifteen pages that retired it.
     static func parseReadable(in html: String) -> String? {
-        var pieces: [String] = []
+        var pieces: [Piece] = []
         // The meta description lives in <head>, so read it off the whole page;
         // paragraphs come from the main CONTENT region (below), which skips the
         // header/nav chrome that would otherwise lead the excerpt with menu
         // scraps ("About · Search · Log in"). Narrowing generalizes across
         // sites, not just one (review 2026-07-15).
-        if let desc = ReadableParse.metaDescription(in: html) { pieces.append(desc) }
-        pieces.append(contentsOf: ReadableParse.paragraphs(in: ReadableParse.contentRegion(html), limit: maxParagraphs))
+        if let desc = ReadableParse.metaDescription(in: html) { pieces.append(.paragraph(desc)) }
+        pieces.append(contentsOf: ReadableParse.blocks(in: ReadableParse.contentRegion(html), limit: maxParagraphs))
 
         // De-dupe (a description often repeats the first paragraph). Each
         // piece is flattened to one line, and the pieces are joined with a
         // BLANK LINE, not a space (prd §645 amendment 4): the page's own
         // paragraphs are the breaks the sheet draws, and joining them with a
         // space was the wall of text. See `ReadableBody.separator`.
+        //
+        // A HEADING is held until a paragraph follows it (§645 amendment 5):
+        // a section title with no section under it is chrome — "Related
+        // stories", "Most popular" — or the last title on a page whose body
+        // the cap will cut anyway. Headings take no 24-character floor (a
+        // real one is "The bottom line") and no prose test (none carries a
+        // full stop); their own bound is 3…120 characters.
         var seen = Set<String>()
-        let text = pieces
-            .map { $0.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
-                     .trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { $0.count > 24 && seen.insert($0).inserted }   // skip nav scraps
+        var lines: [String] = []
+        var pendingHeading: String?
+        for piece in pieces {
+            switch piece {
+            case .heading(let level, let raw):
+                let text = ReadableParse.flattened(raw)
+                guard text.count >= 3, text.count <= 120 else { continue }
+                pendingHeading = String(repeating: "#", count: level) + " " + text
+            case .paragraph(let raw):
+                let text = ReadableParse.flattened(raw)
+                guard text.count > 24, seen.insert(text).inserted else { continue }   // skip nav scraps
+                if let heading = pendingHeading { lines.append(heading); pendingHeading = nil }
+                lines.append(text)
+            }
+        }
+        let text = lines
             .joined(separator: ReadableBody.separator)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard text.count >= 40 else { return nil }
         return text.count > ReadableBody.limit
             ? String(text.prefix(ReadableBody.limit)) + "…" : text
+    }
+
+    /// One block of the content region, in document order.
+    ///
+    /// A heading's `level` is the level it takes IN THE BODY: an `<h2>` is 1
+    /// and an `<h3>` is 2, because the page's `<h1>` is the title and is not
+    /// part of the text. `NoteProse` indents by level, so a section title at
+    /// 1 sits flush with its paragraphs the way it does on the page.
+    enum Piece: Equatable {
+        case heading(level: Int, String)
+        case paragraph(String)
+    }
+
+    /// One piece's text on one line.
+    static func flattened(_ s: String) -> String {
+        s.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// The HTML from the first main-content marker onward — `<main>`,
@@ -139,33 +175,55 @@ enum ReadableParse {
     }
 
     /// Text inside the first `<p>` blocks, inner tags stripped and entities
-    /// decoded — a cheap readability pass, no DOM. Scripts/styles are dropped
-    /// first so an inline `<script>` can't leak code into the excerpt.
+    /// decoded — a cheap readability pass, no DOM. Headings dropped; see
+    /// `blocks(in:limit:)`, which this reads through.
     static func paragraphs(in html: String, limit: Int) -> [String] {
+        blocks(in: html, limit: limit).compactMap {
+            if case .paragraph(let text) = $0 { return text } else { return nil }
+        }
+    }
+
+    /// The content region's `<p>`, `<h2>` and `<h3>` blocks in document order,
+    /// inner tags stripped and entities decoded — a cheap readability pass, no
+    /// DOM. Scripts/styles are dropped first so an inline `<script>` can't leak
+    /// code into the excerpt. `limit` bounds the PARAGRAPHS; headings ride
+    /// free, because a page has few and the cap is the real bound.
+    ///
+    /// Section titles joined the walk in §645 amendment 5: a long explainer
+    /// has five of them, and with only its `<p>`s taken it read as one
+    /// unsigned stretch even after amendment 4 gave it paragraphs.
+    static func blocks(in html: String, limit: Int) -> [Piece] {
         let cleaned = html
             .replacingOccurrences(of: "<script[^>]*>.*?</script>", with: " ",
                                   options: [.regularExpression, .caseInsensitive])
             .replacingOccurrences(of: "<style[^>]*>.*?</style>", with: " ",
                                   options: [.regularExpression, .caseInsensitive])
         guard let re = try? NSRegularExpression(
-            pattern: "<p[^>]*>(.*?)</p>",
+            pattern: "<(p|h2|h3)\\b[^>]*>(.*?)</\\1\\s*>",
             options: [.dotMatchesLineSeparators, .caseInsensitive]) else { return [] }
         let ns = cleaned as NSString
-        var out: [String] = []
+        var out: [Piece] = []
+        var paragraphs = 0
         for match in re.matches(in: cleaned, range: NSRange(location: 0, length: ns.length)) {
-            guard match.numberOfRanges > 1 else { continue }
-            let inner = ns.substring(with: match.range(at: 1))
+            guard match.numberOfRanges > 2 else { continue }
+            let tag = ns.substring(with: match.range(at: 1)).lowercased()
+            let inner = ns.substring(with: match.range(at: 2))
             let stripped = inner
                 .replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
             let text = ReadableParse.decodeEntities(stripped)
                 .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { continue }
+            if tag != "p" {
+                out.append(.heading(level: tag == "h2" ? 1 : 2, text))
+                continue
+            }
             // Keep prose, drop chrome: a real paragraph carries a sentence
             // (a period), while nav/menu `<p>`s ("About · Search · Log in") run
             // long without one — those would only add noise to the index.
             let isProse = text.contains(". ") || text.hasSuffix(".")
-            if !text.isEmpty, isProse { out.append(text) }
-            if out.count >= limit { break }
+            if isProse { out.append(.paragraph(text)); paragraphs += 1 }
+            if paragraphs >= limit { break }
         }
         return out
     }

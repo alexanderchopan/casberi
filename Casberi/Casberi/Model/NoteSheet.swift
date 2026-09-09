@@ -294,7 +294,13 @@ enum NoteSheet {
     /// fold, and every non-markdown source was left with the twelve-line clamp
     /// this whole pass exists to replace. Markers, fences and thematic breaks
     /// stay gated; paragraph breaks are universal.
-    static func blocks(_ text: String, markdown: Bool) -> [Block] {
+    ///
+    /// **`headings` admits SECTION TITLES and nothing else (prd §645 amendment
+    /// 5, 2026-09-08).** A scraped article is not markdown — a `*` in it is an
+    /// asterisk — but its `<h2>`/`<h3>` are real structure, and the parse
+    /// stores them as `# …` / `## …` lines. The flag lets a non-markdown body
+    /// draw those as headings while every other marker stays literal.
+    static func blocks(_ text: String, markdown: Bool, headings: Bool = false) -> [Block] {
         let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !body.isEmpty else { return [] }
 
@@ -347,6 +353,9 @@ enum NoteSheet {
             // paragraph. See the type doc — this is deliberately OUTSIDE the
             // `markdown` gate.
             if line.isEmpty { flush(); continue }
+            if headings, !takesMarkers, let block = leader(line), case .heading = block {
+                flush(); out.append(block); continue
+            }
             if takesMarkers {
                 // A thematic break draws nothing — the design system has no
                 // hairlines — so it acts as the paragraph break it already is
