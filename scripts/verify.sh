@@ -3286,10 +3286,17 @@ else
   # Every shape the app can draw. Hand-maintained against the five `Shape`
   # enums, `WorkStage.Face` and `MoneyReceipt` — the same contract the
   # room-head map above keeps, and the same rule: add a shape, add a row.
+  # `agent.grant` is NOT here (2026-09-08). §638 retired the 1Claw seat and
+  # kept the grant sheet only for rows connected before that build — check D
+  # forbids the demo claiming a seat the catalog no longer offers, so no demo
+  # can reach it by ruling. It stayed in this list for two days and the pass
+  # was green anyway: the sim's store still held 1Claw rows poured before the
+  # retirement, and `pourIfNeeded` never removes a row. A fresh store is what
+  # found it. The shape itself is alive for its shipped rows (prd §638).
   EXPECTED_SHAPES=(
     social.post social.person social.save social.transcript
     note.entry note.note note.passage
-    agent.conversation agent.grant
+    agent.conversation
     purchase.receipt purchase.watch
     work.words work.code work.money work.stars
     money.receipt life.facts
