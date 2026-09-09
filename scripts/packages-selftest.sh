@@ -38,7 +38,8 @@ PKG="Casberi/Casberi/Model/PackageWatchBridge.swift"
 REFRESH="Casberi/Casberi/Model/BridgeRefresh.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
-for f in "$PKG" "$REFRESH" "$REACH" "$CATALOG"; do
+SCREEN="Casberi/Casberi/Screens/PackageWatchScreen.swift"
+for f in "$PKG" "$REFRESH" "$REACH" "$CATALOG" "$SCREEN"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -105,6 +106,25 @@ done
 # today.
 grep -q 'if firstSight, published == nil' "$PKG" \
   || { echo "✗ the silent-seed branch is gone — first sight could stamp an old release as today"; exit 1; }
+
+# THE TWO HALVES MUST AGREE ABOUT WHAT IDENTIFIES A ROW. The screen's week
+# counts and its unwatch prune both read the package name back out of
+# `sourceRef`, because the ingest stamps no `authorHandle` — a package is not a
+# person. This SHIPPED broken the other way round: `countWeek` keyed off
+# `authorHandle` under a comment claiming the ingest stamped it, and since
+# `AccountWeek.counts` skips a nil key, every row read "quiet this week"
+# forever — a wrong number that renders perfectly, in the exact shape §287's
+# empty-room note warns about. Nothing else could see it: the count is real, it
+# is just always zero, which is indistinguishable from a quiet week.
+absent_in_code "$SCREEN" 'authorHandle' \
+  "the package screen reads authorHandle — the ingest stamps none, so every count is silently 0"
+absent_in_code "$PKG" 'authorHandle' \
+  "the ingest stamps authorHandle now — either drop it, or the screen may read it"
+# One parser, shared, or a prune and a count disagree about which rows are whose.
+for use in 'PackageShape.name(fromRef: $0.sourceRef' 'PackageShape.name(fromRef: thing.sourceRef'; do
+  grep -qF "$use" "$SCREEN" \
+    || { echo "✗ the screen no longer reads its rows through PackageShape.name(fromRef:)"; exit 1; }
+done
 
 TMP=$(mktemp -d /tmp/packages-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
@@ -218,6 +238,46 @@ check("a deprecation never collides with a release",
 // every version already in the corpus.
 check("refs fold case", PackageShape.releaseRef(.pypi, name: "Flask", version: "3.0.0")
       == "pypi:release:flask:3.0.0")
+
+print("name(fromRef:) — reading a row's package back, the WHOLE identity")
+// The counts and the unwatch prune both run through this. Round-tripping is
+// the assertion that matters: what the ingest minted is what the screen reads.
+check("a release round-trips",
+      PackageShape.name(fromRef: PackageShape.releaseRef(.npm, name: "react", version: "19.2.8"),
+                        registry: .npm) == "react")
+check("a deprecation round-trips",
+      PackageShape.name(fromRef: PackageShape.deprecationRef(.npm, name: "request"),
+                        registry: .npm) == "request")
+// A SCOPED name carries a slash, not a colon — so `maxSplits` must not eat it.
+check("a scoped name round-trips",
+      PackageShape.name(fromRef: PackageShape.releaseRef(.npm, name: "@vercel/og", version: "0.8.1"),
+                        registry: .npm) == "@vercel/og")
+// THE ONE that makes the counts trustworthy: `react` must not claim
+// `react-router`'s releases, in either direction.
+check("react does NOT read as react-router",
+      PackageShape.name(fromRef: "npm:release:react-router:7.1.0", registry: .npm) != "react")
+check("react-router reads whole",
+      PackageShape.name(fromRef: "npm:release:react-router:7.1.0", registry: .npm) == "react-router")
+// `requests` exists on BOTH registries; a PyPI row must not be counted on npm's
+// page, or one seat's week is the other's.
+check("a PyPI row is not npm's",
+      PackageShape.name(fromRef: PackageShape.releaseRef(.pypi, name: "requests", version: "2.34.2"),
+                        registry: .npm) == nil)
+check("and it reads on PyPI's own page",
+      PackageShape.name(fromRef: PackageShape.releaseRef(.pypi, name: "requests", version: "2.34.2"),
+                        registry: .pypi) == "requests")
+// Refs are lowercased at mint, and `AccountWeek.counts` lowercases its key, so
+// a row landed under any spelling still finds its watch-list entry.
+check("case folds the way the ref does",
+      PackageShape.name(fromRef: PackageShape.releaseRef(.pypi, name: "Flask", version: "3.0.0"),
+                        registry: .pypi) == "flask")
+// A row with no ref, or another bridge's, must count for nothing rather than
+// for something arbitrary.
+check("no ref → nil",        PackageShape.name(fromRef: nil, registry: .npm) == nil)
+check("another seat's ref → nil",
+      PackageShape.name(fromRef: "rss:item:example.com:123", registry: .npm) == nil)
+check("a truncated ref → nil", PackageShape.name(fromRef: "npm:release", registry: .npm) == nil)
+check("an empty name → nil",   PackageShape.name(fromRef: "npm:release::1.0.0", registry: .npm) == nil)
 
 print("titles — the version trails, a deprecation leads")
 // Both a package name and a semver are short, so the 80-char clamp isn't in

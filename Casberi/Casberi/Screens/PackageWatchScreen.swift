@@ -79,11 +79,18 @@ struct PackageWatchScreen: View {
         }
     }
 
-    /// This week's releases per package — the ingest stamps the package name
-    /// as the thing's `authorHandle`.
+    /// This week's releases per package, keyed off each row's REF.
+    ///
+    /// The ingest stamps no `authorHandle` — a package is not a person — so
+    /// the identity is read back out of `sourceRef`, which carries the
+    /// lowercased name by construction (`PackageShape.name(fromRef:)`, the
+    /// same parser `unwatch` prunes with). Radicle, the other keyless watch
+    /// list with nothing author-shaped to stamp, reads its rows the same way.
     private func countWeek() {
         weekly = AccountWeek.counts(source: registry.displayName, seatID: registry.bridgeID,
-                                    context: modelContext) { $0.authorHandle }
+                                    context: modelContext) {
+            PackageShape.name(fromRef: $0.sourceRef, registry: registry)
+        }
     }
 
 
@@ -140,19 +147,13 @@ struct PackageWatchScreen: View {
 
     private func unwatch(_ name: String) {
         packages.remove(registry, name)
-        // Its rows leave with it (prd §286). Every release ref is prefixed
-        // with the registry and the lowercased package name, which is what
-        // makes this matchable without parsing a title.
-        let prefix = "\(registry.rawValue):"
+        // Its rows leave with it (prd §286). Every ref carries the registry
+        // and the lowercased package name, which is what makes this matchable
+        // without parsing a title — one parser, shared with `countWeek`, so a
+        // prune and a count can never disagree about which rows are whose.
         let needle = name.lowercased()
         FollowPrune.remove(source: registry.displayName, context: modelContext) { thing in
-            guard let ref = thing.sourceRef, ref.hasPrefix(prefix) else { return false }
-            // `npm:release:<name>:<version>` and `npm:deprecated:<name>` — the
-            // name is the component after the shape, and it is matched WHOLE
-            // rather than by `contains`, or unwatching `react` would also take
-            // every row belonging to `react-router`.
-            let parts = ref.split(separator: ":", maxSplits: 3).map(String.init)
-            return parts.count >= 3 && parts[2] == needle
+            PackageShape.name(fromRef: thing.sourceRef, registry: registry) == needle
         }
         DSHaptic.tap()
         Task { await sync() }

@@ -281,6 +281,29 @@ enum PackageShape {
         "\(registry.rawValue):deprecated:\(name.lowercased())"
     }
 
+    /// The watched package a landed row belongs to, read back out of its ref.
+    ///
+    /// `npm:release:<name>:<version>` and `npm:deprecated:<name>` — the name is
+    /// the component after the shape, already lowercased at mint time. Read
+    /// from the REF and not from a field, because the ingest stamps no author:
+    /// a package is not a person, and `authorHandle` is where the seats with a
+    /// real publisher (RSS, Shopify, Hugging Face) put one. Matched WHOLE
+    /// rather than by `contains`, or `react` would claim every `react-router`
+    /// row; scoped to the registry, so `requests` on PyPI and `requests` on
+    /// npm stay two packages (the two registries share a namespace shape, not
+    /// a namespace).
+    static func name(fromRef ref: String?, registry: PackageRegistry) -> String? {
+        guard let ref, ref.hasPrefix("\(registry.rawValue):") else { return nil }
+        // `omittingEmptySubsequences: false`, deliberately: the default DROPS an
+        // empty component, so a malformed `npm:release::1.0.0` would shift the
+        // version into the name's slot and count a row against a package called
+        // `1.0.0`. Reading positionally means the positions must be real.
+        let parts = ref.split(separator: ":", maxSplits: 3, omittingEmptySubsequences: false)
+            .map(String.init)
+        guard parts.count >= 3, !parts[2].isEmpty else { return nil }
+        return parts[2]
+    }
+
     /// Whether a search result really IS the package that was asked for.
     ///
     /// The one guard that makes npm's date lookup safe. `text=react` ranks
