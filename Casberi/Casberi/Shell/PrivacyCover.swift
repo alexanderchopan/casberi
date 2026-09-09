@@ -145,11 +145,20 @@ enum PrivacyCover {
     /// mark. Opaque by construction — `DSPageBackground` paints `DS.themedPage`
     /// edge to edge — so there is nothing to see through and no per-view
     /// hiding to get wrong.
+    ///
+    /// 96, not 56 (user, 2026-09-08: "on the load screen there is a small
+    /// octopus, should it be larger?"). 56 is the intro cover's size, where
+    /// the mark is a signature above a headline and the tiles are the moment;
+    /// here it stands ALONE on an empty page, and 56 is smaller than the ~60pt
+    /// app icon the person just tapped in the switcher, so it read as a lost
+    /// glyph rather than the brand. 96 is the size at which a lone mark
+    /// carries a page without becoming a poster. The two covers deliberately
+    /// do NOT share a size — different jobs.
     private struct CoverContent: View {
         var body: some View {
             ZStack {
                 DSPageBackground()
-                CasberiMark(size: 56)
+                CasberiMark(size: 96)
             }
             .ignoresSafeArea()
         }
