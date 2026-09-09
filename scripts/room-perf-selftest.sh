@@ -412,6 +412,38 @@ else
   fail "SourceChips.swift is missing"
 fi
 
+# B8. A ROW MET BY SCROLLING ARRIVES AT REST, AND THE MENU IS BUILT ON PRESS
+#     (prd §660, 2026-09-09 — user: "it's not great on scrolling"). Three
+#     costs inside the scroll's own frames, each build-green and each drawing
+#     a room that looks right: the row's context menu derived its verbs per
+#     row build (a `content` fault plus a detector pass in the All room);
+#     every row that scrolled in waited out the first screen's stagger
+#     (`min(index, 12) × step`) invisible before its fade; and the resting
+#     look's `drawHierarchy` fired inside a scroll still under the fold's
+#     60pt floor.
+check "a row appearing after the cascade window shows at rest, unanimated" \
+      "$FEED" 'if let waveAt, Date\.timeIntervalSinceReferenceDate - waveAt >= Self\.cascadeWindow \{ shown = true; return \}' yes
+check "the entrance helper passes the wave's stamp to every row" \
+      "$FEED" 'instant: rowBudget != nil, waveAt: shapeWaveAt' yes
+# Counted, not grepped for a shape: a bump anywhere in the file without its
+# stamp beside it leaves every later scrolled-in row inside the window — the
+# stagger back, invisibly. The mount's own stamp is the plus one.
+bumps="$(grep -c 'shapeWave += 1' "$FEED_STRIPPED" || true)"
+stamps="$(grep -c 'shapeWaveAt = Date.timeIntervalSinceReferenceDate' "$FEED_STRIPPED" || true)"
+if (( bumps >= 1 && stamps == bumps + 1 )); then
+  ok "every wave bump stamps its time ($bumps bumps, plus the mount)"
+else
+  fail "a shapeWave bump without its shapeWaveAt stamp ($bumps bumps, $stamps stamps; the mount is one)"
+fi
+checkm "the row's verbs are derived when the menu rises, not when the row builds" \
+       "$FEED" '\.contextMenu \{\s*RowVerbMenu\(thing: thing, room: source\)' yes
+# Negative: `contextMenu(menuItems:)` is non-escaping, so anything between the
+# brace and its first closing brace runs per row per body build.
+checkm "nothing in the menu builder derives verbs inline" \
+       "$FEED" '\.contextMenu \{[^}]*VerbDerivation\.verbs' no
+check "the resting look is not captured while the feed is moving" \
+      "$MAIN" 'chrome\.fold == 0, !chrome\.scrolling else \{ return \}' yes
+
 # ------------------------------------------------------------ the instrument
 
 # The clock must cost nothing in a shipped build that was not asked to report.
@@ -738,6 +770,18 @@ mutate "scrolling becomes a body dependency (a rebuild per scroll phase)"  chrom
   's/\@ObservationIgnored var scrolling = false/var scrolling = false/' || mfails=$((mfails + 1))
 mutate "the dock's flick stops holding the lift (only the finger does)"  chips \
   's/let busy = viewport\.fingerDown \|\| viewport\.moving/let busy = viewport.fingerDown/' || mfails=$((mfails + 1))
+
+# B8 (prd §660, 2026-09-09). Each is the shipped shape, restored.
+mutate "a scrolled-in row waits out the first screen's stagger again"  feed \
+  's/\n\s*if let waveAt, Date\.timeIntervalSinceReferenceDate - waveAt >= Self\.cascadeWindow \{ shown = true; return \}//' || mfails=$((mfails + 1))
+mutate "the entrance helper stops passing the stamp"  feed \
+  's/instant: rowBudget != nil, waveAt: shapeWaveAt/instant: rowBudget != nil/' || mfails=$((mfails + 1))
+mutate "a wave bump stops stamping its time"  feed \
+  's/(shapeWave \+= 1)\n(\s*)shapeWaveAt = Date\.timeIntervalSinceReferenceDate/$1/' || mfails=$((mfails + 1))
+mutate "the menu derives its verbs per row build again"  feed \
+  's/RowVerbMenu\(thing: thing, room: source\) \{ run\(\$0, on: \$1\) \}/let verbs = VerbDerivation.verbs(for: thing)\n                if let v = verbs.first { Button { run(v, on: thing) } label: { Text(v.label) } }/' || mfails=$((mfails + 1))
+mutate "the resting look is captured mid-scroll again"  main \
+  's/chrome\.fold == 0, !chrome\.scrolling else \{ return \}/chrome.fold == 0 else { return }/' || mfails=$((mfails + 1))
 
 # Section D (prd §600). Each of these builds green and renders a room that
 # looks entirely correct while making a false claim about it, or pays back the

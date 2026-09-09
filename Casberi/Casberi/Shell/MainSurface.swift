@@ -2292,9 +2292,13 @@ struct MainSurface: View {
     /// sheet over the pager (the capture would be of them), the scene not
     /// active, or a feed already scrolled (`chrome.fold > 0` — the draw
     /// would land mid-scroll as a hitch, and a snapshot of the top of a room
-    /// the person has left the top of is stale on arrival anyway). A room
-    /// with no look shows its mark on the page, which is the carousel's
-    /// documented fallback.
+    /// the person has left the top of is stale on arrival anyway) **or still
+    /// moving (`chrome.scrolling`, 2026-09-09, prd §660)** — the fold has a
+    /// 60pt floor, so a scroll begun inside the first 0.9s and still under
+    /// it at the tick read as "at the top" and admitted a 20–40ms
+    /// `drawHierarchy` into the frames of the scroll it was meant to avoid.
+    /// A room with no look shows its mark on the page, which is the
+    /// carousel's documented fallback.
     ///
     /// The 2026-09-06 "two sets of text" guard (capture only after the room
     /// has been on screen half a second) is kept by construction: the sleep
@@ -2304,7 +2308,7 @@ struct MainSurface: View {
         guard !Task.isCancelled, scenePhase == .active, route.path.isEmpty,
               chrome.pageDragX == 0, chrome.pageDragTarget == nil,
               !chrome.walkModalOpen, !chrome.walkSheetOpen,
-              chrome.fold == 0 else { return }
+              chrome.fold == 0, !chrome.scrolling else { return }
         RoomSnapshots.capture(source: filter.source, frame: chrome.pagerFrame)
     }
 

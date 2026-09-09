@@ -1723,6 +1723,12 @@ struct FeedScreen: View {
     }
 
     @State private var shapeWave = 0
+    /// When `shapeWave` last moved — the mount, then every bump (PERF
+    /// 2026-09-09, prd §660). `RowEntrance.waveAt`: a row appearing more than
+    /// `RowEntrance.cascadeWindow` after this was met by scrolling, not by the
+    /// room's arrival, and shows at rest instead of waiting out a stagger
+    /// sized for the first screen.
+    @State private var shapeWaveAt = Date.timeIntervalSinceReferenceDate
     /// Latches on the FIRST landing so the row entrance plays once, not on
     /// every swipe back to this page (2026-07-30 swipe-smoothness — see
     /// `land()`).
@@ -2099,7 +2105,7 @@ struct FeedScreen: View {
     /// `wave` change, and this is neither.
     private func rowEntrance(_ index: Int) -> RowEntrance {
         RowEntrance(index: index, wave: shapeWave, style: entranceStyle,
-                    instant: rowBudget != nil)
+                    instant: rowBudget != nil, waveAt: shapeWaveAt)
     }
 
     /// How this shape's rows arrive: the agenda slides in from the leading
@@ -7831,6 +7837,7 @@ struct FeedScreen: View {
         if !hasLanded {
             hasLanded = true
             shapeWave += 1
+            shapeWaveAt = Date.timeIntervalSinceReferenceDate
         }
         streamBlock()
         loadWalletLive()
@@ -10939,108 +10946,21 @@ struct FeedScreen: View {
             // long-press is what's left, and it's what the Home board has used
             // for Open/Unpin all along (`GenRenderer.pinnedRowActions`).
             .contextMenu {
-                // Derived ONCE for the whole menu. `contextMenu(menuItems:)`
-                // takes a non-escaping builder, so this runs at body-build time
-                // per row — and `VerbDerivation.verbs` reaches `thing.content`
-                // (one of the heavy inline columns the 2026-07-30 pass
-                // deliberately leaves out of the All room's `propertiesToFetch`)
-                // and runs an `NSDataDetector` pass over it. Asking twice, once
-                // for the open verb and once for the rest, doubled a per-row
-                // fault and a per-row detector run against the exact
-                // optimization that pass exists for.
-                //
-                // AMENDMENT (2026-09-01): the detector half of that paragraph
-                // is STALE and left standing because the rest of it is why
-                // this is one call. §260/§262 moved all three scans out —
-                // `placeURL`/`telURL`/`mailtoURL` are stamped once by
-                // `VerbDetection.backfill` off the main actor and merely READ
-                // here as `detectedPlace`/`detectedTel`/`detectedMailto`. The
-                // `content` fault is the part that is still true, and only in
-                // the All room, whose query sets `propertiesToFetch` while a
-                // source room's does not.
-                //
-                // MEASURED BY NOTHING (perf-spec P3). No instrument in this
-                // app covers scroll or per-row render cost, so what this costs
-                // per row per body build is unknown — which is precisely why
-                // it is being measured rather than memoised. The obvious fix
-                // (a `DerivationMemo` entry keyed by `corpusRevision`) is
-                // deliberately NOT taken here: it would be a guess dressed as
-                // a fix, and this repo's own record is that every tuned guess
-                // died and every structural fix held.
-                //
-                // Bracketed by room because the rooms differ in the one way
-                // that matters: All faults `content` per row, a source room
-                // has it hydrated already. One label for both would average
-                // the question away. `perfAccum`'s totals are a documented
-                // FLOOR (a 250ms report throttle, so the final sub-throttle
-                // window is missing from the last line) and it compiles out
-                // entirely in Release.
-                //
-                // If `perf.sh` prints this as `  ms over  calls`, the label
-                // is fine and the reader is not: its accumulator loop greps
-                // `accum=$label ` as a REGEX, so `[All]` reads as a character
-                // class. `feedList[All]` has reported blank that way in every
-                // recorded run since it landed (see any
-                // `scripts/output/*/perf.txt`). `grep -F` is the fix, and it
-                // is the same `-F` lesson `verify-mac.sh`'s span breakdown
-                // already paid for. Read the raw `accum=` lines meanwhile.
-                let verbs = perfAccum("rowVerbs[\(source)]") {
-                    VerbDerivation.verbs(for: thing)
-                }
-                if let openVerb = verbs.first(where: {
-                    if case .openURL = $0.action { return true } else { return false }
-                }) {
-                    Button {
-                        run(openVerb, on: thing)
-                    } label: {
-                        Label("Open in app", systemImage: "arrow.up.right")
-                    }
-                }
-                // The row's OTHER derived reads (2026-07-31). This menu is the
-                // whole verb surface for a row — the both-edge swipe was
-                // measured unreachable inside a paged TabView and retired on
-                // 2026-07-16 — and it had been carrying exactly one of the
-                // verbs `VerbDerivation` produces, so Translate (a read, over
-                // the thing's own text) existed for every row in the corpus
-                // and was reachable from none of them.
-                //
-                // READS ONLY, which the swipe ruling already settled and this
-                // menu inherits: writes confirm in the sheet, Copy is
-                // sheet-only, and Approve/Deny are consent — a consent action
-                // fired from a right-click menu is precisely the kind of
-                // one-slip yes S10 exists to prevent.
-                if let translate = verbs.first(where: {
-                    if case .translate = $0.action { return true } else { return false }
-                }) {
-                    Button {
-                        run(translate, on: thing)
-                    } label: {
-                        Label(translate.label, systemImage: translate.icon)
-                    }
-                }
-                // PIN (2026-08-10). This menu's own doc calls itself READS
-                // ONLY, and a pin is a write, so the exception is stated
-                // rather than assumed: that rule exists to keep a one-slip yes
-                // off anything irreversible or outward-facing ("Approve/Deny
-                // are consent"). A pin reaches no network, tells no service,
-                // and its undo is the identical gesture on the identical row.
-                // It is also the only verb here the person performs ON their
-                // own corpus, so the long-press — the row's whole verb surface
-                // since the swipe was measured unreachable — is the only place
-                // it can live for a row.
-                Button {
-                    let pinned = Pinboard.toggle(thing)
-                    chrome.pinPulse += 1
-                    DSHaptic.tap()
-                    chrome.flash(pinned ? String(localized: "Pinned")
-                                        : String(localized: "Unpinned"))
-                } label: {
-                    Label(Pinboard.isPinned(thing) ? "Unpin" : "Pin",
-                          systemImage: Pinboard.isPinned(thing) ? "pin.slash" : "pin")
-                }
-                ThingShareLink(thing: thing) {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                }
+                // THE MENU IS BUILT WHEN IT RISES, NOT WHEN THE ROW DOES (PERF
+                // 2026-09-09, user: "it's not great on scrolling"; prd §660).
+                // `contextMenu(menuItems:)` takes a NON-ESCAPING builder, so
+                // everything once written inline here ran on every row body
+                // build — and the first thing it did was
+                // `VerbDerivation.verbs(for:)`, which reads `thing.content`.
+                // The All room's query leaves that column unfetched on
+                // purpose (`lightColumns`), so every row that scrolled into
+                // view paid a SwiftData fault and an `NSDataDetector` pass on
+                // the main thread, inside the scroll, to fill a menu nobody
+                // had pressed. `perf-spec.md` P3 named it first and declined
+                // to memoise it. A View's body is lazy — `RowVerbMenu` holds
+                // the thing and derives when the press raises it — so this is
+                // work that no longer runs, not a cache over it.
+                RowVerbMenu(thing: thing, room: source) { run($0, on: $1) }
             } preview: {
                 // What the band could not fit (prd §412a) — the full title, the
                 // picture at a size worth looking at, the opening words. Until
@@ -12187,6 +12107,7 @@ struct FeedScreen: View {
         // the pour read as a stutter every time. The pulse belongs to the
         // gesture, and the gesture happens once.
         shapeWave += 1
+        shapeWaveAt = Date.timeIntervalSinceReferenceDate
         // The haptic lands with the gesture, not after it (user, 2026-07-28:
         // "need pull to refresh snappy"). It sat behind a deliberate 450ms
         // beat — "a short beat lets the pull read before it lands with a soft
@@ -12309,6 +12230,82 @@ struct FeedScreen: View {
 
 
 
+/// A feed row's long-press verbs, derived when the menu RISES (PERF
+/// 2026-09-09, prd §660).
+///
+/// This body used to be the inline content of `shapedListRow`'s
+/// `.contextMenu`, and that builder is non-escaping: SwiftUI evaluates it
+/// while the ROW is built, so the verb derivation — a `content` fault in the
+/// All room plus a detector pass — ran per row per body evaluation, for a menu
+/// that is raised on a fraction of rows. A View's body runs when the view is
+/// drawn, and a menu's content is drawn when the menu is; nothing here costs
+/// the scroll anything.
+///
+/// The verbs are derived ONCE for the whole menu, as before. READS ONLY, which
+/// the swipe ruling settled and this menu inherits: writes confirm in the
+/// sheet, Copy is sheet-only, and Approve/Deny are consent — a consent action
+/// fired from a right-click menu is the one-slip yes S10 exists to prevent.
+/// Pin is the stated exception (2026-08-10): it reaches no network, tells no
+/// service, its undo is the identical gesture on the identical row, and the
+/// long-press is the only verb surface a row has.
+///
+/// Guarded on `isLive` at the top of the body, like `ThingShareLink` below
+/// it: a menu can be up when a heal's delete lands, and SwiftUI re-evaluates
+/// a leaf's body on the model's own observation (liveness corollary 5).
+private struct RowVerbMenu: View {
+    let thing: Thing
+    /// The room the row is drawn in — the `perfAccum` bracket only. The rooms
+    /// differ in the one way that matters: All faults `content` per row, a
+    /// source room has it hydrated already.
+    let room: String
+    let run: (Verb, Thing) -> Void
+    @Environment(ShellChrome.self) private var chrome
+
+    var body: some View {
+        if thing.isLive { menu }
+    }
+
+    @ViewBuilder private var menu: some View {
+        let verbs = perfAccum("rowVerbs[\(room)]") {
+            VerbDerivation.verbs(for: thing)
+        }
+        if let openVerb = verbs.first(where: {
+            if case .openURL = $0.action { return true } else { return false }
+        }) {
+            Button {
+                run(openVerb, thing)
+            } label: {
+                Label("Open in app", systemImage: "arrow.up.right")
+            }
+        }
+        // The row's OTHER derived reads (2026-07-31): Translate is a read over
+        // the thing's own text, and this menu is the only place a row can
+        // reach it.
+        if let translate = verbs.first(where: {
+            if case .translate = $0.action { return true } else { return false }
+        }) {
+            Button {
+                run(translate, thing)
+            } label: {
+                Label(translate.label, systemImage: translate.icon)
+            }
+        }
+        Button {
+            let pinned = Pinboard.toggle(thing)
+            chrome.pinPulse += 1
+            DSHaptic.tap()
+            chrome.flash(pinned ? String(localized: "Pinned")
+                                : String(localized: "Unpinned"))
+        } label: {
+            Label(Pinboard.isPinned(thing) ? "Unpin" : "Pin",
+                  systemImage: Pinboard.isPinned(thing) ? "pin.slash" : "pin")
+        }
+        ThingShareLink(thing: thing) {
+            Label("Share", systemImage: "square.and.arrow.up")
+        }
+    }
+}
+
 /// Rows arrive the way their shape moves (ruling 2026-07-07): a per-shape
 /// offset/scale revealed with a small stagger, replayed when the chip
 /// changes. One animation per moment — this IS the shape's moment.
@@ -12340,6 +12337,28 @@ struct RowEntrance: ViewModifier {
     /// from a chip tap while standing still both keep the entrance, because
     /// there is no page move underneath them to carry the row in.
     var instant: Bool = false
+    /// When the wave this row belongs to began — `FeedScreen.shapeWaveAt`,
+    /// stamped at the screen's mount and beside every `shapeWave` bump (PERF
+    /// 2026-09-09, user: "it's not great on scrolling"; prd §660).
+    ///
+    /// The stagger is `min(index, 12) × step`, and a row deep in a room never
+    /// has an index under twelve — so every row that SCROLLED into view sat
+    /// invisible for the whole cascade's length (0.34s at the default step,
+    /// 0.54s in the calendar) before its fade even began, and the room's
+    /// content arrived a third of a second behind the finger on every flick,
+    /// for as long as the room was scrolled. The cascade is the ROOM's
+    /// arrival; a row met by scrolling arrives at rest. Past `cascadeWindow`
+    /// from the wave, `reveal()` sets `shown` with no animation at all — not a
+    /// delay of zero, which would still run three animated modifiers per
+    /// entering row for the length of the scroll, on the main actor (the
+    /// BerryRain lesson, one row at a time).
+    ///
+    /// Nil means no window: the entrances outside the feed (a shelf card's
+    /// section) are not scrolled into by the row they decorate.
+    var waveAt: TimeInterval? = nil
+    /// Longer than the longest cascade (12 × 0.045 + `DS.Motion.standard`),
+    /// shorter than any scroll that reaches a thirteenth row.
+    static let cascadeWindow: TimeInterval = 1.0
     @State private var shown = false
     /// Added 2026-08-04 (prd §299). This is the entrance EVERY feed row in the
     /// app wears, and it ignored Reduce Motion from the day it shipped —
@@ -12365,6 +12384,8 @@ struct RowEntrance: ViewModifier {
         // both mean "arrive at rest", and the Reduce Motion path must keep
         // working whether or not a swipe is in flight.
         guard !reduceMotion, !instant else { shown = true; return }
+        // A row met by scrolling, after the room's cascade — see `waveAt`.
+        if let waveAt, Date.timeIntervalSinceReferenceDate - waveAt >= Self.cascadeWindow { shown = true; return }
         withAnimation(DS.Motion.standard.delay(Double(min(index, 12)) * style.step)) {
             shown = true
         }

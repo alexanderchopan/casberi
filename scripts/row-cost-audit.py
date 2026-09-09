@@ -85,6 +85,17 @@ CHECKS = [
         "detector pass per row per body evaluation — the scan a §260 amendment says was removed",
     ),
     (
+        "Casberi/Casberi/Screens/FeedScreen.swift",
+        "RowVerbMenu(thing: thing, room: source) { run($0, on: $1) }",
+        # The builder is non-escaping, so anything between `.contextMenu {`
+        # and its first closing brace runs per row per body build. The verbs
+        # read `content` — unfetched in the All room — and run a detector.
+        r"\.contextMenu \{[^}]*VerbDerivation\.verbs",
+        "the row's context menu deriving its verbs inline, per row build (prd §660)",
+        "a `content` fault plus an NSDataDetector pass on the main thread for "
+        "every row that scrolls into view, to fill a menu nobody has pressed",
+    ),
+    (
         "Casberi/Casberi/Design/AppIconTile.swift",
         "if let hit = inkMemo[key] { return hit }",
         # The key must name the PAGE BACKGROUND, which is what `DS.themedPage`
@@ -246,6 +257,12 @@ def self_test():
          lambda t: t.replace(
              "        if let stored = await StoredPixels.prepared(for: thing) {\n            image = stored.image",
              "        if let data = thing.previewImageData, let stored = UIImage(data: data) {\n            image = stored")),
+        ("the row's verbs derive per row build again",
+         "Casberi/Casberi/Screens/FeedScreen.swift",
+         lambda t: t.replace(
+             "RowVerbMenu(thing: thing, room: source) { run($0, on: $1) }",
+             "let verbs = VerbDerivation.verbs(for: thing)\n"
+             "                if let v = verbs.first { Button { run(v, on: thing) } label: { Text(v.label) } }")),
         ("the share menu detects per row again",
          "Casberi/Casberi/Screens/ThingContent.swift",
          lambda t: t.replace("ShareTargetMemo.url(for: thing)", "Capture.detectURL(in: shareText)")),
