@@ -289,12 +289,25 @@ struct DevnetSendPanel: View {
             // above them — the same budget `devnet-console-audit.py` check 1
             // guards, which is why the grid halves the width rather than
             // lengthening the scroll.
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: DevnetConsole.tileGap),
-                                GridItem(.flexible(), spacing: DevnetConsole.tileGap)],
-                      spacing: DevnetConsole.tileGap) {
-                tile(kind: .send)
-                if topUp != nil { tile(kind: .topUp) }
-                ForEach(extras) { extra in tile(kind: .extra(extra)) }
+            //
+            // **A `Grid`, NOT A `LazyVGrid` (user, 2026-09-09: "the send and
+            // top up button overlap the rail").** This panel mounts as its own
+            // List row under the room's fused slab, and a lazy container
+            // inside a List cell reports a height it has not yet laid out —
+            // the cell came up short of two tile rows, and a cell whose
+            // content is taller than itself CENTRES that content, so the top
+            // tiles bled up over the slab above by half the shortfall. A
+            // `Grid` is sized eagerly, the cell is exactly as tall as the
+            // tiles, and `contentGap` is drawn where the section put it. The
+            // two-act branch below never had it: a `VStack` is not lazy.
+            let acts: [Kind] = [.send] + (topUp == nil ? [] : [.topUp]) + extras.map(Kind.extra)
+            Grid(horizontalSpacing: DevnetConsole.tileGap, verticalSpacing: DevnetConsole.tileGap) {
+                ForEach(Array(stride(from: 0, to: acts.count, by: 2)), id: \.self) { i in
+                    GridRow {
+                        tile(kind: acts[i])
+                        if i + 1 < acts.count { tile(kind: acts[i + 1]) }
+                    }
+                }
             }
         } else {
             VStack(spacing: DevnetConsole.tileGap) {

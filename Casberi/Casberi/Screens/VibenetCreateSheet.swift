@@ -43,6 +43,10 @@ struct VibenetCreateSheet: View {
     /// this already learned the exact lesson (see its own comment); this
     /// path just never got the fix applied to it too.
     @State private var createFailure: String?
+    /// The copy row's own confirmation. NOT `chrome.flash` — that toast renders
+    /// behind this modal sheet (see `createFailure`), so a copy that only
+    /// flashed would read as a dead control, the exact class §83 forbids.
+    @State private var copied = false
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
@@ -70,7 +74,10 @@ struct VibenetCreateSheet: View {
         case .checking:        240
         case .refused:         keyFailure == nil ? 388 : 448
         case .ready, .working: 498
-        case .done:            428
+        // The done state carries an address row (caption + mono line) that
+        // the head used to hold as a wrapping secondary; measured against the
+        // ready state's own stack it lands one row taller, not shorter.
+        case .done:            500
         }
     }
 
@@ -245,9 +252,13 @@ struct VibenetCreateSheet: View {
         }
     }
 
+    /// The full address is NOT this line (user, 2026-09-09: "there is
+    /// clipping"): 42 hex characters have no break point, so at `callout15` it
+    /// wrapped mid-string onto a second line and pushed the head's sentence
+    /// under the pinned action. The created state draws it in the body instead,
+    /// monospaced and copyable — see `doneBody`.
     private var headSecondary: String? {
-        if case .done(let account) = phase { return account }
-        return String(localized: "Base vibenet \u{00B7} devnet")
+        String(localized: "Base vibenet \u{00B7} devnet")
     }
 
     /// What it MEANS now — the line that makes a head an answer rather than a
@@ -365,12 +376,48 @@ struct VibenetCreateSheet: View {
     // MARK: - Done
 
     private func doneBody(_ account: String) -> some View {
-        // The address is already in the head's `secondary` and the act is in
-        // `pinnedAction`; what is left is what that act will mean.
-        Text(String(localized: "Watching puts it in this room with your other accounts."))
-            .dsText(.label11)
-            .foregroundStyle(DS.textTertiary)
-            .frame(maxWidth: .infinity)
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            // THE ADDRESS, AS A ROW YOU CAN TAKE (user, 2026-09-09: "after you
+            // create an account should have a copy button"). `HegotaKeySheet`'s
+            // own row: the full value at `mono12`, which fits 42 characters on
+            // one line where `callout15` in the head could not, and a copy
+            // glyph that turns into a tick — the tick because `chrome.flash`
+            // is invisible behind this sheet. `copySensitive`, the vault's
+            // verb: an address is not a secret, but the pasteboard is shared
+            // with every app on the device.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                caption(String(localized: "Address"))
+                Button {
+                    DSHaptic.selection()
+                    DSPasteboard.copySensitive(account)
+                    copied = true
+                } label: {
+                    HStack(alignment: .top, spacing: DS.Space.s2) {
+                        Text(account)
+                            .dsText(.mono12)
+                            .foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.leading)
+                        Spacer(minLength: 0)
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                            .accessibilityHidden(true)
+                            .dsGlyph(12, weight: .semibold)
+                            .foregroundStyle(copied ? DS.confirm : Self.mark)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                .dsHover()
+                .accessibilityLabel(copied ? String(localized: "Address copied")
+                                           : String(localized: "Copy address"))
+            }
+            // The act is in `pinnedAction`; what is left is what it will mean.
+            Text(String(localized: "Watching puts it in this room with your other accounts."))
+                .dsText(.label11)
+                .foregroundStyle(DS.textTertiary)
+                .frame(maxWidth: .infinity)
+        }
     }
 
     /// Is a faucet really on offer — the only state in which this creation
