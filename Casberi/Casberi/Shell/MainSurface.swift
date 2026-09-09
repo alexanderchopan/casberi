@@ -96,6 +96,20 @@ struct MainSurface: View {
     // `.standard` exactly as before.
     @AppStorage("demo.mode.active", store: ScratchDefaults.standard)
     private var demoActive = false
+    /// DEBUG `-hideDemoBanner YES` leaves the demo's standing mark unmounted,
+    /// for App Store captures over the furnished demo (2026-09-08). The mark
+    /// is §83's price for the demo existing — a real user is never shown fake
+    /// numbers unmarked — and a marketing still or preview is not a real
+    /// user's screen: the pill was painted out of every shot by hand until
+    /// this door, and a video cannot be painted frame by frame past the rain.
+    /// DEBUG only, so no shipped build can ever read it.
+    private var hideDemoBanner: Bool {
+        #if DEBUG
+        return UserDefaults.standard.string(forKey: "hideDemoBanner") != nil
+        #else
+        return false
+        #endif
+    }
     /// Anchors the doors' zoom transitions (each room grows from its door).
     @Namespace private var doorNS
 
@@ -479,7 +493,7 @@ struct MainSurface: View {
     /// banner's own capsule was always what made it legible.)
     @ViewBuilder
     private var demoBannerInset: some View {
-        if demoActive {
+        if demoActive && !hideDemoBanner {
             DemoBanner()
                 .padding(.top, ProcessInfo.processInfo.isMacCatalystApp
                          ? DS.Space.s2 : DS.Space.s4)
