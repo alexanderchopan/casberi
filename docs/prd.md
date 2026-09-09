@@ -51943,3 +51943,101 @@ to fire.
 `harness-exists` audits, and an iOS build. **Unseen on a device or a
 simulator** — proving the count on screen needs a package to release while
 something is watching it, which is a wait, not a check.
+
+## §660 — The dock was eleven live glass elements magnifying by layout inside a scroll, and its scrub had never once fired on the user's phone (user: "goddamn the nav bar is still laggy and doesn't scroll properly. please fix, radically" → "it is very buggy!" → "how is the magnifier supposed to work b/c it doesn't really magnify like an apple dock on a mac does" → "i've never been able to scrub it on my device. that has just never worked", 2026-09-09)
+
+§658 and its amendment moved the app's WORK out of the dock's frames — the
+sweep's forty saves, the pictures decoded on main, the room's biggest build
+landing inside the scroll. The strip stayed slow, and this pass is the reason:
+the remaining cost was not work the dock was waiting on, it was **the dock's
+own drawing**, and no measurement was needed to see it once the file was read
+end to end.
+
+**Three findings, each its own defect, each fixed here.**
+
+**1. Glass on glass on scrolling content.** Every chip carried `dsGlass`,
+which on iOS 26 is `glassEffect(...).interactive()` — a live backdrop sample
+with a hit-tested interaction. Eleven of them sat inside a
+`GlassEffectContainer`, which sat inside the dock's own glass slab, which sat
+inside a horizontal `ScrollView`. That is three nested live-sampling layers
+over content that moves every frame, and it is the one arrangement the
+platform's own guidance rules out. **The slab is the glass; the chips are ink
+on it** — the way the Mac dock's icons sit on the dock, and a tab bar's items
+on the bar. The active word keeps its travelling tint fill
+(`matchedGeometryEffect`, §358/§412b, unchanged), the mark chips keep their
+rings, and an inactive word is now a word.
+
+Two documented workarounds were the glass's own consequences and are deleted
+with it: the magnification had to be LAYOUT because a `scaleEffect` over a
+glass fill double-rendered (the container draws glass at the layout frame
+while the content scales), and the melt had to be a viewport `mask` because
+iOS 26 hoists glass above app content so a per-chip `opacity` never reached a
+word capsule ("rkets" standing out from under the octopus). Flat chips scale
+and fade like anything else: the melt is a `visualEffect` again, evaluated by
+the render server, and the strip is no longer rendered offscreen into a mask
+every frame it moves.
+
+**2. The magnification was layout, and it rode the scroll.** Because it was
+layout, every step of the wave changed the width of the scroll view's own
+content — under a decelerating flick, which is exactly "doesn't scroll
+properly". And it was driven by ANY finger over the strip, including a plain
+scroll, which is the half the user could see was wrong: **a finger dragging
+the strip moves the strip with it, so the same chip stays under the finger and
+nothing sweeps.** The Mac dock's picture needs the opposite — a stationary row
+and a pointer moving across it. So the wave now rides the SCRUB and the
+POINTER only, it is a `scaleEffect` anchored at the chip's foot (it rises out
+of the slab, and `zIndex` lets the tallest draw over its neighbours), and the
+strip's content width is constant whatever the finger does. The parked
+magnifier — the viewport-space wave that kept re-rendering the strip through a
+flick's deceleration, at one rebuild per frame, magnifying nothing a finger
+was over — is deleted outright, with `waveTick`, `waveReaches`,
+`lastWaveOffset`, `lastWaveTime` and `fingerViewportX`.
+
+**3. The scrub had never fired on a phone.** `DockScrubCatcher` was a
+`UIViewRepresentable` that walked its superview chain at layout time hunting
+for SwiftUI's private hosting `UIScrollView`, added a
+`UILongPressGestureRecognizer` to it, delivered from an overridden `state`
+setter, flipped `isScrollEnabled` by hand in the callbacks, and rode a second
+never-recognising recognizer for the finger. Every one of those is a bet on
+SwiftUI's internal view tree, and it lost: the feature shipped 2026-09-05 and
+the user reports it has never once worked on their device — while three
+sessions since have written guards, perf notes and a caption for it, and
+`docs/hooks/system.md` said "device check first" and never got one. **It is
+DELETED.** A `LongPressGesture(0.4, maximumDistance: 10)` `.sequenced(before:
+DragGesture)`, `.simultaneousGesture` on the content, is the same arbitration
+without the bet: the press fails on 10pt of travel so a swipe is the scroll's,
+a lift before the beat is the chip's tap, and `scrollDisabled(scrubbing !=
+nil)` freezes the row for the drag — which is also what gives the wave the
+stationary strip it needs. `isScrollEnabled` stuck off for a whole launch once
+(2026-09-06, "I'm sort of stuck in one place"); as a function of `scrubbing`
+it cannot stick.
+
+**Two invalidation leaks, found in the same read.** The chip's identity flip
+read `chrome.bloomTicks` and its catch bob read `chrome.arrivedChip` /
+`arrivedTick` **in the strip's own body**, so every arrival from every bridge
+sweep rebuilt all eleven chips and their glass. That is the user's own
+"sometimes it's because the app needs to load stuff in the background because
+it gets easier": the strip was rebuilding on the corpus landing. Both are
+leaves now (`ChipIdentityFlip`, `ChipCatchBob`), reading what they need in
+their own bodies — the same pattern §658 applied to `ChipLean` for the page
+drag.
+
+**What is NOT changed.** The strip's shape, its order, the fold, the melt's
+geometry, the travelling selection, the standing ring, the rail, the doors,
+the folder spring, `dockBusy`'s job. This is the same dock, drawn in a way a
+phone can draw.
+
+**Guarded** by `dock-selftest.sh`: the catcher's FILE must stay absent, the
+sequence and its simultaneity must be present, the scroll must be disabled by
+`scrubbing`, the lift must be `scaleEffect(m, anchor: .bottom)`, the parked
+magnifier's identifiers must not return, a chip's body must carry no
+`dsGlass(`, the chip run must not re-enter a `GlassEffectContainer`, the mask
+must stay gone and the `visualEffect` melt must stay. `room-perf-selftest.sh`
+B7 follows `dockBusy` to its new two facts, with its mutation.
+
+**Verified:** an iOS simulator build, `dock-selftest`, `category-fold-selftest`
+and `room-perf-selftest` (all mutations caught), and every `*-audit.py` /
+`*-audit.sh` in `scripts/`. **UNSEEN on a device** — and the whole of finding 3
+is what that phrase costs when it is left standing, so the scrub is the first
+thing to check on the phone: it NSLogs `dockScrub: began` and `dockScrub:
+chose` in DEBUG.

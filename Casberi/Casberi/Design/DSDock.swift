@@ -56,6 +56,13 @@ enum DSDock {
         lerp(chipFrame(minimized: false), chipFrame(minimized: true), fold)
     }
 
+    /// How much taller the chip under a scrubbing finger (or a pointer) stands
+    /// than its neighbours at rest — the Mac dock's magnification, as a share
+    /// of the chip (2026-09-09). One number, read by the strip's wave
+    /// (`SourceChips.wave(for:)`) and by the caption that names the lifted
+    /// chip (`DockScrubCaption`), so the caption always clears the chip.
+    static let scrubLift: CGFloat = 0.4
+
     /// The air between the bar's trailing edge and the first chip.
     ///
     /// `s2` rather than the strip's own `chipGap`: this gap separates two

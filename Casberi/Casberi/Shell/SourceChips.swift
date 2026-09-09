@@ -187,29 +187,24 @@ struct SourceChips: View {
     /// Last time the catalogue door actually opened — see `openApps()`.
     @State private var lastAppsOpen: TimeInterval = 0
 
-    // MARK: - Scrub (2026-09-05, `DockScrubCatcher`)
+    // MARK: - Scrub (2026-09-05; SwiftUI's own sequence since 2026-09-09)
 
     /// The chip under a scrubbing finger — lifted, and named above the slab.
     @State private var scrubbing: String?
     /// Every chip's frame in the strip's CONTENT space, recorded as laid out.
     /// Content space, not the viewport's: these change when the strip folds
-    /// or a folder opens, never when it scrolls, so recording them costs one
-    /// write per chip per layout rather than one per scroll frame.
-    /// A BOX, not state, and frozen while a finger is down (2026-09-06, user:
-    /// "the dock sometimes becomes unresponsive"). The magnification is a
-    /// layout change, so every wave step moved every chip's frame; each frame
-    /// write was a state write; each state write re-ran the wave — a layout
-    /// loop for as long as a finger was on the strip. Rest frames are the
-    /// right input anyway: the wave asks which chip is NEAR the finger, and
-    /// that is a question about the row at rest.
+    /// or a folder opens, never when it scrolls — and since 2026-09-09 never
+    /// under the wave either, which is a transform. A BOX, not state: a
+    /// frame write must not re-run the strip (2026-09-06, user: "the dock
+    /// sometimes becomes unresponsive" — when the wave was layout, each
+    /// write re-ran the wave, which moved every frame, for as long as a
+    /// finger was down).
     @State private var chipFrames = ChipFrameBox()
     private static let contentSpace = "dockStripContent"
     /// A tap fired by a scrub is one tap, not two: the chip's own `Button`
     /// cannot fire after a scrub (UIKit cancels its touch when the press
     /// begins), but the guard costs nothing and says so.
     @State private var scrubCommittedAt: TimeInterval = 0
-    /// The catcher's content→window converter, held for the scrub's length.
-    @State private var scrubWindowConverter = ScrubConverter()
 
     // MARK: - The open folder's width (spec 2026-09-05)
 
@@ -222,64 +217,55 @@ struct SourceChips: View {
     /// out of (`DockSpringRow`). Content-space frame, less the scroll, plus
     /// the strip's own window x.
     private func anchorX(for label: String) -> CGFloat? {
-        guard let frame = chipFrames.frames[label] else { return nil }
-        return viewport.globalMinX + frame.midX - viewport.offset
+        chipFrames.frames[label].map { windowX(contentX: $0.midX) }
+    }
+    /// A content-space x in window space — the strip's own window x, plus the
+    /// point, less the scroll.
+    private func windowX(contentX: CGFloat) -> CGFloat {
+        viewport.globalMinX + contentX - viewport.offset
     }
 
-    /// THE MAGNIFICATION WAVE (2026-09-05, the Mac dock's own): while a scrub
-    /// is under way the chip under the finger stands tallest and its
-    /// neighbours rise less, falling off with distance — so the hand feels
-    /// which chip it is on before the caption says. `scrubX` is the finger in
-    /// content space; a chip's lift is a cosine window over one and a half
-    /// pitches around it. Off under Reduce Motion.
+    /// THE MAGNIFICATION (2026-09-05; confined and made a transform
+    /// 2026-09-09): the chip under a held-then-sliding finger (the scrub) or
+    /// under a pointer stands tallest, its neighbours less, falling off with
+    /// distance — the Mac dock's picture, which needs a STATIONARY strip and a
+    /// finger moving over it. A plain scroll is the opposite: the strip moves
+    /// with the finger and the same chip stays under it, so the wave under a
+    /// scroll never visibly swept anything (user, 2026-09-09: "it doesn't
+    /// really magnify like an apple dock on a mac does") while it re-laid out
+    /// every chip per touch step, and a flick's parked magnifier rebuilt the
+    /// strip once per frame for the length of every deceleration. Neither
+    /// takes part now; a finger dragging the strip is a scroll and nothing
+    /// else.
+    ///
+    /// The lift is a TRANSFORM (`scaleEffect`, anchored at the chip's foot so
+    /// it rises out of the slab), never a size: the strip's content width is
+    /// constant whatever the finger does, so the scroll never has its content
+    /// size changed under a deceleration — which is what made it "not scroll
+    /// properly". The layout form existed because a scale over a GLASS chip
+    /// double-rendered; the chips are flat now (see `horizontalStrip`).
+    /// `scrubX` is the finger and `hoverX` the pointer, both in the content
+    /// `HStack`'s space, the frame the chips are recorded in. Off under
+    /// Reduce Motion.
     @State private var scrubX: CGFloat?
-    /// THE MAGNIFIER HOLDS WHERE THE FINGER LEFT (2026-09-05, user: "as user
-    /// … scrolls on them they should enlarge like a dock does"). While a
-    /// finger is down the wave sits under it, and the strip moves WITH the
-    /// finger, so the same chip stays under it. After a flick the strip keeps
-    /// moving and the finger is gone — so the magnifier stays parked at the
-    /// release point, in VIEWPORT space, and the chips ripple through it as
-    /// they pass, until the scroll goes idle. That is the dock's own
-    /// picture: icons swelling as they pass the pointer.
-    @State private var waveViewportX: CGFloat?
-    /// THE POINTER'S WAVE (2026-09-06, the iPad/Mac pass): a cursor resting
-    /// over the strip magnifies the chip under it exactly as a finger does
-    /// — which on a Mac is the whole of what "like the Mac dock" means. The
-    /// hover point arrives in the content `HStack`'s own space, the same
-    /// frame the chips are recorded in, so it feeds `wave(for:)` unchanged.
-    /// Never fires on touch.
     @State private var hoverX: CGFloat?
-    /// Re-renders the strip per scroll frame ONLY while a parked magnifier
-    /// needs the chips' passing positions; zero cost otherwise.
-    @State private var waveTick = 0
-    private static let waveReach: CGFloat = 1.6
-    private static let waveLift: CGFloat = 0.28
+    private static let waveReach: CGFloat = 1.4
     /// How far a finger or a pointer moves before the wave is re-laid under
-    /// it (PERF 2026-09-08). The wave is a cosine over ~100pt, so 3pt is far
+    /// it (PERF 2026-09-08): the wave is a cosine over ~90pt, so 3pt is far
     /// below anything the eye resolves, and `DS.Motion.press` springs the
-    /// chips between steps; what it removes is a strip rebuild per touch
-    /// event at 120Hz.
+    /// chips between steps.
     private static let fingerStep: CGFloat = 3
-    /// Is any chip close enough to the parked magnifier for the wave to lift
-    /// it? The same window `wave(for:)` applies, asked once for the strip
-    /// rather than once per chip.
-    private func waveReaches(_ x: CGFloat) -> Bool {
-        let reach = (chipSize + Self.chipGap) * Self.waveReach
-        return chipFrames.frames.values.contains { abs($0.midX - x) < reach }
-    }
 
     private func wave(for label: String) -> CGFloat {
         guard !reduceMotion, let frame = chipFrames.frames[label] else { return 1 }
         let x: CGFloat
         if let scrubX { x = scrubX }
         else if let hoverX { x = hoverX }
-        else if let waveViewportX { x = waveViewportX + viewport.offset }
         else { return 1 }
-        _ = waveTick
         let pitch = chipSize + Self.chipGap
         let d = abs(frame.midX - x) / (pitch * Self.waveReach)
         guard d < 1 else { return 1 }
-        return 1 + Self.waveLift * (0.5 + 0.5 * cos(d * .pi))
+        return 1 + DSDock.scrubLift * (0.5 + 0.5 * cos(d * .pi))
     }
 
     /// How far the selection leans toward the neighbour a swipe is heading
@@ -397,22 +383,6 @@ struct SourceChips: View {
     /// now, so the padding that buys that position is the difference. Derived
     /// rather than spelled as a literal 16, so it stays correct if `fadeRamp`
     /// or the head's own metrics move.
-    /// The phone strip's melt, as a mask over the scroll's viewport — see
-    /// the `.mask` site. Fully opaque on the rail, whose melt is per chip.
-    @ViewBuilder private var stripMelt: some View {
-        if axis == .horizontal {
-            HStack(spacing: 0) {
-                Color.clear.frame(width: fadeClear)
-                LinearGradient(colors: [.clear, .black],
-                               startPoint: .leading, endPoint: .trailing)
-                    .frame(width: Self.fadeRamp)
-                Color.black
-            }
-        } else {
-            Color.black
-        }
-    }
-
     private var contentLead: CGFloat {
         // On the phone nothing in this view occupies the head's space any more
         // (§591) — the bar is on another layer — so the resting position is
@@ -501,147 +471,62 @@ struct SourceChips: View {
         // (and the whole View graph behind it) out of the capture.
         let clear = fadeClear
         let ramp = Self.fadeRamp
-        // Per-chip melt is the rail's; the phone masks the viewport — see
-        // `stripMelt`.
-        let melts = axis == .vertical
         // ScrollViewReader keeps the ACTIVE chip visible — a deep link
         // (casberi://feed/source/Zerion) can select a chip past the fold,
         // and a filter you can't see reads as no filter at all.
         return ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                // **THE HEAD IS INSIDE THE SCROLL (2026-08-24, user: "with the
-                // all chip pinned, it's really hard to scroll through the other
-                // categories").**
+                // **FLAT CHIPS IN A GLASS SLAB (2026-09-09, user: "the nav bar
+                // is still laggy and doesn't scroll properly. please fix,
+                // radically").** Until today every chip was its own
+                // `.interactive()` Liquid Glass element inside a
+                // `GlassEffectContainer`, inside the dock's glass slab, inside
+                // a scroll view — eleven live backdrop samples nested in a
+                // twelfth, re-shaped on every fold tick and every wave step,
+                // which is the one arrangement Apple's own guidance rules out
+                // (glass on glass; glass on scrolling content). It was also
+                // why the wave had to be LAYOUT (a scale over glass
+                // double-rendered) and why the melt had to be a viewport MASK
+                // (opacity never reached hoisted glass), each of which cost a
+                // frame of its own. The slab is the glass; the chips are ink
+                // on it, the way the Mac dock's icons and a tab bar's items
+                // are. The active word's tint fill still travels
+                // (`matchedGeometryEffect`), the melt is per chip again, and
+                // nothing in this strip is rendered offscreen.
                 //
-                // It used to be a `ZStack` layer sitting ON TOP of this scroll,
-                // and that is what made the strip hard to move: a `ScrollView`
-                // only pans when the touch that starts the drag lands on the
-                // scroll view itself, so every swipe beginning on the avatar,
-                // the catalogue door or "All" — ~148pt of button at the LEADING
-                // edge, which is exactly where a finger starts a swipe back
-                // toward the earlier chips — hit a fixed layer and did nothing.
-                // Scrolling FORWARD worked (you start on the right, over real
-                // chips) and scrolling BACK did not, which is precisely the
-                // asymmetry the report describes.
-                //
-                // A pinned section header is the same picture with the touch
-                // problem gone: the head still never moves and never leaves the
-                // screen — that was 2026-08-16's whole point and the two doors'
-                // point since 2026-07-17, and nothing here weakens it — but it
-                // now belongs to the scroll view, so a drag starting on it pans
-                // like a drag starting anywhere else. A tap still taps: SwiftUI
-                // cancels a button press that turns into a drag, which is the
-                // ordinary button-inside-a-list behaviour and NOT the custom
-                // recognizer arbitration this codebase has been burned by
-                // (`BoardDragDriver`, the catalogue door's own three reports).
-                //
-                // `pinnedViews` requires a LAZY stack. Laziness buys nothing at
-                // this scale — the fold caps the strip at eleven categories —
-                // but it costs nothing either, and `scrollTo` below still
-                // resolves because `ForEach`'s ids are known whether or not the
-                // chip is realized.
-                // **NO `Section`, NO `pinnedViews` SINCE §591.** Both existed for
-                // exactly one thing: pinning "All" so it never scrolled away
-                // while still belonging to the scroll view, which is what made
-                // a drag starting on it pan like a drag starting anywhere else.
-                // "All" scrolls now (see `scrollingLabels`) and the fixed
-                // leading seat belongs to the agent, which is a view on another
-                // layer entirely — so there is no header left to pin.
-                //
-                // **Keeping the empty `Section` was tried first and SHIPPED THE
-                // STRIP AT ZERO HEIGHT.** A `Section` whose header draws
-                // nothing still asks the lazy stack to lay out a pinned header,
-                // and the `.fixedSize(vertical: true)` below — which exists to
-                // force this subtree back to its own ideal height, see its own
-                // note — then resolved that ideal to approximately nothing. The
-                // band reserved a few points, the chips were never on screen at
-                // all, and the app looked exactly like one whose source strip
-                // had been deleted. Caught on the simulator, not by the build:
-                // every static check was green.
-                //
-                // A plain `HStack` rather than a lazy one, for the reason the
-                // laziness was only ever tolerated: `pinnedViews` REQUIRED a
-                // lazy stack, and laziness buys nothing at this scale since the
-                // fold caps the strip at eleven categories. Without the pin the
-                // requirement is gone, and an eager stack is one fewer thing
-                // between `scrollTo` and a chip that has to be realized to be
-                // scrolled to.
-                HStack(spacing: 0) {
-                        // The active chip's fill is a real glass element that MORPHS
-                        // from the old chip to the new (prd §359, user: "if the
-                        // category chips and the source chips are controls why not
-                        // use liquid glass for the transitions and active states").
-                        // That morph is a property of the CONTAINER — a
-                        // `glassEffectID` outside one is inert — so the row it
-                        // travels along is the container, and it is the row rather
-                        // than the whole strip because the fixed doors are a
-                        // separate glass object that must never blend into a chip
-                        // sliding under them.
-                        DSGlassContainer(spacing: Self.chipGap) {
-                            HStack(spacing: Self.chipGap) {
-                                ForEach(scrollingLabels, id: \.self) { label in
-                                    chip(label)
-                                        // Where this chip is, for the scrub
-                                        // — see `chipFrames`.
-                                        .onGeometryChange(for: CGRect.self) { proxy in
-                                            proxy.frame(in: .named(Self.contentSpace))
-                                        } action: { frame in
-                                            guard scrubX == nil, waveViewportX == nil else { return }
-                                            chipFrames.frames[label] = frame
-                                        }
-                                        // THE MELT, PER CHIP. The old
-                                        // `.mask(leadingFade)` hung on the whole
-                                        // ScrollView, which worked only while the
-                                        // head was a separate layer above it —
-                                        // with the head inside, that mask would
-                                        // dissolve the head itself, i.e. erase the
-                                        // very thing it exists to protect.
-                                        //
-                                        // Same geometry, read per chip instead of
-                                        // painted once across the row: a chip is
-                                        // solid until its leading edge reaches
-                                        // `stripInset`, then ramps to nothing over
-                                        // `fadeRamp`, and is fully gone 8pt before
-                                        // it would show through the head's glass.
-                                        // `.scrollView` is the VIEWPORT's space,
-                                        // so `minX` is distance from the strip's
-                                        // left edge and the head's own width is
-                                        // what `clear` is measured from.
-                                        //
-                                        // The one honest difference: the mask
-                                        // wiped a gradient ACROSS each chip, this
-                                        // fades each chip whole. The 2026-07-19
-                                        // ruling it answers to is "disappear into
-                                        // it, not into a hard line on the source
-                                        // chips" — no hard line either way, and
-                                        // the dissolve still happens over the same
-                                        // 24pt. Worth a look on a device.
-                                        // RAIL ONLY since 2026-09-06 — on the
-                                        // phone the melt is the viewport mask
-                                        // below (`stripMelt`), because a per-chip
-                                        // `opacity` never reached a word chip:
-                                        // its capsule is `dsGlass`, iOS 26 hoists
-                                        // glass above app content, and the chip
-                                        // slid under the octopus at full
-                                        // strength (measured: "rkets" standing
-                                        // out from under the bar in every room
-                                        // whose active chip was past the third).
-                                        .visualEffect { content, proxy in
-                                            let x = proxy.frame(in: .scrollView).minX
-                                            return content.opacity(
-                                                melts ? Double(min(max((x - clear) / ramp, 0), 1)) : 1)
-                                        }
-                                }
+                // A plain `HStack`: the fold caps the strip at eleven
+                // categories, and an eager stack is one fewer thing between
+                // `scrollTo` and a chip that has to be realized to be scrolled
+                // to. (The `Section`/`pinnedViews` history is in git; keeping
+                // an EMPTY `Section` once shipped the strip at zero height.)
+                HStack(spacing: Self.chipGap) {
+                    ForEach(scrollingLabels, id: \.self) { label in
+                        chip(label)
+                            // Where this chip is, for the scrub — see
+                            // `chipFrames`. Layout is constant under the wave,
+                            // so this fires on fold and folder changes only.
+                            .onGeometryChange(for: CGRect.self) { proxy in
+                                proxy.frame(in: .named(Self.contentSpace))
+                            } action: { frame in
+                                chipFrames.frames[label] = frame
                             }
-                        }
-                        // The air between the head and the first chip at rest —
-                        // what `stripInset` bought when the strip started at the
-                        // viewport's edge and ran underneath an overlay. The head
-                        // occupies real layout space now, so the same resting
-                        // position is expressed relative to it.
-                        .padding(.leading, contentLead)
-                        .padding(.trailing, DS.Space.s4)
+                            // THE MELT, PER CHIP: solid until its leading edge
+                            // reaches the bar's trailing edge (`clear`), then
+                            // gone over `ramp` as it slides under the bar —
+                            // the 2026-07-19 ruling ("disappear into it, not
+                            // into a hard line"). `.scrollView` is the
+                            // viewport's space. Evaluated by the render
+                            // server, never a body pass.
+                            .visualEffect { content, proxy in
+                                let x = proxy.frame(in: .scrollView).minX
+                                return content.opacity(Double(min(max((x - clear) / ramp, 0), 1)))
+                            }
+                    }
                 }
+                // The air between the bar and the first chip at rest — see
+                // `stripInset`.
+                .padding(.leading, contentLead)
+                .padding(.trailing, DS.Space.s4)
                 .coordinateSpace(name: Self.contentSpace)
                 // A pointer over the strip — see `hoverX`. `.local` here IS
                 // the content space named above.
@@ -656,156 +541,84 @@ struct SourceChips: View {
                         withAnimation(DS.Motion.press) { hoverX = nil }
                     }
                 }
-                // The scrub's input, on the content so it can find the
-                // scroll view above it — see `DockScrubCatcher`.
-                .background {
-                    DockScrubCatcher(
-                        enabled: { true },
-                        began: { at, toWindowX in scrubBegan(at: at, toWindowX: toWindowX) },
-                        moved: { at in scrubMoved(at: at) },
-                        ended: { commit in scrubEnded(commit: commit) },
-                        finger: { at in
-                            // The wave rides ANY finger over the strip — a
-                            // scroll, a tap, a scrub — see `wave(for:)`. On
-                            // lift the magnifier parks where the finger was
-                            // (viewport space) until the scroll goes idle.
-                            //
-                            // **NO STATE WRITE PER TOUCH MOVE WHILE
-                            // SCROLLING (PERF 2026-09-08).** This wrote two
-                            // `@State` values on every touch move — and a
-                            // finger dragging the strip moves WITH the
-                            // content, so `scrubX` (content space) barely
-                            // changes while `waveViewportX` (viewport space)
-                            // changes every move. Each write rebuilt the whole
-                            // strip, every chip and its glass, at touch rate,
-                            // for the length of every scroll: the dock's own
-                            // "swipe through the nav bar" was a body pass per
-                            // touch event. The viewport x is now kept in the
-                            // frame box until the lift that parks it, and the
-                            // content x is written only when it has moved
-                            // past `fingerStep`.
-                            //
-                            // The dock in hand (2026-09-09): a finger down,
-                            // or a flick still running, holds the room's
-                            // unbounded build (`ShellChrome.dockBusy`,
-                            // `MainSurface.releaseSwipeBudget`). A box write
-                            // per move; the chrome write only on a change.
-                            viewport.fingerDown = at != nil
-                            publishDockBusy()
-                            if let at {
-                                chipFrames.fingerViewportX = at.x - viewport.offset
-                                guard abs((scrubX ?? -.infinity) - at.x) >= Self.fingerStep else { return }
-                                withAnimation(DS.Motion.press) { scrubX = at.x }
-                            } else {
-                                withAnimation(DS.Motion.press) {
-                                    waveViewportX = chipFrames.fingerViewportX
-                                    scrubX = nil
-                                }
+                // PRESS AND SLIDE, IN SWIFTUI'S OWN GRAMMAR (2026-09-09, user:
+                // "i've never been able to scrub it on my device. that has
+                // just never worked"). The scrub was a
+                // `UILongPressGestureRecognizer` added to SwiftUI's private
+                // hosting scroll view, found by walking superviews, delivering
+                // from an overridden `state` setter, with a second
+                // never-recognising recognizer riding along for the finger —
+                // verified on the simulator alone, and it never once began on
+                // a phone. A long press SEQUENCED before a drag is the
+                // arbitration the catcher was re-implementing by hand: the
+                // press fails on 10pt of travel, so a swipe is the scroll's; a
+                // lift before 0.4s is the chip's tap; and once the press has
+                // held, `scrollDisabled` below freezes the strip, so the drag
+                // that follows walks a STATIONARY row — the Mac dock's own
+                // picture, and the one the wave is for. Simultaneous with the
+                // chips' buttons rather than over them: a button that fires at
+                // the lift of a scrub is caught by `scrubbing` and
+                // `scrubCommittedAt` in its action, whichever of the two runs
+                // first. Locations arrive in the content space named above,
+                // the frame the chips are recorded in.
+                .simultaneousGesture(
+                    LongPressGesture(minimumDuration: 0.4, maximumDistance: 10)
+                        .sequenced(before: DragGesture(minimumDistance: 0,
+                                                       coordinateSpace: .named(Self.contentSpace)))
+                        .onChanged { value in
+                            guard case .second(true, let drag?) = value else { return }
+                            if scrubbing == nil { scrubBegan(at: drag.startLocation) }
+                            scrubMoved(at: drag.location)
+                        }
+                        .onEnded { value in
+                            // A lift after a held press with no move reported
+                            // still chose the chip under the finger.
+                            if case .second(true, let drag?) = value, scrubbing == nil {
+                                scrubBegan(at: drag.startLocation)
                             }
-                        })
-                }
-                // **PINNED SECTION HEADERS UNDID THE STRIP'S OWN HEIGHT
-                // (found 2026-08-24, hours after `LazyHStack`+`pinnedViews`
-                // landed above).** `MainSurface.topInset` measures this
-                // strip's NATURAL height through a sibling `GeometryReader`
-                // (`BandHeightKey`) so the feed's `.safeAreaInset` can reserve
-                // exactly that much air and no more. A `LazyHStack` carrying a
-                // pinned `Section` header reports back something close to the
-                // full PROPOSED height rather than its own rendered height —
-                // measured live at up to 778pt on an ~874pt device, i.e. the
-                // reservation ate the whole screen and the real feed rendered
-                // one row peeking in at the very bottom edge, unscrollable
-                // (the reservation, not the content, is what was frozen).
-                // `.fixedSize(vertical: true)` forces this subtree back to its
-                // own IDEAL height before `GeometryReader` ever sees it — the
-                // standard fix for a Lazy stack lying to an outer measurement,
-                // and cheap here since the strip's ideal height is a single
-                // row regardless of how many chips it holds.
+                            scrubEnded(commit: scrubbing != nil)
+                        }
+                )
+                // `MainSurface.topInset` measures this strip's NATURAL height
+                // through a sibling `GeometryReader`; this pins the subtree to
+                // its own ideal height before that measurement sees it (a lazy
+                // stack once reported the whole proposed height, 2026-08-24).
                 .fixedSize(horizontal: false, vertical: true)
             }
-            // THE MELT, ON THE VIEWPORT AGAIN (2026-09-06). The row-wide mask
-            // was deleted on 2026-08-24 because the head had moved INSIDE the
-            // scroll and a mask would dissolve it — and §591 then moved the
-            // phone's head to `RootShell`'s layer, so nothing in this scroll
-            // is the head any more and the mask's one objection is gone. It
-            // came back because the per-chip form it was replaced with does
-            // not reach a glass capsule (see the chip's own note). Same
-            // geometry: clear until `fadeClear` — the bar's trailing edge —
-            // then opaque over `fadeRamp`. A mask reaches hoisted glass the
-            // way the slab's own clip does; opacity does not.
-            .mask { stripMelt }
+            // The strip does not move under a scrub — the finger is walking
+            // the row, not dragging it. The catcher used to flip
+            // `isScrollEnabled` by hand and once left it off for a whole
+            // launch (2026-09-06, "I'm sort of stuck in one place"); this is
+            // the same fact as a function of `scrubbing`, which every end path
+            // clears, so it cannot stick.
+            .scrollDisabled(scrubbing != nil)
             .onAppear {
                 // Unconditional since §591: "All" is in this run now, so a
                 // strip restored on All must scroll to it like any other room.
-                // It leads the order, so this is usually a no-op — but only
-                // usually, and a selection you cannot see reads as no
-                // selection at all.
                 proxy.scrollTo(active, anchor: .center)
             }
-            // **A chip you TAPPED is not re-centred (prd §359, 2026-08-11).**
-            // This used to re-centre on every change, which quietly defeated
-            // the travelling selection above it: the active chip was pulled
-            // to the middle, so the fill never moved in SCREEN space and the
-            // chips slid under it instead — measured at 6px of centroid
-            // travel across a whole switch, which is why the glass morph
-            // "doesn't look like a blob" no matter what material it is made
-            // of. Skipping the scroll for a direct tap gives the morph the
-            // whole distance between two chips to happen in.
-            //
-            // Every OTHER route still re-centres, and that is the rule this
-            // preserves rather than an exception to it: a deep link
-            // (casberi://feed/source/Zerion), a swipe step, or a restored
-            // filter can name a chip past the fold, and a selection you
-            // cannot see reads as no selection at all. A tap is the one case
-            // where the chip is provably already on screen — your finger was
-            // just on it.
+            // **A chip you TAPPED is not re-centred (prd §359, 2026-08-11)** —
+            // the travelling fill needs the whole distance between two chips to
+            // happen in. Every OTHER route (a deep link, a swipe step, a
+            // restored filter) still re-centres: a selection you cannot see
+            // reads as no selection at all.
             .onChange(of: active) { _, now in
                 if tapped == now { tapped = nil; return }
-                // The `guard now != "All"` that stood here is GONE (§591): it
-                // was correct while "All" was pinned outside this scroll and
-                // had no id to reach, and it is now the bug it was preventing
-                // — going home by any route but a tap (a deep link, a swipe
-                // step, the panel's All capsule) would leave the strip parked
-                // wherever it was, with the lit chip off screen.
                 withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
             }
+            // The viewport, for `windowX` — a box write per sample, no state,
+            // so a scroll frame never re-renders the strip.
             .onScrollGeometryChange(for: ScrollViewportSample.self) { geo in
                 ScrollViewportSample(offset: geo.contentOffset.x, width: geo.containerSize.width)
             } action: { _, new in
                 viewport.offset = new.offset
                 viewport.width = new.width
-                // The parked magnifier re-renders the strip per scroll frame;
-                // only every 4pt of travel, which is the finest step a chip's
-                // size visibly changes at (2026-09-06).
-                // A PARKED MAGNIFIER ONLY COSTS WHILE SOMETHING IS PASSING
-                // THROUGH IT (2026-09-06). This re-rendered the strip every
-                // 4pt for the whole of a flick's deceleration, including the
-                // long tail after the last chip has swept past the parked
-                // point — where every chip's `wave` returns 1 and the render
-                // draws exactly what it drew before. 8pt is still far finer
-                // than the wave itself (a cosine over ~1.6 pitches, ~100pt),
-                // and the reach test skips the tail outright.
-                // …and at most once per frame (PERF 2026-09-08): a flick
-                // delivers scroll samples faster than the display draws, and
-                // 8pt at 1,500pt/s is ~190 strip rebuilds a second. One
-                // rebuild per 16ms is every frame the wave can be seen in.
-                let now = Date.timeIntervalSinceReferenceDate
-                if let parked = waveViewportX, scrubX == nil,
-                   abs(new.offset - chipFrames.lastWaveOffset) >= 8,
-                   now - chipFrames.lastWaveTime >= 0.016,
-                   waveReaches(parked + new.offset) {
-                    chipFrames.lastWaveOffset = new.offset
-                    chipFrames.lastWaveTime = now
-                    waveTick &+= 1
-                }
             }
             .onScrollPhaseChange { _, phase in
-                // The strip's own motion, for `dockBusy` — a flick outlives
-                // the finger that threw it.
+                // The strip's own motion, for `dockBusy` — a finger dragging
+                // it, or a flick that outlives the finger.
                 viewport.moving = phase != .idle
                 publishDockBusy()
-                guard phase == .idle, scrubX == nil else { return }
-                withAnimation(DS.Motion.standard) { waveViewportX = nil }
             }
             // The strip's own window x, so a chip's content-space frame can be
             // turned into the anchor a springing folder grows out of.
@@ -816,11 +629,10 @@ struct SourceChips: View {
     }
 
     /// `ShellChrome.dockBusy` from the two facts the strip holds about its own
-    /// motion, written only when the answer changes (2026-09-09). A tap is a
-    /// finger down and up with no phase change between, so the lift clears
-    /// it; a flick's phases carry it past the lift until the strip rests.
+    /// motion, written only when the answer changes (2026-09-09): its scroll
+    /// phase (a finger dragging it, or its flick) and a scrub under way.
     private func publishDockBusy() {
-        let busy = viewport.fingerDown || viewport.moving
+        let busy = viewport.moving || scrubbing != nil
         if chrome.dockBusy != busy { chrome.dockBusy = busy }
     }
 
@@ -838,30 +650,29 @@ struct SourceChips: View {
         return best.map { ($0.label, $0.midX) }
     }
 
-    private func scrubBegan(at point: CGPoint, toWindowX: @escaping (CGFloat) -> CGFloat) {
-        scrubWindowConverter.value = toWindowX
+    private func scrubBegan(at point: CGPoint) {
         guard let hit = scrubTarget(x: point.x) else { return }
         DSHaptic.lift()
         withAnimation(DS.Motion.standard) {
             scrubbing = hit.label
             scrubX = point.x
-            chrome.scrub = ShellChrome.DockScrub(label: hit.label, windowX: toWindowX(hit.midX))
+            chrome.scrub = ShellChrome.DockScrub(label: hit.label, windowX: windowX(contentX: hit.midX))
         }
+        publishDockBusy()
+        #if DEBUG
+        NSLog("dockScrub: began %@", hit.label)
+        #endif
     }
 
     private func scrubMoved(at point: CGPoint) {
-        // The wave follows the finger every `fingerStep` (PERF 2026-09-08 —
-        // it was every move, a strip rebuild per touch event); the name only
-        // on a change.
         if abs((scrubX ?? -.infinity) - point.x) >= Self.fingerStep {
             withAnimation(DS.Motion.press) { scrubX = point.x }
         }
-        guard let hit = scrubTarget(x: point.x), hit.label != scrubbing,
-              let toWindowX = scrubWindowConverter.value else { return }
+        guard let hit = scrubTarget(x: point.x), hit.label != scrubbing else { return }
         DSHaptic.selection()
         withAnimation(DS.Motion.standard) {
             scrubbing = hit.label
-            chrome.scrub = ShellChrome.DockScrub(label: hit.label, windowX: toWindowX(hit.midX))
+            chrome.scrub = ShellChrome.DockScrub(label: hit.label, windowX: windowX(contentX: hit.midX))
         }
     }
 
@@ -872,40 +683,18 @@ struct SourceChips: View {
             scrubX = nil
             chrome.scrub = nil
         }
-        scrubWindowConverter.value = nil
+        publishDockBusy()
         guard commit, let chosen else { return }
+        #if DEBUG
+        NSLog("dockScrub: chose %@", chosen)
+        #endif
         scrubCommittedAt = Date.timeIntervalSinceReferenceDate
         DSHaptic.selection()
         tapped = chosen
         if let x = anchorX(for: chosen) { chrome.folderAnchorX = x }
         withAnimation(DS.Motion.folder) { onTap(chosen) }
     }
-    // `head` was DELETED in §591 along with the `Section` that pinned it. It
-    // drew "All" in the strip's fixed head; "All" scrolls now, and the fixed
-    // leading seat belongs to the agent bar, which `MainSurface` reserves with
-    // `DSDock.agentSeat` and `RootShell` stands in. There is nothing left for a
-    // header to hold.
 
-    /// The two fixed doors as ONE glass capsule (2026-08-06) — see
-    /// `dsGlassDoor` for why they are one object.
-    ///
-    /// The container is required for the union to merge at all, and its spacing
-    /// is 0 ON PURPOSE for the same reason the shell's bottom cluster passes 0:
-    /// a non-zero spacing lets ANY two shapes inside bridge by proximity, which
-    /// is a merge decided by a layout constant instead of by intent. The union
-    /// says which pair fuses; the spacing says none fuse by accident.
-    ///
-    /// **RAIL-ONLY since 2026-08-24** — the phone strip no longer draws these
-    /// (see `head`; they live in `SourcesOverlay`'s header now). The `.horizontal`
-    /// arm is kept rather than deleted because the rail and the strip are ONE view
-    /// with an `axis`, and a function that answers for only one axis is the shape
-    /// that drifted when Home and Feed were two screens; it costs a switch case.
-    ///
-    /// The iPad keeps them for a spatial reason, not a nostalgic one: the rail has
-    /// vertical room to spare — the same reason its own doc gives for having no
-    /// fade mask — so the doors cost it nothing, and the tray is a phone surface
-    /// (`SourcesOverlay` is explicit that a panel pinned to the bottom edge is a
-    /// statement about a phone). Removing them there would strand Settings.
     @ViewBuilder
     private func headDoors(_ axis: Axis) -> some View {
         DSGlassContainer(spacing: 0) {
@@ -1114,71 +903,19 @@ struct SourceChips: View {
     /// the word while they are up — "this folder", with the lit venue ringed
     /// in the row: "this venue".
     @ViewBuilder
-    private func categoryCapsule(_ label: String, scale: CGFloat = 1) -> some View {
+    private func categoryCapsule(_ label: String) -> some View {
         let isOn = label == active
         Text(label)
             .dsText(.label12)
             .fontWeight(.semibold)
-            // The word grows with the wave (`chip(_:)`'s `m`); the capsule
-            // around it grows by layout so its glass fill follows.
-            .scaleEffect(scale)
-            // `.white`, not `DS.textPrimary`: this sits on the accent, which is
-            // a dark blue in BOTH themes — the same blue the composer's lede
-            // card wears (one token, `DS.tint`, user 2026-08-16: "make them
-            // same color as the blue we now use in the composer").
             .foregroundStyle(isOn ? .white : DS.textPrimary)
             .lineLimit(1)
-            // Nothing to scale on the phone: the capsule is what gives, so
-            // the word keeps its size all the way up the Dynamic Type ramp
-            // and the strip simply scrolls further. On the rail the width
-            // is fixed, so the word gives instead.
             .minimumScaleFactor(axis == .vertical ? 0.6 : 1)
-            .padding(.horizontal, capsulePadH * scale)
-            // **THE CAPSULE NEVER OUTGROWS ITS SEAT (2026-09-06, user: "also
-            // have clipping at the top and bottom of the active on the dock.
-            // See how it's got black it's not a circle").** The magnification
-            // is layout, so at the wave's peak `iconSize * 1.28` is 58.9pt
-            // inside a 56pt seat — three points over at each end, which the
-            // slab's own `clipShape` cut off, and a capsule with two flat ends
-            // reads as a rendering fault rather than as a chip standing up.
-            // The chip still grows: the seat widens and the word scales. Only
-            // the HEIGHT is bounded, by the one number the bar reserves.
-            .frame(width: axis == .vertical ? Self.railChipWidth : nil,
-                   height: min(iconSize * scale, chipSize))
-            .wordChipFill(cornerRadius: min(iconSize * scale, chipSize) / 2, active: isOn,
-                          ns: selectionNS, leanPitch: leanPitch)
+            .padding(.horizontal, capsulePadH)
+            .frame(width: axis == .vertical ? Self.railChipWidth : nil, height: iconSize)
+            .wordChipFill(active: isOn, ns: selectionNS, leanPitch: leanPitch)
     }
 
-    /// Everything the strip SCROLLS.
-    ///
-    /// **"All" SCROLLS on the phone since §591, and the reason is a budget.**
-    /// The dock's fixed leading seat belongs to the agent now, and a phone
-    /// strip cannot afford two fixed chips: measured, the head cost 112pt with
-    /// the agent beside a pinned "All" against 56pt with the agent alone —
-    /// which is one whole extra source visible at rest on a 393pt screen.
-    /// The user's own framing (2026-09-03): *"if all and the agent button are
-    /// fixed, then there is less room to scroll. we could make all scroll too
-    /// that way only the agent button is fixed."*
-    ///
-    /// **What that costs, and what pays it back.** The 2026-08-16 ruling that
-    /// pinned it said "All" is the way back to the whole feed, the one
-    /// destination every other room needs a road to — and a road that can
-    /// scroll off is a road you have to look for. Two things keep it: it still
-    /// leads the order by construction, so it is the first thing the run shows
-    /// and one flick away from anywhere in it; and the agent's own panel
-    /// carries an All capsule in its header (§407), which is now the ALWAYS
-    /// -present door, reachable in one tap from every room and from every
-    /// pushed screen the strip does not survive into.
-    ///
-    /// The RAIL is untouched and still pins it (see the vertical branch): a
-    /// rail has vertical room to spare, which is the same reason its own doc
-    /// gives for having no fade mask, so it pays no budget for the pin.
-    ///
-    /// A FILTER, not a `dropFirst()`: `labels` is handed in by the owner and
-    /// "All" leads it by construction today (`MainSurface.computedChips`), but
-    /// an order that ever put it elsewhere would silently render it twice on
-    /// the rail, and two chips claiming one selection is worse than either
-    /// placement.
     private var scrollingLabels: [String] {
         axis == .vertical ? labels.filter { $0 != "All" } : labels
     }
@@ -1191,14 +928,9 @@ struct SourceChips: View {
     @ViewBuilder
     private func chip(_ label: String, pinned: Bool = false) -> some View {
         let isActive = label == active
-        // THE MAGNIFICATION IS LAYOUT, NOT A TRANSFORM (measured 2026-09-05):
-        // a `scaleEffect` over a glass fill double-rendered — the container
-        // draws glass at the LAYOUT frame while the content scales — and a
-        // dock magnifies by growing the icon anyway, which is what pushes the
-        // neighbours aside. `m` is the wave under the finger (`wave(for:)`).
+        // The wave under a scrub or a pointer — a TRANSFORM applied at the
+        // end of this chip (`scaleEffect`), never a size: see `wave(for:)`.
         let m = wave(for: label)
-        let icon = iconSize * m
-        let seatWidth = chipSize * m
         // Through the catalog, not against the label: see `SourcesTray.cell`.
         // The strip and the tray it opens must agree about which seats are in
         // trouble, so this line and that one stay identical.
@@ -1222,8 +954,11 @@ struct SourceChips: View {
             attentionSeats.contains($0.name) && $0.status == .attention
         }
         Button {
-            // A scrub that just chose this chip already tapped it.
-            guard Date.timeIntervalSinceReferenceDate - scrubCommittedAt > 0.4 else { return }
+            // A scrub that just chose this chip already tapped it — whether
+            // its end ran before this action (`scrubCommittedAt`) or after
+            // (`scrubbing`); the sequence and the button are simultaneous.
+            guard scrubbing == nil,
+                  Date.timeIntervalSinceReferenceDate - scrubCommittedAt > 0.4 else { return }
             DSHaptic.selection()
             // Marks this change as finger-initiated so the strip does not
             // re-centre under it — see the horizontal strip's `onChange`.
@@ -1261,14 +996,12 @@ struct SourceChips: View {
                         .foregroundStyle(isActive ? .white : DS.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
-                        .scaleEffect(m)
-                        .frame(width: icon, height: icon)
+                        .frame(width: iconSize, height: iconSize)
                         .clipShape(Circle())
-                        .wordChipFill(cornerRadius: icon / 2,
-                                      active: isActive, ns: selectionNS, leanPitch: leanPitch)
+                        .wordChipFill(active: isActive, ns: selectionNS, leanPitch: leanPitch)
                 case Pinboard.room:
                     // The pinned room (2026-08-10) — see `PinnedChipMark`.
-                    PinnedChipMark(size: icon)
+                    PinnedChipMark(size: iconSize)
                 default:
                     // A category chip is a WORD, not a mark (prd §351,
                     // 2026-08-11, overturning the icon-only ruling of
@@ -1289,20 +1022,20 @@ struct SourceChips: View {
                     // from the shortest. A container that grows has neither
                     // problem and needs neither knob.
                     if isCategory {
-                        categoryCapsule(label, scale: m)
+                        categoryCapsule(label)
                     } else {
                         // Reachable only for a label the catalog has never
                         // heard of (an uncategorized source) — every real
                         // catalog offer resolves to one of the ten categories,
                         // so this is a defensive fallback, not the common path
                         // it used to be.
-                        BridgeIcon(name: label, size: icon, circular: true)
+                        BridgeIcon(name: label, size: iconSize, circular: true)
                     }
                 }
             }
             // A capsule takes its width from its own word (or, on the rail,
             // from the rail) — height alone is shared with the circles.
-            .frame(width: isCategory ? nil : icon, height: icon)
+            .frame(width: isCategory ? nil : iconSize, height: iconSize)
             // The identity flip (2026-07-14, user): the chip is where
             // switching sources actually happens, so it's the one true flip
             // moment — the Feed source header dropped its own animated icon
@@ -1334,15 +1067,16 @@ struct SourceChips: View {
             // turning to face you, just a symmetric glyph inverting through
             // itself. Its half-way frame is edge-on and near-invisible, which
             // is exactly why it reads as a flicker rather than a turn.
-            .coinFlip(trigger: "\(isActive)-\(chrome.bloomTicks[label] ?? 0)",
-                      enabled: !isWord && label != Pinboard.room)
+            // Reads `bloomTicks` in ITS OWN body (2026-09-09), not this one: an
+            // arrival used to invalidate the whole strip, which is the "laggy
+            // while the app loads in the background" every sweep's landings
+            // produced. Same for the catch bob below.
+            .modifier(ChipIdentityFlip(label: label, isActive: isActive,
+                                       enabled: !isWord && label != Pinboard.room))
             // The catch bob — a thing landing from this source while the
             // person watches bumps its chip once, the flight's landing
             // generalized to bridge arrivals (delight 2026-07-13).
-            .modifier(ChipCatchBob(label: label,
-                                   arrivedChip: chrome.arrivedChip,
-                                   tick: chrome.arrivedTick,
-                                   reduceMotion: reduceMotion))
+            .modifier(ChipCatchBob(label: label, reduceMotion: reduceMotion))
             .padding(2.5)
             .overlay {
                 // One ring, two exclusive states: tint = active (a single ring
@@ -1428,7 +1162,13 @@ struct SourceChips: View {
                                       style: StrokeStyle(lineWidth: 2.5, dash: [3, 3]))
                 }
             }
-            .frame(width: isCategory ? nil : seatWidth, height: chipSize)
+            .frame(width: isCategory ? nil : chipSize, height: chipSize)
+            // THE LIFT: the chip grows from its foot, so it rises out of the
+            // slab the way a Mac dock icon does, and the tallest draws over
+            // its neighbours rather than under the one laid out after it. A
+            // transform on a flat chip — no layout, no glass to double-render.
+            .scaleEffect(m, anchor: .bottom)
+            .zIndex(Double(m))
             // This chip is the travelling fill's SOURCE frame (prd §359) —
             // see `travellingFill`. Word chips only: a mark chip cannot take a
             // tint fill without becoming unrecognisable, so it keeps the ring
@@ -1464,9 +1204,9 @@ struct SourceChips: View {
         // up without navigating. "All" sits it out — its room is the whole
         // feed, and a peek that previews everything previews nothing.
         // **RAIL ONLY since 2026-09-05.** On the phone a press on the strip
-        // is the scrub (`DockScrubCatcher`), which begins before the context
-        // menu's own hold would and cancels the touch under it — so the peek
-        // could never fire there, and a modifier that never fires is left
+        // is the scrub (`horizontalStrip`'s long-press-then-drag), which holds
+        // for the same beat a context menu would and takes the touch — so the
+        // peek could never fire there, and a modifier that never fires is left
         // off rather than left claiming. The rail has a pointer and no
         // scrub, and keeps it.
         .modifier(ChipPeekModifier(label: label, venues: venues,
@@ -1586,25 +1326,36 @@ private struct PinnedChipMark: View {
             .foregroundStyle(DS.tint)
             .frame(width: size, height: size)
             .clipShape(Circle())
-            .dsGlass(cornerRadius: size / 2)
     }
 }
 
 /// One catch bob: the chip springs up a touch and settles when its source
 /// lands a thing while the person watches. Fires only for the arrived chip,
 /// never loops, and sits out under Reduce Motion.
+/// The identity flip's trigger, read in a leaf so a bloom re-runs one chip's
+/// flip and not the strip (2026-09-09).
+private struct ChipIdentityFlip: ViewModifier {
+    let label: String
+    let isActive: Bool
+    let enabled: Bool
+    @Environment(ShellChrome.self) private var chrome
+
+    func body(content: Content) -> some View {
+        content.coinFlip(trigger: "\(isActive)-\(chrome.bloomTicks[label] ?? 0)", enabled: enabled)
+    }
+}
+
 private struct ChipCatchBob: ViewModifier {
     let label: String
-    let arrivedChip: String?
-    let tick: Int
     let reduceMotion: Bool
+    @Environment(ShellChrome.self) private var chrome
     @State private var bob = false
 
     func body(content: Content) -> some View {
         content
             .scaleEffect(bob ? 1.12 : 1)
-            .onChange(of: tick) { _, _ in
-                guard arrivedChip == label, !reduceMotion else { return }
+            .onChange(of: chrome.arrivedTick) { _, _ in
+                guard chrome.arrivedChip == label, !reduceMotion else { return }
                 withAnimation(.spring(response: 0.28, dampingFraction: 0.5)) { bob = true }
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(220))
@@ -1675,113 +1426,26 @@ private struct ChipLean<S: View>: View {
     }
 }
 
+/// The active word chip's tint fill — the ONE object that travels between
+/// word chips (prd §358/§412b). Nothing else: an inactive word is ink on the
+/// slab's glass since 2026-09-09 (see `horizontalStrip`), the way a tab bar's
+/// unselected items are.
 private struct WordChipFill: ViewModifier {
-    let cornerRadius: CGFloat
     let active: Bool
     let ns: Namespace.ID
-    /// The lean's PITCH — see `SourceChips.leanPitch`. The progress is read
-    /// inside `ChipLean`, so a drag frame costs that leaf and not the strip.
     var leanPitch: CGFloat = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// The chip's resting wash is the GLASS's own tint rather than a flat
-    /// capsule stacked under the material, so it refracts with the glass
-    /// instead of sitting behind it as paint. The ACTIVE chip additionally
-    /// carries the one travelling fill.
-    ///
-    /// **ONE shared `matchedGeometryEffect` id on a per-chip background — the
-    /// canonical sliding-indicator pattern, and the thing four fancier cuts
-    /// replaced without ever beating.** `glassEffectID` is inert on a shape with
-    /// no `glassEffect`; a `GlassEffectContainer` has nothing to merge when the
-    /// fill exists in only one chip at a time; and hoisting the fill out to the
-    /// strip and positioning it from an `anchorPreference` teleported, because
-    /// preferences resolve on a later pass than the tap's transaction. Recorded
-    /// at 60fps and frame-stepped each time. This is the version that has a
-    /// single view moving between two branches inside one animation.
-    ///
-    /// **The strongest argument AGAINST this version, kept because it is the one
-    /// that will be made again.** A per-chip background means that at no instant
-    /// does a single shape span the gap between two chips — so there is nothing
-    /// for the system to stretch, and the blob everyone pictures (the iOS tab
-    /// bar, Control Center) is one piece of glass CHANGING SIZE rather than one
-    /// handing off to another. It is a good argument. It lost to a measurement:
-    /// the hoisted single capsule it prescribes was built and frame-stepped
-    /// beside this, and teleported for the `anchorPreference` reason above,
-    /// while `matchedGeometryEffect` across two branches of one `if` does
-    /// interpolate the frame and does cross the gap. **The reasoning predicts
-    /// the wrong winner, which is exactly why it is written down here instead of
-    /// being left to sound convincing again in six weeks.** If you rebuild the
-    /// hoisted version, record 60fps and frame-step it before believing it.
-    /// THE RESTING GLASS IS GONE (2026-08-15, user-approved mock: "when not
-    /// selected not have a background") — an unselected word chip is bare
-    /// gradient type on the crown, and only the ACTIVE chip carries a
-    /// surface: the travelling blob, now glass-material rather than the
-    /// solid tint, per the same mock. Everything the long note above
-    /// records about HOW the blob travels is unchanged — one
-    /// matchedGeometryEffect id on a per-chip background, measured against
-    /// every fancier cut — only its paint changed.
-    /// RESTORED to the blue-blob-and-glass form after a one-night experiment
-    /// (2026-08-15/16). The bare-gradient-words cut — approved from a mock,
-    /// built, and judged on device within the hour — lost twice: with
-    /// `.ultraThinMaterial` + `dsGlassBlob` the active chip rendered as an
-    /// EMPTY dark capsule (iOS 26 hoists glass above app content, so the
-    /// blob sat OVER its own word), and with the words bare the user's
-    /// verdict was "the blue chips worked better than these words … it's too
-    /// hard to see". The tint fill + glassBlob below is the form that
-    /// shipped for weeks and was never the complaint; `DS.chipGradient`
-    /// stays in the token file as the experiment's record.
     func body(content: Content) -> some View {
-        content
-            .background {
-                if active {
-                    // `.circular`, not `.continuous` (prd §412b). The ring this
-                    // now hands off to has always been spelled `.circular`, on
-                    // that overlay's own recorded reasoning: "with a circular
-                    // corner style a capsule in a square frame is exactly a
-                    // circle, so every circle chip is pixel-identical". The fill
-                    // never got the same correction, so on "All" — a word in a
-                    // SQUARE frame, clipped to a `Circle()` — the blob drew as a
-                    // subtly flattened squircle inside a true circle, and on a
-                    // category capsule its ends were squircled where the ring's
-                    // were semicircular. One style across both forms is also what
-                    // lets the shared group morph between them without a shape
-                    // swap mid-flight.
-                    // NO GLASS BLOB since 2026-09-05, measured under the
-                    // magnification wave: the container drew the blob at one
-                    // size and the capsule at another, so a magnified word
-                    // chip showed two shapes. The travel is the matched
-                    // geometry's own; the blob added nothing at 6px of travel
-                    // (§359's own measurement).
-                    let fill = Capsule(style: .circular)
-                        .fill(DS.tint)
-                    ChipLean(pitch: leanPitch, ns: ns) { fill }
+        content.background {
+            if active {
+                ChipLean(pitch: leanPitch, ns: ns) {
+                    Capsule(style: .circular).fill(DS.tint)
                 }
             }
-            // **THE RESTING CAPSULE IS NEUTRAL, THE ACTIVE ONE IS BLUE
-            // (prd §572).** The glass carried `tint: DS.tint`, so every chip
-            // in the strip wore a blue wash at rest and the strip was the
-            // loudest tinted region on the screen with nothing happening —
-            // four or five blues stacked under a sixth, the solid active one.
-            // One blue per surface is what makes the active chip read.
-            //
-            // **THIS IS NOT THE STATE THE 2026-08-16 RULING REJECTED.** That
-            // day reversed a mock whose unselected chips had NO BACKGROUND AT
-            // ALL — "it's too hard to see", then "revert and make them same
-            // color as the blue we now use" — and the fix for an invisible
-            // chip is a chip you can see, which is what the glass capsule
-            // still is. What goes is only the BLUE in it: the material, the
-            // shape, the size, the words and the travelling active fill are
-            // all untouched, so a resting chip is still a visible button.
-            .dsGlass(cornerRadius: cornerRadius)
+        }
     }
 }
 
-/// The one matched-geometry group the strip's selection lives in (prd §412b).
-///
-/// A shared constant rather than two string literals in two files' worth of
-/// scroll distance apart: the fill and the ring only hand off if their ids match
-/// EXACTLY, and a typo would not fail the build — it would silently restore the
-/// fade this fixes, which is the failure mode nobody re-checks for.
 private enum ChipSelection {
     static let id = "chipSelection"
     /// The ring that travels BETWEEN VENUES inside an open folder — a group of
@@ -1791,20 +1455,10 @@ private enum ChipSelection {
 
 extension View {
     /// One fill for both word chips, so the circle and the capsule can never
-    /// drift apart the way their COLOUR did before §358 (the "All" chip had to
-    /// be corrected into line with the categories twice).
-    func wordChipFill(cornerRadius: CGFloat, active: Bool, ns: Namespace.ID,
-                      leanPitch: CGFloat = 0) -> some View {
-        modifier(WordChipFill(cornerRadius: cornerRadius, active: active, ns: ns,
-                              leanPitch: leanPitch))
+    /// drift apart the way their COLOUR did before §358.
+    func wordChipFill(active: Bool, ns: Namespace.ID, leanPitch: CGFloat = 0) -> some View {
+        modifier(WordChipFill(active: active, ns: ns, leanPitch: leanPitch))
     }
-}
-
-/// The scrub's content→window converter, boxed so the strip can hold a
-/// closure handed over mid-gesture without making it `@State` (a closure has
-/// no equality, and a `@State` closure re-renders on every assignment).
-final class ScrubConverter {
-    var value: ((CGFloat) -> CGFloat)?
 }
 
 /// The strip's viewport as a plain box — see `SourceChips.viewport`.
@@ -1812,8 +1466,6 @@ final class ScrollViewportBox {
     var offset: CGFloat = 0
     var width: CGFloat = 0
     var globalMinX: CGFloat = 0
-    /// A finger is on the strip (any touch — a tap, a drag, a scrub).
-    var fingerDown = false
     /// The strip's scroll is not idle (a drag, or a flick still running).
     var moving = false
 }
@@ -1826,10 +1478,4 @@ struct ScrollViewportSample: Equatable {
 /// Every chip's frame in the strip's content space — see `SourceChips.chipFrames`.
 final class ChipFrameBox {
     var frames: [String: CGRect] = [:]
-    var lastWaveOffset: CGFloat = 0
-    /// When the parked wave last re-rendered the strip (PERF 2026-09-08).
-    var lastWaveTime: TimeInterval = 0
-    /// The finger's viewport x while it is down — read at the lift that parks
-    /// the magnifier, never written to state per move (PERF 2026-09-08).
-    var fingerViewportX: CGFloat = 0
 }

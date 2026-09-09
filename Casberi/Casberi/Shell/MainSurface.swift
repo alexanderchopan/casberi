@@ -3014,8 +3014,11 @@ private struct DockScrubCaption: View {
                     .fixedSize()
                     // Kept inside the surface: a chip at the very edge names
                     // itself inboard rather than half off the screen.
+                    // Above the LIFTED chip, which rises out of the slab by
+                    // `scrubLift` of its frame (2026-09-09) — a caption at
+                    // `s3` alone sat on the risen chip's crown.
                     .position(x: min(max(scrub.windowX - origin, 56), width - 56),
-                              y: -DS.Space.s3)
+                              y: -(DS.Space.s3 + DSDock.chipFrame(fold: 0) * DSDock.scrubLift))
                     .transition(reduceMotion ? .opacity
                                              : .scale(scale: 0.8).combined(with: .opacity))
                     .accessibilityHidden(true)

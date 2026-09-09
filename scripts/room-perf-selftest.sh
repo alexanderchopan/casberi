@@ -402,12 +402,14 @@ else
   fail "ShellChrome.swift is missing"
 fi
 if [[ -f "$CHIPS" ]]; then
-  check "the strip reports its finger to the dock flag" \
-        "$CHIPS" 'viewport\.fingerDown = at != nil' yes
   check "the strip reports its own scroll phase to the dock flag" \
         "$CHIPS" 'viewport\.moving = phase != \.idle' yes
-  check "the dock flag is the finger OR the flick (a tap clears, a flick holds)" \
-        "$CHIPS" 'let busy = viewport\.fingerDown \|\| viewport\.moving' yes
+  # A finger DRAGGING the strip is its scroll phase (2026-09-09, prd §660) —
+  # the separate touch tracker that used to report it was the never-recognising
+  # UIKit recognizer, deleted with the catcher. A scrub is the other half: it
+  # freezes the scroll, so no phase would ever report it.
+  check "the dock flag is the flick OR a scrub (both outlive the finger)" \
+        "$CHIPS" 'let busy = viewport\.moving \|\| scrubbing != nil' yes
 else
   fail "SourceChips.swift is missing"
 fi
@@ -736,8 +738,8 @@ mutate "the scroll flag outlives the screen that set it"  chrome \
   's/\.onDisappear \{\n\s*if active, chrome\.scrolling \{ chrome\.scrolling = false \}\n\s*\}\n//' || mfails=$((mfails + 1))
 mutate "scrolling becomes a body dependency (a rebuild per scroll phase)"  chrome \
   's/\@ObservationIgnored var scrolling = false/var scrolling = false/' || mfails=$((mfails + 1))
-mutate "the dock's flick stops holding the lift (only the finger does)"  chips \
-  's/let busy = viewport\.fingerDown \|\| viewport\.moving/let busy = viewport.fingerDown/' || mfails=$((mfails + 1))
+mutate "a scrub stops holding the lift (only the flick does)"  chips \
+  's/let busy = viewport\.moving \|\| scrubbing != nil/let busy = viewport.moving/' || mfails=$((mfails + 1))
 
 # Section D (prd §600). Each of these builds green and renders a room that
 # looks entirely correct while making a false claim about it, or pays back the

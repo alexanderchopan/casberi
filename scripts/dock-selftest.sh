@@ -201,18 +201,51 @@ grep -q 'private var leanPitch' "$TMP/chips.nc" \
   && ! grep -q 'chrome.pageDragProgress \* (chipSize' "$TMP/chips.nc" \
   || { echo "✗ SourceChips computes the LEAN again instead of just its pitch — reading"; \
        echo "  pageDragProgress in the strip's body rebuilds every chip per touch move."; fail=1; }
-# SCRUB TO PICK (2026-09-05).
+# SCRUB TO PICK (2026-09-05; SwiftUI's own sequence since 2026-09-09, prd §660).
+# The UIKit catcher is DELETED and must stay deleted: it was attached to
+# SwiftUI's private hosting scroll view by walking superviews and delivered
+# from an overridden `state` setter, and it never once began on the user's
+# phone ("i've never been able to scrub it on my device").
 [ -f "Casberi/Casberi/Shell/DockScrubCatcher.swift" ] \
-  || { echo "✗ DockScrubCatcher.swift is gone — the dock lost its press-and-slide."; fail=1; }
-strip_comments "Casberi/Casberi/Shell/DockScrubCatcher.swift" > "$TMP/scrub.nc"
-grep -q 'override var state: UIGestureRecognizer.State' "$TMP/scrub.nc" \
-  || { echo "✗ the scrub recognizer no longer delivers from its own state setter — target-action"; \
-       echo "  on SwiftUI-owned views fires intermittently (the Home board's lesson)."; fail=1; }
-grep -q 'while let cur = walk, !(cur is UIScrollView)' "$TMP/scrub.nc" \
-  || { echo "✗ the scrub no longer attaches to the strip's own scroll view — UIKit's"; \
-       echo "  arbitration against the pan and the chip buttons is what makes it safe."; fail=1; }
-grep -q 'scrubCommittedAt' "$TMP/chips.nc" \
-  || { echo "✗ a chip's Button no longer guards against the scrub that just chose it."; fail=1; }
+  && { echo "✗ the UIKit scrub catcher is back — it never fired on a device (prd §660)."; fail=1; }
+grep -q 'LongPressGesture(minimumDuration: 0.4, maximumDistance: 10)' "$TMP/chips.nc" \
+  && grep -q 'sequenced(before: DragGesture' "$TMP/chips.nc" \
+  || { echo "✗ the dock lost its press-and-slide — a long press SEQUENCED before a drag is"; \
+       echo "  what makes a swipe the scroll's and a hold the scrub's."; fail=1; }
+grep -q 'simultaneousGesture' "$TMP/chips.nc" \
+  || { echo "✗ the scrub is not simultaneous with the chips' buttons — a gesture that takes"; \
+       echo "  the touch outright would break the ordinary tap."; fail=1; }
+grep -q 'scrollDisabled(scrubbing != nil)' "$TMP/chips.nc" \
+  || { echo "✗ the strip still scrolls under a scrub — the wave needs a STATIONARY row, and"; \
+       echo "  a hand-flipped isScrollEnabled once stuck off for a whole launch (2026-09-06)."; fail=1; }
+grep -q 'scrubCommittedAt' "$TMP/chips.nc" && grep -q 'guard scrubbing == nil,' "$TMP/chips.nc" \
+  || { echo "✗ a chip's Button no longer guards against the scrub that just chose it — the two"; \
+       echo "  are simultaneous now, so BOTH orders have to be caught."; fail=1; }
+# THE WAVE IS A TRANSFORM, AND IT DOES NOT RIDE A SCROLL (prd §660).
+# Layout magnification changed the scroll's content size under a decelerating
+# flick, which is the "doesn't scroll properly" half of the report; and a wave
+# parked in viewport space rebuilt the strip once per frame for the length of
+# every flick while magnifying nothing a finger could see.
+grep -q 'scaleEffect(m, anchor: .bottom)' "$TMP/chips.nc" \
+  || { echo "✗ the dock's magnification is layout again — it would resize the scroll's content"; \
+       echo "  under a running deceleration (prd §660)."; fail=1; }
+grep -qE 'waveViewportX|waveTick|waveReaches' "$TMP/chips.nc" \
+  && { echo "✗ the parked magnifier is back — a strip rebuild per frame for the length of"; \
+       echo "  every flick, magnifying nothing the finger is over (prd §660)."; fail=1; }
+# FLAT CHIPS ON THE SLAB'S GLASS (prd §660). Eleven interactive glass elements
+# in a GlassEffectContainer, inside the dock's own glass slab, inside a scroll
+# view — glass on glass on scrolling content, which is what the strip cost.
+awk '/private func chip\(_ label:/,/private func chipAccessibilityLabel/' "$TMP/chips.nc" \
+  | grep -q 'dsGlass(' \
+  && { echo "✗ a dock chip wears its own glass again — the SLAB is the glass and the chips"; \
+       echo "  are ink on it (prd §660)."; fail=1; }
+grep -q 'DSGlassContainer(spacing: Self.chipGap)' "$TMP/chips.nc" \
+  && { echo "✗ the chip run is back inside a GlassEffectContainer — glass on glass."; fail=1; }
+grep -q 'mask { stripMelt }' "$TMP/chips.nc" \
+  && { echo "✗ the melt is a viewport mask again — it exists only to reach hoisted glass,"; \
+       echo "  which flat chips do not have, and it renders the strip offscreen."; fail=1; }
+grep -q 'visualEffect { content, proxy in' "$TMP/chips.nc" \
+  || { echo "✗ the melt is gone — chips would hit the agent bar as a hard line."; fail=1; }
 grep -q 'enabled: axis == .vertical && label != "All"' "$TMP/chips.nc" \
   || { echo "✗ the chip peek is back on the phone strip, where the scrub's press cancels it"; \
        echo "  before it can fire — a modifier that never fires, left claiming."; fail=1; }
