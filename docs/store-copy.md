@@ -52,26 +52,25 @@ Casberi isn't another chatbot. It's your own things, in one feed, with an agent 
 • Developer networks — Base Vibenet, Hegota Devnet and Frames are test networks: make an account, claim from the faucet and send test transactions. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network.
 
 • Bankr — answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
-## Mac — BLOCKED, In Review (§643)
+## Mac — APPLIED 2026-09-08, on 1.0.15
 
-macOS 1.0.11 is In Review as of 2026-09-07, so its **description and What's New
-answer 409** and the copy below cannot be applied yet. Apply it the moment the
-review clears; until then the Mac listing still carries the 3,994-character
-catalogue version, so the two platforms deliberately disagree and that is
-recorded rather than fixed.
+The 1.0.12 record (In Review since 2026-09-07, build 535) was cancelled on
+2026-09-08 by the user's call — "burn our queue position" — RENAMED to 1.0.15
+(a build attaches only to the version whose string matches its own, and a
+second editable Mac version cannot be created), and the description, the
+promotional text and a fresh What's New below were applied the same minute.
+Build 541 (the 1.0.15 tree, `955f2916`) carries it. The review notes on the
+record — entitlements, the 3.1.5 response — travelled with the rename.
 
 **Promotional text is NOT blocked.** It takes a PATCH while a version is In
-Review (`store-metadata-editable-in-review`), so the new 154-character line at
-the foot of this file can go to Mac today, ahead of the description.
+Review (`store-metadata-editable-in-review`).
 
 The Mac description is NOT the iOS one. `BridgeCatalog.Offer.unavailableOnMac`
 drops Apple Wallet, Apple Health, Strava and HomeKit on Catalyst, so the Mac
-copy must never list them, and the seat count is 99 against iOS's 103. The two
-descriptions were byte-identical until 2026-09-03, which is how the Mac listing
-came to advertise four seats the Mac app does not have. Four differences in the
-copy below, each deliberate: no Apple Card block, "reading" where iOS says
-"workouts", no fitness in the category list, and a menu-bar-and-keyboard line
-where the Apple Card sentence sits on iOS.
+copy must never list them, and the seat count is 99 against iOS's 103. Four
+differences in the copy below, each deliberate: no Apple Card block, "reading"
+where iOS says "workouts", no fitness in the category list, and a
+menu-bar-and-keyboard line where the Apple Card sentence sits on iOS.
 
 ### Mac description (1,778 chars)
 
@@ -97,21 +96,33 @@ There is no Casberi server and no backend at all. No account, no ads, no trackin
 
 Casberi isn't another chatbot. It's your own things, in one feed, with an agent that knows them.
 
-### Mac What's New (2,445 chars)
+### Mac What's New — APPLIED 2026-09-08 on 1.0.15 (1,891 chars)
 
-The wallet rebuilt, three developer networks, and the biggest type on a screen now belongs to whatever that screen is for.
+The Mac sets type at its own size, the dock moves as one piece, and a first run opens into a live demo.
 
-• Wallet — watched addresses get their own roster, everyone else lives in the address book, and one swipe opens exactly one Remove on the row you swiped. An ENS avatar now loads for an address added while the app is open.
-• Developer networks — Base Vibenet, Hegota Devnet and Frames are public test networks: make an account, claim from the faucet, send test transactions and read back what the chain did. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network.
-• Frames Devnet — a new connector for the EIP-8141 frame-transaction chain: budgets, per-frame status and the payer, decoded move by move.
-• Vibenet — token movement lands in Activity in both directions, per token, with ranked counterparties and a balance curve read back from the chain. Policy runs get their own rows with the caller named, and the chain's own pulse tells a quiet account apart from a stopped devnet.
-• Hegotá — a whole sweep now reads a single block, so a spend landing mid-read can't break its proof. Lane counts read the on-chain counter, fees are undone in the balance line where this address paid them, and the block producer is named.
-• Detail sheets — a transaction, an account, a key or a note now leads with the words themselves instead of a boxed receipt. Gas and queue facts read as a table rather than four sentences, and a step whose receipt couldn't be paired says so rather than reading as failed.
-• Bankr — answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
-• Rooms — empty rooms, the address book and the sources tray each say one thing and offer one act. The feed opens on the newest thing at full size, with its source as the mark.
-• Privacy — "there is no server" now leads the privacy screen instead of being its smallest line.
-• Design — the chip strip is ink at rest, so the selected chip is the only blue; state words like Pending, Final and Locked lost their pill; trays and sheets are consistent throughout.
-• Fixed — the app could get stuck behind grey placeholder bars after a dismissed system alert or a glance at the app switcher, which read as loading forever. Returning now always clears it. Images in a connected folder no longer stay blank when the files live in iCloud.
+Features
+• First run opens straight into a furnished demo you can read, ask about, and leave whenever you like
+• With a row selected, ⌘C copies it, Space opens Quick Look, and any row drags out into another app
+• Saved articles read here whole, with their paragraphs and section titles, and every room has next and previous
+• Setup doors open the provider's page in a sheet, the key row offers Paste on return, and catalogue rows say what a tap costs — Allow, Sign in, Add key, Import or Connect
+• Watched addresses get their own roster; everyone else lives in the address book, with one Remove per swipe
+• Base Vibenet, Ethrex Hegotá and Frames are public test networks: make an account, claim from the faucet, send test transactions. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network
+
+Performance
+• Text is set for this platform, so a window holds more without anything feeling tighter
+• Faster launch and smoother scrolling: per-row costs are gone, saves are batched, and pictures decode off the main thread
+
+Design
+• The dock is one continuous surface — a folder springs out of its own chip, chips grow under the pointer, a flick parks the page
+• "There is no server" leads the privacy screen; state words like Pending and Final lost their pills
+
+Bugs
+• The app no longer sticks behind grey placeholder bars after a dismissed alert or a glance away
+• Images in a connected folder no longer stay blank when the files live in iCloud
+• Two crashes fixed: one when leaving the app or locking the screen, one in the source chips
+• Items saved under a renamed account find their room again
+
+Bankr answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
 
 ### Promotional text — both platforms (154 chars)
 
