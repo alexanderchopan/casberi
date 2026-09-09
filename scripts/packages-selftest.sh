@@ -107,7 +107,7 @@ done
 grep -q 'if firstSight, published == nil' "$PKG" \
   || { echo "✗ the silent-seed branch is gone — first sight could stamp an old release as today"; exit 1; }
 
-# THE TWO HALVES MUST AGREE ABOUT WHAT IDENTIFIES A ROW. The screen's week
+# THE TWO HALVES MUST AGREE ABOUT WHAT IDENTIFIES A ROW (prd §659). The screen's week
 # counts and its unwatch prune both read the package name back out of
 # `sourceRef`, because the ingest stamps no `authorHandle` — a package is not a
 # person. This SHIPPED broken the other way round: `countWeek` keyed off

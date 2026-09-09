@@ -281,7 +281,8 @@ enum PackageShape {
         "\(registry.rawValue):deprecated:\(name.lowercased())"
     }
 
-    /// The watched package a landed row belongs to, read back out of its ref.
+    /// The watched package a landed row belongs to, read back out of its ref
+    /// (prd §659).
     ///
     /// `npm:release:<name>:<version>` and `npm:deprecated:<name>` — the name is
     /// the component after the shape, already lowercased at mint time. Read

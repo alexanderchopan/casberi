@@ -51870,3 +51870,76 @@ Three structural costs, each intermittent by construction, which is what "once i
 **Mechanical.** `room-perf-selftest.sh` B7 — eight checks (the wait names both flags; `land` clears the flag; the observer clears it on `onDisappear`; both flags observation-ignored; the strip reports its finger and its phase, and the dock flag is finger OR flick) and five mutations, each a build-green version of the stuck flag, each caught. The harness gained `ShellChrome.swift` and `SourceChips.swift` as targets. Every Python audit in `scripts/` is green on the change. **Not verified here:** the build, the Catalyst compile, the swift harnesses and the device — this session had no toolchain, so the pass is owed before this ships.
 
 **Still open, deliberately.** The lift is still an unbounded `FeedScreen.init` on the main actor, and "wait for a still hand" only chooses when it lands. §651 named the structural ceiling — a room that keeps its mount across a change needs a room that does not observe the store on its own — and this amendment does not touch it. And the chip tap dealing a card (§651 amendment) still puts the room 280ms plus a build after the tap; whether a TAP should fly a card at all is a design call this entry leaves where §651 left it.
+
+## §659 — Every watched package read "quiet this week", because the count keyed off a field the ingest never stamps (2026-09-09)
+
+`PackageWatchScreen.countWeek` asked `AccountWeek.counts` for the week's rows
+by `Thing.authorHandle`, under a comment that said in so many words "the ingest
+stamps the package name as the thing's `authorHandle`". **It never has.**
+`PackageIngest.refresh` builds both Things it can land — the release and the
+deprecation — and touches the field in neither; the identifier does not appear
+in `PackageWatchBridge.swift` at all. `AccountWeek.counts` skips any row whose
+key returns nil (§639's own rule, and the right one), so `weekly` was ALWAYS
+empty: every watched package's subline read `<version> · releases · quiet this
+week`, and `weekCount`/`hasNew` were 0 and false the morning after a release
+landed as surely as they were a year later.
+
+**Why nothing saw it, and why that is the interesting half.** The count is
+real, the fetch runs, the row renders perfectly — it is just always zero, which
+is indistinguishable from a quiet week, and a package that has not released in
+seven days is the COMMON case for both these seats (§287's own empty-room note
+names five causes rendering as one silence; this is a sixth, and unlike the
+other five it is a bug). No build, no audit and no harness can see a field that
+is never written: `swiftc` is happy with a `nil` read, the static sweeps check
+shapes and hosts, and the one probe these seats have (`-packageProbe`) reports
+what the REGISTRY said, not what the screen counted. The comment is what made
+it durable — it stated the contract as satisfied, so anyone reading the screen
+had no reason to check the bridge.
+
+**Fixed by keying the REF, not by stamping the field**, and the choice matters
+past this seat:
+
+* **Retroactive.** Stamping `authorHandle` marks only rows landed AFTER the
+  fix, so a package that released two days ago would still read quiet for
+  another week — a fix that renders identically to the bug for its first seven
+  days. The ref is already on every row in the store, so the counts are right
+  on the next mount. Same class as §647/§650's finding that a one-shot
+  migration cannot fix a CloudKit store, for the milder reason: the rows are
+  already here.
+* **A package is not a person.** The seats that key on `authorHandle` (RSS,
+  Shopify, Hugging Face) each have a real publisher or owner in it. §303 and
+  the §340-family entry above allow a project or a service there — Cursor,
+  Vercel, Sentry, PagerDuty — but that field has UNSCOPED readers (retrieval
+  scoring, `FeedInsight`'s publisher leaderboard, `ThingSheetView`'s person
+  shape), and each would begin treating `@vercel/og` as somebody. `WorkStage.project`
+  is moot either way: it is source-gated to those four seats, so npm would
+  draw no project row regardless — verified before choosing.
+* **Radicle already reads its rows this way** — the other keyless watch list
+  with nothing author-shaped to stamp. The precedent existed one file over.
+
+The parse is `PackageShape.name(fromRef:registry:)` now, **shared with
+`unwatch`** rather than written twice, so a prune and a count can never
+disagree about which rows are whose. Reading a ref rather than a title is the
+§340 central rule holding: a ref is minted here, is not `String(localized:)`,
+and cannot come to mean something else because the device changed language.
+It splits with `omittingEmptySubsequences: false`, which is not a nicety — the
+default DROPS an empty component, so a malformed `npm:release::1.0.0` shifted
+the version into the name's slot and counted a row against a package called
+`1.0.0`; `unwatch`'s old inline parse carried that same hole since it shipped,
+and the assertion written for it caught the new parser on its first run.
+
+**Mechanical.** `scripts/packages-selftest.sh` gains twelve assertions over the
+parser — round-trips against the refs the ingest actually mints, `react` not
+reading as `react-router` in either direction, `requests` on PyPI not counting
+on npm's page (the two registries share a namespace SHAPE, not a namespace),
+and every nil case — plus three drift guards: the screen may not read
+`authorHandle`, the ingest may not stamp it, and both call sites must go
+through the shared parser. The pair is the point: either half may change, but
+not one without the other, which is exactly the disagreement that shipped.
+All three mutation-probed against build-green versions of the bug and confirmed
+to fire.
+
+**Verified:** the self-test, the `ref-shape`, `swiftdata-liveness` and
+`harness-exists` audits, and an iOS build. **Unseen on a device or a
+simulator** — proving the count on screen needs a package to release while
+something is watching it, which is a wait, not a check.

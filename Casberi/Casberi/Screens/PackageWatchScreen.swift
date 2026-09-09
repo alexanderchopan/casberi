@@ -79,7 +79,7 @@ struct PackageWatchScreen: View {
         }
     }
 
-    /// This week's releases per package, keyed off each row's REF.
+    /// This week's releases per package, keyed off each row's REF (prd §659).
     ///
     /// The ingest stamps no `authorHandle` — a package is not a person — so
     /// the identity is read back out of `sourceRef`, which carries the
