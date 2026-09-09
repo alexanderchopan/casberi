@@ -23,7 +23,15 @@ CasberiSharePreprocessor.prototype = {
                 || document.querySelector("#content")
                 || document.querySelector('[role="main"]');
             var body = text(el) || text(document.body);
-            return body.replace(/\s+/g, " ").trim();
+            // Spaces collapse; NEWLINES are kept, as the paragraph breaks the
+            // thing sheet draws (prd §645 amendment 4). innerText separates
+            // block elements with blank lines, and collapsing them to one
+            // space was half of the wall of text.
+            return body
+                .replace(/[ \t\u00a0\r]+/g, " ")
+                .replace(/ ?\n ?/g, "\n")
+                .replace(/\n{3,}/g, "\n\n")
+                .trim();
         }
         var selection = "";
         try { selection = (window.getSelection() || "").toString(); } catch (e) {}
@@ -34,8 +42,8 @@ CasberiSharePreprocessor.prototype = {
             "excerpt": metaDescription(),
             "selection": selection,
             // Capped here too — no reason to ship a whole page across the
-            // extension boundary when Swift only keeps a short lede anyway.
-            "articleText": bestContent().substring(0, 4000)
+            // extension boundary past what Swift keeps (`ReadableBody.limit`).
+            "articleText": bestContent().substring(0, 8000)
         });
     }
 };

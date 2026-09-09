@@ -75,9 +75,9 @@ enum ReadableParse {
         return title.count > 120 ? String(title.prefix(120)) + "…" : title
     }
 
-    /// The meta description plus the content region's paragraphs, de-duped and
-    /// flattened — what lands in `Thing.enrichedText` and, since §645 pass 1,
-    /// what the thing sheet DRAWS. Bounded by `maxParagraphs` and `bodyLimit`;
+    /// The meta description plus the content region's paragraphs, de-duped,
+    /// one paragraph per line-pair — what lands in `Thing.enrichedText` and,
+    /// since §645 pass 1, what the thing sheet DRAWS. Bounded by `maxParagraphs` and `bodyLimit`;
     /// nil when nothing readable comes back.
     ///
     /// It said "capped so it stays a lede, not a mirror of the page" until
@@ -93,13 +93,17 @@ enum ReadableParse {
         if let desc = ReadableParse.metaDescription(in: html) { pieces.append(desc) }
         pieces.append(contentsOf: ReadableParse.paragraphs(in: ReadableParse.contentRegion(html), limit: maxParagraphs))
 
-        // De-dupe (a description often repeats the first paragraph) and flatten.
+        // De-dupe (a description often repeats the first paragraph). Each
+        // piece is flattened to one line, and the pieces are joined with a
+        // BLANK LINE, not a space (prd §645 amendment 4): the page's own
+        // paragraphs are the breaks the sheet draws, and joining them with a
+        // space was the wall of text. See `ReadableBody.separator`.
         var seen = Set<String>()
         let text = pieces
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .map { $0.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                     .trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { $0.count > 24 && seen.insert($0).inserted }   // skip nav scraps
-            .joined(separator: " ")
-            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .joined(separator: ReadableBody.separator)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard text.count >= 40 else { return nil }
         return text.count > ReadableBody.limit

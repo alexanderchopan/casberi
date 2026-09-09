@@ -75,6 +75,19 @@ if re.search(r"enrichedText\s*=\s*String\(body\.prefix\(\s*\d", src):
 PY
 grep -q 'ReadableBody.limit' "$PARSE" \
   || { echo "✗ ReadableParse no longer uses the shared bound"; exit 1; }
+# The page's paragraphs survive the share extension's script (prd §645
+# amendment 4). `innerText` separates blocks with blank lines; collapsing all
+# whitespace to one space was half of the wall of text.
+JS="Casberi/ShareExtension/SharePreprocessor.js"
+[[ -f "$JS" ]] || { echo "✗ $JS not found"; exit 1; }
+if grep -qF 'replace(/\s+/g, " ")' "$JS"; then
+  echo "✗ SharePreprocessor.js collapses newlines again — a shared page is one paragraph"
+  exit 1
+fi
+grep -q 'ReadableBody.compose' "$SHARE" \
+  || { echo "✗ the share extension no longer composes description + article"; exit 1; }
+grep -q 'ReadableBody.paragraphed' "Casberi/Casberi/Screens/ArticleBody.swift" \
+  || { echo "✗ ArticleBody draws the body without paragraphed()"; exit 1; }
 
 # WHICH HOSTS A SCRAPE IS FAIR ON (prd §645 pass 5 item 4). The rule is a long
 # doc comment on `FeedArticleText`, and a rule with no guard is a rule that
@@ -258,6 +271,55 @@ let pw = ReadableParse.parseReadable(in: paywall) ?? ""
 check("the teaser is drawn", pw.contains("six hours"))
 check("…and it is not padded out to look like an article", pw.count < 200)
 
+// ── paragraphs (prd §645 amendment 4): the page's breaks, or a rule ───────
+// User: "it is all in one paragraph like a giant wall of text. could we format
+// it somewhat w/ rules, like every three or four sentences enter a line break".
+print("\nparagraphs")
+let sep = ReadableBody.separator
+check("the page's paragraphs are separated by a blank line, not a space",
+      long.contains("full stop." + sep + "This is paragraph"))
+check("…so the twelfth paragraph starts a block of its own",
+      long.components(separatedBy: sep).count >= 30)
+check("…and no paragraph carries a newline inside it",
+      !long.components(separatedBy: sep).contains { $0.contains("\n") })
+check("the description is the first paragraph", dd.hasPrefix("This is paragraph 1,") && dd.contains(sep))
+// A body that arrived FLAT (a row scraped before this pass, a share whose
+// page had no blocks) is broken every three sentences at draw time.
+let flat = (1...11).map { "This is sentence \($0) of a flat article, by Mr. Smith of the U.S. press." }
+    .joined(separator: " ")
+let broken = ReadableBody.paragraphed(flat)
+let groups = broken.components(separatedBy: sep)
+check("a flat run of eleven sentences is broken into paragraphs", groups.count == 4)
+check("…of three sentences each, the remainder at the end",
+      groups.map { ReadableBody.sentences(in: $0).count } == [3, 3, 3, 2])
+check("…and every sentence is still there, in order",
+      (1...11).allSatisfy { broken.contains("sentence \($0) ") }
+        && broken.replacingOccurrences(of: sep, with: " ") == flat)
+check("\"Mr.\" and \"U.S.\" never start a paragraph",
+      !groups.contains { $0.hasPrefix("Smith") || $0.hasPrefix("press") })
+check("an initial does not end a sentence",
+      ReadableBody.sentences(in: "J. K. Rowling wrote it. It sold.").count == 2)
+check("\"no\" at the end of a sentence still ends it",
+      ReadableBody.sentences(in: "He said no. She said yes.").count == 2)
+check("a remainder of one joins the paragraph before it",
+      ReadableBody.paragraphed((1...7).map { "Sentence \($0) is here." }.joined(separator: " "))
+        .components(separatedBy: sep).map { ReadableBody.sentences(in: $0).count } == [3, 4])
+// What already has breaks is left alone.
+let kept = "One is here. Two is here. Three is here. Four is here." + sep + "Five is here. Six is here."
+check("a body with the page's own short paragraphs is drawn as the page had it",
+      ReadableBody.paragraphed(kept) == kept)
+check("…while a long paragraph inside it is still broken",
+      ReadableBody.paragraphed(kept + sep + flat).components(separatedBy: sep).count == 2 + 4)
+// The share extension's composition: description THEN article, once.
+check("compose: description leads the article",
+      ReadableBody.compose(description: "A lede.", article: "The piece.") == "A lede." + sep + "The piece.")
+check("compose: a description the article already carries is not repeated",
+      ReadableBody.compose(description: "A lede here.", article: "A  lede\nhere. Then more.") == "A  lede\nhere. Then more.")
+check("compose: no article means the description",
+      ReadableBody.compose(description: "A lede.", article: "") == "A lede.")
+check("compose: no description means the article",
+      ReadableBody.compose(description: nil, article: "The piece.") == "The piece.")
+
 print(failures == 0 ? "\nAll assertions passed." : "\n\(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
 SWIFT
@@ -353,6 +415,26 @@ mutate "the short-piece floor dropped" ReadableParse.swift \
 mutate "the nothing-readable floor dropped" ReadableParse.swift \
   'guard text.count >= 40 else { return nil }' \
   'guard !text.isEmpty else { return nil }'
+
+# 9. The paragraphs joined with a space again — the wall of text, verbatim.
+mutate "paragraphs joined with a space again" ReadableParse.swift \
+  '.joined(separator: ReadableBody.separator)' \
+  '.joined(separator: " ")'
+
+# 9b. The draw-time rule dropped: a flat body stays flat.
+mutate "the sentence-grouping rule dropped" ReadableBody.swift \
+  '.flatMap(grouped)' \
+  '.map { $0 }'
+
+# 9c. The abbreviation guard dropped, so "Mr." ends a paragraph.
+mutate "the abbreviation guard dropped" ReadableBody.swift \
+  'if endsOnAbbreviation(s) { pending = s } else { out.append(s) }' \
+  'out.append(s)'
+
+# 9d. The composition back to description-OR-article.
+mutate "compose prefers the description again" ReadableBody.swift \
+  'guard !lead.isEmpty else { return body }' \
+  'return lead'
 
 # The membership guards, mutated. A separate loop because these are drift
 # guards over source text — the driver above cannot run them.

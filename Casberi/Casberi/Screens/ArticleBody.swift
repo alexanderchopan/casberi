@@ -63,8 +63,15 @@ struct ArticleBody: View {
                 // IS the thing (§366's own test), so it is set at `reading20`
                 // in primary ink rather than as a footnote under a fact.
                 // `markdown: false` — this is scraped prose, and nobody wrote
-                // it as markdown.
-                NoteProse(text: body, markdown: false)
+                // it as markdown. `paragraphed` breaks a body that arrived as
+                // one run every three or four sentences (prd §645 amendment
+                // 4); one the page already paragraphed is drawn as the page
+                // had it. `foldable: false` keeps what this view always did:
+                // as ONE block the body could never fold, and an article you
+                // opened to read is not §366's note with a "Read the rest".
+                NoteProse(text: ReadableBody.paragraphed(body),
+                          foldable: false,
+                          markdown: false)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, DS.Space.s4)

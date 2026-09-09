@@ -71,7 +71,10 @@ final class ShareViewController: UIViewController {
         let thing = Thing(kind: .link, title: title, content: url.absoluteString, source: "You")
         let article = (pageInfo?["articleText"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
         let excerpt = (pageInfo?["excerpt"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let body = [excerpt, article].compactMap { $0 }.first { !$0.isEmpty } ?? ""
+        // Description THEN article, not description OR article (prd §645
+        // amendment 4): both are drawn now, and the script hands over the
+        // page's paragraphs with their breaks.
+        let body = ReadableBody.compose(description: excerpt, article: article)
         if body.count >= 40 {
             // `ReadableBody.limit`, not a literal: the app clamps the same
             // column in another process, both are DRAWN since prd §645 pass 1,
