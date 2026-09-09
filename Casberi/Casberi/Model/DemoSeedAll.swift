@@ -2256,7 +2256,15 @@ enum DemoSeedAll {
                 t.authorHandle = r.2
                 t.authorAvatarURL = publisherArt(r.2)
                 t.previewImageURL = art(i)
-                t.enrichedText = "\(r.0) — \(r.2)."
+                // ONE article arrives WHOLE (2026-09-08). Since prd §645 the
+                // sheet draws `enrichedText` as the article, and "has a body"
+                // is simply non-empty — so the one-line stand-in below reads
+                // as a one-line article and the sheet never fetches. A demo
+                // that says "saved articles read here, whole" has to hold at
+                // least one that does. Day 1's row carries an original piece;
+                // the rest keep the stand-in, which is what a headline-only
+                // feed item looks like in real use too.
+                t.enrichedText = i == 0 ? quieterNotifications : "\(r.0) — \(r.2)."
                 // The item's own paragraph, as DISPLAY copy (2026-08-17).
                 // `RSSIngest` stamps the feed's `<summary>` onto `Thing.summary`
                 // — text the publisher wrote and handed us, which is exactly
@@ -2270,6 +2278,30 @@ enum DemoSeedAll {
         }
         return out
     }
+
+    /// The demo's one whole article — original copy, written for the demo
+    /// (2026-09-08). Blank lines are `ReadableBody.separator`; `# ` lines are
+    /// the section titles `NoteSheet.blocks` draws for a scraped body (prd
+    /// §645 amendment 5). Under `ReadableBody.limit`.
+    private static let quieterNotifications = """
+    Every app on my phone believes it is the most important thing that happened today. The weather has an opinion at 7 a.m. A game I have not opened since March would like me to know about a limited-time event. My bank, correctly, tells me a charge went through, and then a second app tells me the same charge went through, and a third offers to categorise it.
+
+    None of these are wrong, exactly. Each one, taken alone, is a reasonable thing to say. The problem is that nobody is taking them alone. They arrive together, on the same surface, wearing the same badge, and the surface has no idea which of them I would have crossed the room for.
+
+    # What a notification is actually for
+
+    Strip it back and a notification is a claim on your attention that could not wait. That is the whole contract. If it could have waited until you next opened the app, it belongs in the app. If it could have waited until tomorrow, it belongs in a digest. Only what cannot wait earns the lock screen, and almost nothing cannot wait.
+
+    The apps that get this right are boringly rare. A ride arriving. A flight gate changing. A dispute deadline that closes at midnight. You can tell them apart from the rest because they stop on their own: the ride arrives, the gate settles, the deadline passes. They do not need you to mute them, because they were never going to keep talking.
+
+    # The quiet default
+
+    So here is the approach, and it is not clever. Everything is off unless it can name the moment it is for. Arrivals are off, because arriving is what a feed is for. Summaries are off, because a summary you did not ask for is an interruption with a table of contents. The only thing that stays on is the alarm: the deadline, the thing with a clock on it, the thing you would genuinely be angry to have missed.
+
+    The result is a phone that goes quiet for hours at a time and then, when it does speak, is right. It took me a week to stop checking it out of habit. It took about a month to notice that I trusted it again, which is the part nobody puts in the release notes.
+
+    That trust is the whole point. An app that is quiet by default is not doing less for you. It is spending your attention as if it were its own, which is the only way anyone has ever earned the right to interrupt.
+    """
 
     private static func listening() -> [Thing] {
         var out: [Thing] = []
