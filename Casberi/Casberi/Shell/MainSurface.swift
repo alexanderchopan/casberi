@@ -2077,6 +2077,11 @@ struct MainSurface: View {
             chrome.pageDragX = 0
             chrome.pageDragProgress = 0
         }
+        // The arriving room has not scrolled (2026-09-09): the room being
+        // left may have been mid-deceleration, and its observer will never
+        // say `.idle` now — see `ShellChrome.scrolling`. Left set, the flag
+        // held this room's lift for the whole cap and every room after it.
+        chrome.scrolling = false
     }
 
     /// A transient bound on the incoming room's query, for the length of the
@@ -2159,8 +2164,15 @@ struct MainSurface: View {
         // `Self.stillnessCapMs` the head is owed regardless (§83 — a room
         // that describes 150 rows as its whole is the fake status the bound
         // was ruled never to become).
+        //
+        // …and not while the DOCK is in hand either (2026-09-09, user: "the
+        // nav bar is now very laggy"): a person who has just landed is very
+        // often already sliding the strip toward the next room, and this
+        // build landing under that motion is the hitch the report names.
+        // `ShellChrome.dockBusy` is the strip's finger and its flick.
         var waited = 0
-        while chrome.scrolling, waited < Self.stillnessCapMs, !Task.isCancelled {
+        while chrome.scrolling || chrome.dockBusy,
+              waited < Self.stillnessCapMs, !Task.isCancelled {
             try? await Task.sleep(for: .milliseconds(100))
             waited += 100
         }

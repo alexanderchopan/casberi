@@ -47,7 +47,32 @@ final class ShellChrome {
     /// observer below, twice per scroll rather than per frame. Read from a
     /// TASK, never a body: the one reader is `MainSurface.releaseSwipeBudget`,
     /// which holds a room's full materialisation until the finger is still.
-    var scrolling = false
+    /// Observation-ignored so that rule is mechanical — a body reading it
+    /// would simply never update.
+    ///
+    /// **RESET ON EVERY ROOM CHANGE AND WHEN ITS SCREEN LEAVES (2026-09-09,
+    /// user: "the nav bar is now very laggy").** The observer only ever saw
+    /// its own screen's phases, and a screen swapped out mid-deceleration —
+    /// a chip tapped while the feed was still settling, Settings popped
+    /// while it was still moving — never delivers its `.idle`. So the flag
+    /// stuck at `true`, and from then on EVERY room reached from the dock
+    /// waited the full `stillnessCapMs` with its head declined and its rows
+    /// bounded, then paid its unbounded build three seconds after arriving,
+    /// at whatever the finger was doing by then. It stayed stuck until a
+    /// feed scroll ran to idle, which a person flicking through rooms never
+    /// does. `MainSurface.land` clears it for the arriving room, and
+    /// `minimizesChrome` clears it on `onDisappear`.
+    @ObservationIgnored var scrolling = false
+    /// Whether the DOCK is in hand — a finger on the strip, or its flick still
+    /// running (2026-09-09). Written by the strip's finger tracker and its
+    /// own scroll-phase observer, only when the value changes; read from the
+    /// same task as `scrolling` and nowhere else. The budget's lift is the
+    /// room's biggest single build, and a person who has just landed in a
+    /// room is very often already sliding the dock to the next one: landing
+    /// that build under the strip's motion is precisely the nav-bar hitch it
+    /// reads as. Bounded by the same cap, so a hand that never leaves the
+    /// dock still gets its head.
+    @ObservationIgnored var dockBusy = false
     /// One chip's height: the scroll distance that folds the dock completely.
     static let foldTravel: CGFloat = 56
     /// Under this offset the dock is always open — the top of a room keeps
@@ -987,6 +1012,12 @@ extension View {
             if chrome.scrolling != moving { chrome.scrolling = moving }
             guard phase == .idle else { return }
             chrome.settleFold()
+        }
+        // A screen that leaves mid-scroll never reports `.idle` — see
+        // `ShellChrome.scrolling`. Without this the flag outlives the screen
+        // that set it, and every later room waits the whole cap.
+        .onDisappear {
+            if active, chrome.scrolling { chrome.scrolling = false }
         }
     }
 }

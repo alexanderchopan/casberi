@@ -69,6 +69,8 @@ SIGNAL="${ROOM_PERF_SIGNAL:-Casberi/Casberi/Model/CorpusSignal.swift}"
 CLOCK="${ROOM_PERF_CLOCK:-Casberi/Casberi/Shell/SwipeClock.swift}"
 COMPOSER="${ROOM_PERF_COMPOSER:-Casberi/Casberi/Shell/Composer.swift}"
 ROOT="${ROOM_PERF_ROOT:-Casberi/Casberi/Shell/RootShell.swift}"
+CHROME="${ROOM_PERF_CHROME:-Casberi/Casberi/Shell/ShellChrome.swift}"
+CHIPS="${ROOM_PERF_CHIPS:-Casberi/Casberi/Shell/SourceChips.swift}"
 
 fails=0
 ok()   { print -r -- "  ✓ $1" }
@@ -372,6 +374,44 @@ else
   fail "swipeRowBudgetRows ($budget) is too small against windowRowTarget ($target)"
 fi
 
+# B7. THE LIFT WAITS FOR A STILL HAND, AND THE FLAG IT WAITS ON CANNOT STICK
+#     (prd §658, amended 2026-09-09 — user: "the nav bar is now very laggy").
+#     The release polls `ShellChrome.scrolling`; the observer that writes it
+#     only ever sees its own screen's phases, and a screen swapped out
+#     mid-deceleration never reports `.idle`. Left set, the flag held EVERY
+#     later room at the cap — head declined, rows bounded, then the unbounded
+#     build landing three seconds after arrival under whatever the finger was
+#     doing. Each check below is one door the flag is cleared through, or the
+#     dock's own hold on the lift.
+check "the lift waits on the feed's scroll AND the dock in hand" \
+      "$MAIN" 'while chrome\.scrolling \|\| chrome\.dockBusy,' yes
+checkm "a room change clears the scroll flag for the arriving room" \
+       "$MAIN" 'private func land\(_ target: String\) \{(?:(?!\n    \}).)*chrome\.scrolling = false' yes
+if [[ -f "$CHROME" ]]; then
+  checkm "the scroll observer clears its flag when its screen leaves" \
+         "$CHROME" '\.onDisappear \{\s*if active, chrome\.scrolling \{ chrome\.scrolling = false \}' yes
+  # Neither flag may be a body's dependency: both are written from scroll and
+  # touch callbacks, and an observable write there invalidates every reader
+  # on every scroll. Ignored, a body that read one would simply never update,
+  # which is the mechanical form of "read from a task, never a body".
+  check "scrolling is observation-ignored" \
+        "$CHROME" '@ObservationIgnored var scrolling = false' yes
+  check "dockBusy is observation-ignored" \
+        "$CHROME" '@ObservationIgnored var dockBusy = false' yes
+else
+  fail "ShellChrome.swift is missing"
+fi
+if [[ -f "$CHIPS" ]]; then
+  check "the strip reports its finger to the dock flag" \
+        "$CHIPS" 'viewport\.fingerDown = at != nil' yes
+  check "the strip reports its own scroll phase to the dock flag" \
+        "$CHIPS" 'viewport\.moving = phase != \.idle' yes
+  check "the dock flag is the finger OR the flick (a tap clears, a flick holds)" \
+        "$CHIPS" 'let busy = viewport\.fingerDown \|\| viewport\.moving' yes
+else
+  fail "SourceChips.swift is missing"
+fi
+
 # ------------------------------------------------------------ the instrument
 
 # The clock must cost nothing in a shipped build that was not asked to report.
@@ -518,6 +558,8 @@ mutate() {  # mutate <description> <which: feed|main> <perl-expression>
   cp "$CLOCK"  "$dir/SwipeClock.swift"
   cp "$COMPOSER" "$dir/Composer.swift"
   cp "$ROOT"     "$dir/RootShell.swift"
+  cp "$CHROME"   "$dir/ShellChrome.swift"
+  cp "$CHIPS"    "$dir/SourceChips.swift"
   local src tgt
   case "$which" in
     feed)     src="$FEED";     tgt="$dir/FeedScreen.swift"  ;;
@@ -525,6 +567,8 @@ mutate() {  # mutate <description> <which: feed|main> <perl-expression>
     composer) src="$COMPOSER"; tgt="$dir/Composer.swift"    ;;
     root)     src="$ROOT";     tgt="$dir/RootShell.swift"   ;;
     clock)    src="$CLOCK";    tgt="$dir/SwipeClock.swift"  ;;
+    chrome)   src="$CHROME";   tgt="$dir/ShellChrome.swift" ;;
+    chips)    src="$CHIPS";    tgt="$dir/SourceChips.swift" ;;
     *)    print -r -- "  ✗ unknown mutation target: $which"; rm -rf "$dir"; return 1 ;;
   esac
   perl -0777 -i -pe "$expr" "$tgt"
@@ -554,6 +598,8 @@ mutate() {  # mutate <description> <which: feed|main> <perl-expression>
   ROOM_PERF_CLOCK="$dir/SwipeClock.swift" \
   ROOM_PERF_COMPOSER="$dir/Composer.swift" \
   ROOM_PERF_ROOT="$dir/RootShell.swift" \
+  ROOM_PERF_CHROME="$dir/ShellChrome.swift" \
+  ROOM_PERF_CHIPS="$dir/SourceChips.swift" \
     "$SELF" --checks-only >/dev/null 2>&1 && survived=1
   rm -rf "$dir"
   if (( survived )); then
@@ -678,6 +724,20 @@ mutate "the source room stops honouring rowBudget"  feed \
   's/d\.fetchLimit = min\(Self\.sourceRoomFetchLimit, rowBudget \?\? \.max\)/d.fetchLimit = Self.sourceRoomFetchLimit/' \
   || mfails=$((mfails + 1))
 mutate "the budget is never released"  main 's/        swipeRowBudget = nil\n//' || mfails=$((mfails + 1))
+
+# B7 (prd §658 amendment, 2026-09-09). Each of these is build-green and renders
+# a room that arrives correctly — three seconds late, with its biggest build
+# landing under the next gesture, which is how it was reported.
+mutate "the lift stops waiting on the dock in hand"  main \
+  's/while chrome\.scrolling \|\| chrome\.dockBusy,/while chrome.scrolling,/' || mfails=$((mfails + 1))
+mutate "a room change no longer clears the scroll flag (it sticks for every later room)"  main \
+  's/\n        chrome\.scrolling = false\n//' || mfails=$((mfails + 1))
+mutate "the scroll flag outlives the screen that set it"  chrome \
+  's/\.onDisappear \{\n\s*if active, chrome\.scrolling \{ chrome\.scrolling = false \}\n\s*\}\n//' || mfails=$((mfails + 1))
+mutate "scrolling becomes a body dependency (a rebuild per scroll phase)"  chrome \
+  's/\@ObservationIgnored var scrolling = false/var scrolling = false/' || mfails=$((mfails + 1))
+mutate "the dock's flick stops holding the lift (only the finger does)"  chips \
+  's/let busy = viewport\.fingerDown \|\| viewport\.moving/let busy = viewport.fingerDown/' || mfails=$((mfails + 1))
 
 # Section D (prd §600). Each of these builds green and renders a room that
 # looks entirely correct while making a false claim about it, or pays back the

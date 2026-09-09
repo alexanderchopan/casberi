@@ -684,6 +684,14 @@ struct SourceChips: View {
                             // frame box until the lift that parks it, and the
                             // content x is written only when it has moved
                             // past `fingerStep`.
+                            //
+                            // The dock in hand (2026-09-09): a finger down,
+                            // or a flick still running, holds the room's
+                            // unbounded build (`ShellChrome.dockBusy`,
+                            // `MainSurface.releaseSwipeBudget`). A box write
+                            // per move; the chrome write only on a change.
+                            viewport.fingerDown = at != nil
+                            publishDockBusy()
                             if let at {
                                 chipFrames.fingerViewportX = at.x - viewport.offset
                                 guard abs((scrubX ?? -.infinity) - at.x) >= Self.fingerStep else { return }
@@ -792,6 +800,10 @@ struct SourceChips: View {
                 }
             }
             .onScrollPhaseChange { _, phase in
+                // The strip's own motion, for `dockBusy` — a flick outlives
+                // the finger that threw it.
+                viewport.moving = phase != .idle
+                publishDockBusy()
                 guard phase == .idle, scrubX == nil else { return }
                 withAnimation(DS.Motion.standard) { waveViewportX = nil }
             }
@@ -801,6 +813,15 @@ struct SourceChips: View {
                 viewport.globalMinX = x
             }
         }
+    }
+
+    /// `ShellChrome.dockBusy` from the two facts the strip holds about its own
+    /// motion, written only when the answer changes (2026-09-09). A tap is a
+    /// finger down and up with no phase change between, so the lift clears
+    /// it; a flick's phases carry it past the lift until the strip rests.
+    private func publishDockBusy() {
+        let busy = viewport.fingerDown || viewport.moving
+        if chrome.dockBusy != busy { chrome.dockBusy = busy }
     }
 
     // MARK: - Scrub
@@ -1791,6 +1812,10 @@ final class ScrollViewportBox {
     var offset: CGFloat = 0
     var width: CGFloat = 0
     var globalMinX: CGFloat = 0
+    /// A finger is on the strip (any touch — a tap, a drag, a scrub).
+    var fingerDown = false
+    /// The strip's scroll is not idle (a drag, or a flick still running).
+    var moving = false
 }
 
 struct ScrollViewportSample: Equatable {

@@ -133,6 +133,12 @@ Every entry below is **verbatim** as it was written — nothing was summarised, 
 
 **What it deliberately does not check.** That the fixes are FAST — it is a shape check, not a budget, and none of these has a measured before/after. It also cannot see a NEW per-row cost of a shape nobody has met yet; the six still-open findings in P3 are carried as prose there, not as checks here, because a guard for a cost nobody has removed would fail on day one.
 
+## Room-perf self-test, section B7 (`scripts/room-perf-selftest.sh`, 2026-09-09) → prd §658 amendment
+
+**What it pins.** The swipe budget's lift (§658 part 3) polls `ShellChrome.scrolling`, and that flag could stick: the observer that writes it only sees its own screen's phases, so a room swapped or a screen popped mid-deceleration left it `true` and every later room waited the full 3s cap with its head declined. Eight checks over `MainSurface`, `ShellChrome` and `SourceChips` (two new harness targets): the wait names both `scrolling` and `dockBusy`; `land` clears the flag for the arriving room; `minimizesChrome` clears it on `onDisappear`; both flags are `@ObservationIgnored`; the strip reports its finger and its own scroll phase, and the dock flag is finger OR flick. Five mutations, each a build-green version of the stuck flag.
+
+**What it deliberately does not check.** That the lift is cheap — it is not, and §651 names the structural ceiling. This only pins WHEN it lands.
+
 ## Save-coalescer self-test (`scripts/save-coalescer-selftest.sh`, 2026-09-08) → prd §658
 
 **What it proves.** `Shared/SaveHonestly.swift` compiled verbatim against SwiftData on the Mac, driven by a counter on `ModelContext.didSave`: a save outside a bridge pass is immediate; five asks inside one become ONE save after the quiet window; a continuous stream cannot hold a save past the 1s cap; a child `Task {}` inside a pass is held with it and a `Task.detached` is not; `flushNow` writes at once and an empty flush writes nothing; `SaveCensus.count` is real saves and `.requested` is asks. Test 0 is the premise — the main context's autosave never fires on its own between explicit saves — kept so the arithmetic is re-checked on every toolchain. Five mutations (the task-local check dropped, the cap dropped, a flushed save uncounted, `flushNow` inert, the timer not re-armed) and seven drift guards: every `BridgeRefresh` slot runs as `landingTask`, none as a bare `Task` before its stagger; the background flush in `RootShell`; `asked=` on the sweep line.
