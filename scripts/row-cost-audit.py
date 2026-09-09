@@ -91,7 +91,7 @@ CHECKS = [
         # and its first closing brace runs per row per body build. The verbs
         # read `content` — unfetched in the All room — and run a detector.
         r"\.contextMenu \{[^}]*VerbDerivation\.verbs",
-        "the row's context menu deriving its verbs inline, per row build (prd §660)",
+        "the row's context menu deriving its verbs inline, per row build (prd §661)",
         "a `content` fault plus an NSDataDetector pass on the main thread for "
         "every row that scrolls into view, to fill a menu nobody has pressed",
     ),

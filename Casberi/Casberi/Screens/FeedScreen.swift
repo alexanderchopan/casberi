@@ -1724,7 +1724,7 @@ struct FeedScreen: View {
 
     @State private var shapeWave = 0
     /// When `shapeWave` last moved — the mount, then every bump (PERF
-    /// 2026-09-09, prd §660). `RowEntrance.waveAt`: a row appearing more than
+    /// 2026-09-09, prd §661). `RowEntrance.waveAt`: a row appearing more than
     /// `RowEntrance.cascadeWindow` after this was met by scrolling, not by the
     /// room's arrival, and shows at rest instead of waiting out a stagger
     /// sized for the first screen.
@@ -10947,7 +10947,7 @@ struct FeedScreen: View {
             // for Open/Unpin all along (`GenRenderer.pinnedRowActions`).
             .contextMenu {
                 // THE MENU IS BUILT WHEN IT RISES, NOT WHEN THE ROW DOES (PERF
-                // 2026-09-09, user: "it's not great on scrolling"; prd §660).
+                // 2026-09-09, user: "it's not great on scrolling"; prd §661).
                 // `contextMenu(menuItems:)` takes a NON-ESCAPING builder, so
                 // everything once written inline here ran on every row body
                 // build — and the first thing it did was
@@ -12231,7 +12231,7 @@ struct FeedScreen: View {
 
 
 /// A feed row's long-press verbs, derived when the menu RISES (PERF
-/// 2026-09-09, prd §660).
+/// 2026-09-09, prd §661).
 ///
 /// This body used to be the inline content of `shapedListRow`'s
 /// `.contextMenu`, and that builder is non-escaping: SwiftUI evaluates it
@@ -12339,7 +12339,7 @@ struct RowEntrance: ViewModifier {
     var instant: Bool = false
     /// When the wave this row belongs to began — `FeedScreen.shapeWaveAt`,
     /// stamped at the screen's mount and beside every `shapeWave` bump (PERF
-    /// 2026-09-09, user: "it's not great on scrolling"; prd §660).
+    /// 2026-09-09, user: "it's not great on scrolling"; prd §661).
     ///
     /// The stagger is `min(index, 12) × step`, and a row deep in a room never
     /// has an index under twelve — so every row that SCROLLED into view sat

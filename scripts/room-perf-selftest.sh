@@ -402,18 +402,20 @@ else
   fail "ShellChrome.swift is missing"
 fi
 if [[ -f "$CHIPS" ]]; then
-  check "the strip reports its finger to the dock flag" \
-        "$CHIPS" 'viewport\.fingerDown = at != nil' yes
   check "the strip reports its own scroll phase to the dock flag" \
         "$CHIPS" 'viewport\.moving = phase != \.idle' yes
-  check "the dock flag is the finger OR the flick (a tap clears, a flick holds)" \
-        "$CHIPS" 'let busy = viewport\.fingerDown \|\| viewport\.moving' yes
+  # A finger DRAGGING the strip is its scroll phase (2026-09-09, prd §660) —
+  # the separate touch tracker that used to report it was the never-recognising
+  # UIKit recognizer, deleted with the catcher. A scrub is the other half: it
+  # freezes the scroll, so no phase would ever report it.
+  check "the dock flag is the flick OR a scrub (both outlive the finger)" \
+        "$CHIPS" 'let busy = viewport\.moving \|\| scrubbing != nil' yes
 else
   fail "SourceChips.swift is missing"
 fi
 
 # B8. A ROW MET BY SCROLLING ARRIVES AT REST, AND THE MENU IS BUILT ON PRESS
-#     (prd §660, 2026-09-09 — user: "it's not great on scrolling"). Three
+#     (prd §661, 2026-09-09 — user: "it's not great on scrolling"). Three
 #     costs inside the scroll's own frames, each build-green and each drawing
 #     a room that looks right: the row's context menu derived its verbs per
 #     row build (a `content` fault plus a detector pass in the All room);
@@ -768,10 +770,10 @@ mutate "the scroll flag outlives the screen that set it"  chrome \
   's/\.onDisappear \{\n\s*if active, chrome\.scrolling \{ chrome\.scrolling = false \}\n\s*\}\n//' || mfails=$((mfails + 1))
 mutate "scrolling becomes a body dependency (a rebuild per scroll phase)"  chrome \
   's/\@ObservationIgnored var scrolling = false/var scrolling = false/' || mfails=$((mfails + 1))
-mutate "the dock's flick stops holding the lift (only the finger does)"  chips \
-  's/let busy = viewport\.fingerDown \|\| viewport\.moving/let busy = viewport.fingerDown/' || mfails=$((mfails + 1))
+mutate "a scrub stops holding the lift (only the flick does)"  chips \
+  's/let busy = viewport\.moving \|\| scrubbing != nil/let busy = viewport.moving/' || mfails=$((mfails + 1))
 
-# B8 (prd §660, 2026-09-09). Each is the shipped shape, restored.
+# B8 (prd §661, 2026-09-09). Each is the shipped shape, restored.
 mutate "a scrolled-in row waits out the first screen's stagger again"  feed \
   's/\n\s*if let waveAt, Date\.timeIntervalSinceReferenceDate - waveAt >= Self\.cascadeWindow \{ shown = true; return \}//' || mfails=$((mfails + 1))
 mutate "the entrance helper stops passing the stamp"  feed \

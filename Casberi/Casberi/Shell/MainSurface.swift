@@ -2293,7 +2293,7 @@ struct MainSurface: View {
     /// active, or a feed already scrolled (`chrome.fold > 0` — the draw
     /// would land mid-scroll as a hitch, and a snapshot of the top of a room
     /// the person has left the top of is stale on arrival anyway) **or still
-    /// moving (`chrome.scrolling`, 2026-09-09, prd §660)** — the fold has a
+    /// moving (`chrome.scrolling`, 2026-09-09, prd §661)** — the fold has a
     /// 60pt floor, so a scroll begun inside the first 0.9s and still under
     /// it at the tick read as "at the top" and admitted a 20–40ms
     /// `drawHierarchy` into the frames of the scroll it was meant to avoid.
@@ -3018,8 +3018,11 @@ private struct DockScrubCaption: View {
                     .fixedSize()
                     // Kept inside the surface: a chip at the very edge names
                     // itself inboard rather than half off the screen.
+                    // Above the LIFTED chip, which rises out of the slab by
+                    // `scrubLift` of its frame (2026-09-09) — a caption at
+                    // `s3` alone sat on the risen chip's crown.
                     .position(x: min(max(scrub.windowX - origin, 56), width - 56),
-                              y: -DS.Space.s3)
+                              y: -(DS.Space.s3 + DSDock.chipFrame(fold: 0) * DSDock.scrubLift))
                     .transition(reduceMotion ? .opacity
                                              : .scale(scale: 0.8).combined(with: .opacity))
                     .accessibilityHidden(true)
