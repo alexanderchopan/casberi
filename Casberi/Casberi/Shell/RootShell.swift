@@ -2005,13 +2005,11 @@ struct RootShell: View {
             // would measure the fix rather than the work.
             AppSignposts.beginForegroundSweep()
             defer { AppSignposts.endForegroundSweep() }
-            // Every write to an EXISTING row's `previewImageData` happens
-            // inside this sweep, so one flush here covers all of them and no
-            // writer needs to know the cache exists (prd §626). Firing before
-            // the sweep's own late slots land is harmless: `StoredPixels`
-            // remembers only pictures that exist, so an early drop costs one
-            // re-decode and can never show a stale or missing one.
-            defer { StoredPixels.flush(); ShareTargetMemo.flush() }
+            // `StoredPixels` is no longer flushed here (2026-09-08): the five
+            // writers that can replace a drawn picture forget their own row,
+            // and a nil is remembered for a minute at most — so a return to
+            // the app no longer re-decodes every visible picture on main.
+            defer { ShareTargetMemo.flush() }
             runForegroundWork()
         }
         // Resnapshot hand-off state so the thing sheet's "Add to <app>"
@@ -2092,6 +2090,9 @@ struct RootShell: View {
         if hasBeenActive && hidePreviews
             && !ProcessInfo.processInfo.isMacCatalystApp { PrivacyCover.show(on: windowScene) }
         if phase == .background {
+            // A save the coalescer is still holding is written now, before
+            // the process can be reaped with it pending.
+            SaveCoalescer.flushNow()
             // The away clock starts — the next foreground reads it.
             AppVisit.markClosed()
             // Ask iOS to sample wallet holdings while we're away, so

@@ -131,6 +131,7 @@ import Foundation
 // mutation pass by being caught in the stub instead of in the code.
 enum SaveCensus {
     nonisolated(unsafe) static var count = 0
+    nonisolated(unsafe) static var requested = 0   // §658: asks beside saves
 }
 enum PerfReadings {
     nonisolated(unsafe) static var recorded: [(String, Double, String)] = []

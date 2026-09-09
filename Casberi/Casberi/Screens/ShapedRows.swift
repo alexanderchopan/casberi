@@ -2253,9 +2253,10 @@ struct PhotoWell: View {
         // The corpus's own copy first (saved by ScreenshotIngest.heal since
         // 2026-07-10) — instant, and it outlives the Photos original. No
         // fade: stored bytes are ready before first paint, like a bundle
-        // image.
-        if let data = thing.previewImageData, let stored = UIImage(data: data) {
-            image = stored
+        // image. Decoded through `StoredPixels` (off main, memoised) rather
+        // than `UIImage(data:)` here, whose bitmap would decode at draw.
+        if let stored = await StoredPixels.prepared(for: thing) {
+            image = stored.image
             return
         }
         let assetID = ref.replacingOccurrences(of: "phasset:", with: "")
@@ -2618,14 +2619,17 @@ struct PostCard: View {
                 PostImageGrid(urls: thing.imageURLs)
             } else if let media = thing.previewImageURL, !media.isEmpty {
                 PostMedia(urlString: media)
-            } else if let stored = StoredPixels.image(for: thing) {
+            } else if let stored = StoredPixels.probe(thing) {
                 // Through `StoredPixels` since prd §626: this is a FEED ROW's
                 // body, and SwiftUI re-evaluates a leaf's body on the model's
                 // own observation (liveness corollary 5) — so the bare
                 // `previewImageData` read plus `UIImage(data:)` that stood here
                 // faulted an external file and built a fresh, undecoded image
                 // on every one of those passes, which during a foreground
-                // sweep is many. Same nil-ness, same picture, decoded once.
+                // sweep is many. Same nil-ness, same picture, decoded once —
+                // and since 2026-09-08 decoded OFF the main thread: the probe
+                // answers the branch from the image header, `StoredPicture`
+                // draws the bitmap when it is ready, at this exact frame.
                 //
                 // A picture the app already HOLDS rather than fetches
                 // (2026-08-06). Every source this card served until now was a
@@ -2643,9 +2647,11 @@ struct PostCard: View {
                 // states above it — a bare `scaledToFill` inflates the row to
                 // the image's intrinsic size.
                 GeometryReader { geo in
-                    Image(uiImage: stored)
-                        .resizable().scaledToFill()
-                        .frame(width: geo.size.width, height: geo.size.height)
+                    StoredPicture(thing, size: stored) { image in
+                        Image(uiImage: image)
+                            .resizable().scaledToFill()
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height)
                 }
                 .frame(height: 160)
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))

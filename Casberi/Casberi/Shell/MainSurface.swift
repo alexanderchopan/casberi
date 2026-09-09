@@ -2136,10 +2136,28 @@ struct MainSurface: View {
         // full fetch lands after the last animated frame, short enough that the
         // head follows the room rather than trailing it.
         try? await Task.sleep(for: .milliseconds(360))
+        // …and not while the finger is on the room (PERF 2026-09-08). The
+        // lift re-runs `FeedScreen.init` unbounded — a 600/1,200-row fetch
+        // plus its per-model snapshot (§646) — and 360ms after a landing is
+        // exactly when a person has started to scroll the room they just
+        // reached, so the biggest build of the whole room change used to
+        // land inside their scroll. Wait for stillness, bounded: past
+        // `Self.stillnessCapMs` the head is owed regardless (§83 — a room
+        // that describes 150 rows as its whole is the fake status the bound
+        // was ruled never to become).
+        var waited = 0
+        while chrome.scrolling, waited < Self.stillnessCapMs, !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(100))
+            waited += 100
+        }
         guard !Task.isCancelled, swipeBudgetGeneration == generation else { return }
         swipeRowBudget = nil
         swipeBudgetSource = nil
     }
+
+    /// How long a scroll may hold the budget's release. Three seconds is
+    /// longer than any flick's deceleration and shorter than a read.
+    private static let stillnessCapMs = 3000
 
     /// Which edge the incoming room slides from.
     ///

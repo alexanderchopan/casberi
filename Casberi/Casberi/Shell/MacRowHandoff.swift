@@ -168,7 +168,7 @@ enum MacRowHandoff {
             case .unreachable:   return .unreachable
             }
         }
-        guard let image = StoredPixels.image(for: thing),
+        guard let image = StoredPixels.imageNow(for: thing),
               let data = image.pngData() else { return .noPreview }
         let name = safeName(thing.title.isEmpty ? "Screenshot" : thing.title) + ".png"
         guard let url = stage(data: data, named: name) else { return .unreachable }

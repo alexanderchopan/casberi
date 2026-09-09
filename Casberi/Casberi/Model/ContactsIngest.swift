@@ -183,6 +183,7 @@ enum ContactsIngest {
                   let data = full.thumbnailImageData, !data.isEmpty
             else { continue }
             thing.previewImageData = data
+            StoredPixels.forget(thing.id)   // a drawn face may be replaced — prd §626
             patched += 1
         }
         if patched > 0 { context.saveHonestly() }
@@ -253,6 +254,7 @@ enum ContactsIngest {
         // Bool the enumeration already carries, never image bytes.
         if !contact.imageDataAvailable, thing.previewImageData != nil {
             thing.previewImageData = nil
+            StoredPixels.forget(thing.id)   // a drawn face was removed — prd §626
         }
     }
 

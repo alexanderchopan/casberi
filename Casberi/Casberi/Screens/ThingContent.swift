@@ -403,9 +403,11 @@ struct ThingContentView: View {
             // claim it and draw the file as a still nothing could play.
             if let ref = thing.sourceRef, FilesIngest.isVideoRef(ref) {
                 FileVideoContent(ref: ref, name: thing.title, note: thing.content,
-                                 poster: StoredPixels.image(for: thing))   // decoded once — prd §626
-            } else if let image = StoredPixels.image(for: thing) {   // decoded once — prd §626
-                FilePictureContent(image: image)
+                                 poster: StoredPixels.imageNow(for: thing))   // decoded once — prd §626
+            } else if let size = StoredPixels.probe(thing) {   // decoded once, off main — prd §626
+                StoredPicture(thing, size: size) { image in
+                    FilePictureContent(image: image)
+                }
                 // The name, size and folder BENEATH the picture (prd §365) —
                 // the delivery anatomy. Before this an image file drew its
                 // pixels and nothing else, so the one row in the corpus that
@@ -636,7 +638,12 @@ private struct ScreenshotContent: View {
         // The corpus's own copy first — instant, and it outlives both the
         // Photos original and the grant. Same order as `PhotoWell` and
         // `ThingShareLink`; this loader is no longer the odd one out.
-        if let stored, let saved = UIImage(data: stored) { image = saved }
+        if let stored {
+            let saved = await Task.detached(priority: .userInitiated) {
+                UIImage(data: stored)?.preparingForDisplay() ?? UIImage(data: stored)
+            }.value
+            if let saved { image = saved }
+        }
         guard let assetID,
               PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
                 || PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited,
@@ -764,7 +771,7 @@ struct ThingShareLink<Label: View>: View {
             screenshotImage = UIImage.demoSample(for: ref)
             return
         }
-        if let data = thing.previewImageData, let stored = UIImage(data: data) {
+        if let stored = StoredPixels.imageNow(for: thing) {
             screenshotImage = stored
             return
         }

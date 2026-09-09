@@ -300,7 +300,11 @@ grep -qF 'PostCard(thing: thing, whole: whole)' "$FEEDSCREEN" \
 # file to bytes on the row, inside the folder grant. Without a stored-bytes
 # branch the card draws none of them: pixels in the store and none on screen,
 # which is §283's Files bug in a new room.
-grep -q 'thing.previewImageData, let stored = UIImage(data: data)' Casberi/Casberi/Screens/ShapedRows.swift \
+# RE-SPELLED twice: §626 moved the decode behind `StoredPixels`, and §658
+# made it `probe` + `StoredPicture` (decoded off main). The old spelling kept
+# passing on PhotoWell's load function — a guard satisfied by the wrong line,
+# the fix-recorded-once class — so this names the PostCard branch itself.
+grep -q '} else if let stored = StoredPixels.probe(thing) {' Casberi/Casberi/Screens/ShapedRows.swift \
   || { echo "✗ PostCard can't draw a picture the app already holds — every imported post loses its media"; exit 1; }
 # The treemap's root cause. `clean` expands `entities["urls"]` and used to stop
 # there, so a picture's own shortlink rode into `content` on every post that

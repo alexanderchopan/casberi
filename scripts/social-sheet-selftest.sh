@@ -136,7 +136,7 @@ guard "facesAreDoors is SocialThread.isSocial, not the wider set" \
 # purpose: accepting both would let a regression to a per-body decode pass as
 # green, and the branch existing is only half of what this guard is for.
 guard "a post draws a picture the app already holds" \
-  'images\.isEmpty, let [A-Za-z]+ = StoredPixels\.image\(for: thing\)' "$POSTS"
+  'images\.isEmpty, let [A-Za-z]+ = StoredPixels\.probe\(thing\)' "$POSTS"
 
 # NEGATIVE GUARDS read a COMMENT-STRIPPED copy. Every file here DOCUMENTS what
 # it must no longer do by naming it — `SocialPostViews.swift` explains at

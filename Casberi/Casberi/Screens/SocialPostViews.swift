@@ -68,7 +68,7 @@ struct SocialPostContent: View {
     /// post. Several ride a strip that scrolls sideways inside its own lane, so
     /// a four-photo post keeps all four and the page never scrolls horizontally.
     @ViewBuilder private var photos: some View {
-        if images.isEmpty, let stored = StoredPixels.image(for: thing) {   // decoded once — prd §626
+        if images.isEmpty, let stored = StoredPixels.probe(thing) {   // decoded once, off main — prd §626
             // A picture the app already HOLDS rather than fetches (prd §363,
             // catching the sheet up with `PostCard`'s own 2026-08-06 fix). An
             // IMPORT has no URL to give — `ImportMedia` decodes the archive's
@@ -76,8 +76,10 @@ struct SocialPostContent: View {
             // second chance at a folder somebody has stopped granting — so an
             // X post's picture is BYTES, and every branch below asks for a URL.
             // The §283 failure exactly: pixels stored, never drawn.
-            Image(uiImage: stored)
-                .resizable().scaledToFit()
+            StoredPicture(thing, size: stored) { image in
+                Image(uiImage: image)
+                    .resizable().scaledToFit()
+            }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 // A poster frame is a still, and this is the largest a stored

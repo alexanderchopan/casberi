@@ -386,6 +386,7 @@ enum InstagramCaptions {
         // writing to a tombstoned model traps inside SwiftData.
         guard thing.isLive else { return .missing }
         thing.previewImageData = thumb
+        StoredPixels.forget(thing.id)   // a drawn cover may be replaced — prd §626
         setCoversStored(coversStored() + 1)
         context.saveHonestly()
         return .stored

@@ -70,7 +70,7 @@ CHECKS = [
     ),
     (
         "Casberi/Casberi/Screens/ShapedRows.swift",
-        "StoredPixels.image(for: thing)",
+        "StoredPixels.probe(thing)",
         None,
         "PostCard.liveBody decoding previewImageData itself",
         "an external-storage file read plus a fresh, undecoded UIImage per body "
@@ -102,14 +102,22 @@ CHECKS = [
 # `previewImageData` + `UIImage(data:)` in one statement is only allowed where
 # it runs ONCE — a load function behind `.task`/`@State` — never in a body.
 DECODE_ALLOWED = {
-    ("Casberi/Casberi/Design/StoredPixels.swift", "image"),          # the cache itself
-    ("Casberi/Casberi/Screens/ShapedRows.swift", "load"),            # PhotoWell.load()
-    ("Casberi/Casberi/Screens/ThingContent.swift", "loadScreenshotIfNeeded"),
+    ("Casberi/Casberi/Design/StoredPixels.swift", "imageNow"),       # the cache's own sync door
 }
 
-# The flush that makes the cache safe. Without it a replaced thumbnail is stale
-# for the session; see StoredPixels' header for why ONE call covers every writer.
-FLUSH = ("Casberi/Casberi/Shell/RootShell.swift", "defer { StoredPixels.flush(); ShareTargetMemo.flush() }")
+# The writers that can REPLACE (or clear) a picture a row has already drawn
+# must forget that row's memo (2026-09-08, in place of the sweep-end flush,
+# which re-decoded every visible picture on main after every foreground).
+# Each assignment line must be followed, within three lines, by its forget.
+FORGETS = [
+    ("Casberi/Casberi/Model/InstagramCaptions.swift", "thing.previewImageData = thumb"),
+    ("Casberi/Casberi/Model/SnapchatImport.swift", "thing.previewImageData = data"),
+    ("Casberi/Casberi/Model/ImportMedia.swift", "thing.previewImageData = data"),
+    ("Casberi/Casberi/Model/ContactsIngest.swift", "thing.previewImageData = data"),
+    ("Casberi/Casberi/Model/ContactsIngest.swift", "thing.previewImageData = nil"),
+]
+# And the flush must NOT come back to the sweep: it is the cost this replaced.
+NO_SWEEP_FLUSH = ("Casberi/Casberi/Shell/RootShell.swift", "StoredPixels.flush()")
 
 
 def strip_comments(text):
@@ -151,17 +159,32 @@ def audit(files):
             findings.append(
                 f"{path}: previewImageData decoded inside `{fn}`\n"
                 "    cost: an external-storage read plus a fresh undecoded UIImage per\n"
-                "    body evaluation. Use StoredPixels.image(for:), or move it into a\n"
-                "    load function behind .task and add it to DECODE_ALLOWED."
+                "    body evaluation, and a bitmap decoded on the main thread at draw.\n"
+                "    Use StoredPixels.probe + StoredPicture (a body) or\n"
+                "    StoredPixels.prepared(for:) (a load function)."
             )
 
-    fpath, fline = FLUSH
-    if fline not in strip_comments(files[fpath]):
+    for fpath, assign in FORGETS:
+        src = strip_comments(files[fpath])
+        lines = src.split("\n")
+        hits = [i for i, l in enumerate(lines) if assign in l]
+        if not hits:
+            findings.append(f"{fpath}: lost the writer `{assign}` this audit pins")
+            continue
+        for i in hits:
+            window = "\n".join(lines[i:i + 4])
+            if "StoredPixels.forget(thing.id)" not in window:
+                findings.append(
+                    f"{fpath}:{i + 1}: `{assign}` without StoredPixels.forget(thing.id)\n"
+                    "    cost: a row already drawn keeps its old picture for the session —\n"
+                    "    the memo is forgotten per row now, never flushed per sweep."
+                )
+    fpath, forbidden = NO_SWEEP_FLUSH
+    if forbidden in strip_comments(files[fpath]):
         findings.append(
-            f"{fpath}: lost `{fline}`\n"
-            "    cost: StoredPixels would keep a replaced thumbnail for the session.\n"
-            "    Every write to an existing row's previewImageData happens inside the\n"
-            "    foreground sweep, which is why one flush there covers all of them."
+            f"{fpath}: `{forbidden}` is back\n"
+            "    cost: every return to the app re-decodes every visible picture on\n"
+            "    the main thread during the first scroll."
         )
     return findings
 
@@ -203,17 +226,26 @@ def self_test():
         ("a row decodes previewImageData in its body",
          "Casberi/Casberi/Screens/ShapedRows.swift",
          lambda t: t.replace(
-             "} else if let stored = StoredPixels.image(for: thing) {",
-             "} else if let data = thing.previewImageData, let stored = UIImage(data: data) {")),
+             "} else if let stored = StoredPixels.probe(thing) {",
+             "} else if let stored = thing.previewImageData, let _ = UIImage(data: stored) {")),
         ("legibleInk solves on every call again",
          "Casberi/Casberi/Design/AppIconTile.swift",
          lambda t: t.replace("if let hit = inkMemo[key] { return hit }", "")),
         ("the ink memo keys on the bleed instead of the page background",
          "Casberi/Casberi/Design/AppIconTile.swift",
          lambda t: t.replace("theme.background.name", "theme.bleed.name")),
-        ("the sweep-end flush is dropped",
+        ("the sweep-end flush returns",
          "Casberi/Casberi/Shell/RootShell.swift",
-         lambda t: t.replace("defer { StoredPixels.flush(); ShareTargetMemo.flush() }", "")),
+         lambda t: t.replace("defer { ShareTargetMemo.flush() }",
+                             "defer { StoredPixels.flush(); ShareTargetMemo.flush() }")),
+        ("a replacing writer stops forgetting its row",
+         "Casberi/Casberi/Model/ContactsIngest.swift",
+         lambda t: t.replace("            StoredPixels.forget(thing.id)   // a drawn face was removed — prd §626\n", "")),
+        ("PhotoWell decodes at draw again",
+         "Casberi/Casberi/Screens/ShapedRows.swift",
+         lambda t: t.replace(
+             "        if let stored = await StoredPixels.prepared(for: thing) {\n            image = stored.image",
+             "        if let data = thing.previewImageData, let stored = UIImage(data: data) {\n            image = stored")),
         ("the share menu detects per row again",
          "Casberi/Casberi/Screens/ThingContent.swift",
          lambda t: t.replace("ShareTargetMemo.url(for: thing)", "Capture.detectURL(in: shareText)")),

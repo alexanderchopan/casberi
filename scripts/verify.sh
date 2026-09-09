@@ -2272,6 +2272,12 @@ harness "MetricKit self-test" "11 mutations, 15 drift guards — the payload rea
 # screenshotted and believed.
 harness "Perf-readings self-test" "4 mutations, 16 drift guards — the on-device perf digest, the measurement switch, and the light-column OS gate" "scripts/perf-readings-selftest.sh" "the perf-readings self-test failed — run scripts/perf-readings-selftest.sh"
 
+# The save coalescer (prd §658, 2026-09-08): ~45 per-bridge saves a sweep,
+# each re-running every mounted @Query, become a handful — and nothing but a
+# bridge pass's own saves is ever held. Compiled against SwiftData on the
+# Mac; test 0 re-checks the premise (autosave never fires on its own).
+harness "Save-coalescer self-test" "22 assertions, 5 mutations, 7 drift guards — one save per burst, and only inside a bridge pass" "scripts/save-coalescer-selftest.sh" "the save-coalescer self-test failed — run scripts/save-coalescer-selftest.sh"
+
 # The account page (prd §639): the shipped words and order of every migrated
 # setup screen — the state line, the meta line, the row facts, the roster
 # split — plus the two stores behind the page (a private note, and the

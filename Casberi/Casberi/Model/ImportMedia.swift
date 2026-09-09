@@ -155,6 +155,7 @@ enum ImportMedia {
         for thing in landed {
             guard let ref = thing.sourceRef, let data = pixels[ref] else { continue }
             thing.previewImageData = data
+            StoredPixels.forget(thing.id)   // a drawn picture may be replaced — prd §626
         }
     }
 

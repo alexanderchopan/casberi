@@ -42,6 +42,12 @@ final class ShellChrome {
     /// that — a padding that follows the fold, evaluated in a modifier of its
     /// own.
     var fold: CGFloat = 0
+    /// Whether the visible room's scroll is moving — a finger on it, or a
+    /// deceleration still running (PERF 2026-09-08). Written by the phase
+    /// observer below, twice per scroll rather than per frame. Read from a
+    /// TASK, never a body: the one reader is `MainSurface.releaseSwipeBudget`,
+    /// which holds a room's full materialisation until the finger is still.
+    var scrolling = false
     /// One chip's height: the scroll distance that folds the dock completely.
     static let foldTravel: CGFloat = 56
     /// Under this offset the dock is always open — the top of a room keeps
@@ -976,7 +982,10 @@ extension View {
             chrome.trackFold(offset: new.offset, from: old.offset, remaining: new.remaining)
         }
         .onScrollPhaseChange { _, phase in
-            guard active, phase == .idle else { return }
+            guard active else { return }
+            let moving = phase != .idle
+            if chrome.scrolling != moving { chrome.scrolling = moving }
+            guard phase == .idle else { return }
             chrome.settleFold()
         }
     }

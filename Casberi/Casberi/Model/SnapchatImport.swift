@@ -485,6 +485,7 @@ enum SnapchatImport {
             guard let thing = byRef[ref], thing.isLive else { continue }
             if let data {
                 thing.previewImageData = data
+                StoredPixels.forget(thing.id)   // a drawn picture may be replaced — prd §626
                 result.fetched += 1
             } else {
                 result.failed += 1

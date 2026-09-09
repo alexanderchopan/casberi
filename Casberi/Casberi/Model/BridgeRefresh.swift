@@ -35,6 +35,22 @@ enum BridgeRefresh {
         try? await Task.sleep(for: .milliseconds(delayMs))
     }
 
+    /// One bridge pass's task, with the coalescer's flag raised (PERF,
+    /// 2026-09-08). Every slot below is `landingTask { … }` rather than
+    /// `Task { … }` so that each pass's end-of-pass `saveHonestly()` — and
+    /// any it makes from a child task — is one REQUEST to `SaveCoalescer`
+    /// rather than one save, and ~45 saves a sweep (each re-running every
+    /// mounted `@Query`) become a handful. The task-local is inherited by
+    /// child tasks and unstructured `Task {}`s, never by `Task.detached`,
+    /// which is what a bridge's pure-compute hops use. Nothing else changes:
+    /// still fire-and-forget, still the main actor, still independent.
+    @discardableResult
+    static func landingTask(_ work: @escaping @MainActor @Sendable () async -> Void) -> Task<Void, Never> {
+        Task { @MainActor in
+            await SaveCoalescer.$landing.withValue(true) { await work() }
+        }
+    }
+
     /// When the whole sweep last ran — a rapid background→active bounce
     /// (a notification glance, Face ID, control center) used to re-fire all
     /// ~25 bridges every time (2026-07-21: no cooldown existed at all). The
@@ -175,7 +191,7 @@ enum BridgeRefresh {
                 // the main thread mid-animation — the chip-flip and refresh
                 // confetti stuttered. A Task defers it a beat past the frame the
                 // animation starts on; new screenshots still land this sweep.
-                let ps = slot(); Task { @MainActor in
+                let ps = slot(); BridgeRefresh.landingTask { @MainActor in
                     await BridgeRefresh.stagger(ps)
                     await sweepTimed("photos.ingest") { _ = ScreenshotIngest.ingest(context: context) }
                     // …and one batch of the walk BACKWARDS through the library,
@@ -188,7 +204,7 @@ enum BridgeRefresh {
                 // but a deliberate pull runs it live, same contract as Mail's
                 // heal below: `force` bypasses every other TTL in this path.
                 if force || BridgeRefresh.dueForHeal("photos") {
-                    let s = slot(); Task { @MainActor in
+                    let s = slot(); BridgeRefresh.landingTask { @MainActor in
                         await BridgeRefresh.stagger(s)
                         _ = await sweepTimed("photos.heal") { await ScreenshotIngest.heal(context: context) }
                         // Mirror Photos deletions (prd §231): a screenshot
@@ -212,7 +228,7 @@ enum BridgeRefresh {
             }
         }
         if connected("cal") {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await ScheduleIngest.refreshCalendar(context: context)
             }
@@ -220,14 +236,14 @@ enum BridgeRefresh {
             // the ingest window) — local EventKit check. Throttled: refresh
             // above still lands new/changed events every foreground.
             if BridgeRefresh.dueForHeal("calendar") {
-                let s2 = slot(); Task { @MainActor in
+                let s2 = slot(); BridgeRefresh.landingTask { @MainActor in
                     await BridgeRefresh.stagger(s2)
                     _ = ScheduleIngest.healCalendar(context: context)
                 }
             }
         }
         if connected("rem") {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await ScheduleIngest.refreshReminders(context: context)
             }
@@ -238,7 +254,7 @@ enum BridgeRefresh {
         let healthOn = connected("hlt")
         let riders = Set(HealthIngest.riders.map(\.seat).filter { connected($0.lowercased()) })
         if healthOn || !riders.isEmpty {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await HealthIngest.connectAndIngest(context: context,
                                                         healthOn: healthOn, riders: riders)
@@ -247,13 +263,13 @@ enum BridgeRefresh {
         if connected("music") {
             // The bare re-scan — refresh must never re-present the
             // permission dialog (2026-07-10).
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await AppleMusicIngest.ingest(context: context)
             }
         }
         if !RSSStore.shared.feeds.isEmpty {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await RSSIngest.refresh(context: context)
             }
@@ -265,13 +281,13 @@ enum BridgeRefresh {
         // pass above. Self-retiring — returns at once when every recent row
         // has been read or has run out of attempts.
         if !RSSStore.shared.feeds.isEmpty || !FeedFollowStore.substack.isEmpty {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await sweepTimed("feeds.articleText") { await FeedArticleText.sweep(context: context) }
             }
         }
         if BlueskyStore.shared.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await BlueskyIngest.refresh(context: context)
                 // Drop what no current follow explains — a topic or account
@@ -284,26 +300,26 @@ enum BridgeRefresh {
             }
             // Delete-sync: a post removed by its author or moderation.
             // Own network round trip and its own hourly throttle.
-            let s2 = slot(); Task { @MainActor in
+            let s2 = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s2)
                 _ = await BlueskyIngest.heal(context: context)
             }
         }
         if FarcasterStore.shared.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await FarcasterIngest.refresh(context: context)
                 SocialTopics.reconcile(source: "Farcaster",
                     watchedHandles: FarcasterStore.shared.usernames,
                     topics: FarcasterStore.shared.channels.map(\.name), context: context)
             }
-            let s2 = slot(); Task { @MainActor in
+            let s2 = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s2)
                 _ = await FarcasterIngest.heal(context: context)
             }
         }
         if NostrStore.shared.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await NostrIngest.refresh(context: context)
                 SocialTopics.reconcile(source: "Nostr",
@@ -312,13 +328,13 @@ enum BridgeRefresh {
             }
             // Delete-sync: own network round trip and its own hourly
             // throttle, same shape as Farcaster/Bluesky's heals above.
-            let s2 = slot(); Task { @MainActor in
+            let s2 = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s2)
                 _ = await NostrIngest.heal(context: context)
             }
         }
         if !PinterestStore.shared.username.isEmpty {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await PinterestIngest.refresh(context: context)
             }
@@ -326,7 +342,7 @@ enum BridgeRefresh {
         // The feed-follow bridges (Substack/Reddit/YouTube/Podcasts) — each
         // polls only when it's watching something.
         for kind in FeedFollowKind.allCases where !kind.store.isEmpty {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await FeedFollowIngest.refresh(kind, context: context)
                 // Read-only passes over what just landed, touching nothing in
@@ -361,7 +377,7 @@ enum BridgeRefresh {
         if connected("contacts") {
             // The bare re-scan — refresh must never re-present the permission
             // dialog; it runs only when access is already granted.
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await ContactsIngest.refresh(context: context)
             }
@@ -372,13 +388,13 @@ enum BridgeRefresh {
         // never reads again. `refresh` re-checks authorization itself and
         // never re-presents the system prompt (the Contacts rule).
         if AppleWalletBridge.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await AppleWalletBridge.refresh(context: context, store: store)
             }
         }
         for bridge in TokenBridge.allCases where bridge.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await TokenIngest.refresh(bridge, context: context)
             }
@@ -392,7 +408,7 @@ enum BridgeRefresh {
         // doesn't hit OpenRouter every single activation.
         if connected("openrouter"), BridgeRefresh.dueForHeal("openrouter.credits"),
            let key = TokenVault.get(AgentProvider.openrouter.vaultKey) {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await AgentAnswer.check(key, provider: .openrouter)
                 let existing = IngestSupport.existingSourceRefs(context)
@@ -404,7 +420,7 @@ enum BridgeRefresh {
         // while a wallet is watched, dropped when the last one goes.
         store.reconcileWalletSeats()
         if !WalletStore.shared.addresses.isEmpty {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await WalletIngest.refresh(context: context)
             }
@@ -413,7 +429,7 @@ enum BridgeRefresh {
             // Home, not only from the Wallet screen. Holdings sample-throttle
             // at 4h. Faces resolve here too, so a wallet wears its ENS avatar
             // before you ever open its screen.
-            let s2 = slot(); Task { @MainActor in
+            let s2 = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s2)
                 _ = await WalletIngest.topHoldingsByWallet()
                 await WalletStore.shared.loadAvatars()
@@ -428,12 +444,12 @@ enum BridgeRefresh {
         }
         // Not an ingest — the watchlist's 24h pulse for the feed-row
         // sparkline. Exits instantly when no tokens are watched.
-        let s = slot(); Task { @MainActor in
+        let s = slot(); BridgeRefresh.landingTask { @MainActor in
             await BridgeRefresh.stagger(s)
             await TokenPulse.shared.refresh(context: context)
         }
         for provider in MailProvider.allCases where provider.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await MailIngest.refresh(provider, context: context)
             }
@@ -448,19 +464,19 @@ enum BridgeRefresh {
             // the gesture, like it should have caught it immediately —
             // exactly the contract `force` exists to guarantee (see the
             // comment on `refreshAllConnected` above).
-            let s2 = slot(); Task { @MainActor in
+            let s2 = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s2)
                 _ = await MailIngest.heal(provider, context: context, force: force)
             }
         }
         if SteamBridge.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await SteamIngest.refresh(context: context)
             }
         }
         if ObsidianStore.shared.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 // nil means the vault couldn't be walked at all — moved,
                 // renamed, or its permission lost. Say so, the way Files and
@@ -481,7 +497,7 @@ enum BridgeRefresh {
             }
         }
         if FilesStore.shared.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 // nil means the folder couldn't be walked at all — moved,
                 // renamed, or its permission lost. That used to be discarded
@@ -498,7 +514,7 @@ enum BridgeRefresh {
             // Thumbnails + OCR for the image files a sync already landed —
             // same throttle contract as Photos' heal above.
             if force || BridgeRefresh.dueForHeal("files") {
-                let s2 = slot(); Task { @MainActor in
+                let s2 = slot(); BridgeRefresh.landingTask { @MainActor in
                     await BridgeRefresh.stagger(s2)
                     _ = await FilesIngest.heal(context: context)
                     // Then the treemap terms off whatever OCR text the heal
@@ -511,25 +527,25 @@ enum BridgeRefresh {
             }
         }
         if DropboxStore.shared.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await DropboxIngest.refresh(context: context)
             }
         }
         if SlackAuth.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await SlackIngest.refresh(context: context)
             }
         }
         if TwitchAuth.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await TwitchIngest.refresh(context: context)
             }
         }
         if VibenetWatch.shared.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 // THE ROOM IS COMPOSED ON THE SWEEP (prd §507), which it never
                 // was: `VibenetRoomSource.compose()` had exactly ONE caller in
@@ -553,13 +569,13 @@ enum BridgeRefresh {
         // balance that is test ETH. So the sweep refreshes the room's state
         // and inserts nothing into the corpus.
         if HegotaWatch.shared.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 await HegotaLiveState.shared.refresh()
             }
         }
         if HuggingFaceStore.shared.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await HuggingFaceIngest.refresh(context: context)
             }
@@ -569,7 +585,7 @@ enum BridgeRefresh {
         // issues is worth a request at all — so this is cheap to run every
         // foreground even against a volunteer-run seed.
         if RadicleStore.shared.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await RadicleIngest.refresh(context: context)
             }
@@ -586,7 +602,7 @@ enum BridgeRefresh {
         if TokenVault.get(TokenBridge.cursor.tokenKey)?.isEmpty == false,
            TokenVault.get(TokenBridge.github.tokenKey)?.isEmpty == false,
            BridgeRefresh.dueForHeal("cursor.pullRequests") {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await CursorPullRequests.reconcile(context: context)
             }
@@ -597,7 +613,7 @@ enum BridgeRefresh {
         // seats a person connects independently, and the steady-state cost of
         // each is one small request per watched package.
         for registry in PackageRegistry.allCases where PackageStore.shared.connected(registry) {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await PackageIngest.refresh(registry, context: context)
             }
@@ -630,7 +646,7 @@ enum BridgeRefresh {
         for (seatID, source) in [("gpt", "ChatGPT"), ("claude", "Claude"), ("gemini", "Gemini"),
                                  (ClaudeCodeImport.seatID, ClaudeCodeImport.source)]
         where connected(seatID) {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await sweepTimed("\(seatID).topics") {
                     await ScreenshotTopics.healTopics(source: source, context: context)
@@ -650,7 +666,7 @@ enum BridgeRefresh {
         // would otherwise never appear in the map this pass gave these rooms.
         for (seatID, source) in [("dayone", "Day One"), ("journal", "Apple Journal")]
         where connected(seatID) {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await sweepTimed("\(seatID).topics") {
                     await ScreenshotTopics.healTopics(source: source, context: context)
@@ -658,7 +674,7 @@ enum BridgeRefresh {
             }
         }
         if connected("instagram") {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await sweepTimed("instagram.topics") { await ScreenshotTopics.healTopics(source: "Instagram", context: context) }
                 if BridgeRefresh.dueForHeal("instagram.captions") {
@@ -680,7 +696,7 @@ enum BridgeRefresh {
         // kind. A map labelled "what you write about" that silently covered
         // half the writing would be exactly the fake status §245 forbids.
         if connected("tiktok"), BridgeRefresh.dueForHeal("tiktok.faces") {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await sweepTimed("tiktok.faces") { await TikTokImport.fetchFaces(limit: 60, context: context) }
             }
@@ -700,7 +716,7 @@ enum BridgeRefresh {
         // other two. They name the AUTHOR of a liked post, which the archive
         // itself never carries — see `XArchiveImport.fetchFaces`.
         if connected("x") {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await sweepTimed("x.topics") { await ScreenshotTopics.healTopics(source: "X", context: context) }
                 // The words the room draws, for rows landed before it had a
@@ -720,13 +736,13 @@ enum BridgeRefresh {
             }
         }
         if connected("stocktwits") {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await StocktwitsIngest.refresh(context: context)
             }
         }
         if connected("walletbeat") {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await WalletbeatIngest.refresh(context: context)
             }
@@ -736,13 +752,13 @@ enum BridgeRefresh {
         // person who never connected it pays nothing, and a disconnected seat
         // stays disconnected.
         if connected("ens") {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await ENSIngest.refresh(context: context)
             }
         }
         if connected("l2beat") {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await L2beatIngest.refresh(context: context)
             }
@@ -753,19 +769,19 @@ enum BridgeRefresh {
         // foreground, forever. `CardPointersIngest.refresh` re-checks the same
         // thing — this is the cheap gate, not the only one.
         if connected("cardpointers"), CardPointersAuth.isPro {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await CardPointersIngest.refresh(context: context)
             }
         }
         if ShopifyStore.shared.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await ShopifyIngest.refresh(context: context)
             }
         }
         if DealsStore.shared.connected {
-            let s = slot(); Task { @MainActor in
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await DealsIngest.refresh(context: context)
             }
