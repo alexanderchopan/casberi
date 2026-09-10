@@ -2116,6 +2116,10 @@ struct MainSurface: View {
         // that is a blank page with a mark would be a worse picture than a
         // short wait.
         if landNow, let look = RoomSnapshots.image(for: filter.source) {
+            // Every tap is measured, not only §668's category branch: the
+            // tap's whole cost is now the room's build in this one frame, so
+            // that is the span worth reading off a phone.
+            HitchMeter.shared.span(.tap, for: Self.flightMs + 200)
             departNow(to: target, look: look)
             return
         }
@@ -2168,7 +2172,7 @@ struct MainSurface: View {
         // Identity insertion: the landed room is simply there, under the card.
         swipeCommit = true
         departing = DepartingCard(id: generation, image: look, x: 0)
-        land(target)
+        land(target, animated: false)
         withAnimation(DS.Motion.standard) { departing?.x = side * width }
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(Self.flightMs + 120))
@@ -2187,20 +2191,38 @@ struct MainSurface: View {
 
     /// The switch itself — the one transaction every room change has always
     /// walked through: the budget, the source, the drag reset.
-    private func land(_ target: String) {
+    /// **A TAP LANDS WITHOUT AN ANIMATION, and that is §671's second half.**
+    /// `filter.source = target` swaps a whole `FeedScreen` behind an `.id()`,
+    /// and doing that inside `withAnimation` builds the entire fresh tree
+    /// inside an animated transaction — every animatable modifier in the new
+    /// room gets an implicit animation attached and interpolation set up for
+    /// it, in the one frame already paying for the room's fetch and its head.
+    /// **Nothing is animating**: with `swipeCommit` true both edges of the
+    /// transition are `.identity`, and on a tap the only motion is the
+    /// departing card's own spring, a separate transaction on `departing.x`.
+    /// The SWIPE keeps the animation, because there `chrome.pageDragX` is
+    /// mid-travel and has to be brought home.
+    private func land(_ target: String, animated: Bool = true) {
         slideEdge = direction(from: filter.source, to: target)
         SwipeClock.step(to: target)
         // THE SLIDE GETS ITS FRAMES (PERF 2026-08-21, corrected 2026-09-01) —
         // see `swipeRowBudget` and `swipeBudgetSource`. ALL THREE WRITES IN
         // ONE TRANSACTION with the source, so the incoming room's very first
         // `init` carries the bound and the outgoing room is never rebuilt.
-        withAnimation(DS.Motion.standard) {
+        let swap = {
             swipeRowBudget = Self.swipeRowBudgetRows
             swipeBudgetSource = target
             swipeBudgetGeneration &+= 1
             filter.source = target
             chrome.pageDragX = 0
             chrome.pageDragProgress = 0
+        }
+        if animated {
+            withAnimation(DS.Motion.standard) { swap() }
+        } else {
+            var plain = Transaction()
+            plain.disablesAnimations = true
+            withTransaction(plain) { swap() }
         }
         // The arriving room has not scrolled (2026-09-09): the room being
         // left may have been mid-deceleration, and its observer will never
@@ -3194,7 +3216,13 @@ private struct DepartingCardView: View {
                 RoundedRectangle(cornerRadius: 28 * p, style: .continuous)
                     .strokeBorder(.white.opacity(reduceMotion ? 0 : 0.18 * p), lineWidth: 1)
             }
-            .shadow(color: .black.opacity(reduceMotion ? 0 : 0.35 * p), radius: 24, y: 8)
+            // NO SHADOW, and that is deliberate: `PagerCover` — the shipped,
+            // tuned half of this same motion — draws the stroke and no shadow.
+            // A `.shadow` on a full-screen image is an offscreen blur of the
+            // whole screen on EVERY frame of the flight (~60 of them at
+            // 120Hz), which is exactly the kind of per-frame GPU cost that
+            // reads as "not quite smooth" while every main-thread instrument
+            // says the frame was cheap. The stroke carries the edge.
             .scaleEffect(reduceMotion ? 1 : 1 - 0.06 * p)
             .offset(x: reduceMotion ? 0 : card.x)
             .opacity(reduceMotion ? 1 - p : 1)
