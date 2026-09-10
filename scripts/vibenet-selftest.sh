@@ -227,8 +227,18 @@ strip_comments "$FEED"    > "$TMP/feed.nc.swift"
 # drawing the same roster and two surfaces listing one set of accounts is the
 # duplication §533 removed elsewhere. So the two verbs are still guarded; only
 # the file holding them changed.
-grep -q 'renamingAddress = item.address' "$TMP/card.nc.swift" \
+grep -q 'onRename(item.address)' "$TMP/card.nc.swift" \
   || { echo "✗ the Accounts row no longer offers rename (prd §545, carrying §465)"; exit 1; }
+# ALL THREE naming menus go through the SAME closure, and that closure has no
+# default (prd §669). It shipped as `= { _ in }` with nothing passing it, so
+# two of the three rendered a verb that could not act — reported as "when i
+# click it nothing happens" — while the third worked off card-local state, in
+# a shape the report was not about. A no-op default is a promise the compiler
+# never asks anyone to keep; without one, a call site cannot forget it.
+grep -qE '^[[:space:]]*var onRename: \(String\) -> Void[[:space:]]*$' "$TMP/card.nc.swift" \
+  || { echo "✗ onRename grew a default again (prd §669) — a no-op default is a dead control"; exit 1; }
+grep -q 'renamingAddress' "$TMP/card.nc.swift" \
+  && { echo "✗ the card is hosting the naming alert again (prd §669) — it can only present it from one branch"; exit 1; }
 grep -q 'unwatch(item.address)' "$TMP/card.nc.swift" \
   || { echo "✗ the Accounts row no longer offers stop-watching (prd §545, carrying §465)"; exit 1; }
 # The LAST unwatch still asks — §472's ruling, which the move must not drop:

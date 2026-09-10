@@ -81,6 +81,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Redaction coverage audit (scripts/redaction-coverage-audit.py, 2026-08-19)** → docs/verify.md · prd §277
 - **Ref-shape audit (scripts/ref-shape-audit.py, 2026-08-19)** → docs/verify.md
 - **Delete-guard audit (scripts/delete-guard-audit.py, 2026-08-19)** → docs/verify.md
+- **Dead-closure audit (scripts/dead-closure-audit.py, 2026-09-10) — a control calling a closure property nothing ever supplies. A no-op default (`= { _ in }`) compiles, renders and does nothing forever; a forward under the property's own name is not a supply, a trailing closure is** → docs/verify.md · prd §669
 - **Secret-scan self-test (scripts/secret-scan-selftest.py, 2026-08-02)** → docs/verify.md · prd §277
 - **On-device self-test (scripts/ondevice-selftest.sh, 2026-08-02)** → docs/verify.md · prd §282
 - **CI, at last (.github/workflows/static-checks.yml, 2026-08-19)** → docs/verify.md

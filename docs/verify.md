@@ -671,3 +671,26 @@ detached worktree at `08b98bc0`, both checks fire and name
 **Ceilings.** Reads `verify.sh` only, not `verify-mac.sh` or the nightly
 wrappers. Cannot see a script reached through a variable. Says nothing about
 whether a cited script WORKS — only that it is there to be run.
+
+## Dead-closure audit (`scripts/dead-closure-audit.py`, 2026-09-10) → prd §669
+
+**What it catches.** A SwiftUI view hands its verbs out as closure properties, and one of them is declared with a no-op default:
+
+```swift
+var onRename: (String) -> Void = { _ in }
+```
+
+A control then calls it. The compiler is content, every other check here is content, the control renders perfectly, and it does nothing — for every call site there will ever be, because nothing ever passed it. That is §83's dead control with a type signature in front of it, and this app shipped it three times in ONE file: `onWatched: {}` (a discovery list that could not add), `onScope` (passed by the call site and called by nobody, the mirror image), and `onRename`, which the user long-pressed and reported as *"when i click it nothing happens"*. The middle one was fixed by wiring the property beside it and leaving this one inert, under a comment saying nobody had reported it.
+
+**The check**, static, no build: a view property whose default is a no-op closure, and which the declaring file mentions, must be supplied by some call site. Two subtleties, both found by running it against the real tree rather than reasoned out:
+
+* **A forward under the property's own name is not a supply.** `VibenetDetailContextMenu(onRename: onRename)` is in the tree and is what made this bug look wired to a grep. Written the obvious way — `name\s*:\s*(?!name\b)` — the regex engine backtracks the `\s*` to nothing and matches anyway; the "not itself" test has to live inside one lookahead. Its own self-test caught that on the first run.
+* **A trailing closure IS a supply.** `AgentKeyPicker(selection: $p) { … }` fills the last closure property with no label anywhere to grep for, and the first cut reported that call site as a dead control. So the check resolves each type's property order and balances a construction's parens to see whether a `{` follows.
+
+**What it deliberately does not check**, so it stays honest about its reach: an OPTIONAL closure (`var onX: ((String) -> Void)? = nil`) — the honest form, whose `nil` is readable at the declaration and which every caller here gates its control on; whether a supplied closure does the right thing (a call site passing `{ _ in }` out loud is at least a decision a reader can see); and `GenUI/`, carved out for the reason `primary-verb-audit.py` and the ramp audit both carve it out.
+
+**A census, reported and never failed on**: a no-op default the declaring file never mentions promises nobody anything, and deciding whether to delete it is a judgement call this check does not make. One line on a clean tree — `HegotaRoomCard.onOpenSend`, supplied by `FeedScreen` and called by nothing, the same wiring broken from the other end.
+
+**What it found on its first clean run**, besides reproducing §669 from the shipped tree: `Composer.onHeight`, an `.onGeometryChange` firing on every layout of the agent surface to hand a height to a no-op, obsolete since §581 made that surface fill rather than hug. Deleted.
+
+**Self-test**: five fixtures (the bug verbatim, a supplied property, an unmentioned default, an optional, a `GenUI/` file) and four mutations — supply it and the finding clears; forward it under its own name and the finding stands; stop mentioning it and it drops to the census; supply it by trailing closure and the finding clears.
