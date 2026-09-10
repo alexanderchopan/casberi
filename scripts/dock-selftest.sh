@@ -299,23 +299,35 @@ for gone in SourcesTray SourcesOverlay DoorsPanel; do
     && { echo "✗ $gone is back — the octopus opens a strip in the band, never a tray."; fail=1; }
 done
 
-# --- 7. a folder tap opens; it never moves the feed -------------------------
+# --- 7. a folder tap LANDS and opens; the standing chip only toggles ---------
+# prd §663 (2026-09-09) overturned the §591 amendment this guard used to pin
+# ("a folder tap doesn't switch what is on your screen"): a tap that changes
+# nothing on screen is a two-tap navigation, and the strip is the app's tab
+# bar. So the folder branch MUST reach go(to:) — but only for ANOTHER
+# category's chip; the chip of the category you are standing in toggles its
+# folder and moves nothing, or a re-tap would re-land you where you are.
 grep -q 'if CategoryFold.isCategory(label)' "$TMP/main.nc" \
-  || { echo "✗ a category chip tap no longer branches on isCategory — it will call go(to:)"; \
-       echo "  and switch the room, which is what a folder must not do."; fail=1; }
+  || { echo "✗ a category chip tap no longer branches on isCategory — the folder would"; \
+       echo "  never spring, and the landing (prd §663) would be a bare source switch."; fail=1; }
 python3 - <<'GATE' || fail=1
-import re, sys
+import sys
 src = open("Casberi/Casberi/Shell/MainSurface.swift", encoding="utf-8").read()
 i = src.find("if CategoryFold.isCategory(label)")
 if i < 0:
     sys.exit(0)
-# The folder branch must RETURN before anything that writes the filter.
-branch = src[i:i + 900]
+branch = src[i:i + 1400]
 end = branch.find("return")
-if end < 0 or "go(to:" in branch[:end]:
-    print("✗ the folder branch reaches go(to:) — tapping a folder would switch the room,")
-    print("  which the §591 amendment forbids ('if you tap a folder on mac dock for")
-    print("  example it doesn't switch what is on your screen').")
+body = branch[:end] if end > 0 else branch
+if "chrome.openFolder = opening ? .category(label) : nil" not in body:
+    print("✗ the folder no longer springs on a category tap (prd §663 keeps the folder).")
+    sys.exit(1)
+if "if !standingHere" not in body or "go(to: label)" not in body:
+    print("✗ a category tap no longer LANDS in the room behind `if !standingHere` —")
+    print("  prd §663: another category's chip goes there; the standing chip only toggles.")
+    sys.exit(1)
+if body.find("go(to: label)") < body.find("if !standingHere"):
+    print("✗ go(to:) runs before the standing-here guard — re-tapping the chip of the")
+    print("  room you are in would re-land you there (prd §663).")
     sys.exit(1)
 GATE
 
