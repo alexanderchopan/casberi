@@ -102,6 +102,38 @@ enum CategoryFold {
     /// for "render this as a word chip, not a source icon."
     static func isCategory(_ label: String) -> Bool { memberCache[label] != nil }
 
+    /// The SF Symbol a category chip wears above its word (prd §662,
+    /// 2026-09-09, user: "with long words like 'shopping' a user has to scroll
+    /// further… icons with the words under them"). A category has no brand to
+    /// wear (§351), so these are the system's own glyphs, each chosen by the
+    /// user from three rendered options against the alternatives:
+    /// `creditcard.fill` over a dollar sign because the Wallet room holds EVM,
+    /// Solana and Bitcoin and a currency sign claims one of them;
+    /// `laptopcomputer` over `briefcase`; `calendar` over `sun.max` for a
+    /// category whose members are Photos, Schedule, Fitness, People, Storage
+    /// and Mail; `cart` because `bag` read as a padlock at 20pt; the two
+    /// bubbles over `person.2`, which is the People seat's own glyph inside
+    /// Life; `play.circle` over `play.rectangle`; `note.text` because
+    /// `square.and.pencil` is the system's compose verb and would promise a
+    /// new note. `category-fold-selftest.sh` holds this table to
+    /// `BridgeCatalog.categories`, so a category added without a glyph fails
+    /// the pass rather than drawing the fallback below.
+    static func glyph(for category: String) -> String {
+        glyphs[category] ?? "square.grid.2x2"
+    }
+
+    private static let glyphs: [String: String] = [
+        "Wallet":   "creditcard.fill",
+        "Work":     "laptopcomputer",
+        "Life":     "calendar",
+        "Agents":   "sparkles",
+        "Media":    "play.circle",
+        "Social":   "bubble.left.and.bubble.right",
+        "Reading":  "book",
+        "Shopping": "cart",
+        "Notes":    "note.text",
+    ]
+
     /// Fold ONE category over an ordered chip list. The folded chip takes the
     /// position of the highest-ranked member it replaces (`ChipMemory`'s
     /// learning still decides where the cluster sits), and — unlike

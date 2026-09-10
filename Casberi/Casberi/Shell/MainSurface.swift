@@ -470,11 +470,12 @@ struct MainSurface: View {
                     // `ShellChrome.fold` for why this surface must not read
                     // that value itself.
                     .modifier(DSDock.SlabInset())
-                    // The scrubbed chip's name, floating over the slab
-                    // (2026-09-05). An overlay applied AFTER the slab's clip,
-                    // because the strip clips to its own glass and a caption
-                    // drawn inside it would be cut at the top edge.
-                    .overlay(alignment: .topLeading) { DockScrubCaption() }
+                    // `DockScrubCaption` — the scrubbed chip's name floating
+                    // over the slab (2026-09-05) — is DELETED (prd §662b,
+                    // user: "drop it entirely"). It was the Mac dock's hover
+                    // label for marks that carried no word; a category is a
+                    // tile with its word on it now, so the caption repeated
+                    // what the lifted tile already showed, one line higher.
             }
         }
     }
@@ -2991,45 +2992,6 @@ private struct PagerCover: View {
                        ? 0 : chrome.pageDragX + side * width)
             .transition(.opacity)
         }
-    }
-}
-
-/// The name of the chip under a scrubbing finger, floating above the dock's
-/// slab (2026-09-05) — see `SourceChips`'s scrub. Positioned from the chip's
-/// window-space centre, converted into this overlay's own space, so it sits
-/// over the chip wherever the strip is scrolled to and never has to know.
-private struct DockScrubCaption: View {
-    @Environment(ShellChrome.self) private var chrome
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        GeometryReader { g in
-            if let scrub = chrome.scrub {
-                let origin = g.frame(in: .global).minX
-                let width = g.size.width
-                Text(scrub.label)
-                    .dsText(.label12)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(minHeight: 28)
-                    .dsGlass(cornerRadius: DS.Radius.pill)
-                    .fixedSize()
-                    // Kept inside the surface: a chip at the very edge names
-                    // itself inboard rather than half off the screen.
-                    // Above the LIFTED chip, which rises out of the slab by
-                    // `scrubLift` of its frame (2026-09-09) — a caption at
-                    // `s3` alone sat on the risen chip's crown.
-                    .position(x: min(max(scrub.windowX - origin, 56), width - 56),
-                              y: -(DS.Space.s3 + DSDock.chipFrame(fold: 0) * DSDock.scrubLift))
-                    .transition(reduceMotion ? .opacity
-                                             : .scale(scale: 0.8).combined(with: .opacity))
-                    .accessibilityHidden(true)
-            }
-        }
-        .animation(DS.Motion.standard, value: chrome.scrub)
-        .allowsHitTesting(false)
     }
 }
 

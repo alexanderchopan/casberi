@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three dock shapes — word, glyph over word, glyph</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --pink: #ff2d87;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink); background: var(--page); padding: 44px 26px 90px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  p.lede { font-size: 15px; line-height: 1.6; color: var(--muted); max-width: 70ch; margin-bottom: 40px; }
+  p.lede b { color: var(--ink); font-weight: 650; }
+  h2 { font-size: 19px; font-weight: 800; letter-spacing: -.015em; margin: 44px 0 4px; }
+  h2 span { color: var(--faint); font-weight: 600; font-size: 14px; margin-left: 10px; }
+  p.note { font-size: 13.5px; line-height: 1.55; color: var(--muted); max-width: 72ch; margin-bottom: 16px; }
+
+  /* ---- the phone ---- */
+  .phone {
+    width: 393px; height: 190px; border-radius: 34px; position: relative; overflow: hidden;
+    background: #000; border: 1px solid #1d2028; margin-bottom: 14px;
+  }
+  .feed { position: absolute; inset: 0; padding: 22px 18px; }
+  .row { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+  .row .pic { width: 44px; height: 44px; border-radius: 12px; background: #17181d; flex: none; }
+  .row .l1 { height: 10px; border-radius: 5px; background: #23252c; width: 62%; margin-bottom: 8px; }
+  .row .l2 { height: 8px; border-radius: 4px; background: #191b20; width: 42%; }
+  .fade { position: absolute; left: 0; right: 0; bottom: 0; height: 120px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,.85)); }
+
+  /* the slab: glass bar, 18pt inset, chip frame 56 tall + 10 bottom air */
+  .slab {
+    position: absolute; left: 18px; right: 18px; bottom: 16px; height: 68px; border-radius: 34px;
+    background: rgba(28,30,36,.72); border: 1px solid rgba(255,255,255,.09);
+    box-shadow: 0 10px 30px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.07);
+    backdrop-filter: blur(22px);
+    display: flex; align-items: center; padding-left: 10px; overflow: hidden;
+  }
+  .bar { width: 46px; height: 46px; border-radius: 23px; flex: none; display: grid; place-items: center;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.10); margin-right: 10px; }
+  .bar svg { width: 29px; height: 29px; }
+  .strip { display: flex; align-items: center; height: 56px; overflow: hidden; flex: 1;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%); }
+  .strip.loose { overflow: visible; -webkit-mask-image: none; mask-image: none; }
+  .strip .chips { display: flex; align-items: center; padding-left: 8px; flex: none; }
+
+  /* chip commons */
+  .chip { height: 46px; display: flex; align-items: center; justify-content: center; flex: none;
+    font-size: 12px; font-weight: 600; color: var(--ink); line-height: 1;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.10); border-radius: 23px; }
+  .chip.on { background: var(--tint); border-color: rgba(255,255,255,.12); color: #fff; }
+  .chip svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.7;
+    stroke-linecap: round; stroke-linejoin: round; }
+
+  /* A — today: capsules, 12pt, 14pt pads, 10pt gap */
+  .A .chip { padding: 0 14px; margin-right: 10px; }
+  .A .chip.all { width: 46px; padding: 0; }
+
+  /* B — glyph over caption: 56 wide tile, 6pt gap, 10pt caption */
+  .B .chip { width: 56px; flex-direction: column; gap: 3px; margin-right: 6px; border-radius: 16px; }
+  .B .chip span { font-size: 10px; font-weight: 500; letter-spacing: 0; }
+  .B .chip svg { width: 20px; height: 20px; }
+  .B .chip.all { border-radius: 23px; width: 46px; }
+
+  /* C — glyph only: 46 circle, 10pt gap; scrub caption above */
+  .C .chip { width: 46px; margin-right: 10px; position: relative; }
+  .C .chip.lifted { transform: translateY(-9px) scale(1.4); z-index: 2; }
+  .cap { position: absolute; left: 50%; top: -34px; transform: translateX(-50%);
+    background: rgba(28,30,36,.92); border: 1px solid rgba(255,255,255,.12); border-radius: 12px;
+    padding: 6px 10px; font-size: 12px; font-weight: 600; white-space: nowrap; color: var(--ink); }
+
+  /* the run, unclipped, for length */
+  .run { display: flex; align-items: center; margin: 22px 0 4px; padding-top: 30px; }
+  .run .chips { display: flex; align-items: center; }
+  .ruler { font-size: 12px; color: var(--faint); margin: 8px 0 0; }
+  .ruler b { color: var(--muted); font-weight: 600; }
+  .grid { display: block; }
+
+  table { border-collapse: collapse; margin-top: 34px; font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px 18px 8px 0; color: var(--muted); }
+  th { color: var(--ink); font-weight: 650; }
+  td:first-child { color: var(--ink); }
+</style>
+<body><div class="wrap">
+  <h1>Three dock shapes, at the phone's real sizes</h1>
+  <p class="lede">Every row is the shipped dock: an 18pt-inset glass slab, the octopus bar at 46, then "All" and the nine categories at the real 12pt / 10pt gap / 14pt padding. The phone is 393 wide, so <b>what you see inside the slab is what fits before a scroll</b>. Under each phone the same run is drawn unclipped, so the three scroll lengths can be compared side by side.</p>
+
+  <div id="rows"></div>
+
+  <table>
+    <tr><th>Shape</th><th>Nine categories</th><th>Visible before scroll</th><th>Saves</th></tr>
+    <tr><td>A · word capsule (today)</td><td>684pt</td><td>~3.5</td><td>—</td></tr>
+    <tr><td>B · glyph over word, 56pt tile, 6pt gap</td><td>558pt</td><td>~4.3</td><td>18%</td></tr>
+    <tr><td>C · glyph only, 46pt circle; name rides the scrub</td><td>504pt</td><td>~4.8</td><td>26%</td></tr>
+  </table>
+</div>
+
+<script>
+const octo = `<svg viewBox="0 0 100 100"><g transform="rotate(-9 50 46)"><path d="M33,46 C29,42 28,34 31,26 C35,14 48,8 59,13 C70,18 73,31 68,40 C66,43 68,45 68,46 Z" fill="#FF2D87"/><circle cx="44" cy="33" r="5" fill="#000"/><circle cx="58.5" cy="36.5" r="5" fill="#000"/></g><g fill="none" stroke="#FF2D87" stroke-width="9" stroke-linecap="round"><path d="M30,42 C25,51 17,53 11,46"/><path d="M47,48 C46,68 39,82 30,80"/><path d="M66,43 C72,52 81,54 86,46"/></g></svg>`;
+
+// SF-symbol-like line glyphs, one per category
+const G = {
+  Wallet:  `<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.2" fill="currentColor" stroke="none"/></svg>`,
+  Work:    `<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="12" rx="3"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 12h18"/></svg>`,
+  Life:    `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>`,
+  Agents:  `<svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>`,
+  Media:   `<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor" stroke="none"/></svg>`,
+  Social:  `<svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h6A2.5 2.5 0 0 1 15 6.5v3a2.5 2.5 0 0 1-2.5 2.5H9l-3 2.5V12A2.5 2.5 0 0 1 4 9.5z"/><path d="M15 9h2.5A2.5 2.5 0 0 1 20 11.5v3a2.5 2.5 0 0 1-2.5 2.5H17l-3 2.5V17"/></svg>`,
+  Reading: `<svg viewBox="0 0 24 24"><path d="M12 6.5c-1.6-1.4-4-2-7-2v13c3 0 5.4.6 7 2 1.6-1.4 4-2 7-2v-13c-3 0-5.4.6-7 2z"/><path d="M12 6.5v13"/></svg>`,
+  Shopping:`<svg viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>`,
+  Notes:   `<svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 9h7M8.5 12.5h7M8.5 16h4"/></svg>`,
+};
+const cats = ["Wallet","Work","Life","Agents","Media","Social","Reading","Shopping","Notes"];
+const active = "Life";
+
+function chipsA(){ return `<div class="chip all">All</div>` + cats.map(c=>`<div class="chip ${c===active?'on':''}">${c}</div>`).join(""); }
+function chipsB(){ return `<div class="chip all">All</div>` + cats.map(c=>`<div class="chip ${c===active?'on':''}">${G[c]}<span>${c}</span></div>`).join(""); }
+function chipsC(lift){ return `<div class="chip all">All</div>` + cats.map(c=>`<div class="chip ${c===active?'on':''} ${lift&&c==='Reading'?'lifted':''}">${G[c]}${lift&&c==='Reading'?'<div class="cap">Reading</div>':''}</div>`).join(""); }
+
+const feed = `<div class="feed">${[62,44,58].map(()=>`<div class="row"><div class="pic"></div><div style="flex:1"><div class="l1"></div><div class="l2"></div></div></div>`).join("")}</div><div class="fade"></div>`;
+
+function block(cls, title, sub, note, chips, chipsUnclipped){
+  return `<h2>${title}<span>${sub}</span></h2><p class="note">${note}</p>
+  <div class="grid"><div>
+    <div class="phone ${cls}">${feed}<div class="slab"><div class="bar">${octo}</div><div class="strip"><div class="chips">${chips}</div></div></div></div>
+  </div><div>
+    <div class="run ${cls}"><div class="bar" style="opacity:.35">${octo}</div><div class="chips">${chipsUnclipped||chips}</div></div>
+    <div class="ruler" data-measure></div>
+  </div></div>`;
+}
+
+document.getElementById("rows").innerHTML =
+  block("A", "A · Word capsules", "today", "The capsule grows to hold its word, so every category reads at the same 12pt. Width is the word plus 28pt of padding, and \"Shopping\" and \"Reading\" set the pace.", chipsA()) +
+  block("B", "B · Glyph over word", "a fixed 56pt tile, 10pt caption", "Every chip is the same width, so the scroll is predictable, and the word survives. The glyphs are generic — a category has no brand to wear — so this is an SF Symbol row with captions, the tab-bar grammar. Height is unchanged: 20pt glyph + 10pt caption sits inside the 46pt chip.", chipsB()) +
+  block("C", "C · Glyph only", "46pt circles; the name rides the scrub, like a Mac dock's hover label", "The most compact and the most Mac-dock. The cost is learning nine generic marks with no word beside them; the scrub caption (already built) names the lifted chip, as shown on Reading.", chipsC(false), chipsC(true));
+
+// measure the unclipped runs
+document.querySelectorAll(".run").forEach(r=>{
+  const ch = r.querySelector(".chips"); const w = Math.round(ch.getBoundingClientRect().width);
+  r.nextElementSibling.innerHTML = `Whole run, All + nine: <b>${w}pt</b> · the slab's strip is <b>~300pt</b> wide`;
+});
+</script>
+</body></html>

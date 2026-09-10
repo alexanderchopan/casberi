@@ -68,7 +68,7 @@ CHIPS="Casberi/Casberi/Shell/SourceChips.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 # `CategoryVenueSwitcher.swift` is DELETED (2026-09-05): a folder opens IN
 # PLACE now — the category chip itself grows to hold its venues
-# (`SourceChips.categoryCapsule` / `folderVenue`) — so every guard below that
+# (`SourceChips.categoryTile` / `folderVenue`) — so every guard below that
 # named the switcher's file now reads the strip, and the properties it pinned
 # (attention resolved through the catalog, a VoiceOver name per venue, a
 # full-bleed mark in a DS.Hit.min seat) are asserted where the venue lives.
@@ -199,9 +199,52 @@ grep -q 'chrome.chipCaught(CategoryFold.chipLabel(' "$TMP/main.nc" \
 grep -qE 'CategoryFold\.isCategory\(label\)' "$TMP/chips.nc" \
   || { echo "✗ SourceChips no longer branches on CategoryFold.isCategory — a folded chip"; \
        echo "  would render through the generic BridgeIcon path and show a missing brand icon."; exit 1; }
-grep -q 'categoryCapsule(label' "$TMP/chips.nc" \
-  || { echo "✗ a category chip no longer renders as a capsule — back inside \"All\"'s fixed"; \
+grep -q 'categoryTile(label' "$TMP/chips.nc" \
+  || { echo "✗ a category chip no longer renders as a tile (prd §662) — back inside \"All\"'s fixed"; \
        echo "  circle, every word shrinks independently to fit and one strip draws four type sizes."; exit 1; }
+
+# THE TILE (prd §662, 2026-09-09): a glyph over its word at a FIXED width, so
+# the strip's pitch is no longer set by its longest name. Three things make it
+# a tile rather than a capsule with a picture in it, and each was chosen:
+#   · the glyph comes from `CategoryFold.glyph(for:)` — the user's own picks —
+#     never from a brand (§351's rule survives: a category has no brand);
+#   · the word wears `dockCaption10`, the one rung sized by this tile, so the
+#     strip draws ONE caption size at the default text setting;
+#   · the width is `tileWidth`, a constant, on the phone.
+python3 - "$TMP/chips.nc" "$FOLD" "Casberi/Casberi/Model/BridgeCatalog.swift" <<'PY4'
+import re, sys
+chips, fold, catalog = (open(a).read() for a in sys.argv[1:4])
+i = chips.find("private func categoryTile(")
+j = chips.find("private func chip(_ label:")
+if i < 0 or j < 0 or j < i:
+    sys.exit("✗ categoryTile(_:) not found ahead of chip(_:) in SourceChips — this guard is testing nothing")
+tile = chips[i:j]
+if "CategoryFold.glyph(for: label)" not in tile:
+    sys.exit("✗ the category tile no longer takes its glyph from CategoryFold.glyph(for:) — the\n"
+             "  user's own symbol choices (prd §662) are not what would draw.")
+if ".dsText(.dockCaption10)" not in tile:
+    sys.exit("✗ the tile's word is off dockCaption10 — at label12 \"Shopping\" is 56pt, the whole\n"
+             "  tile, and the strip is back to shrinking words independently (prd §351).")
+if "Self.tileWidth" not in tile:
+    sys.exit("✗ the tile's width is no longer the fixed tileWidth — the strip's pitch is set by\n"
+             "  its longest name again, which is the scroll §662 exists to shorten.")
+# EVERY category has a glyph. The fallback in glyph(for:) renders, so a
+# category added without a row here would ship a generic grid and nothing
+# else in the pass would say so.
+m = re.search(r"private static let glyphs: \[String: String\] = \[(.*?)\n    \]", fold, re.S)
+if not m:
+    sys.exit("✗ CategoryFold.glyphs not found — this guard is testing nothing")
+have = set(re.findall(r'"([^"]+)":\s*"', m.group(1)))
+cm = re.search(r"static let categories: \[\(name: String, exemplar: String, groups: Set<String>\)\] = \[(.*?)\n    \]", catalog, re.S)
+if not cm:
+    sys.exit("✗ BridgeCatalog.categories not found — this guard is testing nothing")
+names = re.findall(r'^\s*\("([^"]+)",', cm.group(1), re.M)
+if not names:
+    sys.exit("✗ BridgeCatalog.categories parsed to zero names — this guard is testing nothing")
+missing = [n for n in names if n not in have]
+if missing:
+    sys.exit("✗ no dock glyph for %s — add a row to CategoryFold.glyphs (prd §662)." % ", ".join(missing))
+PY4
 
 # THE CHIP IS ITS OWN SHAPE, whatever that shape is (design pass 2026-08-11).
 # Both of these read as decoration and are not: a `Circle()` in a capsule's
@@ -236,7 +279,7 @@ chip = between("private func chip(_ label:", "private func chipAccessibilityLabe
 # themselves, which is the whole design; the ruling below is about the closed
 # chip). `folderVenue` is its own function past `chip(_:)`'s end and is not in
 # either range.
-capsule = between("private func categoryCapsule(", "private func chip(_ label:", "categoryCapsule(_:)")
+capsule = between("private func categoryTile(", "private func chip(_ label:", "categoryTile(_:)")
 
 if "contentShape(Circle())" in chip:
     sys.exit("✗ a chip's hit region is a Circle again — the ends of every category\n"
@@ -247,8 +290,16 @@ if "contentShape(Circle())" in chip:
 if re.search(r"Circle\(\)\s*\.strokeBorder", chip):
     sys.exit("✗ the chip ring is a Circle again — it would draw through the middle of a\n"
              "  capsule, and the sliding active ring would have to swap shape mid-flight.")
-if "contentShape(Capsule(style: .circular))" not in chip:
-    sys.exit("✗ the chip's hit region is no longer the circular capsule both shapes share.")
+# `chipShape(tile: isCategory, …)` since prd §662: ONE shape type for every
+# chip — a rounded rectangle at half the height IS a circle, at `tileRadius`
+# it is the tile — so the hit region is whatever the chip is, drawn by the
+# same call as its rings. A `Capsule` here would be a stadium 61 wide and 56
+# tall under a tile whose corners are 21: pressable past its own corners.
+if "contentShape(chipShape(tile: isCategory, outer: true))" not in chip:
+    sys.exit("✗ the chip's hit region is no longer chipShape(tile: isCategory) — the shape every\n"
+             "  ring is drawn from — so a tile and its pressable region can disagree.")
+if "Capsule(" in chip:
+    sys.exit("✗ a Capsule is back in chip(_:) — every chip outline goes through chipShape (prd §662).")
 
 # A CATEGORY CHIP IS A WORD — no brand mark inside the capsule (user ruling
 # 2026-08-11, "honestly i think it just looks confusing for those logos to be in

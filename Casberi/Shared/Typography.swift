@@ -268,6 +268,18 @@ extension DSTextStyle {
     /// Was 11 — one point under `label12`, in the same rows, for months.
     static let label11 = DSTextStyle(size: 12, weight: .medium, tracking: 0, lineHeight: 16, relative: .caption2)
     static let tab10 = DSTextStyle(size: 12, weight: .medium, tracking: 0, lineHeight: 16, relative: .caption2)
+    /// The dock tile's caption — the ONE rung under the 12pt caption tier
+    /// (prd §662, 2026-09-09), and it is sized by the tile, not the reader.
+    /// A category chip is a fixed 56pt tile with a glyph over its word, the
+    /// way a tab bar item is, and "Shopping" at 12pt medium is 56pt wide — the
+    /// tile itself. At 10pt it is 47. The tier was consolidated at 12 so a row
+    /// never draws two caption sizes side by side; this rung is never drawn
+    /// beside `label12` — every word in the strip wears it, "All" excepted,
+    /// which keeps its circle and its 12 as the strip's anchor. Same
+    /// reasoning as the widget block below: a fixed tile sizes its text.
+    /// `caption2`-relative so it still grows with the text setting; the tile
+    /// bounds it with a floor (`SourceChips.categoryTile`).
+    static let dockCaption10 = DSTextStyle(size: 10, weight: .semibold, tracking: 0, lineHeight: 12, relative: .caption2)
     /// Monospaced caption.
     static let mono12 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 16, relative: .caption1, monospaced: true)
     /// The streaming-response "still writing" dot (GenRenderer).

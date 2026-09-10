@@ -32,9 +32,8 @@ struct DemoBanner: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// One slow breath on arrival, then still for the rest of the session.
-    /// Noticed ONCE is the requirement — a nag on a bar that cannot be
-    /// dismissed is the worst of both — so this is a single entrance.
+    /// One slow breath on arrival — the ENTRANCE. The standing pulse that
+    /// follows it is the glyph's own (see `body`).
     @State private var settled = false
     @State private var explaining = false
 
@@ -53,22 +52,48 @@ struct DemoBanner: View {
             explaining = true
         } label: {
             HStack(spacing: DS.Space.s1) {
-                Image(systemName: "sparkles")
+                // **NOT `sparkles` (user, 2026-09-09): that glyph is the
+                // AGENTS category's mark since §662, and two different things
+                // in one frame wearing one symbol is the collision §662's own
+                // table exists to avoid.** `eye` says you are LOOKING at
+                // something rather than owning it, which is what this status
+                // means; nothing else in the app draws it.
+                Image(systemName: "eye")
                     .dsGlyph(12)
+                    // **IT PULSES (user: "it should likely be pulsing so a
+                    // user knows to tap it").** This overturns the 2026-09-05
+                    // "noticed once" reasoning, and the overturn is narrow:
+                    // that argument was against a NAG on chrome that cannot be
+                    // dismissed, and it was made when the capsule was the only
+                    // thing on the screen wearing the brand pink. In blue it
+                    // is one tinted capsule among a screen of tinted controls,
+                    // so nothing marks it as the one status that must be read
+                    // before a number is believed (§83). A symbol effect, not
+                    // an animated opacity: the render server drives it, so it
+                    // costs the shell nothing per frame — which is the whole
+                    // finding of §660 and §651, one surface over.
+                    .symbolEffect(.pulse, options: reduceMotion ? .nonRepeating : .repeating)
                 Text("Demo")
                     .dsText(.label12)
                     .fontWeight(.semibold)
             }
-            // THE BRAND'S PINK (user, 2026-09-05: "make the demo banner be
-            // pink like our brand color") — the octopus's own hue, so the
-            // marking reads as the app speaking rather than as a warning.
-            .foregroundStyle(CasberiMark.pink)
+            // **BLUE (user, 2026-09-09: "and probably make it blue"),
+            // overturning the brand pink of 2026-09-05.** Recorded because
+            // the pink had a reason worth keeping in view: it made the
+            // marking read as the app speaking rather than as a warning, and
+            // blue is `DS.tint`, the one accent every interactive thing in
+            // the app already wears — including the active dock chip
+            // directly under this capsule. What buys it back is the pulse
+            // above: the capsule is now singled out by MOTION rather than by
+            // hue, and the tint says "this is a control you may press",
+            // which after §620 it is.
+            .foregroundStyle(DS.tint)
             .padding(.horizontal, DS.Space.s3)
             .frame(minHeight: 30)
             // A step past the rest-chip wash (user: "is it visible enough?")
             // — this is the one status on the screen that must be read before
             // any number is believed, so it wears the hue at a quarter.
-            .background { Capsule(style: .continuous).fill(CasberiMark.pink.opacity(0.24)) }
+            .background { Capsule(style: .continuous).fill(DS.tint.opacity(0.24)) }
             .contentShape(Capsule(style: .continuous))
             .frame(minHeight: DS.Hit.min)
         }

@@ -154,15 +154,11 @@ final class ShellChrome {
     /// geometry change, never a reason to re-render.
     @ObservationIgnored var pagerFrame: CGRect = .zero
 
-    /// The chip under a scrubbing finger (2026-09-05) — the dock's press-and-
-    /// slide, see `SourceChips`. `windowX` is the chip's centre in window
-    /// space, so the caption above the slab (`MainSurface.DockScrubCaption`)
-    /// can sit over the chip without knowing where the strip is scrolled to.
-    struct DockScrub: Equatable {
-        var label: String
-        var windowX: CGFloat
-    }
-    var scrub: DockScrub? = nil
+    // `scrub: DockScrub?` — the chip under a scrubbing finger, published for
+    // the caption above the slab — is DELETED with `DockScrubCaption` (prd
+    // §662b, 2026-09-09). The scrub is the strip's own state again
+    // (`SourceChips.scrubbing`), which is also one fewer shell-wide write per
+    // chip the finger crosses.
 
     /// The centre, in window space, of the chip whose folder is open
     /// (2026-09-05, the Mac-dock folder): `DockSpringRow` grows out of this

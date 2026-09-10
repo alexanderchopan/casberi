@@ -25,6 +25,22 @@ import SwiftUI
 /// the 40pt minimized step. The capsule grows to hold its word instead, so
 /// every category reads at the same 12pt.
 ///
+/// **A CATEGORY IS A TILE NOW — a glyph over its word (prd §662, 2026-09-09,
+/// user: "with long words like 'shopping' etc, a user has to scroll further
+/// to read the items and get to categories they may want").** The capsule's
+/// own virtue was its cost: it grew to hold its word, so the strip's pitch
+/// was set by its longest name. The tile is a fixed 56pt with the word at
+/// `dockCaption10` under a 20pt SF Symbol (`CategoryFold.glyph(for:)`, each
+/// chosen by the user from rendered options), so every category is one
+/// width and five chips show before a scroll where three and a half did.
+/// Glyph-only — the Mac dock's own grammar, the name on the scrub caption
+/// — was mocked beside it and declined: it showed the same five, and the
+/// word was judged owed to the reader ("we would need word for
+/// accessibility"). The grammar below is therefore three shapes, not two: a
+/// mark gets a circle, "All" keeps its circle as the strip's anchor, and a
+/// category gets a tile. The capsule paragraph above stays as the record of
+/// why the word is not inside a circle.
+///
 /// **This does not reopen the icon-only ruling (2026-07-09, "labels made the
 /// row scroll").** That ruling was about labelling every SOURCE — an unbounded
 /// set, dozens of them on a full corpus. Categories are capped at eleven by
@@ -107,19 +123,82 @@ struct SourceChips: View {
     private var fold: CGFloat { axis == .horizontal ? chrome.fold : 0 }
     private var iconSize: CGFloat { DSDock.agentSize(fold: fold) }
     private var chipSize: CGFloat { DSDock.chipFrame(fold: fold) }
-    private var capsulePadH: CGFloat { DSDock.lerp(DS.Space.s3, DS.Space.s2, fold) }
+    /// The category TILE (prd §662, 2026-09-09): a glyph over its word in a
+    /// FIXED width, the way a tab bar item is. Fixed so every category is the
+    /// same width and the scroll is predictable — the capsule grew to hold its
+    /// word, so "Shopping" (56pt of word plus 28pt of padding) set the pace.
+    /// Measured on the phone's own numbers: the run of nine went from ~730pt
+    /// to 585, and the strip shows five chips before a scroll where it showed
+    /// three and a half. **52, from 56, the same evening** (user, on the
+    /// simulator: "the icons are far apart from each other… make them a tiny
+    /// bit closer so we can end up showing one more"): the tile IS the
+    /// caption's bound — "Shopping" at `dockCaption10` is 47pt, so the longest
+    /// word keeps 2.5pt of air a side and no word in the table shrinks — and
+    /// at 52 with no gap the pitch is 57, which is what fits a FOURTH full
+    /// tile beside "All" in the 238pt the strip has past it (65 fit 3.7).
+    private static let tileWidth: CGFloat = 52
+    /// A category's CELL — the tile's outer frame, derived from the strip's
+    /// width (prd §662e, 2026-09-09, user: "apple app store uses five total,
+    /// and for symmetry that is probably what people are used to", then "lets
+    /// go with b"): FIVE items rest in the dock — the octopus, "All" and
+    /// THREE tiles spread evenly across what is left, the way a tab bar's
+    /// items are — and when the corpus has more than three categories the
+    /// strip is laid out as three and a HALF cells, so the fourth tile peeks
+    /// by half its cell and says there is more. Fewer than three spread to
+    /// fill. A six-with-a-peek was mocked and did not fit this width (the
+    /// tiles touched); four without a peek fitted and said nothing about the
+    /// rest. Floor is `tileFloorCell` — a rail or a narrow width scrolls
+    /// rather than shrinking the tile under its caption.
+    private var categoryCell: CGFloat {
+        guard axis == .horizontal, stripWidth > 0 else { return Self.tileFloorCell }
+        let count = labels.filter(CategoryFold.isCategory).count
+        guard count > 0 else { return Self.tileFloorCell }
+        let cells = CGFloat(min(count, Self.restingTiles)) + (count > Self.restingTiles ? 0.5 : 0)
+        // What is left past "All": the strip minus its resting inset and
+        // every non-category chip laid out ahead of the tiles (All, and the
+        // pinned room when present).
+        let marks = CGFloat(labels.count - count)
+        let available = stripWidth - stripInset - marks * (chipSize + Self.chipGap)
+        return max(Self.tileFloorCell, (available / cells).rounded(.down))
+    }
+    /// Three tiles at rest — five items with the octopus and "All".
+    private static let restingTiles = 3
+    /// The narrowest cell: the tile plus its ring room, the §662d pitch.
+    private static let tileFloorCell: CGFloat = 52 + 5
+    /// The tile's corner — `DS.Radius.sheet`, a rounded rectangle rather than
+    /// the capsule the word wore: a stadium 56 wide and 46 tall cuts the ends
+    /// of the caption under its glyph.
+    private static let tileRadius: CGFloat = DS.Radius.sheet
+    /// The glyph, folding with the chip (46→40) so the caption keeps its seat
+    /// under it at every point of the travel.
+    private var glyphSize: CGFloat { DSDock.lerp(20, 16, fold) }
 
-    /// The gap between chips, tightened from `s3` (14) when category chips
-    /// became capsules.
+    /// ONE shape type for every chip, whatever the chip is (prd §662): a
+    /// `RoundedRectangle` at half the height IS a circle, and at `tileRadius`
+    /// it is the tile — so the fill that travels between chips, the standing
+    /// ring, the attention ring and the hit region are all drawn from this
+    /// call and can never disagree about a chip's outline. `outer` is the
+    /// ring's frame (`chipSize`, the ring's room around the mark) rather than
+    /// the mark's own, and the radius grows by the same inset so the two stay
+    /// concentric.
+    private func chipShape(tile: Bool, outer: Bool) -> RoundedRectangle {
+        let inset = outer ? (chipSize - iconSize) / 2 : 0
+        return tile
+            ? RoundedRectangle(cornerRadius: Self.tileRadius + inset, style: .continuous)
+            : RoundedRectangle(cornerRadius: iconSize / 2 + inset, style: .circular)
+    }
+
+    /// The gap between chips — ZERO since the tiles (prd §662/§662d); it was
+    /// `s1` for an hour, `s2` for the capsules and `s3` for the circles.
     ///
-    /// A capsule carries its own edges, so it needs less air around it than a
-    /// bare circle did — and the tightening buys back most of the on-screen
-    /// chip count the wider shape costs. Arithmetic on the 12pt label rather
-    /// than a device measurement: against the ~269pt of visible strip left by
-    /// the two fixed doors, 56pt circles at a 14pt gap show ~3.8 chips, and
-    /// capsules at this 10pt gap show ~3.3. At the old gap it was ~3.0.
-    /// Re-measure on a device before trading it away.
-    private static let chipGap: CGFloat = DS.Space.s2
+    /// Every chip already carries 5pt of ring room a side (`chipSize` over
+    /// `iconSize`), so the AIR between two tiles is that room alone: 10pt of
+    /// slab between one tile's edge and the next, against 14 at `s1` and the
+    /// 39-then-17 the bar's own seam had. Measured on the simulator, not
+    /// arithmetic: a tile's pitch is 57 + 0, and the 238pt of strip past
+    /// "All" shows FOUR full tiles where 65 showed three and a sliver; the
+    /// capsules at their 10pt gap averaged ~81 and showed two and a half.
+    private static let chipGap: CGFloat = 0
 
     /// A capsule chip's fixed width on the iPad rail, which is a column of a
     /// FIXED width rather than a scroll of intrinsic ones — so a capsule there
@@ -186,6 +265,11 @@ struct SourceChips: View {
     @Namespace private var doorGlassNS
     /// Last time the catalogue door actually opened — see `openApps()`.
     @State private var lastAppsOpen: TimeInterval = 0
+    /// The strip's viewport width, for `categoryCell` (prd §662e). STATE,
+    /// unlike the rest of the viewport sample, because the cells are LAYOUT
+    /// and must re-lay when it changes — which is a mount or a rotation,
+    /// never a scroll frame: the write below is guarded on inequality.
+    @State private var stripWidth: CGFloat = 0
 
     // MARK: - Scrub (2026-09-05; SwiftUI's own sequence since 2026-09-09)
 
@@ -262,7 +346,7 @@ struct SourceChips: View {
         if let scrubX { x = scrubX }
         else if let hoverX { x = hoverX }
         else { return 1 }
-        let pitch = chipSize + Self.chipGap
+        let pitch = categoryCell
         let d = abs(frame.midX - x) / (pitch * Self.waveReach)
         guard d < 1 else { return 1 }
         return 1 + DSDock.scrubLift * (0.5 + 0.5 * cos(d * .pi))
@@ -282,7 +366,7 @@ struct SourceChips: View {
     /// `ChipLean`, the only view that draws the lean. Zero on the rail,
     /// which has no page turn to lean toward.
     private var leanPitch: CGFloat {
-        axis == .horizontal ? chipSize + Self.chipGap : 0
+        axis == .horizontal ? categoryCell : 0
     }
 
     /// One value both doors key on, so the pair can't drift onto two different
@@ -371,10 +455,24 @@ struct SourceChips: View {
     /// the octopus was still fully lit, and every room showed a sliver of the
     /// previous chip's word peeking out from under the bar ("Vi", "Me", "Ni").
     /// The ramp now runs from the bar's edge outward instead of ending at it.
+    ///
+    /// **At the bar's MARK, not its seat (2026-09-09, user: "there is way too
+    /// much space between the octopus and All").** `headTrailingEdge` is the
+    /// bar's seat — its mark plus the `seam` after it — and the first chip
+    /// rests a whole `fadeRamp` past that, plus its own 5pt of ring room:
+    /// measured on the simulator, 39pt of air between the octopus and "All"
+    /// where chip-to-chip is 14. Vanishing at the mark's own edge keeps the
+    /// 2026-09-06 property (nothing under the bar is lit, so no sliver of a
+    /// word shows through its glass) and lets the ramp start `seam` earlier;
+    /// with the ramp halved the air is 17.
     private var fadeClear: CGFloat {
-        axis == .vertical ? headTrailingEdge - 8 : headTrailingEdge
+        axis == .vertical ? headTrailingEdge - 8 : headTrailingEdge - DSDock.seam
     }
-    private static let fadeRamp: CGFloat = 24
+    /// 12, from 24 (2026-09-09): the ramp is also the air the first chip
+    /// rests in, so every point of it is paid twice — once as the melt, once
+    /// as the hole beside the bar. A chip is 56 wide; twelve points of travel
+    /// is still a dissolve, not the hard line 2026-07-19 forbids.
+    private static let fadeRamp: CGFloat = 12
     private var stripInset: CGFloat { fadeClear + Self.fadeRamp }
     /// The air between the pinned head's TRAILING edge and the first chip at
     /// rest. `stripInset` is the same resting position measured from the
@@ -471,6 +569,13 @@ struct SourceChips: View {
         // (and the whole View graph behind it) out of the capture.
         let clear = fadeClear
         let ramp = Self.fadeRamp
+        // The TRAILING melt's edge, in the viewport's own space (prd §662e):
+        // the peeking tile has to dissolve into the slab's far end the way
+        // the leading ones dissolve under the bar, or the cue that says
+        // "there is more" reads as a tile someone cut in half. Zero until
+        // the strip has measured itself, which disables the effect rather
+        // than fading everything.
+        let far = stripWidth
         // ScrollViewReader keeps the ACTIVE chip visible — a deep link
         // (casberi://feed/source/Zerion) can select a chip past the fold,
         // and a filter you can't see reads as no filter at all.
@@ -518,8 +623,20 @@ struct SourceChips: View {
                             // viewport's space. Evaluated by the render
                             // server, never a body pass.
                             .visualEffect { content, proxy in
-                                let x = proxy.frame(in: .scrollView).minX
-                                return content.opacity(Double(min(max((x - clear) / ramp, 0), 1)))
+                                let f = proxy.frame(in: .scrollView)
+                                let lead = min(max((f.minX - clear) / ramp, 0), 1)
+                                // Fades across the TILE'S OWN WIDTH, not over
+                                // `ramp`: the peeking tile stands about half a
+                                // cell past the edge, so a 12pt ramp put it at
+                                // zero and the "there is more" cue drew
+                                // nothing at all (measured on the simulator).
+                                // Solid while fully inside, half-lit when half
+                                // out, gone when past — which is the dimmed
+                                // peek the mock was chosen from.
+                                let trail = far > 0 && f.width > 0
+                                    ? min(max((far - f.minX) / f.width, 0), 1)
+                                    : 1
+                                return content.opacity(Double(min(lead, trail)))
                             }
                     }
                 }
@@ -613,6 +730,10 @@ struct SourceChips: View {
             } action: { _, new in
                 viewport.offset = new.offset
                 viewport.width = new.width
+                // The one viewport fact that IS layout (`categoryCell`) —
+                // written only when it changes, so a scroll frame still
+                // re-renders nothing.
+                if stripWidth != new.width { stripWidth = new.width }
             }
             .onScrollPhaseChange { _, phase in
                 // The strip's own motion, for `dockBusy` — a finger dragging
@@ -656,7 +777,6 @@ struct SourceChips: View {
         withAnimation(DS.Motion.standard) {
             scrubbing = hit.label
             scrubX = point.x
-            chrome.scrub = ShellChrome.DockScrub(label: hit.label, windowX: windowX(contentX: hit.midX))
         }
         publishDockBusy()
         #if DEBUG
@@ -670,10 +790,7 @@ struct SourceChips: View {
         }
         guard let hit = scrubTarget(x: point.x), hit.label != scrubbing else { return }
         DSHaptic.selection()
-        withAnimation(DS.Motion.standard) {
-            scrubbing = hit.label
-            chrome.scrub = ShellChrome.DockScrub(label: hit.label, windowX: windowX(contentX: hit.midX))
-        }
+        withAnimation(DS.Motion.standard) { scrubbing = hit.label }
     }
 
     private func scrubEnded(commit: Bool) {
@@ -681,7 +798,6 @@ struct SourceChips: View {
         withAnimation(DS.Motion.standard) {
             scrubbing = nil
             scrubX = nil
-            chrome.scrub = nil
         }
         publishDockBusy()
         guard commit, let chosen else { return }
@@ -902,18 +1018,30 @@ struct SourceChips: View {
     /// its venues rise above the dock out of this chip, and the fill stays on
     /// the word while they are up — "this folder", with the lit venue ringed
     /// in the row: "this venue".
+    ///
+    /// **A TILE, not a capsule, since prd §662 (2026-09-09)** — see the type
+    /// doc. The glyph is `CategoryGlyph` (frozen size, fixed box, one bounce
+    /// on arrival); the word is `dockCaption10`, the rung sized by this tile.
+    /// `minimumScaleFactor` is a floor for the accessibility sizes only —
+    /// at the default size no word in the table shrinks, so the strip draws
+    /// ONE caption size, which is what §351 fought for.
     @ViewBuilder
-    private func categoryCapsule(_ label: String) -> some View {
+    private func categoryTile(_ label: String) -> some View {
         let isOn = label == active
-        Text(label)
-            .dsText(.label12)
-            .fontWeight(.semibold)
-            .foregroundStyle(isOn ? .white : DS.textPrimary)
-            .lineLimit(1)
-            .minimumScaleFactor(axis == .vertical ? 0.6 : 1)
-            .padding(.horizontal, capsulePadH)
-            .frame(width: axis == .vertical ? Self.railChipWidth : nil, height: iconSize)
-            .wordChipFill(active: isOn, ns: selectionNS, leanPitch: leanPitch)
+        VStack(spacing: 2) {
+            CategoryGlyph(name: CategoryFold.glyph(for: label), size: glyphSize, isActive: isOn)
+            Text(label)
+                .dsText(.dockCaption10)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .foregroundStyle(isOn ? .white : DS.textPrimary)
+        // No inner padding: the tile's width IS the caption's bound (see
+        // `tileWidth`), and 4pt a side inside 52 would put "Shopping" under
+        // its floor.
+        .frame(width: axis == .vertical ? Self.railChipWidth : Self.tileWidth, height: iconSize)
+        .wordChipFill(active: isOn, ns: selectionNS, leanPitch: leanPitch,
+                      shape: chipShape(tile: true, outer: false))
     }
 
     private var scrollingLabels: [String] {
@@ -998,7 +1126,8 @@ struct SourceChips: View {
                         .minimumScaleFactor(0.55)
                         .frame(width: iconSize, height: iconSize)
                         .clipShape(Circle())
-                        .wordChipFill(active: isActive, ns: selectionNS, leanPitch: leanPitch)
+                        .wordChipFill(active: isActive, ns: selectionNS, leanPitch: leanPitch,
+                                      shape: chipShape(tile: false, outer: false))
                 case Pinboard.room:
                     // The pinned room (2026-08-10) — see `PinnedChipMark`.
                     PinnedChipMark(size: iconSize)
@@ -1022,7 +1151,7 @@ struct SourceChips: View {
                     // from the shortest. A container that grows has neither
                     // problem and needs neither knob.
                     if isCategory {
-                        categoryCapsule(label)
+                        categoryTile(label)
                     } else {
                         // Reachable only for a label the catalog has never
                         // heard of (an uncategorized source) — every real
@@ -1134,7 +1263,7 @@ struct SourceChips: View {
                 // "you have not filtered anything", competing with the chip you
                 // just pressed.
                 if !isActive, standing != "All", !standing.isEmpty, label == standing {
-                    Capsule(style: .circular)
+                    chipShape(tile: isCategory, outer: true)
                         .strokeBorder(DS.tint.opacity(0.55), lineWidth: 2)
                 }
                 if isActive, !isWord {
@@ -1148,7 +1277,7 @@ struct SourceChips: View {
                     // the offset sits INSIDE the match, and now the strip does
                     // not rebuild to draw it.
                     ChipLean(pitch: leanPitch, ns: selectionNS) {
-                        Capsule(style: .circular)
+                        chipShape(tile: false, outer: true)
                             .strokeBorder(DS.tint, lineWidth: 2.5)
                     }
                 } else if broken {
@@ -1157,12 +1286,16 @@ struct SourceChips: View {
                     // two hues — indistinguishable to anyone who doesn't
                     // separate them by color. The solid ring now belongs to
                     // selection alone.
-                    Capsule(style: .circular)
+                    chipShape(tile: isCategory, outer: true)
                         .strokeBorder(DS.attention,
                                       style: StrokeStyle(lineWidth: 2.5, dash: [3, 3]))
                 }
             }
-            .frame(width: isCategory ? nil : chipSize, height: chipSize)
+            // A category's outer frame is its CELL (§662e) — the tile sits
+            // centred in it, and the cell is what spreads across the strip.
+            // On the rail the tile sizes to the rail and the cell is moot.
+            .frame(width: isCategory ? (axis == .horizontal ? categoryCell : nil) : chipSize,
+                   height: chipSize)
             // THE LIFT: the chip grows from its foot, so it rises out of the
             // slab the way a Mac dock icon does, and the tallest draws over
             // its neighbours rather than under the one laid out after it. A
@@ -1196,7 +1329,10 @@ struct SourceChips: View {
             // capsule's frame would leave the ends of every category chip
             // looking pressable and not being it — the exact 2026-07-26
             // "press it several times" bug, in a new shape.
-            .contentShape(Capsule(style: .circular))
+            // `chipShape` since §662 — the same one call as every ring, so
+            // the tile's hit region is the tile and the circle's is the
+            // circle, with nothing to keep in step.
+            .contentShape(chipShape(tile: isCategory, outer: true))
             .dsHover()
         }
         .buttonStyle(.plain)
@@ -1434,15 +1570,54 @@ private struct WordChipFill: ViewModifier {
     let active: Bool
     let ns: Namespace.ID
     var leanPitch: CGFloat = 0
+    /// The chip's own outline (`SourceChips.chipShape`) — a circle under
+    /// "All", the tile under a category (prd §662). One shape TYPE, so the
+    /// travelling fill morphs its corner on the way rather than swapping
+    /// shape mid-flight.
+    let shape: RoundedRectangle
 
     func body(content: Content) -> some View {
         content.background {
             if active {
                 ChipLean(pitch: leanPitch, ns: ns) {
-                    Capsule(style: .circular).fill(DS.tint)
+                    shape.fill(DS.tint)
                 }
             }
         }
+    }
+}
+
+/// A category tile's glyph (prd §662) — an SF Symbol at a FROZEN size in a
+/// fixed box, so the caption's seat under it never moves whichever symbol the
+/// category wears (`laptopcomputer` is wide, `note.text` is tall) and never
+/// moves with the text setting either: the strip's rhythm is fixed by design,
+/// as the "All" chip says of the marks beside it. Frozen through `.font` on
+/// purpose and not `dsGlyph`, which would grow it with the caption — the
+/// design-ramp audit deliberately leaves a non-literal size alone.
+///
+/// Its ONE motion: a single bounce when the tile becomes the active one — the
+/// beat the word chips lost when §359 removed their flip, because a spinning
+/// word is not an identity moment; a glyph bouncing once is exactly what the
+/// flip was for a mark. Nothing ambient (no breathe, no wiggle): the dock's
+/// chrome never explains itself (§630). Leaving a chip bounces nothing —
+/// `landTick` moves only on arrival — and under Reduce Motion it never moves.
+/// Its own view so the tick invalidates this glyph and not the strip (the
+/// 2026-09-09 lesson `ChipIdentityFlip` records).
+private struct CategoryGlyph: View {
+    let name: String
+    let size: CGFloat
+    let isActive: Bool
+    @State private var landTick = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Image(systemName: name)
+            .font(.system(size: size, weight: .medium))
+            .frame(width: size + 6, height: size + 2)
+            .symbolEffect(.bounce.up, value: landTick)
+            .onChange(of: isActive) { _, on in
+                if on, !reduceMotion { landTick += 1 }
+            }
     }
 }
 
@@ -1456,8 +1631,9 @@ private enum ChipSelection {
 extension View {
     /// One fill for both word chips, so the circle and the capsule can never
     /// drift apart the way their COLOUR did before §358.
-    func wordChipFill(active: Bool, ns: Namespace.ID, leanPitch: CGFloat = 0) -> some View {
-        modifier(WordChipFill(active: active, ns: ns, leanPitch: leanPitch))
+    func wordChipFill(active: Bool, ns: Namespace.ID, leanPitch: CGFloat = 0,
+                      shape: RoundedRectangle) -> some View {
+        modifier(WordChipFill(active: active, ns: ns, leanPitch: leanPitch, shape: shape))
     }
 }
 

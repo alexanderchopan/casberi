@@ -58,9 +58,9 @@ enum DSDock {
 
     /// How much taller the chip under a scrubbing finger (or a pointer) stands
     /// than its neighbours at rest — the Mac dock's magnification, as a share
-    /// of the chip (2026-09-09). One number, read by the strip's wave
-    /// (`SourceChips.wave(for:)`) and by the caption that names the lifted
-    /// chip (`DockScrubCaption`), so the caption always clears the chip.
+    /// of the chip (2026-09-09). Read by the strip's wave
+    /// (`SourceChips.wave(for:)`); the caption that once named the lifted
+    /// chip is deleted (prd §662b), so nothing else keys on it.
     static let scrubLift: CGFloat = 0.4
 
     /// The air between the bar's trailing edge and the first chip.
