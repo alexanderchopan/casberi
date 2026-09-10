@@ -5226,8 +5226,14 @@ struct FeedScreen: View {
                     accounts: PrivacyDevnetRoomSource.accounts(scope: chrome.privacyDevnetScope),
                     headSlot: PrivacyDevnetLiveState.shared.headSlot,
                     walkCut: PrivacyDevnetLiveState.shared.walkCut,
-                    onSend: { feedSheet = .privacyDevnetSend },
-                    onShield: { feedSheet = .privacyDevnetShield },
+                    // The Send card is its OWN row below (prd §664), not a
+                    // member of this VStack: a cell shared between the move
+                    // list and the verb grid took the grid's under-reported
+                    // height for both, and the tiles rode up over the last
+                    // transaction on a phone. Vibenet mounts its card the same
+                    // way (`vibenetSendRow`).
+                    onSend: nil,
+                    onShield: nil,
                     onWatchExample: watchPrivacyDevnetExample,
                     // **THESE ROWS WERE TERMINAL BY CONSTRUCTION** (prd §596,
                     // user: "none of the lists open thing sheets") — the seat
@@ -5245,6 +5251,18 @@ struct FeedScreen: View {
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
+            // The verbs, in their own cell (prd §664) — see the `onSend: nil`
+            // above for why they left the list's.
+            if privacyScope == .home {
+                Section {
+                    PrivacyDevnetSendCard(onSend: { feedSheet = .privacyDevnetSend },
+                                          onShield: { feedSheet = .privacyDevnetShield })
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                          bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
+            }
             // **THE SWITCHER WAS MISSING ON THE FIRST BUILD**, found by opening
             // the room on a simulator rather than by any check: the seven scopes
             // existed, `present()` computed them correctly, and six of them were

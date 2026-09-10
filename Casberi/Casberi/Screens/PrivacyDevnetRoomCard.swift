@@ -206,6 +206,19 @@ struct PrivacyDevnetRoomCard: View {
                                   readAt: readAt, diameter: Self.homeRingDiameter,
                                   reduceMotion: reduceMotion)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            } else if !pairs.isEmpty {
+                // **NO PROOFS YET, BUT TRANSACTIONS: THE SLOT DRAWS THE MOVES
+                // (prd §664, 2026-09-09, user's phone: "60 transactions, and
+                // none has spent from the pool yet" over 240pt of nothing —
+                // "privacy devnet is all messed up look how it renders").**
+                // The ring is the crown when there are snapshots to draw;
+                // without one this branch used to leave the sentence alone in
+                // a 300pt slot the chassis pins for every room (§551). A room
+                // with sixty transactions is not empty, so its Home wears the
+                // figure Activity already draws for exactly these moves —
+                // the spine, its axis and the kind mix — under the sentence.
+                figure(for: .activity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
 
             // **THE TALLIES ARE GONE (prd §596).** Home carried a row of

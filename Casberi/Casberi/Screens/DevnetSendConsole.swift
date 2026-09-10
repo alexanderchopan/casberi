@@ -301,6 +301,7 @@ struct DevnetSendPanel: View {
             // tiles, and `contentGap` is drawn where the section put it. The
             // two-act branch below never had it: a `VStack` is not lazy.
             let acts: [Kind] = [.send] + (topUp == nil ? [] : [.topUp]) + extras.map(Kind.extra)
+            let rows = CGFloat((acts.count + 1) / 2)
             Grid(horizontalSpacing: DevnetConsole.tileGap, verticalSpacing: DevnetConsole.tileGap) {
                 ForEach(Array(stride(from: 0, to: acts.count, by: 2)), id: \.self) { i in
                     GridRow {
@@ -309,6 +310,17 @@ struct DevnetSendPanel: View {
                     }
                 }
             }
+            // **THE HEIGHT IS STATED, NOT INFERRED (prd §664).** The eager
+            // `Grid` above was this morning's answer to a lazy grid that
+            // under-reported to its List cell; on the Privacy devnet, whose
+            // three verbs make TWO rows in a cell shared with the room's move
+            // list, the tiles still rode up over the last row on a phone.
+            // A minimum height that is the rows' own floors plus their gaps
+            // is what the cell is told regardless of what the grid measures,
+            // so the tiles can never be taller than the cell that holds them.
+            .frame(minHeight: rows * DevnetConsole.menuTileFloor
+                              + max(0, rows - 1) * DevnetConsole.tileGap,
+                   alignment: .top)
         } else {
             VStack(spacing: DevnetConsole.tileGap) {
                 tile(kind: .send)
