@@ -585,6 +585,43 @@ final class ShellChrome {
     /// berry rain (TileRain, user ask same day).
     var refreshPulse = 0
 
+    /// **When a finger last chose a room from the strip (prd §674).** The
+    /// strip re-centres the active chip on every room change, which is right
+    /// for a swipe or a deep link — the chip you land on may be off screen —
+    /// and wrong for a TAP, where the chip is provably on screen because you
+    /// just touched it, so the scroll is an animation nobody asked for over a
+    /// control that is already where it should be.
+    ///
+    /// It lives here rather than in `SourceChips` because the routes that
+    /// must set it do not all live there: a chip's own button does, and so
+    /// does a venue picked inside an OPEN FOLDER, which reaches the room
+    /// through `sourceRequest` and never touches the strip. The label
+    /// comparison this replaces (`tapped == now`) could not see that route at
+    /// all, and also missed a category chip whose landing source is not
+    /// folded under it — there the new active label is the source's, not the
+    /// one the finger touched.
+    ///
+    /// A MOMENT, not a flag, and deliberately so: a flag set by a tap that
+    /// then changes nothing (re-tapping the chip you are standing on only
+    /// toggles its folder) would never be consumed and would swallow the next
+    /// honest re-centre. This cannot wedge.
+    ///
+    /// `@ObservationIgnored`: nothing draws from it, and a per-touch write
+    /// that invalidated the shell would cost more than the scroll it saves.
+    @ObservationIgnored var lastChipTouch: TimeInterval = 0
+
+    /// How long after a touch a room change still counts as that touch's
+    /// doing. One `DS.Motion.standard` spring plus a frame — long enough for
+    /// the landing and the folder's own settle, far short of a human's next
+    /// deliberate gesture.
+    static let chipTouchWindow: TimeInterval = 0.5
+
+    /// True when the room change being handled right now was started by a
+    /// finger on the strip.
+    var roomChangeCameFromAChipTouch: Bool {
+        Date.timeIntervalSinceReferenceDate - lastChipTouch < Self.chipTouchWindow
+    }
+
     /// Bumped by `FeedScreen` the first time a room's body has run (its
     /// `.task(id: headKey)` mount arm, prd §671) — the signal a category tap
     /// waits on before springing its folder, now that the room lands on the

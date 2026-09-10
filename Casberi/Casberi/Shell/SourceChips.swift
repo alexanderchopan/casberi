@@ -505,6 +505,9 @@ struct SourceChips: View {
                     // a silent no-op rather than a scroll — say so, rather than
                     // leaving a call that only looks like it does something.
                     guard now != "All" else { return }
+                    // The same rule on the pad rail, which had no guard of any
+                    // kind (prd §674).
+                    guard !chrome.roomChangeCameFromAChipTouch else { return }
                     withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
                 }
             }
@@ -659,7 +662,11 @@ struct SourceChips: View {
             // restored filter) still re-centres: a selection you cannot see
             // reads as no selection at all.
             .onChange(of: active) { _, now in
-                if tapped == now { tapped = nil; return }
+                // A TAP NEVER RE-CENTRES (prd §674) — the chip is on screen,
+                // the finger was just on it. Only a swipe or a deep link can
+                // land on a chip that needs scrolling into view.
+                tapped = nil
+                guard !chrome.roomChangeCameFromAChipTouch else { return }
                 withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
             }
             // The viewport, for `windowX` — a box write per sample, no state,
@@ -966,6 +973,9 @@ struct SourceChips: View {
             DSHaptic.selection()
             // Marks this change as finger-initiated so the strip does not
             // re-centre under it — see the horizontal strip's `onChange`.
+            // The MOMENT is what the guard reads (prd §674); `tapped` stays
+            // for the fill's own travel bookkeeping.
+            chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
             tapped = label
             // Where a folder would spring from — published BEFORE the toggle,
             // so the row's first frame already knows its anchor.

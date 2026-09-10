@@ -391,7 +391,31 @@ struct MainSurface: View {
             // `safeAreaInset`s on `FeedScreen` until §357 — see `roomControls`
             // for why that could not work, an argument the edge does not
             // change.
+            // **A RAIL APPEARING MUST NOT BOUNCE THE SCREEN (prd §674, user:
+            // "when i enter social the screen bounces b/c we have extra stuff
+            // at the bottom, it shouldn't do that").** This band is the feed's
+            // bottom `safeAreaInset`, so anything that changes its HEIGHT
+            // changes the scroll view's content inset — and the room change
+            // that reveals a face rail runs inside `land`'s
+            // `DS.Motion.standard`, a spring with **bounce 0.15**. A bouncing
+            // spring driving a scroll view's inset is a bouncing screen: the
+            // rows settle, overshoot and come back, which is what was reported
+            // for Social and is true of any room that carries a rail.
+            //
+            // The override is `DS.Motion.glide` (bounce 0), not nil: the height
+            // still needs to change smoothly, it just must not overshoot —
+            // §667's own ruling for anything that names a position, which is
+            // what an inset is. Guarded on `t.animation != nil` for §673's
+            // reason, so an un-animated write stays un-animated.
+            //
+            // Scoped to `roomControls`, NOT the whole band: the strip below it
+            // owns the folder's spring (`DS.Motion.folder`, bounce 0.32,
+            // §663/§668), and flattening that would take the dock's signature
+            // with it.
             roomControls
+                .transaction { t in
+                    if t.animation != nil { t.animation = DS.Motion.glide }
+                }
             if !showsRail {
                 sourceStrip(axis: .horizontal)
                     // **THE DOCK'S FIRST SEAT BELONGS TO THE AGENT (§591), and
@@ -595,6 +619,12 @@ struct MainSurface: View {
                         category: category,
                         compact: chrome.minimized && !showsRail,
                         anchorLocalX: anchorLocalX) { venue in
+                        // A finger on the strip, one row down (prd §674): the
+                        // folder sits over the chips, so its pick must
+                        // suppress the re-centre exactly as a chip's own tap
+                        // does — this is the route the old label comparison
+                        // could not see.
+                        chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
                         chrome.sourceRequest = venue
                     }
                 }
