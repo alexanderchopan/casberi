@@ -708,7 +708,7 @@ struct SourceChips: View {
     /// phase — a finger dragging it, or its flick.
     private func publishDockBusy() {
         let busy = viewport.moving
-        if chrome.dockBusy != busy { chrome.dockBusy = busy }
+        if chrome.dockBusy != busy { chrome.dockBusy = busy; GestureGate.set(dock: busy) }
     }
 
     @ViewBuilder

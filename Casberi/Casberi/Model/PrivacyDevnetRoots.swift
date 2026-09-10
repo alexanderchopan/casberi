@@ -49,7 +49,7 @@ enum PrivacyDevnetRoots {
     /// All three are `Data`, not integers, and `sourceID` is the one that
     /// matters: it is 32 bytes on the wire (`b08f1575…51c26e20`), so the
     /// sibling seat's `UInt64` cannot hold it.
-    struct Reference: Equatable, Sendable {
+    struct Reference: Equatable, Sendable, Codable {
         var sourceID: Data
         var slot: UInt64
         var root: Data

@@ -1599,7 +1599,12 @@ struct VibenetRoomCard: View {
         // stays as a name the room's own call sites already read, and adds
         // nothing of its own; a room that re-adds a rule here is a room
         // building its sixth template.
-        DSRoomSlot(headline: headline, figure: figure)
+        // The gear column, cleared HERE for every vibenet scope (prd §665):
+        // Frames, Hegotá and the Privacy devnet pad their slot content by
+        // `DSRoomChassis.gearColumn` and this card never did, so the gear sat
+        // on the Permissions grid's third cell (user's phone, 2026-09-09).
+        // One place rather than per figure, or the next scope forgets again.
+        DSRoomSlot(headline: headline) { figure().padding(.trailing, DSRoomChassis.gearColumn) }
     }
 
     /// WHERE THE CHANGES LANDED — the Activity scope's drawing (prd §491,
@@ -2243,8 +2248,16 @@ struct VibenetRoomCard: View {
     /// it** (see `policyCensusCell`), so a longer label can never grow the grid
     /// past the box again — it is the cell's own text that gives, which is
     /// visible, rather than the row below it, which is not.
+    /// **Minus the cell's OWN vertical padding (prd §665, 2026-09-09, user's
+    /// phone: the second row of Permissions cut off behind the rail slab —
+    /// "everything is always clipping").** This derived the INNER height from
+    /// `figureSlot` and then padded each cell by `s2` top and bottom outside
+    /// it, so two rows came to `figureSlot + 40` and the slot's `clipped()`
+    /// took the bottom 40pt of the second row. The derivation is the rule
+    /// this file states for itself ("caps are derived from figureSlot, never
+    /// constants"); the padding was the part it forgot to derive.
     private static let censusCell: CGFloat =
-        (DSRoomChassis.figureSlot - DS.Space.s2 * (censusRows - 1)) / censusRows
+        (DSRoomChassis.figureSlot - DS.Space.s2 * (censusRows - 1)) / censusRows - DS.Space.s2 * 2
 
     /// NOTHING WAS READ — the Permissions scope for an account the chain did
     /// not answer for.

@@ -1005,7 +1005,7 @@ extension View {
         .onScrollPhaseChange { _, phase in
             guard active else { return }
             let moving = phase != .idle
-            if chrome.scrolling != moving { chrome.scrolling = moving }
+            if chrome.scrolling != moving { chrome.scrolling = moving; GestureGate.set(scrolling: moving) }
             guard phase == .idle else { return }
             chrome.settleFold()
         }
@@ -1013,7 +1013,7 @@ extension View {
         // `ShellChrome.scrolling`. Without this the flag outlives the screen
         // that set it, and every later room waits the whole cap.
         .onDisappear {
-            if active, chrome.scrolling { chrome.scrolling = false }
+            if active, chrome.scrolling { chrome.scrolling = false; GestureGate.set(scrolling: false) }
         }
     }
 }

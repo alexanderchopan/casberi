@@ -1842,152 +1842,163 @@ struct RootShell: View {
         // foreground has no launch animation to protect, so it runs
         // immediately.
         let runForegroundWork: @MainActor () -> Void = {
-            // Connected bridges are cheap to poll — every foreground
-            // refreshes them all (one place, reusable from screens).
-            #if DEBUG
-            LaunchPerf.time("refreshAllConnected") {
-                BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
-            }
-            #else
-            BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
-            #endif
-            // Tracked money records, brought up to date (prd §369 amendment).
-            // HERE and not in the background sweep, deliberately: this is the
-            // pass that really re-read the sources, and a Live Activity's
-            // "checked 2h ago" is a claim about the SOURCE, not about our own
-            // store. See `MoneyActivityDriver.sync`.
-            Task { await MoneyActivityDriver.sync(context: modelContext) }
-            // Build the on-device semantic index for anything new or
-            // not yet embedded — a bounded background sweep, so Ask can
-            // retrieve by meaning, not just shared words.
-            EmbeddingIndex.backfill(context: modelContext)
-            // Stamp what each new thing can REACH (a phone number, an
-            // address) once, instead of re-detecting it per row per
-            // render — prd §260. Same bounded-sweep shape as the
-            // embedding backfill above, and deliberately in the same
-            // deferred block: it is the work the launch window exists
-            // to keep clear. Its scans hop off the main actor themselves
-            // (2026-08-06) — on it, 150 rows of `NSDataDetector` was a
-            // stall in exactly this window, every foreground.
+            // **NOTHING BELOW RUNS UNDER A FINGER (prd §666, 2026-09-09).** The
+            // sweep, the index backfills and the detectors all land on the main
+            // actor, and a foreground that arrives while a person is already
+            // scrolling used to pay them inside the frames of that scroll. One
+            // gate for all of it: wait for the hand to be still, capped so a
+            // flick that never quite settles cannot starve the sweep.
             Task { @MainActor in
-                await SweepClock.measure("verbs.detect") {
-                    await VerbDetection.backfill(context: modelContext)
-                }
-            }
-            // The two model-fed sweeps (prd §282, 2026-08-02) — both bounded
-            // to a handful of rows per foreground, both no-ops without Apple
-            // Intelligence, and both deliberately behind the cheap
-            // deterministic sweeps above: a long transcript's digest and a
-            // screenshot's name are worth having, never worth delaying the
-            // index everything else reads.
-            Task { @MainActor in
-                await FirstPaint.painted()
-                await ThreadDigest.sweep(context: modelContext)
-                await ScreenshotNaming.sweep(context: modelContext)
-            }
-            // The "Noticed" line's real trigger (docs/agent-brief.md
-            // ruling 10). Also refreshes the kept-ask digest cache
-            // (`KeptAskStore.anyChanged`) the bar's pulse reads from.
-            Task { @MainActor in
-              // On the sweep clock (2026-08-06) because it is main-actor work
-              // in the same window as the bridge sweep and costs about what a
-              // bridge slot does — a 600-row materialization plus three
-              // composes — so a report that showed only the sweep would send
-              // whoever reads it to optimize the smaller half.
-              // Behind the first paint (2026-09-06): this fetch's transformable
-              // decoding was 61% of the main thread in the pre-paint window.
-              await FirstPaint.painted()
-              // A COLD LAUNCH WAITS A BEAT MORE (PERF 2026-09-08, prd §651).
-              // Nothing below is drawn by the feed — the insight line feeds
-              // the agent, the digests feed the kept-ask chips, the brief and
-              // the widgets are read later — and the block sampled at 158 of
-              // 1,083 main-thread samples across a launch (`insightFetch600`
-              // hydrates 600 rows with their inline text, and the composers
-              // read it), landing in the seconds a person starts scrolling in.
-              // On a later foreground the corpus is warm and this runs as it
-              // always did.
-              if firstActivation { try? await Task.sleep(for: .seconds(2.5)) }
-              await SweepClock.measure("insight.recompute") {
-                // Bounded (2026-07-24): insight/kept-ask/whisper read
-                // only recent activity, so this needn't materialize the
-                // whole corpus on the main actor at launch.
-                var d = FetchDescriptor<Thing>(
-                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-                d.fetchLimit = 600
+                await GestureGate.idle()
+
+                // Connected bridges are cheap to poll — every foreground
+                // refreshes them all (one place, reusable from screens).
                 #if DEBUG
-                let surfaced = LaunchPerf.time("insightFetch600") {
-                    Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
+                LaunchPerf.time("refreshAllConnected") {
+                    BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
                 }
-                LaunchPerf.time("HomeInsight.refresh") { HomeInsightStore.shared.refresh(from: surfaced) }
-                // The deterministic notice (prd §384) — its own bounded
-                // fetches, because a newest-600 window structurally cannot
-                // hold a three-years-ago anniversary (the §382 widget
-                // deadline-scan reasoning).
-                LaunchPerf.time("AgentNoticed.refresh") { AgentNoticed.shared.refresh(context: modelContext) }
-                // The librarian names the map's clusters (prd §386m) — off
-                // the compose path by construction, which is the only reason
-                // §386a's "the brief awaits no model" survives the feature.
-                await ClusterNames.shared.refresh()
-                // GITHUB'S CONTRIBUTION YEAR (2026-08-16, report: "did we
-                // just get rid of 'your work' as a category or it's not
-                // showing"). Not removed — starved. `TodayBrief.githubCalendar`
-                // reads `GitHubGraphStore.year` and deliberately never
-                // fetches, so the brief costs nothing for a room it merely
-                // mentions; but the ONLY caller that did fetch was the GitHub
-                // room's own `.task`. So Work could compose only for someone
-                // who had opened that room within six hours, which for most
-                // people is never, and the section silently never appeared.
-                //
-                // This is §320's class exactly ("two features existed and
-                // NOTHING CALLED THEM") and §386m's, one section over — a
-                // feature whose absence looks identical to its quiet success,
-                // since a Work section that declines and one that was never
-                // fed render as the same nothing.
-                //
-                // Safe here for the reason the composer's comment already
-                // gives: `refreshIfStale` self-guards on a six-hour cache, an
-                // in-flight flag, and a stored token, so a foreground with no
-                // GitHub connected returns before it touches the network.
-                await GitHubGraphStore.shared.refreshIfStale()
-                await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
-                // The widget's rung-1 content (its brief headline) is
-                // published as a side effect of composing "today" — but
-                // refreshDigests only composes it for someone who has
-                // KEPT that ask. Most people never do, so the widget
-                // silently sat on rung 2 (the newest thing) forever.
-                // Compose it here too, unconditionally, so the widget
-                // stops being stale for everyone else (2026-08-03).
-                if !KeptAskStore.shared.order.contains("today") {
-                    _ = await TodayBrief.compose(things: surfaced, context: modelContext)
-                }
-                LaunchPerf.time("refreshPaneBrief") { refreshPaneBrief(things: surfaced) }
-                refreshAgentHint()
-                LaunchPerf.time("widgetPublish") { WidgetPublish.publishAll(things: surfaced, context: modelContext) }
                 #else
-                let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
-                HomeInsightStore.shared.refresh(from: surfaced)
-                AgentNoticed.shared.refresh(context: modelContext)
-                await ClusterNames.shared.refresh()
-                await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
-                if !KeptAskStore.shared.order.contains("today") {
-                    _ = await TodayBrief.compose(things: surfaced, context: modelContext)
-                }
-                // The pane brief's compose rides the same corpus walk this
-                // Task already paid for — never its own fetch.
-                refreshPaneBrief(things: surfaced)
-                refreshAgentHint()
-                WidgetPublish.publishAll(things: surfaced, context: modelContext)
+                BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
                 #endif
-              }
+                // Tracked money records, brought up to date (prd §369 amendment).
+                // HERE and not in the background sweep, deliberately: this is the
+                // pass that really re-read the sources, and a Live Activity's
+                // "checked 2h ago" is a claim about the SOURCE, not about our own
+                // store. See `MoneyActivityDriver.sync`.
+                Task { await MoneyActivityDriver.sync(context: modelContext) }
+                // Build the on-device semantic index for anything new or
+                // not yet embedded — a bounded background sweep, so Ask can
+                // retrieve by meaning, not just shared words.
+                EmbeddingIndex.backfill(context: modelContext)
+                // Stamp what each new thing can REACH (a phone number, an
+                // address) once, instead of re-detecting it per row per
+                // render — prd §260. Same bounded-sweep shape as the
+                // embedding backfill above, and deliberately in the same
+                // deferred block: it is the work the launch window exists
+                // to keep clear. Its scans hop off the main actor themselves
+                // (2026-08-06) — on it, 150 rows of `NSDataDetector` was a
+                // stall in exactly this window, every foreground.
+                Task { @MainActor in
+                    await SweepClock.measure("verbs.detect") {
+                        await VerbDetection.backfill(context: modelContext)
+                    }
+                }
+                // The two model-fed sweeps (prd §282, 2026-08-02) — both bounded
+                // to a handful of rows per foreground, both no-ops without Apple
+                // Intelligence, and both deliberately behind the cheap
+                // deterministic sweeps above: a long transcript's digest and a
+                // screenshot's name are worth having, never worth delaying the
+                // index everything else reads.
+                Task { @MainActor in
+                    await FirstPaint.painted()
+                    await ThreadDigest.sweep(context: modelContext)
+                    await ScreenshotNaming.sweep(context: modelContext)
+                }
+                // The "Noticed" line's real trigger (docs/agent-brief.md
+                // ruling 10). Also refreshes the kept-ask digest cache
+                // (`KeptAskStore.anyChanged`) the bar's pulse reads from.
+                Task { @MainActor in
+                  // On the sweep clock (2026-08-06) because it is main-actor work
+                  // in the same window as the bridge sweep and costs about what a
+                  // bridge slot does — a 600-row materialization plus three
+                  // composes — so a report that showed only the sweep would send
+                  // whoever reads it to optimize the smaller half.
+                  // Behind the first paint (2026-09-06): this fetch's transformable
+                  // decoding was 61% of the main thread in the pre-paint window.
+                  await FirstPaint.painted()
+                  // A COLD LAUNCH WAITS A BEAT MORE (PERF 2026-09-08, prd §651).
+                  // Nothing below is drawn by the feed — the insight line feeds
+                  // the agent, the digests feed the kept-ask chips, the brief and
+                  // the widgets are read later — and the block sampled at 158 of
+                  // 1,083 main-thread samples across a launch (`insightFetch600`
+                  // hydrates 600 rows with their inline text, and the composers
+                  // read it), landing in the seconds a person starts scrolling in.
+                  // On a later foreground the corpus is warm and this runs as it
+                  // always did.
+                  if firstActivation { try? await Task.sleep(for: .seconds(2.5)) }
+                  await SweepClock.measure("insight.recompute") {
+                    // Bounded (2026-07-24): insight/kept-ask/whisper read
+                    // only recent activity, so this needn't materialize the
+                    // whole corpus on the main actor at launch.
+                    var d = FetchDescriptor<Thing>(
+                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                    d.fetchLimit = 600
+                    #if DEBUG
+                    let surfaced = LaunchPerf.time("insightFetch600") {
+                        Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
+                    }
+                    LaunchPerf.time("HomeInsight.refresh") { HomeInsightStore.shared.refresh(from: surfaced) }
+                    // The deterministic notice (prd §384) — its own bounded
+                    // fetches, because a newest-600 window structurally cannot
+                    // hold a three-years-ago anniversary (the §382 widget
+                    // deadline-scan reasoning).
+                    LaunchPerf.time("AgentNoticed.refresh") { AgentNoticed.shared.refresh(context: modelContext) }
+                    // The librarian names the map's clusters (prd §386m) — off
+                    // the compose path by construction, which is the only reason
+                    // §386a's "the brief awaits no model" survives the feature.
+                    await ClusterNames.shared.refresh()
+                    // GITHUB'S CONTRIBUTION YEAR (2026-08-16, report: "did we
+                    // just get rid of 'your work' as a category or it's not
+                    // showing"). Not removed — starved. `TodayBrief.githubCalendar`
+                    // reads `GitHubGraphStore.year` and deliberately never
+                    // fetches, so the brief costs nothing for a room it merely
+                    // mentions; but the ONLY caller that did fetch was the GitHub
+                    // room's own `.task`. So Work could compose only for someone
+                    // who had opened that room within six hours, which for most
+                    // people is never, and the section silently never appeared.
+                    //
+                    // This is §320's class exactly ("two features existed and
+                    // NOTHING CALLED THEM") and §386m's, one section over — a
+                    // feature whose absence looks identical to its quiet success,
+                    // since a Work section that declines and one that was never
+                    // fed render as the same nothing.
+                    //
+                    // Safe here for the reason the composer's comment already
+                    // gives: `refreshIfStale` self-guards on a six-hour cache, an
+                    // in-flight flag, and a stored token, so a foreground with no
+                    // GitHub connected returns before it touches the network.
+                    await GitHubGraphStore.shared.refreshIfStale()
+                    await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
+                    // The widget's rung-1 content (its brief headline) is
+                    // published as a side effect of composing "today" — but
+                    // refreshDigests only composes it for someone who has
+                    // KEPT that ask. Most people never do, so the widget
+                    // silently sat on rung 2 (the newest thing) forever.
+                    // Compose it here too, unconditionally, so the widget
+                    // stops being stale for everyone else (2026-08-03).
+                    if !KeptAskStore.shared.order.contains("today") {
+                        _ = await TodayBrief.compose(things: surfaced, context: modelContext)
+                    }
+                    LaunchPerf.time("refreshPaneBrief") { refreshPaneBrief(things: surfaced) }
+                    refreshAgentHint()
+                    LaunchPerf.time("widgetPublish") { WidgetPublish.publishAll(things: surfaced, context: modelContext) }
+                    #else
+                    let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
+                    HomeInsightStore.shared.refresh(from: surfaced)
+                    AgentNoticed.shared.refresh(context: modelContext)
+                    await ClusterNames.shared.refresh()
+                    await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
+                    if !KeptAskStore.shared.order.contains("today") {
+                        _ = await TodayBrief.compose(things: surfaced, context: modelContext)
+                    }
+                    // The pane brief's compose rides the same corpus walk this
+                    // Task already paid for — never its own fetch.
+                    refreshPaneBrief(things: surfaced)
+                    refreshAgentHint()
+                    WidgetPublish.publishAll(things: surfaced, context: modelContext)
+                    #endif
+                  }
+                }
+                // The agent's chip counters, computed while nothing is waiting on
+                // them, so the first raise of a launch costs what every later one
+                // does (2026-08-12). Self-delaying and self-skipping — see
+                // `AgentOpenCache.warm`; it deliberately does NOT run inline here,
+                // since a ~761ms walk in the sweep is the launch stall this whole
+                // pass has been removing.
+                AgentOpenCache.shared.warm(context: modelContext)
+        
             }
-            // The agent's chip counters, computed while nothing is waiting on
-            // them, so the first raise of a launch costs what every later one
-            // does (2026-08-12). Self-delaying and self-skipping — see
-            // `AgentOpenCache.warm`; it deliberately does NOT run inline here,
-            // since a ~761ms walk in the sweep is the launch stall this whole
-            // pass has been removing.
-            AgentOpenCache.shared.warm(context: modelContext)
-        }
+}
         // Deferred on EVERY activation since 2026-08-06, not just the first.
         // A return has no launch animation to protect, which is why this block
         // used to run inline there — but it has something better worth

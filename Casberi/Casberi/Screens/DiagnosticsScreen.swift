@@ -119,6 +119,9 @@ struct DiagnosticsScreen: View {
         // for. Empty in the Simulator by design — `AppMetrics.report()` says so
         // in its own words rather than drawing a row of dashes.
         for line in AppMetrics.report() { log(line) }
+        // Live, per gesture, from this install (prd §666) — the same hitch
+        // MetricKit reports as a daily ratio above, one flick at a time.
+        for line in HitchMeter.shared.lines() { log(line) }
 
         // — This device's OWN perf numbers, this launch (prd §623) —
         //

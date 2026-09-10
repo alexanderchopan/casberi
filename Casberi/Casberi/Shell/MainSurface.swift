@@ -2107,6 +2107,8 @@ struct MainSurface: View {
         // say `.idle` now — see `ShellChrome.scrolling`. Left set, the flag
         // held this room's lift for the whole cap and every room after it.
         chrome.scrolling = false
+        GestureGate.set(scrolling: false)
+        GestureGate.set(swipe: false)
     }
 
     /// A transient bound on the incoming room's query, for the length of the
@@ -2375,12 +2377,14 @@ struct MainSurface: View {
         }
         let target = neighbour(t < 0 ? 1 : -1)
         let free = target != nil
+        GestureGate.set(swipe: true)
         chrome.pageDragX = free ? t : t * 0.3
         chrome.pageDragProgress = free ? min(1, max(-1, -t / Self.dragPitch)) : 0
         if chrome.pageDragTarget != target { chrome.pageDragTarget = target }
     }
 
     private func dragCancel() {
+        GestureGate.set(swipe: false)
         withAnimation(DS.Motion.standard) {
             chrome.pageDragX = 0
             chrome.pageDragProgress = 0

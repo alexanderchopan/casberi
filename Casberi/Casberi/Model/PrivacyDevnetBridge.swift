@@ -62,7 +62,7 @@ enum PrivacyDevnetChain {
 }
 
 /// One watched address's reading.
-struct PrivacyDevnetAccount: Equatable, Sendable, Identifiable {
+struct PrivacyDevnetAccount: Equatable, Sendable, Identifiable, Codable {
     var address: String
     var id: String { address.lowercased() }
 
@@ -198,7 +198,54 @@ final class PrivacyDevnetLiveState {
         PrivacyDevnetMoments.spendPoolSight()
     }
 
-    private init() {}
+    /// **THE LAST READ IS KEPT (prd §665, 2026-09-09, user: "devnet rooms take
+    /// a second to load and at first load in a weird order, then settle").**
+    /// Frames and Hegotá have persisted their accounts since they shipped;
+    /// this room never did, so every launch opened on "Reading the chain…",
+    /// then the head slot arrived, then the addresses, then their moves —
+    /// four publishes over a second, each re-composing the head, the sentence
+    /// flipping from "reading" to "nothing yet" to the truth. The cache draws
+    /// the previous read at first paint; `refreshIfStale` then reads behind
+    /// it and publishes ONCE.
+    private static let cacheKey = "privacydevnet.live.cache.v1"
+    private struct Snapshot: Codable {
+        var accounts: [PrivacyDevnetAccount]
+        var headSlot: UInt64
+        var observedGenesis: String?
+        var walkCut: WalkCut
+        var readAt: Date?
+    }
+
+    private init() {
+        if let data = UserDefaults.standard.data(forKey: Self.cacheKey),
+           let saved = try? JSONDecoder().decode(Snapshot.self, from: data) {
+            accounts = saved.accounts
+            headSlot = saved.headSlot
+            observedGenesis = saved.observedGenesis
+            walkCut = saved.walkCut
+            readAt = saved.readAt
+        }
+    }
+
+    private func persist() {
+        guard !DemoMode.isActive else { return }
+        let snap = Snapshot(accounts: accounts, headSlot: headSlot, observedGenesis: observedGenesis,
+                            walkCut: walkCut, readAt: readAt)
+        guard let data = try? JSONEncoder().encode(snap) else { return }
+        UserDefaults.standard.set(data, forKey: Self.cacheKey)
+    }
+
+    /// One transaction for a whole read (prd §665): head slot, genesis, walk
+    /// cut and accounts land together, so no body pass composes a head from
+    /// half of them.
+    private func publish(accounts: [PrivacyDevnetAccount], head: UInt64?, cut: WalkCut?, genesis: String?) {
+        if let head { headSlot = head }
+        if let genesis { observedGenesis = genesis }
+        if let cut { walkCut = cut }
+        self.accounts = accounts
+        readAt = Date()
+        persist()
+    }
 
     func account(_ address: String) -> PrivacyDevnetAccount? {
         accounts.first { $0.address.caseInsensitiveCompare(address) == .orderedSame }
@@ -574,13 +621,19 @@ extension PrivacyDevnetLiveState {
         let watched = PrivacyDevnetWatch.shared.addresses
         guard !watched.isEmpty else { return }
 
+        // Gathered into locals and published ONCE at the end (prd §665) —
+        // see `publish`. `noteRelaunch` is a defaults note, not state.
+        var genesisRead: String?
+        var headRead: UInt64?
+        var cutRead: WalkCut?
+
         // Genesis first: a relaunch invalidates every reading below it, and
         // knowing that early means the room can say so rather than describing
         // a chain that is gone.
         if let g = await PrivacyDevnetRPC.call(method: "eth_getBlockByNumber",
                                                params: ["0x0", false]) as? [String: Any],
            let hash = g["hash"] as? String {
-            setGenesis(hash)
+            genesisRead = hash
             noteRelaunch(hash)
         }
 
@@ -592,7 +645,7 @@ extension PrivacyDevnetLiveState {
             method: "eth_call",
             params: [["data": "0x4b60005260206000f3"], "latest"]),
            let slot = PrivacyDevnetRPC.hexInt(word) {
-            setHead(slot: slot)
+            headRead = slot
         }
 
         var out: [PrivacyDevnetAccount] = []
@@ -618,7 +671,7 @@ extension PrivacyDevnetLiveState {
         // ONCE for every watched address rather than per address, because its
         // expensive half — reading every transaction a log touched — is shared.
         if let (walked, cut) = await walkTransactions(for: watched) {
-            setCut(cut)
+            cutRead = cut
             for i in out.indices {
                 if let w = walked[out[i].address.lowercased()] {
                     out[i].frameCount = w.frames
@@ -632,7 +685,7 @@ extension PrivacyDevnetLiveState {
                 }
             }
         }
-        replace(out)
+        publish(accounts: out, head: headRead, cut: cutRead, genesis: genesisRead)
 
         // **THE MOMENTS, OBSERVED HERE AND SAID BY THE ROOM (prd §598).**
         //
@@ -658,7 +711,6 @@ extension PrivacyDevnetLiveState {
             shielded = await PrivacyDevnetShielded.balance()
         }
 
-        readAt = Date()
     }
 
     /// This phone's own account's nonce — **the only signal this seat has for
@@ -693,7 +745,7 @@ extension PrivacyDevnetLiveState {
     /// `gasLimit`/`stateLimit` — Hegotá says `executionGasLimit`/`stateGasLimit`
     /// and Frames says `gasLimit`/`stateGasLimit`, so a reader written for
     /// either sibling gets nil here and draws frames that look budget-less.
-    struct Frame: Equatable, Sendable {
+    struct Frame: Equatable, Sendable, Codable {
         var gasLimit: UInt64?
         var stateLimit: UInt64?
         /// **Never read today.** `eth_getTransactionReceipt` on this chain
@@ -720,7 +772,7 @@ extension PrivacyDevnetLiveState {
     /// groups keys BY TRANSACTION and the Home scope draws the newest moves'
     /// snapshots — both of which need the values on the move rather than only
     /// in the account's flattened union.
-    struct Move: Equatable, Sendable, Identifiable {
+    struct Move: Equatable, Sendable, Identifiable, Codable {
         var hash: String
         /// Nil when the transaction read carried none — never 0, which would
         /// sort a real transaction to the beginning of time.
@@ -771,7 +823,7 @@ extension PrivacyDevnetLiveState {
     /// belonged to whom is exactly what reading them would have told us — so
     /// attributing a cut to one roster row would be inventing the answer the
     /// cut prevented.
-    struct WalkCut: Equatable, Sendable {
+    struct WalkCut: Equatable, Sendable, Codable {
         /// Candidate transactions beyond `walkCap` that were never opened.
         var unread = 0
         /// The block the log scan stopped at when `walkChunkCap` bit before the

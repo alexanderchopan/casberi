@@ -389,7 +389,7 @@ checkm "a room change clears the scroll flag for the arriving room" \
        "$MAIN" 'private func land\(_ target: String\) \{(?:(?!\n    \}).)*chrome\.scrolling = false' yes
 if [[ -f "$CHROME" ]]; then
   checkm "the scroll observer clears its flag when its screen leaves" \
-         "$CHROME" '\.onDisappear \{\s*if active, chrome\.scrolling \{ chrome\.scrolling = false \}' yes
+         "$CHROME" '\.onDisappear \{\s*if active, chrome\.scrolling \{ chrome\.scrolling = false; GestureGate\.set\(scrolling: false\) \}' yes
   # Neither flag may be a body's dependency: both are written from scroll and
   # touch callbacks, and an observable write there invalidates every reader
   # on every scroll. Ignored, a body that read one would simply never update,
@@ -767,7 +767,7 @@ mutate "the lift stops waiting on the dock in hand"  main \
 mutate "a room change no longer clears the scroll flag (it sticks for every later room)"  main \
   's/\n        chrome\.scrolling = false\n//' || mfails=$((mfails + 1))
 mutate "the scroll flag outlives the screen that set it"  chrome \
-  's/\.onDisappear \{\n\s*if active, chrome\.scrolling \{ chrome\.scrolling = false \}\n\s*\}\n//' || mfails=$((mfails + 1))
+  's/\.onDisappear \{\n\s*if active, chrome\.scrolling \{ chrome\.scrolling = false; GestureGate\.set\(scrolling: false\) \}\n\s*\}\n//' || mfails=$((mfails + 1))
 mutate "scrolling becomes a body dependency (a rebuild per scroll phase)"  chrome \
   's/\@ObservationIgnored var scrolling = false/var scrolling = false/' || mfails=$((mfails + 1))
 mutate "the flick stops holding the lift (the dock flag goes dead)"  chips \

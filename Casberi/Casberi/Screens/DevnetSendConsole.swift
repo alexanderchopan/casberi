@@ -318,7 +318,7 @@ struct DevnetSendPanel: View {
             // A minimum height that is the rows' own floors plus their gaps
             // is what the cell is told regardless of what the grid measures,
             // so the tiles can never be taller than the cell that holds them.
-            .frame(minHeight: rows * DevnetConsole.menuTileFloor
+            .frame(minHeight: rows * DevnetConsole.tileFloor
                               + max(0, rows - 1) * DevnetConsole.tileGap,
                    alignment: .top)
         } else {
@@ -356,6 +356,10 @@ struct DevnetSendPanel: View {
                     Text(note)
                         .dsText(.callout15).fontWeight(.semibold)
                         .foregroundStyle(DS.textSecondary)
+                        // One line in the menu, where the tile's height is
+                        // fixed (prd §665); the full note wraps in the
+                        // two-verb form, which grows.
+                        .lineLimit(isMenu ? 1 : nil)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -381,8 +385,17 @@ struct DevnetSendPanel: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(DevnetConsole.tilePadding)
+            // **A FIXED height in the menu, not a floor (prd §665).** Rows of
+            // tiles with different contents (one-line "Send", two-line
+            // "Create\naccount") drew at different heights while the Grid
+            // sized its rows from what each cell REPORTED, and on a phone the
+            // second row overlapped the first by ~10pt (user: "everything is
+            // always clipping"). Every menu tile is `tileFloor` tall now —
+            // the two-line label's own height (disc 36 + gap 10 + 2×28 + 28
+            // of padding = 132) — so the grid is exactly rows × 132 plus gaps.
             .frame(maxWidth: .infinity,
-                   minHeight: isMenu ? DevnetConsole.menuTileFloor : DevnetConsole.tileFloor,
+                   minHeight: DevnetConsole.tileFloor,
+                   maxHeight: isMenu ? DevnetConsole.tileFloor : nil,
                    alignment: .leading)
             .modifier(DevnetTileSurface(tint: filled ? tint : nil))
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
