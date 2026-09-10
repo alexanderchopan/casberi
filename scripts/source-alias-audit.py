@@ -46,7 +46,9 @@ Nine checks, all static — no build, no simulator, no network.
   C. No KEY is in `Corpus.retiredSources` (a source cannot be both renamed
      onto a live seat and declared to have left the catalog).
   D. `BridgeCatalog.seatNameBySource` reads `Corpus.renamedSources`.
-  E. Every source→identity resolver canonicalises: `BridgeIcon.assetName`,
+  E. Every source→identity resolver canonicalises (for `BridgeIcon` that is
+     `BridgeIconArt.assetName`, the memo added in §668; E2 pins the property's
+     delegation to it): `BridgeIcon.assetName`,
      `BridgeGlyph.symbol`, `BridgeGlyph.glyphTint`, `DS.brandHue` and
      `Notifications.brandAsset` each call `Corpus.canonicalSource`.
   F. `SourceRename.sweep` is called from `RootShell` OUTSIDE the
@@ -106,7 +108,12 @@ SWEEP_HEADER = "static func sweep(context: ModelContext) -> Int {"
 
 # file, enclosing declaration, the symbol whose body must canonicalise
 RESOLVERS = [
-    ("Casberi/Casberi/Design/BridgeIcon.swift", "var assetName: String {"),
+    # `BridgeIconArt.assetName`, not `BridgeIcon.assetName` (prd §668,
+    # 2026-09-10): the mangling moved into a memo, so the property now
+    # delegates and the canonicalisation lives one level down. The delegation
+    # itself is check E2 below, or the property could re-implement the mangling
+    # uncanonicalised and this check would still pass on the memo.
+    ("Casberi/Casberi/Design/BridgeIcon.swift", "static func assetName(for name: String) -> String {"),
     ("Casberi/Casberi/Design/KindGlyph.swift", "static func symbol(for name: String) -> String {"),
     ("Casberi/Casberi/Design/KindGlyph.swift", "static func glyphTint(for name: String) -> Color? {"),
     ("Casberi/Casberi/Design/AppIconTile.swift", "static func brandHue(for source: String) -> Color? {"),
@@ -267,6 +274,18 @@ def audit(thing_src, catalog_src, rootshell_src, resolver_srcs,
             fails.append(f"E: {path}: `{header.strip()}` does not canonicalise — "
                          "a renamed seat's rows draw the blank `app` fallback")
 
+    # E2 — the property that every call site reads must DELEGATE to the memo
+    # (prd §668). Without this, `var assetName` could re-derive the name itself,
+    # skip `Corpus.canonicalSource`, and check E above would stay green because
+    # the memo it reads is still correct and simply unused.
+    icon = strip_comments(resolver_srcs[0])
+    prop = body_of(icon, "var assetName: String {")
+    if prop is None:
+        fails.append("E2: BridgeIcon.swift: `var assetName: String {` not found")
+    elif "BridgeIconArt.assetName(" not in prop:
+        fails.append("E2: `BridgeIcon.assetName` no longer delegates to `BridgeIconArt` — "
+                     "it would re-derive the name past the canonicalising memo")
+
     shell = strip_comments(rootshell_src)
     if "SourceRename.sweep(" not in shell:
         fails.append("F: `RootShell` never calls `SourceRename.sweep` — nothing converges")
@@ -338,6 +357,12 @@ def self_test():
         '"brand-" + Corpus.canonicalSource(name).lowercased()',
         '"brand-" + name.lowercased()', 1)
     cases.append(("E", (thing, catalog, shell, broken, sweep, corpus)))
+    # E2 — the property stops delegating and re-derives the name itself.
+    undelegated = list(resolvers)
+    undelegated[0] = undelegated[0].replace(
+        "        BridgeIconArt.assetName(for: name)",
+        '        "brand-" + name.lowercased()', 1)
+    cases.append(("E2", (thing, catalog, shell, undelegated, sweep, corpus)))
     # F — the sweep drifts back inside the migration gate.
     moved = shell.replace("                SourceRename.sweep(context: modelContext)\n", "", 1)
     moved = moved.replace("if migrationsStored < migrationsCurrent {",
