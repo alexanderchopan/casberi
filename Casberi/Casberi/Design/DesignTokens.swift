@@ -864,6 +864,12 @@ enum DS {
         static let duration: Double = 0.25
         /// The app-wide transition spring (was the prototype's `--ds-ease`).
         static let standard = Animation.spring(duration: duration, bounce: 0.15)
+        /// A travel that arrives and stops (prd §667): the dock's selection
+        /// fill and ring move on this, critically damped, because a selection
+        /// that overshoots its tile and settles back reads as a miss. Reach
+        /// for it for any INDICATOR that names a position; keep `standard`
+        /// for things that appear or grow.
+        static let glide = Animation.spring(duration: 0.28, bounce: 0)
         /// Slightly longer for the composer bubble (prototype: 260ms).
         static let bubble = Animation.spring(duration: 0.3, bounce: 0.2)
         /// The dock's folder springing up out of its chip (2026-09-05) —

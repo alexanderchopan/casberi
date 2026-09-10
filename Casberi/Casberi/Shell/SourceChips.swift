@@ -344,22 +344,6 @@ struct SourceChips: View {
         return 1 + DSDock.scrubLift * (0.5 + 0.5 * cos(d * .pi))
     }
 
-    /// How far the selection leans toward the neighbour a swipe is heading
-    /// for (2026-09-05, `ShellChrome.pageDragProgress`): one chip's pitch per
-    /// whole page, so the ring is seen leaving for the chip the turn will
-    /// land on before the finger lets go. Horizontal only, and never under
-    /// Reduce Motion, where the travelling selection itself is off.
-    /// The lean's PITCH — one chip's width plus its gap — and NOT the lean
-    /// itself (2026-09-06, the swipe's perf pass). This used to read
-    /// `chrome.pageDragProgress` here, in the strip's own body, so every
-    /// touch move of a page turn invalidated the whole strip and rebuilt
-    /// every chip (each with its own `wave`) to offset ONE shape by a few
-    /// points. The pitch is static per fold; the progress is read by
-    /// `ChipLean`, the only view that draws the lean. Zero on the rail,
-    /// which has no page turn to lean toward.
-    private var leanPitch: CGFloat {
-        axis == .horizontal ? categoryCell : 0
-    }
 
     /// One value both doors key on, so the pair can't drift onto two different
     /// unions and quietly stop being one shape.
@@ -940,7 +924,7 @@ struct SourceChips: View {
         // `tileWidth`), and 4pt a side inside 52 would put "Shopping" under
         // its floor.
         .frame(width: axis == .vertical ? Self.railChipWidth : Self.tileWidth, height: iconSize)
-        .wordChipFill(active: isOn, ns: selectionNS, leanPitch: leanPitch,
+        .wordChipFill(active: isOn, ns: selectionNS,
                       shape: chipShape(tile: true, outer: false))
     }
 
@@ -1021,7 +1005,7 @@ struct SourceChips: View {
                         .minimumScaleFactor(0.55)
                         .frame(width: iconSize, height: iconSize)
                         .clipShape(Circle())
-                        .wordChipFill(active: isActive, ns: selectionNS, leanPitch: leanPitch,
+                        .wordChipFill(active: isActive, ns: selectionNS,
                                       shape: chipShape(tile: false, outer: false))
                 case Pinboard.room:
                     // The pinned room (2026-08-10) — see `PinnedChipMark`.
@@ -1171,7 +1155,7 @@ struct SourceChips: View {
                     // group as the word chips' fill (prd §412b), same reason
                     // the offset sits INSIDE the match, and now the strip does
                     // not rebuild to draw it.
-                    ChipLean(pitch: leanPitch, ns: selectionNS) {
+                    SelectionTravel(ns: selectionNS) {
                         chipShape(tile: false, outer: true)
                             .strokeBorder(DS.tint, lineWidth: 2.5)
                     }
@@ -1432,27 +1416,34 @@ private struct ChipCatchBob: ViewModifier {
 ///
 /// Reduce Motion keeps its exact former shape: no offset AND no matched
 /// geometry, since the travelling selection is off there entirely.
-private struct ChipLean<S: View>: View {
-    let pitch: CGFloat
+/// **THE ONE OBJECT THAT TRAVELS BETWEEN CHIPS, AND HOW (prd §667,
+/// 2026-09-10, user: "the active indicator when i swipe moves forward and
+/// then swings back. if i switch tabs it does too, like it goes past the
+/// icon and comes back. it should either stay still until it moves to the
+/// next one, or go directly to the next one and not overshoot").** This was
+/// `ChipLean`: the fill leaned toward the neighbour by 40% of a pitch as the
+/// room was dragged (`pageDragProgress`), then the landing zeroed the drag
+/// while the matched geometry set off for the new chip — a forward move and
+/// a swing back, on two curves. And the travel rode whatever animation the
+/// change was made in — `DS.Motion.folder` on a tap, `standard` on a
+/// landing — both springs with bounce, so it overshot the tile and settled
+/// back. Now: nothing moves under a drag (the room is the thing moving; the
+/// selection says where you ARE until you have arrived), and the travel is
+/// pinned to `DS.Motion.glide`, a critically damped spring, whatever
+/// transaction the change came in on. Reading no drag state here is also
+/// one fewer body per touch move for every chip in the strip.
+private struct SelectionTravel<S: View>: View {
     let ns: Namespace.ID
     @ViewBuilder var shape: S
-    @Environment(ShellChrome.self) private var chrome
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if reduceMotion {
             shape
         } else {
-            // A LEAN, not a move (2026-09-06, measured): at a full pitch the
-            // shape sat squarely over the neighbour and hid its word. Forty
-            // percent says where the swipe is going and leaves the word
-            // legible; the matched geometry travels the rest on commit. The
-            // offset sits INSIDE the match so the lean is part of the frame
-            // the travel starts from — outside it, the commit snaps back
-            // before it moves.
             shape
-                .offset(x: chrome.pageDragProgress * pitch * 0.4)
                 .matchedGeometryEffect(id: ChipSelection.id, in: ns)
+                .transaction { $0.animation = DS.Motion.glide }
         }
     }
 }
@@ -1464,7 +1455,6 @@ private struct ChipLean<S: View>: View {
 private struct WordChipFill: ViewModifier {
     let active: Bool
     let ns: Namespace.ID
-    var leanPitch: CGFloat = 0
     /// The chip's own outline (`SourceChips.chipShape`) — a circle under
     /// "All", the tile under a category (prd §662). One shape TYPE, so the
     /// travelling fill morphs its corner on the way rather than swapping
@@ -1474,7 +1464,7 @@ private struct WordChipFill: ViewModifier {
     func body(content: Content) -> some View {
         content.background {
             if active {
-                ChipLean(pitch: leanPitch, ns: ns) {
+                SelectionTravel(ns: ns) {
                     shape.fill(DS.tint)
                 }
             }
@@ -1526,9 +1516,9 @@ private enum ChipSelection {
 extension View {
     /// One fill for both word chips, so the circle and the capsule can never
     /// drift apart the way their COLOUR did before §358.
-    func wordChipFill(active: Bool, ns: Namespace.ID, leanPitch: CGFloat = 0,
+    func wordChipFill(active: Bool, ns: Namespace.ID,
                       shape: RoundedRectangle) -> some View {
-        modifier(WordChipFill(active: active, ns: ns, leanPitch: leanPitch, shape: shape))
+        modifier(WordChipFill(active: active, ns: ns, shape: shape))
     }
 }
 

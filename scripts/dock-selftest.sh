@@ -186,21 +186,22 @@ grep -q 'frame(height: DS.Space.s6)' "$TMP/main.nc" \
        echo "  or the soft edge where the band meets the feed is gone entirely, and that"; \
        echo "  edge is the whole of the 2026-08-23 airiness ruling."; fail=1; }
 # THE LEAN MOVED INTO ITS OWN LEAF (2026-09-06, prd §632 second amendment) —
-# the ruling is unchanged and the guard follows it rather than the old
-# spelling: both the ring and the fill go through `ChipLean`, `ChipLean` is
-# what reads the progress, and the strip's own body must NOT read it (that is
-# the whole point — a read there rebuilds every chip per touch move).
-grep -q 'struct ChipLean' "$TMP/chips.nc" \
-  || { echo "✗ ChipLean is gone — the selection has nowhere to lean from."; fail=1; }
-[ "$(grep -c 'ChipLean(pitch: leanPitch' "$TMP/chips.nc")" -ge 2 ] \
-  || { echo "✗ the ring or the fill no longer leans with the swipe — the selection stays"; \
-       echo "  put while the room moves, two objects for one gesture."; fail=1; }
-grep -q 'chrome.pageDragProgress \* pitch' "$TMP/chips.nc" \
-  || { echo "✗ ChipLean no longer reads the drag's progress — the lean is inert."; fail=1; }
-grep -q 'private var leanPitch' "$TMP/chips.nc" \
-  && ! grep -q 'chrome.pageDragProgress \* (chipSize' "$TMP/chips.nc" \
-  || { echo "✗ SourceChips computes the LEAN again instead of just its pitch — reading"; \
-       echo "  pageDragProgress in the strip's body rebuilds every chip per touch move."; fail=1; }
+# THE SELECTION TRAVELS ON A GLIDE AND NEVER LEANS (prd §667). `ChipLean` —
+# the fill drifting toward the neighbour under a drag and snapping back on
+# landing, its travel on whatever bouncy spring the change came in — is
+# DELETED. One object (`SelectionTravel`) carries both the word chips' fill and
+# the mark chips' ring, pins its transaction to `DS.Motion.glide` (bounce 0),
+# and reads NO drag state, so nothing in the strip rebuilds per touch move.
+grep -q 'struct SelectionTravel' "$TMP/chips.nc" \
+  || { echo "✗ SelectionTravel is gone — the selection has no single object to travel as."; fail=1; }
+[ "$(grep -c 'SelectionTravel(ns: ' "$TMP/chips.nc")" -ge 2 ] \
+  || { echo "✗ the fill and the ring no longer both travel through SelectionTravel."; fail=1; }
+grep -q 'transaction { \$0.animation = DS.Motion.glide }' "$TMP/chips.nc" \
+  || { echo "✗ the selection's travel is no longer pinned to DS.Motion.glide — it would ride a"; \
+       echo "  tap's folder spring or a landing's standard spring and overshoot the tile (prd §667)."; fail=1; }
+grep -qE 'ChipLean|leanPitch|pageDragProgress' "$TMP/chips.nc" \
+  && { echo "✗ the lean is back in the strip — the indicator moves forward under a drag and"; \
+       echo "  swings back on landing (prd §667), and every chip rebuilds per touch move."; fail=1; }
 # SCRUB TO PICK (2026-09-05; SwiftUI's own sequence since 2026-09-09, prd §660).
 # The UIKit catcher is DELETED and must stay deleted: it was attached to
 # SwiftUI's private hosting scroll view by walking superviews and delivered
