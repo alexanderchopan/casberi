@@ -144,6 +144,21 @@ grep -q 'struct PagerDrag' "$TMP/main.nc" \
 grep -q 'chrome.pageDragX = 0' "$TMP/main.nc" \
   || { echo "✗ go(to:) no longer resets the drag in the committing transaction — the incoming"; \
        echo "  room would mount offset by the last finger position."; fail=1; }
+# A TAP LANDS NOW; ONLY A SWIPE FLIES (prd §671, 2026-09-10, user: "tapping
+# icons has a lag"). §651 pass 2 sent every route through deal(to:), so a chip
+# tap showed its room ~530ms after the touch. The swipe's step is the one call
+# that passes fly: true; the strip's tap path reaches go(to: label) bare and
+# lands on the slide through cut(to:).
+[ "$(grep -c 'go(to: target, fly: true)' "$TMP/main.nc")" -eq 1 ] \
+  || { echo "✗ step(_:) no longer flies alone — either a second route deals a card again"; \
+       echo "  (a tap would lag ~530ms, prd §671) or the swipe lost its flight (prd §651)."; fail=1; }
+grep -q 'if fly { deal(to: target) } else { cut(to: target) }' "$TMP/main.nc" \
+  || { echo "✗ go(to:) no longer forks on fly — a tap and a swipe take the same landing (prd §671)."; fail=1; }
+[ "$(grep -c 'deal(to: ' "$TMP/main.nc")" -eq 1 ] \
+  || { echo "✗ deal(to:) is reached from somewhere other than go(to:)'s fly branch (prd §671)."; fail=1; }
+awk '/private func cut\(to target/,/^    }$/' "$TMP/main.nc" | grep -q 'swipeCommit = false' \
+  || { echo "✗ cut(to:) no longer clears swipeCommit — the tap's room would insert as .identity,"; \
+       echo "  a cut with no cover, instead of the slide (prd §671)."; fail=1; }
 # THE CARD IS KEYED TO THE TURN, NOT TO THE SCREEN (prd §648, 2026-09-08).
 # Every card signal in `PagerDrag` — corner, lit edge, scale, tilt, shadow —
 # used to be scaled by `abs(x) / pagerFrame.width`, the fraction of the SCREEN

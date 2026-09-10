@@ -1996,7 +1996,15 @@ struct MainSurface: View {
     /// The one door every source switch walks through (prd §265): chip taps and
     /// swipes both come here, so direction, the tag reset, and tap-learning
     /// cannot drift between them.
-    private func go(to label: String) {
+    ///
+    /// **`fly` — a SWIPE deals a card, a TAP lands now (prd §671, 2026-09-10,
+    /// user: "tapping icons has a lag" → "ok do it").** §651 pass 2 routed
+    /// every route through `deal(to:)`, so a chip tap showed the real room
+    /// ~530ms after the touch (a 280ms flight under a cover, then a 250ms
+    /// hold) — on a first visit, a blank card with a mark for that half
+    /// second. A row of icons is a tab bar and a tab bar switches on the next
+    /// frame. Only `step(_:)` passes `true`; the flight stays the swipe's.
+    private func go(to label: String, fly: Bool = false) {
         // Picking a source means the WHOLE of that source — a kind filter never
         // survives the tap. Two changes from the old rule (2026-08-01), both
         // forced by the "× Links" chip's removal, which was the only way out:
@@ -2023,7 +2031,25 @@ struct MainSurface: View {
             target = label
         }
         guard target != filter.source else { return }
-        deal(to: target)
+        if fly { deal(to: target) } else { cut(to: target) }
+    }
+
+    /// A TAP'S LANDING (prd §671): the room swaps on this frame and arrives on
+    /// the `.move` slide `land` sets up — `swipeCommit` false, so the
+    /// transition is the slide and not the cover's cut. The room's first
+    /// build runs inside the slide's frames, which §651 avoided for the
+    /// swipe; here it is bounded by the row budget and the memoised head, and
+    /// it starts at 0ms rather than 280. A tap during a swipe's flight lands
+    /// the pending room first and drops the cover, as `dragMove` does.
+    private func cut(to target: String) {
+        if chrome.pageDragCommitted || pendingLanding != nil {
+            flightGeneration &+= 1
+            settleFlight()
+            chrome.pageDragCommitted = false
+            chrome.pageDragTarget = nil
+        }
+        swipeCommit = false
+        land(target)
     }
 
     /// The room the flight will land on, once the card is off the edge —
@@ -2033,10 +2059,9 @@ struct MainSurface: View {
     /// timer cannot land or clear a newer one (the guarded-timer shape).
     @State private var flightGeneration = 0
 
-    /// EVERY ROUTE INTO A ROOM DEALS A CARD (2026-09-08, prd §651 pass 2 —
-    /// the chip tap was the one route still building the room inside its own
-    /// slide). A swipe, a tap on All or Pinned, a venue picked in a folder,
-    /// and a room's own switcher all come here after `go(to:)` has resolved
+    /// THE SWIPE DEALS A CARD (2026-09-08, prd §651 pass 2; **the tap no
+    /// longer comes here since prd §671** — it read as lag, see `cut(to:)`).
+    /// A swipe comes here after `go(to:)` has resolved
     /// the label: the card on screen flies off the edge the room lies beyond
     /// while the next room's cover comes to rest beneath it, and the real room
     /// swaps in `flightMs` later, over an idle main thread, under a cover that
@@ -2266,8 +2291,8 @@ struct MainSurface: View {
         }
         // THE FLIGHT FIRST, THE ROOM AFTER (PERF 2026-09-08) — `deal(to:)`,
         // reached through `go(to:)` so a folded chip label resolves the same
-        // way a tap's does.
-        go(to: target)
+        // way a tap's does. The swipe is the ONE route that flies (prd §671).
+        go(to: target, fly: true)
     }
 
     /// How long the released card flies before the room underneath swaps —

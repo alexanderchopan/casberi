@@ -52234,3 +52234,40 @@ comment-stripped copy: 0 clean, 1 mutated), the two leaves must exist, and
 `chipAccessibilityLabel(` must appear exactly twice (declaration and its
 one call). `category-fold-selftest.sh`'s `chip(_:)` slice marker follows the
 function's new `fileprivate static` spelling.
+
+## §671 — A tap lands now; only a swipe flies (user: "Tapping icons has a lag" → "ok do it", 2026-09-10)
+
+**The lag was designed in.** §651 pass 2 sent every route into a room —
+the swipe AND the chip tap — through `deal(to:)`: the card on screen flies
+off over `DS.Motion.standard`, the real room swaps in `flightMs` (280) later
+under a cover, and the cover is held a further 250ms over the room's first
+paint. Measured from the touch: 0ms the folder springs (0.42s, then the
+venues flow); 0–250ms the current room slides off and a cover slides in — a
+snapshot of the target if it was visited in the last eight rooms, else its
+mark on a blank page; 280ms the real room builds under the cover, inside the
+folder's spring; 530ms the cover fades. So the first real content is about
+half a second after the tap, and a first visit is a blank card with an icon
+for that half second. §651 flagged the tap's deferral as "a design call"
+and pass 2 made it; the user's hand made the other one. **A row of icons is
+a tab bar, and a tab bar switches on the next frame.**
+
+**The change.** `go(to:)` takes `fly:`; `step(_:)` — the swipe — is the ONE
+caller that passes `true` and keeps §651's flight whole. Every tap (a
+category tile, All, the pinned room, a venue in a folder, a room's own
+switcher) reaches `cut(to:)`: `swipeCommit` false, then `land`, so the room
+swaps in the tap's own transaction and arrives on the `.move` slide that
+`slideEdge` already sets up. A tap during a swipe's flight lands the
+pending room first and drops the cover, the way a finger returning
+mid-flight (`dragMove`) does.
+
+**The cost, stated.** The room's first build — query, heads, up to the
+150-row budget — runs inside the slide's frames again for a tap, which is
+the stutter §651 pass 2 took out of the tap by deferring it. It is bounded
+(the budget, the memoised head, `releaseSwipeBudget`'s stillness wait) and
+it starts at 0ms rather than 280; the frame meter (§666) says which the
+phone prefers, and that number is owed. Nothing changes for the swipe.
+
+**Guarded** in `dock-selftest.sh`: `go(to: target, fly: true)` exactly once
+(the step), `go(to:)` forks on `fly`, `deal(to:` reached from that fork
+alone, and `cut(to:)` clears `swipeCommit` (or the tap's room would insert
+as `.identity` — a cut with no cover). **UNCOMPILED**, same session as §670.
