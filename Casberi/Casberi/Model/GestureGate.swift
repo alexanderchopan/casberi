@@ -55,7 +55,10 @@ enum GestureGate {
 final class HitchMeter: NSObject {
     static let shared = HitchMeter()
 
-    enum Kind: String, Codable { case scroll, dock, swipe }
+    /// `tap` is the dock's chip tap (prd §668) — a gesture that is over
+    /// before its consequences are, so it is measured as a fixed span rather
+    /// than by a finger lifting: see `span(_:for:)`.
+    enum Kind: String, Codable { case scroll, dock, swipe, tap }
 
     struct Sample: Codable, Identifiable {
         var id = UUID()
@@ -112,6 +115,23 @@ final class HitchMeter: NSObject {
         #endif
         if open.isEmpty { stop() }
     }
+
+    /// A gesture with no lift to end it: measure a fixed window from now.
+    /// Restarts cleanly if one is already open, so a second tap during the
+    /// first's window measures itself rather than extending the first.
+    func span(_ kind: Kind, for milliseconds: Int) {
+        if open[kind] != nil { end(kind) }
+        spanGeneration &+= 1
+        let generation = spanGeneration
+        begin(kind)
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(milliseconds))
+            guard spanGeneration == generation else { return }
+            end(kind)
+        }
+    }
+
+    private var spanGeneration = 0
 
     func forget() {
         samples = []

@@ -316,19 +316,43 @@ src = open("Casberi/Casberi/Shell/MainSurface.swift", encoding="utf-8").read()
 i = src.find("if CategoryFold.isCategory(label)")
 if i < 0:
     sys.exit(0)
-branch = src[i:i + 1400]
-end = branch.find("return")
-body = branch[:end] if end > 0 else branch
-if "chrome.openFolder = opening ? .category(label) : nil" not in body:
-    print("✗ the folder no longer springs on a category tap (prd §663 keeps the folder).")
+# BOUNDED BY THE BRANCH, NOT BY A CHARACTER COUNT (fixed 2026-09-10, caught by
+# this guard's own run): it read a fixed 3400-character window, and a comment
+# added to the branch pushed the line below out of it, so `find` returned -1 and
+# the ordering check failed on correct code. The comment that follows the branch
+# is the real end of it.
+tail = src.find('// "All" and any bare source are not folders', i)
+branch = src[i:tail if tail > i else i + 6000]
+# The branch has TWO arms now (prd §668): standing here toggles the folder and
+# returns; anywhere else LANDS first and springs the folder after the flight,
+# so nothing overlaps the room's mount. Both arms must survive.
+if "let standingHere = BridgeCatalog.category(forSource: filter.source) == label" not in branch:
+    print("✗ the category tap no longer asks whether you are standing in it — prd §663:")
+    print("  another category's chip goes there; the standing chip only toggles.")
     sys.exit(1)
-if "if !standingHere" not in body or "go(to: label)" not in body:
-    print("✗ a category tap no longer LANDS in the room behind `if !standingHere` —")
-    print("  prd §663: another category's chip goes there; the standing chip only toggles.")
+if "if standingHere {" not in branch or "chrome.openFolder = opening ? .category(label) : nil" not in branch:
+    print("✗ the standing chip's tap is no longer the folder's own toggle (prd §663/§668).")
     sys.exit(1)
-if body.find("go(to: label)") < body.find("if !standingHere"):
-    print("✗ go(to:) runs before the standing-here guard — re-tapping the chip of the")
-    print("  room you are in would re-land you there (prd §663).")
+if "go(to: label)" not in branch:
+    print("✗ a category tap no longer LANDS in the room (prd §663).")
+    sys.exit(1)
+# THE SEQUENCING (prd §668): the land comes first, the folder's spring follows
+# it inside a generation-guarded sleep of the flight's own length. A folder
+# sprung in the same frame as the deal is the stutter this fixed.
+land_at = branch.find("go(to: label)")
+spring_at = branch.find("chrome.openFolder = .category(label)")
+if land_at < 0 or spring_at < 0:
+    print("✗ the category tap's land or its folder spring is missing from the branch (prd §668).")
+    sys.exit(1)
+if land_at > spring_at:
+    print("✗ the folder springs before the room is dealt (prd §668) — the spring, the card's")
+    print("  flight and the room's mount would overlap again, which is the reported stutter.")
+    sys.exit(1)
+if "milliseconds(Self.flightMs + 80)" not in branch or "flightGeneration == generation" not in branch:
+    print("✗ the folder's spring is no longer a generation-guarded wait PAST the flight")
+    print("  (prd §668) — level with it, this task and the landing are both due, this one")
+    print("  can run first, and the guard throws the folder away: the tap lands and no")
+    print("  folder ever comes up. Measured on the simulator.")
     sys.exit(1)
 GATE
 

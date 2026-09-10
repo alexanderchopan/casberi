@@ -1582,18 +1582,60 @@ struct MainSurface: View {
             // folder and moves nothing, since there is nowhere new to go.
             if CategoryFold.isCategory(label) {
                 let standingHere = BridgeCatalog.category(forSource: filter.source) == label
-                let opening = standingHere ? chrome.openFolder != .category(label) : true
-                // The spring is felt when it opens, not when it shuts
-                // (2026-09-06, the haptic grammar) — the chip's own tick
-                // already marked the tap; this is the folder landing.
-                if opening { DSHaptic.spring() }
-                withAnimation(DS.Motion.folder) {
-                    chrome.openFolder = opening ? .category(label) : nil
+                if standingHere {
+                    // Nowhere to go: the tap is the folder's own toggle, and it
+                    // is the only thing happening, so it happens now.
+                    let opening = chrome.openFolder != .category(label)
+                    // The spring is felt when it opens, not when it shuts
+                    // (2026-09-06, the haptic grammar) — the chip's own tick
+                    // already marked the tap; this is the folder landing.
+                    if opening { DSHaptic.spring() }
+                    withAnimation(DS.Motion.folder) {
+                        chrome.openFolder = opening ? .category(label) : nil
+                    }
+                    return
                 }
-                if !standingHere {
-                    let before = filter.source
-                    go(to: label)
-                    if filter.source != before { ChipMemory.visited(filter.source) }
+                // **ONE ANIMATION AT A TIME (prd §668, 2026-09-10, user: "when
+                // switching tabs on the [dock] bar it lags. if i switch to All
+                // it goes fast, but between any others there is a stutter").**
+                // §663 sprang the folder and dealt the room in the SAME frame,
+                // so a category tap overlapped three things a tap on All does
+                // not: the folder's spring, the room card's flight, and — 280ms
+                // in, mid-stagger — the new room's mount together with a full
+                // folder-row rebuild (the row is handed `standing`, which the
+                // landing changes). All was fast because it does none of it.
+                // Now the room lands first and the folder springs onto the room
+                // it belongs to: nothing overlaps, and the row mounts already
+                // knowing which venue is lit, so its lens never morphs either.
+                let anchor = chrome.folderAnchorX
+                HitchMeter.shared.span(.tap, for: Self.flightMs + 450)
+                if chrome.openFolder != nil {
+                    // The folder that was up is about a room being left.
+                    withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
+                }
+                let before = filter.source
+                go(to: label)
+                if filter.source != before { ChipMemory.visited(filter.source) }
+                let generation = flightGeneration
+                Task { @MainActor in
+                    // **PAST the landing, not level with it** (measured on the
+                    // simulator: at exactly `flightMs` this task and `deal`'s
+                    // own landing task were both due, this one ran first,
+                    // `filter.source` was still the room being left, and the
+                    // guard below threw the folder away — the tap landed and no
+                    // folder ever came up).
+                    try? await Task.sleep(for: .milliseconds(Self.flightMs + 80))
+                    // A second tap, a swipe or a deep link in the meantime owns
+                    // the strip now — `deal` bumps the generation, and the
+                    // category check covers every route that does not.
+                    guard flightGeneration == generation,
+                          BridgeCatalog.category(forSource: filter.source) == label
+                    else { return }
+                    DSHaptic.spring()
+                    chrome.folderAnchorX = anchor
+                    withAnimation(DS.Motion.folder) {
+                        chrome.openFolder = .category(label)
+                    }
                 }
                 return
             }

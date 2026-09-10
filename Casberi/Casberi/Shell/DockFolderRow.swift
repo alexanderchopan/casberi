@@ -122,8 +122,29 @@ struct DockFolderRow: View {
     private var markSize: CGFloat { compact ? DS.Face.row : DS.Face.list }
     private static let seatPitch: CGFloat = DS.Hit.min + 2
     private static let stagger: Double = 0.035
+    /// **THE DEAL IS BOUNDED (prd §668, 2026-09-10, user: "when switching tabs
+    /// on the [dock] bar it lags… between any others there is a stutter").**
+    /// The delay was `i * stagger` uncapped, so Work's twenty venues dealt for
+    /// 0.42s of spring plus 0.7s of tail — over a second of animation running
+    /// while the room card flew and the new room mounted. Six seats of stagger
+    /// is the whole personality (§621's "flow out of the chip"); the rest
+    /// arrive with the sixth. Same shape as `RowEntrance`'s cap (§661), same
+    /// reason.
+    private static let staggerSeats = 6
+
+    /// **THE BROKEN SET, ONE PASS PER BODY (prd §668).** `folderVenue` asked
+    /// `bridges.bridges.contains { … }` per venue — a linear scan of the whole
+    /// store for each of up to twenty marks, on every body build, and this row
+    /// rebuilds whenever the room lands (`standing` changes). One filter over
+    /// the store, then one `Set` membership per venue.
+    private var brokenVenues: Set<String> {
+        let attention = Set(bridges.bridges.lazy.filter { $0.status == .attention }.map(\.name))
+        guard !attention.isEmpty else { return [] }
+        return Set(venues.filter { attention.contains(BridgeCatalog.seatName(forSource: $0)) })
+    }
 
     var body: some View {
+        let broken = brokenVenues
         // The container the lit venue's lens morphs within — see `folderVenue`.
         DSGlassContainer(spacing: 2) {
         HStack(spacing: 2) {
@@ -135,12 +156,13 @@ struct DockFolderRow: View {
                 // dealt out of the chip rather than switched on.
                 let seatX = 2 + CGFloat(i) * Self.seatPitch + DS.Hit.min / 2
                 let settled = flowed || reduceMotion
-                folderVenue(venue)
+                folderVenue(venue, broken: broken.contains(venue))
                     .scaleEffect(settled ? 1 : 0.3)
                     .opacity(settled ? 1 : 0)
                     .offset(x: settled ? 0 : anchorLocalX - seatX)
                     .animation(reduceMotion ? nil
-                               : DS.Motion.folder.delay(Double(i) * Self.stagger),
+                               : DS.Motion.folder
+                                   .delay(Double(min(i, Self.staggerSeats)) * Self.stagger),
                                value: settled)
             }
         }
@@ -158,10 +180,8 @@ struct DockFolderRow: View {
         .onAppear { flowed = true }
     }
 
-    private func folderVenue(_ venue: String) -> some View {
+    private func folderVenue(_ venue: String, broken: Bool) -> some View {
         let lit = venue == standing
-        let seat = BridgeCatalog.seatName(forSource: venue)
-        let broken = bridges.bridges.contains { $0.name == seat && $0.status == .attention }
         return Button {
             guard !lit else { return }
             DSHaptic.selection()

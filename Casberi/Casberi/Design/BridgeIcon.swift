@@ -9,6 +9,37 @@ import SwiftUI
 /// under each brand's guidelines — drop the official asset in and it appears.
 /// Apple's OWN apps (Photos/Calendar/Reminders/Music) keep the SF fallback:
 /// their icons are restricted, so we never bundle those, and the symbol shows.
+/// **THE NAME AND THE IMAGE ARE RESOLVED ONCE PER BRAND, NOT PER BODY (prd
+/// §668, 2026-09-10).** `assetName` folds diacritics and runs three
+/// `replacingOccurrences` passes, and `UIImage(named:)` is a catalog lookup;
+/// both ran in `body`, so both ran again for every mark on every body build —
+/// 64 call sites, the feed's rows among them, and up to twenty venues in one
+/// dock folder that rebuilds when the room lands. The brands are a closed set
+/// of about ninety, so the memo is bounded by construction. `nil` is cached
+/// too: a seat with no art must not re-miss the catalog on every pass.
+@MainActor
+private enum BridgeIconArt {
+    private static var names: [String: String] = [:]
+    private static var images: [String: UIImage?] = [:]
+
+    static func assetName(for name: String) -> String {
+        if let hit = names[name] { return hit }
+        let made = "brand-" + Corpus.canonicalSource(name).lowercased()
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "en_US_POSIX"))
+            .replacingOccurrences(of: " ", with: "-")
+            .replacingOccurrences(of: ".", with: "")
+        names[name] = made
+        return made
+    }
+
+    static func image(_ asset: String) -> UIImage? {
+        if let hit = images[asset] { return hit }
+        let found = UIImage(named: asset)
+        images[asset] = found
+        return found
+    }
+}
+
 struct BridgeIcon: View {
     let name: String
     var size: CGFloat = 44
@@ -31,10 +62,7 @@ struct BridgeIcon: View {
         // without this it falls to `BridgeGlyph.symbol`'s `app` glyph, a blank
         // rounded square, on every row of a seat that is sitting right there
         // wearing its real mark two rooms over. See `Corpus.renamedSources`.
-        "brand-" + Corpus.canonicalSource(name).lowercased()
-            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "en_US_POSIX"))
-            .replacingOccurrences(of: " ", with: "-")
-            .replacingOccurrences(of: ".", with: "")
+        BridgeIconArt.assetName(for: name)
     }
 
     private var shape: AnyShape {
@@ -43,7 +71,7 @@ struct BridgeIcon: View {
     }
 
     var body: some View {
-        if let ui = UIImage(named: assetName) {
+        if let ui = BridgeIconArt.image(assetName) {
             Image(uiImage: ui)
                 .resizable()
                 .scaledToFill()
