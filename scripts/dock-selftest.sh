@@ -208,30 +208,20 @@ grep -q 'private var leanPitch' "$TMP/chips.nc" \
 # phone ("i've never been able to scrub it on my device").
 [ -f "Casberi/Casberi/Shell/DockScrubCatcher.swift" ] \
   && { echo "✗ the UIKit scrub catcher is back — it never fired on a device (prd §660)."; fail=1; }
-# THE HOLD IS UIKIT'S OWN LONG PRESS, THROUGH SWIFTUI'S BRIDGE (prd §662g).
-# §660's `LongPressGesture.sequenced(before: DragGesture)` — and a bare
-# simultaneous `DragGesture` tried after it — FROZE THE STRIP'S SCROLL DEAD,
-# measured on the simulator on build 543's own code (a flick did nothing, a
-# slow drag became a scrub). That is the standing gotcha: a SwiftUI drag on
-# scroll content takes the touch before the scroll view's pan can begin. The
-# guard that pinned the sequenced pair therefore inverts: NO SwiftUI drag or
-# long press may be attached inside this strip at all.
-grep -q 'struct DockHold: UIGestureRecognizerRepresentable' "$TMP/chips.nc" \
-  && grep -q 'UILongPressGestureRecognizer()' "$TMP/chips.nc" \
-  && grep -q 'minimumPressDuration = 0.4' "$TMP/chips.nc" \
-  && grep -q 'allowableMovement = 10' "$TMP/chips.nc" \
-  && grep -q 'gesture(DockHold(' "$TMP/chips.nc" \
-  || { echo "✗ the dock's hold is no longer UIKit's long press through UIGestureRecognizerRepresentable"; \
-       echo "  (prd §662g) — the one arrangement measured to leave the scroll view its pan."; fail=1; }
-grep -qE 'DragGesture\(|LongPressGesture\(|sequenced\(before' "$TMP/chips.nc" \
-  && { echo "✗ a SwiftUI drag or long press is attached inside the dock's strip again — it"; \
-       echo "  freezes the scroll dead, measured on build 543 (prd §662g)."; fail=1; }
-grep -q 'scrollDisabled(scrubbing != nil)' "$TMP/chips.nc" \
-  || { echo "✗ the strip still scrolls under a scrub — the wave needs a STATIONARY row, and"; \
-       echo "  a hand-flipped isScrollEnabled once stuck off for a whole launch (2026-09-06)."; fail=1; }
-grep -q 'scrubCommittedAt' "$TMP/chips.nc" && grep -q 'guard scrubbing == nil,' "$TMP/chips.nc" \
-  || { echo "✗ a chip's Button no longer guards against the scrub that just chose it — the two"; \
-       echo "  are simultaneous now, so BOTH orders have to be caught."; fail=1; }
+# THE SCRUB IS DELETED (prd §662h, user: "kill it"). A hold-then-slide on a
+# screen with no pointer was a hidden gesture nobody would find; in its
+# sequenced form it FROZE THE STRIP'S SCROLL DEAD (§662g, measured on build
+# 543), and its UIKit form cost the day. NOTHING in the strip may claim a
+# touch: no SwiftUI drag or press, no UIKit recognizer, no scroll freeze. The
+# wave stays for the POINTER (iPad, Mac) — the Mac dock's own case.
+grep -qE 'DragGesture\(|LongPressGesture\(|sequenced\(before|UIGestureRecognizerRepresentable|UILongPressGestureRecognizer|scrollDisabled\(' "$TMP/chips.nc" \
+  && { echo "✗ a finger gesture or a scroll freeze is back inside the dock's strip — the scrub is"; \
+       echo "  DELETED (prd §662h); a drag on scroll content freezes the scroll (§662g)."; fail=1; }
+grep -qE 'scrubbing|scrubX|scrubBegan|DockHold' "$TMP/chips.nc" \
+  && { echo "✗ scrub state is back in SourceChips — deleted with the gesture (prd §662h)."; fail=1; }
+grep -q 'guard let x = hoverX else { return 1 }' "$TMP/chips.nc" \
+  || { echo "✗ the wave no longer rides the POINTER alone — it is the Mac dock's magnification"; \
+       echo "  under a cursor, kept when the finger's scrub went (prd §662h)."; fail=1; }
 # THE WAVE IS A TRANSFORM, AND IT DOES NOT RIDE A SCROLL (prd §660).
 # Layout magnification changed the scroll's content size under a decelerating
 # flick, which is the "doesn't scroll properly" half of the report; and a wave
@@ -372,7 +362,7 @@ grep -q 'DSHaptic.spring()' "$TMP/main.nc" && grep -q 'DSHaptic.fly()' "$TMP/mai
 grep -q 'DSHaptic.pour()' "Casberi/Casberi/Design/TileRain.swift" \
   || { echo "✗ the rain no longer pours in the hand."; fail=1; }
 # A pointer magnifies the strip; a trackpad turns the page.
-grep -q 'onContinuousHover' "$TMP/chips.nc" && grep -q 'if let hoverX { x = hoverX }' "$TMP/chips.nc" \
+grep -q 'onContinuousHover' "$TMP/chips.nc" && grep -q 'guard let x = hoverX else { return 1 }' "$TMP/chips.nc" \
   || { echo "✗ the strip's hover no longer feeds the magnification wave — the Mac dock read is gone."; fail=1; }
 strip_comments "Casberi/Casberi/Shell/PageSwipeCatcher.swift" > "$TMP/pager.nc"
 grep -q 'allowedScrollTypesMask = .continuous' "$TMP/pager.nc" \

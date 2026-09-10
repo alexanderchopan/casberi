@@ -406,10 +406,10 @@ if [[ -f "$CHIPS" ]]; then
         "$CHIPS" 'viewport\.moving = phase != \.idle' yes
   # A finger DRAGGING the strip is its scroll phase (2026-09-09, prd §660) —
   # the separate touch tracker that used to report it was the never-recognising
-  # UIKit recognizer, deleted with the catcher. A scrub is the other half: it
-  # freezes the scroll, so no phase would ever report it.
-  check "the dock flag is the flick OR a scrub (both outlive the finger)" \
-        "$CHIPS" 'let busy = viewport\.moving \|\| scrubbing != nil' yes
+  # UIKit recognizer, deleted with the catcher. The scrub that was the flag's
+  # other half is DELETED too (prd §662h), so the flick is the whole fact.
+  check "the dock flag is the flick, and only the flick (the scrub is gone)" \
+        "$CHIPS" 'let busy = viewport\.moving$' yes
 else
   fail "SourceChips.swift is missing"
 fi
@@ -770,8 +770,8 @@ mutate "the scroll flag outlives the screen that set it"  chrome \
   's/\.onDisappear \{\n\s*if active, chrome\.scrolling \{ chrome\.scrolling = false \}\n\s*\}\n//' || mfails=$((mfails + 1))
 mutate "scrolling becomes a body dependency (a rebuild per scroll phase)"  chrome \
   's/\@ObservationIgnored var scrolling = false/var scrolling = false/' || mfails=$((mfails + 1))
-mutate "a scrub stops holding the lift (only the flick does)"  chips \
-  's/let busy = viewport\.moving \|\| scrubbing != nil/let busy = viewport.moving/' || mfails=$((mfails + 1))
+mutate "the flick stops holding the lift (the dock flag goes dead)"  chips \
+  's/let busy = viewport\.moving\n/let busy = false\n/' || mfails=$((mfails + 1))
 
 # B8 (prd §661, 2026-09-09). Each is the shipped shape, restored.
 mutate "a scrolled-in row waits out the first screen's stagger again"  feed \

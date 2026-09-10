@@ -271,10 +271,8 @@ struct SourceChips: View {
     /// never a scroll frame: the write below is guarded on inequality.
     @State private var stripWidth: CGFloat = 0
 
-    // MARK: - Scrub (2026-09-05; SwiftUI's own sequence since 2026-09-09)
+    // MARK: - Chip frames
 
-    /// The chip under a scrubbing finger — lifted, and named above the slab.
-    @State private var scrubbing: String?
     /// Every chip's frame in the strip's CONTENT space, recorded as laid out.
     /// Content space, not the viewport's: these change when the strip folds
     /// or a folder opens, never when it scrolls — and since 2026-09-09 never
@@ -285,11 +283,6 @@ struct SourceChips: View {
     /// finger was down).
     @State private var chipFrames = ChipFrameBox()
     private static let contentSpace = "dockStripContent"
-    /// A tap fired by a scrub is one tap, not two: the chip's own `Button`
-    /// cannot fire after a scrub (UIKit cancels its touch when the press
-    /// begins), but the guard costs nothing and says so.
-    @State private var scrubCommittedAt: TimeInterval = 0
-
     // MARK: - The open folder's width (spec 2026-09-05)
 
     /// The strip's viewport, tracked off the scroll: offset and width in
@@ -328,24 +321,23 @@ struct SourceChips: View {
     /// size changed under a deceleration — which is what made it "not scroll
     /// properly". The layout form existed because a scale over a GLASS chip
     /// double-rendered; the chips are flat now (see `horizontalStrip`).
-    /// `scrubX` is the finger and `hoverX` the pointer, both in the content
-    /// `HStack`'s space, the frame the chips are recorded in. Off under
-    /// Reduce Motion.
-    @State private var scrubX: CGFloat?
+    /// `hoverX` is the POINTER, in the content `HStack`'s space, the frame
+    /// the chips are recorded in. Off under Reduce Motion. **Pointer only
+    /// since prd §662h (2026-09-09, user: "w/o a mouse like on a mac who is
+    /// going to really scrub?" → "kill it")** — the finger's scrub, a hidden
+    /// hold-then-slide nobody would find, is DELETED; the wave under a
+    /// pointer on iPad and Mac IS the Mac dock's case and stays.
     @State private var hoverX: CGFloat?
     private static let waveReach: CGFloat = 1.4
-    /// How far a finger or a pointer moves before the wave is re-laid under
-    /// it (PERF 2026-09-08): the wave is a cosine over ~90pt, so 3pt is far
+    /// How far a pointer moves before the wave is re-laid under it (PERF
+    /// 2026-09-08): the wave is a cosine over ~90pt, so 3pt is far
     /// below anything the eye resolves, and `DS.Motion.press` springs the
     /// chips between steps.
     private static let fingerStep: CGFloat = 3
 
     private func wave(for label: String) -> CGFloat {
         guard !reduceMotion, let frame = chipFrames.frames[label] else { return 1 }
-        let x: CGFloat
-        if let scrubX { x = scrubX }
-        else if let hoverX { x = hoverX }
-        else { return 1 }
+        guard let x = hoverX else { return 1 }
         let pitch = categoryCell
         let d = abs(frame.midX - x) / (pitch * Self.waveReach)
         guard d < 1 else { return 1 }
@@ -658,50 +650,19 @@ struct SourceChips: View {
                         withAnimation(DS.Motion.press) { hoverX = nil }
                     }
                 }
-                // PRESS AND SLIDE IS A UIKIT LONG PRESS, INSTALLED THROUGH
-                // SWIFTUI'S OWN BRIDGE (prd §662g, 2026-09-09, user: "the dock
-                // does not scroll", "i cannot scroll on any of the icons they
-                // are all staying in place"). §660 wrote the scrub as a
-                // `LongPressGesture` SEQUENCED before a `DragGesture`, and it
-                // froze the strip's scroll dead — a flick did nothing and a
-                // slow drag became a scrub — measured on the simulator on
-                // build 543's own code, so the regression shipped in 543. A
-                // bare simultaneous `DragGesture` was tried next and froze it
-                // the same way. That is the STANDING GOTCHA, the one
-                // `MainSurface`'s pager records having measured ("froze
-                // vertical scrolling dead"): a SwiftUI drag on scroll content,
-                // simultaneous or not, takes the touch before the scroll
-                // view's pan can begin. The pager's answer was a UIKit pan;
-                // this is the same answer for the hold. A
-                // `UILongPressGestureRecognizer` coexists with a scroll view's
-                // pan by UIKit's own rules — travel past `allowableMovement`
-                // before `minimumPressDuration` fails the press and the pan
-                // has the swipe; a still finger recognises, its `.changed`
-                // states carry the finger as it slides, and `scrollDisabled`
-                // below holds the row STILL under it. Installed with
-                // `UIGestureRecognizerRepresentable` (iOS 18) — SwiftUI
-                // attaches it to this view's own backing and converts every
-                // location into this view's space, which is the content space
-                // named above. Not the deleted `DockScrubCatcher`: that walked
-                // superviews to find a private hosting scroll view and never
-                // fired on a phone; this asks nothing about the hierarchy.
-                .gesture(DockHold(
-                    began: { scrubBegan(at: $0) },
-                    moved: { scrubMoved(at: $0) },
-                    ended: { scrubEnded(commit: $0 && scrubbing != nil) }))
+                // NO FINGER GESTURE ON THIS CONTENT, and that is the ruling
+                // that ends a week (prd §662h): the scrub — a hold, then a
+                // slide that magnified the tiles under the finger — was a
+                // hidden gesture on a screen with no pointer, cost three
+                // passes of arbitration, never fired on a phone, and in its
+                // last form froze this scroll dead (§662g). A flick scrolls,
+                // a tap opens the folder, and nothing here claims a touch.
                 // `MainSurface.topInset` measures this strip's NATURAL height
                 // through a sibling `GeometryReader`; this pins the subtree to
                 // its own ideal height before that measurement sees it (a lazy
                 // stack once reported the whole proposed height, 2026-08-24).
                 .fixedSize(horizontal: false, vertical: true)
             }
-            // The strip does not move under a scrub — the finger is walking
-            // the row, not dragging it. The catcher used to flip
-            // `isScrollEnabled` by hand and once left it off for a whole
-            // launch (2026-09-06, "I'm sort of stuck in one place"); this is
-            // the same fact as a function of `scrubbing`, which every end path
-            // clears, so it cannot stick.
-            .scrollDisabled(scrubbing != nil)
             .onAppear {
                 // Unconditional since §591: "All" is in this run now, so a
                 // strip restored on All must scroll to it like any other room.
@@ -742,66 +703,12 @@ struct SourceChips: View {
         }
     }
 
-    /// `ShellChrome.dockBusy` from the two facts the strip holds about its own
+    /// `ShellChrome.dockBusy` from the one fact the strip holds about its own
     /// motion, written only when the answer changes (2026-09-09): its scroll
-    /// phase (a finger dragging it, or its flick) and a scrub under way.
+    /// phase — a finger dragging it, or its flick.
     private func publishDockBusy() {
-        let busy = viewport.moving || scrubbing != nil
+        let busy = viewport.moving
         if chrome.dockBusy != busy { chrome.dockBusy = busy }
-    }
-
-    // MARK: - Scrub
-
-    /// The chip nearest a content-space x — nearest by centre, so a finger
-    /// in the gap between two chips still names one.
-    private func scrubTarget(x: CGFloat) -> (label: String, midX: CGFloat)? {
-        var best: (label: String, midX: CGFloat, distance: CGFloat)?
-        for (label, frame) in chipFrames.frames {
-            let d = abs(frame.midX - x)
-            if let b = best, d >= b.distance { continue }
-            best = (label, frame.midX, d)
-        }
-        return best.map { ($0.label, $0.midX) }
-    }
-
-    private func scrubBegan(at point: CGPoint) {
-        guard let hit = scrubTarget(x: point.x) else { return }
-        DSHaptic.lift()
-        withAnimation(DS.Motion.standard) {
-            scrubbing = hit.label
-            scrubX = point.x
-        }
-        publishDockBusy()
-        #if DEBUG
-        NSLog("dockScrub: began %@", hit.label)
-        #endif
-    }
-
-    private func scrubMoved(at point: CGPoint) {
-        if abs((scrubX ?? -.infinity) - point.x) >= Self.fingerStep {
-            withAnimation(DS.Motion.press) { scrubX = point.x }
-        }
-        guard let hit = scrubTarget(x: point.x), hit.label != scrubbing else { return }
-        DSHaptic.selection()
-        withAnimation(DS.Motion.standard) { scrubbing = hit.label }
-    }
-
-    private func scrubEnded(commit: Bool) {
-        let chosen = scrubbing
-        withAnimation(DS.Motion.standard) {
-            scrubbing = nil
-            scrubX = nil
-        }
-        publishDockBusy()
-        guard commit, let chosen else { return }
-        #if DEBUG
-        NSLog("dockScrub: chose %@", chosen)
-        #endif
-        scrubCommittedAt = Date.timeIntervalSinceReferenceDate
-        DSHaptic.selection()
-        tapped = chosen
-        if let x = anchorX(for: chosen) { chrome.folderAnchorX = x }
-        withAnimation(DS.Motion.folder) { onTap(chosen) }
     }
 
     @ViewBuilder
@@ -1075,11 +982,6 @@ struct SourceChips: View {
             attentionSeats.contains($0.name) && $0.status == .attention
         }
         Button {
-            // A scrub that just chose this chip already tapped it — whether
-            // its end ran before this action (`scrubCommittedAt`) or after
-            // (`scrubbing`); the sequence and the button are simultaneous.
-            guard scrubbing == nil,
-                  Date.timeIntervalSinceReferenceDate - scrubCommittedAt > 0.4 else { return }
             DSHaptic.selection()
             // Marks this change as finger-initiated so the strip does not
             // re-centre under it — see the horizontal strip's `onChange`.
@@ -1647,71 +1549,4 @@ struct ScrollViewportSample: Equatable {
 /// Every chip's frame in the strip's content space — see `SourceChips.chipFrames`.
 final class ChipFrameBox {
     var frames: [String: CGRect] = [:]
-}
-
-/// The dock's hold, as UIKit's own long press (prd §662g) — see the
-/// `horizontalStrip` comment where it is attached for why a SwiftUI drag on
-/// this scroll's content is not an option. `minimumPressDuration` and
-/// `allowableMovement` are the 0.4s and 10pt the sequenced press used, so the
-/// feel is unchanged; what changed is who arbitrates against the scroll
-/// view's pan — UIKit, which knows how.
-private struct DockHold: UIGestureRecognizerRepresentable {
-    let began: (CGPoint) -> Void
-    let moved: (CGPoint) -> Void
-    /// `true` at a lift, `false` at a cancel.
-    let ended: (Bool) -> Void
-
-    /// The arbitration against the scroll view's pan, in UIKit's own terms:
-    /// the pan is REQUIRED TO WAIT for this press to fail. A finger that
-    /// travels fails the press at once (`allowableMovement`) and the pan has
-    /// its swipe with no delay a person can feel; a finger that holds
-    /// recognises, and a pan that was waiting on a press that succeeded can
-    /// never begin — so the row is still under the slide before
-    /// `scrollDisabled` has even re-rendered.
-    ///
-    /// **SIMULTANEOUS with everything else, declared HERE.** The bridge has one
-    /// attachment, `gesture(_:)`, and no `simultaneousGesture` form — so a
-    /// recognizer installed on the strip's content, an ANCESTOR of every chip
-    /// Button, loses SwiftUI's child-wins arbitration to the Button's own press
-    /// and never sees a touch (measured: no state at all reached the action).
-    /// SwiftUI surfaces its own gestures to this delegate as recognizers, so
-    /// UIKit's simultaneity is the `simultaneousGesture` the bridge lacks.
-    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
-                               shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
-            true
-        }
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
-                               shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
-            other is UIPanGestureRecognizer
-        }
-    }
-
-    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
-
-    func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
-        let hold = UILongPressGestureRecognizer()
-        hold.minimumPressDuration = 0.4
-        hold.allowableMovement = 10
-        hold.delegate = context.coordinator
-        #if DEBUG
-        NSLog("dockHold: installed")
-        #endif
-        return hold
-    }
-
-    func updateUIGestureRecognizer(_ recognizer: UILongPressGestureRecognizer, context: Context) {}
-
-    func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
-        // Local to the view this is attached to — the strip's content, the
-        // space every chip frame is recorded in.
-        let point = context.converter.localLocation
-        switch recognizer.state {
-        case .began: began(point)
-        case .changed: moved(point)
-        case .ended: ended(true)
-        case .cancelled, .failed: ended(false)
-        default: break
-        }
-    }
 }
