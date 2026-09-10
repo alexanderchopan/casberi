@@ -168,23 +168,29 @@ grep -q 'abs(x) / width' "$TMP/main.nc" \
 grep -q 'let p = min(1, abs(chrome.pageDragProgress))' "$TMP/main.nc" \
   || { echo "✗ PagerCover no longer runs on the drag's progress — the two halves of the"; \
        echo "  carousel would disagree about when a turn is a turn, which is §648's cause."; fail=1; }
-# THE BAND'S SCRIM RAMPS OVER A FIXED LENGTH, NOT A FRACTION OF ITSELF (prd
-# §649 amendment, 2026-09-08). The mask was `location: 0.25` — a quarter of the
-# band's OWN height — so the softness grew with the number of rows stacked in
-# it. Measured off the report's screenshot: a three-row Social band is 218pt, so
-# the quarter was a 54pt ramp that covered the whole first control row and let a
-# line of feed text read between the strips. `DS.Space.s6` is not a chosen
-# number — it is what the fraction already yields for the 96pt dock-only band,
-# so the case the old rule got right is unchanged. A fraction coming back is the
-# defect itself, and nothing else here can see it: the band paints, the app
-# works, and only a screenshot of a THREE-row room shows it.
-grep -q 'location: 0.25' "$TMP/main.nc" \
-  && { echo "✗ the band's scrim is back on a FRACTION of its own height — a stacked band"; \
-       echo "  goes see-through in proportion to how much it holds (§649 amendment)."; fail=1; }
-grep -q 'frame(height: DS.Space.s6)' "$TMP/main.nc" \
-  || { echo "✗ the band's scrim lost its fixed-length ramp — either it is a fraction again"; \
-       echo "  or the soft edge where the band meets the feed is gone entirely, and that"; \
-       echo "  edge is the whole of the 2026-08-23 airiness ruling."; fail=1; }
+# THE PAGE IS NOT CLIPPED AT REST, AND THE BAND PAINTS NO PLATE (prd §677,
+# 2026-09-10, user: "why is there a black bar. the shapes and glass bar doesn't
+# go over the screen?"). Three layers made that bar: `PagerDrag`'s clip (radius
+# 0 at rest still clips to the page's bounds, which stop at the band), §649's
+# opaque page-colour plate behind the band, and the soft scroll-edge fade over
+# the whole inset. The clip is `PageClip`, a Shape that reaches below the page
+# at rest and is the rounded card only while lifted; the plate is gone; the
+# bottom edge fade is hidden. Seen on the simulator: rows run under the folder
+# and the dock, and the glass refracts them. §649's scrim guards are retired
+# with the scrim — a fixed ramp on a plate that no longer exists is not a rule.
+grep -q 'clipShape(PageClip(lift: lift))' "$TMP/main.nc" \
+  || { echo "✗ PagerDrag no longer clips through PageClip (prd §677) — a plain clipShape cuts"; \
+       echo "  every row beneath the bottom band at the band's top edge: the black bar."; fail=1; }
+grep -q 'struct PageClip: Shape' "$TMP/main.nc" \
+  || { echo "✗ PageClip is gone (prd §677)."; fail=1; }
+awk '/private var bandInset: some View/,/private var bandContent: some View/' "$TMP/main.nc" \
+  | grep -qE 'DS\.page|DS\.themedPage|Color\.black' \
+  && { echo "✗ the bottom band paints an opaque plate again (prd §677 retired §649's scrim) —"; \
+       echo "  the glass would float over the page colour with nothing to refract."; fail=1; }
+strip_comments "Casberi/Casberi/Design/Glass.swift" > "$TMP/glass677.nc"
+grep -q 'scrollEdgeEffectHidden(true, for: .bottom)' "$TMP/glass677.nc" \
+  || { echo "✗ the feed's bottom scroll-edge fade is back (prd §677) — over a band that holds"; \
+       echo "  a folder or a rail it is ~160pt of page colour, i.e. the plate by another name."; fail=1; }
 # THE LEAN MOVED INTO ITS OWN LEAF (2026-09-06, prd §632 second amendment) —
 # THE SELECTION TRAVELS ON A GLIDE AND NEVER LEANS (prd §667). `ChipLean` —
 # the fill drifting toward the neighbour under a drag and snapping back on

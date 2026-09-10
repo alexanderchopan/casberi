@@ -618,7 +618,8 @@ private struct DSSoftScrollEdges: ViewModifier {
             let edges: Edge.Set = horizontalSizeClass == .regular
                 ? [.top, .bottom, .leading]
                 : [.top, .bottom]
-            content.scrollEdgeEffectStyle(.soft, for: edges)
+            content.scrollEdgeEffectStyle(.soft, for: edges.subtracting(.bottom))
+                .scrollEdgeEffectHidden(true, for: .bottom)
         } else {
             content
         }

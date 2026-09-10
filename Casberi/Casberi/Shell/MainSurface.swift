@@ -352,19 +352,6 @@ struct MainSurface: View {
             // own — a row appears, the dock folds under a scroll — and a
             // fractional ramp re-lengthed on every one of those; this one does
             // not move.
-            .background(alignment: .bottom) {
-                DS.page
-                    .mask(alignment: .bottom) {
-                        VStack(spacing: 0) {
-                            LinearGradient(colors: [.black.opacity(0), .black],
-                                           startPoint: .top, endPoint: .bottom)
-                                .frame(height: DS.Space.s6)
-                            Color.black
-                        }
-                    }
-                    .ignoresSafeArea(edges: .bottom)
-                    .allowsHitTesting(false)
-            }
             .frame(maxWidth: showsRail ? PadLayout.readingMaxWidth : .infinity,
                    alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -2985,6 +2972,22 @@ struct MainSurface: View {
 /// A view of its own so the ONLY body that re-evaluates on a touch move is
 /// this one; `MainSurface`'s body is the most expensive in the app and must
 /// not depend on a value written sixty times a second.
+/// The pager's clip (prd §677): the page's own rounded card while a drag lifts
+/// it, and at rest a rectangle that reaches well below the page's bounds, so
+/// the rows a List draws beneath the bottom band are not sliced off at the
+/// band's top edge. 600pt covers the tallest band (rail + folder + dock) with
+/// room to spare; the window's edge clips whatever is left.
+private struct PageClip: Shape {
+    var lift: CGFloat
+    func path(in rect: CGRect) -> Path {
+        if lift <= 0 {
+            return Path(CGRect(x: rect.minX, y: rect.minY,
+                               width: rect.width, height: rect.height + 600))
+        }
+        return Path(roundedRect: rect, cornerRadius: 28 * lift, style: .continuous)
+    }
+}
+
 private struct PagerDrag<Content: View>: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -3063,7 +3066,19 @@ private struct PagerDrag<Content: View>: View {
             // invisible on a black page), it tilts about its bottom edge in
             // the direction of travel, shrinks a hair and casts a shadow.
             // Under Reduce Motion it slides flat, as before.
-            .clipShape(RoundedRectangle(cornerRadius: 28 * lift, style: .continuous))
+            // **THE PAGE IS NOT CLIPPED AT REST (prd §677, user: "why is there a
+            // black bar. the shapes and glass bar doesn't go over the screen?").**
+            // A `clipShape` with a radius of 0 still clips to the view's BOUNDS,
+            // and this page's bounds stop at the bottom band's inset — so every
+            // row the List drew beneath the dock, the folder and the rails was
+            // sliced off at the band's top edge, and the glass floated over
+            // the page colour with nothing to refract. That was the black bar,
+            // and it was there in every room, one clip for the whole app.
+            // `PageClip` covers the safe area below the page at rest and is the
+            // rounded card only while a drag lifts it (`lift > 0`), so §648's
+            // cardness is untouched. A Shape rather than an `if`, so the page's
+            // identity never changes when a drag begins.
+            .clipShape(PageClip(lift: lift))
             .overlay {
                 RoundedRectangle(cornerRadius: 28 * lift, style: .continuous)
                     .strokeBorder(.white.opacity(0.22 * lift), lineWidth: 1)
