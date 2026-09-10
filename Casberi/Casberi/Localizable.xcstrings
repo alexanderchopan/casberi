@@ -45561,6 +45561,34 @@
         }
       }
     },
+    "Casberi diagnostics" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Diagnóstico de Casberi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 診断"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 진단"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 诊断"
+          }
+        }
+      }
+    },
     "Casberi has no server. Every request below goes straight from %@ to the service named." : {
       "localizations" : {
         "es" : {
@@ -49586,6 +49614,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "复制密钥 ID"
+          }
+        }
+      }
+    },
+    "Copy readings" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copiar lecturas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "測定値をコピー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "측정값 복사"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "复制读数"
           }
         }
       }
@@ -57621,6 +57677,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你保存过的每一条摘录都可在此搜索 — 此后新增的也一样。"
+          }
+        }
+      }
+    },
+    "Every line is a real result from this device. Copy or share it below and send it back." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada línea es un resultado real de este dispositivo. Cópialo o compártelo abajo y envíanoslo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各行はこのデバイスの実際の結果です。下でコピーまたは共有して送り返してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 줄은 이 기기의 실제 결과입니다. 아래에서 복사하거나 공유해 보내 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每一行都是这台设备的真实结果。在下方复制或分享后发回给我们。"
           }
         }
       }
@@ -106211,6 +106295,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分享笔记进来"
+          }
+        }
+      }
+    },
+    "Share readings" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Compartir lecturas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "測定値を共有"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "측정값 공유"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "分享读数"
           }
         }
       }
