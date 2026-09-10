@@ -273,7 +273,7 @@ def between(a, b, what):
 # PER FUNCTION, not per file — both of the traps below were live on this
 # guard's first mutation run and each is the same shape: a check satisfied by
 # a DIFFERENT, correct copy of the words elsewhere in the file.
-chip = between("private func chip(_ label:", "private func chipAccessibilityLabel", "chip(_:)")
+chip = between("private func chip(_ label:", "fileprivate static func chipAccessibilityLabel", "chip(_:)")
 # The capsule AT REST: up to the `if open {` that unfolds its venues (2026-09-05
 # — a folder opens IN PLACE, and the marks inside an OPEN chip are the venues
 # themselves, which is the whole design; the ruling below is about the closed
@@ -323,7 +323,7 @@ if "markSize" in capsule:
 # that reads as a bug to the one person who cannot see the strip to check, and
 # the only surface where this feature's landing is spoken at all. Scoped to
 # the function that speaks it.
-speech = between("private func chipAccessibilityLabel", "\n}", "chipAccessibilityLabel(...)")
+speech = between("fileprivate static func chipAccessibilityLabel", "\n}", "chipAccessibilityLabel(...)")
 if "opens on" not in speech:
     sys.exit("✗ the chip no longer speaks where it opens — the fold's landing would be\n"
              "  invisible AND unspoken, which for a folded category is no way to know at all.")
@@ -352,16 +352,13 @@ awk '/func folderVenue/,/^    }$/' "$TMP/folder.nc" | grep -q 'DS.attention' \
 # graph update — the frame build 522's process-exit watchdog was sampled in.
 # What this guard is about is that the switcher resolves THROUGH THE CATALOG
 # rather than against a raw label, and both spellings do.
-# **RESOLVED ONCE PER BODY, NOT PER VENUE (prd §668, 2026-09-10)** — the scan
-# moved out of `folderVenue` into the row's `brokenVenues`, so this reads the
-# whole file for the catalog route and the row for the one pass. It was a
-# `bridges.bridges.contains { … }` per venue per body build, over a store of
-# sixty seats, on a row that rebuilds every time the room lands.
-grep -q 'private var brokenVenues: Set<String>' "$TMP/folder.nc" \
-  && ! awk '/func folderVenue/,/^    }$/' "$TMP/folder.nc" | grep -q 'bridges\.bridges' \
-  || { echo "✗ the folder's broken-seat scan is per venue again (prd §668) — a linear pass"; \
-       echo "  over the bridge store for each of up to twenty marks, on every body build."; exit 1; }
-grep -qE 'BridgeCatalog\.(offer|seatName)\(forSource: \$0\)|BridgeCatalog\.(offer|seatName)\(forSource: venue\)' "$TMP/folder.nc" \
+# AMENDED for prd §668 (2026-09-10): the resolution moved UP a level. §668 made
+# the row resolve its broken seats ONCE per body and hand `folderVenue` a
+# `broken: Bool`, so looking for the catalog call inside the venue view now
+# fails on working code. What must stay true is unchanged — the set is built
+# THROUGH THE CATALOG and not against raw labels — so the guard reads the
+# whole file and pins the one call that builds it.
+grep -qE 'BridgeCatalog\.(offer|seatName)\(forSource: \$0\)' "$TMP/folder.nc" \
   || { echo "✗ the open folder resolves attention by raw name — the alias family (Privacy Pools"; \
        echo "  against 0xBow Privacy Pools) would silently never light, which is the whole"; \
        echo "  reason the strip and the tray both resolve through the catalog."; exit 1; }

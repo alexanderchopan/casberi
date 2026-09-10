@@ -52203,3 +52203,71 @@ The row said "New here? Start here" and opened `HowItWorksSheet`: one heading, o
 * **A trailing closure does count.** `AgentKeyPicker(selection: $p) { … }` supplies the last closure property with no label anywhere to find, and the check's first cut reported that call site as a dead control. It resolves the type's property order and balances the call's parens instead.
 
 The check reproduces this bug from the shipped tree and clears on the fix. It also found **`Composer.onHeight`** — a `.onGeometryChange` firing on every layout of the agent surface to hand a height to a no-op, obsolete since §581 made that surface fill rather than hug. Deleted. And it reports one census line it deliberately does not fail on: `HegotaRoomCard.onOpenSend` is supplied by `FeedScreen` and called by nothing, the same wiring broken from the other end.
+
+## §673 — "The tab bar is still not smooth": the selection was re-sprung on every scroll frame, every bridge sync rebuilt the strip twice, and each chip's spoken name was built twice per body (user: "the tab bar is stilll not smooth. why!", 2026-09-10)
+
+Read end to end, one day after §667, and the answer is three defects in the
+strip's own drawing — none of them the work §658/§660/§666 already moved out
+of its frames. Written on a machine with no Xcode: **UNCOMPILED, UNSEEN** —
+the harness greps pass and the build is owed to the next Mac pass, and the
+first thing that pass reads is `hitch:` (§666) before and after.
+
+**1. §667 animated the fold.** `SelectionTravel` pinned the selection to
+`DS.Motion.glide` with `.transaction { $0.animation = DS.Motion.glide }` —
+which rewrites EVERY transaction that reaches the shape, not only the one
+that moves it between chips. The fold (`ShellChrome.trackFold`) writes
+`chrome.fold` UN-animated on every scroll frame, the chips shrink 46→40 and
+the fill's frame and corner follow; under §667 each of those writes arrived
+with `animation == nil`, was rewritten to a 0.28s spring, and so while the
+dock folded the fill and the ring were re-sprung 60–120 times a second and
+trailed the tile they sit on by up to a quarter second — the indicator
+smearing behind its chip on every feed scroll, the day after it was made to
+"go directly to the next one". The user saw it as the tab bar. The guard is
+now `if t.animation != nil { t.animation = DS.Motion.glide }`: a change that
+ARRIVED animated (a tap's folder spring, a landing's standard) glides, which
+is all §667 asked; a nil animation stays nil and the shape moves with its
+chip. Named cost: `settleFold`'s standard spring on the tile against glide
+on the fill — 30ms and a 15% bounce apart, at the end of a scroll.
+
+**2. The strip read the bridge store in its body — and the store writes
+twice per sync.** `chip(_:)` scanned `bridges.bridges` for the dashed
+"needs reconnecting" ring, so every `bridges` mutation rebuilt all eleven
+chips. §660 moved the bloom ticks and the catch bob to leaves for exactly
+this and left the scan. And `BridgeStore.reconnect` — called by
+`registerConnected`, i.e. by every sync that lands proof, 58 call sites —
+wrote `status` and then `statusLine` as two subscript writes, each a
+`didSet` JSON encode into defaults and an invalidation of every reader,
+for a seat already connected with the same line. A foreground sweep is ~45
+seats: ~90 strip rebuilds and ~90 encodes on the main thread, under
+whatever the finger was doing — the "laggy while the app loads stuff in the
+background" §660 half-fixed. Now: `ChipAttentionRing` (the ring, at the
+same frame, only where no selection ring is — the `else` it was) and
+`ChipSpokenLabel` read the store in their own bodies; `reconnect` writes
+once, and not at all when nothing changed.
+
+**3. The spoken name was built twice per chip per body, once for nothing.**
+`chipAccessibilityLabel` — a `ListFormatter` join plus localized lookups —
+was called for `.dsTooltip(…)`, which is `self` on a phone (the argument is
+still evaluated), and again for `.accessibilityLabel(…)`. Twenty-two
+formatter runs per strip body, and the strip's body runs on every fold
+frame (below). One string, once, in the leaf.
+
+**Not changed, and named as the two costs left.** (a) The strip's body
+re-runs on every fold frame BY CONSTRUCTION — `chrome.fold` is read in
+`SourceChips` through `iconSize`/`chipSize`/`categoryCell`, and the sizes
+are layout, so the eleven chips re-lay per frame across the 56pt fold
+window; this pass makes that body cheap rather than rare, and making it
+rare means every size becoming a leaf modifier. (b) `MainSurface`'s
+`@Query` re-runs its body on every store write and the strip cannot skip
+its own (closure props), which §666 already names as the largest gap.
+Both are owed to a pass with the meter's numbers.
+
+**Guarded** in `dock-selftest.sh`: the glide must be behind `t.animation !=
+nil`, the unconditional `$0.animation = DS.Motion.glide` must not return,
+`chip(_:)` must not read `bridges.bridges` (mutation-checked by hand on the
+comment-stripped copy: 0 clean, 1 mutated), the two leaves must exist, and
+`chipAccessibilityLabel(` must appear exactly twice (declaration and its
+one call). `category-fold-selftest.sh`'s `chip(_:)` slice marker follows the
+function's new `fileprivate static` spelling.
+
+**Taken from the `claude/tab-bar-smoothness-9v7vig` branch and renumbered (2026-09-10).** That branch wrote this as §670 and its own tap fix as §671, both already taken by this line's §670 (the diagnostics reading) and §671 (the tap's landing) — two sessions each took the next free number while eight commits, including everything in builds 553 and 554, sat unpushed behind a rejected auto-push. **Its tap rewrite is NOT taken**: it cleared `swipeCommit` so the room inserts on a `.move` while `land` is still inside `withAnimation`, i.e. the new room slides in while it is being built — the thing §651 exists to forbid. §671's landing (a still card over a room that swapped in one un-animated frame) is what shipped in 554 and stands. The three costs above are orthogonal to it and are taken whole.

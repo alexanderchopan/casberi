@@ -196,9 +196,30 @@ grep -q 'struct SelectionTravel' "$TMP/chips.nc" \
   || { echo "✗ SelectionTravel is gone — the selection has no single object to travel as."; fail=1; }
 [ "$(grep -c 'SelectionTravel(ns: ' "$TMP/chips.nc")" -ge 2 ] \
   || { echo "✗ the fill and the ring no longer both travel through SelectionTravel."; fail=1; }
-grep -q 'transaction { \$0.animation = DS.Motion.glide }' "$TMP/chips.nc" \
+grep -q 't.animation = DS.Motion.glide' "$TMP/chips.nc" \
   || { echo "✗ the selection's travel is no longer pinned to DS.Motion.glide — it would ride a"; \
        echo "  tap's folder spring or a landing's standard spring and overshoot the tile (prd §667)."; fail=1; }
+# …AND ONLY AN ANIMATED CHANGE IS RE-PINNED (prd §673). §667's first cut rewrote
+# EVERY transaction reaching the shape, the fold's un-animated per-frame write
+# included, so the fill and the ring were re-sprung on every scroll frame and
+# trailed their tile by up to 0.28s while the dock folded. A nil animation
+# must stay nil.
+grep -q 'if t.animation != nil { t.animation = DS.Motion.glide }' "$TMP/chips.nc" \
+  || { echo "✗ SelectionTravel no longer guards its glide on t.animation != nil — the fold's"; \
+       echo "  un-animated per-frame write would re-spring the selection every frame (prd §673)."; fail=1; }
+grep -q '\$0.animation = DS.Motion.glide' "$TMP/chips.nc" \
+  && { echo "✗ the unconditional transaction rewrite is back on the selection (prd §673)."; fail=1; }
+# THE STRIP'S BODY DOES NOT READ THE BRIDGE STORE (prd §673). `bridges.bridges`
+# is written twice per landing sync; a read in `chip(_:)` rebuilt all eleven
+# chips per write. The broken-seat ring and the spoken label are leaves.
+awk '/private func chip\(_ label:/,/fileprivate static func chipAccessibilityLabel/' "$TMP/chips.nc" \
+  | grep -q 'bridges\.bridges' \
+  && { echo "✗ chip(_:) reads bridges.bridges again — every bridge write rebuilds the strip (prd §673)."; fail=1; }
+grep -q 'struct ChipAttentionRing' "$TMP/chips.nc" && grep -q 'struct ChipSpokenLabel' "$TMP/chips.nc" \
+  || { echo "✗ the broken-seat ring or the spoken label is no longer a leaf (prd §673)."; fail=1; }
+[ "$(grep -c 'chipAccessibilityLabel(' "$TMP/chips.nc")" -eq 2 ] \
+  || { echo "✗ chipAccessibilityLabel is called from more than one place — it was built twice"; \
+       echo "  per chip per body, once for a modifier that is inert on a phone (prd §673)."; fail=1; }
 grep -qE 'ChipLean|leanPitch|pageDragProgress' "$TMP/chips.nc" \
   && { echo "✗ the lean is back in the strip — the indicator moves forward under a drag and"; \
        echo "  swings back on landing (prd §667), and every chip rebuilds per touch move."; fail=1; }
