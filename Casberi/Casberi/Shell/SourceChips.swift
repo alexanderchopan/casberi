@@ -223,7 +223,8 @@ struct SourceChips: View {
     var zoomNS: Namespace.ID? = nil
     let onTap: (String) -> Void
 
-    @Environment(BridgeStore.self) private var bridges
+    // No `BridgeStore` here since prd §670 — the two leaves that need it
+    // (`ChipAttentionRing`, `ChipSpokenLabel`) read it in their own bodies.
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The ONE namespace the strip's selection travels in — the blue fill on a
@@ -962,9 +963,10 @@ struct SourceChips: View {
         // Sources Tray (or, for Markets, its own switcher) is one tap from
         // naming which seat it is.
         let attentionSeats: Set<String> = isCategory ? Set(venues) : [seat]
-        let broken = bridges.bridges.contains {
-            attentionSeats.contains($0.name) && $0.status == .attention
-        }
+        // Whether any of those seats is BROKEN is read in two leaves below
+        // (`ChipAttentionRing`, `ChipSpokenLabel`), never here (prd §670): a
+        // scan of `bridges.bridges` in this body made every bridge write —
+        // two per sync that lands — rebuild all eleven chips.
         Button {
             DSHaptic.selection()
             // Marks this change as finger-initiated so the strip does not
@@ -1159,16 +1161,18 @@ struct SourceChips: View {
                         chipShape(tile: false, outer: true)
                             .strokeBorder(DS.tint, lineWidth: 2.5)
                     }
-                } else if broken {
-                    // DASHED, not merely orange (2026-07-21). "Selected" and
-                    // "this connection is broken" were the same 2.5pt ring in
-                    // two hues — indistinguishable to anyone who doesn't
-                    // separate them by color. The solid ring now belongs to
-                    // selection alone.
-                    chipShape(tile: isCategory, outer: true)
-                        .strokeBorder(DS.attention,
-                                      style: StrokeStyle(lineWidth: 2.5, dash: [3, 3]))
                 }
+            }
+            // DASHED, not merely orange (2026-07-21). "Selected" and "this
+            // connection is broken" were the same 2.5pt ring in two hues —
+            // indistinguishable to anyone who doesn't separate them by
+            // color. The solid ring above belongs to selection alone; this
+            // one is drawn only where no selection ring is (the `else` it
+            // used to be). A leaf, so the bridge store is read there (§670).
+            .overlay {
+                ChipAttentionRing(seats: attentionSeats,
+                                  shape: chipShape(tile: isCategory, outer: true),
+                                  enabled: !(isActive && !isWord))
             }
             // A category's outer frame is its CELL (§662e) — the tile sits
             // centred in it, and the cell is what spreads across the strip.
@@ -1227,10 +1231,11 @@ struct SourceChips: View {
         .modifier(ChipPeekModifier(label: label, venues: venues,
                                    enabled: axis == .vertical && label != "All",
                                    onOpen: { onTap(label) }))
-        // Names the mark on hover, Mac only (2026-08-01) — see `dsTooltip`.
-        // Same string the accessibility label uses, so the two can't drift on
-        // what a broken connection is called.
-        .dsTooltip(chipAccessibilityLabel(label, broken: broken, isActive: isActive))
+        // Names the mark on hover (Mac only, see `dsTooltip`) and to
+        // VoiceOver — ONE string, computed ONCE, in a leaf (prd §670). It was
+        // built twice per chip per body, `ListFormatter` and localized
+        // lookups included, once for a modifier that is `self` on a phone.
+        .modifier(ChipSpokenLabel(label: label, venues: venues, isActive: isActive))
         // Finger-driven, never idle: chips ease down as they leave the viewport
         // edges (Stories grammar). Under Reduce Motion only the fade remains.
         // Follows `axis` so the rail's chips ease at its TOP and BOTTOM edges,
@@ -1238,7 +1243,6 @@ struct SourceChips: View {
         .modifier(ChipScrollEase(axis: axis, enabled: !pinned,
                                  reduceMotion: reduceMotion))
         .id(label)
-        .accessibilityLabel(chipAccessibilityLabel(label, broken: broken, isActive: isActive))
         // The folder for VoiceOver (2026-09-06): the scrub and the wave are
         // pointer moves with no spoken form, so the spoken form is the tap's
         // — this says what it does, and the row that springs up is its own
@@ -1247,12 +1251,15 @@ struct SourceChips: View {
         .accessibilityAddTraits(isActive ? .isSelected : [])
     }
 
-    private func chipAccessibilityLabel(_ label: String, broken: Bool, isActive: Bool) -> String {
+    /// Static, and called from `ChipSpokenLabel` alone (prd §670): the
+    /// string depends on the bridge store, which the strip's body no longer
+    /// reads.
+    fileprivate static func chipAccessibilityLabel(_ label: String, venues: [String],
+                                                   broken: Bool, isActive: Bool) -> String {
         // A folded chip's own face is its category's word — visible — but for
         // more than one member VoiceOver is the one place that still says
         // WHICH seats are behind it, spoken rather than drawn (prd §351,
         // generalizing what was Markets-only reasoning here).
-        let venues = categoryVenues[label] ?? []
         guard CategoryFold.isCategory(label), venues.count > 1 else {
             return broken ? String(localized: "\(label), needs reconnecting") : label
         }
@@ -1443,7 +1450,16 @@ private struct SelectionTravel<S: View>: View {
         } else {
             shape
                 .matchedGeometryEffect(id: ChipSelection.id, in: ns)
-                .transaction { $0.animation = DS.Motion.glide }
+                // ONLY a change that ARRIVED animated is re-pinned to the
+                // glide (prd §670). The first cut of §667 rewrote EVERY
+                // transaction reaching this shape — including the fold's
+                // un-animated write on every scroll frame — so while the dock
+                // folded, the fill and the ring were re-sprung 60–120 times a
+                // second and trailed the tile they sit on by up to 0.28s. A
+                // nil animation stays nil: the shape moves with its chip.
+                .transaction { t in
+                    if t.animation != nil { t.animation = DS.Motion.glide }
+                }
         }
     }
 }
@@ -1503,6 +1519,49 @@ private struct CategoryGlyph: View {
             .onChange(of: isActive) { _, on in
                 if on, !reduceMotion { landTick += 1 }
             }
+    }
+}
+
+/// The dashed "needs reconnecting" ring, read where it is drawn (prd §670,
+/// 2026-09-10). `bridges.bridges` is written twice by every sync that lands
+/// (status, then status line), and reading it in `SourceChips`'s body made
+/// each write rebuild the whole strip — §660 moved the bloom and the catch
+/// bob to leaves for the same reason and left this scan in place. One leaf
+/// per chip now; a bridge write re-runs eleven of these and nothing else.
+private struct ChipAttentionRing: View {
+    let seats: Set<String>
+    let shape: RoundedRectangle
+    /// False where a selection ring is drawn instead — the `else` this was.
+    let enabled: Bool
+    @Environment(BridgeStore.self) private var bridges
+
+    var body: some View {
+        if enabled, bridges.bridges.contains(where: { seats.contains($0.name) && $0.status == .attention }) {
+            shape.strokeBorder(DS.attention,
+                               style: StrokeStyle(lineWidth: 2.5, dash: [3, 3]))
+        }
+    }
+}
+
+/// The chip's spoken name — the tooltip and the accessibility label, ONE
+/// string built ONCE (prd §670). Same string for both so they cannot drift
+/// on what a broken connection is called; a leaf so the bridge store it
+/// depends on is read here, not by the strip.
+private struct ChipSpokenLabel: ViewModifier {
+    let label: String
+    let venues: [String]
+    let isActive: Bool
+    @Environment(BridgeStore.self) private var bridges
+
+    func body(content: Content) -> some View {
+        let seat = BridgeCatalog.seatName(forSource: label)
+        let seats: Set<String> = CategoryFold.isCategory(label) ? Set(venues) : [seat]
+        let broken = bridges.bridges.contains { seats.contains($0.name) && $0.status == .attention }
+        let spoken = SourceChips.chipAccessibilityLabel(label, venues: venues,
+                                                        broken: broken, isActive: isActive)
+        content
+            .dsTooltip(spoken)
+            .accessibilityLabel(spoken)
     }
 }
 

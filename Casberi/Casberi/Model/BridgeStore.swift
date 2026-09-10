@@ -67,8 +67,20 @@ final class BridgeStore {
     /// connect ends in proof; the default is the sync fact.
     func reconnect(_ id: String, proof: String? = nil) {
         guard let i = bridges.firstIndex(where: { $0.id == id }) else { return }
-        bridges[i].status = .connected
-        bridges[i].statusLine = proof ?? "Synced just now"
+        // ONE write, and none when nothing changed (prd §670, 2026-09-10).
+        // Two subscript writes here were two `bridges` mutations per sync
+        // that landed — each a JSON encode into defaults (`didSet`) and an
+        // invalidation of every view reading the list — for a seat that was
+        // already connected with the same line. A sweep of ~45 bridges paid
+        // it ~90 times on the main thread, under whatever the finger was
+        // doing.
+        let line = proof ?? "Synced just now"
+        if bridges[i].status != .connected || bridges[i].statusLine != line {
+            var next = bridges[i]
+            next.status = .connected
+            next.statusLine = line
+            bridges[i] = next
+        }
         // A fresh credential must not inherit the old one's refusal
         // (2026-08-10). Without this, pasting a new key leaves the stale
         // `authFailedAt` in place and the very next sweep re-flags the seat —

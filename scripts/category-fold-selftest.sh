@@ -273,7 +273,7 @@ def between(a, b, what):
 # PER FUNCTION, not per file — both of the traps below were live on this
 # guard's first mutation run and each is the same shape: a check satisfied by
 # a DIFFERENT, correct copy of the words elsewhere in the file.
-chip = between("private func chip(_ label:", "private func chipAccessibilityLabel", "chip(_:)")
+chip = between("private func chip(_ label:", "fileprivate static func chipAccessibilityLabel", "chip(_:)")
 # The capsule AT REST: up to the `if open {` that unfolds its venues (2026-09-05
 # — a folder opens IN PLACE, and the marks inside an OPEN chip are the venues
 # themselves, which is the whole design; the ruling below is about the closed
@@ -323,7 +323,7 @@ if "markSize" in capsule:
 # that reads as a bug to the one person who cannot see the strip to check, and
 # the only surface where this feature's landing is spoken at all. Scoped to
 # the function that speaks it.
-speech = between("private func chipAccessibilityLabel", "\n}", "chipAccessibilityLabel(...)")
+speech = between("fileprivate static func chipAccessibilityLabel", "\n}", "chipAccessibilityLabel(...)")
 if "opens on" not in speech:
     sys.exit("✗ the chip no longer speaks where it opens — the fold's landing would be\n"
              "  invisible AND unspoken, which for a folded category is no way to know at all.")
