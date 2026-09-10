@@ -260,7 +260,11 @@ extension AppMetrics {
     private static func row(kind: String, at: Date,
                             diagnostic: MXDiagnostic,
                             tree: MXCallStackTree) -> Remembered {
-        let frames = AppMetricsDigest.frames(callStackTreeJSON: tree.jsonRepresentation())
+        // 40 frames, not the digest's 12 (prd §671): build 551's hang read
+        // `assignWithCopy for FaceScopeRail` under twelve AttributeGraph
+        // frames and stopped, so the view whose update was looping was
+        // never named — the Casberi caller sat just below the cap.
+        let frames = AppMetricsDigest.frames(callStackTreeJSON: tree.jsonRepresentation(), limit: 40)
         let own = AppMetricsDigest.ownFrame(frames, binary: ownBinaryName)
         let build = diagnostic.metaData.applicationBuildVersion
         let head = "\(short(at)) \(kind) · \(diagnostic.applicationVersion) (\(build)) · \(diagnostic.metaData.osVersion) · \(diagnostic.metaData.deviceType)"

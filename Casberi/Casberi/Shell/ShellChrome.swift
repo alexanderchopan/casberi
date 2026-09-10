@@ -585,6 +585,12 @@ final class ShellChrome {
     /// berry rain (TileRain, user ask same day).
     var refreshPulse = 0
 
+    /// Bumped by `FeedScreen` the first time a room's body has run (its
+    /// `.task(id: headKey)` mount arm, prd §671) — the signal a category tap
+    /// waits on before springing its folder, now that the room lands on the
+    /// tap's own frame and there is no flight to wait past.
+    var roomMounts = 0
+
     /// True for the half-second between tapping Exit in the demo and the rows
     /// actually going. The shell fades its content on this, so leaving reads
     /// as the app LETTING GO rather than as a hard cut to somewhere else.

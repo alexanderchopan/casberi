@@ -5848,6 +5848,7 @@ struct FeedScreen: View {
             if heads == nil {
                 heads = Self.headMemo[headIdentity]
                 SwipeClock.mark("mount", detail: heads == nil ? "memo=miss" : "memo=hit")
+                chrome.roomMounts &+= 1
             }
             // NEVER over a truncated room. `rowBudget` is the swipe's transient
             // bound (see `MainSurface.swipeRowBudget`) — a head composed from

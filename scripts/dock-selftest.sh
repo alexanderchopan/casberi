@@ -333,13 +333,15 @@ if "let standingHere = BridgeCatalog.category(forSource: filter.source) == label
 if "if standingHere {" not in branch or "chrome.openFolder = opening ? .category(label) : nil" not in branch:
     print("✗ the standing chip's tap is no longer the folder's own toggle (prd §663/§668).")
     sys.exit(1)
-if "go(to: label)" not in branch:
+if "go(to: label, landNow: true)" not in branch:
     print("✗ a category tap no longer LANDS in the room (prd §663).")
     sys.exit(1)
-# THE SEQUENCING (prd §668): the land comes first, the folder's spring follows
-# it inside a generation-guarded sleep of the flight's own length. A folder
-# sprung in the same frame as the deal is the stutter this fixed.
-land_at = branch.find("go(to: label)")
+# THE SEQUENCING (prd §668, re-based by §671): the land comes first, the
+# folder's spring follows it inside a generation-guarded wait — past the
+# ROOM'S MOUNT since §671 (the tap lands on its own frame, so there is no
+# flight to wait past), capped at the flight's length. A folder sprung in the
+# same frame as the room's build is the stutter §668 fixed.
+land_at = branch.find("go(to: label, landNow: true)")
 spring_at = branch.find("chrome.openFolder = .category(label)")
 if land_at < 0 or spring_at < 0:
     print("✗ the category tap's land or its folder spring is missing from the branch (prd §668).")
@@ -348,11 +350,23 @@ if land_at > spring_at:
     print("✗ the folder springs before the room is dealt (prd §668) — the spring, the card's")
     print("  flight and the room's mount would overlap again, which is the reported stutter.")
     sys.exit(1)
-if "milliseconds(Self.flightMs + 80)" not in branch or "flightGeneration == generation" not in branch:
-    print("✗ the folder's spring is no longer a generation-guarded wait PAST the flight")
-    print("  (prd §668) — level with it, this task and the landing are both due, this one")
-    print("  can run first, and the guard throws the folder away: the tap lands and no")
-    print("  folder ever comes up. Measured on the simulator.")
+if "roomMounted(after: mountsBefore" not in branch or "flightGeneration == generation" not in branch:
+    print("✗ the folder's spring is no longer a generation-guarded wait PAST the room's")
+    print("  mount (prd §668/§671) — level with the landing, this task and the landing are")
+    print("  both due, this one can run first, and the guard throws the folder away: the")
+    print("  tap lands and no folder ever comes up. Measured on the simulator (§668).")
+    sys.exit(1)
+# §671: a tap LANDS NOW. Every tap route passes `landNow: true`; the swipe's
+# `step` does not, because the finger already moved the page there.
+src = open("Casberi/Casberi/Shell/MainSurface.swift").read()
+if src.count("landNow: true") < 4:
+    print("✗ fewer than four tap routes land on their own frame (prd §671): the category")
+    print("  chip, the plain chip, a folder's venue pick and a room's own switcher all pass")
+    print("  `landNow: true` to `go(to:)`.")
+    sys.exit(1)
+if "RoomSnapshots.image(for: filter.source)" not in src or "departNow(to: target, look: look)" not in src:
+    print("✗ a tap no longer lands beneath a departing picture of the room being left")
+    print("  (prd §671) — the flight is back on every tap, and so is the 280ms of nothing.")
     sys.exit(1)
 GATE
 

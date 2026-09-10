@@ -1614,17 +1614,23 @@ struct MainSurface: View {
                     withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
                 }
                 let before = filter.source
-                go(to: label)
+                let mountsBefore = chrome.roomMounts
+                go(to: label, landNow: true)
                 if filter.source != before { ChipMemory.visited(filter.source) }
                 let generation = flightGeneration
                 Task { @MainActor in
-                    // **PAST the landing, not level with it** (measured on the
-                    // simulator: at exactly `flightMs` this task and `deal`'s
-                    // own landing task were both due, this one ran first,
-                    // `filter.source` was still the room being left, and the
-                    // guard below threw the folder away — the tap landed and no
-                    // folder ever came up).
-                    try? await Task.sleep(for: .milliseconds(Self.flightMs + 80))
+                    // **PAST the landing, not level with it** (§668, measured on
+                    // the simulator: level with it, this task and the landing
+                    // were both due, this one ran first, `filter.source` was
+                    // still the room being left, and the guard below threw the
+                    // folder away). Since §671 the landing is the tap's own
+                    // frame, so "past it" means past the ROOM'S MOUNT — the
+                    // new room's first body has run and painted — read off
+                    // `chrome.roomMounts`, capped at the flight's length plus
+                    // the old margin for a room whose mount never reports
+                    // (the fallback flight lands at `flightMs`, its mount
+                    // follows).
+                    try? await Self.roomMounted(after: mountsBefore, chrome: chrome)
                     // A second tap, a swipe or a deep link in the meantime owns
                     // the strip now — `deal` bumps the generation, and the
                     // category check covers every route that does not.
@@ -1650,8 +1656,8 @@ struct MainSurface: View {
             }
             let before = filter.source
             withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
-            go(to: label)
-                        if filter.source != before { ChipMemory.visited(filter.source) }
+            go(to: label, landNow: true)
+            if filter.source != before { ChipMemory.visited(filter.source) }
         }
     }
 
@@ -1978,7 +1984,7 @@ struct MainSurface: View {
         .onChange(of: chrome.sourceRequest) { _, request in
             guard let request else { return }
             chrome.sourceRequest = nil
-            go(to: request)
+            go(to: request, landNow: true)
             ChipMemory.visited(request)
             // A pick closes the folder, like a stack — a beat later, once the
             // ring has been seen arriving on the venue just chosen.
@@ -2038,7 +2044,7 @@ struct MainSurface: View {
     /// The one door every source switch walks through (prd §265): chip taps and
     /// swipes both come here, so direction, the tag reset, and tap-learning
     /// cannot drift between them.
-    private func go(to label: String) {
+    private func go(to label: String, landNow: Bool = false) {
         // Picking a source means the WHOLE of that source — a kind filter never
         // survives the tap. Two changes from the old rule (2026-08-01), both
         // forced by the "× Links" chip's removal, which was the only way out:
@@ -2065,7 +2071,7 @@ struct MainSurface: View {
             target = label
         }
         guard target != filter.source else { return }
-        deal(to: target)
+        deal(to: target, landNow: landNow)
     }
 
     /// The room the flight will land on, once the card is off the edge —
@@ -2089,8 +2095,30 @@ struct MainSurface: View {
     /// so a person flicking through three rooms is never ignored — the second
     /// flick pays the first room's build as a cut and starts from the room
     /// it was heading for, which is what a stack of cards does.
-    private func deal(to target: String) {
+    private func deal(to target: String, landNow: Bool = false) {
         settleFlight()
+        // **A TAP LANDS ON ITS OWN FRAME (prd §671, 2026-09-10, user: "the tab
+        // bar scrolling left to right is good too but when you tap on an icon
+        // it lags").** §651's amendment sent every route through the flight
+        // below — the card flies for `flightMs` and the room swaps AFTER it —
+        // which is right for a swipe (the finger already moved the page, the
+        // wait reads as follow-through) and wrong for a tap, where 280ms of
+        // nothing-changes is the lag reported, and no instrument could see
+        // it: the hitch meter counts dropped frames, not late ones, and
+        // `SwipeClock` starts inside `land`, after the wait. So a tap swaps
+        // the room NOW, beneath a picture of the room being left that flies
+        // off the top (`DepartingCard`) — the same carousel, the real room
+        // there from the first frame. The build runs in the tap's own
+        // transaction, before the card's spring starts its clock, so nothing
+        // is moving while it runs (§651's actual rule, kept). Falls back to
+        // the flight when no resting picture of this room exists (a room
+        // scrolled or left before `captureRestingLook` got to it) — a card
+        // that is a blank page with a mark would be a worse picture than a
+        // short wait.
+        if landNow, let look = RoomSnapshots.image(for: filter.source) {
+            departNow(to: target, look: look)
+            return
+        }
         let toward = direction(from: filter.source, to: target)
         let side: CGFloat = toward == .trailing ? -1 : 1
         let width = max(chrome.pagerFrame.width, 1)
@@ -2120,6 +2148,36 @@ struct MainSurface: View {
     }
 
     /// Land the pending room now, if one is in flight. Idempotent.
+    /// The picture of the room being left, flying off above the room that
+    /// has already landed beneath it. `id` is the deal's generation so a
+    /// superseded flight cannot clear a newer card.
+    struct DepartingCard: Equatable {
+        let id: Int
+        let image: UIImage
+        var x: CGFloat
+        static func == (a: DepartingCard, b: DepartingCard) -> Bool { a.id == b.id && a.x == b.x }
+    }
+    @State private var departing: DepartingCard?
+
+    private func departNow(to target: String, look: UIImage) {
+        let toward = direction(from: filter.source, to: target)
+        let side: CGFloat = toward == .trailing ? -1 : 1
+        let width = max(chrome.pagerFrame.width, 1)
+        flightGeneration &+= 1
+        let generation = flightGeneration
+        // Identity insertion: the landed room is simply there, under the card.
+        swipeCommit = true
+        departing = DepartingCard(id: generation, image: look, x: 0)
+        land(target)
+        withAnimation(DS.Motion.standard) { departing?.x = side * width }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(Self.flightMs + 120))
+            guard generation == flightGeneration else { return }
+            departing = nil
+            swipeCommit = false
+        }
+    }
+
     private func settleFlight() {
         guard let target = pendingLanding else { return }
         pendingLanding = nil
@@ -2306,10 +2364,9 @@ struct MainSurface: View {
         } else if chrome.openFolder == .doors {
             withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
         }
-        // THE FLIGHT FIRST, THE ROOM AFTER (PERF 2026-09-08) — `deal(to:)`,
-        // reached through `go(to:)` so a folded chip label resolves the same
-        // way a tap's does.
-        go(to: target)
+        // A room's own switcher is a tap: it lands now (prd §671), through
+        // `go(to:)` so a folded chip label resolves the same way a chip's does.
+        go(to: target, landNow: true)
     }
 
     /// How long the released card flies before the room underneath swaps —
@@ -2548,6 +2605,11 @@ struct MainSurface: View {
                         removal: swipeCommit
                             ? .identity
                             : .move(edge: slideEdge == .trailing ? .leading : .trailing)))
+                // The tap's departing picture (prd §671), above the room that
+                // landed beneath it on the tap's own frame.
+                if let card = departing {
+                    DepartingCardView(card: card)
+                }
             }
             // The swipe input, mounted ONCE at the shell — never inside the
             // transitioning subtree (see PageSwipeCatcher for the two designs
@@ -3093,6 +3155,54 @@ private struct PagerCover: View {
 
 /// `MainSurface.fallbackChips`'s memo — a class, never `@State` data, so a
 /// write from a body pass schedules nothing (PERF 2026-09-08).
+extension MainSurface {
+    /// Resolves once the room mounted after `mountsBefore`, or after the
+    /// flight's length plus the old folder margin — whichever comes first.
+    @MainActor
+    static func roomMounted(after mountsBefore: Int, chrome: ShellChrome) async throws {
+        var waited = 0
+        while chrome.roomMounts == mountsBefore, waited < flightMs + 80 {
+            try await Task.sleep(for: .milliseconds(16))
+            waited += 16
+        }
+        // One more frame so the mount's own paint is on screen before the
+        // folder's spring shares a frame with anything.
+        try await Task.sleep(for: .milliseconds(16))
+    }
+}
+
+/// The room being left, as a picture, flying off the edge the new room lies
+/// beyond — the tap's half of the carousel `PagerCover` draws for a swipe
+/// (prd §671). Cardness follows the travel the way §648 rules for a swipe:
+/// corners, scale and shadow grow with `abs(x) / width`, so the first frame
+/// is the room itself and not a card that popped. Under Reduce Motion it
+/// fades in place.
+private struct DepartingCardView: View {
+    let card: MainSurface.DepartingCard
+    @Environment(ShellChrome.self) private var chrome
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let width = max(chrome.pagerFrame.width, 1)
+        let p = min(1, abs(card.x) / width)
+        Image(uiImage: card.image)
+            .resizable()
+            .scaledToFill()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: reduceMotion ? 0 : 28 * p, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 28 * p, style: .continuous)
+                    .strokeBorder(.white.opacity(reduceMotion ? 0 : 0.18 * p), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(reduceMotion ? 0 : 0.35 * p), radius: 24, y: 8)
+            .scaleEffect(reduceMotion ? 1 : 1 - 0.06 * p)
+            .offset(x: reduceMotion ? 0 : card.x)
+            .opacity(reduceMotion ? 1 - p : 1)
+            .allowsHitTesting(false)
+            .transition(.identity)
+    }
+}
+
 final class ChipFallbackBox {
     var value: (labels: [String], venues: [String: [String]], sources: [String])?
 }

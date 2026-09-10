@@ -137,6 +137,20 @@ struct DiagnosticsScreen: View {
         .navigationTitle(Text("Diagnostics"))
         .navigationBarTitleDisplayMode(.inline)
         .dsSheetDismiss { dismiss() }
+        // A Copy IN THE BAR (user, 2026-09-10: "we need a proper copy button
+        // ON the diagnostics, not just long press and hold to copy") — the
+        // rows below scroll off with the readings; this one is on screen the
+        // whole time. System style, like Done beside it (the `dsSheetDismiss`
+        // rule). Disabled, not hidden, while the run is still writing.
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(copied ? String(localized: "Copied") : String(localized: "Copy")) {
+                    copyTranscript()
+                }
+                .tint(DS.tint)
+                .disabled(running || lines.isEmpty)
+            }
+        }
         .task { await run() }
     }
 
