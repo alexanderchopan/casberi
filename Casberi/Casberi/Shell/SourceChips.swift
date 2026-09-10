@@ -1455,16 +1455,25 @@ private struct SelectionTravel<S: View>: View {
         } else {
             shape
                 .matchedGeometryEffect(id: ChipSelection.id, in: ns)
-                // ONLY a change that ARRIVED animated is re-pinned to the
-                // glide (prd §670). The first cut of §667 rewrote EVERY
-                // transaction reaching this shape — including the fold's
-                // un-animated write on every scroll frame — so while the dock
-                // folded, the fill and the ring were re-sprung 60–120 times a
-                // second and trailed the tile they sit on by up to 0.28s. A
-                // nil animation stays nil: the shape moves with its chip.
-                .transaction { t in
-                    if t.animation != nil { t.animation = DS.Motion.glide }
-                }
+                // **THE SELECTION DOES NOT TRAVEL (prd §675, user: "the active
+                // indicator still slides", seen frame by frame on the
+                // simulator).** `matchedGeometryEffect` interpolates POSITION
+                // AND SHAPE, so the fill did not slide so much as deform: over
+                // ~5 frames the blue circle on "All" stretched, thinned and
+                // re-formed as a rounded rect on "Wallet", passing through
+                // shapes neither chip has. §667 asked for travel without
+                // overshoot and got it; what a tab bar actually wants is no
+                // travel at all — the indicator IS on the chip you touched, on
+                // the frame you touch it.
+                //
+                // The effect STAYS, and that is the point: it is what keeps
+                // one selection object rather than two blinking fills (the
+                // 2026-07-14 ruling), and it is what carries the shape from
+                // circle to capsule to tile correctly. Only its ANIMATION
+                // goes. A nil animation still leaves the fold's un-animated
+                // per-frame write untouched, which is §673's whole finding, so
+                // that fix survives this one.
+                .transaction { t in t.animation = nil }
         }
     }
 }

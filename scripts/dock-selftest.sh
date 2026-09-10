@@ -196,19 +196,21 @@ grep -q 'struct SelectionTravel' "$TMP/chips.nc" \
   || { echo "✗ SelectionTravel is gone — the selection has no single object to travel as."; fail=1; }
 [ "$(grep -c 'SelectionTravel(ns: ' "$TMP/chips.nc")" -ge 2 ] \
   || { echo "✗ the fill and the ring no longer both travel through SelectionTravel."; fail=1; }
-grep -q 't.animation = DS.Motion.glide' "$TMP/chips.nc" \
-  || { echo "✗ the selection's travel is no longer pinned to DS.Motion.glide — it would ride a"; \
-       echo "  tap's folder spring or a landing's standard spring and overshoot the tile (prd §667)."; fail=1; }
-# …AND ONLY AN ANIMATED CHANGE IS RE-PINNED (prd §673). §667's first cut rewrote
-# EVERY transaction reaching the shape, the fold's un-animated per-frame write
-# included, so the fill and the ring were re-sprung on every scroll frame and
-# trailed their tile by up to 0.28s while the dock folded. A nil animation
-# must stay nil.
-grep -q 'if t.animation != nil { t.animation = DS.Motion.glide }' "$TMP/chips.nc" \
-  || { echo "✗ SelectionTravel no longer guards its glide on t.animation != nil — the fold's"; \
-       echo "  un-animated per-frame write would re-spring the selection every frame (prd §673)."; fail=1; }
-grep -q '\$0.animation = DS.Motion.glide' "$TMP/chips.nc" \
-  && { echo "✗ the unconditional transaction rewrite is back on the selection (prd §673)."; fail=1; }
+# THE SELECTION DOES NOT TRAVEL (prd §675). §667 pinned the fill's and ring's
+# travel to a glide and §673 guarded that on an animated transaction; both were
+# about HOW it moved. It does not move: `matchedGeometryEffect` interpolates
+# shape as well as position, so the fill deformed from one chip's circle into
+# the next chip's tile through shapes neither has, which is what "the active
+# indicator still slides" named. The effect stays — it is the one selection
+# object — and its animation is nil.
+grep -q '.transaction { t in t.animation = nil }' "$TMP/chips.nc" \
+  || { echo "✗ SelectionTravel animates again (prd §675) — the fill would deform between"; \
+       echo "  chips instead of being on the one you touched."; fail=1; }
+grep -q 'matchedGeometryEffect(id: ChipSelection.id' "$TMP/chips.nc" \
+  || { echo "✗ SelectionTravel lost its matchedGeometryEffect — the selection becomes two"; \
+       echo "  blinking fills rather than one object (2026-07-14)."; fail=1; }
+grep -qE 't\.animation = DS\.Motion\.glide|\$0\.animation = DS\.Motion\.glide' "$TMP/chips.nc" \
+  && { echo "✗ the selection is re-pinned to a spring again (prd §675)."; fail=1; }
 # THE STRIP'S BODY DOES NOT READ THE BRIDGE STORE (prd §673). `bridges.bridges`
 # is written twice per landing sync; a read in `chip(_:)` rebuilt all eleven
 # chips per write. The broken-seat ring and the spoken label are leaves.
