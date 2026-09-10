@@ -664,6 +664,23 @@ struct FeedScreen: View {
     /// Non-nil while the last-account confirm sits open for a vibenet
     /// "Stop watching" tap — see `vibenetUnwatch`/`commitVibenetUnwatch`.
     @State private var removingLastVibenet: String?
+    /// Non-nil while the vibenet naming alert sits open — the address it names
+    /// (prd §669). On the SCREEN rather than the card for the reason the card's
+    /// `onRename` gives: three shapes of that card offer "Name this account…"
+    /// and only one of them ever drew the alert, so the verb worked or did
+    /// nothing depending on which one you long-pressed.
+    @State private var renamingVibenet: String?
+    /// The naming alert's field — a text-entry alert needs its text in `@State`.
+    @State private var vibenetNameDraft = ""
+
+    /// "Name this account…" from any of the vibenet card's long-presses.
+    /// Seeded with the name it already has, so the alert opens on the current
+    /// answer rather than an empty box that reads as a fresh address.
+    private func vibenetRename(_ address: String) {
+        DSHaptic.tap()
+        vibenetNameDraft = VibenetWatch.shared.name(for: address) ?? ""
+        renamingVibenet = address
+    }
 
     /// "Stop watching" from the card's own long-press (prd §472's guard,
     /// copied from `VibenetAddressBookScreen.unwatch`): the ordinary case
@@ -6008,6 +6025,30 @@ struct FeedScreen: View {
         } message: {
             Text(String(localized: "It's the only account you watch, so vibenet disconnects: the chip leaves the source strip, and the address leaves your Address book unless it's also a named account on another network."))
         }
+        // The vibenet card's other long-press verb (prd §669). One alert for
+        // every shape of that card — the roster row, the one-account detail
+        // and the lead row each raise it through `onRename`, so the verb
+        // cannot work in one shape and do nothing in another again.
+        //
+        // A MODIFIER rather than a fourth presentation spelled out inline:
+        // this chain already carries a sheet, a translation presentation and
+        // two dialogs, and a text-entry alert's three nested builders inside
+        // one expression this size is how a body stops type-checking (the
+        // `KeyboardWalk` split's own lesson, one file over).
+        .modifier(VibenetNameAlert(address: $renamingVibenet,
+                                   draft: $vibenetNameDraft,
+                                   onSave: commitVibenetName))
+    }
+
+    /// Saves the name a vibenet account was just given (prd §669).
+    ///
+    /// `refreshRooms()` because the name is what every row of that room prints
+    /// and the room is a memoised VALUE — without it the alert closes onto the
+    /// old word and stays there until some unrelated change moves the head. It
+    /// moves the head and rains nothing (§655): naming is not an arrival.
+    private func commitVibenetName(_ address: String, _ name: String) {
+        VibenetWatch.shared.setName(name, for: address)
+        chrome.refreshRooms()
     }
 
     // MARK: - Shaped sections (one source in force = its native shape)
@@ -6322,10 +6363,15 @@ struct FeedScreen: View {
                     // `VibenetAddressBookScreen.unwatch` including the last-
                     // account confirm, then re-composes and bumps
                     // `chrome.refreshPulse` the same way `onWatched` already
-                    // does below. `onRename` stays inert (its default
-                    // no-op) — a rename needs a text-entry alert that belongs
-                    // on the setup screen, not on this card, and nobody has
-                    // reported that one as broken. `onOpen` is left NIL here
+                    // does below. `onRename` IS WIRED HERE TOO, and for the
+                    // same reason one release later (prd §669, user: "long
+                    // press ... offer to name this address but when i click it
+                    // nothing happens"): it shipped inert on the strength of
+                    // "nobody has reported that one as broken", which is what
+                    // this comment used to say and is not a test. The alert is
+                    // this screen's (`vibenetRename`), because the card draws
+                    // that verb in three shapes and could host it in one.
+                    // `onOpen` is left NIL here
                     // (2026-08-24,
                     // corrected — see `VibenetRoomCard`'s own header doc):
                     // Wallet's own unscoped room has no per-wallet door
@@ -6384,6 +6430,7 @@ struct FeedScreen: View {
                                         }
                                     },
                                     onRequestWatch: { feedSheet = .vibenetWatch },
+                                    onRename: vibenetRename,
                                     onOpenKeys: { newKeyIDs in
                                         feedSheet = .vibenetKeys(room.items, newKeyIDs: newKeyIDs)
                                     },
@@ -12271,6 +12318,42 @@ struct FeedScreen: View {
 /// Guarded on `isLive` at the top of the body, like `ThingShareLink` below
 /// it: a menu can be up when a heal's delete lands, and SwiftUI re-evaluates
 /// a leaf's body on the model's own observation (liveness corollary 5).
+/// The vibenet card's naming alert (prd §669) — ONE alert for every shape of
+/// that card.
+///
+/// It used to live on the card, on the one branch that could present it, while
+/// two of the three menus offering "Name this account…" called an inert
+/// closure. So the same verb worked or did nothing depending on which shape
+/// you long-pressed, which is what the user reported: *"long press on accounts
+/// … offer to name this address but when i click it nothing happens"*.
+///
+/// A `ViewModifier` rather than an inline `.alert` on `FeedScreen`'s chain:
+/// three nested view builders inside an expression that size is how a body
+/// stops type-checking.
+private struct VibenetNameAlert: ViewModifier {
+    @Binding var address: String?
+    @Binding var draft: String
+    /// (address, name) — the save, so this modifier owns no store and no
+    /// refresh, only the field.
+    let onSave: (String, String) -> Void
+
+    func body(content: Content) -> some View {
+        content.alert(String(localized: "Name this account"),
+                      isPresented: Binding(get: { address != nil },
+                                           set: { if !$0 { address = nil } })) {
+            TextField(String(localized: "Name"), text: $draft)
+            // An empty field CLEARS the name rather than storing it — the
+            // contract `VibenetWatch.setName` states and `AddressBook` keeps,
+            // so there is no separate "remove name" verb to look for.
+            Button(String(localized: "Save")) {
+                if let address { onSave(address, draft) }
+                address = nil
+            }
+            Button(String(localized: "Cancel"), role: .cancel) { address = nil }
+        }
+    }
+}
+
 private struct RowVerbMenu: View {
     let thing: Thing
     /// The room the row is drawn in — the `perfAccum` bracket only. The rooms

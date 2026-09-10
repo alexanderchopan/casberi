@@ -58527,34 +58527,6 @@
         }
       }
     },
-    "Everything you need, in one place." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Todo lo que necesitas, en un solo lugar."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "必要なものを、ひとつの場所に。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "필요한 모든 것을 한곳에."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你需要的一切，都在一处。"
-          }
-        }
-      }
-    },
     "Everything you need, in one place. Read it all together, or one app at a time. Ask your agents about any of it. This is a demo." : {
       "localizations" : {
         "es" : {
@@ -76814,40 +76786,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "新建分组…"
-          }
-        }
-      }
-    },
-    "New here? Start here" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New here? Start here"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "¿Nuevo por aquí? Empieza aquí"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "はじめての方へ"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "처음이신가요? 여기서 시작하세요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "初来乍到？从这里开始"
           }
         }
       }
@@ -128507,34 +128445,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此操作的作用"
-          }
-        }
-      }
-    },
-    "What you can do" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Qué puedes hacer"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "できること"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "할 수 있는 것"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "你可以执行的操作"
           }
         }
       }

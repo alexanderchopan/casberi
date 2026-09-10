@@ -24,7 +24,6 @@ struct SettingsScreen: View {
     @State private var rungBounce = 0
     @State private var diagnosticsOpen = false
     @State private var languageOpen = false
-    @State private var howItWorksOpen = false
     @State private var chipOrderOpen = false
     @State private var detail: AccountDetail?
 
@@ -77,7 +76,6 @@ struct SettingsScreen: View {
             }
             .sheet(item: $detail) { AccountDetailSheet(detail: $0) }
             .sheet(isPresented: $languageOpen) { LanguagePickerSheet() }
-            .sheet(isPresented: $howItWorksOpen) { HowItWorksSheet().dsNavSheet() }
             .sheet(isPresented: $chipOrderOpen) {
                 NavigationStack { CategoryOrderSheet() }.dsNavSheet()
             }
@@ -137,9 +135,6 @@ struct SettingsScreen: View {
             .onAppear {
                 if UserDefaults.standard.bool(forKey: "openDiagnostics") {
                     diagnosticsOpen = true
-                }
-                if UserDefaults.standard.bool(forKey: "openHowItWorks") {
-                    howItWorksOpen = true
                 }
                 if UserDefaults.standard.bool(forKey: "openChipOrder") {
                     chipOrderOpen = true
@@ -331,18 +326,12 @@ struct SettingsScreen: View {
                     valueColor: keyed ? DS.confirm : DS.textTertiary,
                     badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
                     action: { detail = .key }),
-            // The one persistent explainer of the model (2026-07-11) — for
-            // a new person after the coach lines retire. NOT "About", which
-            // reads as version/legal.
-            //
-            // "What you can do" since §528 (2026-08-29), moved in step with the
-            // sheet's own header so the screen has ONE name rather than two.
-            // It was "How it works", which named a mechanism over content that
-            // is three things you do.
-            RowSpec(title: "What you can do",
-                    value: String(localized: "New here? Start here"),
-                    badge: ("questionmark.circle", DS.textSecondary),
-                    action: { howItWorksOpen = true }),
+            // "What you can do" (2026-07-11 as "How it works") sat here until
+            // 2026-09-10 — a sheet holding one sentence, reached from a row
+            // saying "New here? Start here". Deleted with the sheet (user: "it's
+            // not helpful", prd §672): the intro cover says the sentence over
+            // the demo on first launch, and a settings row is not the place to
+            // say it again.
             // Dev-facing on purpose: TestFlight reports become a screenshot
             // of on-device facts instead of a description (2026-07-09).
             RowSpec(title: "Diagnostics",

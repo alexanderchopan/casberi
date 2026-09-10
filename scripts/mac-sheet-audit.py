@@ -76,7 +76,7 @@ STRUCT = re.compile(r"^\s*(?:public\s+|private\s+|fileprivate\s+|internal\s+)?st
 NO_DETENT_SHEETS = {
     "AddressBookViews.swift": "AddressCard — presented from the thing sheet's face tap AND the wallet book, both inside a switch, so the size is declared in the view rather than twice at two call sites.",
     "WalletbeatCardScreen.swift": "WalletbeatCardScreen — presented from the Walletbeat room and from its directory; a report you read, so it takes the page size.",
-    "AccountScreen.swift": "Diagnostics and How-it-works, both plain sheets with no sizing of their own; sized at the call site because neither view is presented anywhere else.",
+    "AccountScreen.swift": "Diagnostics, a plain sheet with no sizing of its own; sized at the call site because the view is presented nowhere else. (How-it-works sat beside it until 2026-09-10, prd §668.)",
     "BridgeRouting.swift": "ConnectFormSheet — the sheet that got REPORTED (2026-08-20, \"way too small, user has to scroll to read them in a tiny box\"). It had no detents and no sizing at all, so on iPad it was the default ~540x620 box holding a whole setup screen. The first cut of this audit missed it precisely because Mac pushes it rather than raising it, so it is not a sheet there — which is the reason this file checks the IDIOM-gated helpers rather than anything Mac-specific.",
 }
 

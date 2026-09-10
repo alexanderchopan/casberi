@@ -571,6 +571,19 @@ step "Catalog mode audit"
 "$ROOT/scripts/catalog-mode-audit.py" || fail "a seat's catalogue verb and its setup screen's mode disagree — see the output above"
 print -P "%F{green}✓ catalog mode audit%f"
 
+# A control that calls a closure property nothing ever supplies (prd §669). The
+# no-op default (`var onRename: (String) -> Void = { _ in }`) compiles, renders
+# and does nothing for every call site there will ever be — §83's dead control
+# with a type signature in front of it, shipped three times in one file. The
+# last of them was long-pressed by the user and reported as "when i click it
+# nothing happens". A forward under the property's own name does NOT count as
+# supplying it; a trailing closure does.
+step "Dead-closure audit"
+"$ROOT/scripts/dead-closure-audit.py" --self-test >/dev/null \
+  || fail "the dead-closure audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/dead-closure-audit.py" || fail "a control calls a closure nothing supplies — see the output above"
+print -P "%F{green}✓ dead-closure audit%f"
+
 # Keeps the "What this app reaches" registry complete (prd §205): every host
 # the app calls must be disclosed in NetworkReach.swift or the explicit
 # non-reach denylist — an undisclosed fetch host fails here.

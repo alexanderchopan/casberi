@@ -160,7 +160,19 @@ struct VibenetRoomCard: View {
     /// lives on the SCREEN (a text-entry alert needs `@State` a card
     /// re-composed from a value type shouldn't own), so this just reports
     /// which address was asked for.
-    var onRename: (String) -> Void = { _ in }
+    ///
+    /// **NO DEFAULT, and that is the whole of prd §669** (user, 2026-09-10:
+    /// *"long press on accounts in wallet and devnet silhouette rails offer to
+    /// name this address but when i click it nothing happens"*). It shipped as
+    /// `= { _ in }` and NO CALL SITE EVER PASSED IT, so all three menus
+    /// offering "Name this account…" were §83 dead controls. It is the
+    /// identical failure §472's "Stop watching" had one property over —
+    /// wired 2026-08-30 after the same report — and this one was left inert
+    /// deliberately, on the strength of "nobody has reported that one as
+    /// broken". Somebody has. A no-op default is a promise the compiler will
+    /// never ask anyone to keep, so this one is required: a future call site
+    /// cannot forget it in silence.
+    var onRename: (String) -> Void
     /// nil in the FEED room — a roster row must never navigate there (see
     /// this type's own header doc), so the whole roster draws as a plain
     /// stat block instead (`stackedRoom`'s cards, no faces, no
@@ -269,9 +281,12 @@ struct VibenetRoomCard: View {
     // `onOpenBook` was HERE and is deleted with the screen it opened
     // (prd §545) — the roster's verbs are on the rows in this card now.
 
-    /// The naming alert — a text-entry alert needs its text in `@State`.
-    @State private var renamingAddress: String?
-    @State private var renameText = ""
+    // The naming alert's `@State` was HERE and is gone (prd §669). It hosted
+    // ONE of the three menus that offer "Name this account…" — the roster
+    // row's — while the other two called an inert `onRename`, so the same
+    // verb worked or did nothing depending on which shape of this card you
+    // long-pressed. The alert now lives on the screen, once, for all three:
+    // see `onRename`.
     /// Set only when the address being unwatched is the LAST one, which is
     /// what raises the confirm. See `unwatch`.
     @State private var removingLast: String?
@@ -2613,24 +2628,17 @@ struct VibenetRoomCard: View {
     @ViewBuilder
     private var accountsCard: some View {
         accountsCardBody
-            // The roster's two presentations, on the card that owns the rows
-            // (prd §545). ONE alert and ONE dialog for the whole list rather
-            // than per row: a presentation declared inside a `ForEach` resolves
-            // to the same presenting controller for every row, which is the
-            // half-open-then-close bug this file's own `onOpenKeySheet` comment
-            // records paying for three times.
-            .alert(String(localized: "Name this account"),
-                   isPresented: Binding(get: { renamingAddress != nil },
-                                        set: { if !$0 { renamingAddress = nil } })) {
-                TextField(String(localized: "Name"), text: $renameText)
-                Button(String(localized: "Save")) {
-                    if let address = renamingAddress {
-                        VibenetWatch.shared.setName(renameText, for: address)
-                    }
-                    renamingAddress = nil
-                }
-                Button(String(localized: "Cancel"), role: .cancel) { renamingAddress = nil }
-            }
+            // The roster's ONE remaining presentation, on the card that owns
+            // the rows (prd §545) — one dialog for the whole list rather than
+            // per row: a presentation declared inside a `ForEach` resolves to
+            // the same presenting controller for every row, which is the
+            // half-open-then-close bug this file's own `onOpenKeySheet`
+            // comment records paying for three times.
+            //
+            // The naming alert that sat beside it moved to the SCREEN (prd
+            // §669). It could only ever be presented from this scope, and two
+            // of the three menus offering that verb are drawn in shapes that
+            // never reach this card at all.
             .confirmationDialog(String(localized: "Stop watching this account?"),
                                 isPresented: Binding(get: { removingLast != nil },
                                                      set: { if !$0 { removingLast = nil } }),
@@ -2890,10 +2898,9 @@ struct VibenetRoomCard: View {
         }
         .contextMenu {
             Button {
-                renameText = VibenetWatch.shared.name(for: item.address) ?? ""
-                renamingAddress = item.address
+                onRename(item.address)
             } label: {
-                Label(String(localized: "Name this account"), systemImage: "pencil")
+                Label(String(localized: "Name this account…"), systemImage: "pencil")
             }
             Button(role: .destructive) {
                 unwatch(item.address)

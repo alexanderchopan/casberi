@@ -42,9 +42,13 @@ struct Composer: View {
     /// bubble's card surface and morph so the field, chips, and tools read as
     /// native page content, not a stranded card.
     var embedded: Bool = false
-    /// Reports the content's natural height (embedded only) so the hosting sheet
-    /// can hug it — no stranded empty space.
-    var onHeight: (CGFloat) -> Void = { _ in }
+    // `onHeight` was HERE and is deleted (prd §669). It reported the content's
+    // natural height so a hosting sheet could hug it, defaulted to a no-op,
+    // and NO CALL SITE EVER PASSED IT — including the one embedded host there
+    // is. §581 then made this surface FILL rather than hug, so the reading had
+    // nothing left to be for either. What it still cost was a
+    // `.onGeometryChange` firing on every layout of the agent surface to hand
+    // a number to nobody.
     /// Answers a query, returning the final AnswerStream document (engine
     /// grammar). While a synthesis answer streams, it calls `onProseDoc` with
     /// each growing doc so prose renders live; lookups and the non-AI fallback
@@ -1774,10 +1778,6 @@ struct Composer: View {
         // instead of standing them on the bottom edge. Filling is what makes
         // the paper's `Spacer` push the foot down.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        // Report the content's natural height so the hosting sheet hugs it.
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
-            if embedded { onHeight(h) }
-        }
         // The bubble's surface, restructured (2026-07-11, device report:
         // keyboard up, no bubble — this time on Home; prd 44's underlay
         // didn't hold). Root cause: glassEffect renders the whole modified
