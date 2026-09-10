@@ -1562,14 +1562,38 @@ struct MainSurface: View {
             // Compared against the LABEL, so re-tapping an open folder shuts
             // it — including the folder of the room you are standing in, which
             // is the "make the second row go away" the amendment started from.
+            // **A TAP LANDS, AND THE FOLDER SPRINGS UP OVER THE ROOM IT
+            // LANDED IN (prd §663, 2026-09-09, user: "should we make it so if
+            // you click another chip it goes to the first thing in that room
+            // … or keep it the way it is now, where it only pulls up the
+            // icons" → "do it").** This overturns the paragraph above, and
+            // the reason is the honesty rule: a tap that changes nothing on
+            // screen is a two-tap navigation dressed as one, and the strip is
+            // also the app's tab bar, where a tap switches. The Mac-dock
+            // reading ("a folder tap doesn't switch what is on your screen")
+            // was right about the FOLDER and wrong about the row: this is a
+            // navigation strip that happens to have folders, not a dock of
+            // folders. So: ANOTHER category's chip lands in that category's
+            // room — `go(to:)` resolves the landing (anchor, else where you
+            // left off, else the best-ranked member; §354, which VoiceOver
+            // already speaks as "opens on X") — and opens its folder so the
+            // venues are there to refine with. The chip of the category you
+            // are STANDING IN keeps the toggle: its tap opens or shuts the
+            // folder and moves nothing, since there is nowhere new to go.
             if CategoryFold.isCategory(label) {
-                let opening = chrome.openFolder != .category(label)
+                let standingHere = BridgeCatalog.category(forSource: filter.source) == label
+                let opening = standingHere ? chrome.openFolder != .category(label) : true
                 // The spring is felt when it opens, not when it shuts
                 // (2026-09-06, the haptic grammar) — the chip's own tick
                 // already marked the tap; this is the folder landing.
                 if opening { DSHaptic.spring() }
                 withAnimation(DS.Motion.folder) {
                     chrome.openFolder = opening ? .category(label) : nil
+                }
+                if !standingHere {
+                    let before = filter.source
+                    go(to: label)
+                    if filter.source != before { ChipMemory.visited(filter.source) }
                 }
                 return
             }
@@ -2228,10 +2252,14 @@ struct MainSurface: View {
         // like a chip tick (2026-09-06, the haptic grammar).
         DSHaptic.fly()
         // A swipe closes an open folder (spec 2026-09-05): you have left the
-        // room it was about. A venue PICK does not — that goes through
-        // `go(to:)` directly and keeps the folder open so the ring is seen
-        // arriving.
-        if chrome.openFolder != nil {
+        // room it was about — **unless the step stays INSIDE that folder's
+        // category (prd §663)**, in which case it is the venue pick the
+        // folder exists for, made with a swipe, and the ring is seen arriving
+        // on the next venue exactly as a tap's would be.
+        if case .category(let open) = chrome.openFolder,
+           BridgeCatalog.category(forSource: target) != open {
+            withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
+        } else if chrome.openFolder == .doors {
             withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
         }
         // THE FLIGHT FIRST, THE ROOM AFTER (PERF 2026-09-08) — `deal(to:)`,
@@ -2247,23 +2275,45 @@ struct MainSurface: View {
 
     /// The chip one step along from the room you are in, or nil at either end.
     ///
-    /// Walks CHIPS, not sources (2026-08-10): the folded market seats are one
-    /// stop, so a swipe crosses the whole cluster in one step and moving
-    /// between venues is the folder's job. Stepping through the members
-    /// instead would make a five-venue fold five swipes wide while showing
-    /// one chip, which is the strip lying about how far away things are.
+    /// **Walks ROOMS, in the dock's order (prd §663, 2026-09-09, user:
+    /// "should swipe swipe between categories as it does now or individual
+    /// rooms" → "individual rooms").** From 2026-08-10 until today this
+    /// walked CHIPS — a folded category was one stop, on the reasoning that
+    /// stepping through members would make a five-venue fold five swipes
+    /// wide while showing one chip. That reasoning assumed the fold's
+    /// members were interchangeable, and they are the opposite: the feed
+    /// always shows ONE room, and a swipe from GitHub that landed on Photos
+    /// skipped Linear, Jira and Slack — the rooms a person in GitHub most
+    /// wants next. Neighbours inside a category are related; neighbours
+    /// across categories are not. So the walk is every chip in strip order,
+    /// each category expanded to its present venues in the folder's own
+    /// displayed order (`CategoryFold.scopes`, the order the venues spring
+    /// up in, so the card's travel and the folder's ring agree), and a swipe
+    /// past a category's last venue crosses into the next category's first.
+    /// The lit chip follows by construction (`activeChip` is derived from
+    /// `filter.source`), so the dock is the map of the walk. Crossing the
+    /// whole corpus takes more swipes than nine; nobody crosses the corpus
+    /// by swiping — a flick on the dock and a tap is how you jump far.
     private func neighbour(_ delta: Int) -> String? {
-        var labels = chipLabels
-        // The room you are standing in may have no chip at all — a deep link
-        // (casberi://feed/source/Gmail), a bridge connected but not yet synced,
-        // or deleting the last row in the room you're in. It still has to be
-        // somewhere in the walk, or the swipe silently dies exactly there and
+        var rooms: [String] = []
+        for label in chipLabels {
+            if CategoryFold.isCategory(label) {
+                let present = Set(categoryVenues[label] ?? [])
+                rooms.append(contentsOf: CategoryFold.scopes(category: label, present: present))
+            } else {
+                rooms.append(label)
+            }
+        }
+        // The room you are standing in may be in no walk at all — a deep
+        // link (casberi://feed/source/Gmail), a bridge connected but not yet
+        // synced, or deleting the last row in the room you're in. It still
+        // has to be somewhere, or the swipe silently dies exactly there and
         // the only way out is the strip. This is the guarantee the retired
         // `feedLabels` used to make for the pager's pages, kept.
-        if !labels.contains(activeChip) { labels.append(activeChip) }
-        guard let idx = labels.firstIndex(of: activeChip),
-              labels.indices.contains(idx + delta) else { return nil }
-        return labels[idx + delta]
+        if !rooms.contains(filter.source) { rooms.append(filter.source) }
+        guard let idx = rooms.firstIndex(of: filter.source),
+              rooms.indices.contains(idx + delta) else { return nil }
+        return rooms[idx + delta]
     }
 
     /// One chip's pitch in the strip — how far the ring travels for one whole
