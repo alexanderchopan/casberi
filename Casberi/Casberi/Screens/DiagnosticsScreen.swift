@@ -27,6 +27,12 @@ struct DiagnosticsScreen: View {
     /// so a Release build with this on behaves exactly like the Xcode-attached
     /// procedure in `docs/perf-spec.md` — with nothing attached.
     @State private var measuring = PerfReadings.measuring
+    /// The Copy door's landed state (prd §670): the row's own glyph and word
+    /// say "Copied" for two seconds, the way `ENSRenewCard` does — this
+    /// screen is a SHEET whose environment may not carry `ShellChrome`, so a
+    /// `chrome.flash` here would be the same trap the optional `filter` above
+    /// exists to avoid.
+    @State private var copied = false
 
     var body: some View {
         List {
@@ -57,8 +63,47 @@ struct DiagnosticsScreen: View {
                     .dsListCardRow()
                 }
             } footer: {
-                Text("Screenshot this screen and send it back — every line is a real result from this device.")
+                Text("Every line is a real result from this device. Copy or share it below and send it back.")
                     .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            }
+            // — The reading leaves the phone (prd §670, 2026-09-10) —
+            //
+            // Until this section existed the footer said "screenshot this
+            // screen", and a screenshot is where every device number this
+            // app ever produced went to die: nothing in the repo holds a
+            // single reading per shipped build, so "it got laggy" arrived as
+            // a sentence and was chased on a simulator where it had never
+            // reproduced. Two doors, both over the SAME transcript: Copy
+            // (expiring, cross-device — `DSPasteboard.copy`, because pasting
+            // on the Mac is the point) and the system share sheet. Drawn only
+            // once the run has finished (§83: a door over an empty or
+            // half-written transcript is a control that copies the wrong
+            // thing, which is worse than one that is not there yet).
+            if !running, !lines.isEmpty {
+                Section {
+                    DSDoorRow(icon: copied ? "checkmark" : "doc.on.doc",
+                              label: copied ? "Copied" : "Copy readings") {
+                        copyTranscript()
+                    }
+                    .dsListCardRow()
+                    ShareLink(item: transcript, subject: Text("Casberi diagnostics")) {
+                        HStack(spacing: DS.Space.s2) {
+                            Image(systemName: "square.and.arrow.up")
+                                .dsGlyph(13, weight: .regular)
+                                .foregroundStyle(DS.textSecondary)
+                                .frame(width: 18, alignment: .center)
+                            Text("Share readings")
+                                .dsText(.callout15)
+                                .foregroundStyle(DS.textPrimary)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, DS.Space.s1)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .dsHover()
+                    .dsListCardRow()
+                }
             }
             // The switch sits BELOW the readings it produces, so the line
             // above it ("Stalls are not being measured — turn on …") points at
@@ -96,6 +141,27 @@ struct DiagnosticsScreen: View {
     }
 
     private func log(_ s: String) { lines.append(s) }
+
+    /// The whole screen as text, one line per row, headed by the device and
+    /// the moment — so a pasted block from build 552 on an iPhone 15 Pro on
+    /// the 10th is distinguishable from the same lines a week later. The
+    /// first line under the head is already "Build x (y)" from `run()`.
+    private var transcript: String {
+        let when = Date().formatted(date: .abbreviated, time: .shortened)
+        let device = UIDevice.current.model + " · " + UIDevice.current.systemName
+            + " " + UIDevice.current.systemVersion
+        return (["Casberi diagnostics · \(when) · \(device)"] + lines).joined(separator: "\n")
+    }
+
+    private func copyTranscript() {
+        DSPasteboard.copy(transcript)
+        DSHaptic.tap()
+        copied = true
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            copied = false
+        }
+    }
 
     @MainActor
     private func run() async {
