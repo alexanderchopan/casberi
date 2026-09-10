@@ -658,44 +658,37 @@ struct SourceChips: View {
                         withAnimation(DS.Motion.press) { hoverX = nil }
                     }
                 }
-                // PRESS AND SLIDE, IN SWIFTUI'S OWN GRAMMAR (2026-09-09, user:
-                // "i've never been able to scrub it on my device. that has
-                // just never worked"). The scrub was a
-                // `UILongPressGestureRecognizer` added to SwiftUI's private
-                // hosting scroll view, found by walking superviews, delivering
-                // from an overridden `state` setter, with a second
-                // never-recognising recognizer riding along for the finger —
-                // verified on the simulator alone, and it never once began on
-                // a phone. A long press SEQUENCED before a drag is the
-                // arbitration the catcher was re-implementing by hand: the
-                // press fails on 10pt of travel, so a swipe is the scroll's; a
-                // lift before 0.4s is the chip's tap; and once the press has
-                // held, `scrollDisabled` below freezes the strip, so the drag
-                // that follows walks a STATIONARY row — the Mac dock's own
-                // picture, and the one the wave is for. Simultaneous with the
-                // chips' buttons rather than over them: a button that fires at
-                // the lift of a scrub is caught by `scrubbing` and
-                // `scrubCommittedAt` in its action, whichever of the two runs
-                // first. Locations arrive in the content space named above,
-                // the frame the chips are recorded in.
-                .simultaneousGesture(
-                    LongPressGesture(minimumDuration: 0.4, maximumDistance: 10)
-                        .sequenced(before: DragGesture(minimumDistance: 0,
-                                                       coordinateSpace: .named(Self.contentSpace)))
-                        .onChanged { value in
-                            guard case .second(true, let drag?) = value else { return }
-                            if scrubbing == nil { scrubBegan(at: drag.startLocation) }
-                            scrubMoved(at: drag.location)
-                        }
-                        .onEnded { value in
-                            // A lift after a held press with no move reported
-                            // still chose the chip under the finger.
-                            if case .second(true, let drag?) = value, scrubbing == nil {
-                                scrubBegan(at: drag.startLocation)
-                            }
-                            scrubEnded(commit: scrubbing != nil)
-                        }
-                )
+                // PRESS AND SLIDE IS A UIKIT LONG PRESS, INSTALLED THROUGH
+                // SWIFTUI'S OWN BRIDGE (prd §662g, 2026-09-09, user: "the dock
+                // does not scroll", "i cannot scroll on any of the icons they
+                // are all staying in place"). §660 wrote the scrub as a
+                // `LongPressGesture` SEQUENCED before a `DragGesture`, and it
+                // froze the strip's scroll dead — a flick did nothing and a
+                // slow drag became a scrub — measured on the simulator on
+                // build 543's own code, so the regression shipped in 543. A
+                // bare simultaneous `DragGesture` was tried next and froze it
+                // the same way. That is the STANDING GOTCHA, the one
+                // `MainSurface`'s pager records having measured ("froze
+                // vertical scrolling dead"): a SwiftUI drag on scroll content,
+                // simultaneous or not, takes the touch before the scroll
+                // view's pan can begin. The pager's answer was a UIKit pan;
+                // this is the same answer for the hold. A
+                // `UILongPressGestureRecognizer` coexists with a scroll view's
+                // pan by UIKit's own rules — travel past `allowableMovement`
+                // before `minimumPressDuration` fails the press and the pan
+                // has the swipe; a still finger recognises, its `.changed`
+                // states carry the finger as it slides, and `scrollDisabled`
+                // below holds the row STILL under it. Installed with
+                // `UIGestureRecognizerRepresentable` (iOS 18) — SwiftUI
+                // attaches it to this view's own backing and converts every
+                // location into this view's space, which is the content space
+                // named above. Not the deleted `DockScrubCatcher`: that walked
+                // superviews to find a private hosting scroll view and never
+                // fired on a phone; this asks nothing about the hierarchy.
+                .gesture(DockHold(
+                    began: { scrubBegan(at: $0) },
+                    moved: { scrubMoved(at: $0) },
+                    ended: { scrubEnded(commit: $0 && scrubbing != nil) }))
                 // `MainSurface.topInset` measures this strip's NATURAL height
                 // through a sibling `GeometryReader`; this pins the subtree to
                 // its own ideal height before that measurement sees it (a lazy
@@ -1654,4 +1647,71 @@ struct ScrollViewportSample: Equatable {
 /// Every chip's frame in the strip's content space — see `SourceChips.chipFrames`.
 final class ChipFrameBox {
     var frames: [String: CGRect] = [:]
+}
+
+/// The dock's hold, as UIKit's own long press (prd §662g) — see the
+/// `horizontalStrip` comment where it is attached for why a SwiftUI drag on
+/// this scroll's content is not an option. `minimumPressDuration` and
+/// `allowableMovement` are the 0.4s and 10pt the sequenced press used, so the
+/// feel is unchanged; what changed is who arbitrates against the scroll
+/// view's pan — UIKit, which knows how.
+private struct DockHold: UIGestureRecognizerRepresentable {
+    let began: (CGPoint) -> Void
+    let moved: (CGPoint) -> Void
+    /// `true` at a lift, `false` at a cancel.
+    let ended: (Bool) -> Void
+
+    /// The arbitration against the scroll view's pan, in UIKit's own terms:
+    /// the pan is REQUIRED TO WAIT for this press to fail. A finger that
+    /// travels fails the press at once (`allowableMovement`) and the pan has
+    /// its swipe with no delay a person can feel; a finger that holds
+    /// recognises, and a pan that was waiting on a press that succeeded can
+    /// never begin — so the row is still under the slide before
+    /// `scrollDisabled` has even re-rendered.
+    ///
+    /// **SIMULTANEOUS with everything else, declared HERE.** The bridge has one
+    /// attachment, `gesture(_:)`, and no `simultaneousGesture` form — so a
+    /// recognizer installed on the strip's content, an ANCESTOR of every chip
+    /// Button, loses SwiftUI's child-wins arbitration to the Button's own press
+    /// and never sees a touch (measured: no state at all reached the action).
+    /// SwiftUI surfaces its own gestures to this delegate as recognizers, so
+    /// UIKit's simultaneity is the `simultaneousGesture` the bridge lacks.
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                               shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            true
+        }
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                               shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
+            other is UIPanGestureRecognizer
+        }
+    }
+
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
+
+    func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
+        let hold = UILongPressGestureRecognizer()
+        hold.minimumPressDuration = 0.4
+        hold.allowableMovement = 10
+        hold.delegate = context.coordinator
+        #if DEBUG
+        NSLog("dockHold: installed")
+        #endif
+        return hold
+    }
+
+    func updateUIGestureRecognizer(_ recognizer: UILongPressGestureRecognizer, context: Context) {}
+
+    func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
+        // Local to the view this is attached to — the strip's content, the
+        // space every chip frame is recorded in.
+        let point = context.converter.localLocation
+        switch recognizer.state {
+        case .began: began(point)
+        case .changed: moved(point)
+        case .ended: ended(true)
+        case .cancelled, .failed: ended(false)
+        default: break
+        }
+    }
 }

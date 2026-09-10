@@ -208,13 +208,24 @@ grep -q 'private var leanPitch' "$TMP/chips.nc" \
 # phone ("i've never been able to scrub it on my device").
 [ -f "Casberi/Casberi/Shell/DockScrubCatcher.swift" ] \
   && { echo "✗ the UIKit scrub catcher is back — it never fired on a device (prd §660)."; fail=1; }
-grep -q 'LongPressGesture(minimumDuration: 0.4, maximumDistance: 10)' "$TMP/chips.nc" \
-  && grep -q 'sequenced(before: DragGesture' "$TMP/chips.nc" \
-  || { echo "✗ the dock lost its press-and-slide — a long press SEQUENCED before a drag is"; \
-       echo "  what makes a swipe the scroll's and a hold the scrub's."; fail=1; }
-grep -q 'simultaneousGesture' "$TMP/chips.nc" \
-  || { echo "✗ the scrub is not simultaneous with the chips' buttons — a gesture that takes"; \
-       echo "  the touch outright would break the ordinary tap."; fail=1; }
+# THE HOLD IS UIKIT'S OWN LONG PRESS, THROUGH SWIFTUI'S BRIDGE (prd §662g).
+# §660's `LongPressGesture.sequenced(before: DragGesture)` — and a bare
+# simultaneous `DragGesture` tried after it — FROZE THE STRIP'S SCROLL DEAD,
+# measured on the simulator on build 543's own code (a flick did nothing, a
+# slow drag became a scrub). That is the standing gotcha: a SwiftUI drag on
+# scroll content takes the touch before the scroll view's pan can begin. The
+# guard that pinned the sequenced pair therefore inverts: NO SwiftUI drag or
+# long press may be attached inside this strip at all.
+grep -q 'struct DockHold: UIGestureRecognizerRepresentable' "$TMP/chips.nc" \
+  && grep -q 'UILongPressGestureRecognizer()' "$TMP/chips.nc" \
+  && grep -q 'minimumPressDuration = 0.4' "$TMP/chips.nc" \
+  && grep -q 'allowableMovement = 10' "$TMP/chips.nc" \
+  && grep -q 'gesture(DockHold(' "$TMP/chips.nc" \
+  || { echo "✗ the dock's hold is no longer UIKit's long press through UIGestureRecognizerRepresentable"; \
+       echo "  (prd §662g) — the one arrangement measured to leave the scroll view its pan."; fail=1; }
+grep -qE 'DragGesture\(|LongPressGesture\(|sequenced\(before' "$TMP/chips.nc" \
+  && { echo "✗ a SwiftUI drag or long press is attached inside the dock's strip again — it"; \
+       echo "  freezes the scroll dead, measured on build 543 (prd §662g)."; fail=1; }
 grep -q 'scrollDisabled(scrubbing != nil)' "$TMP/chips.nc" \
   || { echo "✗ the strip still scrolls under a scrub — the wave needs a STATIONARY row, and"; \
        echo "  a hand-flipped isScrollEnabled once stuck off for a whole launch (2026-09-06)."; fail=1; }
