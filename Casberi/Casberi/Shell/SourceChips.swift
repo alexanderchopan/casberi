@@ -980,7 +980,12 @@ struct SourceChips: View {
             // Where a folder would spring from — published BEFORE the toggle,
             // so the row's first frame already knows its anchor.
             if let x = anchorX(for: label) { chrome.folderAnchorX = x }
-            withAnimation(DS.Motion.folder) { onTap(label) }
+            // NO ANIMATION AROUND THE LANDING (prd §676). This wrapper made
+            // every state the tap touched animate, the selection's fill
+            // included, and it was never what sprang the folder — the folder
+            // has its own `withAnimation(DS.Motion.folder)` in `MainSurface`,
+            // fired after the room's mount (§668).
+            onTap(label)
         } label: {
             ZStack {
                 switch label {
@@ -1450,31 +1455,24 @@ private struct SelectionTravel<S: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        if reduceMotion {
-            shape
-        } else {
-            shape
-                .matchedGeometryEffect(id: ChipSelection.id, in: ns)
-                // **THE SELECTION DOES NOT TRAVEL (prd §675, user: "the active
-                // indicator still slides", seen frame by frame on the
-                // simulator).** `matchedGeometryEffect` interpolates POSITION
-                // AND SHAPE, so the fill did not slide so much as deform: over
-                // ~5 frames the blue circle on "All" stretched, thinned and
-                // re-formed as a rounded rect on "Wallet", passing through
-                // shapes neither chip has. §667 asked for travel without
-                // overshoot and got it; what a tab bar actually wants is no
-                // travel at all — the indicator IS on the chip you touched, on
-                // the frame you touch it.
-                //
-                // The effect STAYS, and that is the point: it is what keeps
-                // one selection object rather than two blinking fills (the
-                // 2026-07-14 ruling), and it is what carries the shape from
-                // circle to capsule to tile correctly. Only its ANIMATION
-                // goes. A nil animation still leaves the fold's un-animated
-                // per-frame write untouched, which is §673's whole finding, so
-                // that fix survives this one.
-                .transaction { t in t.animation = nil }
-        }
+        // **THE SELECTION DOES NOT TRAVEL, AND THE EFFECT THAT MADE IT TRAVEL
+        // IS GONE (prd §676, user: "the active indicator still slides" → "the
+        // lozenge").** §675 set this transaction's animation to nil and the
+        // fill STILL deformed between chips — measured, 8 frames, a blue blob
+        // spanning two tiles. `matchedGeometryEffect` is not an animation you
+        // can switch off; it IS a travel mechanism. Its whole contract is that
+        // one view's frame is interpolated to another's, and it reads the
+        // transaction at the geometry's own commit, not the one this modifier
+        // sits in. So the effect goes.
+        //
+        // The 2026-07-14 ruling it was serving ("selection is an object
+        // traveling, not two states blinking") held for a strip of source
+        // chips a finger SWIPED along. This is the app's tab bar, and the
+        // ruling that governs a tab bar is the platform's: the indicator is on
+        // the thing you touched, on the frame you touch it. Nothing blinks —
+        // exactly one chip is active, so the old fill leaves and the new fill
+        // arrives in the same frame.
+        shape
     }
 }
 

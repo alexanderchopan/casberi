@@ -2127,30 +2127,23 @@ struct MainSurface: View {
     /// it was heading for, which is what a stack of cards does.
     private func deal(to target: String, landNow: Bool = false) {
         settleFlight()
-        // **A TAP LANDS ON ITS OWN FRAME (prd §671, 2026-09-10, user: "the tab
-        // bar scrolling left to right is good too but when you tap on an icon
-        // it lags").** §651's amendment sent every route through the flight
-        // below — the card flies for `flightMs` and the room swaps AFTER it —
-        // which is right for a swipe (the finger already moved the page, the
-        // wait reads as follow-through) and wrong for a tap, where 280ms of
-        // nothing-changes is the lag reported, and no instrument could see
-        // it: the hitch meter counts dropped frames, not late ones, and
-        // `SwipeClock` starts inside `land`, after the wait. So a tap swaps
-        // the room NOW, beneath a picture of the room being left that flies
-        // off the top (`DepartingCard`) — the same carousel, the real room
-        // there from the first frame. The build runs in the tap's own
-        // transaction, before the card's spring starts its clock, so nothing
-        // is moving while it runs (§651's actual rule, kept). Falls back to
-        // the flight when no resting picture of this room exists (a room
-        // scrolled or left before `captureRestingLook` got to it) — a card
-        // that is a blank page with a mark would be a worse picture than a
-        // short wait.
-        if landNow, let look = RoomSnapshots.image(for: filter.source) {
-            // Every tap is measured, not only §668's category branch: the
-            // tap's whole cost is now the room's build in this one frame, so
+        // **A TAP CUTS. NOTHING TRAVELS (prd §676, user, four builds running:
+        // "there wasn't a sort of scroll when you click the icons in the tab
+        // bar" → "it is still the same in 557").** §651 sent every route
+        // through the flight below, §671 moved the tap's LANDING to its own
+        // frame but still flew a picture of the room being left across the
+        // screen, and that picture is the scroll being reported: the whole
+        // surface slides sideways when a finger touches a tab. Measured on
+        // the simulator with a WARM snapshot cache — 8 frames of travel — and
+        // the reason §671 read as verified is that its check ran on a COLD
+        // cache, where no picture existed, so the card never flew and the
+        // room cut in one frame. A tab bar cuts. Only a SWIPE flies, because
+        // there a finger is already carrying the page.
+        if landNow {
+            // The tap's whole cost is the room's build in this one frame, so
             // that is the span worth reading off a phone.
-            HitchMeter.shared.span(.tap, for: Self.flightMs + 200)
-            departNow(to: target, look: look)
+            HitchMeter.shared.span(.tap, for: 400)
+            cutNow(to: target)
             return
         }
         let toward = direction(from: filter.source, to: target)
@@ -2183,31 +2176,26 @@ struct MainSurface: View {
 
     /// Land the pending room now, if one is in flight. Idempotent.
     /// The picture of the room being left, flying off above the room that
-    /// has already landed beneath it. `id` is the deal's generation so a
-    /// superseded flight cannot clear a newer card.
-    struct DepartingCard: Equatable {
-        let id: Int
-        let image: UIImage
-        var x: CGFloat
-        static func == (a: DepartingCard, b: DepartingCard) -> Bool { a.id == b.id && a.x == b.x }
-    }
-    @State private var departing: DepartingCard?
-
-    private func departNow(to target: String, look: UIImage) {
-        let toward = direction(from: filter.source, to: target)
-        let side: CGFloat = toward == .trailing ? -1 : 1
-        let width = max(chrome.pagerFrame.width, 1)
+    /// **A TAP'S LANDING: a CUT (prd §676).** No card, no cover, no slide —
+    /// the room on screen is replaced by the room you asked for, on the frame
+    /// you asked for it, which is what every tab bar on this platform does.
+    ///
+    /// `swipeCommit` is what makes the transition `.identity` at both edges,
+    /// so neither room moves; it is cleared a beat later so the next SWIPE
+    /// still gets its `.move`. Any flight already in the air is landed and its
+    /// drag state cleared first, so a tap during a swipe's travel is honoured
+    /// immediately rather than fighting a cover that is still on screen.
+    private func cutNow(to target: String) {
         flightGeneration &+= 1
         let generation = flightGeneration
-        // Identity insertion: the landed room is simply there, under the card.
+        settleFlight()
+        chrome.pageDragCommitted = false
+        chrome.pageDragTarget = nil
         swipeCommit = true
-        departing = DepartingCard(id: generation, image: look, x: 0)
         land(target, animated: false)
-        withAnimation(DS.Motion.standard) { departing?.x = side * width }
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(Self.flightMs + 120))
+            try? await Task.sleep(for: .milliseconds(120))
             guard generation == flightGeneration else { return }
-            departing = nil
             swipeCommit = false
         }
     }
@@ -2657,11 +2645,6 @@ struct MainSurface: View {
                         removal: swipeCommit
                             ? .identity
                             : .move(edge: slideEdge == .trailing ? .leading : .trailing)))
-                // The tap's departing picture (prd §671), above the room that
-                // landed beneath it on the tap's own frame.
-                if let card = departing {
-                    DepartingCardView(card: card)
-                }
             }
             // The swipe input, mounted ONCE at the shell — never inside the
             // transitioning subtree (see PageSwipeCatcher for the two designs
@@ -3220,44 +3203,6 @@ extension MainSurface {
         // One more frame so the mount's own paint is on screen before the
         // folder's spring shares a frame with anything.
         try await Task.sleep(for: .milliseconds(16))
-    }
-}
-
-/// The room being left, as a picture, flying off the edge the new room lies
-/// beyond — the tap's half of the carousel `PagerCover` draws for a swipe
-/// (prd §671). Cardness follows the travel the way §648 rules for a swipe:
-/// corners, scale and shadow grow with `abs(x) / width`, so the first frame
-/// is the room itself and not a card that popped. Under Reduce Motion it
-/// fades in place.
-private struct DepartingCardView: View {
-    let card: MainSurface.DepartingCard
-    @Environment(ShellChrome.self) private var chrome
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        let width = max(chrome.pagerFrame.width, 1)
-        let p = min(1, abs(card.x) / width)
-        Image(uiImage: card.image)
-            .resizable()
-            .scaledToFill()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: reduceMotion ? 0 : 28 * p, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 28 * p, style: .continuous)
-                    .strokeBorder(.white.opacity(reduceMotion ? 0 : 0.18 * p), lineWidth: 1)
-            }
-            // NO SHADOW, and that is deliberate: `PagerCover` — the shipped,
-            // tuned half of this same motion — draws the stroke and no shadow.
-            // A `.shadow` on a full-screen image is an offscreen blur of the
-            // whole screen on EVERY frame of the flight (~60 of them at
-            // 120Hz), which is exactly the kind of per-frame GPU cost that
-            // reads as "not quite smooth" while every main-thread instrument
-            // says the frame was cheap. The stroke carries the edge.
-            .scaleEffect(reduceMotion ? 1 : 1 - 0.06 * p)
-            .offset(x: reduceMotion ? 0 : card.x)
-            .opacity(reduceMotion ? 1 - p : 1)
-            .allowsHitTesting(false)
-            .transition(.identity)
     }
 }
 

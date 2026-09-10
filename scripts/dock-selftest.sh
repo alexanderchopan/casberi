@@ -196,21 +196,21 @@ grep -q 'struct SelectionTravel' "$TMP/chips.nc" \
   || { echo "✗ SelectionTravel is gone — the selection has no single object to travel as."; fail=1; }
 [ "$(grep -c 'SelectionTravel(ns: ' "$TMP/chips.nc")" -ge 2 ] \
   || { echo "✗ the fill and the ring no longer both travel through SelectionTravel."; fail=1; }
-# THE SELECTION DOES NOT TRAVEL (prd §675). §667 pinned the fill's and ring's
-# travel to a glide and §673 guarded that on an animated transaction; both were
-# about HOW it moved. It does not move: `matchedGeometryEffect` interpolates
-# shape as well as position, so the fill deformed from one chip's circle into
-# the next chip's tile through shapes neither has, which is what "the active
-# indicator still slides" named. The effect stays — it is the one selection
-# object — and its animation is nil.
-grep -q '.transaction { t in t.animation = nil }' "$TMP/chips.nc" \
-  || { echo "✗ SelectionTravel animates again (prd §675) — the fill would deform between"; \
-       echo "  chips instead of being on the one you touched."; fail=1; }
+# THE SELECTION DOES NOT TRAVEL, AND THE EFFECT IS GONE (prd §676). §667 pinned
+# the travel to a glide, §673 guarded that on an animated transaction, §675 set
+# the animation to nil — and the fill STILL deformed between chips, measured at
+# 8 frames. `matchedGeometryEffect` is not an animation you switch off; it is a
+# travel mechanism. It is removed, and the chip's tap no longer wraps its
+# landing in an animation either.
 grep -q 'matchedGeometryEffect(id: ChipSelection.id' "$TMP/chips.nc" \
-  || { echo "✗ SelectionTravel lost its matchedGeometryEffect — the selection becomes two"; \
-       echo "  blinking fills rather than one object (2026-07-14)."; fail=1; }
+  && { echo "✗ the selection travels again (prd §676) — matchedGeometryEffect interpolates the"; \
+       echo "  fill's frame between chips, which is the deform the user called a slide."; fail=1; }
 grep -qE 't\.animation = DS\.Motion\.glide|\$0\.animation = DS\.Motion\.glide' "$TMP/chips.nc" \
-  && { echo "✗ the selection is re-pinned to a spring again (prd §675)."; fail=1; }
+  && { echo "✗ the selection is pinned to a spring again (prd §676)."; fail=1; }
+grep -q 'withAnimation(DS.Motion.folder) { onTap(label) }' "$TMP/chips.nc" \
+  && { echo "✗ the chip's tap wraps its landing in an animation again (prd §676) — every state"; \
+       echo "  the tap touches would animate, the selection included. The folder springs from"; \
+       echo "  MainSurface, after the room's mount (§668)."; fail=1; }
 # THE STRIP'S BODY DOES NOT READ THE BRIDGE STORE (prd §673). `bridges.bridges`
 # is written twice per landing sync; a read in `chip(_:)` rebuilt all eleven
 # chips per write. The broken-seat ring and the spoken label are leaves.
@@ -387,9 +387,21 @@ if src.count("landNow: true") < 4:
     print("  chip, the plain chip, a folder's venue pick and a room's own switcher all pass")
     print("  `landNow: true` to `go(to:)`.")
     sys.exit(1)
-if "RoomSnapshots.image(for: filter.source)" not in src or "departNow(to: target, look: look)" not in src:
-    print("✗ a tap no longer lands beneath a departing picture of the room being left")
-    print("  (prd §671) — the flight is back on every tap, and so is the 280ms of nothing.")
+# §676: a tap CUTS. §671's departing card — a picture of the room being left,
+# flown across the screen — was the "sort of scroll when you click the icons"
+# the user reported for four builds running; measured at 8 frames of travel on
+# a warm snapshot cache, which is why §671's own check (run on a COLD cache,
+# where no picture exists) read as a clean cut.
+if "cutNow(to: target)" not in src:
+    print("✗ a tap no longer cuts (prd §676) — it is flying a card or a cover across the")
+    print("  screen again, which is the slide reported through builds 554-557.")
+    sys.exit(1)
+if "DepartingCard" in src or "departNow" in src:
+    print("✗ the departing card is back (prd §676).")
+    sys.exit(1)
+if "swipeCommit = true" not in src:
+    print("✗ cutNow no longer pins the transition to .identity (prd §676) — the rooms would")
+    print("  slide past each other on a tap instead of cutting.")
     sys.exit(1)
 GATE
 
