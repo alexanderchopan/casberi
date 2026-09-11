@@ -175,7 +175,11 @@ struct SourceChips: View {
         // What is left past "All": the strip minus its resting inset and
         // every non-category chip laid out ahead of the tiles (All, and the
         // pinned room when present).
-        let marks = CGFloat(labels.count - count)
+        // ...plus ONE for the catalogue mark at the strip's TAIL (prd §700).
+        // It is not in `labels`, and a tail nobody counted is a tail the
+        // three spread tiles cover — the door a new person needs most would
+        // rest one scroll past the edge.
+        let marks = CGFloat(labels.count - count) + 1
         let available = stripWidth - stripInset - marks * (chipSize + Self.chipGap)
         return max(Self.tileFloorCell, (available / cells).rounded(.down))
     }
@@ -225,8 +229,9 @@ struct SourceChips: View {
     /// the container bounds the longest word, so nothing else has to.
     private static let railChipWidth: CGFloat = PadLayout.railWidth - 2 * DS.Space.s2
     /// Opens the app catalogue (user 2026-07-17: its door moved OUT of the
-    /// top-right cluster and INTO the head of this strip — "add a source"
-    /// belongs with your sources).
+    /// top-right cluster and INTO this strip — "add a source" belongs with
+    /// your sources). On the phone it is the strip's LAST item since prd
+    /// §700 (`catalogueMark`); the iPad rail still pins it at the head.
     var onApps: () -> Void = {}
     /// Opens Settings — the avatar joined this strip too (2026-07-20,
     /// Stories-style: your own face leads, fixed, ahead of the catalogue
@@ -613,30 +618,17 @@ struct SourceChips: View {
                             } action: { frame in
                                 chipFrames.frames[label] = frame
                             }
-                            // THE MELT, PER CHIP: solid until its leading edge
-                            // reaches the bar's trailing edge (`clear`), then
-                            // gone over `ramp` as it slides under the bar —
-                            // the 2026-07-19 ruling ("disappear into it, not
-                            // into a hard line"). `.scrollView` is the
-                            // viewport's space. Evaluated by the render
-                            // server, never a body pass.
-                            .visualEffect { content, proxy in
-                                let f = proxy.frame(in: .scrollView)
-                                let lead = min(max((f.minX - clear) / ramp, 0), 1)
-                                // Fades across the TILE'S OWN WIDTH, not over
-                                // `ramp`: the peeking tile stands about half a
-                                // cell past the edge, so a 12pt ramp put it at
-                                // zero and the "there is more" cue drew
-                                // nothing at all (measured on the simulator).
-                                // Solid while fully inside, half-lit when half
-                                // out, gone when past — which is the dimmed
-                                // peek the mock was chosen from.
-                                let trail = far > 0 && f.width > 0
-                                    ? min(max((far - f.minX) / f.width, 0), 1)
-                                    : 1
-                                return content.opacity(Double(min(lead, trail)))
-                            }
+                            // THE MELT, PER CHIP — see `ChipMelt`.
+                            .modifier(ChipMelt(clear: clear, ramp: ramp, far: far))
                     }
+                    // THE CATALOGUE, LAST (prd §700, 2026-09-11): after the
+                    // last category, in the tail §697 found empty. Not in
+                    // `labels` and not a chip — it opens a screen, not a
+                    // room — so it is drawn here once rather than through
+                    // `chip(_:)`, and it melts under the face exactly as a
+                    // chip does.
+                    catalogueMark
+                        .modifier(ChipMelt(clear: clear, ramp: ramp, far: far))
                 }
                 // The air between the bar and the first chip at rest — see
                 // `stripInset`.
@@ -815,6 +807,37 @@ struct SourceChips: View {
         // Kept as the belt beside the Button's own braces above — it was
         // never the whole story, but it costs nothing to keep winning.
         .highPriorityGesture(TapGesture().onEnded { openApps() })
+    }
+
+    /// The catalogue door as the STRIP'S LAST ITEM (prd §700, 2026-09-11):
+    /// the same `AppsDoor` glyph (and its breakage alarm) the rail pins in a
+    /// glass circle, drawn here as ink on the slab like every chip beside it
+    /// (2026-09-09: the slab is the glass). It stands in a `chipSize` frame
+    /// so its pitch from the last tile is a chip's pitch, and it folds with
+    /// the chips (46→40). A BARE MARK, never a captioned tile — a tile that
+    /// pushes a screen is §697's own objection ("a new species wearing the
+    /// old one's shape"), and a mark is visibly not a folder.
+    @ViewBuilder private var catalogueMark: some View {
+        Button {
+            openApps()
+        } label: {
+            ZStack {
+                if let zoomNS {
+                    AppsDoor().matchedTransitionSource(id: "appsDoor", in: zoomNS)
+                } else {
+                    AppsDoor()
+                }
+            }
+            .frame(width: iconSize, height: iconSize)
+            .frame(width: chipSize, height: chipSize)
+            // The door is the circle, not the glyph (2026-07-26, three
+            // reports deep — see `catalogueChip`).
+            .contentShape(Circle())
+            .dsHover()
+        }
+        .buttonStyle(.plain)
+        .modifier(CatalogueDoorSpokenLabel())
+        .dsTooltip(String(localized: "Accounts"))
     }
 
     /// One entry point for the door's two possible tap deliveries (the
@@ -1584,6 +1607,36 @@ private struct ChipAttentionRing: View {
 /// branch that took the store out of `chip(_:)` left these two modifiers
 /// behind, so the strip kept its dependency and the file did not compile at
 /// all once the property went.
+/// THE MELT, PER CHIP: solid until its leading edge reaches the bar's
+/// trailing edge (`clear`), then gone over `ramp` as it slides under the
+/// face — the 2026-07-19 ruling ("disappear into it, not into a hard line").
+/// `.scrollView` is the viewport's space. Evaluated by the render server,
+/// never a body pass. A modifier rather than a closure inline in the
+/// `ForEach` since prd §700, because the catalogue mark at the strip's tail
+/// is not in that loop and has to dissolve by the same rule.
+private struct ChipMelt: ViewModifier {
+    let clear: CGFloat
+    let ramp: CGFloat
+    let far: CGFloat
+    func body(content: Content) -> some View {
+        let clear = clear, ramp = ramp, far = far
+        return content.visualEffect { content, proxy in
+            let f = proxy.frame(in: .scrollView)
+            let lead = min(max((f.minX - clear) / ramp, 0), 1)
+            // Fades across the TILE'S OWN WIDTH, not over `ramp`: the
+            // peeking tile stands about half a cell past the edge, so a
+            // 12pt ramp put it at zero and the "there is more" cue drew
+            // nothing at all (measured on the simulator). Solid while fully
+            // inside, half-lit when half out, gone when past — which is the
+            // dimmed peek the mock was chosen from.
+            let trail = far > 0 && f.width > 0
+                ? min(max((far - f.minX) / f.width, 0), 1)
+                : 1
+            return content.opacity(Double(min(lead, trail)))
+        }
+    }
+}
+
 private struct CatalogueDoorSpokenLabel: ViewModifier {
     @Environment(BridgeStore.self) private var bridges
 

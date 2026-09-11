@@ -48,25 +48,18 @@ enum DSDock {
         lerp(agentSize(minimized: false), agentSize(minimized: true), fold)
     }
 
-    /// The air between the two doors in the leading seat — `s1`, tighter than
-    /// the `seam` after them, because they ARE one object (`dsGlassDoor`
-    /// merges them into a single glass shape) where the seam separates the
-    /// cluster from the run of chips.
-    static let doorGap: CGFloat = DS.Space.s1
-
-    /// **THE LEADING SEAT HOLDS TWO DOORS, NOT THE OCTOPUS (2026-09-11, prd
-    /// §697).** Everything below was written for one 46pt mark; the seat is
-    /// the face (Settings) and the grid (Accounts) now, so every number that
-    /// reserved room beside it has to count both. Spelled as a width rather
-    /// than patched into `agentSeat`, because the strip's melt, the bar's own
-    /// frame and the self-test all need the same answer and two of them
-    /// cannot see each other.
-    static func clusterWidth(fold: CGFloat) -> CGFloat {
-        agentSize(fold: fold) * 2 + doorGap
-    }
-    static func clusterWidth(minimized: Bool) -> CGFloat {
-        agentSize(minimized: minimized) * 2 + doorGap
-    }
+    /// **THE LEADING SEAT HOLDS ONE DOOR — YOUR FACE (2026-09-11, prd §700).**
+    /// §697 seated two marks here, the face and the catalogue grid, and the
+    /// grid moved the same day to the TAIL of the strip (user: "have the app
+    /// icon not be fixed on the tab bar. only make the avatar be fixed"): the
+    /// face is the one thing in the dock that is about you; the catalogue is
+    /// a place, and the places scroll. So the cluster is one mark wide again
+    /// — still spelled as a WIDTH rather than folded into `agentSeat`,
+    /// because the strip's melt, the bar's own frame and the self-test all
+    /// read it and cannot see each other; a seat that still counted two
+    /// marks would leave 54pt of air between the face and "All".
+    static func clusterWidth(fold: CGFloat) -> CGFloat { agentSize(fold: fold) }
+    static func clusterWidth(minimized: Bool) -> CGFloat { agentSize(minimized: minimized) }
 
     /// The chip's own FRAME, which is bigger than its mark — it carries the
     /// active ring's room. Centring the bar on the row means centring on this,

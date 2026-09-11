@@ -2262,17 +2262,17 @@ struct RootShell: View {
                     // 2026-09-11). `AgentHintCapsule` taught the hold that
                     // raised the agent, and `AgentBar` was the agent's own
                     // seat; the ask is deprecated, so what stands in the
-                    // dock's leading seat is the two doors that folder held
-                    // — Settings and Accounts, drawn rather than hidden one
-                    // tap deep.
+                    // dock's leading seat is your face — Settings. The
+                    // catalogue stood beside it for a few hours (§697) and
+                    // is the strip's LAST item now (prd §700): the face is
+                    // the one fixed mark, the places scroll.
                     //
                     // No zoom anchor: the `.zoom` transitions are declared in
                     // `MainSurface` against ITS namespace, which this layer
                     // cannot see — and the octopus standing here had none
                     // either, so nothing on the phone loses a transition it
                     // used to have. The iPad rail's own pair keeps theirs.
-                    DockDoors(onSettings: { sceneState.route.present(.settings) },
-                              onApps: { sceneState.route.present(.apps) })
+                    DockDoors(onSettings: { sceneState.route.present(.settings) })
                 }
                 }
                 // Pinned to the trailing edge (2026-08-07). The iPad cap the

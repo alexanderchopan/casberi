@@ -298,29 +298,69 @@ grep -q 'axis == .vertical ? labels.filter { $0 != "All" } : labels' "$TMP/chips
        echo "  again (costing a visible chip AND rendering it twice), or the RAIL lost its"; \
        echo "  pin, which renders \"All\" twice there instead."; fail=1; }
 
-# --- 5. the leading seat is the two doors, and the seat COUNTS them ---------
-# THE OCTOPUS IS GONE (prd §697, 2026-09-11). The ask is deprecated, so the
-# folder it opened held Settings and Accounts and nothing else — cheaper drawn
-# than hidden. The failure this guards is arithmetic and invisible: the melt,
-# the reserved padding and the bar's own frame all read `agentSeat`, and a seat
-# that still counts ONE mark leaves the second door sitting on top of the
-# "All" chip.
-grep -q 'clusterWidth' "$DOCK" \
-  || { echo "✗ DSDock lost clusterWidth — the leading seat no longer counts BOTH doors,"; \
-       echo "  so the grid door and the All chip overlap."; fail=1; }
+# --- 5. the leading seat is the FACE alone, and the catalogue is the strip's
+#        LAST item ---------------------------------------------------------
+# THE OCTOPUS IS GONE (prd §697, 2026-09-11), and the grid door that stood
+# beside the face for a few hours went to the strip's tail the same day (prd
+# §700, user: "have the app icon not be fixed on the tab bar. only make the
+# avatar be fixed"). The face is the one mark that is about you and the one
+# that must survive into a pushed room; the catalogue is a place, and places
+# scroll. The failure this guards is arithmetic and invisible: the melt, the
+# reserved padding and the bar's own frame all read `agentSeat`, and a seat
+# that counts a mark that is not there leaves 54pt of air before "All".
+grep -q 'static func clusterWidth(fold: CGFloat) -> CGFloat { agentSize(fold: fold) }' "$DOCK" \
+  || { echo "✗ DSDock.clusterWidth no longer spans exactly ONE mark — the seat holds the"; \
+       echo "  face alone (prd §700); a wider cluster leaves air before All, a narrower"; \
+       echo "  one runs All under the face."; fail=1; }
 grep -q 'clusterInset + clusterWidth(fold: fold) + seam' "$DOCK" \
   || { echo "✗ DSDock.agentSeat no longer spans the door CLUSTER."; fail=1; }
 grep -q 'DockDoors(' "$TMP/root.nc" \
-  || { echo "✗ RootShell no longer hosts DockDoors — Settings and Accounts must stand on"; \
-       echo "  the shell's own layer, which survives into a pushed room; the strip does not."; fail=1; }
+  || { echo "✗ RootShell no longer hosts DockDoors — Settings must stand on the shell's"; \
+       echo "  own layer, which survives into a pushed room; the strip does not."; fail=1; }
 grep -q 'AvatarChip(' "$TMP/doors.nc" \
-  || { echo "✗ the face is gone from the dock's leading seat (order is Face · Grid · All)."; fail=1; }
+  || { echo "✗ the face is gone from the dock's leading seat."; fail=1; }
 grep -q 'AppsDoor()' "$TMP/doors.nc" \
-  || { echo "✗ the catalogue door is gone from the dock — AppsDoor also carries the ONE"; \
-       echo "  breakage alarm the shell has."; fail=1; }
-grep -q 'contentShape(Circle())' "$TMP/doors.nc" \
-  || { echo "✗ a dock door lost its hit region — the door is the CIRCLE, not the glyph"; \
-       echo "  (2026-07-26, three user reports deep)."; fail=1; }
+  && { echo "✗ the catalogue door is back in the FIXED seat (prd §700: only the avatar is"; \
+       echo "  fixed; the catalogue is the strip's last item)."; fail=1; }
+# The tail mark: drawn ONCE, after the ForEach, inside the horizontal strip's
+# HStack — so it scrolls with the places, melts under the face like a chip,
+# and never enters `labels` (it opens a screen, not a room). Counted in the
+# cell arithmetic, or three spread tiles cover it and a new person's "add an
+# account" rests one scroll past the edge.
+python3 - "$TMP/chips.nc" <<'PY3' || fail=1
+import sys
+src = open(sys.argv[1]).read()
+i = src.find("private var horizontalStrip: some View")
+j = src.find("private func headDoors", i) if i >= 0 else -1
+strip = src[i:j] if i >= 0 and j > i else ""
+if not strip:
+    sys.exit("✗ horizontalStrip not found in SourceChips — this guard is testing nothing")
+fe = strip.find("ForEach(scrollingLabels")
+cm = strip.find("catalogueMark")
+if fe < 0 or cm < 0:
+    sys.exit("✗ the strip no longer draws catalogueMark after its ForEach — the catalogue\n"
+             "  has no seat anywhere on the phone (prd §700).")
+if cm < fe:
+    sys.exit("✗ catalogueMark is drawn BEFORE the categories — it belongs at the strip's\n"
+             "  tail (prd §700): leading, it slides under the fixed face on the first\n"
+             "  scroll and pushes All off its resting seat.")
+if strip.count("ChipMelt(") < 2:
+    sys.exit("✗ the tail mark no longer melts under the face like a chip — it would show a\n"
+             "  hard edge sliding under the avatar's glass (2026-07-19).")
+if "let marks = CGFloat(labels.count - count) + 1" not in src:
+    sys.exit("✗ categoryCell no longer counts the tail mark — at three categories the spread\n"
+             "  tiles cover it and the catalogue rests one scroll past the edge.")
+mark = src[src.find("private var catalogueMark"):src.find("private func openApps")]
+if "contentShape(Circle())" not in mark:
+    sys.exit("✗ the tail mark lost its hit region — the door is the CIRCLE, not the glyph\n"
+             "  (2026-07-26, three user reports deep).")
+if "dsGlassDoor" in mark:
+    sys.exit("✗ the tail mark wears glass — chips are ink on the slab (2026-09-09); glass\n"
+             "  inside the scrolling slab is the arrangement that cost a frame per tick.")
+if "frame(width: chipSize, height: chipSize)" not in mark:
+    sys.exit("✗ the tail mark no longer stands in a chipSize frame — its pitch from the last\n"
+             "  tile would differ from every other pitch in the strip.")
+PY3
 
 # --- 6. a CATEGORY still springs its folder out of its own chip -------------
 # Unchanged by §697: the octopus's folder is gone, every category's is not.
