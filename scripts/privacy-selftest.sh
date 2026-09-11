@@ -107,6 +107,10 @@ check(PrivacyDevnetSection.allCases.contains { $0.rawValue == "nullifiers" },
       "`nullifiers` exists, and is not spelled `nonces` as on Hegota")
 check(!PrivacyDevnetSection.allCases.contains { $0.rawValue == "nonces" },
       "not `nonces` — here the keyed nonce is a nullifier (§593)")
+check(PrivacyDevnetSection.allCases.contains { $0.rawValue == "holdings" },
+      "`holdings` exists — what each watched address holds (prd §680)")
+check(!PrivacyDevnetSection.holdings.isConditional,
+      "holdings is unconditional: the tab is present even when nothing is held (user, prd §680)")
 check(PrivacyDevnetSection.allCases.contains { $0.rawValue == "roots" },
       "`roots` exists — the only chain in the app with EIP-8272 deployed")
 
@@ -116,7 +120,12 @@ let firstConditional = PrivacyDevnetSection.order.firstIndex { $0.isConditional 
 let lastUnconditional = PrivacyDevnetSection.order.lastIndex { !$0.isConditional }!
 check(lastUnconditional < firstConditional,
       "every unconditional scope precedes every conditional one")
-check(PrivacyDevnetSection.order[3] == .frames, "the conditional tail opens on frames")
+// AMENDED for prd §680: `holdings` was inserted third, so the tail's index
+// moved. What matters is not WHICH index — that changes whenever a scope is
+// added — but that the conditional tail opens on `frames`, so the check reads
+// the boundary the rule above just computed.
+check(PrivacyDevnetSection.order[firstConditional] == .frames,
+      "the conditional tail opens on frames")
 
 // THE PAIRING: nullifiers and roots are two halves of one mechanism and must be
 // adjacent, in that order — apart they read as two unrelated pieces of jargon.
@@ -1630,11 +1639,19 @@ if "logs, so a transaction that emitted none" in body:
 print("  ✓ the standing ceiling is said once, on Home")
 PYX
 
-# **HOME LISTS ITS MOVES AGAIN.** The scope's summary promises "the last few
-# moves" and it showed none whenever a proof was live, which is whenever the
-# room has anything to say.
-grep -qF 'case .home:       list(Array(pairs.prefix(homeMoveCount))' "$work/card.bare" \
-  || fail "Home stopped listing its moves — its own summary promises them, and drawing none is the §83 gap that ruling created"
+# **HOME DRAWS THE SHARED CROWN AND NO LIST (prd §682/§683, user: "there
+# should be NO LIST on the home screen").** This reverses the earlier ruling
+# that Home must list its last few moves — that promise was the scope summary's
+# and the summary has moved with it. What replaces the check is the pair that
+# must hold together: Home draws `RoomHomeCrown`, the same Home every
+# wallet-family room draws, and its list is empty. A Home that lists again is
+# the state the user reported, where the verb tiles fell below the fold.
+grep -qF 'case .home:       EmptyView()' "$work/card.bare" \
+  || fail "Home lists rows again (prd §682) — the verbs would fall below the fold, which is what
+  made them look deleted."
+grep -qF 'RoomHomeCrown(samples: homeSamples' "$work/card.bare" \
+  || fail "Home no longer draws the shared room crown (prd §683) — every wallet-family room's
+  Home is one template: caption, number, change, line, range chips."
 # And they must NOT come back inside the clipped slot, which is what cut a row
 # mid-line on a device twice.
 grep -qF 'ForEach(pairs.prefix(homeMoveCount)' "$work/card.bare" \
@@ -1725,4 +1742,4 @@ print "  ok   drift guards: no price, no notification, slots not blocks, no coin
 # drift guards" while the file held 59 and 83 — a hardcoded tally that nobody
 # updates and that therefore understates the suite by more every pass, which is
 # a summary saying something false about the very thing it summarises.
-print "✓ privacy: 7 scopes, the 8272 window, the room head, the figures, the roots' own storage, the §596 sheets and §602's readings, $(grep -c '^mutate ' "$0") mutations, $(grep -c 'fail \"' "$0") drift guards"
+print "✓ privacy: 8 scopes, the 8272 window, the room head, the figures, the roots' own storage, the §596 sheets and §602's readings, $(grep -c '^mutate ' "$0") mutations, $(grep -c 'fail \"' "$0") drift guards"

@@ -51,49 +51,60 @@ struct DemoBanner: View {
             DSHaptic.tap()
             explaining = true
         } label: {
-            HStack(spacing: DS.Space.s1) {
-                // **NOT `sparkles` (user, 2026-09-09): that glyph is the
-                // AGENTS category's mark since §662, and two different things
-                // in one frame wearing one symbol is the collision §662's own
-                // table exists to avoid.** `eye` says you are LOOKING at
-                // something rather than owning it, which is what this status
-                // means; nothing else in the app draws it.
-                Image(systemName: "eye")
-                    .dsGlyph(12)
-                    // **IT PULSES (user: "it should likely be pulsing so a
-                    // user knows to tap it").** This overturns the 2026-09-05
-                    // "noticed once" reasoning, and the overturn is narrow:
-                    // that argument was against a NAG on chrome that cannot be
-                    // dismissed, and it was made when the capsule was the only
-                    // thing on the screen wearing the brand pink. In blue it
-                    // is one tinted capsule among a screen of tinted controls,
-                    // so nothing marks it as the one status that must be read
-                    // before a number is believed (§83). A symbol effect, not
-                    // an animated opacity: the render server drives it, so it
-                    // costs the shell nothing per frame — which is the whole
-                    // finding of §660 and §651, one surface over.
-                    .symbolEffect(.pulse, options: reduceMotion ? .nonRepeating : .repeating)
+            HStack(spacing: DS.Space.s2) {
+                // **THE SIGNAL, and the only colour the capsule carries (prd
+                // §679, 2026-09-10).** Blue (2026-09-09) was `DS.tint` — the
+                // one hue every live control in the app wears, the dock's
+                // lozenge included — so a marker meaning "none of this is
+                // real" wore the colour that everywhere else means "this is
+                // yours and live". Amber is the platform's word for
+                // non-production, and it is used here as a DOT and a WORD,
+                // never as the capsule's fill: `DS.attention` already means
+                // "a seat is broken" (the dashed ring, the catalogue door's
+                // mark), and every one of those is amber INK on a dark
+                // ground, so a filled amber pill would have read as that.
+                //
+                // The dot is an SF Symbol so the pulse stays a symbol effect
+                // — the render server drives it and the shell pays nothing
+                // per frame (§651, §660). The halo behind it is a static
+                // gradient, not a second animation.
+                ZStack {
+                    Circle()
+                        .fill(RadialGradient(colors: [DS.attention.opacity(0.55), DS.attention.opacity(0)],
+                                             center: .center, startRadius: 0, endRadius: 10))
+                    Image(systemName: "circle.fill")
+                        .dsGlyph(10)
+                        .foregroundStyle(DS.attention)
+                        .symbolEffect(.pulse, options: reduceMotion ? .nonRepeating : .repeating)
+                }
+                .frame(width: 20, height: 20)
+                .accessibilityHidden(true)
                 Text("Demo")
                     .dsText(.label12)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
+                    .foregroundStyle(DS.attention)
+                Text(verbatim: "·")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .accessibilityHidden(true)
+                // The sentence the accessibility label below has always
+                // spoken, on screen at last: "Demo" alone can be read as a
+                // mode somebody turned on; naming the data removes that
+                // reading.
+                Text("not your data")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
             }
-            // **BLUE (user, 2026-09-09: "and probably make it blue"),
-            // overturning the brand pink of 2026-09-05.** Recorded because
-            // the pink had a reason worth keeping in view: it made the
-            // marking read as the app speaking rather than as a warning, and
-            // blue is `DS.tint`, the one accent every interactive thing in
-            // the app already wears — including the active dock chip
-            // directly under this capsule. What buys it back is the pulse
-            // above: the capsule is now singled out by MOTION rather than by
-            // hue, and the tint says "this is a control you may press",
-            // which after §620 it is.
-            .foregroundStyle(DS.tint)
             .padding(.horizontal, DS.Space.s3)
-            .frame(minHeight: 30)
-            // A step past the rest-chip wash (user: "is it visible enough?")
-            // — this is the one status on the screen that must be read before
-            // any number is believed, so it wears the hue at a quarter.
-            .background { Capsule(style: .continuous).fill(DS.tint.opacity(0.24)) }
+            .frame(minHeight: 34)
+            // **GLASS, a step brighter than the dock's (prd §679).** The
+            // banner is floating chrome, which is the one layer §8 gives
+            // Liquid Glass to — but the dock is glass too, so plain glass
+            // here reads as a control. The light tint lifts it off the
+            // slab; the amber above is what says what it is. On the pre-26
+            // fallback the tint is faint and the amber does all the work,
+            // which is why the amber is not optional.
+            .dsGlass(cornerRadius: DS.Radius.pill, tint: .white.opacity(0.35))
             .contentShape(Capsule(style: .continuous))
             .frame(minHeight: DS.Hit.min)
         }

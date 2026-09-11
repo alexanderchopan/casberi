@@ -79,6 +79,7 @@ struct HegotaRoomFigure: View {
         switch section {
         case .home:     return false
         case .activity: return moves.isEmpty
+        case .holdings: return holdingsAnswered.isEmpty
         case .accounts: return shown.isEmpty
         case .frames:   return framedMoves.isEmpty
         case .coins:    return coins.isEmpty
@@ -170,6 +171,12 @@ struct HegotaRoomFigure: View {
         // roster row, even one that says the chain could not be reached, which
         // is itself the answer." The roster is the subject, so the headline is
         // how many, and the room is back to one crown (§506).
+        case .holdings:
+            // The TOTAL is the scope's stat line, so the treemap below carries
+            // names and amounts and never repeats it (prd §680).
+            let answered = holdingsAnswered
+            guard !answered.isEmpty else { return section.emptyHeadline }
+            return HegotaFormat.crown(answered.reduce(Decimal(0)) { $0 + ($1.balanceWei ?? 0) })
         case .accounts:
             return accounts.count == 1 ? String(localized: "1 address")
                                        : String(localized: "\(String(accounts.count)) addresses")
@@ -193,6 +200,7 @@ struct HegotaRoomFigure: View {
         switch section {
         case .home, .sponsors: crownFigure
         case .activity:        activityFigure
+        case .holdings:        holdingsFigure
         case .accounts:        accountsFigure
         case .frames:          framesFigure
         case .coins:           coinsFigure
@@ -692,6 +700,82 @@ struct HegotaRoomFigure: View {
     /// two did not (user, 2026-09-01: *"i don't like seeing so many different
     /// sizes of silhouette avatars"*). The name is the identity here and the
     /// card spends its width on what the address IS.
+    /// Every watched address that answered, richest first — the ones the
+    /// treemap and the list both read from (prd §680). An address the chain
+    /// could not read is left OUT rather than drawn at zero: a failed read and
+    /// a real zero must never look alike (§83).
+    /// Reads `shown`, not `accounts`: the face rail scopes this card, so a
+    /// picked address must scope the map and the stat line with it — seen on
+    /// the simulator, a scoped rail over a map still drawing every address
+    /// (prd §680).
+    private var holdingsAnswered: [HegotaAccount] {
+        shown.filter { $0.reached && $0.balanceWei != nil }
+             .sorted { ($0.balanceWei ?? 0) > ($1.balanceWei ?? 0) }
+    }
+
+    /// **A TREEMAP (prd §680)** — `UnitTreemap`, the same one this card already
+    /// draws for UTXOs one scope over, so "how much, and how lopsided" reads
+    /// the same way whether the subject is one address's coins or every
+    /// address's balance.
+    @ViewBuilder private var holdingsFigure: some View {
+        let answered = holdingsAnswered
+        let drawn = Array(answered.prefix(UnitTreemap<EmptyView>.maxCells))
+        let unread = shown.count - answered.count
+        let total = answered.reduce(Decimal(0)) { $0 + ($1.balanceWei ?? 0) }
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if !drawn.isEmpty {
+                UnitTreemap(count: drawn.count,
+                            height: DSRoomChassis.crownLine(box: DSRoomChassis.figureSlot,
+                                                            chrome: unread > 0 ? 46 : 24),
+                            cell: { i in holdingsTile(drawn[i], rank: i, total: total) },
+                            readout: { i in
+                                let a = drawn[i]
+                                let name = HegotaWatch.shared.name(for: a.address)
+                                    ?? WalletStore.shortAddress(a.address)
+                                return String(localized: "\(name) — \(HegotaFormat.crown(a.balanceWei ?? 0))")
+                            },
+                            identity: { i in drawn[i].address })
+                if unread > 0 {
+                    Text(unread == 1
+                         ? String(localized: "one didn't answer")
+                         : String(localized: "\(String(unread)) didn't answer"))
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    private func holdingsTile(_ account: HegotaAccount, rank: Int, total: Decimal) -> some View {
+        let tall = rank < 2
+        let share = total > 0 ? (account.balanceWei ?? 0) / total : 0
+        VStack(alignment: .leading, spacing: 2) {
+            Text(HegotaFormat.crown(account.balanceWei ?? 0))
+                .dsText(tall ? .callout15 : .label12)
+                .fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1).minimumScaleFactor(0.6)
+            Text(HegotaWatch.shared.name(for: account.address)
+                 ?? WalletStore.shortAddress(account.address))
+                .dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1).minimumScaleFactor(0.8)
+            if tall { Spacer(minLength: 0) }
+        }
+        .padding(DS.Space.s3)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background {
+            ZStack {
+                DS.surfaceSheet
+                DS.ink(magnitude: Double(truncating: share as NSNumber))
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        }
+    }
+
     @ViewBuilder private var accountsFigure: some View {
         let rows = HegotaRoster.rows(accounts)
         let drawn = Array(rows.prefix(HegotaRoster.cap))
@@ -1841,6 +1925,7 @@ struct HegotaRoomList: View {
             // key, so a room with no key draws no form rather than a dead one.
             case .home:     HegotaSendCard()
             case .activity: movesList(moves)
+            case .holdings: holdingsList
             case .accounts: accountsList
             case .frames:   framesList
             case .coins:    coinsList
@@ -1977,6 +2062,31 @@ struct HegotaRoomList: View {
         }
         .buttonStyle(.plain)
         .dsHover()
+    }
+
+    /// The rows under the treemap: richest first, balance trailing, the same
+    /// `WalletRow` the Accounts scope draws so one address reads identically
+    /// in both (prd §680).
+    @ViewBuilder private var holdingsList: some View {
+        let answered = shown.filter { $0.reached && $0.balanceWei != nil }
+                            .sorted { ($0.balanceWei ?? 0) > ($1.balanceWei ?? 0) }
+        ForEach(answered) { account in
+            Button {
+                DSHaptic.selection()
+                onOpenAccount?(account)
+            } label: {
+                WalletRow(mark: .face(account.address),
+                          title: HegotaWatch.shared.name(for: account.address)
+                              ?? WalletStore.shortAddress(account.address),
+                          subtitle: subtitle(account)) {
+                    Text(HegotaFormat.crown(account.balanceWei ?? 0))
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit().lineLimit(1)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     @ViewBuilder private var accountsList: some View {

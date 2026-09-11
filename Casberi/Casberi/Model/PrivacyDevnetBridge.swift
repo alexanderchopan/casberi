@@ -238,7 +238,25 @@ final class PrivacyDevnetLiveState {
     /// One transaction for a whole read (prd §665): head slot, genesis, walk
     /// cut and accounts land together, so no body pass composes a head from
     /// half of them.
+    /// **WHAT EACH WATCHED ADDRESS HELD, OVER TIME (prd §682/§683).**
+    /// Recorded into `RoomValueHistory`, the store every wallet-family room
+    /// shares, so Home's line and its range chips are the same machinery the
+    /// Wallet's are. SAMPLED rather than derived because a Privacy move
+    /// carries no wei — the amount is what the pool hides — which is also why
+    /// a shield shows as a dip.
+    func noteBalances(_ accounts: [PrivacyDevnetAccount]) {
+        guard !DemoMode.isActive else { return }
+        for account in accounts {
+            guard account.reached, let wei = account.balanceWei else { continue }
+            RoomValueHistory.note(room: Self.historyRoom, address: account.address,
+                                  value: (wei as NSDecimalNumber).doubleValue / 1e18)
+        }
+    }
+
+    static let historyRoom = "privacyDevnet"
+
     private func publish(accounts: [PrivacyDevnetAccount], head: UInt64?, cut: WalkCut?, genesis: String?) {
+        noteBalances(accounts)
         if let head { headSlot = head }
         if let genesis { observedGenesis = genesis }
         if let cut { walkCut = cut }
@@ -1175,6 +1193,35 @@ extension PrivacyDevnetLiveState {
         Task { @MainActor in
             PrivacyDevnetLiveState.shared.installDemo([a, b, c], headSlot: head,
                                                 genesis: PrivacyDevnetChain.genesis)
+            // The demo carries a balance HISTORY too (prd §682) — Home's line
+            // is sampled per read, so a freshly poured demo would otherwise
+            // show the ring for its whole life and the line would be
+            // unreachable from here. Each series ends on the account's own
+            // balance above, and the dips are shields: value leaving the
+            // address for the pool, which is exactly what the reading means.
+            // The demo carries a HISTORY too (prd §682/§683) — Home's line is
+            // sampled per read, so a freshly poured demo would otherwise show
+            // no line for its whole life. Points are spread back over ten days
+            // so the 7d and since-watched chips both have something to offer,
+            // and the dips are shields: value leaving an address for the pool.
+            // Spread over ~45 days so 7d, 30d and since-watched all have two
+            // points and the range chips have something to offer —
+            // `WalletRange.offered` requires the oldest sample to PREDATE a
+            // window, not merely to sit inside it.
+            let day: TimeInterval = 86_400
+            func series(_ values: [Double]) -> [WalletStore.ValueSample] {
+                let step = 45.0 / Double(max(values.count - 1, 1))
+                return values.enumerated().map { i, v in
+                    WalletStore.ValueSample(
+                        at: Date().addingTimeInterval(-day * step * Double(values.count - 1 - i)),
+                        usd: v)
+                }
+            }
+            RoomValueHistory.installDemo(room: PrivacyDevnetLiveState.historyRoom, book: [
+                demoAddress: series([0.9012, 0.8990, 0.7011, 0.6998, 0.6995, 0.4502, 0.4481]),
+                "0x753d91eef10c8e26924aabcb0ad73052f8fc4522": series([0.1002, 0.2503, 0.2501, 0.3999, 0.4480]),
+                "0x248ac8584135c94469a90fbb02ba053b17f1cc60": series([1.2004, 1.1998, 0.9002, 1.4003, 1.3999]),
+            ])
         }
     }
 

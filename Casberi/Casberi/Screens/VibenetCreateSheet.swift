@@ -569,7 +569,17 @@ struct VibenetCreateSheet: View {
             // What you did lands in the corpus (prd §523) — a real gap this
             // sheet shipped with: `landReceipt` existed and had no caller.
             VibenetSend.landReceipt(sent, in: modelContext)
-            phase = .done(account: "0x" + VibenetTransaction.hex(sent.account))
+            let address = "0x" + VibenetTransaction.hex(sent.account)
+            // **WATCH WHAT YOU JUST MADE (prd §681, user: "vibenet says create
+            // account even tho i already have created an account").** The room
+            // finds this phone's account by looking for a WATCHED account whose
+            // actors include this key (`FeedScreen.signableVibenetAccount`), and
+            // creating one never added it to the watch list — so the account
+            // existed on chain, the key could sign for it, and the room went on
+            // offering to create a second one. It is watched here, at the one
+            // moment the app is certain the account is yours.
+            _ = VibenetWatch.shared.add(address)
+            phase = .done(account: address)
         } catch {
             phase = .ready
             // NOT `chrome.flash` — that toast renders inside `RootShell`'s own

@@ -850,10 +850,28 @@ struct FeedScreen: View {
             // Hegotá's: a vibenet account is deployed by a sponsor, so it has a
             // real flow with a payer check behind it and cannot be a keystroke.
             Section {
+                // **A PHONE WITH A KEY IS NEVER OFFERED A SECOND ACCOUNT (prd
+                // §681).** This scope draws when no WATCHED account lists this
+                // device's key as an actor — which is true both for a phone
+                // that has never made one and for a phone whose account exists
+                // on chain but is not watched (creating one did not watch it
+                // until today, and a reinstall drops the watch list while the
+                // Keychain key survives). The second case was the report:
+                // "create account even tho i already have created an account".
+                // The key's own presence tells the two apart, so the verb does.
                 DevnetCreatePanel(tint: DS.brandHue(for: VibenetIdentity.source)
                                         ?? Color.fixed("#0052ff"),
-                                  title: String(localized: "Create\naccount"),
-                                  onCreate: { feedSheet = .vibenetCreate })
+                                  title: VibenetDeviceKey.presence() == .present
+                                      ? String(localized: "Find my\naccount")
+                                      : String(localized: "Create\naccount"),
+                                  busy: vibenetFinding,
+                                  onCreate: {
+                                      if VibenetDeviceKey.presence() == .present {
+                                          findVibenetAccount()
+                                      } else {
+                                          feedSheet = .vibenetCreate
+                                      }
+                                  })
                 // Same row chrome as the signable branch above — this state is
                 // the same section wearing one tile instead of four.
                 .listRowBackground(Color.clear)
@@ -1402,6 +1420,35 @@ struct FeedScreen: View {
             return vibenetSendFailureText(f)
         } catch {
             return String(localized: "Couldn't send.")
+        }
+    }
+
+    @State private var vibenetFinding = false
+
+    /// **THE RECOVERY (prd §681).** Walks the keystore's `AccountCreated` log
+    /// for an account whose live actors include this phone's key, and watches
+    /// it. Says what happened either way — a verb that can silently do nothing
+    /// is the honesty rule's own example (§83).
+    private func findVibenetAccount() {
+        guard !vibenetFinding else { return }
+        vibenetFinding = true
+        Task { @MainActor in
+            defer { vibenetFinding = false }
+            guard let c = await VibenetConfig.current() else {
+                chrome.flash(String(localized: "Couldn't reach the chain."), tone: .failure)
+                return
+            }
+            guard let found = await VibenetDiscovery.accountForThisPhone(keystore: c.keystore) else {
+                chrome.flash(String(localized: "No account on this chain uses this phone's key."),
+                             tone: .failure)
+                return
+            }
+            if VibenetWatch.shared.add(found) {
+                DSHaptic.success()
+                chrome.flash(String(localized: "Found your account."))
+            } else {
+                chrome.flash(String(localized: "Already watching that account."))
+            }
         }
     }
 
@@ -5183,6 +5230,8 @@ struct FeedScreen: View {
                     accounts: PrivacyDevnetRoomSource.accounts(scope: chrome.privacyDevnetScope),
                     headSlot: PrivacyDevnetLiveState.shared.headSlot,
                     walkCut: PrivacyDevnetLiveState.shared.walkCut,
+                    shielded: PrivacyDevnetLiveState.shared.shielded,
+                    mine: PrivacyDevnetLiveState.shared.mine,
                     // Home's own newest moves are rows too, and rows open
                     // sheets (prd §596) — the closure the card's list half
                     // gets below, on the one scope whose rows draw in the slot.
@@ -5237,12 +5286,48 @@ struct FeedScreen: View {
             // sign — reported as the lists not showing at all. `FramesRoomList`
             // is the same split one seat over.
             Section {
+            // **THE VERBS SIT UNDER THE RAIL, NOT UNDER THE LIST (prd §682,
+            // user: "instead of a list below the rail should be whatever
+            // buttons go here like on the other wallets… somehow they
+            // disappeared").** They never disappeared: §664 gave the Send card
+            // its own List row and left it AFTER the room's rows, so on a Home
+            // with any history the verbs were below the fold and the first
+            // thing under the rail was a list. Every other wallet room leads
+            // with its verbs. So does this one now; the last few moves follow
+            // them.
+            if privacyScope == .home {
+                Section {
+                    PrivacyDevnetSendCard(onSend: { feedSheet = .privacyDevnetSend },
+                                          onShield: { feedSheet = .privacyDevnetShield })
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                          bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
+                // The example doors AFTER the verbs, in their own row (prd
+                // §680, user: "showing buttons on top of a list which
+                // shouldn't happen"). §664 gave the tiles their own row and
+                // left the doors inside the card, which inverted the card's
+                // own order. Own row for the same reason the tiles got one:
+                // a shared cell under-reports the grid's height.
+                if PrivacyDevnetRoomList.showsExamples(head) {
+                    Section {
+                        PrivacyDevnetExampleDoors(onWatch: watchPrivacyDevnetExample)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
+                }
+            }
                 PrivacyDevnetRoomList(
                     head: head,
                     section: privacyScope,
                     accounts: PrivacyDevnetRoomSource.accounts(scope: chrome.privacyDevnetScope),
                     headSlot: PrivacyDevnetLiveState.shared.headSlot,
                     walkCut: PrivacyDevnetLiveState.shared.walkCut,
+                    shielded: PrivacyDevnetLiveState.shared.shielded,
+                    mine: PrivacyDevnetLiveState.shared.mine,
                     // The Send card is its OWN row below (prd §664), not a
                     // member of this VStack: a cell shared between the move
                     // list and the verb grid took the grid's under-reported
@@ -5270,16 +5355,6 @@ struct FeedScreen: View {
                                       bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
             // The verbs, in their own cell (prd §664) — see the `onSend: nil`
             // above for why they left the list's.
-            if privacyScope == .home {
-                Section {
-                    PrivacyDevnetSendCard(onSend: { feedSheet = .privacyDevnetSend },
-                                          onShield: { feedSheet = .privacyDevnetShield })
-                }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                          bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
-            }
             // **THE SWITCHER WAS MISSING ON THE FIRST BUILD**, found by opening
             // the room on a simulator rather than by any check: the seven scopes
             // existed, `present()` computed them correctly, and six of them were

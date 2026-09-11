@@ -3100,6 +3100,34 @@
         }
       }
     },
+    "%@ didn't answer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ no respondieron"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 件は応答なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@개는 응답 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 个未响应"
+          }
+        }
+      }
+    },
     "%@ doesn't answer as a Radicle seed." : {
       "localizations" : {
         "es" : {
@@ -4809,6 +4837,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 可触及。%@。"
+          }
+        }
+      }
+    },
+    "%@ in the pool" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ en el pool"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プール内に %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "풀에 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "池中 %@"
+          }
+        }
+      }
+    },
+    "%@ in the pool, held by this phone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ en el pool, en este teléfono"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プール内に %@、このスマートフォンが保有"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "풀에 %@, 이 휴대폰이 보유"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "池中 %@，由此手机持有"
           }
         }
       }
@@ -7271,6 +7355,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "过去 30 天刷卡 %@ — 大部分在 %@"
+          }
+        }
+      }
+    },
+    "%@ on the chain" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ en la cadena"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チェーン上に %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "체인에 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "链上 %@"
           }
         }
       }
@@ -16013,6 +16125,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%lld 笔存入，全部已审核"
+          }
+        }
+      }
+    },
+    "%lld didn't answer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld no respondieron"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 件は応答なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개는 응답 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个未响应"
           }
         }
       }
@@ -60471,6 +60611,34 @@
         }
       }
     },
+    "Find my\naccount" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Buscar mi\ncuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントを\n探す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정\n찾기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "找到我的\n账户"
+          }
+        }
+      }
+    },
     "Finding the channel…" : {
       "localizations" : {
         "es" : {
@@ -62026,6 +62194,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在你关注的钱包中发现"
+          }
+        }
+      }
+    },
+    "Found your account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encontramos tu cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントが見つかりました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정을 찾았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已找到你的账户。"
           }
         }
       }
@@ -77946,6 +78142,34 @@
         }
       }
     },
+    "No account on this chain uses this phone's key." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ninguna cuenta de esta cadena usa la clave de este teléfono."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このチェーンにこのスマートフォンの鍵を使うアカウントはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 체인에 이 휴대폰의 키를 쓰는 계정이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这条链上没有账户使用这台手机的密钥。"
+          }
+        }
+      }
+    },
     "No account yet" : {
       "localizations" : {
         "es" : {
@@ -78082,6 +78306,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "没有已授权的操作者"
+          }
+        }
+      }
+    },
+    "No address here has spent a pool note" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ninguna dirección aquí ha gastado una nota del pool"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここのどのアドレスもプールのノートを使っていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기 어떤 주소도 풀 노트를 사용하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这里没有地址花费过池中票据"
           }
         }
       }
@@ -85164,6 +85416,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你名下的资产 %lld 个月内不会到期"
+          }
+        }
+      }
+    },
+    "Nothing you watch holds a balance here yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada de lo que sigues tiene saldo aquí todavía."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォッチ中のアドレスにはまだ残高がありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지켜보는 주소에 아직 잔액이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的地址在这里还没有余额。"
           }
         }
       }
@@ -125033,6 +125313,34 @@
         }
       }
     },
+    "Watch an address to see it here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue una dirección para verla aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレスをウォッチするとここに表示されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소를 지켜보면 여기에 표시됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注一个地址即可在此看到"
+          }
+        }
+      }
+    },
     "Watch an address to see what it did on this chain." : {
       "localizations" : {
         "es" : {
@@ -127329,6 +127637,62 @@
         }
       }
     },
+    "What each address holds, on the chain and in the pool" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que tiene cada dirección, en la cadena y en el pool"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各アドレスがチェーン上とプール内に持つもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "각 주소가 체인과 풀에 보유한 것"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每个地址在链上和池中持有的内容"
+          }
+        }
+      }
+    },
+    "What each address you watch holds" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que tiene cada dirección que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォッチ中の各アドレスが持つもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지켜보는 각 주소가 보유한 것"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的每个地址持有什么"
+          }
+        }
+      }
+    },
     "What each pool holds for you, per asset, and how much larger the set it hides among has grown. Nothing here carries an amount this app can state." : {
       "localizations" : {
         "es" : {
@@ -128473,6 +128837,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你持有的内容"
+          }
+        }
+      }
+    },
+    "What you hold here, and what you can do with it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que tienes aquí y lo que puedes hacer con ello"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここにある残高と、できること"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기 보유한 것과 할 수 있는 일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你在这里持有什么，以及能做什么"
           }
         }
       }
@@ -143793,6 +144185,34 @@
         }
       }
     },
+    "not your data" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "no son tus datos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのデータではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 데이터가 아닙니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不是你的数据"
+          }
+        }
+      }
+    },
     "note" : {
       "localizations" : {
         "es" : {
@@ -144325,6 +144745,62 @@
         }
       }
     },
+    "on the chain, across %lld addresses" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en la cadena, en %lld direcciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チェーン上、%lld アドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "체인, 주소 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "链上，共 %lld 个地址"
+          }
+        }
+      }
+    },
+    "on the chain, one address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en la cadena, una dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チェーン上、1 アドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "체인, 주소 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "链上，一个地址"
+          }
+        }
+      }
+    },
     "on your %@" : {
       "localizations" : {
         "es" : {
@@ -144581,6 +145057,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "1"
+          }
+        }
+      }
+    },
+    "one didn't answer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "una no respondió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 件は応答なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1개는 응답 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一个未响应"
           }
         }
       }

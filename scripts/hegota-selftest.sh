@@ -87,7 +87,10 @@ func check(_ ok: Bool, _ what: String) {
 
 // ─────────────────────────── scopes ───────────────────────────
 
-check(HegotaSection.order == [.home, .activity, .accounts, .frames, .coins, .nonces, .sponsors],
+// AMENDED for prd §680: `holdings` is third — what each watched address
+// holds, the question this room is asked first, and the tab both other
+// devnets gained the same day.
+check(HegotaSection.order == [.home, .activity, .holdings, .accounts, .frames, .coins, .nonces, .sponsors],
       "order is home → activity → accounts → frames → coins → nonces → sponsors")
 // **`frames` LEADS the conditional tail, ahead of `coins` (§504).** Pinned as
 // its own assertion rather than left implicit in the list above, because it is
@@ -95,7 +98,8 @@ check(HegotaSection.order == [.home, .activity, .accounts, .frames, .coins, .non
 // directly off `activity`, which precedes it.
 check(HegotaSection.order.firstIndex(of: .frames)! < HegotaSection.order.firstIndex(of: .coins)!,
       "frames leads the conditional tail, ahead of coins")
-check(HegotaSection.order.firstIndex(of: .activity)! + 2 == HegotaSection.order.firstIndex(of: .frames)!,
+// §680 put `holdings` between them, so the gap is three rather than two.
+check(HegotaSection.order.firstIndex(of: .activity)! + 3 == HegotaSection.order.firstIndex(of: .frames)!,
       "frames sits as close behind activity as the tail rule permits")
 check(HegotaSection.order.count == HegotaSection.allCases.count,
       "order lists every case — a new scope cannot be silently unlisted")
@@ -106,13 +110,17 @@ check(HegotaSection.order.last == .sponsors, "sponsors is last — the rarest sc
 // sit after a conditional one, so the strip's stable head never reflows. Frames
 // opening the tail satisfies this — home, activity and accounts are the only
 // unconditional scopes and all three precede it.
+check(HegotaSection.allCases.contains { $0.rawValue == "holdings" },
+      "`holdings` exists — what each watched address holds (prd §680)")
+check(!HegotaSection.holdings.isConditional,
+      "holdings is unconditional: the tab is present even when nothing is held (user, prd §680)")
 let firstConditional = HegotaSection.order.firstIndex { $0.isConditional }!
 let lastUnconditional = HegotaSection.order.lastIndex { !$0.isConditional }!
 check(lastUnconditional < firstConditional,
       "no unconditional scope sits after a conditional one")
-check(HegotaSection.order[3] == .frames,
+check(HegotaSection.order[firstConditional] == .frames,
       "frames leads the conditional tail — the reading this chain exists for")
-check(HegotaSection.order[2] == .accounts,
+check(HegotaSection.order[lastUnconditional] == .accounts,
       "accounts closes the unconditional head — every watched address always has one")
 
 check(HegotaSection.home.isAlwaysPresent, "home is always present")
@@ -1009,9 +1017,9 @@ mutate "a single-mode mix claims a commonest step (\"mostly\" said of all of the
   HegotaRoom.swift 's/leaders\.count == 1 && slices\.count > 1/leaders.count == 1/'
 
 mutate "a conditional scope moved ahead of an unconditional one (the strip's head reflows)" \
-  HegotaSection.swift 's/\[\.home, \.activity, \.accounts, \.frames, \.coins, \.nonces, \.sponsors\]/[.home, .coins, .activity, .accounts, .frames, .nonces, .sponsors]/'
+  HegotaSection.swift 's/\[\.home, \.activity, \.holdings, \.accounts, \.frames, \.coins, \.nonces, \.sponsors\]/[.home, .coins, .activity, .holdings, .accounts, .frames, .nonces, .sponsors]/'
 mutate "home no longer leads" \
-  HegotaSection.swift 's/\[\.home, \.activity, \.accounts/[.coins, .home, .activity/'
+  HegotaSection.swift 's/\[\.home, \.activity, \.holdings/[.coins, .home, .activity/'
 mutate "resolve falls back to the first present scope instead of home" \
   HegotaSection.swift 's/guard let wanted, present\.contains\(wanted\) else \{ return \.home \}/guard let wanted, present.contains(wanted) else { return present.first ?? .home }/'
 mutate "shows() lets a single scope draw a control" \

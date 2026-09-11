@@ -42,6 +42,11 @@ struct PrivacyDevnetRoomCard: View {
     /// What the last walk could not read (prd §593d). Empty on every pass
     /// today; the room says so the day it is not.
     var walkCut = PrivacyDevnetLiveState.WalkCut()
+    /// This phone's pool balance and its own address (prd §680) — the one
+    /// row in Holdings that has a second line, because a note in the pool is
+    /// held by nobody the chain can name.
+    var shielded: PrivacyDevnetShielded.Balance? = nil
+    var mine: String? = nil
     /// Opens one transaction's sheet (prd §596). Nil for a preview — and then
     /// the rows draw without a chevron, because a chevron over a tap that does
     /// nothing is §83's dead control.
@@ -52,6 +57,7 @@ struct PrivacyDevnetRoomCard: View {
     /// §299: a drawing sized from data gets an entrance, and the entrance
     /// honours Reduce Motion.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     /// The spend keys this device had never seen when the scope opened — the
     /// only ones whose ring seals (prd §598). Empty on an install's first read
     /// by construction, so arriving somewhere does not look like forty things
@@ -62,7 +68,11 @@ struct PrivacyDevnetRoomCard: View {
         // role a headline plays — so the row is reserved only where the
         // chassis draws one (`DSRoomSlot.reservesHeadline`'s own rule).
         DSRoomSlot(headline: slotHeadline,
-                   reservesHeadline: section != .home || !marks.isEmpty) { content }
+                   // **RESERVE THE ROW ONLY WHEN THERE IS SOMETHING IN IT
+                   // (prd §683).** Home's headline is nil once the shared
+                   // crown draws — the crown owns the number — and the
+                   // reserved row then sat above it as a band of air.
+                   reservesHeadline: slotHeadline != nil) { content }
     }
 
     /// One `stat24` line per scope, drawn by the CHASSIS (prd §495/§596) —
@@ -71,6 +81,14 @@ struct PrivacyDevnetRoomCard: View {
     /// Activity, the STEP count to Frames, so no two scopes read as one
     /// reading twice.
     private var slotHeadline: String? {
+        // **HOME LEADS WITH WHAT IS HELD (prd §682, user: "it isn't supposed
+        // to say the balance, we say that on home").** When the line draws,
+        // the stat line is the figure it is a line OF — the shape every other
+        // wallet room has. Without a line Home keeps §606's count.
+        // **THE CROWN OWNS THE NUMBER (prd §683).** Nil when Home draws the
+        // shared crown, or the figure appears twice — seen on the simulator as
+        // "2.2960 ETH" above "2.2960 ETH".
+        if section == .home, homeSamples.count >= 2 { return nil }
         switch section {
         // **HOME TAKES A HEADLINE WHEN A FIGURE DRAWS (prd §606, user: "isn't
         // it weird to have those sentences at the top of the charts?").**
@@ -100,6 +118,16 @@ struct PrivacyDevnetRoomCard: View {
             guard n > 0 else { return section.emptyHeadline }
             return n == 1 ? String(localized: "1 transaction")
                           : String(localized: "\(String(n)) transactions")
+        case .holdings:
+            // **NOT THE BALANCE (prd §680, user: "you have the balance, it
+            // isn't supposed to say the balance, we say that on home").** Home
+            // is where this chain's total lives; a count is what the other
+            // scopes' stat lines carry, and it is what this one carries.
+            guard !accounts.isEmpty else { return section.emptyHeadline }
+            let answered = accounts.filter { $0.reached && $0.balanceWei != nil }
+            guard !answered.isEmpty else { return String(localized: "Balance unread") }
+            return answered.count == 1 ? String(localized: "1 address")
+                                       : String(localized: "\(String(answered.count)) addresses")
         case .accounts:
             let n = accounts.count
             guard n > 0 else { return section.emptyHeadline }
@@ -200,7 +228,24 @@ struct PrivacyDevnetRoomCard: View {
             //
             // Centred, and given the leftover height so the air is distributed
             // rather than dumped underneath.
-            if !marks.isEmpty {
+            // **THE SHARED ROOM CROWN (prd §683, user: "Can you make sure we
+            // are using the same templates for Wallet, and each devnet please.
+            // the home's on all should be same … for the slot").**
+            // `RoomHomeCrown` is the Home slot every wallet-family room draws —
+            // caption, number, change, line, range chips — so this room and the
+            // Wallet differ in their FACTS and in nothing else. Only the
+            // spelling is ours: this chain counts its own ETH.
+            //
+            // The line is SAMPLED, not derived: a Privacy move carries no wei,
+            // because the amount is what the pool hides (§682). A shield dips
+            // it because value leaves the address for the pool.
+            if homeSamples.count >= 2 {
+                RoomHomeCrown(samples: homeSamples,
+                              caption: scopeCaption,
+                              format: { PrivacyDevnetMoney.line(wei: Self.wei($0)) },
+                              exactFormat: { PrivacyDevnetMoney.line(wei: Self.wei($0)) })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            } else if !marks.isEmpty {
                 PrivacyDevnetRing(marks: marks, sets: setCount,
                                   remaining: freshestRemaining,
                                   readAt: readAt, diameter: Self.homeRingDiameter,
@@ -310,6 +355,7 @@ extension PrivacyDevnetRoomCard {
         switch section {
         case .home:       return false
         case .activity:   return pairs.isEmpty
+        case .holdings:   return accounts.isEmpty
         case .accounts:   return accounts.isEmpty
         case .frames:     return moves.allSatisfy { $0.frameCount == 0 }
         case .nullifiers: return keyRows.isEmpty
@@ -356,8 +402,14 @@ extension PrivacyDevnetRoomCard {
         // all — so the scope's summary promised them and the scope had none.
         // Here they cannot clip, and they cannot double up either: the slot
         // above draws the sentence and the ring, and nothing else.
-        case .home:       list(Array(pairs.prefix(homeMoveCount)), showsCeiling: false)
+        // **HOME HAS NO LIST (prd §682, user: "there should be NO LIST on the
+        // home screen").** Home is the crown, the rail and the verbs — the
+        // shape every other wallet room has. The last few moves were a third
+        // copy of rows that Activity already owns in full, and they pushed the
+        // verbs off the screen, which is what made them look deleted.
+        case .home:       EmptyView()
         case .activity:   list(pairs)
+        case .holdings:   holdingsRoster
         case .accounts:   roster
         case .frames:     list(pairs.filter { $0.move.frameCount > 0 })
         case .nullifiers: nullifierScope
@@ -577,6 +629,253 @@ extension PrivacyDevnetRoomCard {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// **HOLDINGS (prd §680).** Every watched address, richest first, with
+    /// what it holds on the chain; this phone's own address adds what it
+    /// holds in the pool. The figure above the rows is the total, so the
+    /// tab answers "how much" before "where".
+    /// **THE SLOT ALWAYS DRAWS (prd §680, user: "i don't want empty spots to
+    /// go hidden … the rows on the tab should always be present even if
+    /// empty").** Two of this room's scopes had `EmptyView` figures, so the
+    /// slot every other scope fills held a count over 240pt of black — §664's
+    /// own defect, one scope over. Collapsing the slot was tried and rejected
+    /// by the same ruling: the rail must sit on one line in every scope, so a
+    /// scope with nothing to draw says SO, in the slot, rather than vanishing
+    /// it.
+    ///
+    /// Accounts: the faces, and what each one did here.
+    /// The line Home draws, from the store every wallet-family room shares
+    /// (prd §683): the scoped address's samples, or the sum across everything
+    /// you follow when the rail is on All.
+    /// The crown's caption: the scoped address's name, or how many you follow.
+    var scopeCaption: String {
+        if accounts.count == 1, let one = accounts.first {
+            return PrivacyDevnetName.of(one.address)
+        }
+        return String(localized: "\(String(accounts.count)) addresses")
+    }
+
+    var homeSamples: [WalletStore.ValueSample] {
+        RoomValueHistory.combined(room: PrivacyDevnetLiveState.historyRoom,
+                                  addresses: accounts.map(\.address))
+    }
+
+    static func wei(_ eth: Double) -> Decimal {
+        Decimal(eth) * Decimal(sign: .plus, exponent: 18, significand: 1)
+    }
+
+    @ViewBuilder var accountsFigure: some View {
+        if accounts.isEmpty {
+            slotNothing(String(localized: "Watch an address to see it here"))
+        } else {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                ForEach(accounts.prefix(4)) { account in
+                    HStack(spacing: DS.Space.s3) {
+                        WalletFace(address: account.address, size: DS.Face.list, circular: true)
+                            .opacity(account.reached ? 1 : 0.45)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(PrivacyDevnetName.of(account.address))
+                                .dsText(.callout15)
+                                .foregroundStyle(account.reached ? DS.textPrimary : DS.textTertiary)
+                                .lineLimit(1)
+                            Text(accountDoing(account))
+                                .dsText(.label12)
+                                .foregroundStyle(DS.textTertiary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                }
+                if accounts.count > 4 {
+                    Text(String(localized: "\(String(accounts.count - 4)) more"))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                }
+            }
+            .padding(.trailing, DSRoomChassis.gearColumn)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+
+    private func accountDoing(_ account: PrivacyDevnetAccount) -> String {
+        guard account.reached else { return String(localized: "The chain didn't answer") }
+        var parts: [String] = []
+        let moved = pairs.filter { $0.owner.caseInsensitiveCompare(account.address) == .orderedSame }.count
+        parts.append(moved == 1 ? String(localized: "1 transaction")
+                                : String(localized: "\(String(moved)) transactions"))
+        if !account.nullifiers.isEmpty {
+            parts.append(account.nullifiers.count == 1
+                         ? String(localized: "1 spend key")
+                         : String(localized: "\(String(account.nullifiers.count)) spend keys"))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// Spend keys: how many each watched address has burned. A spend key is
+    /// used once and never again, so the count IS the reading.
+    @ViewBuilder var spendKeyFigure: some View {
+        let spenders = accounts.filter { !$0.nullifiers.isEmpty }
+                               .sorted { $0.nullifiers.count > $1.nullifiers.count }
+        if spenders.isEmpty {
+            slotNothing(String(localized: "No address here has spent a pool note"))
+        } else {
+            let top = max(spenders.first?.nullifiers.count ?? 1, 1)
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                ForEach(spenders.prefix(4)) { account in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: DS.Space.s2) {
+                            Text(PrivacyDevnetName.of(account.address))
+                                .dsText(.label12)
+                                .foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                            Text(String(account.nullifiers.count))
+                                .dsText(.callout15).fontWeight(.semibold)
+                                .foregroundStyle(DS.textPrimary)
+                                .monospacedDigit()
+                        }
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule(style: .continuous).fill(DS.fillFaint)
+                                Capsule(style: .continuous).fill(DS.tint)
+                                    .frame(width: max(4, geo.size.width
+                                                      * CGFloat(account.nullifiers.count) / CGFloat(top)))
+                            }
+                        }
+                        .frame(height: 6)
+                    }
+                }
+            }
+            .padding(.trailing, DSRoomChassis.gearColumn)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+
+    /// What a scope with nothing to draw puts in the slot: the sentence, not a
+    /// blank. Never a dash and never a zero — a scope that has nothing says
+    /// why in its own words (§83, and `PrivacyDevnetSection.emptyBody`).
+    @ViewBuilder private func slotNothing(_ line: String) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                .strokeBorder(DS.fillLine, style: StrokeStyle(lineWidth: 1.4, dash: [3, 3]))
+                .frame(height: 64)
+                .opacity(0.6)
+            Text(line)
+                .dsText(.callout15)
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.trailing, DSRoomChassis.gearColumn)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    @ViewBuilder var holdingsRoster: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ForEach(holdingsOrdered) { account in
+                let title = PrivacyDevnetName.of(account.address)
+                if let onOpenAccount {
+                    Button {
+                        DSHaptic.selection()
+                        onOpenAccount(account)
+                    } label: {
+                        WalletRow(mark: .face(account.address),
+                                  title: title, subtitle: holdingsLine(account))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    WalletRow(terminal: .face(account.address),
+                              title: title, subtitle: holdingsLine(account))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var holdingsOrdered: [PrivacyDevnetAccount] {
+        accounts.sorted { ($0.balanceWei ?? -1) > ($1.balanceWei ?? -1) }
+    }
+
+    private func isMine(_ account: PrivacyDevnetAccount) -> Bool {
+        guard let mine else { return false }
+        return account.address.caseInsensitiveCompare(mine) == .orderedSame
+    }
+
+    private func holdingsLine(_ account: PrivacyDevnetAccount) -> String {
+        guard account.reached else { return String(localized: "The chain didn't answer") }
+        var parts: [String] = []
+        if let onChain = Self.eth(account.balanceWei) {
+            parts.append(String(localized: "\(onChain) on the chain"))
+        } else {
+            parts.append(String(localized: "Balance unread"))
+        }
+        if isMine(account), let shielded, let unspent = shielded.unspentWei {
+            parts.append(String(localized: "\(PrivacyDevnetMoney.line(wei: unspent)) in the pool"))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// **THE SAME TREEMAP THE WALLET DRAWS (prd §680, user: "you need to
+    /// emulate the treemap we already have on wallet … PLEASE DO NOT
+    /// HANDROLL").** `UnitTreemap` is the house primitive — the one the topic
+    /// map, the receipts map, Hegotá's UTXOs and `GenTagMap` (which is what
+    /// paints the Wallet's own Holdings) all sit on — so the proportional
+    /// frames, the entrance and the accessibility readout are shared, not
+    /// copied.
+    ///
+    /// **NO AMOUNT IN A CELL — §491, verbatim** (*"if there is a list of
+    /// holdings below that will show amounts, then do we need the amounts in
+    /// the treemap? treemap is just to show proportions… make the treemap just
+    /// the symbols"*). And no balance in the stat line either: Home says what
+    /// this chain holds. The map says which address holds how much of it; the
+    /// rows below carry the figures.
+    ///
+    /// This phone's own address is tinted `DS.attention` — the one tile you
+    /// can spend from. An address the chain could not read is left OUT rather
+    /// than drawn at zero (§83).
+    private var holdingsFigure: some View {
+        let answered = holdingsOrdered.filter { $0.reached && $0.balanceWei != nil }
+        let drawn = Array(answered.prefix(UnitTreemap<EmptyView>.maxCells))
+        let total = answered.reduce(Decimal(0)) { $0 + ($1.balanceWei ?? 0) }
+        return Group {
+            if drawn.isEmpty {
+                slotNothing(String(localized: "Nothing you watch holds a balance here yet."))
+            } else {
+                UnitTreemap(count: drawn.count,
+                            height: DSRoomChassis.figureSlot,
+                            cell: { i in holdingsTile(drawn[i], total: total) },
+                            readout: { i in
+                                let a = drawn[i]
+                                return String(localized: "\(PrivacyDevnetName.of(a.address)) — \(Self.eth(a.balanceWei) ?? "")")
+                            },
+                            identity: { i in drawn[i].address })
+                    .padding(.trailing, DSRoomChassis.gearColumn)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    @ViewBuilder
+    private func holdingsTile(_ account: PrivacyDevnetAccount, total: Decimal) -> some View {
+        let mine = isMine(account)
+        let share = total > 0 ? (account.balanceWei ?? 0) / total : 0
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer(minLength: 0)
+            Text(PrivacyDevnetName.of(account.address))
+                .dsText(.callout15).fontWeight(.semibold)
+                .foregroundStyle(mine ? DS.attention : DS.textPrimary)
+                .lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .padding(DS.Space.s3)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+        .background {
+            ZStack {
+                DS.surfaceSheet
+                DS.ink(magnitude: Double(truncating: share as NSNumber))
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        }
+    }
+
     static func eth(_ wei: Decimal?) -> String? {
         guard let wei else { return nil }
         return PrivacyDevnetMoney.line(wei: wei)
@@ -784,8 +1083,9 @@ extension PrivacyDevnetRoomCard {
         // over data with nothing to compare. "We can count; what does that
         // do." The chassis headline states the number and the rows below the
         // rail carry the detail, which is strictly more than the shapes said.
-        case .accounts:   EmptyView()
-        case .nullifiers: EmptyView()
+        case .holdings:   holdingsFigure
+        case .accounts:   accountsFigure
+        case .nullifiers: spendKeyFigure
         case .roots:      windows
         case .sponsors:   budgetBar(moves.filter(\.sponsored))
         case .home:       EmptyView()
@@ -983,6 +1283,11 @@ struct PrivacyDevnetRoomList: View {
     var accounts: [PrivacyDevnetAccount] = []
     var headSlot: UInt64 = 0
     var walkCut = PrivacyDevnetLiveState.WalkCut()
+    /// This phone's pool balance and its own address (prd §680) — the one
+    /// row in Holdings that has a second line, because a note in the pool is
+    /// held by nobody the chain can name.
+    var shielded: PrivacyDevnetShielded.Balance? = nil
+    var mine: String? = nil
     /// Raise the send form. Nil for a preview and for the demo's own card.
     var onSend: (() -> Void)?
     /// Shield onto the pool (prd §593e). Threaded beside `onSend`; the panel is
@@ -1002,6 +1307,7 @@ struct PrivacyDevnetRoomList: View {
     private var card: PrivacyDevnetRoomCard {
         PrivacyDevnetRoomCard(head: head, section: section, accounts: accounts,
                               headSlot: headSlot, walkCut: walkCut,
+                              shielded: shielded, mine: mine,
                               onOpenMove: onOpenMove, onOpenAccount: onOpenAccount)
     }
 
@@ -1031,14 +1337,12 @@ struct PrivacyDevnetRoomList: View {
             // only where it is really the answer: not while a relaunch is being
             // announced (which outranks everything), and not once there is
             // something to read.
-            if section == .home, let onWatchExample, showsExamples {
-                PrivacyDevnetExampleDoors(onWatch: onWatchExample)
-            }
-
             // The room's standing ceiling, once (prd §602) — under the acts,
             // where fine print belongs, rather than three times in three
             // scopes above the fold.
-            if section == .home, head.watching > 0 { card.walkFloor }
+            // The walk's footnote belongs to a list of moves, so it goes where
+            // the moves are (prd §682) — Home no longer has any.
+            if section == .activity, head.watching > 0 { card.walkFloor }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .modifier(PrivacyDevnetMomentsTask())
@@ -1050,16 +1354,20 @@ struct PrivacyDevnetRoomList: View {
         .task { PrivacyDevnetLiveState.shared.setMine(PrivacyDevnetKey.address()) }
     }
 
-    private var showsExamples: Bool {
+    /// Whether the room offers its two example addresses — a room with nothing
+    /// to read gets them, a room with rows does not (prd §610). `FeedScreen`
+    /// mounts the doors as their OWN List row, after the verb tiles (prd §680):
+    /// §664 moved the tiles out of this VStack into their own row, which put
+    /// them AFTER the example list this VStack still held — buttons under a
+    /// list of rows. The card's own order was always tiles, then doors.
+    static func showsExamples(_ head: PrivacyDevnetRoom.Head) -> Bool {
         switch head.lede {
         case .quiet, .unwatched: return true
-        // **`moved` is on the FALSE side (prd §610).** The doors exist for a
-        // room with nothing to read; an address with transactions has rows
-        // under the rail, and offering somebody else's example address over
-        // them is an answer to a question this room is no longer asking.
         case .reading, .relaunched, .rootLive, .rootsAged, .spends, .moved: return false
         }
     }
+
+    private var showsExamples: Bool { Self.showsExamples(head) }
 }
 
 

@@ -42,6 +42,12 @@ import Foundation
 enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
     case home
     case activity
+    /// What each watched address holds — on the chain and, for this phone's
+    /// own account, in the pool (prd §680, user: "the privacy and hegota
+    /// devnets need to have a holdings tab on the rail, and also should show
+    /// balances"). Vibenet has had one since §530; the two devnets that came
+    /// after it never did.
+    case holdings
     case accounts
     case frames
     case nullifiers
@@ -66,7 +72,7 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
     /// against — and a reader who meets them apart meets two unrelated pieces of
     /// jargon. Nullifiers leads because it is the half that concerns YOUR
     /// transaction; roots is the half that concerns the chain's state.
-    static let order: [PrivacyDevnetSection] = [.home, .activity, .accounts, .frames,
+    static let order: [PrivacyDevnetSection] = [.home, .activity, .holdings, .accounts, .frames,
                                           .nullifiers, .roots, .sponsors]
 
     /// Which scopes can be EMPTY.
@@ -80,7 +86,7 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         // A watched address always has a roster row — even one saying the chain
         // could not be reached, which is itself the answer (vibenet's rule).
-        case .home, .activity, .accounts: return false
+        case .home, .activity, .holdings, .accounts: return false
         case .frames, .nullifiers, .roots, .sponsors: return true
         }
     }
@@ -112,6 +118,7 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:       return String(localized: "Home")
         case .activity:   return String(localized: "Activity")
+        case .holdings:   return String(localized: "Holdings")
         case .accounts:   return String(localized: "Accounts")
         case .frames:     return String(localized: "Frames")
         case .nullifiers: return String(localized: "Spend keys")
@@ -130,8 +137,11 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
     /// more — §83 in the domain where believing it is most expensive.
     var summary: String {
         switch self {
-        case .home:       return String(localized: "The line, and the last few moves")
+        // The promise follows the screen (prd §682): Home is the line and the
+        // verbs now, and the moves are Activity's in full.
+        case .home:       return String(localized: "What you hold here, and what you can do with it")
         case .activity:   return String(localized: "What moved, and what each transaction did")
+        case .holdings:   return String(localized: "What each address holds, on the chain and in the pool")
         case .accounts:   return String(localized: "The addresses you watch, and what each holds")
         case .frames:     return String(localized: "The steps your transactions ran")
         case .nullifiers: return String(localized: "Spend keys used once, so a spend can't be repeated")
@@ -189,6 +199,7 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:       return nil
         case .activity:   return String(localized: "None yet")
+        case .holdings:   return String(localized: "Holds nothing")
         case .accounts:   return String(localized: "No addresses")
         case .frames:     return String(localized: "No steps")
         case .nullifiers: return String(localized: "No spend keys")
@@ -222,6 +233,8 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
             return nil
         case .activity:
             return String(localized: "No transaction from what you watch has landed on the stretch of chain this read covered.")
+        case .holdings:
+            return String(localized: "Nothing you watch holds a balance here yet.")
         case .accounts:
             return String(localized: "Watch an address to see what it holds here.")
         case .frames:

@@ -120,6 +120,20 @@ struct WalletBalanceHeadline: View {
     /// launch — so the crown showed **$0** in every scope but Home, under a
     /// sentence explaining that the line had not started yet. Both were true of
     /// the parameter and neither was true of the wallet.
+    /// **HOW THE NUMBER IS SPELLED (prd §683).** This crown is the shared Home
+    /// of every wallet-family room — Wallet, Vibenet, Hegotá, Frames and the
+    /// Privacy devnet — and the spelling is the ONE piece of it that cannot be
+    /// shared: the Wallet counts dollars, a devnet counts its own chain's ETH.
+    /// Everything else (the caption, the odometer roll, the plot, the range
+    /// chips, the scrub) is identical, which is why those rooms take this view
+    /// now instead of each building a headline of their own.
+    var format: (Double) -> String = { WalletValue.money($0) }
+    /// The same spelling at full precision, for the CHANGE line under the
+    /// number. Separate because the Wallet rounds its crown ("$33K") and never
+    /// rounds the delta, and a devnet wants its own unit in both places —
+    /// which is the bug Privacy's first conversion showed, reading "$0
+    /// (+14.7%)" over a chain that has no dollars (prd §683).
+    var exactFormat: (Double) -> String = { WalletValue.exactMoney($0) }
     var drawsChart: Bool = true
     /// Whether the FIGURE and its move line draw.
     ///
@@ -405,7 +419,7 @@ struct WalletBalanceHeadline: View {
                     // draw are listed with their widths. It is still the
                     // biggest figure on its surface (nothing else on this
                     // card sets 24 bold), and still scales with Dynamic Type.
-                    Text(WalletValue.money(displayed ?? 0))
+                    Text(format(displayed ?? 0))
                         .dsText(.stat24).foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                         .contentTransition(reduceMotion ? .identity
@@ -502,7 +516,7 @@ struct WalletBalanceHeadline: View {
             }
             Text(flat
                  ? String(localized: "No change")
-                 : "\(WalletValue.exactMoney(abs(delta))) (\(TokenChartStyle.changeText(change)))")
+                 : "\(exactFormat(abs(delta))) (\(TokenChartStyle.changeText(change)))")
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(ink)
                 .monospacedDigit()

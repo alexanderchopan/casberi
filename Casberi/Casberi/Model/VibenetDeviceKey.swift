@@ -131,7 +131,26 @@ enum VibenetDeviceKey {
     /// here. No `0x`, because this is a key and not an address, and the two
     /// being visually distinguishable is worth the missing prefix.
     static func publicKeyHex() -> String? {
-        UserDefaults.standard.string(forKey: publicKeyDefaultsKey)
+        if let hex = UserDefaults.standard.string(forKey: publicKeyDefaultsKey) { return hex }
+        // **SELF-HEAL FROM THE KEYCHAIN (prd §681, 2026-09-10, user: "vibenet
+        // says create account even tho i already have created an account").**
+        // The public key was mirrored in UserDefaults at `create()` and read
+        // ONLY from there — while the key itself lives in the Keychain, which
+        // outlives a delete-and-reinstall and an iCloud restore, and the
+        // defaults do not. With the mirror gone, `presence()` said `.none`,
+        // `actorID()` said nil, no watched account could match this phone, the
+        // room offered "Create account" over an account that existed, and the
+        // tap would have thrown `alreadyExists` at the Keychain. The blob's
+        // public half needs no biometry to derive (only SIGNING does), so the
+        // mirror is rebuilt from it here and the read becomes what it always
+        // should have been: a cache.
+        guard let key = try? loadKey() else { return nil }
+        let x963 = key.publicKey.x963Representation
+        guard x963.count == 65, x963.first == 0x04 else { return nil }
+        let hex = Self.hex(x963.dropFirst())
+        UserDefaults.standard.set(hex, forKey: publicKeyDefaultsKey)
+        NSLog("[Casberi] vibenet: rebuilt the public-key mirror from the Keychain")
+        return hex
     }
 
     /// The raw 64 bytes, which is the form a P-256 authenticator wants.

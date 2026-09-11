@@ -2926,6 +2926,30 @@ enum VibenetDiscovery {
     /// newest `limit` rather than by a block range, the same "small young
     /// devnet, no chunking needed" reasoning `VibenetChain.getLogs`'s own
     /// doc already gives for the per-address reads.
+    /// **FIND THE ACCOUNT THIS PHONE ALREADY HAS (prd §681, 2026-09-10).**
+    /// Walks `AccountCreated` newest-first and returns the first account whose
+    /// live actor set contains this device's key — the recovery path for a
+    /// phone whose account exists on chain but was never watched (creating one
+    /// did not watch it until today, and a reinstall drops the watch list
+    /// while the Keychain key survives).
+    ///
+    /// Bounded on purpose: `scan` accounts, each one `actorEvents` + one
+    /// `actor` call per surviving id. A devnet keystore holds tens of
+    /// accounts, not thousands, and this runs only when somebody taps the
+    /// verb — never on a sweep.
+    static func accountForThisPhone(keystore: String, scan: Int = 40) async -> String? {
+        guard let ours = VibenetDeviceKey.actorID()?.lowercased() else { return nil }
+        let recent = await recentAccounts(keystore: keystore, limit: scan)
+        for candidate in recent {
+            guard let events = await VibenetRead.actorEvents(account: candidate.address,
+                                                            keystore: keystore)
+            else { continue }
+            let live = VibenetActorLog.survivors(events).map { $0.lowercased() }
+            if live.contains(ours) { return candidate.address }
+        }
+        return nil
+    }
+
     static func recentAccounts(keystore: String, limit: Int = 5) async -> [VibenetDiscoveredAccount] {
         guard let logs = await VibenetChain.getLogs(
             address: keystore, topics: [VibenetTopics.accountCreated])

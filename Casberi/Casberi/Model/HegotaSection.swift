@@ -52,6 +52,11 @@ import Foundation
 enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
     case home
     case activity
+    /// What each watched address holds, as a treemap (prd §680) — the same
+    /// tab the Privacy devnet gained the same day, and vibenet has had since
+    /// §530. Distinct from `coins`, which is one address's UTXOs: this is
+    /// balances ACROSS the addresses you watch.
+    case holdings
     case accounts
     case frames
     case coins
@@ -83,7 +88,7 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
     /// seat. It also reads directly off `activity`, which precedes it — the
     /// list says what moved, this says what the transactions DID — so the two
     /// sit adjacent rather than with the vault between them.
-    static let order: [HegotaSection] = [.home, .activity, .accounts, .frames, .coins, .nonces, .sponsors]
+    static let order: [HegotaSection] = [.home, .activity, .holdings, .accounts, .frames, .coins, .nonces, .sponsors]
 
     /// Which scopes can be EMPTY.
     ///
@@ -97,7 +102,7 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         // `accounts` is unconditional once there is a room at all — a watched
         // address always has a roster row, even one that says the chain could
         // not be reached, which is itself the answer (vibenet's own rule).
-        case .home, .activity, .accounts: return false
+        case .home, .activity, .holdings, .accounts: return false
         // `frames` is conditional for a reason worth stating: this chain has
         // TWO ERAS, and an address whose whole history predates frame
         // transactions has only type-`0x2` transfers. Its scope is absent
@@ -116,6 +121,7 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:     return String(localized: "Home")
         case .activity: return String(localized: "Activity")
+        case .holdings: return String(localized: "Holdings")
         case .accounts: return String(localized: "Accounts")
         // **"Frames", the literal term — the Nonces ruling, third application.**
         // EIP-8141 calls them frames, the receipt field is `frames`, and the
@@ -146,6 +152,7 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:     return String(localized: "The line, and the last few moves")
         case .activity: return String(localized: "What moved, and what each transaction did")
+        case .holdings: return String(localized: "What each address you watch holds")
         case .accounts: return String(localized: "The addresses you watch, and what each holds")
         case .frames:   return String(localized: "The steps your transactions ran")
         case .coins:    return String(localized: "The unspent outputs this address owns")
@@ -168,6 +175,7 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:     return nil
         case .activity: return String(localized: "None yet")
+        case .holdings: return String(localized: "Holds nothing")
         case .accounts: return String(localized: "No addresses")
         case .frames:   return String(localized: "No steps")
         case .coins:    return String(localized: "No UTXOs")
@@ -187,6 +195,8 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
             return nil
         case .activity:
             return String(localized: "Every move of ETH on this chain is a log, so this list is exact. Nothing has moved to or from what you watch.")
+        case .holdings:
+            return String(localized: "Nothing you watch holds a balance here yet.")
         case .accounts:
             return String(localized: "Each address you watch, with its balance and how much it has sent. None is watched here.")
         case .frames:
