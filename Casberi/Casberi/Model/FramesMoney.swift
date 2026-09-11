@@ -30,6 +30,31 @@ enum FramesMoney {
     /// An empty body is nil, NOT zero: `eth_getBalance` answering with nothing
     /// is a read that did not happen, and drawing it as a zero balance is the
     /// §515a mistake (an unreached read is not evidence of an empty account).
+    /// A wei quantity back as the `0x…` the chain speaks — the inverse of
+    /// `decimal(fromHex:)`, for the one place the room composes a total the
+    /// chain never stated as a single number (prd §688, the summed balance
+    /// across watched addresses).
+    ///
+    /// Exact: it divides the `Decimal` down by 16 rather than going through
+    /// any binary floating type, for `decimal(fromHex:)`'s own reason — a
+    /// devnet balance is up to 2^256 and a `Double` keeps 53 bits.
+    static func hex(wei: Decimal) -> String {
+        var n = wei
+        guard n > 0 else { return "0x0" }
+        var digits = ""
+        let sixteen = Decimal(16)
+        while n > 0 {
+            var whole = Decimal()
+            var divided = n / sixteen
+            NSDecimalRound(&whole, &divided, 0, .down)
+            let remainder = n - whole * sixteen
+            let value = NSDecimalNumber(decimal: remainder).intValue
+            digits.append(String(value, radix: 16))
+            n = whole
+        }
+        return "0x" + String(digits.reversed())
+    }
+
     static func decimal(fromHex raw: String) -> Decimal? {
         let body = raw.hasPrefix("0x") || raw.hasPrefix("0X") ? String(raw.dropFirst(2)) : raw
         guard !body.isEmpty, body.count <= 64 else { return nil }

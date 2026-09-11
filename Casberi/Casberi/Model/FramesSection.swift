@@ -27,8 +27,17 @@ import Foundation
 ///     shows one row on nearly every install is the dead control §83 bans.
 ///     Revisit it if watching several here ever becomes ordinary.
 ///
-/// Wallet's own four stay absent for §500's reasons, all of which hold:
-/// **Holdings** (one asset, so the crown states the whole of it), **Positions**
+/// **HOLDINGS ARRIVES (prd §688, 2026-09-11), and §500's reason for its absence
+/// was a measurement nobody had taken.** It read "one asset, so the crown
+/// states the whole of it" — and this chain carries `YDS` and `DAI`, read off
+/// it the day this changed. What was true is that the app only ever asked
+/// `eth_getBalance`, so the room could not have seen a token if an address had
+/// held one. It asks now (`DevnetTokens`), and the scope draws the split when
+/// there is one and says "Test ETH only" when there is not — which is the
+/// honest version of the sentence §500 wrote as a fact about the chain.
+///
+/// Wallet's other three stay absent for §500's reasons, all of which hold:
+/// **Positions**
 /// and **NFTs** (nothing to hold), **Risk** (nothing can move against you —
 /// the asset is test ETH with no price), and **Permissions**.
 ///
@@ -67,6 +76,7 @@ import Foundation
 enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     case home
     case activity
+    case holdings
     case frames
     case sponsors
 
@@ -85,7 +95,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     /// they are the entire reason the chain and this seat exist. It also reads
     /// directly off `activity`, which precedes it — the list says what moved,
     /// this says what the transactions DID — so the two sit adjacent.
-    static let order: [FramesSection] = [.home, .activity, .frames, .sponsors]
+    static let order: [FramesSection] = [.home, .activity, .holdings, .frames, .sponsors]
 
     /// Which scopes can be EMPTY.
     ///
@@ -97,7 +107,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     var isConditional: Bool {
         switch self {
         case .home, .activity: return false
-        case .frames, .sponsors: return true
+        case .holdings, .frames, .sponsors: return true
         }
     }
 
@@ -110,6 +120,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:     return String(localized: "Home")
         case .activity: return String(localized: "Activity")
+        case .holdings: return String(localized: "Holdings")
         // **"Frames", the literal term** — Hegotá's Nonces ruling, applied
         // again. EIP-8141 calls them frames, the RPC field is `frames`, the
         // chain is NAMED for them, and the seat is called Hegotá Frames.
@@ -126,6 +137,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:     return String(localized: "The balance, and the last few moves")
         case .activity: return String(localized: "What moved, and whether it worked")
+        case .holdings: return String(localized: "The tokens this address holds")
         case .frames:   return String(localized: "The steps each transaction ran")
         case .sponsors: return String(localized: "Transactions somebody else paid for")
         }
@@ -143,6 +155,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:     return nil
         case .activity: return String(localized: "None yet")
+        case .holdings: return String(localized: "Test ETH only")
         case .frames:   return String(localized: "No steps")
         case .sponsors: return String(localized: "None sponsored")
         }
@@ -159,6 +172,8 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
             return nil
         case .activity:
             return String(localized: "What moved, newest first, and whether the chain accepted it. Nothing from what you watch has landed on the stretch of chain this read covered.")
+        case .holdings:
+            return String(localized: "The tokens an address holds besides the chain's own coin. Nothing you watch holds one — the balance on Home is the whole of it.")
         case .frames:
             return String(localized: "A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here has run any — a plain transfer runs none.")
         case .sponsors:

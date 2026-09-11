@@ -411,6 +411,12 @@ struct FramesAccount: Identifiable, Equatable, Codable {
     var balanceWeiHex: String?
     var nonce: UInt64?
     var moves: [FramesMove]
+    /// **WHAT ELSE THIS ADDRESS HOLDS (prd §688).** This chain carries real
+    /// ERC-20s — `YDS` and `DAI`, measured — and the room said "one asset" for
+    /// its whole life because nothing ever asked. Empty is a real answer and
+    /// the commonest one: an account holding only test ETH has no token, which
+    /// Holdings states in a line rather than drawing as a single cell at 100%.
+    var tokens: [DevnetTokens.Holding] = []
 
     var id: String { address.lowercased() }
 

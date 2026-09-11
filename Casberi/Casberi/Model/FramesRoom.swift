@@ -113,6 +113,16 @@ enum FramesRoom {
         guard watched > 0 else { return nil }
 
         let reached = accounts.filter(\.reached)
+        // **"ALL" IS THE SUM, NOT THE FIRST (prd §688).** This read
+        // `reached.first` everywhere a total was wanted, which was invisible
+        // while the demo watched one address and wrong the moment it watched
+        // two: the crown said 0.9896 over a rail whose own faces read 0.9896
+        // and 2.0000. The curve still walks the FIRST account's moves — a
+        // reconstruction needs one account's history, not a sum of several —
+        // and that difference is why the two are separate values here.
+        let heldWei: Decimal? = reached.isEmpty ? nil
+            : reached.compactMap { $0.balanceWeiHex.flatMap(FramesMoney.decimal(fromHex:)) }
+                     .reduce(Decimal(0), +)
         let moves = reached.flatMap(\.moves)
         let rolled = reached.flatMap(\.rolledBack).count
 
@@ -122,7 +132,7 @@ enum FramesRoom {
         // No balance, no walk — the reconstruction starts from the number
         // that IS known, and there is nothing to start from.
         let series: [WalletStore.ValueSample]
-        if let held = reached.first?.balanceWeiHex.flatMap(FramesMoney.decimal(fromHex:)) {
+        if let held = heldWei {
             series = RoomValueHistory.derived(
                 balance: held,
                 undoNewestFirst: ordered.map { ($0.deltaWei.map { -$0 }, $0.timestamp) },
@@ -151,7 +161,11 @@ enum FramesRoom {
             // not one person's holdings (Wallet's own combined-total rule does
             // not carry, because there the addresses are all yours by
             // construction and here a watched one is usually a stranger's).
-            balanceWeiHex: reached.first?.balanceWeiHex,
+            // The SUM, re-encoded, so every reader of this field gets the
+            // room's total rather than one address's (prd §688). The room's
+            // three readers all want the total: the Sponsors headline, the
+            // crown's no-line state and the Holdings cell.
+            balanceWeiHex: heldWei.map(FramesMoney.hex(wei:)),
             reached: reached.count,
             watched: watched,
             moveCount: moves.count,

@@ -34,6 +34,10 @@ struct UnitTreemap<Cell: View>: View {
     let count: Int
     var height: CGFloat = 200
     var gap: CGFloat = DS.Space.s2
+    /// Draw every cell the same size (prd §688). Default false: a map whose
+    /// cells ARE a magnitude keeps the rank-ordered tiling, which is most of
+    /// them.
+    var even: Bool = false
     /// The cell face for slot `i`. Sizing, placement and the entrance are this
     /// view's; the fill, the words and the magnitude wash are the caller's.
     @ViewBuilder var cell: (Int) -> Cell
@@ -93,6 +97,43 @@ struct UnitTreemap<Cell: View>: View {
     ///
     /// (x, y, w, h) in grid units, per cell count. Sized so a 1- to 6-cell map
     /// always fills the board with no holes.
+    /// **EVEN CELLS, still on the 4×3 unit grid (prd §688, user: "treemap
+    /// should all be the same size and fill the slot").**
+    ///
+    /// The rank-ordered table below is right where the CELLS' SIZES are a
+    /// reading — a bigger tile means a bigger share. Holdings on a devnet is
+    /// the case where they cannot be: there is no price, so a `DAI` balance
+    /// and a `YDS` balance are not on one scale and a tile drawn larger would
+    /// claim a comparison the chain does not support. Even cells say the one
+    /// true thing — these are the assets — and the amounts live in the list
+    /// below, where they are already stated exactly.
+    ///
+    /// It still tiles all twelve units with no holes at every count, so the
+    /// map fills its slot rather than leaving a ragged edge.
+    static func evenFrames(_ n: Int) -> [(Int, Int, Int, Int)] {
+        switch n {
+        // **EQUAL AREA, and shaped like a map rather than a stack.** Three
+        // full-width bands are equal and read as a list that has lost its
+        // rows — measured on the simulator the hour this landed. Each count
+        // below gives every cell the same number of the twelve units, and no
+        // count is a single column of bands.
+        case 0, 1: return [(0, 0, 4, 3)]                                    // 12
+        case 2:    return [(0, 0, 2, 3), (2, 0, 2, 3)]                      // 6 each
+        case 3:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 4, 1)]        // 4 each
+        case 4:    return [(0, 0, 1, 3), (1, 0, 1, 3), (2, 0, 1, 3), (3, 0, 1, 3)]  // 3 each
+        // **FIVE IS THE ONE COUNT TWELVE UNITS CANNOT SPLIT EVENLY**, and the
+        // choice is stated rather than hidden: four cells of two and one of
+        // four, with the ODD ONE LAST so the inequality falls on the smallest
+        // holding rather than the largest. The alternative — leaving a hole —
+        // breaks "fill the slot", which is the other half of the ruling.
+        case 5:    return [(0, 0, 2, 1), (2, 0, 2, 1), (0, 1, 2, 1),
+                           (2, 1, 2, 1), (0, 2, 4, 1)]
+        case 6:    return [(0, 0, 2, 1), (2, 0, 2, 1), (0, 1, 2, 1),
+                           (2, 1, 2, 1), (0, 2, 2, 1), (2, 2, 2, 1)]        // 2 each
+        default:   return evenFrames(6)
+        }
+    }
+
     static func frames(_ n: Int) -> [(Int, Int, Int, Int)] {
         switch n {
         case 0, 1: return [(0, 0, 4, 3)]
@@ -141,7 +182,7 @@ struct UnitTreemap<Cell: View>: View {
 
     var body: some View {
         let shown = min(max(count, 0), Self.maxCells)
-        let table = Self.frames(shown)
+        let table = even ? Self.evenFrames(shown) : Self.frames(shown)
         let keys = Self.keys(shown, identity)
         GeometryReader { geo in
             let uw = (geo.size.width - gap * 3) / 4

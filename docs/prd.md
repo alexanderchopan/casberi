@@ -245,6 +245,7 @@ marks chronological position within the pair.
 | §234 / §235 (the prediction rooms as seats) | Kalshi and Polymarket are catalog seats whose rooms head with a live book and a settled-markets record | §638 — retired seats: no catalog entry, no chip, no room; the bridge files stay one release so a connected seat is not stranded, then go |
 | §306 (the three notification classes) | alarms, arrivals and the daily whisper each ship ON, and the permission prompt is deferred to the first real alarm so it carries its own reason | amended by §644 — the deferral stands and is why the defaults were wrong: the grant is earned by a dispute and was then spent on ordinary arrivals and a 07:30 push nobody chose. Arrivals and the whisper are opt-IN; alarms stay on, because they are what the prompt asks for |
 | §632 (nothing under a thing is a guess) | the related shelf, two chips and the provenance sentence are cut; what the sheet leaves is eyebrow, title, the thing, where it came from, the dial, the earlier copy | amended by §645 — the finding is untouched and is what licenses the change: every word the sheet now draws has a human author. What moves is "the thing", which may be the words themselves rather than a card that links to them |
+| §548's tail order ("frames leads the conditional tail") | the Frames devnet's strip ran home · activity · frames · sponsors, frames first among the scopes that can be empty | amended by §688 — Holdings exists on this chain after all and takes the family's third place (Wallet, Hegotá and vibenet all put it there), so the tail is holdings · frames · sponsors. The ruling's substance is intact: frames still leads every scope it outranks, and §548 stands in every other respect |
 
 ## 1. Thesis
 
@@ -52598,3 +52599,69 @@ endpoint). The only thing that sees a native send is a block walk over 276,637 b
 growing — the option `PrivacyDevnetLiveState.walkTransactions` already considered and
 rejected in writing at ~15,000 requests. So vibenet's Activity stays events, and the fix is
 a label rather than a scan.
+
+## §688 — Holdings, and the tokens nobody had asked the chain for (2026-09-11)
+
+User, choosing the next shared slot: *"should we do holdings next?"*, then *"frames should
+have holdings … so we can add it"*, and — pushing back on a proposal to map addresses —
+*"for privacy why would it be treemap of address, again won't they have currency?"*,
+*"same for frames"*, with the caution that mattered: *"i don't want to be wrong on these
+but i also don't want to force fit something that belongs in its own slot"*.
+
+**THE PREMISE UNDER THREE ROOMS WAS WRONG, AND IT WAS A MEASUREMENT NOBODY HAD TAKEN.**
+`FramesSection` said Holdings could not exist here — *"one asset, so the crown states the
+whole of it"* (§500) — and Hegotá and the Privacy devnet both drew Holdings as a treemap of
+ADDRESSES for the same stated reason. Measured against the live chains on 2026-09-11:
+Hegotá Frames carries `YDS` and `DAI`, Hegotá UTXO carries `BONUS`, `PEPE` and `SHIB`,
+Hegotá Privacy genuinely carries none (system predeploys only). What was true is that every
+bridge read `eth_getBalance` and nothing else, so a room could not have seen a token if an
+address had held one. **The sentence described the app and was written as a fact about the
+chain.**
+
+`DevnetTokens` is the read, shared by every ethrex room and chain-agnostic (the bridge hands
+in its own RPC door). **Discovery is per ADDRESS, not per chain**: filtering Transfer logs
+on the address returns exactly the tokens it has ever touched, which is the only set a
+balance could be non-zero for — 14,392 all-time Transfer logs on the privacy chain against
+two requests per address. **A zero balance is not a holding** (an address that spent all of
+a token keeps its logs forever), decimals are never assumed on a failed read (18 over a
+6-decimal token reads as a millionth of itself), and balances parse as `Decimal` because a
+`Double` keeps 53 bits of a number that runs to 2^256.
+
+**AND THE USER'S CAUTION WAS THE RIGHT RULING.** Holdings' job is the SPLIT; where nothing
+splits, Holdings is not the slot. Two of the three address-treemaps were force-fits:
+Hegotá UTXO already has the real answer and it is called **Coins** — "coins as objects, not
+a balance" is the room's own tagline — and the Privacy devnet's true split is **open versus
+shielded**, which is visible only for your own account because you cannot see anyone else's
+shielded balance; that is the pool. An account holding only test ETH therefore draws NO map:
+one cell at 100% is the bar §610 removed, and the scope says "Test ETH only" instead.
+
+**Frames gains the scope** (order: home · activity · **holdings** · frames · sponsors — the
+family's own place for it, which amends one clause of §548 — "frames leads the conditional
+tail", written before Holdings existed here; frames still leads everything it outranks), **and a second watched address is seeded** (user:
+*"seed a second"*) so the demo has a split to show at all. The native coin is a cell like
+any other — it is the largest holding on nearly every account here, and leaving it out would
+map the small change while Home stated the rest.
+
+**"ALL" IS THE SUM, NOT THE FIRST.** `FramesRoom.head` read `reached.first` everywhere a
+total was wanted — invisible with one watched address and wrong the moment there were two:
+the crown said 0.9896 above a rail whose own faces read 0.9896 and 2.0000. The curve still
+walks the first account's moves, because a reconstruction needs one history rather than a
+sum of several, and the two are separate values now for that reason.
+
+**EVEN CELLS, NAMES ONLY** (user: *"treemap should all be the same size and fill the slot
+and I'm not sure we need the amount inside the tree since the list has the balances"*).
+Right on both, and the first is a correctness point rather than a preference: there is no
+price on these chains, so a `DAI` balance and a `YDS` balance are not on one scale and a
+larger tile would claim a comparison the data cannot support. `UnitTreemap.evenFrames`
+gives every cell the same share of the twelve units at every count — five is the one count
+twelve cannot split, and the odd cell goes LAST so the inequality falls on the smallest
+holding. The amount inside the cell was §680's defect one slot over: the row below states
+it exactly, so the cell restating it is the figure repeating its own list.
+
+**Three guards re-pinned rather than deleted**, each to the ruling it served rather than the
+name it named: `FramesMovementBars`' arrival check follows the drawing to `ActivityBars`
+(§687), "frames leads the conditional tail" becomes "holdings leads it, and frames still
+leads what it outranks", and the balance's rounding mutation is pinned to the balance's own
+`NSDecimalRound` — a bare `.down)` began rewriting the new `FramesMoney.hex(wei:)` instead
+and reported SURVIVED against code it never touched, which is the dead-mutation class caught
+by its own harness for the second time this week.

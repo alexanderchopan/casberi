@@ -497,10 +497,18 @@ final class FramesLiveState {
             let (rawBal, rawNonce) = await (balCall, nonceCall)
             if rawBal != nil || rawNonce != nil { anyAnswered = true }
             let moves = await self.moves(for: address)
+            // **WHAT ELSE IT HOLDS (prd §688)** — two log reads filtered to
+            // this address, then a balance per token it has actually touched.
+            // Proportional to what you watch, never to the chain; see
+            // `DevnetTokens` for why discovery is per address.
+            let tokens = await DevnetTokens.holdings(address: address) { method, params in
+                await FramesRPC.call(method: method, params: params)
+            }
             read.append(FramesAccount(address: address,
                                       balanceWeiHex: rawBal as? String,
                                       nonce: FramesRead.hexInt(rawNonce),
-                                      moves: moves))
+                                      moves: moves,
+                                      tokens: tokens))
         }
         // A pass where NOTHING answered leaves the last good read standing
         // rather than blanking the room — §515a's rule.
@@ -834,6 +842,33 @@ extension FramesLiveState {
             // whole point of the scope, and of `delta`'s payer check.
             deltaWei: -(Decimal(string: "1000000000000000")!))
 
+        // **THE TOKENS ARE THIS CHAIN'S OWN (prd §688).** Both contracts and
+        // both symbols were read off rpc1.frames.ethrex.xyz on 2026-09-11 —
+        // `YDS` at 0x25e6…0920 and `DAI` at 0x7d6f…cf3f, eighteen decimals
+        // each, with real holders carrying 1,993.9 and 999. The amounts below
+        // are this fixture's, the assets are not invented.
+        func token(_ contract: String, _ symbol: String, _ whole: String) -> DevnetTokens.Holding {
+            DevnetTokens.Holding(contract: contract, symbol: symbol, decimals: 18,
+                                 raw: Decimal(string: whole)!)
+        }
+        let yds = token("0x25e69b3da09d2a9a4c49012b60324a00c3b60920", "YDS",
+                        "142300000000000000000")      // 142.3
+        let dai = token("0x7d6fa7c366f36046656b019dc9a27f171628cf3f", "DAI",
+                        "25000000000000000000")       // 25
+
+        // **A SECOND WATCHED ADDRESS (user, 2026-09-11: "seed a second").**
+        // One account made every scope here read as a room about one address:
+        // the face rail had a single face, "All" summed one thing, and Holdings
+        // could not show a split at all. This one holds DAI and no frames of
+        // its own — an address you WATCH rather than one you send from, which
+        // is the commoner shape and the one the rail exists for.
+        let watched = FramesAccount(
+            address: "0x5b3772a23fa2214ad2c7ec27dd74bde28dac3ba9",
+            balanceWeiHex: "0x1bc16d674ec80000",      // 2 test ETH
+            nonce: 0,
+            moves: [],
+            tokens: [dai])
+
         let fixture = [FramesAccount(
             address: me,
             // **DERIVED FROM THE MOVES ABOVE, NOT MEASURED (2026-09-10).**
@@ -848,7 +883,8 @@ extension FramesLiveState {
             // zero the way a real account's does.
             balanceWeiHex: "0xdbbe581d938128c",
             nonce: 4,
-            moves: [sponsored, stitched, rolled, partial, sent, funded])]
+            moves: [sponsored, stitched, rolled, partial, sent, funded],
+            tokens: [yds]), watched]
         Task { @MainActor in FramesLiveState.shared.installDemo(fixture) }
     }
 

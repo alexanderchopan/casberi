@@ -82,7 +82,7 @@ PYM
   # so this file was proven equivalent run-for-run by
   # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.9x faster).
   # Re-probe before trusting it again after adding mutations.
-  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift FramesReading.swift m/main.swift 2>/dev/null ) \
+  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift FramesReading.swift m/main.swift 2>/dev/null ) \
      && "$MW/m/run2" >/dev/null 2>&1; then
     echo "SURVIVED|$MID|$MLABEL"; exit 0
   fi
@@ -95,6 +95,11 @@ KC="Casberi/Casberi/Model/Keccak256.swift"
 MONEY="Casberi/Casberi/Model/FramesMoney.swift"
 SECT="Casberi/Casberi/Model/FramesSection.swift"
 READ="Casberi/Casberi/Model/FramesReading.swift"
+# **Foundation-only, and compiled REAL (prd §688).** `FramesAccount` carries
+# what it holds beyond the coin now, so the reading file names `DevnetTokens`.
+# Stubbing it would let the harness disagree with the app about a type the app
+# stores; it is Foundation-only by design for exactly this.
+TOKENS="Casberi/Casberi/Model/DevnetTokens.swift"
 KEY="Casberi/Casberi/Model/FramesKey.swift"
 SEND="Casberi/Casberi/Model/FramesSend.swift"
 BRIDGE="Casberi/Casberi/Model/FramesBridge.swift"
@@ -299,7 +304,7 @@ for absent in nonces coins accounts permissions; do
     echo "✗ FramesSection grew a \`$absent\` scope — Hegotá has it and this chain cannot fill it; re-measure before adding one"; exit 1
   fi
 done
-echo "  ok   drift guards: the strip keeps the four scopes this chain can fill"
+echo "  ok   drift guards: the strip keeps only the scopes this chain can fill"
 
 # --- the moments (2026-09-01) -----------------------------------------------
 # Five small things that are all one class: a room says what JUST HAPPENED, and
@@ -454,12 +459,12 @@ sys.exit(0)
 PYJOIN
 echo "  ok   drift guards: the legs list's tie is the encoder's own join, not a second spelling"
 
-# EVERY DRAWING IN THIS ROOM ARRIVES. Both are a `Canvas`, which is why
+# EVERY DRAWING IN THIS ROOM ARRIVES. Each is a `Canvas`, which is why
 # `design-motion-audit` — which looks for proportional shapes and
 # GeometryReader — cannot see them, and why a room where everything else
 # arrives kept two that simply were. Reduce Motion is `chartWipe`'s own
 # contract, so requiring the shared component is requiring the guarantee.
-for drawing in FramesSequenceStrip FramesMovementBars; do
+for drawing in FramesSequenceStrip; do
   python3 - "$WORK/card.nc" "$drawing" <<'PYENTRY' || exit 1
 import sys, io
 src, name = io.open(sys.argv[1], encoding="utf-8").read(), sys.argv[2]
@@ -473,6 +478,22 @@ if "chartWipe(reduceMotion:" not in body:
 sys.exit(0)
 PYENTRY
 done
+# **AND THE DRAWING THAT REPLACED `FramesMovementBars` (prd §687/§688).** The
+# signed value bars are deleted with the Activity scope they served, and what
+# draws there now is the shared `ActivityBars` — also a `Canvas`, also
+# invisible to `design-motion-audit`, so the ruling follows the drawing to the
+# file it moved to rather than lapsing with the name it was pinned on.
+python3 - "Casberi/Casberi/Screens/RoomActivityChart.swift" <<'PYSHARED' || exit 1
+import sys, io
+src = io.open(sys.argv[1], encoding="utf-8").read()
+i = src.find("struct ActivityBars: View")
+if i < 0:
+    print("\u2717 ActivityBars is gone \u2014 every Activity scope in the family draws it"); sys.exit(1)
+if "chartWipe(reduceMotion:" not in src[i:]:
+    print("\u2717 ActivityBars no longer arrives \u2014 a Canvas is invisible to design-motion-audit")
+    sys.exit(1)
+sys.exit(0)
+PYSHARED
 # A NEW TRANSACTION IS A NEW DRAWING. A chart entrance is one-shot on appear,
 # which is right for opening a room and wrong for the moment this room exists
 # for — without the key, a send you just made lands by the chart redrawing
@@ -675,6 +696,7 @@ cp "$KC" "$WORK/Keccak256.swift"
 cp "$MONEY" "$WORK/FramesMoney.swift"
 cp "$SECT" "$WORK/FramesSection.swift"
 cp "$READ" "$WORK/FramesReading.swift"
+cp "$TOKENS" "$WORK/DevnetTokens.swift"
 mkdir -p "$WORK/m"
 
 cat > "$WORK/m/main.swift" <<'SWIFT'
@@ -962,7 +984,18 @@ check("no unconditional scope sits after a conditional one",
       FramesSection.order.enumerated().allSatisfy { i, s in i < firstConditional || s.isConditional })
 check("home and activity are the constants",
       FramesSection.order.filter { !$0.isConditional } == [.home, .activity])
-check("frames leads the conditional tail", FramesSection.order[firstConditional] == .frames)
+// **HOLDINGS LEADS THE TAIL NOW, and `frames` still leads the frame scopes
+// (prd §688).** The older ruling was "frames leads the conditional tail,
+// because frame transactions are the reason this chain exists" — true, and
+// written when Holdings did not exist here. It does now, and the rail's order
+// is a FAMILY fact rather than this room's: Wallet, Hegotá and vibenet all put
+// Holdings third, so a person moving between rooms finds the same chip in the
+// same place. What the old ruling protected is intact and is asserted below:
+// nothing about frames has moved relative to the scopes it outranks.
+check("holdings leads the conditional tail, as it does in every other room",
+      FramesSection.order[firstConditional] == .holdings)
+check("frames still leads the scopes it outranks",
+      FramesSection.order.firstIndex(of: .frames)! < FramesSection.order.firstIndex(of: .sponsors)!)
 
 // PRESENT: EVERY scope, on every address (prd §611; user: "it should [show all
 // the scopes] even if they are not present"). The gate is gone — a bare address
@@ -1473,7 +1506,7 @@ print("  ok   encoder: 3 real vectors byte-exact, keccak == the chain's own hash
 SWIFT
 
 build_run() {
-  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift FramesReading.swift m/main.swift 2>&1 )
+  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift FramesReading.swift m/main.swift 2>&1 )
 }
 if ! out="$(build_run)"; then echo "✗ harness did not compile"; echo "$out"; exit 1; fi
 "$WORK/m/run" || exit 1
@@ -1572,11 +1605,18 @@ mutate "an empty balance read as zero" $F2 \
   'guard !body.isEmpty, body.count <= 64 else { return nil }' \
   'guard body.count <= 64 else { return nil }
         if body.isEmpty { return Decimal(0) }'
-mutate "the balance rounded to nearest" $F2 '.down)' '.plain)'
+# **PINNED TO THE BALANCE'S OWN ROUNDING, not the first `.down` in the file
+# (prd §688).** `FramesMoney` grew `hex(wei:)` above this one, which also
+# rounds down — and a bare `.down)` mutation then rewrote THAT, left the
+# balance untouched, and reported SURVIVED against code it never changed. The
+# "dead mutation prints a passing line" class, caught by its own harness.
+mutate "the balance rounded to nearest" $F2 \
+  'NSDecimalRound(&rounded, &quotient, places, .down)' \
+  'NSDecimalRound(&rounded, &quotient, places, .plain)'
 mutate "the wei-per-ETH divisor losing a zero" $F2 \
   '"1000000000000000000"' '"100000000000000000"'
 mutate "a conditional scope ahead of an unconditional one" $F3 \
-  '[.home, .activity, .frames, .sponsors]' '[.home, .frames, .activity, .sponsors]'
+  '[.home, .activity, .holdings, .frames, .sponsors]' '[.home, .holdings, .activity, .frames, .sponsors]'
 mutate "the remembered scope falling back to the first present one" $F3 \
   'guard let wanted, present.contains(wanted) else { return .home }' \
   'guard let wanted, present.contains(wanted) else { return present.first ?? .home }'
@@ -1587,7 +1627,7 @@ mutate "every scope gated again, so two chips vanish on the address that most ne
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" $F3 \
   'A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here has run any — a plain transfer runs none.' ' '
 mutate "frames marked unconditional" $F3 \
-  'case .frames, .sponsors: return true' 'case .frames, .sponsors: return false'
+  'case .holdings, .frames, .sponsors: return true' 'case .holdings, .frames, .sponsors: return false'
 mutate "a chip growing a dot that can never honestly light" $F3 \
   'static func attention() -> Set<FramesSection> { [] }' \
   'static func attention() -> Set<FramesSection> { [.frames] }'
