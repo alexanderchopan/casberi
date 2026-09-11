@@ -406,6 +406,16 @@ final class ShellChrome {
     /// wallets in every Wallet room; @dwr is not on Bluesky.
     var personScope: String?
 
+    /// The GitHub room's scoped watch — a repo's or a person's watch REF, or
+    /// nil for everything (2026-09-11).
+    ///
+    /// Its own property for `vibenetScope`'s reason one room over: this is a
+    /// different SET from `personScope`, and sharing one would mean a Farcaster
+    /// handle silently scoping the GitHub room to somebody it has never heard
+    /// of. Cleared on a source change, like the person scope and for the same
+    /// argument — a watch belongs to one seat.
+    var githubScope: String?
+
     /// The vibenet room's scoped account, or nil for all of them
     /// (2026-08-23) — its own property rather than reusing `walletScope`,
     /// because these are two different address SETS and sharing one

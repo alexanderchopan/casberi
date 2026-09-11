@@ -3703,19 +3703,34 @@ enum DemoSeedAll {
         // coverage would then have reported a real gap that was only ever a
         // demo one (§375's X lesson, two rooms over). Three asks are seeded so
         // the card can demonstrate its whole ranking, not just its lead.
-        let github: [(String, String, Double, String?)] = [
-            ("Merged: panel draws only figures (#412)", "you", 1, nil),
-            ("Mentioned you · casberi/app · seed every source on the sim (#414)", "you", 1.5, "Mentioned"),
-            ("Assigned to you · casberi/app · serialize NLEmbedding inference (#409)", "you", 6, "Assigned"),
-            ("Review requested · casberi/app · receipts reach map (#402)", "mia", 14, "Review"),
+        // **EVERY ROW CARRIES A REAL REF AND A REAL github.com URL** (2026-09-11).
+        // The tag under a GitHub row's timestamp is DERIVED from those two
+        // fields (`GitHubRowTag`) rather than stored, so a demo row reffed
+        // `demo:github:0` with an empty `content` draws no tag at all — the
+        // demo would be missing the one thing the room's rows gained, in the
+        // corpus every App Store still and every census shot is taken over.
+        // These are the namespaces `GitHubFeedFetch` really stamps and the URL
+        // shapes GitHub really serves; the ids are the demo's own.
+        let github: [(title: String, who: String, days: Double,
+                      ask: String?, ref: String, url: String)] = [
+            ("Merged: panel draws only figures (#412)", "you", 1, nil,
+             "gh:demo412", "https://github.com/casberi/app/pull/412"),
+            ("Mentioned you · casberi/app · seed every source on the sim (#414)", "you", 1.5,
+             "Mentioned", "gh:notif:demo414", "https://github.com/casberi/app/issues/414"),
+            ("Assigned to you · casberi/app · serialize NLEmbedding inference (#409)", "you", 6,
+             "Assigned", "gh:notif:demo409", "https://github.com/casberi/app/issues/409"),
+            ("Review requested · casberi/app · receipts reach map (#402)", "mia", 14,
+             "Review", "gh:notif:demo402", "https://github.com/casberi/app/pull/402"),
         ]
-        out += github.enumerated().map { i, g in
-            row(.link, g.0, source: "GitHub", ref: "demo:github:\(i)", days: g.2, hour: 15) { t in
-                if let ask = g.3 { t.tags = t.tags + ["Notifications", ask] }
+        out += github.map { g in
+            let i = github.firstIndex { $0.ref == g.ref } ?? 0
+            return row(.link, g.title, source: "GitHub", ref: g.ref, days: g.days, hour: 15,
+                       content: g.url) { t in
+                if let ask = g.ask { t.tags = t.tags + ["Notifications", ask] }
                 t.starCount = 128 + i
                 t.repoLanguage = "Swift"
-                t.authorHandle = g.1
-                t.authorAvatarURL = avatarArt(g.1)
+                t.authorHandle = g.who
+                t.authorAvatarURL = avatarArt(g.who)
                 // The repository's social preview image, which `GitHubFeeds`
                 // stamps (2026-08-17). The avatar above says WHO; this says
                 // what the project looks like, and the room drew neither.

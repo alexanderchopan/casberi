@@ -270,15 +270,22 @@ struct BandRow: View {
             let book = (work.components(separatedBy: " — ").first ?? work)
                 .trimmingCharacters(in: .whitespaces)
             return book.isEmpty ? nil : book
-        // GitHub carries starCount/repoLanguage but rendered as a plain band
-        // like any other link — the contribution hero above the feed was the
-        // only place either fact showed (2026-07-21 enrichment, matching the
-        // grammar RSS/social/Wallet already use in this same slot).
+        // WHAT THE ROW IS (user ruling, 2026-09-11) — "Pull request", "Issue",
+        // "Release", "Star", "Gist", "Activity", "Watching". The GitHub room is
+        // a plain feed now: no head card, no chip strip, no sections of its own,
+        // so the only thing differentiating a release from a starred repo from
+        // a review request was the words at the front of a title. This slot is
+        // where that fact goes, and this slot exactly — a chip would promise a
+        // tap (the 2026-07-06 band ruling) and a second line on the row would
+        // be a second row anatomy.
+        //
+        // It DISPLACES "Swift · ★1.2k", which is the trade the ruling makes:
+        // the language and the star count are facts about a repo, true of every
+        // row from it and therefore not distinguishing — the exact noise this
+        // slot's own doc above says killed the project tag in 2026-07-23. They
+        // are still stored, still indexed, and still drawn on the thing sheet.
         case "GitHub":
-            let language = thing.repoLanguage ?? ""
-            let stars = (thing.starCount).map { "★\(GitHubStarContent.compact($0))" } ?? ""
-            let parts = [language, stars].filter { !$0.isEmpty }
-            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+            return GitHubRowTag.word(ref: thing.sourceRef, url: thing.content)
         // Peer rides the Wallet address (the wallet-label check above already
         // covers the >1-watched-wallet case); with just one wallet watched
         // that slot sits empty, so a single-wallet Peer row instead names the

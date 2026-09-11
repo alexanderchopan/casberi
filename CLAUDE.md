@@ -262,6 +262,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - PostHog (2026-07-27, prd §223, Model/PostHogBridge.swift, Screens/PostHogScreen.swift) → docs/hooks/bridges.md · prd §223
 - `-for` — Stripe (2026-07-31, prd §250, Model/StripeBridge.swift, Screens/StripeScreen.swift) → docs/hooks/bridges.md · prd §250
 - Cursor (2026-08-04, prd §303, Model/CursorBridge.swift) — the cloud agents you launched, landing → docs/hooks/bridges.md · prd §303
+- **The GitHub room is ONE FEED (prd §699, 2026-09-11) — the §401 head card and the contributions heatmap are both GONE from it (the heatmap draws on the account page), the type of every row is a TAG under its timestamp (`Model/GitHubRowTag.swift`, derived from the URL and the ref, nothing stamped), and the repos and people you watch scope the feed from a face rail in the bottom band. Nothing watched draws NO rail row. A notification is scoped by REPO and never by PERSON — its face is the repository's owner. `scripts/github-rowtag-selftest.sh`** → prd §699
 - **The App Store Connect ROOM** → docs/hooks/bridges.md · prd §324
 - App Store Connect (2026-08-06, prd §323, Model/AppStoreConnectBridge.swift, screen → docs/hooks/bridges.md · prd §323
 - Apple Wallet (2026-08-06, prd §313 + §317, Model/AppleWalletBridge.swift / AppleWalletRoom.swift / → docs/hooks/bridges.md · prd §313

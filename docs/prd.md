@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §36 (Fileverse clause) | Fileverse declined as "E2EE by design; revisit if they ship a hosted API" | amended by §669 (the DECLINE stands and the REASON does not — the reopening clause was met. `@fileverse/api` has been on npm since 2026-02-11: the key is a seed the UCAN, ECIES and ERC-4337 keys all derive from, gas is sponsored by a Pimlico paymaster, and a Swift client could skip their self-hosted Node satellite entirely. It is declined on POSITIONING instead — an editor, a doc list and a conflict story serve authoring, and §26 already ruled that Casberi collects and connects while Apple Notes authors. §36's other declines are untouched) |
 | §629 | The two ethrex seats are renamed, and migration v9 — a one-time pass gated on the `migrations.version` stamp — rewrites the rows already landed under the old names | amended by §647 (the rename stands; the repair could not. The store mirrors to CloudKit, so rows arrive after a one-shot has run and it never runs again — every one of those kept the old name, resolved to no seat, and reached a device as an unfoldable chip with a blank mark. `Corpus.renamedSources` makes RESOLUTION tolerant and `SourceRename.sweep` converges the corpus at every launch; v9 is deleted so there is one mechanism, not two) |
 | §647 | `Corpus.renamedSources` is a source→source table, and `SourceRename.sweep` converges the corpus off it at every launch | amended by §650 (the mechanism stands whole; the table's SHAPE widens. Migration v3 — the same one-shot, one seat over — also moved the rows' ref namespace (`dexscreener:` → `tokens:`), which a source→source entry cannot express, so an entry now carries an optional `refPrefix` pair and the sweep rewrites both strings. That half matters more than the name: the ref failure RENDERS PERFECTLY, and `TokenWatch.add`'s already-watching guard misses the row, so the same coin lands twice. §647's "two entries today" is three) |
 | §675 (the selection's animation set to nil) | `SelectionTravel`'s transaction stops animating, measured as a one-frame switch | superseded by §676 — that measurement ran on a COLD snapshot cache; warm it is 8 frames, because `matchedGeometryEffect` is a travel mechanism rather than an animation you can switch off. The effect is removed outright. |
@@ -52180,6 +52181,24 @@ Two motions, both wrong for an indicator. `ChipLean` (2026-09-05) slid the fill 
 
 **Instrumented, not yet measured on a device.** `HitchMeter.Kind.tap` plus `span(_:for:)` — a gesture whose consequences outlive it is measured as a fixed window rather than by a finger lifting — so Diagnostics will show a category tap's worst frame beside All's. The user had no Diagnostics report ready, so **the before/after numbers are owed**: everything above is a reading of the code, and three of the four items are unambiguous work removed rather than a judgement about what was slow. Verified on the simulator: All→Work lands and springs, Work→Agents closes the old folder and springs the new one anchored under its own chip, and the standing chip still toggles without moving.
 
+## §669 — Fileverse: they DID ship the API §36 said would reopen this, and it is declined anyway — on positioning, not capability (user: "i don't understand why we can't integrate them", then "i guess the issue would be then we become a 'write' app and aren't trying to compete with notes apps", 2026-09-10)
+
+**§36's recorded reason is now false, which is the only reason this entry has to exist.** That ruling declined Fileverse as "E2EE by design; revisit if they ship a hosted API" — a capability claim with its own reopening clause attached. They shipped one: `@fileverse/api` has been on npm since 2026-02-11 (1.0.10 as of 2026-07-09), and a key is minted at ddocs.new → Settings → Developer Mode. A future session citing §36 for "Fileverse has no API" would get a confident wrong answer, so the finding is written down whether or not the seat is ever built.
+
+**The passkey was never the blocker, and the login screen the user was looking at is not part of the runtime path.** Privy's passkey/email sheet is a one-time browser step to reach the portal that mints the key. After that the key is the whole authority.
+
+**What the key actually is — the finding worth keeping, so nobody re-derives it.** It is a SEED, not a bearer token. `deriveHKDFKey(apiKeySeed, salt, "COLLABORATOR_UCAN_SECRET")` yields the ed25519 secret that signs the UCAN capability tokens; `generateECKeyPair(portalKeySeed)` yields the ECIES keypair that wraps app data; and `initializeAgentClient` feeds derived key material straight into `privateKeyToAccount`, i.e. the same seed is the EVM smart account. Documents live as ciphertext at `apps-storage.fileverse.io` (server DID `did:key:z6Mkroj9…`) indexed by a Portal contract on **Gnosis Chain** (`rpc.gnosischain.com`); a per-document `secretKey` is wrapped with `tweetnacl.secretbox` under an **Argon2id**-derived key salted by the doc id. Writes go on-chain as ERC-4337 UserOps through a Pimlico bundler proxy with `paymaster: pimlicoClient` — **gas is sponsored, so a seat would need no funding**, which is the single most surprising fact here and the one most likely to be re-litigated on a wrong assumption.
+
+**The shipped "API" is unshippable and skippable, and both halves matter.** `@fileverse/api` is a self-hosted Node satellite: Express on `127.0.0.1:8001`, SQLite at `DB_PATH`, `/api/ddocs` · `/api/folders` · `/api/search` · `/api/events`, authenticated by `?apiKey=`. Nothing on a phone can run it. But because the key is a seed rather than a session, a Swift client can address storage and the chain directly and never stand the satellite up at all.
+
+**The Swift gap list, since the question "could we" deserves a costed answer.** Present already: HKDF-SHA256 and ed25519 in CryptoKit, secp256k1 as an existing SPM dependency (`21-DOT-DEV/swift-secp256k1`). Absent: NaCl `secretbox` (XSalsa20-Poly1305, not in CryptoKit), Argon2id, UCAN minting, and an ERC-4337 **write** path — `Model/WalletUserOps.swift` reads and attributes bundled operations and the app has never signed or submitted one (prd 112's preparing-surface ruling; no `eth_sendUserOperation` anywhere in the tree).
+
+**The standing risk, stated because it would land on the honesty rule.** Every fact above is a reading of a minified bundle, not a run. `@fileverse/crypto` is at **0.0.21** and none of this is documented. A format change would break writes with no signal — and a seat whose whole promise is "your note is saved" cannot have a silent failure mode (§83).
+
+**THE RULING, and it is not the technical one.** Declined on positioning. §26 already settled it in words the user reached independently a year later — *"We collect and connect; Apple Notes authors"*, typed composer text never saves, content is never editable in-app, and "if a real quick-jot itch emerges, it becomes a deliberate capture path later — never an editor." A Fileverse seat needs an editor, a document list and a conflict story, three things that exist only to serve authoring. The core loop is capture → read; this is a second product wearing a bridge's clothes. Reading is not on the table either, and the user named that first: there is no feed to read — the corpus is E2EE by construction and a dDoc is a document you wrote, not a thing that arrives.
+
+**What would reopen it, stated precisely so the next session doesn't reopen it for the wrong reason.** Not "Fileverse got easier." Only this: if Casberi ever needs a **durable, shareable destination for something it produced itself** — a brief, an answer, a digest — then Fileverse is the strongest candidate on file, because sponsored gas and a seed-derived key make it the only encrypted destination that costs the person nothing to write to. §90 already built the mechanism's near half ("Open in" chips carry the text out; typed text gains destinations, not persistence) — but a dDoc write is an authenticated encrypted API call, not a URL jump, so it cannot be an "Open in" chip and would be the first destination that isn't. Until that need is real, the cheap version covers it: the system share sheet, over the URL `ShareTargetMemo` already resolves for a row.
+
 ## §670 — The diagnostics reading leaves the phone: Copy and Share rows, over one transcript (user: "wdym phone is unseen, i have diagnostics on my phone and use it on my device what do we do", 2026-09-10)
 
 **The gap was misnamed and then found.** The session opened by saying the phone was "unseen"; the user uses the app on a device daily and has Diagnostics open on it, so that was wrong as said. What is true is narrower and worse: **nothing the phone shows is recorded anywhere.** `DiagnosticsScreen` draws the launch, sweep, hitch and MetricKit numbers (§622, §623, §666) and its footer said *"Screenshot this screen and send it back"* — and a screenshot is where every device number this app has produced went to die. `docs/` holds no reading per shipped build, so build 543's frozen dock (§662g) and the laggy nav bar (§658's amendment) reached the fix as sentences, and were chased on a simulator where neither had reproduced. The verify pass cannot see a device, and the device's own reading had no way out.
@@ -52456,6 +52475,28 @@ separates, and under a filled tile with a shadow that reads as contact.
 Frames account row said the address a third time — the crown's caption names it, the face
 rail draws it — and it was the only thing between the line and the verb tiles. Its door was
 not dropped: it moved onto the crown's caption, which is the identity it was repeating.
+
+## §672 — The Frames devnet's changelog, checked against the chain rather than read (user: "there is a list of new changes, and upgraded their frames devnet, can you check it to see what if anything changes for us?", 2026-09-11)
+
+**NOTHING IS BROKEN, and the page's one substantive item was already absorbed.** The faucet's changelog lists four entries; the only one that could touch this app is the **2026-09-07 fresh genesis** (`0x4225d878…cfc27ab`, chain id unchanged, previous chain ended at block 90,751 on a gas-accounting mismatch, database wipe and resync), which §654a re-pinned on 09-08 — the post-restart vector 1R in `frames-tx-selftest.sh` is exactly that work. The other three are node-operator facts with no reader here: a `checkpoint-sync.frames.ethrex.xyz` endpoint (403 to us), restored bootnodes, and a `chainspec.json` FOCIL removal. `faucet.frames.ethrex.xyz/artifacts` 404s.
+
+**The check was a MEASUREMENT, not a read of the page**, and that is the whole entry: three of the page's claims were verified against `rpc1` directly, and the one the changelog states in a single clause turned out to be the one the repo had described four different ways as impossible.
+
+**1. `stateGasUsed` HAS ARRIVED, and a dormant feature woke up with nobody told.** The changelog's last clause — "Frame receipts now include `stateGasUsed` per frame via JSON-RPC" — was verified by walking every EIP-7708 log on the chain and reading the receipt of every type-`0x06` transaction it names: **present on all 118 frames of all 45 transactions, zero absent.** `0x0` on every VERIFY frame (it writes no state), `0x2cd30` — 183,600 against the 250,000 budget these frames carry — on every landed transfer.
+
+§548 measured it absent on all five pre-restart transactions, *including one sent deliberately to a freshly generated address so the transfer would grow state*, and recorded that as the field's absence rather than a fixture's omission. That was right then and is wrong now. **The code needed no change**: `FramesReading` decodes it optional, `FramesSheets.stateReading` draws the second bar the moment both a used and a limit are present, and `FramesRead.starvation` refuses to judge without a reported value. So the two-bar figure and the starvation line — **dormant from the day they shipped, because the chain never once fed them** — are live on real transactions, and were live before this session looked. What was wrong was every sentence around them: the sheet's own doc-comment led with "**`stateGasUsed` IS ABSENT ON THIS CHAIN**", `docs/hooks/devnets.md` said it "does not exist on this client", and two harness comments taught the same. All four are corrected to say it arrived, *and every guard is kept exactly as it was* — a defaulted zero was wrong when the field was missing and is wrong again the day a devnet that has re-genesised once drops it. The nightly `live-integrations.sh` row now REQUIRES the field, so its **disappearance** is what warns.
+
+**The demo fixture was the one place the stale fact was a VALUE, not a comment.** `FramesBridge.seedDemo` passed `stateGasUsed: nil` on every frame, correctly, for a bar the room could not then draw — so the demo would now be the only Frames surface in the app showing a chain that no longer exists. Filled **only where the measurement reaches**, because that fixture's rule is that every figure is real: verify frames take the measured `0`, succeeded transfer frames that emitted their log take the measured 183,600 (vector 3's included — its transfer persisted under a failed transaction, which is the shape that vector exists for). The two **failed** frames and vector 4's **rolled-back** frame stay nil: the restarted chain has produced neither, so there is nothing measured to put there, and a number invented in that slot is a starvation diagnosis the demo would assert to somebody (§83). `state:` defaults to nil so the unmeasured case stays the one a future vector gets by saying nothing.
+
+**2. THE CHAIN IS NO LONGER NEARLY EMPTY, and that weakens three arguments in our favour's opposite direction.** Re-censused 2026-09-11 by the same method §548 used (walking every log, never sampling blocks — §500's rule): **242 logs, 241 value-moving transactions, 45 of type `0x06`, 214 distinct addresses, in 55,630 blocks.** It was 25 / 20 / 5 / 18 in 56,503 blocks on 09-01. **The restart did not shrink this chain, it filled it** — an order of magnitude in population against a head that is slightly shorter.
+
+Three places argued from the old figure and are corrected rather than deleted, because the pair is the point: `FramesBridge`'s "WHY A SEAT, WHEN THE CHAIN IS NEARLY EMPTY" (the seat was argued on a four-day-old network's floor and now reads on a real population — the argument for the seat was never volume, so it survives); `FramesScreen`'s account-block placement, which said "a chain four days old holds 18 addresses and so a pasted stranger shows almost nothing" and closed with "**That measurement stands**" — it does not, and a pasted stranger is now a plausible read; and `-framesProbe`'s reason, which cited the census to explain why "nothing here" is the healthy answer. The probe's *conclusion* is untouched and still right: a watched devnet account is usually untouched, and the five causes that render identically are unchanged.
+
+**3. Everything else on the envelope held.** Chain id `0x13e02` on all three hosts, genesis matching §654a's pin, the seven-field envelope unchanged, and `nonceKeys` / `recentRootReferences` still absent across the whole type-`0x06` population — so `FramesSection`'s declined Nonces scope stays declined and the harness's drift guards stay green (64 mutations, 3 real vectors).
+
+**A correction to §654a's own ledger entry, found while acting on it.** It records as OWED that "the room still weights its frame strip by execution gas alone", citing CLAUDE.md. `FramesRoomCard` weights the strip by **value moved**, changed 2026-09-01 and commented at length with the reason — the per-frame gas shares were measured meaningless here (100 and 3,000 against a receipt of 210,790). CLAUDE.md contains no such sentence. That debt was either already paid or never real; it is closed, not carried.
+
+**UNSEEN on a device**, per the standing rule: verified by build, `frames-tx-selftest.sh` (64 mutations), `demo-selftest.py`, and the live RPC reads above. The second gas bar and the starvation line have never been seen drawn by anybody — they became drawable four days ago and the chain has produced no failed frame since, so the starvation line specifically still has no real input anywhere. The bar does: any type-`0x06` transfer on this chain now feeds it.
 
 
 ## §685 — The three ethrex devnets take the chain's name (2026-09-10)
@@ -53308,3 +53349,139 @@ Supersedes §566's sponsor-era strip sizing and §606's budget bar for this scop
 (the Frames room lists every framed transaction, not only the multi-step ones) and §500 (the
 mode vocabulary is the family's, stated once). §510's population note and §503's run-on-open
 survive whole, now for three rooms.
+
+## §699 — The GitHub room is ONE FEED: the head card is deleted, the type becomes a tag under the timestamp, and the faces you watch scope it (user: "we should make our github room super rich and gorgous and perhaps have categories or indicators or soethign for the type of thing in the rows", then five rulings narrowing it, 2026-09-11)
+
+**The complaint, and the thing it was not.** The room was asked to be richer. Every
+mock that answered by ADDING — a ranked head card, a scope chip strip, the fused
+`DSRoomRailSlab` borrowed from Wallet — was rejected, and the rejections
+converge on one sentence the user wrote last: *"the room needs to be one equal
+list. it can't be a row of words at top different than below. only a chart could
+be at the top, otherwise whole room needs to be rows"*, then *"it is just a row
+no sections… just a feed and those are tags or whatever"*.
+
+That is the 2026-07-06 band ruling — *one line on a field of its kind's color,
+every kind, same anatomy* — enforced against a room that had quietly acquired a
+second anatomy above the first.
+
+### What went
+
+**§401's "what is waiting on you" card is DELETED**, with `GitHubRoom.swift`,
+`GitHubRoomSource.swift`, `GitHubRoomCard.swift` and
+`scripts/github-room-selftest.sh`. Its reasoning about WHICH ask outranks which
+was right and is not overturned; what was wrong is the shape it took. The card
+drew ranked entries — a face, a title, a sub-line each — which is a row, so the
+room opened with rows about rows. `githubHead` leaves `verify.sh`'s room-head
+coverage map and `-roomInsightSweep`.
+
+**The contributions heatmap leaves the room too**, and this one the ruling
+permitted: a chart may sit at the top. It moves because of what it ANSWERS
+(user: *"i also really don't think the year in code matters as much does it?
+it's kind of a static thing"*) — how much you wrote this year, in a room opened
+to see what moved. It draws on the GitHub account page now, beside the account's
+other facts, and `FeedScreen` no longer holds `GitHubGraphStore` at all.
+
+**The scope chip strip never shipped.** It was mocked, approved in one round,
+and killed in the next by the same sentence: a row of words at the top is a row
+of words at the top.
+
+### What the rows carry instead
+
+**`Model/GitHubRowTag.swift` — the type as a TAG under the timestamp**, in the
+slot `BandRow` gives the project name, which a single-source room leaves free.
+Plain tinted text, never a chip (a chip means tappable). Seven values on one
+axis: Pull request · Issue · Release · Star · Gist · Activity · Watching.
+
+Three decisions inside it are worth keeping:
+
+* **It names the OBJECT, never the reason.** A notification's title already
+  leads with "Review requested · org/repo · …", so a tag reading "Review" would
+  print one word twice on one row.
+* **The URL is the authority, not the ref.** `gh:` and `gh:notif:` rows both
+  point at an issue OR a pull request and nothing in the ref says which;
+  `/pull/9` and `/issues/9` are exact — on every row ever landed, including the
+  ones that predate the file. Nothing is stamped at ingest, so there is no
+  backfill and no CloudKit deploy, and the GitHub bridge has no heal pass that
+  could have fixed old rows anyway.
+* **It DISPLACES "Swift · ★1.2k"**, which is the trade. Language and stars are
+  true of every row from a repo and therefore do not distinguish one from
+  another — the exact noise that slot's own doc says killed the project tag in
+  2026-07-23. Both facts are still stored, still indexed, still on the thing
+  sheet, and they are now the roster subline on the account page, where they do
+  tell two watched repos apart.
+
+### The rail, and the ruling that a repo belongs on it
+
+The face rail scopes the feed, and it holds **repos beside people** (user: *"i
+think a repo does belong in the rail b/c it is something someone follows"*). A
+repo wears a squircle and a person a circle — `FaceScopeRail.Item.Face` gains a
+`.mark` case, the 2026-08-14 distinction that an avatar is an identity and a
+logo is not.
+
+**It is the SOCIAL rail's shape and not the wallet's, and that was settled by
+trying the wallet's first.** A mock put GitHub on `DSRoomRailSlab` — figure,
+fused rail-and-switcher slab, rows — and the user named why it fails here:
+*"we can't show a list above AND below the rail"*. Wallet survives that geometry
+because its figure is a number and a chart; GitHub's room is rows top to bottom,
+so the slab sat between rows and rows. The rail lives in the bottom band with
+the other room controls.
+
+**No `+` and no book door** (user: *"can we emulate the way wallet and devnets
+do their watching so it is only on the set up screen"*) — `VibenetScopeRail`'s
+§465 ruling: one tier, so a second slot onto the same screen is chrome.
+
+**Nothing watched draws NO ROW** (user: *"if they paste their own key… if it is
+just themselves that would suck to see a third row"*). A rail holding only "All"
+is a control with one option — §83's dead control wearing a band row the feed
+could have used. ONE watch is enough, unlike the devnets' `watched > 1`, and the
+difference is real: there, All and the single account show the same rows; here
+All is your whole GitHub and one watched person is a strict slice of it.
+
+### The rule nobody would guess
+
+**A notification is scoped by REPO and never by PERSON.**
+`GitHubFeedFetch.notifications` stamps the REPOSITORY's owner onto
+`authorHandle` — it says so in its own comment, because GitHub's notifications
+payload names no actor anywhere — so reading that field as "who did this" files
+every notification from an org under a watched person who happens to own it. The
+row is real and the face is real; the claim is the false part.
+
+### What made the rail worth having
+
+A repo watch had landed its newest RELEASE since it shipped and nothing else,
+which is right for a dependency and nearly nothing for a project you follow. So
+picking a repo would have shown one row from two months ago — §83's dead control
+with a face on it. `GitHubFeedFetch.openWorkFor` adds **one request per watched
+repo** (capped at ten): GitHub's `/issues` endpoint returns issues AND pull
+requests in one list, so "what is open here" costs a single call. Repo EVENTS
+are deliberately not read — a push to a repo you do not own is the noisiest
+thing GitHub publishes, and `eventsFor` already lands the pushes of people you
+chose. It keeps the shared `gh:<id>` namespace, so an issue that is both open in
+a watched repo and assigned to you lands ONCE.
+
+### The account page
+
+Roster rows passed `weekCount: 0` for every watch, so `AccountPageShape.split`
+filed all of them under Quiet — an active-first sort with nothing to sort by. It
+now counts what each watch landed this week through the SAME
+`GitHubRowTag.matches` the rail uses, so a watch is "active" here precisely when
+picking its face in the room shows you something.
+
+### Guards
+
+`scripts/github-rowtag-selftest.sh` (new, replacing the room-head harness)
+compiles `GitHubRowTag.swift` whole beside `GitHubLinks.swift` — 45 assertions,
+9 mutations — and carries the drift guards for the two-file ref MIRROR, for the
+tag being drawn, for the scope being applied, for the rail being mounted on the
+shell rather than the screen (§357), for the repo's open work being fetched in
+one call, and NEGATIVELY for the head card and the heatmap not coming back.
+
+The demo's four GitHub rows gained real refs and real `github.com` URLs: the tag
+is derived rather than stored, so a row reffed `demo:github:0` with empty
+`content` drew no tag at all — the demo would have been missing the one thing
+the room's rows gained, in the corpus every App Store still is taken over.
+
+**UNSEEN on a device**, per the standing rule: verified by build, the new
+harness, and every static audit. Two things no machine here can check — whether
+a watched repo's `/issues` call lands what the room expects, and how the rail
+reads with a dozen watches.

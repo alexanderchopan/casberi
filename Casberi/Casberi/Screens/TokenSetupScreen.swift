@@ -83,6 +83,18 @@ struct TokenSetupScreen: View {
     /// step ticked from a previous session would be a claim about a form the
     /// person is looking at fresh.
     @State private var doorOpened = false
+
+    /// GitHub only — the contribution year, which LEFT THE ROOM on 2026-09-11
+    /// (user: *"i also really don't think the year in code matters as much does
+    /// it? it's kind of a static thing"*, and then the ruling that made the room
+    /// one plain feed with no head).
+    ///
+    /// It is a fact about the ACCOUNT — how much you wrote this year — not about
+    /// what moved, so it belongs on the page that holds the account's other
+    /// facts rather than above a feed opened to see what needs you. Same store
+    /// it always used; `refreshIfStale` self-guards and refuses to reach
+    /// anything in demo mode.
+    @State private var githubGraph = GitHubGraphStore.shared
     /// Bumped on a successful connect so the header's icon coin-flips to
     /// acknowledge the handshake. Wired 2026-08-04: five smaller setup screens
     /// (Stripe, Bankr, Grok, OpenRouter, Venice) already did this, and the
@@ -130,6 +142,7 @@ struct TokenSetupScreen: View {
             act: { actField },
             more: {
                 if bridge == .github && bridge.connected {
+                    githubYearSection
                     feedsSection
                 }
             },
@@ -138,6 +151,13 @@ struct TokenSetupScreen: View {
         .onAppear {
             if bridge.connected {
                 Task { await sync() }
+                // The contribution year, seeded from the one always-present
+                // spot on this page — the section that draws it is
+                // conditionally empty, so its own `.task` would not fire until
+                // a year had already landed (chicken-and-egg).
+                if bridge == .github {
+                    Task { await githubGraph.refreshIfStale() }
+                }
             }
         }
         .task(id: "\(bridge.rawValue)\(bridge.connected)") { readRows() }
@@ -549,6 +569,17 @@ struct TokenSetupScreen: View {
         .buttonStyle(.plain)
     }
 
+    /// GitHub only — the contribution year (2026-09-11). Paints only once a
+    /// real year with contributions has landed: an empty grid is a skeleton, not
+    /// content, and this page already says everything else it knows in words.
+    @ViewBuilder private var githubYearSection: some View {
+        if let year = githubGraph.year, year.total > 0 {
+            CalendarHeatmapHero(title: String(localized: "Your year in code"),
+                                subtitle: String(localized: "\(year.total.formatted()) contributions"),
+                                year: year)
+        }
+    }
+
     /// GitHub only — the feed picker. One connection, several streams the
     /// person each turns on; toggling re-syncs so a newly-chosen feed lands
     /// now, not next foreground.
@@ -606,18 +637,77 @@ struct TokenSetupScreen: View {
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         descriptor.fetchLimit = 200
         let lastLooked = AccountVisits.lastLooked(bridge.bridgeID)
-        rows = ((try? modelContext.fetch(descriptor)) ?? []).compactMap { thing in
+        let landed = (try? modelContext.fetch(descriptor)) ?? []
+        // **WHAT EACH WATCH ACTUALLY LANDED THIS WEEK** (2026-09-11). Every
+        // row here passed `weekCount: 0` until now, which meant
+        // `AccountPageShape.split` filed every watch under "Quiet" — the page
+        // had an active-first sort and nothing to sort by, so a repo that
+        // shipped twice today read exactly like one nobody has touched since
+        // spring.
+        //
+        // ONE walk of the rows already fetched, bucketed by the same
+        // `GitHubRowTag.matches` the room's rail uses — so a watch is "active"
+        // here precisely when picking its face in the room shows you something,
+        // and the two can never disagree about what belongs to whom.
+        let weekStart = Date.now.addingTimeInterval(-7 * 86_400)
+        var counts: [String: Int] = [:]
+        for thing in landed where thing.isLive && thing.capturedAt >= weekStart {
+            let ref = thing.sourceRef
+            // The watch row itself is not news about the watch.
+            guard !(ref?.hasPrefix("gh:watchrepo:") ?? false),
+                  ref.flatMap(GitHubLinks.personLogin(fromRef:)) == nil else { continue }
+            for watch in landed where watch.isLive {
+                guard let scope = watch.sourceRef,
+                      scope.hasPrefix("gh:watchrepo:")
+                        || GitHubLinks.personLogin(fromRef: scope) != nil else { continue }
+                if GitHubRowTag.matches(scope: scope, ref: ref, url: thing.content,
+                                        authorHandle: thing.authorHandle) {
+                    counts[scope, default: 0] += 1
+                }
+            }
+        }
+        rows = landed.compactMap { thing in
             guard thing.isLive, let ref = thing.sourceRef else { return nil }
             let isPerson = GitHubLinks.personLogin(fromRef: ref) != nil
             let isRepo = ref.hasPrefix("gh:watchrepo:")
             guard isPerson || isRepo else { return nil }
             let new = lastLooked.map { thing.capturedAt > $0 } ?? false
+            let week = counts[ref] ?? 0
             return AccountPageShape.Row(
                 id: ref, title: thing.title,
-                subline: isPerson ? String(localized: "person") : String(localized: "repo"),
-                weekCount: 0, hasNew: new, isYou: false,
+                subline: watchSubline(thing, isPerson: isPerson, week: week),
+                weekCount: week, hasNew: new, isYou: false,
                 avatarURL: thing.authorAvatarURL ?? thing.previewImageURL)
         }
+    }
+
+    /// What a watch row says under its name.
+    ///
+    /// A repo names its LANGUAGE and star count, which is the fact the feed row
+    /// stopped carrying when the type tag took that slot (2026-09-11) — the
+    /// right trade in both places: on a feed row it was true of every row from
+    /// that repo and therefore not distinguishing, and here it is the one line
+    /// telling two watched repos apart. A person names their login, because the
+    /// title above is a display name and two people called Alex are otherwise
+    /// the same row.
+    private func watchSubline(_ thing: Thing, isPerson: Bool, week: Int) -> String {
+        var parts: [String] = []
+        if isPerson {
+            if let handle = thing.authorHandle, !handle.isEmpty { parts.append("@\(handle)") }
+            else { parts.append(String(localized: "person")) }
+        } else {
+            if let language = thing.repoLanguage, !language.isEmpty { parts.append(language) }
+            if let stars = thing.starCount, stars > 0 {
+                parts.append("★\(GitHubStarContent.compact(stars))")
+            }
+            if parts.isEmpty { parts.append(String(localized: "repo")) }
+        }
+        // NO "nothing this week" (§83's honesty rule read the other way round):
+        // a count of zero is already said by the row sitting under Quiet, and
+        // printing it twice makes the quiet half of the list noisier than the
+        // active one.
+        if week > 0 { parts.append(String(localized: "\(week) this week")) }
+        return parts.joined(separator: " · ")
     }
 
     /// Removing a watch deletes its row — the watch IS the thing.

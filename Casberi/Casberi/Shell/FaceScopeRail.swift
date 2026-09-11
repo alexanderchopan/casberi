@@ -66,6 +66,13 @@ struct FaceScopeRail: View {
             case wallet(address: String)
             /// A fetched avatar, falling back to the source's own mark.
             case avatar(url: String?, source: String)
+            /// A LOGO rather than a person — a squircle, never a circle
+            /// (2026-09-11, the same distinction `ShapedRows` draws between
+            /// `faceSources` and `publisherMarkSources`: drawing a project's
+            /// mark in a circle would say a person published it). GitHub's rail
+            /// mixes the two, so the shape is what keeps a watched repo from
+            /// reading as a watched person.
+            case mark(url: String?, source: String)
         }
     }
 
@@ -436,7 +443,7 @@ struct FaceScopeRail: View {
             VStack(spacing: DS.Space.s1) {
                 face(item.face)
                     .overlay(
-                        Circle().strokeBorder(DS.tint, lineWidth: ringWidth(item, isOn: isOn))
+                        ring(item.face, width: ringWidth(item, isOn: isOn))
                             .padding(-3)
                     )
                 if !namesInRoom {
@@ -506,6 +513,28 @@ struct FaceScopeRail: View {
             } else {
                 BridgeIcon(name: source, size: faceSize, circular: true)
             }
+        case .mark(let url, let source):
+            if let url, !url.isEmpty {
+                RemoteThumb(urlString: url, size: faceSize, fallback: source, circular: false)
+            } else {
+                BridgeIcon(name: source, size: faceSize, circular: false)
+            }
+        }
+    }
+
+    /// The ring a slot wears, following the FACE's own shape — a squircle mark
+    /// ringed by a circle loses its corners. A `@ViewBuilder` rather than an
+    /// `AnyShape`, because `strokeBorder` needs `InsettableShape` and SwiftUI
+    /// ships no type-erased one.
+    @ViewBuilder
+    private func ring(_ face: Item.Face, width: CGFloat) -> some View {
+        switch face {
+        case .mark:
+            RoundedRectangle(cornerRadius: DS.Radius.appIcon(faceSize) + 3,
+                             style: .continuous)
+                .strokeBorder(DS.tint, lineWidth: width)
+        default:
+            Circle().strokeBorder(DS.tint, lineWidth: width)
         }
     }
 
@@ -845,6 +874,60 @@ enum SocialScopeRail {
     /// function anyway so the two adapters are read side by side and the wallet
     /// rule can never be applied here by accident.
     static func matches(_ scope: String, _ id: String) -> Bool { scope == id }
+}
+
+/// **THE GITHUB ROOM'S FACE RAIL** (user ruling, 2026-09-11) — the people and
+/// repos you watch, scoping one plain feed.
+///
+/// It is the SOCIAL rail's shape and not the wallet's, and that was settled by
+/// trying the other one first. Wallet and the devnets mount their rail inside a
+/// glass slab above the room's figure, between the figure and the rows; that
+/// works there because the figure is a number and a chart, so the slab sits
+/// between two different kinds of thing. GitHub's room has no figure — it is
+/// rows top to bottom — so the slab sat between rows and rows (user: *"we can't
+/// show a list above AND below the rail"*). Here the rail lives in the bottom
+/// band with the other room controls, where the social rooms keep theirs.
+///
+/// A repo and a person share the strip deliberately (user: *"i think a repo
+/// does belong in the rail b/c it is something someone follows"*). The repo
+/// wears a squircle and the person a circle — the 2026-08-14 rule that an
+/// avatar is an identity and a logo is not — so the two never read as one kind.
+///
+/// **No `+` and no book door.** Watching happens on the account page and only
+/// there (user: *"can we emulate the way wallet and devnets do their watching
+/// so it is only on the set up screen"*), which is `VibenetScopeRail`'s own
+/// §465 ruling: one tier, so a second slot pointing at the same screen is
+/// chrome rather than a choice.
+enum GitHubScopeRail {
+    /// Nothing watched draws NO ROW — see `GitHubRowTag.railShows`, which owns
+    /// the rule so a harness can compile it.
+    static func shows(source: String, watched: Int) -> Bool {
+        GitHubRowTag.railShows(source: source, watched: watched)
+    }
+
+    /// One watched repo or person per face, in the watch list's own order
+    /// (newest watch first, which is `GitHubWatchStore`'s own sort).
+    static func items(_ watches: [GitHubWatchStore.Watch]) -> [FaceScopeRail.Item] {
+        watches.map { watch in
+            FaceScopeRail.Item(
+                id: watch.ref,
+                // A repo's caption is its NAME, not its owner and name: the
+                // strip is 66pt wide and "tokio-rs/tokio" truncates to the
+                // owner, which is the half that does not identify it. A person
+                // keeps whatever the watch row is titled — their display name
+                // when they set one, else their login.
+                caption: watch.isRepo
+                    ? (watch.title.split(separator: "/").last.map(String.init) ?? watch.title)
+                    : watch.title,
+                face: watch.isRepo ? .mark(url: watch.avatarURL, source: "GitHub")
+                                   : .avatar(url: watch.avatarURL, source: "GitHub"),
+                tooltip: watch.title)
+        }
+    }
+
+    static func matches(_ scope: String, _ id: String) -> Bool {
+        scope.caseInsensitiveCompare(id) == .orderedSame
+    }
 }
 
 /// The Hegotá room's face rail — the same shape as vibenet's, one chain over.

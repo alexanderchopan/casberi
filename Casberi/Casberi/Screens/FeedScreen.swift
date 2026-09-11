@@ -1574,12 +1574,6 @@ struct FeedScreen: View {
     /// `calendarSections`.
     @State private var pastEventsExpanded = false
     @State private var blockStream = GenStream()
-    // GitHub's contribution graph rides the TOP of its own source feed (moved
-    // off Home, 2026-07-18): the green-squares year is a GitHub thing, so it
-    // belongs where GitHub lives. Self-fetching @Observable store, same one the
-    // graph always used; the hero only paints once a real year with
-    // contributions has landed (an empty grid is a skeleton, not content).
-    @State private var githubGraph = GitHubGraphStore.shared
     @Bindable private var wallet = WalletStore.shared
     /// The wallet this room is scoped to (prd §128, widened by §356) — nil is
     /// "All". Scopes the balance lede, holdings treemap, NFT strip and the
@@ -2239,6 +2233,7 @@ struct FeedScreen: View {
                 && walletScopeAllows(thing)
                 && vibenetScopeAllows(thing)
                 && personScopeAllows(thing)
+                && githubScopeAllows(thing)
         }
     }
 
@@ -2511,6 +2506,9 @@ struct FeedScreen: View {
             ? Corpus.revision(in: modelContext)
             : Corpus.revision(in: modelContext, source: source)
         return [source, filter.tag, selectedWallet ?? "", chrome.personScope ?? "",
+                // The GitHub rail scopes the whole feed (2026-09-11), so it
+                // belongs here for this property's own stated reason.
+                chrome.githubScope ?? "",
                 // The vibenet rail scopes the CARD (2026-08-23), so it
                 // belongs in the memo key for the reason this property's
                 // own doc gives: a head that survived a scope change is a
@@ -2856,6 +2854,20 @@ struct FeedScreen: View {
     private func personScopeAllows(_ thing: Thing) -> Bool {
         guard SocialRoom.hasRoster(source), let scope = chrome.personScope else { return true }
         return thing.authorHandle == scope
+    }
+
+    /// The GitHub room's watch scope (2026-09-11) — the fourth of these, gated
+    /// on the ROOM for the same reason as the three around it: a repo ref
+    /// compared against every other room's rows would empty them.
+    ///
+    /// The match itself is `GitHubRowTag.matches`, which is Foundation-only so
+    /// a harness can drive it — including the one rule that is not obvious, that
+    /// a notification is scoped by REPO and never by PERSON because its face is
+    /// the repository's owner rather than whoever acted.
+    private func githubScopeAllows(_ thing: Thing) -> Bool {
+        guard source == "GitHub", let scope = chrome.githubScope else { return true }
+        return GitHubRowTag.matches(scope: scope, ref: thing.sourceRef,
+                                    url: thing.content, authorHandle: thing.authorHandle)
     }
 
     /// The vibenet room's account scope (2026-08-23) — the same shape as
@@ -4519,20 +4531,9 @@ struct FeedScreen: View {
         .padding(.bottom, DS.Space.s2)
     }
 
-    /// The GitHub source feed's lede — "Your year in code · N contributions"
-    /// and the green-squares grid, drawn on device and cached in
-    /// `GitHubGraphStore` (the same store, and reusing `ContributionGraph`, that
-    /// the retired Home tile used). Paints only for a real year with
-    /// contributions (an empty grid is a skeleton, not content); the fetch that
-    /// seeds that year runs from the List's own `.task` (see feedList), not
-    /// here — a conditionally-empty view's `.task` wouldn't fire.
-    @ViewBuilder private var githubGraphHero: some View {
-        if let year = githubGraph.year, year.total > 0 {
-            CalendarHeatmapHero(title: "Your year in code",
-                                subtitle: "\(year.total.formatted()) contributions",
-                                year: year)
-        }
-    }
+    // THE YEAR GRAPH LEFT THIS ROOM (user ruling, 2026-09-11) — see the room
+    // head's own note below. It draws on the GitHub ACCOUNT PAGE now
+    // (`TokenSetupScreen`), where facts about the account live.
 
 
     /// What each `FeedSheetRoute` presents.
@@ -5060,19 +5061,26 @@ struct FeedScreen: View {
                 sourceComposeRow(action)
             }
             // GitHub's source feed leads with its contribution graph (moved
-            // off Home, 2026-07-18). Gated on the source STRING, not the
-            // BridgeStore seat — the graph belongs to GitHub's token
-            // (`GitHubGraphStore` self-fetches with it), so it rides the
-            // GitHub feed whenever it's the filter; the hero self-checks for
-            // a landed year and takes no room otherwise.
-            // …and stands DOWN whenever the "needs you" head has something
-            // to say (prd §401). Two leads is not a richer room, it is a
-            // room with no lead: the heatmap answers "how much did I write
-            // this year" and the head answers "what is waiting on you",
-            // and only one of those is why you opened it. The heatmap
-            // remains the lead on the quiet days, which is most of them,
-            // and is why it was not simply deleted.
-            if source == "GitHub", sourceHeadIsAbsent { githubGraphHero }
+            // **THE GITHUB ROOM DRAWS NO HEAD AT ALL** (user ruling,
+            // 2026-09-11: *"the room needs to be one equal list. it can't be a
+            // row of words at top different than below. only a chart could be
+            // at the top, otherwise whole room needs to be rows"*, then *"it is
+            // just a row no sections… just a feed and those are tags"*).
+            //
+            // Two things went, and for one reason between them. §401's "what
+            // is waiting on you" card drew RANKED ENTRIES — a face, a title, a
+            // sub-line — which is a SECOND ROW ANATOMY stacked on top of the
+            // room's own rows, against the 2026-07-06 band ruling that every
+            // kind wears one. And the contributions heatmap is a chart, which
+            // the ruling does allow at the top, but it answers "how much did I
+            // write this year" and the room is opened to see what moved; it
+            // draws on the account page now, where facts about the account sit.
+            //
+            // What the head was saying is carried by the ROWS instead: the ask
+            // is already the first words of a notification's title, and the
+            // TYPE of every row is now the tag under its timestamp
+            // (`GitHubRowTag`), which is what made the head's ranking legible
+            // as a list in the first place.
         }
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
@@ -5778,11 +5786,6 @@ struct FeedScreen: View {
         // actually fills the window. Everything else keeps `.reading`, and no
         // paragraph in this app gets wider.
         .dsAdaptiveContentWidth(shape.widensForPictures ? .wide : .reading)
-        // Seed/refresh the contribution year from a RELIABLE always-present spot
-        // (the conditionally-empty hero's own `.task` doesn't fire until a year
-        // lands — chicken-and-egg). `source` is fixed per feed instance, so this
-        // runs once when the GitHub feed appears; `refreshIfStale` self-guards.
-        .task { if source == "GitHub" { await githubGraph.refreshIfStale() } }
         // Drives `debouncedAllSnapshot` (see its doc above) — `.task(id:)`
         // cancels and restarts on every `@Query` emission, so only the LAST
         // save in a refresh burst survives its sleep and actually publishes;
@@ -6474,14 +6477,6 @@ struct FeedScreen: View {
                         // straight to the directory rather than via the connect screen
                         // (§234 — a browse is mounted by the room).
                         route.path.append(.l2beatDirectory)
-                    }
-                case .github(let room):
-                    GitHubRoomCard(room: room) { ref in
-                        // The card names a real row, so this lands exactly —
-                        // no "newest matching" hop is needed or wanted.
-                        openNewest(source: GitHubRoomSource.source, in: visible) { thing in
-                            thing.sourceRef == ref
-                        }
                     }
                 case .radicle(let room):
                     RadicleRoomCard(room: room) { rid, id, kind in
@@ -8499,7 +8494,6 @@ struct FeedScreen: View {
         // I write", in the slot the rows that actually need you were competing
         // for. Radicle shipped headless on purpose (§400 refused the
         // `/activity` span strip), and this is the head that entry pointed at.
-        case github(GitHubRoom)
         case radicle(RadicleRoom)
         // Ethrex Hegotá deliberately has NO case here (prd §500). Its room is
         // four sections of its own — figure, rail, switcher, list — which is
@@ -8619,8 +8613,6 @@ struct FeedScreen: View {
             return L2beatRoomSource.compose(things: visible).map { .l2beat($0) }
         case CardPointersRoomSource.source:
             return CardPointersRoomSource.compose(things: visible).map { .cardPointers($0) }
-        case GitHubRoomSource.source:
-            return GitHubRoomSource.compose(things: visible).map { .github($0) }
         // Reads no rows at all — its subject is bridge STATE, since no landed
         // row can say a patch is still unresolved. See `RadicleRoomSource`.
         case RadicleRoomSource.source:
@@ -11832,6 +11824,7 @@ struct FeedScreen: View {
                        narrowed: Pinboard.isPinnedRoom(source)
                            || (roomTakesWalletScope && selectedWallet != nil)
                            || (SocialRoom.hasRoster(source) && chrome.personScope != nil)
+                           || (source == "GitHub" && chrome.githubScope != nil)
                            || (shape == .vibenet && chrome.vibenetScope != nil))
     }
 

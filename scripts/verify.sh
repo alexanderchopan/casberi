@@ -1840,14 +1840,16 @@ harness "Feed-walk self-test" "feed-walk self-test" "scripts/feed-walk-selftest.
 # credential at all — and the guard that keeps `/activity` unread, since that
 # endpoint is a trailing 365-day window and a span strip fed from it would
 # re-commit the bug §398 had just fixed for the journals.
-# The GitHub room head (prd §401). Its whole subject is a RANKING — which of
-# three asks outranks which — and a ranking is invisible to every other check
-# here: a card that leads with a mention instead of a requested review renders
-# exactly as well as a correct one, and the person simply attends to the wrong
-# thing. It also guards the two-file MIRROR between `GitHubRoom.Ask`'s raw
-# values and the strings `GitHubFeeds.notificationAsk` stamps, which cannot
-# import each other and would otherwise drift into the head silently vanishing.
-harness "GitHub room pure-logic self-test" "github-room self-test" "scripts/github-room-selftest.sh" "the GitHub room self-test failed — run scripts/github-room-selftest.sh"
+# The GitHub room's ROW TAG and WATCH SCOPE (user ruling, 2026-09-11). This
+# replaces the §401 room-head harness, which went with the card it guarded: the
+# room draws no head at all now, and what that card was ranking is carried by
+# the rows themselves. What the new logic gets wrong is invisible everywhere
+# else — a tag derived from the wrong half of a URL renders exactly as well as a
+# right one and simply calls a pull request an issue, and a scope that matches
+# the wrong rows paints a plausible feed about somebody else. It also guards the
+# one rule that is counter-intuitive: a notification's face is the REPOSITORY's
+# owner, so it may never answer "whose is this".
+harness "GitHub row-tag pure-logic self-test" "github-rowtag self-test" "scripts/github-rowtag-selftest.sh" "the GitHub row-tag self-test failed — run scripts/github-rowtag-selftest.sh"
 # The GitHub person watch (prd §519). What a pasted string ADDRESSES, which no
 # build and no screen sweep can see and which fails as a watch that looks like
 # it worked: a repo URL read as its owner watches somebody nobody asked for, a
@@ -2981,7 +2983,6 @@ else
     claudeHead        "Claude"
     geminiHead        "Gemini"
     claudeCodeHead    "Claude Code"
-    githubHead        "GitHub"
     radicleHead       "Radicle"
     cardPointersHead  "CardPointers"
     walletbeatHead    "Walletbeat"

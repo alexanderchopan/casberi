@@ -21,6 +21,13 @@ enum GitHubRepoWatch {
         var id: String { fullName }
     }
 
+    /// The tag every row a WATCH brought in wears — the watch row itself, and
+    /// (since 2026-09-11) the repo's open issues and pull requests. Spelled
+    /// once here so the two files that stamp it cannot drift; it is deliberately
+    /// the same word `GitHubFeed.following` uses, because both mean "you asked
+    /// to keep an eye on this".
+    static let tag = "Watching"
+
     private static let refPrefix = "gh:watchrepo:"
 
     static func ref(_ fullName: String) -> String { "\(refPrefix)\(fullName.lowercased())" }
@@ -55,7 +62,7 @@ enum GitHubRepoWatch {
             predicate: #Predicate { $0.sourceRef == r }))) ?? 0
         guard existing == 0 else { return nil }
         let thing = Thing(kind: .link, title: repo.fullName, content: repo.htmlURL,
-                          source: "GitHub", capturedAt: .now, tags: ["Watching"], sourceRef: r)
+                          source: "GitHub", capturedAt: .now, tags: [tag], sourceRef: r)
         thing.previewImageURL = repo.avatarURL
         thing.repoLanguage = repo.language
         thing.starCount = repo.stars

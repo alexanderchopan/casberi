@@ -7340,16 +7340,12 @@ enum ProbeHooks {
              ? CursorRoomSource.compose(things: things).map {
                 "\(CursorRoom.headline($0)) · \($0.repos.count) repos"
              } : nil)
-        // The two CODE heads (prd §401). `githubHead` reads `things`
-        // like `cursorHead` above — the notifications ARE the subject.
-        // `radicleHead` reads NONE and is the only line in this block
-        // that doesn't: its subject is bridge state, since no landed
-        // row can say a patch is still unresolved (`ASCRoomSource`'s
+        // The remaining CODE head. `githubHead` went with the §401 card
+        // (user ruling, 2026-09-11 — the GitHub room draws no head at
+        // all now); `radicleHead` reads NO rows and is the only line in
+        // this block that doesn't: its subject is bridge state, since no
+        // landed row can say a patch is still unresolved (`ASCRoomSource`'s
         // situation, and the `appStoreConnect` line's).
-        note("githubHead", source == GitHubRoomSource.source
-             ? GitHubRoomSource.compose(things: things).map {
-                "\($0.headline) · \($0.items.count) waiting"
-             } : nil)
         note("radicleHead", source == RadicleRoomSource.source
              ? RadicleRoomSource.compose(things: things).map {
                 "\($0.items.count) open · \($0.repos) repos · \($0.drafts) drafts"

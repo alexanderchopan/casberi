@@ -265,9 +265,17 @@ enum GitHubFeedFetch {
         async let peopleActivity: [Thing] =
             activityPeople.isEmpty ? [] : eventsFor(activityPeople, token: token)
 
+        // **WHAT IS OPEN IN THE REPOS YOU WATCH** (user ruling, 2026-09-11).
+        // Without this the repo half of the room's face rail is a dead control:
+        // a watched repo landed its newest RELEASE and nothing else, so picking
+        // it showed one row every couple of months. See `openWorkFor`.
+        async let repoOpenWork: [Thing] =
+            watchedRepos.isEmpty ? [] : openWorkFor(watchedRepos, token: token)
+
         var things = await feedBatches.flatMap { $0 }
         things += await extraReleases
         things += await peopleActivity
+        things += await repoOpenWork
         if let alert = identity.alert { things.append(alert) }
         return things
     }
@@ -582,6 +590,66 @@ enum GitHubFeedFetch {
             return t
         }
         return found.compactMap { $0 }
+    }
+
+    /// **A WATCHED REPO'S OPEN ISSUES AND PULL REQUESTS** (user ruling,
+    /// 2026-09-11) — the half of a repo watch that was missing.
+    ///
+    /// A watch has landed the repo's newest RELEASE since it shipped
+    /// (`releasesFor`), which is the right thing for a dependency and nearly
+    /// nothing for a project you follow: tokio cuts a release every few weeks
+    /// and has dozens of open pull requests on any given day. So the room's
+    /// rail could scope to a repo and show you one row from March, which is
+    /// §83's dead control with a face on it.
+    ///
+    /// **ONE call per repo, not three.** GitHub's `/issues` endpoint returns
+    /// issues AND pull requests in the same list (a PR carries a
+    /// `pull_request` key), so the two halves of "what is open here" cost a
+    /// single request. Repo EVENTS are deliberately not read: a push to a repo
+    /// you do not own is the noisiest thing GitHub publishes and the least
+    /// answerable — `eventsFor` already lands the pushes of people you chose.
+    ///
+    /// **It keeps the `gh:<id>` namespace**, which is not a shortcut: a GitHub
+    /// issue id is unique across GitHub, so an issue that is BOTH open in a repo
+    /// you watch and assigned to you lands ONCE, wearing whichever pass reached
+    /// it first — the same argument `eventThing` records for `gh:event:`. Giving
+    /// this pass a namespace of its own would double every such row.
+    ///
+    /// The title is landed BARE, exactly as `involved` lands it, for the same
+    /// reason: the two passes share a ref, so a prefix here would mean the same
+    /// logical row read differently depending on which one saw it first.
+    ///
+    /// Budget: at most 10 repos × 1 request. GitHub's authenticated REST budget
+    /// is 5,000/hour and `GitHubRateLimit` already reports when it runs low.
+    private static func openWorkFor(_ names: [String], token: String) async -> [Thing] {
+        let capped = Array(names.prefix(10))
+        let batches = await IngestSupport.boundedGather(capped, maxConcurrent: 4) { full -> [Thing] in
+            guard let items = await IngestSupport.getJSON(
+                "\(api)/repos/\(full)/issues?state=open&sort=updated&per_page=30",
+                auth: "Bearer \(token)") as? [[String: Any]] else { return [] }
+            return items.compactMap { item in
+                guard let id = item["id"], let title = item["title"] as? String,
+                      let link = item["html_url"] as? String else { return nil }
+                // EVERYTHING A WATCH BRINGS IN WEARS "Watching" — the tag
+                // `GitHubRepoWatch.add` already stamps on the watch row itself.
+                // Not a feed tag: no feed in the picker turned this on, and
+                // filing it under one would make that switch a lie in both
+                // directions (off, and these still land; on, and they are not
+                // what it describes).
+                let t = thing(.link, title: title, content: link, ref: "gh:\(id)",
+                              tag: GitHubRepoWatch.tag,
+                              at: IngestSupport.isoDate(item["updated_at"]))
+                // Open by construction — `state=open` — so the mark is never
+                // guessed here. `reconcileGitHubIssues` closes it later the way
+                // it closes an `involved` row.
+                t.mark = .todo
+                stampWho(t, item["user"])
+                if let body = trimmedString(item["body"]) { t.summary = clampBody(body) }
+                t.tags += labelNames(item["labels"], excluding: t.tags)
+                return t
+            }
+        }
+        return batches.flatMap { $0 }
     }
 
     /// Your gists — snippets you saved, landing as notes.

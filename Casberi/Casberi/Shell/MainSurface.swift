@@ -581,6 +581,7 @@ struct MainSurface: View {
         // exactly one row ever sits between the faces and the dock.
         if roomControlsShown {
         socialScopeRail
+        githubScopeRail
         // **VIBENET'S FACE RAIL IS FOLDED INTO ITS CROWN (prd §482
         // amendment, 2026-08-26, user: "we cannot have four rows of chips").**
         // It and the value chips under the sparkline were both a strip of
@@ -730,6 +731,46 @@ struct MainSurface: View {
                             return nil
                         }())
                 })
+            .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
+        }
+    }
+
+    /// **THE GITHUB ROOM'S FACE RAIL** (user ruling, 2026-09-11) — the repos and
+    /// people you watch, scoping one plain feed.
+    ///
+    /// Mounted HERE and not on `FeedScreen` for §357's reason, which this rail
+    /// inherits rather than re-earns: the screen carries `.id(filter.source)`
+    /// under a move transition, so a control declared on it is destroyed by the
+    /// very room change it commands.
+    ///
+    /// **It draws nothing when nothing is watched** (user, 2026-09-11: *"if
+    /// they paste their own key… if it is just themselves that would suck to
+    /// see a third row"*). A rail holding only "All" is a control with one
+    /// option — §83's dead control, wearing a band row the feed could have had.
+    /// The predicate lives in `GitHubRowTag.railShows` so a harness can compile
+    /// it; see there for why ONE watch is enough here and two are needed on the
+    /// devnet rails.
+    ///
+    /// **No re-tap door.** A social face re-taps into that person's own room
+    /// because one exists; a watched repo has no room of its own in this app,
+    /// and a re-tap that opened github.com would leave the app on the one
+    /// gesture whose whole grammar is "narrow what is already here". Re-tapping
+    /// the lit face simply re-picks it, which is what `onReTap: nil` does.
+    @ViewBuilder
+    private var githubScopeRail: some View {
+        let watches = GitHubWatchStore.shared.watches
+        if GitHubScopeRail.shows(source: filter.source, watched: watches.count) {
+            FaceScopeRail(
+                items: GitHubScopeRail.items(watches),
+                scope: chrome.githubScope,
+                compact: chrome.minimized && !showsRail,
+                matches: GitHubScopeRail.matches,
+                onPick: { picked in
+                    withAnimation(DS.Motion.standard) { chrome.githubScope = picked }
+                },
+                onReTap: nil,
+                addTitle: nil,
+                onAdd: nil)
             .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
         }
     }
@@ -1967,6 +2008,9 @@ struct MainSurface: View {
             // too, and a scope that survives one of the three doors is worse than
             // one that survives none.
             chrome.personScope = nil
+            // A GitHub watch belongs to the GitHub seat, same argument
+            // (2026-09-11) — a repo ref carried into Linear matches no row.
+            chrome.githubScope = nil
             // Dies with the room like the person scope above, NOT spanning
             // its category the way the wallet scope deliberately does: a
             // vibenet devnet address matches no row in Peer, Safe or any
@@ -2642,6 +2686,12 @@ struct MainSurface: View {
                 }
             }
             // Hands the room back its whole query once the slide is over.
+            // The rail's first read: `onChange` is edge-triggered, so without
+            // this the strip is empty until something else lands (2026-09-11).
+            .task(id: filter.source) {
+                guard filter.source == "GitHub" else { return }
+                GitHubWatchStore.shared.refresh(context: modelContext)
+            }
             .task(id: filter.source) { await releaseSwipeBudget() }
             // The room's last look for the carousel, taken at rest — see
             // `captureRestingLook`. A source change cancels a pending one.
@@ -2811,6 +2861,16 @@ struct MainSurface: View {
             // raw count was neither free nor able to change past the query's
             // own 400-row bound. See `corpusRevision`.
             .onChange(of: corpusRevision) { _, _ in
+                // The GitHub rail's membership, re-read on a corpus change
+                // and only while that room is the one showing (2026-09-11). A
+                // watch IS a `Thing` here, unlike every other rail's in-memory
+                // roster, so reading it from the rail's own body would put a
+                // `FetchDescriptor` on the body path — §628's ruling, and
+                // §646's crash one room over. The room gate is what keeps this
+                // off the other fifty rooms' corpus changes.
+                if filter.source == "GitHub" {
+                    GitHubWatchStore.shared.refresh(context: modelContext)
+                }
                 // One walk for the whole watcher — every derivation below
                 // reads this binding rather than asking `feedThings` again.
                 let surfaced = feedThings

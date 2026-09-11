@@ -72,7 +72,7 @@ enum GitHubPersonWatch {
         guard existing == 0 else { return nil }
         let thing = Thing(kind: .link, title: IngestSupport.titleLine(person.title),
                           content: person.htmlURL, source: "GitHub", capturedAt: .now,
-                          tags: ["Watching"], sourceRef: r)
+                          tags: [GitHubRepoWatch.tag], sourceRef: r)
         thing.authorHandle = person.login
         thing.authorAvatarURL = person.avatarURL
         // The bio is DISPLAY copy (`summary`), the issue-body precedent: text
