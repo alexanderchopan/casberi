@@ -130,6 +130,21 @@ enum PolarAccount {
 
     static let api = "https://api.polar.sh/v1"
 
+    /// Polar went DATE-VERSIONED on 2026-09-11 (`Polar-Version: YYYY-MM`), and
+    /// an unpinned request follows whatever is CURRENT — which rolls on the
+    /// first week of January, April, July and October. Unpinned, this bridge
+    /// would silently start meeting `2026-10`'s payloads on 2026-10-01, in a
+    /// build already on people's phones, with no signal anywhere: every shape
+    /// read here (`items`/`pagination`, `totals.monthly_recurring_revenue`,
+    /// the refund row that carries its own dispute) is one this file decodes
+    /// by hand. Pinned to the contract it was written and measured against.
+    ///
+    /// Migrating is a DELIBERATE act, never a default: change this string only
+    /// after re-reading the shapes above against the new version's docs. A
+    /// deprecated version stays stable until the next quarterly release, so
+    /// `2026-04` holds until January 2027.
+    static let versionHeader = ["Polar-Version": "2026-04"]
+
     /// The organization's display name, read off `/v1/organizations` — empty
     /// when unread, which degrades to the plain seat name rather than
     /// blocking connect (Stripe's "the scope is a nicety" rule).
@@ -315,7 +330,7 @@ enum PolarFetch {
     /// THE NAME AND SLUG, and its failure is not an error.
     static func validate(key: String) async -> Outcome {
         let (json, status) = await IngestSupport.getJSONBody(
-            "\(PolarAccount.api)/refunds/?limit=1", auth: auth(key))
+            "\(PolarAccount.api)/refunds/?limit=1", auth: auth(key), headers: PolarAccount.versionHeader)
         switch status {
         case 200: break
         case 401: return .rejected(detail: errorDetail(json))
@@ -331,7 +346,7 @@ enum PolarFetch {
     /// per Polar's docs.
     static func organization(key: String) async -> (id: String, name: String, slug: String)? {
         let (json, status) = await IngestSupport.getJSONStatus(
-            "\(PolarAccount.api)/organizations/?limit=1", auth: auth(key))
+            "\(PolarAccount.api)/organizations/?limit=1", auth: auth(key), headers: PolarAccount.versionHeader)
         guard status == 200, let root = json as? [String: Any],
               let items = root["items"] as? [[String: Any]], let org = items.first
         else { return nil }
@@ -348,7 +363,7 @@ enum PolarFetch {
     static func metrics(key: String) async -> PolarState.Reading? {
         let day = ISO8601DateFormatter.polarDay.string(from: .now)
         let url = "\(PolarAccount.api)/metrics/?start_date=\(day)&end_date=\(day)&interval=day"
-        let (json, status) = await IngestSupport.getJSONStatus(url, auth: auth(key))
+        let (json, status) = await IngestSupport.getJSONStatus(url, auth: auth(key), headers: PolarAccount.versionHeader)
         guard status == 200, let root = json as? [String: Any],
               let totals = root["totals"] as? [String: Any] else { return nil }
         var reading = PolarState.Reading()
@@ -370,7 +385,7 @@ enum PolarFetch {
     /// One page of a list endpoint, `items`/`pagination` envelope (Polar's
     /// documented shape, distinct from Dodo's `items`-only one).
     static func envelope(_ url: String, key: String) async -> (items: [[String: Any]], status: Int) {
-        let (json, status) = await IngestSupport.getJSONStatus(url, auth: auth(key))
+        let (json, status) = await IngestSupport.getJSONStatus(url, auth: auth(key), headers: PolarAccount.versionHeader)
         let items = (json as? [String: Any])?["items"] as? [[String: Any]]
         return (items ?? [], status)
     }
@@ -440,7 +455,7 @@ enum PolarFetch {
     /// to ever see its resolution again.
     static func refund(id: String, key: String) async -> [String: Any]? {
         let (json, status) = await IngestSupport.getJSONStatus(
-            "\(PolarAccount.api)/refunds/\(id)", auth: auth(key))
+            "\(PolarAccount.api)/refunds/\(id)", auth: auth(key), headers: PolarAccount.versionHeader)
         guard status == 200 else { return nil }
         return json as? [String: Any]
     }
@@ -919,7 +934,7 @@ enum PolarIngest {
             return
         }
         let (refundsBody, refundsStatus) = await IngestSupport.getJSONBody(
-            "\(PolarAccount.api)/refunds/?limit=1", auth: "Bearer \(key)")
+            "\(PolarAccount.api)/refunds/?limit=1", auth: "Bearer \(key)", headers: PolarAccount.versionHeader)
         NSLog("[Casberi] polarProbe refunds endpoint: HTTP %d (401 rejected/sandbox-token · 403 missing scope · 0 unreachable)", refundsStatus)
         if refundsStatus != 200 {
             NSLog("[Casberi] polarProbe refunds endpoint reason: %@",
@@ -974,7 +989,7 @@ enum PolarIngest {
         // refuses, and shape drift. The per-row `reason=`/`lands=` pair is
         // what separates the third from the fourth.
         let (ordersBody, ordersStatus) = await IngestSupport.getJSONBody(
-            "\(PolarAccount.api)/orders/?limit=1", auth: "Bearer \(key)")
+            "\(PolarAccount.api)/orders/?limit=1", auth: "Bearer \(key)", headers: PolarAccount.versionHeader)
         NSLog("[Casberi] polarProbe orders endpoint: HTTP %d (403 = token predates §537, re-mint with orders:read)", ordersStatus)
         if ordersStatus != 200 {
             NSLog("[Casberi] polarProbe orders endpoint reason: %@",
