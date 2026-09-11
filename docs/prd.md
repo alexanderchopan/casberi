@@ -52850,3 +52850,26 @@ them. The two watch-door counts are re-pinned: the Wallet page's field is the ON
 door (`outcome(ofAdding:)`, so the cap and the duplicate case are answered in words), and
 §511's row menu stays on the shared row. `wallet-connect-plan-selftest.sh` re-pins the
 picker's host to the page.
+
+## §689c — Accounts are what you follow and what is tied to them; a tied address is not always an account (2026-09-11)
+
+User, in three beats: *"addresses are accounts"*, *"and or tied to them"*, then the
+correction that fixed the vocabulary — *"and addresses are sometimes accounts but not always
+with smart contracts"*.
+
+**The scope's subject is the accounts you FOLLOW and the addresses TIED to them.** The
+left-hand nodes of §689's spine are rows too: a picture whose nodes have no row is a figure
+the list beneath it does not explain. `RoomAccountsRows.tied` lists them after the followed
+rows, keyed the way the map keys them so a tied address that is also followed is never
+listed twice. A followed row reads *"connected to 2 of yours"*, a tied one *"tied to 2 of
+yours"*, and the count on the right is the same unit for both.
+
+**And the words follow the kind, not the wish.** What you follow are *accounts* — the rail,
+the rows, the scope descriptions (*"The accounts you follow, and the ones tied to them"*).
+What is tied to them are *addresses*, because a Uniswap router two of your accounts both
+paid is a connection §295 counts and is a contract, not an account. So the crown line stays
+*"N addresses connect the accounts you follow"* — it had been changed to "accounts" for one
+build and put back, because "2 accounts connect…" is false the moment one of them is a
+contract. `AddressBook.Kind` already draws the line (wallet · contract · safe · smart
+account); the Wallet can say which on a tied row, and the devnets cannot yet, since none of
+them reads `eth_getCode` — one call per counterparty, owed.
