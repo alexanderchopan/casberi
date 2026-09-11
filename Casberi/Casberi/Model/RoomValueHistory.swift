@@ -35,6 +35,49 @@ enum RoomValueHistory {
     /// is left open should not grow without limit.
     static let cap = 720
 
+    /// **A DERIVED LINE IS A DATED LINE (2026-09-10).**
+    ///
+    /// Hegotá and Frames reconstruct their history by walking each move's
+    /// amount backwards from the balance, and both shipped that as a bare
+    /// `[Double]` — no dates, so no window to clip and no range chips, which
+    /// left two of the five wallet-family Homes wearing a different crown from
+    /// the other three. But a move on both chains carries a `timestamp`, so
+    /// the walk can date every point it produces and the whole family takes
+    /// one path.
+    ///
+    /// `undo` is what to ADD to the running balance to step back over a move —
+    /// the caller owns that sign, because the two chains state it differently
+    /// (Frames holds a signed delta, Hegotá an amount plus a direction and a
+    /// fee). Newest first.
+    ///
+    /// **All or nothing, for three reasons rather than one:** a missing
+    /// amount, a missing date, and — the one that shipped as a bug — a point
+    /// below zero. A balance cannot be negative, so a negative point proves
+    /// the walk ran off the end of a truncated history and every point before
+    /// it is a story about money the account never had. Clamping it to zero
+    /// (which is what Hegotá did) is worse than abandoning it: the line then
+    /// starts at a floor nobody observed and reports the growth off it as a
+    /// real percentage — "+860.3%" on a devnet account, seen on the simulator.
+    static func derived(balance: Decimal,
+                        undoNewestFirst: [(undo: Decimal?, at: Date?)],
+                        unit: Decimal,
+                        now: Date = .now) -> [WalletStore.ValueSample] {
+        guard !undoNewestFirst.isEmpty else { return [] }
+        func eth(_ d: Decimal) -> Double { NSDecimalNumber(decimal: d / unit).doubleValue }
+        var running = balance
+        var out: [WalletStore.ValueSample] = [.init(at: now, usd: eth(running))]
+        for move in undoNewestFirst {
+            guard let undo = move.undo, let at = move.at else { return [] }
+            running += undo
+            if running < 0 { return [] }
+            out.append(.init(at: at, usd: eth(running)))
+        }
+        guard out.count >= 2 else { return [] }
+        // Oldest first, and never out of order: a chain that returns two moves
+        // with the same second must not produce a line that goes backwards.
+        return out.reversed().sorted { $0.at < $1.at }
+    }
+
     /// Record one reading. **Writes only when the value actually moved**, so an
     /// idle room does not fill the store with a flat line — and so the first
     /// sample after a change is adjacent to the change rather than buried in

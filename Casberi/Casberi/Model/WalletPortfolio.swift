@@ -351,6 +351,20 @@ enum WalletRange: String, CaseIterable {
     /// What the delta pill says its number is measured over.
     var deltaLabel: String { rawValue }
 
+    /// **WHAT THE CHIP SAYS (prd §683, user: "shouldn't 'watched' be sentence
+    /// case").** `rawValue` is a STORAGE key — it is what lands in
+    /// `UserDefaults` — and it was being drawn as a label, so the chip read
+    /// "watched" in lower case beside "7d" and "30d". The spelling of a key
+    /// and the spelling of a word on screen are different facts; this is the
+    /// second.
+    var chipLabel: String {
+        switch self {
+        case .week:    return String(localized: "7d")
+        case .month:   return String(localized: "30d")
+        case .watched: return String(localized: "Watched")
+        }
+    }
+
     /// How the flow band names this window in a sentence (2026-08-01). The
     /// pill's "7d" is fine as a chip beside a number; a card whose whole claim
     /// is "this is the period I'm describing" says it in words.

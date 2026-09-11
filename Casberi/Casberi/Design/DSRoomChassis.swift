@@ -121,7 +121,16 @@ enum DSRoomChassis {
     /// It keeps its rung while the two above drop one, so the separation it
     /// states gets STRONGER rather than weaker as the group tightens — which
     /// is the whole point of tightening a group rather than the page.
-    static let contentGap: CGFloat = DS.Space.s2
+    ///
+    /// **s2 → s3 (user, 2026-09-10: "the create button is overlapping the
+    /// rail").** It was not overlapping — it was 8pt below a glass slab whose
+    /// own inner gaps are 4 — so a separation stood only twice as far apart as
+    /// the groupings inside the thing it separates, and under a filled tile
+    /// with a shadow that reads as contact. The rule above is unchanged and is
+    /// the reason for the direction: this gap says "chrome ends here", and it
+    /// has to out-state `slabPadding` and `slabDeckGap` by more than a hair to
+    /// do it.
+    static let contentGap: CGFloat = DS.Space.s3
 
     /// The page inset the chassis and its figures share.
     static let inset: CGFloat = DS.Space.s4

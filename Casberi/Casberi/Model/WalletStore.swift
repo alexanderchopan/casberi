@@ -434,7 +434,7 @@ final class WalletStore {
     /// really fetched (WalletIngest), at most one per 4 hours, capped at 240
     /// points. Forward-only and honest: history exists from the moment
     /// watching began, sampled as the app is used — never back-filled.
-    struct ValueSample: Codable {
+    struct ValueSample: Codable, Equatable {
         let at: Date
         let usd: Double
         /// The wallet's top positions by USD at this moment (symbol → USD),

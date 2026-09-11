@@ -34,7 +34,7 @@ import SwiftUI
 struct RoomHomeCrown: View {
     /// Oldest first. `usd` carries the room's own unit — see
     /// `RoomValueHistory`.
-    let samples: [WalletStore.ValueSample]
+    var samples: [WalletStore.ValueSample] = []
     /// The scope: one address's name, or how many you follow.
     let caption: String
     var captionAddress: String? = nil
@@ -44,16 +44,42 @@ struct RoomHomeCrown: View {
     /// Shown when there is no series at all — a room that has read nothing yet
     /// says what it holds rather than drawing a chart of one point.
     var fallbackTotal: Double? = nil
-    var chartHeight: CGFloat = DSRoomChassis.crownChart
+    /// **THE BOX THE CROWN STANDS IN, NOT THE HEIGHT OF ITS LINE.** Each room
+    /// used to hand this view a `chartHeight` it had tuned by hand — 92 here,
+    /// 122 there, against two different boxes — which is precisely how five
+    /// Homes drifted into five crowns ("the crown does not look like the
+    /// others"). A room states the ONE thing it knows that this view cannot,
+    /// which is how much room it has; the chrome above and below the line is
+    /// this view's own business, because this view is what draws it.
+    var box: CGFloat = DSRoomChassis.visualSlot
+    private var chartHeight: CGFloat {
+        DSRoomChassis.crownLine(box: box, chrome: DSRoomChassis.crownChrome)
+    }
+
+    // **THE UNDATED PATH IS GONE (2026-09-10).** Hegotá and Frames used to
+    // hand this view a bare `[Double]`, on the reasoning that a move carries a
+    // block rather than a date — which was simply wrong: both chains' moves
+    // carry a `timestamp`, and `RoomValueHistory.derived` dates the walk. It
+    // was the whole reason two of the five Homes had no range chips while the
+    // other three did, which is the drift this template exists to end.
+
+    /// The door behind the figure, where a room has one more thing to say
+    /// about the account the crown is naming (2026-09-10). Frames puts its
+    /// account sheet here: the caption already names the address, so the
+    /// chevron beside it opens the address, and Home needs no row to carry a
+    /// door the reading is already standing on.
+    var onOpen: (() -> Void)? = nil
 
     @State private var range: WalletRange = WalletRange.remembered(offered: [])
 
-    var body: some View {
+    var body: some View { datedCrown }
+
+    private var datedCrown: some View {
         let offered = WalletRange.offered(for: samples)
         let active = offered.contains(range) ? range : WalletRange.remembered(offered: offered)
         let windowed = active.clip(samples)
         let chart = TokenChart.from(samples: windowed)
-        WalletBalanceHeadline(
+        return WalletBalanceHeadline(
             total: windowed.last?.usd ?? samples.last?.usd ?? fallbackTotal,
             chart: chart,
             caption: caption,
@@ -67,7 +93,7 @@ struct RoomHomeCrown: View {
                 range = picked
                 picked.remember()
             },
-            onOpen: nil)
+            onOpen: onOpen)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }

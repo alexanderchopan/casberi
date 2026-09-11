@@ -501,22 +501,37 @@ struct WalletBalanceHeadline: View {
         // The scrubbed percent, or the chart's own when at rest — never
         // recomputed at rest, so the resting line is byte-identical to what
         // it has always drawn.
+        // **A FRACTION, NOT A PERCENT (2026-09-10).** `changeText` and
+        // `isFlat` both multiply by 100, so `chart.change` is a fraction —
+        // and this branch multiplied by 100 as well, which made every
+        // SCRUBBED reading a hundred times its real move. Invisible at rest,
+        // because the resting line takes `chart.change` untouched.
         let change = end == nil ? chart.change
-            : (first == 0 ? 0 : (last - first) / abs(first) * 100)
-        let flat = TokenChartStyle.isFlat(change)
+            : (first == 0 ? 0 : (last - first) / abs(first))
         let delta = last - first
+        // **A LINE THAT STARTS AT ZERO HAS NO PERCENTAGE (2026-09-10).** A
+        // devnet account begins at nothing and is funded once, so the first
+        // point really is 0 — and a ratio against it is undefined, which the
+        // guard above rendered as `0`, i.e. the words "No change" over a
+        // balance that had gone from nothing to a whole ETH. The delta is a
+        // fact and draws; the percentage is not and does not.
+        let ratioless = first == 0 && delta != 0
+        let flat = !ratioless && TokenChartStyle.isFlat(change)
         let ink = flat ? DS.textSecondary
-                       : TokenChartStyle.accent(change: change, scheme: scheme)
+                       : TokenChartStyle.accent(change: ratioless ? (delta > 0 ? 1 : -1) : change,
+                                                scheme: scheme)
         HStack(spacing: 5) {
             if !flat {
-                Image(systemName: change >= 0 ? "arrowtriangle.up.fill"
-                                              : "arrowtriangle.down.fill")
+                Image(systemName: (ratioless ? delta : change) >= 0 ? "arrowtriangle.up.fill"
+                                                                   : "arrowtriangle.down.fill")
                     .dsGlyph(9)
                     .foregroundStyle(ink)
             }
             Text(flat
                  ? String(localized: "No change")
-                 : "\(exactFormat(abs(delta))) (\(TokenChartStyle.changeText(change)))")
+                 : (ratioless
+                    ? exactFormat(abs(delta))
+                    : "\(exactFormat(abs(delta))) (\(TokenChartStyle.changeText(change)))"))
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(ink)
                 .monospacedDigit()
@@ -545,7 +560,7 @@ struct WalletBalanceHeadline: View {
                     // floating in space. It also retires the white-pill
                     // variant this control carried for one day: there is no
                     // saturated ground left under it to need one.
-                    Text(r.rawValue)
+                    Text(r.chipLabel)
                         .dsText(.label12)
                         .fontWeight(r == range ? .semibold : .regular)
                         .lineLimit(1)

@@ -331,6 +331,37 @@ struct VibenetRoomCard: View {
     /// summary.
     private static let rowCap = 8
 
+    /// The line Home draws (prd §683): the scoped account's samples, or the
+    /// sum across every account in the room. vibenet's own `VibenetValueSample`
+    /// already carries a date, so it maps straight onto the shape
+    /// `WalletRange` and `TokenChart` take, and the range chips are offered.
+    private var homeSamples: [WalletStore.ValueSample] {
+        let wanted = room.items.map(\.address)
+        let serieses = wanted
+            .map { VibenetValueStore.samples(for: $0) }
+            .filter { $0.count >= 2 }
+        guard !serieses.isEmpty else { return [] }
+        if serieses.count == 1 {
+            return serieses[0].map { WalletStore.ValueSample(at: $0.at, usd: $0.native) }
+        }
+        let n = serieses.map(\.count).min() ?? 0
+        guard n >= 2 else { return [] }
+        return (0..<n).map { i in
+            let slice = serieses.map { $0[$0.count - n + i] }
+            return WalletStore.ValueSample(at: slice.map(\.at).max() ?? .now,
+                                           usd: slice.reduce(0) { $0 + $1.native })
+        }
+    }
+
+    /// The crown's caption: the scoped account, or how many this room holds.
+    private var crownCaption: String {
+        if room.items.count == 1, let one = room.items.first {
+            return VibenetWatch.shared.name(for: one.address)
+                ?? WalletStore.shortAddress(one.address)
+        }
+        return String(localized: "\(String(room.items.count)) accounts")
+    }
+
     private var drawn: [VibenetAccountItem] { Array(room.items.prefix(Self.rowCap)) }
 
     /// R4.7 (2026-08-23), reported: *"the details about the account (eg
@@ -571,7 +602,22 @@ struct VibenetRoomCard: View {
                     if (section ?? .home) == .home {
                         // The crown IS the headline here too — see Wallet's
                         // own Home slot and `reservesHeadline`.
-                        DSRoomSlot(headline: nil, reservesHeadline: false) { balanceHero }
+                        // **THE SHARED ROOM CROWN (prd §683).** Same Home as
+                        // the Wallet and the other devnets — caption, number,
+                        // change, line, range chips — over vibenet's own
+                        // per-account samples, which it has kept since §530
+                        // and which carry dates, so the chips are offered
+                        // here. Only the spelling is ours.
+                        DSRoomSlot(headline: nil, reservesHeadline: false) {
+                            if homeSamples.count >= 2 {
+                                RoomHomeCrown(samples: homeSamples,
+                                              caption: crownCaption,
+                                              format: { "\(VibenetBalanceFormat.line($0)) ETH" },
+                                              exactFormat: { "\(VibenetBalanceFormat.line($0)) ETH" })
+                            } else {
+                                balanceHero
+                            }
+                        }
                     } else {
                         scopeVisualDissolving
                     }

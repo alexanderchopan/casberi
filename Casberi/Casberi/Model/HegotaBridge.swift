@@ -954,9 +954,19 @@ extension HegotaLiveState {
         // to reach. The SPACING is therefore real (those two nonce sends
         // really are a week older than the coin activity); only the anchor
         // moves, which is the same trade every demo in this app makes.
+        //
+        // **THE CADENCE IS STRETCHED FOR THE DEMO (2026-09-10).** At the real
+        // 6 seconds a block this fixture spans 43 hours — measured — so the
+        // Home crown could offer no 7d or 30d chip and this room's crown did
+        // not match the others'. 132 seconds a block keeps every interval in
+        // exact proportion (it is one multiplier over the same block deltas)
+        // and puts the oldest move about 40 days back. What is real here is
+        // the ORDER and the RATIOS, which is what the sentence above was
+        // really claiming; the absolute cadence is the demo's.
         let tip: UInt64 = 113_128
+        let demoSecondsPerBlock: Double = 132
         func stamp(_ block: UInt64) -> Date {
-            Date().addingTimeInterval(-Double(tip &- min(block, tip)) * 6)
+            Date().addingTimeInterval(-Double(tip &- min(block, tip)) * demoSecondsPerBlock)
         }
 
         var owner = HegotaAccount(address: coinsAddr)

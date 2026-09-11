@@ -139,6 +139,13 @@ enum FramesMoney {
 
     /// A balance line for a screen, or nil when the read did not happen.
     /// **No currency symbol and no dollar figure** — see the type doc.
+    /// The same spelling from a plain ETH `Double`, for the shared room crown
+    /// (prd §683), which works in the room's unit rather than in wei hex.
+    static func eth(_ amount: Double, places: Int = 4) -> String {
+        guard amount.isFinite else { return "0" }
+        return String(format: "%.\(places)f", amount)
+    }
+
     static func balanceLine(weiHex: String?) -> String? {
         guard let weiHex, let amount = eth(fromWeiHex: weiHex) else { return nil }
         return String(localized: "\(amount) test ETH")

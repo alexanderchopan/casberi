@@ -38,10 +38,18 @@ struct FramesRoomFigure: View {
     /// §551's ruling: the strip must not change the type scale of the screen.
     private var slotHeadline: String? {
         switch section {
-        case .home, .sponsors:
-            // An empty scope takes its own short state (prd §611); Home is
-            // never empty, so only Sponsors can reach this branch.
-            if section == .sponsors, isEmpty(.sponsors) { return section.emptyHeadline }
+        // **THE CROWN OWNS THE NUMBER ON HOME (prd §683)** — nil once the
+        // shared crown draws, or the figure appears twice: once as the stat
+        // line and once inside the crown.
+        case .home:
+            // The crown owns the number on Home in BOTH its states — with a
+            // line and without one — so the slot never spells it a second
+            // time (prd §683, and the "2.2960 ETH" over "2.2960 ETH" the
+            // Privacy conversion showed).
+            return nil
+        case .sponsors:
+            // An empty scope takes its own short state (prd §611).
+            if isEmpty(.sponsors) { return section.emptyHeadline }
             guard head.hasRead, !head.everythingUnreached else { return nil }
             return FramesMoney.balanceLine(weiHex: head.balanceWeiHex)
         case .activity:
@@ -178,6 +186,16 @@ struct FramesRoomFigure: View {
     /// `partial` stays, and is the test for what belongs: it is not a reading
     /// at all, it is a caveat about how much of the room was READ, and no
     /// other scope can carry it because it applies to all of them.
+    /// The crown's caption: the scoped address, or how many you follow.
+    private var crownCaption: String {
+        if accounts.count == 1, let one = accounts.first {
+            return FramesWatch.shared.name(for: one.address)
+                ?? WalletStore.shortAddress(one.address)
+        }
+        return head.watched == 1 ? String(localized: "1 address")
+                                 : String(localized: "\(String(head.watched)) addresses")
+    }
+
     @ViewBuilder private var sponsorship: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             // **THE CURVE, WHERE THERE IS ONE.** Two points is a line
@@ -185,54 +203,58 @@ struct FramesRoomFigure: View {
             // along the floor, which reads as "went to zero" — the most
             // alarming possible way to say nothing happened, and the reason
             // `AgentPanel.normalized` returns 0.5 for a flat series.
-            if head.curve.count > 1 {
-                FramesBalanceCurve(points: head.curve)
-                    // **THE BOX, NOT 56 (prd §588).** This was the biggest
-                    // dead band in the room: a 56pt curve top-pinned in a
-                    // 256pt box, so the scope somebody opens to see a balance
-                    // move spent four fifths of its drawing area on nothing.
-                    // The chrome is the account row below it (`DS.Face.list`
-                    // 36 in a ~48pt row) plus the `s2` between them.
-                    .frame(height: DSRoomChassis.crownLine(box: DSRoomChassis.figureSlot,
-                                                           chrome: 58))
-                    .frame(maxWidth: .infinity)
+            // **THE SHARED ROOM CROWN (prd §683).** Same Home as the Wallet
+            // and the other devnets — caption, number, change, line. The
+            // `closes:` path, because this room's curve is derived from the
+            // chain's own history and carries no dates: there is no window to
+            // clip, so no range chips are offered, which is honest rather than
+            // labelling a chip over a guess.
+            // **THE CROWN DRAWS WHETHER OR NOT THERE IS A LINE (2026-09-10).**
+            // A truncated history reconstructs no curve at all (see
+            // `FramesRoom.curve`), and the first cut fell back to a bare stat
+            // line — which dropped the caption, the account's face and the
+            // door with it. The crown's no-line state says the number and
+            // that the line has not started, which is the same bargain the
+            // Wallet takes on its first watched day.
+            let door: (() -> Void)? = accounts.first(where: \.reached).map { account in
+                { DSHaptic.selection(); onOpenAccount?(account) }
             }
-            if let account = accounts.first(where: \.reached) {
-                Button {
-                    DSHaptic.selection()
-                    onOpenAccount?(account)
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        WalletFace(address: account.address, size: DS.Face.list, circular: true)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(FramesWatch.shared.name(for: account.address)
-                                 ?? WalletStore.shortAddress(account.address))
-                                .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                            // The nonce IS the count — it is incremented per
-                            // transaction the account signs — so this is a fact off
-                            // the chain rather than a tally of what was read back.
-                            Text(sendLine(nonce: account.nonce))
-                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        }
-                        Spacer(minLength: 0)
-                        WalletRowChevron()
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                // **The name stays IN the label.** The first cut replaced the
-                // button's whole label with "Open this account", which is the
-                // one thing a sighted reader already knows from the chevron
-                // and drops the one thing they get from the row — which
-                // account it is. `children: .combine` keeps the address and
-                // the send line and adds the verb.
-                .accessibilityElement(children: .combine)
-                .accessibilityHint(Text(String(localized: "Opens this account")))
+            if head.series.count > 1 {
+                RoomHomeCrown(samples: head.series,
+                              caption: crownCaption,
+                              format: { String(localized: "\(FramesMoney.eth($0)) test ETH") },
+                              exactFormat: { String(localized: "\(FramesMoney.eth($0)) test ETH") },
+                              box: DSRoomChassis.figureSlot,
+                              onOpen: door)
+            } else if let held = Self.heldETH(head) {
+                RoomHomeCrown(caption: crownCaption,
+                              format: { String(localized: "\(FramesMoney.eth($0)) test ETH") },
+                              exactFormat: { String(localized: "\(FramesMoney.eth($0)) test ETH") },
+                              fallbackTotal: held,
+                              box: DSRoomChassis.figureSlot,
+                              onOpen: door)
             }
+            // **NO LIST ON HOME (user, 2026-09-10: "there should be NO LIST
+            // on the home screen").** The account row that sat here said the
+            // address a third time — the crown's own caption names it and the
+            // face rail above draws it — and it was the one thing between the
+            // line and the verb tiles, which is where a person's eye is
+            // going. The account's sheet keeps its doors in the scopes that
+            // list accounts; Home draws a reading and the verbs under it.
             if head.partial {
                 note(String(localized: "\(String(head.reached)) of \(String(head.watched)) addresses answered."))
             }
         }
+    }
+
+    /// The balance as a NUMBER rather than a line, for the crown's no-line
+    /// state. Nil while nothing has read, because a crown reading 0 over an
+    /// account nobody reached is the false fact §83 exists to stop.
+    private static func heldETH(_ head: FramesRoom.Head) -> Double? {
+        guard head.hasRead, !head.everythingUnreached,
+              let weiHex = head.balanceWeiHex,
+              let wei = FramesMoney.decimal(fromHex: weiHex) else { return nil }
+        return NSDecimalNumber(decimal: wei / FramesMoney.weiPerETH).doubleValue
     }
 
     /// **Nil is not zero.** A nonce that did not read is not an account that

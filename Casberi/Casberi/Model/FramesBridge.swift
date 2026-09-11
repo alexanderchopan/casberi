@@ -719,9 +719,20 @@ extension FramesLiveState {
         // sits a few minutes back and every other keeps its real distance from
         // it. Same bargain the restamp makes (shift everything by one amount,
         // keep the shape), taken at install time instead of on a stale check.
+        //
+        // **AND THE SCALE IS STRETCHED (2026-09-10).** The intervals above are
+        // measured, and measured they span TWO HOURS — so the Home crown could
+        // offer neither a 7d nor a 30d chip, and this room wore a different
+        // crown from the rest of the wallet family for no reason a person
+        // would accept ("the crown does not look like the others"). One
+        // multiplier, applied to every gap, so the ORDER and the PROPORTIONS
+        // stay exactly as the chain produced them and only the scale is the
+        // demo's: 480 puts the faucet payment about 38 days back, which is a
+        // history a month-long window can honestly be drawn over.
+        let demoTimeStretch: TimeInterval = 480
         let anchor = Date().addingTimeInterval(-240)
         func at(_ secondsBefore: TimeInterval) -> Date {
-            anchor.addingTimeInterval(-secondsBefore)
+            anchor.addingTimeInterval(-secondsBefore * demoTimeStretch)
         }
 
         // 1. THE FAUCET. An ordinary type-0x2 transfer — no frames — which is
@@ -825,7 +836,17 @@ extension FramesLiveState {
 
         let fixture = [FramesAccount(
             address: me,
-            balanceWeiHex: "0xd7cf8d9b06f5b8",
+            // **DERIVED FROM THE MOVES ABOVE, NOT MEASURED (2026-09-10).**
+            // Every delta here is real, and the balance used to be real too —
+            // read off the live account on 2026-09-02, by which time it had
+            // made far more transactions than the six representative ones
+            // this fixture carries. The two numbers therefore disagreed by
+            // 0.93 ETH, and the Home curve walked backwards straight through
+            // zero: one faucet payment of 1 ETH minus 0.0104 of measured
+            // spending cannot leave 0.0607 behind. This is the balance those
+            // six moves actually produce, so the reconstruction closes on
+            // zero the way a real account's does.
+            balanceWeiHex: "0xdbbe581d938128c",
             nonce: 4,
             moves: [sponsored, stitched, rolled, partial, sent, funded])]
         Task { @MainActor in FramesLiveState.shared.installDemo(fixture) }

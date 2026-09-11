@@ -318,10 +318,20 @@ struct TokenChart {
     /// the data already lives in `WalletStore.ValueSample` history (2026-07-18,
     /// "do we have that data?" — yes). nil under two points, the same honesty
     /// floor `WalletStore.combinedValueSamples()` itself keeps.
+    /// **A SERIES MAY START AT ZERO (2026-09-10).** `first != 0` was a guard
+    /// against dividing by it, and it threw the whole chart away instead —
+    /// which is exactly the shape a devnet account has: it begins holding
+    /// nothing and is funded once. The Frames Home drew its no-line state
+    /// ("the line starts once a second reading lands") over seven perfectly
+    /// good points because of this one clause. There is no percentage against
+    /// zero, so `change` carries the DIRECTION only, and
+    /// `WalletBalanceHeadline.moveLine` draws the delta without a percentage
+    /// whenever the first close is zero.
     static func from(closes: [Double]) -> TokenChart? {
-        guard closes.count >= 2, let first = closes.first, first != 0,
+        guard closes.count >= 2, let first = closes.first,
               let last = closes.last else { return nil }
-        return TokenChart(closes: closes, price: last, change: (last - first) / first)
+        let change = first == 0 ? (last >= 0 ? 1.0 : -1.0) : (last - first) / first
+        return TokenChart(closes: closes, price: last, change: change)
     }
 
     /// The wallet-history form of `from(closes:)` — a wallet's or the combined

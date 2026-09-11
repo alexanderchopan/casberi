@@ -52380,3 +52380,66 @@ function's new `fileprivate static` spelling.
 **`RoomValueHistory` is the shared series.** `WalletStore.ValueSample`s deliberately — that is what `WalletRange.offered`/`clip` and `TokenChart.from(samples:)` already take, so a room that records there gets the **7d / 30d / since-watched** chips for nothing. Its `usd` field carries the room's own unit and the crown spells it. Two ways in: DERIVE where every move carries its amount (Hegotá), SAMPLE where they do not (Privacy, Frames). **A window offers a range only when the oldest sample PREDATES it** — not merely sits inside it — which is why the demo's history spans 45 days: at ten it offered one range and drew no chips at all.
 
 **The rails, inventoried before any of this was designed.** All five: Home, Activity. Four: Holdings. Three: Accounts. Then Wallet adds Positions, NFTs, Risk, Permissions; Hegotá adds Frames, UTXOs, Nonces, Sponsors; Privacy adds Frames, Spend keys, Snapshots, Sponsors; Frames adds Frames, Sponsors; vibenet adds Permissions. The template is the head of that list, and the tail stays each chain's own.
+
+## §684 — The devnet Homes are one crown, and four arithmetic bugs under it (2026-09-10)
+
+User, on a screenshot of the Frames devnet's Home: *"oh man that is messed up"*, then
+*"i wouldn't call that fixed. the crown does not look like the others, and also the create
+button is overlapping the rail"*. §683 put five rooms on one template; this is what putting
+them there exposed, and none of it was layout.
+
+**1. A reconstructed balance that goes negative is proof a move is MISSING.** Frames and
+Hegotá both derive their line by walking each transaction's amount backwards from the
+balance. The Frames demo's balance (0.0607 ETH, measured off the live chain on 2026-09-02)
+disagreed with the six representative moves the fixture carries (a 1 ETH faucet minus
+0.0104 of measured spending), so the walk ran through zero to **−0.9289** — and the crown
+read "+0.9896 test ETH (+106.5%)" over a 0.0607 balance, a change sixteen times the number
+it belonged to. `RoomValueHistory.derived` abandons the whole series on a negative point,
+the same all-or-nothing bargain an unreadable amount already took. **This protects real
+accounts, not just the demo**: a read that returns the newest N of a longer history leaves
+the oldest steps with nothing to subtract from. Hegotá had CLAMPED to zero instead, which
+is worse — the line then starts at a floor nobody observed and reports the climb off it as
+a real percentage ("+860.3%").
+
+**2. A DERIVED line is a DATED line.** §683 shipped Hegotá and Frames on a bare `[Double]`,
+reasoning that a move carries a block rather than a date, so there was no window to clip
+and no range chips could be offered. That reasoning was simply wrong: `FramesMove` and
+`HegotaMove` both carry a `timestamp`. Two of the five Homes therefore wore a crown the
+other three did not, which is the drift the template exists to end. One path now;
+`RoomHomeCrown.closes` and its undated arm are deleted.
+
+**3. `TokenChart.from(closes:)` threw away any series starting at exactly zero** — a guard
+against dividing by it that discarded the chart rather than the ratio. That is precisely
+the shape of a devnet account: it begins holding nothing and is funded once. The Frames
+Home drew "the line starts once a second reading lands" over seven good points. `change`
+now carries the DIRECTION when the first close is zero, and `WalletBalanceHeadline.moveLine`
+draws the delta with **no percentage** in that case — there is no percentage against zero,
+and the `0` it used to pass rendered as the words "No change" over a balance that had gone
+from nothing to a whole ETH.
+
+**3b. And the scrubbed percent was a hundred times the real one.** `changeText` and
+`isFlat` both multiply by 100, so `chart.change` is a fraction; the scrub branch multiplied
+by 100 as well. Invisible at rest, because the resting line takes `chart.change` untouched.
+The Wallet had this too.
+
+**4. The chart height was hand-tuned per room** — 92 in Hegotá, 122 in Frames, against two
+different boxes — which is how five Homes became five crowns. A room now states the one
+thing this view cannot know (`box:`, how much room it has) and the crown derives the rest,
+because the crown is what draws the chrome above and below the line.
+
+**The demo clocks are stretched, and that is stated rather than hidden.** Measured: the
+Hegotá fixture spanned 43 hours and the Frames fixture 2, so neither Home could honestly
+offer a 7d or 30d chip. One multiplier each (Frames ×480 on its intervals, Hegotá 132
+seconds a block instead of 6) keeps every ORDER and every RATIO exactly as the chain
+produced them and puts the oldest move about 40 days back. What was measured stays
+measured; the absolute scale is the demo's.
+
+**`DSRoomChassis.contentGap` s2 → s3** (user: *"the create button is overlapping the
+rail"*). It was not overlapping — it was 8pt below a glass slab whose own inner gaps are 4,
+so a SEPARATION stood only twice as far apart as the groupings inside the thing it
+separates, and under a filled tile with a shadow that reads as contact.
+
+**And Home draws no list** (user: *"there should be NO LIST on the home screen"*). The
+Frames account row said the address a third time — the crown's caption names it, the face
+rail draws it — and it was the only thing between the line and the verb tiles. Its door was
+not dropped: it moved onto the crown's caption, which is the identity it was repeating.

@@ -155,7 +155,12 @@ struct HegotaRoomFigure: View {
         // (prd §611).
         if isEmpty(section) { return section.emptyHeadline }
         switch section {
-        case .home, .sponsors:
+        case .home:
+            // **THE CROWN OWNS THE NUMBER (prd §683)** — nil here, or the
+            // figure is drawn twice, once as the stat line and once inside the
+            // crown. Sponsors keeps its own, since it draws no crown.
+            return nil
+        case .sponsors:
             guard head.hasRead, !head.everythingUnreached,
                   let wei = shownBalance ?? head.balanceWei else { return nil }
             return HegotaFormat.crown(wei)
@@ -209,7 +214,21 @@ struct HegotaRoomFigure: View {
     }
 
     /// Home: the delta and the curve. The figure itself is the slot's headline,
-    /// so it is not drawn twice.
+    /// **THE SHARED ROOM CROWN (prd §683).** `RoomHomeCrown` is the Home every
+    /// wallet-family room draws — caption, number, change, line — so this room
+    /// and the Wallet differ in their facts and nothing else. Only the
+    /// spelling is ours: this chain counts its own ETH.
+    ///
+    /// The `closes:` path, not `samples:`: Hegotá DERIVES its line by walking
+    /// each move's amount backwards from the balance, which is exact and
+    /// reaches as far back as the moves do — but a move carries a BLOCK, not a
+    /// date, so there is no time axis to clip a window against and the crown
+    /// draws no range chips. That is the honest reading: this is the whole
+    /// history the chain can reconstruct.
+    ///
+    /// The unread and partial states stay ABOVE the crown, because they are
+    /// facts about the READ rather than about the money, and a number drawn
+    /// over an unread chain is the fake status §83 forbids.
     @ViewBuilder private var crownFigure: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if !head.hasRead {
@@ -221,41 +240,29 @@ struct HegotaRoomFigure: View {
             } else if head.partial {
                 Text(String(localized: "\(String(head.watched - head.reached)) of \(String(head.watched)) couldn't be read"))
                     .dsText(.subhead13).foregroundStyle(DS.attention)
-            } else if let account = primary, let delta = HegotaRoom.valueDelta(account) {
-                Text(PriceObject.percent(delta))
-                    .dsText(.subhead13).monospacedDigit()
-                    .foregroundStyle(TokenChartStyle.accent(change: delta, scheme: scheme))
-            } else {
-                Text(head.watched == 1 ? String(localized: "1 address")
-                                       : String(localized: "\(String(head.watched)) addresses"))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
             }
-            // EXACT, not sampled: every ETH movement on this chain is a log, so
-            // the whole line reconstructs from the moves with no gaps.
-            if let account = primary, let series = HegotaRoom.valueSeries(account) {
-                let delta = HegotaRoom.valueDelta(account) ?? 0
-                TokenChartPlot(chart: TokenChart(closes: series,
-                                                 price: series.last ?? 0,
-                                                 change: delta),
-                               accent: TokenChartStyle.accent(change: delta, scheme: scheme),
-                               // **THE BOX, NOT 120 (prd §588)** — the same
-                               // EXPRESSION Wallet and vibenet draw, with this
-                               // room's own two terms. The box is `figureSlot`
-                               // and NOT `visualSlot`: this room passes a
-                               // headline, so the chassis has already spent 44
-                               // of the slot on the row above. The chrome is
-                               // 28, being the `subhead13` delta line 18 and
-                               // the `s2` under it 10.
-                               //
-                               // Serves Home AND Sponsors — both scopes draw
-                               // this figure, so a literal here was two rooms'
-                               // worth of dead air, not one.
-                               height: DSRoomChassis.crownLine(box: DSRoomChassis.figureSlot,
-                                                               chrome: 28),
-                               pulses: false,
-                               lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true)
+            if let account = primary, case let series = HegotaRoom.valueSamples(account),
+               series.count >= 2 {
+                RoomHomeCrown(samples: series,
+                              caption: crownCaption,
+                              format: { HegotaFormat.crown(Self.wei($0)) },
+                              exactFormat: { HegotaFormat.eth(Self.wei($0)) },
+                              box: DSRoomChassis.figureSlot)
             }
         }
+    }
+
+    /// The crown's caption: the scoped address's name, or how many you follow.
+    private var crownCaption: String {
+        if let one = scoped {
+            return HegotaWatch.shared.name(for: one) ?? WalletStore.shortAddress(one)
+        }
+        return head.watched == 1 ? String(localized: "1 address")
+                                 : String(localized: "\(String(head.watched)) addresses")
+    }
+
+    static func wei(_ eth: Double) -> Decimal {
+        Decimal(eth) * Decimal(sign: .plus, exponent: 18, significand: 1)
     }
 
     /// **ACTIVITY — what came in, what went out, and what carried it.**

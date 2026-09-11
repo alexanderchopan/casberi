@@ -281,6 +281,14 @@ struct TokenChartPlot: View {
         }
         .chartXAxis(.hidden)
         .chartYAxis(.hidden)
+        // **THE LINE ENDS AT THE RIGHT EDGE (2026-09-10).** Left to itself,
+        // Swift Charts rounds a quantitative domain outward to a nice bound —
+        // 0…7 for seven points — and parks the newest reading at 6/7 of the
+        // width with dead air after it. On a market line of 168 closes that
+        // gap is half a percent and nobody ever saw it; on a devnet's Home,
+        // where the line is one point per transaction, it is a sixth of the
+        // chart and reads as a line that stopped.
+        .chartXScale(domain: 0...Double(max(chart.closes.count - 1, 1)))
         .chartYScale(domain: .automatic(includesZero: false))
         .frame(height: height)
         .chartOverlay { proxy in

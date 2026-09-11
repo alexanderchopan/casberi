@@ -139,6 +139,26 @@ enum HegotaRoom {
     ///
     /// Returns nil below two points — a chart of one value is a dot claiming
     /// to be a trend.
+    /// The dated form of `valueSeries` — the one the Home crown takes, so
+    /// this room offers the same range chips as the rest of the wallet family
+    /// (2026-09-10). Empty where the walk cannot be trusted: see
+    /// `RoomValueHistory.derived`, which also explains why the zero clamp in
+    /// `valueSeries` below is NOT repeated here.
+    static func valueSamples(_ account: HegotaAccount) -> [WalletStore.ValueSample] {
+        guard let balance = account.balanceWei, !account.moves.isEmpty else { return [] }
+        let ordered = account.moves.sorted { $0.block > $1.block }   // newest first
+        return RoomValueHistory.derived(
+            balance: balance,
+            undoNewestFirst: ordered.map { move in
+                var undo = move.incoming ? -move.wei : move.wei
+                // The fee left the balance and emitted no log (§509) — undo it
+                // too, and only where this address actually paid it.
+                if !move.incoming, !move.isSponsored, let fee = move.feeWei { undo += fee }
+                return (undo, move.timestamp)
+            },
+            unit: Decimal(string: "1000000000000000000")!)
+    }
+
     static func valueSeries(_ account: HegotaAccount) -> [Double]? {
         guard let balance = account.balanceWei, !account.moves.isEmpty else { return nil }
         let ordered = account.moves.sorted { $0.block > $1.block }   // newest first

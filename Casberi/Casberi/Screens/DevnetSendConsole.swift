@@ -491,12 +491,12 @@ struct DevnetCreatePanel: View {
                 }
                 Spacer().frame(height: DevnetConsole.markGap)
                 Text(title)
-                    .dsText(.price40)
+                    .dsText(.stat24)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(DevnetConsole.tilePadding)
-            .frame(maxWidth: .infinity, minHeight: DevnetConsole.tileFloor * 2, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: DevnetConsole.tileFloor, alignment: .leading)
             .modifier(DevnetTileSurface(tint: nil))
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         }

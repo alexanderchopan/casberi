@@ -90,6 +90,9 @@ enum FramesRoom {
         /// every point before it, and a curve that is wrong in its middle
         /// looks exactly like one that is right.
         let curve: [Double]
+        /// The same walk, DATED — what the Home crown draws, so this room
+        /// offers the range chips the rest of the family does (2026-09-10).
+        let series: [WalletStore.ValueSample]
 
         /// Some answered and some did not. The room says so rather than
         /// drawing a total that silently omits an address.
@@ -116,6 +119,17 @@ enum FramesRoom {
         // Newest first, as the room lists them; the walk below reverses it.
         let ordered = (reached.first?.moves ?? []).sorted { $0.blockNumber > $1.blockNumber }
         let curve = Self.curve(balanceWeiHex: reached.first?.balanceWeiHex, newestFirst: ordered)
+        // No balance, no walk — the reconstruction starts from the number
+        // that IS known, and there is nothing to start from.
+        let series: [WalletStore.ValueSample]
+        if let held = reached.first?.balanceWeiHex.flatMap(FramesMoney.decimal(fromHex:)) {
+            series = RoomValueHistory.derived(
+                balance: held,
+                undoNewestFirst: ordered.map { ($0.deltaWei.map { -$0 }, $0.timestamp) },
+                unit: FramesMoney.weiPerETH)
+        } else {
+            series = []
+        }
 
         let lead: Lead
         if !hasRead {
@@ -144,7 +158,7 @@ enum FramesRoom {
             frameCount: moves.filter { $0.rows.count > 1 }.count,
             sponsoredCount: moves.filter(\.sponsored).count,
             rolledBackCount: rolled,
-            curve: curve)
+            curve: curve, series: series)
     }
 
     /// Walk backwards from the balance that IS known, subtracting each
@@ -161,6 +175,17 @@ enum FramesRoom {
         for move in newestFirst {
             guard let delta = move.deltaWei else { return [] }
             running -= delta
+            // **A BALANCE CANNOT BE NEGATIVE, SO A NEGATIVE POINT IS PROOF A
+            // MOVE IS MISSING (2026-09-10).** The walk is exact only while it
+            // sees every transaction between two points; a read that returns
+            // the newest N of a longer history leaves the oldest steps with
+            // nothing to subtract from, and the line dives below zero and
+            // makes the whole curve a story about money the account never
+            // had. Seen on the simulator as "0.0607 test ETH" under
+            // "+0.9896 test ETH (+106.5%)" — a change sixteen times the
+            // balance it belongs to. Same all-or-nothing bargain as an
+            // unreadable delta above, for the same reason.
+            if running < 0 { return [] }
             points.append(running)
         }
         // Oldest first, and in ETH rather than wei — a `Double` of 1e18 has no
