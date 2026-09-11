@@ -174,6 +174,19 @@ struct RSSScreen: View {
                     Text("Export as OPML")
                         .dsText(.subhead13).foregroundStyle(DS.tint)
                 }
+                // **`.plain`, OR THIS LINK EATS THE WHOLE ROW (prd §693).**
+                // A `ShareLink` is a Button, and a Button left on the
+                // automatic style inside a `List` row becomes that ROW's
+                // action — SwiftUI hands the cell's tap to it. The act is ONE
+                // row (`AccountPage.actSection`), so this link sat on the same
+                // cell as the follow field and took its taps: a person with a
+                // feed already followed could not paste a second one, because
+                // reaching for the field raised the share sheet instead. Zero
+                // feeds drew no link and worked, which is exactly how it was
+                // reported. Every other `ShareLink` in the tree outside a menu
+                // already carries this (`HandleSetupScreen`'s copy of this very
+                // block does); `sharelink-style-audit.py` is the guard.
+                .buttonStyle(.plain)
                 .simultaneousGesture(TapGesture().onEnded { DSHaptic.tap() })
             }
             Spacer(minLength: 0)

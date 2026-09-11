@@ -584,6 +584,20 @@ step "Dead-closure audit"
 "$ROOT/scripts/dead-closure-audit.py" || fail "a control calls a closure nothing supplies — see the output above"
 print -P "%F{green}✓ dead-closure audit%f"
 
+# A share control left on the AUTOMATIC button style inside a `List` row is
+# not a button in a row — SwiftUI gives the ROW its action (prd §693). The
+# account pages draw their whole act as one row, so RSS's unstyled "Export as
+# OPML" took the follow field's taps: the user could not paste a fourth feed
+# because reaching for the field raised the share sheet, and the empty state
+# worked because with no feeds the link is not drawn. Five of six sites
+# already carried `.buttonStyle(.plain)`; one did not, and nothing could see
+# it — the build is clean and the screen renders identically either way.
+step "ShareLink style audit"
+"$ROOT/scripts/sharelink-style-audit.py" --self-test >/dev/null \
+  || fail "the sharelink-style audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/sharelink-style-audit.py" || fail "a share control in content takes its row's taps — see the output above"
+print -P "%F{green}✓ sharelink style audit%f"
+
 # Keeps the "What this app reaches" registry complete (prd §205): every host
 # the app calls must be disclosed in NetworkReach.swift or the explicit
 # non-reach denylist — an undisclosed fetch host fails here.

@@ -694,3 +694,25 @@ A control then calls it. The compiler is content, every other check here is cont
 **What it found on its first clean run**, besides reproducing §669 from the shipped tree: `Composer.onHeight`, an `.onGeometryChange` firing on every layout of the agent surface to hand a height to a no-op, obsolete since §581 made that surface fill rather than hug. Deleted.
 
 **Self-test**: five fixtures (the bug verbatim, a supplied property, an unmentioned default, an optional, a `GenUI/` file) and four mutations — supply it and the finding clears; forward it under its own name and the finding stands; stop mentioning it and it drops to the census; supply it by trailing closure and the finding clears.
+
+## ShareLink style audit (`scripts/sharelink-style-audit.py`, 2026-09-11) → prd §693
+
+**What it catches.** A share control left on the AUTOMATIC button style inside a `List` row. A `ShareLink` is a Button, and SwiftUI gives a row's tap to an automatic-styled button inside it — so the control is not a button in a row, it is the row.
+
+The user's report was the whole diagnosis: *"i have three rss feeds but am unable to add another. when i go to paste one in a share sheet opens."* `RSSScreen`'s OPML off-ramp had no `buttonStyle`, an account page draws its whole act as ONE row (`AccountPage.actSection`), and the export link and the follow field therefore shared a cell. Reaching for the field raised the share sheet. The link is drawn only `if !rss.feeds.isEmpty`, which is why an empty RSS screen worked and a furnished one did not — the "three feeds but can't add a fourth" half and the "a share sheet opens" half are one line, and reading them as two sends you into `RSSStore.add`, which is fine.
+
+**The check**, static, no build: a share control drawn in content carries `.buttonStyle(.plain)` (or `.borderless`, the older spelling of the same intent). `ShareLink` and `ThingShareLink` both count — exempting the wrapper would move the same nothing one level down.
+
+**Three carve-outs, each stated rather than assumed:**
+
+* **A menu builder** (`Menu { }`, `.contextMenu { }`, `.swipeActions { }`, `.toolbar { }`) — there the automatic style is the right one, and a plain style drops the system's own row chrome. Two sites.
+* **A forwarder** — a `ShareLink` inside a wrapper whose label is the caller's (`{ label() }`, i.e. `ThingShareLink`). The style belongs to the call site, which the check reads on its own. Three sites.
+* **A menu extracted into its own View** — `FeedScreen`'s `RowVerbMenu`, whose body IS the menu's items and which is raised from a different file. A brace stack cannot see that, and the first run against the real tree reported a correct menu as a defect. Resolved BY CALL SITE (a type constructed inside a menu builder anywhere in the tree), never by name: "it ends in Menu" is a convention, and a rule may not rest on one.
+
+**What it deliberately does not check.** Every other automatic-styled button in a `List` row — the same SwiftUI rule governs them all, but outside a list the automatic style is fine and no text check can tell which is which; the share sheet is singled out because its misfire is silent and modal, doing something dramatic and plausible instead of nothing. `PasteButton` cannot comply (it refuses custom button styles by design) and the entry rows carrying one have the same row-wide behaviour — noted rather than left to be rediscovered. And a view drawn both as menu content and as content would be carved out on both halves; none exists today, and the census names all six carve-outs so that stays checkable by eye.
+
+**What it found besides the report**: `CalendarHeatmapHero`'s share glyph (`GenUI/GenRenderer.swift`), unstyled, in a card the feed draws as a `List` row — a tap anywhere on the year could have raised the share sheet. Nobody had reported it.
+
+**Why nothing else here could see it.** The build is clean; both styles render pixel-identically, because a `ShareLink` draws the label it is given either way; no screen sweep or screenshot opens a system share sheet; and `-rssFeed` drives the follow path without touching the field. Text over the source is the only instrument that reaches this class.
+
+**Self-test**: seven fixtures (the shipped shape verbatim, its styled twin, two menu sites, a forwarder with a styled and an unstyled call site, an extracted menu view, and a string carrying `//` and an unbalanced-looking `(x)` that must not derail the scan) and six mutations — style it and the finding clears; unstyle the passing screen and it fires; `.borderless` passes; a neighbour's `buttonStyle` does not clear it; moving a link into a menu carves it out; raising a menu view as ordinary content brings it back.

@@ -1452,6 +1452,11 @@ struct CalendarHeatmapHero: View {
                         .dsGlyph(13)
                         .foregroundStyle(DS.textTertiary)
                 }
+                // `.plain` for §693's reason, one card over: this hero is drawn
+                // in the feed, which is a `List`, and an automatic-styled
+                // button in a row becomes the row's own action — a tap
+                // anywhere on the year would have raised the share sheet.
+                .buttonStyle(.plain)
                 .accessibilityLabel("Share")
             }
             ContributionGraph(year: year, minColumns: minColumns, onPick: { day in

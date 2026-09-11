@@ -82,6 +82,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Ref-shape audit (scripts/ref-shape-audit.py, 2026-08-19)** → docs/verify.md
 - **Delete-guard audit (scripts/delete-guard-audit.py, 2026-08-19)** → docs/verify.md
 - **Dead-closure audit (scripts/dead-closure-audit.py, 2026-09-10) — a control calling a closure property nothing ever supplies. A no-op default (`= { _ in }`) compiles, renders and does nothing forever; a forward under the property's own name is not a supply, a trailing closure is** → docs/verify.md · prd §669
+- **ShareLink style audit (scripts/sharelink-style-audit.py, 2026-09-11) — a share control left on the AUTOMATIC button style inside a `List` row becomes the ROW's action. An account page's act is ONE row, so RSS's unstyled "Export as OPML" ate the follow field's taps: with feeds followed you could not paste another, and the share sheet rose instead (user: "i have three rss feeds but am unable to add another. when i go to paste one in a share sheet opens"). Five of six sites already carried `.buttonStyle(.plain)`; both styles render identically, so nothing but text over the source can see it** → docs/verify.md · prd §693
 - **Secret-scan self-test (scripts/secret-scan-selftest.py, 2026-08-02)** → docs/verify.md · prd §277
 - **On-device self-test (scripts/ondevice-selftest.sh, 2026-08-02)** → docs/verify.md · prd §282
 - **CI, at last (.github/workflows/static-checks.yml, 2026-08-19)** → docs/verify.md

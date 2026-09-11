@@ -53010,3 +53010,60 @@ grid is shared and the cell is a well), supersedes §566's sponsor bar and §606
 figure, and amends §690 (Home's list half is rows, not the band). §463, §491 and §551 stand:
 vibenet's census, its Admin naming and its draw-the-whole-census ruling are what the shared
 figure was built from.
+
+## §693 — A share link left on the automatic button style takes its whole row (user: "i have three rss feeds but am unable to add another. when i go to paste one in a share sheet opens", 2026-09-11)
+
+**The report is the diagnosis, read literally.** A share sheet opened where a paste was
+meant, so something on that row was a share control — and the only one there is RSS's own
+off-ramp, `ShareLink(item: exportURL) { Text("Export as OPML") }`, drawn a few lines under
+the follow field.
+
+**A `ShareLink` is a Button, and a Button left on the AUTOMATIC style inside a `List` row
+becomes the ROW's action.** SwiftUI hands the cell's tap to it; that is the documented
+behaviour and the reason `.buttonStyle(.plain)` is on every other tappable thing in this
+tree's rows. An account page draws its entire act as ONE row (`AccountPage.actSection` is a
+`VStack` wearing `plainAccountRow()`), so the export link and the entry field shared a cell,
+and the link owned it.
+
+**Everything the user said follows from that, including the part that sounds like a separate
+bug.** The link is drawn only `if !rss.feeds.isEmpty`, so a person with no feeds has a
+working field and a person with three does not — "three rss feeds but am unable to add
+another" is not a cap, a validation refusal or a sync failure, it is the same one line. Both
+halves of the sentence are one defect, and reading them as two is what would have sent a
+session hunting through `RSSStore.add`, `normalized` and the freshness record, all of which
+are fine.
+
+**One site out of six, and the other five prove it was an oversight rather than a
+position.** `HandleSetupScreen` carries this very block — copied from here on 2026-08-06 for
+the four feed-follow bridges — WITH `.buttonStyle(.plain)`, and so do `ThingStage`'s share
+disc and `DiagnosticsScreen`'s "Share readings". The two in `AccountDetailSheet` sit inside a
+`Menu`, where automatic is right. So the tree already agreed on the rule and one screen was
+outside it, which is exactly the shape a mechanical check exists for.
+
+**Fixed in the feed's own hero too** (`CalendarHeatmapHero`, `GenUI/GenRenderer.swift`). Its
+share glyph had the same omission and the feed is a `List`, so a tap anywhere on a year's
+contribution card could raise the share sheet. Not reported by anyone — found by the audit
+below on its first run, which is the argument for writing it rather than fixing one line.
+
+**NOTHING HERE COULD HAVE SEEN IT.** The build is clean, both styles render pixel-identically
+(a `ShareLink`'s own label is drawn either way), no screen sweep or screenshot opens a system
+share sheet, and the app's own probes drive the follow path through `-rssFeed`, which never
+touches the field. The only instrument that reaches this class is text over the source, which
+is `scripts/sharelink-style-audit.py`: **a share control drawn in content carries
+`.buttonStyle(.plain)`**, with `ShareLink` and its wrapper `ThingShareLink` both counted, and
+three carve-outs it states rather than assumes — a menu builder (`Menu`, `.contextMenu`,
+`.swipeActions`, `.toolbar`), a forwarder whose label is the caller's, and a menu extracted
+into its own View, that last one resolved BY CALL SITE because `RowVerbMenu` is a convention
+and a rule may not rest on one. Six mutations, including the shipped line verbatim.
+
+**The wider rule this is one instance of, stated once so the next case is cheap**: any
+automatic-styled button inside a `List` row is that row's action. The audit deliberately does
+not sweep for all of them — outside a list the automatic style is fine and no text check can
+tell which is which — but a control that misfires SILENTLY and modally is worth singling out.
+`PasteButton` is the known non-compliant one (it refuses custom button styles by design), and
+the entry rows that carry one have the same row-wide behaviour; said here rather than left to
+be rediscovered.
+
+Amends §640 (the act draws rows, and a row is a cell whose taps belong to one thing) and
+§653 (whose return-leg paste is the very gesture this was eating). §83 stands one door over:
+a control that does something other than what it says is worse than a dead one.
