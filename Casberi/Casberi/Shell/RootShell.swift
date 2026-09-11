@@ -805,36 +805,11 @@ struct RootShell: View {
             // budget ("unable to type-check this expression in reasonable
             // time"), which is a compile FAILURE rather than a slow build.
             openRoomIfRequested()
-            // `-openAddressBook YES|vibenet` pushes the address book — the
-            // wallet manager's, or vibenet's roster screen. Added 2026-08-27
-            // (the address-book unification): both screens are otherwise
-            // reachable only through taps (the wallet rail's book glyph, the
-            // vibenet rail's book slot), which no headless run can make, and
-            // the unified book is exactly the kind of change that has to be
-            // LOOKED at — a badge, a note field and a kind mark are invisible
-            // to every probe.
-            // ONE BOOK since §545 — the vibenet arm pushed a per-devnet screen
-            // that no longer exists, and its accounts are in the shared book
-            // already, badged `vibenet` by `VibenetWatch.add`. The argument is
-            // still accepted so an existing sweep does not break; it just lands
-            // where every other address lands.
-<<<<<<< HEAD
-            // `-openSources YES` raises the sources tray, which is otherwise
-            // reachable ONLY by a long press on the agent bar — a gesture no
-            // headless run can make and no screenshot pass can stage. Added
-            // 2026-08-16 while trying to answer whether `glassEffect` samples
-            // a sheet's backdrop at all: that question can only be settled by
-            // looking at the rendered panel, and there was no way to render it
-            // without a human holding a finger down.
-            if UserDefaults.standard.bool(forKey: "openSources") {
-                toggleDoors()
-            }
-=======
-            if UserDefaults.standard.string(forKey: "openAddressBook") != nil {
-                sceneState.route.push(.addressBook)
-            }
-            // `-openSources` is DELETED with the folder it opened (prd §697).
->>>>>>> 85c5454e (The dock's leading seat is your face and the catalogue; the ask is deprecated (prd §697, §697b))
+            // **`-openSources` IS DELETED with the folder it opened (prd §697),
+            // and `-openAddressBook` went with the screen (prd §691).** Both
+            // sides of a rebase conflict landed on main unresolved — the
+            // markers shipped, so `main` could not build. Resolved here the way
+            // both rulings say: neither hook exists, so neither block does.
             // `-openAppsDelay <s>` pushes the store after a delay — records
             // "tapping the grid door" (the zoom plays on the real push path).
             let appsDelay = UserDefaults.standard.double(forKey: "openAppsDelay")
