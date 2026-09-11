@@ -52706,3 +52706,58 @@ height, so the crown overflowed its box and pushed the chips down onto the rail.
 `crownRangeChips` is `DSRangeChips`' own numbers added up, and the crown asks whether the
 chips will draw rather than reserving space that is usually empty — a record with one
 honest window offers none (§83's dead control).
+
+## §689 — Accounts is the connections between them, and §295 was still running with nowhere to draw (2026-09-11)
+
+User, picking the next shared slot: *"Accounts is next. Wallet doesn't have an accounts
+slot. but we will add one … i was thinking it could be the connections between the followed
+accounts"*, then the find — *"wallet has connected addresses we used to show this somewhere
+in a previous version"* — and the correction that shaped the list: *"for the list for
+wallets what should it be, should it really be what each holds b/c we have a holdings slot
+for that on the rail. it needs to be something else."*
+
+**THE DRAWING EXISTED AND THE MODEL NEVER STOPPED RUNNING.** §295 —
+*"N of your addresses are connected"*, a count and a spine, the connected address on the
+left, your wallets on the right, one ribbon per landed relationship — lived at the foot of
+the Wallet manager until the Accounts-door redesign deleted that screen. `AddressConnections`
+and `AddressConnectionsSource` survived it: still computed, still probed by
+`-connectionsProbe`, still reported in the demo census on every verify run. Only the view
+died, so for weeks the app worked this reading out and showed it to nobody. The user
+remembered a feature the code had quietly kept.
+
+**Two of the four rooms were drawing their own list twice.** Hegotá and the Privacy devnet
+put the roster in the slot and the same roster in the list beneath it — 258pt restating the
+rows a finger's width below, §610's defect one scope over. Only vibenet had a real figure,
+and it is already a web of who authorised whom (§491, the user's pick of three drawings),
+so it keeps it: that room genuinely has an authority relationship the others do not.
+
+**`AddressConnections.map(edges:watched:)` is a PURE function**, which is what makes this
+cheap rather than a per-room build: a room that can name its transfers gets the node cap,
+the §439 direct-pair links and the untouched-wallet naming with no new analysis.
+`RoomConnectionsEdges` turns a room's own moves into edges, oldest first — which `map`
+requires, because node order is first-appearance order and sorting by count or value would
+be the ranking §295 forbids. A move with ITSELF is dropped: some of these chains route a
+transfer through the sender's own address (a UTXO's change comes straight back), and
+counting it would make every account connected to itself and nothing else.
+
+**§295's ruling governs the drawing and is not to be "improved"** (*"limit the 'analysis'
+b/c it should be factual"*): every ribbon the same weight, no ranking, no value — and on a
+devnet there is no price anyway.
+
+**THE LIST SAYS WHAT EACH ADDRESS IS AND HOW IT RELATES.** The user's objection was exact,
+and both rooms' scope descriptions said the wrong thing out loud — *"the addresses you
+watch, and what each holds"*, which is the Holdings chip's sentence, written before Holdings
+existed in those rooms. Every other scope has taken a piece: Home the total, Activity what
+moved, Holdings what is held, Frames and Permissions the mechanics. What is left is
+identity and relationship, which also makes the list the crown's own legend rather than a
+second copy of it: title the name, subtitle what it is and how it relates, right edge the
+number of your addresses it connects to — the crown's own unit, in the column the family
+reserves for the number that differs row to row.
+
+**Empty means "nothing connects them", not "nothing is watched".** The rows list what you
+watch either way; the slot's job is the relationship, and two unrelated addresses are a real
+answer the scope states rather than 258pt of blank. The Hegotá demo gains a shared
+counterparty for that reason — both its addresses were funded by the same payer, which is
+§295's sense of connected exactly (not that they dealt with each other, but that they both
+dealt with somebody else) — because without it the scope is correctly empty and nobody ever
+sees the drawing work.

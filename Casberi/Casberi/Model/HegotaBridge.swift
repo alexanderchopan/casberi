@@ -1122,7 +1122,19 @@ extension HegotaLiveState {
         twelve.sender = nonceAddr; twelve.payer = nonceAddr
         twelve.nonceKeys = ["0x1234"]; twelve.nonceSeq = "0x0"
         twelve.frames = beef.frames
-        sender.moves = [beef, twelve]
+        // **A SHARED COUNTERPARTY, so the Accounts spine has something to draw
+        // (prd §689).** Both demo addresses were funded by the same payer on
+        // this chain — the owner's own history already carries that move at
+        // block 87,073 — and the second one having it too is what makes them
+        // CONNECTED in §295's sense: not that they dealt with each other, but
+        // that they both dealt with somebody else. Without it the scope is
+        // correctly empty and nobody ever sees the drawing work.
+        var funded = HegotaMove(hash: "0x8c41a7d2be", counterparty: payer,
+                                wei: Decimal(string: "1000000000000000000")!,
+                                incoming: true, block: 2_120)
+        funded.timestamp = stamp(2_120)
+        funded.sender = payer; funded.payer = payer
+        sender.moves = [beef, twelve, funded]
         sender.lanes = HegotaRead.lanes(from: sender.moves)
         // Its real ordinary nonce. Both moves above ride NAMED keys, so none of
         // these seven touched key 0 — the two counters really are independent,

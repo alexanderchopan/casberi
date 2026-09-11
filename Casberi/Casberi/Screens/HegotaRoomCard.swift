@@ -85,7 +85,11 @@ struct HegotaRoomFigure: View {
         // splits by ASSET, so an address holding only this chain's coin has
         // nothing for it to draw: one cell at 100% is the bar §610 removed.
         case .holdings: return HegotaHoldings.tokens(shown).isEmpty
-        case .accounts: return shown.isEmpty
+        // **EMPTY IS "NOTHING CONNECTS THEM" (prd §689)**, not "nothing is
+        // watched" — the rows below list what you watch either way, and the
+        // slot's job is the relationship. Two unrelated addresses are a real
+        // answer and the scope says it rather than leaving 258pt blank.
+        case .accounts: return HegotaConnections.map(shown)?.nodes.isEmpty ?? true
         case .frames:   return framedMoves.isEmpty
         case .coins:    return coins.isEmpty
         case .nonces:   return lanes.isEmpty
@@ -191,8 +195,11 @@ struct HegotaRoomFigure: View {
             // amounts.
             return isEmpty(.holdings) ? section.emptyHeadline : nil
         case .accounts:
-            return accounts.count == 1 ? String(localized: "1 address")
-                                       : String(localized: "\(String(accounts.count)) addresses")
+            // **THE CROWN OWNS THE COUNT (prd §689)** — it says how many
+            // addresses connect, which is the reading; a count of watched
+            // addresses above it is the list's own length said twice.
+            if isEmpty(.accounts) { return section.emptyHeadline }
+            return nil
         case .coins:
             return coins.isEmpty ? nil : HegotaFormat.crown(HegotaCoins.total(coins))
         case .nonces:
@@ -774,17 +781,13 @@ struct HegotaRoomFigure: View {
         }
     }
 
+    /// **THE CONNECTIONS BETWEEN WHAT YOU WATCH (prd §689).** This drew the
+    /// roster — the same rows the list beneath it draws — so the slot spent
+    /// 258pt restating what was a finger's width below. What it draws now is
+    /// the one thing those rows cannot: how they relate.
     @ViewBuilder private var accountsFigure: some View {
-        let rows = HegotaRoster.rows(accounts)
-        let drawn = Array(rows.prefix(HegotaRoster.cap))
-        let rest = rows.count - drawn.count
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            ForEach(drawn) { rosterRow($0) }
-            if rest > 0 { rosterMore(rest) }
-        }
-        // Centred in the slot for `activityFigure`'s reason: the surplus is
-        // split rather than pooled under the rows.
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        RoomConnectionsFigure(map: HegotaConnections.map(shown),
+                              yours: String(localized: "the accounts you watch"))
     }
 
     /// One watched address: its name, and the scopes it has something to say in.
@@ -2070,31 +2073,7 @@ struct HegotaRoomList: View {
     }
 
     @ViewBuilder private var accountsList: some View {
-        thisPhoneRow
-        ForEach(shown) { account in
-            Button {
-                DSHaptic.selection()
-                onOpenAccount?(account)
-            } label: {
-            WalletRow(mark: .face(account.address),
-                      title: HegotaWatch.shared.name(for: account.address)
-                          ?? WalletStore.shortAddress(account.address),
-                      subtitle: subtitle(account)) {
-                if let wei = account.balanceWei {
-                    // **`crown`, not `eth`.** A devnet hands out prefunded
-                    // accounts, and one watched here really holds 999,999,898
-                    // ETH — printed in full it was shrinking to a size nobody
-                    // could read rather than abbreviating like the crown above
-                    // it already does.
-                    Text(HegotaFormat.crown(wei))
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        .monospacedDigit().lineLimit(1)
-                }
-            }
-            .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        }
+        RoomAccountsRows(rows: HegotaConnections.rows(shown, onOpen: onOpenAccount))
     }
 
     private func subtitle(_ account: HegotaAccount) -> String {
@@ -3869,5 +3848,52 @@ enum HegotaHoldings {
                                      amount: HegotaFormat.crownFigure(total))
         }
         return RoomHoldings.cells(coin: coin, tokens: tokens(accounts))
+    }
+}
+
+
+/// **WHO THE ACCOUNTS YOU WATCH HAVE DEALT WITH (prd §689).** `RoomConnections`'
+/// shape over this room's own moves — a `HegotaMove` names its counterparty
+/// outright, so the edges are a map rather than a derivation.
+enum HegotaConnections {
+    static func map(_ accounts: [HegotaAccount]) -> AddressConnections.Map? {
+        let moves = accounts.flatMap { account in
+            account.moves.map {
+                RoomConnectionsEdges.Move(owner: account.address,
+                                          counterparty: $0.counterparty,
+                                          order: $0.block)
+            }
+        }
+        return AddressConnections.map(
+            edges: RoomConnectionsEdges.edges(moves) { address in
+                HegotaWatch.shared.name(for: address) ?? WalletStore.shortAddress(address)
+            },
+            watched: accounts.map {
+                AddressConnections.WatchedWallet(
+                    key: $0.address.lowercased(),
+                    name: HegotaWatch.shared.name(for: $0.address)
+                        ?? WalletStore.shortAddress($0.address))
+            })
+    }
+
+    static func rows(_ accounts: [HegotaAccount],
+                     onOpen: ((HegotaAccount) -> Void)?) -> [RoomAccountsRows.Row] {
+        let drawn = map(accounts)
+        return accounts.map { account in
+            // How many of the OTHER accounts you watch this one shares a
+            // counterparty with — the crown's own unit, per row.
+            let reach = drawn?.nodes.filter {
+                $0.walletKeys.contains(account.address.lowercased())
+            }.count ?? 0
+            return RoomAccountsRows.Row(
+                key: account.address.lowercased(),
+                address: account.address,
+                name: HegotaWatch.shared.name(for: account.address)
+                    ?? WalletStore.shortAddress(account.address),
+                kind: nil,
+                connections: reach,
+                unreached: !account.reached,
+                onOpen: onOpen.map { open in { open(account) } })
+        }
     }
 }
