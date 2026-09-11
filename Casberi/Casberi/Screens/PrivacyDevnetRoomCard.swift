@@ -681,7 +681,7 @@ extension PrivacyDevnetRoomCard {
         if accounts.count == 1, let one = accounts.first {
             return PrivacyDevnetName.of(one.address)
         }
-        return String(localized: "\(String(accounts.count)) addresses")
+        return String(localized: "\(String(accounts.count)) accounts")
     }
 
     var homeSamples: [WalletStore.ValueSample] {
@@ -699,7 +699,7 @@ extension PrivacyDevnetRoomCard {
     /// rows cannot: how they relate.
     @ViewBuilder var accountsFigure: some View {
         RoomConnectionsFigure(map: PrivacyConnections.map(accounts),
-                              yours: String(localized: "the accounts you watch"))
+                              yours: String(localized: "the accounts you follow"))
     }
 
     private func accountDoing(_ account: PrivacyDevnetAccount) -> String {
@@ -1403,7 +1403,7 @@ enum PrivacyConnections {
     static func rows(_ accounts: [PrivacyDevnetAccount],
                      onOpen: ((PrivacyDevnetAccount) -> Void)?) -> [RoomAccountsRows.Row] {
         let drawn = map(accounts)
-        return accounts.map { account in
+        let followed = accounts.map { account -> RoomAccountsRows.Row in
             let reach = drawn?.nodes.filter {
                 $0.walletKeys.contains(account.address.lowercased())
             }.count ?? 0
@@ -1416,5 +1416,7 @@ enum PrivacyConnections {
                 unreached: !account.reached,
                 onOpen: onOpen.map { open in { open(account) } })
         }
+        return followed + RoomAccountsRows.tied(
+            drawn, watchedKeys: Set(accounts.map { $0.address.lowercased() }))
     }
 }

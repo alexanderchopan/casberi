@@ -141,7 +141,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         case .home:     return String(localized: "The balance, and the last few moves")
         case .activity: return String(localized: "What moved, and whether it worked")
         case .holdings: return String(localized: "The tokens this address holds")
-        case .accounts: return String(localized: "The addresses you watch, and how they relate")
+        case .accounts: return String(localized: "The accounts you follow, and the ones tied to them")
         case .frames:   return String(localized: "The steps each transaction ran")
         case .sponsors: return String(localized: "Transactions somebody else paid for")
         }
@@ -180,7 +180,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings:
             return String(localized: "The tokens an address holds besides the chain's own coin. Nothing you watch holds one — the balance on Home is the whole of it.")
         case .accounts:
-            return String(localized: "How the addresses you watch relate — who they have both dealt with. None of them shares a counterparty yet, so there is nothing to draw between them.")
+            return String(localized: "How the accounts you follow relate — who they have both dealt with. None of them shares a counterparty yet, so there is nothing to draw between them.")
         case .frames:
             return String(localized: "A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here has run any — a plain transfer runs none.")
         case .sponsors:

@@ -157,6 +157,22 @@ struct ConnectionSpine: View {
 /// mechanics. What is left, and what nothing else can answer, is **what this
 /// address IS and how it relates to the others you watch** — which also makes
 /// the list the crown's own legend rather than a second copy of it.
+extension RoomAccountsRows {
+    /// The accounts TIED to the ones you follow — one row per node of the
+    /// spine, after the followed rows. Same key rule as the map (lowercased
+    /// hex), so a tied account that is also followed is never listed twice.
+    static func tied(_ map: AddressConnections.Map?, watchedKeys: Set<String>,
+                     onOpen: ((String) -> Void)? = nil) -> [Row] {
+        (map?.nodes ?? [])
+            .filter { !watchedKeys.contains($0.id) }
+            .map { node in
+                Row(key: node.id, address: node.address, name: node.name, kind: nil,
+                    connections: node.walletKeys.count, watched: false, unreached: false,
+                    onOpen: onOpen.map { open in { open(node.address) } })
+            }
+    }
+}
+
 struct RoomAccountsRows: View {
     struct Row: Identifiable {
         var id: String { key }
@@ -167,6 +183,14 @@ struct RoomAccountsRows: View {
         let kind: String?
         /// How many of the accounts you watch it connects to.
         let connections: Int
+        /// **Whether YOU follow it (prd §689c, user: "addresses are accounts …
+        /// and or tied to them").** The scope's subject is the accounts you
+        /// follow AND the accounts tied to them — the left-hand nodes of the
+        /// spine are accounts too, and a picture whose nodes have no row is a
+        /// figure the list beneath it does not explain. A tied account reads
+        /// "tied to 2 of yours"; a followed one reads "connected to 2 of
+        /// yours"; the count on the right is the same unit for both.
+        var watched: Bool = true
         /// True when the chain did not answer for it; the row says so instead
         /// of reading as an address with nothing going on (§515a).
         let unreached: Bool
@@ -212,6 +236,10 @@ struct RoomAccountsRows: View {
             // "no connections yet" over a chain that never answered would be
             // the false fact §83 exists to stop.
             parts.append(String(localized: "couldn't be reached"))
+        } else if !row.watched {
+            parts.append(row.connections == 1
+                         ? String(localized: "tied to 1 of yours")
+                         : String(localized: "tied to \(String(row.connections)) of yours"))
         } else if row.connections == 0 {
             parts.append(String(localized: "no connections yet"))
         } else {

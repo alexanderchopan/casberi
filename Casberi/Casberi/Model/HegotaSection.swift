@@ -152,12 +152,12 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:     return String(localized: "The line, and the last few moves")
         case .activity: return String(localized: "What moved, and what each transaction did")
-        case .holdings: return String(localized: "What each address you watch holds")
+        case .holdings: return String(localized: "What each account you follow holds")
         // **NOT "and what each holds" (prd §689).** That sentence is the
         // Holdings chip's, word for word, and this scope had been claiming it
         // since before Holdings existed here. What Accounts owns is identity
         // and relationship — the one question no other scope answers.
-        case .accounts: return String(localized: "The addresses you watch, and how they relate")
+        case .accounts: return String(localized: "The accounts you follow, and the ones tied to them")
         case .frames:   return String(localized: "The steps your transactions ran")
         case .coins:    return String(localized: "The unspent outputs this address owns")
         case .nonces:   return String(localized: "Sends that don't wait for each other")
@@ -202,7 +202,7 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings:
             return String(localized: "Nothing you watch holds a balance here yet.")
         case .accounts:
-            return String(localized: "How the addresses you watch relate — who they have both dealt with. None of them shares a counterparty yet, so there is nothing to draw between them.")
+            return String(localized: "How the accounts you follow relate — who they have both dealt with. None of them shares a counterparty yet, so there is nothing to draw between them.")
         case .frames:
             return String(localized: "A frame transaction runs in numbered steps, each carrying its own budget. Nothing here has run one — a plain transfer runs none.")
         case .coins:

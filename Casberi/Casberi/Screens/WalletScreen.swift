@@ -73,10 +73,23 @@ struct WalletScreen: View {
             // the state line says whether anything is being read.
             mode: .noAccount,
             // The connect picker, through the page's ONE presentation.
-            cardSheet: { _ in
-                AnyView(WalletConnectPickerSheet(shared: sharedAccounts) { added in
-                    if added > 0 { openRoom() }
-                })
+            // **THE DIRECTORY (prd §690).** Every address you watch or have
+            // named, as rows on this page — the accounts-door redesign made
+            // each seat's page its directory and four devnet pages got that;
+            // this one kept a door to the old book instead of absorbing it.
+            rows: rows,
+            onRemoveRow: forget,
+            onOpenRow: { sheet = .card(id: $0) },
+            cardSheet: { id in
+                if id == "connect" {
+                    AnyView(WalletConnectPickerSheet(shared: sharedAccounts) { added in
+                        if added > 0 { openRoom() }
+                    })
+                } else if let entry = AddressBook.shared.entry(for: id) {
+                    AnyView(AddressCard(entry: entry))
+                } else {
+                    AnyView(EmptyView())
+                }
             },
             // The watch list is this seat's whole store, so a disconnect
             // clears it — see the type's own note on the exit this seat never
@@ -84,7 +97,7 @@ struct WalletScreen: View {
             teardown: {
                 wallet.remove(at: IndexSet(wallet.addresses.indices))
             },
-            disconnectNote: String(localized: "The names you filed in the address book stay."),
+            disconnectNote: String(localized: "The names you filed stay."),
             sheet: $sheet,
             act: { actBlock },
             more: { moreBlock },
@@ -94,20 +107,54 @@ struct WalletScreen: View {
 
     /// The act. The FIRST address while there is none; the book's door once
     /// there is, because watching a second through fifth is its job (§466).
+    /// **ONE FORM, ALWAYS (prd §690).** This swapped the follow field for an
+    /// "Address book" door the moment a first wallet was watched — so the one
+    /// place a second wallet could be followed was a screen this page no
+    /// longer owns. The field stays; the rows below it are the directory.
     @ViewBuilder private var actBlock: some View {
-        if wallet.addresses.isEmpty {
-            WalletWatchField(
-                onWatched: openRoom,
-                showsPeekChip: true,
-                onConnectFound: { accounts in
-                    sharedAccounts = accounts
-                    sheet = .card(id: "connect")
-                })
-        } else {
-            DSSlabDoor(title: "Address book", detail: bookSummary,
-                       systemImage: "person.text.rectangle") {
-                route.push(.addressBook)
+        WalletWatchField(
+            onWatched: openRoom,
+            showsPeekChip: true,
+            onConnectFound: { accounts in
+                sharedAccounts = accounts
+                sheet = .card(id: "connect")
+            })
+    }
+
+    /// Watched wallets first, then the addresses you have only named — §169's
+    /// two tiers over one ledger, drawn as one list with the tier in the
+    /// subline (user, 2026-09-11: "keep them as rows").
+    private var rows: [AccountPageShape.Row] {
+        let watchedKeys = Set(wallet.addresses.map { AddressBook.key(for: $0.address) })
+        let watched = wallet.addresses.map { w in
+            AccountPageShape.Row(
+                id: AddressBook.key(for: w.address),
+                title: w.label.isEmpty ? w.short : w.label,
+                subline: w.short,
+                weekCount: 0, hasNew: false, isYou: false, avatarURL: nil,
+                faceAddress: w.address, watched: true)
+        }
+        let named = AddressBook.shared.all
+            .filter { !watchedKeys.contains(AddressBook.key(for: $0.address)) }
+            .map { e in
+                AccountPageShape.Row(
+                    id: AddressBook.key(for: e.address),
+                    title: e.name,
+                    subline: WalletStore.shortAddress(e.address),
+                    weekCount: 0, hasNew: false, isYou: false, avatarURL: nil,
+                    faceAddress: e.address, watched: false)
             }
+        return watched + named
+    }
+
+    /// Removing a watched row stops watching; removing a named-only row
+    /// forgets the name. One verb per tier, each the consequence that tier
+    /// actually has.
+    private func forget(_ id: String) {
+        if let i = wallet.addresses.firstIndex(where: { AddressBook.key(for: $0.address) == id }) {
+            wallet.remove(at: IndexSet(integer: i))
+        } else if let entry = AddressBook.shared.entry(for: id) {
+            AddressBook.shared.remove(entry.address)
         }
     }
 
@@ -131,13 +178,6 @@ struct WalletScreen: View {
         chrome.sourceRequest = "Wallet"
     }
 
-    private var bookSummary: String {
-        switch book.count {
-        case 0: return String(localized: "Nothing named yet")
-        case 1: return String(localized: "1 named")
-        default: return String(localized: "\(book.count) named")
-        }
-    }
 
     private var chainsSummary: String {
         let selected = WalletChainStore.selectable.filter { WalletChainStore.shared.isSelected($0.id) }

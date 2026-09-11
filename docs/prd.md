@@ -52792,3 +52792,61 @@ can never connect to anything, so Frames' second watched address gains one move 
 same burn address the first account's frames pay. That is §295's sense of connected exactly
 — not that the two dealt with each other, but that they both dealt with somebody else — and
 without it the scope is correctly empty and nobody ever sees the drawing work.
+
+## §690 — The book folds into the Wallet's page; follow lives in the directory; Home is the band, Activity is the chart (2026-09-11)
+
+User, arriving at it in order: *"we don't have an address book anymore. we moved to app
+catalogue as account directory … each set up page should be where a list is kept"*, then
+*"it looks like what happened is we never got rid of the address book that is in the wallet
+set up page, but we now made these pages be more than just set up, they merged w/ address
+book"*, then *"it's dumb to have follow in two places"* and *"if the devnets have follow in
+the directory shouldn't wallet?"*, and finally *"Home list could be the sankey · Home Activity
+chart could be same chart the devnets have — then we have home filled."*
+
+**THE DIAGNOSIS WAS EXACT.** The accounts-door redesign made every seat's catalog page its
+directory — *"entries become rows on each account's page"* — and four devnet pages got that:
+`DevnetAccountsAct` as the follow form, `rows:` as the roster. The Wallet's page did not: it
+kept a door to the old `AddressBookScreen` and swapped its own follow field for that door the
+moment a first wallet was watched. So the book was not a concept that survived; it was a
+migration that stopped one seat short.
+
+**Finished, for the Wallet.** Its page carries `WalletWatchField` always and every watched
+AND named address as rows — §169's two tiers over one ledger, drawn as one list with
+`Watching · N` over the followed and `Named · M` over the rest (user: *"keep them as
+rows"*). Each row wears its own `WalletFace`, which meant a new `faceAddress` on
+`AccountPageShape.Row` because the roster's fallback is the SEAT's icon — right for a model
+or a repo, wrong for an address, and the first cut wore the Wallet app icon seventeen times
+over. The book — screen, route node, `-openAddressBook` probe, its census surface — is
+deleted. `ConnectWalletRow` returns to first-run only: a card, not a 56pt row, and with fact
+rows now beneath it, it overlapped "Connection".
+
+**FOLLOW LIVES IN THE DIRECTORY AND NOWHERE ELSE.** The Home "Follow" tile proposed earlier
+in the session is dropped, and the reason is the user's: two doors to one act is two places
+to look. Home's tiles are the room's MONEY verbs — Send, Top up, Create, Authorize — and the
+Wallet has none, because it is watch-only. Its tile-less Home stops being the odd one out and
+becomes the honest one.
+
+**AND HOME IS FILLED THE ONLY WAY A WATCH-ONLY ROOM CAN BE.** The flow band moves from
+Activity's slot to Home's list: the crown's line says how much moved, the band says through
+whom — the total, decomposed, which is Home-shaped and not a preview of Activity. "Recent",
+which drew there, was Activity filtered to four rows — Hegotá's own note calls exactly that
+*"a worse copy of the scope beside it"*. Activity's slot takes `RoomActivityChart`, so all
+five rooms answer Activity's question the same way; §483's substance holds (the band is
+still visible, Activity still carries no second value figure), one tab over. The Wallet is
+the family's dense case, and §687's rule fires as written: day headers, clock times.
+
+**WHAT THIS ORPHANS, STATED RATHER THAN DISCOVERED LATER:** groups. `AddressGroupScreen`,
+`AddressMoveSheet` and `NewGroupSheet` still compile and nothing reaches them — the deleted
+screen was the only thing that pushed `.addressGroup` or raised the new-group sheet. §440's
+filing (drag a face onto a group, swipe to move) has no door. Either the Wallet's page grows
+one (a `rowMenu` "Move to group…" through the existing move sheet, and group rows on the
+page) or groups go with the book. That is a product call, and it is the user's.
+
+**Fifty-five guards over the deleted screen are retired in `address-book-selftest.sh`** —
+A–Z sort, the search fold, the hoisted search, the filing doors, the save flight, the quiet
+foot — every one a fact about a screen that no longer exists; the rulings that outlive it
+(the shared row, the move sheet, the group card) stay pinned on the files that still hold
+them. The two watch-door counts are re-pinned: the Wallet page's field is the ONE follow
+door (`outcome(ofAdding:)`, so the cap and the duplicate case are answered in words), and
+§511's row menu stays on the shared row. `wallet-connect-plan-selftest.sh` re-pins the
+picker's host to the page.

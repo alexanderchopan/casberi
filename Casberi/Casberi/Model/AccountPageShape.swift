@@ -141,6 +141,17 @@ enum AccountPageShape {
         /// The person's own account — the "You" pill.
         let isYou: Bool
         let avatarURL: String?
+        /// **A wallet row wears its own face (prd §690).** The roster row's
+        /// fallback is the SEAT's icon, which is right for a Hugging Face model
+        /// or a Radicle repo and wrong for an address — every row on the
+        /// Wallet's page wore the Wallet app icon seventeen times over. Set,
+        /// it draws `WalletFace` for the address; nil keeps the seat's icon.
+        var faceAddress: String? = nil
+        /// **Followed, or only named (prd §690, §169's two tiers).** The Wallet's
+        /// directory lists both, and the page's "Watching · N" counted all
+        /// seventeen when four were watched. Default true so the other 23
+        /// rosters, which list only what they follow, change nothing.
+        var watched: Bool = true
     }
 
     /// Active this week first, then the quiet rest; each half keeps the
@@ -193,6 +204,11 @@ enum AccountPageShape {
 
     static func watchingLabel(_ count: Int) -> String {
         String(localized: "Watching · \(count)")
+    }
+
+    /// The named-only tier's header, beside "Watching · N".
+    static func namedLabel(_ count: Int) -> String {
+        String(localized: "Named · \(count)")
     }
 
     static func quietLabel(_ count: Int) -> String {

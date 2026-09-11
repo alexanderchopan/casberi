@@ -145,7 +145,7 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
         // **NOT "and what each holds" (prd §689).** That is the Holdings
         // chip's sentence word for word; this scope owns identity and
         // relationship, the one question no other scope answers.
-        case .accounts:   return String(localized: "The addresses you watch, and how they relate")
+        case .accounts:   return String(localized: "The accounts you follow, and the ones tied to them")
         case .frames:     return String(localized: "The steps your transactions ran")
         case .nullifiers: return String(localized: "Spend keys used once, so a spend can't be repeated")
         case .roots:      return String(localized: "Which snapshot a proof was made against")
@@ -239,7 +239,7 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings:
             return String(localized: "Nothing you watch holds a balance here yet.")
         case .accounts:
-            return String(localized: "How the addresses you watch relate — who they have both dealt with. None of them shares a counterparty yet, so there is nothing to draw between them.")
+            return String(localized: "How the accounts you follow relate — who they have both dealt with. None of them shares a counterparty yet, so there is nothing to draw between them.")
         case .frames:
             return String(localized: "A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here ran any — a plain transfer runs none.")
         case .nullifiers:

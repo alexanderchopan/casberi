@@ -3810,11 +3810,29 @@ struct FeedScreen: View {
     /// hands back a value, which is what keeps this immune to the liveness
     /// crash class rather than merely guarded against it (CLAUDE.md
     /// corollaries 1–6).
+    @ViewBuilder private var walletActivitySection: some View {
+        let caption = selectedWallet.map {
+            WalletScopeRail.caption(for: $0, in: wallet.addresses).name
+        } ?? (wallet.addresses.count == 1
+              ? String(localized: "1 wallet")
+              : String(localized: "\(String(wallet.addresses.count)) wallets"))
+        Section {
+            RoomActivityChart(dates: visible.map(\.capturedAt),
+                              caption: caption,
+                              box: DSRoomChassis.visualSlot)
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                          bottom: DSRoomChassis.contentGap,
+                                          trailing: DSRoomChassis.inset))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+        }
+    }
+
     @ViewBuilder private var walletConnectionsSection: some View {
         Section {
             RoomConnectionsFigure(map: AddressConnections.map(context: modelContext),
                                   box: DSRoomChassis.visualSlot,
-                                  yours: String(localized: "the wallets you watch"))
+                                  yours: String(localized: "the accounts you follow"))
                 .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                           bottom: DSRoomChassis.contentGap,
                                           trailing: DSRoomChassis.inset))
@@ -3841,9 +3859,11 @@ struct FeedScreen: View {
                 }.count ?? 0,
                 unreached: false)
         }
+        let tied = RoomAccountsRows.tied(
+            map, watchedKeys: Set(WalletStore.shared.addresses.map { AddressBook.key(for: $0.address) }))
         if !rows.isEmpty {
             Section {
-                RoomAccountsRows(rows: rows)
+                RoomAccountsRows(rows: rows + tied)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
@@ -3942,7 +3962,11 @@ struct FeedScreen: View {
         // positions opened 258 blank points.
         case _ where walletScopeIsEmpty(section):
             WalletScopeEmptyFigure(section: section)
-        case .activity:    walletFlowSection
+        // **THE FAMILY'S ACTIVITY CHART (prd §690, user: "Home Activity chart
+        // could be same chart the devnets have").** §483 kept the band here so
+        // Activity carried no second value figure; the band moves to Home and
+        // that substance holds — this slot draws WHEN, like the other four.
+        case .activity:    walletActivitySection
         case .holdings:    holdingsBlockSection
         // **§295 RESTORED (prd §689).** "N of your addresses are connected"
         // drew at the foot of the Wallet manager until that screen went; the
@@ -7053,26 +7077,21 @@ struct FeedScreen: View {
             // kinds of thing.
             switch section {
             case .home:
-                // Home's LIST — below the toggle like every other scope's, not
-                // inside the crown card where §208 put it. Drawn there it sat
-                // BETWEEN the sparkline and the control, which is the one place
-                // the ruling says nothing may go.
-                if !latest.isEmpty {
-                    Section {
-                        // BARE ON THE PAGE, NO CARD (user ruling, prd §483:
-                        // *"we need to put the transactions that are showing
-                        // outside of a card, remember we are going to the
-                        // restrained design?"*). §391's rule, one room over:
-                        // text sections lose their box and separate by air and
-                        // heading weight; only DRAWINGS keep a surface, because
-                        // `DS.ink(magnitude:)` and the chart fills are
-                        // calibrated against one.
-                        walletTodayCard(latest, streamTotal: all.count)
-                            .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
-                                                      bottom: 0, trailing: DS.Space.s4))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                    }
+                // **HOME'S SECOND HALF IS THE FLOW BAND (prd §690, user: "Home
+                // list could be the sankey … then we have home filled").** The
+                // crown's line says how much moved; the band says through whom
+                // — the total, decomposed, which is Home-shaped and not a
+                // preview of Activity. "Recent" that drew here was Activity
+                // filtered to four rows, the copy Hegotá's own note calls "a
+                // worse copy of the scope beside it." The devnets fill this
+                // half with their verb tiles; the Wallet, watch-only, fills it
+                // with the one reading only it has.
+                Section {
+                    walletFlowSection
+                        .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                                                  bottom: 0, trailing: DS.Space.s4))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
             case .activity:
                 // **WHAT ALREADY HAPPENED, AND ONLY THAT** (user ruling, prd

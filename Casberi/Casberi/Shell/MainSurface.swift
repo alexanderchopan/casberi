@@ -794,8 +794,6 @@ struct MainSurface: View {
             L2beatDirectoryScreen()
         case .addressGroup(let name):
             AddressGroupScreen(group: name)
-        case .addressBook:
-            AddressBookScreen()
         }
     }
 

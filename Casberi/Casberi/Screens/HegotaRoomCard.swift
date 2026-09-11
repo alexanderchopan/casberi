@@ -282,8 +282,8 @@ struct HegotaRoomFigure: View {
         if let one = scoped {
             return HegotaWatch.shared.name(for: one) ?? WalletStore.shortAddress(one)
         }
-        return head.watched == 1 ? String(localized: "1 address")
-                                 : String(localized: "\(String(head.watched)) addresses")
+        return head.watched == 1 ? String(localized: "1 account")
+                                 : String(localized: "\(String(head.watched)) accounts")
     }
 
     static func wei(_ eth: Double) -> Decimal {
@@ -787,7 +787,7 @@ struct HegotaRoomFigure: View {
     /// the one thing those rows cannot: how they relate.
     @ViewBuilder private var accountsFigure: some View {
         RoomConnectionsFigure(map: HegotaConnections.map(shown),
-                              yours: String(localized: "the accounts you watch"))
+                              yours: String(localized: "the accounts you follow"))
     }
 
     /// One watched address: its name, and the scopes it has something to say in.
@@ -3879,7 +3879,7 @@ enum HegotaConnections {
     static func rows(_ accounts: [HegotaAccount],
                      onOpen: ((HegotaAccount) -> Void)?) -> [RoomAccountsRows.Row] {
         let drawn = map(accounts)
-        return accounts.map { account in
+        let followed = accounts.map { account -> RoomAccountsRows.Row in
             // How many of the OTHER accounts you watch this one shares a
             // counterparty with — the crown's own unit, per row.
             let reach = drawn?.nodes.filter {
@@ -3895,5 +3895,7 @@ enum HegotaConnections {
                 unreached: !account.reached,
                 onOpen: onOpen.map { open in { open(account) } })
         }
+        return followed + RoomAccountsRows.tied(
+            drawn, watchedKeys: Set(accounts.map { $0.address.lowercased() }))
     }
 }

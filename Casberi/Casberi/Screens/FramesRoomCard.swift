@@ -224,8 +224,8 @@ struct FramesRoomFigure: View {
             return FramesWatch.shared.name(for: one.address)
                 ?? WalletStore.shortAddress(one.address)
         }
-        return head.watched == 1 ? String(localized: "1 address")
-                                 : String(localized: "\(String(head.watched)) addresses")
+        return head.watched == 1 ? String(localized: "1 account")
+                                 : String(localized: "\(String(head.watched)) accounts")
     }
 
     @ViewBuilder private var sponsorship: some View {
@@ -343,7 +343,7 @@ struct FramesRoomFigure: View {
     /// this is not the roster anyway.
     @ViewBuilder private var accountsFigure: some View {
         RoomConnectionsFigure(map: FramesConnections.map(accounts),
-                              yours: String(localized: "the accounts you watch"))
+                              yours: String(localized: "the accounts you follow"))
     }
 
     @ViewBuilder private var holdingsFigure: some View {
@@ -1364,7 +1364,7 @@ enum FramesConnections {
     static func rows(_ accounts: [FramesAccount],
                      onOpen: ((FramesAccount) -> Void)?) -> [RoomAccountsRows.Row] {
         let drawn = map(accounts)
-        return accounts.map { account in
+        let followed = accounts.map { account -> RoomAccountsRows.Row in
             let reach = drawn?.nodes.filter {
                 $0.walletKeys.contains(account.address.lowercased())
             }.count ?? 0
@@ -1378,5 +1378,7 @@ enum FramesConnections {
                 unreached: !account.reached,
                 onOpen: onOpen.map { open in { open(account) } })
         }
+        return followed + RoomAccountsRows.tied(
+            drawn, watchedKeys: Set(accounts.map { $0.address.lowercased() }))
     }
 }

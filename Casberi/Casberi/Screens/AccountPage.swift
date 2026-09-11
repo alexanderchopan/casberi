@@ -478,18 +478,26 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         // Filtered FIRST, then split: under a query the halves are the
         // matches' own, so "Quiet" never counts rows the person cannot see.
         let shown = AccountPageShape.matches(rows, query: query)
-        let (active, quiet) = AccountPageShape.split(shown)
         let searching = !query.trimmingCharacters(in: .whitespaces).isEmpty
+        // **TWO TIERS WHEN A ROSTER HAS THEM (prd §690).** A directory that
+        // lists what you follow AND what you have only named splits by that,
+        // and its header counts only the followed; every other roster keeps
+        // the active/quiet split by activity, untouched.
+        let tiered = shown.contains { !$0.watched }
+        let (active, quiet) = tiered
+            ? (shown.filter(\.watched), shown.filter { !$0.watched })
+            : AccountPageShape.split(shown)
         if !shown.isEmpty {
             Text(searching ? AccountPageShape.yoursLabel(shown.count)
-                           : AccountPageShape.watchingLabel(rows.count))
+                           : AccountPageShape.watchingLabel(rows.filter(\.watched).count))
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .padding(.top, DS.Space.s3)
                 .plainAccountRow()
             ForEach(active) { row in rosterRow(row) }
             if !quiet.isEmpty {
-                if !active.isEmpty {
-                    Text(AccountPageShape.quietLabel(quiet.count))
+                if !active.isEmpty || tiered {
+                    Text(tiered ? AccountPageShape.namedLabel(quiet.count)
+                                : AccountPageShape.quietLabel(quiet.count))
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .padding(.top, DS.Space.s2)
                         .plainAccountRow()
@@ -774,6 +782,9 @@ struct AccountRosterRow: View {
                 if let avatar = row.avatarURL, !avatar.isEmpty {
                     RemoteThumb(urlString: avatar, size: DS.Face.list,
                                 fallback: fallbackIcon, circular: true)
+                } else if let address = row.faceAddress {
+                    // An address IS a face in this app (§690).
+                    WalletFace(address: address, size: DS.Face.list, circular: true)
                 } else {
                     BridgeIcon(name: fallbackIcon, size: DS.Face.list, circular: true)
                 }

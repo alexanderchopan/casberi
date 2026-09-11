@@ -122,7 +122,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         // connected" lived at the foot of the Wallet manager and died with
         // that screen; the reading kept running with nowhere to draw. This is
         // where it goes, and the devnets took the same one.
-        case .accounts:    return String(localized: "The wallets you watch, and how they relate")
+        case .accounts:    return String(localized: "The accounts you follow, and the ones tied to them")
         case .risk:        return String(localized: "Positions that could move against you")
         case .permissions: return String(localized: "What you've granted reach to")
         }
@@ -170,7 +170,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .risk:
             return String(localized: "A position a price move could liquidate, and how close it stands. Nothing here carries leverage.")
         case .accounts:
-            return String(localized: "How the wallets you watch relate — who they have both dealt with, and which pay each other directly. None of them shares a counterparty yet, so there is nothing to draw between them.")
+            return String(localized: "How the accounts you follow relate — who they have both dealt with, and which pay each other directly. None of them shares a counterparty yet, so there is nothing to draw between them.")
         case .permissions:
             return String(localized: "What has been allowed to reach these wallets: a token approval, a Safe module, a delegate. Nothing here has granted any.")
         }

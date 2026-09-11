@@ -70,7 +70,12 @@ PEOPLE="Casberi/Casberi/Model/AddressBookPeople.swift"
 # The BOOK — everyone else, as a room. §461 split these; before it, both of
 # these were one screen, which is why most of the guards below moved file
 # rather than changing.
-BOOKSCREEN="Casberi/Casberi/Screens/AddressBookScreen.swift"
+# BOOKSCREEN is gone (prd §690): the address book screen is deleted and the
+# Wallet catalog page is the directory. Every guard that read that file —
+# A–Z sort, the search fold, the hoisted search, the filing doors, the save
+# flight, the quiet foot — described a screen that no longer exists; the
+# rulings that outlive it (groups, the shared row, the move sheet) are still
+# guarded on $VIEWS and $GROUPS below.
 VIEWS="Casberi/Casberi/Screens/AddressBookViews.swift"
 GROUPS="Casberi/Casberi/Screens/AddressGroupViews.swift"
 BAR="Casberi/Casberi/Screens/AddressIndexBar.swift"
@@ -82,7 +87,7 @@ CONN="Casberi/Casberi/Model/AddressConnections.swift"
 # The shell — where the rail is built and the route node resolved (§461).
 SHELL_MAIN="Casberi/Casberi/Shell/MainSurface.swift"
 ROUTE="Casberi/Casberi/Shell/HomeRoute.swift"
-for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$FIELD" "$UNWATCH" "$UNFOLLOW" "$PEOPLE" "$BOOKSCREEN" "$VIEWS" "$GROUPS" "$BAR" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
+for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$FIELD" "$UNWATCH" "$UNFOLLOW" "$PEOPLE" "$VIEWS" "$GROUPS" "$BAR" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -109,7 +114,6 @@ strip_comments "$FIELD"  > "$TMP/field-bare.swift"
 strip_comments "$UNWATCH" > "$TMP/unwatch-bare.swift"
 strip_comments "$UNFOLLOW" > "$TMP/unfollow-bare.swift"
 strip_comments "$PEOPLE" > "$TMP/people-bare.swift"
-strip_comments "$BOOKSCREEN" > "$TMP/book-bare.swift"
 strip_comments "$GROUPS" > "$TMP/groups-bare.swift"
 strip_comments "$VIEWS"  > "$TMP/views-bare.swift"
 strip_comments "$SHAPE"  > "$TMP/shape-bare.swift"
@@ -120,11 +124,6 @@ strip_comments "$REVEAL" > "$TMP/reveal-bare.swift"
 # worthless if the list draws its own order, if the scrubber invents its own
 # letters, or if the search field and the book disagree about what a group is.
 
-grep -q 'AddressBookShape.sections(shapeRows(entries), order: bookSort)' "$BOOKSCREEN" \
-  || grep -q 'AddressBookShape.sections(rows, order: bookSort)' "$BOOKSCREEN" \
-  || { echo "✗ the manager no longer takes its sections from AddressBookShape — the order would be the screen's own and nothing could test it"; exit 1; }
-grep -q 'AddressBookShape.index(of: sections)' "$BOOKSCREEN" \
-  || { echo "✗ the scrubber no longer derives its letters from the rendered sections — it would offer letters that scroll nowhere (§83)"; exit 1; }
 grep -q 'AddressBookShape.groupMatches($0, query: q)' "$BOOK" \
   || { echo "✗ AddressBook.search no longer uses the shared group rule — the field's group RESULTS and its row filter would be two spellings of one test"; exit 1; }
 grep -q 'AddressBookShape.matchingGroups(groupNames, query: query)' "$BOOK" \
@@ -137,28 +136,18 @@ grep -q 'static func summaries(in context: ModelContext)' "$ACTIVITY" \
 # THE SORT DEFAULT (§440). A-Z is the whole reason the sectioning and the
 # scrubber exist; flip it back to `.recent` and both are dead code on first
 # open.
-grep -q 'private var bookSort: AddressBookShape.Order = .name' "$BOOKSCREEN" \
-  || { echo "✗ the book no longer opens A–Z — the letter headings and the scrubber would only appear if somebody changed the sort"; exit 1; }
 
 # THE SEARCH FOLD. Everything above the book collapses while you type, or the
 # field is a search box with two screens of chrome above its results. Anchored
 # to the two branches that actually fold — the top half and the foot — rather
 # than to the flag's declaration, which would pass against a `searching` that
 # nothing reads.
-grep -q 'if !searching {' "$TMP/book-bare.swift" \
-  || { echo "✗ the book room no longer folds the groups strip while searching"; exit 1; }
 
 # ONE SEARCH PER BODY PASS (prd §441). `book.search` was reached four times a
 # pass; the fix is a single `let` threaded down. A section builder that goes
 # back to the store for its own copy silently restores the cost.
-grep -q 'let entries = visibleEntries()' "$TMP/book-bare.swift" \
-  || { echo "✗ the body no longer hoists the filtered book — the search would run once per reader again (§441)"; exit 1; }
-grep -q 'private func bookSection(entries: \[AddressBook.Entry\]' "$BOOKSCREEN" \
-  || { echo "✗ the book list no longer takes its entries as a parameter"; exit 1; }
 
 # ONE CORPUS WALK, TWO READINGS (prd §441).
-grep -q 'let things = AddressActivity.relevant(in: modelContext)' "$BOOKSCREEN" \
-  || { echo "✗ the book room fetches the corpus twice again — the activity summary and the connections map both walked their own fetch (§441)"; exit 1; }
 grep -q 'static func map(things: \[Thing\]) -> Map?' "$SOURCE" \
   || { echo "✗ AddressConnections can no longer be built from an already-fetched array"; exit 1; }
 # The re-sort inside `edges(from:)` is load-bearing: AddressActivity hands back
@@ -184,8 +173,6 @@ grep -q 'outcome(ofAdding:' "$TMP/screen-bare.swift" \
   && { echo "✗ WalletScreen calls outcome(ofAdding:) directly again — that call belongs to WalletWatchField alone, or the setup screen and the book answer a paste two different ways (§466)"; exit 1; }
 grep -q 'outcome(ofAdding:' "$TMP/unwatch-bare.swift" \
   && { echo "✗ the unwatch file words a refusal itself — that door belongs to WalletWatchField (§466)"; exit 1; }
-grep -q 'outcome(ofAdding:' "$TMP/book-bare.swift" \
-  && { echo "✗ the address book words a refusal itself — the outcome-wording door belongs to WalletWatchField (§461/§466)"; exit 1; }
 grep -q 'outcome(ofAdding:' "$TMP/views-bare.swift" \
   && { echo "✗ the address card words a refusal itself — see above (§461/§466)"; exit 1; }
 
@@ -205,8 +192,13 @@ grep -q 'outcome(ofAdding:' "$TMP/views-bare.swift" \
 # `grep -c` counts lines, and a second call appended to the same line is exactly
 # how the equivalent guard in `safetx-selftest.sh` was first defeated.
 count_of() { python3 -c "import sys;print(open(sys.argv[1]).read().count(sys.argv[2]))" "$1" "$2"; }
-[[ "$(count_of "$TMP/book-bare.swift" 'WalletStore.shared.add(')" == "2" ]] \
-  || { echo "✗ the book has other than exactly two watch doors — §498's paste-preview capsule and §511's row menu, and nothing else"; exit 1; }
+# **TWO WATCH DOORS, RE-PINNED (prd §690).** The book screen carried §498's
+# paste-preview capsule; that door is the Wallet catalog page's own field now,
+# and it watches through `outcome(ofAdding:)` so the cap and the duplicate case
+# are answered in words rather than swallowed. §511's row menu stays on the
+# shared row in $VIEWS (counted below). Nothing else may watch.
+[[ "$(count_of "$TMP/field-bare.swift" 'wallet.outcome(ofAdding:')" == "1" ]] \
+  || { echo "✗ the Wallet page's field has other than exactly one watch door (§498/§690)"; exit 1; }
 [[ "$(count_of "$TMP/views-bare.swift" 'WalletStore.shared.add(')" == "1" ]] \
   || { echo "✗ the address card has other than exactly one watch door — §511 allows the overflow menu's Watch row and nothing else"; exit 1; }
 # The card may only ADD. Stopping a watch carries a corpus prune, §511's
@@ -216,12 +208,8 @@ count_of() { python3 -c "import sys;print(open(sys.argv[1]).read().count(sys.arg
 # It prunes the corpus, decides whether the book entry leaves with the watch and
 # owes a sentence and an undo for both, and a second copy would get one of those
 # subtly differently.
-grep -q 'FollowPrune.removeWallet' "$TMP/views-bare.swift" "$TMP/book-bare.swift" \
-  && { echo "✗ a screen implements the unwatch itself — it belongs to WalletUnwatch alone (§511)"; exit 1; }
 grep -q 'WalletUnwatch.perform(' "$TMP/views-bare.swift" \
   || { echo "✗ the address card cannot stop a watch — a plain tap is the discoverable door §511 added (§511)"; exit 1; }
-grep -q 'WalletUnwatch.perform(' "$TMP/book-bare.swift" \
-  || { echo "✗ the book row cannot stop a watch (§511)"; exit 1; }
 
 # ── §511: ONE CONSEQUENCE, ONE WORD ─────────────────────────────────────────
 #
@@ -229,16 +217,10 @@ grep -q 'WalletUnwatch.perform(' "$TMP/book-bare.swift" \
 # destructive verb and the book's were both spelled "Remove" and meant two
 # different things, so unwatching read as a delete that had failed. Each failure
 # below renders as a perfectly ordinary menu.
-grep -q 'Label("Stop watching"' "$TMP/book-bare.swift" \
-  || { echo "✗ the watch verb is not 'Stop watching' — the bare 'Remove' is the book's word for a different consequence (§511)"; exit 1; }
 grep -q 'Label("Stop watching"' "$TMP/views-bare.swift" \
   || { echo "✗ the address card's watch verb is not 'Stop watching' (§511)"; exit 1; }
 grep -qE 'Label\("Remove", ' "$TMP/views-bare.swift" \
   && { echo "✗ the address card says the bare 'Remove' again (§511)"; exit 1; }
-grep -q 'Label("Remove from book"' "$TMP/book-bare.swift" \
-  || { echo "✗ the book row's destructive verb no longer names the book — 'Remove' beside the roster's own means nothing (§511)"; exit 1; }
-grep -qE 'Label\("Remove", ' "$TMP/book-bare.swift" \
-  && { echo "✗ the book says the bare 'Remove' again (§511)"; exit 1; }
 
 # ── §511: THE FOLD, THE SENTENCE, THE UNDO ──────────────────────────────────
 #
@@ -268,14 +250,10 @@ grep -q '"eye.fill"' "$TMP/views-bare.swift" \
   || { echo "✗ a watched row is indistinguishable from every other row (§511)"; exit 1; }
 grep -q 'Button(action: onToggleWatch)' "$VIEWS" \
   || { echo "✗ the row's star is gone entirely — the parameter is what keeps AddressGroupScreen on one anatomy (§461)"; exit 1; }
-grep -qE 'star\.fill|"star"' "$TMP/book-bare.swift" \
-  && { echo "✗ a star is back on a book row (§461)"; exit 1; }
 # …and the row's own star is drawn only when a caller passes the closure, so
 # neither screen may pass one. The book row keeps the parameter: `AddressGroupScreen`
 # and any future caller still get one anatomy, and a parameter nobody passes is
 # what makes that safe.
-grep -q 'onToggleWatch' "$TMP/book-bare.swift" \
-  && { echo "✗ the book passes a watch toggle to its rows (§461)"; exit 1; }
 grep -q 'onToggleWatch' "$TMP/screen-bare.swift" "$TMP/unwatch-bare.swift" \
   && { echo "✗ a screen passes a watch toggle to its rows — §511 merged the lists and did NOT bring the star back (§461)"; exit 1; }
 # The flight's ends are RAMP tokens the caller passes, and since §448 they are
@@ -312,29 +290,11 @@ grep -qE '\b[ab]\.(width|height|size)\b' "$TMP/flight-bare.swift" \
 # of the same question: "a search that also filtered them out would be a search
 # that cannot find the wallets you watch". With no block above, excluding them
 # here would mean the book cannot find the addresses you care most about.
-grep -q 'book.search(query).filter { !isWatched($0) }' "$TMP/book-bare.swift" \
-  && { echo "✗ the book excludes your own watched wallets again — §511 deleted the block they used to be drawn in, so they would be nowhere (§511)"; exit 1; }
-grep -q 'is one of your own wallets' "$TMP/book-bare.swift" \
-  && { echo "✗ the search still sends somebody to another screen for a row that is right here (§511)"; exit 1; }
-grep -q 'WalletRosterSection' "$TMP/book-bare.swift" \
-  && { echo "✗ the pinned Watching block is back — the book is two lists again (§511)"; exit 1; }
-grep -q 'WalletWatchSyncSection()' "$TMP/book-bare.swift" \
-  || { echo "✗ the chain read's status is gone — 'reading onchain activity' has no row to be, and a book that is still loading looks finished (§511)"; exit 1; }
 # The head must name what it LISTS. "Everyone else" was true only while the five
 # sat above; under a narrowing chip it says the count and NOT the population's
 # name, because the lit chip is already the name (§366's read-it-twice).
-grep -q 'Everyone · \\(count)' "$TMP/book-bare.swift" \
-  || { echo "✗ the book's head no longer names or counts what it actually lists (§448/§511)"; exit 1; }
-grep -q 'Everyone else' "$TMP/book-bare.swift" \
-  && { echo "✗ the head still says 'Everyone else' over a list that holds everyone (§511)"; exit 1; }
 
 # ── §511: THE WATCHING CHIP AND ITS CAP ─────────────────────────────────────
-grep -q 'watching: watchedCount' "$TMP/book-bare.swift" \
-  || { echo "✗ the chip strip never learns how many are watched — the Watching chip would never be offered (§511)"; exit 1; }
-grep -q 'AddressBookShape.watchingLabel(watchedCount' "$TMP/book-bare.swift" \
-  || { echo "✗ the Watching chip stopped carrying the cap — deleting the block deleted the only other place the app said how many of the five are spent (§511)"; exit 1; }
-grep -q 'watched: isWatched($0)' "$TMP/book-bare.swift" \
-  || { echo "✗ the chip filters on something other than the roster's own answer (§511)"; exit 1; }
 
 # ── §511: A SOCIAL ROW HAS A VERB ───────────────────────────────────────────
 #
@@ -342,8 +302,6 @@ grep -q 'watched: isWatched($0)' "$TMP/book-bare.swift" \
 # filling the feed. Every write door is shut for an ephemeral row by
 # construction (`isInBook` is false), which is why the book listed forty people
 # and offered nothing to do about any of them — §83's dead row, forty times.
-grep -q 'SocialUnfollow.perform(' "$TMP/book-bare.swift" \
-  || { echo "✗ a followed account cannot be unfollowed from the book row (§511)"; exit 1; }
 grep -q 'SocialUnfollow.perform(' "$TMP/views-bare.swift" \
   || { echo "✗ a followed account cannot be unfollowed from its card (§511)"; exit 1; }
 
@@ -372,10 +330,6 @@ grep -q 'SocialRoom.hasRoster(source)' "$TMP/people-bare.swift" \
 # NEGATIVE, comment-stripped: the shelf may not come back. `DS.Face.shelf` is
 # the ramp rung it was drawn at and this screen is the only place it was ever
 # used at this size.
-grep -qE 'DS.Face.shelf' "$TMP/screen-bare.swift" "$TMP/unwatch-bare.swift" "$TMP/book-bare.swift" \
-  && { echo "✗ the watched shelf is back — §448 deleted it because it drew every watched wallet a second time, with its name truncated (§448)"; exit 1; }
-grep -qE 'rosterSlot|emptyRosterSlot|rosterSlotWidth' "$TMP/screen-bare.swift" "$TMP/unwatch-bare.swift" "$TMP/book-bare.swift" \
-  && { echo "✗ the roster shelf's slots are back (§448)"; exit 1; }
 
 # ── §448: THE FEWEST WORDS ──────────────────────────────────────────────────
 #
@@ -387,8 +341,6 @@ grep -qE 'rosterSlot|emptyRosterSlot|rosterSlotWidth' "$TMP/screen-bare.swift" "
 # §497: the Connected spine LEFT the book (user ruling, 2026-08-27). The
 # drawing is deleted; the arithmetic stays in the model for the probe. A
 # reference returning here is the ruling being quietly reversed.
-grep -qE 'AddressSpineCard|sectionHeader\(String\(localized: "Connected"\)\)' "$TMP/book-bare.swift" \
-  && { echo "✗ the Connected spine is back on the address book — §497 removed it (user ruling, with a screenshot)"; exit 1; }
 [[ -f "Casberi/Casberi/Screens/AddressSpineCard.swift" ]] \
   && { echo "✗ AddressSpineCard.swift is back; §497 deleted it with its only call site"; exit 1; }
 grep -qE 'static func (headline|subhead)\(count:' "$CONN" \
@@ -413,34 +365,22 @@ grep -q 'absorbing == AddressBook.key(forGroup: name)' "$GROUPS" \
 # people, and a checkmark, a word and a tally names none of them.
 grep -q 'AddressMark(entry: member' "$GROUPS" \
   || { echo "✗ a group row lost its members' faces"; exit 1; }
-grep -q 'absorbing == key' "$BOOKSCREEN" \
-  || { echo "✗ a dropped face is no longer absorbed by the deck"; exit 1; }
 grep -q 'defaults.set(true, forKey: seededKey)' "$SOURCE" \
   || { echo "✗ the seen-set no longer seeds silently on first sight — a year of history would announce itself as today's news (the Hyperliquid 2026-07-30 bug)"; exit 1; }
 
 # ONE ROW ANATOMY. Two spellings of the book row is two books.
 grep -q 'struct AddressBookRow: View' "$VIEWS" \
   || { echo "✗ the shared row is gone; the manager and the group screen would each draw their own"; exit 1; }
-grep -q 'AddressBookRow(entry: entry' "$BOOKSCREEN" \
-  || { echo "✗ the book room no longer draws the shared row"; exit 1; }
 grep -q 'AddressBookRow(entry: entry' "$GROUPS" \
   || { echo "✗ the group screen no longer draws the shared row"; exit 1; }
 
 # THE THREE MOVE DOORS (§440). Each is named, because two of them exist
 # precisely so the feature survives the third misbehaving on a device.
-grep -q '.draggable(entry.address)' "$BOOKSCREEN" \
-  || { echo "✗ a book row is no longer draggable — dragging onto a group card is the primary filing gesture"; exit 1; }
-grep -q 'dropDestination(for: String.self)' "$BOOKSCREEN" \
-  || { echo "✗ a group card is no longer a drop target"; exit 1; }
-grep -q 'bookSheet = .move(entry)' "$BOOKSCREEN" \
-  || { echo "✗ swipe no longer opens the filing sheet"; exit 1; }
 grep -q 'struct AddressMoveSheet: View' "$GROUPS" \
   || { echo "✗ the filing sheet is gone"; exit 1; }
 # The swipe must stay a DOOR and never a write — the design law's own "swipe
 # verbs are reads; a write belongs behind a deliberate press" (§212). It opens
 # a sheet, and the sheet takes the consent.
-grep -q 'swipeActions(edge: .trailing, allowsFullSwipe: false)' "$BOOKSCREEN" \
-  || { echo "✗ the book's swipe gained a full swipe — a full swipe commits without a second beat, which for a write is exactly what §212 forbids"; exit 1; }
 
 # ONE DESTRUCTIVE VERB PER ROW, on the swipe as well as in the menu
 # (2026-08-29). Reported as "why do the address book items have a swipe to move
@@ -452,15 +392,15 @@ grep -q 'swipeActions(edge: .trailing, allowsFullSwipe: false)' "$BOOKSCREEN" \
 # a bare `grep -q` here passes green with the swipe arm deleted. Counted by
 # OCCURRENCE and not by line (`grep -c` counts lines, and one line carrying both
 # is how the equivalent guard in `safetx-selftest.sh` was first defeated).
-removes=$(grep -o 'Label("Remove from book"' "$TMP/book-bare.swift" | wc -l | tr -d ' ')
-[ "$removes" -ge 2 ] \
+# **RE-PINNED (prd §690):** the swipe arm lived on the deleted book screen; the
+# long-press menu lives on the shared row in $VIEWS and is what survives.
+removes=$(grep -o 'Label("Remove from book"' "$TMP/views-bare.swift" | wc -l | tr -d ' ')
+[ "$removes" -ge 1 ] \
   || { echo "✗ the book names 'Remove from book' $removes time(s) — the swipe and the long-press menu must each carry it, or an unwatched row's swipe is Move-only again"; exit 1; }
-grep -q 'Label("Remove from book", systemImage: "trash")' "$TMP/book-bare.swift" \
-  || { echo "✗ the book's remove verb lost its mark (§511)"; exit 1; }
 
 # NEGATIVE, on comment-stripped copies: §435's money ruling. The manager is a
 # PEOPLE screen and the feed's crown owns the money reading, once.
-for f in "$TMP/screen-bare.swift" "$TMP/book-bare.swift" "$TMP/groups-bare.swift"; do
+for f in "$TMP/screen-bare.swift" "$TMP/groups-bare.swift"; do
   grep -q 'WalletValue.money' "$f" \
     && { echo "✗ a money figure returned to the address book — §435 struck every one of them off this screen"; exit 1; }
 done
@@ -475,8 +415,6 @@ grep -qE 'isDateIn(Today|Yesterday)' "$TMP/shape-bare.swift" \
   && { echo '✗ lastPhrase asks the system clock again — its now parameter would be a lie for the today and yesterday rungs, and this harness would pass or fail by time of day (§448)'; exit 1; }
 
 # NEGATIVE: the sky is gone and must not come back by reference.
-grep -qE 'AddressSky' "$TMP/screen-bare.swift" "$TMP/book-bare.swift" \
-  && { echo "✗ a wallet screen references AddressSky, which was deleted with §440"; exit 1; }
 [[ -f "Casberi/Casberi/Model/AddressSky.swift" ]] \
   && { echo "✗ AddressSky.swift is back; §440 replaced it with the spine"; exit 1; }
 
@@ -487,23 +425,9 @@ grep -qE 'AddressSky' "$TMP/screen-bare.swift" "$TMP/book-bare.swift" \
 # that stopped firing files the row off-screen, and a flight with no Reduce
 # Motion guard is the §79 violation the motion audit cannot see (it is
 # gesture-driven, so the audit's appear-trigger check never fires).
-grep -q 'CounterpartyRetitle.applyCurrentName(for: target, in: modelContext)' "$BOOKSCREEN" \
-  || { echo "✗ the save no longer captures what the name rewrote — the whisper would count nothing forever (§462)"; exit 1; }
-grep -q 'rewrote > 0' "$TMP/book-bare.swift" \
-  || { echo "✗ the whisper lost its zero gate — 'Saved — 0 transfers' is a count of nothing (§83/§462)"; exit 1; }
-grep -q 'isReduceMotionEnabled == false else { return }' "$BOOKSCREEN" \
-  || { echo "✗ the save flight ignores Reduce Motion (§462)"; exit 1; }
-grep -q 'onChange(of: pendingReveal)' "$BOOKSCREEN" \
-  || { echo "✗ the save no longer scrolls to the row it filed — the row lands off-screen under its letter (§462)"; exit 1; }
 # THE QUIET TOP (§462). The strip waits for a REAL group; the zeroes are one
 # sentence at the foot. The foot line is also §267's discoverability answer,
 # so it may not lose the filing hint.
-grep -q 'private func quietFootSection' "$BOOKSCREEN" \
-  || { echo "✗ the quiet foot is gone — the filing hint has no home (§462; its spine line left with §497)"; exit 1; }
-grep -q 'Groups arrive with your first filing' "$TMP/book-bare.swift" \
-  || { echo "✗ the foot lost the filing hint — with the dashed card gone, nothing on the screen says groups exist (§267/§462)"; exit 1; }
-grep -q 'if !groups.isEmpty {' "$TMP/book-bare.swift" \
-  || { echo "✗ the groups strip no longer waits for a real group (§462)"; exit 1; }
 # WHEN, down the trailing edge (§462) — recency left the subline for the slot
 # the star vacated. Both halves guarded, or the fact is drawn twice or not at
 # all.
@@ -527,8 +451,17 @@ grep -q 'AddressBookShape.lastPhrase(activity.lastAt)' "$TMP/views-bare.swift" \
 #
 # So the guards invert: the door in the Wallet entry must survive, and no
 # rail, room card or strip may grow a book door back.
+# **THE BOOK IS GONE (prd §690).** The guard that stood here pinned the Wallet
+# catalog entry's door to it as "the one way in". The accounts-door redesign
+# made each seat's page its own directory, four devnet pages got that, and this
+# page kept a door to the old screen instead of absorbing it — so the ruling is
+# inverted: the page carries the rows and the form, and nothing pushes a book.
 grep -q 'route.push(.addressBook)' "$SCREEN" \
-  || { echo "✗ the Wallet catalog entry lost its address-book door — with the rails' and strip's doors gone by ruling (2026-09-06) this is the one way in"; exit 1; }
+  && { echo "✗ the Wallet page grew its address-book door back — the page IS the directory now (§690)"; exit 1; }
+grep -q 'rows: rows,' "$SCREEN" \
+  || { echo "✗ the Wallet page lost its rows — the directory lives here, not in a book (§690)"; exit 1; }
+grep -q 'onRemoveRow: forget,' "$SCREEN" \
+  || { echo "✗ a directory row lost its one verb (§690)"; exit 1; }
 for f in Casberi/Casberi/Shell/FaceScopeRail.swift Casberi/Casberi/Shell/MainSurface.swift \
          Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/VibenetRoomCard.swift; do
   # Comment-stripped: VibenetRoomCard's history NAMES the callback it lost
@@ -543,9 +476,9 @@ grep -q 'Image(systemName: "gearshape")' "Casberi/Casberi/Shell/RoomGear.swift" 
 grep -q 'Image(systemName: "square.grid.2x2")' "Casberi/Casberi/Shell/RoomGear.swift" \
   || { echo "✗ the room door no longer wears the Accounts glyph (2026-09-06)"; exit 1; }
 grep -q 'case addressBook' "$ROUTE" \
-  || { echo "✗ the address book has no route node"; exit 1; }
+  && { echo "✗ the address book has a route node again (§690)"; exit 1; }
 grep -q 'AddressBookScreen()' "$SHELL_MAIN" \
-  || { echo "✗ nothing resolves the addressBook node to a screen"; exit 1; }
+  && { echo "✗ the shell resolves an address-book screen that no longer exists (§690)"; exit 1; }
 # THE ADD VERB IS GONE, not merely stepping aside at the cap (§466, reversing
 # §461's own "steps aside at the cap" — watching a new wallet and seeing the
 # whole roster are the same screen now that the roster moved into the book,
@@ -602,8 +535,6 @@ grep -q 'guard !reduceMotion else { grown = true; return }' "$TMP/reveal-bare.sw
 # obvious way to "improve" this moment is to put it back. Read from a
 # comment-stripped copy, because both files explain the decision by naming the
 # API it governs (the Obsidian/Cursor lesson).
-grep -q 'navigationTransition' "$TMP/views-bare.swift" "$TMP/book-bare.swift" "$TMP/reveal-bare.swift" \
-  && { echo "✗ the address book reached for .navigationTransition(.zoom) again — prd §232 dropped it for sheets after a device-specific crash; restore only on a symbolicated stack proving another cause"; exit 1; }
 
 # 2 · THE PASTE'S DECK. It must read the WRITE's own tokenizer, or the preview
 # and the write are two parsers for one format and the deck shows faces the
@@ -612,27 +543,13 @@ grep -q 'func bulkAddresses(_ raw: String) -> \[String\]' "$BOOK" \
   || { echo "✗ AddressBook no longer enumerates a paste's addresses — the deck would need a parser of its own (§502)"; exit 1; }
 [[ $(grep -c 'Self.tokens(in: line)' "$BOOK") -ge 3 ]] \
   || { echo "✗ the paste's three readers no longer share one tokenizer — the deck, the bulk test and the write would disagree about what a list is (§502)"; exit 1; }
-grep -q 'book.bulkAddresses(draft)' "$TMP/book-bare.swift" \
-  || { echo "✗ the deck no longer reads the paste through the shared tokenizer (§502)"; exit 1; }
-grep -q 'prefix(AddressDeck.shown)' "$TMP/book-bare.swift" \
-  || { echo "✗ the deck no longer caps its faces — a fan of forty is a smear (§502)"; exit 1; }
-grep -q 'AddressDeck.line(count: addresses.count)' "$TMP/book-bare.swift" \
-  || { echo "✗ the deck's count is no longer AddressDeck's — a hand-rolled string here is how the tail stops being named (§300, §502)"; exit 1; }
 
 # 3 · THE FILTER NARROWS RATHER THAN REPLACING, and only when it is a FILTER:
 # while searching the same rows are rewritten on every keystroke, and a lateral
 # slide per character is motion spent on something that is not a decision.
-grep -q '.transition(draft.isEmpty' "$TMP/book-bare.swift" \
-  || { echo "✗ the book's rows no longer distinguish a filter change from a keystroke — every search character would slide the whole list sideways (§502)"; exit 1; }
-grep -q '.opacity.combined(with: .move(edge: .leading))' "$TMP/book-bare.swift" \
-  || { echo "✗ a filtered-out row no longer leaves toward the leading edge — the chip reads as handing you a different book rather than narrowing this one (§502)"; exit 1; }
 
 # 4 · THE SCRUB LANDS SOMEWHERE. Two halves in two functions: the bar's callback
 # records where you arrived, the heading reads it. Either alone is silent.
-grep -q 'landedLetter = letter' "$TMP/book-bare.swift" \
-  || { echo "✗ the scrubber's pick no longer records where it landed — the destination would say nothing again (§502)"; exit 1; }
-grep -q 'landedLetter == letter ? DS.tint : DS.textSecondary' "$TMP/book-bare.swift" \
-  || { echo "✗ the letter you land on no longer answers the scrub (§502)"; exit 1; }
 
 # 5 · WHAT THE COPY TOOK. ONE copy path on the card, so the tile and the reach
 # row cannot answer differently — which is exactly what had happened: the row's

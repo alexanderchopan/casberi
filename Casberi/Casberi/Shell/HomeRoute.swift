@@ -82,9 +82,6 @@ final class HomeRoute {
         /// the roster — the five addresses the app reads — which is the only
         /// thing on that side of the line now.
         ///
-        /// Valueless, unlike `addressGroup`: there is exactly one book, and the
-        /// group it opens onto pushes its own node on top.
-        case addressBook
         /// Vibenet's own address book — the devnet accounts you watch, and
         /// every verb that manages them (prd §465).
         ///

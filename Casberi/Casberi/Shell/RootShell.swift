@@ -821,9 +821,6 @@ struct RootShell: View {
             // already, badged `vibenet` by `VibenetWatch.add`. The argument is
             // still accepted so an existing sweep does not break; it just lands
             // where every other address lands.
-            if UserDefaults.standard.string(forKey: "openAddressBook") != nil {
-                sceneState.route.push(.addressBook)
-            }
             // `-openSources YES` raises the sources tray, which is otherwise
             // reachable ONLY by a long press on the agent bar — a gesture no
             // headless run can make and no screenshot pass can stage. Added

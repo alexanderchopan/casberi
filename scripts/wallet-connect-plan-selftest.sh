@@ -70,13 +70,14 @@ SCREEN="Casberi/Casberi/Screens/WalletScreen.swift"
 #     which is the one that can actually break.
 FIELD="Casberi/Casberi/Screens/WalletWatchField.swift"
 CONNECTROW="Casberi/Casberi/Screens/ConnectWalletRow.swift"
-BOOKSCREEN="Casberi/Casberi/Screens/AddressBookScreen.swift"
+# BOOKSCREEN is gone (prd §690); the connect picker is hosted by the Wallet
+# catalog page ($SCREEN) and its guards below read $CODE.
 SHEET="Casberi/Casberi/Screens/WalletConnectPickerSheet.swift"
 STORE="Casberi/Casberi/Model/WalletStore.swift"
 ENSF="Casberi/Casberi/Model/ENS.swift"
 BRIDGE="Casberi/Casberi/Model/WalletConnectBridge.swift"
 SAFE="Casberi/Casberi/Model/SafeBridge.swift"
-for f in "$PLAN" "$SCREEN" "$FIELD" "$CONNECTROW" "$BOOKSCREEN" "$SHEET" "$STORE" "$ENSF" "$BRIDGE" "$SAFE"; do
+for f in "$PLAN" "$SCREEN" "$FIELD" "$CONNECTROW" "$SHEET" "$STORE" "$ENSF" "$BRIDGE" "$SAFE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -97,7 +98,6 @@ ROWCODE=$(mktemp /tmp/wcplan-row.XXXXXX)
 trap 'rm -f "$CODE" "$FIELDCODE" "$BOOKCODE" "$ROWCODE"' EXIT
 grep -vE '^[[:space:]]*(//|\*|/\*)' "$SCREEN" > "$CODE"
 grep -vE '^[[:space:]]*(//|\*|/\*)' "$FIELD" > "$FIELDCODE"
-grep -vE '^[[:space:]]*(//|\*|/\*)' "$BOOKSCREEN" > "$BOOKCODE"
 grep -vE '^[[:space:]]*(//|\*|/\*)' "$CONNECTROW" > "$ROWCODE"
 # The negative check covers every host that could reach a connected account:
 # WalletScreen, the field where ConnectWalletRow lives (§466), the BOOK, which
@@ -125,17 +125,12 @@ grep -q 'cardSheet:' "$CODE" \
        echo "  ONE presentation — a sibling .sheet self-dismisses the first tap (§466/§639)"; exit 1; }
 grep -q 'WalletConnectPickerSheet(shared:' "$CODE" \
   || { echo "✗ WalletScreen's card sheet no longer resolves the connect picker (§466)"; exit 1; }
-grep -q 'case .connectPicker' "$BOOKSCREEN" \
-  || { echo "✗ the book's sheet route no longer resolves .connectPicker — the roster's"; \
-       echo "  own connect flow would have nowhere to land (§466)"; exit 1; }
 grep -q 'sheet = .card(id: "connect")' "$CODE" \
   || { echo "✗ WalletScreen no longer wires the field's found accounts to its own sheet (§466)"; exit 1; }
 grep -q 'onConnectFound:' "$CODE" \
   || { echo "✗ WalletScreen no longer takes the field's found accounts at all (§466)"; exit 1; }
 # The book's own connect row, which is the live door since §511 deleted the
 # roster section that carried a second (and never-read) `onConnectFound:`.
-grep -q 'ConnectWalletRow(onFound: { bookSheet = .connectPicker(\$0) }' "$BOOKSCREEN" \
-  || { echo "✗ the book no longer wires its connect row's found accounts to its own sheet (§466/§511)"; exit 1; }
 
 # The sheet must open on the PLAN's preselection, never its own. A sheet that
 # ticks its own boxes can tick more than the Add button will take.

@@ -350,12 +350,6 @@ enum DemoCensus {
             let lines = await WalletActingParties.probeLines()
             return lines.isEmpty ? .empty("no lines") : .ok(lines.first ?? "")
         })
-        out.append(Surface(name: "wallet.addressBook", gate: .required) {
-            let entries = AddressBook.shared.all
-            let known = entries.filter { $0.kind != .unknown }.count
-            return entries.isEmpty ? .empty("empty book")
-                : .ok("\(entries.count) entries, \(known) with a detected kind")
-        })
 
         // ── Social: rosters and the inbound half ──────────────────────────
         for source in ["Farcaster", "Bluesky"] where sources.contains(source) {

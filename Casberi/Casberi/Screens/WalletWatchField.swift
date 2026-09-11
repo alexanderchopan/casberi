@@ -97,7 +97,12 @@ struct WalletWatchField: View {
             // §440): it is only relevant on an empty field, so leaving it
             // under the preview would stack two ways to add one address on
             // top of each other.
-            if WalletConnectBridge.isAvailable, draft.isEmpty, wallet.canWatchMore {
+            // **FIRST RUN ONLY (prd §690).** This card drew under the field on a
+            // page that now carries fact rows and a directory beneath it, and
+            // — a card, not a 56pt row — it overlapped "Connection". With a
+            // wallet already watched the page's own Connection row is the door.
+            if WalletConnectBridge.isAvailable, draft.isEmpty, wallet.canWatchMore,
+               wallet.addresses.isEmpty {
                 ConnectWalletRow(onFound: { showConnectPicker($0) },
                                  onNote: { message, isError in
                                      result = message
