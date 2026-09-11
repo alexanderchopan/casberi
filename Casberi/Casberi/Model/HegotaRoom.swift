@@ -691,6 +691,33 @@ struct HegotaFrameMix: Equatable, Sendable {
 /// scope was Activity filtered — the same rows, in the same shape, ordered by
 /// when rather than by who. Somebody paying for eleven of your transactions
 /// and eleven people paying once each are completely different facts about
+/// This chain's frames, as the family's shared reading (prd §698).
+///
+/// **De-duplicated by hash**, the way `HegotaFrameMix.of` already was: a move
+/// reaches this list once per watched address that was party to it, and a
+/// transaction counted twice makes the headline disagree with the rows.
+///
+/// **No rollback outcome here**: EIP-8312's vault has no undo, so a step either
+/// ran, failed, or could not be read. Hegotá Frames is the only chain in the
+/// family that can roll one back.
+enum HegotaFrames {
+    static func runs(_ moves: [HegotaMove]) -> [RoomFrames.Run] {
+        var seen = Set<String>()
+        return moves.compactMap { move in
+            guard let frames = move.frames, !frames.isEmpty else { return nil }
+            guard seen.insert(move.hash.lowercased()).inserted else { return nil }
+            let steps = frames.enumerated().map { index, frame in
+                RoomFrames.Step(modeName: frame.mode.label,
+                                weight: Double(frame.gasUsed ?? 0),
+                                outcome: frame.succeeded == nil ? .unread
+                                       : (frame.succeeded == true ? .ran : .failed),
+                                id: index)
+            }
+            return RoomFrames.Run(id: move.hash, steps: steps)
+        }
+    }
+}
+
 /// **THE TWO KINDS OF PERMISSION THIS CHAIN GRANTS (prd §692).**
 ///
 /// A NONCE KEY is standing authority: a named key's transfers do not wait for

@@ -519,7 +519,7 @@ struct PrivacyDevnetLegend: View {
 // "we can count, what does that do".
 //
 // What replaced them is above: `PrivacyDevnetKindMix` answers what these
-// transactions ARE, and `PrivacyDevnetBudgetBar` what their steps were allowed
+// transactions ARE, and the shared frames strip what their steps DID
 // and what they cost. The Accounts and Spend keys scopes draw NO figure at
 // all — their headline is the number and their rows are the detail, which is
 // strictly more than the shapes were saying.
@@ -640,115 +640,11 @@ struct PrivacyDevnetKindMix: View {
 
 // MARK: - What the room asked the chain for (prd §606)
 
-/// The two budgets a frame transaction carries, summed across the room.
-///
-/// **THIS REPLACES SIX IDENTICAL STRIPS.** The Frames scope drew one anatomy
-/// per transaction weighted by execution budget, and most frames here carry the
-/// same 320,000 — so it was six identical bar-pairs under a headline reading
-/// "12 steps", which is the "who cares, what does that even tell anyone" the
-/// pass was reported for.
-///
-/// The reading that is NOT already in the headline is the split. EIP-8141 gives
-/// a frame two allowances: what it may compute, and what it may GROW. On this
-/// chain state is the one that varies — most frames ask for none, a pool
-/// spend's second frame asks for 550,000 — so the proportion between them is
-/// what these transactions actually are.
-///
-/// **The spend rides on top where every receipt was read**, as a fill inside
-/// the execution segment on that segment's own axis, so the figure says both
-/// what was asked for and what it cost.
-struct PrivacyDevnetBudgetBar: View {
-    let budgets: PrivacyDevnetFigure.Budgets
-    let reduceMotion: Bool
+// **`PrivacyDevnetBudgetBar` IS DELETED (prd §698)** — it drew what a
+// transaction's steps were allowed to spend, under the Frames scope, which asks
+// what they DID. The room draws the family's shared frames figure there now,
+// and the per-step budgets are still on the frame sheet.
 
-    private var execution: Double { Double(budgets.execution ?? 0) }
-    private var state: Double { Double(budgets.state ?? 0) }
-    private var total: Double { execution + state }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            GeometryReader { geo in
-                HStack(spacing: 3) {
-                    if execution > 0 {
-                        ZStack(alignment: .leading) {
-                            // **THE TRACK IS ONLY DIM WHEN SOMETHING FILLS
-                            // IT.** Drawn at 0.35 unconditionally, the LARGER
-                            // share read weaker than the smaller one beside
-                            // it — seen on a device, 4.9M of compute looking
-                            // fainter than 1.5M of state. Dim means "awaiting
-                            // a fill"; with no receipt read there is no fill
-                            // coming, so it carries its own weight.
-                            Capsule().fill(DS.tint.opacity(budgets.used == nil ? 0.9 : 0.3))
-                            if let used = budgets.used, execution > 0 {
-                                // What the chain actually charged, on the
-                                // execution segment's own axis. Clamped: the
-                                // receipt covers the whole transaction while
-                                // this sums the frames, so an intrinsic cost
-                                // outside any frame can exceed it.
-                                Capsule()
-                                    .fill(DS.tint)
-                                    .frame(width: segment(geo, execution)
-                                           * CGFloat(min(1, Double(used) / execution)))
-                            }
-                        }
-                        .frame(width: segment(geo, execution))
-                        .chartArrival(index: 0, reduceMotion: reduceMotion)
-                    }
-                    if state > 0 {
-                        Capsule()
-                            .fill(DS.tint.opacity(0.5))
-                            .frame(width: segment(geo, state))
-                            .chartArrival(index: 1, reduceMotion: reduceMotion)
-                    }
-                }
-            }
-            .frame(height: 26)
-
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let gas = budgets.execution, gas > 0 {
-                    row(fill: budgets.used == nil ? 0.9 : 0.3,
-                        text: usedLine ?? String(localized: "\(PrivacyDevnetFigures.grouped(gas)) to compute"))
-                }
-                if let growth = budgets.state, growth > 0 {
-                    row(fill: 0.5, text: String(localized: "\(PrivacyDevnetFigures.grouped(growth)) to grow state"))
-                } else if budgets.state == 0 {
-                    // **A ZERO IS A READING** — these steps asked to grow no
-                    // state, which is a fact about them, not a gap in the read.
-                    Text(String(localized: "None of these steps asked to grow state"))
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textTertiary)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(String(localized: "What these steps were allowed")))
-    }
-
-    private var usedLine: String? {
-        guard let gas = budgets.execution, gas > 0, let used = budgets.used else { return nil }
-        return String(localized: "\(PrivacyDevnetFigures.grouped(used)) of \(PrivacyDevnetFigures.grouped(gas)) computed")
-    }
-
-    private func segment(_ geo: GeometryProxy, _ value: Double) -> CGFloat {
-        guard total > 0 else { return 0 }
-        let gaps: CGFloat = (execution > 0 && state > 0) ? 3 : 0
-        return max(8, (geo.size.width - gaps) * CGFloat(value / total))
-    }
-
-    @ViewBuilder private func row(fill: Double, text: String) -> some View {
-        HStack(spacing: DS.Space.s2) {
-            Capsule().fill(DS.tint.opacity(fill)).frame(width: 14, height: 8)
-            Text(text)
-                .dsText(.callout15)
-                .foregroundStyle(DS.textSecondary)
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Spacer(minLength: 0)
-        }
-    }
-}
 
 /// One spelling of a count somebody reads, shared by this room's figures.
 enum PrivacyDevnetFigures {

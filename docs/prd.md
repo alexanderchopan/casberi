@@ -100,6 +100,8 @@ at all.
 | §363 | The money receipt's TEAR carries state — torn is history, flat is still in the machine | reversed by §583 (an edge cannot survive the surface it was an edge of. Checked rather than assumed before removing: every `.open` receipt built in `MoneyReceipt` stamps `.settling` / `.pending` / `.screening` / `.yourTurn` / `.needsProof` / `.openPosition`, none of them quiet — so the silhouette and the word were two renderings of one fact. `finality` itself is untouched, and the settle keeps its haptic) |
 | §680 | Devnet Holdings is a treemap of what each watched address holds, and a scope does not restate Home's balance | amended by §694 (the UTXO scope's headline moved from the balance to counts for exactly this reason; Holdings itself is unchanged) |
 | §692 | Permissions is one scope in five rooms; Wallet Home's flow becomes rows | amended by §695 (the flow's net line — "in … · out … · Kept +…" — was dropped with the band's frame and is restored above the blocks) |
+| §548 | The Frames room's scope lists the transactions that ran more than one step | amended by §698 (it lists every transaction that ran a step — a plain transfer parses to none, so the filter was excluding framed transactions, not transfers) |
+| §606 | Privacy's Frames scope draws a room-wide gas budget bar | superseded by §698 (a budget is what a step was allowed to cost, not what it did; the scope draws the family's frames figure and the budgets are on the frame sheet) |
 | §555 | The UTXO treemap's caption states how many pieces the balance is held as | amended by §696 (the count moved to the scope's headline; the caption names the unspent half and keeps the change fact) |
 | §546 | The Permissions slot is COUNTS by rung, four bare numerals in two columns | superseded in shape by §692 (the counts and the no-names rule stand; the grid is shared with five rooms and a cell is a well) |
 | §566 | The sponsor scope's figure is a split bar of whose gas paid | superseded by §692 (the share leads the shared grid; the bar is deleted) |
@@ -53233,3 +53235,76 @@ now explains its own dead end).
 **The cost the user took knowingly.** A placed kept-ask widget goes to the system's "unable to load" placeholder on update (*"get rid of it. i doubt any user is using it"*). And the App Store description, the Mac description and `website/docs.html` all still sell "ASK IT" — **that copy is now wrong and is NOT changed in this pass**; it is owed before the next submission, because a store page promising a feature the build hides is the §83 problem at the one place a stranger meets it first.
 
 **UNSEEN on a device.** Verified by build and by `dock-selftest.sh`'s per-door checks.
+## §698 — The Frames scope is one reading in three rooms (user: "OK, let's talk about frames. Do an inventory and show me what the crowns are and the lists are", then "ok do it", 2026-09-11)
+
+**Three rooms asked one question and gave three answers, and one of them did not answer it
+at all.** Hegotá UTXO counted frames over its framed transactions and drew them as
+mode-coloured strips. Hegotá Privacy counted `frameCount` and drew a GAS BUDGET BAR — what
+the steps were ALLOWED TO COST, which is not what ran, and the same bar that sat over
+Sponsors until §692. Hegotá Frames — the room named for frames — counted every row it had,
+one-step transactions included, then listed only the multi-step ones, so its headline could
+read "14 steps" above four rows, and its own rows drew no frame at all.
+
+**A STEP IS A FRAME, and the population is every transaction that ran one.** The headline
+counts frames over exactly the population the list shows, in all three rooms, through one
+census (`RoomFrames.mix`). That equality is the whole ruling: the defects above are three
+spellings of a scope disagreeing with itself. Hegotá Frames' `rows.count > 1` filter goes —
+**measured before changing it**, `FramesRead.frames(inTransaction:)` returns `[]` where the
+key is absent, so a plain transfer parses to NO frames and admitting the one-step
+transactions admits genuinely framed ones and no transfers.
+
+**MODE IS THE FILL; OUTCOME OVERRIDES IT.** A segment's width is what the step cost and its
+colour is what the step WAS — this room tinted by outcome, that one by mode, one drawing
+with two meanings in adjacent rooms. Three overrides, in order, each something a reader must
+not miss where a mode name is not: a FAILED step takes the alarm colour, a ROLLED BACK one is
+an outline (it ran and was undone — a different fact from failing, and only Hegotá Frames has
+it), and an UNREAD one is hollow (a receipt we could not pair is not a step that went wrong —
+§515a, that zero and unknown are different readings).
+
+**ONE VOCABULARY FOR ONE NUMBERING.** The mode is EIP-8141's number and the rooms had three
+glossaries for it: Hegotá UTXO said Call / Verify / Send / Check / UTXO, Hegotá Frames said
+Default / Verify / Sender / "Mode N", and Hegotá Privacy read the number and named nothing.
+That is §500's own complaint — one room using two words for one thing — spread across rooms
+instead of within one. Hegotá UTXO's words win because they were the deliberated ones: a
+*Call* is what the general frame is, where "Default" names its position in a table rather
+than its job. **An unnamed number says its number**, because a name guessed from a
+neighbour's table is the overclaim §83 bans and this chain family is young enough that a new
+mode is an ordinary event.
+
+**What could not be measured, said plainly.** Hegotá Privacy's own mode numbers were not
+confirmed: 1,200 blocks off the tip of both that chain and Hegotá Frames carry ZERO framed
+transactions today, so the census that would have named them found nothing. That is exactly
+why the fallback prints "Mode 7" rather than borrowing a sibling's name — and it is a
+measurement that should be repeated the next time either chain is busy.
+
+**The budget is not lost, it is relocated.** A budget is a PER-STEP fact and the frame sheet
+states it; it was never a whole-scope reading. `PrivacyDevnetBudgetBar` and
+`PrivacyDevnetFigure.budgets` are deleted with the figure they fed, and their best line is
+kept where a reader will meet it: ZERO IS A READING, NIL IS AN ABSENCE — most frames on that
+chain ask to grow no state, which is a fact, while an unread budget is us not knowing, and
+both draw nothing.
+
+**A FIND WORTH THE PASS ON ITS OWN.** `PrivacyDevnetFigure.shares` is the family's best
+implementation of how to divide a strip — a floor a step stays countable at, and
+reserve-then-share rather than clamp-and-renormalise, which pushes a clamped step back BELOW
+its own floor (measured: weights 900 and 1 give 0.107 against a 0.12 floor). It lost its only
+caller when §606 replaced that room's per-frame strip with the budget bar, so **the best code
+here was dead with live tests over it** — `HegotaRoom.valueSeries`' lesson wearing the other
+face: not a twin nobody draws, an original nobody draws. It is `RoomFrames.shares` now, drawn
+by three rooms, and the fixtures that kept it correct moved with it.
+
+**Every figure dimension derives from `DSRoomChassis.figureSlot`** (§665), including how many
+runs fit — so `frameRows = 5` is gone as a written-down number and falls out of the
+arithmetic at this slot height. The guard follows the rule rather than the constant. The
+caption keeps every ruling it had: it counts TRANSACTIONS where the headline counts STEPS
+(§510's confusion), a failure is worth the whole caption, `leaders` is the caption's question
+while `slices` is the drawing's order, and a mode label is a NAME that is never lowercased.
+
+**And the rows carry the shape.** Hegotá UTXO has drawn a strip on its framed rows since it
+shipped; the other two said "3 frames" in words. All three draw one now, as a texture rather
+than a document — it does not run on appear.
+
+Supersedes §566's sponsor-era strip sizing and §606's budget bar for this scope, amends §548
+(the Frames room lists every framed transaction, not only the multi-step ones) and §500 (the
+mode vocabulary is the family's, stated once). §510's population note and §503's run-on-open
+survive whole, now for three rooms.

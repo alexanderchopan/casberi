@@ -433,6 +433,43 @@ struct FramesAccount: Identifiable, Equatable, Codable {
     var rolledBack: [FramesFrameRow] { moves.flatMap(\.rolledBack) }
 }
 
+/// This chain's frames, as the family's shared reading (prd §698).
+///
+/// **A step that ran and was UNDONE is its own outcome**, and this is the only
+/// chain in the family that has one: `valueLanded == false` is a frame whose
+/// value never landed though the transaction itself succeeded, which the strip
+/// draws as an outline rather than as a failure.
+///
+/// **EVERY transaction with at least one frame (prd §698).** The scope filtered
+/// on `rows.count > 1` while its headline summed every row, so a room could say
+/// "14 steps" over four rows. A plain transfer parses to NO frames — measured,
+/// `FramesRead.frames(inTransaction:)` returns `[]` where the key is absent —
+/// so counting the one-step transactions admits genuinely framed ones and no
+/// transfers.
+enum FramesFrames {
+    static func runs(_ moves: [FramesMove]) -> [RoomFrames.Run] {
+        moves.compactMap { move in
+            guard !move.rows.isEmpty else { return nil }
+            let steps = move.rows.enumerated().map { index, row in
+                RoomFrames.Step(modeName: RoomFrames.modeName(row.frame.mode),
+                                weight: Double(row.outcome?.gasUsed ?? row.frame.executionGas ?? 0),
+                                outcome: outcome(of: row),
+                                id: index)
+            }
+            return RoomFrames.Run(id: move.hash, steps: steps)
+        }
+    }
+
+    private static func outcome(of row: FramesFrameRow) -> RoomFrames.Outcome {
+        guard let landed = row.outcome else { return .unread }
+        if !landed.succeeded { return .failed }
+        // A frame that carried value the chain never logged ran and was undone.
+        // `valueLanded` is nil for a frame that carried none, which is most of
+        // them and is not a rollback.
+        return row.valueLanded == false ? .rolledBack : .ran
+    }
+}
+
 // MARK: - Who an address is, from this room's point of view
 
 /// **WHO, rather than a hex string.**

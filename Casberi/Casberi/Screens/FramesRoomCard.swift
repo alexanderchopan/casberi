@@ -75,11 +75,11 @@ struct FramesRoomFigure: View {
         // the transaction count is the Activity scope's headline one chip
         // away, so repeating it makes two scopes look like one reading twice.
         // What this scope adds is that those transactions have parts.
+        // **ONE DEFINITION OF A STEP (prd §698).** This summed every row while
+        // the list filtered on `rows.count > 1`, so the headline could say "14
+        // steps" over four rows. Both read the shared census now.
         case .frames:
-            let steps = moves.reduce(0) { $0 + $1.rows.count }
-            guard steps > 0 else { return section.emptyHeadline }
-            return steps == 1 ? String(localized: "1 step")
-                              : String(localized: "\(String(steps)) steps")
+            return RoomFrames.headline(RoomFrames.mix(frameRuns)) ?? section.emptyHeadline
         }
     }
 
@@ -140,7 +140,7 @@ struct FramesRoomFigure: View {
         // **EMPTY IS "NOTHING CONNECTS THEM" (prd §689)**, not "nothing is
         // watched" — the rows list what you watch either way.
         case .accounts: return FramesConnections.map(accounts)?.nodes.isEmpty ?? true
-        case .frames:   return !moves.contains { $0.rows.count > 1 }
+        case .frames:   return frameRuns.isEmpty
         case .permissions: return !moves.contains(where: \.sponsored)
         }
     }
@@ -374,59 +374,34 @@ struct FramesRoomFigure: View {
     /// absent.** That clause exists because a transaction without a payer has
     /// no verify frame, and in the drawing that reads as a row with no grey
     /// opening segment — which is the fact itself rather than a sentence about
-    /// it, so the legend names Verify only when one is actually drawn.
+    /// **THE SHARED FRAMES FIGURE (prd §698).** `RoomFramesFigure` draws this
+    /// scope in all three rooms now, so one strip means one thing: the width is
+    /// what a step cost and the FILL is what it was, with failure, rollback and
+    /// an unread receipt as the three overrides. This room tinted by OUTCOME
+    /// and Hegotá UTXO tinted by MODE — one drawing, two meanings, in adjacent
+    /// rooms — and the key that explained this room's version goes with it,
+    /// since the shared legend names the modes instead.
     @ViewBuilder private var frames: some View {
-        let runs = moves.filter { $0.rows.count > 1 }.prefix(6).map(\.rows)
-        let rolled = moves.flatMap(\.rolledBack).count
-        let failed = moves.flatMap(\.rows).filter { $0.outcome?.succeeded == false }.count
-        let verified = runs.contains { $0.contains { $0.frame.mode == 1 } }
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if !runs.isEmpty {
-                FramesSequenceStrip(runs: Array(runs))
-                    .frame(maxHeight: .infinity)
-                    .id(newestHash)
-            }
-            HStack(spacing: DS.Space.s3) {
-                if verified { framesKey(DS.textTertiary, String(localized: "Verify")) }
-                framesKey(DS.tint, String(localized: "Ran"))
-                if rolled > 0 {
-                    framesKey(nil, rolled == 1
-                              ? String(localized: "Rolled back 1")
-                              : String(localized: "Rolled back \(String(rolled))"))
-                }
-                if failed > 0 {
-                    framesKey(DS.destructive, failed == 1
-                              ? String(localized: "Failed 1")
-                              : String(localized: "Failed \(String(failed))"))
-                }
-                Spacer(minLength: 0)
-            }
-        }
+        // **KEYED ON THE NEWEST TRANSACTION**, as every chart in this room is:
+        // a settle that changes what the figure draws must redraw it rather
+        // than mutate it in place, or the strips change under the reader with
+        // no beat.
+        RoomFramesFigure(runs: frameRuns, hue: RoomFrameStyle.hue)
+            .id(newestHash)
     }
 
-    /// One legend entry. A nil fill draws the dashed outline the strip uses for
-    /// a rolled-back step, so the swatch IS the mark it explains.
-    /// A whole-number percent, formatted once so the figure and the bar's own
-    /// end label can never disagree by a rounding step.
+    /// This scope's population, read once so the headline, the empty state, the
+    /// figure and the list cannot disagree about it (prd §698).
+    private var frameRuns: [RoomFrames.Run] { FramesFrames.runs(moves) }
+
     private static func percent(_ fraction: Double) -> String {
         (fraction * 100).rounded().formatted(.number.precision(.fractionLength(0))) + "%"
     }
 
-    @ViewBuilder private func framesKey(_ fill: Color?, _ label: String) -> some View {
-        HStack(spacing: 4) {
-            Group {
-                if let fill {
-                    RoundedRectangle(cornerRadius: 2, style: .continuous).fill(fill)
-                } else {
-                    RoundedRectangle(cornerRadius: 2, style: .continuous)
-                        .strokeBorder(DS.destructive, style: StrokeStyle(lineWidth: 1, dash: [2, 1.5]))
-                }
-            }
-            .frame(width: 8, height: 8)
-            Text(label)
-                .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
-        }
-    }
+    // **`framesKey` IS DELETED (prd §698)** — it explained this room's
+    // outcome-coloured strip, and the shared figure's legend names the MODES
+    // instead. `FramesSequenceStrip` itself stays: the move sheet and the send
+    // preview both still draw it, which is why only the key goes.
 
     /// **PERMISSIONS: WHO WAS ALLOWED TO PAY (prd §692).**
     ///
@@ -565,7 +540,11 @@ struct FramesRoomList: View {
         case .accounts:
             accountsRows
         case .frames:
-            rows(pairs.filter { $0.move.rows.count > 1 })
+            // **EVERY transaction that ran a step (prd §698)** — a plain
+            // transfer parses to NO frames (measured), so admitting the
+            // one-step transactions admits genuinely framed ones and no
+            // transfers, and the list finally shows what the headline counts.
+            rows(pairs.filter { !$0.move.rows.isEmpty })
         case .permissions:
             // **TWO KINDS OF ROW, SAID TO BE TWO** (user, 2026-09-02: *"sponsors
             // list also is messy"*). A person and a transaction have different
@@ -859,6 +838,16 @@ struct FramesMoveRow: View {
         WalletRow(mark: mark,
                   title: titleText,
                   subtitleText: meta) {
+            // **THE SHAPE OF THE TRANSACTION, ON THE ROW (prd §698).** The room
+            // named for frames drew none on its rows: Hegotá UTXO has had a
+            // 78pt strip on its framed rows since it shipped, and this list
+            // said "3 frames" in words instead. A texture rather than a
+            // document, so it does not run on appear.
+            if !move.rows.isEmpty {
+                RoomFrameStrip(steps: FramesFrames.runs([move]).first?.steps ?? [],
+                               height: 5, hue: RoomFrameStyle.hue)
+                    .frame(width: 54)
+            }
             // **WHAT IT MOVED, AND NOTHING ELSE IN THIS COLUMN.** The fee and
             // the gas were here and are now the sheet's — three stacked
             // figures made the money column wider than the words beside it,

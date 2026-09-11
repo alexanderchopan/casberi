@@ -128,11 +128,11 @@ struct PrivacyDevnetRoomCard: View {
             // addresses connect, which is the reading; a count of watched
             // addresses above it is the list's own length said twice.
             return isEmpty(.accounts) ? section.emptyHeadline : nil
+        // **ONE DEFINITION OF A STEP (prd §698)** — the headline counts frames
+        // over exactly the population the list shows, through the family's
+        // shared census.
         case .frames:
-            let steps = moves.reduce(0) { $0 + $1.frameCount }
-            guard steps > 0 else { return section.emptyHeadline }
-            return steps == 1 ? String(localized: "1 step")
-                              : String(localized: "\(String(steps)) steps")
+            return RoomFrames.headline(RoomFrames.mix(frameRuns)) ?? section.emptyHeadline
         // **"N permissions" (prd §692)** — the scope's unit, and the same
         // unit in all five rooms. It counted spend keys alone while the
         // Sponsors chip beside it counted sponsored transactions; one scope
@@ -360,7 +360,7 @@ extension PrivacyDevnetRoomCard {
         // **EMPTY IS "NOTHING CONNECTS THEM" (prd §689)** — the rows list
         // what you watch either way; the slot's job is the relationship.
         case .accounts:   return PrivacyConnections.map(accounts)?.nodes.isEmpty ?? true
-        case .frames:     return moves.allSatisfy { $0.frameCount == 0 }
+        case .frames:     return frameRuns.isEmpty
         // **EMPTY ONLY WHEN NEITHER KIND IS GRANTED (prd §692).**
         case .permissions: return permissionKinds.isEmpty
         case .roots:      return accounts.allSatisfy { $0.roots.isEmpty }
@@ -414,7 +414,7 @@ extension PrivacyDevnetRoomCard {
         case .activity:   list(pairs)
         case .holdings:   holdingsRoster
         case .accounts:   roster
-        case .frames:     list(pairs.filter { $0.move.frameCount > 0 })
+        case .frames:     list(pairs.filter { !$0.move.frames.isEmpty })
         case .permissions: permissionsScope
         case .roots:      rootScope
         }
@@ -520,6 +520,12 @@ extension PrivacyDevnetRoomCard {
                 WalletRow(mark: Self.mark(for: move),
                           title: Self.moveTitle(move),
                           subtitleText: Self.moveMeta(move, showsSponsorship: showsSponsorship)) {
+                    // **THE SHAPE OF THE TRANSACTION, ON THE ROW (prd §698)** —
+                    // Hegotá UTXO's framed rows have carried one since they
+                    // shipped and this room said "3 frames" in words instead.
+                    // A texture rather than a document, so it does not run on
+                    // appear.
+                    Self.strip(move)
                     // **THE TIME, NOT A CHEVRON (prd §687).** One meaning per
                     // column across the family: the amount where a row has
                     // one, the time where it does not. A chevron was a third
@@ -536,8 +542,18 @@ extension PrivacyDevnetRoomCard {
             WalletRow(mark: Self.mark(for: move),
                       title: Self.moveTitle(move),
                       subtitleText: Self.moveMeta(move, showsSponsorship: showsSponsorship)) {
+                Self.strip(move)
                 Self.when(move)
             }
+        }
+    }
+
+    /// One transaction's steps, at a row's scale (prd §698).
+    @ViewBuilder static func strip(_ move: PrivacyDevnetLiveState.Move) -> some View {
+        if !move.frames.isEmpty {
+            RoomFrameStrip(steps: PrivacyFrames.runs([move]).first?.steps ?? [],
+                           height: 5, hue: RoomFrameStyle.hue)
+                .frame(width: 54)
         }
     }
 
@@ -824,6 +840,10 @@ extension PrivacyDevnetRoomCard {
     /// Sponsors are counted by PAYER, not by transaction: a permission is a
     /// party who was allowed to do something, and one sponsor covering nine
     /// transactions is one arrangement.
+    /// This scope's population, read once so the headline, the empty state and
+    /// the figure cannot disagree about it (prd §698).
+    var frameRuns: [RoomFrames.Run] { PrivacyFrames.runs(moves) }
+
     var permissionKinds: [RoomPermissions.Kind] {
         var out: [RoomPermissions.Kind] = []
         let keys = keyRows.count
@@ -1053,7 +1073,11 @@ extension PrivacyDevnetRoomCard {
     @ViewBuilder func figure(for section: PrivacyDevnetSection) -> some View {
         switch section {
         case .activity:   activityChart
-        case .frames:     budgetBar(moves.filter { $0.frameCount > 0 })
+        // **THE SHARED FRAMES FIGURE (prd §698).** This drew `budgetBar` — what
+        // the steps were ALLOWED TO COST, which is not what the scope asks, and
+        // the same bar that sat over Sponsors until §692. The budgets are a
+        // per-step fact and the frame sheet states them.
+        case .frames:     RoomFramesFigure(runs: frameRuns, hue: RoomFrameStyle.hue)
         // **NO FIGURE (prd §606).** These two drew a count as N identical
         // shapes — eight rings for eight keys, a row of pips per address —
         // over data with nothing to compare. "We can count; what does that
@@ -1080,20 +1104,13 @@ extension PrivacyDevnetRoomCard {
     // against the copy nobody drew.
 
 
-    /// WHAT THESE STEPS WERE ALLOWED, and what they cost — one bar for the
-    /// room rather than one strip per transaction (prd §606).
-    @ViewBuilder private func budgetBar(_ moves: [PrivacyDevnetLiveState.Move]) -> some View {
-        let frames = moves.flatMap(\.frames).map {
-            PrivacyDevnetFigure.Frame(gasLimit: $0.gasLimit, stateLimit: $0.stateLimit,
-                                      succeeded: $0.succeeded)
-        }
-        let b = PrivacyDevnetFigure.budgets(frames: frames, gasUsed: moves.map(\.gasUsed))
-        if b.hasAnything {
-            PrivacyDevnetBudgetBar(budgets: b, reduceMotion: reduceMotion)
-        } else {
-            EmptyView()
-        }
-    }
+    // **`budgetBar` IS DELETED (prd §698).** It drew what a transaction's steps
+    // were allowed to spend — a cost reading under a scope asking what ran, and
+    // the only figure in the family that drew no frames. `PrivacyDevnetFigure
+    // .budgets` and `PrivacyDevnetBudgetBar` go with it; the per-step budgets
+    // are still on the frame sheet, which is where a budget belongs. Deleted
+    // rather than left behind: a dead twin is what let a mutation pass against
+    // a copy nobody drew (`kindMix`, in this very file).
 
     /// Every referenced snapshot on the ring, one lane per source.
     ///

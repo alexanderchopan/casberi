@@ -63,6 +63,9 @@ SECTION="Casberi/Casberi/Model/PrivacyDevnetSection.swift"
 ROOTS="Casberi/Casberi/Model/PrivacyDevnetRoots.swift"
 ROOM="Casberi/Casberi/Model/PrivacyDevnetRoom.swift"
 FIG="Casberi/Casberi/Model/PrivacyDevnetFigure.swift"
+# The family's shared frames reading (prd §698) — this room's anatomy row and
+# the Frames scope's strip must divide one transaction the same way.
+RFRAMES="Casberi/Casberi/Model/RoomFrames.swift"
 # The moments ledger (prd §598). Foundation-only and every store injectable,
 # because a once-ever flag whose only proof is "it did not fire again on my
 # phone" is not proven at all — and because the failure this catches is the
@@ -533,17 +536,25 @@ check(PrivacyDevnetRoots.setLabel(0, of: 1) == "The set", "one source wears no n
 check(PrivacyDevnetRoots.setLabel(0, of: 2) == "Set 1", "two sources are numbered from one")
 check(PrivacyDevnetRoots.setIndex(of: src, in: refs) != nil, "a known source has an ordinal")
 check(PrivacyDevnetRoots.setIndex(of: d("ff"), in: refs) == nil, "an unknown one has none — never 0")
-// FOUND while writing: clamp-then-renormalise pushed a floored frame BACK BELOW its floor.
-let w = PF.shares([PF.Frame(gasLimit: 900), PF.Frame(gasLimit: 1)])
+// FOUND while writing: clamp-then-renormalise pushed a floored frame BACK BELOW
+// its floor. **RE-POINTED AT `RoomFrames.shares` (prd §698)** — this room had
+// reasoned the rule out and then lost its only caller when §606 swapped the
+// per-frame strip for a budget bar, so the family's best implementation of it
+// was dead code with live tests over it. Three rooms draw it now, and these
+// fixtures are what kept it correct through the move.
+func step(_ weight: Double) -> RoomFrames.Step {
+    RoomFrames.Step(modeName: "Call", weight: weight, outcome: .ran, id: 0)
+}
+let w = RoomFrames.shares([step(900), step(1)])
 check(abs(w.reduce(0,+) - 1) < 1e-9, "weighted shares fill the strip exactly")
-check(w[1] >= PF.minFrameShare - 1e-9, "the smallest step is still visible AFTER renormalising")
+check(w[1] >= RoomFrames.minShare - 1e-9, "the smallest step is still visible AFTER renormalising")
 check(w[0] > w[1], "the bigger budget is still the wider bar")
-let casc = PF.shares([PF.Frame(gasLimit: 10000), PF.Frame(gasLimit: 1), PF.Frame(gasLimit: 1)])
-check(casc.allSatisfy { $0 >= PF.minFrameShare - 1e-9 } && abs(casc.reduce(0,+) - 1) < 1e-9,
+let casc = RoomFrames.shares([step(10000), step(1), step(1)])
+check(casc.allSatisfy { $0 >= RoomFrames.minShare - 1e-9 } && abs(casc.reduce(0,+) - 1) < 1e-9,
       "flooring one frame can push the next below the floor — the cascade must settle")
-check(PF.shares([PF.Frame(gasLimit: 90), PF.Frame()])[0] == PF.shares([PF.Frame(gasLimit: 90), PF.Frame()])[1],
+check(RoomFrames.shares([step(90), step(0)])[0] == RoomFrames.shares([step(90), step(0)])[1],
       "ONE unread budget falls back to equal widths — never present a leftover as a budget")
-check(abs(PF.shares(Array(repeating: PF.Frame(gasLimit: 5), count: 12))[0] - 1.0/12) < 1e-9,
+check(abs(RoomFrames.shares(Array(repeating: step(5), count: 12))[0] - 1.0/12) < 1e-9,
       "too many frames for the floor stops pretending and draws equal")
 if case .frame(_, let bad) = PF.anatomy(frames: [PF.Frame(succeeded: nil)], keys: 0, roots: 0, sponsored: false)[0] {
     check(!bad, "an UNREAD status is not a failure — gasUsed/succeeded are nil on 8141")
@@ -713,25 +724,19 @@ check(PF.kind(frames: 0, keys: 1) == .poolSpend, "keys decide it even with no fr
 // guarantees it.
 // `PF.kind` above survives: it still classifies a move for the row's mark.
 
-// **ZERO IS A READING, NIL IS AN ABSENCE.** Most frames here ask to grow no
-// state, which is a fact about them; an unread budget is us not knowing.
-let bAll = PF.budgets(frames: [PF.Frame(gasLimit: 320_000, stateLimit: 0),
-                               PF.Frame(gasLimit: 1_400_000, stateLimit: 550_000)],
-                      gasUsed: [21_000])
-check(bAll.execution == 1_720_000, "execution budgets sum across every frame in the room")
-check(bAll.state == 550_000, "and so do the state budgets")
-check(bAll.used == 21_000, "the spend is the receipts' own total")
-check(bAll.hasAnything, "and there is a bar to draw")
-let bNoState = PF.budgets(frames: [PF.Frame(gasLimit: 100, stateLimit: 0)], gasUsed: [])
-check(bNoState.state == 0, "all-zero state is ZERO, not nil — these steps asked to grow nothing")
-check(bNoState.used == nil, "no receipts read is nil, never a zero spend")
-let bPartial = PF.budgets(frames: [PF.Frame(gasLimit: 100), PF.Frame()], gasUsed: [1, nil])
-check(bPartial.execution == nil, "ONE unread budget and there is no room total — a partial sum is invented")
-check(bPartial.used == nil, "and one unread receipt leaves the spend unknown rather than understated")
-check(!PF.budgets(frames: [], gasUsed: []).hasAnything, "no frames, no bar")
-check(PF.budgets(frames: [PF.Frame(gasLimit: .max), PF.Frame(gasLimit: .max)],
-                 gasUsed: []).execution == nil,
-      "a sum wide enough to overflow is refused, never wrapped into a small honest-looking number")
+// **THE BUDGET ASSERTIONS ARE RETIRED WITH THEIR FIGURE (prd §698).** They
+// covered `PF.budgets`, which summed what a room's steps were ALLOWED to spend
+// and fed the bar the Frames scope drew — a cost reading under a scope asking
+// what ran, and the only figure in the family that drew no frames. The scope
+// draws `RoomFramesFigure` now and the per-step budgets are on the frame sheet.
+//
+// The rule those assertions protected outlives them and is worth restating
+// where a reader will meet it: ZERO IS A READING, NIL IS AN ABSENCE. Most
+// frames on this chain ask to grow no state, which is a fact about them; an
+// unread budget is us not knowing. Both draw nothing; only one may be said out
+// loud. `RoomFrames.shares` keeps that distinction — a step with no weight
+// falls the whole strip back to equal widths rather than presenting a leftover
+// as a measurement, which is asserted above.
 
 // ── prd §602: what it was allowed, and what it spent ──
 // The room could state every transaction's BUDGET and no transaction's COST,
@@ -814,7 +819,8 @@ MW="$1"
 xcrun swiftc -Onone -o "$MW/pv" \
   "$MW/PrivacyDevnetSection.swift" "$MW/PrivacyDevnetRoots.swift" \
   "$MW/PrivacyDevnetRoom.swift" "$MW/PrivacyDevnetFigure.swift" \
-  "$MW/PrivacyDevnetMoments.swift" "$MW/Keccak256.swift" "$MW/main.swift" 2>"$MW/build.log"
+  "$MW/PrivacyDevnetMoments.swift" "$MW/Keccak256.swift" "$MW/RoomFrames.swift" \
+  "$MW/main.swift" 2>"$MW/build.log"
 BUILDSH
 
 # The applier, written to a file so the child needs no heredoc of its own.
@@ -836,6 +842,7 @@ cp "$SECTION" "$work/base/PrivacyDevnetSection.swift"
 cp "$ROOTS"   "$work/base/PrivacyDevnetRoots.swift"
 cp "$ROOM"    "$work/base/PrivacyDevnetRoom.swift"
 cp "$FIG"     "$work/base/PrivacyDevnetFigure.swift"
+cp "$RFRAMES" "$work/base/RoomFrames.swift"
 cp "$MOMENTS" "$work/base/PrivacyDevnetMoments.swift"
 cp "$KECCAK"  "$work/base/Keccak256.swift"
 cp "$work/main.swift" "$work/base/main.swift"
@@ -1050,8 +1057,15 @@ mutate "the pool filed as an ordinary framed call, so this room's subject never 
   "$FIG" "if keys > 0 { return .poolSpend }" "if false { return .poolSpend }"
 # The two kindMix mutations that stood here went with `PrivacyDevnetFigure
 # .kindMix` (prd §687), for the same reason.
-mutate "a partial room budget summed anyway and stated as the total" \
-  "$FIG" "guard let value else { return nil }" "let value = value ?? 0"
+# The room-budget mutation that stood here went with `PrivacyDevnetFigure
+# .budgets` (prd §698), for the same reason as the two `kindMix` ones above:
+# a mutation over a function nobody draws passes against a copy nobody sees.
+# The rule it protected — a partial sum must be refused, never presented as a
+# total — lives in `RoomFrames.shares` now, where an unweighted step falls the
+# whole strip back to equal widths, and is mutated in the shared file below.
+mutate "a partial strip weighted anyway, so an unread step is drawn at its leftover" \
+  "$RFRAMES" "guard !steps.contains(where: { \$0.weight <= 0 }) else { return equal }" \
+  "if false { return equal }"
 mutate "a partial budget sum stated as the transaction's whole allowance" \
   "$FIG" "guard let gas = frame.gasLimit else { return nil }" \
   "let gas = frame.gasLimit ?? 0"
@@ -1601,13 +1615,15 @@ grep -qF 'This phone' "$work/sheets.bare" \
   || fail "this phone's own account lost its name — it is watched now, so without it the room shows the account it created as a stranger's hex"
 
 # **THE SPEND IS DRAWN AND STATED, off a receipt already fetched.**
-# The spend is drawn by the ROOM's budget bar now rather than per strip (§606),
-# so the guard follows it there: the Frames scope must still hand the figure
-# what the receipts reported, or it states every budget and no cost.
-grep -qF 'gasUsed: moves.map(\.gasUsed)' "$work/card.bare" \
-  || fail "the Frames scope stopped handing the receipts' totals to its figure — it would state every transaction's budget and no transaction's cost"
-grep -qF 'PrivacyDevnetFigure.budgets(' "$work/card.bare" \
-  || fail "the Frames scope stopped summing the room's budgets — it drew one identical strip per transaction before, which is what §606 replaced"
+# **RE-PINNED (prd §698):** the room's budget BAR is deleted — it answered what
+# the steps were allowed to cost under a scope asking what they did — so the
+# guard follows the spend to where it is still drawn. A step's WEIGHT is what
+# it spent where a receipt was read and what it was allowed where one was not,
+# and a strip that reads neither is a sequence of equal blocks claiming to be a
+# measurement.
+grep -qF 'weight: Double(frame.gasUsed ?? frame.gasLimit ?? 0)' "$work/card.bare" \
+  || grep -qF 'weight: Double(frame.gasUsed ?? frame.gasLimit ?? 0)' "$work/bridge.bare" \
+  || fail "the Frames scope stopped weighting its steps by what they spent — it would draw every step the same width and call it a reading"
 grep -qF 'gasUsed: moveGasUsed' "$work/bridge.bare" \
   || fail "the walk stopped keeping the receipt's own total — a number already in memory, thrown away"
 # It must stay TRANSACTION level: no per-frame breakdown exists on this chain,

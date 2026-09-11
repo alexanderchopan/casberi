@@ -82,7 +82,7 @@ PYM
   # so this file was proven equivalent run-for-run by
   # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.9x faster).
   # Re-probe before trusting it again after adding mutations.
-  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift FramesReading.swift m/main.swift 2>/dev/null ) \
+  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift m/main.swift 2>/dev/null ) \
      && "$MW/m/run2" >/dev/null 2>&1; then
     echo "SURVIVED|$MID|$MLABEL"; exit 0
   fi
@@ -95,6 +95,10 @@ KC="Casberi/Casberi/Model/Keccak256.swift"
 MONEY="Casberi/Casberi/Model/FramesMoney.swift"
 SECT="Casberi/Casberi/Model/FramesSection.swift"
 READ="Casberi/Casberi/Model/FramesReading.swift"
+# The family's shared frames reading (prd §698) — `FramesFrames` is written
+# against it, and one definition of a step is what stopped this room's headline
+# disagreeing with its own list.
+RFRAMES="Casberi/Casberi/Model/RoomFrames.swift"
 # **Foundation-only, and compiled REAL (prd §688).** `FramesAccount` carries
 # what it holds beyond the coin now, so the reading file names `DevnetTokens`.
 # Stubbing it would let the harness disagree with the app about a type the app
@@ -710,6 +714,7 @@ cp "$KC" "$WORK/Keccak256.swift"
 cp "$MONEY" "$WORK/FramesMoney.swift"
 cp "$SECT" "$WORK/FramesSection.swift"
 cp "$READ" "$WORK/FramesReading.swift"
+cp "$RFRAMES" "$WORK/RoomFrames.swift"
 cp "$TOKENS" "$WORK/DevnetTokens.swift"
 mkdir -p "$WORK/m"
 
@@ -1531,7 +1536,7 @@ print("  ok   encoder: 3 real vectors byte-exact, keccak == the chain's own hash
 SWIFT
 
 build_run() {
-  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift FramesReading.swift m/main.swift 2>&1 )
+  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift m/main.swift 2>&1 )
 }
 if ! out="$(build_run)"; then echo "✗ harness did not compile"; echo "$out"; exit 1; fi
 "$WORK/m/run" || exit 1

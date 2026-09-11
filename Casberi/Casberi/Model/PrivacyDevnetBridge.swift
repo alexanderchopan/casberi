@@ -1320,3 +1320,33 @@ extension PrivacyDevnetLiveState {
         return out
     }
 }
+
+/// This chain's frames, as the family's shared reading (prd §698).
+///
+/// **The scope drew a GAS BUDGET BAR before this**, which answers what the
+/// steps were allowed to COST rather than what they did — the same bar that sat
+/// over Sponsors until §692 — so the room named for privacy was the one room in
+/// the family whose Frames scope drew no frames. The budgets are not lost: they
+/// are a per-step fact and the frame sheet states them.
+///
+/// **The mode is read and was never named.** This chain publishes EIP-8141's
+/// number like its two siblings; `RoomFrames.modeName` is the family's one
+/// table and says "Mode 7" for anything nobody has named, which is honest where
+/// borrowing a neighbour's glossary would not be.
+///
+/// **No rollback outcome here**: nothing on this chain undoes a landed step.
+enum PrivacyFrames {
+    static func runs(_ moves: [PrivacyDevnetLiveState.Move]) -> [RoomFrames.Run] {
+        moves.compactMap { move in
+            guard !move.frames.isEmpty else { return nil }
+            let steps = move.frames.enumerated().map { index, frame in
+                RoomFrames.Step(modeName: RoomFrames.modeName(frame.mode),
+                                weight: Double(frame.gasUsed ?? frame.gasLimit ?? 0),
+                                outcome: frame.succeeded == nil ? .unread
+                                       : (frame.succeeded == true ? .ran : .failed),
+                                id: index)
+            }
+            return RoomFrames.Run(id: move.hash, steps: steps)
+        }
+    }
+}

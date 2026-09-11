@@ -35,31 +35,10 @@ struct HegotaRoomFigure: View {
     /// right now, not a scope worth keeping.
     @State private var pickedLane: HegotaFlow.Lane?
     @State private var laneRevert: Task<Void, Never>?
-    /// How many transactions the frame anatomy draws.
-    ///
-    /// **The budget is 166pt and the sum is written down, because the drawing
-    /// is not the only thing in it.** `DSRoomSlot` is a hard 210pt with
-    /// `.clipped()`, less its 30pt reserved headline row AND that row's own
-    /// `DS.Space.s3` bottom pad — 14pt on iOS, and the part that is easy to
-    /// miss because it lives in the chassis rather than here. The figure
-    /// spends: caption 16 + 4 + rows + 4 + legend 16 + 4 + the population
-    /// note 16. At five rows that is 5×14 + 4×5 = 90, so the total is 150 and
-    /// the slack is 16 — which is what absorbs a step or two of Dynamic Type,
-    /// since `label12` is `.caption1`-relative and the slot is not.
-    ///
-    /// **The caption is clamped to ONE line here** for the same sum: at its
-    /// shared two-line limit the total is 166 exactly, zero slack, and the
-    /// line that goes over the edge is the last one — the population note.
-    ///
-    /// It was SIX, and the note did not exist. Adding it takes six rows to
-    /// 169 and the clip lands on the note itself, which is the one line that
-    /// exists to stop the cap being silent — the failure the old comment here
-    /// was already warning about, arriving through the disclosure rather than
-    /// through a seventh row. A fifth multiple shows the same shape as a
-    /// sixth; a clipped disclosure shows a card that lies.
-    ///
-    /// **Re-do this sum before raising it (prd §510).**
-    private static let frameRows = 5
+    // **`frameRows` IS THE SHARED FIGURE'S NOW (prd §698)** — how many runs
+    // fit is derived from `DSRoomChassis.figureSlot` in `RoomFramesFigure`,
+    // which is the rule this constant was standing in for, and five falls out
+    // of that arithmetic at this slot height rather than being written down.
 
     var body: some View {
         DSRoomSlot(headline: slotHeadline) {
@@ -946,124 +925,21 @@ struct HegotaRoomFigure: View {
             : String(localized: "\(String(rest)) more addresses, in the list below"))
     }
 
-    /// **FRAMES — the shape of your transactions, one row each.**
-    ///
-    /// Small multiples of the strip the sheet already draws, because a frame
-    /// transaction IS a sequence and every alternative throws the sequence
-    /// away: a mode tally says you ran nine UTXO steps and four verifies
-    /// without saying that they came in the same order four times, which is the
-    /// only thing the shape of your usage actually looks like.
-    ///
-    /// **Each row normalises to full width, so the rows compare COMPOSITION,
-    /// not size.** Widths within a row are gas-weighted — the strip's own
-    /// contract — so a step that burned most of the gas is most of the bar.
-    /// Comparing gas ACROSS transactions was tried and refused for
-    /// `HegotaScale`'s reason one figure over: the spread is wide enough that
-    /// every ordinary transaction draws as a sliver beside one heavy one, and
-    /// what the scope is for is what the steps WERE.
-    ///
-    /// The legend names the modes actually present, in the mix's own ranked
-    /// order, so the colours are learnable from the drawing rather than from a
-    /// sheet you have to open first.
-    /// How tall one frame strip is, so the drawing FILLS the box rather than
-    /// sitting at a fixed 14pt inside it (prd §566).
-    ///
-    /// A sum rather than a guess, in the shape §553 and §555 both use — the
-    /// slot is fixed, the chrome under it is known, and what is left is the
-    /// drawing's. Floored at the old 14 so a many-rowed band can never be
-    /// worse than it was, and capped at 34 so a single strip does not become a
-    /// slab: a frame strip is a texture, and one bar filling the box reads as a
-    /// progress meter.
-    private static func frameStripHeight(rows: Int, hasMore: Bool) -> CGFloat {
-        guard rows > 0 else { return 14 }
-        // The caption, the legend, §510's remainder line where it draws, and
-        // the gaps the `s1` stack puts between all of them.
-        let chrome = 16 + DS.Space.s1
-                   + 16 + DS.Space.s1
-                   + (hasMore ? 16 + DS.Space.s1 : 0)
-        let gaps = 5 * CGFloat(rows - 1)
-        let room = DSRoomChassis.figureSlot - chrome - gaps
-        // **THE CEILING WENT 34 → 44 (prd §588).** It is a ceiling and not a
-        // fit for the reason a strip is a strip: one run stretched to a whole
-        // 256pt box is a progress meter, not a texture. But 34 was chosen when
-        // the box was 166, so at 256 a one-row strip drew 34pt and left ~180
-        // under it. 44 is what five rows plus their gaps and this figure's own
-        // chrome spend of the new box.
-        return max(14, min(44, room / CGFloat(rows)))
-    }
+    // **`frameStripHeight` MOVED TOO (prd §698).** The shared figure derives
+    // its own strip height from `figureSlot` the same way, for every room.
 
+    /// **THE SHARED FRAMES FIGURE (prd §698).** `RoomFramesFigure` is this
+    /// room's own drawing generalised — the caption, the strips, the legend and
+    /// the census note, every rule of it reasoned out here (§510, §566) and now
+    /// drawn by three rooms instead of one.
+    ///
+    /// What the move settles, said once because it is the reason for the whole
+    /// pass: Hegotá Privacy drew a GAS BUDGET BAR in this slot, which answers
+    /// what the steps were allowed to cost rather than what they did, and
+    /// Hegotá Frames tinted its strips by OUTCOME while this room tinted by
+    /// MODE — one drawing, two meanings, in adjacent rooms.
     @ViewBuilder private var framesFigure: some View {
-        if let mix = HegotaFrameMix.of(framedMoves) {
-            let rows = Array(framedMoves.prefix(Self.frameRows))
-            // `s1`, not `s2`: the caption, the legend and the note all belong
-            // TO the drawing rather than beside it, and the three gaps are
-            // also what buys the note its room inside `frameRows`' budget.
-            // **THE STRIPS FILL THE BOX (prd §566).** The drawing this scope
-            // exists for sat at a fixed 14pt inside a 166pt slot while every
-            // word around it was larger. It takes the room that is actually
-            // left instead — see `frameStripHeight`.
-            //
-            // **THE CAPTION STAYS, and deleting it was the mistake this
-            // comment exists to record.** It looks like a duplicate of the
-            // headline and is not: the headline counts STEPS and the caption
-            // counts TRANSACTIONS — §510's exact confusion — and it is also
-            // the only place a FAILED step is named. Removing it lost two
-            // facts to win 16pt, and orphaned `HegotaFrameMix.leaders`, which
-            // this room's harness spends twenty assertions and three mutations
-            // on. The strips grow 14 → 22 with every fact kept, which is the
-            // trade that was actually available.
-            //
-            // **§510's line stays whole for the same reason.**
-            // The obvious tidy — folding "4 of 11" into the legend's trailing
-            // end — drops "step counts cover all", and §510 says in its own
-            // words that "naming the remainder without naming the census
-            // leaves the contradiction intact": the legend counts steps over
-            // every framed transaction while the bars are capped, so both
-            // halves have to be said or the two numbers on the card cannot be
-            // reconciled by any arithmetic.
-            let strip = Self.frameStripHeight(rows: rows.count,
-                                              hasMore: framedMoves.count > rows.count)
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                figureCaption(framesCaption(mix), lines: 1)
-                VStack(spacing: 5) {
-                    ForEach(rows) { move in
-                        HegotaFrameStrip(frames: move.frames ?? [], height: strip,
-                                         weighted: true)
-                    }
-                }
-                framesLegend(mix)
-                if framedMoves.count > rows.count {
-                    // **THE LEGEND AND THE BARS COUNT DIFFERENT POPULATIONS,
-                    // and until this line nothing said so** (prd §510). The
-                    // legend is a census over every framed transaction — it
-                    // is what the "N steps" headline is made of — while the
-                    // drawing is capped at `frameRows`. So on twelve
-                    // transactions the legend totalled nineteen steps above
-                    // six bars carrying nine of them, and a reader counting
-                    // segments against the legend could not make them agree
-                    // by any arithmetic. Reported as exactly that.
-                    //
-                    // Both facts, one line: what is drawn, and what the
-                    // counts are over. The no-silent-caps rule is the floor
-                    // here, not the whole of it — naming the remainder
-                    // without naming the census leaves the contradiction
-                    // intact.
-                    //
-                    // **"step counts", not "counts".** The legend's numbers
-                    // are STEPS and this line's are TRANSACTIONS, which is
-                    // the 19-against-12 confusion itself — a line naming
-                    // neither unit leaves the two numbers on the lower half
-                    // of the card still uncomparable.
-                    //
-                    // Short on purpose beyond that: `lineLimit(1)` and a long
-                    // localization truncate to the same silence this line
-                    // exists to end, and es/ja/ko/zh all have to fit too.
-                    Text(String(localized: "Newest \(String(rows.count)) of \(String(framedMoves.count)) · step counts cover all"))
-                        .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        }
+        RoomFramesFigure(runs: HegotaFrames.runs(framedMoves), hue: RoomFrameStyle.hue)
     }
 
     /// What the mix says in one line. The commonest step LEADS, because on this
@@ -1079,67 +955,13 @@ struct HegotaRoomFigure: View {
     /// card not adding up. A tie is a real and interesting answer here, so it
     /// is said rather than broken.
 
-    /// The modes present, in the mix's ranked order, each with its count.
-    ///
-    /// Deliberately NOT every mode the chain defines: a legend listing four
-    /// colours this address has never used teaches the palette and says nothing
-    /// about the person, and it is the same dead-chrome objection §83 makes.
-    private func framesCaption(_ mix: HegotaFrameMix) -> String {
-        let leaders = mix.leaders
-        guard !leaders.isEmpty else {
-            return String(localized: "What your transactions ran")
-        }
-        let what = mix.transactions == 1
-            ? String(localized: "1 transaction")
-            : String(localized: "\(String(mix.transactions)) transactions")
-        // A failure is rare here by construction, so it is worth the whole
-        // caption when it happens rather than a share of one.
-        if mix.failed > 0 {
-            return mix.failed == 1
-                ? String(localized: "\(what) · 1 step failed")
-                : String(localized: "\(what) · \(String(mix.failed)) steps failed")
-        }
-        // **NOT lowercased.** A mode label is a NAME, and one of them is an
-        // initialism — `.lowercased()` rendered the chain's own word as
-        // "mostly utxo steps", which is the §500 naming ruling broken by a
-        // string transform rather than by a decision. `allcaps-audit` exempts
-        // UTXO precisely because it is an initialism; lowercasing it here
-        // undoes that from the other side.
-        //
-        // ONE mode present is not "mostly" anything — it is all of them, and
-        // saying "mostly" of a clean sweep understates the one address shape
-        // this chain makes most legible.
-        if mix.hasCommonest {
-            return String(localized: "\(what) · mostly \(leaders[0].mode.label) steps")
-        }
-        if mix.slices.count == 1 {
-            return String(localized: "\(what) · all \(leaders[0].mode.label) steps")
-        }
-        // Two tied modes are worth naming — "Send and Verify, evenly" is a
-        // real reading of an address that verifies everything it sends. Three
-        // or more is not a shape, so it is reported as the absence of one
-        // rather than as a list nobody can hold.
-        if leaders.count == 2 {
-            return String(localized: "\(what) · \(leaders[0].mode.label) and \(leaders[1].mode.label), evenly")
-        }
-        return String(localized: "\(what) · no commonest step")
-    }
+    // **`framesCaption` AND `framesLegend` MOVED TO `RoomFrames` (prd §698)** —
+    // the sentence and the swatch row are three rooms' now. Their rulings went
+    // with them whole: the caption counts TRANSACTIONS where the headline
+    // counts STEPS (§510's confusion), a failure is worth the whole caption,
+    // a mode label is a NAME and is never lowercased (§500), and `leaders` is
+    // the caption's question while `slices` is the drawing's order.
 
-    @ViewBuilder private func framesLegend(_ mix: HegotaFrameMix) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            ForEach(mix.slices.prefix(4)) { slice in
-                HStack(spacing: 4) {
-                    RoundedRectangle(cornerRadius: 2, style: .continuous)
-                        .fill(HegotaModeStyle.hue(slice.mode).opacity(0.85))
-                        .frame(width: 8, height: 8)
-                    Text("\(slice.mode.label) \(String(slice.count))")
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-    }
 
     /// **THE UTXO SET AS A TREEMAP** — the app's own `UnitTreemap`, the same
     /// component Wallet's composition uses.
@@ -1508,17 +1330,14 @@ enum HegotaModeStyle {
     /// `hue(.utxo)` reads it below rather than repeating the literal, or the
     /// pour and the vault segment drift into two cyans that are nearly the
     /// same — the drift nobody sees in a screenshot of one of them.
-    static let room = Color(red: 0.30, green: 0.78, blue: 0.92)
+    static let room = RoomFrameStyle.vault
 
+    /// **`RoomFrameStyle` IS THE TABLE (prd §698)** — three rooms draw one
+    /// encoding, so the hues moved there and this reads them. Kept as a
+    /// property rather than replaced at its call sites for `Mode.label`'s own
+    /// reason: one indirection is what keeps the rooms provably together.
     static func hue(_ mode: HegotaFrame.Mode) -> Color {
-        switch mode {
-        case .verify:    return Color(red: 0.55, green: 0.47, blue: 0.93)   // the signature check
-        case .sender:    return DS.confirm                                   // value actually moving
-        case .general:   return DS.tint                                      // a call
-        case .assertion: return DS.attention                                 // a condition
-        case .utxo:      return room                                         // the vault
-        case .unknown:   return DS.textTertiary
-        }
+        RoomFrameStyle.hue(mode.label)
     }
 
     /// The step's mark, for a sheet head's disc.

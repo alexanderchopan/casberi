@@ -319,62 +319,14 @@ enum PrivacyDevnetFigure {
         }
     }
 
-    /// The narrowest a frame may be drawn, as a share of the strip.
-    ///
-    /// `HegotaFrameStrip`'s own constant, and for its reason: a frame that used
-    /// a thousandth of the gas is still a step that ran, and at its true width
-    /// it is a sub-pixel sliver, which reads as four frames where there were
-    /// five. The clamp costs proportionality at the bottom of the range and
-    /// buys the count being right, which is the fact the strip is for.
-    static let minFrameShare: Double = 0.12
-
-    /// The widths of a transaction's frames.
-    ///
-    /// **Weighted ONLY when every frame carries a budget.** A strip where three
-    /// frames are measured and one is not would draw the unmeasured one at
-    /// whatever the arithmetic happened to leave over, and present it as its
-    /// budget — a number invented by the drawing. All-or-nothing, so a partial
-    /// read falls back to equal widths, which claims nothing.
-    ///
-    /// **The budget, not the gas used**: the strip is what the transaction was
-    /// ALLOWED, which is the field the envelope carries for every frame; usage
-    /// is on the receipt and is not read per frame today.
-    static func shares(_ frames: [Frame]) -> [Double] {
-        guard !frames.isEmpty else { return [] }
-        let equal = Array(repeating: 1.0 / Double(frames.count), count: frames.count)
-        let budgets = frames.map(\.gasLimit)
-        guard !budgets.contains(where: { $0 == nil }) else { return equal }
-        let values = budgets.map { Double($0 ?? 0) }
-        let total = values.reduce(0, +)
-        guard total > 0 else { return equal }
-        // Past this many frames the floor cannot be honoured at all, so the
-        // strip stops pretending and draws equal widths — which is the honest
-        // reading of "these are too many to compare".
-        guard Double(frames.count) * minFrameShare <= 1 else { return equal }
-
-        // **RESERVE, then share out the remainder — do NOT clamp and
-        // renormalise.** Renormalising after a clamp pushes the clamped frame
-        // back BELOW its floor (measured: budgets 900 and 1 give 0.107 against
-        // a 0.12 floor), so the guarantee the floor exists for is silently
-        // broken by the step meant to preserve the total. Here a floored frame
-        // keeps exactly `minFrameShare` and everything above the floor divides
-        // what is left, so the strip fills its track AND the smallest step is
-        // always visible. Iterated, because giving one frame the floor can push
-        // the next below it.
-        var share = values.map { $0 / total }
-        var floored = Array(repeating: false, count: frames.count)
-        while true {
-            let below = share.indices.filter { !floored[$0] && share[$0] < minFrameShare }
-            if below.isEmpty { break }
-            for i in below { floored[i] = true; share[i] = minFrameShare }
-            let reserved = Double(floored.filter { $0 }.count) * minFrameShare
-            let free = share.indices.filter { !floored[$0] }
-            let freeTotal = free.reduce(0.0) { $0 + values[$1] }
-            guard freeTotal > 0, !free.isEmpty else { return equal }
-            for i in free { share[i] = (values[i] / freeTotal) * (1 - reserved) }
-        }
-        return share
-    }
+    // **`minFrameShare` AND `shares` MOVED TO `RoomFrames` (prd §698).** This
+    // room reasoned out the whole rule — the floor a step stays countable at,
+    // and reserve-then-share rather than clamp-and-renormalise, which pushes a
+    // clamped step back below its own floor — and then lost its only caller
+    // when §606 replaced the per-frame strip with a budget bar. The family's
+    // best implementation of this was dead code with live tests over it, which
+    // is the `HegotaRoom.valueSeries` lesson wearing the other face: not a twin
+    // nobody draws, a original nobody draws. It is three rooms' now.
 
     /// One transaction's row.
     ///
@@ -387,7 +339,18 @@ enum PrivacyDevnetFigure {
     static func anatomy(frames: [Frame], keys: Int, roots: Int,
                         sponsored: Bool) -> [Item] {
         var out: [Item] = []
-        let widths = shares(frames)
+        // **THE WIDTHS COME FROM `RoomFrames` NOW (prd §698)** — the anatomy
+        // row and the Frames scope's strip must divide one transaction the same
+        // way, or the sheet and the figure disagree about which step was the
+        // big one. The weight is the BUDGET here, which is what this chain
+        // publishes per frame; usage is on the receipt and is not per-frame.
+        let widths = RoomFrames.shares(frames.enumerated().map { index, frame in
+            RoomFrames.Step(modeName: RoomFrames.modeName(nil),
+                            weight: Double(frame.gasLimit ?? 0),
+                            outcome: frame.succeeded == nil ? .unread
+                                   : (frame.succeeded == true ? .ran : .failed),
+                            id: index)
+        })
         for (i, frame) in frames.enumerated() {
             out.append(.frame(share: widths[i], failed: frame.succeeded == false))
         }
@@ -540,60 +503,12 @@ enum PrivacyDevnetFigure {
 
     // MARK: - What the room asked the chain for (prd §606)
 
-    /// The two budgets a frame transaction carries, summed across the room.
-    ///
-    /// **EIP-8141 gives a frame TWO allowances and the room drew neither.** The
-    /// Frames scope drew one strip per transaction, weighted by execution
-    /// budget — six identical bar-pairs, because most frames here carry the
-    /// same 320,000. Reported as "it says twelve steps who cares".
-    ///
-    /// The reading that is not in the headline is the SPLIT: execution gas is
-    /// what a step is allowed to compute, state gas is what it is allowed to
-    /// GROW — and on this chain state is the one that varies (measured: most
-    /// frames carry 0, a pool spend's second frame carries 550,000). That
-    /// split is what a frame transaction IS, and it is one bar rather than N.
-    ///
-    /// **All-or-nothing per column** (`allowance`'s rule): a sum over the
-    /// frames that happened to carry a figure, presented as the room's total,
-    /// is a number invented by the drawing. Either side may be nil
-    /// independently — a room whose state budgets are all unread still has a
-    /// real execution total.
-    struct Budgets: Equatable, Sendable {
-        var execution: UInt64?
-        var state: UInt64?
-        /// What the chain actually charged, where the receipts were read.
-        /// Nil unless EVERY transaction reported one — a partial sum drawn
-        /// against a complete allowance understates the spend and reads as
-        /// headroom nobody has.
-        var used: UInt64?
 
-        /// Whether there is a bar to draw at all — a room whose every budget
-        /// read came back nil, or came back zero, has no proportion to show.
-        var hasAnything: Bool { (execution ?? 0) > 0 || (state ?? 0) > 0 }
-    }
-
-    static func budgets(frames: [Frame], gasUsed: [UInt64?]) -> Budgets {
-        func total(_ values: [UInt64?]) -> UInt64? {
-            guard !values.isEmpty else { return nil }
-            var sum: UInt64 = 0
-            for value in values {
-                guard let value else { return nil }
-                let (next, overflow) = sum.addingReportingOverflow(value)
-                if overflow { return nil }
-                sum = next
-            }
-            // **ZERO IS A READING, NIL IS AN ABSENCE, and conflating them
-            // here would be the §515a error on the field that shows it most.**
-            // Most frames on this chain carry `stateLimit` 0 — they asked to
-            // grow no state, which is a fact — while an unread budget is us
-            // not knowing. Both draw no segment; only one of them can be said
-            // out loud.
-            return sum
-        }
-        return Budgets(execution: total(frames.map(\.gasLimit)),
-                       state: total(frames.map(\.stateLimit)),
-                       used: total(gasUsed))
-    }
+    // **`budgets(frames:gasUsed:)` IS DELETED (prd §698)** with the bar it fed.
+    // Its own best line survives the deletion and is worth restating: ZERO IS A
+    // READING, NIL IS AN ABSENCE — most frames on this chain ask to grow no
+    // state, which is a fact, while an unread budget is us not knowing, and
+    // both draw nothing. Only one of them can be said out loud.
 
     // **THE TALLY IS GONE (prd §606).** `Tally`, `pipCap` and `pips` fed one
     // figure — three pip columns per address — and a count drawn as N

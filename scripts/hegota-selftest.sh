@@ -68,6 +68,9 @@ ROOM="Casberi/Casberi/Model/HegotaRoom.swift"
 # against them, and the count a headline states must be the count that decides
 # whether the scope is empty.
 PERMS="Casberi/Casberi/Model/RoomPermissions.swift"
+# The family's shared frames reading (prd §698) — `HegotaFrames` is written
+# against it, and the headline, the empty state and the list all read one census.
+FRAMES="Casberi/Casberi/Model/RoomFrames.swift"
 # Foundation-only, and the nonce-slot derivation is real keccak — so the harness
 # compiles the SHIPPED hash rather than asserting against a copied digest.
 KECCAK="Casberi/Casberi/Model/Keccak256.swift"
@@ -1125,7 +1128,7 @@ MW="$1"
 swiftc -Onone -o "$MW/run" \
   "$MW/HegotaSection.swift" "$MW/HegotaCoins.swift" "$MW/HegotaAccount.swift" \
   "$MW/HegotaRoom.swift" "$MW/Keccak256.swift" "$MW/RoomValueHistory.swift" \
-  "$MW/DevnetTokens.swift" "$MW/RoomPermissions.swift" \
+  "$MW/DevnetTokens.swift" "$MW/RoomPermissions.swift" "$MW/RoomFrames.swift" \
   "$MW/main.swift" 2>"$MW/err"
 BUILDSH
 
@@ -1141,6 +1144,7 @@ cp "$KECCAK"  "$work/base/Keccak256.swift"
 cp "$HISTORY" "$work/base/RoomValueHistory.swift"
 cp "$TOKENS"  "$work/base/DevnetTokens.swift"
 cp "$PERMS"   "$work/base/RoomPermissions.swift"
+cp "$FRAMES"  "$work/base/RoomFrames.swift"
 cp "$work/main.swift" "$work/base/main.swift"
 
 zsh "$work/build.zsh" "$work/base" \
@@ -1435,6 +1439,8 @@ strip_comments "$SECTION" > "$work/section.bare"
 strip_comments "$COINS" > "$work/coins.bare"
 strip_comments "$ROOM" > "$work/room.bare"
 strip_comments "$ACCOUNT" > "$work/account.bare"
+strip_comments "$FRAMES" > "$work/RoomFrames.swift.bare"
+strip_comments "Casberi/Casberi/Screens/RoomFramesFigure.swift" > "$work/RoomFramesFigure.swift.bare"
 
 have() { [[ -f "$work/$1" ]] || fail "guard points at a file that was never prepared: $1"; }
 deny() { have "$1"; if grep -q -- "$2" "$work/$1"; then fail "drift: $3"; fi }
@@ -1559,19 +1565,29 @@ deny FramesScreen.swift.bare "keyAddress != nil" \
 # were reported from a device as "how does this math add up" and neither is
 # reachable by any other check here: the counts were always correct, so the
 # build, the sweep and every probe pass while the card contradicts itself.
-need HegotaRoomCard.swift.bare "mix.leaders" \
+# **RE-PINNED to `RoomFrames` (prd §698)** — the caption and the legend are
+# three rooms' now, so the guard follows them there. `leaders` is the caption's
+# question and `slices` is the drawing's order, and a caption reading the first
+# slice renders a tie as a winner its own legend refutes.
+need RoomFrames.swift.bare "mix.leaders" \
   "the frames caption reads the drawing's first slice again — a tie renders as a winner the legend refutes"
-deny HegotaRoomCard.swift.bare "mix.busiest" \
-  "the frames caption is built from busiest again — that property is the drawing's head, never a superlative"
+deny RoomFrames.swift.bare "slices.first?.modeName" \
+  "the frames caption is built from the drawing's head again, never a superlative"
 # The legend is a census over EVERY framed transaction while the bars are
 # capped at `frameRows`, so the card must say which population each covers.
 # Without it the legend totals nineteen steps above six bars carrying nine.
-need HegotaRoomCard.swift.bare "step counts cover all" \
+need RoomFrames.swift.bare "step counts cover all" \
   "the drawing no longer names its population — the legend and the bars count different things in silence"
 # The note has to FIT, or the one line stopping the cap being silent is itself
-# clipped by DSRoomSlot's 210pt. The arithmetic is in the constant's own doc.
-need HegotaRoomCard.swift.bare "frameRows = 5" \
-  "the frame row cap moved without re-doing the 180pt sum — six rows plus the population note clips at 185"
+# clipped by DSRoomSlot's 210pt. **The cap is DERIVED now (prd §698)** rather
+# than written down as five: `RoomFramesFigure` subtracts the caption, the
+# legend and the note from `figureSlot` and divides what is left, so the sum
+# cannot go stale against a slot that changed. The guard follows the rule
+# instead of the number — a constant back in that file is the reversion.
+need RoomFramesFigure.swift.bare "DSRoomChassis.figureSlot" \
+  "the frames figure stopped deriving its own height — a written-down row cap is what clipped the note at 185pt"
+deny RoomFramesFigure.swift.bare "let rowsShown = " \
+  "the row cap is a constant again — derive it from figureSlot or the sum goes stale the next time the slot moves"
 
 # NO PRICE, EVER. This is test ETH; an amount here is a quantity, never a value.
 # A fiat conversion on this card would be §83's fake status in the one place a

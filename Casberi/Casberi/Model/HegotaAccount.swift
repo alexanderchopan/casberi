@@ -83,20 +83,36 @@ struct HegotaFrame: Equatable, Sendable, Codable {
             }
         }
 
-        var label: String {
+        /// **THE FAMILY'S ONE VOCABULARY (prd §698)** — `RoomFrames.modeName`
+        /// is the table now, and these words are the ones it took: Hegotá
+        /// Frames said "Default"/"Sender" for the same EIP-8141 numbers and
+        /// Hegotá Privacy named nothing, which is §500's "one room using two
+        /// words for one thing" spread across three rooms.
+        ///
+        /// Kept as a property rather than replaced at its call sites: the
+        /// sheets, the rows and the accessibility labels all read `label`, and
+        /// one indirection is what keeps the three rooms provably on one table.
+        var label: String { RoomFrames.modeName(raw) }
+
+        /// The spec's own number for this mode — what `RoomFrames.modeName`
+        /// and `RoomFrameStyle.hue` are keyed on.
+        ///
+        /// **THE LITERAL TERM survives the move (the Nonces ruling, one mode
+        /// over):** EIP-8312 calls 5 a UTXO frame and the spec, the RPC and the
+        /// vault all say UTXO, so `modeName` says UTXO. "Coins" was our
+        /// friendly word for what the vault holds, never the name of the step
+        /// that moved them — and prd §696 retired it from the room entirely.
+        var raw: UInt64? {
             switch self {
-            case .general:   return String(localized: "Call")
-            case .verify:    return String(localized: "Verify")
-            case .sender:    return String(localized: "Send")
-            case .assertion: return String(localized: "Check")
-            // **THE LITERAL TERM (the Nonces ruling, one mode over).**
-            // EIP-8312 calls this a UTXO frame and the spec, the RPC and the
-            // vault all say UTXO; "Coins" is our friendly word for what it
-            // holds, not the name of the step that moved them.
-            case .utxo:      return String(localized: "UTXO")
-            case .unknown:   return String(localized: "Step")
+            case .general:   return 0
+            case .verify:    return 1
+            case .sender:    return 2
+            case .assertion: return 3
+            case .utxo:      return 5
+            case .unknown:   return nil
             }
         }
+
     }
 
     let mode: Mode
