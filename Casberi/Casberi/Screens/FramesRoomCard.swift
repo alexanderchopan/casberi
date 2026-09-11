@@ -56,11 +56,15 @@ struct FramesRoomFigure: View {
             // balance, we say that on home").** The cells carry the names and
             // the amounts; a stat line above them would be Home's number again.
             return isEmpty(.holdings) ? section.emptyHeadline : nil
-        case .sponsors:
+        case .permissions:
             // An empty scope takes its own short state (prd §611).
-            if isEmpty(.sponsors) { return section.emptyHeadline }
-            guard head.hasRead, !head.everythingUnreached else { return nil }
-            return FramesMoney.balanceLine(weiHex: head.balanceWeiHex)
+            if isEmpty(.permissions) { return section.emptyHeadline }
+            // **"N permissions", not the BALANCE (prd §692).** This line used
+            // to state the address's ETH — a fact about money over a list of
+            // who was allowed to pay, and the same number Home already leads
+            // with. The count is the scope's own unit and it is the same unit
+            // in all five rooms.
+            return RoomPermissions.headline(kinds) ?? section.emptyHeadline
         case .activity:
             // **THE CHART OWNS THE COUNT (prd §686)**, exactly as the crown
             // owns the balance on Home — this line and the chart's own number
@@ -137,7 +141,7 @@ struct FramesRoomFigure: View {
         // watched" — the rows list what you watch either way.
         case .accounts: return FramesConnections.map(accounts)?.nodes.isEmpty ?? true
         case .frames:   return !moves.contains { $0.rows.count > 1 }
-        case .sponsors: return !moves.contains(where: \.sponsored)
+        case .permissions: return !moves.contains(where: \.sponsored)
         }
     }
 
@@ -173,7 +177,7 @@ struct FramesRoomFigure: View {
         } else {
             switch section {
             case .home:     sponsorship
-            case .sponsors: sponsors
+            case .permissions: permissions
             case .activity:        activityChart
             case .holdings:        holdingsFigure
             case .accounts:        accountsFigure
@@ -424,73 +428,49 @@ struct FramesRoomFigure: View {
         }
     }
 
-    /// **SPONSORS: WHOSE GAS.** Exact — `gasUsed` and `effectiveGasPrice` are
-    /// on every receipt and `payer` says whose it was.
-    @ViewBuilder private var sponsors: some View {
+    /// **PERMISSIONS: WHO WAS ALLOWED TO PAY (prd §692).**
+    ///
+    /// The grid is `RoomPermissionsFigure`, shared with four other rooms; this
+    /// chain grants exactly one kind of permission, so it draws one cell.
+    ///
+    /// **The lead is the fact only this room can state.** Whose gas: exact,
+    /// because `gasUsed` and `effectiveGasPrice` are on every receipt and
+    /// `payer` says whose it was. §566 made that share the scope's figure and
+    /// it stays the figure — it just leads the shared grid now instead of a
+    /// split bar of its own. `FramesSponsorBar` and the bar's two end labels
+    /// go with it: a drawing that five rooms cannot have is what made this
+    /// scope look like a different question from the same scope next door.
+    ///
+    /// The arrival glance goes too. It was the bar's own wash, and nothing on
+    /// a shared grid can carry it — noted rather than quietly dropped, because
+    /// `FramesLiveState.hasJustArrived` still feeds the Activity rows and this
+    /// is the one reader that stopped asking.
+    @ViewBuilder private var permissions: some View {
         let paid = moves.compactMap { move -> (Double, Bool)? in
             guard let gas = move.gasUsed else { return nil }
             return (Double(gas), move.sponsored)
         }
         let theirs = paid.filter(\.1).map(\.0).reduce(0, +)
         let mine = paid.filter { !$0.1 }.map(\.0).reduce(0, +)
-        // **SOMEBODY ELSE JUST PAID FOR ONE.** The reading this chain has that
-        // no other room in this app can make, and until now it only ever
-        // arrived as a slightly different bar. A glance, not a badge: it
-        // answers a thing that just happened and gets out of the way
-        // (`ArrivalWash`'s ruling), and `arrived` empties on the next read so
-        // it cannot become a mark the bar wears.
-        let sponsoredArrival = moves.contains {
-            $0.sponsored && FramesLiveState.shared.hasJustArrived($0.hash)
-        }
-        // **THE SHARE IS THE FIGURE (prd §566).** This scope is about ONE
-        // number — how much of the gas somebody else paid — and it lived only
-        // inside a `subhead13` sentence under a 14pt bar, while the headline
-        // above is the room's BALANCE, a figure this scope is not about. The
-        // share takes the head rung and the sentence that carried it goes: the
-        // bar's own two ends are named instead.
-        //
-        // `price40`, not `price48`. §506's crown is one per SURFACE and this
-        // card's headline already holds it; the ramp's word for this rung is
-        // "a figure that leads a card without being its crown".
-        //
-        // **The figure wears the tint because the tint half of the bar IS it**
-        // — colour saying what is happening rather than where it came from
-        // (§524), and the one place on this card where a hue states a fact.
         let share = theirs + mine > 0 ? theirs / (theirs + mine) : 0
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if theirs + mine > 0 {
-                // Centred in what is left rather than pinned to the top, for
-                // the Activity chart's reason: a 16pt bar hung under a
-                // headline in a 210pt box reads as a drawing that failed to
-                // load.
-                Spacer(minLength: 0)
-                if theirs > 0 {
-                    HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
-                        Text(Self.percent(share))
-                            .dsText(.price40).monospacedDigit()
-                            .foregroundStyle(DS.tint)
-                            .lineLimit(1).minimumScaleFactor(0.7)
-                        Text(String(localized: "of gas paid by somebody else"))
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
-                            .lineLimit(2)
-                            .frame(maxWidth: 120, alignment: .leading)
-                    }
-                }
-                FramesSponsorBar(mine: mine, theirs: theirs, glance: sponsoredArrival)
-                    .frame(height: theirs > 0 ? 44 : 14)
-                if theirs > 0 {
-                    // The bar's two ends, named where they are — this replaces
-                    // the sentence rather than adding to it.
-                    HStack(spacing: 0) {
-                        Text(String(localized: "you · \(Self.percent(1 - share))"))
-                        Spacer(minLength: DS.Space.s2)
-                        Text(String(localized: "sponsors"))
-                    }
-                    .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
-                }
-                Spacer(minLength: 0)
-            }
-        }
+        RoomPermissionsFigure(
+            kinds: kinds,
+            lead: theirs > 0
+                ? RoomPermissions.Lead(figure: Self.percent(share),
+                                       caption: String(localized: "of gas paid by somebody else"))
+                : nil)
+    }
+
+    /// The one kind of permission this chain grants: somebody else paid.
+    ///
+    /// Counted by PAYER rather than by transaction — a permission is a party
+    /// who was allowed to do something, and one sponsor covering nine
+    /// transactions is one arrangement, not nine. The rows below count the
+    /// transactions.
+    private var kinds: [RoomPermissions.Kind] {
+        let payers = FramesPayers.roster(moves).count
+        guard payers > 0 else { return [] }
+        return [RoomPermissions.Kind(label: String(localized: "Sponsors"), count: payers)]
     }
 
     @ViewBuilder private func note(_ text: String) -> some View {
@@ -586,18 +566,20 @@ struct FramesRoomList: View {
             accountsRows
         case .frames:
             rows(pairs.filter { $0.move.rows.count > 1 })
-        case .sponsors:
+        case .permissions:
             // **TWO KINDS OF ROW, SAID TO BE TWO** (user, 2026-09-02: *"sponsors
             // list also is messy"*). A person and a transaction have different
             // anatomies, and stacked under one caption at one spacing they read
             // as a single list that keeps changing shape. Each block names
             // itself; `s6` between them is the gap the app already uses for
             // "these are different things".
+            //
+            // **`RoomListBlock` is that rule, shared (prd §692)** — the
+            // three Hegotá rooms each list two kinds of permission under this
+            // scope now, and all of them caption their blocks the same way.
             VStack(alignment: .leading, spacing: DS.Space.s6) {
-                payers
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    Text(String(localized: "What they paid for"))
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                RoomListBlock(caption: String(localized: "Sponsors")) { payers }
+                RoomListBlock(caption: String(localized: "What they paid for")) {
                     // **THE SPONSORSHIP CLAUSE IS DROPPED HERE.** Every row in
                     // this scope is sponsored by definition, so the word
                     // separates nothing and costs the line its remaining
@@ -611,21 +593,22 @@ struct FramesRoomList: View {
 
     /// **WHO PAID — the scope's other subject, and it had no surface at all.**
     ///
-    /// The figure draws one split bar: how much of the gas here somebody else
-    /// covered. It could not say WHO, and on this chain that is the whole
-    /// interesting half — the `payer` field is the reading no ordinary chain
-    /// publishes, and a sponsor is the one stranger on a network of eighteen
-    /// addresses genuinely worth following.
+    /// The figure states how much of the gas here somebody else covered. It
+    /// cannot say WHO, and on this chain that is the whole interesting half —
+    /// the `payer` field is the reading no ordinary chain publishes, and a
+    /// sponsor is the one stranger on a network of eighteen addresses
+    /// genuinely worth following.
     ///
     /// Above the transactions rather than below, because the people are what
     /// the scope is ABOUT and the transactions are the evidence.
+    ///
+    /// **The block's own "N sponsors" caption is gone (prd §692)** —
+    /// `RoomListBlock` names the kind above it now, and two captions
+    /// one line apart is the same word twice.
     @ViewBuilder private var payers: some View {
         let roster = FramesPayers.roster(moves)
         if !roster.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text(roster.count == 1 ? String(localized: "1 sponsor")
-                                       : String(localized: "\(String(roster.count)) sponsors"))
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
                 ForEach(roster) { payer in
                     Button {
                         DSHaptic.selection()
@@ -1232,74 +1215,13 @@ private struct FramesSequenceCanvas: View, Animatable {
     }
 }
 
-/// WHO PAID THE GAS — one bar, split.
-///
-/// Exact: `gasUsed` and `effectiveGasPrice` are on every receipt and the
-/// `payer` says whose it was. The reading no ordinary chain can give.
-struct FramesSponsorBar: View {
-    let mine: Double
-    let theirs: Double
-    /// A sponsored transaction landed while somebody was in this scope.
-    var glance = false
+// **`FramesSponsorBar` IS DELETED (prd §692).** It drew the split of whose gas
+// paid for what, under the Sponsors scope that is now Permissions and draws
+// the shared grid. Deleted with its only call site rather than left behind —
+// `HegotaRoom.valueSeries`' lesson, where a dead twin kept a mutation passing
+// against a copy nobody drew. The share it stated survives as the figure's
+// lead line.
 
-    /// **A DRAWING SIZED FROM DATA GETS AN ENTRANCE** (prd §299) — caught by
-    /// `design-motion-audit`, not by looking. It grows from the leading edge,
-    /// which is the direction the split is read in, and Reduce Motion lands it
-    /// at full width on the first frame rather than animating faster.
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var grown = false
-    /// The glance's own clock, latched so a re-compose cannot replay it —
-    /// this scope re-composes on every read, and a segment that keeps
-    /// flickering is the badge `ArrivalWash` exists to refuse.
-    @State private var glanced = false
-    @State private var lit = false
-
-    var body: some View {
-        GeometryReader { geo in
-            let total = mine + theirs
-            let split = total > 0 ? CGFloat(theirs / total) : 0
-            HStack(spacing: 2) {
-                if split < 1 {
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                        .fill(DS.textTertiary)
-                        .frame(width: max(0, geo.size.width * (1 - split) - 1))
-                }
-                if split > 0 {
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                        .fill(DS.tint)
-                        // A GLOW, not a size change and not a hue change: the
-                        // segment's width is a measurement and its colour is
-                        // the room's, so the only thing left to lend it is
-                        // light. Nothing when idle.
-                        .shadow(color: DS.tint.opacity(lit ? 0.7 : 0),
-                                radius: lit ? 7 : 0)
-                }
-            }
-            .scaleEffect(x: grown ? 1 : 0.001, anchor: .leading)
-            .onAppear {
-                guard !reduceMotion else { grown = true; return }
-                withAnimation(DS.Motion.standard) { grown = true }
-            }
-            .task {
-                // Reduce Motion draws nothing at all rather than a slower
-                // glow — the fact is already in the bar's own proportions,
-                // and this is the flourish that preference exists to drop.
-                guard glance, !glanced, !reduceMotion else { return }
-                glanced = true
-                // A beat, so the bar's own growth lands first and the glance
-                // reads as a mark ON a settled drawing rather than as part of
-                // its arrival (`ArrivalWash`'s reasoning, same number).
-                try? await Task.sleep(nanoseconds: 180_000_000)
-                withAnimation(.easeOut(duration: 0.22)) { lit = true }
-                try? await Task.sleep(nanoseconds: 620_000_000)
-                withAnimation(.easeInOut(duration: 0.5)) { lit = false }
-            }
-        }
-        .frame(height: 16)
-        .accessibilityElement()
-        .accessibilityLabel(Text(String(localized: "Gas paid by others, against gas you paid")))
-    }
-}
 
 
 /// **WHAT A FRAMES ADDRESS HOLDS (prd §688).**

@@ -98,6 +98,10 @@ at all.
 | §495 | Every sheet head is a piece of paper — a raised surface, the ROOM'S HUE poured at the top, and the receipt silhouette | amended by §524 (the paper, the pour and the silhouette all stand; only the hue goes. `dsReceiptPaper` no longer TAKES a colour, which also ends the nil arm that gave a hueless app's page no top while a branded one got a coloured one) |
 | §495 | Every sheet head is a piece of paper — a raised surface, an ink pour, and the receipt silhouette | reversed by §583 (user: *"i think it looks WAY better without the card"*. §495 read "a jumble of text" as a missing OBJECT and shipped both halves of a fix — the paper AND the anatomy. The anatomy is what worked: with a disc, a stamp, a lead, a title at the head rung and one sentence, running 12 → 40 down the block, the paper was a second boundary around a block that already had one. §495's "deliberate exception to headers-no-cards" is withdrawn and the general rule applies) |
 | §363 | The money receipt's TEAR carries state — torn is history, flat is still in the machine | reversed by §583 (an edge cannot survive the surface it was an edge of. Checked rather than assumed before removing: every `.open` receipt built in `MoneyReceipt` stamps `.settling` / `.pending` / `.screening` / `.yourTurn` / `.needsProof` / `.openPosition`, none of them quiet — so the silhouette and the word were two renderings of one fact. `finality` itself is untouched, and the settle keeps its haptic) |
+| §546 | The Permissions slot is COUNTS by rung, four bare numerals in two columns | superseded in shape by §692 (the counts and the no-names rule stand; the grid is shared with five rooms and a cell is a well) |
+| §566 | The sponsor scope's figure is a split bar of whose gas paid | superseded by §692 (the share leads the shared grid; the bar is deleted) |
+| §606 | The spend-key scope draws one bar per address; Holdings and Accounts draw no figure | superseded in part by §692 (the spend-key bar goes with the scope; the no-figure rulings stand) |
+| §690 | Wallet Home is the crown and the flow BAND; Activity is the family's chart | amended by §692 (Home's list half draws the flow as rows — the band stays in the brief) |
 | §498 | `DSReceiptPaper` is the shared silhouette, so two rooms cannot drift into two papers | amended by §583 (the reasoning is why a modifier SURVIVES the deletion: strip the ground, the pour, the clip and the shadow and what is left is spacing, and five heads composing their own insets is how they drift apart with every check still green. `DSSheetHeadBlock` is that modifier) |
 | §583 | A capsule is a small card, so the state stamp loses its fill | extended by §584 to the three hand-rolled news pills the `DSStamp` sweep could not reach — and BOUNDED there: measured over all 145 capsules in the app, most are progress tracks or controls, and a capsule that GROUPS (a glyph with its word, one token among several) is earning its place |
 | §584 | A room head's headline cannot take the head rung, because a composed sentence measures 141pt on a 250pt card | answered by §585 — the rung was never the problem, the CONTENT was. A room that opens on a FIGURE puts the figure at `price40` and demotes its sentence; a room that opens on a statement keeps `heading22`, exactly as §584 measured |
@@ -52906,3 +52910,103 @@ still lands the address rather than mistaking the word for a name.
 Supersedes §266 and §267 (the feature they built), reverses §444 (the group row and the
 filing flight), and supersedes §462 (a strip that waited for a group has nothing to wait
 for). §433 and §440 were already out of force by §440 and §461 respectively.
+
+## §692 — Permissions is one scope in five rooms, and Wallet's Home draws its flow as rows (user: "isn't a spend key a permission? aren't frames too? aren't nonces too", then "vibenet keys are not always something someone has control over your account, often you are the owner of those keys. they are just different kinds of permissions. actions permissable on the account which have been granted", then "lets treat frames as its own thing and the others as permissions", 2026-09-11)
+
+**The first answer was wrong and the correction is the ruling.** Asked whether spend keys,
+frames and nonces are permissions, this session's test was *who holds it* — a standing grant
+held by somebody else, revocable. By that test a vibenet key you own is not a permission,
+which is plainly false: it is the scope vibenet has called Permissions since §463. The right
+test is the user's own words — **a class of action that has been granted on the account** —
+and it does not care who holds it.
+
+| Room | Chips before | Chip after |
+|---|---|---|
+| Wallet | Permissions | Permissions |
+| Base Vibenet | Permissions | Permissions |
+| Hegotá UTXO | Nonces · Sponsors | Permissions |
+| Hegotá Privacy | Spend keys · Sponsors | Permissions |
+| Hegotá Frames | Sponsors | Permissions |
+
+Nine chips over one question become five. **Frames stays its own scope in all three
+devnets** — a frame's budget is granted to a step INSIDE one transaction and is gone when
+the step runs, so it is the anatomy of a transaction rather than a right on the account.
+**Snapshots stays its own scope on Privacy**: a root says which SET a proof was made
+against, a fact about the chain's state and not about what anyone may do.
+
+**TWO TENSES UNDER ONE ROOF, AND THE ROW IS WHAT TELLS THEM APART.** A standing grant is
+authority that survives until somebody revokes it — a token approval, a vibenet key, a keyed
+nonce lane. An exercised one was granted and spent — a spend key burned in the using, a
+sponsor who paid. Both answer "what is allowed on this account"; neither may wear the
+other's words. A standing row says what it CAN do (*"Can move up to a cap"*, *"Session ·
+lapses in 3d"*), an exercised one says what it DID (*"Spent once"*, *"Paid for 3
+transactions"*). **Measured before deciding**: sponsorship is derived per transaction on all
+three devnets (`payer ≠ sender`), so there is no standing arrangement to list anywhere, and
+Privacy exposes only SPENT keys — no unspent authority is readable, so its block is "spend
+keys used", stated as such.
+
+**The figure is `RoomPermissionsFigure`, and it is vibenet's census cell generalised.** A
+grid of count-by-kind: a well per cell, a dash and a hollow outline where a class is not in
+play, a two-line label, every dimension derived from `DSRoomChassis.figureSlot` (§665).
+Three columns only when four cells no longer fit two rows; ONE column for a lone kind, so
+Hegotá Frames' single class does not sit in half a row with nothing beside it. Colour marks
+UNBOUNDEDNESS and nothing else, and the figure never names a holder — §546's ruling,
+inherited whole: the list owns the names, the figure owns the arithmetic.
+
+**The headline is "N permissions" in every room, and takes its count rather than deriving
+it.** Wallet's rungs and the devnets' kinds PARTITION their permissions, so the cells add up
+to the total; vibenet's census does not — one key holding Send and Receive is counted in two
+cells — so vibenet passes its key count. Three headlines go: Hegotá UTXO's and Frames'
+Sponsors scopes stated the address's ETH BALANCE, which is a fact about money over a list of
+who was allowed to act, and Home's own number said twice; Privacy's Sponsors drew the gas
+BUDGET bar, a reading about what steps were allowed to COST.
+
+**The list is captioned blocks (`RoomListBlock`), one per kind.** Frames' 2026-09-02 ruling —
+*"sponsors list also is messy"*, a person and a transaction are two anatomies and must say so
+— generalised to every room that now lists two kinds. **This is also where §500's "the chip
+is where the word gets learned" lands now**: the chain's own words are not lost to the fold,
+they are the captions over the rows they name — "Nonce keys", "Spend keys", "Sponsors" — one
+layer in and nearer their subject. Privacy's §598 pass fought to put plain words on the chip
+rather than in a glossary; the harness that guarded the chip guards the caption.
+
+**Sponsors are counted by PAYER, never by transaction.** A permission is a party who was
+allowed to do something, and one sponsor covering nine transactions is one arrangement, not
+nine — the rows below count the transactions. The same unit `FramesPayers.roster` already
+used.
+
+**Four drawings are deleted with their scopes**, rather than left as dead twins
+(`HegotaRoom.valueSeries`' lesson, paid again): `FramesSponsorBar` (the gas split — its
+share survives as the figure's lead line, the one fact only that room can state, beside
+Wallet's "$N in reach"), `HegotaRoomCard.noncesFigure` and its caption (three stats, two of
+which counted SENDS rather than permissions; the lane rows still carry a lane's own send
+count and the account sheet keeps the whole split), `PrivacyDevnetRoomCard.spendKeyFigure`
+(one bar per address ranked by how much it had spent, under a scope asking what is allowed),
+and vibenet's `policyCensusCell` with its three constants, which became the shared figure's
+rules. Frames' sponsored-arrival glance goes with its bar and is noted rather than quietly
+dropped — nothing on a shared grid carries it, and `FramesLiveState.hasJustArrived` still
+feeds the Activity rows.
+
+**One knowing loss, stated.** Wallet's four cells were `price40` numerals, bare on the page;
+they are `price16` in wells now. The well is what lets a class with nothing in it draw a dash
+instead of a "0" that reads as a measurement, and a lone room keeping its own rung is how
+five slots drift back apart.
+
+**THE SANKEY LEAVES HOME (user, same session: "i don't like the sankey on the home list area
+it looks weird to have a chart there now that i see it. can we change it to a list
+format").** §690 put `WalletFlowBand` in Wallet Home's list half four hours earlier, on the
+reasoning that the crown says how much moved and the band says through whom. **That substance
+stands and only the shape changes**: `WalletFlowRows` draws the SAME `WalletFlow.Band` over
+the same window, so no number can disagree with the band the daily brief still renders
+(`GenRenderer`, where a diagram is the right shape for a card read once). Two captioned
+blocks — Came in, Went out — because a single list of signed amounts makes the reader do the
+grouping the band did for free. A row is who, how many, how much, and **no share bar**: the
+amounts are already comparable down one column, and a bar per row is the tally §292 refused.
+The folded "Other" lane keeps its row, or the block totals go unaccounted for (§510's
+contradiction). The sign is drawn on the amount as well as said in the caption, because a row
+met alone — by VoiceOver, or scrolled past its caption — has to carry its own direction.
+
+Supersedes §546 in shape only (the counts and the no-names rule are inherited whole; the
+grid is shared and the cell is a well), supersedes §566's sponsor bar and §606's spend-key
+figure, and amends §690 (Home's list half is rows, not the band). §463, §491 and §551 stand:
+vibenet's census, its Admin naming and its draw-the-whole-census ruling are what the shared
+figure was built from.

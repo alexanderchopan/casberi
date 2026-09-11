@@ -92,8 +92,10 @@ struct HegotaRoomFigure: View {
         case .accounts: return HegotaConnections.map(shown)?.nodes.isEmpty ?? true
         case .frames:   return framedMoves.isEmpty
         case .coins:    return coins.isEmpty
-        case .nonces:   return lanes.isEmpty
-        case .sponsors: return !moves.contains(where: \.isSponsored)
+        // **EMPTY ONLY WHEN NEITHER KIND IS GRANTED (prd §692).** The scope
+        // holds two — nonce keys and sponsors — so an address with a lane and
+        // no sponsor has permissions and must not draw the empty state.
+        case .permissions: return HegotaPermissions.kinds(shown).isEmpty
         }
     }
 
@@ -169,10 +171,12 @@ struct HegotaRoomFigure: View {
             // figure is drawn twice, once as the stat line and once inside the
             // crown. Sponsors keeps its own, since it draws no crown.
             return nil
-        case .sponsors:
-            guard head.hasRead, !head.everythingUnreached,
-                  let wei = shownBalance ?? head.balanceWei else { return nil }
-            return HegotaFormat.crown(wei)
+        // **"N permissions", not the BALANCE (prd §692).** This scope's line
+        // stated the address's ETH — Home's own number, over a list of who was
+        // allowed to send and who paid. The count is the scope's unit, and the
+        // same unit in all five rooms.
+        case .permissions:
+            return RoomPermissions.headline(HegotaPermissions.kinds(shown)) ?? section.emptyHeadline
         case .activity:
             // **THE CHART OWNS THE COUNT (prd §686)** — the same rule the crown
             // has on Home. Drawn here as well it appears twice, once as this
@@ -202,9 +206,6 @@ struct HegotaRoomFigure: View {
             return nil
         case .coins:
             return coins.isEmpty ? nil : HegotaFormat.crown(HegotaCoins.total(coins))
-        case .nonces:
-            return lanes.count == 1 ? String(localized: "1 nonce key")
-                                    : String(localized: "\(String(lanes.count)) nonce keys")
         // **STEPS, not transactions.** The transaction count is already the
         // Activity scope's headline one chip away, so repeating it here would
         // make the two scopes look like the same reading twice. What this scope
@@ -218,13 +219,13 @@ struct HegotaRoomFigure: View {
 
     @ViewBuilder private var slotFigure: some View {
         switch section {
-        case .home, .sponsors: crownFigure
+        case .home:            crownFigure
         case .activity:        activityChart
         case .holdings:        holdingsFigure
         case .accounts:        accountsFigure
         case .frames:          framesFigure
         case .coins:           coinsFigure
-        case .nonces:          noncesFigure
+        case .permissions:     RoomPermissionsFigure(kinds: HegotaPermissions.kinds(shown))
         }
     }
 
@@ -1401,64 +1402,14 @@ struct HegotaRoomFigure: View {
             : String(localized: "\(held), \(String(change)) of them change")
     }
 
-    /// **NONCES — the three facts the list below cannot state.**
-    ///
-    /// **There is no chart here, and that is the finding.** Three were built
-    /// and all three were unreadable for one reason: a real address keeps two
-    /// or three counters with one or two sends each, and a bar chart, a pip
-    /// grid and a staircase all need more steps than that to say anything. A
-    /// figure invented for two data points is noise wearing a chart's clothes.
-    ///
-    /// So: numbers, and specifically the ones the rows underneath are
-    /// structurally incapable of showing. **The list enumerates NAMED keys** —
-    /// that is what a keyed nonce is — so key 0, the single counter every other
-    /// chain gives you and usually the busiest thing on the account, appears
-    /// nowhere in it. Nor does any total, because a list of per-key counts
-    /// never sums itself.
-    @ViewBuilder private var noncesFigure: some View {
-        // **The ordinary count comes off the CHAIN now (§504).** Every other
-        // reading in this room is reconstructed from transfer logs, and this one
-        // could not be: a transaction that moved no ETH emits no transfer log,
-        // so counting outgoing moves undercounts — on the chain whose whole
-        // subject is transactions that verify, check and call rather than pay,
-        // and in the scope whose entire claim is to count sends.
-        let account = primary
-        let totals = HegotaNonceTotals.of(moves, lanes: lanes,
-                                          nonceCount: account?.nonceCount,
-                                          valuelessSends: account?.valuelessSends)
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            figureCaption(noncesCaption(totals))
-            HStack(alignment: .top, spacing: DS.Space.s2) {
-                stat(String(totals.counters),
-                     String(localized: "Counters in all"), tint: DS.textPrimary)
-                stat(String(totals.ordinarySends),
-                     String(localized: "On the ordinary nonce"), tint: DS.textSecondary)
-                stat(String(totals.keyedSends),
-                     String(localized: "On named keys"), tint: DS.tint)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-    }
+    // **`noncesFigure` IS DELETED (prd §692).** It drew three stats —
+    // counters in all, sends on the ordinary nonce, sends on named keys —
+    // under a scope chip that is now Permissions, whose figure is the shared
+    // grid. Two of those three counted SENDS rather than permissions, and the
+    // lane rows below still carry a lane's own send count; the account sheet
+    // keeps the whole split (`sends`). Deleted with its caption rather than
+    // left behind: `HegotaRoom.valueSeries`' lesson.
 
-    /// The line above the three counters.
-    ///
-    /// **The independence sentence is the scope's whole content**, so it is the
-    /// default — three numbers sitting still say none of it, which is why the
-    /// figures count up on their own clocks (§503, moment 04).
-    ///
-    /// It gives way only for the fact that is strictly newer than it: sends the
-    /// chain counted that no transfer log can show. Those are frame
-    /// transactions that verified, checked or called and paid nobody — real
-    /// sends, invisible to every other reading in this room, and the concrete
-    /// evidence for what the Frames scope one chip away is about.
-    private func noncesCaption(_ totals: HegotaNonceTotals) -> String {
-        guard let quiet = totals.valuelessSends else {
-            return String(localized: "Each counter sends without waiting on the others")
-        }
-        return quiet == 1
-            ? String(localized: "1 send moved no value — a step, not a payment")
-            : String(localized: "\(String(quiet)) sends moved no value — steps, not payments")
-    }
 
     /// One figure and what it counts. `stat24` is the ramp's own stat size —
     /// big enough to be the drawing, small enough that three sit side by side.
@@ -1930,8 +1881,7 @@ struct HegotaRoomList: View {
             case .accounts: accountsList
             case .frames:   framesList
             case .coins:    coinsList
-            case .nonces:   noncesList
-            case .sponsors: sponsorsList
+            case .permissions: permissionsList
             }
         }
     }
@@ -2160,6 +2110,25 @@ struct HegotaRoomList: View {
     }
 
     // MARK: Nonces
+
+    /// One block per kind, each captioned with the chain's own word — which is
+    /// where §500's "the chip is where the word gets learned" actually lands
+    /// now that the chip says Permissions: a person meets "Nonce keys" over
+    /// the rows that are nonce keys.
+    @ViewBuilder private var permissionsList: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
+            if !lanes.isEmpty {
+                RoomListBlock(caption: String(localized: "Nonce keys")) {
+                    VStack(spacing: DS.Space.s2) { noncesList }
+                }
+            }
+            if moves.contains(where: \.move.isSponsored) {
+                RoomListBlock(caption: String(localized: "Sponsors")) {
+                    VStack(spacing: DS.Space.s2) { sponsorsList }
+                }
+            }
+        }
+    }
 
     @ViewBuilder private var noncesList: some View {
         if !lanes.isEmpty {
@@ -3540,8 +3509,8 @@ struct HegotaAccountSheet: View {
     @ViewBuilder private var doing: some View {
         DSSpecTable {
             row(Text("Movements"), count: account.moves.count, section: .activity)
-            row(Text("Nonce keys"), count: account.lanes.count, section: .nonces)
-            row(Text("Somebody else paid"), count: account.sponsored.count, section: .sponsors)
+            row(Text("Nonce keys"), count: account.lanes.count, section: .permissions)
+            row(Text("Somebody else paid"), count: account.sponsored.count, section: .permissions)
         }
     }
 

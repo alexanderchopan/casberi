@@ -133,20 +133,17 @@ struct PrivacyDevnetRoomCard: View {
             guard steps > 0 else { return section.emptyHeadline }
             return steps == 1 ? String(localized: "1 step")
                               : String(localized: "\(String(steps)) steps")
-        case .nullifiers:
-            let n = accounts.reduce(0) { $0 + $1.nullifiers.count }
-            guard n > 0 else { return section.emptyHeadline }
-            return n == 1 ? String(localized: "1 spend key")
-                          : String(localized: "\(String(n)) spend keys")
+        // **"N permissions" (prd §692)** — the scope's unit, and the same
+        // unit in all five rooms. It counted spend keys alone while the
+        // Sponsors chip beside it counted sponsored transactions; one scope
+        // cannot have two units.
+        case .permissions:
+            return RoomPermissions.headline(permissionKinds) ?? section.emptyHeadline
         case .roots:
             let n = accounts.reduce(0) { $0 + $1.roots.count }
             guard n > 0 else { return section.emptyHeadline }
             return n == 1 ? String(localized: "1 proof")
                           : String(localized: "\(String(n)) proofs")
-        case .sponsors:
-            let n = moves.filter(\.sponsored).count
-            guard n > 0 else { return section.emptyHeadline }
-            return String(localized: "\(String(n)) sponsored")
         }
     }
 
@@ -364,9 +361,9 @@ extension PrivacyDevnetRoomCard {
         // what you watch either way; the slot's job is the relationship.
         case .accounts:   return PrivacyConnections.map(accounts)?.nodes.isEmpty ?? true
         case .frames:     return moves.allSatisfy { $0.frameCount == 0 }
-        case .nullifiers: return keyRows.isEmpty
+        // **EMPTY ONLY WHEN NEITHER KIND IS GRANTED (prd §692).**
+        case .permissions: return permissionKinds.isEmpty
         case .roots:      return accounts.allSatisfy { $0.roots.isEmpty }
-        case .sponsors:   return !moves.contains(where: \.sponsored)
         }
     }
 
@@ -418,12 +415,8 @@ extension PrivacyDevnetRoomCard {
         case .holdings:   holdingsRoster
         case .accounts:   roster
         case .frames:     list(pairs.filter { $0.move.frameCount > 0 })
-        case .nullifiers: nullifierScope
+        case .permissions: permissionsScope
         case .roots:      rootScope
-        // **THE SPONSORSHIP CLAUSE IS DROPPED IN ITS OWN SCOPE** — Frames'
-        // ruling: every row here is sponsored by definition, so the word
-        // separates nothing and costs the line its remaining width.
-        case .sponsors:   list(pairs.filter(\.move.sponsored), showsSponsorship: false)
         }
     }
 
@@ -716,45 +709,12 @@ extension PrivacyDevnetRoomCard {
         return parts.joined(separator: " · ")
     }
 
-    /// Spend keys: how many each watched address has burned. A spend key is
-    /// used once and never again, so the count IS the reading.
-    @ViewBuilder var spendKeyFigure: some View {
-        let spenders = accounts.filter { !$0.nullifiers.isEmpty }
-                               .sorted { $0.nullifiers.count > $1.nullifiers.count }
-        if spenders.isEmpty {
-            slotNothing(String(localized: "No address here has spent a pool note"))
-        } else {
-            let top = max(spenders.first?.nullifiers.count ?? 1, 1)
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                ForEach(spenders.prefix(4)) { account in
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: DS.Space.s2) {
-                            Text(PrivacyDevnetName.of(account.address))
-                                .dsText(.label12)
-                                .foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                            Text(String(account.nullifiers.count))
-                                .dsText(.callout15).fontWeight(.semibold)
-                                .foregroundStyle(DS.textPrimary)
-                                .monospacedDigit()
-                        }
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                Capsule(style: .continuous).fill(DS.fillFaint)
-                                Capsule(style: .continuous).fill(DS.tint)
-                                    .frame(width: max(4, geo.size.width
-                                                      * CGFloat(account.nullifiers.count) / CGFloat(top)))
-                            }
-                        }
-                        .frame(height: 6)
-                    }
-                }
-            }
-            .padding(.trailing, DSRoomChassis.gearColumn)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
-    }
+    // **`spendKeyFigure` IS DELETED (prd §692).** It drew one bar per address
+    // by how many pool keys that address had spent — a ranking of your own
+    // addresses by spending, under a scope asking what is allowed. The shared
+    // grid states the count; the rows below say which key and open its
+    // transaction. Deleted with its scope rather than left behind
+    // (`HegotaRoom.valueSeries`' lesson, and `kindMix` in this very file).
 
     /// What a scope with nothing to draw puts in the slot: the sentence, not a
     /// blank. Never a dash and never a zero — a scope that has nothing says
@@ -853,6 +813,53 @@ extension PrivacyDevnetRoomCard {
     /// **EVERY KEY OPENS THE TRANSACTION THAT SPENT IT (prd §596).** The
     /// explainer paragraph that led this list moved into the move sheet, where
     /// it sits beside the keys it explains instead of over a column of rows.
+    /// **THE TWO KINDS OF PERMISSION THIS CHAIN GRANTS (prd §692).**
+    ///
+    /// A SPEND KEY is exercised authority: the right to spend one pool note,
+    /// burned in the using, so the same note cannot be spent twice. A SPONSOR
+    /// is authority somebody else exercised for you. Neither is standing —
+    /// this chain exposes no unspent authority to list, and the rows say what
+    /// was DONE rather than what may be.
+    ///
+    /// Sponsors are counted by PAYER, not by transaction: a permission is a
+    /// party who was allowed to do something, and one sponsor covering nine
+    /// transactions is one arrangement.
+    var permissionKinds: [RoomPermissions.Kind] {
+        var out: [RoomPermissions.Kind] = []
+        let keys = keyRows.count
+        if keys > 0 {
+            out.append(RoomPermissions.Kind(label: String(localized: "Spend keys used"),
+                                            count: keys))
+        }
+        let payers = Set(pairs.filter(\.move.sponsored).map(\.owner)).count
+        if payers > 0 {
+            out.append(RoomPermissions.Kind(label: String(localized: "Sponsors"),
+                                            count: payers))
+        }
+        return out
+    }
+
+    /// One block per kind, each captioned with the chain's own plain words —
+    /// §598's vocabulary, moved from the chip to the caption over the rows it
+    /// names.
+    @ViewBuilder var permissionsScope: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
+            if !keyRows.isEmpty {
+                RoomListBlock(caption: String(localized: "Spend keys")) {
+                    nullifierScope
+                }
+            }
+            if moves.contains(where: \.sponsored) {
+                // **THE SPONSORSHIP CLAUSE IS DROPPED IN THIS BLOCK** — Frames'
+                // ruling: every row here is sponsored by definition, so the
+                // word separates nothing and costs the line its width.
+                RoomListBlock(caption: String(localized: "Sponsors")) {
+                    list(pairs.filter(\.move.sponsored), showsSponsorship: false)
+                }
+            }
+        }
+    }
+
     @ViewBuilder var nullifierScope: some View {
         let rows = keyRows
         if rows.isEmpty {
@@ -1054,9 +1061,13 @@ extension PrivacyDevnetRoomCard {
         // rail carry the detail, which is strictly more than the shapes said.
         case .holdings:   holdingsFigure
         case .accounts:   accountsFigure
-        case .nullifiers: spendKeyFigure
+        // **THE SHARED GRID (prd §692).** `spendKeyFigure` drew one bar per
+        // address by how many keys it had spent, and the Sponsors chip beside
+        // it drew the gas BUDGET bar — a reading about what steps were allowed
+        // to cost, which is not what the scope asks. Both go for the figure
+        // five rooms share.
+        case .permissions: RoomPermissionsFigure(kinds: permissionKinds)
         case .roots:      windows
-        case .sponsors:   budgetBar(moves.filter(\.sponsored))
         case .home:       EmptyView()
         }
     }

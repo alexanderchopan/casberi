@@ -691,6 +691,43 @@ struct HegotaFrameMix: Equatable, Sendable {
 /// scope was Activity filtered — the same rows, in the same shape, ordered by
 /// when rather than by who. Somebody paying for eleven of your transactions
 /// and eleven people paying once each are completely different facts about
+/// **THE TWO KINDS OF PERMISSION THIS CHAIN GRANTS (prd §692).**
+///
+/// A NONCE KEY is standing authority: a named key's transfers do not wait for
+/// the ordinary counter, so anything sending on it may go out beside anything
+/// else, and it keeps that right until the account stops using it. A SPONSOR
+/// is exercised authority: somebody paid for a transaction of yours.
+///
+/// **Sponsors are counted by PAYER, never by transaction.** A permission is a
+/// party who was allowed to do something, and one sponsor covering nine
+/// transactions is one arrangement, not nine — the rows below count the
+/// transactions. This is the same unit `FramesPayers.roster` counts one room
+/// over, deliberately.
+///
+/// **A kind with none of its own is DROPPED, not drawn as a dash.** Vibenet's
+/// census draws absences because its six scope bits are a fixed set of rungs a
+/// key either has or has not, and "no key here can send anywhere" is a real
+/// answer. These two are not a fixed set: an address that has never been
+/// sponsored has no sponsor rung to be empty of.
+///
+/// Foundation-only, so `hegota-selftest.sh` can drive it: the figure, the
+/// headline and the empty state all read it, and a room that disagrees with
+/// itself about whether a scope is empty draws an empty state over content.
+enum HegotaPermissions {
+    static func kinds(_ accounts: [HegotaAccount]) -> [RoomPermissions.Kind] {
+        var out: [RoomPermissions.Kind] = []
+        let lanes = accounts.reduce(0) { $0 + $1.lanes.count }
+        if lanes > 0 {
+            out.append(RoomPermissions.Kind(label: String(localized: "Nonce keys"), count: lanes))
+        }
+        let payers = Set(accounts.flatMap(\.sponsored).compactMap { $0.payer?.lowercased() })
+        if !payers.isEmpty {
+            out.append(RoomPermissions.Kind(label: String(localized: "Sponsors"), count: payers.count))
+        }
+        return out
+    }
+}
+
 /// your account, and a flat list cannot tell them apart.
 struct HegotaSponsor: Equatable, Sendable, Identifiable {
     let payer: String

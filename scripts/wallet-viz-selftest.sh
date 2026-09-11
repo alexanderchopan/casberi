@@ -171,6 +171,17 @@ fi
 # (2b) The Activity slot DRAWS its decline (prd §589). A nil band used to leave
 # the fixed slot as a box of air — "the activity chart isn't showing" — and the
 # figure that names the cause must read the model's ladder, never re-derive it.
+# (2c) HOME DRAWS THE FLOW AS ROWS (prd §692). The band is the same model and
+# the same window; what changed is the shape, because the list half of a room
+# is a list. A `WalletFlowBand` back in `walletFlowSection` is the reversion
+# this guards — it renders perfectly and is exactly what the user asked to be
+# rid of.
+grep -q 'WalletFlowRows(band: band' <<< "$FEED_CODE" \
+  || { echo "✗ Home's flow slot no longer draws WalletFlowRows (prd §692) — a chart"; \
+       echo "  in the list half is the shape this ruling replaced"; exit 1; }
+grep -q 'WalletFlowBand(band: band' <<< "$FEED_CODE" \
+  && { echo "✗ the sankey is back in the room's list half (prd §692) — the band"; \
+       echo "  belongs to the brief (GenRenderer), not to Home"; exit 1; }
 grep -q 'WalletFlowEmptyFigure(decline: ' <<< "$FEED_CODE" \
   || { echo "✗ walletFlowSection no longer draws WalletFlowEmptyFigure when the band"; \
        echo "  declines (prd §589) — a fixed slot with nothing in it is a dead control"; exit 1; }
@@ -450,6 +461,16 @@ do {
 check(WalletFlow.band(legs: [leg(true, "A", nil), leg(false, "B", nil)]) == nil,
       "declines when nothing could be priced")
 check(WalletFlow.band(legs: []) == nil, "declines on no legs")
+// **A LANE KNOWS ITS COUNTERPARTY (prd §692)** — the rows draw a face from it,
+// and an empty or side-bearing key draws the wrong one. An address contains no
+// colon, so splitting on the FIRST is total.
+if let keyed = WalletFlow.band(legs: [leg(true, "A", 500, key: "0xaaa"),
+                                      leg(true, "B", 400, key: "0xbbb"),
+                                      leg(false, "C", 300, key: "0xccc"),
+                                      leg(false, "D", 200, key: "0xddd")]) {
+    check(keyed.inLanes.first?.key == "0xaaa", "a lane's key is its counterparty, without the side")
+    check(keyed.inLanes.first?.id.hasPrefix("in:") == true, "…and the id still carries the side")
+} else { check(false, "the four-lane fixture should band") }
 // One lane is a sentence, not a comparison.
 check(WalletFlow.band(legs: [leg(true, "Only", 500)]) == nil, "declines on a single lane")
 // A zero or non-finite price can't become a lane or poison the scale.

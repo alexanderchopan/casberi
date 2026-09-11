@@ -518,7 +518,7 @@ struct PrivacyDevnetAccountSheet: View {
         DSSpecTable {
             row(Text("Transactions"), count: account.moves.count, section: .activity)
             row(Text("Steps run"), count: account.frameCount, section: .frames)
-            row(Text("Spend keys"), count: account.nullifiers.count, section: .nullifiers)
+            row(Text("Spend keys"), count: account.nullifiers.count, section: .permissions)
             row(Text("Snapshot proofs"), count: account.roots.count, section: .roots)
         }
     }

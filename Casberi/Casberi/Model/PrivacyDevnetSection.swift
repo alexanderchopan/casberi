@@ -50,9 +50,17 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
     case holdings
     case accounts
     case frames
-    case nullifiers
+    /// **SPEND KEYS AND SPONSORS FOLDED IN HERE (prd §692).** A spend key is a
+    /// permission EXERCISED — the right to spend one note, burned in the using
+    /// — and a sponsor is one somebody else exercised on your behalf. Two
+    /// chips over one question is what this replaces; user, 2026-09-11:
+    /// *"they are just different kinds of permissions."*
+    ///
+    /// **Snapshots stays its own scope**, and the split is the ruling: a root
+    /// is which SET a proof was made against, a fact about the chain's state
+    /// rather than about what anyone is allowed to do.
+    case permissions
     case roots
-    case sponsors
 
     var id: String { rawValue }
 
@@ -66,14 +74,15 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
     /// no unconditional scope sits after a conditional one, and `home`,
     /// `activity` and `accounts` all precede it.
     ///
-    /// **`nullifiers` and `roots` sit adjacent, in that order, and the pairing
-    /// is the point.** They are the two halves of one mechanism — a nullifier
-    /// says this spend cannot happen twice, a root says which set it was proved
-    /// against — and a reader who meets them apart meets two unrelated pieces of
-    /// jargon. Nullifiers leads because it is the half that concerns YOUR
-    /// transaction; roots is the half that concerns the chain's state.
+    /// **`permissions` and `roots` sit adjacent, in that order, and the
+    /// pairing survives §692's fold.** They are the two halves of one
+    /// mechanism — a spend key says this spend cannot happen twice, a root says
+    /// which set it was proved against — and a reader who meets them apart
+    /// meets two unrelated pieces of jargon. Permissions leads because it is
+    /// the half that concerns YOUR transaction; roots is the half that concerns
+    /// the chain's state.
     static let order: [PrivacyDevnetSection] = [.home, .activity, .holdings, .accounts, .frames,
-                                          .nullifiers, .roots, .sponsors]
+                                                .permissions, .roots]
 
     /// Which scopes can be EMPTY.
     ///
@@ -87,7 +96,7 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
         // A watched address always has a roster row — even one saying the chain
         // could not be reached, which is itself the answer (vibenet's rule).
         case .home, .activity, .holdings, .accounts: return false
-        case .frames, .nullifiers, .roots, .sponsors: return true
+        case .frames, .permissions, .roots: return true
         }
     }
 
@@ -121,15 +130,19 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings:   return String(localized: "Holdings")
         case .accounts:   return String(localized: "Accounts")
         case .frames:     return String(localized: "Frames")
-        case .nullifiers: return String(localized: "Spend keys")
-        case .roots:      return String(localized: "Snapshots")
-        case .sponsors:   return String(localized: "Sponsors")
+        // **ONE CHIP FOR THE QUESTION, IN EVERY ROOM (prd §692).** "Spend
+        // keys" and "Sponsors" were two chips over one reading. The plain
+        // words §598 fought for are not lost — they are the BLOCK CAPTIONS
+        // inside the scope now, which is still the first place a person meets
+        // them and is nearer the rows they name.
+        case .permissions: return String(localized: "Permissions")
+        case .roots:       return String(localized: "Snapshots")
         }
     }
 
     /// What the scope holds — the accessibility label and the tooltip.
     ///
-    /// **`nullifiers` and `roots` are the two that must not overclaim.** Every
+    /// **`permissions` and `roots` are the two that must not overclaim.** Every
     /// transaction on this chain carries `sender` in the clear and EIP-8182's
     /// protocol-level pool is not deployed, so nothing here hides who
     /// transacted or how much. What is shielded is the LINK between a
@@ -147,9 +160,8 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
         // relationship, the one question no other scope answers.
         case .accounts:   return String(localized: "The accounts you follow, and the ones tied to them")
         case .frames:     return String(localized: "The steps your transactions ran")
-        case .nullifiers: return String(localized: "Spend keys used once, so a spend can't be repeated")
-        case .roots:      return String(localized: "Which snapshot a proof was made against")
-        case .sponsors:   return String(localized: "Transactions somebody else paid for")
+        case .permissions: return String(localized: "What's allowed to act on your accounts, and what already has")
+        case .roots:       return String(localized: "Which snapshot a proof was made against")
         }
     }
 
@@ -160,7 +172,7 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
     /// rules compile and mutation-test with no `ModelContext` and no network.
     /// The call site does the reading; this does the deciding.
     ///
-    /// **`sponsors` is expected false on every address today** — no measured
+    /// **A sponsor is expected on no address today** — no measured
     /// transaction on this chain has a `payer` differing from its sender — and
     /// that is the correct output rather than a gap.
     ///
@@ -170,10 +182,10 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
     ///
     /// **EVERY SCOPE IS PRESENT, ALWAYS (prd §610, user ruling: "even if they
     /// have no data for the account, they should still be present w/ an empty
-    /// state").** The gate used to drop `frames`, `nullifiers`, `roots` and
-    /// `sponsors` for an address that had none — which on this chain is nearly
+    /// state").** The gate used to drop `frames`, `permissions` and `roots`
+    /// for an address that had none — which on this chain is nearly
     /// every address, so the strip read *Home · Activity · Accounts* and the
-    /// four readings the room exists for were invisible to anyone who had not
+    /// readings the room exists for were invisible to anyone who had not
     /// already made one.
     ///
     /// **This is not the dead control §83 bans, and the distinction is the
@@ -205,9 +217,8 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings:   return String(localized: "Holds nothing")
         case .accounts:   return String(localized: "No connections yet")
         case .frames:     return String(localized: "No steps")
-        case .nullifiers: return String(localized: "No spend keys")
-        case .roots:      return String(localized: "No proofs")
-        case .sponsors:   return String(localized: "None sponsored")
+        case .permissions: return String(localized: "No permissions")
+        case .roots:       return String(localized: "No proofs")
         }
     }
 
@@ -225,7 +236,7 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
     /// **NO DOOR ANYWHERE HERE** (user ruling, §610): Top up and Send live on
     /// Home and nowhere else, so these say what is true and stop.
     ///
-    /// **Nothing here states a chain-wide fact.** `sponsors` was written first
+    /// **Nothing here states a chain-wide fact.** The sponsor half was written first
     /// as "no transaction measured on this chain has had a payer other than
     /// its own sender" — true when measured, and a sentence that silently
     /// becomes a lie the first time one does. It says what is true of THIS
@@ -242,12 +253,10 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "How the accounts you follow relate — who they have both dealt with. None of them shares a counterparty yet, so there is nothing to draw between them.")
         case .frames:
             return String(localized: "A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here ran any — a plain transfer runs none.")
-        case .nullifiers:
-            return String(localized: "A pool spend burns a key that can never be used again, so the same note cannot be spent twice. Nothing here has spent one.")
+        case .permissions:
+            return String(localized: "What has been allowed on this account. A pool spend burns a key that can never be used again, so the same note cannot be spent twice; a sponsored transaction is one somebody else covered the gas for. Nothing here has spent a key, and nothing here was sponsored.")
         case .roots:
             return String(localized: "A proof names a moment the chain still remembers, and proves it belongs to that set without saying which member it is. Nothing here names one — a plain transfer proves nothing.")
-        case .sponsors:
-            return String(localized: "A sponsored transaction is one somebody else covered the gas for. Nothing here was.")
         }
     }
 

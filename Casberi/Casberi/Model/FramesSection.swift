@@ -38,33 +38,35 @@ import Foundation
 /// honest version of the sentence §500 wrote as a fact about the chain.
 ///
 /// Wallet's other three stay absent for §500's reasons, all of which hold:
-/// **Positions**
-/// and **NFTs** (nothing to hold), **Risk** (nothing can move against you —
-/// the asset is test ETH with no price), and **Permissions**.
+/// **Positions** and **NFTs** (nothing to hold) and **Risk** (nothing can move
+/// against you — the asset is test ETH with no price).
 ///
-/// **PERMISSIONS IS ABSENT BECAUSE THIS CHAIN HAS NO STANDING AUTHORITY, and
-/// that is a fact about EIP-8141 rather than a gap in this room** (user,
-/// 2026-09-01: *"won't we have permissions ... or no bc that is 'frames'"* —
-/// right, and the reason is sharper than coverage). On vibenet a keystore
-/// account really does have actors — keys, passkeys, a delegate — that can act
-/// for it tomorrow, so a Permissions scope lists a durable grant somebody can
-/// revoke. Here **authorization is PER-TRANSACTION**: a VERIFY frame's `flags`
-/// carry the `APPROVE` scope for execution and payment, and that authority is
-/// granted and spent inside the one transaction carrying it. Nothing survives
-/// it, so there is nothing standing to list and nothing to revoke — which is
-/// also why a transaction with no `APPROVE` is not under-permissioned but
-/// INVALID: it has no payer at all.
+/// **PERMISSIONS ARRIVES, AND SPONSORS IS WHAT IT HOLDS (prd §692,
+/// 2026-09-11).** The note that stood here said a Permissions scope on this
+/// chain would list grants that cannot exist — true of STANDING authority and
+/// only of that. Authorization here is per-transaction: a VERIFY frame's
+/// `flags` carry the `APPROVE` scope for execution and payment, granted and
+/// spent inside the one transaction carrying it, which is why a transaction
+/// with no `APPROVE` is not under-permissioned but INVALID — it has no payer
+/// at all. Nothing survives it, so there is nothing to revoke.
 ///
-/// The permission therefore genuinely IS a frame, and it is drawn where frames
-/// are drawn. Two consequences worth keeping: the `frames` scope must always
-/// say whether a VERIFY frame approved execution, payment or both — that is
-/// the permission, not decoration — and a Permissions scope here would be a
-/// page listing grants that cannot exist, the empty chip §83 bans.
+/// What the user's ruling adds is that an EXERCISED permission is still a
+/// permission: *"they are just different kinds of permissions. actions
+/// permissable on the account which have been granted."* A sponsor paid for a
+/// transaction of yours, and that is the one thing on this chain somebody
+/// else was allowed to do for this account. So the scope is Permissions, its
+/// one kind is Sponsors, and every row says what it DID rather than what it
+/// may do — the tense is the honesty.
+///
+/// The frame-level `APPROVE` stays where frames are drawn, and the consequence
+/// is unchanged: the `frames` scope must always say whether a VERIFY frame
+/// approved execution, payment or both — that is the permission, not
+/// decoration.
 ///
 /// **EVERY SCOPE IS PRESENT, ALWAYS (prd §611, generalising §610; user,
 /// 2026-09-05: "it doesn't show all the scopes in the rail. I think it should
 /// even if they are not present").** The gate used to drop `frames` and
-/// `sponsors` for an address that had none, so the seat named for frame
+/// `permissions` for an address that had none, so the seat named for frame
 /// transactions hid the Frames chip from anyone who had not already sent one.
 /// Now the strip is the same four chips on every address, and a scope with
 /// nothing in it says what it would hold (`emptyHeadline`/`emptyBody`). That
@@ -80,7 +82,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     case holdings
     case accounts
     case frames
-    case sponsors
+    case permissions
 
     var id: String { rawValue }
 
@@ -97,7 +99,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     /// they are the entire reason the chain and this seat exist. It also reads
     /// directly off `activity`, which precedes it — the list says what moved,
     /// this says what the transactions DID — so the two sit adjacent.
-    static let order: [FramesSection] = [.home, .activity, .holdings, .accounts, .frames, .sponsors]
+    static let order: [FramesSection] = [.home, .activity, .holdings, .accounts, .frames, .permissions]
 
     /// Which scopes can be EMPTY.
     ///
@@ -109,7 +111,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     var isConditional: Bool {
         switch self {
         case .home, .activity: return false
-        case .holdings, .accounts, .frames, .sponsors: return true
+        case .holdings, .accounts, .frames, .permissions: return true
         }
     }
 
@@ -129,8 +131,11 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         // chain is NAMED for them, and the seat is called Hegotá Frames.
         // A friendlier gloss would leave one room using two words for one
         // thing, and the chip is where the word gets learned.
-        case .frames:   return String(localized: "Frames")
-        case .sponsors: return String(localized: "Sponsors")
+        case .frames:      return String(localized: "Frames")
+        // **ONE CHIP FOR THE QUESTION, IN EVERY ROOM (prd §692).** This was
+        // "Sponsors" — the room's only kind of permission wearing its own
+        // name, which left five rooms asking one question under nine chips.
+        case .permissions: return String(localized: "Permissions")
         }
     }
 
@@ -142,8 +147,8 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         case .activity: return String(localized: "What moved, and whether it worked")
         case .holdings: return String(localized: "The tokens this address holds")
         case .accounts: return String(localized: "The accounts you follow, and the ones tied to them")
-        case .frames:   return String(localized: "The steps each transaction ran")
-        case .sponsors: return String(localized: "Transactions somebody else paid for")
+        case .frames:      return String(localized: "The steps each transaction ran")
+        case .permissions: return String(localized: "What's allowed to act on your accounts, and what already has")
         }
     }
 
@@ -161,8 +166,8 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         case .activity: return String(localized: "None yet")
         case .holdings: return String(localized: "Test ETH only")
         case .accounts: return String(localized: "No connections yet")
-        case .frames:   return String(localized: "No steps")
-        case .sponsors: return String(localized: "None sponsored")
+        case .frames:      return String(localized: "No steps")
+        case .permissions: return String(localized: "No permissions")
         }
     }
 
@@ -183,8 +188,8 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "How the accounts you follow relate — who they have both dealt with. None of them shares a counterparty yet, so there is nothing to draw between them.")
         case .frames:
             return String(localized: "A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here has run any — a plain transfer runs none.")
-        case .sponsors:
-            return String(localized: "A sponsored transaction is one somebody else paid the gas for. Every transaction here paid its own.")
+        case .permissions:
+            return String(localized: "What somebody else was allowed to do for this account. On this chain that is paying: a sponsored transaction is one somebody else paid the gas for. Every transaction here paid its own.")
         }
     }
 

@@ -1270,7 +1270,7 @@ struct FramesAccountSheet: View {
                 DSSpecRow(label: Text("Somebody else paid"),
                           value: Text(verbatim: String(sponsored)),
                           tint: DS.tint, glyph: "chevron.right",
-                          action: { onScope?(.sponsors) })
+                          action: { onScope?(.permissions) })
             }
             let rolled = account.rolledBack.count
             if rolled > 0 {

@@ -64,6 +64,10 @@ SECTION="Casberi/Casberi/Model/HegotaSection.swift"
 COINS="Casberi/Casberi/Model/HegotaCoins.swift"
 ACCOUNT="Casberi/Casberi/Model/HegotaAccount.swift"
 ROOM="Casberi/Casberi/Model/HegotaRoom.swift"
+# The shared Permissions rules (prd §692) — `HegotaPermissions` is written
+# against them, and the count a headline states must be the count that decides
+# whether the scope is empty.
+PERMS="Casberi/Casberi/Model/RoomPermissions.swift"
 # Foundation-only, and the nonce-slot derivation is real keccak — so the harness
 # compiles the SHIPPED hash rather than asserting against a copied digest.
 KECCAK="Casberi/Casberi/Model/Keccak256.swift"
@@ -109,8 +113,8 @@ enum WalletStore {
 // AMENDED for prd §680: `holdings` is third — what each watched address
 // holds, the question this room is asked first, and the tab both other
 // devnets gained the same day.
-check(HegotaSection.order == [.home, .activity, .holdings, .accounts, .frames, .coins, .nonces, .sponsors],
-      "order is home → activity → accounts → frames → coins → nonces → sponsors")
+check(HegotaSection.order == [.home, .activity, .holdings, .accounts, .frames, .coins, .permissions],
+      "order is home → activity → holdings → accounts → frames → coins → permissions")
 // **`frames` LEADS the conditional tail, ahead of `coins` (§504).** Pinned as
 // its own assertion rather than left implicit in the list above, because it is
 // a RULING — frame transactions are what the chain is for, and the scope reads
@@ -123,7 +127,7 @@ check(HegotaSection.order.firstIndex(of: .activity)! + 3 == HegotaSection.order.
 check(HegotaSection.order.count == HegotaSection.allCases.count,
       "order lists every case — a new scope cannot be silently unlisted")
 check(HegotaSection.order.first == .home, "home leads")
-check(HegotaSection.order.last == .sponsors, "sponsors is last — the rarest scope")
+check(HegotaSection.order.last == .permissions, "permissions is last — the rarest scope")
 
 // THE STRUCTURAL RULE, inherited from WalletSection: no unconditional scope may
 // sit after a conditional one, so the strip's stable head never reflows. Frames
@@ -145,7 +149,7 @@ check(HegotaSection.order[lastUnconditional] == .accounts,
 check(HegotaSection.home.isAlwaysPresent, "home is always present")
 check(HegotaSection.activity.isAlwaysPresent, "activity is always present")
 check(HegotaSection.accounts.isAlwaysPresent, "accounts is always present")
-for s in [HegotaSection.frames, .coins, .nonces, .sponsors] {
+for s in [HegotaSection.frames, .coins, .permissions] {
     check(s.isConditional, "\(s.rawValue) is conditional")
     check(!s.isAlwaysPresent, "\(s.rawValue) is not always present")
 }
@@ -194,11 +198,11 @@ check(HegotaSection.resolve(nil, present: HegotaSection.order) == .home,
       "nil resolves to home — the room's front door")
 check(HegotaSection.resolve(.coins, present: HegotaSection.order) == .coins,
       "a present scope resolves to itself")
-check(HegotaSection.resolve(.sponsors, present: [.home, .activity]) == .home,
+check(HegotaSection.resolve(.permissions, present: [.home, .activity]) == .home,
       "a scope whose content has gone falls back to home")
 // The fixture that separates "falls back to home" from "falls back to the first
 // present entry" — without it both implementations pass every case above.
-check(HegotaSection.resolve(.sponsors, present: [.coins, .home]) == .home,
+check(HegotaSection.resolve(.permissions, present: [.coins, .home]) == .home,
       "falls back to HOME, not to the first entry of `present`")
 
 // shows(): one scope is a label, not a control (§83).
@@ -207,11 +211,14 @@ check(!HegotaSection.shows(present: []), "no scopes draw no strip")
 check(HegotaSection.shows(present: [.home, .activity]), "two scopes draw a strip")
 
 // THE NAMING RULING (2026-08-27): the literal term, not a metaphor.
-check(HegotaSection.nonces.label == "Nonces", "the keyed-nonce scope reads Nonces")
+// **ONE CHIP FOR THE QUESTION (prd §692).** Nonces and Sponsors were two
+// chips over one reading — what is allowed on this account. The chain's own
+// words survive as the block captions inside the scope.
+check(HegotaSection.permissions.label == "Permissions", "the folded scope reads Permissions")
 check(HegotaSection.home.label == "Home", "home reads Home")
 check(HegotaSection.activity.label == "Activity", "activity reads Activity")
 check(HegotaSection.coins.label == "UTXOs", "the unspent-output scope reads UTXOs, the chain's own word")
-check(HegotaSection.sponsors.label == "Sponsors", "sponsors reads Sponsors")
+
 for s in HegotaSection.allCases {
     check(!s.label.contains(" "), "\(s.rawValue)'s label is ONE word — the strip must not wrap")
     check(s.label.count <= 11, "\(s.rawValue)'s label is short enough for a chip")
@@ -566,6 +573,42 @@ check(sponsors.count == 2, "sponsors group by who PAID")
 check(sponsors.first?.payer == "0xp1", "the sponsor who paid for most leads")
 check(sponsors.first?.feeWei == Decimal(15), "a sponsor's gas is summed")
 check(sponsors.first?.moves.first?.block == 3, "a sponsor's moves come back newest first")
+
+// ───────────────── permissions (prd §692) ─────────────────
+// Nonces and Sponsors folded into ONE scope, so the count the headline states
+// and the count that decides whether the scope is empty are the same number.
+// They were two chips with two units — "6 nonce keys" beside "3 sponsored" —
+// and a folded scope cannot have two units.
+let lane1 = HegotaNonceLane(key: "0x1", seq: "0x0", lastBlock: 1, sends: 1)
+let lane2 = HegotaNonceLane(key: "0x2", seq: "0x0", lastBlock: 1, sends: 1)
+check(HegotaPermissions.kinds([acct("0xa")]).isEmpty,
+      "an account granting nothing has no kinds — the scope draws its empty state")
+check(RoomPermissions.headline(HegotaPermissions.kinds([acct("0xa")])) == nil,
+      "…and no headline, so the section's own empty line is what shows")
+let lanesOnly = HegotaPermissions.kinds([acct("0xa", lanes: [lane1, lane2])])
+check(lanesOnly.count == 1 && lanesOnly[0].count == 2,
+      "nonce keys are counted, and a kind with none of its own is DROPPED not dashed")
+check(lanesOnly[0].label == "Nonce keys",
+      "the chain's own word survives as the kind's label, where the chip no longer says it")
+// **COUNTED BY PAYER, NEVER BY TRANSACTION.** One sponsor covering two
+// transactions is one arrangement; counting the transactions would make the
+// headline disagree with the rows, which list the payers.
+let sponsoredAcct = acct("0xb", moves: [spon("0xp1", 3, fee: 10), spon("0xp1", 2, fee: 5),
+                                        spon("0xp2", 1, fee: 7)])
+let both = HegotaPermissions.kinds([acct("0xa", lanes: [lane1]), sponsoredAcct])
+check(both.count == 2, "an account with a lane and a sponsor has two kinds")
+check(both[0].label == "Nonce keys" && both[1].label == "Sponsors",
+      "standing before exercised — a lane is authority that is still live")
+check(both[1].count == 2, "two payers over three sponsored transactions count as TWO")
+check(RoomPermissions.headline(both) == "3 permissions",
+      "the headline adds the kinds — one unit for the whole scope")
+check(RoomPermissions.headline(HegotaPermissions.kinds([acct("0xa", lanes: [lane1])])) == "1 permission",
+      "…and one is singular")
+// The same address under two spellings is ONE payer: EIP-55 case is a
+// checksum, not an identity (`HegotaParty.of`'s own rule, owed here too).
+let cased = acct("0xc", moves: [spon("0xP1", 3, fee: 1), spon("0xp1", 2, fee: 1)])
+check(HegotaPermissions.kinds([cased])[0].count == 1,
+      "a payer written two ways is one sponsor")
 check(HegotaSponsor.group([spon("0xp1", 1, fee: 10), spon("0xp1", 2, fee: nil)]).first?.feeWei == nil,
       "one unread fee makes the WHOLE total nil — a partial sum understates a gift, silently")
 check(HegotaSponsor.group([mv(nil, sender: "0xme")]).isEmpty,
@@ -1015,7 +1058,7 @@ MW="$1"
 swiftc -Onone -o "$MW/run" \
   "$MW/HegotaSection.swift" "$MW/HegotaCoins.swift" "$MW/HegotaAccount.swift" \
   "$MW/HegotaRoom.swift" "$MW/Keccak256.swift" "$MW/RoomValueHistory.swift" \
-  "$MW/DevnetTokens.swift" \
+  "$MW/DevnetTokens.swift" "$MW/RoomPermissions.swift" \
   "$MW/main.swift" 2>"$MW/err"
 BUILDSH
 
@@ -1030,6 +1073,7 @@ cp "$ROOM"    "$work/base/HegotaRoom.swift"
 cp "$KECCAK"  "$work/base/Keccak256.swift"
 cp "$HISTORY" "$work/base/RoomValueHistory.swift"
 cp "$TOKENS"  "$work/base/DevnetTokens.swift"
+cp "$PERMS"   "$work/base/RoomPermissions.swift"
 cp "$work/main.swift" "$work/base/main.swift"
 
 zsh "$work/build.zsh" "$work/base" \
@@ -1078,7 +1122,7 @@ mutate "a single-mode mix claims a commonest step (\"mostly\" said of all of the
   HegotaRoom.swift 's/leaders\.count == 1 && slices\.count > 1/leaders.count == 1/'
 
 mutate "a conditional scope moved ahead of an unconditional one (the strip's head reflows)" \
-  HegotaSection.swift 's/\[\.home, \.activity, \.holdings, \.accounts, \.frames, \.coins, \.nonces, \.sponsors\]/[.home, .coins, .activity, .holdings, .accounts, .frames, .nonces, .sponsors]/'
+  HegotaSection.swift 's/\[\.home, \.activity, \.holdings, \.accounts, \.frames, \.coins, \.permissions\]/[.home, .coins, .activity, .holdings, .accounts, .frames, .permissions]/'
 mutate "home no longer leads" \
   HegotaSection.swift 's/\[\.home, \.activity, \.holdings/[.coins, .home, .activity/'
 mutate "resolve falls back to the first present scope instead of home" \
@@ -1090,11 +1134,21 @@ mutate "every scope gated again, so four chips vanish on the address that most n
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
   HegotaSection.swift 's/This chain can hold a balance as unspent pieces, each spent whole and never in part\. None of these addresses holds one\./ /'
 mutate "coins is marked unconditional, so the head-reflow rule stops being enforced" \
-  HegotaSection.swift 's/case \.frames, \.coins, \.nonces, \.sponsors: return true/case .frames, .nonces, .sponsors: return true\n        case .coins: return false/'
+  HegotaSection.swift 's/case \.frames, \.coins, \.permissions: return true/case .frames, .permissions: return true\n        case .coins: return false/'
 mutate "the unspent-output scope goes back to the friendly gloss" \
   HegotaSection.swift 's/String\(localized: "UTXOs"\)/String(localized: "Coins")/'
-mutate "the literal term becomes a metaphor again" \
-  HegotaSection.swift 's/String\(localized: "Nonces"\)/String(localized: "Queues")/'
+# **RE-PINNED to the folded scope (prd §692).** "Nonces" is no longer a chip
+# label — the word is a block caption inside Permissions now — so this mutation
+# guards the chip that replaced it. A guard pinned to a deleted string matches
+# nothing and reports a pass, which is the failure this file has paid for twice.
+mutate "the folded scope takes one of its halves' names back" \
+  HegotaSection.swift 's/case \.permissions: return String\(localized: "Permissions"\)/case .permissions: return String(localized: "Nonces")/'
+mutate "sponsors counted by transaction rather than by payer" \
+  HegotaRoom.swift 's/let payers = Set\(accounts.flatMap\(\\.sponsored\).compactMap \{ \$0.payer\?.lowercased\(\) \}\)/let payers = Set(accounts.flatMap(\\.sponsored).enumerated().map { "\\($0.offset)" })/'
+mutate "a payer's case is treated as an identity" \
+  HegotaRoom.swift 's/compactMap \{ \$0.payer\?.lowercased\(\) \}/compactMap { $0.payer }/'
+mutate "a kind with nothing in it is listed anyway, so an empty scope reads as granted" \
+  HegotaRoom.swift 's/if lanes > 0 \{/if lanes >= 0 {/'
 mutate "a scope quietly grows an attention dot nothing here can honestly light" \
   HegotaSection.swift 's/static func attention\(\) -> Set<HegotaSection> \{ \[\] \}/static func attention() -> Set<HegotaSection> { [.coins] }/'
 

@@ -96,15 +96,22 @@ func d(_ hex: String) -> Data {
 check(PrivacyDevnetSection.order.count == PrivacyDevnetSection.allCases.count,
       "order lists every case — a case missing from order can never be shown")
 check(PrivacyDevnetSection.order.first == .home, "home leads")
-check(PrivacyDevnetSection.order.last == .sponsors, "sponsors is last, the rarest scope")
+check(PrivacyDevnetSection.order.last == .roots, "roots is last, the rarest scope")
 
 // THE ABSENT SCOPE. `coins` must not exist: the UTXO vault has no code on 8141,
 // so the chip could never light. Asserted on the raw values because a `case
 // coins` added later would compile fine and draw a permanently empty scope.
 check(!PrivacyDevnetSection.allCases.contains { $0.rawValue == "coins" },
       "no `coins` scope — the UTXO vault has no code on this chain")
-check(PrivacyDevnetSection.allCases.contains { $0.rawValue == "nullifiers" },
-      "`nullifiers` exists, and is not spelled `nonces` as on Hegota")
+// **NULLIFIERS AND SPONSORS FOLDED INTO `permissions` (prd §692).** A spend
+// key is authority exercised and a sponsor is authority somebody exercised for
+// you; two chips over one question is what this replaced.
+check(PrivacyDevnetSection.allCases.contains { $0.rawValue == "permissions" },
+      "`permissions` exists — the folded scope")
+check(!PrivacyDevnetSection.allCases.contains { $0.rawValue == "nullifiers" },
+      "`nullifiers` is gone as a scope — the word is a block caption inside Permissions now")
+check(!PrivacyDevnetSection.allCases.contains { $0.rawValue == "sponsors" },
+      "`sponsors` is gone as a scope, for the same reason")
 check(!PrivacyDevnetSection.allCases.contains { $0.rawValue == "nonces" },
       "not `nonces` — here the keyed nonce is a nullifier (§593)")
 check(PrivacyDevnetSection.allCases.contains { $0.rawValue == "holdings" },
@@ -127,11 +134,12 @@ check(lastUnconditional < firstConditional,
 check(PrivacyDevnetSection.order[firstConditional] == .frames,
       "the conditional tail opens on frames")
 
-// THE PAIRING: nullifiers and roots are two halves of one mechanism and must be
-// adjacent, in that order — apart they read as two unrelated pieces of jargon.
-let ni = PrivacyDevnetSection.order.firstIndex(of: .nullifiers)!
+// THE PAIRING SURVIVES THE FOLD (prd §692): permissions (which holds the spend
+// keys) and roots are two halves of one mechanism and must be adjacent, in that
+// order — apart they read as two unrelated pieces of jargon.
+let ni = PrivacyDevnetSection.order.firstIndex(of: .permissions)!
 let ri = PrivacyDevnetSection.order.firstIndex(of: .roots)!
-check(ri == ni + 1, "roots sits immediately after nullifiers")
+check(ri == ni + 1, "roots sits immediately after permissions")
 
 for s in PrivacyDevnetSection.allCases {
     check(!s.label.isEmpty, "\(s.rawValue) has a label")
@@ -891,10 +899,10 @@ mutate "home no longer the fallback for a vanished scope" \
 mutate "the strip drawn over a single chip" \
   "$SECTION" "present.count > 1" "present.count > 0"
 mutate "a conditional scope promoted into the stable head" \
-  "$SECTION" "case .frames, .nullifiers, .roots, .sponsors: return true" \
-  "case .nullifiers, .roots, .sponsors: return true\n        case .frames: return false"
-mutate "roots separated from nullifiers" \
-  "$SECTION" ".nullifiers, .roots, .sponsors]" ".roots, .nullifiers, .sponsors]"
+  "$SECTION" "case .frames, .permissions, .roots: return true" \
+  "case .permissions, .roots: return true\n        case .frames: return false"
+mutate "roots separated from the spend keys" \
+  "$SECTION" ".permissions, .roots]" ".roots, .permissions]"
 mutate "a named nonce channel counted as a nullifier" \
   "$ROOTS" 'significant.count >= nullifierFloor' '!significant.isEmpty'
 # **THIS MUTATION HAD NEVER RUN (found by prd §593d).** A trailing space after
@@ -1462,12 +1470,16 @@ strip_comments "$SHEETS" > "$work/sheets.bare"
 # both accessibility labels — and said "Nullifiers" and "Roots" in the one
 # place a person meets the strip FIRST. Renaming them back would look like a
 # tidy-up toward the mechanism's real name.
-grep -qF 'case .nullifiers: return String(localized: "Spend keys")' "$SECTION"   || fail "the Nullifiers chip lost its plain words — the strip is the room's table of contents, not its glossary"
-grep -qF 'case .roots:      return String(localized: "Snapshots")' "$SECTION"   || fail "the Roots chip lost its plain words"
+# §692 folded the spend-key chip into Permissions, so what this guards now is
+# the CAPTION over those rows — the same plain words, one layer in, still the
+# first place a person meets them.
+grep -qF 'RoomListBlock(caption: String(localized: "Spend keys"))' "$CARD" \
+  || fail "the spend-key block lost its plain words — the room teaches 'spend keys', never 'nullifiers', outside the sheet"
+grep -qF 'case .roots:       return String(localized: "Snapshots")' "$SECTION"   || fail "the Roots chip lost its plain words"
 # The RAW VALUES must not move with the labels: they are the persisted pick and
 # the deep link's own word, so renaming a case silently resets every stored
 # scope and breaks a saved link.
-grep -qE '^\s+case nullifiers$' "$SECTION"   || fail "the nullifiers CASE was renamed — the raw value is the persisted scope and a deep link's word"
+grep -qE '^\s+case permissions$' "$SECTION"   || fail "the permissions CASE was renamed — the raw value is the persisted scope and a deep link's word"
 grep -qE '^\s+case roots$' "$SECTION"   || fail "the roots CASE was renamed — same reason"
 
 # **THE TRACK IS GONE AND MUST NOT COME BACK.** The straight bar needed a

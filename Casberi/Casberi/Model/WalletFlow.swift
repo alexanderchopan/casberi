@@ -54,6 +54,21 @@ enum WalletFlow {
         /// True for the folded tail (see `laneLimit`) — the view names it
         /// rather than dropping it silently.
         let isOther: Bool
+
+        /// The counterparty this lane is, with its side stripped — an address
+        /// for every lane but the folded one, whose key is the literal
+        /// `"other"`.
+        ///
+        /// Added for `WalletFlowRows` (prd §692): a row draws the
+        /// counterparty's FACE, and a face needs the address the id already
+        /// carries. Derived here rather than re-split in the view, so the two
+        /// halves of the id can never disagree about where the colon is — and
+        /// an address itself contains none, so splitting on the FIRST is
+        /// total.
+        var key: String {
+            guard let colon = id.firstIndex(of: ":") else { return id }
+            return String(id[id.index(after: colon)...])
+        }
     }
 
     /// Both sides of one window.

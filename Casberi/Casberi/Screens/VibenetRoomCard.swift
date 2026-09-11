@@ -2191,155 +2191,33 @@ struct VibenetRoomCard: View {
             // a real reading on this screen — "no key here can send anywhere"
             // is the answer somebody opens this scope hoping for, and only a
             // census that includes absences can give it.
+            //
+            // **THE GRID IS THE SHARED ONE SINCE §692** — five rooms draw this
+            // scope and this room's census cell is the grammar all five took
+            // (the well, the dash, the two-line label, the height derived from
+            // `figureSlot`). What stays here is the census itself, which is
+            // this chain's own list, and the HEADLINE's count: a key holding
+            // Send and Receive is in two cells, so the cells added up are not
+            // the number of permissions this account has granted.
             let census = VibenetPolicyAggregation.census(counts)
-            scopeFigure(headline: keys.map {
-                $0.total == 1 ? String(localized: "1 key") : String(localized: "\($0.total) keys")
-            } ?? String(localized: "No keys")) {
-                LazyVGrid(columns: Self.censusColumns,
-                          alignment: .leading,
-                          spacing: DS.Space.s2) {
-                    ForEach(Array(census.enumerated()), id: \.element.label) { index, row in
-                        policyCensusCell(row)
-                            .chartArrival(index: index, reduceMotion: reduceMotion)
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            scopeFigure(headline: RoomPermissions.headline(count: keys?.total ?? 0)
+                        ?? String(localized: "No keys")) {
+                RoomPermissionsFigure(kinds: census.map {
+                    RoomPermissions.Kind(label: $0.label, count: $0.count,
+                                         unbounded: $0.label == Self.adminLabel)
+                })
             }
         }
     }
 
-    /// ONE PERMISSION, HELD OR NOT.
-    ///
-    /// **An absence is an OUTLINE and a dash, never a filled "0".** A zero
-    /// drawn in the same well as a count reads as a measurement — the same
-    /// object, a smaller number — when what it means is that this permission
-    /// is not in play at all. The dash is the app's own grammar for a fact
-    /// that has no value (`holdingsEmptyFigure`'s dashed treemap, the empty
-    /// ring on the Accounts scope), and the hollow well is the well saying
-    /// the same thing.
-    ///
-    /// **Admin, and only Admin, wears the alarm colour** — it is the one rung
-    /// that is unbounded (`scope == 0` is unrestricted, prd §463), and
-    /// colouring the others would be this app grading permissions somebody set
-    /// on purpose. It is tinted only when it is actually held: an attention
-    /// hue over a dash is an alarm about something that is not there.
-    @ViewBuilder
-    private func policyCensusCell(_ row: VibenetPolicyCount) -> some View {
-        let held = row.count > 0
-        let isAdmin = row.label == Self.adminLabel
-        VStack(alignment: .leading, spacing: 4) {
-            Text(held ? "\(row.count)" : "—")
-                // **`price16`, ONE RUNG UNDER THE HEADLINE** (2026-09-02) —
-                // the ramp's own "a row's figure", which is what a cell in a
-                // well is. It was `stat24`, the same rung as the "3 keys"
-                // directly above it, so the figure read as seven numbers of
-                // equal standing when six of them are that seventh one's
-                // breakdown. It is also what makes the cell FIT: at `stat24` a
-                // two-line cell wants 83pt of the 78 `censusCell` derives.
-                //
-                // **The knowing divergence from `HegotaRoomCard.stat`**, which
-                // this cell otherwise copies: that grid is ONE row of three in
-                // the same slot, so it can spend 88pt on a cell and the whole
-                // rung with it. Two rows cannot, and the rung is what gives.
-                .dsText(.price16)
-                .foregroundStyle(held ? (isAdmin ? DS.attention : DS.textPrimary)
-                                      : DS.textTertiary)
-                .monospacedDigit()
-            Text(row.label)
-                // **TWO lines, not three** (2026-09-02). Three was
-                // `HegotaRoomCard.stat`'s measurement, and it was measured
-                // against THAT box: three across a 342pt slot leave ~60pt of
-                // text, where "On the ordinary nonce" really does want three.
-                // This grid is wider — three across the room's own 376pt, less
-                // this cell's `s2` insets, is ~99pt — and the longest label
-                // here ("Send to one contract") sets in two. The third line was
-                // never drawn and was still PAID FOR: every cell in the grid
-                // takes the tallest cell's height, so one label's unused third
-                // line made all six 14pt taller, which is most of what pushed
-                // the second row past the slot's clip.
-                .dsText(.label12)
-                .foregroundStyle(held ? DS.textTertiary : DS.textQuaternary.opacity(0.6))
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-                .minimumScaleFactor(0.9)
-            Spacer(minLength: 0)
-        }
-        // **PINNED, NOT FLOORED** (2026-09-02) — see `censusCell`. A floor is
-        // what a label's own wrapping walks straight through, and the grid it
-        // grows is clipped rather than scrolled.
-        //
-        // TWO modifiers, and that is forced rather than stylistic: SwiftUI has
-        // `frame(width:height:alignment:)` and the `min/ideal/max` family, and
-        // NO overload mixing `maxWidth:` with `height:` — so the obvious
-        // single-call reading of "full width, pinned height" does not compile
-        // at all. Pinning the height first and widening after says the same
-        // thing. Deliberately NOT `minHeight:`, which is the floor this
-        // room's own guard bans and which a label's wrapping walks through.
-        .frame(height: Self.censusCell, alignment: .topLeading)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .padding(.horizontal, DS.Space.s2)
-        .padding(.vertical, DS.Space.s2)
-        // A well, so six facts read as six facts rather than as a sentence
-        // that lost its words — `HegotaRoomCard.stat`'s grammar, which is what
-        // the Nonces figure one devnet over already uses for exactly this job.
-        .background {
-            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                .fill(held ? DS.surfaceWell : Color.clear)
-        }
-        .overlay {
-            if !held {
-                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                    .strokeBorder(DS.fillLine, lineWidth: 1)
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(held
-                            ? (row.count == 1
-                               ? String(localized: "1 key · \(row.label)")
-                               : String(localized: "\(row.count) keys · \(row.label)"))
-                            : String(localized: "No keys · \(row.label)"))
-    }
 
-    /// Three across, two down — the six permissions in one screenful.
-    ///
-    /// THREE and not two: at two columns the six cells need three rows, and
-    /// three rows do not fit `DSRoomChassis.figureSlot` at any cell height a
-    /// number and a label can be read at.
-    private static let censusRows: CGFloat = 2
-    private static let censusColumns = Array(
-        repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .topLeading),
-        count: 3)
-
-    /// **A CENSUS CELL'S HEIGHT, DERIVED FROM THE BOX IT MUST FIT** (2026-09-02
-    /// — reported as clipping on the Permissions scope, the second row of cells
-    /// cut in half along the top edge of the fused slab).
-    ///
-    /// It was a FLOOR of 72 with a note doing the arithmetic by hand, and every
-    /// term of that arithmetic was wrong by the time it was read. The floor
-    /// never bound — a cell is a number over a label, and the label's own
-    /// wrapping decides the height, so the six cells came out at ~92 each; the
-    /// note allowed "~158pt under a `price40` headline" when §551 had taken the
-    /// headline to `stat24` and its row to 30 + `s3`; and it compared against a
-    /// number that could not be reached from here anyway, since `headlineRow`
-    /// was a static on a generic type. Two rows of 92 plus their gap is ~193pt
-    /// of the 166 there are, and `DSRoomSlot` clips — so the bottom row lost a
-    /// quarter of itself with nothing anywhere saying so.
-    ///
-    /// Derived, the arithmetic cannot go stale: the slot changes, the cell
-    /// changes with it. **The cell is PINNED to this rather than floored by
-    /// it** (see `policyCensusCell`), so a longer label can never grow the grid
-    /// past the box again — it is the cell's own text that gives, which is
-    /// visible, rather than the row below it, which is not.
-    /// **Minus the cell's OWN vertical padding (prd §665, 2026-09-09, user's
-    /// phone: the second row of Permissions cut off behind the rail slab —
-    /// "everything is always clipping").** This derived the INNER height from
-    /// `figureSlot` and then padded each cell by `s2` top and bottom outside
-    /// it, so two rows came to `figureSlot + 40` and the slot's `clipped()`
-    /// took the bottom 40pt of the second row. The derivation is the rule
-    /// this file states for itself ("caps are derived from figureSlot, never
-    /// constants"); the padding was the part it forgot to derive.
-    private static let censusCell: CGFloat =
-        (DSRoomChassis.figureSlot - DS.Space.s2 * (censusRows - 1)) / censusRows - DS.Space.s2 * 2
+    // **THE CENSUS GRID'S THREE CONSTANTS MOVED TO `RoomPermissions` (§692).**
+    // `censusRows`, `censusColumns` and `censusCell` — three across two down,
+    // and a cell height derived from `figureSlot` with its own padding
+    // subtracted (§665's fix) — are the shared figure's rules now, stated
+    // there once for five rooms. Deleted here rather than left behind: a dead
+    // twin is what let a mutation pass against a copy nobody drew
+    // (`HegotaRoom.valueSeries`, two rulings ago).
 
     /// NOTHING WAS READ — the Permissions scope for an account the chain did
     /// not answer for.

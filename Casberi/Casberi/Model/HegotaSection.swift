@@ -60,8 +60,12 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
     case accounts
     case frames
     case coins
-    case nonces
-    case sponsors
+    /// **NONCES AND SPONSORS FOLDED IN HERE (prd §692).** A keyed nonce lane
+    /// is a standing grant on this account — sends on it do not wait for the
+    /// ordinary counter — and a sponsor is one somebody else was allowed to
+    /// exercise. Two chips over one question is what this scope replaces;
+    /// user, 2026-09-11: *"they are just different kinds of permissions."*
+    case permissions
 
     var id: String { rawValue }
 
@@ -88,7 +92,7 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
     /// seat. It also reads directly off `activity`, which precedes it — the
     /// list says what moved, this says what the transactions DID — so the two
     /// sit adjacent rather than with the vault between them.
-    static let order: [HegotaSection] = [.home, .activity, .holdings, .accounts, .frames, .coins, .nonces, .sponsors]
+    static let order: [HegotaSection] = [.home, .activity, .holdings, .accounts, .frames, .coins, .permissions]
 
     /// Which scopes can be EMPTY.
     ///
@@ -108,7 +112,7 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         // transactions has only type-`0x2` transfers. Its scope is absent
         // rather than empty, which is also how the strip says which era an
         // address lived in without a word of copy.
-        case .frames, .coins, .nonces, .sponsors: return true
+        case .frames, .coins, .permissions: return true
         }
     }
 
@@ -138,8 +142,13 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         // and refused outright: UTXOs and coins are not two readings, so two
         // chips over one set is the dead control §83 bans.
         case .coins:    return String(localized: "UTXOs")
-        case .nonces:   return String(localized: "Nonces")
-        case .sponsors: return String(localized: "Sponsors")
+        // **ONE CHIP FOR THE QUESTION, IN EVERY ROOM (prd §692).** "Nonces"
+        // and "Sponsors" were two chips over one reading — what has been
+        // allowed on this account. The chain's own words survive as the
+        // BLOCK CAPTIONS inside the scope, which is where §500's "the chip is
+        // where the word gets learned" is actually satisfied: a person meets
+        // "Nonce keys" over the rows that are nonce keys.
+        case .permissions: return String(localized: "Permissions")
         }
     }
 
@@ -160,8 +169,7 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         case .accounts: return String(localized: "The accounts you follow, and the ones tied to them")
         case .frames:   return String(localized: "The steps your transactions ran")
         case .coins:    return String(localized: "The unspent outputs this address owns")
-        case .nonces:   return String(localized: "Sends that don't wait for each other")
-        case .sponsors: return String(localized: "Transactions somebody else paid for")
+        case .permissions: return String(localized: "What's allowed to act on your accounts, and what already has")
         }
     }
 
@@ -183,8 +191,7 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         case .accounts: return String(localized: "No connections yet")
         case .frames:   return String(localized: "No steps")
         case .coins:    return String(localized: "No UTXOs")
-        case .nonces:   return String(localized: "No keyed nonces")
-        case .sponsors: return String(localized: "None sponsored")
+        case .permissions: return String(localized: "No permissions")
         }
     }
 
@@ -207,10 +214,8 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "A frame transaction runs in numbered steps, each carrying its own budget. Nothing here has run one — a plain transfer runs none.")
         case .coins:
             return String(localized: "This chain can hold a balance as unspent pieces, each spent whole and never in part. None of these addresses holds one.")
-        case .nonces:
-            return String(localized: "A transfer on a named key does not wait for the ordinary counter, so two can go out at once. Everything here went on the ordinary nonce.")
-        case .sponsors:
-            return String(localized: "A sponsored transaction is one somebody else covered the gas for. Nothing here was.")
+        case .permissions:
+            return String(localized: "What is allowed to act on this account. Here that is a named nonce key, whose transfers do not wait for the ordinary counter, and a sponsor, who covered somebody's gas. Everything here went on the ordinary nonce and paid its own way.")
         }
     }
 

@@ -9543,8 +9543,13 @@ struct FeedScreen: View {
     private var walletFlowSection: some View {
         let verdict = WalletFlowSource.verdict(from: visible, since: flowWindowStart)
         if let band = verdict.band {
-                            WalletFlowBand(band: band, windowLabel: balanceRange.flowLabel,
-                               spineAddress: spineWalletAddress)
+            // **ROWS, NOT THE BAND (prd §692, user: "i don't like the sankey on
+            // the home list area it looks weird to have a chart there now that
+            // i see it").** Same `Band`, same window, same numbers — the list
+            // half of a room draws a list. `WalletFlowBand` itself stays: the
+            // brief renders it through `GenRenderer`, where a diagram is the
+            // right shape for a card somebody reads once.
+            WalletFlowRows(band: band, windowLabel: balanceRange.flowLabel)
                     .modifier(rowEntrance(1))
         } else if let decline = verdict.decline {
             WalletFlowEmptyFigure(decline: decline, windowLabel: balanceRange.flowLabel,
