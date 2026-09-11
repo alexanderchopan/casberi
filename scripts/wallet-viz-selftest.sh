@@ -176,6 +176,18 @@ fi
 # is a list. A `WalletFlowBand` back in `walletFlowSection` is the reversion
 # this guards — it renders perfectly and is exactly what the user asked to be
 # rid of.
+# (2d) THE NET SURVIVES THE SHAPE CHANGE (prd §695). §692 turned the band into
+# rows and dropped "in … · out … · Kept +…" with the drawing — the one reading
+# neither block can state, since a column of amounts says where the money went
+# and only the difference says whether you ended up with more.
+ROWS_CODE=$(sed 's://.*::' "Casberi/Casberi/Screens/WalletFlowRows.swift" | sed '/^[[:space:]]*\/\/\//d')
+grep -q 'band.netUSD' <<< "$ROWS_CODE" \
+  || { echo "✗ the flow rows stopped stating the NET (prd §695) — two blocks of amounts"; \
+       echo "  cannot say whether the window ended up ahead"; exit 1; }
+grep -q 'abs(net) >= 1' <<< "$ROWS_CODE" \
+  || { echo "✗ a net that rounds to nothing is being given a direction (§83's isFlat rule)"; exit 1; }
+grep -q 'DS.destructive' <<< "$ROWS_CODE" \
+  && { echo "✗ a down window is drawn in the alarm colour — spending is not a failure"; exit 1; }
 grep -q 'WalletFlowRows(band: band' <<< "$FEED_CODE" \
   || { echo "✗ Home's flow slot no longer draws WalletFlowRows (prd §692) — a chart"; \
        echo "  in the list half is the shape this ruling replaced"; exit 1; }

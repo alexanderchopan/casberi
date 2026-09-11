@@ -99,6 +99,7 @@ at all.
 | §495 | Every sheet head is a piece of paper — a raised surface, an ink pour, and the receipt silhouette | reversed by §583 (user: *"i think it looks WAY better without the card"*. §495 read "a jumble of text" as a missing OBJECT and shipped both halves of a fix — the paper AND the anatomy. The anatomy is what worked: with a disc, a stamp, a lead, a title at the head rung and one sentence, running 12 → 40 down the block, the paper was a second boundary around a block that already had one. §495's "deliberate exception to headers-no-cards" is withdrawn and the general rule applies) |
 | §363 | The money receipt's TEAR carries state — torn is history, flat is still in the machine | reversed by §583 (an edge cannot survive the surface it was an edge of. Checked rather than assumed before removing: every `.open` receipt built in `MoneyReceipt` stamps `.settling` / `.pending` / `.screening` / `.yourTurn` / `.needsProof` / `.openPosition`, none of them quiet — so the silhouette and the word were two renderings of one fact. `finality` itself is untouched, and the settle keeps its haptic) |
 | §680 | Devnet Holdings is a treemap of what each watched address holds, and a scope does not restate Home's balance | amended by §694 (the UTXO scope's headline moved from the balance to counts for exactly this reason; Holdings itself is unchanged) |
+| §692 | Permissions is one scope in five rooms; Wallet Home's flow becomes rows | amended by §695 (the flow's net line — "in … · out … · Kept +…" — was dropped with the band's frame and is restored above the blocks) |
 | §546 | The Permissions slot is COUNTS by rung, four bare numerals in two columns | superseded in shape by §692 (the counts and the no-names rule stand; the grid is shared with five rooms and a cell is a well) |
 | §566 | The sponsor scope's figure is a split bar of whose gas paid | superseded by §692 (the share leads the shared grid; the bar is deleted) |
 | §606 | The spend-key scope draws one bar per address; Holdings and Accounts draw no figure | superseded in part by §692 (the spend-key bar goes with the scope; the no-figure rulings stand) |
@@ -53133,3 +53134,29 @@ unlooked-at.
 Amends §680 in this room only (a scope does not restate the balance — that is why the
 headline moved to counts) and inherits §692's block grammar. §555's reconciliation line and
 census are untouched and still land after the rows settle.
+
+## §695 — The net goes back on Wallet Home's flow (user: "i think the sankey looks weird underneath the rail, do you? on wallet home? if so can we do a list format some how? in and out? or that just becomes another activity list?", then "ok, so yes put net back", 2026-09-11)
+
+**The shape change had taken substance with it.** §692 turned Home's flow band into rows
+and dropped the line above it — *"in $7K · out $3K · Kept +$4K"* — because it had been part
+of the band's own frame. That is the one thing a shape change is least entitled to do, and
+nothing in the pass noticed: the rows were right, the guards were green, and a real reading
+was simply gone. It is back above the two blocks, through `WalletValue.money`, the same
+formatter the band uses, so the two surfaces cannot round one window two ways.
+
+**Why neither block can state it.** A column of amounts says where the money went; only the
+difference says whether you ended up with more. Came in and Went out are two complete
+readings that do not answer that between them.
+
+**The band's own two rules ride along**: a net that rounds to nothing draws no line at all
+(§83's `isFlat` — a change with no direction gets no sign and no colour), and a down window
+stays in plain ink rather than red, because spending is not a failure and an alarm hue here
+would be the app grading an ordinary week.
+
+**The question under the request, answered.** *"Or does that just become another activity
+list?"* — no, and the unit is why. Activity lists TRANSACTIONS, newest first, one row per
+event. This lists COUNTERPARTIES, ranked by value, one row per party with its transaction
+count folded in, over the same window the crown uses. The capped tail keeps its "Other" row
+so the two sides still add up (§510).
+
+Amends §692 (which dropped the line) and restores the reading §483 gave the band.
