@@ -98,6 +98,7 @@ at all.
 | §495 | Every sheet head is a piece of paper — a raised surface, the ROOM'S HUE poured at the top, and the receipt silhouette | amended by §524 (the paper, the pour and the silhouette all stand; only the hue goes. `dsReceiptPaper` no longer TAKES a colour, which also ends the nil arm that gave a hueless app's page no top while a branded one got a coloured one) |
 | §495 | Every sheet head is a piece of paper — a raised surface, an ink pour, and the receipt silhouette | reversed by §583 (user: *"i think it looks WAY better without the card"*. §495 read "a jumble of text" as a missing OBJECT and shipped both halves of a fix — the paper AND the anatomy. The anatomy is what worked: with a disc, a stamp, a lead, a title at the head rung and one sentence, running 12 → 40 down the block, the paper was a second boundary around a block that already had one. §495's "deliberate exception to headers-no-cards" is withdrawn and the general rule applies) |
 | §363 | The money receipt's TEAR carries state — torn is history, flat is still in the machine | reversed by §583 (an edge cannot survive the surface it was an edge of. Checked rather than assumed before removing: every `.open` receipt built in `MoneyReceipt` stamps `.settling` / `.pending` / `.screening` / `.yourTurn` / `.needsProof` / `.openPosition`, none of them quiet — so the silhouette and the word were two renderings of one fact. `finality` itself is untouched, and the settle keeps its haptic) |
+| §680 | Devnet Holdings is a treemap of what each watched address holds, and a scope does not restate Home's balance | amended by §694 (the UTXO scope's headline moved from the balance to counts for exactly this reason; Holdings itself is unchanged) |
 | §546 | The Permissions slot is COUNTS by rung, four bare numerals in two columns | superseded in shape by §692 (the counts and the no-names rule stand; the grid is shared with five rooms and a cell is a well) |
 | §566 | The sponsor scope's figure is a split bar of whose gas paid | superseded by §692 (the share leads the shared grid; the bar is deleted) |
 | §606 | The spend-key scope draws one bar per address; Holdings and Accounts draw no figure | superseded in part by §692 (the spend-key bar goes with the scope; the no-figure rulings stand) |
@@ -53067,3 +53068,68 @@ be rediscovered.
 Amends §640 (the act draws rows, and a row is a cell whose taps belong to one thing) and
 §653 (whose return-leg paste is the very gesture this was eating). §83 stands one door over:
 a control that does something other than what it says is worse than a dead one.
+## §694 — The UTXO scope gets its spent half; it does not replace Holdings (user: "in UTXO we need to track spent and unspent and the values… Which makes me wonder does this replace holdings does this become the holding data or does UTXO maintain its own slot?", then "go", 2026-09-11)
+
+**No, and the unit is why.** Holdings answers *how much, per address, across assets* — the
+same treemap and rows in five rooms, comparable at a glance. UTXOs answers *what pieces this
+address's balance is in, and what they were made from* — an index, an amount, an origin, a
+block, on the one chain in this app that has them. Two questions, two units, two slots.
+
+**They meet at exactly one number, and it is pinned.** When the set reconciles, the unspent
+total IS the address's test-ETH balance, so Holdings' cell for that address and this scope
+must state the same figure. Two derivations of one balance is how a room starts disagreeing
+with itself, so `hegota-selftest.sh` asserts it — and asserts the complement, that the WHOLE
+history does not equal the balance, which is the reason spent may never be summed into a
+holding.
+
+**Spent is free.** `readCoinState` already reads every `UtxoCreated` log and every spent bit
+— it has to, since conservation only holds across all owners at once — so the spent set is
+the difference between two lists the sweep already holds. No request, no host, no reach entry.
+
+**ONLY A RECONCILED ACCOUNT IS CLASSIFIED, in both directions.** `unspent` is nil exactly
+when a spent bit could not be read; subtracting nil from everything would report the whole
+history as spent, which is the inverse of the refusal `HegotaCoins.unspent(_:words:)` already
+makes — an unreadable bit is *"we don't know"*, never *"not spent"*. Money you have and money
+you spent are the two things that file exists to keep apart, and §694 owes that symmetry.
+
+**Two tenses, two blocks** — `RoomListBlock`, the grammar §692 shipped four hours earlier.
+*Unspent* is what the address holds; *Spent* is what those pieces were made from. **One row
+anatomy for both, and the tense is the INK**: same amount, same origin, same ordinal; a spent
+row's glyph loses its tint and the row sits at 0.72. No strikethrough, no red — nothing went
+wrong, the coin was spent on purpose, and an alarm colour over ordinary housekeeping is §83
+backwards. Both rows open the same sheet, which already reasons over the whole history
+(`everyCoin` plus the unspent index set) and can tell a spend from a holding without being
+told which was tapped.
+
+**The headline is COUNTS — "6 unspent · 24 spent".** It stated `HegotaFormat.crown` of the
+unspent set, which is the balance: Home's crown and the Holdings cell, said a third time in
+one room (§680's ruling, applied here). The two tenses are the one reading this scope owns.
+**There is no spent total anywhere, and that is a correctness rule rather than a layout one**:
+a coin spent to produce change you still hold sits on both sides of that spend, so a sum over
+the spent set over-counts and reads as money that left. The demo's coin #24 is exactly that
+case — its source is the owner itself, so it is change that was later spent again.
+
+**The spent block folds at twelve and NAMES ITS CENSUS** ("Spent · showing 12 of 24") — §510's
+rule that a capped drawing must say what it was capped from, since a reader counting twelve
+rows under a headline saying twenty-four has no way to reconcile them. Newest first by INDEX,
+the vault's own allocation counter: `timestamp` is nil on any coin whose block header the
+sweep did not reach, and sorting on an optional puts the unread ones wherever the comparator
+lands.
+
+**The scope is no longer empty when everything has been spent.** `isEmpty(.coins)` read the
+unspent set alone, so an address that had held four coins and spent them all showed the
+empty state over a history the room was hiding — and the list's own three-empty-states note
+had already flagged that as the interesting case. The summary follows: *"The pieces this
+balance is in, and what they were made from"*, both halves, since a sentence naming only the
+unspent half describes one of the scope's two blocks.
+
+**The demo carries the spent half, measured rather than invented.** Re-read off the live
+devnet 2026-09-11 at tip 518906: 49 `UtxoCreated` logs in all, 14 owned by the demo address,
+and the vault's spent bitmap calls exactly seven of them spent — the same seven-unspent set
+the fixture already had, plus the seven it was made from. Without them the second block is
+invisible in the demo and in every census screenshot, which is how a shipped reading goes
+unlooked-at.
+
+Amends §680 in this room only (a scope does not restate the balance — that is why the
+headline moved to counts) and inherits §692's block grammar. §555's reconciliation line and
+census are untouched and still land after the rows settle.

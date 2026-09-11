@@ -252,6 +252,68 @@ enum HegotaCoins {
         total(unspent) == vaultWei
     }
 
+    // MARK: - The spent half (prd §694)
+
+    /// How many spent coins the scope draws before it folds. A capped drawing
+    /// must NAME its census (§510), which the block's caption does.
+    static let spentShown = 12
+
+    /// **THE COINS THIS OWNER HAS SPENT — free, and the room never drew them.**
+    ///
+    /// Every coin ever created for these accounts minus the set the vault's
+    /// spent bitmap says is still unspent. Both halves are already walked:
+    /// `readCoinState` reads every `UtxoCreated` log and every spent bit,
+    /// because conservation only holds across all owners at once. So the spent
+    /// history costs no request and no new host.
+    ///
+    /// **ONLY RECONCILED ACCOUNTS ARE CLASSIFIED.** An account whose spent bits
+    /// could not be read has `unspent == nil`, and subtracting nil from
+    /// everything would report the whole history as spent — the exact inverse
+    /// of `unspent(_:words:)`' own refusal, which is that an unreadable bit is
+    /// "we don't know" rather than "not spent". Money you have and money you
+    /// spent are the two things this file exists to keep apart, in both
+    /// directions.
+    ///
+    /// **Newest first, by INDEX.** The index is the vault's own allocation
+    /// counter, so a higher one was minted later; `timestamp` is nil on any
+    /// coin whose block header the sweep did not reach, and sorting on an
+    /// optional puts the unread ones wherever the comparator happens to land.
+    static func spent(of accounts: [HegotaAccount]) -> [HegotaCoin] {
+        let classified = accounts.filter { $0.reconciled && $0.unspent != nil }
+        let held = Set(classified.flatMap { $0.unspent ?? [] }.map(\.index))
+        return classified.flatMap(\.coins)
+            .filter { !held.contains($0.index) }
+            .sorted { $0.index > $1.index }
+    }
+
+    /// **THE SCOPE'S HEADLINE IS COUNTS, NOT VALUE (prd §694).** The value of
+    /// what these coins add up to is Home's crown and the Holdings cell for the
+    /// same address — §680's ruling, that a scope does not restate the balance
+    /// — and the two tenses are the one reading this scope owns.
+    ///
+    /// **There is deliberately no SPENT TOTAL anywhere.** A coin spent to
+    /// produce change you still hold is counted on both sides of that spend, so
+    /// a sum over the spent set over-counts and reads as money that left. The
+    /// per-coin amounts are exact and the sum is not, so only the amounts are
+    /// drawn.
+    static func scopeHeadline(unspent: Int, spent: Int) -> String? {
+        let held = unspent == 1 ? String(localized: "1 unspent")
+                                : String(localized: "\(String(unspent)) unspent")
+        if spent == 0 { return unspent == 0 ? nil : held }
+        let gone = spent == 1 ? String(localized: "1 spent")
+                              : String(localized: "\(String(spent)) spent")
+        return unspent == 0 ? gone : "\(held) · \(gone)"
+    }
+
+    /// The Spent block's caption. Bare when nothing is folded; naming the
+    /// census when something is, because a reader counting twelve rows under a
+    /// headline that says twenty-four has no way to reconcile them (§510).
+    static func spentCaption(shown: Int, of total: Int) -> String {
+        shown >= total
+            ? String(localized: "Spent")
+            : String(localized: "Spent · showing \(String(shown)) of \(String(total))")
+    }
+
     /// What a spend paid the chain: inputs minus outputs.
     ///
     /// **Derived, never reported.** Nothing on the wire states a UTXO frame's

@@ -1020,10 +1020,51 @@ extension HegotaLiveState {
                        source: coinsAddr, owner: coinsAddr, block: 113_128,
                        createdBy: "0x46bd544999bbc3295b774a88e450e33030e27ccc37128e3e2e1b2346e36612ee"),
         ]
+        // **AND THE SEVEN IT HAS SPENT (prd §694), measured the same way.**
+        // Re-read off the live chain 2026-09-11 at tip 518906: 49
+        // `UtxoCreated` logs in all, 14 of them owned by this address, and the
+        // vault's spent bitmap calls exactly these seven spent. They cost the
+        // demo nothing to carry and they are what the seven above were made
+        // from — without them the scope's second block is invisible in the
+        // demo and in every census screenshot, which is how a shipped reading
+        // goes unlooked-at.
+        //
+        // Note #24: its source is this address itself, so it is CHANGE that
+        // was later spent again — the case that proves a spent total would
+        // over-count, since the coins it became are in the unspent list above.
+        let spentCoins = [
+            HegotaCoin(index: 4,  wei: Decimal(string: "10000000000000000")!,
+                       source: peerAddr, owner: coinsAddr, block: 96_594,
+                       createdBy: "0x6748b0501ca9e6fd98d9915f3b4f572d16e124ca0839fd26f13b417c05351bd1"),
+            HegotaCoin(index: 23, wei: Decimal(string: "10000000000000000")!,
+                       source: peerAddr, owner: coinsAddr, block: 101_707,
+                       createdBy: "0x38431204b81c8dc71f0e6278a30b2d708c066f75299cecd70a85c10d84858824"),
+            HegotaCoin(index: 24, wei: Decimal(string: "4936925999558482")!,
+                       source: coinsAddr, owner: coinsAddr, block: 101_767,
+                       createdBy: "0x4d12e06f40d1afdf9fbb9544ea6ca705868f7f4cf4737e2bb6f4f488ec9bda85"),
+            HegotaCoin(index: 29, wei: Decimal(string: "23000000000000000")!,
+                       source: "0x2a8bbcc059815cf1486745cc6755bef11c003a15",
+                       owner: coinsAddr, block: 102_567,
+                       createdBy: "0xcafe098f5316bb63c7f2bc6ad0502e390d5d82f6c3b07f9db2473f75c5b932dd"),
+            HegotaCoin(index: 35, wei: Decimal(string: "10000000000000000")!,
+                       source: peerAddr, owner: coinsAddr, block: 110_485,
+                       createdBy: "0xf2d1e361f96368cb89085f69502812891075fcffd7a48ff2c836926e43a01dec"),
+            HegotaCoin(index: 36, wei: Decimal(string: "10000000000000000")!,
+                       source: peerAddr, owner: coinsAddr, block: 110_582,
+                       createdBy: "0xbb81737179a6b26c97fcfc9f636c9f8337bd128a6358a86f33eb9398f829102c"),
+            HegotaCoin(index: 44, wei: Decimal(string: "123400000000000000")!,
+                       source: peerAddr, owner: coinsAddr, block: 113_114,
+                       createdBy: "0x289eea96440b1762fe9bd214cd1eb4305bf115c7e3aac92a322f6cda216601f3"),
+        ]
         let dated = coins.map { coin -> HegotaCoin in
             var c = coin; c.timestamp = stamp(coin.block); return c
         }
-        owner.coins = dated
+        // `coins` is everything ever created for this owner and `unspent` is
+        // the subset the bitmap still calls held — the two lists the spent half
+        // is the difference of.
+        owner.coins = (dated + spentCoins.map { coin -> HegotaCoin in
+            var c = coin; c.timestamp = stamp(coin.block); return c
+        }).sorted { $0.index < $1.index }
         owner.unspent = dated
         // **THE WHOLE CHAIN'S VAULT, measured the same day (§504).** 49
         // `UtxoCreated` logs, 28 of them still unspent across 11 owners,

@@ -346,6 +346,67 @@ check(!HegotaCoins.reconciles(unspent: two, vaultWei: Decimal(1001)),
       "one wei out does NOT reconcile — a tolerance here would only hide a bug")
 check(!HegotaCoins.reconciles(unspent: two, vaultWei: Decimal(999)), "short by one wei does not reconcile")
 
+// ───────────────── the spent half (prd §694) ─────────────────
+// **Spent is free**: the walk already reads every `UtxoCreated` log and every
+// spent bit, so the spent set is the difference between two lists it already
+// has. It is the second TENSE of this scope — what the pieces you hold were
+// made from — and it is deliberately NOT Holdings, which would count the same
+// money twice.
+func spentFixture(_ address: String) -> HegotaAccount {
+    // Four ever made, two still held.
+    acct(address, coins: [made(0, 100), made(1, 200), made(2, 300), made(3, 400)],
+         held: [made(2, 300), made(3, 400)])
+}
+let spentOne = HegotaCoins.spent(of: [spentFixture("0xa")])
+check(spentOne.map(\.index) == [1, 0],
+      "spent is everything ever made minus what is still held, NEWEST first by the vault's counter")
+check(HegotaCoins.spent(of: [acct("0xa", coins: [made(0, 100)])]).isEmpty,
+      "an account that has spent nothing has no spent coins")
+check(HegotaCoins.spent(of: [acct("0xa")]).isEmpty, "an account with no coins at all has none")
+// **AN UNREADABLE ACCOUNT IS NOT CLASSIFIED, IN EITHER DIRECTION.** `unspent`
+// is nil exactly when a spent bit could not be read; subtracting nothing from
+// everything would report the WHOLE history as spent, which is the inverse of
+// the refusal `unspent(_:words:)` already makes. Money you have and money you
+// spent are the two things this file keeps apart.
+check(HegotaCoins.spent(of: [acct("0xa", coins: [made(0, 100), made(1, 200)], unreadable: true)]).isEmpty,
+      "an account whose spent bits could not be read reports NO spent coins, not all of them")
+check(HegotaCoins.spent(of: [acct("0xa", coins: [made(0, 100)], held: [], reconciled: false)]).isEmpty,
+      "an unreconciled account is not classified either")
+// Several accounts at once: a coin held by ONE of them is not spent, even
+// though the others never held it — the sets are unioned, not intersected.
+let shared = HegotaCoins.spent(of: [acct("0xa", coins: [made(0, 100), made(1, 200)], held: [made(1, 200)]),
+                                    acct("0xb", coins: [made(1, 200)], held: [made(1, 200)])])
+check(shared.map(\.index) == [0], "a coin one watched account still holds is not spent")
+
+// THE HEADLINE IS COUNTS, NOT VALUE — the value is Home's crown and the
+// Holdings cell for the same address (§680), and stating it here is the third
+// time. There is deliberately NO spent total: a coin spent to produce change
+// you still hold sits on both sides of that spend, so a sum over-counts.
+check(HegotaCoins.scopeHeadline(unspent: 2, spent: 2) == "2 unspent · 2 spent",
+      "both tenses, in that order")
+check(HegotaCoins.scopeHeadline(unspent: 1, spent: 0) == "1 unspent", "singular, and no spent clause")
+check(HegotaCoins.scopeHeadline(unspent: 0, spent: 1) == "1 spent",
+      "an address that has spent everything says so rather than reading as empty")
+check(HegotaCoins.scopeHeadline(unspent: 0, spent: 0) == nil,
+      "nothing either way defers to the section's own empty line")
+// A CAPPED DRAWING NAMES ITS CENSUS (§510).
+check(HegotaCoins.spentCaption(shown: 12, of: 24) == "Spent · showing 12 of 24",
+      "a folded spent block says what it was folded from")
+check(HegotaCoins.spentCaption(shown: 4, of: 4) == "Spent", "an unfolded one just names the kind")
+check(HegotaCoins.spentShown == 12, "the fold is a stated constant, not a number in a view")
+
+// **UTXO DOES NOT REPLACE HOLDINGS, AND THE TWO OWE EACH OTHER ONE NUMBER.**
+// Holdings answers "how much, per address, across assets"; this answers "what
+// pieces, and where from". When the set reconciles they meet: the unspent total
+// IS the address's test-ETH balance. Two derivations of one balance is how they
+// drift, so it is pinned here.
+let reconciledAcct = acct("0xa", wei: 700, coins: [made(0, 100), made(1, 200), made(2, 300), made(3, 400)],
+                          held: [made(2, 300), made(3, 400)])
+check(HegotaCoins.total(reconciledAcct.unspent ?? []) == reconciledAcct.balanceWei,
+      "the unspent total is the address's balance — the Holdings cell and this scope state one number")
+check(HegotaCoins.total(reconciledAcct.coins) != reconciledAcct.balanceWei,
+      "…and the WHOLE history is not, which is why spent may never be summed into a holding")
+
 // fee(): the REAL split on chain — 1 ETH in, 0.4 + 0.5 out, change back.
 let inputs = [Decimal(1_000_000_000_000_000_000)]
 let outputs = [Decimal(400_000_000_000_000_000),
@@ -369,14 +430,20 @@ check(HegotaChain.chainID == 3151908, "the chain id")
 
 // ─────────────────────────── the room head ───────────────────────────
 
+// `held` splits the two sets: `coins` is everything ever created for this
+// owner and `held` is what the spent bitmap still calls unspent. Nil means the
+// two are the same (nothing spent), which is what every case before prd §694
+// assumed; `held: nil` with `unreadable: true` is the account whose bits could
+// not be read at all.
 func acct(_ a: String, reached: Bool = true, wei: Int? = 1000,
-          coins: [HegotaCoin] = [], reconciled: Bool = true,
+          coins: [HegotaCoin] = [], held: [HegotaCoin]? = nil,
+          unreadable: Bool = false, reconciled: Bool = true,
           lanes: [HegotaNonceLane] = [], moves: [HegotaMove] = []) -> HegotaAccount {
     var x = HegotaAccount(address: a)
     x.reached = reached
     x.balanceWei = wei.map { Decimal($0) }
     x.coins = coins
-    x.unspent = coins.isEmpty ? [] : coins
+    x.unspent = unreadable ? nil : (held ?? (coins.isEmpty ? [] : coins))
     x.reconciled = reconciled
     x.lanes = lanes
     x.moves = moves
@@ -1132,7 +1199,7 @@ mutate "shows() lets a single scope draw a control" \
 mutate "every scope gated again, so four chips vanish on the address that most needs them" \
   HegotaSection.swift 's/static func present\(\) -> \[HegotaSection\] \{ order \}/static func present() -> [HegotaSection] { order.filter { !\$0.isConditional } }/'
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
-  HegotaSection.swift 's/This chain can hold a balance as unspent pieces, each spent whole and never in part\. None of these addresses holds one\./ /'
+  HegotaSection.swift 's/This chain can hold a balance as pieces.*?were made from\./ /'
 mutate "coins is marked unconditional, so the head-reflow rule stops being enforced" \
   HegotaSection.swift 's/case \.frames, \.coins, \.permissions: return true/case .frames, .permissions: return true\n        case .coins: return false/'
 mutate "the unspent-output scope goes back to the friendly gloss" \
@@ -1143,6 +1210,14 @@ mutate "the unspent-output scope goes back to the friendly gloss" \
 # nothing and reports a pass, which is the failure this file has paid for twice.
 mutate "the folded scope takes one of its halves' names back" \
   HegotaSection.swift 's/case \.permissions: return String\(localized: "Permissions"\)/case .permissions: return String(localized: "Nonces")/'
+mutate "an unreadable account has its whole history reported as spent" \
+  HegotaCoins.swift 's/let classified = accounts.filter \{ \$0.reconciled && \$0.unspent != nil \}/let classified = accounts/'
+mutate "spent coins come back oldest first, so a fold drops the recent ones" \
+  HegotaCoins.swift 's/.sorted \{ \$0.index > \$1.index \}/.sorted { $0.index < $1.index }/'
+mutate "the headline states the value instead of the counts" \
+  HegotaCoins.swift 's/if spent == 0 \{ return unspent == 0 \? nil : held \}/if spent == 0 { return held }/'
+mutate "a folded spent block stops naming its census" \
+  HegotaCoins.swift 's/\n        shown >= total\n/\n        true\n/'
 mutate "sponsors counted by transaction rather than by payer" \
   HegotaRoom.swift 's/let payers = Set\(accounts.flatMap\(\\.sponsored\).compactMap \{ \$0.payer\?.lowercased\(\) \}\)/let payers = Set(accounts.flatMap(\\.sponsored).enumerated().map { "\\($0.offset)" })/'
 mutate "a payer's case is treated as an identity" \

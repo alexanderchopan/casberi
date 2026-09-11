@@ -168,7 +168,10 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         // and relationship — the one question no other scope answers.
         case .accounts: return String(localized: "The accounts you follow, and the ones tied to them")
         case .frames:   return String(localized: "The steps your transactions ran")
-        case .coins:    return String(localized: "The unspent outputs this address owns")
+        // **BOTH TENSES (prd §694).** The scope draws what is held and what
+        // it was made from; a summary naming only the unspent half describes
+        // one of its two blocks.
+        case .coins:    return String(localized: "The pieces this balance is in, and what they were made from")
         case .permissions: return String(localized: "What's allowed to act on your accounts, and what already has")
         }
     }
@@ -213,7 +216,7 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         case .frames:
             return String(localized: "A frame transaction runs in numbered steps, each carrying its own budget. Nothing here has run one — a plain transfer runs none.")
         case .coins:
-            return String(localized: "This chain can hold a balance as unspent pieces, each spent whole and never in part. None of these addresses holds one.")
+            return String(localized: "This chain can hold a balance as pieces, each spent whole and never in part. None of these addresses has ever held one — and a piece that has been spent still shows here, since it is what the rest were made from.")
         case .permissions:
             return String(localized: "What is allowed to act on this account. Here that is a named nonce key, whose transfers do not wait for the ordinary counter, and a sponsor, who covered somebody's gas. Everything here went on the ordinary nonce and paid its own way.")
         }

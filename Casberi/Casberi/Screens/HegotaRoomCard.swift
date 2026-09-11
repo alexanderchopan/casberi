@@ -91,7 +91,10 @@ struct HegotaRoomFigure: View {
         // answer and the scope says it rather than leaving 258pt blank.
         case .accounts: return HegotaConnections.map(shown)?.nodes.isEmpty ?? true
         case .frames:   return framedMoves.isEmpty
-        case .coins:    return coins.isEmpty
+        // **SPENT COUNTS AS CONTENT (prd §694).** An address that has spent
+        // every coin it ever held has a history to draw, and this arm hid it
+        // behind the scope's empty state.
+        case .coins:    return coins.isEmpty && spentCoins.isEmpty
         // **EMPTY ONLY WHEN NEITHER KIND IS GRANTED (prd §692).** The scope
         // holds two — nonce keys and sponsors — so an address with a lane and
         // no sponsor has permissions and must not draw the empty state.
@@ -131,6 +134,9 @@ struct HegotaRoomFigure: View {
     private var coins: [HegotaCoin] {
         shown.filter(\.hasCoins).flatMap { $0.unspent ?? [] }.sorted { $0.index < $1.index }
     }
+    /// What these accounts have SPENT (prd §694) — derived in the model so the
+    /// figure and the list cannot disagree about how many there are.
+    private var spentCoins: [HegotaCoin] { HegotaCoins.spent(of: shown) }
     private var lanes: [HegotaNonceLane] {
         shown.flatMap(\.lanes).sorted { $0.lastBlock > $1.lastBlock }
     }
@@ -204,8 +210,13 @@ struct HegotaRoomFigure: View {
             // addresses above it is the list's own length said twice.
             if isEmpty(.accounts) { return section.emptyHeadline }
             return nil
+        // **COUNTS, NOT THE VALUE (prd §694).** `HegotaFormat.crown` of the
+        // unspent set is the balance — Home's crown and the Holdings cell for
+        // the same address, stated a third time. The two tenses are what this
+        // scope owns.
         case .coins:
-            return coins.isEmpty ? nil : HegotaFormat.crown(HegotaCoins.total(coins))
+            return HegotaCoins.scopeHeadline(unspent: coins.count, spent: spentCoins.count)
+                ?? section.emptyHeadline
         // **STEPS, not transactions.** The transaction count is already the
         // Activity scope's headline one chip away, so repeating it here would
         // make the two scopes look like the same reading twice. What this scope
@@ -1826,6 +1837,10 @@ struct HegotaRoomList: View {
     private var coins: [HegotaCoin] {
         shown.filter(\.hasCoins).flatMap { $0.unspent ?? [] }.sorted { $0.index < $1.index }
     }
+    /// What these accounts have SPENT (prd §694) — the list's second block,
+    /// derived in the model so the figure's headline and these rows cannot
+    /// disagree about how many there are.
+    private var spentCoins: [HegotaCoin] { HegotaCoins.spent(of: shown) }
     /// Every coin these accounts have EVER owned, spent ones included — what a
     /// spend's full anatomy needs. `coins` above is the unspent set the list
     /// draws; this is the set the sheet reasons over.
@@ -2040,65 +2055,102 @@ struct HegotaRoomList: View {
 
     // MARK: Coins
 
+    /// **TWO TENSES, TWO BLOCKS (prd §694, user: "in UTXO we need to track
+    /// spent and unspent and the values").**
+    ///
+    /// Unspent is what this address holds, as pieces. Spent is what those
+    /// pieces were made from — history, not money, which is why it is here and
+    /// not in Holdings: a spent coin added to a treemap of what you hold would
+    /// count the same money twice.
+    ///
+    /// **Does this replace Holdings? No, and the two owe each other one rule.**
+    /// Holdings answers "how much, per address, across assets" and is the same
+    /// treemap in five rooms; this answers "what pieces, and where from" and
+    /// only this chain has it. When the set reconciles they meet: the unspent
+    /// total IS the address's test-ETH balance, so the Holdings cell and this
+    /// scope must state the same number — guarded in `hegota-selftest.sh`,
+    /// because two derivations of one balance is how they drift.
     @ViewBuilder private var coinsList: some View {
-        if coins.isEmpty {
-            // **Three empty states, not one.** "No unspent UTXOs" was told to
-            // somebody who had never held one and to somebody who had held four
-            // and spent them all — completely different facts about an account,
-            // and the second is a history the room was hiding.
-            // Spent-out is a fact the slot cannot state — the coins EXISTED.
-            // "Never held" moved to the slot with the rest (prd §611).
-            if !everyCoin.isEmpty {
-                empty(everyCoin.count == 1
-                      ? String(localized: "Its 1 UTXO has been spent.")
-                      : String(localized: "All \(String(everyCoin.count)) of its UTXOs have been spent."))
-            }
-        } else {
-            ForEach(coins, id: \.index) { coin in
-                Button {
-                    DSHaptic.selection()
-                    onOpenCoin?(coin, everyCoin, unspentIndices)
-                } label: {
-                WalletRow(mark: .symbol(coin.isChange ? "arrow.uturn.backward" : "arrow.down",
-                                        tint: DS.tint),
-                          title: HegotaFormat.eth(coin.wei),
-                          subtitle: coinSubtitle(coin)) {
-                    // The vault's own allocation counter — which coin came
-                    // first. An ORDINAL, which is why the age beside it in the
-                    // subtitle is worth having: #45 says nothing about when.
-                    Text(String(localized: "#\(String(coin.index))"))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary).monospacedDigit()
-                }
-                .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-            // **THE BOOKS BALANCE** (moment 03). This line is a PROOF the app
-            // performed — every unspent coin on the chain, summed, equals what
-            // the vault contract actually holds — so it arrives after the rows
-            // have settled rather than with them, the way a sum lands after
-            // its column. No other room in this app can check its own numbers.
-            //
-            // **AND THE CENSUS RIDES IT NOW (prd §555).** That fact used to sit
-            // under the treemap, where 116pt of map plus a two-line share ran
-            // the 168pt figure slot over and clipped the drawing. It was never
-            // a fact about YOUR coins — it is what the whole chain's vault
-            // holds and how many people hold it — so it belongs beside the
-            // reconciliation it is a companion to, in a list with as much room
-            // as it needs.
-            VStack(alignment: .leading, spacing: 2) {
-                Text(String(localized: "These UTXOs account for exactly what the vault holds."))
-                if let census = censusLine {
-                    Text(census)
+        let spent = spentCoins
+        let shownSpent = Array(spent.prefix(HegotaCoins.spentShown))
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
+            if !coins.isEmpty {
+                RoomListBlock(caption: String(localized: "Unspent")) {
+                    VStack(spacing: DS.Space.s2) {
+                        ForEach(coins, id: \.index) { coin in coinRow(coin, spent: false) }
+                    }
                 }
             }
-            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .opacity(balanced || reduceMotion ? 1 : 0)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.4).delay(0.45),
-                       value: balanced)
-            .onAppear { balanced = true }
+            if !shownSpent.isEmpty {
+                RoomListBlock(caption: HegotaCoins.spentCaption(shown: shownSpent.count,
+                                                                of: spent.count)) {
+                    VStack(spacing: DS.Space.s2) {
+                        ForEach(shownSpent, id: \.index) { coin in coinRow(coin, spent: true) }
+                    }
+                }
+            }
+            if !coins.isEmpty {
+                // **THE BOOKS BALANCE** (moment 03). This line is a PROOF the app
+                // performed — every unspent coin on the chain, summed, equals what
+                // the vault contract actually holds — so it arrives after the rows
+                // have settled rather than with them, the way a sum lands after
+                // its column. No other room in this app can check its own numbers.
+                //
+                // **AND THE CENSUS RIDES IT NOW (prd §555).** That fact used to sit
+                // under the treemap, where 116pt of map plus a two-line share ran
+                // the 168pt figure slot over and clipped the drawing. It was never
+                // a fact about YOUR coins — it is what the whole chain's vault
+                // holds and how many people hold it — so it belongs beside the
+                // reconciliation it is a companion to, in a list with as much room
+                // as it needs.
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(localized: "These UTXOs account for exactly what the vault holds."))
+                    if let census = censusLine {
+                        Text(census)
+                    }
+                }
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .opacity(balanced || reduceMotion ? 1 : 0)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.4).delay(0.45),
+                           value: balanced)
+                .onAppear { balanced = true }
+            }
         }
+    }
+
+    /// ONE ROW ANATOMY FOR BOTH TENSES, and the tense is the INK.
+    ///
+    /// A spent coin is the same object with the same amount and the same
+    /// origin; what differs is that it is gone. So the row does not change
+    /// shape — the amount drops to tertiary, which is this app's grammar for a
+    /// fact that is no longer live, and the glyph loses the tint. **No
+    /// strikethrough and no red**: nothing went wrong, the coin was spent on
+    /// purpose, and §83's "colour says what is happening" would be making an
+    /// alarm out of ordinary housekeeping.
+    ///
+    /// Both open the same sheet, which already reasons over the whole history
+    /// (`everyCoin` plus the unspent index set) and can therefore tell a spend
+    /// from a holding without being told which was tapped.
+    @ViewBuilder private func coinRow(_ coin: HegotaCoin, spent: Bool) -> some View {
+        Button {
+            DSHaptic.selection()
+            onOpenCoin?(coin, everyCoin, unspentIndices)
+        } label: {
+            WalletRow(mark: .symbol(coin.isChange ? "arrow.uturn.backward" : "arrow.down",
+                                    tint: spent ? DS.textTertiary : DS.tint),
+                      title: HegotaFormat.eth(coin.wei),
+                      subtitle: coinSubtitle(coin)) {
+                // The vault's own allocation counter — which coin came first.
+                // An ORDINAL, which is why the age beside it in the subtitle is
+                // worth having: #45 says nothing about when.
+                Text(String(localized: "#\(String(coin.index))"))
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary).monospacedDigit()
+            }
+            .opacity(spent ? 0.72 : 1)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func coinSubtitle(_ coin: HegotaCoin) -> String {
