@@ -114,10 +114,9 @@ struct PrivacyDevnetRoomCard: View {
             return n == 1 ? String(localized: "1 snapshot")
                           : String(localized: "\(String(n)) snapshots")
         case .activity:
-            let n = pairs.count
-            guard n > 0 else { return section.emptyHeadline }
-            return n == 1 ? String(localized: "1 transaction")
-                          : String(localized: "\(String(n)) transactions")
+            // **THE CHART OWNS THE COUNT (prd §686)** — drawn here as well it
+            // appears twice, once as this line and once inside the chart.
+            return pairs.isEmpty ? section.emptyHeadline : nil
         case .holdings:
             // **NOT THE BALANCE (prd §680, user: "you have the balance, it
             // isn't supposed to say the balance, we say that on home").** Home
@@ -521,7 +520,12 @@ extension PrivacyDevnetRoomCard {
                 WalletRow(mark: Self.mark(for: move),
                           title: Self.moveTitle(move),
                           subtitleText: Self.moveMeta(move, showsSponsorship: showsSponsorship)) {
-                    WalletRowChevron()
+                    // **THE TIME, NOT A CHEVRON (prd §687).** One meaning per
+                    // column across the family: the amount where a row has
+                    // one, the time where it does not. A chevron was a third
+                    // thing in the same slot — and the row opens its sheet on
+                    // tap either way, exactly as Frames' rows do without one.
+                    Self.when(move)
                 }
                 .contentShape(Rectangle())
             }
@@ -532,8 +536,27 @@ extension PrivacyDevnetRoomCard {
             WalletRow(mark: Self.mark(for: move),
                       title: Self.moveTitle(move),
                       subtitleText: Self.moveMeta(move, showsSponsorship: showsSponsorship)) {
-                EmptyView()
+                Self.when(move)
             }
+        }
+    }
+
+    /// **THE SHARED ACTIVITY CHART (prd §686/§687).** Reachable at last: this
+    /// room's moves carry a date now, so the same drawing every other
+    /// wallet-family room's Activity carries works here too.
+    @ViewBuilder var activityChart: some View {
+        RoomActivityChart(dates: moves.compactMap(\.date),
+                          caption: scopeCaption,
+                          box: DSRoomChassis.figureSlot)
+    }
+
+    /// The row's right edge: how long ago, or nothing where the block did not
+    /// date (prd §687). The same age every other devnet row carries — this
+    /// list is sparse and draws no day headers, so the time has to stand
+    /// alone.
+    @ViewBuilder static func when(_ move: PrivacyDevnetLiveState.Move) -> some View {
+        if let when = RoomWhen.age(move.date) {
+            Text(when).dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
     }
 
@@ -549,10 +572,23 @@ extension PrivacyDevnetRoomCard {
     /// **AN ORDINARY TRANSACTION IS NOT "0 FRAMES"** — Frames' own rule; this
     /// chain's faucet pays out as a plain transfer that emits an EIP-7708 log,
     /// so the walk can carry both.
+    /// **WHAT THE TRANSACTION WAS, in this room's own words (prd §687, user:
+    /// "if this is the activity list, shouldn't it list transactions?").**
+    ///
+    /// It said "2 frames" — how the transaction was built, not what it did,
+    /// and this room has a whole Frames scope for the parts. The vocabulary
+    /// here is the figure's own: it already counts "4 pool spends · 2 framed
+    /// calls", so those are the two nouns, and the mark beside the title has
+    /// encoded exactly this distinction since the room shipped (a key for a
+    /// pool spend, the stack for a framed call, the arrows for a transfer).
+    ///
+    /// **No amount, ever, and that is the chain rather than an omission**: the
+    /// amount is the thing the pool hides, so a title here can say what a
+    /// transaction WAS and never what it moved.
     static func moveTitle(_ m: PrivacyDevnetLiveState.Move) -> String {
-        guard m.frameCount > 0 else { return String(localized: "Transfer") }
-        return m.frameCount == 1 ? String(localized: "1 frame")
-                                 : String(localized: "\(String(m.frameCount)) frames")
+        if m.nullifierCount > 0 { return String(localized: "Pool spend") }
+        return m.frameCount > 0 ? String(localized: "Framed call")
+                                : String(localized: "Transfer")
     }
 
     /// The metadata clauses, as ONE concatenated `Text` (`WalletRow
@@ -565,6 +601,15 @@ extension PrivacyDevnetRoomCard {
         func add(_ piece: Text) {
             out = out.map { $0 + Text(verbatim: " · ") + piece } ?? piece
         }
+        // **THE FRAME COUNT IS A QUALIFIER NOW (prd §687)** — it used to be
+        // the row's name. A move with no frames says nothing here: this chain
+        // carries plain transfers too, and "0 frames" is a count where a noun
+        // belongs.
+        if m.frameCount > 0 {
+            add(Text(m.frameCount == 1
+                     ? String(localized: "1 frame")
+                     : String(localized: "\(String(m.frameCount)) frames")))
+        }
         if m.nullifierCount > 0 {
             add(Text(m.nullifierCount == 1
                      ? String(localized: "1 spend key")
@@ -574,9 +619,17 @@ extension PrivacyDevnetRoomCard {
         if m.sponsored, showsSponsorship {
             add(Text(String(localized: "Sponsored")))
         }
-        if let block = m.block {
-            add(Text(String(localized: "block \(String(block))")))
-        }
+        // **A TIME, NOT A BLOCK (prd §687).** This said `block 13352` because
+        // the move carried no date — every other room in the family says when.
+        // The block is still the fact underneath and the sheet still shows it;
+        // it is not what a list row is scanned for. Nil draws nothing.
+        // **NO TIME HERE — it owns the RIGHT EDGE in this room (prd §687).**
+        // The rule across the family is that the right edge carries the amount
+        // where a row has one to state; this chain hides the amount by design,
+        // so the column is free and the time takes it. The block is still the
+        // fact underneath and the sheet still shows it; it is not what a list
+        // row is scanned for, which is why it no longer draws here at all.
+        _ = m.block
         return out
     }
 
@@ -1076,7 +1129,7 @@ extension PrivacyDevnetRoomCard {
 
     @ViewBuilder func figure(for section: PrivacyDevnetSection) -> some View {
         switch section {
-        case .activity:   activityFigure
+        case .activity:   activityChart
         case .frames:     budgetBar(moves.filter { $0.frameCount > 0 })
         // **NO FIGURE (prd §606).** These two drew a count as N identical
         // shapes — eight rings for eight keys, a row of pips per address —
@@ -1092,68 +1145,13 @@ extension PrivacyDevnetRoomCard {
         }
     }
 
-    /// **WHEN EACH TRANSACTION LANDED, and what they were only when that
-    /// differs (prd §610).**
-    ///
-    /// The scope drew `kindMix` alone, which on the reported device was one
-    /// legend line — *60 plain transfers* — under a chassis headline already
-    /// reading *60 transactions*: the slot restated its own headline and left
-    /// the rest empty. The mix is not wrong, it is the right figure for a room
-    /// whose transactions differ in kind, and here they almost never do.
-    ///
-    /// So the spine leads and the mix becomes its caption, drawn **only when
-    /// there is more than one kind** — which is exactly when it stops being the
-    /// headline said twice.
-    @ViewBuilder private var activityFigure: some View {
-        // ONE definition of what is dated, shared with the drawing: the axis
-        // ends and the spine's own bins come from the same function, so the
-        // labels can never name a range the marks are not inside.
-        let marks = pairs.map { (block: $0.move.block, sponsored: $0.move.sponsored,
-                                 id: $0.move.id) }
-        let axis = PrivacyDevnetFigure.spine(marks, columns: 1)
-        let mix = PrivacyDevnetFigure.kindMix(moves.map {
-            PrivacyDevnetFigure.kind(frames: $0.frameCount, keys: $0.nullifierCount)
-        })
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            PrivacyDevnetMoveSpine(marks: marks,
-                                   open: onOpenMove == nil ? nil : { id in
-                                       guard let pair = pairs.first(where: { $0.move.id == id })
-                                       else { return }
-                                       onOpenMove?(pair.move, pair.owner)
-                                   },
-                                   reduceMotion: reduceMotion)
-            if let axis {
-                HStack {
-                    Text(String(localized: "block \(String(axis.fromBlock))"))
-                    Spacer(minLength: DS.Space.s2)
-                    Text(String(axis.toBlock))
-                }
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                // Every mark in one block is a real reading and a range of one
-                // is not: an axis printing the same number at both ends reads
-                // as a broken chart rather than as a busy minute.
-                .opacity(axis.fromBlock == axis.toBlock ? 0 : 1)
-            }
-            if mix.count > 1 {
-                Text(mix.map { PrivacyDevnetKindMix.words($0.kind, count: $0.count) }
-                        .joined(separator: " · "))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-            }
-            // **COUNTED, NEVER PLACED.** A transaction whose read carried no
-            // block has no position on this axis; saying so is the difference
-            // between a figure that is incomplete and one that is wrong.
-            if let axis, axis.undated > 0 {
-                Text(axis.undated == 1
-                     ? String(localized: "1 more, with no block on it.")
-                     : String(localized: "\(String(axis.undated)) more, with no block on them."))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-            }
-        }
-    }
+    // **THE `activityFigure` THAT STOOD HERE IS DELETED (prd §687).** It
+    // drew this room's own dot strip on a block axis, and Activity takes
+    // the shared count chart now. Checked before deleting rather than left
+    // behind: nothing else called it — the lesson `HegotaRoom.valueSeries`
+    // taught two rulings ago, where a dead twin kept a mutation passing
+    // against the copy nobody drew.
+
 
     /// WHAT THESE STEPS WERE ALLOWED, and what they cost — one bar for the
     /// room rather than one strip per transaction (prd §606).

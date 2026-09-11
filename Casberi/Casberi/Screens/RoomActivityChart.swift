@@ -251,3 +251,111 @@ struct ActivityBars: View {
             "\(String(counts.reduce(0, +))) transactions over \(String(counts.count)) periods")))
     }
 }
+
+/// **WHEN A ROW HAPPENED, ONE ANSWER FOR EVERY ROOM (prd §687, user: "why
+/// woudln't the when be the same for all just a time").**
+///
+/// Every wallet-family room said when in its own way: the Wallet and vibenet a
+/// relative age on the right ("3h"), Hegotá and Frames a relative age buried in
+/// the subtitle, the Privacy devnet a BLOCK NUMBER, because its moves carried
+/// no date at all until §687 gave them one.
+///
+/// **WHICH FORM IS A QUESTION ABOUT THE LIST, NOT THE ROW — and getting that
+/// backwards cost this pass a wrong turn.** The first cut ruled "a clock time
+/// everywhere" on the reasoning that a day header carries the date, so a row
+/// saying "3h ago" under "Today" says it twice. That reasoning is right and its
+/// premise is not: **the devnet lists do not group by day, and must not.**
+/// `FeedScreen.coarsenIfSparse` coarsens any list averaging under 1.5 rows a
+/// day across six or more days — which is every devnet Activity list here, six
+/// transactions across five weeks — because the 2026-07-21 ruling killed "the
+/// ladder of one-row day cards". Day headers there would have re-created
+/// exactly what that ruling removed, and a bare `10:19 AM` on a five-week-old
+/// row would have been actively wrong.
+///
+/// So: **grain follows density, and the time format follows the grain.**
+///   * a SPARSE list draws no day headers and each row carries `age` — "41m
+///     ago", "4w ago", which stands alone;
+///   * a DENSE list groups by `day` and each row carries `clock` — the header
+///     owns the date, the row owns the time, as Mail and Messages do.
+/// The Wallet and vibenet rooms sit in the feed's own grouping, which already
+/// applies that gate; the devnet rooms draw their own rows and are sparse.
+enum RoomWhen {
+    /// The row's own time. Nil where the timestamp could not be read — a row
+    /// draws no time rather than a guessed one, the rule `VibenetBridge
+    /// .blockTime` and `FramesFormat.time` already keep.
+    /// The row's age, for a list with no day headers — the form every devnet
+    /// Activity list takes today.
+    ///
+    /// The grammar is `FramesFormat.time`'s, which `HegotaFormat.time` already
+    /// matches word for word; this is the third copy and the one the rooms
+    /// without their own now share. Folding all three into it is a cleanup
+    /// worth doing and is deliberately NOT done here — it would churn two
+    /// working rooms inside a pass about a third.
+    static func age(_ date: Date?, now: Date = .now) -> String? {
+        guard let date else { return nil }
+        let seconds = max(0, now.timeIntervalSince(date))
+        let minutes = Int(seconds / 60)
+        if minutes < 1 { return String(localized: "just now") }
+        if minutes < 60 { return String(localized: "\(String(minutes))m ago") }
+        let hours = minutes / 60
+        if hours < 24 { return String(localized: "\(String(hours))h ago") }
+        let days = hours / 24
+        if days < 7 { return String(localized: "\(String(days))d ago") }
+        let weeks = days / 7
+        return String(localized: "\(String(weeks))w ago")
+    }
+
+    /// The row's time, for a list that DOES group by day. Unused by the devnet
+    /// rooms today for the reason above; kept because the rule is about the
+    /// list's density and a busy account is exactly the case that flips it.
+    static func clock(_ date: Date?) -> String? {
+        date.map { $0.formatted(date: .omitted, time: .shortened) }
+    }
+
+    /// The header a row groups under — **the FEED'S own wording**, because
+    /// the Wallet and vibenet rooms already group under it and a devnet list
+    /// saying "Sep 8" beside a feed saying "Monday, September 8" is the drift
+    /// this pass exists to end. `AddressSpine.dayText` is the app's other
+    /// answer and is deliberately NOT used here: it abbreviates for a dense
+    /// spine, which is a different job.
+    ///
+    /// **Compared against the INJECTED `now`, never `isDateInToday`** — a trap
+    /// three files in this tree have each paid for separately, and the reason
+    /// `AddressSpine.dayText` carries a paragraph about it. Those two methods
+    /// read the system clock and silently ignore the argument, so a harness
+    /// passes on the day it is written and goes red at the next midnight.
+    ///
+    /// An undated row groups under **Earlier**, which is the honest place for
+    /// it: a bounded read legitimately returns transactions it could not date,
+    /// and sorting them into a real day would be inventing one.
+    static func day(_ date: Date?, now: Date = .now,
+                    calendar: Calendar = .current) -> String {
+        guard let date else { return String(localized: "Earlier") }
+        if calendar.isDate(date, inSameDayAs: now) { return String(localized: "Today") }
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+           calendar.isDate(date, inSameDayAs: yesterday) {
+            return String(localized: "Yesterday")
+        }
+        return date.formatted(.dateTime.weekday(.wide).month().day())
+    }
+
+    /// Rows in day groups, newest day first, each group keeping the order it
+    /// was given. Undated rows collect in one **Earlier** group at the end,
+    /// never interleaved with dated ones.
+    static func grouped<T>(_ items: [T], date: (T) -> Date?,
+                           now: Date = .now,
+                           calendar: Calendar = .current) -> [(day: String, rows: [T])] {
+        var order: [String] = []
+        var bag: [String: [T]] = [:]
+        var undated: [T] = []
+        for item in items {
+            guard let d = date(item) else { undated.append(item); continue }
+            let key = day(d, now: now, calendar: calendar)
+            if bag[key] == nil { order.append(key); bag[key] = [] }
+            bag[key]?.append(item)
+        }
+        var out = order.map { (day: $0, rows: bag[$0] ?? []) }
+        if !undated.isEmpty { out.append((day: String(localized: "Earlier"), rows: undated)) }
+        return out
+    }
+}

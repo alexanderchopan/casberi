@@ -479,29 +479,13 @@ enum PrivacyDevnetFigure {
         return frames > 0 ? .framed : .transfer
     }
 
-    /// The room's transactions by kind, biggest first, zeroes dropped.
-    ///
-    /// **A share is only drawn when there is something to share BETWEEN.** One
-    /// kind is not a breakdown, it is a sentence with a bar behind it — and on
-    /// a young room every transaction is the same kind, so this returns a
-    /// single entry and the view states it in words rather than drawing a
-    /// full-width bar that says "100%".
-    ///
-    /// Ties break on the case's own order so the figure cannot reshuffle
-    /// between opens over identical data.
-    static func kindMix(_ kinds: [Kind]) -> [(kind: Kind, count: Int)] {
-        var counts: [Kind: Int] = [:]
-        for k in kinds { counts[k, default: 0] += 1 }
-        return Kind.allCases.compactMap { k in
-            guard let n = counts[k], n > 0 else { return nil }
-            return (kind: k, count: n)
-        }
-        .sorted { a, b in
-            if a.count != b.count { return a.count > b.count }
-            return (Kind.allCases.firstIndex(of: a.kind) ?? 0)
-                 < (Kind.allCases.firstIndex(of: b.kind) ?? 0)
-        }
-    }
+    // **`kindMix` AND `spine` ARE DELETED (prd §687).** Both existed for the
+    // Activity figure this room drew before it moved to the shared
+    // `RoomActivityChart`, and both lost their only caller with it. §610's
+    // ruling survives them — the Activity slot must not restate its own
+    // headline — and is guarded now on the thing that guarantees it: the
+    // chart owns the count and the slot headline yields.
+
 
     // MARK: - When each transaction landed (prd §610)
 
@@ -553,35 +537,6 @@ enum PrivacyDevnetFigure {
         var sponsored: Int { columns.reduce(0) { $0 + $1.sponsored } }
     }
 
-    /// One mark per transaction, binned into `columns` equal stretches of the
-    /// walked block range.
-    ///
-    /// Nil when nothing is dated — there is no axis to draw, and an axis with
-    /// invented ends is worse than no figure.
-    static func spine(_ marks: [(block: UInt64?, sponsored: Bool, id: String)],
-                      columns: Int) -> Spine? {
-        let n = max(1, columns)
-        let dated = marks.compactMap { m -> (UInt64, Bool, String)? in
-            guard let b = m.block else { return nil }
-            return (b, m.sponsored, m.id)
-        }
-        let undated = marks.count - dated.count
-        guard let from = dated.map(\.0).min(), let to = dated.map(\.0).max() else { return nil }
-        var cols = [Spine.Column](repeating: Spine.Column(), count: n)
-        // **SORTED FIRST, so a column's contents cannot reshuffle between opens
-        // over identical data** — the ranking rule every figure in this room
-        // keeps. Block, then id, so the order is total.
-        for (block, sponsored, id) in dated.sorted(by: { $0.0 == $1.0 ? $0.2 < $1.2 : $0.0 < $1.0 }) {
-            // **THE SPAN CAN BE ZERO**, and it is on any room whose walk saw a
-            // single block — the common case on a young address. A naive
-            // division there is a crash, and a naive index for the NEWEST block
-            // is `n`, one past the end, which drops the newest transaction.
-            let span = to - from
-            let idx = span == 0 ? 0 : min(n - 1, Int((block - from) * UInt64(n) / span))
-            cols[idx].marks.append(Spine.Mark(id: id, sponsored: sponsored))
-        }
-        return Spine(columns: cols, fromBlock: from, toBlock: to, undated: undated)
-    }
 
     // MARK: - What the room asked the chain for (prd §606)
 

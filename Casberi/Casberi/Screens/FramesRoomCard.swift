@@ -735,6 +735,16 @@ struct FramesMoveRow: View {
         if verdict.isTrouble {
             add(Text(verdict.word).foregroundColor(DS.destructive))
         }
+        // **HOW IT WAS BUILT, as a qualifier rather than the row's name
+        // (prd §687).** A plain transfer says nothing here — this chain
+        // carries both, the faucet pays out as an ordinary type-0x2 transfer,
+        // and "0 frames" over one of those is a count where a noun belongs.
+        if !move.rows.isEmpty {
+            add(Text(move.rows.count == 1
+                     ? String(localized: "1 frame")
+                     : String(localized: "\(String(move.rows.count)) frames"))
+                .foregroundColor(DS.textTertiary))
+        }
         // One word, not a sentence: the scope is called Sponsors and the sheet
         // says who and how much.
         if move.sponsored, showsSponsorship {
@@ -742,6 +752,12 @@ struct FramesMoveRow: View {
         }
         // Nil draws nothing rather than "now" — the header read is bounded, so
         // a move outside the window legitimately has no time (§515a).
+        // **A RELATIVE AGE, LAST (prd §687).** This list draws no day headers
+        // and must not — it is sparse by nature, and `coarsenIfSparse`'s own
+        // ruling is that a ladder of one-row day cards is worse than none. So
+        // the row carries an age that stands alone. Nil draws nothing: the
+        // header read is bounded, so a move outside the window legitimately
+        // has no time (§515a).
         if let when = FramesFormat.time(move.timestamp) {
             add(Text(when).foregroundColor(DS.textTertiary))
         }
@@ -763,15 +779,28 @@ struct FramesMoveRow: View {
             : .symbol("square.stack.3d.up.fill", tint: DS.tint)
     }
 
-    /// **AN ORDINARY TRANSACTION IS NOT "0 FRAMES".** This chain carries both
-    /// — the faucet pays out as a plain type-0x2 transfer — and a row reading
-    /// "0 frames" over one of them is a count where a noun belongs.
+    /// **A ROW IN ACTIVITY SAYS WHAT THE TRANSACTION DID (prd §687, user:
+    /// "if this is the activity list, shouldn't it list transactions? they all
+    /// have transactions").**
+    ///
+    /// This said "4 frames" — which is HOW the transaction was built, not what
+    /// it did, and every other room in the family titles its rows with the
+    /// event. It also put a count where three rooms already have a whole
+    /// **Frames scope** for the parts, so the list was spending its most
+    /// valuable line on the one question a chip away answers better.
+    ///
+    /// The frame count is not lost: it moves to `meta`, beside the status and
+    /// the time, where a qualifier belongs.
+    ///
+    /// **An unreadable amount is not a zero (§515a).** A move whose `deltaWei`
+    /// did not read says "Transaction" rather than guessing a direction — the
+    /// nil-is-not-zero rule this room already keeps for the figure column.
     private var titleText: String {
-        move.rows.isEmpty
-            ? String(localized: "Transfer")
-            : move.rows.count == 1
-              ? String(localized: "1 frame")
-              : String(localized: "\(String(move.rows.count)) frames")
+        guard let delta = move.deltaWei, delta != 0 else {
+            return String(localized: "Transaction")
+        }
+        return delta > 0 ? String(localized: "Received")
+                         : String(localized: "Sent")
     }
 
     var body: some View {

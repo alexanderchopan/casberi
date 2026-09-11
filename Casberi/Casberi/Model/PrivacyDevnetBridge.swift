@@ -815,6 +815,17 @@ extension PrivacyDevnetLiveState {
         /// room could say what every transaction was ALLOWED and never what
         /// any of them cost.
         var gasUsed: UInt64? = nil
+        /// **WHEN IT LANDED (prd §687).** The block's own timestamp, read once
+        /// per distinct block after the walk — the same `eth_getBlockByNumber`
+        /// Hegotá and Frames have always done, which this room simply never
+        /// did. Without it every row said `block 13352` where every other room
+        /// says a time, the list could not group by day, and the Activity
+        /// chart had no axis to draw against.
+        ///
+        /// **Nil is not "now".** A block whose time did not read keeps nil and
+        /// the row draws no time — the same rule `VibenetBridge.blockTime`
+        /// states: a fallback renders a years-old event as today.
+        var date: Date? = nil
         var id: String { hash }
 
         var frameCount: Int { frames.count }
@@ -1006,7 +1017,39 @@ extension PrivacyDevnetLiveState {
                                 gasUsed: moveGasUsed))
             out[sender] = w
         }
+        await Self.date(&out)
         return (out, cut)
+    }
+
+    /// Stamp every move with its block's time.
+    ///
+    /// **ONE READ PER DISTINCT BLOCK, not per move.** Several of this room's
+    /// transactions land in the same block — the walk's own measurement found
+    /// 18 transactions across far fewer blocks — so keying the read on the
+    /// block rather than the transaction is the difference between a handful
+    /// of requests and one per row. A block that does not answer leaves its
+    /// moves undated rather than failing the walk: a list with times on most
+    /// rows is strictly better than no list, and an undated row already has a
+    /// place to sit (§687's `Earlier` group).
+    private static func date(_ walked: inout [String: Walked]) async {
+        var blocks = Set<UInt64>()
+        for w in walked.values { for m in w.moves { if let b = m.block { blocks.insert(b) } } }
+        guard !blocks.isEmpty else { return }
+        var times: [UInt64: Date] = [:]
+        for block in blocks.sorted(by: >) {
+            guard let raw = await PrivacyDevnetRPC.call(
+                    method: "eth_getBlockByNumber",
+                    params: ["0x" + String(block, radix: 16), false]) as? [String: Any],
+                  let tsHex = raw["timestamp"] as? String,
+                  let seconds = PrivacyDevnetRPC.hexInt(tsHex), seconds > 0 else { continue }
+            times[block] = Date(timeIntervalSince1970: TimeInterval(seconds))
+        }
+        for (address, var w) in walked {
+            for i in w.moves.indices {
+                if let b = w.moves[i].block { w.moves[i].date = times[b] }
+            }
+            walked[address] = w
+        }
     }
 }
 
@@ -1087,19 +1130,34 @@ extension PrivacyDevnetLiveState {
         // because the counts above are non-zero. Hashes and shapes are this
         // address's own, off blocks 13352 and 13347 — obtained by running the
         // walk's own path against the live chain, not by hand.
+        // **THE DEMO'S CLOCK (prd §687).** These moves are real and so are
+        // their block numbers; what the fixture never carried was a TIME, so
+        // every row said `block 13352` where every other room says a clock
+        // time and the Activity chart had no axis. Derived from the blocks so
+        // the ORDER and the PROPORTIONS are the chain's own — 260 seconds a
+        // block puts the oldest fixture move about 40 days back, which is a
+        // history a 7d and a 30d window can honestly be drawn over. The same
+        // stretch §684 made for Hegotá and Frames, and stated the same way:
+        // what is measured stays measured, the absolute scale is the demo's.
+        let demoTip: UInt64 = 13_352
+        let demoSecondsPerBlock: Double = 260
+        func stamp(_ block: UInt64) -> Date {
+            Date().addingTimeInterval(-Double(demoTip &- min(block, demoTip)) * demoSecondsPerBlock)
+        }
+
         a.moves = [
             Move(hash: "0xeda9b1c8231c7ba375c831d63655acc813cf8c7d3ac2b095b23e3011d7b2999a",
                  block: 13352,
                  frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
                           Frame(gasLimit: 0x4e200, stateLimit: 0)],
                  nullifiers: [a.nullifiers[2], a.nullifiers[3]],
-                 roots: [a.roots[1]], sponsored: false),
+                 roots: [a.roots[1]], sponsored: false, date: stamp(13352)),
             Move(hash: "0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f",
                  block: 13347,
                  frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
                           Frame(gasLimit: 0x4e200, stateLimit: 0)],
                  nullifiers: [a.nullifiers[0], a.nullifiers[1]],
-                 roots: [a.roots[0]], sponsored: false),
+                 roots: [a.roots[0]], sponsored: false, date: stamp(13347)),
         ]
         // Zero, and CORRECT: no transaction measured on this chain carries a
         // `payer` differing from its sender, so the Sponsors chip is absent in
@@ -1152,13 +1210,13 @@ extension PrivacyDevnetLiveState {
                  frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
                           Frame(gasLimit: 0x155cc0, stateLimit: 0x86470)],
                  nullifiers: [b.nullifiers[2], b.nullifiers[3]],
-                 roots: [b.roots[1]], sponsored: false),
+                 roots: [b.roots[1]], sponsored: false, date: stamp(2792)),
             Move(hash: "0x5ad114d29ed7e9326bbc300b951c6ee9a59c648985dbba9497dfea454cccaa4a",
                  block: 2787,
                  frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
                           Frame(gasLimit: 0x155cc0, stateLimit: 0x86470)],
                  nullifiers: [b.nullifiers[0], b.nullifiers[1]],
-                 roots: [b.roots[0]], sponsored: false),
+                 roots: [b.roots[0]], sponsored: false, date: stamp(2787)),
         ]
 
         var c = PrivacyDevnetAccount(address: "0x248ac8584135c94469a90fbb02ba053b17f1cc60")
@@ -1174,12 +1232,12 @@ extension PrivacyDevnetLiveState {
                  block: 69,
                  frames: [Frame(gasLimit: 0x13880, stateLimit: 0),
                           Frame(gasLimit: 0x7530, stateLimit: 0x2cd30)],
-                 nullifiers: [], roots: [], sponsored: false),
+                 nullifiers: [], roots: [], sponsored: false, date: stamp(69)),
             Move(hash: "0xd4bf5b4d8d71d1cae6c2fe947daaa644f7b5770586f542ebe8ddc09b0040a51e",
                  block: 66,
                  frames: [Frame(gasLimit: 0x13880, stateLimit: 0),
                           Frame(gasLimit: 0x7530, stateLimit: 0x2cd30)],
-                 nullifiers: [], roots: [], sponsored: false),
+                 nullifiers: [], roots: [], sponsored: false, date: stamp(66)),
         ]
 
         // **THE DEMO'S HEAD, and it must stay AHEAD of the fixture's roots but

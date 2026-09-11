@@ -52545,3 +52545,56 @@ control rather than to each caller's manners.
 and the `activity` wrapper). Checked rather than assumed before deleting: the Frames scope
 draws `FramesSequenceStrip`, so nothing else called them. Amounts still read per move in
 the rows below and, summed, in the crown.
+
+## §687 — Activity lists transactions, and the "when" follows the list's density (2026-09-10)
+
+User, on the five Activity lists side by side: *"if this is the activity list, shouldn't it
+list transactions? they all have transactions"*, then *"Privacy still has transactions.
+Shielding for example is a transaction isn't it?"* and *"Topping up is a transaction too"*.
+Right on every count, and three rooms were titling their rows by how a transaction was
+BUILT rather than by what it did.
+
+**THE ROW GRAMMAR, one meaning per column.** Title says what happened; subtitle carries the
+qualifiers; the right edge carries the AMOUNT where a row has one to state and the TIME
+where it does not. Frames' `4 frames` becomes `Sent`/`Received` with the count demoted to a
+qualifier; Privacy's `2 frames` becomes `Pool spend` / `Framed call` / `Transfer`, the
+room's own vocabulary — its figure already counts "4 pool spends · 2 framed calls". Both
+rooms have a whole **Frames scope** for the parts, so the list was spending its most
+valuable line on the question a chip away answers better. Privacy's chevron goes with it:
+the row opens its sheet on tap either way, exactly as Frames' rows do without one.
+
+**PRIVACY'S MOVES GET A DATE.** One `eth_getBlockByNumber` per DISTINCT block after the
+walk — the read Hegotá and Frames have always done and this room never did. That is what
+puts a time on its rows in place of `block 13352`, and what finally lets it draw §686's
+Activity chart, which had no axis before. A block that does not answer leaves its moves
+undated rather than failing the walk. The demo fixture is stretched the same way §684
+stretched the other two (260 seconds a block, oldest move ~40 days back).
+
+**AND THE WRONG TURN, recorded because the reasoning was good and the premise was not.**
+The first ruling here was "a clock time everywhere": a relative age under a day header
+restates the header, so the header should own the date and the row the time — which is what
+Mail and Messages do. The premise was that these lists group by day. **They must not.**
+`FeedScreen.coarsenIfSparse` coarsens any list averaging under 1.5 rows a day over six or
+more days, because the 2026-07-21 ruling killed "the ladder of one-row day cards" — and
+every devnet Activity list is exactly that shape (six transactions across five weeks). Day
+headers there would have re-created what that ruling removed, and a bare `10:19 AM` on a
+five-week-old row would have been actively wrong.
+
+So the rule is not about the row: **grain follows density, and the time format follows the
+grain.** A sparse list draws no day headers and each row carries an age that stands alone
+("41m ago", "4w ago"); a dense list groups by day and each row carries a clock time. The
+Wallet and vibenet rooms sit in the feed's own grouping, which already applies that gate.
+`RoomWhen` carries both forms and the rule that picks between them.
+
+**WHAT VIBENET CANNOT DO, measured rather than assumed.** The user's instinct that a key
+change is a transaction is right on chain, and the obvious next step was to have vibenet
+list its transactions like everyone else. It cannot, and the RPC says why: a vibenet
+account emits no event of its own (its key events come from the EIP-8130 Keystore at
+`0x8130…00ac`, filtered by account); **native ETH movement emits no log at all**, so a
+top-up and a send — the two the user named — are invisible to any log scan; ERC-20
+`Transfer` logs are scannable but the node caps a query at 100,000 blocks AND 20,000
+results; and there is no explorer API (404 on every Blockscout- and Etherscan-shaped
+endpoint). The only thing that sees a native send is a block walk over 276,637 blocks and
+growing — the option `PrivacyDevnetLiveState.walkTransactions` already considered and
+rejected in writing at ~15,000 requests. So vibenet's Activity stays events, and the fix is
+a label rather than a scan.

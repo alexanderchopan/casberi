@@ -695,86 +695,15 @@ check(PF.kind(frames: 2, keys: 0) == .framed, "frames with no keys is an ordinar
 check(PF.kind(frames: 0, keys: 0) == .transfer, "no frames at all is a plain transfer — the faucet pays out this way")
 check(PF.kind(frames: 0, keys: 1) == .poolSpend, "keys decide it even with no frames read")
 
-check(PF.kindMix([]).isEmpty, "nothing in, nothing out")
-let oneKind = PF.kindMix([.poolSpend, .poolSpend])
-check(oneKind.count == 1 && oneKind[0].count == 2,
-      "one kind is ONE entry — the view states it in words rather than drawing a bar that says 100%")
-let mixed = PF.kindMix([.transfer, .poolSpend, .poolSpend, .framed])
-check(mixed.count == 3, "three kinds, three entries")
-check(mixed[0].kind == .poolSpend && mixed[0].count == 2, "biggest share leads")
-check(PF.kindMix([.framed, .transfer]).map(\.kind) == PF.kindMix([.transfer, .framed]).map(\.kind),
-      "a tie breaks on the case order, so the figure cannot reshuffle between opens")
-
-// ── prd §610: WHEN each transaction landed ──
-//
-// The Activity scope's figure. Every failure below draws a perfectly ordinary
-// chart: the newest transaction missing, a column of marks in the wrong bin, a
-// figure that reshuffles between opens, or an axis whose ends do not contain
-// the marks on it.
-func sm(_ b: UInt64?, _ sp: Bool = false, _ id: String = "") -> (block: UInt64?, sponsored: Bool, id: String) {
-    (block: b, sponsored: sp, id: id.isEmpty ? "tx\(b.map(String.init) ?? "x")\(sp ? "s" : "")" : id)
-}
-check(PF.spine([], columns: 12) == nil, "nothing dated means no axis — invented ends are worse than no figure")
-check(PF.spine([sm(nil), sm(nil)], columns: 12) == nil,
-      "an undated-only room draws no axis either, rather than putting them all at block zero")
-
-// THE NEWEST TRANSACTION MUST BE IN THE LAST COLUMN. The naive index for the
-// maximum block is `columns`, one past the end — so it is dropped or it traps,
-// and a room's most recent transaction is the one most worth seeing.
-if let sp = PF.spine([sm(100), sm(150), sm(200)], columns: 4) {
-    check(sp.columns.count == 4, "the column count is honoured exactly")
-    check(sp.fromBlock == 100 && sp.toBlock == 200, "the axis is the data's own range")
-    check(sp.placed == 3, "every dated transaction is placed")
-    check(sp.columns.last?.count == 1, "the newest lands in the LAST column, not one past the end")
-    check(sp.columns.first?.count == 1, "and the oldest in the first")
-    check(sp.tallest == 1, "tallest is the busiest column, which the view budgets its rows against")
-} else { check(false, "three dated transactions make a spine") }
-
-// A SPAN OF ZERO. Every transaction in one block is the common case on a young
-// address, and dividing by the span there is a crash rather than a wrong
-// answer — the one failure in this file that is not silent.
-if let sp = PF.spine([sm(77, false, "a"), sm(77, false, "b")], columns: 6) {
-    check(sp.fromBlock == 77 && sp.toBlock == 77, "one block is a range of one")
-    check(sp.columns[0].count == 2, "and both marks sit in it")
-    check(sp.placed == 2, "nothing is lost to the zero span")
-} else { check(false, "a single-block room still draws") }
-
-// UNDATED IS COUNTED, NEVER PLACED. `Move.block` is Optional because the read
-// can carry none, and placing one at zero puts a real transaction at the
-// beginning of time.
-if let sp = PF.spine([sm(10), sm(20), sm(nil)], columns: 5) {
-    check(sp.undated == 1, "a blockless transaction is counted")
-    check(sp.placed == 2, "and is not on the axis")
-    check(sp.total == 3, "so the figure can still say how many there really are")
-    check(sp.fromBlock == 10, "and it does not drag the axis to zero")
-} else { check(false, "a partly dated room still draws") }
-
-// SPONSORSHIP RIDES THE MARK, not a per-column tally: the view has to know
-// WHICH one to draw hollow, and a count alone lets it pick the wrong dot.
-if let sp = PF.spine([sm(10, true, "paid"), sm(10, false, "self")], columns: 3) {
-    check(sp.sponsored == 1, "one of the two was paid for by somebody else")
-    check(sp.columns[0].marks.contains { $0.id == "paid" && $0.sponsored },
-          "and the mark that carries it is the one that was")
-    check(sp.columns[0].marks.contains { $0.id == "self" && !$0.sponsored },
-          "while its neighbour is not")
-} else { check(false, "a sponsored transaction still draws") }
-
-// A TOTAL ORDER. Two transactions in one block, handed over in either order,
-// must bin identically — a figure that reshuffles between opens over identical
-// data reads as broken.
-let a1 = PF.spine([sm(5, false, "b"), sm(5, false, "a"), sm(9, false, "c")], columns: 3)
-let a2 = PF.spine([sm(9, false, "c"), sm(5, false, "a"), sm(5, false, "b")], columns: 3)
-check(a1 == a2, "the same transactions in any order produce the same spine")
-check(a1?.columns[0].marks.map(\.id) == ["a", "b"], "and a tie breaks on the id, never on arrival")
-
-// EVERY MARK IS INSIDE THE AXIS IT IS DRAWN UNDER. The labels name fromBlock
-// and toBlock, so a bin outside them is a chart lying about its own range.
-if let sp = PF.spine((0..<60).map { sm(UInt64(27_700 + $0 * 2)) }, columns: 12) {
-    check(sp.placed == 60, "sixty transactions, sixty marks — the reported room")
-    check(sp.columns.allSatisfy { $0.count > 0 }, "an even spread fills every column")
-    check(sp.tallest == 5, "and the busiest holds its real share")
-    check(sp.fromBlock == 27_700 && sp.toBlock == 27_818, "the ends are the real first and last")
-} else { check(false, "the reported room draws") }
+// **THE `kindMix` AND `spine` CASES ARE GONE WITH THE FIGURE (prd §687).**
+// They were good tests of a drawing this room no longer has: Activity takes
+// the shared `RoomActivityChart`, so both functions lost their only caller
+// and are deleted rather than left to keep a guard green against code
+// nobody draws — `HegotaRoom.valueSeries`'s lesson, two rulings old. The
+// ruling they served (§610, "the Activity slot must not restate its own
+// headline") is pinned in the drift section instead, on the thing that now
+// guarantees it.
+// `PF.kind` above survives: it still classifies a move for the row's mark.
 
 // **ZERO IS A READING, NIL IS AN ABSENCE.** Most frames here ask to grow no
 // state, which is a fact about them; an unread budget is us not knowing.
@@ -1009,14 +938,9 @@ mutate "a room full of transfers reading as quiet again (the sentence over its o
   "$ROOM" "if moves > 0 { return finish(.moved(count: moves)) }" "if false { return finish(.moved(count: moves)) }"
 mutate "moved promoted ABOVE spends, so a pool spend reads as an ordinary transaction" \
   "$ROOM" "if nullifiers > 0 { return finish(.spends(nullifiers: nullifiers)) }" "if false { return finish(.spends(nullifiers: nullifiers)) }"
-mutate "the newest transaction binned one past the end of the axis" \
-  "$FIG" "min(n - 1, Int((block - from) * UInt64(n) / span))" "Int((block - from) * UInt64(n) / span)"
-mutate "an undated transaction placed at the beginning of time rather than counted" \
-  "$FIG" "guard let b = m.block else { return nil }" "let b = m.block ?? 0"
-mutate "a column ordered by arrival, so the figure reshuffles between opens" \
-  "$FIG" 'dated.sorted(by: { $0.0 == $1.0 ? $0.2 < $1.2 : $0.0 < $1.0 })' 'dated'
-mutate "sponsorship dropped from the mark, so the view cannot tell which dot was paid for" \
-  "$FIG" "Spine.Mark(id: id, sponsored: sponsored)" "Spine.Mark(id: id, sponsored: false)"
+# The four spine mutations that stood here went with `PrivacyDevnetFigure
+# .spine` (prd §687) — the Activity figure they defended is the shared
+# `RoomActivityChart` now, whose own arithmetic is harnessed where it lives.
 mutate "every scope gated again, so four chips vanish on the address that most needs them" \
   "$SECTION" 'static func present() -> [PrivacyDevnetSection] { order }' 'static func present() -> [PrivacyDevnetSection] { order.filter { !$0.isConditional } }'
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
@@ -1116,12 +1040,8 @@ mutate "an UNREAD nonce read as a landing" \
   "let nonce = nonce ?? 1; guard firstSettleOwed(defaults) else { return false }"
 mutate "the pool filed as an ordinary framed call, so this room's subject never appears in its own figure" \
   "$FIG" "if keys > 0 { return .poolSpend }" "if false { return .poolSpend }"
-mutate "a single kind drawn as a breakdown — a bar saying 100%" \
-  "$FIG" "guard let n = counts[k], n > 0 else { return nil }" \
-  "let n = counts[k] ?? 0"
-mutate "the kind mix ordered smallest-first, so the strongest weight lands on the rarest kind" \
-  "$FIG" "if a.count != b.count { return a.count > b.count }" \
-  "if a.count != b.count { return a.count < b.count }"
+# The two kindMix mutations that stood here went with `PrivacyDevnetFigure
+# .kindMix` (prd §687), for the same reason.
 mutate "a partial room budget summed anyway and stated as the total" \
   "$FIG" "guard let value else { return nil }" "let value = value ?? 0"
 mutate "a partial budget sum stated as the transaction's whole allowance" \
@@ -1683,24 +1603,42 @@ grep -qF 'gasUsed: moveGasUsed' "$work/bridge.bare" \
 grep -qE 'gasUsed: PrivacyDevnetRPC|gasUsed: PF?\.?hexInt\(f\[' "$work/bridge.bare" \
   && fail "a per-frame gasUsed is being read — this chain serves none (§593a), so any figure built on it is invented"
 
-# ── prd §610 drift guards ──
+# ── prd §610 drift guards, AMENDED by §687 ──
 #
 # **THE ACTIVITY SCOPE DRAWS WHEN, NOT WHAT.** `kindMix` back as the figure is
 # the reported defect restored: on this chain every transaction is one kind, so
 # the mix suppresses its own bar and leaves a legend line restating the chassis
 # headline, in a 258pt box.
-grep -qF 'case .activity:   activityFigure' "$work/card.bare" \
-  || fail "the Activity scope's figure changed — if it is kindMix again it draws one legend line under a headline that already said the number (§610)"
-grep -qF 'PrivacyDevnetMoveSpine(marks: marks' "$work/card.bare" \
-  || fail "the Activity figure stopped drawing the spine, so the scope has no reading of its own again"
-# The axis ends and the marks must come from ONE call, or the labels can name a
-# range the marks are not inside.
-grep -qF 'PrivacyDevnetFigure.spine(marks, columns: 1)' "$work/card.bare" \
-  || fail "the Activity axis stopped deriving from the same function as its marks — two readings of one range eventually disagree"
-# The mix survives as the CAPTION, and only when it is more than the headline
-# said twice.
-grep -qF 'if mix.count > 1 {' "$work/card.bare" \
-  || fail "the kind mix is drawn unconditionally again — with one kind that is the chassis headline restated, which is what §610 removed"
+#
+# The figure it pinned (`activityFigure`, this room's own dot strip on a block
+# axis) is GONE — §687 put every wallet-family Activity on `RoomActivityChart`,
+# which is a drawing of WHEN and so keeps §610's ruling rather than overturning
+# it. What the guard pins is therefore the ruling and not the name: the scope
+# draws the shared chart, and `kindMix` is not it.
+grep -qF 'case .activity:   activityChart' "$work/card.bare" \
+  || fail "the Activity scope's figure changed — it must be the shared RoomActivityChart, which draws WHEN (§610, §687)"
+grep -qE 'case \.activity:[[:space:]]+kindMix' "$work/card.bare" \
+  && fail "kindMix is the Activity figure again — one legend line under a headline that already said the number (§610)"
+# The spine guard that stood here is FOLDED INTO the check above (§687). Its
+# ruling — "the scope must have a reading of its own" — is what the shared chart
+# satisfies; pinning `PrivacyDevnetMoveSpine` by name pinned the implementation,
+# and the view itself is deleted with the figure that was its only caller.
+# The axis guard that stood here goes with the spine (§687). Its ruling — the
+# axis ends and the marks derive from ONE call, or the labels name a range the
+# marks are not inside — was about a drawing that no longer exists. The shared
+# chart cannot reproduce the defect: it takes DATES and derives its buckets and
+# its window from `WalletRange` in one place, which is the same ruling expressed
+# as a type rather than policed as a grep.
+# **§610'S RULING, RE-PINNED TO WHAT NOW CARRIES IT (§687).** The mix-as-caption
+# check went with the figure it lived in. What §610 was really about is that the
+# Activity slot must not restate the chassis headline — and the way that is
+# guaranteed now is that the chart OWNS the count and the headline yields it, so
+# the two can no longer say the same number. That is the thing to pin.
+grep -qE 'case \.activity:' "$work/card.bare" \
+  || fail "the Activity scope lost its headline arm entirely"
+awk '/case \.activity:/{found=1} found&&/return pairs.isEmpty \? section.emptyHeadline : nil/{ok=1} END{exit ok?0:1}' \
+  "$work/card.bare" \
+  || fail "the Activity slot headline states a number again — the chart already says it, which is §610's defect in §687's room"
 
 # **THE EMPTY STATE IS IN THE SLOT.** It was drawn by `scopeList`, below the
 # rail, so a scoped room with nothing in it was 300 blank points of card with
