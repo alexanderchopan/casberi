@@ -546,46 +546,14 @@ struct WalletBalanceHeadline: View {
 
     /// The window chips — the token chart's own grammar, at the wallet's dose.
     /// Only drawn with a real choice to make (see `WalletRange.offered`).
+    /// **LIFTED OUT (prd §686).** The Activity chart offers the same three
+    /// windows over the same records, and a control drawn twice drifts — which
+    /// is §683's finding one surface up. `DSRangeChips` owns the track, the
+    /// concentric corner and the never-draw-a-lone-chip rule; this keeps only
+    /// the spacing that belongs to the crown's own stack.
     private var rangeChips: some View {
-        HStack(spacing: DS.Space.s1) {
-            ForEach(ranges, id: \.self) { r in
-                Button {
-                    guard r != range else { return }
-                    DSHaptic.tap()
-                    onPickRange(r)
-                } label: {
-                    // STOCKS' SEGMENTED BOX (2026-08-16, the Apple redraw) —
-                    // the chips share one recessed track and the selected one
-                    // is a raised tile inside it, rather than a lone capsule
-                    // floating in space. It also retires the white-pill
-                    // variant this control carried for one day: there is no
-                    // saturated ground left under it to need one.
-                    Text(r.chipLabel)
-                        .dsText(.label12)
-                        .fontWeight(r == range ? .semibold : .regular)
-                        .lineLimit(1)
-                        .fixedSize()
-                        .foregroundStyle(r == range ? DS.textPrimary : DS.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 5)
-                        // Concentric with the track below (prd §412): the
-                        // segment's corner is the track's minus the 3pt inset,
-                        // so the gap around it stays even through the bend
-                        // rather than swelling at each corner. Was the literal
-                        // 7 — the same arithmetic, done once by hand and with
-                        // nothing tying it to the track it belongs to.
-                        .background(r == range ? DS.fillStrong : .clear,
-                                    in: RoundedRectangle(
-                                        cornerRadius: DS.Radius.nested(
-                                            parent: DS.Radius.card, inset: 3),
-                                        style: .continuous))
-                }
-                .buttonStyle(PressSpring())
-            }
-        }
-        .padding(3)
-        .dsWell()
-        .padding(.top, DS.Space.s2)
+        DSRangeChips(ranges: ranges, range: range, onPick: onPickRange)
+            .padding(.top, DS.Space.s2)
     }
 
     private func draw(redraw: Bool = false) {

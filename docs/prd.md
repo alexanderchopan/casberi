@@ -52481,3 +52481,67 @@ its own harness for once, and the fix is the one that makes it impossible: one c
 The `usd` drift guard is amended in the same pass — it banned three letters, and the
 shared `WalletStore.ValueSample.usd` carries the ROOM'S OWN UNIT by documented design, so
 it now bans the CLAIM (a price, a dollar, a conversion) and allows `\.usd` on a sample.
+
+## §686 — Activity is one chart too: how many, and when (2026-09-10)
+
+User: *"we move to activity for all the rooms, and for that one i want to implement a
+standard chart for number of transations over time"*, then *"it could be a sparkline too
+but we could make it blue or bar chart"*. §683/§684 did this for Home; Activity had
+drifted further, because each room had answered the question its own data made easiest
+rather than the one the scope is named for.
+
+**BARS, NOT A SPARKLINE.** A transaction count is a count per bucket. A line drawn between
+two counts claims a continuous quantity passing through the values between them, and
+nothing here measured that — the same objection §684 raised to a percentage against zero,
+one drawing over. **Blue rather than green**: green is the delta's colour one slot up, and
+this reading has no direction to report; borrowing the colour that means "up" for a number
+that means "how many" is a quiet false claim.
+
+`RoomActivityChart` reads in the crown's order on purpose — caption → count → change →
+bars → range chips — so moving between the two tabs is moving between two readings of one
+shape. **The window rule is the crown's verbatim**: each date becomes a `ValueSample`
+carrying no value purely so `WalletRange.offered`/`.clip` decide both controls' windows by
+one piece of code. The alternative, a second date-only window rule, is how two controls
+over one record come to disagree about what "30d" covers.
+
+**Three findings, each caught on the simulator rather than reasoned:**
+
+1. **The count drew twice** — the chassis headline said "6 transactions" directly above the
+   chart's own number. §683's "2.2960 ETH over 2.2960 ETH" in a second scope. The chart
+   owns the count; the slot headline on `.activity` returns nil.
+2. **A peak of one drew every bar at full height.** Scaled purely against the busiest
+   bucket, six lone transactions rendered as six full-height columns — which reads as a
+   burst and is the loudest possible way to say "not much happened". The axis runs 0…4
+   until something busier stretches it: it can only understate a quiet record, never
+   overstate a busy one, and the exact figure is stated above the chart either way.
+3. **Buckets AGGREGATE; they do not tally.** Thirty daily buckets over a five-week record
+   of six transactions put exactly one in every bucket that held anything — a picket fence
+   with no shape. 7d keeps a day each (a week is read day by day); the longer windows go
+   coarser (30d → fifteen two-day buckets, watched → at most sixteen) so a busy stretch
+   stacks into a tall bar.
+
+**`DSRangeChips` is lifted out of `WalletBalanceHeadline`** and now serves both controls —
+including the never-draw-a-lone-chip rule, which is §83's dead control and belongs to the
+control rather than to each caller's manners.
+
+**WHAT IT DOES NOT COVER, AND WHY, STATED RATHER THAN QUIETLY SKIPPED:**
+
+* **Hegotá Privacy draws no chart.** `PrivacyDevnetLiveState.Move` carries a `block` and no
+  timestamp — the amount is not the only thing that pool hides. Dating those moves means a
+  block-time read per move in the bridge, which is a bridge change and not a chart one; a
+  chart drawn over estimated dates would be §684's mistake made deliberately.
+* **Base Vibenet counts KEY CHANGES, not transactions**, through the chart's one
+  parameter (`countLabel`, exactly as the crown takes `format`). The user's instinct that a
+  key change IS a transaction is right on chain — but this room reads key events ONLY, so
+  calling the count "transactions" would silently under-report any account that also sent
+  money. The precise noun now; the parity fix is a dated transaction read in the bridge,
+  after which Activity counts transactions everywhere and the key history earns the Keys
+  slot the user proposed in the same breath.
+* **The Wallet keeps its flow band.** §483 is a user ruling — *"on activity, we don't need
+  the value, just show the sankey"* — and overturning it is the user's call, not a
+  consistency argument's.
+
+**Frames' signed value bars are deleted with the scope they served** (`FramesMovementBars`,
+and the `activity` wrapper). Checked rather than assumed before deleting: the Frames scope
+draws `FramesSequenceStrip`, so nothing else called them. Amounts still read per move in
+the rows below and, summed, in the crown.

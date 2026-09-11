@@ -53,9 +53,11 @@ struct FramesRoomFigure: View {
             guard head.hasRead, !head.everythingUnreached else { return nil }
             return FramesMoney.balanceLine(weiHex: head.balanceWeiHex)
         case .activity:
-            guard head.moveCount > 0 else { return section.emptyHeadline }
-            return head.moveCount == 1 ? String(localized: "1 transaction")
-                                       : String(localized: "\(String(head.moveCount)) transactions")
+            // **THE CHART OWNS THE COUNT (prd §686)**, exactly as the crown
+            // owns the balance on Home — this line and the chart's own number
+            // drew "6 transactions" one above the other, which is §683's
+            // "2.2960 ETH over 2.2960 ETH" in a second scope.
+            return head.moveCount > 0 ? nil : section.emptyHeadline
         // **STEPS, not transactions** — Hegotá's ruling, and the same reason:
         // the transaction count is the Activity scope's headline one chip
         // away, so repeating it makes two scopes look like one reading twice.
@@ -155,7 +157,7 @@ struct FramesRoomFigure: View {
             switch section {
             case .home:     sponsorship
             case .sponsors: sponsors
-            case .activity:        activity
+            case .activity:        activityChart
             case .frames:          frames
             }
         }
@@ -187,6 +189,17 @@ struct FramesRoomFigure: View {
     /// at all, it is a caveat about how much of the room was READ, and no
     /// other scope can carry it because it applies to all of them.
     /// The crown's caption: the scoped address, or how many you follow.
+    /// **THE SHARED ACTIVITY CHART (prd §686).** Replaces `activity`, whose
+    /// signed value bars answered "how much moved" — a question the Home crown
+    /// above already owns, and which left "how much has been going on" unasked
+    /// in the one scope named for it. Those value bars are deleted with it —
+    /// see the note above `newestHash` for why nothing else wanted them.
+    @ViewBuilder private var activityChart: some View {
+        RoomActivityChart(dates: moves.compactMap(\.timestamp),
+                          caption: crownCaption,
+                          box: DSRoomChassis.figureSlot)
+    }
+
     private var crownCaption: String {
         if accounts.count == 1, let one = accounts.first {
             return FramesWatch.shared.name(for: one.address)
@@ -269,15 +282,14 @@ struct FramesRoomFigure: View {
         }
     }
 
-    /// **ACTIVITY: WHAT MOVED, PER TRANSACTION.** One bar each, newest on the
-    /// right, above the line for arriving and below for leaving — the shape a
-    /// list of amounts cannot give you, which is that this account received
-    /// once and has been spending since.
+    /// **THE VALUE BARS THAT LIVED HERE ARE DELETED (prd §686).** They drew
+    /// one signed bar per transaction — how much moved and which way — and
+    /// Activity is the shared count chart now. Checked rather than assumed
+    /// before deleting: the Frames scope draws `FramesSequenceStrip`, so
+    /// nothing else called them. Amounts still read per move in the rows
+    /// below and, summed, in the crown. What survives is the IDENTITY the
+    /// drawing was keyed on, because the sequence strip is keyed on it too:
     ///
-    /// Drawn from `deltaWei`, which is exact (§548): every ETH movement is a
-    /// log and the receipt names the fee AND its payer. A transaction whose
-    /// delta could not be read draws NO bar rather than a zero-height one — an
-    /// unread amount and an amount of nothing must not look alike.
     /// **THE NEWEST TRANSACTION IS THE DRAWING'S IDENTITY** (2026-09-01).
     ///
     /// A chart entrance is a one-shot on appear, which is right for opening a
@@ -291,38 +303,6 @@ struct FramesRoomFigure: View {
     /// in the room can replay it: not a scope switch, not a balance read, not
     /// an older run rolling off the end.
     private var newestHash: String { moves.first?.hash ?? "" }
-
-    @ViewBuilder private var activityChart: some View {
-        let bars = moves.reversed().compactMap { move -> (Decimal, Bool)? in
-            guard let delta = move.deltaWei else { return nil }
-            return (delta, move.succeeded)
-        }
-        // ONE BAR IS STILL A READING — its size and its direction are both
-        // real. The threshold was 2 while a sentence sat under the chart to
-        // carry the single-movement case; with that sentence gone (below) a
-        // 2-bar floor would leave the slot empty on exactly the account that
-        // has just made its first send.
-        if !bars.isEmpty {
-            // **FILLS THE SLOT** (user, 2026-09-02: *"why it so tiny and top
-            // justified"*). It was pinned to 64pt inside a 210pt box whose
-            // remaining height went to the `Spacer` below, so the room's
-            // busiest reading drew in a third of the space it had been given
-            // and every scope beside it looked fuller. `maxHeight: .infinity`
-            // hands it what the slot actually reserved.
-            FramesMovementBars(bars: bars)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .id(newestHash)
-        }
-    }
-
-    @ViewBuilder private var activity: some View {
-        // **NO FRAME-COUNT SENTENCE (user ruling, 2026-09-01).** It read
-        // "4 of them are frame transactions" under the chart, and on THIS
-        // chain that is a tally of very nearly everything. The one branch a
-        // chart cannot draw — nothing has moved — is `emptyState`'s now
-        // (prd §611), so this only ever draws over at least one move.
-        activityChart
-    }
 
     /// The MODE MIX — what the steps actually were. Counted rather than
     /// charted: a handful of frames is a sentence, and a bar over three values
@@ -918,72 +898,6 @@ struct FramesBalanceCurve: View {
 /// **The centre line is drawn even when every bar points the same way**, so a
 /// column of outgoing bars reads as outgoing rather than as a bar chart that
 /// happens to start at the top. Without it the sign is carried by nothing.
-struct FramesMovementBars: View {
-    /// Signed wei, and whether the transaction itself succeeded.
-    let bars: [(Decimal, Bool)]
-
-    /// **THE DRAWING DRAWS ITSELF** (prd §297), and left to right is the
-    /// direction it means: oldest bar first, newest on the right, so the wipe
-    /// is the account's own history accruing. Invisible to
-    /// `design-motion-audit` because it is a `Canvas` rather than a
-    /// proportional shape — which is how a room where every other sized-from-
-    /// data drawing arrives kept two that simply were.
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        Canvas { ctx, size in
-            let magnitudes = bars.map { abs(NSDecimalNumber(decimal: $0.0).doubleValue) }
-            guard let peak = magnitudes.max(), peak > 0 else { return }
-            let mid = size.height / 2
-            ctx.stroke(Path { $0.move(to: CGPoint(x: 0, y: mid))
-                              $0.addLine(to: CGPoint(x: size.width, y: mid)) },
-                       with: .color(DS.textTertiary.opacity(0.35)),
-                       style: StrokeStyle(lineWidth: 1))
-
-            let slot = size.width / CGFloat(bars.count)
-            let width = min(slot * 0.55, 14)
-            for (i, bar) in bars.enumerated() {
-                let value = NSDecimalNumber(decimal: bar.0).doubleValue
-                // **A MOVEMENT THAT HAPPENED MUST NOT DRAW AS NOTHING.** On
-                // this chain a faucet claim is 1 ETH and a send is 0.001, a
-                // 1000:1 ratio — so a purely proportional bar renders four
-                // real transactions as invisible hairlines, which says "these
-                // did not happen". Same principle as nil-is-not-zero, one
-                // surface over.
-                //
-                // The floor is 4pt: enough to be seen, small enough that the
-                // shape still carries magnitude. NOT a log scale — that makes
-                // every height a claim about a ratio nobody can read back.
-                // **THE FLOOR SCALES WITH THE DRAWING.** It was a flat 4pt,
-                // chosen when this chart was 64pt tall; at the slot's real
-                // height 4pt is 3% of the box, so on this chain's own spread —
-                // a 1 ETH faucet claim beside 0.001 sends, a 1000:1 ratio —
-                // five of six real transactions drew as hairlines and the
-                // chart read as empty. Still NOT a log scale, for the reason
-                // below: this raises the minimum, it does not restate any
-                // bar's magnitude relative to another above it.
-                let floor = max(4, (mid - 3) * 0.08)
-                let height = max(floor, CGFloat(abs(value) / peak) * (mid - 3))
-                let x = slot * CGFloat(i) + (slot - width) / 2
-                let rect = value >= 0
-                    ? CGRect(x: x, y: mid - height, width: width, height: height)
-                    : CGRect(x: x, y: mid, width: width, height: height)
-                // **A FAILED TRANSACTION IS OUTLINED, NOT FILLED.** It may
-                // still have moved money (§548), so it belongs on the chart —
-                // but it must not read as an ordinary movement.
-                let path = Path(roundedRect: rect, cornerRadius: min(3, width / 2))
-                if bar.1 {
-                    ctx.fill(path, with: .color(value >= 0 ? DS.confirm : DS.textSecondary))
-                } else {
-                    ctx.stroke(path, with: .color(DS.destructive), style: StrokeStyle(lineWidth: 1.5))
-                }
-            }
-        }
-        .chartWipe(reduceMotion: reduceMotion)
-        .accessibilityElement()
-        .accessibilityLabel(Text(String(localized: "\(String(bars.count)) movements")))
-    }
-}
 
 /// **THE ROOM'S SIGNATURE DRAWING: a transaction as its parts.**
 ///

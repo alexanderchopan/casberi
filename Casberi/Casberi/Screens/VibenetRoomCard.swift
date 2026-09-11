@@ -1337,7 +1337,7 @@ struct VibenetRoomCard: View {
         // Home's box is the crown itself (`balanceHero`), so it never
         // reaches here — see `stackedRoom`.
         case .home:            EmptyView()
-        case .activity:        activityFigure
+        case .activity:        activityChart
         case .holdings:        holdingsFigure
         case .accounts:        accountsFigure
         case .permissions:     permissionsFigure
@@ -1695,6 +1695,27 @@ struct VibenetRoomCard: View {
         } else {
             activityEmptyFigure
         }
+    }
+
+    /// **THE SHARED ACTIVITY CHART (prd §686)** — the same drawing every other
+    /// wallet-family room's Activity now carries, over this room's own noun.
+    ///
+    /// **What it counts here is KEY CHANGES, not transactions**, and that is
+    /// the room rather than a compromise: a vibenet account's activity IS its
+    /// authorisations and revocations, which is why `VibenetKeyMoment` is what
+    /// this room records. A moment whose block-time lookup failed carries no
+    /// date and is not counted — the same rule the chart takes everywhere, and
+    /// the reason it takes dates rather than rows.
+    ///
+    /// `activityFigure`'s change flow is NOT deleted: it answers "which key,
+    /// and when did it change hands", which this chart cannot, and it keeps its
+    /// place under the chart in the room's list.
+    @ViewBuilder private var activityChart: some View {
+        RoomActivityChart(dates: room.items.flatMap(\.history).compactMap(\.date),
+                          caption: crownCaption,
+                          box: DSRoomChassis.figureSlot,
+                          countLabel: { $0 == 1 ? String(localized: "1 key change")
+                                                : String(localized: "\(String($0)) key changes") })
     }
 
     /// WHAT AN EMPTY ACTIVITY MEANS — and why the toggle bar was walking

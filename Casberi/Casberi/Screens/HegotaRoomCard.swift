@@ -165,8 +165,10 @@ struct HegotaRoomFigure: View {
                   let wei = shownBalance ?? head.balanceWei else { return nil }
             return HegotaFormat.crown(wei)
         case .activity:
-            return moves.count == 1 ? String(localized: "1 transaction")
-                                    : String(localized: "\(String(moves.count)) transactions")
+            // **THE CHART OWNS THE COUNT (prd §686)** — the same rule the crown
+            // has on Home. Drawn here as well it appears twice, once as this
+            // line and once inside the chart.
+            return nil
         // **A COUNT, NOT THE MONEY (prd §555, user: "accounts isn't about
         // balances. it could sum how many or how many watching").** This scope
         // led with the summed balance of every reached address, which is the
@@ -204,7 +206,7 @@ struct HegotaRoomFigure: View {
     @ViewBuilder private var slotFigure: some View {
         switch section {
         case .home, .sponsors: crownFigure
-        case .activity:        activityFigure
+        case .activity:        activityChart
         case .holdings:        holdingsFigure
         case .accounts:        accountsFigure
         case .frames:          framesFigure
@@ -253,6 +255,16 @@ struct HegotaRoomFigure: View {
     }
 
     /// The crown's caption: the scoped address's name, or how many you follow.
+    /// **THE SHARED ACTIVITY CHART (prd §686)** — how many transactions, and
+    /// when, over the same three windows the crown offers. What it replaces is
+    /// `activityFigure`, which drew this room's own step figure and answered a
+    /// question two other scopes already answer better.
+    @ViewBuilder private var activityChart: some View {
+        RoomActivityChart(dates: moves.compactMap(\.timestamp),
+                          caption: crownCaption,
+                          box: DSRoomChassis.figureSlot)
+    }
+
     private var crownCaption: String {
         if let one = scoped {
             return HegotaWatch.shared.name(for: one) ?? WalletStore.shortAddress(one)
