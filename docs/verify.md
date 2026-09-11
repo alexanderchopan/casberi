@@ -501,7 +501,7 @@ Six checks: every screen with a resolvable name and a literal mode agrees with
 the catalogue; every `TokenBridge` seat is a pasted key but GitHub (a sign-in
 while its device-flow id ships); every `HandleBridge` seat is a handle; every
 name in the five seat sets is a real offer (the first draft named "Vibenet" and
-"Frames"; the offers are "Base Vibenet" and "Frames Devnet"); nothing a screen
+"Frames"; the offers are "Base Vibenet" and "Hegotá Frames"); nothing a screen
 declares is one-tap in the catalogue; and **nothing rests on the fallback
 unchecked** (check F).
 

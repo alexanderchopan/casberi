@@ -920,7 +920,7 @@ struct DevnetSendSheet: View {
     /// `BridgeIcon` resolves and what the send's shower rains one tile of (prd
     /// §655). Distinct from `venue`, which is the shortened word a person
     /// reads ("Hegotá", "vibenet"); a tile needs the catalog spelling
-    /// ("Hegota Devnet", "Base Vibenet") or it falls back to a blank glyph.
+    /// ("Hegotá UTXO", "Base Vibenet") or it falls back to a blank glyph.
     let seat: String
     let tint: Color
     /// The word beside the figure. A WORD and never a chip: both devnets move

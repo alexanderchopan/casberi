@@ -50,11 +50,11 @@ HANDLES = "Casberi/Casberi/Screens/HandleSetupScreen.swift"
 # whole `HandleBridge` enum, which is stronger than a list.
 EXPRESSION_SEATS = {
     "ExchangeSetupScreen.swift": ["Binance", "Coinbase", "Kraken", "Gemini Exchange"],
-    "FramesScreen.swift": ["Frames Devnet"],
-    "HegotaScreen.swift": ["Hegota Devnet"],
+    "FramesScreen.swift": ["Hegotá Frames"],
+    "HegotaScreen.swift": ["Hegotá UTXO"],
     "MailScreen.swift": ["Gmail", "iCloud Mail"],
     "PackageWatchScreen.swift": ["npm", "PyPI"],
-    "PrivacyDevnetScreen.swift": ["Privacy Devnet"],
+    "PrivacyDevnetScreen.swift": ["Hegotá Privacy"],
     "VibenetScreen.swift": ["Base Vibenet"],
 }
 

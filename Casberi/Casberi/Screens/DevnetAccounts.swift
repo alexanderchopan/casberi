@@ -4,7 +4,7 @@ import SwiftData
 /// **THE FOUR DEVNET SETUP SCREENS SHARE ONE ANATOMY (user, 2026-09-04:
 /// "i think they should share common framework and also be better").**
 ///
-/// Base Vibenet, Ethrex Hegotá, Frames Devnet and Ethrex Privacy all ask the
+/// Base Vibenet, Ethrex Hegotá, Hegotá Frames and Ethrex Privacy all ask the
 /// same thing of somebody — *which addresses on this chain do you want to
 /// read?* — and until this file they asked it four different ways. Measured
 /// across the four screens as they stood:

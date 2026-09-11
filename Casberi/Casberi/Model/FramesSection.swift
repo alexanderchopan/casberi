@@ -112,7 +112,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         case .activity: return String(localized: "Activity")
         // **"Frames", the literal term** — Hegotá's Nonces ruling, applied
         // again. EIP-8141 calls them frames, the RPC field is `frames`, the
-        // chain is NAMED for them, and the seat is called Frames Devnet.
+        // chain is NAMED for them, and the seat is called Hegotá Frames.
         // A friendlier gloss would leave one room using two words for one
         // thing, and the chip is where the word gets learned.
         case .frames:   return String(localized: "Frames")

@@ -362,7 +362,7 @@ enum BridgeGlyph {
         // rank it above the others, which is a claim a fallback that only
         // appears when an asset FAILED TO LOAD has no business making.
         case "frames devnet": return "character"
-        // Privacy Devnet bundles its own mark (`brand-privacy-devnet`), so
+        // Hegotá Privacy bundles its own mark (`brand-privacy-devnet`), so
         // this is the third instance of the same defensive fallback and the
         // same ANSWER: a neutral letterform. A key or a shield glyph would
         // name one of the chain's readings — and on THIS seat it would do

@@ -41648,7 +41648,7 @@ the bundled mark (`brand-frames-devnet`, the user's own icon), the website
 mini-cell with the icon inlined as base64, and the `KindGlyph` letterform
 fallback.
 
-**"Frames Devnet", not "Frames"**, and the rename reached `Thing.source` before
+**"Hegotá Frames", not "Frames"**, and the rename reached `Thing.source` before
 anything landed under the old spelling. The bare word is one of the most
 ordinary nouns in this app's own vocabulary — `FeedScreen` frames, a video
 frame, the `frames` array inside every transaction on this chain — and a
@@ -48136,7 +48136,7 @@ And on the write side the signature entry's `signer` is **LITERAL** here (9 of 9
 
 **Copy, fixed in the same pass, in both places the rejection memory names.** The Frames tagline read "Send a transaction no wallet can make" and its lead bullet "no other wallet can encode one": both position this app AS a wallet by saying it does what wallets cannot, in a catalog group called Wallet, which that memory names as the likely 3.1.5 trigger. The capability is unchanged and still said — "a draft EIP no released library encodes yet" is the same fact with the comparison moved off the app and onto the tooling. **`library` and `tooling` are safe words here; `wallet` is not**, and `hegota-selftest.sh` now fails the build if any devnet seat's user-visible strings say it — scoped to the quoted strings, since `group: "Wallet"` is a category that must stay, and reading a comment-stripped copy, since this rule is documented by naming the phrasing it bans (the Obsidian/Cursor lesson). Mutation-proven three ways: both old strings caught, the documenting comment clean. Hegotá's tagline led with the SHARED frame-transaction trait while its own first bullet held the differentiator, so the two were the wrong way round; it now leads with the coins, and its summary carries the reset warning Frames already had, which §522 and §515a make non-optional.
 
-**Naming (user, 2026-09-04).** The set takes one grammar — `<operator> <chain>` — from the precedent already in the catalog: **Ethrex Hegotá · Ethrex Frames · Ethrex Privacy**, beside **Base Vibenet**. "Frames Devnet" was the odd one out twice: no operator, and "Devnet" where the others carry the chain's name. Renaming Hegotá to "UTXO Devnet" was proposed and REFUSED — it reverses the user's own 2026-09-01 ruling that "hegota is for hegota writ large", and it names a chain after the single predeploy most likely to move, on the user's own premise that all three will evolve. Under this grammar the second word is the chain's NAME and the TAGLINE carries the capability, which is what the taglines now do. Cost is one `KNOWN_CATALOG_ALIAS` entry — display-only, no `Thing.source` change, so no re-landing and no CloudKit deploy.
+**Naming (user, 2026-09-04).** The set takes one grammar — `<operator> <chain>` — from the precedent already in the catalog: **Ethrex Hegotá · Ethrex Frames · Ethrex Privacy**, beside **Base Vibenet**. "Hegotá Frames" was the odd one out twice: no operator, and "Devnet" where the others carry the chain's name. Renaming Hegotá to "UTXO Devnet" was proposed and REFUSED — it reverses the user's own 2026-09-01 ruling that "hegota is for hegota writ large", and it names a chain after the single predeploy most likely to move, on the user's own premise that all three will evolve. Under this grammar the second word is the chain's NAME and the TAGLINE carries the capability, which is what the taglines now do. Cost is one `KNOWN_CATALOG_ALIAS` entry — display-only, no `Thing.source` change, so no re-landing and no CloudKit deploy.
 
 **UNBUILT.** No Privacy seat exists; nothing here has been compiled beyond the copy edits, and `verify.sh` has not run on this branch.
 
@@ -48769,7 +48769,7 @@ fresh addresses is the first thing to try.
 
 ## 595. The four devnet setup screens become one anatomy (user: "those designs look bad, the 'open the explorer' i mean doesn't really seem like rest of the style. also i think the watch / paste field should be at top not bottom", after "i think they should share common framework and also be better", 2026-09-04)
 
-Base Vibenet, Ethrex Hegotá, Frames Devnet and Ethrex Privacy ask somebody the same question — *which addresses on this chain do you want to read?* — and asked it four different ways. Measured across the four files as they stood, not inferred:
+Base Vibenet, Ethrex Hegotá, Hegotá Frames and Ethrex Privacy ask somebody the same question — *which addresses on this chain do you want to read?* — and asked it four different ways. Measured across the four files as they stood, not inferred:
 
 * **Three affordances for one act.** Vibenet drew face rows carrying a `Watch` / `✓ Watching` state; Hegotá and Frames drew title-plus-address rows ending in a tint-coloured word; Privacy drew `DSSlabDoor`s under a heading. One tap, three shapes, and a person who connects two of these seats learns the control twice.
 * **Two field components.** Vibenet used `DSSlabField` with a live address preview; the other three used `BridgeFieldRow` with a hand-rolled result line under it — three copies of "That isn't an address", three wordings, and only one of the four showed you the face of what you were about to watch.
@@ -49509,7 +49509,7 @@ Two findings from one sweep of the sixty connect screens and the twenty-five `To
 
 ## §618 — The five wallet setup screens: one paste, one read, one way on (user: "how would you improve the wallet set up screens? wallet, hegota, privacy, frames, basenet" → "in terms of UI and UX" → "do all", 2026-09-05)
 
-Five screens that all ask for an address — Wallet, Base Vibenet, Ethrex Hegotá, Frames Devnet, Ethrex Privacy — read together after §595/§608 gave them one anatomy and one vocabulary. What was left was behavioural, and it is worth recording that two of the six findings turned out to be *not* findings once the code was read: the devnet sentence (`DSSlabNote`) was never a card, only a separate clear list section; and the bottom-inset worry did not apply, because a connect screen is RAISED as a sheet (§219) and only the pushed Wallet screen sits under the floating bar, which is why only it pads.
+Five screens that all ask for an address — Wallet, Base Vibenet, Ethrex Hegotá, Hegotá Frames, Ethrex Privacy — read together after §595/§608 gave them one anatomy and one vocabulary. What was left was behavioural, and it is worth recording that two of the six findings turned out to be *not* findings once the code was read: the devnet sentence (`DSSlabNote`) was never a card, only a separate clear list section; and the bottom-inset worry did not apply, because a connect screen is RAISED as a sheet (§219) and only the pushed Wallet screen sits under the floating bar, which is why only it pads.
 
 **Paste is one tap (all five).** `DSSlabField` takes a `paste:` closure and draws a system `PasteButton` beside the verb while the field is empty — the system reads the clipboard, so no banner, and the control dims itself when the clipboard holds no text. The paste FILLS and never commits: the preview, the lookalike and checksum notices (Wallet) and the armed verb treat it exactly as typed. `BankrSetupScreen` had already chosen `PasteButton` for the same reason; this makes it the family's.
 
@@ -49728,9 +49728,9 @@ Five screens that all ask for an address — Wallet, Base Vibenet, Ethrex Hegot�
 
 **Deferred, with the reason.** The two SQL `COUNT`s in `.task(id:)` keys that run on every feed body pass (`headIdentity`, `corpusRevision`) are visible in this same CPU report (two samples) and are the obvious next cut — but a cache keyed on local saves would miss rows arriving from iCloud, which merge into the main context without a local save and with no remote-change hook in this app, and a room head that disagrees with its rows is worse than a count. That needs a `ModelContext.didSave` / remote-change observer proven on a device first.
 
-## §629 — The two ethrex seats are "Hegota Devnet" and "Privacy Devnet" (user, 2026-09-06)
+## §629 — The two ethrex seats are "Hegotá UTXO" and "Hegotá Privacy" (user, 2026-09-06)
 
-**The ruling.** The catalog names are `Hegota Devnet` (was "Ethrex Hegotá") and `Privacy Devnet` (was "Ethrex Privacy"). User's words: *"change the catloge names of Ethrex Privacy to Privacy Devnet and Hegota to Hegota Devnet."* The three devnet seats now read as a set — Frames Devnet, Hegota Devnet, Privacy Devnet — each named for what it is rather than for who runs the node.
+**The ruling.** The catalog names are `Hegotá UTXO` (was "Ethrex Hegotá") and `Hegotá Privacy` (was "Ethrex Privacy"). User's words: *"change the catloge names of Ethrex Privacy to Hegotá Privacy and Hegota to Hegotá UTXO."* The three devnet seats now read as a set — Hegotá Frames, Hegotá UTXO, Hegotá Privacy — each named for what it is rather than for who runs the node.
 
 **What a catalog name IS here, which is why this was not a two-line edit.** An offer's name is also its rows' `Thing.source` and its `BridgeApp` record's name — `HegotaIdentity.source` / `PrivacyDevnetIdentity.source` are the single constants behind all three, and the routing table, the "What this app reaches" registry, the reset notification's seat slot, the demo seeds, the glyph fallback (keyed on the lowercased name) and the icon asset (`brand-` + the folded name, so the two imagesets moved too) all carry the literal. Every one of those follows in this pass; the harness anchors that pin them (`hegota-selftest.sh`, `notify-selftest.sh`, `demo-selftest.py`) and the website shelf follow in the same commit, because `catalog-sync.sh` fails the pass otherwise.
 
@@ -50914,8 +50914,8 @@ that had escaped the fold. Every row in the room wore the same blank rounded
 square where its mark should be. Both are one fault with one cause.
 
 **The cause.** An offer's name is also its rows' `Thing.source`. §629 renamed
-the two ethrex seats ("Ethrex Hegotá" → "Hegota Devnet", "Ethrex Privacy" →
-"Privacy Devnet"), and a row keeps the string it landed with forever — so
+the two ethrex seats ("Ethrex Hegotá" → "Hegotá UTXO", "Ethrex Privacy" →
+"Hegotá Privacy"), and a row keeps the string it landed with forever — so
 `BridgeCatalog.offer(forSource:)` answers nil for an old row and from there it
 has NO SEAT. `CategoryFold` resolves membership through
 `BridgeCatalog.category(forSource:)`, so the chip cannot fold and draws its own
@@ -50964,7 +50964,7 @@ draws compare that string to a seat's own identity — `FeedScreen`'s room heads
 of those the alias is the cross-file promise `Thing.swift`'s own corollary 4 was
 written about. So the strings converge and only display is forgiving. The
 consequence to know: between an old-named row arriving and the next launch, the
-Wallet switcher can show two scopes that both READ "Hegota Devnet" — one per
+Wallet switcher can show two scopes that both READ "Hegotá UTXO" — one per
 underlying string. That window is one launch, and it is the honest cost of not
 making every room comparison alias-aware.
 
@@ -51614,7 +51614,7 @@ first.
 
 A dark row said "Connect" whether the tap would raise one system sheet or send you to a developer console. The user asked for the cost on the row ("one tap", "sign in", "needs a key"); the 2026-07-16 ruling had killed exactly that as a SECOND LINE ("'no account' repeatedly under the names… extra text the user doesn't need"). Both hold: the cost takes the slot the row already has. `CapsuleVerb` gains **Allow** (a system permission — the tap IS the grant), **Sign in**, **Add key**, **Import**; **Connect** stays for the free ones (a handle, an address, a feed); Watch/Automatic stay the riding seats' pair (§515). The source is `BridgeCatalog.Offer.mode`, which returns the SAME `BridgeSetupMode` every setup screen passes for its §315 chip — the enum moved into the Model so the catalogue and the Foundation-only harnesses can reach it. It replaces `Offer.qualifier`, which had been dead since the badge died: seven weeks computing three words nobody drew, and the "Discover eyebrow" its comment still named went with the product page (§641).
 
-**Held in step mechanically.** `scripts/catalog-mode-audit.py`: every screen handing `AccountPage` a literal name and a literal mode must agree with `Offer.mode` (48 screens); every `TokenBridge` seat is `.pasteKey` but GitHub (`.signIn` while its device-flow id ships); every `HandleBridge` seat is `.noAccount`; every name in the five seat sets is a real offer (the first draft named "Vibenet" and "Frames" — the offers are "Base Vibenet" and "Frames Devnet" — and check D is what said so). Eight expression-named screens are reported as skipped, not silently passed. Mutation-tested six ways.
+**Held in step mechanically.** `scripts/catalog-mode-audit.py`: every screen handing `AccountPage` a literal name and a literal mode must agree with `Offer.mode` (48 screens); every `TokenBridge` seat is `.pasteKey` but GitHub (`.signIn` while its device-flow id ships); every `HandleBridge` seat is `.noAccount`; every name in the five seat sets is a real offer (the first draft named "Vibenet" and "Frames" — the offers are "Base Vibenet" and "Hegotá Frames" — and check D is what said so). Eight expression-named screens are reported as skipped, not silently passed. Mutation-tested six ways.
 
 ### Declined, with reasons
 
@@ -51664,12 +51664,12 @@ Checked in the simulator on Stripe: the door opens the sheet full; a drag lands 
 **The inventory, which is the actual finding.** The user named Wallet; Wallet was two of ten sites. `ShellChrome.refreshRoster` was ordinary stored state, and its doc said as much — *"a writer that bumps the pulse without setting this inherits the last roster, which is the right default for every in-room bump"*. That is true of an in-room PULL and false of everything else, because walking into a room does not clear the roster. So:
 
 - **Two sites raining berries ON PURPOSE** — the wallet arrival (`WalletFeedTiles`) and the wallet-scoped pull (`FeedScreen.performPull`), both setting `refreshRoster = []` with a comment citing §619. These are what the user saw.
-- **EIGHT sites raining the LAST PULL'S ROSTER**, none of them intending anything of the kind: Hegotá's faucet pour and its key sheet, vibenet's faucet claim, Frames' key-create and top-up, Privacy Devnet's key-create and top-up, and both of `DevnetSendConsole`'s send endings. Pull on All, walk into the Hegotá room, top up: Photos and Gmail and Strava fall over a devnet faucet claim. Every one of these set the HUE and the PULSE by hand and simply did not mention the roster, which does not mean "no tiles" — it means "whatever was there".
-- **Six more bumps that are not celebrations at all** — vibenet's unwatch, key revoke, the two watch sheets and `onWatched`, plus Privacy Devnet's example watch. They exist to move a memoised room head, and the pulse is `BerryRain`'s only trigger, so each one deals a shower too, of the same inherited set.
+- **EIGHT sites raining the LAST PULL'S ROSTER**, none of them intending anything of the kind: Hegotá's faucet pour and its key sheet, vibenet's faucet claim, Frames' key-create and top-up, Hegotá Privacy's key-create and top-up, and both of `DevnetSendConsole`'s send endings. Pull on All, walk into the Hegotá room, top up: Photos and Gmail and Strava fall over a devnet faucet claim. Every one of these set the HUE and the PULSE by hand and simply did not mention the roster, which does not mean "no tiles" — it means "whatever was there".
+- **Six more bumps that are not celebrations at all** — vibenet's unwatch, key revoke, the two watch sheets and `onWatched`, plus Hegotá Privacy's example watch. They exist to move a memoised room head, and the pulse is `BerryRain`'s only trigger, so each one deals a shower too, of the same inherited set.
 
 **The fix is a door, not a sweep.** `ShellChrome.rain(sources:)` sets the roster and bumps the pulse together, `refreshRoster` is `private(set)`, and every one of the sixteen sites names the seat it stands for. A shower can no longer stand for a set nobody asked about, because there is no way to bump without saying what falls. Named `rain` and not `pour` because `pourHue`/`pourDose` next door are §524's PAGE pour — a wash at the top of a surface — and the two have nothing to do with each other.
 
-**`refreshHue` is DELETED, and that is the honest consequence rather than tidying.** With tiles falling everywhere, nothing renders it: a tile carries its own brand. A stored value that every writer sets and no view reads is the fake status §83 bans, and leaving it would have kept the whole confetti path one edit from returning. `DevnetSendSheet` gained a `seat` parameter for the same reason its `tint` could not serve — `venue` is the shortened word a person reads ("Hegotá", "vibenet") and a tile needs the catalog spelling ("Hegota Devnet", "Base Vibenet") or `BridgeIcon` falls back to a blank glyph.
+**`refreshHue` is DELETED, and that is the honest consequence rather than tidying.** With tiles falling everywhere, nothing renders it: a tile carries its own brand. A stored value that every writer sets and no view reads is the fake status §83 bans, and leaving it would have kept the whole confetti path one edit from returning. `DevnetSendSheet` gained a `seat` parameter for the same reason its `tint` could not serve — `venue` is the shortened word a person reads ("Hegotá", "vibenet") and a tile needs the catalog spelling ("Hegotá UTXO", "Base Vibenet") or `BridgeIcon` falls back to a blank glyph.
 
 **An empty roster deals NOTHING.** Not berries, not a fallback — no source was asked, so no tile falls. It is reachable only with nothing connected, where the avatar door still spins and `refreshFeed`'s own `DSHaptic.success()` still lands, so the gesture is answered. Wallet has no bundled `brand-wallet` asset, so its tile is `BridgeIcon`'s glyph fallback — a solid brand fill with a white glyph, rendered once per process through `ImageRenderer` — which is an app tile in every way that matters here.
 
@@ -51810,7 +51810,7 @@ The `load()` fetch stays unbounded (see above — an X person cannot be found by
 
 **`ShellChrome.refreshPulse` was doing two unrelated jobs.** It deals the rain, and it is the term `FeedScreen`'s memoised room head recomputes on — a second job it acquired for a good reason that is recorded three lines from the key itself: Ethrex Hegotá lands NO row, ever, so its corpus revision is frozen at zero, its head was computed once while the sweep had not returned, memoised as nil, and never recomputed. A permanently black room, reported from a device three times before anybody found it. The fix was to fold the pulse into the key, and it worked.
 
-**What nobody weighed is the other direction.** Once the pulse is the invalidation term, every site that needs a head recomputed has to bump the pulse — and the pulse is `TileRain`'s only trigger. So six sites that change a LIST and nothing else (vibenet's unwatch, its key revoke, its two watch sheets and `onWatched`, plus Privacy Devnet's example watch) each dealt a shower as a side effect of asking a room to re-read itself. §655 made those showers coherent by naming their seat; it did not ask whether they should exist. They should not.
+**What nobody weighed is the other direction.** Once the pulse is the invalidation term, every site that needs a head recomputed has to bump the pulse — and the pulse is `TileRain`'s only trigger. So six sites that change a LIST and nothing else (vibenet's unwatch, its key revoke, its two watch sheets and `onWatched`, plus Hegotá Privacy's example watch) each dealt a shower as a side effect of asking a room to re-read itself. §655 made those showers coherent by naming their seat; it did not ask whether they should exist. They should not.
 
 **Two jobs, two counters.** `roomRevision` moves the head and draws nothing; `refreshRooms()` is its door and both are `private(set)`/guarded the way §655 made the roster. `rain(sources:)` bumps both, because a pull genuinely is both. The head's key reads `roomRevision`, so Hegotá's black room stays fixed — every rain still re-keys it, and now so does every list change, including the ones that used to be paid for with a shower.
 
@@ -52129,7 +52129,7 @@ Four counts were rendered at the phone's width with the real symbols (`design/do
 
 **The tiles**: `PrivacyDevnetRoomList` put the move list and `PrivacyDevnetSendCard` in one VStack in one List cell, so the cell took the verb grid's under-reported height for both and the tiles drew ~20pt up over the last row. This morning's `Grid`-for-`LazyVGrid` (the vibenet fix) did not cover it: the Privacy room's three verbs make two rows, in a shared cell. Two fixes, either sufficient: the Send card is its own List row (`FeedScreen`, the way `vibenetSendRow` already mounts vibenet's), and `DevnetSendPanel`'s menu grid states its height — rows × `menuTileFloor` plus gaps — as a `minHeight`, so no cell is ever told less than the tiles need. Both are structural; the phone is the check.
 
-**The demo already has this room** (`"Privacy Devnet": 3` in `demoVisits`, `PrivacyDevnetLiveState.seedDemo()`), with proofs, so it draws the ring; it lives under the Wallet folder, which is why it did not show as a chip of its own.
+**The demo already has this room** (`"Hegotá Privacy": 3` in `demoVisits`, `PrivacyDevnetLiveState.seedDemo()`), with proofs, so it draws the ring; it lives under the Wallet folder, which is why it did not show as a chip of its own.
 
 ## §665 — The devnet rooms: the Privacy room keeps its last read and publishes once, the vibenet Permissions grid fits its slot and clears the gear, and the verb tiles are one height (user: "devnet rooms take a second to load and at first load in a weird order, then settle", "look at their spacing too. everything is always clipping", "we have a template and should follow it", 2026-09-09)
 
@@ -52443,3 +52443,41 @@ separates, and under a filled tile with a shadow that reads as contact.
 Frames account row said the address a third time — the crown's caption names it, the face
 rail draws it — and it was the only thing between the line and the verb tiles. Its door was
 not dropped: it moved onto the crown's caption, which is the identity it was repeating.
+
+
+## §685 — The three ethrex devnets take the chain's name (2026-09-10)
+
+User: *"I'd like to change the names of the devnets to Hegota UTXO, Hegota Privacy, and
+Hegota Frames"*, then *"keep the accent"* and *"Base Vibenet leave as is"*. So:
+
+| was | is |
+| --- | --- |
+| Hegota Devnet | **Hegotá UTXO** |
+| Privacy Devnet | **Hegotá Privacy** |
+| Frames Devnet | **Hegotá Frames** |
+
+Base Vibenet is untouched — it is a different chain with a different operator, and the
+family name would be a claim about hosting that is not true.
+
+**The rename is the NAME only, and that is checked rather than assumed** — §629's finding,
+applied again. The rows stay keyed `hegota:`, `privacydevnet:` and `frames:`; no ref
+literal moves, so no `Rename.refPrefix` is owed. Three entries go into
+`Corpus.renamedSources`, and the two 2026-09-06 entries above them are re-pointed at the
+new names so a row saved under "Ethrex Hegotá" still resolves in ONE hop rather than
+needing the table walked twice.
+
+**The three brand assets are renamed with the seats.** `BridgeIconArt.assetName` derives a
+filename from `Corpus.canonicalSource(name)`, so a seat whose asset folder kept the old
+name would resolve to nothing and fall back to the generic glyph — the §647 failure from
+the other direction, and one that renders as a blank rounded square rather than an error.
+
+**`HegotaRoom.valueSeries` is DELETED, and how it was found is the point.** It was the
+undated twin of `valueSamples` with a clamp at zero, and by the time §684 moved the Home
+crown to the dated form it had no caller left in the app — only `hegota-selftest.sh`. So
+the tree carried TWO copies of the sponsored-fee rule, and the mutation that removes the
+`!move.isSponsored` guard changed one copy while the assertion went on reading the other
+and reported SURVIVED. That is the "dead mutation prints a passing line" class caught by
+its own harness for once, and the fix is the one that makes it impossible: one copy.
+The `usd` drift guard is amended in the same pass — it banned three letters, and the
+shared `WalletStore.ValueSample.usd` carries the ROOM'S OWN UNIT by documented design, so
+it now bans the CLAIM (a price, a dollar, a conversion) and allows `\.usd` on a sample.

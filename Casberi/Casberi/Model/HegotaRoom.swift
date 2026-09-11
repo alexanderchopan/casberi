@@ -159,41 +159,20 @@ enum HegotaRoom {
             unit: Decimal(string: "1000000000000000000")!)
     }
 
-    static func valueSeries(_ account: HegotaAccount) -> [Double]? {
-        guard let balance = account.balanceWei, !account.moves.isEmpty else { return nil }
-        let ordered = account.moves.sorted { $0.block > $1.block }   // newest first
-        var running = balance
-        var series: [Double] = [(running as NSDecimalNumber).doubleValue / 1e18]
-        for move in ordered {
-            // Undo it: money that came IN was not there before, money that
-            // went OUT still was.
-            running += move.incoming ? -move.wei : move.wei
-            // **AND UNDO THE FEE THIS ADDRESS PAID (§509).** A fee leaves the
-            // balance and emits NO transfer log — measured on this chain: a
-            // frame transaction's receipt carries only its value-move log, and
-            // nothing sends the 91,201,976-wei fee to the coinbase — so a
-            // reconstruction built from logs alone drifts by exactly the gas
-            // this address has spent. `feeWei` is held for the newest
-            // `frameDepth` moves, so the recent stretch is exact and the older
-            // one is unchanged; the clamp below stays as the floor for it.
-            //
-            // Only when THIS address paid: a sponsored transaction cost it
-            // nothing, and adding back somebody else's gas would bend the line
-            // the wrong way on precisely the transactions this chain exists to
-            // show off.
-            if !move.incoming, !move.isSponsored, let fee = move.feeWei {
-                running += fee
-            }
-            if running < 0 { running = 0 }   // an unread fee is still a gap; never draw below zero
-            series.append((running as NSDecimalNumber).doubleValue / 1e18)
-        }
-        return series.count >= 2 ? series.reversed() : nil
-    }
+    // **`valueSeries` IS DELETED (prd §684, 2026-09-10).** It was the same
+    // walk as `valueSamples` above with no dates and a clamp at zero, and by
+    // the time the Home crown moved to the dated form it had no caller left in
+    // the app — only the harness, which meant the tree carried TWO copies of
+    // the sponsored-fee rule and a mutation of one of them survived while the
+    // other went on satisfying the assertion. One copy now.
+
 
     /// What the line did across that span, as a fraction — the crown's delta.
     static func valueDelta(_ account: HegotaAccount) -> Double? {
-        guard let s = valueSeries(account), let first = s.first, let last = s.last,
-              first > 0 else { return nil }
+        // `first > 0`, not `>= 0`: a series that starts at zero has a real
+        // delta and NO ratio, and this function returns a ratio (prd §684).
+        let s = valueSamples(account).map(\.usd)
+        guard let first = s.first, let last = s.last, first > 0 else { return nil }
         return (last - first) / first
     }
 }

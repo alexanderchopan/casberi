@@ -67,6 +67,11 @@ ROOM="Casberi/Casberi/Model/HegotaRoom.swift"
 # Foundation-only, and the nonce-slot derivation is real keccak — so the harness
 # compiles the SHIPPED hash rather than asserting against a copied digest.
 KECCAK="Casberi/Casberi/Model/Keccak256.swift"
+# The dated walk this room's Home line is built from (prd §684). Foundation-only
+# and compiled REAL rather than stubbed, because its one load-bearing rule — a
+# reconstructed balance that goes negative proves a move is missing — is exactly
+# the kind of thing a stub would quietly assert instead of testing.
+HISTORY="Casberi/Casberi/Model/RoomValueHistory.swift"
 VERIFY="scripts/verify.sh"
 
 work=$(mktemp -d)
@@ -83,6 +88,15 @@ import Foundation
 var failures = 0
 func check(_ ok: Bool, _ what: String) {
     if !ok { print("  ✗ \(what)"); failures += 1 }
+}
+
+// The one type `RoomValueHistory` needs from the app's wallet half, which is
+// SwiftUI-bound and cannot be compiled here. Its shape is the whole contract.
+enum WalletStore {
+    struct ValueSample: Codable, Equatable {
+        let at: Date
+        let usd: Double
+    }
 }
 
 // ─────────────────────────── scopes ───────────────────────────
@@ -840,32 +854,34 @@ func paidMove(fee: String?, sponsored: Bool) -> HegotaMove {
     m.sender = "0xme"
     m.payer = sponsored ? "0xsomebodyelse" : "0xme"
     m.feeWei = fee.map(weiOf)
+    // The dated walk needs a date; the value of it is irrelevant here.
+    m.timestamp = Date(timeIntervalSince1970: 1_786_000_000)
     return m
 }
-func lineFor(_ move: HegotaMove) -> [Double]? {
+func lineFor(_ move: HegotaMove) -> [Double] {
     var a = HegotaAccount(address: "0xme")
     a.reached = true
     a.balanceWei = weiOf("2000000000000000000")   // 2 ETH now
     a.moves = [move]
-    return HegotaRoom.valueSeries(a)
+    return HegotaRoom.valueSamples(a).map(\.usd)
 }
 // Self-paid: the 0.1 ETH of gas was this address's, so undoing the move has to
 // put it back — the balance before was 2 + 1 + 0.1.
 let ownGasLine = lineFor(paidMove(fee: "100000000000000000", sponsored: false))
-check(ownGasLine?.count == 2, "a line is one point per move plus today")
-check(abs((ownGasLine?.first ?? 0) - 3.1) < 0.000001,
+check(ownGasLine.count == 2, "a line is one point per move plus today")
+check(abs((ownGasLine.first ?? 0) - 3.1) < 0.000001,
       "a self-paid fee is undone with the move — the line starts at 3.1")
-check(abs((ownGasLine?.last ?? 0) - 2.0) < 0.000001, "the line ends at today's balance")
+check(abs((ownGasLine.last ?? 0) - 2.0) < 0.000001, "the line ends at today's balance")
 // **THE DISCRIMINATING CASE.** Sponsored: somebody else's gas never left this
 // balance, so adding it back bends the line — on exactly the transactions this
 // chain exists to show off.
 let sponsoredLine = lineFor(paidMove(fee: "100000000000000000", sponsored: true))
-check(abs((sponsoredLine?.first ?? 0) - 3.0) < 0.000001,
+check(abs((sponsoredLine.first ?? 0) - 3.0) < 0.000001,
       "a SPONSORED fee is not added back — the line starts at 3.0, not 3.1")
 // An unread fee is a gap we cannot close, not a zero: the line is simply the
 // move, which is what every move past the receipt window gets.
 let noFee = lineFor(paidMove(fee: nil, sponsored: false))
-check(abs((noFee?.first ?? 0) - 3.0) < 0.000001, "an unread fee changes nothing")
+check(abs((noFee.first ?? 0) - 3.0) < 0.000001, "an unread fee changes nothing")
 
 // ───────────── where a keyed nonce's counter lives (§509) ─────────────
 // **PINNED TO A LIVE MEASUREMENT.** The nonce manager cannot be called at all
@@ -941,6 +957,42 @@ check(HegotaParty.of("0xstranger", watched: []) == .stranger("0xstranger"),
 
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("  ok   \(HegotaSection.allCases.count) scopes, words, the spent bitmap, coins, reconciliation, fees")
+
+// ───────────────── the derived line (prd §684) ─────────────────
+
+let unit = Decimal(string: "1000000000000000000")!
+let walkT0 = Date(timeIntervalSince1970: 1_700_000_000)
+func sample(_ undo: String, _ minutesAgo: Double) -> (undo: Decimal?, at: Date?) {
+    (Decimal(string: undo)!, walkT0.addingTimeInterval(-minutesAgo * 60))
+}
+
+// A clean walk: 1 ETH in, two spends of 0.1 — undoing them from 0.8 lands on 0.
+let clean = RoomValueHistory.derived(
+    balance: Decimal(string: "800000000000000000")!,
+    undoNewestFirst: [sample("100000000000000000", 10),
+                      sample("100000000000000000", 20),
+                      sample("-1000000000000000000", 30)],
+    unit: unit, now: walkT0)
+check(clean.count == 4, "a clean walk keeps every point")
+check(clean.first.map { abs($0.usd) < 1e-12 } ?? false, "the walk lands on zero, oldest first")
+check(clean.last.map { abs($0.usd - 0.8) < 1e-12 } ?? false, "the newest point is the balance")
+check(zip(clean, clean.dropFirst()).allSatisfy { $0.at <= $1.at }, "the line never goes backwards in time")
+
+// **A NEGATIVE POINT ABANDONS THE WHOLE SERIES.** This is §684's rule and the
+// bug it was written for: a history truncated by the read leaves the oldest
+// steps with nothing to subtract from, and a clamp to zero would report the
+// climb off a floor nobody observed as a real percentage.
+check(RoomValueHistory.derived(
+        balance: Decimal(string: "60000000000000000")!,
+        undoNewestFirst: [sample("-1000000000000000000", 10)],
+        unit: unit, now: walkT0).isEmpty,
+      "a walk that goes below zero draws nothing at all")
+
+// A missing amount and a missing date each abandon it too — same bargain.
+check(RoomValueHistory.derived(balance: unit, undoNewestFirst: [(nil, walkT0)], unit: unit, now: walkT0).isEmpty,
+      "an unreadable amount abandons the walk")
+check(RoomValueHistory.derived(balance: unit, undoNewestFirst: [(0, nil)], unit: unit, now: walkT0).isEmpty,
+      "an undated move abandons the walk")
 SWIFT
 
 # ONE compile line, written once and run by both the assertion build and every
@@ -957,7 +1009,8 @@ cat > "$work/build.zsh" <<'BUILDSH'
 MW="$1"
 swiftc -Onone -o "$MW/run" \
   "$MW/HegotaSection.swift" "$MW/HegotaCoins.swift" "$MW/HegotaAccount.swift" \
-  "$MW/HegotaRoom.swift" "$MW/Keccak256.swift" "$MW/main.swift" 2>"$MW/err"
+  "$MW/HegotaRoom.swift" "$MW/Keccak256.swift" "$MW/RoomValueHistory.swift" \
+  "$MW/main.swift" 2>"$MW/err"
 BUILDSH
 
 # The pristine tree every mutation is cut from. Staged ONCE; a child copies it
@@ -969,6 +1022,7 @@ cp "$COINS"   "$work/base/HegotaCoins.swift"
 cp "$ACCOUNT" "$work/base/HegotaAccount.swift"
 cp "$ROOM"    "$work/base/HegotaRoom.swift"
 cp "$KECCAK"  "$work/base/Keccak256.swift"
+cp "$HISTORY" "$work/base/RoomValueHistory.swift"
 cp "$work/main.swift" "$work/base/main.swift"
 
 zsh "$work/build.zsh" "$work/base" \
@@ -1164,7 +1218,7 @@ mutate "a derived send count is narrated as the chain's own" \
 mutate "the balance line adds back gas somebody ELSE paid (a sponsored move bends the wrong way)" \
   HegotaRoom.swift 's/if !move\.incoming, !move\.isSponsored, let fee = move\.feeWei \{/if !move.incoming, let fee = move.feeWei {/'
 mutate "the balance line stops undoing the fee at all (it drifts by the gas this address spent)" \
-  HegotaRoom.swift 's/if !move\.incoming, !move\.isSponsored, let fee = move\.feeWei \{\n                running \+= fee\n            \}//'
+  HegotaRoom.swift 's/if !move\.incoming, !move\.isSponsored, let fee = move\.feeWei \{ undo \+= fee \}//'
 
 # ── the last mutation must precede the fan-out ───────────────────────────────
 # A `mutate` call BELOW the fan-out is silently never run and the pass still
@@ -1235,7 +1289,23 @@ deny() { have "$1"; if grep -q -- "$2" "$work/$1"; then fail "drift: $3"; fi }
 deny section.bare "import SwiftUI" "HegotaSection imports SwiftUI — it must stay compilable without it"
 deny coins.bare   "import SwiftUI" "HegotaCoins imports SwiftUI — it must stay compilable without it"
 deny room.bare    "import SwiftUI" "HegotaRoom imports SwiftUI — it must stay compilable without it"
-deny room.bare    "usd" "HegotaRoom reaches for a dollar figure — test ETH has no price"
+# NO PRICE, EVER — amended 2026-09-10 (prd §684) for the ONE exception, which is
+# a field name and not a claim. `WalletStore.ValueSample.usd` is the shared
+# sample type every wallet-family room records into, and its doc says plainly
+# that the field carries THE ROOM'S OWN UNIT — a devnet's native ETH here. The
+# type is shared precisely so `WalletRange.offered`/`clip` and
+# `TokenChart.from(samples:)` need no per-room variant; renaming the field
+# across the app for one reader's comfort was considered and declined. So the
+# guard stops banning the three letters and starts banning the CLAIM: a price,
+# a dollar sign, a conversion. `\.usd` as a keypath on a sample is allowed and
+# nothing else is.
+if grep -q -- "usd" "$work/room.bare"; then
+  if grep -v -- '\\.usd' "$work/room.bare" | grep -q -- "usd"; then
+    fail "drift: HegotaRoom reaches for a dollar figure — test ETH has no price (only \`\\.usd\` on a ValueSample is allowed, prd §684)"
+  fi
+fi
+deny room.bare    "price" "HegotaRoom reaches for a price — test ETH has no price"
+deny room.bare    "dollar" "HegotaRoom names dollars — test ETH has no price"
 deny account.bare "import SwiftUI" "HegotaAccount imports SwiftUI — it must stay compilable without it"
 deny account.bare "import Observation" "HegotaAccount imports Observation — the value types must stay Foundation-only or the room's rules leave the harness"
 deny account.bare "URLSession" "HegotaAccount reaches the network — it is value types only"
@@ -1431,7 +1501,7 @@ done
 python3 - "$work/BridgeCatalog.swift.bare" <<'PYCAT' > "$work/hegota-catalog-promise.txt" || true
 import sys
 src = open(sys.argv[1]).read()
-start = src.find('Offer(name: "Hegota Devnet')
+start = src.find('Offer(name: "Hegotá UTXO')
 if start < 0:
     print("NONE"); sys.exit(0)
 nxt = src.find('Offer(name:', start + 10)
@@ -1443,7 +1513,7 @@ CATALOG_PROMISE="$(cat "$work/hegota-catalog-promise.txt" 2>/dev/null || echo NO
 python3 - "$work/NetworkReach.swift.bare" <<'PYREACH' > "$work/hegota-reach-promise.txt" || true
 import sys
 src = open(sys.argv[1]).read()
-start = src.find('service: "Hegota Devnet')
+start = src.find('service: "Hegotá UTXO')
 if start < 0:
     print("NONE"); sys.exit(0)
 nxt = src.find('Endpoint(service:', start + 10)
@@ -1500,7 +1570,7 @@ python3 - "$work/BridgeCatalog.swift.bare" <<'PYWALLET' > "$work/devnet-wallet-c
 import re, sys
 src = open(sys.argv[1]).read()
 bad = []
-for seat in ('Hegota Devnet', 'Frames Devnet', 'Privacy Devnet', 'vibenet'):
+for seat in ('Hegotá UTXO', 'Hegotá Frames', 'Hegotá Privacy', 'vibenet'):
     start = src.find('Offer(name: "%s' % seat)
     if start < 0:
         continue

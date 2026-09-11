@@ -684,7 +684,7 @@ final class ShellChrome {
     /// 2026-09-08).** `refreshPulse` was doing two jobs: it deals the rain AND
     /// it is the term `FeedScreen`'s memoised room head recomputes on. Six
     /// sites bumped it for the second reason only — vibenet's unwatch, its key
-    /// revoke, its two watch sheets and `onWatched`, plus Privacy Devnet's
+    /// revoke, its two watch sheets and `onWatched`, plus Hegotá Privacy's
     /// example watch — and each therefore dealt a shower nobody asked for. The
     /// unwatch bumped TWICE (a local trim, then the chain read), so removing an
     /// address rained twice, seconds apart: the exact stutter "one gesture, one

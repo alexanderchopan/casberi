@@ -284,8 +284,8 @@ enum NetworkReach {
         // no config document to fetch and no second host. Three RPC nodes are
         // listed because the read walks them in order: one being down is a
         // retry, not an outage.
-        Endpoint(service: "Hegota Devnet",
-                 reach: .whenConnected(bridge: "Hegota Devnet"),
+        Endpoint(service: "Hegotá UTXO",
+                 reach: .whenConnected(bridge: "Hegotá UTXO"),
                  purpose: "Reads a watched address's balance, its transfers, the unspent coins it holds in the chain's UTXO vault and who paid for its transactions, from Hegot\u{00e1} — a public devnet testing frame transactions. A read carries only the address you watch. Sending also sends one signed transaction: what leaves is a signature, never the key that made it — that key is a plain scalar held on this device, not the Secure Enclave, because Hegot\u{00e1}'s money has no value to protect. Asking the faucet for test ETH sends the address you are asking for, and nothing else; it needs no key and no signature.",
                  hosts: ["rpc1.hegota.ethrex.xyz", "rpc2.hegota.ethrex.xyz",
                          "rpc3.hegota.ethrex.xyz",
@@ -316,8 +316,8 @@ enum NetworkReach {
         // day it belongs there and not before (§531's lesson, one seat over,
         // where a faucet the app really posted to sat in the reach audit's
         // denylist for a day and the privacy screen omitted it).
-        Endpoint(service: "Privacy Devnet",
-                 reach: .whenConnected(bridge: "Privacy Devnet"),
+        Endpoint(service: "Hegotá Privacy",
+                 reach: .whenConnected(bridge: "Hegotá Privacy"),
                  purpose: "Reads a watched address's balance, its transfers, the steps each transaction ran, the one-time spend keys it used and which recent snapshot a proof named, from a public devnet testing Ethereum's privacy proposals. A read carries only the address you watch. If you make an account here, asking the faucet for test ETH sends its address, and a send you make carries the transaction you signed on this device — both to the same devnet, and only when you tap.",
                  hosts: ["rpc1.privacy.ethrex.xyz", "rpc2.privacy.ethrex.xyz",
                          "rpc3.privacy.ethrex.xyz",
@@ -329,8 +329,8 @@ enum NetworkReach {
         // in the non-reach denylist for a day after its key sheet grew a Claim
         // button, so the privacy screen omitted a host the app really reached
         // (§531). This app POSTs to it, so it is declared.
-        Endpoint(service: "Frames Devnet",
-                 reach: .whenConnected(bridge: "Frames Devnet"),
+        Endpoint(service: "Hegotá Frames",
+                 reach: .whenConnected(bridge: "Hegotá Frames"),
                  purpose: "Reads a watched address's balance and its frame transactions — what each frame did, what it spent of its two gas budgets, and who paid for it — from the Frames devnet, the public test network for EIP-8141 frame transactions. A read carries only the address you watch. Sending also sends one signed transaction: what leaves is a signature, never the key that made it — that key is a plain scalar held on this device, not the Secure Enclave, because this chain's money has no value to protect and the network itself says it may be reset without notice. Asking the faucet for test ETH sends the address you are asking for, and nothing else; it needs no key and no signature.",
                  hosts: ["rpc1.frames.ethrex.xyz", "rpc2.frames.ethrex.xyz",
                          "rpc3.frames.ethrex.xyz",

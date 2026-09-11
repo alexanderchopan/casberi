@@ -515,18 +515,18 @@ enum DemoSeedAll {
         // completely: it lands no `Thing` at all, so its chip has no row to
         // ride and needs its own weight or it sorts to the back of the strip
         // while reading as connected.
-        "Hegota Devnet": 3,
-        // Frames Devnet (prd §548) — landless for exactly Hegotá's reason,
+        "Hegotá UTXO": 3,
+        // Hegotá Frames (prd §548) — landless for exactly Hegotá's reason,
         // one line above: it lands no `Thing` at all, so its chip has no row
         // to ride and needs its own weight or it sorts to the back of the
         // strip while reading as connected.
-        "Frames Devnet": 3,
+        "Hegotá Frames": 3,
         // Ethrex Privacy (prd §593) — rowless for exactly the reason above,
         // and it is the same ruling rather than a third one: it lands no
         // `Thing` at all, so its chip has no row to ride and needs its own
         // weight or it sorts to the back of the strip while reading as
         // connected.
-        "Privacy Devnet": 3,
+        "Hegotá Privacy": 3,
         // Cloudflare (2026-08-08) — the `runway` figure kind had NO room
         // above the panel's 20-card cap, and the reason wasn't affinity, it
         // was that `runway` could not draw at all: `CloudflareRunwaySource
@@ -5167,9 +5167,9 @@ enum DemoSeedAll {
         // list (`VibenetWatch`), the Farcaster/Bluesky/Stocktwits "N watched"
         // shape instead.
         ("Base Vibenet", "4 accounts watched", "Reads which keys can act for a watched account."),
-        ("Hegota Devnet", "1 address watched", "Reads an address's coins, transfers and who paid for them."),
-        ("Frames Devnet", "An account on this phone", "Reads what each frame of a transaction did."),
-        ("Privacy Devnet", "1 address watched", "Reads the one-time spend keys an address used, and which snapshot each proof named."),
+        ("Hegotá UTXO", "1 address watched", "Reads an address's coins, transfers and who paid for them."),
+        ("Hegotá Frames", "An account on this phone", "Reads what each frame of a transaction did."),
+        ("Hegotá Privacy", "1 address watched", "Reads the one-time spend keys an address used, and which snapshot each proof named."),
         ("Gnosis Pay", "Rides your wallet", "Reads what the card settled onchain."),
         ("ether.fi", "Rides your wallet", "Reads what the card settled onchain."),
         // (Aave, Morpho, Uniswap, Hyperliquid and Aerodrome were claimed here

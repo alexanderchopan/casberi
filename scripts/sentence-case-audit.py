@@ -220,7 +220,7 @@ KNOWN_PROPER: set[str] = {
     "Bitcoin", "Ethereum", "Solana", "Base", "Optimism", "Polygon", "Arbitrum",
     "Gnosis", "Monad", "Robinhood", "HyperEVM", "Etherscan", "Solscan",
     "Ethrex", "Reown", "WalletConnect", "Visa", "Metamask", "Delegator",
-    # The CHAIN is Hegotá; the SEAT is "Hegota Devnet" since §629. The rename
+    # The CHAIN is Hegotá; the SEAT is "Hegotá UTXO" since §629. The rename
     # took the accented spelling out of the catalog (which is where proper
     # nouns are derived from), leaving four sentences that name the network
     # itself — "Sent test ETH on Hegotá" — with nothing to vouch for them.

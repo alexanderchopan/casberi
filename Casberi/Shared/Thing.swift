@@ -190,8 +190,19 @@ enum Corpus {
         // verified against f8a5eea9, which touches no ref literal: the rows
         // are keyed `hegota:` and `privacydevnet:`, and no `ethrex…`
         // namespace has ever existed, so there is nothing to move.
-        "Ethrex Hegot\u{00e1}": Rename(current: "Hegota Devnet"),
-        "Ethrex Privacy": Rename(current: "Privacy Devnet"),
+        "Ethrex Hegot\u{00e1}": Rename(current: "Hegotá UTXO"),
+        "Ethrex Privacy": Rename(current: "Hegotá Privacy"),
+        // prd §685, 2026-09-10 — the three ethrex seats become one family
+        // under the chain that hosts them (user: "i'd like to change the names
+        // of the devnets to Hegota UTXO, Hegota Privacy, and Hegota Frames").
+        // The NAME only: the rows stay keyed `hegota:`, `privacydevnet:` and
+        // `frames:`, and no literal moved with this rename — the same check
+        // §629 made for the entries above. The 2026-09-06 pair above now
+        // points at the new names rather than at the intermediate ones, so a
+        // row saved under "Ethrex Hegotá" still resolves in one hop.
+        "Hegota Devnet": Rename(current: "Hegotá UTXO"),
+        "Privacy Devnet": Rename(current: "Hegotá Privacy"),
+        "Frames Devnet": Rename(current: "Hegotá Frames"),
         // prd §650, 2026-09-08 — the token-watch seat became "Tokens" when its
         // chart stopped being one vendor's (commit a2618a2, 2026-07-13). That
         // commit moved the ref prefix in the same breath, which is why this

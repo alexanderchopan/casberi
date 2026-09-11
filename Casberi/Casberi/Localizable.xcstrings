@@ -64807,30 +64807,30 @@
         }
       }
     },
-    "Hegota Devnet was relaunched from genesis, so everything it held is gone. The addresses you watch are still yours." : {
+    "Hegotá UTXO was relaunched from genesis, so everything it held is gone. The addresses you watch are still yours." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Hegota Devnet fue relanzado desde el génesis, así que todo lo que contenía desapareció. Las direcciones que vigilas siguen siendo tuyas."
+            "value" : "Hegotá UTXO fue relanzado desde el génesis, así que todo lo que contenía desapareció. Las direcciones que vigilas siguen siendo tuyas."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Hegota Devnet はジェネシスから再起動されたため、保有していたものはすべて消えました。ウォッチしているアドレスは引き続きあなたのものです。"
+            "value" : "Hegotá UTXO はジェネシスから再起動されたため、保有していたものはすべて消えました。ウォッチしているアドレスは引き続きあなたのものです。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Hegota Devnet가 제네시스부터 재시작되어, 보유하던 모든 것이 사라졌습니다. 감시 중인 주소는 여전히 당신의 것입니다."
+            "value" : "Hegotá UTXO가 제네시스부터 재시작되어, 보유하던 모든 것이 사라졌습니다. 감시 중인 주소는 여전히 당신의 것입니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Hegota Devnet 已从创世重新启动，其原有内容已全部消失。你所关注的地址仍然属于你。"
+            "value" : "Hegotá UTXO 已从创世重新启动，其原有内容已全部消失。你所关注的地址仍然属于你。"
           }
         }
       }
@@ -93970,30 +93970,30 @@
         }
       }
     },
-    "Privacy Devnet" : {
+    "Hegotá Privacy" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Privacy Devnet"
+            "value" : "Hegotá Privacy"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Privacy Devnet"
+            "value" : "Hegotá Privacy"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Privacy Devnet"
+            "value" : "Hegotá Privacy"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Privacy Devnet"
+            "value" : "Hegotá Privacy"
           }
         }
       }

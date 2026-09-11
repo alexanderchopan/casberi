@@ -485,7 +485,7 @@ let dr3 = NotifyDevnet.plan(reset: reset(.vibenet, key: "id-2-3"), now: dnow)!
 ok(dr3.id != dr1.id, "a SECOND reset is a different id, so it is new news")
 let drh = NotifyDevnet.plan(reset: reset(.hegota), now: dnow)!
 ok(drh.id != dr1.id, "the two seats never share an id")
-ok(dr1.source == "Base Vibenet" && drh.source == "Hegota Devnet",
+ok(dr1.source == "Base Vibenet" && drh.source == "Hegotá UTXO",
    "each plan carries its own seat's source, so the right-hand slot gets its mark")
 ok(dr1.body.contains("addresses"),
    "vibenet's body says the ADDRESS survives — §515a's easily-missed half")

@@ -456,7 +456,7 @@ enum BridgeCatalog {
         // own ruling that a devnet with worthless money does not need
         // hardware-backed non-export. `hegota-selftest.sh` ties this bullet to
         // the code both ways.
-        Offer(name: "Hegota Devnet", tagline: "Explore UTXOs — coins as objects, not a balance", group: "Wallet", connectable: true,
+        Offer(name: "Hegotá UTXO", tagline: "Explore UTXOs — coins as objects, not a balance", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 8, 27)),
         // The OTHER frame-transaction devnet, and a separate seat by ruling
         // (user, 2026-09-01: "hegota is for hegota writ large" / "this one is
@@ -482,7 +482,7 @@ enum BridgeCatalog {
         // may be reset without notice, and a seat that let somebody keep
         // something here without saying so would be the §83 failure on the
         // page where they decide whether to connect.
-        Offer(name: "Frames Devnet", tagline: "Try Ethereum's new frame transactions", group: "Wallet", connectable: true,
+        Offer(name: "Hegotá Frames", tagline: "Try Ethereum's new frame transactions", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 1)),
         // The THIRD ethrex devnet (prd §593, 2026-09-04), and a chain of its
         // own — 8141, distinct genesis — not a re-host of Hegotá. A separate
@@ -511,7 +511,7 @@ enum BridgeCatalog {
         // recovers to a real address, and authorises something other than what
         // the screen said. The last bullet is the honest version of that and
         // must be removed in the same commit that lands sending, never before.
-        Offer(name: "Privacy Devnet", tagline: "Try Ethereum's new privacy proposals", group: "Wallet", connectable: true,
+        Offer(name: "Hegotá Privacy", tagline: "Try Ethereum's new privacy proposals", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 4)),
         Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
               needsSetup: true),
@@ -1092,6 +1092,6 @@ enum BridgeSetupMode {
     static let noAccountSeats: Set<String> = ["Wallet", "Tokens", "Reddit", "YouTube",
         "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster", "Bluesky", "Nostr",
         "Telegram", "Shopify", "Deals", "Stocktwits", "Hugging Face", "Radicle",
-        "npm", "PyPI", "Altana", "Walletbeat", "L2BEAT", "ENS", "Frames Devnet", "Hegota Devnet",
-        "Base Vibenet", "ETH Validators", "Privacy Devnet"]
+        "npm", "PyPI", "Altana", "Walletbeat", "L2BEAT", "ENS", "Hegotá Frames", "Hegotá UTXO",
+        "Base Vibenet", "ETH Validators", "Hegotá Privacy"]
 }

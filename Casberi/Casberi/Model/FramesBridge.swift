@@ -47,12 +47,12 @@ import Foundation
 /// a future chain upgrade that adds them shows up as a failing guard rather
 /// than as a scope nobody thought to build.
 enum FramesIdentity {
-    /// **"Frames Devnet", not "Frames".** The bare word is one of the most
+    /// **"Hegotá Frames", not "Frames".** The bare word is one of the most
     /// ordinary nouns in this app's own vocabulary — `FeedScreen` frames, a
     /// video frame, the `frames` array inside every transaction here — and a
     /// catalog seat, a `Thing.source` and a §308 facet all share one namespace
     /// with search. `BridgeIcon` folds it to `brand-frames-devnet`.
-    static let source = "Frames Devnet"
+    static let source = "Hegotá Frames"
     static let seatID = "frames"
 
     /// The block explorer and the faucet's own page — opened in the person's

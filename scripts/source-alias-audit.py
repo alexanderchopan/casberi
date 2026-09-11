@@ -335,7 +335,7 @@ def self_test():
     cases = []
 
     # A — an alias pointing at a name no offer carries.
-    cases.append(("A", (thing.replace('"Hegota Devnet"', '"Hegota Devnet (old)"', 1),
+    cases.append(("A", (thing.replace('"Hegotá UTXO"', '"Hegotá UTXO (old)"', 1),
                         catalog, shell, resolvers, sweep, corpus)))
     # B — an alias key that is a live offer name.
     cases.append(("B", (thing.replace('"Ethrex Hegot\\u{00e1}"', '"Linear"', 1),

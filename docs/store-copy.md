@@ -49,7 +49,7 @@ Casberi isn't another chatbot. It's your own things, in one feed, with an agent 
 
 ### iOS What's New — append these two bullets
 
-• Developer networks — Base Vibenet, Hegota Devnet and Frames are test networks: make an account, claim from the faucet and send test transactions. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network.
+• Developer networks — Base Vibenet, Hegotá UTXO and Frames are test networks: make an account, claim from the faucet and send test transactions. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network.
 
 • Bankr — answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
 ## Mac — APPLIED 2026-09-08, on 1.0.15
