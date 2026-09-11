@@ -119,7 +119,7 @@ struct HegotaScreen: View {
     /// will.
     private static let examples: [DevnetExample] = [
         DevnetExample(address: "0x8b54b45663b4af65d51d7f98c20f533965e0a013",
-                      title: String(localized: "An address holding coins"),
+                      title: String(localized: "An address holding UTXOs"),
                       detail: String(localized: "The vault's unspent pieces")),
         DevnetExample(address: "0x8943545177806ed17b9f23f0a21ee5948ecaa776",
                       title: String(localized: "An address sending in parallel"),

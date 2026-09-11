@@ -100,6 +100,7 @@ at all.
 | §363 | The money receipt's TEAR carries state — torn is history, flat is still in the machine | reversed by §583 (an edge cannot survive the surface it was an edge of. Checked rather than assumed before removing: every `.open` receipt built in `MoneyReceipt` stamps `.settling` / `.pending` / `.screening` / `.yourTurn` / `.needsProof` / `.openPosition`, none of them quiet — so the silhouette and the word were two renderings of one fact. `finality` itself is untouched, and the settle keeps its haptic) |
 | §680 | Devnet Holdings is a treemap of what each watched address holds, and a scope does not restate Home's balance | amended by §694 (the UTXO scope's headline moved from the balance to counts for exactly this reason; Holdings itself is unchanged) |
 | §692 | Permissions is one scope in five rooms; Wallet Home's flow becomes rows | amended by §695 (the flow's net line — "in … · out … · Kept +…" — was dropped with the band's frame and is restored above the blocks) |
+| §555 | The UTXO treemap's caption states how many pieces the balance is held as | amended by §696 (the count moved to the scope's headline; the caption names the unspent half and keeps the change fact) |
 | §546 | The Permissions slot is COUNTS by rung, four bare numerals in two columns | superseded in shape by §692 (the counts and the no-names rule stand; the grid is shared with five rooms and a cell is a well) |
 | §566 | The sponsor scope's figure is a split bar of whose gas paid | superseded by §692 (the share leads the shared grid; the bar is deleted) |
 | §606 | The spend-key scope draws one bar per address; Holdings and Accounts draw no figure | superseded in part by §692 (the spend-key bar goes with the scope; the no-figure rulings stand) |
@@ -53160,3 +53161,48 @@ count folded in, over the same window the crown uses. The capped tail keeps its 
 so the two sides still add up (§510).
 
 Amends §692 (which dropped the line) and restores the reading §483 gave the band.
+
+## §696 — The UTXO map says which half it draws, a spent piece says what became of it, and the room stops saying "coin" (user: "yes i would think unspent is more important than spent, but lets look at it. also lets look at the coin sheet. we need to call them UTXO tho not coins", 2026-09-11)
+
+**Unspent IS the more important half, and the treemap already drew only it — silently.** It
+is a picture of what you hold, so a spent piece in it would be money drawn twice. §694 then
+put a Spent block directly beneath it, which made an unlabelled population sit above a
+labelled one: §510's exact complaint, two censuses on one screen with no way to tell them
+apart. The caption names it now — *"Unspent"*, or *"Unspent · 5 of them change"*.
+
+**The COUNT left that caption.** The scope's headline states it ("7 unspent · 7 spent"), and
+a figure repeating its own headline is the rule the crown keeps on Home (§683) and the chart
+keeps on Activity (§686). What survives is the fact no count carries: how much of what you
+hold came back as change from your own spends, which is the whole reason the map exists
+(§555: a total alone is the very thing this model is not).
+
+**A SPENT PIECE SAYS WHAT BECAME OF IT, INCLUDING WHAT WE CANNOT SAY.** The sheet already
+stamped Spent and already hid the "% of what you hold" share correctly. What it did not say
+is where the piece went — and it cannot: the vault publishes `UtxoCreated` for every OUTPUT
+and keeps a spent BITMAP for the inputs, so the chain records THAT a piece was spent and
+never by whom. That is the same absence the sibling list's fee note states one block down.
+Said aloud rather than left as a silence: *"Spent. The vault records that it was, not which
+transaction spent it."* This sheet has a door for everything else it names, and a reading
+with no door and no reason looks like a door that broke. Drawn only where the caller passed
+an unspent set at all — with none, the stamp is absent too, and a sentence about spending
+from a sheet that cannot tell would be a claim we have not earned.
+
+**THE ROOM SAYS UTXO TO A PERSON, NEVER COIN.** §500 renamed the chip from "Coins" and gave
+the reason — one room using two words for one thing, and the chip is where the word gets
+learned — and three sentences were left behind: the setup screen's example address (*"An
+address holding coins"*), the seat's own can-line, and the `NetworkReach` purpose, which is
+the privacy screen's wording. All three now say UTXO, and a drift guard sweeps the two
+source files and the reach entry.
+
+**The TYPE names stay `HegotaCoin` / `HegotaCoins`,** deliberately: they are code, no reader
+meets them, and renaming them churns every harness, fixture and mutation in the seat for no
+reader. The guard is scoped to `String(localized:)` for exactly that reason.
+
+**One process note worth keeping.** The wording guard was first written above
+`strip_comments`' own definition, so it printed `command not found`, matched nothing and
+reported OK — the "a check that cannot fail certifies nothing" class, caught only because
+the guard was probed against a deliberate reversion before being trusted. Probe a new grep
+guard by breaking the thing it guards; a guard that has never failed has never run.
+
+Amends §555 (the map's caption loses its count and gains its label) and §694 (the spent half
+now explains its own dead end).

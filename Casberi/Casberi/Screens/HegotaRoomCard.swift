@@ -1403,14 +1403,26 @@ struct HegotaRoomFigure: View {
     /// A total alone is the very thing this model is not: the balance IS these
     /// unequal pieces, and most of them came back as change from your own
     /// spends rather than arriving from somebody else.
+    ///
+    /// **THE CAPTION NAMES THE HALF THE MAP DRAWS (prd §696, user: "yes i would
+    /// think unspent is more important than spent, but lets look at it").**
+    /// The treemap is the UNSPENT set and always was — it is a picture of what
+    /// you hold, and a spent piece in it would be money drawn twice — but
+    /// nothing said so, and §694 put a Spent block directly under it. Two
+    /// populations on one screen with one of them unlabelled is §510's exact
+    /// complaint.
+    ///
+    /// **The COUNT left this line**, because the scope's headline states it
+    /// now ("7 unspent · 7 spent") and a figure that repeats its own headline
+    /// is the same rule the crown has on Home (§683) and the chart has on
+    /// Activity (§686). What survives is the fact no count carries: how much of
+    /// what you hold came back from your own spends.
     private var coinsLine: String {
         let change = coins.filter(\.isChange).count
-        let held = coins.count == 1 ? String(localized: "held as 1 UTXO")
-                                    : String(localized: "held as \(String(coins.count)) UTXOs")
-        guard change > 0 else { return held }
+        guard change > 0 else { return String(localized: "Unspent") }
         return change == coins.count
-            ? String(localized: "\(held), all of it change from your own spends")
-            : String(localized: "\(held), \(String(change)) of them change")
+            ? String(localized: "Unspent · all of it change from your own spends")
+            : String(localized: "Unspent · \(String(change)) of them change")
     }
 
     // **`noncesFigure` IS DELETED (prd §692).** It drew three stats —
@@ -3712,6 +3724,7 @@ struct HegotaCoinSheet: View {
                  ? String(localized: "change from your own spend")
                  : String(localized: "sent to you by \(WalletStore.shortAddress(coin.source))"))
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
+            fate
         }
         .dsSheetHeadBlock()
     }
@@ -3726,6 +3739,29 @@ struct HegotaCoinSheet: View {
     ///
     /// Both wear `quiet`: a spent piece is not a warning and an unspent one is
     /// not good news, they are the two ordinary states of a UTXO.
+    /// **WHAT BECAME OF IT, AND WHY THIS SHEET CANNOT SAY MORE (prd §696).**
+    ///
+    /// A spent UTXO's most interesting fact is which transaction spent it, and
+    /// that fact is not on the wire: the vault publishes `UtxoCreated` for
+    /// every OUTPUT and keeps a spent BITMAP for the inputs, so the chain
+    /// records THAT a piece was spent and never by whom. The same absence the
+    /// sibling list's own fee note states one block down.
+    ///
+    /// Said rather than left as a silence: this sheet has a door for
+    /// everything else it names, and a reading with no door and no reason
+    /// looks like a door that broke. Drawn only when the caller passed an
+    /// unspent set at all — with none, `standing` draws no stamp either, and a
+    /// sentence about spending under a sheet that cannot tell would be a claim
+    /// we have not earned.
+    @ViewBuilder private var fate: some View {
+        if !unspent.isEmpty, !unspent.contains(coin.index) {
+            Text(String(localized: "Spent. The vault records that it was, not which transaction spent it."))
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, DS.Space.s2)
+        }
+    }
+
     private var standing: (word: String, weight: DSStamp.Weight)? {
         guard !unspent.isEmpty else { return nil }
         return unspent.contains(coin.index)

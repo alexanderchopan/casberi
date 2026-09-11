@@ -1210,6 +1210,7 @@ mutate "the unspent-output scope goes back to the friendly gloss" \
 # nothing and reports a pass, which is the failure this file has paid for twice.
 mutate "the folded scope takes one of its halves' names back" \
   HegotaSection.swift 's/case \.permissions: return String\(localized: "Permissions"\)/case .permissions: return String(localized: "Nonces")/'
+
 mutate "an unreadable account has its whole history reported as spent" \
   HegotaCoins.swift 's/let classified = accounts.filter \{ \$0.reconciled && \$0.unspent != nil \}/let classified = accounts/'
 mutate "spent coins come back oldest first, so a fold drops the recent ones" \
@@ -1413,6 +1414,23 @@ fi
 # never shown — so a guard grepping raw source scores prose as compliance (the
 # Obsidian/Cursor lesson).
 strip_comments() { perl -pe 's{//.*$}{}g' "$1"; }
+
+# **THE ROOM SAYS "UTXO", NEVER "COIN" (prd §696, user: "we need to call them
+# UTXO tho not coins").** §500 renamed the chip and left three sentences behind
+# — the setup screen's example, the seat's own can-line and the reach entry's
+# purpose — so a person met the friendly gloss before they ever met the chip.
+# The TYPE names (`HegotaCoin`, `HegotaCoins`) are deliberately not guarded:
+# they are code, nobody reads them, and renaming them would churn every
+# harness for no reader.
+for f in Casberi/Casberi/Screens/HegotaScreen.swift Casberi/Casberi/Model/HegotaBridge.swift; do
+  if strip_comments "$f" | grep -qiE 'localized: "[^"]*\bcoins?\b'; then
+    echo "✗ $f says \"coin\" to a person — this chain's word is UTXO (§500, §696)"; exit 1
+  fi
+done
+if grep -qiE 'unspent coins' Casberi/Casberi/Model/NetworkReach.swift; then
+  echo "✗ the reach entry says \"unspent coins\" — the vault's pieces are UTXOs (§696)"; exit 1
+fi
+echo "  ok   drift guards: the room says UTXO to a person, never coin"
 strip_comments "$SECTION" > "$work/section.bare"
 strip_comments "$COINS" > "$work/coins.bare"
 strip_comments "$ROOM" > "$work/room.bare"
