@@ -28,6 +28,11 @@ struct AvatarChip: View {
     /// either way; the union is what makes the two of them ONE shape. nil is a
     /// preview or any future placement with no partner to merge with.
     var doorUnion: DSGlassUnion? = nil
+    /// The mark's drawn size. 46 everywhere it floats; the dock's leading
+    /// seat folds it 46→40 with the chips beside it (prd §697), which a fixed
+    /// frame could not do — a door standing at 46 in a row of 40s reads as a
+    /// slightly grown one, the near-miss `DSDock.agentSize` exists to prevent.
+    var size: CGFloat = 46
     /// Taps bounce the door (Telegram grammar, same as the tab icons).
     @State private var avatarBounce = 0
     /// Last time the door actually opened — see `openSettings()` below.
@@ -57,7 +62,7 @@ struct AvatarChip: View {
                         .modifier(DoorSpin(trigger: refreshSpin, tension: pullTension))
                 }
             }
-            .frame(width: 46, height: 46)
+            .frame(width: size, height: size)
             // Glass at the same radius the catalogue door beside it uses — one
             // shared definition, so the union merges two identical circles
             // rather than smearing one shape into a differently-rounded

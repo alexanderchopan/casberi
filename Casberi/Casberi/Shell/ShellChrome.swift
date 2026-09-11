@@ -240,8 +240,11 @@ final class ShellChrome {
         /// what makes a folder a folder: you can look inside Social from
         /// Kalshi without leaving Kalshi.
         case category(String)
-        /// The octopus's four doors (`DoorsStrip`).
-        case doors
+        // `.doors` — the octopus's folder — is DELETED (prd §697,
+        // 2026-09-11). With the ask deprecated it held Settings and
+        // Accounts, which stand in the dock's leading seat now
+        // (`DockDoors`), so there is no second kind of folder any more: a
+        // folder is a category's sources, full stop.
     }
 
     var openFolder: OpenFolder? = nil
@@ -546,14 +549,8 @@ final class ShellChrome {
     var composerRequest = 0
     func openComposer() { composerRequest += 1 }
 
-    /// The sources tray, asked for without the hold (2026-07-31). The tray's
-    /// only trigger was a 0.45s press on the agent bar — a gesture with no
-    /// visible affordance, which a phone can teach through repetition and a
-    /// mouse simply cannot: click-and-wait is not something anyone tries. So
-    /// the same tray hangs off the bar's right-click menu and off the View
-    /// menu (⌘0, continuing the ⌘1–⌘9 chip run), and the hold is unchanged.
-    var sourcesRequest = 0
-    func openSources() { sourcesRequest += 1 }
+    // `sourcesRequest` / `openSources()` are DELETED (prd §697) — the tray
+    // they raised became the octopus's folder, and the folder is gone.
 
     /// Find — the composer raised straight into a typed search, nothing
     /// running until the person types (§215). One verb because three doors now

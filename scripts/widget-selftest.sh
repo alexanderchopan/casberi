@@ -174,9 +174,18 @@ grep -qE '\$%\.1fK' "$TMP/panel.nc" \
 
 # Every tile the bundle declares must actually be in the bundle. A widget
 # struct that compiles and is never listed is invisible with no error anywhere.
-for w in HeroWidget KeptAskWidget NeedsYouWidget WalletWidget ComposeControl BriefControl; do
+for w in HeroWidget NeedsYouWidget WalletWidget ComposeControl; do
   grep -q "        $w()" "$TMP/bundle.nc" \
     || { print -u2 "✗ $w is not in the widget bundle — it would never appear in the gallery"; exit 1; }
+done
+# ...and the two the ask took with it must STAY out (prd §697b, 2026-09-11).
+# `KeptAskWidget` was a gallery full of doors onto an ask that is deprecated,
+# and `BriefControl` was the Control Center button onto the brief. Their files
+# stay in the target and stay compiling, so listing either again is a one-line
+# mistake with no compiler to catch it — which is what this guard is for.
+for w in KeptAskWidget BriefControl; do
+  grep -q "        $w()" "$TMP/bundle.nc" \
+    && { print -u2 "✗ $w is back in the bundle — the ask is deprecated (prd §697b)"; exit 1; }
 done
 
 # THE SIZE THE USER ASKED FOR. The hero is the tile with room for the sentence,

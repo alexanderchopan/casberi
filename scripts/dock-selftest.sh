@@ -40,11 +40,12 @@ trap 'rm -rf "$TMP"' EXIT
 MAIN="Casberi/Casberi/Shell/MainSurface.swift"
 ROOTS="Casberi/Casberi/Shell/RootShell.swift"
 CHIPS="Casberi/Casberi/Shell/SourceChips.swift"
-BAR="Casberi/Casberi/Shell/AgentBar.swift"
+# The agent bar and its folder are DELETED (prd §697, 2026-09-11); the
+# leading seat is `DockDoors` — the face and the grid.
+DOORS="Casberi/Casberi/Shell/DockDoors.swift"
 DOCK="Casberi/Casberi/Design/DSDock.swift"
-PANEL="Casberi/Casberi/Shell/DoorsStrip.swift"
 
-for f in "$MAIN" "$ROOTS" "$CHIPS" "$BAR" "$DOCK" "$PANEL"; do
+for f in "$MAIN" "$ROOTS" "$CHIPS" "$DOORS" "$DOCK"; do
   [ -f "$f" ] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -80,7 +81,7 @@ PY
 strip_comments "$MAIN"  > "$TMP/main.nc"
 strip_comments "$ROOTS" > "$TMP/root.nc"
 strip_comments "$CHIPS" > "$TMP/chips.nc"
-strip_comments "$BAR"   > "$TMP/bar.nc"
+strip_comments "$DOORS" > "$TMP/doors.nc"
 
 # --- 1. the band is a BOTTOM inset -----------------------------------------
 grep -q 'safeAreaInset(edge: .bottom, spacing: 0) { bandInset }' "$TMP/main.nc" \
@@ -115,8 +116,8 @@ grep -q 'iconSize: CGFloat { DSDock.agentSize(fold: fold) }' "$TMP/chips.nc" \
        echo "  marks and the agent bar beside them can drift apart mid-fold."; fail=1; }
 grep -q 'static func agentSize(fold: CGFloat)' "$DOCK" \
   || { echo "✗ DSDock.agentSize lost its fold form — the continuous fold has no metric."; fail=1; }
-grep -q 'DSDock.agentSize(fold: chrome.fold)' "$TMP/bar.nc" \
-  || { echo "✗ AgentBar no longer sizes itself off ShellChrome.fold — it would jump 46→40"; \
+grep -q 'DSDock.agentSize(fold: chrome.fold)' "$TMP/doors.nc" \
+  || { echo "✗ DockDoors no longer sizes itself off ShellChrome.fold — it would jump 46→40"; \
        echo "  while the chips beside it slide, or RootShell would re-render per scroll tick."; fail=1; }
 grep -q 'DSDock.SeatInset()' "$TMP/root.nc" \
   || { echo "✗ RootShell no longer seats the bar through DSDock.SeatInset — the bar's"; \
@@ -203,7 +204,7 @@ grep -q 'struct SelectionTravel' "$TMP/chips.nc" \
 [ "$(grep -c 'SelectionTravel(ns: ' "$TMP/chips.nc")" -ge 2 ] \
   || { echo "✗ the fill and the ring no longer both travel through SelectionTravel."; fail=1; }
 # THE SELECTION DOES NOT TRAVEL, AND THE EFFECT IS GONE (prd §676). §667 pinned
-# the travel to a glide, §673 guarded that on an animated transaction, §675 set
+# the travel to a glide, §697 guarded that on an animated transaction, §675 set
 # the animation to nil — and the fill STILL deformed between chips, measured at
 # 8 frames. `matchedGeometryEffect` is not an animation you switch off; it is a
 # travel mechanism. It is removed, and the chip's tap no longer wraps its
@@ -217,17 +218,17 @@ grep -q 'withAnimation(DS.Motion.folder) { onTap(label) }' "$TMP/chips.nc" \
   && { echo "✗ the chip's tap wraps its landing in an animation again (prd §676) — every state"; \
        echo "  the tap touches would animate, the selection included. The folder springs from"; \
        echo "  MainSurface, after the room's mount (§668)."; fail=1; }
-# THE STRIP'S BODY DOES NOT READ THE BRIDGE STORE (prd §673). `bridges.bridges`
+# THE STRIP'S BODY DOES NOT READ THE BRIDGE STORE (prd §697). `bridges.bridges`
 # is written twice per landing sync; a read in `chip(_:)` rebuilt all eleven
 # chips per write. The broken-seat ring and the spoken label are leaves.
 awk '/private func chip\(_ label:/,/fileprivate static func chipAccessibilityLabel/' "$TMP/chips.nc" \
   | grep -q 'bridges\.bridges' \
-  && { echo "✗ chip(_:) reads bridges.bridges again — every bridge write rebuilds the strip (prd §673)."; fail=1; }
+  && { echo "✗ chip(_:) reads bridges.bridges again — every bridge write rebuilds the strip (prd §697)."; fail=1; }
 grep -q 'struct ChipAttentionRing' "$TMP/chips.nc" && grep -q 'struct ChipSpokenLabel' "$TMP/chips.nc" \
-  || { echo "✗ the broken-seat ring or the spoken label is no longer a leaf (prd §673)."; fail=1; }
+  || { echo "✗ the broken-seat ring or the spoken label is no longer a leaf (prd §697)."; fail=1; }
 [ "$(grep -c 'chipAccessibilityLabel(' "$TMP/chips.nc")" -eq 2 ] \
   || { echo "✗ chipAccessibilityLabel is called from more than one place — it was built twice"; \
-       echo "  per chip per body, once for a modifier that is inert on a phone (prd §673)."; fail=1; }
+       echo "  per chip per body, once for a modifier that is inert on a phone (prd §697)."; fail=1; }
 grep -qE 'ChipLean|leanPitch|pageDragProgress' "$TMP/chips.nc" \
   && { echo "✗ the lean is back in the strip — the indicator moves forward under a drag and"; \
        echo "  swings back on landing (prd §667), and every chip rebuilds per touch move."; fail=1; }
@@ -297,37 +298,69 @@ grep -q 'axis == .vertical ? labels.filter { $0 != "All" } : labels' "$TMP/chips
        echo "  again (costing a visible chip AND rendering it twice), or the RAIL lost its"; \
        echo "  pin, which renders \"All\" twice there instead."; fail=1; }
 
-# --- 5. the hold is gone -----------------------------------------------------
-grep -q 'LongPressGesture' "$TMP/bar.nc" \
-  && { echo "✗ AgentBar grew a long press again — §591 deleted it because one control with"; \
-       echo "  two destinations is what §384/§390/§550 spent three rounds arguing about, and"; \
-       echo "  the agent is a labelled row in DoorsPanel now."; fail=1; }
-grep -q 'heldForAgent\|consumeHold' "$TMP/bar.nc" \
-  && { echo "✗ AgentBar still carries the hold's swallow-the-tap state."; fail=1; }
+# --- 5. the leading seat is the two doors, and the seat COUNTS them ---------
+# THE OCTOPUS IS GONE (prd §697, 2026-09-11). The ask is deprecated, so the
+# folder it opened held Settings and Accounts and nothing else — cheaper drawn
+# than hidden. The failure this guards is arithmetic and invisible: the melt,
+# the reserved padding and the bar's own frame all read `agentSeat`, and a seat
+# that still counts ONE mark leaves the second door sitting on top of the
+# "All" chip.
+grep -q 'clusterWidth' "$DOCK" \
+  || { echo "✗ DSDock lost clusterWidth — the leading seat no longer counts BOTH doors,"; \
+       echo "  so the grid door and the All chip overlap."; fail=1; }
+grep -q 'clusterInset + clusterWidth(fold: fold) + seam' "$DOCK" \
+  || { echo "✗ DSDock.agentSeat no longer spans the door CLUSTER."; fail=1; }
+grep -q 'DockDoors(' "$TMP/root.nc" \
+  || { echo "✗ RootShell no longer hosts DockDoors — Settings and Accounts must stand on"; \
+       echo "  the shell's own layer, which survives into a pushed room; the strip does not."; fail=1; }
+grep -q 'AvatarChip(' "$TMP/doors.nc" \
+  || { echo "✗ the face is gone from the dock's leading seat (order is Face · Grid · All)."; fail=1; }
+grep -q 'AppsDoor()' "$TMP/doors.nc" \
+  || { echo "✗ the catalogue door is gone from the dock — AppsDoor also carries the ONE"; \
+       echo "  breakage alarm the shell has."; fail=1; }
+grep -q 'contentShape(Circle())' "$TMP/doors.nc" \
+  || { echo "✗ a dock door lost its hit region — the door is the CIRCLE, not the glyph"; \
+       echo "  (2026-07-26, three user reports deep)."; fail=1; }
 
-# --- 6. the panel offers the agent, and the tray is really gone -------------
-# --- 6. the octopus is a FOLDER, not a tray ---------------------------------
-# THE FOLDER SPRINGS UP (2026-09-05, the Mac-dock folder): the doors rise out
-# of the octopus as a row ABOVE the dock (`DockSpringRow` in MainSurface's
-# band), anchored to the bar, and the strip draws no folder of its own.
-grep -q 'chrome.openFolder == .doors' "$TMP/main.nc" \
-  || { echo "✗ MainSurface no longer springs the doors from the open folder — the octopus"; \
-       echo "  must open a row out of the bar like every other chip, not a raised tray."; fail=1; }
+# --- 6. a CATEGORY still springs its folder out of its own chip -------------
+# Unchanged by §697: the octopus's folder is gone, every category's is not.
 grep -q 'DockSpringRow(' "$TMP/main.nc" \
-  || { echo "✗ MainSurface no longer uses DockSpringRow — the folder does not spring out of"; \
-       echo "  its chip, which is the whole of the Mac-dock ruling."; fail=1; }
+  || { echo "✗ MainSurface no longer uses DockSpringRow — a category's folder does not"; \
+       echo "  spring out of its chip, which is the whole of the Mac-dock ruling."; fail=1; }
 [ -f "Casberi/Casberi/Shell/DockFolderRow.swift" ] \
   || { echo "✗ DockFolderRow.swift is gone — the springing folder has no row."; fail=1; }
-grep -q 'chrome.openFolder == .doors' "$TMP/chips.nc" \
-  && { echo "✗ SourceChips draws the doors IN the strip again — the folder opens above the"; \
-       echo "  dock now, out of its chip; in-place spent width the row does not have."; fail=1; }
-grep -q 'onAgent:' "$PANEL" \
-  || { echo "✗ DoorsStrip lost its agent door — with the hold deleted this is the bar's"; \
-       echo "  ONLY route to the agent."; fail=1; }
-for gone in SourcesTray SourcesOverlay DoorsPanel; do
+grep -q 'openFolder == .doors' "$TMP/main.nc" \
+  && { echo "✗ the octopus's folder is back (prd §697): with the ask deprecated it held"; \
+       echo "  two doors, and two doors are drawn in the dock now."; fail=1; }
+grep -q 'openFolder == .doors' "$TMP/chips.nc" \
+  && { echo "✗ SourceChips draws the doors folder again."; fail=1; }
+
+# --- 7. the ask is deprecated, and it is deprecated EVERYWHERE ---------------
+# prd §697b. Each line below is a door a person meets BY ACCIDENT if it is left
+# on — a Home Screen tile, a Siri phrase, a Control Center button, an icon
+# long-press. §377's lesson is that a feature reachable by five doors is a
+# feature turned off at four of them, so these are checked one by one.
+for gone in AgentBar DoorsStrip SourcesTray SourcesOverlay DoorsPanel; do
   [ -f "Casberi/Casberi/Shell/$gone.swift" ] \
-    && { echo "✗ $gone is back — the octopus opens a strip in the band, never a tray."; fail=1; }
+    && { echo "✗ $gone is back — the bar and its folder were deleted with the ask."; fail=1; }
 done
+grep -q 'static let enabled = false' "Casberi/Shared/AskSurface.swift" \
+  || { echo "✗ AskSurface.enabled is not false — the ask is deprecated (2026-09-11)."; fail=1; }
+grep -q 'AskSurface.enabled ? \[' "Casberi/Casberi/CasberiApp.swift" \
+  || { echo "✗ the Daily Brief quick action is registered unconditionally again."; fail=1; }
+grep -q 'AskCasberiIntent()' "Casberi/Casberi/Model/CasberiIntents.swift" \
+  && { echo "✗ the \"Ask Casberi\" Shortcuts phrase is advertised again — Siri would offer"; \
+       echo "  a feature the app no longer draws."; fail=1; }
+grep -q 'KeptAskWidget()' "Casberi/CasberiWidgets/CasberiWidgets.swift" \
+  && { echo "✗ the kept-ask widget is back in the bundle — every tile on it opens an ask."; fail=1; }
+grep -q 'BriefControl()' "Casberi/CasberiWidgets/CasberiWidgets.swift" \
+  && { echo "✗ the brief's Control Center button is back."; fail=1; }
+grep -q 'WidgetAskLink.url' "Casberi/CasberiWidgets/NeedsYouWidget.swift" \
+  && { echo "✗ the deadlines widget taps through to an ask again — it reads dueAt, which"; \
+       echo "  is a corpus field, so it keeps its seat and opens the FEED."; fail=1; }
+grep -q 'guard AskSurface.enabled else { return }' "$TMP/root.nc" \
+  || { echo "✗ RootShell no longer gates the ask's deep links (casberi://ask, ://brief)"; \
+       echo "  and the quick action's landing."; fail=1; }
 
 # --- 7. a folder tap LANDS and opens; the standing chip only toggles ---------
 # prd §663 (2026-09-09) overturned the §591 amendment this guard used to pin

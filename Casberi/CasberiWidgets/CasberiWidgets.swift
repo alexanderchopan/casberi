@@ -20,11 +20,19 @@ import ActivityKit
 struct CasberiWidgets: WidgetBundle {
     var body: some Widget {
         HeroWidget()
-        KeptAskWidget()
+        // `KeptAskWidget` is GONE from the bundle (prd §697b, 2026-09-11):
+        // every tile on it opened an ask, so with the ask deprecated the
+        // whole widget is a wall of doors onto nothing. A placed one goes to
+        // the system's "unable to load" placeholder, which is the cost the
+        // user took knowingly ("get rid of it. i doubt any user is using
+        // it"). The file stays in the target and stays compiling, so the
+        // widget returns with the flag.
         NeedsYouWidget()
         WalletWidget()
         ComposeControl()
-        BriefControl()
+        // `BriefControl` — the Control Center button onto the daily brief —
+        // is GONE with the ask (prd §697b). `ComposeControl` stays: it opens
+        // the CAPTURE surface, which outlives the ask.
         #if !targetEnvironment(macCatalyst)
         VoiceRecordingActivity()
         ImportActivity()

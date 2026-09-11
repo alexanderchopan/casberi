@@ -48,6 +48,26 @@ enum DSDock {
         lerp(agentSize(minimized: false), agentSize(minimized: true), fold)
     }
 
+    /// The air between the two doors in the leading seat — `s1`, tighter than
+    /// the `seam` after them, because they ARE one object (`dsGlassDoor`
+    /// merges them into a single glass shape) where the seam separates the
+    /// cluster from the run of chips.
+    static let doorGap: CGFloat = DS.Space.s1
+
+    /// **THE LEADING SEAT HOLDS TWO DOORS, NOT THE OCTOPUS (2026-09-11, prd
+    /// §697).** Everything below was written for one 46pt mark; the seat is
+    /// the face (Settings) and the grid (Accounts) now, so every number that
+    /// reserved room beside it has to count both. Spelled as a width rather
+    /// than patched into `agentSeat`, because the strip's melt, the bar's own
+    /// frame and the self-test all need the same answer and two of them
+    /// cannot see each other.
+    static func clusterWidth(fold: CGFloat) -> CGFloat {
+        agentSize(fold: fold) * 2 + doorGap
+    }
+    static func clusterWidth(minimized: Bool) -> CGFloat {
+        agentSize(minimized: minimized) * 2 + doorGap
+    }
+
     /// The chip's own FRAME, which is bigger than its mark — it carries the
     /// active ring's room. Centring the bar on the row means centring on this,
     /// not on the mark.
@@ -96,10 +116,10 @@ enum DSDock {
     /// than a margin. Spelled from the window edge outward instead, which is
     /// the only frame of reference both sides share.
     static func agentSeat(minimized: Bool) -> CGFloat {
-        clusterInset + agentSize(minimized: minimized) + seam
+        clusterInset + clusterWidth(minimized: minimized) + seam
     }
     static func agentSeat(fold: CGFloat) -> CGFloat {
-        clusterInset + agentSize(fold: fold) + seam
+        clusterInset + clusterWidth(fold: fold) + seam
     }
 
     /// How far the bar sits off the bottom edge so its centre lands on the

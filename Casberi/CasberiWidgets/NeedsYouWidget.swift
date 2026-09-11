@@ -239,10 +239,14 @@ struct NeedsYouWidgetView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
-        // The tile as a whole opens the ask that IS this tile — the same
-        // standing question the app answers as "what's coming up", so tapping
-        // the header lands on the full list rather than the feed.
-        .widgetURL(WidgetAskLink.url(asking: askQuery))
+        // **THE TILE OPENS THE FEED, not an ask (prd §697b, 2026-09-11).**
+        // It used to tap through to "what's coming up" as a question, and the
+        // ask is deprecated — but this widget is NOT an ask surface: it reads
+        // `dueAt`, which is a field in the corpus, and it is the app's only
+        // announcement of an obligation (§382). So it keeps its seat in the
+        // bundle and loses its question. The feed is the honest landing: the
+        // tile names the deadlines, and the app opens where the things are.
+        .widgetURL(URL(string: "casberi://feed"))
     }
 
     /// The signature request, drawn as a banner rather than a row.

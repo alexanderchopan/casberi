@@ -392,7 +392,7 @@ struct MainSurface: View {
             // The override is `DS.Motion.glide` (bounce 0), not nil: the height
             // still needs to change smoothly, it just must not overshoot —
             // §667's own ruling for anything that names a position, which is
-            // what an inset is. Guarded on `t.animation != nil` for §673's
+            // what an inset is. Guarded on `t.animation != nil` for §697's
             // reason, so an un-animated write stays un-animated.
             //
             // Scoped to `roomControls`, NOT the whole band: the strip below it
@@ -618,27 +618,9 @@ struct MainSurface: View {
                 .padding(.horizontal, DS.Space.s4)
             }
         }
-        if chrome.openFolder == .doors {
-            // The octopus's centre in window space — the rail's column on a
-            // regular width, then the bar's seat and half its own size.
-            DockSpringRow(anchorX: (isRegular ? PadLayout.railWidth : 0) + DSDock.clusterInset
-                          + DSDock.agentSize(minimized: chrome.minimized) / 2) { _ in
-                DoorsStrip(compact: chrome.minimized && !showsRail,
-                           onAgent: {
-                               chrome.openFolder = nil
-                               chrome.openComposer()
-                           },
-                           onApps: {
-                               chrome.openFolder = nil
-                               route.present(.apps)
-                           },
-                           onSettings: {
-                               chrome.openFolder = nil
-                               route.present(.settings)
-                           })
-            }
-            .padding(.horizontal, DS.Space.s4)
-        }
+        // THE OCTOPUS'S FOLDER IS GONE (prd §697, 2026-09-11) — with the
+        // ask deprecated it held two doors, and two doors are cheaper drawn
+        // than hidden behind a tap (`DockDoors`, in the seat the bar had).
     }
 
     // `roomControlsAvailable` was DELETED in the §591 amendment. It existed to
@@ -1769,7 +1751,9 @@ struct MainSurface: View {
     @ViewBuilder private var paneRest: some View {
         if let latest = latestArrival {
             VStack(alignment: .leading, spacing: 0) {
-                if let brief = chrome.paneBrief {
+                // The iPad pane's day strip is an ASK door — it opens the
+                // brief — so it goes with the ask (prd §697b, 2026-09-11).
+                if AskSurface.enabled, let brief = chrome.paneBrief {
                     paneDayStrip(brief)
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s4)
@@ -2383,8 +2367,6 @@ struct MainSurface: View {
         // on the next venue exactly as a tap's would be.
         if case .category(let open) = chrome.openFolder,
            BridgeCatalog.category(forSource: target) != open {
-            withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
-        } else if chrome.openFolder == .doors {
             withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
         }
         // A room's own switcher is a tap: it lands now (prd §671), through

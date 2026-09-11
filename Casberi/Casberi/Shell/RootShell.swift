@@ -67,11 +67,8 @@ struct RootShell: View {
     /// explanation, and re-explaining on every cold launch is what made them
     /// permanent furniture in the first place.
     ///
-    /// It tracks what is BEHIND the bar, not the agent — the words name the
-    /// tap, so the tap is what spends them. Since the §591 amendment that is
-    /// the doors folder (`toggleDoors`), which every route goes through so the
-    /// grace can't depend on which one you reached it by.
-    @AppStorage("sources.everOpened") private var sourcesEverOpened = false
+    // `sources.everOpened` is DELETED (prd §697): it spent the agent bar's
+    // one-time teaching label, and both the bar and the label are gone.
     /// A drag is over the window and a drop would land (one flag per payload
     /// type `dropDestination` accepts) — drives `DropGlow`'s edge answer.
     @State private var dropTargetedURL = false
@@ -821,6 +818,7 @@ struct RootShell: View {
             // already, badged `vibenet` by `VibenetWatch.add`. The argument is
             // still accepted so an existing sweep does not break; it just lands
             // where every other address lands.
+<<<<<<< HEAD
             // `-openSources YES` raises the sources tray, which is otherwise
             // reachable ONLY by a long press on the agent bar — a gesture no
             // headless run can make and no screenshot pass can stage. Added
@@ -831,6 +829,12 @@ struct RootShell: View {
             if UserDefaults.standard.bool(forKey: "openSources") {
                 toggleDoors()
             }
+=======
+            if UserDefaults.standard.string(forKey: "openAddressBook") != nil {
+                sceneState.route.push(.addressBook)
+            }
+            // `-openSources` is DELETED with the folder it opened (prd §697).
+>>>>>>> 85c5454e (The dock's leading seat is your face and the catalogue; the ask is deprecated (prd §697, §697b))
             // `-openAppsDelay <s>` pushes the store after a delay — records
             // "tapping the grid door" (the zoom plays on the real push path).
             let appsDelay = UserDefaults.standard.double(forKey: "openAppsDelay")
@@ -1443,21 +1447,6 @@ struct RootShell: View {
                     }
                 }
             }
-            // Debug hook: `-openSources YES` raises the sources tray — the
-            // agent bar's HOLD, which no headless run can perform (a long
-            // press isn't a launch arg and computer-use is blocked in
-            // scheduled runs). Delayed so `chrome.chipOrder` has been mirrored
-            // from `MainSurface.chipLabels` first; opening at mount would
-            // render the tray against the ["All"] placeholder and read as a
-            // one-source corpus.
-            if UserDefaults.standard.bool(forKey: "openSources") {
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(600))
-                    NSLog("[Casberi] openSources: %@", chrome.chipOrder.joined(separator: ", "))
-                    // Through the same door a finger uses.
-                    toggleDoors()
-                }
-            }
             // `-openComposerDelay <s>` opens the composer after a delay.
             let composerDelay = UserDefaults.standard.double(forKey: "openComposerDelay")
             if composerDelay > 0 {
@@ -1646,11 +1635,6 @@ struct RootShell: View {
         // deliberately does the opposite, per ruling 6).
         .onChange(of: chrome.composerRequest) { _, _ in
             composerOpen = true
-        }
-        // The tray, asked for from the menu bar or the bar's own right-click
-        // (2026-07-31) — the hold is not the only door anymore.
-        .onChange(of: chrome.sourcesRequest) { _, _ in
-            toggleDoors()
         }
         // Privacy as the default (goal 6): leaving the app covers the corpus,
         // so the app-switcher snapshot shows the mark rather than content. The
@@ -2077,6 +2061,12 @@ struct RootShell: View {
         let group = UserDefaults(suiteName: SharedStore.appGroup)
         guard group?.bool(forKey: "brief.request") == true else { return }
         group?.removeObject(forKey: "brief.request")
+        // DRAINED BUT NOT ACTED ON while the ask is deprecated (prd §697b):
+        // the flag is cleared first, so a request left in the app group by an
+        // older build (or by a shortcut somebody saved) cannot sit there and
+        // raise the ask on some later foreground the person meant for
+        // something else — §377's own failure, from the other side.
+        guard AskSurface.enabled else { return }
         NSLog("[Casberi] briefRequest: raising the agent on the brief")
         sceneState.filter.source = "All"
         sceneState.filter.tag = "All"
@@ -2293,122 +2283,21 @@ struct RootShell: View {
                 // load-bearing on both sides, since `MainSurface` reserves the
                 // seat with a `.padding(.leading,)` that mirrors too.
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    // The hint rides ABOVE the bar (prd §550) — once ever,
-                    // after onboarding, until the agent has been raised. It
-                    // names the HOLD, which is the gesture §390 left with no
-                    // visible affordance; its own tap does the same thing, so
-                    // reading it and obeying it land in the same place and it
-                    // is never a control that only talks (§83).
-                    if agentHint {
-                        // roomTint nil since 2026-08-15 — see the bar's own
-                        // note below; the capsule follows the bar so the
-                        // bottom cluster stays one untinted pair.
-                        AgentHintCapsule(roomTint: nil) {
-                            DSHaptic.tap()
-                            // A BARE RISE, seeding no ask — the same landing
-                            // the hold gives (§543's idle rest surface), since
-                            // this capsule promises the agent and not any one
-                            // document. `chrome.askRequest` is deliberately
-                            // left alone so a surface that seeded a specific
-                            // ask a moment before still wins, which is the
-                            // rule the bar's own tap site states.
-                            //
-                            // The day brief's proxy-title morph
-                            // (`chrome.risingBriefTitle`, §167 item 1) is
-                            // deleted with the day content: it existed to fly
-                            // this capsule's words into the brief's masthead,
-                            // and there is no titled document on the other
-                            // side of this tap to fly them into. The bar's own
-                            // shape morph is untouched.
-                            composerOpen = true
-                        }
-                        // The 2026-07-22 inset is GONE (2026-08-07) — see
-                        // `AgentHintCapsule`'s own note. It existed to stop two
-                        // full-width slabs reading as a double-bar, and the bar
-                        // beneath it is no longer a slab. What replaces it is a
-                        // CAP: the capsule holds a title over a second line,
-                        // which needs real width to be worth reading, so it
-                        // keeps the phone's whole column and is only bounded on
-                        // a shell wide enough to make that column silly.
-                        .frame(maxWidth: PadLayout.floatingClusterMaxWidth,
-                               alignment: .leading)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                    }
-                    AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
-                             // Compact at rest (user ruling 2026-07-31, see
-                             // `AgentBar`'s own note). The words survive only
-                             // as a first-run grace — and `chrome.minimized`,
-                             // which still folds the chip strip, folds them
-                             // early if that first-time reader scrolls before
-                             // ever opening the tray.
-                             // NEVER EXPANDED since 2026-09-05 (measured on a
-                             // fresh install): the first-run grace grew the
-                             // bar to "Everything else", and since §591 the
-                             // bar is the dock's first seat with a FIXED
-                             // width reserved beside it (`DSDock.agentSeat`),
-                             // so the grown bar sat over the All chip on the
-                             // one launch that matters most. The bar rests
-                             // compact by ruling (2026-07-31); its folder's
-                             // labelled doors are what teach it now.
-                             expanded: false,
-                             morphNS: agentMorph,
-                             onSources: { toggleDoors() },
-                             // NIL since 2026-08-15, the crown-pour ruling's
-                             // other half. The user killed the per-wallet
-                             // crown pour because it argued with the wallet
-                             // hero's fixed blue ("it doesn't match the blue
-                             // card"), and this glass tint was the same fact
-                             // at a smaller dose: scope to a green-faced
-                             // wallet and the bar goes green under a room
-                             // whose one bright object is blue. The wallet's
-                             // identity lives in the face rail and the hero's
-                             // own caption now; the bar is plain glass in
-                             // every room. `AgentBar.roomTint` keeps its
-                             // parameter — the mechanism is sound, this is a
-                             // ruling about what feeds it.
-                             roomTint: nil) {
-                        // `lift()`, not `tap()`, since §390 — this arrives at
-                        // the END of a 0.45s hold, with the finger still down
-                        // and nothing on screen yet to say the press
-                        // registered. The heavier buzz IS that confirmation;
-                        // the tray's ordinary `tap()` now sits on the tap.
-                        DSHaptic.lift()
-                        // OPEN ONTO THE LAUNCHER, NOT THE BRIEF (2026-08-30,
-                        // user: "when it opens it should show chat interface
-                        // with wallet, work, day chips" — the brief may also
-                        // be getting in the way and is not related when user
-                        // wants bankr balance"). This REVERSES §386d's own
-                        // reversal of §336 a third time — the difference from
-                        // both prior rounds is that the empty state this
-                        // returns to is no longer empty: `Composer.askChips`
-                        // now leads with three FIXED launcher chips (Wallet/
-                        // Work/Day) rather than the "chips-to-have-chips" row
-                        // §386d's comment describes being deleted, and Day is
-                        // one tap away from the exact brief this used to
-                        // auto-seed — so nothing the brief answered is now
-                        // unreachable, it costs one deliberate tap instead of
-                        // being the thing you have to get past to ask
-                        // anything else. Every OTHER deliberate route to the
-                        // brief is untouched: the whisper capsule, the Daily
-                        // Brief quick action, the `casberi://brief` deep
-                        // link, the day strip, a kept `today` pill, and a
-                        // typed "how's my day" all still seed `askRequest`
-                        // themselves and open straight onto it as before.
-                        //
-                        // A bare tap seeds NOTHING — `chrome.askRequest` is
-                        // left exactly as it was, so a surface that already
-                        // seeded a specific ask a moment before the bar rose
-                        // still wins. The composer opens idle
-                        // (`restChrome(keepBrief: true)` true, `answering`
-                        // false) and the launcher chips draw. §336's own
-                        // finding about the panel needing `restChrome
-                        // (keepBrief: false)` to be true no longer applies
-                        // here for the same reason it stopped applying under
-                        // §386d: the panel draws inside the brief's own
-                        // landing, reached by tapping Day, not by this bare
-                        // rise.
-                        composerOpen = true
-                    }
+                    // THE HINT AND THE BAR ARE BOTH GONE (prd §697,
+                    // 2026-09-11). `AgentHintCapsule` taught the hold that
+                    // raised the agent, and `AgentBar` was the agent's own
+                    // seat; the ask is deprecated, so what stands in the
+                    // dock's leading seat is the two doors that folder held
+                    // — Settings and Accounts, drawn rather than hidden one
+                    // tap deep.
+                    //
+                    // No zoom anchor: the `.zoom` transitions are declared in
+                    // `MainSurface` against ITS namespace, which this layer
+                    // cannot see — and the octopus standing here had none
+                    // either, so nothing on the phone loses a transition it
+                    // used to have. The iPad rail's own pair keeps theirs.
+                    DockDoors(onSettings: { sceneState.route.present(.settings) },
+                              onApps: { sceneState.route.present(.apps) })
                 }
                 }
                 // Pinned to the trailing edge (2026-08-07). The iPad cap the
@@ -2531,43 +2420,11 @@ struct RootShell: View {
         }
     }
 
-    /// The one door into the sources tray. Every way in fires the SAME buzz —
-    /// the bar's tap, the VoiceOver action, the Mac menu bar, the deep link.
-    /// It used to live inside `AgentBar`'s long-press, which meant the gesture
-    /// with no visible affordance was the only route that said it had been
-    /// received, and the routes built for the people who can't perform that
-    /// gesture opened the tray in silence. Feel belongs to the tray, not to
-    /// one recognizer.
-    ///
-    /// `tap()`, not the `lift()` it fired until §390: this is an ordinary tap
-    /// now, and `lift()` is the weight of a gesture that had to be held.
-    /// The octopus's folder (§591 amendment) — the dock's first chip opens the
-    /// same way every other chip does, as a row above the strip rather than as
-    /// a raised tray (user: "the octopus button needs to open the same way the
-    /// others do in a strip", "not in a tray").
-    ///
-    /// **It pops to root first, and that is a real behaviour change said out
-    /// loud.** The tray this replaces was hosted on this shell's own ZStack, so
-    /// it opened over Settings, a bridge form, anywhere. A row in
-    /// `MainSurface`'s bottom band is applied INSIDE the `NavigationStack` and
-    /// is therefore covered by every pushed room — so opening it from one would
-    /// be a tap with nothing on screen to show for it. Going home first is the
-    /// honest reading of the gesture: you asked for the doors, so here is the
-    /// surface that has them.
-    ///
-    /// `sourcesEverOpened` still rides this, unchanged: it is what spends the
-    /// bar's one-time teaching label, and the label's job is done the first
-    /// time the thing behind the bar is seen, by whatever route.
-    private func toggleDoors() {
-        DSHaptic.tap()
-        sourcesEverOpened = true
-        if chrome.openFolder == .doors {
-            withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
-            return
-        }
-        if !sceneState.route.path.isEmpty { sceneState.route.path = [] }
-        withAnimation(DS.Motion.standard) { chrome.openFolder = .doors }
-    }
+    // `toggleDoors` is DELETED with the octopus's folder (prd §697,
+    // 2026-09-11): there is nothing left to toggle. Settings and Accounts are
+    // drawn in the dock (`DockDoors`); `chrome.sourcesRequest`, the
+    // `-openSources` probe hook and the Mac menu item that all reached this
+    // are gone with it.
 
     /// Everything the shell hands its own tree, re-applied to a ROOT-PRESENTED
     /// sheet or cover — whose content hangs OUTSIDE the chain those modifiers
@@ -2639,7 +2496,11 @@ struct RootShell: View {
         // would make the tile a headline with nothing behind it. The SAME
         // `askRequest` door the whisper capsule, the agent bar and a typed
         // "how's my day" all already funnel through — one composer, one route.
+        // Both ask links answer NOTHING while the ask is deprecated (prd
+        // §697b) — an `openURL` that opens a surface the app does not offer
+        // is the dead control §83 bans, reached by a link instead of a tap.
         case "brief":
+            guard AskSurface.enabled else { return }
             sceneState.filter.source = "All"
             sceneState.filter.tag = "All"
             chrome.askRequest = TodayBrief.title
@@ -2655,6 +2516,7 @@ struct RootShell: View {
         // dispatch to drift, and a kind this build doesn't recognise degrades to
         // an ordinary free-text ask instead of a dead link.
         case "ask":
+            guard AskSurface.enabled else { return }
             guard let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                     .queryItems?.first(where: { $0.name == "q" })?.value,
                   !q.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

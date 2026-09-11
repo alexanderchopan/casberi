@@ -71,13 +71,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // EVERY launch — and the shell it gated then never built on Mac, where
         // neither mount door posts for a launch. `BackgroundLaunch` asks the
         // SCENE instead, on first read, from `RootShell`.
-        application.shortcutItems = [
+        // THE "DAILY BRIEF" QUICK ACTION IS GONE (prd §697b, 2026-09-11) —
+        // it opened the ask, which is deprecated. Registered behind the flag
+        // rather than deleted, because §377's whole lesson is that
+        // registering and HANDLING live in different delegates and drift
+        // apart silently; `QuickAction.receive` keeps its arm, so flipping
+        // `AskSurface.enabled` restores a working action rather than a
+        // listed one that does nothing.
+        application.shortcutItems = AskSurface.enabled ? [
             UIApplicationShortcutItem(
                 type: QuickAction.dailyBrief,
                 localizedTitle: "Daily Brief",
                 localizedSubtitle: nil,
                 icon: UIApplicationShortcutIcon(systemImageName: "sparkles"))
-        ]
+        ] : []
         return true
     }
 
@@ -522,23 +529,11 @@ struct CasberiApp: App {
                 // "Your Sources" while that folder held a grid of every source;
                 // the sources are the numbered chips themselves now, and what
                 // is left behind the octopus is everything else.
-                Button("Everything Else") { focusedChrome?.openSources() }
-                    .keyboardShortcut("0", modifiers: .command)
-                // THE AGENT GETS A KEY (prd §607). Everything else the dock
-                // does has had one since §256 — the sources tray on ⌘0, the
-                // nine chips, the walk, the pane — and the surface the whole
-                // app is arranged around had none. §390 made the agent a HOLD
-                // on the bar, a gesture a pointer does not have; the Mac's
-                // only door has been `BarSecondaryMenu`'s right-click, which
-                // is discoverable by accident and by nothing else.
-                //
-                // ⌘⇧A, not ⌘A (select-all) and not ⌘K (the Mac has no such
-                // convention and ⌘K is a link in every editor). It goes in
-                // this same group because raising the agent is the same class
-                // of act as opening the tray: a door onto a surface, not an
-                // edit.
-                Button("Talk to Your Agents") { focusedChrome?.openComposer() }
-                    .keyboardShortcut("a", modifiers: [.command, .shift])
+                // "Talk to Your Agents" (⌘⇧A) is DELETED (prd §697b,
+                // 2026-09-11): the ask is deprecated, and a menu item that
+                // raises a surface the app no longer offers is the dead
+                // control §83 bans. ⌘N still opens the composer, which is
+                // the CAPTURE door and outlives the ask.
             }
             // Help → the real docs, Mac convention (2026-07-28) — replaces
             // the system's default "Casberi Help" item, which without this

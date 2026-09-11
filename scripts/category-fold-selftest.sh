@@ -437,11 +437,15 @@ grep -qE 'markSize: CGFloat \{ compact \? DS\.Face\.row : DS\.Face\.list \}' "$T
 # would stay green with the switcher's own argument deleted — a guard proving
 # the words appear rather than that the condition holds, which is the defect
 # `cursor-selftest.sh` records against its own first cut.
-awk '/DoorsStrip\(compact:/,/onSettings:/' "$TMP/main.nc" | grep -q 'compact: chrome.minimized && !showsRail' \
-  || { echo "✗ the doors row is no longer handed the shell's fold state, or is handed a"; \
-       echo "  different expression from the face rails (§541). Both rails take"; \
-       echo "  'chrome.minimized && !showsRail'; a row on anything else steps apart"; \
-       echo "  from the chrome around it on exactly the scrolls nobody screenshots."; exit 1; }
+# THE DOORS ROW IS GONE (prd §697, 2026-09-11) — the octopus's folder held
+# Settings and Accounts and a deprecated ask, and those two doors are drawn in
+# the dock's leading seat now (`DockDoors`). §541's rule is unchanged and still
+# has rows to govern: what must not drift apart is the CATEGORY folder and the
+# face rails, which is the guard below. A row that reappears here must take the
+# same expression.
+grep -q 'DoorsStrip(' "$TMP/main.nc" \
+  && { echo "✗ the doors row is back — the ask is deprecated (prd §697b) and its two"; \
+       echo "  surviving doors stand in the dock, not in a folder above it."; exit 1; }
 # ...and the SEAT must NOT fold with it. The slot is the tap target, so a fold
 # that shrank it would buy back space by dropping the control under the touch
 # floor — `dsTapTarget`'s ruling run backwards, and the defect §541 just fixed.

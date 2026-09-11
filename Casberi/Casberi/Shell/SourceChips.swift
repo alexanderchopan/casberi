@@ -145,14 +145,32 @@ struct SourceChips: View {
     /// items are — and when the corpus has more than three categories the
     /// strip is laid out as three and a HALF cells, so the fourth tile peeks
     /// by half its cell and says there is more. Fewer than three spread to
-    /// fill. A six-with-a-peek was mocked and did not fit this width (the
+    /// fill — OVERTURNED 2026-09-11, see the amendment below; the sentence
+    /// stays because the rest of this paragraph is the ruling it sat in.
+    /// A six-with-a-peek was mocked and did not fit this width (the
     /// tiles touched); four without a peek fitted and said nothing about the
     /// rest. Floor is `tileFloorCell` — a rail or a narrow width scrolls
     /// rather than shrinking the tile under its caption.
+    ///
+    /// **FEWER THAN THREE DO NOT SPREAD (2026-09-11, user on TestFlight: "tab
+    /// bar looks like this and doesn't scroll").** "Spread to fill" above was
+    /// written for the full dock and applied to every count below it without
+    /// being looked at: a person with two categories got `available / 2` —
+    /// measured on their phone at ~122pt around a 52pt tile, so the strip drew
+    /// three marks separated by ~70pt of empty glass, and since the content
+    /// then came to exactly the viewport's width it could not scroll either.
+    /// Both halves of the report are this one line. A dock with two items is
+    /// a dock with two items at the dock's own pitch and room to spare after
+    /// them — the Mac's does not stretch its icons across the screen — so
+    /// below `restingTiles` the cell is the resting pitch and the tail of the
+    /// slab is simply empty. At three it still spreads, which is the ruled
+    /// five-item rest (§662e), and past three the half-cell peek is unchanged.
+    private var categoryCount: Int { labels.filter(CategoryFold.isCategory).count }
     private var categoryCell: CGFloat {
         guard axis == .horizontal, stripWidth > 0 else { return Self.tileFloorCell }
-        let count = labels.filter(CategoryFold.isCategory).count
+        let count = categoryCount
         guard count > 0 else { return Self.tileFloorCell }
+        guard count >= Self.restingTiles else { return Self.tileFloorCell }
         let cells = CGFloat(min(count, Self.restingTiles)) + (count > Self.restingTiles ? 0.5 : 0)
         // What is left past "All": the strip minus its resting inset and
         // every non-category chip laid out ahead of the tiles (All, and the
@@ -1560,7 +1578,7 @@ private struct ChipAttentionRing: View {
 /// on what a broken connection is called; a leaf so the bridge store it
 /// depends on is read here, not by the strip.
 /// The catalogue door's spoken name, as a LEAF for the same reason
-/// `ChipSpokenLabel` beside it is one (prd §673): `bridges.attentionCount`
+/// `ChipSpokenLabel` beside it is one (prd §697): `bridges.attentionCount`
 /// reads the bridge store, and read from the strip's own body it rebuilt all
 /// eleven chips on every one of the ~90 writes a landing sweep makes. The
 /// branch that took the store out of `chip(_:)` left these two modifiers

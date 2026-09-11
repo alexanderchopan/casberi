@@ -308,13 +308,18 @@ struct CasberiShortcuts: AppShortcutsProvider {
             shortTitle: "Search things",
             systemImageName: "magnifyingglass"
         )
-        AppShortcut(
-            intent: AskCasberiIntent(),
-            phrases: [
-                "Ask \(.applicationName)",
-            ],
-            shortTitle: "Ask",
-            systemImageName: "questionmark.bubble"
-        )
+        // **"Ask Casberi" IS NOT ADVERTISED (prd §697b, 2026-09-11).** The
+        // ask is deprecated, and Siri and Spotlight offering a phrase for a
+        // feature the app no longer draws is the dead control §83 bans,
+        // wearing the system's voice instead of ours.
+        //
+        // DELETED rather than wrapped in `if AskSurface.enabled`, and the
+        // compiler is the reason: `AppShortcutsBuilder` has no `buildOptional`
+        // ("if statements in an AppShortcutsBuilder can only be used with
+        // #available clauses"), so this list cannot branch on anything but an
+        // OS version. Restoring the phrase means pasting the entry back.
+        //
+        // `AskCasberiIntent` itself stays compiled: it answers headlessly from
+        // the corpus and draws no surface.
     }
 }
