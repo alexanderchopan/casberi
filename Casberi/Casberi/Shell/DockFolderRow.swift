@@ -116,21 +116,15 @@ struct DockFolderRow: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Namespace private var selectionNS
     /// False on the first frame: every venue sits at the anchor, small and
-    /// clear; then each springs to its seat a beat after the one before.
+    /// clear, then springs to its seat. **All of them together since prd §678**
+    /// — see the `.animation` in `body`. The cascade this used to carry was
+    /// bounded to six seats by §668 (Work's twenty dealt for over a second)
+    /// and is now gone entirely, because a slab sized by seats that have not
+    /// arrived is a black bar over the feed.
     @State private var flowed = false
 
     private var markSize: CGFloat { compact ? DS.Face.row : DS.Face.list }
     private static let seatPitch: CGFloat = DS.Hit.min + 2
-    private static let stagger: Double = 0.035
-    /// **THE DEAL IS BOUNDED (prd §668, 2026-09-10, user: "when switching tabs
-    /// on the [dock] bar it lags… between any others there is a stutter").**
-    /// The delay was `i * stagger` uncapped, so Work's twenty venues dealt for
-    /// 0.42s of spring plus 0.7s of tail — over a second of animation running
-    /// while the room card flew and the new room mounted. Six seats of stagger
-    /// is the whole personality (§621's "flow out of the chip"); the rest
-    /// arrive with the sixth. Same shape as `RowEntrance`'s cap (§661), same
-    /// reason.
-    private static let staggerSeats = 6
 
     /// **THE BROKEN SET, ONE PASS PER BODY (prd §668).** `folderVenue` asked
     /// `bridges.bridges.contains { … }` per venue — a linear scan of the whole
@@ -160,9 +154,25 @@ struct DockFolderRow: View {
                     .scaleEffect(settled ? 1 : 0.3)
                     .opacity(settled ? 1 : 0)
                     .offset(x: settled ? 0 : anchorLocalX - seatX)
-                    .animation(reduceMotion ? nil
-                               : DS.Motion.folder
-                                   .delay(Double(min(i, Self.staggerSeats)) * Self.stagger),
+                    // **NO CASCADE — THE ROW ARRIVES WHOLE (prd §678, user:
+                    // "when you click on the 'life' icon it flashes briefly
+                    // that black bar").** The glass slab below is sized by
+                    // these seats at their FULL frames — `scaleEffect`,
+                    // `opacity` and `offset` are render-only and change no
+                    // layout — so the strip is full width from its first
+                    // frame while the seats are still invisible behind their
+                    // delays. The slab's own fade beat them: measured on the
+                    // Life folder, frames 158-161 are a full-width dark strip
+                    // lying over a feed heading with two seats on it. The
+                    // longer the category, the longer that window, which is
+                    // why Life named itself.
+                    //
+                    // Every seat still springs out of the chip — the scale,
+                    // the fade and the offset from `anchorLocalX` are all
+                    // untouched, so §621's "flow out of the chip in some
+                    // springy way" survives. Only the CASCADE goes, and with
+                    // it the window in which the slab has nothing on it.
+                    .animation(reduceMotion ? nil : DS.Motion.folder,
                                value: settled)
             }
         }
