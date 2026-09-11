@@ -141,6 +141,27 @@ enum DevnetTokens {
         return out
     }
 
+    /// A token quantity, spelled in the token's OWN unit — which is to say in
+    /// no unit at all (prd §688).
+    ///
+    /// **The first cut handed token amounts to the room's ETH formatter**, so
+    /// Holdings read "8.4K ETH" beside the word PEPE and "312.5 ETH" beside
+    /// SHIB: the chain's coin name stamped onto quantities of something else,
+    /// which is a units error of the plainest kind and went straight onto the
+    /// simulator. The cell and the row both NAME the asset already, so the
+    /// number needs no unit and must not borrow one.
+    ///
+    /// Grouped, and trimmed rather than padded: a whole number of tokens
+    /// prints whole. Four places matches the coin's spelling on these chains.
+    static func quantity(_ amount: Double) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.usesGroupingSeparator = true
+        f.minimumFractionDigits = 0
+        f.maximumFractionDigits = 4
+        return f.string(from: NSNumber(value: amount)) ?? String(amount)
+    }
+
     /// Read what one address holds.
     ///
     /// `call` is the room's own JSON-RPC door, handed in rather than reached

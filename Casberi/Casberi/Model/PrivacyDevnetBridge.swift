@@ -88,6 +88,9 @@ struct PrivacyDevnetAccount: Equatable, Sendable, Identifiable, Codable {
     var hasNullifiers: Bool { !nullifiers.isEmpty }
     var hasRoots: Bool { !roots.isEmpty }
     var hasSponsors: Bool { sponsoredCount > 0 }
+    /// **WHAT ELSE THIS ADDRESS HOLDS (prd §688).** Empty on this chain today
+    /// and asked anyway — see the sweep's own note.
+    var tokens: [DevnetTokens.Holding] = []
 }
 
 /// The seat's live state — the watch list and what each address reads.
@@ -669,6 +672,16 @@ extension PrivacyDevnetLiveState {
         var out: [PrivacyDevnetAccount] = []
         for address in watched {
             var a = PrivacyDevnetAccount(address: address)
+            // **WHAT ELSE IT HOLDS (prd §688).** This chain carries no ERC-20
+            // today — measured, only system predeploys emit Transfer — so this
+            // answers empty and Holdings says so. It is asked anyway because
+            // "measured today" is not "cannot": the read costs two filtered
+            // log calls and the room is right the day a token lands, rather
+            // than carrying a second "this chain has one asset" to be wrong
+            // about later. That sentence is what §688 exists to correct.
+            a.tokens = await DevnetTokens.holdings(address: address) { method, params in
+                await PrivacyDevnetRPC.call(method: method, params: params)
+            }
             // Two params ONLY. Measured: this node refuses a third
             // nonce-channel argument ("Invalid params: Expected 2 params")
             // where vibenet's honours one, so the feature is per-deployment

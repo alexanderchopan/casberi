@@ -186,6 +186,11 @@ enum HegotaRead {
     static func account(_ address: String, at block: HegotaRPC.Block = nil) async -> HegotaAccount {
         var out = HegotaAccount(address: address)
         let addressTopic = HegotaRPC.topic(address)
+        // **AND WHAT ELSE IT HOLDS (prd §688)** — two log reads filtered to
+        // this address, then a balance per token it has actually touched.
+        out.tokens = await DevnetTokens.holdings(address: address) { method, params in
+            await HegotaRPC.call(method: method, params: params)
+        }
 
         // 1. The balance, and 2/3. the value history — every ETH movement on
         //    this chain is a log, so both directions are one read each.
@@ -972,6 +977,20 @@ extension HegotaLiveState {
         var owner = HegotaAccount(address: coinsAddr)
         owner.reached = true
         owner.balanceWei = Decimal(string: "1128827347981991436")
+        // **THE TOKENS ARE THIS CHAIN'S OWN (prd §688).** Contracts and
+        // symbols read off rpc1.hegota.ethrex.xyz on 2026-09-11 — `PEPE` at
+        // 0xd097…7854 and `SHIB` at 0xbec3…41c8, eighteen decimals each. The
+        // amounts are this fixture's; the assets are not invented, and without
+        // them the Holdings scope is correctly empty in the demo and nobody
+        // ever sees it work.
+        owner.tokens = [
+            DevnetTokens.Holding(contract: "0xd09713634c7cb8f827ec38de88a27bf7b0da7854",
+                                 symbol: "PEPE", decimals: 18,
+                                 raw: Decimal(string: "8400000000000000000000")!),   // 8,400
+            DevnetTokens.Holding(contract: "0xbec3ebf2e1274e4578a239be758585f76cc841c8",
+                                 symbol: "SHIB", decimals: 18,
+                                 raw: Decimal(string: "312500000000000000000")!),    // 312.5
+        ]
         owner.reconciled = true
         // The real unspent set, by index. Five are CHANGE coming back to this
         // address and two are dust somebody else sent it.

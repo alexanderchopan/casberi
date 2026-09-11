@@ -52665,3 +52665,44 @@ leads what it outranks", and the balance's rounding mutation is pinned to the ba
 `NSDecimalRound` — a bare `.down)` began rewriting the new `FramesMoney.hex(wei:)` instead
 and reported SURVIVED against code it never touched, which is the dead-mutation class caught
 by its own harness for the second time this week.
+
+## §688b — Holdings on the other two rooms, and the chips nobody budgeted for (2026-09-11)
+
+The second half of §688, and three defects the simulator caught rather than reasoning.
+
+**`RoomHoldings` is the template** — the figure (even cells, the asset's name) and the rows
+(mark, name, amount) are one pair of views, and the merge rule is stated once so two rooms
+cannot sum their tokens two ways. Hegotá and the Privacy devnet take it; Frames' own copy
+folds into it.
+
+**Both rooms stop stating a total.** Hegotá's Holdings headline was the summed balance —
+Home's crown said one chip away — and Privacy's was a COUNT OF ADDRESSES, which is the
+**Accounts** scope's subject word for word (*"the addresses you watch, and what each
+holds"*). Nothing above the map now, which is the Wallet's own §447.
+
+**Privacy's split is OPEN versus SHIELDED, and it is the room's subject rather than a
+fallback.** No ERC-20 has ever been transferred on that chain (measured), and a shielded
+balance belongs to the phone holding the notes — **you cannot see anyone else's, which is
+what the pool is for.** So a watcher sees one asset and the scope says so; a person with
+notes sees the two halves of their own money. The token read runs there anyway, because
+"measured today" is not "cannot", and carrying a second "this chain has one asset" to be
+wrong about later is the mistake §688 exists to correct.
+
+**A TOKEN'S UNIT IS ITS OWN NAME.** The first cut handed token amounts to each room's ETH
+formatter, and Holdings read **"8.4K ETH" beside the word PEPE** and "312.5 ETH" beside
+SHIB — the chain's coin name stamped onto quantities of something else. `DevnetTokens
+.quantity` spells them with no unit at all, because the cell and the row both name the
+asset beside the number. Hegotá's coin row had the same fault in a milder form ("test ETH …
+1B ETH"), so `HegotaFormat.crownFigure` is the crown's figure without its suffix —
+delegating rather than stripping a localized unit, which would break in every language but
+this one.
+
+**AND THE RANGE CHIPS WERE NEVER IN THE CROWN'S BUDGET** (user, two reports of one fault:
+*"looks like the rail is touching the ranges"* and *"the silhouettes are coming off the top
+of the rail"*). Measured: the chips track's bottom sat 13px above the rail slab's top edge
+and the faces inside it were flush to that edge. `crownChrome` was set when the crown drew
+caption, number and change; §683 gave every devnet the chips too and nothing added their
+height, so the crown overflowed its box and pushed the chips down onto the rail.
+`crownRangeChips` is `DSRangeChips`' own numbers added up, and the crown asks whether the
+chips will draw rather than reserving space that is usually empty — a record with one
+honest window offers none (§83's dead control).

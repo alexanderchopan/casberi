@@ -118,15 +118,11 @@ struct PrivacyDevnetRoomCard: View {
             // appears twice, once as this line and once inside the chart.
             return pairs.isEmpty ? section.emptyHeadline : nil
         case .holdings:
-            // **NOT THE BALANCE (prd §680, user: "you have the balance, it
-            // isn't supposed to say the balance, we say that on home").** Home
-            // is where this chain's total lives; a count is what the other
-            // scopes' stat lines carry, and it is what this one carries.
-            guard !accounts.isEmpty else { return section.emptyHeadline }
-            let answered = accounts.filter { $0.reached && $0.balanceWei != nil }
-            guard !answered.isEmpty else { return String(localized: "Balance unread") }
-            return answered.count == 1 ? String(localized: "1 address")
-                                       : String(localized: "\(String(answered.count)) addresses")
+            // **NOTHING ABOVE THE MAP (prd §688).** §680 took the balance off
+            // this line and a COUNT replaced it — which was the addresses it
+            // was mapping, i.e. the Accounts scope's own subject said one chip
+            // early. The cells are the assets and the rows carry the amounts.
+            return isEmpty(.holdings) ? section.emptyHeadline : nil
         case .accounts:
             let n = accounts.count
             guard n > 0 else { return section.emptyHeadline }
@@ -354,7 +350,16 @@ extension PrivacyDevnetRoomCard {
         switch section {
         case .home:       return false
         case .activity:   return pairs.isEmpty
-        case .holdings:   return accounts.isEmpty
+        // **NOTHING TO SPLIT IS EMPTY (prd §688).** This asked whether any
+        // address was watched — the Accounts scope's question, word for word
+        // ("the addresses you watch, and what each holds"). Holdings splits by
+        // ASSET, and on THIS chain the split that exists is open versus
+        // SHIELDED: no ERC-20 has ever been transferred here (measured), and
+        // nobody else's shielded balance is visible to anyone — that is the
+        // pool. So the scope fills for a phone that holds notes, and says what
+        // it would hold for one that does not.
+        case .holdings:   return PrivacyHoldings.cells(accounts: accounts,
+                                                       shielded: shielded).count < 2
         case .accounts:   return accounts.isEmpty
         case .frames:     return moves.allSatisfy { $0.frameCount == 0 }
         case .nullifiers: return keyRows.isEmpty
@@ -822,26 +827,7 @@ extension PrivacyDevnetRoomCard {
     }
 
     @ViewBuilder var holdingsRoster: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            ForEach(holdingsOrdered) { account in
-                let title = PrivacyDevnetName.of(account.address)
-                if let onOpenAccount {
-                    Button {
-                        DSHaptic.selection()
-                        onOpenAccount(account)
-                    } label: {
-                        WalletRow(mark: .face(account.address),
-                                  title: title, subtitle: holdingsLine(account))
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    WalletRow(terminal: .face(account.address),
-                              title: title, subtitle: holdingsLine(account))
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        RoomHoldingsRows(cells: PrivacyHoldings.cells(accounts: accounts, shielded: shielded))
     }
 
     private var holdingsOrdered: [PrivacyDevnetAccount] {
@@ -886,25 +872,7 @@ extension PrivacyDevnetRoomCard {
     /// can spend from. An address the chain could not read is left OUT rather
     /// than drawn at zero (§83).
     private var holdingsFigure: some View {
-        let answered = holdingsOrdered.filter { $0.reached && $0.balanceWei != nil }
-        let drawn = Array(answered.prefix(UnitTreemap<EmptyView>.maxCells))
-        let total = answered.reduce(Decimal(0)) { $0 + ($1.balanceWei ?? 0) }
-        return Group {
-            if drawn.isEmpty {
-                slotNothing(String(localized: "Nothing you watch holds a balance here yet."))
-            } else {
-                UnitTreemap(count: drawn.count,
-                            height: DSRoomChassis.figureSlot,
-                            cell: { i in holdingsTile(drawn[i], total: total) },
-                            readout: { i in
-                                let a = drawn[i]
-                                return String(localized: "\(PrivacyDevnetName.of(a.address)) — \(Self.eth(a.balanceWei) ?? "")")
-                            },
-                            identity: { i in drawn[i].address })
-                    .padding(.trailing, DSRoomChassis.gearColumn)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        RoomHoldingsFigure(cells: PrivacyHoldings.cells(accounts: accounts, shielded: shielded))
     }
 
     @ViewBuilder
@@ -1416,5 +1384,42 @@ private struct PrivacyDevnetMomentsTask: ViewModifier {
                              mark: PrivacyDevnetIdentity.source,
                              seconds: 4)
             }
+    }
+}
+
+
+/// **WHAT A PRIVACY ADDRESS HOLDS (prd §688).**
+///
+/// **The split on this chain is OPEN versus SHIELDED**, and it is the room's
+/// whole subject rather than a fallback. Two facts decide it, both measured:
+/// no ERC-20 has ever been transferred on this chain (only system predeploys
+/// emit `Transfer`), and a shielded balance belongs to the phone holding the
+/// notes — **you cannot see anyone else's, which is what the pool is for.**
+///
+/// So a watcher sees one asset and Holdings says so; a person with notes sees
+/// the two halves of their own money, which is the reading this room exists to
+/// give. Tokens are still merged in, for the day the chain grows one.
+enum PrivacyHoldings {
+    static func cells(accounts: [PrivacyDevnetAccount],
+                      shielded: PrivacyDevnetShielded.Balance?) -> [RoomHoldings.Cell] {
+        let answered = accounts.filter { $0.reached && $0.balanceWei != nil }
+        var coin: RoomHoldings.Cell?
+        if !answered.isEmpty {
+            let open = answered.reduce(Decimal(0)) { $0 + ($1.balanceWei ?? 0) }
+            coin = RoomHoldings.Cell(name: String(localized: "In the open"),
+                                     amount: PrivacyDevnetMoney.line(wei: open))
+        }
+        var out = RoomHoldings.cells(
+            coin: coin,
+            tokens: RoomHoldings.merged(accounts.filter(\.reached).map(\.tokens)))
+        // **A NIL unspent is an unread chain, never an empty pool (§83)** —
+        // `PrivacyDevnetShielded.Balance` states that rule for this very
+        // field, so an unread shielded balance draws no cell rather than a
+        // zero one.
+        if let shielded, let notes = shielded.unspentWei, notes > 0 {
+            out.append(RoomHoldings.Cell(name: String(localized: "Shielded"),
+                                         amount: PrivacyDevnetMoney.line(wei: notes)))
+        }
+        return out
     }
 }

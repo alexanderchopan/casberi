@@ -158,6 +158,11 @@ struct HegotaAccount: Equatable, Sendable, Identifiable, Codable {
     var reached = false
     var balanceWei: Decimal?
     var moves: [HegotaMove] = []
+    /// **WHAT ELSE THIS ADDRESS HOLDS (prd §688).** This chain carries real
+    /// ERC-20s — `BONUS`, `PEPE` and `SHIB`, measured — and the room said "one
+    /// asset" for its whole life because nothing ever asked. Empty is a real
+    /// answer and the commonest one.
+    var tokens: [DevnetTokens.Holding] = []
     var coins: [HegotaCoin] = []
     /// Nil when a spent bit could not be read — `HegotaCoins.unspent` refuses
     /// the whole set rather than showing money that is already gone.

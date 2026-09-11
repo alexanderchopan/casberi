@@ -72,6 +72,11 @@ KECCAK="Casberi/Casberi/Model/Keccak256.swift"
 # reconstructed balance that goes negative proves a move is missing — is exactly
 # the kind of thing a stub would quietly assert instead of testing.
 HISTORY="Casberi/Casberi/Model/RoomValueHistory.swift"
+# **Foundation-only, and compiled REAL (prd §688).** `HegotaAccount` carries
+# what it holds beyond the coin now, so the account file names `DevnetTokens`.
+# Stubbing it would let the harness disagree with the app about a type the app
+# stores; it is Foundation-only by design for exactly this.
+TOKENS="Casberi/Casberi/Model/DevnetTokens.swift"
 VERIFY="scripts/verify.sh"
 
 work=$(mktemp -d)
@@ -1010,6 +1015,7 @@ MW="$1"
 swiftc -Onone -o "$MW/run" \
   "$MW/HegotaSection.swift" "$MW/HegotaCoins.swift" "$MW/HegotaAccount.swift" \
   "$MW/HegotaRoom.swift" "$MW/Keccak256.swift" "$MW/RoomValueHistory.swift" \
+  "$MW/DevnetTokens.swift" \
   "$MW/main.swift" 2>"$MW/err"
 BUILDSH
 
@@ -1023,6 +1029,7 @@ cp "$ACCOUNT" "$work/base/HegotaAccount.swift"
 cp "$ROOM"    "$work/base/HegotaRoom.swift"
 cp "$KECCAK"  "$work/base/Keccak256.swift"
 cp "$HISTORY" "$work/base/RoomValueHistory.swift"
+cp "$TOKENS"  "$work/base/DevnetTokens.swift"
 cp "$work/main.swift" "$work/base/main.swift"
 
 zsh "$work/build.zsh" "$work/base" \

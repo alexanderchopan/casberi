@@ -330,53 +330,7 @@ struct FramesRoomFigure: View {
     /// WHICH assets and HOW MUCH of each — the same bargain `FramesMoney`
     /// takes for the coin.
     @ViewBuilder private var holdingsFigure: some View {
-        let cells = FramesHoldings.cells(head: head, accounts: accounts)
-        let drawn = Array(cells.prefix(UnitTreemap<EmptyView>.maxCells))
-        if !drawn.isEmpty {
-            UnitTreemap(count: drawn.count,
-                        height: DSRoomChassis.crownLine(box: DSRoomChassis.figureSlot,
-                                                        chrome: 24),
-                        even: true,
-                        cell: { i in holdingsTile(drawn[i], rank: i) },
-                        readout: { i in drawn[i].name })
-        }
-    }
-
-    /// **HEGOTÁ'S TILE, to the token.** Amount over name, `s3` padding, the
-    /// sheet under an ink wash — copied deliberately rather than re-invented,
-    /// because a treemap cell that differs between two rooms is exactly the
-    /// drift §683 spent itself removing. The first cut drew bare text on the
-    /// page: a treemap with no tile is not a treemap, it is a list that has
-    /// lost its rows, and it went straight onto the simulator looking like one.
-    ///
-    /// **The wash is by RANK, not by share.** There is no price on this chain,
-    /// so a `DAI` balance and a `YDS` balance cannot be put on one scale —
-    /// shading by "share of the total" would state a comparison the data does
-    /// not support. Rank is what the order already claims and all it claims.
-    @ViewBuilder private func holdingsTile(_ cell: FramesHoldings.Cell, rank: Int) -> some View {
-        // **THE NAME ONLY (user, 2026-09-11: "i'm not sure we need the amount
-        // inside the tree since the list has the balances").** Right, and it
-        // is the same ruling §680 made one slot over: the amount is stated
-        // exactly in the row below, so a second copy inside the cell is the
-        // figure restating its own list. What the map adds is WHICH assets and
-        // how many — which the names alone carry.
-        VStack(alignment: .leading, spacing: 2) {
-            Text(cell.name)
-                .dsText(.callout15)
-                .fontWeight(.semibold)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1).minimumScaleFactor(0.7)
-            Spacer(minLength: 0)
-        }
-        .padding(DS.Space.s3)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background {
-            ZStack {
-                DS.surfaceSheet
-                DS.ink(magnitude: max(0, 1 - Double(rank) * 0.22))
-            }
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-        }
+        RoomHoldingsFigure(cells: FramesHoldings.cells(head: head, accounts: accounts))
     }
 
     /// The MODE MIX — what the steps actually were. Counted rather than
@@ -595,17 +549,7 @@ struct FramesRoomList: View {
     /// room's Holdings list has used since it shipped, which is what makes two
     /// rooms' Holdings read as one screen rather than two.
     @ViewBuilder private var holdingsRows: some View {
-        ForEach(FramesHoldings.cells(head: head, accounts: accounts)) { cell in
-            WalletRow(mark: .symbol("circle.grid.2x2.fill", tint: DS.tint),
-                      title: cell.name,
-                      subtitleText: nil) {
-                Text(cell.amount)
-                    .dsText(.price16)
-                    .foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-            }
-        }
+        RoomHoldingsRows(cells: FramesHoldings.cells(head: head, accounts: accounts))
     }
 
     @ViewBuilder private var scoped: some View {
@@ -1340,56 +1284,23 @@ struct FramesSponsorBar: View {
 /// At file scope because the figure and the list are two structs and both draw
 /// it — the same reason `FramesHoldings` states the merge rule once rather than
 /// letting each side sum the accounts its own way and disagree by a token.
+/// **WHAT A FRAMES ADDRESS HOLDS (prd §688).** The shape is
+/// `RoomHoldings`'s; this is the room's own vocabulary handed to it — the
+/// coin's name and how this chain spells a quantity.
 enum FramesHoldings {
-
-    /// One asset. The coin first, then the tokens, biggest quantity first.
-    struct Cell: Identifiable {
-        var id: String { name }
-        let name: String
-        let amount: String
-    }
-
-    /// Every token held across the reached accounts, deduplicated by contract
-    /// and SUMMED — the room's "All" is the sum of what it watches, exactly as
-    /// the crown's is.
     static func tokens(_ accounts: [FramesAccount]) -> [DevnetTokens.Holding] {
-        var byContract: [String: DevnetTokens.Holding] = [:]
-        for account in accounts where account.reached {
-            for token in account.tokens {
-                if let seen = byContract[token.id] {
-                    byContract[token.id] = DevnetTokens.Holding(
-                        contract: seen.contract, symbol: seen.symbol,
-                        decimals: seen.decimals, raw: seen.raw + token.raw)
-                } else {
-                    byContract[token.id] = token
-                }
-            }
-        }
-        return byContract.values.sorted { ($0.amount ?? 0) > ($1.amount ?? 0) }
+        RoomHoldings.merged(accounts.filter(\.reached).map(\.tokens))
     }
 
-    /// The coin and the tokens as drawable cells.
-    ///
-    /// **The coin is a cell like any other.** It is the largest holding on
-    /// nearly every account here, and leaving it out would draw a map of the
-    /// small change while Home stated the rest.
-    static func cells(head: FramesRoom.Head, accounts: [FramesAccount]) -> [Cell] {
-        var out: [Cell] = []
+    static func cells(head: FramesRoom.Head, accounts: [FramesAccount]) -> [RoomHoldings.Cell] {
+        var coin: RoomHoldings.Cell?
         if head.hasRead, !head.everythingUnreached,
            let weiHex = head.balanceWeiHex,
            let wei = FramesMoney.decimal(fromHex: weiHex) {
             let eth = NSDecimalNumber(decimal: wei / FramesMoney.weiPerETH).doubleValue
-            out.append(Cell(name: String(localized: "test ETH"), amount: FramesMoney.eth(eth)))
+            coin = RoomHoldings.Cell(name: String(localized: "test ETH"),
+                                     amount: FramesMoney.eth(eth))
         }
-        for token in tokens(accounts) {
-            // A token that could not name itself keeps its address rather than
-            // an invented name, and one whose decimals did not read shows no
-            // quantity rather than a wrong one (`DevnetTokens.Holding`).
-            let name = token.symbol ?? WalletStore.shortAddress(token.contract)
-            let amount = token.amount.map { FramesMoney.eth($0) }
-                ?? String(localized: "amount couldn't be read")
-            out.append(Cell(name: name, amount: amount))
-        }
-        return out
+        return RoomHoldings.cells(coin: coin, tokens: tokens(accounts))
     }
 }

@@ -52,8 +52,14 @@ struct RoomHomeCrown: View {
     /// which is how much room it has; the chrome above and below the line is
     /// this view's own business, because this view is what draws it.
     var box: CGFloat = DSRoomChassis.visualSlot
-    private var chartHeight: CGFloat {
-        DSRoomChassis.crownLine(box: box, chrome: DSRoomChassis.crownChrome)
+    /// **THE CHIPS ARE PART OF THE CHROME WHEN THEY DRAW (prd §688).** They
+    /// are not always offered — a record with one honest window draws none
+    /// (§83's dead control) — so the budget asks rather than reserving space
+    /// that is usually empty.
+    private func chartHeight(chips: Bool) -> CGFloat {
+        DSRoomChassis.crownLine(
+            box: box,
+            chrome: DSRoomChassis.crownChrome + (chips ? DSRoomChassis.crownRangeChips : 0))
     }
 
     // **THE UNDATED PATH IS GONE (2026-09-10).** Hegotá and Frames used to
@@ -86,7 +92,7 @@ struct RoomHomeCrown: View {
             captionAddress: captionAddress,
             format: format,
             exactFormat: exactFormat,
-            chartHeight: chartHeight,
+            chartHeight: chartHeight(chips: offered.count > 1),
             ranges: offered,
             range: active,
             onPickRange: { picked in

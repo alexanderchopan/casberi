@@ -79,7 +79,12 @@ struct HegotaRoomFigure: View {
         switch section {
         case .home:     return false
         case .activity: return moves.isEmpty
-        case .holdings: return holdingsAnswered.isEmpty
+        // **NOTHING TO SPLIT IS EMPTY (prd §688).** This asked whether any
+        // address had answered — a question the Accounts scope owns, word for
+        // word ("the addresses you watch, and what each holds"). Holdings
+        // splits by ASSET, so an address holding only this chain's coin has
+        // nothing for it to draw: one cell at 100% is the bar §610 removed.
+        case .holdings: return HegotaHoldings.tokens(shown).isEmpty
         case .accounts: return shown.isEmpty
         case .frames:   return framedMoves.isEmpty
         case .coins:    return coins.isEmpty
@@ -179,11 +184,12 @@ struct HegotaRoomFigure: View {
         // is itself the answer." The roster is the subject, so the headline is
         // how many, and the room is back to one crown (§506).
         case .holdings:
-            // The TOTAL is the scope's stat line, so the treemap below carries
-            // names and amounts and never repeats it (prd §680).
-            let answered = holdingsAnswered
-            guard !answered.isEmpty else { return section.emptyHeadline }
-            return HegotaFormat.crown(answered.reduce(Decimal(0)) { $0 + ($1.balanceWei ?? 0) })
+            // **NO TOTAL (prd §688, applying §680's own words — user: "it
+            // isn't supposed to say the balance, we say that on home").** This
+            // line stated the summed balance, which is Home's crown said again
+            // one chip away. The cells carry the assets and the rows carry the
+            // amounts.
+            return isEmpty(.holdings) ? section.emptyHeadline : nil
         case .accounts:
             return accounts.count == 1 ? String(localized: "1 address")
                                        : String(localized: "\(String(accounts.count)) addresses")
@@ -737,34 +743,7 @@ struct HegotaRoomFigure: View {
     /// the same way whether the subject is one address's coins or every
     /// address's balance.
     @ViewBuilder private var holdingsFigure: some View {
-        let answered = holdingsAnswered
-        let drawn = Array(answered.prefix(UnitTreemap<EmptyView>.maxCells))
-        let unread = shown.count - answered.count
-        let total = answered.reduce(Decimal(0)) { $0 + ($1.balanceWei ?? 0) }
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if !drawn.isEmpty {
-                UnitTreemap(count: drawn.count,
-                            height: DSRoomChassis.crownLine(box: DSRoomChassis.figureSlot,
-                                                            chrome: unread > 0 ? 46 : 24),
-                            cell: { i in holdingsTile(drawn[i], rank: i, total: total) },
-                            readout: { i in
-                                let a = drawn[i]
-                                let name = HegotaWatch.shared.name(for: a.address)
-                                    ?? WalletStore.shortAddress(a.address)
-                                return String(localized: "\(name) — \(HegotaFormat.crown(a.balanceWei ?? 0))")
-                            },
-                            identity: { i in drawn[i].address })
-                if unread > 0 {
-                    Text(unread == 1
-                         ? String(localized: "one didn't answer")
-                         : String(localized: "\(String(unread)) didn't answer"))
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        RoomHoldingsFigure(cells: HegotaHoldings.cells(shown))
     }
 
     @ViewBuilder
@@ -2087,25 +2066,7 @@ struct HegotaRoomList: View {
     /// `WalletRow` the Accounts scope draws so one address reads identically
     /// in both (prd §680).
     @ViewBuilder private var holdingsList: some View {
-        let answered = shown.filter { $0.reached && $0.balanceWei != nil }
-                            .sorted { ($0.balanceWei ?? 0) > ($1.balanceWei ?? 0) }
-        ForEach(answered) { account in
-            Button {
-                DSHaptic.selection()
-                onOpenAccount?(account)
-            } label: {
-                WalletRow(mark: .face(account.address),
-                          title: HegotaWatch.shared.name(for: account.address)
-                              ?? WalletStore.shortAddress(account.address),
-                          subtitle: subtitle(account)) {
-                    Text(HegotaFormat.crown(account.balanceWei ?? 0))
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        .monospacedDigit().lineLimit(1)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        }
+        RoomHoldingsRows(cells: HegotaHoldings.cells(shown))
     }
 
     @ViewBuilder private var accountsList: some View {
@@ -3305,6 +3266,31 @@ enum HegotaFormat {
         let text = f.string(from: scaled as NSDecimalNumber) ?? "0"
         return String(localized: "\(text)\(suffix) ETH")
     }
+
+    /// The crown's figure with **no unit**, for a row that already names the
+    /// asset beside it (prd §688).
+    ///
+    /// Holdings reads "test ETH … 1B ETH" otherwise — the unit said twice in
+    /// one row, a foot from itself. It delegates rather than stripping a
+    /// localized suffix off `crown`'s output, which would break in every
+    /// language but this one; and it keeps `eth`'s sub-floor case, where the
+    /// unit is `wei` and IS the fact (a UTXO of 1 wei must not print as 0).
+    static func crownFigure(_ wei: Decimal) -> String {
+        let value = HegotaCoins.eth(wei)
+        guard value >= 1000 else {
+            let spelled = eth(wei)
+            return spelled.hasSuffix(" ETH") ? String(spelled.dropLast(4)) : spelled
+        }
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.maximumFractionDigits = 1
+        let (scaled, suffix): (Decimal, String) =
+            value >= 999_950_000 ? (value / 1_000_000_000, "B")
+            : value >= 999_950 ? (value / 1_000_000, "M")
+            : (value / 1_000, "K")
+        let text = f.string(from: scaled as NSDecimalNumber) ?? "0"
+        return "\(text)\(suffix)"
+    }
 }
 
 // MARK: - One account
@@ -3863,5 +3849,25 @@ struct HegotaCoinSheet: View {
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
             }
         }
+    }
+}
+
+
+/// **WHAT A HEGOTÁ ADDRESS HOLDS (prd §688).** `RoomHoldings`'s shape with this
+/// room's vocabulary — its coin's name, and `HegotaFormat`'s spelling.
+enum HegotaHoldings {
+    static func tokens(_ accounts: [HegotaAccount]) -> [DevnetTokens.Holding] {
+        RoomHoldings.merged(accounts.filter(\.reached).map(\.tokens))
+    }
+
+    static func cells(_ accounts: [HegotaAccount]) -> [RoomHoldings.Cell] {
+        let answered = accounts.filter { $0.reached && $0.balanceWei != nil }
+        var coin: RoomHoldings.Cell?
+        if !answered.isEmpty {
+            let total = answered.reduce(Decimal(0)) { $0 + ($1.balanceWei ?? 0) }
+            coin = RoomHoldings.Cell(name: String(localized: "test ETH"),
+                                     amount: HegotaFormat.crownFigure(total))
+        }
+        return RoomHoldings.cells(coin: coin, tokens: tokens(accounts))
     }
 }

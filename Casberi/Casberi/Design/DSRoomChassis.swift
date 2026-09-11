@@ -258,6 +258,25 @@ enum DSRoomChassis {
     /// mean costs the bottom of the drawing — and §588's whole complaint was
     /// air. Which direction to be wrong in is therefore settled: generous.
     static let crownChrome: CGFloat = 108
+
+    /// **AND THE RANGE CHIPS, WHICH `crownChrome` DOES NOT COVER (prd §688,
+    /// user: "looks like the rail is touching the ranges" / "the silhouettes
+    /// are coming off the top of the rail").**
+    ///
+    /// Two reports of one fault, measured on the simulator: the chips track's
+    /// bottom sat 13px above the rail slab's own top edge and the faces inside
+    /// it were flush to that edge. `crownChrome` was set when the crown drew
+    /// caption, number and change — §683 gave every devnet the chips too, and
+    /// nothing added their height to the budget, so the crown overflowed its
+    /// box and pushed the chips down onto the rail.
+    ///
+    /// 5pt vertical padding each side of a `label12` segment, the 3pt track
+    /// inset twice, and `s2` above the track — `DSRangeChips`' own numbers,
+    /// added up rather than guessed, and generous for the same reason
+    /// `crownChrome` is: the box clips, so a few points of air beats a few
+    /// points off the bottom of the line.
+    static let crownRangeChips: CGFloat = 42
+
     /// What is left of `visualSlot` for WALLET's crown line to draw into.
     static let crownChart: CGFloat = crownLine(box: visualSlot, chrome: crownChrome)
 
