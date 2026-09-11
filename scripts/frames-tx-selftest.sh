@@ -299,7 +299,14 @@ strip_comments "$SECT" > "$WORK/sect.nc"
 # and has no UTXO vault. A case appearing here is either a chain upgrade
 # nobody re-measured or a scope copied across from Hegotá that can only ever
 # be empty, and §83 bans the empty chip.
-for absent in nonces coins accounts permissions; do
+# **`accounts` LEAVES THIS LIST (prd §689).** The guard's reason was §548's:
+# "Hegotá has it and this chain cannot fill it." That was about a ROSTER — a
+# list short by construction, one row on most installs, §83's dead control.
+# The scope drawn there now is the CONNECTIONS between what you watch, which
+# is not a roster, needs two addresses rather than one, and which §688 made
+# ordinary here by seeding a second. The other three stay: this chain has no
+# UTXO vault, no keyed nonces and no standing authority, all measured.
+for absent in nonces coins permissions; do
   if grep -qE "case $absent" "$WORK/sect.nc"; then
     echo "✗ FramesSection grew a \`$absent\` scope — Hegotá has it and this chain cannot fill it; re-measure before adding one"; exit 1
   fi
@@ -994,6 +1001,11 @@ check("home and activity are the constants",
 // nothing about frames has moved relative to the scopes it outranks.
 check("holdings leads the conditional tail, as it does in every other room",
       FramesSection.order[firstConditional] == .holdings)
+// **ACCOUNTS SITS WHERE THE FAMILY PUTS IT (prd §689)** — straight after
+// Holdings, as Wallet, Hegotá and vibenet all have it.
+check("accounts follows holdings",
+      FramesSection.order.firstIndex(of: .accounts)!
+        == FramesSection.order.firstIndex(of: .holdings)! + 1)
 check("frames still leads the scopes it outranks",
       FramesSection.order.firstIndex(of: .frames)! < FramesSection.order.firstIndex(of: .sponsors)!)
 
@@ -1616,7 +1628,7 @@ mutate "the balance rounded to nearest" $F2 \
 mutate "the wei-per-ETH divisor losing a zero" $F2 \
   '"1000000000000000000"' '"100000000000000000"'
 mutate "a conditional scope ahead of an unconditional one" $F3 \
-  '[.home, .activity, .holdings, .frames, .sponsors]' '[.home, .holdings, .activity, .frames, .sponsors]'
+  '[.home, .activity, .holdings, .accounts, .frames, .sponsors]' '[.home, .holdings, .activity, .accounts, .frames, .sponsors]'
 mutate "the remembered scope falling back to the first present one" $F3 \
   'guard let wanted, present.contains(wanted) else { return .home }' \
   'guard let wanted, present.contains(wanted) else { return present.first ?? .home }'
@@ -1627,7 +1639,7 @@ mutate "every scope gated again, so two chips vanish on the address that most ne
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" $F3 \
   'A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here has run any — a plain transfer runs none.' ' '
 mutate "frames marked unconditional" $F3 \
-  'case .holdings, .frames, .sponsors: return true' 'case .holdings, .frames, .sponsors: return false'
+  'case .holdings, .accounts, .frames, .sponsors: return true' 'case .holdings, .accounts, .frames, .sponsors: return false'
 mutate "a chip growing a dot that can never honestly light" $F3 \
   'static func attention() -> Set<FramesSection> { [] }' \
   'static func attention() -> Set<FramesSection> { [.frames] }'

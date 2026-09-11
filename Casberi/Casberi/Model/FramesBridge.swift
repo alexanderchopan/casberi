@@ -862,11 +862,29 @@ extension FramesLiveState {
         // could not show a split at all. This one holds DAI and no frames of
         // its own — an address you WATCH rather than one you send from, which
         // is the commoner shape and the one the rail exists for.
+        // **AND ONE MOVE, SHARING A COUNTERPARTY (prd §689).** An address with
+        // no moves can never connect to anything, so the Accounts spine would
+        // be correctly empty and nobody would see it work. This one paid the
+        // same burn address the main account's own frames pay — which is §295's
+        // sense of connected exactly: not that the two dealt with each other,
+        // but that they both dealt with somebody else.
+        let watchedSend = FramesMove(
+            hash: "0x7ac41d0b8e5a2f3c6d9e0f1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e",
+            blockNumber: 59_210, sender: "0x5b3772a23fa2214ad2c7ec27dd74bde28dac3ba9",
+            payer: "0x5b3772a23fa2214ad2c7ec27dd74bde28dac3ba9",
+            succeeded: true, gasUsed: 210_790, effectiveGasPriceWei: 1_000_000_000,
+            timestamp: at(6300),
+            rows: [
+                .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"),
+                      outcome: outcome(true, 3_000, logs: 1)),
+            ],
+            deltaWei: -(Decimal(string: "1210790000000000")!))
+
         let watched = FramesAccount(
             address: "0x5b3772a23fa2214ad2c7ec27dd74bde28dac3ba9",
             balanceWeiHex: "0x1bc16d674ec80000",      // 2 test ETH
-            nonce: 0,
-            moves: [],
+            nonce: 1,
+            moves: [watchedSend],
             tokens: [dai])
 
         let fixture = [FramesAccount(

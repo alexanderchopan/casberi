@@ -59,6 +59,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case home
     case activity
     case holdings
+    case accounts
     case positions
     case nfts
     case risk
@@ -71,7 +72,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// it is stated where a reader looking for it will find it and where a
     /// self-test can assert it.
     static let order: [WalletSection] = [
-        .home, .activity, .holdings, .positions, .nfts, .risk, .permissions,
+        .home, .activity, .holdings, .accounts, .positions, .nfts, .risk, .permissions,
     ]
 
     /// Which scopes can be EMPTY.
@@ -83,6 +84,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// what obliges a scope to carry an `emptyBody`.
     var isConditional: Bool {
         switch self {
+        case .accounts: return true
         case .home, .activity, .holdings: return false
         case .positions, .nfts, .risk, .permissions: return true
         }
@@ -99,6 +101,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings:    return String(localized: "Holdings")
         case .positions:   return String(localized: "Positions")
         case .nfts:        return String(localized: "NFTs")
+        case .accounts:    return String(localized: "Accounts")
         case .risk:        return String(localized: "Risk")
         case .permissions: return String(localized: "Permissions")
         }
@@ -115,6 +118,11 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings:    return String(localized: "What your money is made of")
         case .positions:   return String(localized: "Money you've deployed")
         case .nfts:        return String(localized: "Collectibles you hold")
+        // **THE SCOPE §295 NEVER HAD (prd §689).** "N of your addresses are
+        // connected" lived at the foot of the Wallet manager and died with
+        // that screen; the reading kept running with nowhere to draw. This is
+        // where it goes, and the devnets took the same one.
+        case .accounts:    return String(localized: "The wallets you watch, and how they relate")
         case .risk:        return String(localized: "Positions that could move against you")
         case .permissions: return String(localized: "What you've granted reach to")
         }
@@ -136,6 +144,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings:    return String(localized: "Nothing held")
         case .positions:   return String(localized: "Nothing deployed")
         case .nfts:        return String(localized: "No collectibles")
+        case .accounts:    return String(localized: "No connections yet")
         case .risk:        return String(localized: "Nothing at risk")
         case .permissions: return String(localized: "No grants")
         }
@@ -160,6 +169,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "The collections a wallet holds, as pictures. Nothing here holds one that survived the spam filter.")
         case .risk:
             return String(localized: "A position a price move could liquidate, and how close it stands. Nothing here carries leverage.")
+        case .accounts:
+            return String(localized: "How the wallets you watch relate — who they have both dealt with, and which pay each other directly. None of them shares a counterparty yet, so there is nothing to draw between them.")
         case .permissions:
             return String(localized: "What has been allowed to reach these wallets: a token approval, a Safe module, a delegate. Nothing here has granted any.")
         }

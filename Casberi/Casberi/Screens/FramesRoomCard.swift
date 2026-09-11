@@ -47,6 +47,10 @@ struct FramesRoomFigure: View {
             // time (prd §683, and the "2.2960 ETH" over "2.2960 ETH" the
             // Privacy conversion showed).
             return nil
+        case .accounts:
+            // **THE CROWN OWNS THE COUNT (prd §689)** — it says how many
+            // addresses connect, which is the reading.
+            return isEmpty(.accounts) ? section.emptyHeadline : nil
         case .holdings:
             // **NO TOTAL (prd §680, user: "it isn't supposed to say the
             // balance, we say that on home").** The cells carry the names and
@@ -129,6 +133,9 @@ struct FramesRoomFigure: View {
         // here rather than drawing the balance a second time — the crown on
         // Home already states it.
         case .holdings: return FramesHoldings.tokens(accounts).isEmpty
+        // **EMPTY IS "NOTHING CONNECTS THEM" (prd §689)**, not "nothing is
+        // watched" — the rows list what you watch either way.
+        case .accounts: return FramesConnections.map(accounts)?.nodes.isEmpty ?? true
         case .frames:   return !moves.contains { $0.rows.count > 1 }
         case .sponsors: return !moves.contains(where: \.sponsored)
         }
@@ -169,6 +176,7 @@ struct FramesRoomFigure: View {
             case .sponsors: sponsors
             case .activity:        activityChart
             case .holdings:        holdingsFigure
+            case .accounts:        accountsFigure
             case .frames:          frames
             }
         }
@@ -329,6 +337,15 @@ struct FramesRoomFigure: View {
     /// comparable and the map does not pretend they are. What it shows is
     /// WHICH assets and HOW MUCH of each — the same bargain `FramesMoney`
     /// takes for the coin.
+    /// **THE CONNECTIONS BETWEEN WHAT YOU WATCH (prd §689).** New here: §548
+    /// left this scope out because the roster was "short by construction", and
+    /// said to revisit if watching several ever became ordinary. It has, and
+    /// this is not the roster anyway.
+    @ViewBuilder private var accountsFigure: some View {
+        RoomConnectionsFigure(map: FramesConnections.map(accounts),
+                              yours: String(localized: "the accounts you watch"))
+    }
+
     @ViewBuilder private var holdingsFigure: some View {
         RoomHoldingsFigure(cells: FramesHoldings.cells(head: head, accounts: accounts))
     }
@@ -548,6 +565,10 @@ struct FramesRoomList: View {
     /// mark, the name, the amount on the right. The same anatomy the vibenet
     /// room's Holdings list has used since it shipped, which is what makes two
     /// rooms' Holdings read as one screen rather than two.
+    @ViewBuilder private var accountsRows: some View {
+        RoomAccountsRows(rows: FramesConnections.rows(accounts, onOpen: nil))
+    }
+
     @ViewBuilder private var holdingsRows: some View {
         RoomHoldingsRows(cells: FramesHoldings.cells(head: head, accounts: accounts))
     }
@@ -561,6 +582,8 @@ struct FramesRoomList: View {
             rows(pairs)
         case .holdings:
             holdingsRows
+        case .accounts:
+            accountsRows
         case .frames:
             rows(pairs.filter { $0.move.rows.count > 1 })
         case .sponsors:
@@ -1302,5 +1325,58 @@ enum FramesHoldings {
                                      amount: FramesMoney.eth(eth))
         }
         return RoomHoldings.cells(coin: coin, tokens: tokens(accounts))
+    }
+}
+
+
+/// **WHO THE ADDRESSES YOU WATCH HAVE BOTH DEALT WITH (prd §689).**
+///
+/// A `FramesMove` carries no counterparty of its own: this chain's transfers
+/// ride the FRAMES, each with its own target, which is the same fact one layer
+/// down. A plain transfer — the faucet pays out as one — has no frames and so
+/// contributes no edge, which is honest rather than a gap: the payer is on the
+/// receipt, not in the move's own rows.
+@MainActor
+enum FramesConnections {
+    static func map(_ accounts: [FramesAccount]) -> AddressConnections.Map? {
+        let moves = accounts.flatMap { account in
+            account.moves.flatMap { move in
+                move.rows.compactMap { row -> RoomConnectionsEdges.Move? in
+                    guard let target = row.frame.target, !target.isEmpty else { return nil }
+                    return RoomConnectionsEdges.Move(owner: account.address,
+                                                     counterparty: target,
+                                                     order: move.blockNumber)
+                }
+            }
+        }
+        return AddressConnections.map(
+            edges: RoomConnectionsEdges.edges(moves) { address in
+                FramesWatch.shared.name(for: address) ?? WalletStore.shortAddress(address)
+            },
+            watched: accounts.map {
+                AddressConnections.WatchedWallet(
+                    key: $0.address.lowercased(),
+                    name: FramesWatch.shared.name(for: $0.address)
+                        ?? WalletStore.shortAddress($0.address))
+            })
+    }
+
+    static func rows(_ accounts: [FramesAccount],
+                     onOpen: ((FramesAccount) -> Void)?) -> [RoomAccountsRows.Row] {
+        let drawn = map(accounts)
+        return accounts.map { account in
+            let reach = drawn?.nodes.filter {
+                $0.walletKeys.contains(account.address.lowercased())
+            }.count ?? 0
+            return RoomAccountsRows.Row(
+                key: account.address.lowercased(),
+                address: account.address,
+                name: FramesWatch.shared.name(for: account.address)
+                    ?? WalletStore.shortAddress(account.address),
+                kind: nil,
+                connections: reach,
+                unreached: !account.reached,
+                onOpen: onOpen.map { open in { open(account) } })
+        }
     }
 }

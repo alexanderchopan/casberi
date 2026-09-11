@@ -124,10 +124,10 @@ struct PrivacyDevnetRoomCard: View {
             // early. The cells are the assets and the rows carry the amounts.
             return isEmpty(.holdings) ? section.emptyHeadline : nil
         case .accounts:
-            let n = accounts.count
-            guard n > 0 else { return section.emptyHeadline }
-            return n == 1 ? String(localized: "1 address")
-                          : String(localized: "\(String(n)) addresses")
+            // **THE CROWN OWNS THE COUNT (prd §689)** — it says how many
+            // addresses connect, which is the reading; a count of watched
+            // addresses above it is the list's own length said twice.
+            return isEmpty(.accounts) ? section.emptyHeadline : nil
         case .frames:
             let steps = moves.reduce(0) { $0 + $1.frameCount }
             guard steps > 0 else { return section.emptyHeadline }
@@ -360,7 +360,9 @@ extension PrivacyDevnetRoomCard {
         // it would hold for one that does not.
         case .holdings:   return PrivacyHoldings.cells(accounts: accounts,
                                                        shielded: shielded).count < 2
-        case .accounts:   return accounts.isEmpty
+        // **EMPTY IS "NOTHING CONNECTS THEM" (prd §689)** — the rows list
+        // what you watch either way; the slot's job is the relationship.
+        case .accounts:   return PrivacyConnections.map(accounts)?.nodes.isEmpty ?? true
         case .frames:     return moves.allSatisfy { $0.frameCount == 0 }
         case .nullifiers: return keyRows.isEmpty
         case .roots:      return accounts.allSatisfy { $0.roots.isEmpty }
@@ -654,37 +656,7 @@ extension PrivacyDevnetRoomCard {
     }
 
     @ViewBuilder var roster: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            ForEach(accounts) { account in
-                // A wallet is a FACE in this app (`WalletRowMark.face`): the
-                // watched address leads with its own, title its name, subtitle
-                // its balance — the per-address row every wallet room draws.
-                // **Nil is not zero** (§515a): a failed read says so.
-                // One naming for the whole seat (`PrivacyDevnetName.of`), so
-                // this phone's own account reads as "This phone" here, on the
-                // rail and in every sheet rather than as a stranger's hex in
-                // the room that created it (prd §602).
-                let title = PrivacyDevnetName.of(account.address)
-                let line = account.reached
-                    ? (Self.eth(account.balanceWei) ?? String(localized: "Balance unread"))
-                    : String(localized: "The chain didn't answer")
-                if let onOpenAccount {
-                    Button {
-                        DSHaptic.selection()
-                        onOpenAccount(account)
-                    } label: {
-                        WalletRow(mark: .face(account.address),
-                                  title: title, subtitle: line)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    WalletRow(terminal: .face(account.address),
-                              title: title, subtitle: line)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        RoomAccountsRows(rows: PrivacyConnections.rows(accounts, onOpen: onOpenAccount))
     }
 
     /// **HOLDINGS (prd §680).** Every watched address, richest first, with
@@ -721,37 +693,13 @@ extension PrivacyDevnetRoomCard {
         Decimal(eth) * Decimal(sign: .plus, exponent: 18, significand: 1)
     }
 
+    /// **THE CONNECTIONS BETWEEN WHAT YOU WATCH (prd §689).** This drew the
+    /// first four accounts — the same rows the list beneath it draws — so the
+    /// slot restated its own list. What it draws now is the one thing those
+    /// rows cannot: how they relate.
     @ViewBuilder var accountsFigure: some View {
-        if accounts.isEmpty {
-            slotNothing(String(localized: "Watch an address to see it here"))
-        } else {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                ForEach(accounts.prefix(4)) { account in
-                    HStack(spacing: DS.Space.s3) {
-                        WalletFace(address: account.address, size: DS.Face.list, circular: true)
-                            .opacity(account.reached ? 1 : 0.45)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(PrivacyDevnetName.of(account.address))
-                                .dsText(.callout15)
-                                .foregroundStyle(account.reached ? DS.textPrimary : DS.textTertiary)
-                                .lineLimit(1)
-                            Text(accountDoing(account))
-                                .dsText(.label12)
-                                .foregroundStyle(DS.textTertiary)
-                                .lineLimit(1)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                }
-                if accounts.count > 4 {
-                    Text(String(localized: "\(String(accounts.count - 4)) more"))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                }
-            }
-            .padding(.trailing, DSRoomChassis.gearColumn)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
+        RoomConnectionsFigure(map: PrivacyConnections.map(accounts),
+                              yours: String(localized: "the accounts you watch"))
     }
 
     private func accountDoing(_ account: PrivacyDevnetAccount) -> String {
@@ -1421,5 +1369,52 @@ enum PrivacyHoldings {
                                          amount: PrivacyDevnetMoney.line(wei: notes)))
         }
         return out
+    }
+}
+
+
+/// **WHO THE ADDRESSES YOU WATCH HAVE BOTH DEALT WITH (prd §689).**
+///
+/// A move on this chain carries no counterparty field — the amount is what the
+/// pool hides, and the recipient rides the FRAMES. So the edges come from each
+/// frame's own `target`, which is the same fact one layer down, and the only
+/// one this chain offers.
+@MainActor
+enum PrivacyConnections {
+    static func map(_ accounts: [PrivacyDevnetAccount]) -> AddressConnections.Map? {
+        let moves = accounts.flatMap { account in
+            account.moves.flatMap { move in
+                move.frames.compactMap { frame -> RoomConnectionsEdges.Move? in
+                    guard let target = frame.target, !target.isEmpty else { return nil }
+                    return RoomConnectionsEdges.Move(owner: account.address,
+                                                     counterparty: target,
+                                                     order: move.block ?? 0)
+                }
+            }
+        }
+        return AddressConnections.map(
+            edges: RoomConnectionsEdges.edges(moves) { PrivacyDevnetName.of($0) },
+            watched: accounts.map {
+                AddressConnections.WatchedWallet(key: $0.address.lowercased(),
+                                                 name: PrivacyDevnetName.of($0.address))
+            })
+    }
+
+    static func rows(_ accounts: [PrivacyDevnetAccount],
+                     onOpen: ((PrivacyDevnetAccount) -> Void)?) -> [RoomAccountsRows.Row] {
+        let drawn = map(accounts)
+        return accounts.map { account in
+            let reach = drawn?.nodes.filter {
+                $0.walletKeys.contains(account.address.lowercased())
+            }.count ?? 0
+            return RoomAccountsRows.Row(
+                key: account.address.lowercased(),
+                address: account.address,
+                name: PrivacyDevnetName.of(account.address),
+                kind: nil,
+                connections: reach,
+                unreached: !account.reached,
+                onOpen: onOpen.map { open in { open(account) } })
+        }
     }
 }

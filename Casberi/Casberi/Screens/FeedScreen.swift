@@ -3803,6 +3803,53 @@ struct FeedScreen: View {
     /// that the board has always been a partial answer with nothing saying so.
     /// The list is where the rest live, which is the other reason it belongs
     /// here rather than behind a door.
+    /// **§295'S OWN READING, IN THE SCOPE IT NEVER HAD (prd §689).**
+    ///
+    /// `AddressConnections.map(context:)` is the adapter that has been
+    /// running all along — it builds the edges while the models are live and
+    /// hands back a value, which is what keeps this immune to the liveness
+    /// crash class rather than merely guarded against it (CLAUDE.md
+    /// corollaries 1–6).
+    @ViewBuilder private var walletConnectionsSection: some View {
+        Section {
+            RoomConnectionsFigure(map: AddressConnections.map(context: modelContext),
+                                  box: DSRoomChassis.visualSlot,
+                                  yours: String(localized: "the wallets you watch"))
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                          bottom: DSRoomChassis.contentGap,
+                                          trailing: DSRoomChassis.inset))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+        }
+    }
+
+    /// The wallets you watch — what each IS and how it relates, never what it
+    /// holds: Holdings owns that, one chip away (prd §689).
+    @ViewBuilder private var walletAccountsListSection: some View {
+        let map = AddressConnections.map(context: modelContext)
+        // `WalletStore.shared.addresses` is the same watched set the map is
+        // built from — one source, so a row can never name a wallet the spine
+        // has never heard of.
+        let rows = WalletStore.shared.addresses.map { wallet in
+            RoomAccountsRows.Row(
+                key: AddressBook.key(for: wallet.address),
+                address: wallet.address,
+                name: wallet.label.isEmpty ? wallet.short : wallet.label,
+                kind: nil,
+                connections: map?.nodes.filter {
+                    $0.walletKeys.contains(AddressBook.key(for: wallet.address))
+                }.count ?? 0,
+                unreached: false)
+        }
+        if !rows.isEmpty {
+            Section {
+                RoomAccountsRows(rows: rows)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+        }
+    }
+
     @ViewBuilder
     private var walletTokenListSection: some View {
         if let portfolio, !portfolio.isEmpty {
@@ -3897,6 +3944,10 @@ struct FeedScreen: View {
             WalletScopeEmptyFigure(section: section)
         case .activity:    walletFlowSection
         case .holdings:    holdingsBlockSection
+        // **§295 RESTORED (prd §689).** "N of your addresses are connected"
+        // drew at the foot of the Wallet manager until that screen went; the
+        // model never stopped running. This is its slot.
+        case .accounts:    walletConnectionsSection
         case .positions:   walletCompositionSection
         // **THE RANKED BARS LEAD, NOT "Worth a look"** (prd §483, 2026-08-26).
         // The warnings row is a ROW — one line with a chevron — so in a 210pt
@@ -4257,6 +4308,10 @@ struct FeedScreen: View {
         case .home:        return false
         case .activity:    return false
         case .holdings:    return blockStream.els.isEmpty
+        // **EMPTY IS "NOTHING CONNECTS THEM" (prd §689)** — the rows list what
+        // you watch either way; the slot's job is the relationship.
+        case .accounts:    return AddressConnections.map(context: modelContext)?
+                                    .nodes.isEmpty ?? true
         case .positions:   return !(hasLendingCard
                                     || !walletLive.uniswap.isEmpty
                                     || !walletLive.hyperliquid.positions.isEmpty)
@@ -7041,6 +7096,8 @@ struct FeedScreen: View {
                 walletSeeAllSection(total: all.count)
             case .holdings:
                 walletTokenListSection
+            case .accounts:
+                walletAccountsListSection
             case .positions:
                 walletDeFiSection
                 walletLiquiditySection

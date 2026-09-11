@@ -52761,3 +52761,34 @@ counterparty for that reason — both its addresses were funded by the same paye
 §295's sense of connected exactly (not that they dealt with each other, but that they both
 dealt with somebody else) — because without it the scope is correctly empty and nobody ever
 sees the drawing work.
+
+## §689b — Accounts everywhere, and the Wallet finally gets §295 back (2026-09-11)
+
+The rest of §689: the Privacy devnet takes the spine, Hegotá Frames and **the Wallet** gain
+the scope, and vibenet keeps its sub-account web.
+
+**The Wallet is where §295 lived and it is the last room to get it back.** The drawing died
+with the address book screen; `AddressConnections.map(context:)` — the adapter that builds
+the edges while the models are live and hands back a VALUE, which is what keeps it immune
+to the liveness crash class rather than merely guarded against it — never stopped running.
+The scope sits straight after Holdings, the family's own place for it.
+
+**Each room says who its transfers were with in its own way, and two of them have no
+counterparty field at all.** Hegotá's moves name one outright. On the Privacy devnet and
+Hegotá Frames the recipient rides the FRAMES, so the edges come from each frame's `target`
+— the same fact one layer down, and the only one those chains offer. A plain transfer
+carries no frames and so contributes no edge, which is honest rather than a gap: on Frames
+the faucet's payer is on the receipt, not in the move's own rows.
+
+**§548'S ABSENCE GUARD LOSES `accounts`, and the reason it loses it is the reason it was
+written.** The guard said *"Hegotá has it and this chain cannot fill it"* — true of a
+ROSTER, which is a list short by construction and §83's dead control on most installs. What
+the scope draws is the connections between what you watch: not a roster, needs two
+addresses rather than one, and §688 made watching two ordinary here. The other three stay
+absent and stay measured — no UTXO vault, no keyed nonces, no standing authority.
+
+**Two demo seeds, for the same reason the Hegotá one was made**: an address with no moves
+can never connect to anything, so Frames' second watched address gains one move paying the
+same burn address the first account's frames pay. That is §295's sense of connected exactly
+— not that the two dealt with each other, but that they both dealt with somebody else — and
+without it the scope is correctly empty and nobody ever sees the drawing work.
