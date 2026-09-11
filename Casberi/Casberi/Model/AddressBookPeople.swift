@@ -22,7 +22,7 @@ import SwiftData
 ///     addresses, and it stays addresses
 ///   · every WRITE door is shut by construction rather than by a rule someone
 ///     has to remember: `AddressBook.entry(for:)` answers nil for these keys,
-///     so `isInBook` is false and rename/note/group/remove are already gated
+///     so `isInBook` is false and rename/note/remove are already gated
 ///
 /// **The bulk-import rule still stands** (`SocialFollows`' §87 picker ruling,
 /// restated in the §498 spec): nothing here WRITES the book, so following a
@@ -254,7 +254,7 @@ enum AddressBookPeople {
     ///
     /// **The BOOK entry is always the base**, never the ephemeral one, and
     /// that is what keeps the merge safe: the row that stands is the persisted
-    /// one, with its address, note, groups, kind and dates intact, so nothing
+    /// one, with its address, note, kind and dates intact, so nothing
     /// a person typed can be shadowed or lost by a display-name match. The
     /// ephemeral rows only ever ADD — accounts to the list, and an avatar if
     /// the book entry had none.

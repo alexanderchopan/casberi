@@ -133,7 +133,10 @@ at all.
 | §295 | The connections card leads with a headline counting the connected addresses | amended by §448 |
 | §465 | Wallet and vibenet keep two names ledgers — the structure copied, never the type | amended by §496 (the LEDGER is shared now; the two screens stay separate types, reading and writing one `AddressBook`) |
 | §169 | The book is crypto-only — an entry is an on-chain address, and emails and phone numbers fail the copy test | amended by §498 (it is the app's one people surface now; contacts and social profiles join as ephemeral rows, and the filter chips protect the scannability the exclusion used to) |
-| §462 | The quiet foot carries the spine's empty line and the filing hint | amended by §497 (the spine line left with the drawing; the foot keeps the filing hint) |
+| §462 | The quiet foot carries the spine's empty line and the filing hint | amended by §497 (the spine line left with the drawing; the foot keeps the filing hint); superseded by §691 (the strip, the foot and the filing hint are gone with groups) |
+| §266 | The address manager becomes an address manager: groups, a book that survives the device | superseded by §691 (groups are deleted; the surviving book is the Wallet page's roster, §690) |
+| §267 | Group creation lives in the address book itself, not only inside an address | superseded by §691 (no groups anywhere) |
+| §444 | A group row wears the faces of its members, and filing is a flight into the group's deck | reversed by §691 (groups are deleted) |
 | §295 | The connections card is the last thing on the Wallet manager | amended by §497 (the spine no longer draws anywhere; the arithmetic and probe survive) |
 | §448 | The spine's three empty states are facts about the roster, stated in the book | amended by §497 (the drawing left the screen, so nothing states them) |
 | §472 | Stopping the last watched vibenet account forgets the names given to your accounts | amended by §496 (names live in `AddressBook` now and outlive every watch — disconnect only drops the chip) |
@@ -52873,3 +52876,33 @@ build and put back, because "2 accounts connect…" is false the moment one of t
 contract. `AddressBook.Kind` already draws the line (wallet · contract · safe · smart
 account); the Wallet can say which on a tied row, and the devnets cannot yet, since none of
 them reads `eth_getCode` — one call per counterparty, owed.
+
+## §691 — Groups are deleted (user: "i think we get rid of groups. users can only follow five wallets and what are they going to even do with groups at the moment, where and when would they use them. who cares. lets drop it", 2026-09-11)
+
+**The feature is gone, whole.** §266 built groups as a portfolio-or-family filing over the
+address book; §267 put creation in the book itself; §433 drew them as folder sections;
+§444 gave a group row the faces of its members and a filing flight; §462 quieted the chip
+strip until a real group existed; §440 let the search field offer a group as a result. Every
+one of those was a ruling about a book screen §690 folded away, and the user's arithmetic
+settles the rest: a person follows at most five wallets (§170), and five names on one
+directory page need no folders.
+
+**What is deleted.** `AddressGroupViews.swift` and the `HomeRoute.addressGroup` node; the
+`Entry.groups` field and every function that read it (`sameGroup`, `groupNames`,
+`groupCounts`, `entries(inGroup:)`, `addToGroup`, `removeFromGroup`, `renameGroup`,
+`deleteGroup`, `matchingGroups`, `AddressBookShape.groupMatches`); the group arm of
+`search`, of the alias merge, of `exportText`, of `unwatchKeepsEntry` and of `addBulk`'s
+token walk; the `GroupMenuItems`, `NewGroupSheet` and `groupChips` views; the `addressGroup`
+probe hook. **An old book decodes as before** — the `groups` key is simply not read, which
+is exactly the tolerance `Entry`'s Optional-fields rule was written to buy.
+
+**One deliberate loss, stated.** `unwatchKeepsEntry` used a group membership as authorship:
+an unnamed address filed under "Family" survived an unwatch. Filing is gone, so that keep is
+gone with it; a typed name, a note, a provenance or a network tag still keeps the row, and
+those are the four the harness pins. `addBulk` still READS a trailing token after an
+address — it used to file the address by it — and drops it, so a pasted "0x… Family" line
+still lands the address rather than mistaking the word for a name.
+
+Supersedes §266 and §267 (the feature they built), reverses §444 (the group row and the
+filing flight), and supersedes §462 (a strip that waited for a group has nothing to wait
+for). §433 and §440 were already out of force by §440 and §461 respectively.

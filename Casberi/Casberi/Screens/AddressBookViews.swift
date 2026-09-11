@@ -22,7 +22,7 @@ extension AddressBook.Entry {
     /// rows with nothing on screen explaining why, which reads as arbitrary.
     ///
     /// The short form is dropped when the ROW'S OWN NAME already is it
-    /// (2026-08-13). `WalletStore.add`/`addBulk`/`addToGroup` file a bare
+    /// (2026-08-13). `WalletStore.add`/`addBulk` file a bare
     /// address under `shortAddress` so every watched wallet is findable in its
     /// own book — a display fallback, not a name — and this line then repeated
     /// it directly underneath, so an unnamed wallet read "…44b1 / …44b1 · 12
@@ -110,47 +110,6 @@ extension AddressBook.Entry {
     }
 }
 
-/// The filing menu's ITEMS — every group with a tick beside the ones this
-/// address is already in, then "New group…".
-///
-/// Shared because both places you can file from need the identical list: the
-/// book row's context menu and the address card's own group row. Only the
-/// LABEL differs between them (a context-menu entry vs a card row), so the
-/// label stays with each caller and the items live here once.
-///
-/// Creating a group stays a callback rather than an `.alert` attached here —
-/// an alert can't be presented from inside `contextMenu` content, so the host
-/// has to own it.
-struct GroupMenuItems: View {
-    let entry: AddressBook.Entry
-    let groups: [String]
-    var onNewGroup: () -> Void
-    private var book = AddressBook.shared
-
-    init(entry: AddressBook.Entry, groups: [String], onNewGroup: @escaping () -> Void) {
-        self.entry = entry
-        self.groups = groups
-        self.onNewGroup = onNewGroup
-    }
-
-    var body: some View {
-        ForEach(groups, id: \.self) { name in
-            let inGroup = entry.isIn(name)
-            Button {
-                DSHaptic.tap()
-                if inGroup { book.removeFromGroup(name, address: entry.address) }
-                else { book.addToGroup(name, address: entry.address) }
-            } label: {
-                if inGroup { Label(name, systemImage: "checkmark") } else { Text(name) }
-            }
-        }
-        Section {
-            Button(action: onNewGroup) {
-                Label("New group…", systemImage: "folder.badge.plus")
-            }
-        }
-    }
-}
 
 /// Where a book row's tap can go (prd §440) — ONE presentation per screen.
 ///
@@ -338,256 +297,6 @@ struct AddressBookRow: View {
     }
 }
 
-/// Making a group from the BOOK rather than from one address (2026-08-01,
-/// amending prd §266).
-///
-/// §266 shipped creation as a per-address verb only, and the reasoning held:
-/// filing something is what brings a group into being, so the door lived where
-/// the thing being filed was. Nothing here changes that model — this sheet
-/// still cannot make an empty group. What it fixes is DISCOVERY. The chips row
-/// renders only once a group exists, so a book with none showed no trace of the
-/// feature anywhere, and the only ways in were a long-press on a row or a tap
-/// into an address card: "we just shipped some Wallet features improving the
-/// address book, but I don't see how to create groups" (user, 2026-08-01).
-///
-/// So the gesture inverts — name it, then pick who's in it, in one pass. That
-/// is also the shape the job actually has: a group is several addresses you
-/// already have in mind, and filing them one long-press at a time is the same
-/// work spread over N gestures with no way to see the set coming together.
-///
-/// Two honesty details worth keeping. Typing a name the book already uses
-/// (case-folded) ADDS to that group rather than making a second one wearing the
-/// same word — `AddressBook.canonicalGroupName` has always done this, and the
-/// sheet says so in place instead of letting the outcome surprise you. And the
-/// button states which of the two requirements is still missing, rather than
-/// sitting inert with nothing to say.
-struct NewGroupSheet: View {
-    /// Handed the spelling the book actually filed under, so the caller can
-    /// select the chip it just made. See `AddressBook.addToGroup(_:addresses:)`.
-    var onCreate: (String) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    private var book = AddressBook.shared
-
-    @State private var name = ""
-    @State private var filter = ""
-    @State private var picked: Set<String> = []
-
-    init(onCreate: @escaping (String) -> Void) {
-        self.onCreate = onCreate
-    }
-
-    var body: some View {
-        DSTray(title: "New group", height: 660, ink: true) {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text("Deleting a group never deletes an address.")
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                nameField
-                if let existing = matchingGroup {
-                    note(String(localized: "You already have “\(existing)” — these get added to it."))
-                }
-                cover
-                if book.count > 8 { filterField }
-                list
-                createButton
-            }
-        }
-    }
-
-    /// THE GROUP'S COVER, FORMING AS YOU BUILD IT (2026-08-22, prd §444).
-    ///
-    /// This sheet asks for two things — a name and a set — and until now the
-    /// set existed only as ticks scattered down a scrolling list, so the thing
-    /// being made was never visible as a thing. Every group in the app is drawn
-    /// as a deck of its members' faces (`AddressGroupCard`, and since §444 the
-    /// filing sheet's own rows); this is that same deck, assembling.
-    ///
-    /// It is not a preview of a screen elsewhere, it IS the object: a face
-    /// joining the deck is the tick you just made, which is why the deck grows
-    /// from the leading edge and the button below it counts the same set.
-    ///
-    /// Absent until the first pick, deliberately — an empty deck above an
-    /// untouched list is a frame around nothing, and the row's own well
-    /// (which exists so a flight has somewhere to land) has no equivalent job
-    /// here.
-    @ViewBuilder
-    private var cover: some View {
-        let chosen = pickedEntries
-        if !chosen.isEmpty {
-            HStack(spacing: -8) {
-                ForEach(chosen.prefix(Self.coverFaces)) { entry in
-                    AddressMark(entry: entry, size: DS.Face.list)
-                        // `AddressGroupCard`'s deck, spelled the same way — one
-                        // deck across the app. Nothing here draws a line, so a
-                        // mark punches the sheet colour out from under the one
-                        // behind it.
-                        .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 2))
-                        // A face JOINING grows into the deck; the ones already
-                        // in it hold still.
-                        .transition(.scale(scale: 0.4).combined(with: .opacity))
-                }
-                if chosen.count > Self.coverFaces {
-                    Text("+\(chosen.count - Self.coverFaces)")
-                        .dsText(.label12).foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
-                        .padding(.leading, DS.Space.s3)
-                }
-                Spacer(minLength: 0)
-            }
-            .frame(height: DS.Face.list)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text("^[\(chosen.count) address](inflect: true) picked"))
-        }
-    }
-
-    /// How many faces the cover shows before it starts counting. Five, because
-    /// that is where a leading-anchored deck at `DS.Face.list` stops fitting
-    /// beside its own tally inside the tray's margins.
-    private static let coverFaces = 5
-
-    /// The picked entries in the BOOK's order, not tap order — the deck must
-    /// match the group it is about to make, and a group has no memory of which
-    /// address you ticked first.
-    private var pickedEntries: [AddressBook.Entry] {
-        book.all.filter { picked.contains($0.id) }
-    }
-
-    private func note(_ text: String) -> some View {
-        Text(text).dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private var nameField: some View {
-        DSSlabField(placeholder: String(localized: "Name (e.g. Family, Cold)"),
-                    text: $name, actionLabel: "",
-                    size: .compact, submitLabel: .done,
-                    // A group name is somebody's own word, not a credential —
-                    // the slab's `.never` default is for the keys and hexes it
-                    // was born holding.
-                    autocapitalization: .words, action: {})
-    }
-
-    /// Only for a book big enough to need it — a filter above six rows is
-    /// furniture, and this sheet already asks for two things.
-    private var filterField: some View {
-        DSSlabField(placeholder: String(localized: "Filter your addresses"),
-                    text: $filter, actionLabel: "",
-                    glyph: "magnifyingglass", clearable: true,
-                    size: .compact, action: {})
-    }
-
-    private var list: some View {
-        ScrollView {
-            LazyVStack(spacing: DS.Space.s2) {
-                ForEach(rows) { entry in row(entry) }
-            }
-            .padding(.vertical, DS.Space.s1)
-            if rows.isEmpty {
-                note(book.count == 0
-                     ? String(localized: "Your book is empty — name an address first, then it can go in a group.")
-                     : String(localized: "Nothing here matches “\(filter)”."))
-                    .padding(.top, DS.Space.s2)
-            }
-        }
-        .scrollIndicators(.hidden)
-        .frame(maxHeight: .infinity)
-    }
-
-    private func row(_ entry: AddressBook.Entry) -> some View {
-        let on = picked.contains(entry.id)
-        return Button {
-            DSHaptic.tap()
-            // One animation for the tick AND the cover above it: they are the
-            // same event, and two `withAnimation`s would let the face land
-            // before or after the checkmark it belongs to.
-            withAnimation(DS.Motion.bubble) {
-                if on { picked.remove(entry.id) } else { picked.insert(entry.id) }
-            }
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                AddressMark(entry: entry, size: 36)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(entry.name).dsText(.heading17)
-                        .foregroundStyle(DS.textPrimary).lineLimit(1)
-                    Text(entry.short).dsText(.subhead13)
-                        .foregroundStyle(DS.textTertiary).monospaced().lineLimit(1)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "checkmark")
-                    .dsGlyph(16, weight: .bold)
-                    .foregroundStyle(DS.tint)
-                    .opacity(on ? 1 : 0)
-            }
-            .padding(DS.Space.s3)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(on ? DS.tintDim : DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        }
-        .buttonStyle(DSTileButtonStyle())
-        .dsHover()
-        .accessibilityLabel(entry.name)
-        .accessibilityAddTraits(on ? [.isSelected] : [])
-    }
-
-    /// Says which requirement is still open rather than going inert — and
-    /// swaps its own FILL when it does, since `.disabled` dims a label and not
-    /// a background a button painted itself (honesty rule, prd §83).
-    private var createButton: some View {
-        let ready = !trimmedName.isEmpty && !picked.isEmpty
-        return Button {
-            create()
-        } label: {
-            Text(buttonLabel)
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(ready ? .white : DS.textTertiary)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 48)
-                .background(ready ? DS.tint : DS.gray100,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.control,
-                                                 style: .continuous))
-        }
-        .buttonStyle(PressSpring())
-        .armedPop(ready)
-        .disabled(!ready)
-    }
-
-    private var buttonLabel: String {
-        if trimmedName.isEmpty { return String(localized: "Name the group") }
-        if picked.isEmpty { return String(localized: "Pick who's in it") }
-        return String(localized: "Create with \(picked.count)")
-    }
-
-    private var trimmedName: String {
-        name.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    /// The group this name would join rather than create, if any.
-    private var matchingGroup: String? {
-        let typed = trimmedName
-        guard !typed.isEmpty else { return nil }
-        return book.groupNames.first { AddressBook.sameGroup($0, typed) }
-    }
-
-    private var rows: [AddressBook.Entry] {
-        let all = book.all
-        let q = filter.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !q.isEmpty else { return all }
-        return all.filter {
-            $0.name.lowercased().contains(q) || $0.address.lowercased().contains(q)
-        }
-    }
-
-    private func create() {
-        // Off `book.all` rather than the filtered `rows`, or narrowing the
-        // filter after picking would drop members already chosen.
-        let addresses = book.all.filter { picked.contains($0.id) }.map(\.address)
-        guard let group = book.addToGroup(trimmedName, addresses: addresses) else { return }
-        DSHaptic.success()
-        onCreate(group)
-        dismiss()
-    }
-}
 
 /// What an address IS, as a mark. A wallet is a WHO — it wears the same
 /// identicon face the watched wallets and transfer stages use, so the same
@@ -909,8 +618,6 @@ struct AddressCard: View {
     @State private var editingName = false
     @FocusState private var nameFocused: Bool
     @State private var nameDraft = ""
-    @State private var addingGroup = false
-    @State private var groupDraft = ""
     /// The note field's draft (2026-08-27, the address-book unification) —
     /// see `noteBlock`.
     @State private var noteDraft = ""
@@ -1042,16 +749,6 @@ struct AddressCard: View {
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
-            .alert("New group", isPresented: $addingGroup) {
-                TextField("Name (e.g. Family, Cold)", text: $groupDraft)
-                Button("Create") {
-                    book.addToGroup(groupDraft, address: entry.address)
-                    DSHaptic.success()
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("Files \(current.name) under a new group.")
-            }
             .task { await AddressKind.detect(entry.address) }
             .task {
                 exposure = await WalletApprovalExposure.forSpender(entry.address,
@@ -1212,8 +909,6 @@ struct AddressCard: View {
             // puts somebody's company. It used to sit in the verb row beside
             // Copy, which made filing look like an action of the same weight
             // as copying an address; it is a fact about who this is.
-            groupChips
-                .padding(.top, DS.Space.s2)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, DS.Space.s4)
@@ -1876,60 +1571,6 @@ struct AddressCard: View {
         CopyAddressButton(address: current.address, style: .pill, tint: DS.tint)
     }
 
-    /// Which groups this address is filed under, as chips beside its name
-    /// (2026-08-22, prd §443).
-    ///
-    /// It was a full-width menu card down among the settings-shaped rows, and
-    /// that is the wrong reading of what a group IS: "Family" is a fact about
-    /// who this address is to you, the same kind of fact as its name and its
-    /// face, not a preference you set. So it rides with the identity, and the
-    /// trailing `+` opens the very same `GroupMenuItems` menu the card row
-    /// opened — no verb was moved or lost.
-    ///
-    /// Always present, empty included: a control that only appears once you
-    /// already have groups leaves the feature discoverable solely by
-    /// long-pressing a row in the list behind this sheet.
-    private var groupChips: some View {
-        let groups = current.groupNames
-        return Menu {
-            GroupMenuItems(entry: current, groups: book.groupNames) {
-                groupDraft = ""
-                addingGroup = true
-            }
-        } label: {
-            HStack(spacing: DS.Space.s1 + 2) {
-                ForEach(groups, id: \.self) { name in
-                    Text(name)
-                        .dsText(.label12).foregroundStyle(DS.textPrimary)
-                        .padding(.horizontal, DS.Space.s3)
-                        .padding(.vertical, 6)
-                        .background(DS.fillFaint, in: Capsule(style: .continuous))
-                }
-                if groups.isEmpty {
-                    // The Copy pill's own anatomy (subhead13 semibold, 7pt) —
-                    // the two share a row now (prd §462), and a lighter twin
-                    // reads as a disabled one.
-                    Text("Add to a group")
-                        .dsText(.subhead13).fontWeight(.semibold)
-                        .foregroundStyle(DS.textSecondary)
-                        .padding(.horizontal, DS.Space.s3)
-                        .padding(.vertical, 7)
-                        .background(DS.fillFaint, in: Capsule(style: .continuous))
-                } else {
-                    Image(systemName: "plus")
-                        .dsGlyph(10)
-                        .foregroundStyle(DS.textSecondary)
-                        .frame(width: 26, height: 26)
-                        .background(DS.fillFaint, in: Circle())
-                }
-            }
-            .contentShape(Rectangle())
-            .dsTapTarget()
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(groups.isEmpty ? "Add to a group"
-                                                : "Groups: \(groups.joined(separator: ", "))"))
-    }
 
     /// A wallet is a who and owns a hue; a contract or a Safe is machinery and
     /// borrows the app's. Mirrors the mark's own round-vs-square rule, so the

@@ -553,8 +553,8 @@ final class VibenetWatch {
         guard VibenetWatch.isValidAddress(address), !isWatching(address) else { return false }
         addressList.append(address)
         // Watching implies the book holds it (2026-08-27) — the same
-        // invariant `AddressBook.addToGroup` enforces for groups, one door
-        // over. A short-form name so a freshly-watched account is findable
+        // invariant `WalletStore.add` enforces one door over. A short-form
+        // name so a freshly-watched account is findable
         // in the book immediately, exactly the fallback `WalletStore.add`
         // uses on the mainnet side.
         let book = AddressBook.shared

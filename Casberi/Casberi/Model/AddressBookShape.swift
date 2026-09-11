@@ -174,28 +174,6 @@ enum AddressBookShape {
         sections.compactMap(\.letter)
     }
 
-    // MARK: - Group matching (prd §440)
-
-    /// Whether a query names a group. **The one spelling of that test**, so
-    /// the search field, the group results and `AddressBook.search`'s row
-    /// filter can never disagree about what "fam" finds.
-    ///
-    /// Whole-name matches fold through the book's own case rule; anything
-    /// shorter falls back to substring, since somebody typing "fam" has not
-    /// named a group yet. Lifted here from `AddressBook.search`, which had it
-    /// inline and is now the caller.
-    static func groupMatches(_ group: String, query: String) -> Bool {
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !q.isEmpty else { return false }
-        let g = group.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return g == q || g.contains(q)
-    }
-
-    /// The groups a query names, in the order given.
-    static func matchingGroups(_ groups: [String], query: String) -> [String] {
-        groups.filter { groupMatches($0, query: query) }
-    }
-
     // MARK: - The filter chips (prd §498)
 
     /// Which population the book is showing — one quiet capsule row, single
@@ -408,7 +386,7 @@ enum AddressBookShape {
     /// which reads as a delete that failed rather than as a demotion.
     ///
     /// **The rule is AUTHORSHIP, not attribute.** A name somebody typed, a
-    /// group they filed it in, a note they wrote, a provenance the app verified
+    /// note they wrote, a provenance the app verified
     /// through a door (§169), or a network tag saying it was met somewhere else
     /// are all things this app cannot recreate, and every one of them keeps the
     /// row. A placeholder name and nothing else is ours, and leaves with the
@@ -424,19 +402,15 @@ enum AddressBookShape {
     /// them. Taking the answer as a parameter is what keeps this file
     /// Foundation-only, and what makes every fixture below mean something.
     static func unwatchKeepsEntry(isPlaceholderName: Bool,
-                                  groups: [String]? = nil,
                                   note: String? = nil,
                                   provenance: String? = nil,
                                   networks: [String]? = nil) -> Bool {
         // A name somebody typed is the whole reason the book outlives the
         // roster. Asked first because it is the common keep.
         if !isPlaceholderName { return true }
-        // Blank strings are not authorship. A group list holding one empty
-        // name, or a note that is whitespace, would otherwise pin an unnamed
-        // address in the book forever with nothing on screen to explain why.
-        if (groups ?? []).contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
-            return true
-        }
+        // Blank strings are not authorship. A note that is whitespace would
+        // otherwise pin an unnamed address in the book forever with nothing
+        // on screen to explain why.
         if let note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
         if let provenance, !provenance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return true

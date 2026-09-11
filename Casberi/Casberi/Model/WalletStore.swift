@@ -113,7 +113,7 @@ final class WalletStore {
     /// Is `name` a placeholder this app generated, rather than something the
     /// person typed?
     ///
-    /// `add`/`addBulk`/`addToGroup` file a bare address under its own short
+    /// `add`/`addBulk` file a bare address under its own short
     /// form so every watched wallet is findable in its own book — a display
     /// fallback, not a name. Three callers need to tell the two apart: the
     /// book's merge (a real ENS name must beat a placeholder), `Verbs`'

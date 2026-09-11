@@ -76,7 +76,6 @@ enum WalletUnwatch {
         // what was true when the gesture happened.
         let keepsEntry = AddressBookShape.unwatchKeepsEntry(
             isPlaceholderName: WalletStore.isAutoName(entry.name, for: entry.address),
-            groups: entry.groups,
             note: entry.note,
             provenance: entry.provenance,
             networks: entry.networks)

@@ -79,7 +79,7 @@ final class AddressBook {
         /// one: these entries are EPHEMERAL, built for display by
         /// `AddressBookPeople` from the corpus and never persisted or synced.
         /// `AddressBook.entry(for:)` answers nil for one, which is what keeps
-        /// every write door (rename, group, note) correctly shut.
+        /// every write door (rename, note) correctly shut.
         case contact
         /// A social profile you watch — Bluesky, Farcaster, Nostr, Twitch
         /// (prd §498). Ephemeral like `.contact`, for the same reason: a
@@ -208,18 +208,13 @@ final class AddressBook {
         /// identity GUESSED across sources: a wrong link silently retitles
         /// history with the wrong name, which the person can't see or correct.
         var provenance: String? = nil
-        /// The groups this address is in (2026-08-01) — a portfolio, a family,
-        /// a set of work wallets. Stored ON the entry rather than in a store of
-        /// its own precisely because `reconcileAliases` RE-KEYS entries when a
-        /// name resolves: membership keyed separately would be orphaned by the
-        /// same merge that fixes the duplicate.
-        ///
-        /// Optional, and every new field here must be: Swift's synthesized
-        /// `Codable` does NOT fall back to a property's default for a missing
-        /// key, so a non-optional addition would throw on decode and take the
-        /// WHOLE book with it (the decode is one `try?` over the entire
-        /// dictionary). `provenance` set that precedent.
-        var groups: [String]? = nil
+        /// Every field added after `provenance` is Optional, and must be:
+        /// Swift's synthesized `Codable` does NOT fall back to a property's
+        /// default for a missing key, so a non-optional addition would throw
+        /// on decode and take the WHOLE book with it (the decode is one `try?`
+        /// over the entire dictionary). A stored `groups` list lived here from
+        /// 2026-08-01 until prd §691 deleted the feature; an old book's key is
+        /// simply not read.
         /// When this entry last CHANGED — the merge stamp iCloud sync compares
         /// (`AddressBookSync`). Distinct from `addedAt`, which records when the
         /// address was first named and deliberately never moves.
@@ -313,14 +308,7 @@ final class AddressBook {
         /// device has that carries a real stamp is newer.
         var stamp: Date { updatedAt ?? addedAt }
 
-        var groupNames: [String] { groups ?? [] }
 
-        /// Group membership, case-folded — the ONE place that test is spelled.
-        /// It was written out at thirteen sites across three files before this,
-        /// which is how a fold rule quietly stops being one.
-        func isIn(_ group: String) -> Bool {
-            groupNames.contains { AddressBook.sameGroup($0, group) }
-        }
     }
 
     /// key (normalised address) → entry.
@@ -461,15 +449,9 @@ final class AddressBook {
         out.addedAt = min(standing.addedAt, alias.addedAt)
         if out.kind == .unknown { out.kind = alias.kind }
         if out.provenance == nil { out.provenance = alias.provenance }
-        // Groups UNION rather than pick a side: both rows were the person's
-        // own filing of the same wallet, and dropping either half would lose a
-        // group they put it in. Ordered, not a Set, so the list stays stable.
-        let combined = standing.groupNames + alias.groupNames.filter {
-            !standing.groupNames.contains($0)
-        }
-        out.groups = combined.isEmpty ? nil : combined
-        // Networks UNION the same way — an address met on vibenet under one
-        // spelling and mainnet under another is met on both.
+        // Networks UNION rather than pick a side — an address met on vibenet
+        // under one spelling and mainnet under another is met on both. Ordered,
+        // not a Set, so the list stays stable.
         out.networks = Self.unionNetworks(standing.networks, alias.networks ?? [])
         if out.note == nil { out.note = alias.note }
         out.updatedAt = [standing.updatedAt, alias.updatedAt].compactMap { $0 }.max()
@@ -555,29 +537,12 @@ final class AddressBook {
         return (name?.isEmpty ?? true) ? nil : name
     }
 
-    /// Filtered for the book's search field — matches the name, any part of
-    /// the address, any GROUP it's filed under, or its provenance, so "mom",
-    /// "9a2E", "Family" and "Peer" all find rows.
-    ///
-    /// Groups and provenance joined on 2026-08-13, and the group half is the
-    /// one that was actually broken. §267's whole ruling is that the omnibox
-    /// is where a group becomes findable — it is the field the person types
-    /// "Family" into — and it searched two fields, neither of which was the
-    /// group, so it answered "no matches" for a group the chips right above
-    /// it were displaying. The chip filter is a different gesture (narrow to
-    /// a group you can see) and does not stand in for typing its name.
-    ///
-    /// Provenance rides along because it's already printed on the row by
-    /// `subline`: a field the person can read and cannot search reads as a
-    /// broken search, whichever field it is.
-    ///
-    /// Group matching goes through `AddressBookShape.groupMatches` — a
-    /// whole-name fold, falling back to substring for a partial query, since
-    /// someone typing "fam" hasn't named a group yet. That rule was spelled
-    /// inline here until 2026-08-22 (prd §440), when the search field gained
-    /// GROUP RESULTS of its own: two places deciding what "fam" finds is two
-    /// places to disagree, and the disagreement renders as a group offered as
-    /// a result whose own rows are missing from the list beneath it.
+    /// Filtered for the directory's search field — matches the name, any
+    /// part of the address, or its provenance, so "mom", "9a2E" and "Peer"
+    /// all find rows. Provenance joined on 2026-08-13 because it's already
+    /// printed on the row by `subline`: a field the person can read and
+    /// cannot search reads as a broken search, whichever field it is. (A
+    /// group arm sat here until prd §691 deleted groups.)
     func search(_ query: String) -> [Entry] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !q.isEmpty else { return all }
@@ -586,21 +551,10 @@ final class AddressBook {
             if entry.address.lowercased().contains(q) { return true }
             if let provenance = entry.provenance, provenance.lowercased().contains(q) { return true }
             if let note = entry.note, note.lowercased().contains(q) { return true }
-            return entry.groupNames.contains { AddressBookShape.groupMatches($0, query: q) }
+            return false
         }
     }
 
-    /// The groups a search query names (prd §440) — what the field offers
-    /// ABOVE the matching rows, so typing "fam" opens Family rather than
-    /// merely listing the four addresses in it.
-    ///
-    /// §267's whole ruling is that the omnibox is where a group becomes
-    /// findable. It has filtered ROWS by group since 2026-08-13; the group
-    /// itself was still not a result you could act on, which is the half that
-    /// makes the chip §433 deleted actually unnecessary.
-    func matchingGroups(_ query: String) -> [String] {
-        AddressBookShape.matchingGroups(groupNames, query: query)
-    }
 
     // MARK: - Writing
 
@@ -648,8 +602,8 @@ final class AddressBook {
     /// — the door `VibenetWatch.add`/the vibenet migration use to mark "this
     /// address was also met on vibenet" for a row that already exists under
     /// another name. No-op for an address the book doesn't hold: filing a tag
-    /// implies keeping the address, same as `addToGroup`'s own rule, but
-    /// unlike that door this one is never asked to invent a row — every
+    /// implies keeping the address (the rule the deleted group door had,
+    /// prd §691), but unlike that door this one is never asked to invent a row — every
     /// caller has already named the address by the time it reaches here.
     func addNetwork(_ tag: String, for address: String) {
         let key = Self.key(for: address)
@@ -785,59 +739,10 @@ final class AddressBook {
 
     // MARK: - Groups (2026-08-01)
 
-    /// **A group is a label on entries, not a container of them.** There is no
-    /// group store, no group ids, no empty groups to manage: a group exists
-    /// exactly as long as some address carries its name. That is what keeps
-    /// this a flat list with a filter rather than a tree — and it means rename
-    /// is a relabel, delete is an unlabel, and a group can never end up holding
-    /// an address the book no longer has.
-    ///
-    /// The one rule worth stating: **deleting a group never deletes an
-    /// address.** Every door that offers it says so.
-    /// Two group names are the same group when they differ only in case.
-    static func sameGroup(_ a: String, _ b: String) -> Bool {
-        a.caseInsensitiveCompare(b) == .orderedSame
-    }
 
-    /// The same fold `sameGroup` compares on, as a KEY — for a caller that has
-    /// to hold group state in a set or a dictionary rather than compare two
-    /// names (prd §433: which folders the wallet manager has closed). Spelled
-    /// here rather than at the call site so a `Set<String>` of groups can never
-    /// disagree with `sameGroup` about whether "family" and "Family" are one.
-    static func key(forGroup name: String) -> String {
-        name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
 
-    /// Every group in use, alphabetical — for display. Sorted, so callers that
-    /// only need a lookup use `canonicalGroupName` instead.
-    var groupNames: [String] {
-        var seen: [String: String] = [:]   // folded → the spelling in use
-        for entry in entries.values {
-            for name in entry.groupNames where seen[name.lowercased()] == nil {
-                seen[name.lowercased()] = name
-            }
-        }
-        return seen.values.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
-    }
 
-    /// The spelling already in use for a group matching this one case-folded,
-    /// so "family" typed twice doesn't become two groups wearing one word.
-    /// Scans `entries` directly rather than going through `groupNames`, whose
-    /// localized SORT is pure waste for a first-match lookup — this is called
-    /// once per address in a bulk paste.
-    private func canonicalGroupName(_ name: String) -> String {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        for entry in entries.values {
-            if let match = entry.groupNames.first(where: { Self.sameGroup($0, trimmed) }) {
-                return match
-            }
-        }
-        return trimmed
-    }
 
-    func entries(inGroup name: String) -> [Entry] {
-        all.filter { $0.isIn(name) }
-    }
 
     /// Every group's size in ONE walk, keyed the book's own way (prd §440).
     ///
@@ -857,68 +762,9 @@ final class AddressBook {
         Set(entries.values.map(\.kind.rawValue))
     }
 
-    var groupCounts: [String: Int] {
-        var out: [String: Int] = [:]
-        for entry in entries.values {
-            for name in entry.groupNames {
-                out[Self.key(forGroup: name), default: 0] += 1
-            }
-        }
-        return out
-    }
 
-    /// The first few members of every group, in ONE walk (2026-08-22, prd §444).
-    ///
-    /// The filing sheet draws a deck of faces per row — you file by recognising
-    /// people, not by reading a word — and `entries(inGroup:)` sorts the whole
-    /// book, which is the exact cost `groupCounts` above exists to avoid, one
-    /// question over. `all`'s own order, so the deck and the group screen behind
-    /// it agree about who leads.
-    func groupMembers(limit: Int) -> [String: [Entry]] {
-        var out: [String: [Entry]] = [:]
-        for entry in all {
-            for name in entry.groupNames {
-                let key = Self.key(forGroup: name)
-                guard (out[key]?.count ?? 0) < limit else { continue }
-                out[key, default: []].append(entry)
-            }
-        }
-        return out
-    }
 
-    /// The one read-modify-write behind every group edit: transform the group
-    /// list of each named key, stamp what changed, and write the dictionary
-    /// back ONCE — which matters because `entries`' own `didSet` persists and
-    /// pushes to iCloud, so a per-key write would encode the whole book once
-    /// per key.
-    private func editGroups(of keys: some Sequence<String>,
-                            _ transform: ([String]) -> [String]) {
-        var out = entries
-        var changed = false
-        for key in keys {
-            guard let names = out[key]?.groupNames else { continue }
-            let next = transform(names)
-            guard next != names else { continue }
-            out[key]?.groups = next.isEmpty ? nil : next
-            out[key]?.updatedAt = .now
-            changed = true
-        }
-        if changed { entries = out }
-    }
 
-    /// Files an address under a group. An address with no entry yet is named
-    /// with its own short form first — filing something implies keeping it,
-    /// and a group naming an address the book doesn't hold would be the
-    /// orphan this design exists to make impossible.
-    func addToGroup(_ name: String, address: String) {
-        let group = canonicalGroupName(name)
-        guard !group.isEmpty else { return }
-        let key = Self.key(for: address)
-        if entries[key] == nil {
-            setName(WalletStore.shortAddress(Self.resolvedForm(of: address)), for: address)
-        }
-        editGroups(of: [key]) { $0.contains(where: { Self.sameGroup($0, group) }) ? $0 : $0 + [group] }
-    }
 
     /// Files SEVERAL addresses under one group in a single write (2026-08-01) —
     /// the book-level door, where a group is named and its members picked in
@@ -934,49 +780,9 @@ final class AddressBook {
     /// Nil when the name is blank, so a caller can't select a group that was
     /// never created.
     @discardableResult
-    func addToGroup(_ name: String, addresses: some Sequence<String>) -> String? {
-        let group = canonicalGroupName(name)
-        guard !group.isEmpty else { return nil }
-        // Name anything not yet in the book first, for the reason the
-        // single-address door does it: a group naming an address the book
-        // doesn't hold is the orphan this design makes impossible. A write
-        // apiece, but only for addresses the picker could not have offered.
-        var keys: [String] = []
-        for address in addresses {
-            let key = Self.key(for: address)
-            guard !key.isEmpty else { continue }
-            if entries[key] == nil {
-                setName(WalletStore.shortAddress(Self.resolvedForm(of: address)), for: address)
-            }
-            keys.append(key)
-        }
-        guard !keys.isEmpty else { return nil }
-        editGroups(of: keys) { $0.contains(where: { Self.sameGroup($0, group) }) ? $0 : $0 + [group] }
-        return group
-    }
 
-    func removeFromGroup(_ name: String, address: String) {
-        editGroups(of: [Self.key(for: address)]) {
-            $0.filter { !Self.sameGroup($0, name) }
-        }
-    }
 
-    func renameGroup(_ old: String, to new: String) {
-        let target = new.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !target.isEmpty, !Self.sameGroup(target, old) else { return }
-        editGroups(of: entries.keys) { names in
-            // Renaming ONTO an existing group merges rather than duplicating.
-            var seen: Set<String> = []
-            return names.map { Self.sameGroup($0, old) ? target : $0 }
-                .filter { seen.insert($0.lowercased()).inserted }
-        }
-    }
 
-    /// Unfiles every address in a group. The addresses and their names stay —
-    /// only the label goes.
-    func deleteGroup(_ name: String) {
-        editGroups(of: entries.keys) { $0.filter { !Self.sameGroup($0, name) } }
-    }
 
     // MARK: - Lookalikes (address poisoning, 2026-08-01)
 
@@ -1026,7 +832,7 @@ final class AddressBook {
     /// change one and change the other.
     func exportText() -> String {
         all.map { entry in
-            ([entry.name, entry.address] + entry.groupNames).joined(separator: ", ")
+            [entry.name, entry.address].joined(separator: ", ")
         }.joined(separator: "\n")
     }
 
@@ -1047,7 +853,6 @@ final class AddressBook {
                 "kind": entry.kind.rawValue,
             ]
             if let provenance = entry.provenance { dict["provenance"] = provenance }
-            if !entry.groupNames.isEmpty { dict["groups"] = entry.groupNames }
             if let updatedAt = entry.updatedAt { dict["updatedAt"] = iso.string(from: updatedAt) }
             if let note = entry.note { dict["note"] = note }
             if let networks = entry.networks, !networks.isEmpty { dict["networks"] = networks }
@@ -1076,7 +881,6 @@ final class AddressBook {
                                  kind: (item["kind"] as? String).flatMap(Kind.init(rawValue:))
                                      ?? .unknown,
                                  provenance: item["provenance"] as? String,
-                                 groups: item["groups"] as? [String],
                                  updatedAt: updated,
                                  note: item["note"] as? String,
                                  networks: item["networks"] as? [String])
@@ -1129,9 +933,10 @@ final class AddressBook {
                         if setName(name, for: token) != nil { landed += 1 }
                         pendingName = nil
                         lastAddress = token
-                    } else if let address = lastAddress {
-                        // Trailing tokens belong to the address they follow.
-                        addToGroup(token, address: address)
+                    } else if lastAddress != nil {
+                        // A trailing token after an address used to file it
+                        // into a group. Groups are gone (prd §691): the token
+                        // is read and dropped rather than mistaken for a name.
                     } else {
                         // Leading token — a name for the address still to
                         // come, on this line or the next.
@@ -1253,8 +1058,8 @@ final class AddressBook {
     /// A name FILLS IN only — it never overwrites an entry the wallet side
     /// already named. A watched-but-unnamed address still lands (short form,
     /// same fallback `WalletStore.add` uses), because watching implies the
-    /// book holds it (the same invariant `addToGroup` enforces for groups,
-    /// `VibenetWatch.add` enforces for network tags from today forward).
+    /// book holds it (the same invariant `VibenetWatch.add` enforces for
+    /// network tags from today forward).
     private func migrateVibenetIfNeeded() {
         guard !UserDefaults.standard.bool(forKey: Self.vibenetMigratedKey) else { return }
         var moved = 0

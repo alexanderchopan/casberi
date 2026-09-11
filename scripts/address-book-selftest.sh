@@ -22,8 +22,6 @@
 #     for again with its bearings)
 #   · a diacritic filed past Z by a comparison that folds it and a heading that
 #     doesn't
-#   · a search that finds a group's ROWS but not the group, or offers a group
-#     whose rows the list beneath it is hiding — two spellings of one rule
 #   · "241 days ago" where the month was the fact, or a month from two years
 #     ago printed as though it were this spring
 #
@@ -74,10 +72,9 @@ PEOPLE="Casberi/Casberi/Model/AddressBookPeople.swift"
 # Wallet catalog page is the directory. Every guard that read that file —
 # A–Z sort, the search fold, the hoisted search, the filing doors, the save
 # flight, the quiet foot — described a screen that no longer exists; the
-# rulings that outlive it (groups, the shared row, the move sheet) are still
-# guarded on $VIEWS and $GROUPS below.
+# rulings that outlive it (the shared row, the move sheet) are still guarded
+# on $VIEWS below. Groups are DELETED (prd §691) and guarded nowhere.
 VIEWS="Casberi/Casberi/Screens/AddressBookViews.swift"
-GROUPS="Casberi/Casberi/Screens/AddressGroupViews.swift"
 BAR="Casberi/Casberi/Screens/AddressIndexBar.swift"
 FLIGHT="Casberi/Casberi/Screens/AddressFlight.swift"
 REVEAL="Casberi/Casberi/Screens/AddressReveal.swift"
@@ -87,7 +84,7 @@ CONN="Casberi/Casberi/Model/AddressConnections.swift"
 # The shell — where the rail is built and the route node resolved (§461).
 SHELL_MAIN="Casberi/Casberi/Shell/MainSurface.swift"
 ROUTE="Casberi/Casberi/Shell/HomeRoute.swift"
-for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$FIELD" "$UNWATCH" "$UNFOLLOW" "$PEOPLE" "$VIEWS" "$GROUPS" "$BAR" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
+for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$FIELD" "$UNWATCH" "$UNFOLLOW" "$PEOPLE" "$VIEWS" "$BAR" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -114,7 +111,6 @@ strip_comments "$FIELD"  > "$TMP/field-bare.swift"
 strip_comments "$UNWATCH" > "$TMP/unwatch-bare.swift"
 strip_comments "$UNFOLLOW" > "$TMP/unfollow-bare.swift"
 strip_comments "$PEOPLE" > "$TMP/people-bare.swift"
-strip_comments "$GROUPS" > "$TMP/groups-bare.swift"
 strip_comments "$VIEWS"  > "$TMP/views-bare.swift"
 strip_comments "$SHAPE"  > "$TMP/shape-bare.swift"
 strip_comments "$REVEAL" > "$TMP/reveal-bare.swift"
@@ -122,12 +118,8 @@ strip_comments "$REVEAL" > "$TMP/reveal-bare.swift"
 # --- drift guards -----------------------------------------------------------
 # Wiring the compiled file cannot prove about itself. A perfect `sections` is
 # worthless if the list draws its own order, if the scrubber invents its own
-# letters, or if the search field and the book disagree about what a group is.
+# letters.
 
-grep -q 'AddressBookShape.groupMatches($0, query: q)' "$BOOK" \
-  || { echo "✗ AddressBook.search no longer uses the shared group rule — the field's group RESULTS and its row filter would be two spellings of one test"; exit 1; }
-grep -q 'AddressBookShape.matchingGroups(groupNames, query: query)' "$BOOK" \
-  || { echo "✗ the book no longer offers matching groups; typing a group name would list its members and never open it (§267)"; exit 1; }
 grep -q 'AddressBookShape.lastPhrase(activity.lastAt)' "$VIEWS" \
   || { echo "✗ the row subline no longer states WHEN you last dealt — the count alone cannot separate a correspondent from a stranger"; exit 1; }
 grep -q 'static func summaries(in context: ModelContext)' "$ACTIVITY" \
@@ -249,11 +241,11 @@ grep -q 'FollowPrune.removeWallet' "$TMP/unwatch-bare.swift" \
 grep -q '"eye.fill"' "$TMP/views-bare.swift" \
   || { echo "✗ a watched row is indistinguishable from every other row (§511)"; exit 1; }
 grep -q 'Button(action: onToggleWatch)' "$VIEWS" \
-  || { echo "✗ the row's star is gone entirely — the parameter is what keeps AddressGroupScreen on one anatomy (§461)"; exit 1; }
+  || { echo "✗ the row's star is gone entirely — the parameter is what keeps every caller on one anatomy (§461)"; exit 1; }
 # …and the row's own star is drawn only when a caller passes the closure, so
-# neither screen may pass one. The book row keeps the parameter: `AddressGroupScreen`
-# and any future caller still get one anatomy, and a parameter nobody passes is
-# what makes that safe.
+# no screen may pass one. The book row keeps the parameter so any future
+# caller still gets one anatomy, and a parameter nobody passes is what makes
+# that safe.
 grep -q 'onToggleWatch' "$TMP/screen-bare.swift" "$TMP/unwatch-bare.swift" \
   && { echo "✗ a screen passes a watch toggle to its rows — §511 merged the lists and did NOT bring the star back (§461)"; exit 1; }
 # The flight's ends are RAMP tokens the caller passes, and since §448 they are
@@ -345,39 +337,15 @@ grep -q 'SocialRoom.hasRoster(source)' "$TMP/people-bare.swift" \
   && { echo "✗ AddressSpineCard.swift is back; §497 deleted it with its only call site"; exit 1; }
 grep -qE 'static func (headline|subhead)\(count:' "$CONN" \
   && { echo "✗ AddressConnections.headline/subhead are back; §448 cut them"; exit 1; }
-# A group says its COUNT and stops. "3 addresses · none watched" clipped to
-# "3 addresses · none wat…" at 150pt, and whether a group's members are watched
-# is a fact about the Watching section, not about the group.
-grep -qE 'watched\)? watched|none watched' "$TMP/groups-bare.swift" \
-  && { echo "✗ a group counts its watched members again — user ruling 2026-08-22, and it clipped at 150pt (§448)"; exit 1; }
-
-# THE FILING FLIGHT (§444) — the same face, the other direction. Filing was the
-# one gesture in the book whose whole feedback was a checkmark appearing.
-grep -q 'fromKey: "head:", toKey: "group:"' "$GROUPS" \
-  || { echo "✗ filing an address no longer sends its face into the group — the tick would be the only feedback again"; exit 1; }
-grep -q 'flightAnchor("group:" + AddressBook.key(forGroup: name))' "$GROUPS" \
-  || { echo "✗ a group row no longer publishes a landing anchor, or stopped keying it the BOOK's way — a group typed in another case would never find its own row"; exit 1; }
-grep -q 'toSize: AddressMoveSheet.deckFace' "$GROUPS" \
-  || { echo "✗ the filing flight stopped ending at the deck's own face size"; exit 1; }
-grep -q 'absorbing == AddressBook.key(forGroup: name)' "$GROUPS" \
-  || { echo "✗ the group row no longer takes the hit when a face lands in it"; exit 1; }
-# A group row wears the faces of who is in it (§444) — you file by recognising
-# people, and a checkmark, a word and a tally names none of them.
-grep -q 'AddressMark(entry: member' "$GROUPS" \
-  || { echo "✗ a group row lost its members' faces"; exit 1; }
 grep -q 'defaults.set(true, forKey: seededKey)' "$SOURCE" \
   || { echo "✗ the seen-set no longer seeds silently on first sight — a year of history would announce itself as today's news (the Hyperliquid 2026-07-30 bug)"; exit 1; }
 
 # ONE ROW ANATOMY. Two spellings of the book row is two books.
 grep -q 'struct AddressBookRow: View' "$VIEWS" \
-  || { echo "✗ the shared row is gone; the manager and the group screen would each draw their own"; exit 1; }
-grep -q 'AddressBookRow(entry: entry' "$GROUPS" \
-  || { echo "✗ the group screen no longer draws the shared row"; exit 1; }
+  || { echo "✗ the shared row is gone; every caller would draw its own"; exit 1; }
 
 # THE THREE MOVE DOORS (§440). Each is named, because two of them exist
 # precisely so the feature survives the third misbehaving on a device.
-grep -q 'struct AddressMoveSheet: View' "$GROUPS" \
-  || { echo "✗ the filing sheet is gone"; exit 1; }
 # The swipe must stay a DOOR and never a write — the design law's own "swipe
 # verbs are reads; a write belongs behind a deliberate press" (§212). It opens
 # a sheet, and the sheet takes the consent.
@@ -400,7 +368,7 @@ removes=$(grep -o 'Label("Remove from book"' "$TMP/views-bare.swift" | wc -l | t
 
 # NEGATIVE, on comment-stripped copies: §435's money ruling. The manager is a
 # PEOPLE screen and the feed's crown owns the money reading, once.
-for f in "$TMP/screen-bare.swift" "$TMP/groups-bare.swift"; do
+for f in "$TMP/screen-bare.swift"; do
   grep -q 'WalletValue.money' "$f" \
     && { echo "✗ a money figure returned to the address book — §435 struck every one of them off this screen"; exit 1; }
 done
@@ -425,9 +393,6 @@ grep -qE 'isDateIn(Today|Yesterday)' "$TMP/shape-bare.swift" \
 # that stopped firing files the row off-screen, and a flight with no Reduce
 # Motion guard is the §79 violation the motion audit cannot see (it is
 # gesture-driven, so the audit's appear-trigger check never fires).
-# THE QUIET TOP (§462). The strip waits for a REAL group; the zeroes are one
-# sentence at the foot. The foot line is also §267's discoverability answer,
-# so it may not lose the filing hint.
 # WHEN, down the trailing edge (§462) — recency left the subline for the slot
 # the star vacated. Both halves guarded, or the fact is drawn twice or not at
 # all.
@@ -716,20 +681,6 @@ check("a # name never leads an A–Z list",
       AddressBookShape.ordered(hashLed, order: .name).map(\.id) == ["a", "h"])
 
 print("")
-print("Group matching — ONE rule, so the results and the rows agree")
-check("a whole name matches", AddressBookShape.groupMatches("Family", query: "family"))
-check("case folds", AddressBookShape.groupMatches("family", query: "FAMILY"))
-check("a partial query matches by substring", AddressBookShape.groupMatches("Family", query: "fam"))
-check("surrounding whitespace folds", AddressBookShape.groupMatches("Family", query: "  fam  "))
-check("an unrelated query does not match", !AddressBookShape.groupMatches("Family", query: "work"))
-// An empty query must find NOTHING — the book returns everything for an empty
-// search, and a group offered above that list would claim the whole book was a
-// match for it.
-check("an empty query matches no group", !AddressBookShape.groupMatches("Family", query: ""))
-check("a whitespace query matches no group", !AddressBookShape.groupMatches("Family", query: "   "))
-check("matchingGroups keeps the given order",
-      AddressBookShape.matchingGroups(["Work", "Family", "Cold"], query: "o") == ["Work", "Cold"])
-
 print("")
 print("The recency phrase")
 var cal = Calendar(identifier: .gregorian)
@@ -899,8 +850,6 @@ check("a placeholder name with nothing else leaves with the watch",
       AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true) == false)
 check("a name somebody typed keeps the row",
       AddressBookShape.unwatchKeepsEntry(isPlaceholderName: false))
-check("a group keeps an unnamed row",
-      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, groups: ["Work"]))
 check("a note keeps an unnamed row",
       AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, note: "paid me in March"))
 check("a verified provenance keeps an unnamed row",
@@ -909,27 +858,22 @@ check("a verified provenance keeps an unnamed row",
 // ever put it back.
 check("a network tag keeps an unnamed row",
       AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, networks: ["vibenet"]))
-// Blank is not authorship. Without these an empty group name or a whitespace
-// note pins an unnamed address in the book forever, with nothing on screen to
-// say why.
-check("an empty group name is not authorship",
-      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, groups: [""]) == false)
+// Blank is not authorship. Without these a whitespace note pins an unnamed
+// address in the book forever, with nothing on screen to say why.
 check("a whitespace note is not authorship",
       AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, note: "   ") == false)
 check("a whitespace provenance is not authorship",
       AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, provenance: " ") == false)
-check("an empty network list is not authorship",
-      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, groups: [], networks: []) == false)
 // A fixture only tests the rule it names if it FAILS that rule and passes every
 // other one — the standing lesson this repo has paid for four times. The typed
 // name must be carrying this on its own.
 check("the typed-name case is not carried by some other field",
-      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: false, groups: [],
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: false,
                                          note: "", provenance: "", networks: []))
 // …and each keep-fixture above must be the ONLY thing keeping its row: every
 // one of them is a placeholder name with empty everything else.
 check("each keeper is alone in its fixture",
-      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, groups: [], note: "",
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, note: "",
                                          provenance: "", networks: []) == false)
 
 print("")
@@ -1011,11 +955,6 @@ mutate "adjacent rows stop merging into one section" \
 mutate "the index stops being derived from the sections" \
   'sections.compactMap(\.letter)' \
   '["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"]'
-# A group offered as a result for a query that matches nothing — which on an
-# EMPTY query means every group is offered above the whole book.
-mutate "an empty query starts matching every group" \
-  'guard !q.isEmpty else { return false }' \
-  'guard !q.isEmpty else { return true }'
 # "241 days ago", where the month was the fact.
 mutate "the day count stops handing over to the month" \
   'if days < 7 { return String(localized: "\(days) days ago") }' \
@@ -1094,9 +1033,6 @@ mutate "the deck claims a write it has not made" \
 mutate "a typed name stops keeping the row" \
   'if !isPlaceholderName { return true }' \
   'if false { return true }'
-mutate "an empty group name counts as authorship" \
-  'if (groups ?? []).contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {' \
-  'if !(groups ?? []).isEmpty {'
 mutate "a whitespace note counts as authorship" \
   'if let note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }' \
   'if let note, !note.isEmpty { return true }'

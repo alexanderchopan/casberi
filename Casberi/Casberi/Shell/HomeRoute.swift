@@ -66,14 +66,6 @@ final class HomeRoute {
         /// Walletbeat's has one: §234's ruling that a browse belongs at the head of the
         /// room, never behind the setup screen.
         case l2beatDirectory
-        /// One address-book group, opened (prd §440).
-        ///
-        /// Keyed by the group's NAME, which is also its identity in the model
-        /// — there are no group ids because there is no group store. A rename
-        /// therefore invalidates a pushed screen, which `AddressGroupScreen`
-        /// handles by popping itself rather than by this node holding a
-        /// stabler key it has no way to get.
-        case addressGroup(String)
         /// The address book — everyone you have dealt with (prd §461).
         ///
         /// Its own node rather than a `.bridge` destination, and that is the
