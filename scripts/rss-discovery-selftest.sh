@@ -118,7 +118,12 @@ enum IngestSupport {
     static func decodeHTMLEntities(_ s: String) -> String { s }
 }
 enum FeedFreshness {
+    // BOTH arities, matching the shipped pair since §710 batched the remove
+    // (one encode of the freshness store, not one per feed). A stub that
+    // carries only the single-URL form stops the extracted store compiling
+    // the moment a call site takes the array — which is how this drifted.
     static func forget(_ url: String) {}
+    static func forget(_ urls: [String]) {}
 }
 
 // `remove(atOffsets:)` ships in SwiftUI, which this harness deliberately does
