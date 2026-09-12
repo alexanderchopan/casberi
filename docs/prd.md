@@ -201,7 +201,7 @@ at all.
 | §240 | NFTs in folders, and the eager owned-NFT read behind them | amended by §387 |
 | §389b | A fold is skipped, not fatal — the cover is the newest thing t | reversed by §389c |
 | §392 | The grouping is drawn by proximity, the packer stops churning, | item 1 (the whitespace cluster layout) overturned by §392a; its diagnosis, the packing-order change, the scroll-to-active and the glass step all still stand |
-| §393 | Use what Apple uses, and keep the recipe because iOS 18 exists | default reversed by §393a — `glassEffect` does not sample a sheet's backdrop on hardware, so the material is the default again and the system path stays behind `-trayGlass system`; §393's reasoning about a BAR is untouched |
+| §393 | Use what Apple uses, and keep the recipe because iOS 18 exists | default reversed by §393a — `glassEffect` does not sample a sheet's backdrop on hardware, so the material is the default again and the system path stays behind `-trayGlass system`; §393's reasoning about a BAR is untouched; the glass tray itself, its flag and its three tokens deleted by §712 — no tray passed `glass: true` once the sources tray became the dock |
 | §394 | The tray stops being a sheet, and four boundary treatments are rejected | amended by §394a — the overlay shipped with three runtime-only failures (missing environment, ScrollView eating the drag, `.local` coordinate space) and the drag-to-expand detent §394 declared gone is rebuilt |
 
 ### Known stale, by hand
@@ -54075,3 +54075,54 @@ authenticated half of the chain has never run here — this pass fixes one prove
 defect, ships one correct-by-construction change, and makes the next report
 answerable. It is not yet a confirmed fix for the person who reported it, and
 should not be described as one.
+
+## §712 — The glass tray is deleted: a `DSTray` parameter nothing passed, the sheet it drew, its DEBUG flag and three tokens (user: "how are we doing with liquid glass use? any other opportunites to use it?" → "do 1 and 2 and the dead code thing", 2026-09-12)
+
+A survey of Liquid Glass across the app found the floating layer complete —
+every piece of chrome over content routes through `dsGlass`, the content itself
+wears none, and the composer is solid ink by prd 44/52. It also found a branch
+with no callers, and proposed two small additions. Only the deletion survived a
+closer read.
+
+**What went.** `DSTray`'s `glass:` parameter, the undimmed-backdrop interaction
+it switched on, `DSGlassSheet` (the material recipe and the iOS 26
+`glassEffect(.clear)` path behind it), `DSTrayGlass` and its `-trayGlass` DEBUG
+flag, and the tokens only that sheet read: `glassSheen`, `glassDepth` and
+`glassCarve`. About 320 lines. `SourcesTray` was the one caller (§393) and it
+became the dock; nothing has passed `glass: true` since, so the flag compared two
+treatments nothing drew. `glassCarve` had no reader at all.
+
+**What stays true.** §393a's finding is not about this code and is not retired
+with it: `glassEffect` did not sample a presented sheet's backdrop on hardware,
+and a future glass SHEET starts from that, not from the simulator.
+
+**A guard was amended, not deleted.** `dock-selftest.sh` required `DSTray` to
+read Reduce Transparency, because its glass pane had to go opaque under the
+setting. There is no pane now, only `surfaceSheet`, which is already opaque.
+The check is gone and `DSTray.swift` drops out of the raw-material exemption,
+so a material added to a tray later is caught instead of excused.
+
+**The two additions that were proposed and are NOT done, recorded so neither is
+proposed again from the same survey.**
+
+- *`backgroundExtensionEffect` under the article art and the photo viewer.* It
+  extends a view into the SAFE AREA beneath chrome. The article's art
+  (`LinkPreviewCard(artOnly:)`, §709) is a padded, rounded 140pt card
+  mid-scroll, touching no safe-area edge and under no glass. `PhotoViewer`
+  already ignores the safe area and letterboxes on black. It would draw
+  nothing in either place.
+- *Glass on the thing sheet's "flat share capsule."* The flat capsule the survey
+  saw is the receipt's inline "Watch it from the lock screen" control
+  (`trackRecordControl`), which is content. Brief §8 keeps glass off content.
+  The sheet has no floating control on a flat fill.
+
+The one flat floating disc left in the tree is in `SummonPrototype.swift`, a
+prototype screen, and was left alone.
+
+**Verified:** built green for iOS Simulator; `dock-selftest.sh` green after the
+amendment, and a probe material appended to `DSTray.swift` in a throwaway
+worktree trips the widened check; `prd-index-audit`, `sheet-title-audit`,
+`mac-sheet-audit`, `design-ramp-audit`, `design-motion-audit`,
+`harness-exists-audit` and `mutation-liveness-audit` all pass. **Not run:** the
+Mac Catalyst compile and the full `verify.sh`. Nothing deleted was
+platform-specific, but that is reasoning, not a build.

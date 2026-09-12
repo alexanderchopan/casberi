@@ -500,23 +500,23 @@ GATE
 # Every glass surface honours Reduce Transparency, through the token — so a raw
 # material anywhere else is a surface the setting cannot reach.
 strip_comments "Casberi/Casberi/Design/Glass.swift" > "$TMP/glass.nc"
-strip_comments "Casberi/Casberi/Design/DSTray.swift" > "$TMP/tray.nc"
 [ "$(grep -c 'accessibilityReduceTransparency' "$TMP/glass.nc")" -ge 3 ] \
   || { echo "✗ Glass.swift no longer reads accessibilityReduceTransparency on each of"; \
        echo "  dsGlass / dsGlassProminent / dsGlassBlob — a glass surface the setting can't reach."; fail=1; }
-grep -q 'accessibilityReduceTransparency' "$TMP/tray.nc" \
-  || { echo "✗ DSTray's pane no longer goes opaque under Reduce Transparency."; fail=1; }
+# DSTray's glass pane and its Reduce Transparency check were deleted (prd §712):
+# a tray is `surfaceSheet`, already opaque, so it has nothing to read — and it
+# is no longer exempt from the raw-material check below.
 grep -q 'func dsOpaqueGlass' "$TMP/glass.nc" \
   || { echo "✗ dsOpaqueGlass is gone — the opaque form of glass has no one recipe."; fail=1; }
 # Comment-stripped, because two files DOCUMENT a material they no longer draw.
 raw=""
 for f in $(grep -rl 'Material' Casberi/Casberi Casberi/Shared --include='*.swift' 2>/dev/null \
-           | grep -v 'Design/Glass.swift\|Design/DSTray.swift'); do
+           | grep -v 'Design/Glass.swift'); do
   strip_comments "$f" | grep -q '\.regularMaterial\|\.ultraThinMaterial\|\.thinMaterial\|\.thickMaterial' \
     && raw="$raw $f"
 done
 [ -z "$raw" ] \
-  || { echo "✗ a raw material outside Glass.swift/DSTray.swift — route it through dsGlass so"; \
+  || { echo "✗ a raw material outside Glass.swift — route it through dsGlass so"; \
        echo "  Reduce Transparency reaches it: $raw"; fail=1; }
 # Money says its direction without colour: the pill's glyph and the down line's dash.
 strip_comments "Casberi/Casberi/Design/TokenChartView.swift" > "$TMP/chart.nc"
