@@ -112,6 +112,14 @@ enum DemoSeedAll {
                               // needs these two or they outlive the demo.
                               "fc:demo:", "bsky:demo:",
                               "import:receipt:", "cloudflare:cert:demo",
+                              // The GitHub feed's demo rows (prd §674 — one
+                              // feed, a tag per row) carry the real bridge's
+                              // `gh:` shape so `GitHubRoom` recognises them,
+                              // so teardown and the freshness re-stamp need
+                              // these or they outlive the demo. Both are
+                              // demo-specific (they carry `demo`), so a real
+                              // notification (`gh:notif:<id>`) is never touched.
+                              "gh:demo", "gh:notif:demo",
                               // Vibenet's demo rows carry the REAL bridge's
                               // ref shape for the same reason Peer's do
                               // below — so its own dedupe recognises them —
@@ -2314,6 +2322,22 @@ enum DemoSeedAll {
         out += music.enumerated().map { i, m in
             row(.link, m.0, source: "Apple Music", ref: "demo:music:\(i)", days: m.1, hour: 8) { t in
                 t.previewImageURL = art(i + 2)
+            }
+        }
+        // Spotify recently-played — the same "Song — Artist" shape as Apple
+        // Music (its ingest lands `.link` things the same way), tagged
+        // `Played` to match `SpotifyIngest`, on the generic `demo:` ref that
+        // `refPrefixes` already covers.
+        let spotify: [(String, Double)] = [
+            ("Dayvan Cowboy — Boards of Canada", 1), ("Roygbiv — Boards of Canada", 6),
+            ("An Eagle in Your Mind — Boards of Canada", 15),
+            ("Avril 14th — Aphex Twin", 9), ("Xtal — Aphex Twin", 28),
+            ("Lianne — Bibio", 20),
+        ]
+        out += spotify.enumerated().map { i, s in
+            row(.link, s.0, source: "Spotify", ref: "demo:spotify:\(i)", days: s.1, hour: 9) { t in
+                t.tags = ["Played"]
+                t.previewImageURL = art(i + 8)
             }
         }
         let shows: [(String, String, Double)] = [
@@ -5153,6 +5177,7 @@ enum DemoSeedAll {
         ("Substack", "2 publications", "Follows writers you read."),
         ("Podcasts", "3 shows", "Follows shows you listen to."),
         ("Apple Music", "Synced 35m ago", "Reads what you played."),
+        ("Spotify", "Synced 20m ago", "Reads what you recently played."),
         ("Steam", "Synced 2h ago", "Reads what you played."),
         ("Readwise", "Synced 1h ago", "Brings your highlights in."),
         ("Kindle", "Synced 3h ago", "Brings your highlights in."),
