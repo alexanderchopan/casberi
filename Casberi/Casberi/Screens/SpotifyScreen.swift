@@ -18,6 +18,12 @@ struct SpotifyScreen: View {
     /// it's kept apart from `result` (which the status row paints green/red).
     @State private var cancelled = false
     @State private var showLogin = false
+    /// The login cover handed back a session this time. The cover's dismiss
+    /// fires AFTER `harvested` — often after its whole validate has already
+    /// failed and cleared the credential — so "not connected on dismiss" drew
+    /// "Sign-in cancelled" on top of the real failure line (build 568, a
+    /// user's screenshot). Only a cover that returned NOTHING was cancelled.
+    @State private var harvestedThisCover = false
 
     /// The page's one presentation (`AccountPage.sheet`). The login web view
     /// rises through its own `fullScreenCover`, so the two never collide.
@@ -45,7 +51,7 @@ struct SpotifyScreen: View {
         // closing the login cover by hand said nothing at all (2026-09-12).
         // A cover closed without a session IS the cancel.
         .fullScreenCover(isPresented: $showLogin,
-                         onDismiss: { cancelled = !SpotifyAuth.connected }) {
+                         onDismiss: { cancelled = !harvestedThisCover }) {
             SpotifyLoginWebView(onCredentials: harvested)
         }
         .onAppear {
@@ -64,7 +70,8 @@ struct SpotifyScreen: View {
         } else {
             DSSlabButton(title: "Connect Spotify",
                          systemImage: "person.badge.key",
-                         action: { DSHaptic.tap(); cancelled = false; result = nil; showLogin = true })
+                         action: { DSHaptic.tap(); cancelled = false; result = nil
+                                   harvestedThisCover = false; showLogin = true })
             if cancelled {
                 Text("Sign-in cancelled — nothing was connected.")
                     .dsText(.callout15).foregroundStyle(DS.textTertiary)
@@ -96,6 +103,7 @@ struct SpotifyScreen: View {
 
     /// The web view handed back a session. Store it, confirm it works, sync.
     private func harvested(_ creds: SpotifyAuth.Credentials) {
+        harvestedThisCover = true
         SpotifyAuth.save(creds)
         cancelled = false
         result = nil
@@ -121,7 +129,10 @@ struct SpotifyScreen: View {
                     // forever.
                     register(proof: String(localized: "Signed in"))
                 }
-                result = .failed(failure.line)
+                // A throttle is a signed-in state with a delay, not an error —
+                // painting it as a failure is what told this user to sign in
+                // again into the same wall.
+                result = failure == .throttled ? .says(failure.line) : .failed(failure.line)
                 return
             }
             DSHaptic.success()
@@ -153,7 +164,14 @@ struct SpotifyScreen: View {
         let added = await SpotifyIngest.refresh(context: modelContext)
         syncing = false
         guard let added else {
-            result = .failed(String(localized: "Couldn't reach Spotify — try again in a moment."))
+            switch SpotifyIngest.lastFailure {
+            case .throttled?:
+                result = .says(SpotifyAuth.Failure.throttled.line)
+            case let failure? where failure.clearsCredential:
+                result = .failed(failure.line)
+            default:
+                result = .failed(String(localized: "Couldn't reach Spotify — try again in a moment."))
+            }
             return
         }
         result = .landed(added)

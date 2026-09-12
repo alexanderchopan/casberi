@@ -52,6 +52,13 @@ enum SpotifyAuth {
         case refused(Int)
         /// No usable answer: no network, a timeout, a 5xx.
         case unreachable
+        /// Spotify answered 429. NOT a verdict on the session: `api.spotify.com`
+        /// throttles the web player's SHARED client id, so a web-player token is
+        /// refused there on its very first request, from a fresh machine, with
+        /// a real session or an anonymous one alike (measured 2026-09-12,
+        /// `Retry-After: 48` on `/v1/tracks`, `/v1/me` and recently-played).
+        /// Build 568 read it as `.refused` and threw a good sign-in away.
+        case throttled
         /// Nothing is stored — no sign-in has happened on this device.
         case noSession
 
@@ -63,6 +70,8 @@ enum SpotifyAuth {
                 return String(localized: "Sign in to connect Spotify.")
             case .unreachable:
                 return String(localized: "Signed in, but couldn't reach Spotify just now — it'll retry on its own.")
+            case .throttled:
+                return String(localized: "Signed in — Spotify is busy right now, so your plays will arrive shortly.")
             case .refused(let status):
                 return String(localized: "Spotify didn't accept that sign-in (\(status)) — tap Connect to try again.")
             }
@@ -71,7 +80,23 @@ enum SpotifyAuth {
         /// Whether the stored credential is now known to be worthless. Only a
         /// refusal says that; an unreachable moment says nothing at all, and
         /// wiping on it costs the person the whole web sign-in for a blip.
-        var clearsCredential: Bool { self == .unreachable ? false : true }
+        var clearsCredential: Bool {
+            switch self {
+            case .refused, .noSession: return true
+            case .unreachable, .throttled: return false
+            }
+        }
+
+        /// The one mapping from an HTTP status to a case, so the token call and
+        /// every read agree on what a 429 means.
+        static func from(status: Int) -> Failure {
+            switch status {
+            case 0: return .unreachable
+            case 429: return .throttled
+            case 500...: return .unreachable
+            default: return .refused(status)
+            }
+        }
     }
 
     private static let credsKey = "spotify.creds"
@@ -182,9 +207,8 @@ enum SpotifyAuth {
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let access = json["accessToken"] as? String, !access.isEmpty
         else {
-            // 5xx is Spotify having a bad minute, not a session verdict.
-            return (nil, http.statusCode >= 500 ? .unreachable
-                                                : .refused(http.statusCode))
+            // 5xx and 429 are Spotify having a bad minute, not a session verdict.
+            return (nil, .from(status: http.statusCode))
         }
         // **A 200 IS NOT A SIGNED-IN SESSION.** `open.spotify.com/api/token`
         // answers a valid TOTP with a perfectly well-formed token EVEN WITH NO
@@ -227,21 +251,24 @@ enum SpotifyAuth {
     /// same call stupid-social proves the harvested token reaches. A non-200
     /// here means the login didn't take (or has already lapsed).
     static func validate() async -> Failure? {
-        let (bearer, tokenFailure) = await token()
-        guard let bearer else { return tokenFailure ?? .unreachable }
+        guard let creds = load(), !creds.spDC.isEmpty else { return .noSession }
+        // THE SESSION PROOF IS THE TOKEN ENDPOINT'S OWN VERDICT. It mints for
+        // any valid TOTP and says `isAnonymous: false` only when `sp_dc` is a
+        // live sign-in — and it is not throttled, where `api.spotify.com` is
+        // (see `.throttled`). `/v1/me` used to be this gate, so a rate limit on
+        // a shared client id read as a failed sign-in for every person at once.
+        // A fresh mint, not `token()`: a still-valid stored bearer would skip
+        // the refresh and prove nothing.
+        let (refreshed, failure) = await refreshWebPlayerToken(creds)
+        guard let refreshed else { return failure ?? .unreachable }
+        // The display name is a nicety, never a gate — a 429 here costs the
+        // "Signed in as" line, nothing else.
         let (json, status) = await IngestSupport.getJSONStatus(
-            "https://api.spotify.com/v1/me", auth: "Bearer \(bearer)", service: "Spotify")
-        guard status == 200, let me = json as? [String: Any] else {
-            // Status 0 is `getJSONStatus`'s own "no response at all". A 5xx is
-            // Spotify's bad minute. Everything else, `/v1/me` included, is the
-            // session being turned down — and if the refresh already had a
-            // verdict, that one is the more specific fact.
-            if status == 0 || status >= 500 { return .unreachable }
-            return tokenFailure ?? .refused(status)
-        }
-        if var creds = load() {
-            creds.username = (me["display_name"] as? String) ?? (me["id"] as? String)
-            save(creds)
+            "https://api.spotify.com/v1/me", auth: "Bearer \(refreshed.bearerToken)",
+            service: "Spotify")
+        if status == 200, let me = json as? [String: Any], var current = load() {
+            current.username = (me["display_name"] as? String) ?? (me["id"] as? String)
+            save(current)
         }
         return nil
     }
@@ -309,6 +336,10 @@ enum SpotifyWebPlayerToken {
 enum SpotifyIngest {
 
     @MainActor private static var running = false
+    /// Why the last pass landed nothing, when it failed. `refresh` keeps its
+    /// `Int?` because the sweep only needs "did it work"; the SCREEN needs to
+    /// tell a throttle (signed in, plays delayed) from a dead session.
+    @MainActor private(set) static var lastFailure: SpotifyAuth.Failure?
 
     /// Recently played, newest 50 — "Song — Artist" things linking to Spotify,
     /// each wearing its album's cover and the album it came off. One thing per
@@ -322,8 +353,10 @@ enum SpotifyIngest {
         }
         running = true
         defer { running = false }
+        lastFailure = nil
 
-        guard let token = await SpotifyAuth.accessToken() else { return nil }
+        let (bearer, tokenFailure) = await SpotifyAuth.token()
+        guard let token = bearer else { lastFailure = tokenFailure ?? .unreachable; return nil }
         let (json, status) = await IngestSupport.getJSONStatus(
             "https://api.spotify.com/v1/me/player/recently-played?limit=50",
             auth: "Bearer \(token)", service: "Spotify")
@@ -332,7 +365,13 @@ enum SpotifyIngest {
         // try this pass; the seat will re-validate on the next foreground.
         guard status == 200,
               let root = json as? [String: Any],
-              let items = root["items"] as? [[String: Any]] else { return nil }
+              let items = root["items"] as? [[String: Any]] else {
+            // A 429 is the norm here, not an outage: `api.spotify.com` throttles
+            // the web player's shared client id on a rolling window (three
+            // honoured `Retry-After`s in a row, still 429 — §711b).
+            lastFailure = status == 200 ? .unreachable : .from(status: status)
+            return nil
+        }
 
         let existing = IngestSupport.existingSourceRefs(context, source: "Spotify")
         var seen = Set<String>()

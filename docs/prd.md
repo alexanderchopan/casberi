@@ -54126,3 +54126,42 @@ worktree trips the widened check; `prd-index-audit`, `sheet-title-audit`,
 `harness-exists-audit` and `mutation-liveness-audit` all pass. **Not run:** the
 Mac Catalyst compile and the full `verify.sh`. Nothing deleted was
 platform-specific, but that is reasoning, not a build.
+
+## §711b — The 429 is Spotify throttling the web player's SHARED client id, not the person: the session is proven by the token endpoint, and a throttle is a signed-in state (user's screenshot on build 568: "Spotify didn't accept that sign-in (429)", under "Sign-in cancelled — nothing was connected.", 2026-09-12)
+
+§711's diagnostic did its one job on the first report: it named the link, and
+the link was a 429. Measured the same hour:
+
+- **`api.spotify.com` answers 429 to a web-player token on its FIRST request**,
+  from a machine that had made none — `/v1/tracks`, `/v1/me` and
+  `/v1/me/player/recently-played` alike, anonymous token or not. Three
+  honoured `Retry-After`s in a row (15s, 56s, 57s) were each answered 429
+  again: a rolling throttle on the client id every web-player token shares,
+  not a burst this device caused.
+- **`open.spotify.com/api/token` is NOT throttled**, and its `isAnonymous`
+  field is the session verdict. `validate()` now mints fresh and gates on
+  that alone; `/v1/me` is demoted to a best-effort display name. §711 made
+  `/v1/me` the gate, which turned one shared rate limit into a failed sign-in
+  for every person at once.
+- **`spclient.wg.spotify.com` — what the web player itself reads — is not on
+  that throttle** (same token: 200 on a public profile, 401 rather than 429 on
+  recently-played).
+
+So: `SpotifyAuth.Failure.throttled` (429, via one `Failure.from(status:)` the
+token call and every read share), which keeps the credential, registers the
+seat, and draws as `.says` — signed in, plays delayed — never as `.failed`.
+`SpotifyIngest.lastFailure` carries the same fact to the screen's sync line.
+
+**The second bug in the screenshot:** "Sign-in cancelled" drawn over the real
+failure. The cover's `onDismiss` computed cancelled as "not connected when the
+cover closed", and it fires AFTER `harvested` — often after its whole validate
+has failed and cleared the credential. Cancelled now means only a cover that
+handed back NOTHING (`harvestedThisCover`).
+
+**What is still broken, stated plainly:** while the throttle holds, the INGEST
+lands nothing, because recently-played still reads `api.spotify.com`. The fix
+is the web player's own `spclient` path, and it is NOT shipped here: its
+recently-played is 401 to anything but a real session, so its response shape
+and the username it needs cannot be verified on a machine with no `sp_dc`,
+and §711 has already recorded what an unverified guess at this seat costs.
+One real session stored locally makes it a one-launch check.

@@ -109927,6 +109927,34 @@
         }
       }
     },
+    "Signed in — Spotify is busy right now, so your plays will arrive shortly." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sesión iniciada: Spotify está ocupado ahora mismo, así que tus reproducciones llegarán en breve."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サインインしました。Spotify が混み合っているため、再生履歴はまもなく届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "로그인했습니다 — 지금 Spotify가 바빠서 재생 기록이 곧 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已登录 —— Spotify 当前繁忙，你的播放记录稍后就会到达。"
+          }
+        }
+      }
+    },
     "Signed in, but couldn't reach Spotify just now — it'll retry on its own." : {
       "localizations" : {
         "es" : {
