@@ -52506,6 +52506,34 @@
         }
       }
     },
+    "Couldn't reach Spotify's sign-in — check your connection and tap Try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo abrir el inicio de sesión de Spotify: revisa tu conexión y toca Intentar de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify のサインインに接続できませんでした。接続を確認して「もう一度試す」をタップしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify 로그인에 연결할 수 없습니다 — 연결 상태를 확인하고 다시 시도를 탭하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法打开 Spotify 登录——请检查你的网络连接并点按“重试”。"
+          }
+        }
+      }
+    },
     "Couldn't reach Steam — check the key, the profile name, and that the profile is public." : {
       "localizations" : {
         "es" : {
@@ -90260,6 +90288,34 @@
         }
       }
     },
+    "Opening Spotify's sign-in…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abriendo el inicio de sesión de Spotify…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify のサインインを開いています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify 로그인을 여는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在打开 Spotify 登录…"
+          }
+        }
+      }
+    },
     "Opens AWS" : {
       "localizations" : {
         "es" : {
@@ -111618,6 +111674,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "赞助者"
+          }
+        }
+      }
+    },
+    "Spotify didn't hand back a session — tap Try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify no devolvió una sesión: toca Intentar de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify からセッションが返されませんでした。「もう一度試す」をタップしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify가 세션을 반환하지 않았습니다 — 다시 시도를 탭하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify 没有返回会话——请点按“重试”。"
           }
         }
       }
