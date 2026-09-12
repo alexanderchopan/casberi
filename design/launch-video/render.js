@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const FPS = 30;
-const FRAMES_DIR = path.join(__dirname, 'frames');
+const FRAMES_DIR = process.env.FRAMES_DIR || path.join(__dirname, 'frames');
 const PREVIEW = process.argv.includes('--preview');
 const HTML = process.argv.find(a => a.endsWith('.html')) || 'video.html';
 const SPOTS = (process.argv.find(a => a.startsWith('--spots=')) || '').slice(8)
@@ -17,7 +17,7 @@ const [W, H] = SIZE.split('x').map(Number);
   fs.rmSync(FRAMES_DIR, { recursive: true, force: true });
   fs.mkdirSync(FRAMES_DIR, { recursive: true });
 
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : {});
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   await page.goto('file://' + path.join(__dirname, HTML));
   await page.waitForTimeout(300); // let data-URI images decode
@@ -37,6 +37,11 @@ const [W, H] = SIZE.split('x').map(Number);
     n++;
     if (!PREVIEW && n % 60 === 0) console.log(`${n}/${nFrames}`);
   }
-  await browser.close();
   console.log('done:', n, 'frames,', total + 's @', FPS, 'fps');
+  // Four of these run at once for the account clips, and `browser.close()`
+  // was observed to hang indefinitely under that contention with every frame
+  // already on disk. The frames ARE the output; nothing here owns state worth
+  // draining, so the process leaves rather than waits.
+  await Promise.race([browser.close(), new Promise(r => setTimeout(r, 3000))]);
+  process.exit(0);
 })();

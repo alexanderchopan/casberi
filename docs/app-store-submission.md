@@ -54,50 +54,27 @@ wallet,crypto,portfolio,tracker,ai,agent,second,brain,notes,feed,farcaster,blues
 - Don't repeat the app name or subtitle words here; they're already indexed.
 
 ### Description  *(≤4000)*
-```
-Casberi is one private home for everything you care about — and an agent that answers from it.
 
-Connect your apps and wallets once. Everything they produce lands in one feed on your iPhone: posts, transactions, workouts, releases, events, screenshots, notes. Then ask about any of it, in plain words, and get an answer grounded in your own things — never invented.
+**SUPERSEDED — the live description lives in `docs/store-copy.md`, not here.**
+That file holds the 1,794-character iOS text applied by hand on 2026-09-07
+(§643) and the Mac one beside it. **Read back from the public listing
+2026-09-11 and it matches**, which also closes the question §643's amendment
+left open ("only ASC can say which" copy went up): the halved copy shipped.
+Live subtitle on that read: `One app for your things`.
 
-ONE FEED, EVERY SOURCE
-• Wallets, Farcaster, Bluesky, RSS, GitHub, your calendar, reminders, photos, health — connect them in the catalog and each lands automatically.
-• Chips up top narrow the feed to one app; the feed learns which ones you visit.
-• A day's events share one card, and each source's feed takes the shape of its content.
+The 3,089-character description that stood here until 2026-09-11 is **deleted
+rather than corrected**, and the reason is the one §643's amendment paid for —
+*a store-copy doc carrying text nobody can vouch for is worse than one carrying
+an admitted hole, because the next session pastes from it.* Its `CONNECTS WITH`
+block named 48 seats, and **six of them no longer exist**: Spotify (retired
+2026-09-02, `a5a515e5` — Spotify's development mode caps an app at five
+hand-registered accounts) and Kalshi, OpenSea, GeckoTerminal, Open Food Facts
+and 1Claw (retired with the Markets category, §638). Nothing read this file, so
+the list sat six retirements behind with no signal anywhere. `catalog-sync.sh`
+checks any `CONNECTS WITH` block in the copy docs now, so a re-added list
+cannot drift again.
 
-CONNECTS WITH
-Photos, Calendar, Reminders, Contacts, Apple Health, Apple Notes, Apple Journal, Apple Music, Podcasts, HomeKit, ChatGPT, Claude, Gemini, GitHub, Linear, Notion, Todoist, Obsidian, Day One, Readwise, Raindrop, Kindle, RSS, Substack, Pinterest, Reddit, YouTube, Spotify, Twitch, Steam, Strava, Cal.com, Calendly, Farcaster, Bluesky, Shopify, Kalshi, Stocktwits, OpenSea, GeckoTerminal, Peer, Bitrefill, Open Food Facts, Venice, Bankr, 1Claw — and more join regularly.
-
-ASK YOUR THINGS
-• The ask bar sits at the bottom of every screen. Ask "what's happening with my trip?" or "show me my wallet" — Casberi retrieves the actual things and writes the answer from them.
-• Answers draw real charts: holdings, trends, activity.
-• Keep an ask you make often and it becomes a standing chip, ready with a fresh answer.
-• On iPhones with Apple Intelligence, answers are written by Apple's on-device model. Optionally bring your own key (Claude, ChatGPT, Gemini, and more) for longer answers — your key stays in the device Keychain.
-
-WATCH ANY WALLET
-• Paste an address or a name (ENS, .sol) — or connect read-only through WalletConnect. Watching can never trade or move funds.
-• Live holdings across Ethereum, Base, Solana, and more, drawn as a treemap.
-• Transactions, token approvals (with a direct path to review and revoke), NFT drops, trending tokens, stocks, and event odds if you want them.
-
-CAPTURE WITHOUT FRICTION
-• Share from any app and it lands instantly, no filing. Screenshots flow in from Photos on their own.
-• Tap the mic for a voice note; it's transcribed and stays findable.
-• Paste a link and Casberi reads the page so you don't have to.
-• Import your ChatGPT, Claude, and Gemini conversations, Day One journals, and Apple Journal entries.
-
-FOUND EVERYWHERE
-• Spotlight finds your things. Siri and Shortcuts can search them and ask about them.
-• Visual Intelligence matches what your camera sees against what you've saved.
-
-YOURS, ACTUALLY
-• No account. No sign-up. No password to give us.
-• No analytics, no tracking, no ads.
-• No Casberi server holds your things — there is no backend at all.
-• Optional iCloud sync through your own private iCloud account (off by default).
-• Export everything to a single file, any time. Delete everything for real.
-
-Casberi isn't another chatbot. It's your own things, in one feed, with an agent that actually knows them.
-```
-*(3,089 — rewritten 2026-07-21, CONNECTS WITH list added same day (48 names, feature-offers Wallet/Tokens/Deals excluded; ends open-ended since description edits ride version reviews and the catalog grows) for the agent-shell redesign: leads with agent + one feed, adds the wallet section, scopes the on-device claim honestly around BYOK)*
+Git has the old text if it is ever wanted: `git show HEAD:docs/app-store-submission.md`.
 
 ### What's New (version notes)  *(≤4000)*
 For a first public release, keep it simple:

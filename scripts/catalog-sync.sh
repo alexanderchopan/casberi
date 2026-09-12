@@ -16,7 +16,16 @@
 #        screen died — onboarding is the "How it works" greeting straight
 #        into the catalog, and the catalog is code-derived. Nothing to check.
 #
-#   3. DECORATIVE MARQUEES — the website hero rain (index.html .rain) and the
+#   3. STORE-COPY APP LISTS (docs/store-copy.md, docs/app-store-submission.md)
+#        A `CONNECTS WITH` block is a promise on the App Store that the app
+#        connects to each name in it, so every name MUST resolve to a
+#        CONNECTABLE offer — stricter than the marquee rule, which only asks
+#        that a name be a real offer. Completeness is NOT required (the block
+#        is curated and ends open-ended). Nothing read these docs until
+#        2026-09-11, and the list had sat six retirements behind: Spotify
+#        (a5a515e5) plus the five Markets seats (§638).
+#
+#   4. DECORATIVE MARQUEES — the website hero rain (index.html .rain) and the
 #        onboarding rain (IntroCover.marqueeApps) — are hand-curated
 #        SUBSETS by design (the rain has never listed Photos/Wallet/etc.).
 #        We do NOT require completeness, but every name they reference MUST
@@ -34,6 +43,13 @@ CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
 ONBOARD="Casberi/Casberi/Screens/IntroCover.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 INDEX="website/index.html"
+# Overridable so the check can be proven against fixtures without mutating a
+# tracked file (a peer session's `git add -A` would commit the mutation).
+if [ -n "${CATALOG_SYNC_COPYDOCS:-}" ]; then
+  read -ra COPYDOCS <<< "$CATALOG_SYNC_COPYDOCS"
+else
+  COPYDOCS=(docs/store-copy.md docs/app-store-submission.md)
+fi
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -111,6 +127,35 @@ grep -q 'BridgeCatalog.offers.filter' "$ONBOARD" \
   || bad "the onboarding rain no longer derives its names from the catalog"
 check_marquee_validity "empty-feed pile"  "$tmp/feed_pile"
 [ "$fail" -eq 0 ] && say "  ✓ all marquee names valid"
+
+# === Check 3: store-copy CONNECTS WITH names are connectable =============
+# Fires only where such a block exists, so a doc without one is silent rather
+# than green-by-absence. The block is one paragraph: the line(s) after the
+# heading, up to the first blank line.
+say "Store-copy app lists ↔ connectable offers"
+found_block=0
+for doc in "${COPYDOCS[@]}"; do
+  [ -f "$doc" ] || continue
+  awk '/^CONNECTS WITH[[:space:]]*$/{f=1;next} f&&/^[[:space:]]*$/{exit} f{print}' "$doc" \
+    > "$tmp/copy_raw"
+  [ -s "$tmp/copy_raw" ] || continue
+  found_block=1
+  # Comma-separated names; drop the trailing open-ended clause after an em dash.
+  sed -E 's/[[:space:]]*—.*$//' "$tmp/copy_raw" \
+    | tr ',' '\n' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' \
+    | grep -v '^$' | sort -u > "$tmp/copy_names"
+  dead="$(comm -23 "$tmp/copy_names" "$tmp/connectable")"
+  if [ -n "$dead" ]; then
+    while IFS= read -r a; do
+      bad "$doc CONNECTS WITH names a seat that is not a connectable offer: $a"
+    done <<< "$dead"
+  fi
+done
+if [ "$found_block" -eq 0 ]; then
+  info "no CONNECTS WITH block in the copy docs — nothing to check"
+elif [ "$fail" -eq 0 ]; then
+  say "  ✓ every listed seat is connectable"
+fi
 
 # === Info: connectable apps not (yet) in a decorative marquee ============
 say "Connectable apps absent from a marquee (info only)"
