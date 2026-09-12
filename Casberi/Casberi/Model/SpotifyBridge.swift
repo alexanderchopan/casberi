@@ -179,8 +179,9 @@ enum SpotifyWebPlayerToken {
     /// device with a skewed clock still mints a valid code. Best-effort: falls
     /// back to the local clock on any failure.
     static func serverSynchronized() async -> String? {
-        guard let (data, response) = try? await URLSession.shared.data(
-                from: URL(string: "https://open.spotify.com/api/server-time")!),
+        let serverTimeURL = URL(string: "https://open.spotify.com/api/server-time")!
+        NetworkLedger.shared.record(serverTimeURL, as: "Spotify")
+        guard let (data, response) = try? await URLSession.shared.data(from: serverTimeURL),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let serverTime = (json["serverTime"] as? Double)

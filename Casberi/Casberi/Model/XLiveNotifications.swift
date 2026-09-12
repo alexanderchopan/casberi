@@ -154,6 +154,7 @@ enum XLiveNotifications {
                 request.setValue("OAuth2Session", forHTTPHeaderField: "X-Twitter-Auth-Type")
                 request.setValue("https://x.com", forHTTPHeaderField: "Origin")
                 request.setValue("https://x.com/", forHTTPHeaderField: "Referer")
+                NetworkLedger.shared.record(request, as: "X")
                 if let (data, _) = try? await URLSession.shared.data(for: request) {
                     let body = String(data: data.prefix(600), encoding: .utf8) ?? "(non-UTF8 body)"
                     NSLog("[Casberi] xLiveDebugBody| %@", body)
