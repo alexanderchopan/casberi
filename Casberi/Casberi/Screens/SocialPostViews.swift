@@ -214,13 +214,20 @@ struct SocialQuoteCard: View {
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 Spacer(minLength: 0)
             }
-            Text(card.text)
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                // A quote is context, not the point — it shows enough to
-                // know what's being answered and stops. The tap has the rest.
-                .lineLimit(6)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
+            // A WORDLESS post is a real card, not a broken one (prd §704): a
+            // photo-only post carries a handle and pictures and no sentence,
+            // and an empty `Text` here draws a blank line under the face that
+            // reads as a failed fetch. The picture is drawn above this card by
+            // `SocialPostContent`, so the card is complete without it.
+            if !card.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(card.text)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    // A quote is context, not the point — it shows enough to
+                    // know what's being answered and stops. The tap has the rest.
+                    .lineLimit(6)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s3)
@@ -298,28 +305,32 @@ struct SocialPostThread: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
-                Button {
-                    profile = SocialProfile(source: source, handle: post.handle,
-                                            displayName: nil, bio: nil,
-                                            avatarURL: post.avatarURL)
-                } label: {
-                    HStack(spacing: DS.Space.s2) {
-                        if let avatar = post.avatarURL {
-                            RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: source,
-                                        circular: true)
-                        } else {
-                            BridgeIcon(name: source, size: DS.Face.row, circular: true)
-                        }
-                        Text("@\(SocialThread.shortHandle(post.handle))")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        Spacer(minLength: 0)
+                // THE FACE IS A DOOR ONLY WHERE ONE LEADS SOMEWHERE (prd §704)
+                // — the same `facesAreDoors` test `ThingSheetView` has always
+                // applied to its own eyebrow, applied here at last. This
+                // walker only ever opened over Farcaster and Bluesky cards, so
+                // the unconditional button was correct by accident; a notice
+                // now lands X cards in it, and `SocialProfileCard` says in its
+                // own doc that it opens "only for Farcaster/Bluesky people" —
+                // its `bridge` is nil for X, so Watch, the switches and the
+                // follow row all render dead. No dead controls (§83).
+                if SocialThread.isSocial(source) {
+                    Button {
+                        profile = SocialProfile(source: source, handle: post.handle,
+                                                displayName: nil, bio: nil,
+                                                avatarURL: post.avatarURL)
+                    } label: {
+                        header
                     }
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                } else {
+                    header
                 }
-                .buttonStyle(.plain)
-                Text(post.text)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(post.text)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if let url = post.url.flatMap(URL.init) {
                     Button { openURL(url) } label: {
                         Text("Open on \(source)")
@@ -349,6 +360,23 @@ struct SocialPostThread: View {
             guard let ref = post.ref else { return }
             replies = await SocialThread.replies(source: source, ref: ref, handle: post.handle)
         }
+    }
+
+    /// Who said it. Split out so the door and the plain read draw exactly the
+    /// same line — two copies is how the two drift.
+    private var header: some View {
+        HStack(spacing: DS.Space.s2) {
+            if let avatar = post.avatarURL {
+                RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: source,
+                            circular: true)
+            } else {
+                BridgeIcon(name: source, size: DS.Face.row, circular: true)
+            }
+            Text("@\(SocialThread.shortHandle(post.handle))")
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            Spacer(minLength: 0)
+        }
+        .contentShape(Rectangle())
     }
 }
 

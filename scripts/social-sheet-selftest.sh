@@ -37,7 +37,9 @@ VIEW="Casberi/Casberi/Screens/ThingSheetView.swift"
 CONTENT="Casberi/Casberi/Screens/ThingContent.swift"
 POSTS="Casberi/Casberi/Screens/SocialPostViews.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
-for f in "$SHEET" "$SOURCE" "$CARD" "$VIEW" "$CONTENT" "$POSTS" "$CATALOG"; do
+THING="Casberi/Shared/Thing.swift"
+XLIVE="Casberi/Casberi/Model/XLiveNotifications.swift"
+for f in "$SHEET" "$SOURCE" "$CARD" "$VIEW" "$CONTENT" "$POSTS" "$CATALOG" "$THING" "$XLIVE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -64,7 +66,37 @@ echo "Drift guards"
 guard "the sheet asks SocialSheetSource for its shape" \
   'SocialSheetSource\.shape\(for: thing\)' "$VIEW"
 guard "the content view routes a post on the shape, not the kind" \
-  'SocialSheetSource\.shape\(for: thing\) == \.post' "$CONTENT"
+  'shape == \.post \|\| shape == \.notice' "$CONTENT"
+guard "the content view asks the shape, not the kind" \
+  'let shape = SocialSheetSource\.shape\(for: thing\)' "$CONTENT"
+# A NOTICE draws a body (prd §704). Its `content` is always a bare x.com
+# permalink, so `linkOnlyBody` catches every one of them — without this
+# conjunct the sheet falls back to a LinkPreviewCard over a host that serves no
+# og: tags, which is a headline with nothing under it: the shipped defect.
+guard "the sheet draws a body for a notice as well as a post" \
+  'drawsSocialBody: Bool \{ socialShape == \.post \|\| socialShape == \.notice \}' "$VIEW"
+guard "the content gate reads drawsSocialBody" \
+  '\(drawsSocialBody \|\| agentShape == \.conversation' "$VIEW"
+# …and the HERO does not move. A notice's hero is its own sentence; a post's is
+# the post's words. Sharing `isSocialPost` would put the post in the title slot
+# and drop the news.
+guard "the title slot still keys on the post shape alone" \
+  'isSocialPost: Bool \{ socialShape == \.post \}' "$VIEW"
+# An archive is a FILE, not a source name — a live X notification wore "From
+# your X archive." four minutes after it arrived.
+guard "the archive sentence excludes a row that arrived live" \
+  'Corpus\.arrivedLive\(thing\)' "$SOURCE"
+# THE LIVE NAMESPACE, spelled in two files that cannot see each other — the
+# Telegram self-tests' own guard, pointed at X (prd §704).
+# `XLiveNotifications.sourceRefPrefix` is what a notice's ref is BUILT from;
+# `Corpus.liveRefPrefixes` is what tells the All feed and the archive test
+# above that the row ARRIVED rather than came out of a file. Drift the two and
+# every notice still lands, none of them reaches All, each one wears "From your
+# X archive." — and nothing anywhere reports an error.
+guard "the live notice namespace is the literal XLiveNotifications builds" \
+  'static let sourceRefPrefix = "x-live:notif:"' "$XLIVE"
+guard "…and the same literal is in Corpus.liveRefPrefixes" \
+  '"x-live:notif:"' "$THING"
 guard "the reception block is drawn by the sheet" \
   'SocialReceptionCard\(reception: reception\)' "$VIEW"
 guard "the reception is recomposed when the live read answers" \
@@ -199,9 +231,10 @@ func check(_ name: String, _ ok: Bool) {
 }
 
 func facts(social: Bool = true, threadCapable: Bool = false, kind: String,
-           hasWords: Bool = false, context: String? = nil) -> SocialSheet.Facts {
+           hasWords: Bool = false, context: String? = nil,
+           notice: Bool = false) -> SocialSheet.Facts {
     .init(social: social, threadCapable: threadCapable, kind: kind,
-          hasWords: hasWords, context: context)
+          hasWords: hasWords, context: context, notice: notice)
 }
 
 print("Shape — the gate that was a source list")
@@ -231,6 +264,27 @@ check("a wordless social link is a save",
       SocialSheet.shape(facts(kind: "link", hasWords: false)) == .save)
 check("a wordless social product is a save",
       SocialSheet.shape(facts(kind: "product", hasWords: false)) == .save)
+
+// A NOTICE — the news is the sentence and the post is context (prd §704). The
+// shipped defect: this fell to `.save`, so the sheet drew a link preview of an
+// x.com URL, which serves no og: tags, under a headline.
+check("an X notification carrying the post it is about is a notice",
+      SocialSheet.shape(facts(kind: "link", hasWords: false, notice: true)) == .notice)
+// A notice with NO post behind it (a follow, a list add) is unchanged — it has
+// nothing to preview, and inventing a shape for it would draw an empty card.
+check("a notice with no post behind it is still a save",
+      SocialSheet.shape(facts(kind: "link", hasWords: false, notice: false)) == .save)
+// ORDER: a record that has BOTH its own words and a quoted post is a
+// quote-post, which is a post. Reversing these two lines would take the hero
+// off every quote-post in the corpus and put the quoted stranger's card there.
+check("a quote-post is a post, not a notice",
+      SocialSheet.shape(facts(kind: "link", hasWords: true, notice: true)) == .post)
+check("a quote-cast is a post, not a notice",
+      SocialSheet.shape(facts(threadCapable: true, kind: "chat",
+                              hasWords: true, notice: true)) == .post)
+// …and a follower still wins over everything, notice or not.
+check("a follower beats a notice",
+      SocialSheet.shape(facts(kind: "link", context: "follow", notice: true)) == .person)
 
 // A transcript is a `.chat` from a network with no thread API — Snapchat's
 // saved chats, an imported DM thread.
@@ -469,6 +523,18 @@ mutate "a legacy wordless cast falls through to a save" \
 mutate "a transcript is classified as a post" \
   'return f.threadCapable ? .post : .transcript' \
   'return .post'
+# THE BUG §704 FIXED: a notice falling through to the save fallback, so the
+# sheet draws a link card over a host that serves no og: tags.
+mutate "a notice falls back to a save" \
+  'if f.notice { return .notice }' \
+  'if f.notice && f.kind == "notice" { return .notice }'
+# …and the inverse, which costs more: a notice test ahead of the words test
+# turns every quote-post into a notice and takes its own words off the hero.
+mutate "a quote-post is classified as a notice" \
+  'if f.hasWords { return .post }
+        if f.notice { return .notice }' \
+  'if f.notice { return .notice }
+        if f.hasWords { return .post }'
 # A follower losing its noun, back to a link preview of a profile page.
 mutate "a follower stops being a person" \
   'if f.context == "follow" { return .person }' \

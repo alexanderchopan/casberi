@@ -64,6 +64,25 @@ enum SocialSheet {
         /// A conversation: two people's words in turn. Snapchat's saved chats,
         /// an imported DM thread.
         case transcript
+        /// A NOTICE about somebody else's act, carrying the post it concerns
+        /// (prd §704, 2026-09-12). "Thomas Humphreys liked your repost" — the
+        /// sentence is the news and the post is the context, which is the
+        /// opposite arrangement to every shape above.
+        ///
+        /// It earns a case by this file's own rule — a shape exists only where
+        /// the sheet would otherwise draw the wrong noun — and `.save` was
+        /// drawing exactly that: "somebody else's thing that you kept, whose
+        /// words we do not have", over a record that you kept nothing of and
+        /// whose words are right there. The visible cost was a `LinkPreviewCard`
+        /// on an x.com URL, which serves no `og:` tags (§280), so the sheet was
+        /// a headline over a bare host row (user, 2026-09-12: "twitter shows
+        /// the notification but the thing sheet doesn't show any preview").
+        ///
+        /// Not `.post`, and the reason is the one that decided the whole pass:
+        /// a post leads with its own words, and both the feed row and the sheet
+        /// would then lead with the post and DROP the notice — the news the row
+        /// exists to carry.
+        case notice
     }
 
     /// The facts the shape decision reads. A value type on purpose: the
@@ -87,6 +106,15 @@ enum SocialSheet {
         /// `Thing.socialContext`: "liked", "recast", "mention", "reply",
         /// "follow".
         var context: String?
+        /// Does the record carry the post it is ABOUT — `Thing.quote` — rather
+        /// than words of its own (prd §704)?
+        ///
+        /// A RECORD test, never a source list, the rule this whole function
+        /// was rewritten for: any seat that lands a notice with the post
+        /// beside it gets the anatomy the day it ships. Ordered after the
+        /// words test below, so a quote-post (a post that has both) is a post,
+        /// which is what it is.
+        var notice: Bool = false
     }
 
     /// The anatomy, or nil for a social thing that needs none (a Snapchat
@@ -105,12 +133,17 @@ enum SocialSheet {
     /// 3. **Then, and only then, words decide.** This is the widening: an X
     ///    post, an X like, an Instagram caption, a TikTok comment all reach
     ///    `.post` here on the strength of their own record.
-    /// 4. **A social link with no words of its own is a save.**
+    /// 4. **A wordless record that carries the post it is about is a notice.**
+    ///    Before the save fallback and after the words test: a notice has no
+    ///    words of its own (its `content` is the post's permalink), and a
+    ///    record that has both is a quote-post, which is a post.
+    /// 5. **A social link with no words of its own is a save.**
     static func shape(_ f: Facts) -> Shape? {
         guard f.social else { return nil }
         if f.context == "follow" { return .person }
         if f.kind == "chat" { return f.threadCapable ? .post : .transcript }
         if f.hasWords { return .post }
+        if f.notice { return .notice }
         if f.kind == "link" || f.kind == "product" { return .save }
         return nil
     }

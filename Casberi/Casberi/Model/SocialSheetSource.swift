@@ -44,7 +44,11 @@ enum SocialSheetSource {
             threadCapable: SocialThread.isSocial(thing.source),
             kind: thing.kind.rawValue,
             hasWords: hasWords(thing),
-            context: thing.socialContext)
+            context: thing.socialContext,
+            // The post a notice is about (prd §704). `quote` is the field the
+            // sheet already draws a card from, so a notice needs no new column
+            // and no CloudKit deploy — and the test stays about the RECORD.
+            notice: thing.quote != nil)
     }
 
     /// The prose the sheet would show, if there is any.
@@ -115,7 +119,16 @@ enum SocialSheetSource {
             reposts: thing.repostCount.map { SocialCount(value: $0) },
             replies: thing.replyCount.map { SocialCount(value: $0) })
         let shown = live ?? (stored.isEmpty ? nil : stored)
+        // An ARCHIVE is a file you exported, not a source name (prd §704).
+        // This read the source set alone, so every live X notification wore
+        // "From your X archive." four minutes after it arrived — the archive
+        // grammar's whole claim ("the FILE is the origin, your own act is the
+        // event") stated about a row that came off the wire and records
+        // somebody else's act. `arrivedLive` is the same per-ref test All
+        // already uses, so the feed and the sentence can never disagree about
+        // which half a row came from.
         let archive = Corpus.bulkImportSources.contains(thing.source)
+            && !Corpus.arrivedLive(thing)
 
         return SocialReception.compose(.init(
             source: thing.source,

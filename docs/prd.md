@@ -53560,3 +53560,113 @@ pre-change file, which matches the first two greps 8 times.
 **UNSEEN on a device**: verified by build, the self-test and the static audits.
 The visual reading — whether the plain rows still balance with one fewer, on a
 seat that is neither keyed nor landing — is a look, not a check.
+
+## §704 — An X notification is a NOTICE: the news is the sentence, the post is the preview under it (user: "twitter shows the notification but the thing sheet doesn't show any preview", 2026-09-12)
+
+**The report, and the screenshot under it.** A live X notification opened to
+"Thomas Humphreys liked your repost" at the display tier, then a link card
+reading `accountless.eth (@alexanderchopan) on X · x.com`, then "From your X
+archive." The post the notice was about — the repost somebody had just liked —
+was not on the screen in any form.
+
+**Three separate defects, and only the first was reported.**
+
+1. **The post was never landed.** `XLiveNotifications.thing(from:)` read two
+   fields out of each entry — the notice sentence and the post's `rest_id` for
+   a permalink — and dropped everything else. The post's words, its author,
+   its pictures and its counts were in the same JSON, one key over, and nobody
+   read them. The sheet then did the only thing it could with a bare `.link`:
+   drew a `LinkPreviewCard` over an x.com URL, and x.com serves no `og:` tags
+   at all (§280's own finding, cited by §363 as the reason an X liked post
+   "rendered as a naked host row"). So the empty card was not a failed fetch —
+   it was the app asking a host that will never answer for words it already
+   had.
+2. **The sheet had no shape for it.** `SocialSheet.shape` sent it to `.save`,
+   whose own definition is "somebody else's thing that you KEPT, whose words
+   we do not have". Both halves are false of a notification: you kept nothing,
+   and the words are right there. §363's rule is that a shape exists exactly
+   where the sheet would otherwise draw the wrong noun, so this is that case.
+3. **It called itself an archive.** `SocialSheetSource.reception` set
+   `archive` from the SOURCE SET alone, so every live notification wore "From
+   your X archive." minutes after arriving off the wire — the archive
+   grammar's whole claim (the FILE is the origin, YOUR OWN act is the event)
+   asserted about a row that came down a socket and records somebody else's
+   act. A fourth consequence of the same miss: `Corpus.liveRefPrefixes` listed
+   only Telegram and its doc stated as permanent that "Instagram, Snapchat,
+   TikTok and X have no live half to let through" — true when written, false
+   since §701 — so a notification was also kept out of the All feed, and the
+   one X row that is actually news appeared only if you went looking for it.
+
+**The ruling: a notice is its own noun, and the notice is the hero.** The
+tempting fix is to stamp the post's words on `postText` and let the existing
+`.post` anatomy do the work. That is wrong, and the reason decided the whole
+pass: `PostCard` and the thing sheet both LEAD with `postText` wherever there
+is any, so the row and the sheet would both lead with the post — and "Thomas
+Humphreys liked your repost" would disappear from the feed, from the sheet and
+from the app. The news is the sentence. The post is context under it, which is
+what X's own notifications screen has always drawn and what this app already
+has a slot and a card for: `Thing.quote` and `SocialQuoteCard`.
+
+So: `title` keeps the notice sentence (the row's line, the sheet's hero, and
+what search and Spotlight index). `quote` carries the post — handle, words,
+avatar, permalink, protocol ref — and `imageURLs`/`previewImageURL` its
+pictures, `likeCount`/`repostCount`/`replyCount` its counts. **Not one new
+column**: every field already exists and is already in CloudKit Production, so
+this needs no schema stage and no `cktool` deploy.
+
+**`Shape.notice`**, placed AFTER the words test and BEFORE the save fallback,
+and the order is load-bearing in both directions: a record carrying its own
+words AND a quoted post is a quote-post, which is a post (putting the notice
+test first would take the hero off every quote-post in the corpus and put a
+stranger's card there), while a wordless record carrying the post it is about
+is a notice (putting it after the save fallback is the shipped defect). The
+gate is a RECORD test — `thing.quote != nil` — never a source list, §363's own
+rule, so any seat that lands a notice with the post beside it gets the anatomy
+the day it ships. `ThingContent` routes `.notice` to `SocialPostContent`, the
+same view a post's body uses, because a notice's body and a quote-post's body
+are the same two objects (pictures, then the card) and two views drawing them
+is how they drift. `ThingSheetView.drawsSocialBody` covers both; `isSocialPost`
+deliberately does not, because that is the property that decides the HERO.
+
+**The backfill is what makes the fix reach the notice in the screenshot.** A
+notification is never re-sent, so the timeline's own forty entries are the only
+chance an already-landed row gets: `refresh` now fetches the landed notices
+(scoped by the ref PREFIX, never `thingsByRef(source: "X")`, which would fault
+a fifteen-year archive on every sweep to look at forty rows) and fills the
+preview onto any that lack one, through the SAME `fill` the landing uses.
+
+**Two smaller things the pass found and fixed rather than left.** The thread
+walker's face was an unconditional door into `SocialProfileCard`, whose own doc
+says it opens "only for Farcaster/Bluesky people" — correct by accident while
+only those two networks reached it, and a dead control (§83) the moment a
+notice lands an X card in it; it is now gated on `SocialThread.isSocial`, the
+same `facesAreDoors` test the thing sheet's eyebrow has always applied. And a
+photo-only post has a handle and pictures and no sentence, so both the quote
+card and the walker drew an empty `Text` under the face that reads as a failed
+fetch; both now omit it.
+
+**Mechanical.** `scripts/social-sheet-selftest.sh` gains five assertions (a
+notice is a notice; a notice with no post behind it is still a save; a
+quote-post and a quote-cast are posts, not notices; a follower beats a notice),
+two mutations (the notice falling back to a save — the shipped defect — and the
+notice test hoisted above the words test, which costs more), and five drift
+guards: the content view's new routing, `drawsSocialBody`, `isSocialPost`
+keying on `.post` alone, and `reception` excluding a row that `arrivedLive`.
+
+**UNMEASURED, and this entry inherits §701's caveat rather than escaping it.**
+The subject parse is authored against the publicly documented shape of X's
+internal timeline responses with no live session on the build host — and §701's
+own first measurement pass found TWO of its paths had never been real. Both
+user shapes X has shipped are read (`legacy.screen_name` and the newer
+`core.screen_name`), `TweetWithVisibilityResults` is unwrapped rather than
+refused, and every path fails to nil, so a drift loses the preview and still
+lands the notice. `-xLiveProbe YES` now prints one `xLiveSubject|` line per
+entry (id, handle, word count, picture count, likes) plus the RAW first entry,
+truncated — so "X sent no post with this notice" and "the post is there and a
+path moved" are one launch apart instead of a round trip.
+
+**UNCOMPILED AND UNSEEN.** Written on a Linux session with no Xcode and no
+Swift toolchain: the static Python audits ran green, the shipped-source
+harnesses (`social-sheet-selftest.sh` included) could not run at all, and
+nothing here has been built or looked at. `scripts/verify.sh` on a Mac is the
+gate, and the preview itself needs a live X session to see.

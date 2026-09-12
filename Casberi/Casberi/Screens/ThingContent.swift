@@ -220,7 +220,14 @@ struct ThingContentView: View {
         // describe itself. Routed on the RECORD's shape, ahead of the kind
         // switch, so a source that files a post under some third kind
         // tomorrow is covered the day it lands.
-        if SocialSheetSource.shape(for: thing) == .post {
+        //
+        // A NOTICE draws the same body (prd §704): `SocialPostContent` is
+        // pictures + the card for the post — which for a notice is the post it
+        // is ABOUT, in the same `quote` slot. It is deliberately the same view
+        // rather than a second one: a notice's body and a quote-post's body are
+        // the same two objects, and two views drawing them is how they drift.
+        let shape = SocialSheetSource.shape(for: thing)
+        if shape == .post || shape == .notice {
             SocialPostContent(thing: thing)
         } else {
             kindSwitch

@@ -102,19 +102,53 @@ enum XLiveNotifications {
         let (json, status) = await fetch(auth: auth)
         guard status == 200, let entries = notificationEntries(json) else { return nil }
 
-        let existing = IngestSupport.existingSourceRefs(context, source: "X")
+        let landed = landedNotices(context: context)
         var added = 0
+        var healed = 0
         for entry in entries {
             guard let id = entry["entryId"] as? String, !id.isEmpty else { continue }
             let ref = sourceRefPrefix + id
-            guard !existing.contains(ref) else { continue }
+            // ALREADY HERE — but maybe without its preview (prd §704). Every
+            // notice landed before this pass carries no post at all, and the
+            // ref dedupe would leave them that way forever: a notification is
+            // never re-sent, so the timeline's own 40 entries are the only
+            // chance any of them gets. The backfill is what makes the fix
+            // reach the notices the person is already looking at, rather than
+            // only the ones that arrive next. `Apple Music`'s artwork patch
+            // (`IngestSupport.artlessThings`) is the same move.
+            if let existing = landed[ref] {
+                guard existing.quote == nil, let subject = subject(from: entry)
+                else { continue }
+                fill(existing, with: subject)
+                healed += 1
+                continue
+            }
             guard let thing = thing(from: entry, ref: ref) else { continue }
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 { context.saveHonestly() }
+        if added > 0 || healed > 0 { context.saveHonestly() }
         return added
+    }
+
+    /// The notices already in the store, keyed by ref.
+    ///
+    /// Scoped by the ref PREFIX, not by the source: an X archive is the
+    /// deepest corpus this app lands (thousands of rows across fifteen years),
+    /// and `IngestSupport.thingsByRef(context, source: "X")` would fault every
+    /// one of them on every sweep to look at forty notifications.
+    @MainActor
+    private static func landedNotices(context: ModelContext) -> [String: Thing] {
+        let prefix = sourceRefPrefix
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
+            $0.source == "X" && ($0.sourceRef?.starts(with: prefix) ?? false)
+        })
+        var map: [String: Thing] = [:]
+        for thing in (try? context.fetch(descriptor)) ?? [] {
+            if let ref = thing.sourceRef { map[ref] = thing }
+        }
+        return map
     }
 
     /// The measure tool for a bridge authored against a rotating,
@@ -177,6 +211,29 @@ enum XLiveNotifications {
             NSLog("[Casberi] xLiveEntry| id=%@ text=%@",
                   (entry["entryId"] as? String) ?? "MISSING",
                   (notificationText(entry) ?? "MISSING").prefix(80).description)
+            // THE PREVIEW HALF (prd §704). A notice with no subject renders as
+            // a headline over a naked host row, which is the defect this pass
+            // exists to end — so the diagnosis has to separate "X sent no post
+            // with this notice" (a follow, a list add) from "the post is in
+            // there and a path moved". Prints the fields the sheet draws.
+            if let s = subject(from: entry) {
+                NSLog("[Casberi] xLiveSubject| id=%@ handle=%@ words=%d imgs=%d likes=%@",
+                      s.restID, s.handle ?? "MISSING", (s.text ?? "").count,
+                      s.imageURLs.count, s.likes.map { "\($0)" } ?? "—")
+            } else {
+                NSLog("[Casberi] xLiveSubject| none — no post hangs off this notice")
+            }
+        }
+        // The raw shape of ONE entry, truncated. This file is UNMEASURED by
+        // construction and two of its paths were authored against a guess and
+        // corrected only by a real session's bytes (the header note) — so when
+        // a subject comes back MISSING, the next question is always "what did
+        // X actually send", and without this it takes a second round trip to
+        // ask. Notification text only: no cookie, no header, no token.
+        if let first = entries.first,
+           let data = try? JSONSerialization.data(withJSONObject: first),
+           let body = String(data: data.prefix(1500), encoding: .utf8) {
+            NSLog("[Casberi] xLiveEntryRaw| %@", body)
         }
     }
 
@@ -311,15 +368,212 @@ enum XLiveNotifications {
         return "https://x.com/i/web/status/\(restID)"
     }
 
+    // MARK: - The post a notice is ABOUT (prd §704, 2026-09-12)
+
+    /// The post a notification concerns, as much of it as the response carries.
+    ///
+    /// **This is the half the first pass dropped.** A notice landed as a bare
+    /// `.link` over `x.com/i/web/status/<id>` — and x.com serves no `og:` tags
+    /// (§280), so the sheet drew a headline and a naked host row under it:
+    /// "Thomas Humphreys liked your repost", then nothing. The post was in the
+    /// same JSON the notice sentence came out of, one key over, and nobody
+    /// read it (user, 2026-09-12: "twitter shows the notification but the
+    /// thing sheet doesn't show any preview").
+    ///
+    /// Every field is optional and every path fails to nil, the rule this
+    /// whole file keeps: a shape drift loses the preview and lands the notice,
+    /// never the other way round. `diagnose()` prints what it found, so which
+    /// half is missing is a one-launch answer.
+    struct Subject {
+        var restID: String
+        var handle: String?
+        var text: String?
+        var avatarURL: String?
+        var imageURLs: [String] = []
+        var likes: Int?
+        var reposts: Int?
+        var replies: Int?
+        /// The permalink, with the author's own handle where we resolved one —
+        /// `x.com/i/web/status/<id>` redirects, but it is not a link anybody
+        /// can read before tapping it.
+        var permalink: String
+    }
+
+    /// The `tweet_results.result` a notification hangs off, through either of
+    /// the two item shapes X mixes in one timeline: a NOTIFICATION item, whose
+    /// `template.target_objects` names the posts the notice is about, and a
+    /// plain TWEET item, which X files "new post from an account you follow"
+    /// notifications as.
+    ///
+    /// `TweetWithVisibilityResults` is unwrapped rather than refused: X wraps
+    /// a post in it whenever any visibility rule applies (a reply limited to
+    /// followers, a flagged post), and the real tweet sits under `.tweet`. A
+    /// parser that only knows the bare `Tweet` shape silently loses the
+    /// preview for exactly those.
+    private static func tweetResult(_ entry: [String: Any]) -> [String: Any]? {
+        guard let content = entry["content"] as? [String: Any],
+              let itemContent = content["itemContent"] as? [String: Any]
+        else { return nil }
+        var result: [String: Any]?
+        if let template = itemContent["template"] as? [String: Any],
+           let targets = template["target_objects"] as? [[String: Any]],
+           let first = targets.first,
+           let results = first["tweet_results"] as? [String: Any] {
+            result = results["result"] as? [String: Any]
+        }
+        if result == nil, let results = itemContent["tweet_results"] as? [String: Any] {
+            result = results["result"] as? [String: Any]
+        }
+        guard let result else { return nil }
+        if let inner = result["tweet"] as? [String: Any] { return inner }
+        return result
+    }
+
+    /// The author, across BOTH user shapes X has shipped — `legacy` holds
+    /// `screen_name`/`profile_image_url_https` on the older one, and the newer
+    /// one lifts the same two onto `core`/`avatar`. Neither is documented and
+    /// either may be what a given account comes back as, so both are read and
+    /// the first non-empty answer wins.
+    private static func author(_ result: [String: Any]) -> (handle: String?, avatar: String?) {
+        guard let core = result["core"] as? [String: Any],
+              let userResults = core["user_results"] as? [String: Any],
+              let user = userResults["result"] as? [String: Any]
+        else { return (nil, nil) }
+        let legacy = user["legacy"] as? [String: Any]
+        let userCore = user["core"] as? [String: Any]
+        let handle = (legacy?["screen_name"] as? String)
+            ?? (userCore?["screen_name"] as? String)
+        let avatar = (legacy?["profile_image_url_https"] as? String)
+            ?? ((user["avatar"] as? [String: Any])?["image_url"] as? String)
+        return (handle.flatMap { $0.isEmpty ? nil : $0 },
+                avatar.flatMap { $0.isEmpty ? nil : $0 })
+    }
+
+    /// The post's own words. A long-form post keeps its full text on
+    /// `note_tweet` and truncates `legacy.full_text` at 280 with an ellipsis,
+    /// so the long form is read FIRST — the same precedence `XArchiveImport`
+    /// gives `note-tweet.js` over `tweets.js` (§375).
+    private static func words(_ result: [String: Any]) -> String? {
+        if let note = result["note_tweet"] as? [String: Any],
+           let noteResults = note["note_tweet_results"] as? [String: Any],
+           let noteResult = noteResults["result"] as? [String: Any],
+           let text = noteResult["text"] as? String, !text.isEmpty {
+            return text
+        }
+        guard let legacy = result["legacy"] as? [String: Any] else { return nil }
+        let text = (legacy["full_text"] as? String) ?? (legacy["text"] as? String)
+        guard let text, !text.isEmpty else { return nil }
+        return text
+    }
+
+    /// t.co out, the real link in — the same job `XArchiveImport.clean` does
+    /// for an imported post, over the entity table this response carries.
+    ///
+    /// Two substitutions, and the second matters more than it looks: X appends
+    /// a t.co link to the post's own PHOTO at the end of the text, so a
+    /// picture post reads as a sentence followed by a shortlink to itself. The
+    /// picture is drawn above the words here, so that link is dropped outright.
+    private static func expandLinks(_ text: String, result: [String: Any]) -> String {
+        guard let legacy = result["legacy"] as? [String: Any] else { return text }
+        var out = text
+        let entities = legacy["entities"] as? [String: Any]
+        for url in (entities?["urls"] as? [[String: Any]]) ?? [] {
+            guard let short = url["url"] as? String,
+                  let expanded = url["expanded_url"] as? String, !short.isEmpty
+            else { continue }
+            out = out.replacingOccurrences(of: short, with: expanded)
+        }
+        let media = ((legacy["extended_entities"] as? [String: Any])?["media"] as? [[String: Any]])
+            ?? (entities?["media"] as? [[String: Any]]) ?? []
+        for item in media {
+            guard let short = item["url"] as? String, !short.isEmpty else { continue }
+            out = out.replacingOccurrences(of: short, with: "")
+        }
+        return out.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func imageURLs(_ result: [String: Any]) -> [String] {
+        guard let legacy = result["legacy"] as? [String: Any] else { return [] }
+        let media = ((legacy["extended_entities"] as? [String: Any])?["media"] as? [[String: Any]])
+            ?? ((legacy["entities"] as? [String: Any])?["media"] as? [[String: Any]]) ?? []
+        return media.compactMap { item in
+            // A video's poster frame is served under the same key, so this
+            // covers both without claiming to play anything.
+            (item["media_url_https"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        }
+    }
+
+    static func subject(from entry: [String: Any]) -> Subject? {
+        guard let result = tweetResult(entry),
+              let restID = result["rest_id"] as? String, !restID.isEmpty
+        else { return nil }
+        let (handle, avatar) = author(result)
+        let legacy = result["legacy"] as? [String: Any]
+        let text = words(result).map {
+            IngestSupport.decodeHTMLEntities(expandLinks($0, result: result))
+        }
+        return Subject(
+            restID: restID,
+            handle: handle,
+            text: (text?.isEmpty ?? true) ? nil : text,
+            avatarURL: avatar,
+            imageURLs: imageURLs(result),
+            likes: legacy?["favorite_count"] as? Int,
+            reposts: legacy?["retweet_count"] as? Int,
+            replies: legacy?["reply_count"] as? Int,
+            permalink: handle.map { "https://x.com/\($0)/status/\(restID)" }
+                ?? "https://x.com/i/web/status/\(restID)")
+    }
+
     private static func thing(from entry: [String: Any], ref: String) -> Thing? {
         guard let text = notificationText(entry) else { return nil }
-        let permalink = notificationPermalink(entry) ?? "https://x.com/notifications"
-        return Thing(
+        let subject = subject(from: entry)
+        let permalink = subject?.permalink
+            ?? notificationPermalink(entry) ?? "https://x.com/notifications"
+        let thing = Thing(
             kind: .link,
             title: IngestSupport.titleLine(IngestSupport.decodeHTMLEntities(text)),
             content: permalink,
             source: "X",
             capturedAt: .now,
             sourceRef: ref)
+        guard let subject else { return thing }
+        fill(thing, with: subject)
+        return thing
+    }
+
+    /// THE POST THE NOTICE IS ABOUT, onto the fields the sheet already draws
+    /// (prd §704). One function, because a landing and a backfill writing the
+    /// same six fields in two places is how the two drift.
+    ///
+    /// **Not `postText`**, and that is the decision the whole pass turns on:
+    /// these are not the notice's own words. `PostCard` and the thing sheet
+    /// both lead with `postText` where there is any, so stamping it would make
+    /// the row and the sheet lead with the POST and drop the news — "Thomas
+    /// Humphreys liked your repost" is the entire reason the row exists.
+    /// `quote` is the slot for "the post this record is about", and
+    /// `SocialSheet.shape` reads it to send the sheet to the notice anatomy.
+    private static func fill(_ thing: Thing, with subject: Subject) {
+        // A card with neither words nor a picture behind it is a face and a
+        // handle over nothing — worse than no card, and the shape test keys on
+        // this field, so landing an empty one would claim a preview there
+        // isn't.
+        if let handle = subject.handle, subject.text != nil || !subject.imageURLs.isEmpty {
+            thing.quote = SocialCard(
+                handle: handle,
+                text: subject.text ?? "",
+                avatarURL: subject.avatarURL,
+                url: subject.permalink,
+                ref: subject.restID)
+        }
+        thing.imageURLs = subject.imageURLs
+        thing.previewImageURL = subject.imageURLs.first
+        thing.likeCount = subject.likes
+        thing.repostCount = subject.reposts
+        thing.replyCount = subject.replies
+        // A backfilled row landed on `x.com/i/web/status/<id>`; now that the
+        // author has been resolved, its Open verb follows a link a person can
+        // read before tapping it.
+        thing.content = subject.permalink
     }
 }

@@ -284,9 +284,22 @@ enum Corpus {
     /// deploy, and it cannot drift from the truth the way a flag set at
     /// landing time could.
     ///
-    /// **The other four bulk sources declare nothing here and are unaffected**
-    /// — Instagram, Snapchat, TikTok and X have no live half to let through.
-    static let liveRefPrefixes: Set<String> = ["telegram:post:"]
+    /// **X joined on 2026-09-12 (prd §704), and its entry corrects a fact
+    /// this doc stated as permanent.** The line above used to end "Instagram,
+    /// Snapchat, TikTok and X have no live half to let through" — true when
+    /// written and false since §701 gave X a live notifications door. The
+    /// shape is Telegram's exactly: a notice arrives one at a time, a few a
+    /// day, while an archive import lands fifteen years at once, and the two
+    /// halves are already told apart by the ref namespace `XLiveNotifications`
+    /// deliberately kept separate from `XArchiveImport`'s. Without this a
+    /// notification was kept out of All — so the one X row that IS news
+    /// appeared only if you went looking for it — and, one consequence over,
+    /// the thing sheet called it an archive row and wrote "From your X
+    /// archive." under a notice that arrived four minutes ago.
+    ///
+    /// **The other three bulk sources declare nothing here and are
+    /// unaffected** — Instagram, Snapchat and TikTok have no live half.
+    static let liveRefPrefixes: Set<String> = ["telegram:post:", "x-live:notif:"]
 
     /// Did this row arrive live rather than out of an imported file?
     static func arrivedLive(_ thing: Thing) -> Bool {

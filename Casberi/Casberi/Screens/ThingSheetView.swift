@@ -636,6 +636,12 @@ struct ThingSheetView: View {
                 // draws the pictures and the quote, which the bare-link test
                 // would take with it.
                 //
+                // A NOTICE is bypassed for the same reason and needs it more
+                // (prd §704): its `content` is ALWAYS a bare x.com permalink,
+                // so the test caught every one of them and left the body to
+                // `LinkPreviewCard` — over a host that serves no `og:` tags, so
+                // the sheet was a headline with nothing under it.
+                //
                 // A note draws NOTHING here (prd §366) and that is the point:
                 // the generic content view is where a journal entry's prose was
                 // set at `callout15` in `textSecondary` and cut at twelve
@@ -663,7 +669,7 @@ struct ThingSheetView: View {
                     && socialShape != .person && noteShape == nil
                     && walletbeatShape == nil && l2beatShape == nil
                     && agentShape != .grant && purchaseReading == nil
-                    && (isSocialPost || agentShape == .conversation
+                    && (drawsSocialBody || agentShape == .conversation
                     || (!linkOnlyBody && thing.kind != .event
                     && thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
                         != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)))
@@ -1472,6 +1478,12 @@ struct ThingSheetView: View {
     /// A thing whose words are the hero. The title slot, the reading measure
     /// and the content route all key off this.
     private var isSocialPost: Bool { socialShape == .post }
+
+    /// A thing whose body is a social one — pictures and the card for the post
+    /// (prd §704). A NOTICE joins a post here and DELIBERATELY NOT in
+    /// `isSocialPost` above: its hero is the notice sentence on `title`, not
+    /// the post's words, which is the whole difference between the two shapes.
+    private var drawsSocialBody: Bool { socialShape == .post || socialShape == .notice }
 
     // MARK: - The note anatomies (prd §366)
 
