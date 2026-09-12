@@ -768,6 +768,11 @@ enum Retriever {
             (["my own posts", "own posts", "my posts", "posts", "post"], "Post"),
             (["my replies", "replies", "reply", "replied"], "Reply"),
             (["what i liked", "i liked", "my likes", "likes", "liked"], "Liked"),
+            // Spotify recently-played (`SpotifyIngest`). A facet like "Liked":
+            // "what I played on Spotify" narrows to these rather than a
+            // whole-corpus keyword scan, and it is a state label the Themes
+            // treemap must not draw as a subject.
+            (["what i played", "recently played", "i played", "my plays", "played"], "Played"),
             (["my saves", "saves", "saved"], "Saved"),
             // The read X can't answer about your own corpus: posts you kept
             // that no longer exist there. Stamped by the author pass — see
