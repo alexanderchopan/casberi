@@ -48,8 +48,20 @@ struct RSSScreen: View {
 
     /// The page's one presentation (`AccountPage.sheet`).
     @State private var sheet: AccountPageSheet?
-    /// This week's posts per followed feed.
-    @State private var weekly: [String: (week: Int, new: Bool)] = [:]
+    /// The roster, composed OFF the body — read on appearance, after every
+    /// follow, unfollow and sync (prd §628: a fetch or a store read belongs in
+    /// `onAppear`/`.task`, never in a body or a computed property a body
+    /// reads).
+    ///
+    /// **This was a computed property (prd §710).** It asked
+    /// `FeedFreshness.trouble(for:)` once per followed feed, and that takes an
+    /// `NSLock` held by up to eight concurrent feed fetches across a full
+    /// encode of the whole freshness store — so every body evaluation paid N
+    /// contended acquisitions on the main thread, and a body evaluates on
+    /// every keystroke in the follow field above it. `HandleSetupScreen`, the
+    /// same page for the four feed-follow seats, has held its rows in `@State`
+    /// for exactly this reason since §639; this screen was the one left.
+    @State private var rows: [AccountPageShape.Row] = []
 
     var body: some View {
         AccountPage(
@@ -68,7 +80,7 @@ struct RSSScreen: View {
         )
         .onAppear {
             refreshExportURL()
-            countWeek()
+            readRows()
             // A file handed in via AirDrop/Share Sheet before this screen
             // existed to receive it (RootShell's onOpenURL raised this sheet
             // and parked the URL here) — pick it up once, same as if the
@@ -82,7 +94,7 @@ struct RSSScreen: View {
         }
         .onChange(of: rss.feeds) { _, _ in
             refreshExportURL()
-            countWeek()
+            readRows()
         }
         .onChange(of: pendingOPML.url) { _, url in
             guard let url else { return }
@@ -103,10 +115,18 @@ struct RSSScreen: View {
     /// this week — or, where the publisher has gone dark, that instead
     /// (`FeedFreshness.trouble`, three misses and three days rather than one).
     /// Two states used to render as the same row that simply stopped growing.
-    private var rows: [AccountPageShape.Row] {
-        rss.feeds.map { feed in
+    ///
+    /// ONE read of the week counts and ONE read of the freshness store for the
+    /// whole roster (`FeedFreshness.troubles(for:)`), never one per row — see
+    /// `rows`.
+    private func readRows() {
+        let feeds = rss.feeds
+        let weekly = AccountWeek.counts(source: "RSS", seatID: "rss",
+                                        context: modelContext) { $0.authorHandle }
+        let troubles = FeedFreshness.troubles(for: feeds.map(\.url))
+        rows = feeds.map { feed in
             let counted = weekly[feed.displayName.lowercased()] ?? (week: 0, new: false)
-            let subline = FeedFreshness.trouble(for: feed.url)
+            let subline = troubles[feed.url]
                 ?? AccountPageShape.subline(nouns: String(localized: "posts"),
                                             weekCount: counted.week)
             return AccountPageShape.Row(
@@ -119,14 +139,7 @@ struct RSSScreen: View {
     private func unfollow(_ id: String) {
         guard let i = rss.feeds.firstIndex(where: { $0.id.uuidString == id }) else { return }
         rss.remove(at: IndexSet(integer: i))
-        countWeek()
-    }
-
-    /// This week's posts per feed — `RSSIngest` stamps the feed's display name
-    /// as the thing's `authorHandle`.
-    private func countWeek() {
-        weekly = AccountWeek.counts(source: "RSS", seatID: "rss",
-                                    context: modelContext) { $0.authorHandle }
+        readRows()
     }
 
 
@@ -333,6 +346,13 @@ struct RSSScreen: View {
         let added = await RSSIngest.refresh(context: modelContext,
                                             waitForInFlight: justAdded != nil)
         syncing = false
+        // The rows are held, not computed (see `rows`), so a pass that changed
+        // only the FRESHNESS store — a feed's failure streak, a "no feed here"
+        // verdict — has to be read back explicitly. A pass that renamed or
+        // resolved a feed mutates `rss.feeds` and is already covered by the
+        // `onChange` above; this is the other half, and it is the half that
+        // makes a publisher going dark show up without leaving the screen.
+        readRows()
         if let queued = pendingAdd {
             pendingAdd = nil
             await sync(justAdded: queued)

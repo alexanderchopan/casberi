@@ -75,11 +75,43 @@ final class RSSStore {
         return true
     }
 
+    /// Follows MANY feeds at once — an OPML file's whole scope (prd §710).
+    ///
+    /// **`add` in a loop is what froze the RSS page.** Every `feeds` mutation
+    /// fires `didSet` → `persist()`, i.e. a full `JSONEncoder` pass over the
+    /// growing array and a `UserDefaults` write; and every `add` re-scans the
+    /// array linearly for a duplicate. So landing a reader's export — which
+    /// `OPMLImport.land` did one feed at a time, synchronously, on the main
+    /// thread with the account sheet on screen — cost N encodes of an
+    /// average-N/2-element array and N²/2 string comparisons. A 300-feed OPML
+    /// is tens of thousands of `Feed` encodings for one tap. Here the
+    /// duplicate check is a Set built once, and `feeds` is assigned ONCE, so
+    /// there is one encode, one write and one observation bump.
+    ///
+    /// Returns how many were new. Duplicates within the incoming list are
+    /// skipped too — an OPML with the same feed in two folders is ordinary.
+    @discardableResult
+    func add(contentsOf incoming: [(url: String, title: String)]) -> Int {
+        var known = Set(feeds.map { $0.url.lowercased() })
+        var fresh: [Feed] = []
+        for candidate in incoming {
+            guard let text = normalized(candidate.url) else { continue }
+            guard known.insert(text.lowercased()).inserted else { continue }
+            fresh.append(Feed(url: text,
+                              title: candidate.title
+                                  .trimmingCharacters(in: .whitespacesAndNewlines)))
+        }
+        guard !fresh.isEmpty else { return 0 }
+        feeds.append(contentsOf: fresh)
+        return fresh.count
+    }
+
     func remove(at offsets: IndexSet) {
         // Drop the feed's HTTP record with the follow itself (2026-08-05), so
         // re-following a URL that had been failing starts clean instead of
-        // inheriting the streak the person just removed it over.
-        for i in offsets where feeds.indices.contains(i) { FeedFreshness.forget(feeds[i].url) }
+        // inheriting the streak the person just removed it over. BATCHED
+        // (§710) — one encode of the freshness store, not one per feed.
+        FeedFreshness.forget(offsets.compactMap { feeds.indices.contains($0) ? feeds[$0].url : nil })
         feeds.remove(atOffsets: offsets)
     }
 
@@ -87,7 +119,7 @@ final class RSSStore {
     /// HTTP record behind, so the one caller that used to do that goes
     /// through here (2026-08-05).
     func removeAll() {
-        for feed in feeds { FeedFreshness.forget(feed.url) }
+        FeedFreshness.forget(feeds.map(\.url))
         feeds = []
     }
 

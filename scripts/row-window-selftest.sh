@@ -30,7 +30,8 @@ cd "$(dirname "$0")/.."
 WINDOW="Casberi/Casberi/Model/RowWindow.swift"
 ROOM="Casberi/Casberi/Screens/PersonRoomScreen.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
-for f in "$WINDOW" "$ROOM" "$FEED"; do
+ACCOUNT="Casberi/Casberi/Screens/AccountPage.swift"
+for f in "$WINDOW" "$ROOM" "$FEED" "$ACCOUNT"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -75,8 +76,44 @@ grep -q 'onAppear.*windowSteps' "$STRIPPED" \
 grep -q 'DSHapticSink()' "$FEED" \
   || { echo "✗ the person-room sheet no longer mounts a haptic listener — Show older's tap would be silent"; exit 1; }
 
+# --- the account-page chassis (prd §710) ------------------------------------
+# The SECOND surface of build 539's class, and the one that reaches 55 screens
+# at once: every account page is a `List` inside `MainSurface`'s one
+# `.sheet(item: $route.connectForm)`, so a finger can drag it, and the roster
+# was unbounded. RSS's roster is the one an OPML export fills in a single tap
+# (hundreds of rows), which is how it was reported; the chassis's own doc
+# already anticipated "a hundred and forty accounts".
+#
+# Read on a COMMENT-STRIPPED copy for the negative, same as the room above —
+# this file now documents §710 by naming the shape it must not have.
+ASTRIPPED=$(mktemp)
+sed -E 's://.*$::' "$ACCOUNT" > "$ASTRIPPED"
+trap 'rm -f "$STRIPPED" "$ASTRIPPED"' EXIT
+
+grep -q 'RowWindow.slice(active + quiet, steps: windowSteps)' "$ACCOUNT" \
+  || { echo "✗ the account page no longer slices its roster through RowWindow — all 55 pages are unbounded inside a draggable sheet again (prd §710)"; exit 1; }
+grep -q 'ForEach(drawnActive)' "$ACCOUNT" \
+  || { echo "✗ the account page's active half no longer draws the window's own rows"; exit 1; }
+grep -q 'ForEach(drawnQuiet)' "$ACCOUNT" \
+  || { echo "✗ the account page's quiet half no longer draws the window's own rows"; exit 1; }
+grep -qE 'ForEach\((active|quiet|shown)\)' "$ASTRIPPED" \
+  && { echo "✗ the account page draws an unwindowed roster half again — that is the line §710 removed"; exit 1; }
+# The window is drawn in DRAW ORDER and split back, never sliced per half: two
+# budgets draw two screenfuls, and slicing only the quiet half leaves a seat
+# with 300 active rows (RSS after an OPML import) exactly as unbounded.
+grep -qE 'RowWindow.slice\((active|quiet),' "$ASTRIPPED" \
+  && { echo "✗ the account page slices a roster half against its own budget — window the draw order once, then split it back"; exit 1; }
+grep -q 'windowSteps += 1' "$ACCOUNT" \
+  || { echo "✗ nothing opens the account page's roster — the rows past the first screenful are unreachable"; exit 1; }
+grep -q 'onAppear.*windowSteps' "$ASTRIPPED" \
+  && { echo "✗ the account page's window grows on appearance — that feeds its own trigger (the feed's olderRow measurement)"; exit 1; }
+# The header counts are TOTALS. A count that shrank to the window would hide
+# what was held back, on the one row a person reads to learn how many they follow.
+grep -qF 'AccountPageShape.watchingLabel(rows.filter(\.watched).count)' "$ACCOUNT" \
+  || { echo "✗ Watching · N no longer counts the whole roster — a window's own count is not the fact that row states (§83)"; exit 1; }
+
 TMP=$(mktemp -d)
-trap 'rm -rf "$TMP" "$STRIPPED"' EXIT
+trap 'rm -rf "$TMP"; rm -f "$STRIPPED" "$ASTRIPPED"' EXIT
 
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation

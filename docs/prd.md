@@ -53888,3 +53888,110 @@ hero, which is why it stayed at card height.
 **What this is not.** No row moved, no word of a step changed, nothing was added. The page is the same page with three fills removed and one column alignment made consistent — which is the answer to "gorgeous and elegant and minimal" that does not cost a feature.
 
 **Verified:** the build, `setup-copy-audit.py` (56 connect screens clean, its own self-test green with check 3c's fixture re-worded), `account-page-selftest.sh` (all checks and six mutations, two guards rewritten to the new ruling), and the dead-closure, design-motion, row-cost, mac-parity, catalog-mode and ShareLink audits. **UNSEEN on a device** — every change here is pixels.
+
+## §710 — The RSS page freezes, refuses another feed and kills the app: an unbounded roster inside a draggable sheet, and three loops that persist per item (user: "the rss page freezes won't let me add more sources and crashes the app", 2026-09-12)
+
+**The report, and why the obvious answer was the wrong one.** §693 had fixed
+"unable to add another" the day before — an unstyled `ShareLink` eating the
+act row's taps — so a second report naming the same screen reads as that fix
+not having taken. It is a different defect, and the give-away is the third
+clause: a control that steals taps does not crash a process. Reading the
+screen against the rulings this repo has already paid for, there are four
+costs on it, and every one of them is a shape a numbered ruling elsewhere in
+this ledger already forbids.
+
+**1. THE CRASH: an account page's roster is unbounded, inside a sheet a finger
+can drag.** This is build 539's watchdog (§657) on a second surface, and the
+second surface is 55 screens rather than one. Every connect screen in the app
+is presented through `MainSurface`'s single `.sheet(item: $route.connectForm)`
+— so every one of them is a `List` a finger can drag — and `AccountPage`'s
+`roster` drew `ForEach(active)` and `ForEach(quiet)` over whatever the adopter
+handed it. §657 recorded the mechanism in full: UIKit lays a sheet's hosting
+view out SYNCHRONOUSLY on every offset change, SwiftUI resolves each row's
+index by a linear walk of its shadow collection, so one drag re-runs a list
+update that is O(rows × sections); backgrounded, the app gets ~16% of a core
+and a render costing a second and a half of CPU exceeds ten seconds of wall
+clock. §657 bounded `PersonRoomScreen` and left this chassis alone — which is
+understandable and wrong, because the chassis's own doc already anticipated
+"forty repos or a hundred and forty accounts", and RSS's roster is the one an
+OPML export fills in a single tap. A reader's export carries hundreds of
+feeds; this screen's own doc says so, in the comment explaining why the import
+is two-phase.
+
+The roster is windowed through `RowWindow` now, with the same 30-row target,
+the same linear growth and the same tapped opener the person room uses. It is
+windowed in DRAW ORDER and split back into its two halves, never sliced per
+half: two budgets would draw two screenfuls, and windowing only the quiet half
+would leave a seat with 300 active rows exactly as unbounded — which is RSS's
+shape after an import, since a just-followed feed is active this week. The
+HEADER COUNTS STAY TOTALS. "Watching · 312" over thirty rows is the honest
+reading; a count that shrank to the window would hide the 282 on the one row
+a person reads to learn how many they follow.
+
+**2. THE FREEZE: `OPMLImport.land` followed a reader's export one feed at a
+time.** `RSSStore.feeds` carries `didSet { persist() }`, so every mutation is
+a full `JSONEncoder` pass over the array plus a `UserDefaults` write; and
+`add` re-scans the array linearly for a duplicate. Landing a 300-feed file was
+therefore 300 encodes of an average-150-element array and ~45,000 string
+comparisons, synchronously, on the main thread, with the account sheet on
+screen. `add(contentsOf:)` builds the duplicate set once and assigns `feeds`
+ONCE: one encode, one write, one observation bump. The single-URL form stays —
+most call sites really do follow one feed.
+
+`FeedFreshness.forget` had the same shape at the other end: `removeAll` called
+it per feed, each a lock plus a full encode of the whole freshness store, so
+disconnecting RSS with an imported OPML was hundreds of those back to back.
+There is a list form now.
+
+**3. THE TYPING: the roster was a computed property a body read.** `rows`
+asked `FeedFreshness.trouble(for:)` once per followed feed. That call takes an
+`NSLock` which up to eight concurrent feed fetches hold across a full encode
+of the store — so every body evaluation paid N contended acquisitions on the
+main thread, and a body evaluates on every keystroke in the follow field
+directly above the roster. This is **prd §628 verbatim** ("a fetch or a
+Keychain read belongs in `onAppear`/`.task`, never in a body or a computed
+property a body reads"), and the tell is that `HandleSetupScreen` — the same
+page for the four feed-follow seats — has held its rows in `@State` for
+exactly this reason since §639. RSS was the one screen in the family left
+behind. `readRows()` now composes the roster off the body, on appearance,
+after every follow, unfollow and sync; `FeedFreshness.troubles(for:)` asks the
+store ONCE for the whole roster. The sync call is not optional bookkeeping: a
+pass that changed only the freshness store — a feed's failure streak, a "no
+feed here" verdict — does not touch `rss.feeds`, so without it a publisher
+going dark would not show until the screen was left and re-entered.
+
+**4. `BridgeHealth` decoded its whole book three times per body evaluation, on
+all 55 pages, and lost records under concurrency.** `load()` was an uncached
+`UserDefaults` read plus a `JSONDecoder` pass over one entry per seat the app
+has ever reached, and `AccountPageState.of` calls it twice while the header's
+`metaLine` calls it a third time. §628 again, reached from the chassis rather
+than from a screen, which is why no per-page pass could have found it. It is
+memoised and lock-guarded now — `FeedFreshness`'s shape, for `FeedFreshness`'s
+reasons. The lock fixes a second thing that was never a perf problem at all:
+`record(host:status:named:)` is called off the main actor from concurrent
+bridge reads and did load-modify-save unguarded, so two responses landing
+together dropped one of the two records. **A dropped 401 is the one record
+this whole feature exists to catch.**
+
+**What is pinned.** `row-window-selftest.sh` grows an account-page half: the
+roster slices through `RowWindow`, both halves draw the window's own arrays,
+no unwindowed `ForEach` comes back, no half is sliced against its own budget,
+the opener is a TAP (`.onAppear` growth feeds its own trigger — the feed's
+`olderRow` measurement), and "Watching · N" still counts the whole roster.
+`row-cost-audit.py` grows four checks with four mutations: the RSS roster back
+as a computed property, the per-row freshness read, `land` back in a loop, and
+`BridgeHealth` decoding per call. Sixteen mutations, all caught.
+
+**What was found and NOT fixed.** The connect-form sheet mounts no
+`DSHapticSink`, so every `DSHaptic` call on every account page — the fact
+rows, Remove, the act's verbs, and the new opener — is silent inside it
+(`Haptics.swift`: the listener must sit INSIDE the presentation it serves, and
+`PersonRoomScreen`'s note records the same finding one sheet over). That is a
+one-line fix touching how all 55 screens feel, which is the user's call, not
+this pass's.
+
+**Verified:** every `scripts/*-audit.py` green, `row-cost-audit.py --self-test`
+green at 16 mutations. **UNCOMPILED and UNSEEN** — written on a Linux session
+with no Xcode, no `swiftc` and no simulator, so neither the build nor
+`row-window-selftest.sh`'s compiled half nor a single frame of this has run.
+§673 is the precedent and the warning.

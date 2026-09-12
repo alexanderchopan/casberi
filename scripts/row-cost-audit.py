@@ -96,6 +96,46 @@ CHECKS = [
         "every row that scrolls into view, to fill a menu nobody has pressed",
     ),
     (
+        "Casberi/Casberi/Screens/RSSScreen.swift",
+        "@State private var rows: [AccountPageShape.Row] = []",
+        # `rows` as a computed property asked `FeedFreshness.trouble(for:)`
+        # once per followed feed, per body evaluation. That call takes an
+        # NSLock which up to eight concurrent feed fetches hold across a full
+        # encode of the whole freshness store — and a body evaluates on every
+        # keystroke in the follow field directly above the roster.
+        r"private var rows: \[AccountPageShape\.Row\] \{",
+        "RSSScreen composing its roster in a computed property a body reads (prd §710)",
+        "N contended NSLock acquisitions on the main thread per body evaluation, "
+        "in the one place a person is typing — reported as the page freezing and "
+        "refusing another feed",
+    ),
+    (
+        "Casberi/Casberi/Screens/RSSScreen.swift",
+        "FeedFreshness.troubles(for: feeds.map(\\.url))",
+        None,
+        "the roster asking the freshness store once per row instead of once per read",
+        "one lock acquisition and one dictionary pass for the whole roster, "
+        "against one per feed",
+    ),
+    (
+        "Casberi/Casberi/Model/OPMLImport.swift",
+        "RSSStore.shared.add(\n            contentsOf:",
+        r"if RSSStore\.shared\.add\(feed\.url, title: feed\.title\)",
+        "OPMLImport.land following a reader's export one feed at a time",
+        "every `feeds` mutation persists the whole array (a JSONEncoder pass plus "
+        "a defaults write) and re-scans it linearly, so a 300-feed file is tens of "
+        "thousands of Feed encodings synchronously on the main thread with the "
+        "account sheet on screen",
+    ),
+    (
+        "Casberi/Casberi/Model/BridgeHealth.swift",
+        "if let cache { return cache }",
+        None,
+        "BridgeHealth.load reading UserDefaults and decoding the whole book per call",
+        "every account page asks it THREE times per body evaluation "
+        "(AccountPageState.of twice, the header's metaLine once) across 55 screens",
+    ),
+    (
         "Casberi/Casberi/Design/AppIconTile.swift",
         "if let hit = inkMemo[key] { return hit }",
         # The key must name the PAGE BACKGROUND, which is what `DS.themedPage`
@@ -263,6 +303,32 @@ def self_test():
              "RowVerbMenu(thing: thing, room: source) { run($0, on: $1) }",
              "let verbs = VerbDerivation.verbs(for: thing)\n"
              "                if let v = verbs.first { Button { run(v, on: thing) } label: { Text(v.label) } }")),
+        ("the RSS roster goes back to a computed property",
+         "Casberi/Casberi/Screens/RSSScreen.swift",
+         lambda t: t.replace(
+             "    @State private var rows: [AccountPageShape.Row] = []",
+             "    private var rows: [AccountPageShape.Row] { [] }")),
+        ("the RSS roster asks the freshness store per row again",
+         "Casberi/Casberi/Screens/RSSScreen.swift",
+         lambda t: t.replace(
+             "FeedFreshness.troubles(for: feeds.map(\\.url))",
+             "[String: String]()")),
+        ("OPML import lands one feed at a time again",
+         "Casberi/Casberi/Model/OPMLImport.swift",
+         lambda t: t.replace(
+             "        summary.added = RSSStore.shared.add(\n"
+             "            contentsOf: feeds.map { (url: $0.url, title: $0.title) })\n"
+             "        summary.skipped = feeds.count - summary.added",
+             "        for feed in feeds {\n"
+             "            if RSSStore.shared.add(feed.url, title: feed.title) {\n"
+             "                summary.added += 1\n"
+             "            } else {\n"
+             "                summary.skipped += 1\n"
+             "            }\n"
+             "        }")),
+        ("BridgeHealth decodes its whole book per call again",
+         "Casberi/Casberi/Model/BridgeHealth.swift",
+         lambda t: t.replace("        if let cache { return cache }\n", "")),
         ("the share menu detects per row again",
          "Casberi/Casberi/Screens/ThingContent.swift",
          lambda t: t.replace("ShareTargetMemo.url(for: thing)", "Capture.detectURL(in: shareText)")),

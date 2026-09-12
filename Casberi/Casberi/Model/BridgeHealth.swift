@@ -57,7 +57,13 @@ enum BridgeHealth {
     /// opinion that could disagree with the receipts screen.
     static func record(host: String?, status: Int, named: String?) {
         guard let bridge = owningBridge(host: host, named: named) else { return }
-        var book = load()
+        // READ AND WRITE UNDER ONE LOCK (prd §710). This is reached from
+        // `IngestSupport.send`, which is not main-actor and runs a sweep's
+        // bridges concurrently — so load-modify-save raced itself, and two
+        // responses landing together dropped one of the two records. A
+        // dropped 401 is the one this feature exists to catch.
+        lock.lock(); defer { lock.unlock() }
+        var book = loaded()
         book[bridge] = folded(book[bridge] ?? Record(), status: status, now: .now)
         save(book)
     }
@@ -174,7 +180,8 @@ enum BridgeHealth {
     /// the stale flag would tell them their fresh credential is broken before
     /// it has been used once.
     static func forget(_ bridge: String) {
-        var book = load()
+        lock.lock(); defer { lock.unlock() }
+        var book = loaded()
         guard book.removeValue(forKey: bridge) != nil else { return }
         save(book)
     }
@@ -185,7 +192,8 @@ enum BridgeHealth {
     /// refusal on the floor. A no-op when nothing is filed under the old name.
     static func rename(_ old: String, to new: String) {
         guard old != new else { return }
-        var book = load()
+        lock.lock(); defer { lock.unlock() }
+        var book = loaded()
         guard let record = book.removeValue(forKey: old) else { return }
         book[new] = record
         save(book)
@@ -198,14 +206,43 @@ enum BridgeHealth {
     // list, and Swift's synthesized decoder does not apply defaults for a
     // missing key, so adding a field there silently unfollows every seat on
     // the device (measured, prd §312).
-    private static func load() -> [String: Record] {
-        guard let data = UserDefaults.standard.data(forKey: key),
-              let book = try? JSONDecoder().decode([String: Record].self, from: data)
-        else { return [:] }
-        return book
+    //
+    // MEMOISED, AND LOCK-GUARDED (prd §710) — `FeedFreshness`'s shape, for
+    // `FeedFreshness`'s two reasons.
+    //
+    // READ: every account page asks this THREE TIMES PER BODY EVALUATION —
+    // `AccountPageState.of` calls `needsReconnect` and `record(for:)`, and the
+    // header's `metaLine` calls `record(for:)` again — and a body evaluates on
+    // every keystroke in the act field above it. Each call was a `UserDefaults`
+    // read plus a full `JSONDecoder` pass over the whole book (one entry per
+    // seat the app has ever reached). That is prd §628's banned shape reached
+    // from the chassis rather than from a screen, so it could not be fixed one
+    // page at a time.
+    //
+    // WRITE: `record(host:status:named:)` is called off the main actor from
+    // concurrent bridge reads, so the cache and the store must move together
+    // under one lock — which is also what makes that writer stop losing
+    // records (see its own note).
+    private static let lock = NSLock()
+    private static var cache: [String: Record]?
+
+    /// Caller must hold `lock`.
+    private static func loaded() -> [String: Record] {
+        if let cache { return cache }
+        let decoded = (UserDefaults.standard.data(forKey: key))
+            .flatMap { try? JSONDecoder().decode([String: Record].self, from: $0) } ?? [:]
+        cache = decoded
+        return decoded
     }
 
+    private static func load() -> [String: Record] {
+        lock.lock(); defer { lock.unlock() }
+        return loaded()
+    }
+
+    /// Caller must hold `lock`.
     private static func save(_ book: [String: Record]) {
+        cache = book
         guard let data = try? JSONEncoder().encode(book) else { return }
         UserDefaults.standard.set(data, forKey: key)
     }

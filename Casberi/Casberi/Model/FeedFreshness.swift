@@ -235,10 +235,24 @@ enum FeedFreshness {
     /// Drops one feed's record — called when a follow is removed, so a
     /// re-follow of the same URL starts clean rather than inheriting a
     /// failure streak the person just tried to fix.
-    static func forget(_ url: String) {
+    static func forget(_ url: String) { forget([url]) }
+
+    /// The same, for a LIST — one lock, one encode, one `UserDefaults` write
+    /// (prd §710).
+    ///
+    /// `forget` is called per feed at every removal site, and each call was a
+    /// full `JSONEncoder` pass over the whole store (up to `cap` records) plus
+    /// a defaults write. Disconnecting RSS with a reader's OPML followed —
+    /// which `RSSStore.removeAll` does in a loop — is hundreds of those, back
+    /// to back, on the main thread with a sheet on screen. The single-URL form
+    /// above stays because most call sites really do forget one feed.
+    static func forget(_ urls: [String]) {
+        guard !urls.isEmpty else { return }
         lock.lock(); defer { lock.unlock() }
         var records = loaded()
-        guard records.removeValue(forKey: key(url)) != nil else { return }
+        var dropped = false
+        for url in urls where records.removeValue(forKey: key(url)) != nil { dropped = true }
+        guard dropped else { return }
         write(records)
     }
 
@@ -388,6 +402,12 @@ enum FeedFreshness {
     /// long.
     static func trouble(for url: String) -> String? {
         guard let record = all()[key(url)] else { return nil }
+        return trouble(record)
+    }
+
+    /// The judgement itself, over one record — ONE copy, so the per-URL form
+    /// above and the batch form below cannot drift apart (prd §710).
+    private static func trouble(_ record: Record) -> String? {
         // Checked BEFORE the failure gate, and it is the whole reason this
         // verdict is stored (2026-08-16): a site that answers 200 with an
         // ordinary web page passes every check below — `failures` is 0,
@@ -410,6 +430,31 @@ enum FeedFreshness {
         let days = Int(-successAt.timeIntervalSinceNow / 86400)
         guard days >= quietDays else { return nil }
         return String(localized: "Hasn't answered in \(days) days")
+    }
+
+    /// Every URL's trouble line in ONE pass, keyed by the URL as it was handed
+    /// in — the shape a roster needs (prd §710).
+    ///
+    /// `trouble(for:)` takes `lock` per call, and that lock is held by up to
+    /// eight concurrent feed fetches, each across a full encode of the whole
+    /// store. A screen asking it once per row per body evaluation therefore
+    /// pays N contended acquisitions on the main thread every time anything
+    /// invalidates — a keystroke in the follow field included. This asks once.
+    ///
+    /// A roster must still read it from `onAppear`/`.task` and hold the answer
+    /// (prd §628); the batch makes that read cheap, it does not make a body
+    /// read acceptable.
+    static func troubles(for urls: [String]) -> [String: String] {
+        guard !urls.isEmpty else { return [:] }
+        lock.lock()
+        let records = loaded()
+        lock.unlock()
+        var out: [String: String] = [:]
+        for url in urls {
+            guard let record = records[key(url)], let line = trouble(record) else { continue }
+            out[url] = line
+        }
+        return out
     }
 
     /// The probe's view — every tracked feed's record, newest answer first.

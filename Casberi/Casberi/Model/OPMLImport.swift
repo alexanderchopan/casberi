@@ -54,20 +54,22 @@ enum OPMLImport {
     }
 
     /// Lands the chosen feeds through the exact path a pasted URL takes —
-    /// `RSSStore.add` already validates the scheme and dedupes against the
-    /// person's current follows, so re-importing the same file (or two
-    /// files sharing a feed) only ever adds what's new. The OPML file's own
-    /// title lands with it, so a row reads with its real name immediately
-    /// instead of waiting for the first fetch to learn it.
+    /// `RSSStore.add(contentsOf:)` validates each scheme and dedupes against
+    /// the person's current follows exactly as the single-URL form does, so
+    /// re-importing the same file (or two files sharing a feed) only ever adds
+    /// what's new. The OPML file's own title lands with it, so a row reads with
+    /// its real name immediately instead of waiting for the first fetch to
+    /// learn it.
+    ///
+    /// **ONE STORE WRITE FOR THE WHOLE FILE (prd §710)** — this looped
+    /// `RSSStore.add`, which persists and re-scans on every call, so a
+    /// reader's export locked the main thread for the length of the file
+    /// while the account sheet sat on screen. See `add(contentsOf:)`.
     static func land(_ feeds: [Feed]) -> Summary {
         var summary = Summary()
-        for feed in feeds {
-            if RSSStore.shared.add(feed.url, title: feed.title) {
-                summary.added += 1
-            } else {
-                summary.skipped += 1
-            }
-        }
+        summary.added = RSSStore.shared.add(
+            contentsOf: feeds.map { (url: $0.url, title: $0.title) })
+        summary.skipped = feeds.count - summary.added
         return summary
     }
 

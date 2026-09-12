@@ -140,6 +140,21 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     @State private var today = 0
     @State private var week = 0
     @State private var note = ""
+    /// How far the roster's window has been opened, in `RowWindow` steps
+    /// (prd §710).
+    ///
+    /// **EVERY ACCOUNT PAGE IS A `List` INSIDE A SHEET A FINGER CAN DRAG**
+    /// (`MainSurface`'s one `.sheet(item: $route.connectForm)`), which is
+    /// precisely build 539's watchdog one surface over: UIKit lays a sheet's
+    /// hosting view out SYNCHRONOUSLY on every offset change, and SwiftUI
+    /// resolves each row's index by a linear walk, so the update is
+    /// O(rows × sections) per offset. §657 bounded the person room and left
+    /// this chassis unbounded — and this page's own doc anticipates "forty
+    /// repos or a hundred and forty accounts", while an OPML export drops
+    /// hundreds of feeds into RSS's roster in one tap. Making the row cheaper
+    /// raises the count at which it dies; not drawing the rows is the fix
+    /// (`RowWindow`'s own ruling).
+    @State private var windowSteps = 0
     /// THE DOOR OPENED IN-APP (prd §653). Sticky for the page's life: the
     /// paste the person came back to make is offered from the first return
     /// on, whether the sheet is down or parked at half height over the rows.
@@ -230,6 +245,11 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             }
         }
         .task(id: source) { await readCounts() }
+        // A typed query is a new list, so it gets a new first screenful (prd
+        // §710) — otherwise a window opened to 300 rows stays open once the
+        // query clears, which is the bound gone by the back door. Guarded on
+        // the value so a keystroke over an unopened window writes nothing.
+        .onChange(of: query) { _, _ in if windowSteps != 0 { windowSteps = 0 } }
         .onAppear { note = AccountNotes.note(for: seatID) ?? "" }
         .onChange(of: note) { _, now in AccountNotes.set(now, for: seatID) }
         // The visit is stamped on the way OUT: the ring a row wears is "since
@@ -426,14 +446,27 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         let (active, quiet) = tiered
             ? (shown.filter(\.watched), shown.filter { !$0.watched })
             : AccountPageShape.split(shown)
+        // BOUNDED (prd §710) — windowed in DRAW ORDER, then split back, so
+        // the first screenful is the rows a person came to see (active this
+        // week, or followed) and the tail is what gets held back. Slicing each
+        // half against its own budget would draw two screenfuls, and slicing
+        // only the quiet half would leave a seat with 300 active rows
+        // unbounded, which is RSS's own shape after an OPML import.
+        let window = RowWindow.slice(active + quiet, steps: windowSteps)
+        let drawnActive = Array(window.shown.prefix(active.count))
+        let drawnQuiet = Array(window.shown.dropFirst(active.count))
         if !shown.isEmpty {
+            // The HEADER COUNTS ARE TOTALS, never the window's (§83: a number
+            // about nothing). "Watching · 312" over thirty rows is the honest
+            // reading — the rows below it are a window, and the opener says
+            // so; a count that shrank to the window would hide the 282.
             Text(searching ? AccountPageShape.yoursLabel(shown.count)
                            : AccountPageShape.watchingLabel(rows.filter(\.watched).count))
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .padding(.top, DS.Space.s3)
                 .plainAccountRow()
-            ForEach(active) { row in rosterRow(row) }
-            if !quiet.isEmpty {
+            ForEach(drawnActive) { row in rosterRow(row) }
+            if !drawnQuiet.isEmpty {
                 if !active.isEmpty || tiered {
                     Text(tiered ? AccountPageShape.namedLabel(quiet.count)
                                 : AccountPageShape.quietLabel(quiet.count))
@@ -441,9 +474,29 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                         .padding(.top, DS.Space.s2)
                         .plainAccountRow()
                 }
-                ForEach(quiet) { row in rosterRow(row) }
+                ForEach(drawnQuiet) { row in rosterRow(row) }
             }
+            if window.more { opener }
         }
+    }
+
+    /// A TAP, never an appearance trigger — `PersonRoomScreen`'s own note
+    /// records the measurement: `List` realizes rows ahead of the viewport, so
+    /// growing on `.onAppear` re-renders, appears again and runs away.
+    private var opener: some View {
+        Button {
+            DSHaptic.tap()
+            withAnimation(DS.Motion.standard) { windowSteps += 1 }
+        } label: {
+            Text("Show more")
+                .dsText(.subhead13)
+                .foregroundStyle(DS.tint)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, DS.Space.s4)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .plainAccountRow()
     }
 
     @ViewBuilder
