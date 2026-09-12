@@ -162,6 +162,18 @@ enum DemoSeedAll {
                               // halves are exact.
                               "telegram:post:demo-", "telegram:saved:demo-",
                               "telegram:chat:demo-",
+                              // X's live notices (prd §707) — Telegram's case
+                              // exactly, on the second seat to hold both
+                              // shapes at once. The demo notice must carry the
+                              // real `x-live:notif:` namespace or
+                              // `Corpus.arrivedLive` reads it as archive: kept
+                              // out of All, and the sheet introduces a notice
+                              // hours old as "From your X archive." A bare
+                              // real prefix in teardown would delete a REAL
+                              // person's notifications, so the demo marker
+                              // sits INSIDE the real shape and both halves
+                              // stay exact.
+                              "x-live:notif:demo-",
                               "peer:demo", "privacypools:dep:demo",
                               "privacypools:ragequit:demo",
                               // Radicle (prd §401), same reasoning again: the
@@ -1321,6 +1333,7 @@ enum DemoSeedAll {
         out += obsidian()
         out += ownCaptures()
         out += xArchive()
+        out += xNotices()
         out += instagram()
         out += tiktok()
         out += snapchat()
@@ -1665,6 +1678,76 @@ enum DemoSeedAll {
         let cal = Calendar.current
         let then = cal.date(byAdding: .year, value: -1, to: .now) ?? .now
         return cal.startOfDay(for: .now).timeIntervalSince(cal.startOfDay(for: then)) / 86_400
+    }
+
+    /// THE LIVE HALF OF X (prd §707, 2026-09-12). The demo seeded an archive
+    /// and nothing else, so the busiest room in the corpus demonstrated the one
+    /// X door that is a file you export — and none of the door that is news
+    /// arriving (user: *"the demo shows what an imported twitter feed looks
+    /// like but not what notifications look like"*).
+    ///
+    /// **They are HOURS old, and the archive is years old, which is the whole
+    /// arrangement.** A notice arrives one at a time and an archive lands
+    /// fifteen years at once, so on any real account the notices sit on top and
+    /// the import is the deep history under them — the user's own words for why
+    /// the demo read as import-only. Seeding them a year back would have put
+    /// them in the middle of the archive, which is the one place a person would
+    /// never meet one.
+    ///
+    /// **The ref namespace is the REAL one**, `x-live:notif:`, never a `demo:`
+    /// prefix — `Corpus.liveRefPrefixes` keys on it (§456/§704), so a demo
+    /// notice under a demo ref would be read as an archive row: kept out of the
+    /// All feed, and introduced by the thing sheet as "From your X archive."
+    /// under a notice four minutes old. This is the trap the room-head pass
+    /// found in Peer and Privacy Pools, avoided by construction here.
+    ///
+    /// **No `postText`, and that is §704's ruling rather than an omission**:
+    /// the row and the sheet both lead with `postText` where there is any, so
+    /// stamping the post's words would make each row lead with the POST and
+    /// drop the news. The post rides `quote`, which is also what sends the
+    /// sheet to the notice anatomy.
+    ///
+    /// The FACE is the person who acted, never yours (§707) — the demo is where
+    /// that distinction is most visible, since every archive row directly below
+    /// wears your own.
+    private static func xNotices() -> [Thing] {
+        // (title, actor, the post it concerns, that post's author, days, hour)
+        //
+        // DAYS AND AN HOUR, never fractional days: `at` snaps to `startOfDay`
+        // and then adds the hour, so four notices seeded hours apart on one
+        // fractional day collapse onto the SAME timestamp and the room shows a
+        // stack of rows all reading "23h". The hour is what separates times
+        // within a day.
+        //
+        // All four sit a day or two back rather than a few hours: the demo is
+        // poured whenever somebody opens the app, and a row dated "3 hours ago"
+        // seeded at 2am is dated in the FUTURE. They are still far newer than
+        // the 3-day import receipt and the years of archive under it, which is
+        // the whole arrangement this function exists to show.
+        let notices: [(String, String, String, String, Double, Int)] = [
+            ("sam liked your post",
+             "sam", "Interfaces that age well say less.", "you", 1, 20),
+            ("mia and 2 others liked your repost",
+             "mia", "Most product demos show a screen nobody has ever had.", "mia", 1, 15),
+            ("sam reposted your post",
+             "sam", "Archives are the only honest analytics.", "you", 1, 9),
+            ("New post from mia",
+             "mia", "Shipped the thing that reads the other things.", "mia", 2, 18),
+        ]
+        return notices.enumerated().map { i, n in
+            row(.link, n.0, source: "X", ref: "x-live:notif:demo-\(i)",
+                days: n.4, hour: n.5,
+                // The permalink an Open verb follows. A demo quote card carries
+                // no `url`/`ref` (the `castParent` rule — a fabricated id makes
+                // the sheet offer a walk into a thread that does not exist), but
+                // the ROW's own content is the notice's door and reads as one.
+                content: "https://x.com/\(n.3)/status/\(1_800_000_000_000 + i)") { t in
+                t.authorHandle = n.1
+                t.authorAvatarURL = avatarArt(n.1)
+                t.quote = SocialCard(handle: n.3, text: n.2,
+                                     avatarURL: avatarArt(n.3))
+            }
+        }
     }
 
     private static func xArchive() -> [Thing] {

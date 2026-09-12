@@ -117,10 +117,22 @@ enum XLiveNotifications {
             // only the ones that arrive next. `Apple Music`'s artwork patch
             // (`IngestSupport.artlessThings`) is the same move.
             if let existing = landed[ref] {
-                guard existing.quote == nil, let subject = subject(from: entry)
-                else { continue }
-                fill(existing, with: subject)
-                healed += 1
+                // TWO backfills, asked SEPARATELY (prd §707). A notice landed
+                // before the face pass has no actor and may already have been
+                // healed with its post — so gating the face on `quote == nil`
+                // would skip exactly the rows the earlier backfill repaired,
+                // and a follow (which never has a post) would never be asked
+                // at all.
+                var touched = false
+                if existing.authorAvatarURL == nil, let actor = actor(from: entry) {
+                    fillActor(existing, with: actor)
+                    touched = true
+                }
+                if existing.quote == nil, let subject = subject(from: entry) {
+                    fill(existing, with: subject)
+                    touched = true
+                }
+                if touched { healed += 1 }
                 continue
             }
             guard let thing = thing(from: entry, ref: ref) else { continue }
@@ -222,6 +234,15 @@ enum XLiveNotifications {
                       s.imageURLs.count, s.likes.map { "\($0)" } ?? "—")
             } else {
                 NSLog("[Casberi] xLiveSubject| none — no post hangs off this notice")
+            }
+            // WHO ACTED (prd §707), separately from the post: the two come
+            // from different halves of the entry, so a face that never draws
+            // has to be diagnosable without reading the subject line above.
+            if let a = actor(from: entry) {
+                NSLog("[Casberi] xLiveActor| handle=%@ avatar=%@",
+                      a.handle ?? "MISSING", a.avatar ?? "MISSING")
+            } else {
+                NSLog("[Casberi] xLiveActor| none — no person behind this notice")
             }
         }
         // The raw shape of ONE entry, truncated. This file is UNMEASURED by
@@ -439,6 +460,42 @@ enum XLiveNotifications {
               let userResults = core["user_results"] as? [String: Any],
               let user = userResults["result"] as? [String: Any]
         else { return (nil, nil) }
+        return face(of: user)
+    }
+
+    /// WHO ACTED — the person the notice is about, off `template.from_users`
+    /// (prd §707). X hangs two different people off one notification and the
+    /// app was reading only one of them: `target_objects` is the POST, whose
+    /// author on "REN2140 liked your repost" is YOU, and `from_users` is the
+    /// person who did the liking. Until this, every notice drew the bare X
+    /// logo in the slot the sheet reserves for a face (user, 2026-09-12: "can
+    /// we make it so the person's avatar shows… not mine, i mean the person
+    /// who liked something?").
+    ///
+    /// **The FIRST actor, deliberately.** "REN2140 and 2 others liked your
+    /// repost" carries three, and the headline already says how many — so the
+    /// face names the one the sentence leads with, the way X's own bell does.
+    /// A notice with nobody behind it (a list add, a system notice) returns nil
+    /// and keeps the source icon, which is the honest mark for "no person here".
+    private static func actor(from entry: [String: Any]) -> (handle: String?, avatar: String?)? {
+        guard let itemContent = (entry["content"] as? [String: Any])?["itemContent"] as? [String: Any],
+              let template = itemContent["template"] as? [String: Any],
+              let users = template["from_users"] as? [[String: Any]],
+              let user = (users.first?["user_results"] as? [String: Any])?["result"] as? [String: Any]
+        else { return nil }
+        let read = face(of: user)
+        return read.avatar == nil && read.handle == nil ? nil : read
+    }
+
+    /// One user object → its handle and its face. Shared by the post's author
+    /// and the notice's actor because X serves the SAME shape for both, and two
+    /// parsers for one shape is how they drift (this file's own rule, stated on
+    /// `fill` below).
+    ///
+    /// The avatar is upgraded off X's `_normal` variant, which is 48px — soft
+    /// at `DS.Face.badge` on a 3× screen. `_400x400` is X's own named size and
+    /// the substitution is safe on any URL that lacks it (no match, no change).
+    private static func face(of user: [String: Any]) -> (handle: String?, avatar: String?) {
         let legacy = user["legacy"] as? [String: Any]
         let userCore = user["core"] as? [String: Any]
         let handle = (legacy?["screen_name"] as? String)
@@ -446,7 +503,9 @@ enum XLiveNotifications {
         let avatar = (legacy?["profile_image_url_https"] as? String)
             ?? ((user["avatar"] as? [String: Any])?["image_url"] as? String)
         return (handle.flatMap { $0.isEmpty ? nil : $0 },
-                avatar.flatMap { $0.isEmpty ? nil : $0 })
+                avatar.flatMap {
+                    $0.isEmpty ? nil : $0.replacingOccurrences(of: "_normal.", with: "_400x400.")
+                })
     }
 
     /// The post's own words. A long-form post keeps its full text on
@@ -537,9 +596,27 @@ enum XLiveNotifications {
             source: "X",
             capturedAt: .now,
             sourceRef: ref)
+        // The FACE, before the subject guard (prd §707): a follow or a list add
+        // has no post hanging off it and would take the early return below, and
+        // those are exactly the notices where a person is the whole news.
+        if let actor = actor(from: entry) { fillActor(thing, with: actor) }
         guard let subject else { return thing }
         fill(thing, with: subject)
         return thing
+    }
+
+    /// WHO ACTED, onto the fields the row and the sheet already draw (prd
+    /// §707) — `PostCard` has drawn `authorAvatarURL` whenever a row carries
+    /// one since the archive pass (2026-08-06), and `ThingSheetView.faceMark`
+    /// falls back to the source icon only when it is empty. So this is an
+    /// INGEST fix with no view half: the two surfaces light up on the stamp.
+    ///
+    /// `authorHandle` rides with it because a face with no name is a picture
+    /// of a stranger — and the sheet's face is a door to their profile, which
+    /// needs the handle to open.
+    private static func fillActor(_ thing: Thing, with actor: (handle: String?, avatar: String?)) {
+        if let avatar = actor.avatar { thing.authorAvatarURL = avatar }
+        if let handle = actor.handle { thing.authorHandle = handle }
     }
 
     /// THE POST THE NOTICE IS ABOUT, onto the fields the sheet already draws
