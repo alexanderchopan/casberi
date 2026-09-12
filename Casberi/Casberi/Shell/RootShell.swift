@@ -2272,7 +2272,7 @@ struct RootShell: View {
                     // cannot see — and the octopus standing here had none
                     // either, so nothing on the phone loses a transition it
                     // used to have. The iPad rail's own pair keeps theirs.
-                    DockDoors(onSettings: { sceneState.route.present(.settings) })
+                    DockDoors(onSettings: { sceneState.route.toggle(.settings) })
                 }
                 }
                 // Pinned to the trailing edge (2026-08-07). The iPad cap the

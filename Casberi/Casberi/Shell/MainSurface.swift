@@ -1580,7 +1580,7 @@ struct MainSurface: View {
                     categoryVenues: chips.venues,
                     minimized: chrome.minimized,
                     onApps: { route.present(.apps) },
-                    onSettings: { route.present(.settings) },
+                    onSettings: { route.toggle(.settings) },
                     refreshSpin: chrome.refreshPulse,
                     zoomNS: doorNS) { label in
             // Compared against the CHIP, not the source: re-tapping the folded

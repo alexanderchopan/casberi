@@ -53735,3 +53735,34 @@ Swift toolchain: the static Python audits ran green, the shipped-source
 harnesses (`social-sheet-selftest.sh` included) could not run at all, and
 nothing here has been built or looked at. `scripts/verify.sh` on a Mac is the
 gate, and the preview itself needs a live X session to see.
+
+## §705 — The avatar is a TOGGLE: press it again and Settings closes (user: "today tab bar when you press your avatar it opens settings. can we make the tab bar such that if you press your avatar again it closes that screen?", 2026-09-12)
+
+The face in the dock's fixed seat (§700) opened Settings and, pressed again,
+re-presented the same screen — `HomeRoute.present` sets `path = [door]`, so the
+second press wrote the array it already held and nothing moved.
+
+**That is the dead control §83 forbids, and this seat is the one place it can
+happen.** `DockDoors` is hosted on `RootShell`'s own layer, above the
+`NavigationStack` — the very property §700 chose it for, so the face survives
+into a pushed room, a bridge form and Settings itself. Every other door in the
+app is COVERED by what it opens; this one stays under the thumb, lit, on top of
+its own destination. The only honest reading of a second press there is "put it
+back".
+
+`HomeRoute.toggle(_:)` pops when `path.last` is already the door and presents
+otherwise. It pops ONE frame rather than clearing the stack, so Apps → Settings
+returns to Apps; since `present` replaces the path, the top frame is the only
+one it can ever match.
+
+Both avatar seats route through it — the phone's fixed dock seat
+(`RootShell`) and the iPad rail's own avatar (`MainSurface`) — because they are
+one door and must behave identically. Everything that is NOT the face keeps
+`present`: the `casberi://settings` deep link, ⌘, and `-openSettings` all mean
+"be on Settings", not "flip it".
+
+`AvatarChip.open()`'s existing 0.4s coalesce is unchanged and now does a second
+job: it is what stops a double-tap from opening and closing in one gesture.
+
+Guarded in `scripts/dock-selftest.sh` (both seats, mutation-tested against the
+`present` it replaced). Built; the toggle itself is UNSEEN on a device.

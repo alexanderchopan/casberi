@@ -319,6 +319,18 @@ grep -q 'DockDoors(' "$TMP/root.nc" \
        echo "  own layer, which survives into a pushed room; the strip does not."; fail=1; }
 grep -q 'AvatarChip(' "$TMP/doors.nc" \
   || { echo "✗ the face is gone from the dock's leading seat."; fail=1; }
+# The face is a TOGGLE (user, 2026-09-12: "if you press your avatar again it
+# closes that screen"). It is the one door that stands ON TOP of the screen it
+# opens, so a second press that re-presents the same screen is a control that
+# looks live and does nothing — §83's dead control. Both seats (the phone's
+# fixed dock seat and the iPad rail's own avatar) must route through
+# `HomeRoute.toggle`, never `present`.
+grep -q 'route.toggle(.settings)' "$TMP/root.nc" \
+  || { echo "✗ the dock's face no longer TOGGLES Settings (prd §705) — pressing it a"; \
+       echo "  second time must close the screen it opened, not re-present it."; fail=1; }
+grep -q 'route.toggle(.settings)' "$TMP/main.nc" \
+  || { echo "✗ the iPad rail's avatar no longer toggles Settings — the two seats are"; \
+       echo "  one door and must behave identically."; fail=1; }
 grep -q 'AppsDoor()' "$TMP/doors.nc" \
   && { echo "✗ the catalogue door is back in the FIXED seat (prd §700: only the avatar is"; \
        echo "  fixed; the catalogue is the strip's last item)."; fail=1; }
