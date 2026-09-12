@@ -58,25 +58,27 @@ extension View {
 /// governs (`DSSlabNote`) or in the error copy that already states it.
 
 
-/// THE GUIDE CARD — the trip to the other site, as ONE object (prd §640b,
-/// user picked it out of three directions: *"maybe the connect info is on a
-/// card"*).
+/// THE DOOR AND ITS FOOTER — the trip to the other site, as a row and the
+/// lines under it (prd §708, 2026-09-12; it was ONE FILLED CARD from §640b).
 ///
-/// §640 turned the act into a column of rows and the page got shorter without
-/// getting clearer: the door, three steps, a checklist and three entries were
-/// eight loose blocks reading as one undifferentiated list. The split a
-/// person actually makes is **over there / here** — what you do on the
-/// provider's site, and what you do in this app — and the card is that split
-/// drawn. Everything inside it happens somewhere else; everything below it is
-/// a row on the page you are standing on.
+/// §640b drew the over-there / here split as a filled shape, and the user's
+/// verdict on the built page was that the gray boxes "look bolted on and
+/// vibe coded". They did, for a reason §639 had already stated: this page
+/// has ONE grammar — a row states a fact, anything you change opens — and
+/// the card was a control and three lines of prose inside a box on a page
+/// where nothing else is boxed. The split survives without the fill: the
+/// door is a row like every row around it, and its steps are a FOOTER under
+/// it, quiet type at the page margin, the way a system footer explains the
+/// group above it. Everything in the footer happens on the provider's site;
+/// everything below it is a row on the page you are standing on.
 ///
 /// The door keeps its ADDRESS (§613): the verb says what you get, the host
 /// trails it, and it stays on the control so the door is checkable against
 /// the address bar it opens.
 ///
-/// One object, so one fill — the card is the `surfaceWell` tone with
-/// `DS.pourInk` over it, clipped to the widget radius (§545's recipe; on ink
-/// the tone alone is a 1.03:1 step and draws no corner).
+/// The type name stays — 21 call sites and `setup-copy-audit.py`'s check 3c
+/// discover the pairing by it, and "a door with its steps" is still what it
+/// spells; only the fill is gone.
 struct BridgeSetupCard<Door: View>: View {
     let steps: [String]
     var startingAt = 2
@@ -94,22 +96,7 @@ struct BridgeSetupCard<Door: View>: View {
                                 doneThrough: doneThrough)
             }
         }
-        // The card's own margin. The door's disc then starts 14pt in and its
-        // title 60pt in, which is exactly where `BridgeStepLines`'s act inset
-        // puts the step text — one column inside the card, continuous with
-        // the rows outside it.
-        .padding(.horizontal, DS.Space.s3)
-        .padding(.bottom, DS.Space.s1)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
-                .fill(DS.surfaceWell)
-                .overlay {
-                    RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
-                        .fill(DS.pourInk)
-                }
-        }
-        .padding(.vertical, DS.Space.s2)
     }
 }
 
@@ -127,10 +114,11 @@ struct BridgeSetupCard<Door: View>: View {
 /// manual page.
 struct BridgeStepLines: View {
     let steps: [String]
-    /// Drawn inside `BridgeSetupCard`, which already carries the indent — the
-    /// numeral column then sits under the door's disc rather than under its
-    /// title, which buys the copy 46pt and is the difference between a step
-    /// that fits one line and one that wraps (prd §640b).
+    /// Drawn under a door in `BridgeSetupCard`. Since §708 this changes
+    /// nothing about the geometry — every step line in an act is a FOOTER at
+    /// the page margin, under the disc column, whether a door sits above it
+    /// or not — and it stays as the one word that says which lines are the
+    /// trip out and which are the continuation here (check 3c).
     var inCard = false
     /// The number the first line wears — 2 when a door did step one.
     var startingAt = 2
@@ -177,7 +165,7 @@ struct BridgeStepLines: View {
     private func number(_ i: Int) -> Int { i + startingAt }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        VStack(alignment: .leading, spacing: accountAct ? DS.Space.s1 : DS.Space.s2) {
             ForEach(Array(steps.enumerated()), id: \.offset) { i, text in
                 let done = number(i) <= ticked
                 let live = number(i) == ticked + 1
@@ -225,9 +213,16 @@ struct BridgeStepLines: View {
                 }
             }
         }
-        .padding(.leading, inCard ? 0 : (accountAct ? DSActRow.inset : DS.Space.s2))
+        // A FOOTER RUNS IN ITS ROW'S OWN COLUMN (prd §708) — inset to the
+        // title column, where `DSSlabNote` and `DSCheckList` already sat,
+        // because these lines explain the DOOR ABOVE THEM and text starting
+        // at the margin under a column of discs draws a second left edge.
+        // §640b's measured one-line bound survives with room: 330pt here
+        // against the 290pt the 54-character cap was measured at.
+        .padding(.leading, accountAct ? DSActRow.inset : (inCard ? 0 : DS.Space.s2))
         .padding(.trailing, DS.Space.s2)
-        .padding(.vertical, accountAct ? DS.Space.s2 : DS.Space.s1)
+        .padding(.top, accountAct ? 0 : DS.Space.s1)
+        .padding(.bottom, accountAct ? DS.Space.s2 : DS.Space.s1)
         .onAppear { ticked = doneThrough }
         .onChange(of: doneThrough) { old, now in
             // Backwards (a field cleared, a key replaced) settles at once —

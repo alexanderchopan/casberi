@@ -19,13 +19,22 @@ import SwiftData
 ///    `Design/DSAccountAct.swift`): the door, the entry and the verb are the
 ///    same 56pt row anatomy as the facts below them.
 /// 3. **Plain rows** — Activity (opens the room), Your key (where it lives,
-///    never a character of it), then **Notes as a caption over a box you can
-///    paste into** (§640). **No "What it reaches" row** (prd §702, user: "we
-///    already have 'what it reaches' in settings") — the ONE registry is the
-///    privacy screen's, where a person goes to ask that question about the
-///    whole app; the per-account copy asked it again, once per account, on
-///    the page whose job is connecting.
-/// 4. **Who may read it** — reader marks, lit or dimmed, a caption.
+///    never a character of it), **Notes** — an ENTRY ROW, the note itself
+///    in the title column, inline and visible on the page, growing as it is
+///    typed or pasted (prd §708; §640's filled box is gone, its reason —
+///    "they may have an actual note to paste" — kept). **No "What it
+///    reaches" row** (prd §702, user: "we already have 'what it reaches' in
+///    settings") — the ONE registry is the privacy screen's, where a person
+///    goes to ask that question about the whole app; the per-account copy
+///    asked it again, once per account, on the page whose job is connecting.
+///    **No "Who may read it"** (prd §708, user: "it is really confusing and
+///    no one cares, we already in settings give receipts") — the marks
+///    block, the caption and the sheet are deleted; the reader store and its
+///    enforcement stand, defaulting to every reader, until they are retired.
+/// 4. **Nothing on the page is boxed** (§708, user: the gray boxes "look
+///    bolted on and vibe coded"). A row states a fact, a footer under it
+///    explains it — the setup card, the notes box and the reader-marks block
+///    were the three exceptions and are gone.
 /// 5. **Watching · N** — the account's own rows, active this week first,
 ///    then Quiet; ONE removal verb, "Remove".
 /// 6. **Exits** — Pause reading, Disconnect.
@@ -40,11 +49,12 @@ import SwiftData
 /// cannot be got wrong by a screen at all. `scripts/account-page-selftest.sh`
 /// guards what the type cannot: that every adopter says "Remove", that no
 /// adopter draws a slab section, that the readers filter is wired at every
-/// model hand-off.
+/// model hand-off — the FILTER, which stands; its per-account control is
+/// deleted (§708).
 struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// The catalog name — mark, title, reach registry lookup.
     let name: String
-    /// The BridgeStore seat id — notes, readers and the visit stamp key on it.
+    /// The BridgeStore seat id — notes and the visit stamp key on it.
     let seatID: String
     /// The `Thing.source` this seat lands rows under. NOT the catalog name
     /// where the two differ (`RoomDoor`'s rule) — the Activity row opens it.
@@ -69,8 +79,10 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// balance and lands no row. For those the Activity row would read "0
     /// today · 0 this week" about a seat that will never have a count — the
     /// §83 number-about-nothing, one row under a state line saying it is
-    /// working — and "Who may read it" would offer to shut readers out of a
-    /// corpus with nothing in it. Both are simply absent instead.
+    /// working. ("Who may read it" carried the second half of this argument
+    /// — it would have offered to shut readers out of a corpus with nothing
+    /// in it — until §708 deleted that block outright; the flag now governs
+    /// the Activity row alone.)
     var lands = true
     /// The rows under "Watching". The caller composes them from its own
     /// store; the chassis sorts and labels them.
@@ -128,8 +140,6 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     @State private var today = 0
     @State private var week = 0
     @State private var note = ""
-    /// Bumped by a reader toggle so the static `AccountReaders` read re-runs.
-    @State private var readersTick = 0
     /// THE DOOR OPENED IN-APP (prd §653). Sticky for the page's life: the
     /// paste the person came back to make is offered from the first return
     /// on, whether the sheet is down or parked at half height over the rows.
@@ -177,7 +187,6 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             }
             more().dsAccountAct().plainAccountRow()
             factRows
-            readers
             roster
             exits
         }
@@ -222,6 +231,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         }
         .task(id: source) { await readCounts() }
         .onAppear { note = AccountNotes.note(for: seatID) ?? "" }
+        .onChange(of: note) { _, now in AccountNotes.set(now, for: seatID) }
         // The visit is stamped on the way OUT: the ring a row wears is "since
         // you last looked", and looking is only over once you leave.
         .onDisappear { AccountVisits.stamp(seatID) }
@@ -341,8 +351,8 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         // (prd §641, the ruling that deleted the product page): it used to
         // draw "—" with no chevron on the dark page, which is a read that
         // says nothing, on the screen with the least room — the same defect
-        // §640b removed one row over when it pulled the notes box and the
-        // readers block off a page with no account. Absent entirely for a
+        // §640b removed one row over when it pulled the notes box off a
+        // page with no account. Absent entirely for a
         // seat that lands nothing (see `lands`).
         if lands, state.connected {
             AccountFactRow(glyph: "clock",
@@ -364,7 +374,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         // a fact about a seat you have; drawn on a page with no seat it is a
         // form field asking you to annotate nothing, above the act that would
         // create the thing to annotate.
-        if state.connected { notesBox }
+        if state.connected { notesRow }
     }
 
     /// CLOSE THE SHEET, THEN POP, THEN ASK — `RoomDoor`'s three writes in
@@ -377,94 +387,27 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         chrome.sourceRequest = source
     }
 
-    /// NOTES IS A BOX (prd §640, user: *"notes should be a little box a user
-    /// can paste into not just some one line to type inline b/c they may have
-    /// an actual note to paste"*).
-    ///
-    /// It shipped as a fact row with a trailing one-to-four-line field, which
-    /// is the shape every OTHER row on this page has — and that was the
-    /// mistake: those rows carry a fact the app knows, and this one is the
-    /// only place on the page a PERSON writes. Right-aligned against a title
-    /// it read as a caption, and anything longer than a phrase truncated into
-    /// the row's remaining half.
-    ///
-    /// A caption over a filled box, like the readers block one section down —
-    /// and the fill is sanctioned rather than a slab creeping back: this page
-    /// has exactly one filled element and it has always been the input.
-    private var notesBox: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("Notes")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            TextField(String(localized: "Add a note — paste anything"),
-                      text: $note, axis: .vertical)
-                .dsText(.callout15)
+    /// NOTES IS AN ENTRY ROW (prd §708) — the disc, then the note itself in
+    /// the title column, no fill. §640 drew a caption over a filled box so a
+    /// person could paste a real note; the box was the last gray shape on a
+    /// page whose rule is that nothing is boxed (user: "they look bolted on
+    /// and vibe coded"), and the user ruled the note stays INLINE — *"someone
+    /// may want to come back to this page and see it, not have to click
+    /// another time"*. So it is the same row as every entry on this page:
+    /// one line standing empty ("Add a note"), growing to ten as it is typed
+    /// or pasted, the text always on the page.
+    private var notesRow: some View {
+        HStack(alignment: .top, spacing: DS.Space.s3) {
+            AccountFactRow.disc("note.text")
+                .frame(height: AccountFactRow.height)
+            TextField(String(localized: "Add a note"), text: $note, axis: .vertical)
+                .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
                 .tint(DS.tint)
-                // Three lines standing empty, ten before it scrolls — enough
-                // that a pasted paragraph is READ here rather than guessed at.
-                .lineLimit(3...10)
+                .lineLimit(1...10)
                 .textInputAutocapitalization(.sentences)
-                .onChange(of: note) { _, now in AccountNotes.set(now, for: seatID) }
-                .padding(.horizontal, DS.Space.s3)
-                .padding(.vertical, DS.Space.s2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                // The §545/§590 recipe: the well tone, and `DS.pourInk`
-                // clipped by the box's own shape to draw the top edge — on an
-                // ink page a recess by tone alone is a 1.03:1 step and the
-                // corner never appears.
-                .background(alignment: .top) {
-                    LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
-                                   startPoint: .top, endPoint: .bottom)
-                        .frame(height: 150)
-                        .frame(maxWidth: .infinity, alignment: .top)
-                }
-                .background(DS.surfaceWell)
-                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget,
-                                            style: .continuous))
+                .frame(minHeight: AccountFactRow.height)
         }
-        .padding(.vertical, DS.Space.s3)
-        .plainAccountRow()
-    }
-
-    // MARK: - 4. Who may read it
-
-    /// Same rule as the notes box (§640b): who may READ this account is a
-    /// question about an account. Before connecting it drew three dimmed
-    /// marks under a caption saying nothing reads this yet — a control that
-    /// cannot be used, explaining why, on the screen with the least room.
-    @ViewBuilder private var readers: some View {
-        if lands, state.connected { readersBlock }
-    }
-
-    private var readersBlock: some View {
-        let available = AccountReaders.available()
-        let denied = AccountReaders.denied(seat: seatID)
-        return VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("Who may read it")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            if !available.isEmpty {
-                HStack(spacing: DS.Space.s3) {
-                    ForEach(available) { reader in
-                        AccountReaderMark(reader: reader,
-                                          lit: state.connected && !denied.contains(reader.id),
-                                          enabled: state.connected) {
-                            let now = denied.contains(reader.id)
-                            AccountReaders.setMayRead(reader.id, now, seat: seatID, source: source)
-                            DSHaptic.selection()
-                            readersTick += 1
-                        }
-                    }
-                }
-            }
-            Text(AccountReaders.caption(available: available, denied: denied,
-                                        connected: state.connected))
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        // `readersTick` is otherwise unread — mutating it re-runs this body,
-        // which re-reads the static, non-observable store above.
-        .id(readersTick)
-        .padding(.vertical, DS.Space.s3)
         .plainAccountRow()
     }
 
@@ -715,39 +658,6 @@ struct AccountFactRow: View {
     /// The leading disc — `DSActRow`'s, so a fact row and an act row cannot
     /// drift apart (prd §640; they stand in one column).
     static func disc(_ glyph: String) -> some View { DSActRow.disc(glyph) }
-}
-
-/// One reader's mark — a brand tile, or the on-device glyph tile. Lit = may
-/// read; dimmed (28%) = may not. Tap toggles.
-struct AccountReaderMark: View {
-    let reader: AccountReaders.Reader
-    let lit: Bool
-    let enabled: Bool
-    let toggle: () -> Void
-
-    var body: some View {
-        Button(action: toggle) {
-            Group {
-                if let mark = reader.mark {
-                    BridgeIcon(name: mark, size: DS.Face.list, circular: true)
-                } else {
-                    Image(systemName: "sparkles")
-                        .dsGlyph(18, weight: .medium)
-                        .foregroundStyle(DS.textPrimary)
-                        .frame(width: DS.Face.list, height: DS.Face.list)
-                        .background(DS.surfaceWell, in: Circle())
-                }
-            }
-            .opacity(lit ? 1 : 0.28)
-            .animation(DS.Motion.standard, value: lit)
-            .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-        .accessibilityLabel(Text(reader.name))
-        .accessibilityValue(Text(lit ? String(localized: "May read") : String(localized: "May not read")))
-        .accessibilityAddTraits(.isToggle)
-    }
 }
 
 /// face · name · subline, a ring when it produced things since you last

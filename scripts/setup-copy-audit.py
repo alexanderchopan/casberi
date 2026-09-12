@@ -798,11 +798,13 @@ def audit_source(name: str, src: str, stamped: set = None,
                 findings.append(f"{name}: step wraps to a second line at "
                                 f"{len(lit)} chars (max {MAX_STEP_CHARS}) — {lit[:60]}…")
 
-    # 3c: A DOOR ABOVE STEPS IS A CARD (prd §640b). The two together are one
-    # thing — the trip to the provider's site — and drawn as loose siblings
-    # they read as two of the eight blocks the card exists to collapse. Only
-    # adjacency is checked: steps with no door stay plain step lines, which is
-    # the ruling, not an oversight.
+    # 3c: A DOOR ABOVE STEPS IS ONE OBJECT (prd §640b, unboxed by §708). The
+    # two together are one thing — the trip to the provider's site — and drawn
+    # as loose siblings they read as two of the eight blocks §640b collapsed.
+    # `BridgeSetupCard` is the pairing and is no longer a filled card; the
+    # check is unchanged because what it pins is the pairing, not the fill.
+    # Only adjacency is checked: steps with no door stay plain step lines,
+    # which is the ruling, not an oversight.
     for m in re.finditer(r"BridgeStepLines\(", body):
         before = body[max(0, m.start() - 400):m.start()]
         if "BridgeSetupCard(" in before[-120:]:
@@ -810,7 +812,7 @@ def audit_source(name: str, src: str, stamped: set = None,
         if re.search(r"DSSlab(Button|Door)\(", before) and \
            not re.search(r"DSSlabField\(|DSCheckList\(", before[before.rfind("DSSlab"):]):
             findings.append(f"{name}: a door sits above BridgeStepLines outside "
-                            f"a BridgeSetupCard — §640b: the trip is one card")
+                            f"a BridgeSetupCard — §640b: the trip is one object")
 
     # 3b: a checklist line is a bullet too, and wraps in the same column.
     for m in re.finditer(r"DSCheckList\(lines:\s*\[", body):
@@ -940,7 +942,7 @@ def self_test() -> bool:
         ("too many sentences", DIRTY_MANY_SENTENCES, "sentences"),
         ("step too long", DIRTY_LONG_STEP, "step is"),
         ("a step that wraps", DIRTY_WIDE_STEP, "wraps to a second line"),
-        ("a door loose above its steps", DIRTY_LOOSE_DOOR, "one card"),
+        ("a door loose above its steps", DIRTY_LOOSE_DOOR, "one object"),
         ("footer wall", DIRTY_FOOTER, "footer carries"),
         ("too many notes", DIRTY_NOTES, "DSSlabNotes"),
     ]

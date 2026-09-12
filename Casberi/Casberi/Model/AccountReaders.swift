@@ -105,36 +105,16 @@ enum AccountReaders {
         (defaults ?? Self.defaults).removeObject(forKey: key)
     }
 
-    // MARK: - The caption
-
-    /// The sentence under the marks. Three states and no fourth: nothing to
-    /// read yet; nothing chosen (the default, said as what it does and how to
-    /// change it); a choice made, said as who may read. "Nobody" when every
-    /// reader is off, because a page that lists five dimmed marks and says
-    /// nothing under them is a control with no stated state (§83).
-    static func caption(available: [Reader], denied: Set<String>, connected: Bool) -> String {
-        guard connected else { return String(localized: "Nothing to read yet.") }
-        let allowed = available.filter { !denied.contains($0.id) }
-        let chosen = available.contains { denied.contains($0.id) }
-        guard chosen else {
-            return String(localized: "Default — every agent you've added may read it. Tap one to stop it.")
-        }
-        guard !allowed.isEmpty else {
-            return String(localized: "Nobody may read this account.")
-        }
-        return String(localized: "\(list(allowed.map(\.name))) may read this account.")
-    }
-
-    /// "A", "A and B", "A, B and C" — the sentence's own list, never a
-    /// comma-joined enumeration ending in a dangling name.
-    static func list(_ names: [String]) -> String {
-        switch names.count {
-        case 0: return ""
-        case 1: return names[0]
-        case 2: return "\(names[0]) and \(names[1])"
-        default: return names.dropLast().joined(separator: ", ") + " and " + names[names.count - 1]
-        }
-    }
+    // THE CAPTION IS DELETED (prd §708, user: "get rid of the who may read
+    // it section, it is really confusing and no one cares, we already in
+    // settings give receipts"). `caption(available:denied:connected:)` and
+    // its `list(_:)` sentence builder wrote the three-state line under the
+    // reader marks on every account page; the block, the marks and the line
+    // all went together. Everything ABOVE this comment stands — the deny
+    // book, the per-source lookups and `AccountReadersEnforce` still filter
+    // every hand-off to a model, defaulting to every reader, which is what
+    // the receipts screen then reports. Restoring a per-account control
+    // means writing new copy, not reviving this.
 
     // MARK: - Persistence
 

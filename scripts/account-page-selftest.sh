@@ -17,14 +17,14 @@
 #   · a "What it reaches" row growing back onto the page, restating per
 #     account what the privacy screen states once for the whole app (§702)
 #   · a key row that shows a character of the key
-#   · a reader mark that is lit for an agent the page shut out, because the
-#     deny list was written under one seat and read under another
+#   · a deny list written under one seat and read under another, so an agent
+#     the person shut out of one account keeps reading it
 #   · a default that stops being a default — an agent added later reads
 #     nothing because the allow-list was stored as a snapshot of who existed
-#   · a caption that lists five dimmed marks and says nothing under them
 #   · a roster that swaps two rows between body passes because the sort was
 #     not stable, or that heads its Quiet half with a label over nothing
-#   · a note that stored "" and now counts as a note
+#   · a note that stored "" and now counts as a note, or a Notes row that
+#     no longer shows on the page what was typed into it (§708)
 #   · a second removal verb ("Unfollow", "Stop watching") creeping back onto
 #     a migrated screen, or a slab section drawn on the page that ruled them
 #     out ("looks like a SaaS tool")
@@ -167,11 +167,16 @@ grep -q '.onDisappear { AccountVisits.stamp(seatID) }' "$TMP/page-bare.swift" \
 grep -q 'onAppear { AccountVisits.stamp' "$TMP/page-bare.swift" \
   && { echo "✗ the visit is stamped on ARRIVAL — the ring would clear before it was seen"; exit 1; }
 
-# 9. The readers row toggles through the store, under the seat, WITH the source.
-grep -q 'AccountReaders.setMayRead(reader.id, now, seat: seatID, source: source)' "$TMP/page-bare.swift" \
-  || { echo "✗ a reader toggle no longer writes seat AND source — enforcement reads the source"; exit 1; }
-grep -q 'AccountReaders.caption(available: available, denied: denied' "$TMP/page-bare.swift" \
-  || { echo "✗ the caption under the marks is not the shape's"; exit 1; }
+# 9. "WHO MAY READ IT" IS GONE FROM THE PAGE (prd §708, user: "it is really
+#    confusing and no one cares, we already in settings give receipts"). The
+#    marks, the caption and the per-account toggle are deleted; what must NOT
+#    go with them is the filter itself, which check 10 pins. A block that
+#    grows back here is a control nobody asked for, one screen from the
+#    receipts that answer the same question for the whole app.
+grep -q 'AccountReaderMark\|Who may read it' "$TMP/page-bare.swift" \
+  && { echo "✗ the readers block is back on the account page — §708 deleted it"; exit 1; }
+grep -q 'AccountReaders.caption' Casberi --include='*.swift' -r \
+  && { echo "✗ the readers caption has a call site again — §708 deleted the copy with the block"; exit 1; }
 
 # 10. ENFORCEMENT — every hand-off to a model passes through the reader filter.
 grep -q 'AccountReaders.readable(things, by: reader).map' "$TMP/root-bare.swift" \
@@ -217,14 +222,19 @@ stray=$(grep -rl 'dsAccountAct()' Casberi --include='*.swift' | grep -v 'Screens
 [[ -z "$stray" ]] \
   || { echo "✗ dsAccountAct() is set outside the chassis: $stray — §640: two places, nowhere else"; exit 1; }
 
-# 14. NOTES IS A BOX, not a row (prd §640, user: "they may have an actual note
-#     to paste"). A trailing one-line field truncates anything longer than a
-#     phrase into the row's remaining half, and reads as a caption rather than
-#     a place to put something.
-grep -q 'lineLimit(3\.\.\.10)' "$TMP/page-bare.swift" \
-  || { echo "✗ the Notes field is not the multi-line box §640 ruled (3...10)"; exit 1; }
+# 14. NOTES IS AN INLINE ENTRY ROW that GROWS (prd §708, user: "having a way to
+#     add the note inline is better… someone may want to come back to this
+#     page and see it, not have to click another time"; §640's reason kept:
+#     "they may have an actual note to paste"). Two ways to lose it, both of
+#     which render fine: a one-line cap truncates a pasted paragraph into the
+#     row, and a sheet hides it behind a tap. It also must not wear a fill —
+#     the box is what §708 removed.
+grep -q 'lineLimit(1\.\.\.10)' "$TMP/page-bare.swift" \
+  || { echo "✗ the Notes field no longer grows 1...10 — a pasted note truncates, or a box is back"; exit 1; }
 grep -q 'multilineTextAlignment(.trailing)' "$TMP/page-bare.swift" \
   && { echo "✗ the Notes field is right-aligned again — that is the row shape §640 replaced"; exit 1; }
+grep -q 'AccountNotesSheet\|case .notes' "$TMP/page-bare.swift" \
+  && { echo "✗ Notes opens a sheet — §708: the note stays on the page"; exit 1; }
 
 echo "✓ drift guards"
 
@@ -359,23 +369,17 @@ let device = R.Reader(id: R.ID.device, name: "On-device", mark: nil)
 let claude = R.Reader(id: R.ID.agent("anthropic"), name: "Claude", mark: "Claude")
 let venice = R.Reader(id: R.ID.agent("venice"), name: "Venice", mark: "Venice")
 check("default: everyone may read", R.mayRead(claude.id, seat: "gh", defaults: suite) && R.denied(seat: "gh", defaults: suite).isEmpty)
-check("default caption", R.caption(available: [device, claude], denied: [], connected: true)
-      == "Default — every agent you've added may read it. Tap one to stop it.")
-check("not connected caption", R.caption(available: [device, claude], denied: [], connected: false) == "Nothing to read yet.")
+// The CAPTION and its sentence builder went with the page block (§708). What
+// is tested here is the deny book and the per-source lookups the ANSWER PATH
+// reads — every one of these failures is silent and none of them renders.
 R.setMayRead(claude.id, false, seat: "gh", source: "GitHub", defaults: suite)
 check("denied under its seat", !R.mayRead(claude.id, seat: "gh", defaults: suite))
 check("another seat untouched", R.mayRead(claude.id, seat: "bsky", defaults: suite))
 check("device still reads", R.mayRead(device.id, seat: "gh", defaults: suite))
-check("caption names who may read", R.caption(available: [device, claude], denied: R.denied(seat: "gh", defaults: suite), connected: true)
-      == "On-device may read this account.")
 check("an agent added LATER is allowed by default (deny list, not a snapshot)",
       R.mayRead(venice.id, seat: "gh", defaults: suite))
-check("caption lists two", R.caption(available: [device, claude, venice], denied: [claude.id], connected: true)
-      == "On-device and Venice may read this account.")
-check("caption lists three with a comma", R.list(["A", "B", "C"]) == "A, B and C")
 R.setMayRead(device.id, false, seat: "gh", source: "GitHub", defaults: suite)
-check("nobody", R.caption(available: [device, claude], denied: R.denied(seat: "gh", defaults: suite), connected: true)
-      == "Nobody may read this account.")
+check("two denials under one seat", R.denied(seat: "gh", defaults: suite) == [claude.id, device.id])
 check("denied sources for claude name the SOURCE, not the seat", R.deniedSources(for: claude.id, defaults: suite) == ["GitHub"])
 check("denied sources for venice are empty", R.deniedSources(for: venice.id, defaults: suite).isEmpty)
 R.setMayRead(claude.id, true, seat: "gh", source: "GitHub", defaults: suite)
@@ -441,8 +445,6 @@ mutate "$SHAPE" '(rows.filter { $0.weekCount > 0 }, rows.filter { $0.weekCount <
 mutate "$READERS" '        if entry.denied.isEmpty { book.removeValue(forKey: seat) } else { book[seat] = entry }' \
        '        book[seat] = entry' \
        "an empty deny set leaves an entry behind"
-mutate "$READERS" '        guard chosen else {' '        guard !allowed.isEmpty, chosen else {' \
-       "the default caption is lost when someone chose"
 mutate "$NOTES" 'if trimmed.isEmpty { book.removeValue(forKey: seat) } else { book[seat] = trimmed }' \
        'book[seat] = trimmed' \
        "a blank note is stored as a note"
