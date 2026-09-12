@@ -18,9 +18,13 @@ import SwiftData
 ///    "Paste a new token". **It draws ROWS, not slabs** (§640,
 ///    `Design/DSAccountAct.swift`): the door, the entry and the verb are the
 ///    same 56pt row anatomy as the facts below them.
-/// 3. **Plain rows** — Activity (opens the room), What it reaches (the hosts
-///    and only the hosts), Your key (where it lives, never a character of
-///    it), then **Notes as a caption over a box you can paste into** (§640).
+/// 3. **Plain rows** — Activity (opens the room), Your key (where it lives,
+///    never a character of it), then **Notes as a caption over a box you can
+///    paste into** (§640). **No "What it reaches" row** (prd §702, user: "we
+///    already have 'what it reaches' in settings") — the ONE registry is the
+///    privacy screen's, where a person goes to ask that question about the
+///    whole app; the per-account copy asked it again, once per account, on
+///    the page whose job is connecting.
 /// 4. **Who may read it** — reader marks, lit or dimmed, a caption.
 /// 5. **Watching · N** — the account's own rows, active this week first,
 ///    then Quiet; ONE removal verb, "Remove".
@@ -28,7 +32,7 @@ import SwiftData
 ///
 /// The rejected variants are recorded in §639 so nobody restores them: cards
 /// and slabs ("looks like a SaaS tool"), tabs, a Yours section, showing any
-/// part of the token, privacy slogans on the reach row, and "room" as a word.
+/// part of the token, privacy slogans on a reach row, and "room" as a word.
 ///
 /// **The slot order is the chassis, not an audit.** §608 made the order a
 /// property of each screen's body and audited it; here the adopter fills two
@@ -102,7 +106,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     var disconnectNote: String? = nil
     /// One presentation for the whole screen (the third-time-paid-for rule):
     /// the adopter owns the state so it can raise a profile from a row tap,
-    /// and the chassis raises the reach and key sheets through the same door.
+    /// and the chassis raises the key sheet through the same door.
     @Binding var sheet: AccountPageSheet?
     @ViewBuilder var act: () -> Act
     /// Second acts that only exist once the first has happened (GitHub's
@@ -132,7 +136,6 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     @State private var doorOpened = false
 
     private var seat: BridgeApp? { store.bridges.first { $0.id == seatID } }
-    private var hosts: [String] { AccountReach.hosts(for: name) }
 
     var body: some View {
         pageList
@@ -197,8 +200,6 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $sheet) { which in
             switch which {
-            case .reach:
-                AccountReachSheet(name: name, hosts: hosts)
             case .key:
                 // THE HOST WRAPS THE SHEET, NOT ITS ROW. `AccountKeySheet`
                 // renders what it is handed as a `List` row, so a host placed
@@ -351,11 +352,6 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                            opens: true,
                            action: openRoom)
         }
-        AccountFactRow(glyph: "network",
-                       title: String(localized: "What it reaches"),
-                       fact: AccountPageShape.reachFact(hosts: hosts),
-                       opens: !hosts.isEmpty,
-                       action: hosts.isEmpty ? nil : { sheet = .reach })
         if keyed, state.connected {
             AccountFactRow(glyph: "key",
                            title: String(localized: "Your key"),
@@ -593,7 +589,6 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 /// sheet opens onto a row a foreground heal deleted underneath it. The sheet
 /// re-reads it, and draws nothing if it has gone.
 enum AccountPageSheet: Identifiable {
-    case reach
     case key
     case profile(SocialProfile)
     case thing(id: UUID)
@@ -604,7 +599,6 @@ enum AccountPageSheet: Identifiable {
     case web(URL)
     var id: String {
         switch self {
-        case .reach: "reach"
         case .key: "key"
         case .profile(let p): "profile:\(p.id)"
         case .thing(let id): "thing:\(id.uuidString)"
@@ -862,88 +856,7 @@ enum AccountWeek {
     }
 }
 
-// MARK: - The reach lookup
-
-/// What a seat reaches, read out of the ONE registry (`NetworkReach`) — the
-/// hosts under the service that wears the catalog name, plus any endpoint
-/// that names this bridge as its owner. Nothing here is typed twice.
-enum AccountReach {
-    static func endpoints(for name: String) -> [NetworkReach.Endpoint] {
-        NetworkReach.endpoints.filter { endpoint in
-            if endpoint.service == name { return true }
-            if case .whenConnected(let bridge) = endpoint.reach { return bridge == name }
-            return false
-        }
-    }
-
-    static func hosts(for name: String) -> [String] {
-        var seen = Set<String>()
-        return endpoints(for: name).flatMap(\.hosts).filter { $0.contains(".") && seen.insert($0).inserted }
-    }
-}
-
 // MARK: - Sheets
-
-/// The reach row's screen: this account's registry entries and the receipts
-/// for exactly its hosts — the receipts screen, filtered. The purpose
-/// sentence is the registry's own; the counts are the ledger's.
-struct AccountReachSheet: View {
-    let name: String
-    let hosts: [String]
-    @Environment(\.dismiss) private var dismiss
-    @State private var receipts: [NetworkLedger.Entry] = []
-
-    var body: some View {
-        NavigationStack {
-            List {
-                ForEach(AccountReach.endpoints(for: name)) { endpoint in
-                    Text(endpoint.purpose)
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, DS.Space.s2)
-                        .plainAccountRow()
-                }
-                ForEach(hosts, id: \.self) { host in
-                    HStack(spacing: DS.Space.s3) {
-                        AccountFactRow.disc("network")
-                        Text(host)
-                            .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1).truncationMode(.middle)
-                        Spacer(minLength: DS.Space.s2)
-                        Text(receiptLine(host))
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                    .frame(minHeight: AccountFactRow.height)
-                    .plainAccountRow()
-                }
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .dsPageBackground()
-            .dsScreenTitle(String(localized: "What \(name) reaches"))
-            .dsSheetDismiss { dismiss() }
-            .onAppear { receipts = NetworkLedger.shared.snapshot() }
-        }
-        .dsNavSheet()
-        .dsColorScheme()
-    }
-
-    /// "12 calls · 8m ago" from the ledger, or "no calls this week" — the
-    /// honest empty, since the ledger keeps seven days.
-    private func receiptLine(_ host: String) -> String {
-        let needle = host.lowercased()
-        let matching = receipts.filter {
-            let h = $0.host.lowercased()
-            return h == needle || h.hasSuffix("." + needle)
-        }
-        let count = matching.reduce(0) { $0 + $1.count }
-        guard count > 0, let last = matching.map(\.last).max() else {
-            return String(localized: "no calls this week")
-        }
-        return String(localized: "\(count) calls · \(AccountPageShape.ago(last))")
-    }
-}
 
 /// The "Your key" sheet — the adopter's own paste field, in a sheet that says
 /// where the key goes and nothing about the key it replaces.

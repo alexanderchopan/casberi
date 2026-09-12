@@ -107,15 +107,6 @@ enum AccountPageShape {
         return String(localized: "\(today) today · \(week) this week")
     }
 
-    /// The hosts and only the hosts. One host reads bare; more read as the
-    /// first plus the count, because a row has room for one address.
-    static func reachFact(hosts: [String]) -> String {
-        let clean = hosts.filter { $0.contains(".") }
-        guard let first = clean.first else { return "—" }
-        guard clean.count > 1 else { return first }
-        return String(localized: "\(first) · \(clean.count) hosts")
-    }
-
     /// Where the key lives and the verb that changes it — NEVER a character
     /// of the key. The expiry replaces the place when a provider reports one,
     /// because the date is then the fact that matters.

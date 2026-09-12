@@ -14,8 +14,8 @@
 #
 #   · a state line that says "Reading" over a key the provider refused, or
 #     "0 today" for a seat that reads nothing
-#   · a reach row that grew a slogan back ("nothing leaves the phone" was
-#     rejected as superfluous — the hosts ARE the fact)
+#   · a "What it reaches" row growing back onto the page, restating per
+#     account what the privacy screen states once for the whole app (§702)
 #   · a key row that shows a character of the key
 #   · a reader mark that is lit for an agent the page shut out, because the
 #     deny list was written under one seat and read under another
@@ -50,9 +50,10 @@ DISCONNECT="Casberi/Casberi/Screens/BridgeDisconnectSection.swift"
 ROOT="Casberi/Casberi/Shell/RootShell.swift"
 MCP="Casberi/Casberi/Model/MCPTools.swift"
 TOKENS="Casberi/Casberi/Design/DesignTokens.swift"
+SETTINGS="Casberi/Casberi/Screens/AccountDetailSheet.swift"
 
 for f in "$SHAPE" "$READERS" "$NOTES" "$ENFORCE" "$PAGE" "$TOKEN" "$HANDLE" "$DETAIL" \
-         "$DISCONNECT" "$ROOT" "$MCP" "$TOKENS"; do
+         "$DISCONNECT" "$ROOT" "$MCP" "$TOKENS" "$SETTINGS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -125,13 +126,17 @@ grep -q 'AccountPageShape.keyFact(' "$TMP/page-bare.swift" \
 grep -q 'secure: true' "$TMP/token-bare.swift" \
   || { echo "✗ the token field lost secure entry"; exit 1; }
 
-# 5. The reach row states hosts and only hosts — no slogan, in the shape or on the page.
+# 5. NO reach row on an account page (prd §702, user: "we already have 'what
+#    it reaches' in settings"). The app's reaches are stated ONCE, on the
+#    privacy screen, which is where a person goes to ask that question about
+#    the whole app; a per-account copy asked it again on every page, and
+#    settings must keep its door or the question is answered nowhere.
 grep -qiE 'leaves? (the|this|your) (phone|device)|routes through|no server' "$TMP/shape-bare.swift" "$TMP/page-bare.swift" \
-  && { echo "✗ a privacy slogan is back on the reach row — the hosts are the fact (§639)"; exit 1; }
-grep -q 'AccountPageShape.reachFact(hosts: hosts)' "$TMP/page-bare.swift" \
-  || { echo "✗ the reach row no longer reads its fact from the shape"; exit 1; }
-grep -q 'NetworkReach.endpoints.filter' "$TMP/page-bare.swift" \
-  || { echo "✗ the reach lookup no longer reads the ONE registry (NetworkReach)"; exit 1; }
+  && { echo "✗ a privacy slogan is on the account page — the app's reaches live in settings (§702)"; exit 1; }
+grep -qiE 'What it reaches|reachFact|AccountReach' "$TMP/page-bare.swift" "$TMP/shape-bare.swift" \
+  && { echo "✗ the What it reaches row is back on the account page — it lives in settings alone (§702)"; exit 1; }
+grep -q 'NetworkReachScreen()' "$SETTINGS" \
+  || { echo "✗ settings no longer opens the reach registry — the one place the app's hosts are stated (§702)"; exit 1; }
 
 # 6. The room door keeps RoomDoor's three writes in RoomDoor's order.
 python3 - "$TMP/page-bare.swift" <<'PY' || { echo "✗ the Activity row's door no longer closes, pops, then asks — in that order (RoomDoor's lesson)"; exit 1; }
@@ -283,10 +288,6 @@ check("connected wins over last read when both known",
 print("the facts")
 check("activity", S.activityFact(today: 14, week: 96, connected: true) == "14 today · 96 this week")
 check("activity, not connected, is a dash — never 0 today", S.activityFact(today: 0, week: 0, connected: false) == "—")
-check("one host reads bare", S.reachFact(hosts: ["api.github.com"]) == "api.github.com")
-check("two hosts read first · count", S.reachFact(hosts: ["api.github.com", "github.com"]) == "api.github.com · 2 hosts")
-check("no hosts is a dash", S.reachFact(hosts: []) == "—")
-check("a prose entry is not a host", S.reachFact(hosts: ["the site you saved"]) == "—")
 check("key fact names the place, never the key", S.keyFact(device: "this iPhone", expires: nil) == "Keychain, this iPhone · Replace")
 check("key fact with expiry", S.keyFact(device: "this iPhone", expires: expiry).hasPrefix("Expires ") && S.keyFact(device: "this iPhone", expires: expiry).hasSuffix(" · Replace"))
 
@@ -445,8 +446,6 @@ mutate "$READERS" '        guard chosen else {' '        guard !allowed.isEmpty,
 mutate "$NOTES" 'if trimmed.isEmpty { book.removeValue(forKey: seat) } else { book[seat] = trimmed }' \
        'book[seat] = trimmed' \
        "a blank note is stored as a note"
-mutate "$SHAPE" 'guard clean.count > 1 else { return first }' 'let _ = first' \
-       "one host reads as a count"
 # The one-bar filter (§639 amendment). Its two failure modes are opposite and
 # both silent: a query that filters nothing leaves the person scrolling 140
 # rows they just searched, and a filter that ignores the trim turns a stray

@@ -53522,3 +53522,41 @@ reads with a dozen watches.
 **UNMEASURED, in the sense this codebase already uses that word for `TrelloAuth`/`JiraAuth`.** The guest bearer token and the `NotificationsTimeline` query id are both version-pinned strings X rotates without notice and with no keyless way to discover the current value — authored against the publicly documented shape of X's internal timeline GraphQL responses, with no live X session reachable from this build host. Every parse fails to nil/empty rather than guessing, so a shape drift lands nothing rather than something wrong. `-xLiveProbe YES` is the measure tool: it reports whether cookies are stored, the raw HTTP status, the top-level JSON keys, any GraphQL `errors[]`, and the first few parsed entries — so a future stale query id is a one-launch diagnosis, never a silently empty room. **Re-measure against a real signed-in session before trusting the parse**, the same standing caveat every UNMEASURED bridge here carries.
 
 Guards run: `scripts/network-reach-audit.sh` (the new `x.com` reach), `scripts/catalog-sync.sh` (no catalog offer added — the existing "X" offer is extended, not duplicated), `scripts/keychain-audit.py` (the two new `TokenVault` items carry the standing device-only, non-synchronizable policy — nothing bridge-specific to check, since `TokenVault` enforces the policy at the single `set` call every bridge shares).
+
+## §702 — "What it reaches" leaves the account pages; the app's hosts are stated once, in settings (user: "can we remove 'what it reaches' from the catalogue pages? it's kind of confusing", "we already have 'what it reaches' in settings", 2026-09-11)
+
+**The ruling.** The `What it reaches` row is deleted from `AccountPage` — from
+every one of the 55 account pages, the row, its filtered-receipts sheet
+(`AccountReachSheet`), its registry lookup (`AccountReach`) and its fact
+(`AccountPageShape.reachFact`). Settings keeps its own door, unchanged:
+`AccountDetailSheet` → "What this app reaches" → `NetworkReachScreen`, the ONE
+registry, whole.
+
+**Why it read as confusing.** The two rows answered the same question at two
+altitudes and never said so. The settings screen is where a person goes to ask
+*what does this app talk to* — one place, one list, the whole app. The account
+page asked it again, once per account, on the page whose entire job is
+connecting one thing; standing on the GitHub page, "What it reaches ·
+api.github.com · 2 hosts" is a sentence with no decision under it, between the
+act field and the key. §639 put it there as a fact among facts; a year of
+pages later it reads as a privacy control that controls nothing.
+
+**What is NOT weakened.** The registry (`Model/NetworkReach.swift`) is
+untouched, `scripts/network-reach-audit.sh` still gates every new bridge's
+hosts, and the receipts ledger still records every call. The claim "no server,
+nothing routes through us" remains checkable — in the one place the check
+belongs. A per-account host list was a second rendering of that registry, never
+a second source of truth.
+
+**Mechanical.** `scripts/account-page-selftest.sh` check 5 is inverted: it was
+"the reach row reads its fact from the shape and its hosts from the ONE
+registry", it is now three greps — no `What it reaches` / `reachFact` /
+`AccountReach` anywhere in the page or the shape (comment-stripped, so this
+entry's own prose cannot satisfy it), no privacy slogan on the page, and
+`NetworkReachScreen()` still present in settings, because a removal that also
+lost the settings door would answer the question nowhere. Proven against the
+pre-change file, which matches the first two greps 8 times.
+
+**UNSEEN on a device**: verified by build, the self-test and the static audits.
+The visual reading — whether the plain rows still balance with one fewer, on a
+seat that is neither keyed nor landing — is a look, not a check.
