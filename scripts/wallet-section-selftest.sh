@@ -41,8 +41,8 @@ func check(_ ok: Bool, _ what: String) {
 }
 
 // ORDER is a ruling, not an accident of declaration.
-check(WalletSection.order == [.home, .activity, .holdings, .positions, .nfts, .risk, .permissions],
-      "order is home → activity → holdings → positions → nfts → risk → permissions")
+check(WalletSection.order == [.home, .activity, .holdings, .accounts, .positions, .nfts, .risk, .permissions],
+      "order is home → activity → holdings → accounts → positions → nfts → risk → permissions")
 check(WalletSection.order.count == WalletSection.allCases.count,
       "order lists every case — a new scope cannot be silently unlisted")
 
@@ -172,7 +172,7 @@ mutate() {
 }
 
 mutate "a conditional scope moved out of the tail (the strip reflows)" \
-  's/\.home, \.activity, \.holdings, \.positions, \.nfts, \.risk, \.permissions,/.home, .risk, .activity, .holdings, .positions, .nfts, .permissions,/'
+  's/\.home, \.activity, \.holdings, \.accounts, \.positions, \.nfts, \.risk, \.permissions,/.home, .risk, .activity, .holdings, .accounts, .positions, .nfts, .permissions,/'
 mutate "home no longer leads" \
   's/\.home, \.activity, \.holdings/.holdings, .home, .activity/'
 mutate "resolve falls back to the first present scope instead of activity" \

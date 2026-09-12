@@ -354,14 +354,14 @@ enum BridgeGlyph {
         // silently rank it above the others, which is a claim a fallback has
         // no business making. The literal carries the accent in the catalog's
         // own normalization: Swift compares canonically, the harness does not.
-        case "hegota devnet": return "character"
+        case "hegotá utxo": return "character"
         // The Frames devnet bundles its own mark (`brand-frames-devnet`), so
         // this is the same defensive fallback for the same reason — and the
         // same ANSWER: a neutral letterform, never an invented theme icon. A
         // frame glyph would name one of the chain's readings and silently
         // rank it above the others, which is a claim a fallback that only
         // appears when an asset FAILED TO LOAD has no business making.
-        case "frames devnet": return "character"
+        case "hegotá frames": return "character"
         // Hegotá Privacy bundles its own mark (`brand-privacy-devnet`), so
         // this is the third instance of the same defensive fallback and the
         // same ANSWER: a neutral letterform. A key or a shield glyph would
@@ -370,7 +370,7 @@ enum BridgeGlyph {
         // transacted, which it does not (§593): every transaction here names
         // its sender in the open. A fallback that only appears when an asset
         // failed to load has no business making that claim.
-        case "privacy devnet": return "character"
+        case "hegotá privacy": return "character"
         default:          return "app"
         }
     }

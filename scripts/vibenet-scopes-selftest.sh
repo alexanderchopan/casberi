@@ -257,8 +257,8 @@ FLOWCARD_NC="$(strip "$FLOWCARD")"
 
 grep -q 'case .accounts:        accountsFigure' "$CARD" \
   || fail "the Accounts scope no longer leads with the web"
-grep -q 'case .activity:        activityFigure' "$CARD" \
-  || fail "the Activity scope no longer leads with the change flow"
+grep -q 'case .activity:        activityChart' "$CARD" \
+  || fail "the Activity scope no longer leads with its chart (prd §686 — how many, and when)"
 grep -q 'case .permissions:     permissionsFigure' "$CARD" \
   || fail "the Permissions scope no longer leads with the capability census"
 

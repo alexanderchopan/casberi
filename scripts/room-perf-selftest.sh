@@ -386,7 +386,7 @@ fi
 check "the lift waits on the feed's scroll AND the dock in hand" \
       "$MAIN" 'while chrome\.scrolling \|\| chrome\.dockBusy,' yes
 checkm "a room change clears the scroll flag for the arriving room" \
-       "$MAIN" 'private func land\(_ target: String\) \{(?:(?!\n    \}).)*chrome\.scrolling = false' yes
+       "$MAIN" 'private func land\(_ target: String[^)]*\) \{(?:(?!\n    \}).)*chrome\.scrolling = false' yes
 if [[ -f "$CHROME" ]]; then
   checkm "the scroll observer clears its flag when its screen leaves" \
          "$CHROME" '\.onDisappear \{\s*if active, chrome\.scrolling \{ chrome\.scrolling = false; GestureGate\.set\(scrolling: false\) \}' yes
