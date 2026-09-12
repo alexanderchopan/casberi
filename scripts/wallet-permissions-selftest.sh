@@ -25,6 +25,7 @@ cd "$(dirname "$0")/.."
 SRC="Casberi/Casberi/Model/WalletPermissions.swift"
 MAP="Casberi/Casberi/Model/WalletPermissionsSource.swift"
 CARD="Casberi/Casberi/Screens/WalletPermissionsCard.swift"
+FIGURE="Casberi/Casberi/Screens/RoomPermissionsFigure.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 STATE="Casberi/Casberi/Model/WalletWarnings.swift"
 
@@ -433,7 +434,12 @@ strip "$GRANTS" | grep -q 'Image(systemName: "chevron'   && fail "the approvals 
 strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 3 'first(where: { $0.isLive && $0.id == grant.thingID })' | grep -q 'chrome.flash' || fail "a stale approval row taps into silence again"
 
 # The card speaks as ONE sentence (§299), like the risk bars two scopes over.
-grep -q 'accessibilityElement(children: .combine)' "$CARD" \
+# §692 moved the card's own rendering onto the shared `RoomPermissionsFigure`
+# (`WalletPermissionsCard.body` is now a thin `kinds:`/`lead:` translation),
+# so the modifier lives there now — check both, since a future de-sharing
+# could legitimately move it back.
+{ grep -q 'accessibilityElement(children: .combine)' "$CARD" ||
+  grep -q 'accessibilityElement(children: .combine)' "$FIGURE"; } \
   || fail "the card stopped speaking as one ordered sentence"
 
 # THE SLOT IS COUNTS, NEVER NAMES (prd §546, user: "we can't just repeat the
@@ -448,7 +454,11 @@ strip "$CARD" | grep -qE '\.names|rung\.names' \
   && fail "the slot names a holder again — that is the list restated (§546)"
 # ...and the numerals must stay at figure size: the count IS the drawing now,
 # so demoting it back to a row-sized stat is the old list wearing a new doc.
-grep -q 'dsText(.price40)' "$CARD" \
+# §692 both moved this onto `RoomPermissionsFigure` AND shrank the token to
+# `.price16` (a well, not a bare numeral — the card's own doc comment says
+# so); check both files and both tokens, since either move could reverse.
+{ grep -qE 'dsText\(\.price(40|16)\)' "$CARD" ||
+  grep -qE 'dsText\(\.price(40|16)\)' "$FIGURE"; } \
   || fail "the slot's counts are no longer drawn as figures (§546)"
 
 print "  ok   18 mutations, 25 drift guards"

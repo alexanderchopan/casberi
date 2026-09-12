@@ -59,7 +59,10 @@ struct XArchiveImportScreen: View {
             // (prd §315), and it is the one limit that earns the sentence's
             // second half: bookmarks are the pile an X user most expects this
             // seat to hold, and they are the one thing it can never have.
-            mode: .oneTimeImport,
+            // §701 amendment: the catalogue word is now "Connect" (the live
+            // sign-in), not "Import" — the archive stays the second act, not
+            // the first thing a person is offered (`catalog-mode-audit.py`).
+            mode: .signIn,
             // The live-notifications sign-in (prd §701), raised through the
             // page's ONE presentation like every other seat-only screen here.
             cardSheet: { _ in

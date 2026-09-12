@@ -77,14 +77,14 @@ enum XLiveNotifications {
     /// every page load (see `XLiveAuth`'s header note) — an app identifier,
     /// not a secret. X rotates this occasionally with no notice.
     static let guestBearerToken =
-        "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs=1AWuAgWFAKSfk3QUQZmyzInkgSNCTVXAJ0RgB1qsK1PZM3nlv"
+        "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs=1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
 
     /// The `NotificationsTimeline` query id. X versions every GraphQL query by
     /// a hash-like id that rotates without notice and with no keyless way to
     /// discover the current one — pinned here, and a break shows up as a 404
     /// on this exact path. `diagnose()` prints the raw status so that is a
     /// one-launch diagnosis rather than a silently empty room.
-    static let notificationsQueryID = "wpFOs2YtjCq5X2vAmYlwrw"
+    static let notificationsQueryID = "Ev6UMJRROInk_RMH2oVbBg"
 
     @MainActor private static var running = false
 
@@ -137,6 +137,27 @@ enum XLiveNotifications {
                 NSLog("[Casberi] xLive| unreachable — check the connection")
             default:
                 NSLog("[Casberi] xLive| unexpected status — the query id or the feature flags may have rotated")
+            }
+            // `getJSONStatus` discards the body on non-200 by design (every
+            // other bridge's `diagnose()` never needed it) — this bridge
+            // does, since it's UNMEASURED and the whole point of `diagnose`
+            // is a one-launch cause, not just a code. Re-issue the same
+            // request directly for X's own error body — never the request's
+            // cookie header. Found the wrong guest bearer token AND a stale
+            // query id this way on the first real measurement (2026-09-11).
+            if let url = requestURL() {
+                var request = URLRequest(url: url)
+                request.setValue("Bearer \(guestBearerToken)", forHTTPHeaderField: "Authorization")
+                request.setValue("auth_token=\(auth.authToken); ct0=\(auth.ct0)", forHTTPHeaderField: "Cookie")
+                request.setValue(auth.ct0, forHTTPHeaderField: "X-Csrf-Token")
+                request.setValue("yes", forHTTPHeaderField: "X-Twitter-Active-User")
+                request.setValue("OAuth2Session", forHTTPHeaderField: "X-Twitter-Auth-Type")
+                request.setValue("https://x.com", forHTTPHeaderField: "Origin")
+                request.setValue("https://x.com/", forHTTPHeaderField: "Referer")
+                if let (data, _) = try? await URLSession.shared.data(for: request) {
+                    let body = String(data: data.prefix(600), encoding: .utf8) ?? "(non-UTF8 body)"
+                    NSLog("[Casberi] xLiveDebugBody| %@", body)
+                }
             }
             return
         }
@@ -240,37 +261,47 @@ enum XLiveNotifications {
     private static func notificationEntries(_ json: Any?) -> [[String: Any]]? {
         guard let root = json as? [String: Any],
               let data = root["data"] as? [String: Any],
-              let viewer = data["viewer"] as? [String: Any],
-              let timeline = (viewer["notification_timeline"] as? [String: Any])?["timeline"] as? [String: Any],
+              let viewerV2 = data["viewer_v2"] as? [String: Any],
+              let userResults = viewerV2["user_results"] as? [String: Any],
+              let result = userResults["result"] as? [String: Any],
+              let timeline = (result["notification_timeline"] as? [String: Any])?["timeline"] as? [String: Any],
               let instructions = timeline["instructions"] as? [[String: Any]]
         else { return nil }
         return instructions.flatMap { $0["entries"] as? [[String: Any]] ?? [] }
     }
 
-    /// The notification's own words, off `itemContent.notification.message`
-    /// — a like/follow/mention notice always carries a plain-text summary
-    /// there, independent of whether the underlying post can be resolved.
+    /// The notification's own words, off `itemContent.rich_message.text` —
+    /// MEASURED against a real signed-in session (prd §701's first
+    /// measurement pass, 2026-09-11): a like/follow/mention notice carries a
+    /// plain-text summary there ("New post notifications for Jebu Ittiachen
+    /// and 8 others"), independent of whether the underlying post resolves.
+    /// (The `itemContent.notification.message` path this replaced was never
+    /// real — authored against a guess, and this build's own measurement is
+    /// what corrected it.)
     private static func notificationText(_ entry: [String: Any]) -> String? {
         guard let content = entry["content"] as? [String: Any],
               let itemContent = content["itemContent"] as? [String: Any],
-              let notification = itemContent["notification"] as? [String: Any],
-              let message = notification["message"] as? [String: Any],
-              let text = message["text"] as? String, !text.isEmpty
+              let richMessage = itemContent["rich_message"] as? [String: Any],
+              let text = richMessage["text"] as? String, !text.isEmpty
         else { return nil }
         return text
     }
 
     /// The permalink a notification's underlying post resolves to, when one
-    /// is embedded (`legacy.id_str`/`rest_id` beside the author's screen
-    /// name) — nil for a notice with no single post behind it (a follow, a
-    /// list add), which lands with no `content` URL rather than a guessed one.
+    /// is embedded — MEASURED against a real signed-in session (prd §701's
+    /// first measurement pass, 2026-09-11): `itemContent.template` directly
+    /// (not nested under a "notification" key), whose `target_objects` is a
+    /// bare array of `TimelineNotificationTweetRef`s, each carrying
+    /// `tweet_results.result.rest_id` — the guessed
+    /// `template.aggregateUserActionsV1.targetObjects` path this replaced was
+    /// never real. nil for a notice with no single post behind it (a follow,
+    /// a list add), which lands with no `content` URL rather than a guessed
+    /// one.
     private static func notificationPermalink(_ entry: [String: Any]) -> String? {
         guard let content = entry["content"] as? [String: Any],
               let itemContent = content["itemContent"] as? [String: Any],
-              let notification = itemContent["notification"] as? [String: Any],
-              let template = notification["template"] as? [String: Any],
-              let aggregate = template["aggregateUserActionsV1"] as? [String: Any],
-              let targetObjects = aggregate["targetObjects"] as? [[String: Any]],
+              let template = itemContent["template"] as? [String: Any],
+              let targetObjects = template["target_objects"] as? [[String: Any]],
               let first = targetObjects.first,
               let tweetResults = first["tweet_results"] as? [String: Any],
               let result = tweetResults["result"] as? [String: Any],
