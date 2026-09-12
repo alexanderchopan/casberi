@@ -2,7 +2,8 @@
 # Casberi reading-draw self-test — the ONE condition prd §645 pass 1 changed
 # (2026-09-08): the sheet draws the words the app already holds.
 #
-#   Casberi/Casberi/Screens/ThingContent.swift  — kindSwitch's `.link` arm
+#   Casberi/Casberi/Screens/ThingContent.swift  — kindSwitch's `.link` arm,
+#                                                 resolved by `linkShape` (§709)
 #   Casberi/Casberi/Screens/ArticleBody.swift   — the body it mounts
 #
 # WHY A SEPARATE HARNESS, when `feed-reading-selftest.sh` already guards this
@@ -104,6 +105,30 @@ print("\n".join(lines[start:end]))
 PY
 }
 
+# The `.article` case of the `.link` switch (prd §709), sliced from its own
+# `case .article(` to the next `case` at the same indent.
+article_arm() {
+  python3 - "$1" <<'PY'
+import re, sys
+lines = open(sys.argv[1]).read().splitlines()
+start = indent = None
+for i, line in enumerate(lines):
+    if re.match(r"^ *case \.article\(", line):
+        start, indent = i, len(line) - len(line.lstrip())
+        break
+if start is None:
+    sys.stderr.write("ARM-MISSING\n"); sys.exit(3)
+end = None
+for j in range(start + 1, len(lines)):
+    if re.match(r"^ {%d}(case |\})" % indent, lines[j]):
+        end = j
+        break
+if end is None:
+    sys.stderr.write("ARM-UNCLOSED\n"); sys.exit(3)
+print("\n".join(lines[start:end]))
+PY
+}
+
 strip_comments "$CONTENT" > "$TMP/content.nocomment"
 strip_comments "$BODY"    > "$TMP/body.nocomment"
 
@@ -157,19 +182,55 @@ check_tree() {
     return 1
   fi
 
-  # ── 4. THE PREVIEW CARD STAYS ABOVE THE BODY ─────────────────────────────
-  # §455's own rule, and it now applies to ninety-five more seats: the art and
-  # the door out to the site are not replaced by the text.
-  local card_at body_at
-  card_at=$(print -r -- "$slice" | grep -n 'LinkPreviewCard(' | head -1 | cut -d: -f1)
-  body_at=$(print -r -- "$slice" | grep -n 'ArticleBody(thing: thing)' | head -1 | cut -d: -f1)
-  if [[ -z "$card_at" || -z "$body_at" ]]; then
-    echo "✗ ${label}: the article branch lost its preview card or its body"
+  # ── 4. THE PICTURE, THE WORDS, THEN THE DOOR (prd §709, 2026-09-12) ──────
+  # §455 kept the preview card above the body — art, headline, host, one
+  # button. §709 split it: the art stays above the body as a picture only
+  # (`artOnly: true`), the headline the sheet has already set is not drawn
+  # again, and the door out to the site is ONE ROW AFTER the body. The arm is
+  # the `.article` case of the `.link` switch, sliced by its own opening.
+  local arm art_at body_at door_at
+  arm=$(article_arm "$content_nc") || {
+    echo "✗ ${label}: the .link arm's .article case is gone"; return 1; }
+  art_at=$(print -r -- "$arm" | grep -n 'LinkPreviewCard(.*artOnly: true' | head -1 | cut -d: -f1)
+  body_at=$(print -r -- "$arm" | grep -n 'ArticleBody(thing: thing)' | head -1 | cut -d: -f1)
+  door_at=$(print -r -- "$arm" | grep -n 'ArticleDoor(' | head -1 | cut -d: -f1)
+  if [[ -z "$art_at" || -z "$body_at" || -z "$door_at" ]]; then
+    echo "✗ ${label}: the article arm lost its art, its body or its door"
     return 1
   fi
-  if (( card_at >= body_at )); then
-    echo "✗ ${label}: the body is drawn ABOVE the preview card — the article's"
-    echo "  own art and its door out to the site are not replaced by its text"
+  if (( art_at >= body_at )); then
+    echo "✗ ${label}: the body is drawn ABOVE the art — the article's own"
+    echo "  picture is not replaced by its text"
+    return 1
+  fi
+  if (( door_at <= body_at )); then
+    echo "✗ ${label}: the door out to the site is drawn ABOVE the body — the"
+    echo "  exit comes after the reading, not before it (prd §709)"
+    return 1
+  fi
+  if print -r -- "$arm" | grep 'LinkPreviewCard(' | grep -qv 'artOnly: true'; then
+    echo "✗ ${label}: the article arm draws the preview CARD — headline and"
+    echo "  host under the art, one row below the sheet's own title (prd §709)"
+    return 1
+  fi
+
+  # ── 4b. THE LEDE IS DRAWN ONCE ───────────────────────────────────────────
+  # A fetched body leads with the page's description, so the sheet's
+  # `summaryBlock` under an article was the same paragraph twice. The gate is
+  # `readsAsArticle`; the stand-in is `ArticleBody`'s own summary, drawn only
+  # when there is no body to draw.
+  if ! grep -q 'if !readsAsArticle { summaryBlock }' "$content_nc"; then
+    echo "✗ ${label}: summaryBlock is no longer gated on readsAsArticle — an"
+    echo "  article draws its lede twice, once inside the body and once under it"
+    return 1
+  fi
+  if grep -qE '^\s*summaryBlock\s*$' "$content_nc"; then
+    echo "✗ ${label}: summaryBlock is drawn unconditionally somewhere"
+    return 1
+  fi
+  if ! grep -q 'ThingSummaryText(text: summary)' "$body_nc"; then
+    echo "✗ ${label}: ArticleBody dropped the lede's stand-in — a story whose"
+    echo "  fetch missed now draws nothing where its summary used to be"
     return 1
   fi
 
@@ -197,7 +258,8 @@ check_tree "$TMP/content.nocomment" "$TMP/body.nocomment" "$ARTICLE" "the shippe
   || exit 1
 echo "  ✓ the draw asks hasBody and names no source list"
 echo "  ✓ the fetch arm keeps readableURL, and readableURL keeps its sources"
-echo "  ✓ the preview card is drawn above the body"
+echo "  ✓ the art is drawn above the body, the door after it, and never the card"
+echo "  ✓ the lede is drawn once — summaryBlock gated, ArticleBody's stand-in kept"
 echo "  ✓ the body is tested against summary and title before it is drawn"
 
 # --- mutations --------------------------------------------------------------
@@ -254,22 +316,51 @@ mutate "the source gate spelled inline" ThingContent.swift \
 #    nothing new at all.
 mutate "the draw question dropped" ThingContent.swift \
   'FeedArticleText.hasBody(thing)
-                        || FeedArticleText.readableURL(for: thing) != nil {' \
+                    || FeedArticleText.readableURL(for: thing) != nil {' \
   'FeedArticleText.readableURL(for: thing) != nil {'
 
 # 4. The fetch arm dropped, so a followed story with no body yet never gets one.
 mutate "the fetch arm dropped" ThingContent.swift \
   'FeedArticleText.hasBody(thing)
-                        || FeedArticleText.readableURL(for: thing) != nil {' \
+                    || FeedArticleText.readableURL(for: thing) != nil {' \
   'FeedArticleText.hasBody(thing) {'
 
-# 5. The body hoisted above the preview card.
-mutate "the body drawn above the preview card" ThingContent.swift \
-  '                if let url = Capture.detectURL(
-                    in: thing.content.isEmpty ? thing.title : thing.content) {' \
+# 5. The body hoisted above the art.
+mutate "the body drawn above the art" ThingContent.swift \
+  '                if let door {
+                    LinkPreviewCard(url: door, storedImageURL: thing.previewImageURL, artOnly: true)
+                }
+                ArticleBody(thing: thing)' \
   '                ArticleBody(thing: thing)
-                if let url = Capture.detectURL(
-                    in: thing.content.isEmpty ? thing.title : thing.content) {'
+                if let door {
+                    LinkPreviewCard(url: door, storedImageURL: thing.previewImageURL, artOnly: true)
+                }'
+
+# 5b. The door hoisted above the body — the exit before the reading.
+mutate "the door drawn above the body" ThingContent.swift \
+  '                ArticleBody(thing: thing)
+                if let door {
+                    ArticleDoor(url: door)
+                }' \
+  '                if let door {
+                    ArticleDoor(url: door)
+                }
+                ArticleBody(thing: thing)'
+
+# 5c. The card back in the article arm — the headline drawn twice again.
+mutate "the card's headline back above the article" ThingContent.swift \
+  'LinkPreviewCard(url: door, storedImageURL: thing.previewImageURL, artOnly: true)' \
+  'LinkPreviewCard(url: door, storedImageURL: thing.previewImageURL)'
+
+# 5d. The summary gate removed — the lede under the piece again.
+mutate "the summary drawn under the article again" ThingContent.swift \
+  'if !readsAsArticle { summaryBlock }' \
+  'summaryBlock'
+
+# 5e. The stand-in dropped — a missed fetch draws nothing where the lede was.
+mutate "the lede's stand-in dropped" ArticleBody.swift \
+  'ThingSummaryText(text: summary)' \
+  'EmptyView()'
 
 # 6. The duplicate test against `summary` removed — the one thing the old
 #    condition made unnecessary and this pass made load-bearing.

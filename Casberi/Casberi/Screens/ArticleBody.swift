@@ -80,13 +80,29 @@ struct ArticleBody: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s3)
-        } else if fetching {
-            Text("Reading the article…")
-                .dsText(.callout15)
-                .foregroundStyle(DS.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.bottom, DS.Space.s3)
+        } else {
+            // THE LEDE STANDS IN (2026-09-12, prd §709). The article arm owns
+            // the summary now — `ThingContentView` no longer appends its
+            // `summaryBlock` under an article, because a fetched body LEADS
+            // with the page's description (`ReadableBody.compose`), so the
+            // sheet drew the same paragraph a second time, under the piece
+            // it had just opened. With no body to draw — the fetch missed,
+            // is still running, or the body WAS the summary — the
+            // publisher's own abstract is the reading, exactly as before.
+            let summary = (thing.summary ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !summary.isEmpty,
+               summary != thing.title.trimmingCharacters(in: .whitespacesAndNewlines),
+               summary != thing.content.trimmingCharacters(in: .whitespacesAndNewlines) {
+                ThingSummaryText(text: summary)
+            }
+            if fetching {
+                Text("Reading the article…")
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s3)
+            }
         }
         // `.task` rather than `.onAppear`: it is cancelled with the view, so
         // closing the sheet mid-fetch does not leave a request running against

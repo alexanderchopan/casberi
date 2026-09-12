@@ -53798,3 +53798,75 @@ Built; the Notifications sheet's new height is UNSEEN on a device.
 **Two smaller things the pour found.** The demo dates as DAYS AND AN HOUR, never fractional days: `at` snaps to `startOfDay` then adds the hour, so four notices seeded hours apart on one fractional day collapse onto the same timestamp and the room shows a stack of rows all reading "23h" (seen, then fixed). And they sit a day back rather than three hours, because the demo is poured whenever somebody opens the app and a row dated "3 hours ago" seeded at 2am is dated in the future.
 
 Verified against a live session for the parse and the avatar, and by a poured demo for the render — the room reads notices first, then "Imported from X", then the archive. Guards: `demo-selftest.py`, `demo-parity-audit.py`, `ref-shape-audit.py`, `source-alias-audit.py`, `social-sheet-selftest.sh`, `social-room-selftest.sh`, `redaction-coverage-audit.py`, `network-reach-audit.sh`.
+
+## §709 — An article's sheet drew its own headline twice and put the exit before the reading: the card becomes a picture, the lede is drawn once, the door goes after the words (user: "i definitely would like to remove a repeated headline tho! safari door to the end makes sense", 2026-09-12)
+
+**The ask, and what was declined on the way to it.** "How, if at all, can we
+enrich the reading experience in thing sheets?" Four directions were drawn
+beside the sheet as it draws today, in the app's own tokens: art full-bleed
+above the title with a dateline and a jump list (A), the page's figures kept in
+place (B), a glass band with previous/next and "3 of 41" (C), and a kept-
+passage verb (D). The user could barely tell them apart — which is the finding:
+**§645's five passes made the words right, and what was left was not more
+text.** Each was ruled on in turn. Art above the title: *"for many articles the
+art is some generic header that would make it look more like an error"* — the
+art stays where it is, at its size. The chevrons: *"we already have arrows to
+the previous and next day"* — `WalkDoors` stays where it is. The jump list:
+*"we could make that wrong accidentally and most things people read don't need
+them."* Figures and passages: bigger than the problem. What survived is one
+change in two parts.
+
+**(1) The preview card stops being a card.** `LinkPreviewCard` above an
+article was art, the page's headline, the host and a button — and the sheet
+had just set that headline as its title one row above. The article arm now
+passes `artOnly: true`: the picture, at the same 140pt, clipped to the card
+radius, NOT a button, and nothing at all when the page has no art, so a page
+without an image puts nothing between the title and the words. The card is
+untouched on every other row that draws it — a link with no body is still a
+card, because there the card IS the thing.
+
+**(2) The door goes after the words.** `ArticleDoor` is one `DSDoorRow` —
+"Read on theverge.com" — drawn once, after `ArticleBody`, before the facts
+table and the dial. It is drawn under exactly the condition the old card was
+(a URL to open), so nothing that could open before is closed now; it opens
+from further down. §645 rule 1 ("the preview card stays ABOVE the body") is
+overturned for the card and kept for the art.
+
+**And a third thing the mockups made visible, fixed because it is the same
+defect.** `ThingContentView` draws `kindContent` then `summaryBlock` for every
+kind. A fetched body LEADS with the page's description
+(`ReadableBody.compose`, §645 amendment 4), and an RSS row's `summary` is that
+description — so under every fetched article the sheet drew the lede a second
+time, at `callout15`, after the piece. The article arm owns the lede now:
+`summaryBlock` is gated on `readsAsArticle`, and `ArticleBody` draws the
+summary itself (`ThingSummaryText`, the one spelling) when it has no body to
+draw — the fetch missed, is still running, or the body was the summary. A
+story whose fetch fails reads exactly as it did.
+
+**Structural, and the reason the diff is bigger than three lines.** The
+`.link` arm was an if/else chain drawing as it decided. Asking "did the
+article arm draw?" from `liveBody` meant either copying the chain's order (a
+chart row and a starred repo carry `enrichedText` too, so a copy that forgot
+the arms ahead of the article's would hide THEIR summaries) or resolving the
+shape once. `LinkShape` is that resolution — `chart`, `release`, `star`,
+`article(door:)`, `card`, `art`, `none` — computed by `linkShape` in the order
+the arm always asked, switched on by the arm, read by the gate.
+
+**Mechanical.** `scripts/reading-draw-selftest.sh` slices the `.article` case
+by its own opening: art before body, door after body, never the card
+(`artOnly: true` on every `LinkPreviewCard(` in the arm), `summaryBlock` gated
+and never bare, the stand-in present in `ArticleBody`. Five new mutations —
+the body above the art, the door above the body, the card's headline back, the
+gate removed, the stand-in dropped — each asserted to apply before being
+caught. The four §645 mutations survive with their anchors re-indented to the
+resolver. Verified: clean iOS build, this harness, `feed-reading`,
+`note-sheet` and `readable-body` self-tests, and the liveness, dead-closure,
+mutation-liveness, harness-exists, row-cost and query-read audits.
+
+**Unseen.** Not on a device or simulator (the standing rule), and the Catalyst
+target was not compiled in this pass — nothing here is platform-specific
+(`DSDoorRow` already runs on the Mac), but `verify.sh`'s step 1b is owed
+before a ship. Whether a 140pt picture with no headline under it reads as art
+or as a stray banner on a real sheet is a device question; the user's own
+prediction is that a generic header reads fine as a picture and badly as a
+hero, which is why it stayed at card height.

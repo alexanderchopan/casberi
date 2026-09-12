@@ -180,7 +180,11 @@ struct ThingContentView: View {
         // summary block pads its own top.
         VStack(alignment: .leading, spacing: 0) {
             kindContent
-            summaryBlock
+            // An article owns its lede (2026-09-12, prd §709): a fetched body
+            // LEADS with the page's description, so appending the summary
+            // under it drew the same paragraph twice. `ArticleBody` draws the
+            // summary itself when it has no body to draw.
+            if !readsAsArticle { summaryBlock }
         }
         // Mac polish (2026-07-28): `.textSelection` is an environment value,
         // so ONE modifier here covers every kind's prose — the summary
@@ -189,6 +193,58 @@ struct ThingContentView: View {
         // copying a passage is reflex on Mac; SwiftUI `Text` isn't
         // selectable by default.
         .textSelection(.enabled)
+    }
+
+    /// What a `.link` row LEADS with, decided once (2026-09-12, prd §709).
+    ///
+    /// The `.link` arm was an if/else chain that drew as it decided, which
+    /// was fine until the sheet needed the answer twice: the article arm
+    /// owns the lede now (it draws the body, or the summary when there is no
+    /// body), so `liveBody` has to know whether the article arm is the one
+    /// drawing before it appends `summaryBlock`. Copying the chain's ORDER
+    /// there is the drift this enum exists to prevent — a chart row and a
+    /// starred repo carry `enrichedText` too, and a copy of the predicate
+    /// that forgot the arms ahead of the article's would hide their
+    /// summaries.
+    private enum LinkShape {
+        case chart(ThingChart)
+        case release, star
+        case article(door: URL?)
+        case card(URL)
+        case art(String)
+        case none
+    }
+
+    /// The chain, in the order the arm has always asked it. THE TWO HALVES OF
+    /// THE ARTICLE TEST ANSWER DIFFERENT QUESTIONS (2026-09-08, prd §645
+    /// pass 1): "has a body?" is source-independent — if the app already
+    /// holds the words, the sheet draws them; "could get one?" is the FETCH,
+    /// and `readableURL` keeps `FeedArticleText.sources` internally, so the
+    /// fetch stays two sources wide. `reading-draw-selftest.sh` slices this
+    /// condition by its own opening and pins both halves.
+    private var linkShape: LinkShape {
+        if let chart = ThingChart.kind(for: thing) {
+            return .chart(chart)
+        } else if thing.source == "GitHub", thing.sourceRef?.hasPrefix("gh:release:") == true {
+            return .release
+        } else if thing.source == "GitHub", thing.starCount != nil || thing.repoLanguage != nil {
+            return .star
+        } else if FeedArticleText.hasBody(thing)
+                    || FeedArticleText.readableURL(for: thing) != nil {
+            return .article(door: Capture.detectURL(
+                in: thing.content.isEmpty ? thing.title : thing.content))
+        } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
+            return .card(url)
+        } else if let art = thing.previewImageURL, !art.isEmpty {
+            return .art(art)
+        }
+        return .none
+    }
+
+    /// Whether the article arm draws this row, and therefore its lede.
+    private var readsAsArticle: Bool {
+        guard thing.kind == .link, case .article = linkShape else { return false }
+        return true
     }
 
     /// The source's own abstract — a feed item's summary, a task's notes, a
@@ -200,13 +256,7 @@ struct ThingContentView: View {
         let dupe = text == thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
             || text == thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
         if !text.isEmpty, !dupe {
-            Text(ProseLinks.rendered(text))
-                .dsText(.callout15)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.bottom, DS.Space.s3)
+            ThingSummaryText(text: text)
         }
     }
 
@@ -240,9 +290,12 @@ struct ThingContentView: View {
             ScreenshotContent(assetID: thing.sourceRef, stored: thing.previewImageData)
         case .link:
             // A charted link leads with its curve (the chart is the link's
-            // "media", like a screenshot leads with its image); everything
-            // else previews.
-            if let chart = ThingChart.kind(for: thing) {
+            // "media", like a screenshot leads with its image); a GitHub
+            // release or star with its own anatomy; an article with its
+            // words; everything else previews. The ORDER lives in
+            // `linkShape`, asked once.
+            switch linkShape {
+            case .chart(let chart):
                 switch chart {
                 case .token(let chain, let address):
                     TokenChartContent(thing: thing, chain: chain, address: address)
@@ -256,62 +309,38 @@ struct ThingContentView: View {
                 case .watchedPulse(let ref):
                     TokenPulseChartContent(thing: thing, ref: ref)
                 }
-            } else if thing.source == "GitHub", thing.sourceRef?.hasPrefix("gh:release:") == true {
-                // A release leads with its preview, then its own notes —
-                // read live, since `enrichedText` is retrieval-only.
+            case .release:
+                // A release leads with its preview, then its own notes.
                 GitHubReleaseContent(thing: thing)
-            } else if thing.source == "GitHub", thing.starCount != nil || thing.repoLanguage != nil {
+            case .star:
                 // A starred / watched repo leads with its preview, then the
                 // language dot and the "since you starred" line.
                 GitHubStarContent(thing: thing)
-            } else if FeedArticleText.hasBody(thing)
-                        || FeedArticleText.readableURL(for: thing) != nil {
-                // THE ARTICLE, AT LAST (2026-08-21). `FeedArticleText` has
-                // fetched the readable body of every RSS and Substack link since
-                // it shipped, and NO VIEW HAS EVER DRAWN IT: the row showed a
-                // headline, the sheet showed a preview card, and the words sat
-                // in the store reachable only by asking a question about them.
+            case .article(let door):
+                // THE ARTICLE (2026-08-21, prd §455; widened 2026-09-08, §645
+                // pass 1): the sheet draws the words the app holds.
                 //
-                // This is the Obsidian exception (§320) for the same reason and
-                // with the same shape — `enrichedText` stays retrieval-only as
-                // the rule, and this is the fourth NAMED carve-out, not a
-                // reversal. There the vault bridge read somebody's notes,
-                // indexed them, and showed nobody the note; here the feed
-                // bridge reads somebody's articles, indexes them, and shows
-                // nobody the article. A reader that already paid for the fetch
-                // and then withholds it is the strangest possible outcome.
-                //
-                // THE TWO HALVES ANSWER DIFFERENT QUESTIONS (2026-09-08, prd
-                // §645 pass 1). "Has a body?" is source-independent — if the
-                // app already holds the words, the sheet draws them, and that
-                // is the whole rule. "Could get one?" is the FETCH, and it
-                // stays two sources wide: `readableURL` checks
-                // `FeedArticleText.sources` internally, so the fetch arm is
-                // unchanged by the split. For a year the condition asked only
-                // the second question, so ninety-five seats that had already
-                // been scraped by `LinkTitle.enrich` — every link anyone ever
-                // pasted — fell to a preview card and a door out to Safari
-                // while their lede sat in the store.
-                //
-                // The preview card stays ABOVE it — the article's own art and
-                // its door out to the site are not replaced by its text.
-                if let url = Capture.detectURL(
-                    in: thing.content.isEmpty ? thing.title : thing.content) {
-                    LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
+                // THE PICTURE, THE WORDS, THEN THE DOOR (2026-09-12, prd
+                // §709). The preview card used to sit here whole — art, the
+                // page's headline, the host, all one button — so an article
+                // opened to its own title twice, and the exit came before the
+                // reading. The art stays up top as a picture and nothing
+                // else; a page with no art puts nothing between the title
+                // and the words. The door out is one row after the body,
+                // where a person who has finished the excerpt reaches it.
+                // `ArticleBody` owns the fetch, the "reading the article"
+                // line, the Listen control — and the lede, when there is no
+                // body to draw.
+                if let door {
+                    LinkPreviewCard(url: door, storedImageURL: thing.previewImageURL, artOnly: true)
                 }
-                // THE BODY IS FETCHED ON OPEN NOW (2026-08-23, prd §455), so
-                // this branch is entered for a row that has one OR could get
-                // one — see `ArticleBody`, which owns the fetch, the "reading
-                // the article" line and the Listen control. The gate above
-                // reuses `readableURL`, the fetcher's own eligibility rule, so
-                // a row this view offers to read is exactly a row the fetcher
-                // will read: a podcast's audio enclosure and a story whose
-                // publisher already shipped the whole piece in its summary
-                // both fall through to the generic preview below, as before.
                 ArticleBody(thing: thing)
-            } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
+                if let door {
+                    ArticleDoor(url: door)
+                }
+            case .card(let url):
                 LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
-            } else if let art = thing.previewImageURL, !art.isEmpty {
+            case .art(let art):
                 // A link with stored art but no openable URL — an Apple Music
                 // LIBRARY play comes back from MusicKit with no song.url, so
                 // the thing's content is empty and detectURL finds nothing,
@@ -319,6 +348,8 @@ struct ThingContentView: View {
                 // that art instead of a blank sheet (fix 2026-07-12: every
                 // music item opened to an empty sheet).
                 StoredArtContent(urlString: art)
+            case .none:
+                EmptyView()
             }
         case .product:
             // NOTE (prd §368): the thing SHEET no longer reaches this branch.
@@ -814,11 +845,36 @@ struct ThingShareLink<Label: View>: View {
 private struct LinkPreviewCard: View {
     let url: URL
     var storedImageURL: String? = nil
+    /// The picture alone — no headline, no host, not a button (2026-09-12,
+    /// prd §709). An article's sheet has already set the title, and its
+    /// door out is `ArticleDoor`, after the body. Draws NOTHING without art,
+    /// so a page with no image puts nothing between the title and the words.
+    var artOnly: Bool = false
     @Environment(\.openURL) private var openURL
     @State private var title: String?
     @State private var image: UIImage?
 
     var body: some View {
+        // A VStack rather than a bare `if`, so the `.task` below has a view
+        // to run on while there is no art yet.
+        VStack(spacing: 0) {
+            if artOnly {
+                if let image {
+                    Color.clear
+                        .frame(height: 140)
+                        .overlay(Image(uiImage: image).resizable().scaledToFill())
+                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.bottom, DS.Space.s3)
+                }
+            } else {
+                door
+            }
+        }
+        .task { await fetch() }
+    }
+
+    private var door: some View {
         Button {
             openURL(url)
         } label: {
@@ -855,7 +911,6 @@ private struct LinkPreviewCard: View {
         .dsHover()
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
-        .task { await fetch() }
     }
 
     private func fetch() async {
@@ -899,6 +954,47 @@ private struct LinkPreviewCard: View {
         if let fetched {
             image = await fetched.dsDownsampled(maxSide: 280)
         }
+    }
+}
+
+/// The way out to the page, AFTER the words (2026-09-12, prd §709).
+///
+/// One row in the app's own door grammar (`DSDoorRow`), naming the host, so
+/// "Read on theverge.com" is a sentence and not a button labelled Open. It is
+/// drawn only in the article arm and only when there is a URL to open, which
+/// is the same condition the old preview card had — nothing that could open
+/// before is closed now, it opens from further down.
+struct ArticleDoor: View {
+    let url: URL
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        DSDoorRow(icon: "safari", label: "Read on \(Self.host(url))") {
+            openURL(url)
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+    }
+
+    static func host(_ url: URL) -> String {
+        (url.host() ?? url.absoluteString).replacingOccurrences(of: "www.", with: "")
+    }
+}
+
+/// The source's own abstract, as `summaryBlock` has always drawn it — ONE
+/// view, because `ArticleBody` draws the same lede when it has no body to
+/// draw (2026-09-12, prd §709), and two spellings of one paragraph drift.
+struct ThingSummaryText: View {
+    let text: String
+
+    var body: some View {
+        Text(ProseLinks.rendered(text))
+            .dsText(.callout15)
+            .foregroundStyle(DS.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s3)
     }
 }
 

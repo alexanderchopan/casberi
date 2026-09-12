@@ -80,8 +80,14 @@ new view.
 
 ### Rules
 
-1. **The preview card stays ABOVE the body**, as it does today: *"the article's
-   own art and its door out to the site are not replaced by its text."*
+1. ~~**The preview card stays ABOVE the body**, as it does today: *"the article's
+   own art and its door out to the site are not replaced by its text."*~~
+   **Overturned for the CARD, kept for the ART (prd §709, 2026-09-12):** the
+   picture stays above the body at card height; the headline under it is not
+   drawn (the sheet's title is one row up), and the door out is one row AFTER
+   the body (`ArticleDoor`). The lede is drawn once — `summaryBlock` is gated
+   under an article and `ArticleBody` draws the summary itself when it has no
+   body.
 2. A row whose `enrichedText` merely repeats `summary` or `title` draws nothing
    extra. `summaryBlock` already carries this test (`ThingContent.swift:198`);
    the body needs the same one against `summary`, which it does not have today
