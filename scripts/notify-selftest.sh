@@ -740,6 +740,9 @@ final class Thing {
     var title: String = ""
     var previewImageData: Data?
     var authorAvatarURL: String?
+    var previewImageURL: String?
+    var imageURLs: [String] = []
+    var transferAmount: String?
 }
 
 // COMPILE-ONLY stand-ins for the four other types classify() names — real
@@ -932,9 +935,39 @@ func runFixtures() {
     for k: NotifyKind in [.positionAtRisk, .agentRunFailed, .runningLow, .walletIncident] {
         ok(!NotifySweep.headline(k).isEmpty, "\(k) has a non-empty headline")
     }
+    // ── the picture ladder, rung 1 and the refined rung 2 (prd §714) ────────────
+    // Every picture a row HOLDS reaches the slot, in a fixed order: the person who
+    // acted, then stored bytes, then the row's own art by URL. A row with none is
+    // `.none`, honestly.
+    do {
+        let t = row(ref: "x", source: "X")
+        ok(NotifySweep.art(for: t) == .none, "a row with no picture draws none")
+        t.imageURLs = ["https://a/img.jpg"]
+        ok(NotifySweep.art(for: t) == .remote("https://a/img.jpg"), "the row's first image reaches rung one")
+        t.previewImageURL = "https://a/cover.jpg"
+        ok(NotifySweep.art(for: t) == .remote("https://a/cover.jpg"), "the row's own art outranks an inline image")
+        t.previewImageData = Data([1])
+        ok(NotifySweep.art(for: t) == .thing(t.id.uuidString), "stored bytes outrank a URL")
+        t.authorAvatarURL = "https://a/face.jpg"
+        ok(NotifySweep.art(for: t) == .remote("https://a/face.jpg"), "the person who acted outranks everything")
+    }
+    ok(NotifySweep.mark(for: row(ref: "wallet:defi:morpho:base:0xabc:")) == "morpho", "a position wears its protocol")
+    ok(NotifySweep.mark(for: row(ref: "wallet:defi:uniswap:range:base:v3:1:")) == "uniswap", "a range wears Uniswap")
+    ok(NotifySweep.mark(for: row(ref: "hyperliquid:risk:0xabc")) == "Hyperliquid", "a perp at risk wears Hyperliquid")
+    ok(NotifySweep.mark(for: row(ref: "wallet:safe:1")) == "Safe", "a signature wears Safe")
+    do {
+        let t = row(ref: "wallet:tx:1"); t.transferDirection = "received"; t.transferAmount = "1,250 USDC"
+        ok(NotifySweep.mark(for: t) == "USDC", "money in wears its token")
+        t.transferAmount = "USDC"
+        ok(NotifySweep.mark(for: t) == "USDC", "…even with no amount on the row")
+        t.transferDirection = "sent"
+        ok(NotifySweep.mark(for: t) == nil, "money out is not an event and names no mark")
+    }
+    ok(NotifySweep.mark(for: row(ref: "stripe:dispute:1", source: "Stripe")) == nil, "a dispute keeps the source's own mark")
 }
 
 MainActor.assumeIsolated { runFixtures() }
+
 
 if bad == 0 { print("  \(checks) assertions passed"); exit(0) }
 print("  \(bad) of \(checks) FAILED")
@@ -950,6 +983,18 @@ if [[ -x "$sweepwork/harness" ]]; then
 else
   echo "  ✗ classify() fixtures: did not compile"; fail=1
 fi
+
+# The fixed names `NotifySweep.mark` can answer with must each be a bundled
+# `brand-*` asset (prd §714): `AssetMark.image` returns nil for a missing one
+# and the source's mark stands, so a typo here would never fail — it would
+# quietly put the Wallet mark where Hyperliquid's belongs.
+for name in hyperliquid safe morpho uniswap; do
+  if [[ -d "Casberi/Casberi/Assets.xcassets/brand-${name}.imageset" ]]; then
+    printf '  ✓ bundled mark for %s\n' "$name"
+  else
+    printf '  ✗ DRIFT: NotifySweep.mark can name %s but no brand-%s.imageset is bundled\n' "$name" "$name"; fail=1
+  fi
+done
 
 if [[ $fail -eq 0 ]]; then
   echo "✓ notify self-test passed"

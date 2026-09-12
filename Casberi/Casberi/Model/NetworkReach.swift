@@ -453,8 +453,8 @@ enum NetworkReach {
                  hosts: ["api.appstoreconnect.apple.com", "appstoreconnect.apple.com"]),
         Endpoint(service: "Cursor",
                  reach: .whenConnected(bridge: "cursor"),
-                 purpose: "Lists the cloud agents you've run — the name, the repository, whether each finished, and the pull request it opened. One request, and only ever a read: Cursor's key cannot be scoped read-only, so nothing here starts, stops, follows up, or deletes an agent. Your code is never sent anywhere; the agent already ran on Cursor's side. cursor.com is the page that mints the key — opened in your browser, never called by the app.",
-                 hosts: ["api.cursor.com", "cursor.com"]),
+                 purpose: "Lists the cloud agents you've run — the name, the repository, whether each finished, and the pull request it opened. One request, and only ever a read: Cursor's key cannot be scoped read-only, so nothing here starts, stops, follows up, or deletes an agent. Your code is never sent anywhere; the agent already ran on Cursor's side. cursor.com is the page that mints the key — opened in your browser, never called by the app. For a run on a GitHub repository, the repository owner's public avatar is fetched from github.com so the row and its notification can wear it.",
+                 hosts: ["api.cursor.com", "cursor.com", "github.com"]),
         // AWS (2026-08-30) — the HOST varies by AWS SERVICE and by the region
         // you type, so no fixed list of literals could ever be complete
         // (§289's class: a host built at runtime). Declaring the parent

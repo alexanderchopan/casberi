@@ -577,6 +577,23 @@ enum ASCShape {
         "https://appstoreconnect.apple.com/apps/\(appID)/appstore"
     }
 
+    /// The newest build's icon, at a size the lock screen will read (prd
+    /// §714). `iconAssetToken.templateUrl` is Apple's image template —
+    /// `…/{w}x{h}bb.{f}` — and every substitution here is one of the values
+    /// Apple's own pages ask for, so a URL this returns is one the CDN serves.
+    static func appIcon(_ builds: [[String: Any]]) -> String? {
+        for build in builds {
+            guard let token = ASCFetch.attributes(build)["iconAssetToken"] as? [String: Any],
+                  let template = token["templateUrl"] as? String,
+                  template.hasPrefix("https://") else { continue }
+            return template
+                .replacingOccurrences(of: "{w}", with: "256")
+                .replacingOccurrences(of: "{h}", with: "256")
+                .replacingOccurrences(of: "{f}", with: "png")
+        }
+        return nil
+    }
+
     static func buildURL(appID: String) -> String {
         "https://appstoreconnect.apple.com/apps/\(appID)/testflight/ios"
     }
@@ -841,10 +858,16 @@ enum ASCIngest {
             let (versionRows, reviewRows, buildRows) =
                 await (versionTask, reviewTask, buildTask)
 
+            // The app's OWN icon, off the newest build's `iconAssetToken`
+            // (prd §714) — the one picture a rejection can honestly wear on
+            // the lock screen. Opportunistic: absent on an account whose key
+            // cannot read builds, and then the version row carries none.
+            let icon = ASCShape.appIcon(buildRows ?? [])
             for row in versionRows ?? [] {
                 guard let shaped = versionThing(row, appID: appID, app: app,
                                                 seen: &versionSeen, firstSight: firstSight)
                 else { continue }
+                shaped.thing.previewImageURL = icon
                 landed.append(shaped.thing)
                 if let ref = shaped.thing.sourceRef, shaped.state.alarming {
                     alarming.insert(ref)

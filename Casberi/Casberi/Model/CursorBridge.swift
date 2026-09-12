@@ -239,6 +239,13 @@ enum CursorFetch {
         // string, and `titleLine`'s 80-character cut can take the repo with it
         // on a long agent name.
         if let repo = repoLabel(source) { thing.authorHandle = repo }
+        // The repository owner's avatar — GitHub's own `<owner>.png` door,
+        // keyless — so a failed run wears the org it ran against rather than
+        // the bare Cursor mark (prd §714). GitHub-hosted repos only: nothing
+        // else here has a picture the app can vouch for.
+        if let owner = githubOwner(source) {
+            thing.previewImageURL = "https://github.com/\(owner).png?size=128"
+        }
         // What the agent says it did. Display copy, the way a Trello card's
         // back and a Readwise highlight's full text are — this is the whole
         // reason to keep a finished run, so it must not ride the
@@ -273,6 +280,20 @@ enum CursorFetch {
     /// reads the same way rather than falling back to a bare URL. Nil when
     /// there is nothing usable, so the title is just the agent's name rather
     /// than a lone separator.
+    /// The owner segment of a github.com repository, or nil for any other
+    /// host or shape — the label above is host-agnostic on purpose; this is
+    /// host-SPECIFIC on purpose, because the avatar door is GitHub's alone.
+    static func githubOwner(_ source: [String: Any]) -> String? {
+        guard var s = trimmed(source["repository"]) else { return nil }
+        for prefix in ["https://", "http://", "git://", "ssh://"] where s.hasPrefix(prefix) {
+            s = String(s.dropFirst(prefix.count))
+        }
+        let parts = s.split(separator: "/").map(String.init)
+        guard parts.count >= 3, parts[0].lowercased() == "github.com",
+              !parts[1].isEmpty else { return nil }
+        return parts[1]
+    }
+
     static func repoLabel(_ source: [String: Any]) -> String? {
         guard var s = trimmed(source["repository"]) else { return nil }
         for prefix in ["https://", "http://", "git://", "ssh://"] where s.hasPrefix(prefix) {

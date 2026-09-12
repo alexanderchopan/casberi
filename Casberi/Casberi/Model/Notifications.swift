@@ -288,8 +288,18 @@ enum Notifications {
     /// convincing than anywhere else in the product, because there is no
     /// surrounding context to contradict it.
     private static func attachment(for plan: NotifyPlan, photo: Data?) async -> UNNotificationAttachment? {
-        if let data = await rungOne(plan.art, photo: photo),
+        if let data = await rungOne(plan.art, photo: photo, service: plan.source ?? "Social"),
            let made = write(data, id: plan.id + ".photo") {
+            return made
+        }
+        // Rung 2, refined (prd §714): the event's OWN bundled mark before the
+        // source's — USDC's coin on a transfer, Morpho's on a position — through
+        // the same `BrandMark` the treemap and the wallet rows draw. A name
+        // with no asset resolves nil and the source's mark stands, as before.
+        if let mark = plan.mark,
+           let image = BrandMark.image(for: mark),
+           let data = image.pngData(),
+           let made = write(data, id: plan.id + ".mark") {
             return made
         }
         if let source = plan.source,
@@ -301,7 +311,7 @@ enum Notifications {
         return nil
     }
 
-    private static func rungOne(_ art: NotifyArt, photo: Data?) async -> Data? {
+    private static func rungOne(_ art: NotifyArt, photo: Data?, service: String) async -> Data? {
         switch art {
         case .thing:
             return photo
@@ -312,7 +322,10 @@ enum Notifications {
             // mark below is a perfectly good answer.
             var request = URLRequest(url: url)
             request.timeoutInterval = 3
-            if let host = url.host { NetworkLedger.shared.record(host: host, as: "Social") }
+            // A host that comes from the row (a face, a cover, an app icon) is
+            // the person's data, never a literal — so it is named to the
+            // ledger under the SERVICE that landed it, not a fixed "Social".
+            if let host = url.host { NetworkLedger.shared.record(host: host, as: service) }
             guard let (data, response) = try? await URLSession.shared.data(for: request),
                   (response as? HTTPURLResponse)?.statusCode == 200,
                   data.count < 2_000_000 else { return nil }

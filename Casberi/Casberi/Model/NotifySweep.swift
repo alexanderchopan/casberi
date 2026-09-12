@@ -62,7 +62,8 @@ enum NotifySweep {
                 deadline: thing.dueAt,
                 source: thing.source,
                 art: art(for: thing),
-                place: thing.source))
+                place: thing.source,
+                mark: mark(for: thing)))
         }
 
         // Deadlines are a WINDOW scan, not a landing scan — the row that
@@ -97,7 +98,8 @@ enum NotifySweep {
                 deadline: due,
                 source: thing.source,
                 art: art(for: thing),
-                place: thing.source))
+                place: thing.source,
+                mark: mark(for: thing)))
         }
 
         for plan in out where plan.art != .none {
@@ -409,9 +411,42 @@ enum NotifySweep {
     /// holds. A social row's avatar is remote and already hydrated; a
     /// screenshot's thumbnail is bytes we stored. Everything else declines, and
     /// `Notifications` falls to the source mark.
-    private static func art(for thing: Thing) -> NotifyArt {
+    /// Rung 1 of §306's ladder, widened (prd §714): every picture the row
+    /// ALREADY HOLDS reaches the lock screen, not only the two fields the
+    /// first cut read. The person who acted leads (a face over a cover), then
+    /// stored bytes, then the row's own art by URL — the same URL the feed row
+    /// draws, so nothing here is fetched that the app has not shown.
+    static func art(for thing: Thing) -> NotifyArt {
         if let avatar = thing.authorAvatarURL, !avatar.isEmpty { return .remote(avatar) }
         if thing.previewImageData != nil { return .thing(thing.id.uuidString) }
+        if let art = thing.previewImageURL, !art.isEmpty { return .remote(art) }
+        if let first = thing.imageURLs.first, !first.isEmpty { return .remote(first) }
         return .none
+    }
+
+    /// The most specific bundled mark an event has, for the slot when no
+    /// photo can be had (prd §714): a transfer wears its TOKEN, a position
+    /// wears its PROTOCOL, a Safe signature wears Safe — each a real mark the
+    /// Apps catalog or the token treemap already ships, never a drawing. Read
+    /// off the ref and the row, so the harness can drive every branch; nil
+    /// means "the source's own mark", which is what every event wore before.
+    static func mark(for thing: Thing) -> String? {
+        if let ref = thing.sourceRef {
+            if ref.hasPrefix("wallet:defi:") {
+                let parts = ref.split(separator: ":")
+                return parts.count > 2 ? String(parts[2]) : nil
+            }
+            if ref.hasPrefix("hyperliquid:risk:") { return "Hyperliquid" }
+            if ref.hasPrefix("wallet:safe:") || ref.hasPrefix("wallet:safeconfig:") { return "Safe" }
+        }
+        // "1,250 USDC" → USDC. The symbol is the LAST word by construction
+        // (`WalletIngest.transferThing`: amount, then asset), and a bare
+        // symbol with no amount is one word, which is also its last.
+        if thing.transferDirection == "received",
+           let amount = thing.transferAmount,
+           let symbol = amount.split(separator: " ").last, !symbol.isEmpty {
+            return String(symbol)
+        }
+        return nil
     }
 }

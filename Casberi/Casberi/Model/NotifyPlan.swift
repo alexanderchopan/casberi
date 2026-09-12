@@ -287,6 +287,11 @@ struct NotifyPlan: Sendable, Equatable {
     /// the notification's subtitle (prd §713), the one slot that stood empty on
     /// every notification for five weeks. Nil is honest and draws nothing.
     var place: String? = nil
+    /// The most SPECIFIC bundled mark this event has — a token symbol
+    /// ("USDC"), a protocol ("Morpho"), a Safe — resolved through `AssetMark`
+    /// ahead of the source's own mark (prd §714). A name with no bundled
+    /// asset falls straight through to the source, never to a blank.
+    var mark: String? = nil
 
     var cls: NotifyClass { kind.cls }
     var isTimeSensitive: Bool { kind.isTimeSensitive }

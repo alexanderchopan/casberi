@@ -1770,12 +1770,12 @@ enum ProbeHooks {
                     case .remote: art = "remote→\(plan.source ?? "none")"
                     case .none: art = plan.source.map { "mark:\($0)" } ?? "none"
                     }
-                    NSLog("[Casberi] notifyPlan| %@ %@ spent=%@ ts=%@ hold=%@ art=%@ id=%@ · %@",
+                    NSLog("[Casberi] notifyPlan| %@ %@ spent=%@ ts=%@ hold=%@ art=%@ mark=%@ id=%@ · %@",
                           plan.cls.rawValue, plan.kind.rawValue,
                           ledger.hasFired(plan.id) ? "YES" : "no",
                           plan.isTimeSensitive ? "YES" : "no",
                           hold.map { "\($0)" } ?? "no",
-                          art, plan.id, plan.title)
+                          art, plan.mark ?? "source", plan.id, plan.title)
                 }
                 // What `submit` would REALLY schedule — after the settings
                 // filter, the ledger and the batching collapse. The gap between
