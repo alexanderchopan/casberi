@@ -38,6 +38,42 @@ enum SpotifyAuth {
         var username: String?
     }
 
+    /// WHICH LINK BROKE. The seat's connect is a chain — harvest the cookie,
+    /// mint a bearer from it, read `/v1/me` with that bearer — and a `Bool`
+    /// over the whole chain is why a user's "Spotify connection is failing"
+    /// could not be answered from the report (2026-09-12). The two cases differ
+    /// in what the app should DO, which is the reason to separate them:
+    /// `.refused` means the session is genuinely dead and the person has to
+    /// sign in again; `.unreachable` means nobody knows yet, so the credential
+    /// is KEPT and the next foreground retries it.
+    enum Failure: Equatable {
+        /// Spotify answered, and the answer was no. Carries the HTTP status the
+        /// refusal came as — 200 is the anonymous-token case below.
+        case refused(Int)
+        /// No usable answer: no network, a timeout, a 5xx.
+        case unreachable
+        /// Nothing is stored — no sign-in has happened on this device.
+        case noSession
+
+        /// The line the connect screen shows. Says which link broke, so the
+        /// next report names it.
+        var line: String {
+            switch self {
+            case .noSession:
+                return String(localized: "Sign in to connect Spotify.")
+            case .unreachable:
+                return String(localized: "Signed in, but couldn't reach Spotify just now — it'll retry on its own.")
+            case .refused(let status):
+                return String(localized: "Spotify didn't accept that sign-in (\(status)) — tap Connect to try again.")
+            }
+        }
+
+        /// Whether the stored credential is now known to be worthless. Only a
+        /// refusal says that; an unreachable moment says nothing at all, and
+        /// wiping on it costs the person the whole web sign-in for a blip.
+        var clearsCredential: Bool { self == .unreachable ? false : true }
+    }
+
     private static let credsKey = "spotify.creds"
 
     static var connected: Bool { load()?.spDC.isEmpty == false }
@@ -76,28 +112,32 @@ enum SpotifyAuth {
 
     /// A live web-player bearer token — refreshed through the stored `sp_dc`
     /// session when the current one has expired (or when its expiry is unknown).
-    /// Returns nil when the login has lapsed (no `sp_dc`, or Spotify refuses the
-    /// refresh), which the ingest reads as "reconnect needed".
-    static func accessToken() async -> String? {
-        guard var creds = load(), !creds.spDC.isEmpty else { return nil }
+    static func accessToken() async -> String? { await token().0 }
+
+    /// The bearer, and the reason there isn't one. A stored bearer we couldn't
+    /// refresh is still worth one try — it may not have actually expired — but
+    /// the refresh's own verdict is what rides along, because a bearer that
+    /// then gets refused is a refusal of the SESSION, not of that one call.
+    static func token() async -> (String?, Failure?) {
+        guard var creds = load(), !creds.spDC.isEmpty else { return (nil, .noSession) }
         if let expiresAt = creds.accessTokenExpiresAt,
            expiresAt - Date.now.timeIntervalSince1970 > tokenRefreshLeeway,
            !creds.bearerToken.isEmpty {
-            return creds.bearerToken
+            return (creds.bearerToken, nil)
         }
-        guard let refreshed = await refreshWebPlayerToken(creds) else {
-            // A stored bearer that we couldn't refresh is still worth one try —
-            // it may not have actually expired.
-            return creds.bearerToken.isEmpty ? nil : creds.bearerToken
+        let (refreshed, failure) = await refreshWebPlayerToken(creds)
+        guard let refreshed else {
+            return (creds.bearerToken.isEmpty ? nil : creds.bearerToken, failure)
         }
         creds = refreshed
-        return creds.bearerToken
+        return (creds.bearerToken, nil)
     }
 
     /// Mint a fresh web-player bearer from the `sp_dc` session, exactly the way
     /// `open.spotify.com` does: a TOTP-signed call to its own token endpoint.
-    /// Saves and returns the refreshed credential, or nil if the session lapsed.
-    private static func refreshWebPlayerToken(_ creds: Credentials) async -> Credentials? {
+    /// Saves and returns the refreshed credential, or the reason it couldn't.
+    private static func refreshWebPlayerToken(_ creds: Credentials)
+        async -> (creds: Credentials?, failure: Failure?) {
         let totp = SpotifyWebPlayerToken.current()
         let serverTotp = await SpotifyWebPlayerToken.serverSynchronized() ?? totp
         var comps = URLComponents(string: "https://open.spotify.com/api/token")!
@@ -108,19 +148,54 @@ enum SpotifyAuth {
             URLQueryItem(name: "totpServer", value: serverTotp),
             URLQueryItem(name: "totpVer", value: SpotifyWebPlayerToken.version),
         ]
-        guard let url = comps.url else { return nil }
+        guard let url = comps.url else { return (nil, .unreachable) }
 
         var request = URLRequest(url: url)
         request.setValue("application/json", forHTTPHeaderField: "accept")
         request.setValue("WebPlayer", forHTTPHeaderField: "app-platform")
         request.setValue(cookieHeader(creds), forHTTPHeaderField: "cookie")
+        // PRESENT THE COOKIE AS THE CLIENT THAT MINTED IT. `sp_dc` was issued
+        // to a `WKWebView` identifying as Safari; this request then handed it
+        // back under URLSession's default `Casberi/CFNetwork/Darwin` agent, and
+        // this endpoint sits behind an anti-abuse layer (its refusals come back
+        // stamped `x-sigsci-requestid`) that scores exactly that mismatch. The
+        // seat is a web-player impersonation by design, so sending the web
+        // player's own agent is the correct implementation rather than a
+        // workaround — and it is the one difference between this request and
+        // the browser request it is copying.
+        request.setValue(Self.webPlayerUserAgent, forHTTPHeaderField: "user-agent")
+        // The `cookie` header we just set IS the credential — nothing else may
+        // touch it. With cookie handling on, URLSession merges the shared jar
+        // into this header, and a stale `sp_dc` from any earlier session would
+        // silently replace the one we mean to send.
+        request.httpShouldHandleCookies = false
         NetworkLedger.shared.record(request, as: "Spotify")
 
+        // A NO-ANSWER AND A REFUSAL ARE DIFFERENT FACTS, and collapsing them is
+        // what made a remote "it's failing" report undiagnosable: a flat network
+        // moment and a dead session both read as "that sign-in didn't take", and
+        // the screen then threw the credential away for either one.
         guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200,
+              let http = response as? HTTPURLResponse
+        else { return (nil, .unreachable) }
+        guard http.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let access = json["accessToken"] as? String, !access.isEmpty
-        else { return nil }
+        else {
+            // 5xx is Spotify having a bad minute, not a session verdict.
+            return (nil, http.statusCode >= 500 ? .unreachable
+                                                : .refused(http.statusCode))
+        }
+        // **A 200 IS NOT A SIGNED-IN SESSION.** `open.spotify.com/api/token`
+        // answers a valid TOTP with a perfectly well-formed token EVEN WITH NO
+        // COOKIE AT ALL — it just marks it `isAnonymous: true` (verified live
+        // 2026-09-12: cookie-less, `totpVer=61`, HTTP 200, `isAnonymous: true`).
+        // An anonymous token reaches no `/v1/me` and no recently-played, so
+        // taking it as the refreshed credential turns a lapsed session into a
+        // seat that is "connected" and silently reads nothing forever. Treat it
+        // as the refusal it is: a lapsed session, which the connect screen and
+        // the ingest both already render as "sign in again".
+        if json["isAnonymous"] as? Bool == true { return (nil, .refused(200)) }
 
         var refreshed = creds
         refreshed.bearerToken = access
@@ -128,8 +203,14 @@ enum SpotifyAuth {
             refreshed.accessTokenExpiresAt = ms / 1000
         }
         save(refreshed)
-        return refreshed
+        return (refreshed, nil)
     }
+
+    /// What `open.spotify.com` is running when it mints a token: mobile Safari,
+    /// which is also what the `WKWebView` the cookie came from sends.
+    static let webPlayerUserAgent =
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 "
+        + "(KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1"
 
     private static func cookieHeader(_ creds: Credentials) -> String {
         var parts = ["sp_dc=\(creds.spDC)"]
@@ -145,16 +226,24 @@ enum SpotifyAuth {
     /// canonical current-user endpoint and needs only the bearer token — the
     /// same call stupid-social proves the harvested token reaches. A non-200
     /// here means the login didn't take (or has already lapsed).
-    static func validate() async -> Bool {
-        guard let token = await accessToken() else { return false }
+    static func validate() async -> Failure? {
+        let (bearer, tokenFailure) = await token()
+        guard let bearer else { return tokenFailure ?? .unreachable }
         let (json, status) = await IngestSupport.getJSONStatus(
-            "https://api.spotify.com/v1/me", auth: "Bearer \(token)", service: "Spotify")
-        guard status == 200, let me = json as? [String: Any] else { return false }
+            "https://api.spotify.com/v1/me", auth: "Bearer \(bearer)", service: "Spotify")
+        guard status == 200, let me = json as? [String: Any] else {
+            // Status 0 is `getJSONStatus`'s own "no response at all". A 5xx is
+            // Spotify's bad minute. Everything else, `/v1/me` included, is the
+            // session being turned down — and if the refresh already had a
+            // verdict, that one is the more specific fact.
+            if status == 0 || status >= 500 { return .unreachable }
+            return tokenFailure ?? .refused(status)
+        }
         if var creds = load() {
             creds.username = (me["display_name"] as? String) ?? (me["id"] as? String)
             save(creds)
         }
-        return true
+        return nil
     }
 }
 
@@ -179,9 +268,10 @@ enum SpotifyWebPlayerToken {
     /// device with a skewed clock still mints a valid code. Best-effort: falls
     /// back to the local clock on any failure.
     static func serverSynchronized() async -> String? {
-        let serverTimeURL = URL(string: "https://open.spotify.com/api/server-time")!
-        NetworkLedger.shared.record(serverTimeURL, as: "Spotify")
-        guard let (data, response) = try? await URLSession.shared.data(from: serverTimeURL),
+        var request = URLRequest(url: URL(string: "https://open.spotify.com/api/server-time")!)
+        request.setValue(SpotifyAuth.webPlayerUserAgent, forHTTPHeaderField: "user-agent")
+        NetworkLedger.shared.record(request, as: "Spotify")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let serverTime = (json["serverTime"] as? Double)

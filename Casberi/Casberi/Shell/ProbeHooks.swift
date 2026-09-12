@@ -126,15 +126,18 @@ enum ProbeHooks {
         NSLog("[Casberi] spotify| stored: sp_dc yes, sp_t %@, bearer %@",
               (creds.spT?.isEmpty == false) ? "yes" : "no",
               creds.bearerToken.isEmpty ? "none (mints on first read)" : "carried")
-        guard let token = await SpotifyAuth.accessToken(), !token.isEmpty else {
-            NSLog("[Casberi] spotify| token: FAILED — Spotify refused the refresh (session lapsed, or the web-player TOTP constants have rotated)")
+        let (bearer, tokenFailure) = await SpotifyAuth.token()
+        guard let token = bearer, !token.isEmpty else {
+            NSLog("[Casberi] spotify| token: FAILED (%@) — session lapsed, the TOTP constants have rotated, or Spotify was unreachable",
+                  String(describing: tokenFailure))
             return
         }
         NSLog("[Casberi] spotify| token: minted (%d chars)", token.count)
-        let ok = await SpotifyAuth.validate()
-        NSLog("[Casberi] spotify| /v1/me: %@%@", ok ? "ok" : "REFUSED",
-              ok ? " as \(SpotifyAuth.load()?.username ?? "(no display name)")" : "")
-        guard ok else { return }
+        let failure = await SpotifyAuth.validate()
+        NSLog("[Casberi] spotify| /v1/me: %@",
+              failure.map { "FAILED — \(String(describing: $0)) — \($0.line)" }
+              ?? "ok as \(SpotifyAuth.load()?.username ?? "(no display name)")")
+        guard failure == nil else { return }
         let added = await SpotifyIngest.refresh(context: context)
         NSLog("[Casberi] spotify| recently played: %@ new",
               added.map(String.init) ?? "FAILED")

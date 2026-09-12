@@ -53995,3 +53995,83 @@ green at 16 mutations. **UNCOMPILED and UNSEEN** — written on a Linux session
 with no Xcode, no `swiftc` and no simulator, so neither the build nor
 `row-window-selftest.sh`'s compiled half nor a single frame of this has run.
 §673 is the precedent and the warning.
+
+## §711 — Spotify "connects" and then says the sign-in didn't take: a five-link chain reported as one word, and an anonymous token taken for a session (user: "spotify account connection is failing for a user", 2026-09-12)
+
+The report was a build-567 user who **completed the Spotify login and then saw
+"That sign-in didn't take — tap Connect to try again."** §703's seat harvests
+`sp_dc` from its own web view, mints a web-player bearer from that cookie, and
+proves it with `/v1/me` — three network links plus the harvest plus the
+Keychain write, and the screen collapsed all five into one sentence and then
+**deleted the credential**. So the report could not be answered from the report,
+which is the actual defect this section fixes.
+
+**What was measured first, because three of the plausible causes were wrong and
+one round of code reading would have shipped each of them.**
+
+1. **The TOTP constants have NOT rotated.** `SpotifyWebPlayerToken`'s secret and
+   `totpVer=61` were driven against `open.spotify.com/api/token` live: HTTP 200,
+   a token minted. The file's own stated fragility was the first suspect and is
+   innocent.
+2. **`URLSession` does NOT drop a manually set `Cookie` header.** The theory was
+   good — `serverSynchronized()` runs on `URLSession.shared` immediately before
+   the token call and Spotify's response seeds `sp_t`/`sp_new`/`sp_landing` into
+   `HTTPCookieStorage.shared`, so a merge would have replaced `sp_dc` with a jar
+   that lacks it, deterministically. Driven against a local echo server with
+   `httpShouldHandleCookies` true and false: **the manual header survives
+   both.** `httpShouldHandleCookies = false` is set anyway (the cookie IS the
+   credential and nothing else may touch that header), but it is hardening, not
+   the fix, and is recorded as such so it is not cited as one later.
+3. **No anonymous visit sets `sp_dc`.** Both `accounts.spotify.com/login` and
+   `open.spotify.com/?nd=1` were fetched cold: they set `sp_t`, `sp_new`,
+   `sp_sso_csrf_token` and nothing else. So the poll in `SpotifyLoginWebView`
+   cannot capture a pre-authentication cookie and close the cover early — a
+   captured `sp_dc` is always a real session, which is also what narrows this
+   report to the links BELOW the harvest.
+
+**The one confirmed defect. A 200 FROM THE TOKEN ENDPOINT IS NOT A SIGNED-IN
+SESSION.** `open.spotify.com/api/token` answers a valid TOTP with a perfectly
+well-formed token **even with no cookie at all** — it marks it
+`isAnonymous: true`, and nothing read that field. Verified live twice. An
+anonymous token was therefore saved as the refreshed credential **with a real
+one-hour expiry**, so `accessToken()` handed it back on every call for that hour
+without ever retrying the refresh, and every `/v1/me` and every recently-played
+read refused. On connect that renders as this report; on a later sweep it
+renders as a seat that says "connected" and silently reads nothing forever.
+`isAnonymous` is now the refusal it is.
+
+**The one plausible cause that is also simply correct.** The refresh presented
+`sp_dc` under URLSession's default `Casberi/CFNetwork/Darwin` agent — a cookie
+minted by a `WKWebView` identifying as mobile Safari, handed back by a different
+client, to an endpoint whose refusals come back stamped `x-sigsci-requestid`.
+Both calls now send the web player's own agent. It cannot be proven to be the
+user's cause without their cookie, and it is not claimed to be; it is sent
+because the seat is a web-player impersonation by design and this was the one
+remaining difference between our request and the browser request it copies.
+Both endpoints were driven with the new agent first: 200, no change in behaviour.
+
+**The chain names its own broken link now** (`SpotifyAuth.Failure`). `.refused`
+carries the status Spotify said no with, `.unreachable` is no answer at all (no
+response, or a 5xx), `.noSession` is nothing stored. Three consequences:
+
+- The screen shows WHICH link broke, so the next report is decisive rather than
+  another round of this.
+- **A transient failure no longer costs the person their sign-in.** Only
+  `.refused` clears the credential. A flat network moment used to delete a
+  perfectly good `sp_dc` and demand the whole web login again — for a failure
+  Spotify never even saw.
+- Keeping the credential means the seat must also be **registered**, because
+  `BridgeRefresh` sweeps Spotify off the STORE's roster and not off
+  `SpotifyAuth.connected`: an unregistered session is one no foreground would
+  ever retry, which would turn "couldn't reach Spotify just now" into forever.
+
+`-spotifyProbe` prints the failure case beside each line, so a future report
+resolves in one launch.
+
+**Verified:** built green for iOS Simulator; both Spotify endpoints driven live
+for every claim above; `swiftc -parse` on all three touched files. **What is NOT
+verified: the user's own failure.** No `sp_dc` exists on this machine, so the
+authenticated half of the chain has never run here — this pass fixes one proven
+defect, ships one correct-by-construction change, and makes the next report
+answerable. It is not yet a confirmed fix for the person who reported it, and
+should not be described as one.

@@ -109310,6 +109310,34 @@
         }
       }
     },
+    "Sign in to connect Spotify." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Inicia sesión para conectar Spotify."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify を接続するにはサインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify를 연결하려면 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "登录以连接 Spotify。"
+          }
+        }
+      }
+    },
     "Sign in with GitHub — or paste a token — and the feeds you pick keep arriving, plus any repo or person you watch. Watching here is private." : {
       "localizations" : {
         "es" : {
@@ -109895,6 +109923,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "于 %@ 登录 · 仅限搜索，任何服务器都不会保存密钥"
+          }
+        }
+      }
+    },
+    "Signed in, but couldn't reach Spotify just now — it'll retry on its own." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sesión iniciada, pero ahora mismo no se pudo conectar con Spotify: volverá a intentarlo por su cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サインインは完了しましたが、今は Spotify に接続できませんでした。自動的に再試行します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "로그인은 됐지만 지금은 Spotify에 연결할 수 없습니다 — 자동으로 다시 시도합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已登录，但此刻无法连接 Spotify —— 稍后会自动重试。"
           }
         }
       }
@@ -111730,6 +111786,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "赞助者"
+          }
+        }
+      }
+    },
+    "Spotify didn't accept that sign-in (%lld) — tap Connect to try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify no aceptó ese inicio de sesión (%lld): toca Conectar para volver a intentarlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify がそのサインインを受け付けませんでした (%lld)。「接続」をタップしてもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify가 해당 로그인을 받아들이지 않았습니다 (%lld) — 연결을 탭해 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify 未接受该登录 (%lld) —— 点按“连接”重试。"
           }
         }
       }

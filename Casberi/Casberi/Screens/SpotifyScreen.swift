@@ -101,11 +101,27 @@ struct SpotifyScreen: View {
         result = nil
         connecting = true
         Task {
-            let ok = await SpotifyAuth.validate()
+            let failure = await SpotifyAuth.validate()
             connecting = false
-            guard ok else {
-                SpotifyAuth.disconnect()
-                result = .failed(String(localized: "That sign-in didn't take — tap Connect to try again."))
+            if let failure {
+                // A FAILURE THAT SAYS NOTHING IS NOT A FAILURE REPORT
+                // (2026-09-12). One message over a three-link chain — cookie,
+                // bearer, `/v1/me` — is what made a user's "Spotify connection
+                // is failing" unanswerable; and wiping the credential for a
+                // flat network moment charged them the whole web sign-in again
+                // for a blip Spotify never even saw. Only a REFUSAL clears it.
+                if failure.clearsCredential {
+                    SpotifyAuth.disconnect()
+                } else {
+                    // The credential is KEPT, so the seat must be registered:
+                    // `BridgeRefresh` sweeps Spotify off the STORE's roster,
+                    // not off `SpotifyAuth.connected`, so an unregistered
+                    // session is one no foreground would ever retry — which
+                    // would turn "couldn't reach Spotify just now" into
+                    // forever.
+                    register(proof: String(localized: "Signed in"))
+                }
+                result = .failed(failure.line)
                 return
             }
             DSHaptic.success()
