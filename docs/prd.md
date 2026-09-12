@@ -262,6 +262,7 @@ marks chronological position within the pair.
 | §306 (the three notification classes) | alarms, arrivals and the daily whisper each ship ON, and the permission prompt is deferred to the first real alarm so it carries its own reason | amended by §644 — the deferral stands and is why the defaults were wrong: the grant is earned by a dispute and was then spent on ordinary arrivals and a 07:30 push nobody chose. Arrivals and the whisper are opt-IN; alarms stay on, because they are what the prompt asks for |
 | §632 (nothing under a thing is a guess) | the related shelf, two chips and the provenance sentence are cut; what the sheet leaves is eyebrow, title, the thing, where it came from, the dial, the earlier copy | amended by §645 — the finding is untouched and is what licenses the change: every word the sheet now draws has a human author. What moves is "the thing", which may be the words themselves rather than a card that links to them |
 | §548's tail order ("frames leads the conditional tail") | the Frames devnet's strip ran home · activity · frames · sponsors, frames first among the scopes that can be empty | amended by §688 — Holdings exists on this chain after all and takes the family's third place (Wallet, Hegotá and vibenet all put it there), so the tail is holdings · frames · sponsors. The ruling's substance is intact: frames still leads every scope it outranks, and §548 stands in every other respect |
+| §306 (every class interrupts the same way; the badge is asked for) | alarms and arrivals share `.active` and the default sound, and the permission ask includes `.badge` | amended by §713 — arrivals are `.passive` and silent, alarms keep the level and sound, the badge leaves the ask; the two classes, the collapse rules and quiet hours are untouched |
 
 ## 1. Thesis
 
@@ -54165,3 +54166,23 @@ recently-played is 401 to anything but a real session, so its response shape
 and the username it needs cannot be verified on a machine with no `sp_dc`,
 and §711 has already recorded what an unverified guess at this seat costs.
 One real session stored locally makes it a one-launch check.
+
+## §713 — A notification says WHERE and, when it arrived late, WHEN; an arrival stops lighting the screen (user: "how can we improve the design of our notifications?", then "lets make those changes. the one issue about long press is nobody will actually do that on a notification", 2026-09-12)
+
+**Mockups first, in the app's own tokens**: the lock screen as `Notifications.schedule` composes it, beside three directions — the OS's three interruption levels mapped onto the app's two classes (A), the subtitle slot and the event's own time (B), and v3's pressed-open card (C). A and B are built. **C is declined**: *nobody will actually do that on a notification*, and a content extension is a fourth target whose only door is a gesture nobody makes.
+
+**The promise nothing kept.** The settings footer has said since §306 that each notification *"says when the thing happened, not when it arrived"*. `NotifyPlan.occurredAt` was written on every plan and rendered by nothing: the body is the row's title and iOS stamps the DELIVERY. A like held by quiet hours and delivered at 08:00 read "now". §83's fake status, in the one surface with no screen to check it against.
+
+**(B) The subtitle slot, empty on every notification for five weeks, carries the where and the when.** `NotifyPlan.place` names the source ("Stripe", "Your post on X"); `NotifyRules.datelinePhrase` names the event's time ("last night at 11:52", "this morning at 9:14", "Saturday afternoon at 3:05", a bare date past a week) and is NIL inside an hour, where the OS's own stamp is close enough. The lag is measured against the moment the notification will actually be DELIVERED — the quiet-hours hold, not the sweep — because content is frozen at scheduling. Twelve-hour numerals and a period word, never AM/PM, so it reads the same in a 24-hour locale.
+
+**(A) Three OS levels for two classes.** Dispute and deadline stay `.timeSensitive`, every other alarm stays `.active` with the default sound, and **an arrival is `.passive` with no sound**: it lands in Notification Center without lighting the screen and is read when the person next looks. §644's ruling taken at its word — *attention the app cannot judge is attention it does not claim* — which the defaults honoured and the interruption level did not: an arrival somebody switched on buzzed exactly like a dispute. `relevanceScore` is the plan's own severity over 100, so a scheduled summary leads with the same alarm `collapse` keeps.
+
+**`.badge` leaves the permission ask.** The app has never set a badge. Asking for one it never uses reads as "we use it" while using nothing, and a red count on the icon is the one persistent bid for attention the OS offers.
+
+**Settings says what each class does and what was last sent.** Alarms: *"Lights the screen and sounds."* Arrivals: *"Silent — waits in Notification Center until you look."* The status row reads *"On for this iPhone. Last sent Tuesday 9:14 — Money challenged."* when anything has been scheduled (`Notifications.lastSent`, one title and one date, overwritten) — the one fact that answers "does this work at all", and a diagnostic, never a lane (§644).
+
+**Guards.** `notify-selftest.sh` asserts the dateline's six boundaries (on time, held overnight, same day, yesterday before nine, within a week, stamped after delivery), and two new mutations — the lag floor lost, last night collapsed into yesterday — are each caught. The time-sensitive line the entitlement check greps is unchanged in its first branch.
+
+**UNSEEN on a device**: how iOS 26 draws the subtitle beside a right-hand attachment, and whether a passive arrival reads as missing rather than calm. Both are one real notification each. The String Catalog needs its usual pre-ship sync for the new phrases.
+
+**Five further ideas were drawn and not ruled on**: an alarm rewritten in place by its outcome (Stripe already lands *Dispute won/lost/closed*), opening a thing clears its delivered notification, a deadline's last eight hours as a Live Activity behind a control (§473's bargain), a signature alarm sound now that arrivals are silent, and a tap that opens the sheet with the notification's own line above it.

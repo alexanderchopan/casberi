@@ -283,6 +283,10 @@ struct NotifyPlan: Sendable, Equatable {
     /// case and never a defect — most events have no picture, and §306 forbids
     /// drawing one.
     var art: NotifyArt = .none
+    /// WHERE it happened, in words — the source, or "Your post on X". Drawn as
+    /// the notification's subtitle (prd §713), the one slot that stood empty on
+    /// every notification for five weeks. Nil is honest and draws nothing.
+    var place: String? = nil
 
     var cls: NotifyClass { kind.cls }
     var isTimeSensitive: Bool { kind.isTimeSensitive }
@@ -405,6 +409,57 @@ enum NotifyRules {
         var lead = ranked[0]
         lead.body += more(ranked.count - 1)
         return [lead] + rest
+    }
+
+    /// The event's own time, in words, for the subtitle — and ONLY when
+    /// delivery lags it (prd §713). iOS stamps every banner with the moment it
+    /// was delivered, so a like held by quiet hours and delivered at 08:00
+    /// reads "now" — and the settings footer had promised for five weeks that
+    /// "each says when the thing happened, not when it arrived" while nothing
+    /// rendered `occurredAt` at all. Inside an hour the OS's own stamp is close
+    /// enough and this is nil; past a week the hour is noise and only the date
+    /// is said. Composed from twelve-hour numerals and a period word so it
+    /// reads the same in a 24-hour locale without an AM/PM it never shows.
+    static let datelineLag: TimeInterval = 3600
+
+    static func datelinePhrase(occurredAt: Date, deliveredAt: Date, calendar: Calendar) -> String? {
+        guard deliveredAt.timeIntervalSince(occurredAt) >= datelineLag else { return nil }
+        let days = calendar.dateComponents([.day],
+                                           from: calendar.startOfDay(for: occurredAt),
+                                           to: calendar.startOfDay(for: deliveredAt)).day ?? 0
+        let c = calendar.dateComponents([.hour, .minute], from: occurredAt)
+        let hour = c.hour ?? 0, minute = c.minute ?? 0
+        let clock = "\((hour + 11) % 12 + 1):" + String(format: "%02d", minute)
+        let period: String
+        switch hour {
+        case ..<12: period = String(localized: "morning")
+        case ..<17: period = String(localized: "afternoon")
+        case ..<21: period = String(localized: "evening")
+        default:    period = String(localized: "night")
+        }
+        switch days {
+        case 0:
+            return hour >= 21
+                ? String(localized: "tonight at \(clock)")
+                : String(localized: "this \(period) at \(clock)")
+        case 1:
+            return hour >= 21
+                ? String(localized: "last night at \(clock)")
+                : String(localized: "yesterday \(period) at \(clock)")
+        case 2...6:
+            let f = DateFormatter()
+            f.calendar = calendar
+            f.locale = calendar.locale ?? .current
+            f.dateFormat = "EEEE"
+            let weekday = f.string(from: occurredAt)
+            return String(localized: "\(weekday) \(period) at \(clock)")
+        default:
+            let f = DateFormatter()
+            f.calendar = calendar
+            f.locale = calendar.locale ?? .current
+            f.setLocalizedDateFormatFromTemplate("MMMd")
+            return f.string(from: occurredAt)
+        }
     }
 
     /// Plain-words time-to-deadline for the body. Never "in 71 hours".

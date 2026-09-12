@@ -61,7 +61,8 @@ enum NotifySweep {
                 occurredAt: thing.capturedAt,
                 deadline: thing.dueAt,
                 source: thing.source,
-                art: art(for: thing)))
+                art: art(for: thing),
+                place: thing.source))
         }
 
         // Deadlines are a WINDOW scan, not a landing scan — the row that
@@ -95,7 +96,8 @@ enum NotifySweep {
                 occurredAt: thing.capturedAt,
                 deadline: due,
                 source: thing.source,
-                art: art(for: thing)))
+                art: art(for: thing),
+                place: thing.source))
         }
 
         for plan in out where plan.art != .none {

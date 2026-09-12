@@ -317,7 +317,10 @@ struct AccountDetailSheet: View {
         case .key: 500   // +40 for the per-agent capability line (2026-07-21)
         // Status row + two class toggles + quiet hours + the ceiling footnote
         // (prd §306; −110 with the whisper row and its time picker gone, §706).
-        case .notifications: notifyAuthorized ? 550 : 490
+        // §713: +34 for the two class subtitles that now say how each
+        // interrupts (one more subhead13 line apiece), and +17 more when
+        // authorized for the "Last sent …" clause. UNSEEN on a device.
+        case .notifications: notifyAuthorized ? 600 : 525
         }
     }
 
@@ -781,10 +784,12 @@ struct AccountDetailSheet: View {
             // previews no state here, so it takes the neutral tone
             // (2026-08-10, was DS.tint).
             aliveRow("bell.badge.fill", DS.neutralBadge, "Notifications", notifyStatusLine)
-            toggleRow("Alarms", "A dispute, a new approval on your wallet, a deadline inside three days.",
+            // Each class says how it INTERRUPTS (prd §713), so the two read as
+            // two weights rather than two of the same switch.
+            toggleRow("Alarms", "A dispute, a new approval on your wallet, a deadline inside three days. Lights the screen and sounds.",
                       isOn: Binding(get: { notifySettings.alarms },
                                     set: { notifySettings.alarms = $0; saveNotify() }))
-            toggleRow("Arrivals", "Money in, and likes or replies on your own posts.",
+            toggleRow("Arrivals", "Money in, and likes or replies on your own posts. Silent — waits in Notification Center until you look.",
                       isOn: Binding(get: { notifySettings.arrivals },
                                     set: { notifySettings.arrivals = $0; saveNotify() }))
             // Restored 2026-08-14 with the time-sensitive entitlement (prd
@@ -808,7 +813,15 @@ struct AccountDetailSheet: View {
     }
 
     private var notifyStatusLine: String {
-        if notifyAuthorized { return "On for this \(DS.device)." }
+        if notifyAuthorized {
+            // The last thing sent, when there is one (prd §713) — the fact
+            // that answers "does this work at all" without a lane.
+            if let last = Notifications.lastSent {
+                let when = last.at.formatted(.dateTime.weekday(.wide).hour().minute())
+                return String(localized: "On for this \(DS.device). Last sent \(when) — \(last.title).")
+            }
+            return "On for this \(DS.device)."
+        }
         return Notifications.hasAsked
             ? "Turned off in \(DS.settingsAppName), and only \(DS.settingsAppName) can turn it back on."
             : "We'll ask the first time something actually needs you."

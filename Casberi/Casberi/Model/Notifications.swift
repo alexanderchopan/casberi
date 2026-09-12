@@ -124,8 +124,13 @@ enum Notifications {
             // — see `schedule`'s note. Passing the dead option would still
             // read as "we asked for it" while asking for nothing, so it stays
             // out even now that the level is honoured.
+            // No `.badge`: the app never sets one (prd §713 — it asked for
+            // five weeks and badged nothing, which is asking for something
+            // while reading as "we use it"). A red count on the icon is the
+            // one persistent bid for attention the OS offers, and §644 is
+            // that the app does not make it.
             let granted = (try? await center.requestAuthorization(
-                options: [.alert, .sound, .badge])) ?? false
+                options: [.alert, .sound])) ?? false
             return granted
         }
     }
@@ -202,11 +207,29 @@ enum Notifications {
                                  photo: Data?,
                                  now: Date,
                                  quiet: NotifyRules.Quiet) async {
+        // Quiet hours HOLD rather than drop — the news keeps, and a like that
+        // wakes someone is worth less than nothing.
+        let hold = NotifyRules.holdUntil(plan: plan, now: now, quiet: quiet, calendar: .current)
+
         let content = UNMutableNotificationContent()
         content.title = plan.title
         content.body = plan.body
-        content.sound = .default
+        // The subtitle is WHERE and, when delivery lags the event, WHEN (prd
+        // §712). The when is computed against the moment this will actually
+        // be delivered — the quiet-hours hold, not now — because a body is
+        // frozen at scheduling and a like held until 08:00 must say "last
+        // night", not "an hour ago" as of 23:52.
+        let dateline = NotifyRules.datelinePhrase(
+            occurredAt: plan.occurredAt, deliveredAt: hold ?? now, calendar: .current)
+        content.subtitle = [plan.place, dateline].compactMap { $0 }.joined(separator: " · ")
+        // Sound rides the class: an alarm sounds, an arrival never does (prd
+        // §712). The passive level below already keeps an arrival off the lit
+        // screen; a silent banner is what "does not compete" sounds like.
+        content.sound = plan.cls == .alarm ? .default : nil
         content.threadIdentifier = plan.cls.rawValue        // iOS groups by this
+        // The plan's own ranking, handed to the OS: a scheduled summary leads
+        // with the highest score, and this is the same order `collapse` keeps.
+        content.relevanceScore = Double(plan.kind.severity) / 100
         // HONOURED as of 2026-08-14: `Casberi.entitlements` and its Catalyst
         // twin now carry `com.apple.developer.usernotifications.time-sensitive`
         // (prd §306 amendment's "to finish it"), so a 3am dispute really does
@@ -218,19 +241,42 @@ enum Notifications {
         // notification arrives looking exactly right — it just stops piercing
         // a Focus, while the settings row goes on promising it will. Both
         // halves are tied together mechanically in notify-selftest.sh.
-        content.interruptionLevel = plan.isTimeSensitive ? .timeSensitive : .active
+        // Three OS levels for the app's two classes (prd §713): a dispute or
+        // a deadline is time-sensitive and pierces a Focus; every other alarm
+        // is active and lights the screen; an ARRIVAL is passive — it lands in
+        // Notification Center without lighting the screen or sounding, and is
+        // read when the person next looks. §644's ruling, taken at its word:
+        // attention the app cannot judge is attention it does not claim. The
+        // harness pins this line's first branch to the entitlement.
+        content.interruptionLevel = plan.isTimeSensitive ? .timeSensitive
+            : (plan.cls == .alarm ? .active : .passive)
         if let link = plan.link { content.userInfo = ["link": link] }
         if let art = await attachment(for: plan, photo: photo) { content.attachments = [art] }
 
-        // Quiet hours HOLD rather than drop — the news keeps, and a like that
-        // wakes someone is worth less than nothing.
         var trigger: UNNotificationTrigger?
-        if let hold = NotifyRules.holdUntil(plan: plan, now: now, quiet: quiet, calendar: .current) {
+        if let hold {
             trigger = UNTimeIntervalNotificationTrigger(
                 timeInterval: max(1, hold.timeIntervalSince(now)), repeats: false)
         }
         let request = UNNotificationRequest(identifier: plan.id, content: content, trigger: trigger)
         try? await UNUserNotificationCenter.current().add(request)
+        rememberSent(plan, at: hold ?? now)
+    }
+
+    // MARK: - The last thing sent (prd §713)
+
+    /// The one fact that answers "does this work at all" from the settings
+    /// sheet: what was last scheduled, and for when. A diagnostic, never a
+    /// lane (§644) — one title and one date, overwritten each time.
+    static var lastSent: (title: String, at: Date)? {
+        guard let title = store.string(forKey: "notify.lastTitle"),
+              let at = store.object(forKey: "notify.lastAt") as? Date else { return nil }
+        return (title, at)
+    }
+
+    private static func rememberSent(_ plan: NotifyPlan, at: Date) {
+        store.set(plan.title, forKey: "notify.lastTitle")
+        store.set(at, forKey: "notify.lastAt")
     }
 
     // MARK: - The right-hand slot (§306's ladder)
@@ -363,7 +409,8 @@ enum Notifications {
             link: link,
             occurredAt: when,
             source: source,
-            art: avatarURL.map { NotifyArt.remote($0) } ?? .none)
+            art: avatarURL.map { NotifyArt.remote($0) } ?? .none,
+            place: String(localized: "Your post on \(source)"))
         await submit([plan])
     }
 

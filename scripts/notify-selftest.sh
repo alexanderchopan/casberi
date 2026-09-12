@@ -545,6 +545,26 @@ for k: NotifyKind in [.chainReset, .unlockReady] {
 // so EVERY kind must answer — not only the ones a switch happened to list.
 for k in NotifyKind.allCases { ok(!k.headline.isEmpty, "\(k) has a non-empty headline") }
 
+// ── the dateline: the event's own time, only when delivery lags it (prd §713) ─
+var gmt = Calendar(identifier: .gregorian); gmt.timeZone = TimeZone(identifier: "UTC")!
+gmt.locale = Locale(identifier: "en_US_POSIX")
+func utc(_ d: Int, _ h: Int, _ m: Int = 0) -> Date {
+    var c = DateComponents(); c.year = 2026; c.month = 8; c.day = d; c.hour = h; c.minute = m
+    return gmt.date(from: c)!
+}
+ok(NotifyRules.datelinePhrase(occurredAt: utc(5, 9, 0), deliveredAt: utc(5, 9, 40), calendar: gmt) == nil,
+   "inside an hour the OS's own stamp is enough — no dateline")
+ok(NotifyRules.datelinePhrase(occurredAt: utc(4, 23, 52), deliveredAt: utc(5, 8, 0), calendar: gmt) == "last night at 11:52",
+   "a like held by quiet hours says last night, not now")
+ok(NotifyRules.datelinePhrase(occurredAt: utc(5, 9, 14), deliveredAt: utc(5, 13, 0), calendar: gmt) == "this morning at 9:14",
+   "a same-day lag names the part of the day")
+ok(NotifyRules.datelinePhrase(occurredAt: utc(4, 15, 5), deliveredAt: utc(5, 8, 0), calendar: gmt) == "yesterday afternoon at 3:05",
+   "yesterday before nine at night is yesterday, not last night")
+ok(NotifyRules.datelinePhrase(occurredAt: utc(1, 10, 0), deliveredAt: utc(5, 10, 0), calendar: gmt)?.hasPrefix("Saturday") == true,
+   "within a week the weekday is named")
+ok(NotifyRules.datelinePhrase(occurredAt: utc(5, 9, 0), deliveredAt: utc(5, 8, 0), calendar: gmt) == nil,
+   "an event stamped after delivery never draws a dateline")
+
 // ── the ledger: fires once, ever ────────────────────────────────────────────
 let suite = "casberi.notify.selftest"
 UserDefaults.standard.removePersistentDomain(forName: suite)
@@ -668,6 +688,10 @@ mutate "stale news fires — the devnet window widens past every sweep" \
        's/static let newsWindow: TimeInterval = 36 \* 3600/static let newsWindow: TimeInterval = 3600 * 3600/'
 mutate "a devnet reset outranks a dispute" \
        's/case \.chainReset:       return 55/case .chainReset:       return 200/'
+mutate "the dateline draws even when delivery is on time (the lag floor is lost)" \
+       's/static let datelineLag: TimeInterval = 3600/static let datelineLag: TimeInterval = -1_000_000/'
+mutate "last night and yesterday collapse into one phrase" \
+       's/return hour >= 21\n                \? String\(localized: "last night at/return hour >= 99\n                ? String(localized: "last night at/'
 mutate "a kind loses its headline, so a notification arrives with an empty title" \
        's/case \.chainReset:       return String\(localized: "A devnet was reset"\)/case .chainReset:       return ""/'
 
