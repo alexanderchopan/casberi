@@ -268,6 +268,12 @@ enum BridgeRefresh {
                 _ = await AppleMusicIngest.ingest(context: context)
             }
         }
+        if connected("spotify") {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await SpotifyIngest.refresh(context: context)
+            }
+        }
         if !RSSStore.shared.feeds.isEmpty {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)

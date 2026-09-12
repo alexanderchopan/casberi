@@ -554,6 +554,8 @@ enum BridgeCatalog {
         Offer(name: "YouTube",     tagline: "Follow any channel",                    group: "Watching",  connectable: true,
               needsSetup: true),
         Offer(name: "Apple Music", tagline: "What you play stays in reach",          group: "Listening", connectable: true),
+        Offer(name: "Spotify",     tagline: "What you recently played",             group: "Listening", connectable: true,
+              needsSetup: true),
         Offer(name: "Apple Health", tagline: "Workouts land in your feed",           group: "Fitness",   connectable: true,
               unavailableOnMac: true),
         Offer(name: "Strava",      tagline: "Every activity, one record",            group: "Fitness",   connectable: true,
@@ -1077,7 +1079,7 @@ enum BridgeSetupMode {
     /// A sign-in on the provider's page — the OAuth seats, and GitHub while
     /// its device-flow client id ships. Every one is a `.signIn` on its own
     /// screen; `catalog-mode-audit.py` holds the two in step.
-    static let signInSeats: Set<String> = ["Dropbox", "Slack", "Twitch", "CardPointers", "GitHub", "X"]
+    static let signInSeats: Set<String> = ["Dropbox", "Slack", "Twitch", "CardPointers", "GitHub", "X", "Spotify"]
 
     /// A one-time export you point at. Instagram and Snapchat were missed in
     /// this list's first life (2026-07-31) and TikTok would have been missed

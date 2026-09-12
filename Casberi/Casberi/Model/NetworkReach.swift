@@ -586,6 +586,18 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Apple Music"),
                  purpose: "Reads what you recently played through Apple's own Music framework on \(DS.device), then fetches each song's cover from Apple's artwork CDN. The request carries only the artwork's address.",
                  hosts: ["mzstatic.com"]),
+        // Spotify signs in through its own web player inside \(DS.device)
+        // (accounts.spotify.com, opened by the connect screen — a setup door),
+        // and \(DS.device) then reads the web player's own endpoints as you:
+        // your recently played tracks from api.spotify.com, and a fresh
+        // web-player token from open.spotify.com when the old one lapses.
+        // (open.spotify.com is also declared above as the link-preview host a
+        // pasted Spotify link opens on tap.) No developer app, no key, no
+        // server — the session lives only on this device.
+        Endpoint(service: "Spotify",
+                 reach: .whenConnected(bridge: "spotify"),
+                 purpose: "Reads what you recently played, using the same web-player session you signed in with. The requests carry only that session — no account of ours, no key, no server.",
+                 hosts: ["api.spotify.com", "open.spotify.com", "accounts.spotify.com"]),
 
         // MARK: Work
 
