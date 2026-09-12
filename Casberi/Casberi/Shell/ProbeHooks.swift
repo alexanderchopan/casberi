@@ -50,6 +50,10 @@ enum ProbeHooks {
         // sim log while testing the feature that exists to keep keys out of
         // logs (prd §277).
         "-secretScanProbe",
+        // The `sp_dc` session cookie: effectively full account access to a
+        // Spotify account, which is why the vault stores it device-only and
+        // never syncs it. `-spotifyProbe` takes no value and is not here.
+        "-spotifySession",
     ]
 
     /// `-byokKey venice:vk-abc` → `-byokKey venice:‹redacted›`, but
@@ -107,6 +111,33 @@ enum ProbeHooks {
         }
         NSLog("%@ probe: connected, %d in%@", seat, r.added,
               r.likelyBlocked ? " (access may be off)" : "")
+    }
+
+    /// The Spotify seat's whole chain, one line per link, so a report of "it
+    /// spins forever" resolves to the step that actually stopped. Counts and
+    /// verdicts only — the cookie and the bearer are credentials and are never
+    /// logged, not even truncated.
+    @MainActor
+    private static func spotifyReport(context: ModelContext) async {
+        guard let creds = SpotifyAuth.load(), !creds.spDC.isEmpty else {
+            NSLog("[Casberi] spotify| stored: NO session (sp_dc absent) — sign in first")
+            return
+        }
+        NSLog("[Casberi] spotify| stored: sp_dc yes, sp_t %@, bearer %@",
+              (creds.spT?.isEmpty == false) ? "yes" : "no",
+              creds.bearerToken.isEmpty ? "none (mints on first read)" : "carried")
+        guard let token = await SpotifyAuth.accessToken(), !token.isEmpty else {
+            NSLog("[Casberi] spotify| token: FAILED — Spotify refused the refresh (session lapsed, or the web-player TOTP constants have rotated)")
+            return
+        }
+        NSLog("[Casberi] spotify| token: minted (%d chars)", token.count)
+        let ok = await SpotifyAuth.validate()
+        NSLog("[Casberi] spotify| /v1/me: %@%@", ok ? "ok" : "REFUSED",
+              ok ? " as \(SpotifyAuth.load()?.username ?? "(no display name)")" : "")
+        guard ok else { return }
+        let added = await SpotifyIngest.refresh(context: context)
+        NSLog("[Casberi] spotify| recently played: %@ new",
+              added.map(String.init) ?? "FAILED")
     }
 
     static func runAll(context: ModelContext) {
@@ -5481,6 +5512,29 @@ enum ProbeHooks {
                 let n = await SlackIngest.refresh(context: context)
                 NSLog("Slack probe: %@ new", n.map(String.init) ?? "FAILED")
             }
+        },
+        // `-spotifySession "<sp_dc cookie>"` connects Spotify headlessly with a
+        // session cookie lifted from a browser — the ONE door a machine has to
+        // this seat, since its sign-in is a live human typing a password into
+        // Spotify's own page inside a `WKWebView` that no script can drive.
+        // Stores the cookie exactly as `SpotifyLoginWebView` would (no bearer:
+        // the first read mints one from `sp_dc`), then reports what the seat
+        // makes of it.
+        Hook(key: "spotifySession") { cookie, context in
+            let spDC = cookie.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !spDC.isEmpty, spDC != "YES" else { return }
+            SpotifyAuth.store(bearerToken: "", spDC: spDC, spT: nil, spKey: nil)
+            Task { @MainActor in await spotifyReport(context: context) }
+        },
+        // `-spotifyProbe YES` reports the ALREADY-connected seat end to end:
+        // whether a credential is stored, whether a fresh web-player bearer can
+        // be minted from `sp_dc`, whether `/v1/me` accepts it, and what a
+        // recently-played read lands. The user-visible failure it exists for
+        // ("keeps spinning", "doesn't register a signed in") splits three ways
+        // — no cookie / a cookie Spotify refuses / a read that returns nothing
+        // — and every one of them looks identical on the screen.
+        Hook(key: "spotifyProbe") { _, context in
+            Task { @MainActor in await spotifyReport(context: context) }
         },
         // `-steamBridge "<key>:<profile>"` connects Steam headlessly.
         Hook(key: "steamBridge") { spec, context in

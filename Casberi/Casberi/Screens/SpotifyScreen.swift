@@ -41,7 +41,11 @@ struct SpotifyScreen: View {
             more: { EmptyView() },
             keySheet: { EmptyView() }
         )
-        .fullScreenCover(isPresented: $showLogin) {
+        // `cancelled` had no writer, so the line it gates could never draw —
+        // closing the login cover by hand said nothing at all (2026-09-12).
+        // A cover closed without a session IS the cancel.
+        .fullScreenCover(isPresented: $showLogin,
+                         onDismiss: { cancelled = !SpotifyAuth.connected }) {
             SpotifyLoginWebView(onCredentials: harvested)
         }
         .onAppear {
@@ -84,7 +88,7 @@ struct SpotifyScreen: View {
                 .lineLimit(1).truncationMode(.middle)
             Spacer(minLength: 0)
         }
-        BridgeSyncStatusRows(syncing: syncing,
+        BridgeSyncStatusRows(syncing: syncing || connecting,
                              syncingLine: String(localized: "Reading your Spotify…"),
                              proof: result)
         DSSlabNote(text: "Your recently played tracks land in your feed. Read-only — never plays or changes anything.", plain: true)
@@ -93,6 +97,8 @@ struct SpotifyScreen: View {
     /// The web view handed back a session. Store it, confirm it works, sync.
     private func harvested(_ creds: SpotifyAuth.Credentials) {
         SpotifyAuth.save(creds)
+        cancelled = false
+        result = nil
         connecting = true
         Task {
             let ok = await SpotifyAuth.validate()
@@ -103,8 +109,26 @@ struct SpotifyScreen: View {
                 return
             }
             DSHaptic.success()
+            // The seat is registered the moment the SESSION is proven, not at
+            // the end of the first sync (2026-09-12). `sync()` returns early on
+            // any read that can't complete — a flat network moment, an account
+            // with nothing recently played — and that early return was the only
+            // path to `registerConnected`, so a person who had genuinely signed
+            // in was left looking at an app that had never heard of Spotify.
+            // Signing in and landing rows are two facts; this one is true now.
+            register(proof: String(localized: "Signed in"))
             await sync()
         }
+    }
+
+    /// What this seat can do, said once — the catalogue reads it on connect and
+    /// on every later sync.
+    private static let canLines = ["Reads what you recently played.",
+                                   "Read-only — never plays, queues, or changes anything."]
+
+    private func register(proof: String) {
+        store.registerConnected(id: "spotify", name: "Spotify", proof: proof,
+                                can: Self.canLines)
     }
 
     private func sync() async {
@@ -117,13 +141,8 @@ struct SpotifyScreen: View {
             return
         }
         result = .landed(added)
-        let proof = added > 0
-            ? String(localized: "\(added) new")
-            : String(localized: "Synced just now")
-        if store.registerConnected(id: "spotify", name: "Spotify", proof: proof,
-                                   can: ["Reads what you recently played.",
-                                         "Read-only — never plays, queues, or changes anything."]) {
-            DSHaptic.success()
-        }
+        register(proof: added > 0
+                 ? String(localized: "\(added) new")
+                 : String(localized: "Synced just now"))
     }
 }

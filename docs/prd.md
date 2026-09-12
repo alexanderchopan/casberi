@@ -53561,6 +53561,71 @@ pre-change file, which matches the first two greps 8 times.
 The visual reading — whether the plain rows still balance with one fewer, on a
 seat that is neither keyed nor landing — is a look, not a check.
 
+## §703 — The Spotify sign-in hung on a token it might never be handed, and the seat was only registered by a sync that lands rows (user: "Spotify connects and logged me in the Spotify app successfully, but doesn't register a signed in in Casberi. It just keeps spinning or has a white screen", 2026-09-12)
+
+**The report, and the four defects under it.** One sentence, and every clause
+of it is a different bug. The seat shipped yesterday (§—, build 565) and could
+not have completed a sign-in on a phone with Spotify installed.
+
+**1. It waited for a credential it does not need, from a page it never sees.**
+`SpotifyLoginWebView` completed only when BOTH the `sp_dc` cookie and a bearer
+token were in hand. The bearer arrives from an injected `fetch`/`XHR` hook that
+reads an `authorization` header off the web player's own calls — so it arrives
+only if the web player loads, in this web view, and passes its headers as a
+literal object. `sp_dc` is the credential: `SpotifyAuth.refreshWebPlayerToken`
+mints a bearer from it on every read, and `accessToken()` refreshes before the
+first use anyway because capture leaves `accessTokenExpiresAt` nil. So the app
+waited forever on the one half it can always regenerate, while holding the half
+it cannot. The bearer is a bonus now; the cookie finishes the sign-in.
+
+**2. It only looked when a page finished loading.** The post-login hop is a
+redirect to `open.spotify.com` — which on a phone with Spotify installed iOS
+may route to the SPOTIFY APP as a universal link. That is the reporter's "logged
+me in the Spotify app": the login worked, the hand-off left this web view with
+no further navigation to finish, and `didFinish` never came again. The cookie
+store is POLLED now, every 0.3s, so the session lands whether or not this view
+ever paints another page. Belt and braces: a main-frame navigation to
+`open.spotify.com` is CANCELLED (the web player is a heavy page we have no use
+for, and it is the exact navigation that gets handed to the app), and every
+non-web scheme is cancelled rather than passed to the system.
+
+**3. A white screen was every failure's rendering.** There was no loading state
+and no error state — a cancelled navigation, an unsupported scheme, a dropped
+connection and a successful-but-unread sign-in all drew the same blank page
+under a Cancel button. The cover now says "Opening Spotify's sign-in…" while a
+navigation is in flight, says what went wrong when one fails with a Try again
+that reloads, and after a 4-second grace window past a refused web-player hop
+says the session didn't come back. A `target="_blank"` popup (Spotify's
+"Continue with Google/Apple") loads in the same view instead of being dropped,
+which is its own dead tap.
+
+**4. "Doesn't register a signed in" is literally true, and separate from all of
+the above.** `SpotifyScreen.sync()` returned early — before `registerConnected`
+— on any read that couldn't complete, and that call was the ONLY path to the
+`BridgeStore`. A proven session plus one flat network moment (or an account with
+nothing recently played, which returns nil from a non-200) left the app showing
+Spotify as never connected while the Keychain held a working credential.
+Signing in and landing rows are two facts: the seat registers the moment
+`validate()` passes, and the sync updates the proof line after.
+
+Also fixed in passing: `cancelled` had no writer anywhere, so the "Sign-in
+cancelled — nothing was connected" line it gates could never draw. Closing the
+cover without a session is the cancel.
+
+**Mechanical.** `-spotifyProbe YES` reports the chain link by link — stored
+session / bearer minted / `/v1/me` accepted / recently-played count — because
+those three failures are indistinguishable on the screen, and `-spotifySession
+"<sp_dc>"` connects headlessly from a cookie lifted from a browser, the ONE door
+a machine has to a seat whose sign-in is a human typing a password into
+Spotify's page inside a `WKWebView` no script can drive. The cookie is on
+`ProbeHooks.secretArgKeys`, so `probeArgs:` cannot echo it.
+
+**UNSEEN, and unseeable here.** Written on a Linux session: this was not built,
+and no machine in this project can test it even when it is. The failure needs a
+real Apple ID signed into a real Spotify account, a phone with the Spotify app
+installed for the universal-link hand-off, and a live password typed into
+Spotify's own page. The static audits pass; nothing else about this is verified.
+
 ## §704 — An X notification is a NOTICE: the news is the sentence, the post is the preview under it (user: "twitter shows the notification but the thing sheet doesn't show any preview", 2026-09-12)
 
 **The report, and the screenshot under it.** A live X notification opened to
