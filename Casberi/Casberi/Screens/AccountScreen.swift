@@ -35,7 +35,6 @@ struct SettingsScreen: View {
         var on: [String] = []
         if s.alarms { on.append(String(localized: "Alarms")) }
         if s.arrivals { on.append(String(localized: "Arrivals")) }
-        if s.whisper { on.append(String(localized: "Whisper")) }
         return on.isEmpty ? String(localized: "Off") : on.joined(separator: ", ")
     }
     @State private var avatarPickerOpen = false

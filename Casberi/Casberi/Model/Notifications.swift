@@ -20,18 +20,24 @@ enum Notifications {
 
     // MARK: - Settings
 
-    /// Per-class switches, the whisper's hour, and quiet hours. Stored in the
-    /// app group so the background task reads the same values the settings
-    /// screen writes.
+    /// Per-class switches and quiet hours. Stored in the app group so the
+    /// background task reads the same values the settings screen writes.
+    ///
+    /// The daily whisper (a third switch and its hour) was cut in prd §706
+    /// (2026-09-12): its tap had opened onto nothing since the ask went dark
+    /// (§697b), and its line summarised a day the person had already read.
+    /// `notify.whisper` / `notify.whisperMinute` are left in the store unread,
+    /// and any `whisper.next` an older build scheduled is pulled at launch
+    /// (`cancelRetiredWhisper`).
     ///
     /// **ONLY THE CLASS THE GRANT WAS ASKED FOR IS ON BY DEFAULT (prd §644,
     /// 2026-09-08).** All three shipped `true`, and `askIfNeeded` presents the
     /// system prompt at the first real ALARM — so the permission was earned by
     /// a dispute and then spent on ordinary arrivals and a 07:30 push nobody
     /// chose. Two of the three classes were riding in on a grant given for the
-    /// third. Arrivals and the whisper are opt-IN now; both rows say plainly
-    /// what they do (`AccountDetailSheet.notifyCard`), so turning one on is one
-    /// tap by somebody who wants it.
+    /// third. Arrivals are opt-IN now; the row says plainly what it does
+    /// (`AccountDetailSheet.notifyCard`), so turning it on is one tap by
+    /// somebody who wants it.
     ///
     /// `alarms` stays `true` because it IS what the prompt asks for: a person
     /// who granted permission at a dispute and then heard nothing about the
@@ -39,21 +45,18 @@ enum Notifications {
     struct Settings: Sendable, Equatable {
         var alarms = true
         var arrivals = false
-        var whisper = false
-        var whisperMinute = 7 * 60 + 30      // 07:30
         var quiet = NotifyRules.Quiet.default
 
         /// Whether anything at all could fire — the gate on asking iOS for
-        /// background time. All three off means the task has no work, and
+        /// background time. Both off means the task has no work, and
         /// asking for a run we would do nothing with is how an app earns a
         /// throttle it then can't spend when it matters.
-        var anyOn: Bool { alarms || arrivals || whisper }
+        var anyOn: Bool { alarms || arrivals }
 
         func allows(_ cls: NotifyClass) -> Bool {
             switch cls {
             case .alarm:   return alarms
             case .arrival: return arrivals
-            case .whisper: return whisper
             }
         }
     }
@@ -68,10 +71,6 @@ enum Notifications {
             let d = store
             if d.object(forKey: "notify.alarms") != nil { s.alarms = d.bool(forKey: "notify.alarms") }
             if d.object(forKey: "notify.arrivals") != nil { s.arrivals = d.bool(forKey: "notify.arrivals") }
-            if d.object(forKey: "notify.whisper") != nil { s.whisper = d.bool(forKey: "notify.whisper") }
-            if d.object(forKey: "notify.whisperMinute") != nil {
-                s.whisperMinute = d.integer(forKey: "notify.whisperMinute")
-            }
             if d.object(forKey: "notify.quietOn") != nil { s.quiet.enabled = d.bool(forKey: "notify.quietOn") }
             if d.object(forKey: "notify.quietStart") != nil { s.quiet.startMinute = d.integer(forKey: "notify.quietStart") }
             if d.object(forKey: "notify.quietEnd") != nil { s.quiet.endMinute = d.integer(forKey: "notify.quietEnd") }
@@ -81,8 +80,6 @@ enum Notifications {
             let d = store
             d.set(newValue.alarms, forKey: "notify.alarms")
             d.set(newValue.arrivals, forKey: "notify.arrivals")
-            d.set(newValue.whisper, forKey: "notify.whisper")
-            d.set(newValue.whisperMinute, forKey: "notify.whisperMinute")
             d.set(newValue.quiet.enabled, forKey: "notify.quietOn")
             d.set(newValue.quiet.startMinute, forKey: "notify.quietStart")
             d.set(newValue.quiet.endMinute, forKey: "notify.quietEnd")
@@ -370,51 +367,15 @@ enum Notifications {
         await submit([plan])
     }
 
-    // MARK: - The whisper
+    // MARK: - The retired whisper
 
-    /// The daily line (§165), scheduled as a one-shot for the next whisper time
-    /// and REPLACED by every later sweep — so its content is as fresh as the
-    /// last background run before it fires. A repeating trigger was the obvious
-    /// shape and is wrong: the content would be frozen at whatever the day it
-    /// was created looked like.
-    ///
-    /// Nil line means nothing is scheduled AND any pending whisper is pulled.
-    /// A daily notification that always fires is an alarm clock, not a whisper.
-    static func scheduleWhisper(line: String?, now: Date = Date()) async {
-        let id = "whisper.next"
-        let center = UNUserNotificationCenter.current()
-        center.removePendingNotificationRequests(withIdentifiers: [id])
-        let s = settings
-        let ok = await authorized()
-        guard s.whisper, ok, let line, !line.isEmpty else { return }
-
-        var comps = DateComponents()
-        comps.hour = s.whisperMinute / 60
-        comps.minute = s.whisperMinute % 60
-        let content = UNMutableNotificationContent()
-        content.title = whisperTitle(now: now)
-        content.body = line
-        content.sound = .default
-        content.threadIdentifier = NotifyClass.whisper.rawValue
-        content.interruptionLevel = .active
-        content.userInfo = ["link": "casberi://brief"]
-        let request = UNNotificationRequest(
-            identifier: id, content: content,
-            trigger: UNCalendarNotificationTrigger(dateMatching: comps, repeats: false))
-        try? await center.add(request)
-    }
-
-    /// "Your Wednesday" — the day it will ARRIVE, which is tomorrow whenever
-    /// we are composing after this morning's whisper already went.
-    private static func whisperTitle(now: Date) -> String {
-        let cal = Calendar.current
-        let s = settings
-        let parts = cal.dateComponents([.hour, .minute], from: now)
-        let minute = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
-        let target = minute < s.whisperMinute ? now : (cal.date(byAdding: .day, value: 1, to: now) ?? now)
-        let fmt = DateFormatter()
-        fmt.dateFormat = "EEEE"
-        return "Your " + fmt.string(from: target)
+    /// The daily whisper (§165) was a one-shot re-scheduled by every sweep, so
+    /// an install that had it on carries a pending `whisper.next` that would
+    /// still fire once after the update — with a tap that lands nowhere. Pulled
+    /// once per launch; cheap, and idempotent when there is nothing to pull.
+    static func cancelRetiredWhisper() {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: ["whisper.next"])
     }
 
     // MARK: - Routing a tap

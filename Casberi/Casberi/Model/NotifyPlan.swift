@@ -18,15 +18,15 @@ import Foundation
 
 // MARK: - Classes
 
-/// The three classes, and there is no fourth (§306). A class decides
+/// The two classes, and there is no third (§306; the once-a-day whisper was
+/// the third until prd §706 cut it — its tap had led nowhere since §697b, and
+/// a line about a day you already scrolled says nothing). A class decides
 /// interruption, batching and whether quiet hours may hold it.
 enum NotifyClass: String, Sendable, CaseIterable {
     /// Something needs you.
     case alarm
     /// Something landed FOR you — money in, attention in.
     case arrival
-    /// The once-a-day line, at a time the person picked.
-    case whisper
 }
 
 /// Every event that may ever notify. The list is CLOSED on purpose: adding a
@@ -115,8 +115,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
     case likesReceived
     case repliesReceived
     case followersGained
-    // — whisper
-    case whisper
 
     var cls: NotifyClass {
         switch self {
@@ -127,8 +125,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained:
             return .arrival
-        case .whisper:
-            return .whisper
         }
     }
 
@@ -192,7 +188,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // never the `default: 0` an unlisted alarm would silently fall to
         // and tie with the arrivals it must always outrank in a batch.
         case .runningLow:       return 20
-        default:                return 0     // arrivals/whisper never compete
+        default:                return 0     // arrivals never compete
         }
     }
 
@@ -252,7 +248,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .likesReceived:    return String(localized: "Liked your post")
         case .repliesReceived:  return String(localized: "Someone replied")
         case .followersGained:  return String(localized: "New follower")
-        case .whisper:          return String(localized: "Your day")
         }
     }
 }

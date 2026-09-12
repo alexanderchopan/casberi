@@ -90,8 +90,10 @@ guard "the deadline window rejects the past (> 0, not just <= window)" \
       'delta > 0 && delta <= deadlineWindow' "$PLAN"
 guard "quiet hours HOLD rather than drop (a trigger, not a return)" \
       'UNTimeIntervalNotificationTrigger' "$NOTIFY"
-guard "the whisper is one-shot and re-scheduled, never repeating" \
-      'repeats: false' "$NOTIFY"
+# The daily whisper was cut (prd §706) — a pending one from an older install
+# must be pulled, or it fires once more with a tap that lands nowhere.
+guard "a retired install's pending whisper is pulled by id" \
+      'removePendingNotificationRequests\(withIdentifiers: \["whisper\.next"\]\)' "$NOTIFY"
 guard "the attachment ladder falls to the source mark before nothing" \
       'brandAsset\(source\)' "$NOTIFY"
 # Asset names here are plain ASCII, so a source with an accent in it ("Ethrex
@@ -319,13 +321,12 @@ ok(NotifyKind.moneyIn.cls == .arrival, "money in is an arrival")
 ok(NotifyKind.likesReceived.cls == .arrival, "likes are an arrival")
 ok(NotifyKind.repliesReceived.cls == .arrival, "replies are an arrival")
 ok(NotifyKind.followersGained.cls == .arrival, "followers are an arrival")
-ok(NotifyKind.whisper.cls == .whisper, "the whisper is its own class")
+ok(NotifyClass.allCases.count == 2, "two classes and no third (the whisper is cut, prd §706)")
 
 // ── time-sensitive is claimed by exactly two kinds ──────────────────────────
 let ts = NotifyKind.allCases.filter(\.isTimeSensitive)
 ok(Set(ts) == [.disputeOpened, .deadlineNear], "only the deadline alarms are time-sensitive")
 ok(!NotifyKind.moneyIn.isTimeSensitive, "money arriving never breaks a Focus")
-ok(!NotifyKind.whisper.isTimeSensitive, "the whisper never breaks a Focus")
 
 // ── severity: the ranking that picks WHICH alarm survives a batch ───────────
 ok(NotifyKind.disputeOpened.severity > NotifyKind.deadlineNear.severity, "dispute outranks deadline")
@@ -631,7 +632,7 @@ mutate "the ledger never prunes, growing without bound" \
 mutate "the ledger re-claims ids it already spent" \
        's/for id in ids where !seen\.contains\(id\)/for id in ids/'
 mutate "money arriving claims the time-sensitive level" \
-       's/self == \.disputeOpened \|\| self == \.deadlineNear/self != .whisper/'
+       's/self == \.disputeOpened \|\| self == \.deadlineNear/self != .likesReceived/'
 mutate "a held notification waits a full day too long" \
        's/return today > now \? today : cal/return cal/'
 mutate "money arrivals stop collapsing (four dust transfers, four buzzes)" \
@@ -646,7 +647,7 @@ mutate "a wallet incident claims the Focus-breaking level" \
        's/self == \.disputeOpened \|\| self == \.deadlineNear/self == .disputeOpened || self == .deadlineNear || self == .walletIncident/'
 
 mutate "the two groups share one count, so an alarm absorbs transfers" \
-       's/matching: \{ \$0\.kind == \.moneyIn \}/matching: { \$0.cls != .whisper }/'
+       's/matching: \{ \$0\.kind == \.moneyIn \}/matching: { _ in true }/'
 
 # ── the two devnets (prd §522) ──────────────────────────────────────────────
 # Every one of these renders as a perfectly ordinary notification — or as

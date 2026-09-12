@@ -315,9 +315,9 @@ struct AccountDetailSheet: View {
         // badge indent so it wraps one line fewer.
         case .data: privacyHeight
         case .key: 500   // +40 for the per-agent capability line (2026-07-21)
-        // Status row + three class toggles + the whisper's time + quiet hours
-        // + the ceiling footnote (prd §306).
-        case .notifications: notifyAuthorized ? 660 : 600
+        // Status row + two class toggles + quiet hours + the ceiling footnote
+        // (prd §306; −110 with the whisper row and its time picker gone, §706).
+        case .notifications: notifyAuthorized ? 550 : 490
         }
     }
 
@@ -770,11 +770,11 @@ struct AccountDetailSheet: View {
 
     // MARK: - Notifications (prd §306)
 
-    /// Three switches, one per CLASS — never one per bridge. A per-source list
-    /// would be a settings screen that grows every time the catalog does, and
-    /// it would ask the wrong question: nobody wants "notify me about Stripe",
-    /// they want "tell me when money is challenged". The classes are the answer
-    /// to that, and there are only ever three.
+    /// One switch per CLASS — never one per bridge. A per-source list would be
+    /// a settings screen that grows every time the catalog does, and it would
+    /// ask the wrong question: nobody wants "notify me about Stripe", they want
+    /// "tell me when money is challenged". The classes are the answer to that,
+    /// and there are only two (the daily whisper was the third until prd §706).
     private var notifyCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             // A fixed accent regardless of what's actually on — the badge
@@ -787,16 +787,6 @@ struct AccountDetailSheet: View {
             toggleRow("Arrivals", "Money in, and likes or replies on your own posts.",
                       isOn: Binding(get: { notifySettings.arrivals },
                                     set: { notifySettings.arrivals = $0; saveNotify() }))
-            toggleRow("The daily whisper", whisperSubtitle,
-                      isOn: Binding(get: { notifySettings.whisper },
-                                    set: { notifySettings.whisper = $0; saveNotify() }))
-            if notifySettings.whisper {
-                DatePicker("Whisper at",
-                           selection: Binding(get: { whisperDate }, set: { setWhisper($0) }),
-                           displayedComponents: .hourAndMinute)
-                    .dsText(.body17)
-                    .tint(DS.tint)
-            }
             // Restored 2026-08-14 with the time-sensitive entitlement (prd
             // §306 amendment's "to finish it"). It read "Anything that arrives
             // at night waits until morning" for nine days, which was the
@@ -822,23 +812,6 @@ struct AccountDetailSheet: View {
         return Notifications.hasAsked
             ? "Turned off in \(DS.settingsAppName), and only \(DS.settingsAppName) can turn it back on."
             : "We'll ask the first time something actually needs you."
-    }
-
-    private var whisperSubtitle: String {
-        "One line a day. Nothing to say means nothing arrives."
-    }
-
-    private var whisperDate: Date {
-        let s = notifySettings
-        return Calendar.current.date(bySettingHour: s.whisperMinute / 60,
-                                     minute: s.whisperMinute % 60,
-                                     second: 0, of: .now) ?? .now
-    }
-
-    private func setWhisper(_ date: Date) {
-        let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
-        notifySettings.whisperMinute = (parts.hour ?? 7) * 60 + (parts.minute ?? 30)
-        saveNotify()
     }
 
     /// Written straight through on every change — the sheet can be dismissed by

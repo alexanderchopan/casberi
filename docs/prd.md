@@ -53766,3 +53766,15 @@ job: it is what stops a double-tap from opening and closing in one gesture.
 
 Guarded in `scripts/dock-selftest.sh` (both seats, mutation-tested against the
 `present` it replaced). Built; the toggle itself is UNSEEN on a device.
+
+## §706 — The daily whisper is CUT: two notification classes, no third (user: "in all our iterations it has failed to produce anything that is actually meaningful… the summaries and stuff are nice to look at but i'm not sure they add anything valuable", then "cut it", 2026-09-12)
+
+**What a whisper tap did on the day it was cut: nothing.** The notification carried `casberi://brief`, and that route has returned early since §697b turned the ask dark — so the app opened on whatever was last on screen and the line ("14 new while you were away, wallet +1.5%") led nowhere. It was still being re-scheduled on every wallet background sweep. A push whose tap lands nowhere is §83's dead control, delivered to the lock screen.
+
+**Why it is cut rather than re-landed.** The user's own reading, and it holds: a line summarising things the person has already scrolled is zero information by construction — it reads well because it is fluent, not because it carries anything. The only notification worth a lock screen names something they did NOT see and that has a deadline, and those are alarms, which stay on. §644 had already found the whisper riding in on a grant earned by a dispute; this finishes the thought.
+
+**What goes**: `NotifyClass.whisper` and `NotifyKind.whisper` (the enum is two classes now — "and there is no third"); `Settings.whisper` / `whisperMinute` (the stored keys are left unread, never migrated); `Notifications.scheduleWhisper` and `whisperTitle`; the "The daily whisper" switch and its "Whisper at" picker in the Notifications sheet (sheet height −110); the "Whisper" word in Settings' Notifications row summary; the `whisper=` field of `-notifyProbe`'s `notify|` line. **What stays, each a decision**: `DayBrief.whisper` and `chrome.paneBrief` — they are the feed's Today-header day line (§385) and the iPad pane's strip, a reading, not a push; the probe prints it as `notifyDayLine|`. Alarms and arrivals are untouched.
+
+**The one thing an update owes an old install**: the whisper was a ONE-SHOT re-scheduled by every sweep, so an install that had it on carries a pending `whisper.next` that would fire once more after updating, with a tap that lands nowhere. `Notifications.cancelRetiredWhisper()` pulls it by id from `runNotifySweep` — the one place every install passes through on foreground and in the background task — and `notify-selftest.sh` guards the pull by its literal id. The harness's two whisper-shaped mutations were re-aimed at `likesReceived` and `{ _ in true }` so each still fails its detector.
+
+Built; the Notifications sheet's new height is UNSEEN on a device.

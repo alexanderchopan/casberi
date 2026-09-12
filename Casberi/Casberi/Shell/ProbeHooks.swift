@@ -1733,10 +1733,10 @@ enum ProbeHooks {
                 let devnetPlans = DevnetNotify.plans()
                 let plans = corpusPlans + devnetPlans
                 let s = Notifications.settings
-                NSLog("[Casberi] notify| corpus=%d planned=%d devnet=%d alarms=%@ arrivals=%@ whisper=%@ asked=%@",
+                NSLog("[Casberi] notify| corpus=%d planned=%d devnet=%d alarms=%@ arrivals=%@ asked=%@",
                       things.count, corpusPlans.count, devnetPlans.count,
                       s.alarms ? "on" : "off", s.arrivals ? "on" : "off",
-                      s.whisper ? "on" : "off", Notifications.hasAsked ? "YES" : "NO")
+                      Notifications.hasAsked ? "YES" : "NO")
                 // Why nothing planned, when nothing planned. One NSLog per
                 // line (the `-todayProbe` truncation lesson).
                 for line in NotifySweep.skipCensus(things: things) {
@@ -1784,7 +1784,9 @@ enum ProbeHooks {
                     NSLog("[Casberi] notifySend| %@ · %@ · %@",
                           plan.kind.rawValue, plan.title, plan.body)
                 }
-                NSLog("[Casberi] notifyWhisper| %@",
+                // The day line the feed's Today header draws — still composed
+                // by `DayBrief.whisper` though no notification carries it now.
+                NSLog("[Casberi] notifyDayLine| %@",
                       DayBrief.whisper(things: things.filter(\.isLive))?.detail ?? "(nothing to say)")
             }
         },

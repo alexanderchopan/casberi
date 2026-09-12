@@ -2005,7 +2005,7 @@ struct RootShell: View {
         // Sweep for anything worth telling them about. Runs on foreground as
         // well as in the background task so the two can't drift, and because a
         // person who opens the app rarely may never get a background run at
-        // all — this is what makes the whisper re-arm on their schedule.
+        // all.
         Task { @MainActor in await WalletBackgroundRefresh.runNotifySweep() }
         // A share-extension capture landed while we were away. Its
         // write IS in the store file, but @Query never hears a

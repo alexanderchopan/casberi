@@ -103,14 +103,12 @@ enum WalletBackgroundRefresh {
         // AFTER the submit, never before: pruning first would drop an entry in
         // the same pass that was about to announce it.
         DevnetNotify.prune()
-        // The whisper is re-scheduled on every sweep so its content is as fresh
-        // as the last run before it fires — see `Notifications.scheduleWhisper`
-        // for why a repeating trigger would be wrong.
-        // `detail` is the two-fact form ("14 new while you were away, wallet
-        // +1.5%") — the same line the capsule shows. Nil whisper means nil
-        // line, which pulls any pending one: nothing to say, nothing fires.
-        await Notifications.scheduleWhisper(
-            line: DayBrief.whisper(things: things.filter(\.isLive))?.detail)
+        // The daily whisper used to be re-scheduled here on every sweep; cut
+        // in prd §706 (`DayBrief.whisper` still composes the feed's day line).
+        // This is the one place every install passes through on foreground AND
+        // in the background task, so it is where a pending one from an older
+        // build is pulled.
+        Notifications.cancelRetiredWhisper()
     }
 
     /// Only the rows this sweep could possibly speak about (PERF 2026-08-11).
