@@ -650,6 +650,17 @@ enum BridgeCatalog {
         // developers on 2026-02-06 and now charges per post read, so there is
         // no keyless door and no cheap one. The archive is all of it.
         //
+        // §280's "no keyless door and no cheap one" is SUPERSEDED for the
+        // LIVE half by prd §701 (2026-09-11) — this record stays exactly as
+        // written, because the reasoning about the PAID API is still right
+        // and the ledger is append-only. What changed: the account page's
+        // "Connect for live notifications" action reads X's own internal web
+        // client with the person's own browser-session cookies, obtained via
+        // an in-app sign-in — never the paid public API this entry declined,
+        // and a door that exists for exactly one account at a time. The
+        // archive stays the only bulk-history import; nothing here is
+        // "unlocked", it is a second, narrower door beside the first.
+        //
         // The summary names the BOOKMARKS GAP in its own line. That is not
         // hedging — bookmarks are the pile an X user would most expect this
         // seat to hold, they have never been in the export, and an offer that

@@ -137,6 +137,16 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "x"),
                  purpose: "Your X archive names your profile picture as a link rather than including it. \(DS.device) loads that one picture from X's image server so your own posts show your face instead of the X logo. The request carries only that picture's link.",
                  hosts: ["pbs.twimg.com"]),
+        // The live-notifications door (prd §701, 2026-09-11) — a SEPARATE
+        // reach from the archive import above, and the reason `bridge` here
+        // is the catalog name "X" rather than the seat id "x" the avatar
+        // entry uses: a refused read here is meant to surface as "X needs
+        // reconnecting" on the account page (`BridgeHealth`/`AccountPageState`
+        // key on that name), where an avatar CDN miss deliberately does not.
+        Endpoint(service: "X notifications",
+                 reach: .whenConnected(bridge: "X"),
+                 purpose: "Reads your notifications, using your OWN X sign-in inside this app — not X's paid public API. The request carries the session cookies from that sign-in and nothing else.",
+                 hosts: ["x.com"]),
         Endpoint(service: "Snapchat Memories",
                  reach: .whenConnected(bridge: "snapchat"),
                  purpose: "Your Snapchat export holds links, not pictures — and they expire. When you tap to fetch your Memories, \(DS.device) asks Snapchat's own link for each one and downloads that picture.",

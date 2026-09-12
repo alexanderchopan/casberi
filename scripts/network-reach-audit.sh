@@ -167,6 +167,12 @@ KNOWN_NON_REACH=(
   # makes (the oEmbed read for a saved X link) and it is disclosed in the
   # registry under "Link previews". Different host, so this door can't stand
   # in for that fetch — the property the whole denylist rests on.
+  #
+  # This entry stays true for the TWO literals it always described. A third,
+  # 2026-09-11 (prd §701): the live-notifications bridge DOES fetch `x.com`
+  # (its own internal GraphQL API), and that reach is declared under "X
+  # notifications" in the registry — so the registry match above short-
+  # circuits this line before it is ever consulted for that call.
   x.com
   # TikTok's export link host — the ONE entry here that is never opened either.
   # A TikTok export writes its links as `www.tiktokv.com/share/video/<id>/`, and

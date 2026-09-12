@@ -37,6 +37,12 @@ struct XArchiveImportScreen: View {
     /// parent post we have a permalink for and no words.
     @State private var fetchingContext = false
     @State private var pendingContext = 0
+    /// The SECOND door onto this seat (prd §701) — notifications read live
+    /// through the person's OWN X session cookies, entirely separate from the
+    /// archive above: connecting or disconnecting one never touches the other.
+    @State private var liveConnected = false
+    @State private var liveSyncing = false
+    @State private var liveResult: BridgeProof?
     /// The page's one presentation (`AccountPage.sheet`).
     @State private var sheet: AccountPageSheet?
 
@@ -44,19 +50,32 @@ struct XArchiveImportScreen: View {
     var body: some View {
         AccountPage(
             name: "X", seatID: "x", source: "X",
-            // An import has no live connection, so "is anything here" is the
-            // only honest test of whether this seat is connected at all.
+            // Connected if EITHER door is open (prd §701) — an import with no
+            // live read, or live notifications with no archive yet, are both
+            // real "this seat is doing something" states.
             state: AccountPageState.of(name: "X", seatID: "x",
-                                       connected: held > 0, store: store),
+                                       connected: held > 0 || liveConnected, store: store),
             // The bookmarks limit rides the intro rather than a footer point
             // (prd §315), and it is the one limit that earns the sentence's
             // second half: bookmarks are the pile an X user most expects this
             // seat to hold, and they are the one thing it can never have.
             mode: .oneTimeImport,
-            teardown: {},
+            // The live-notifications sign-in (prd §701), raised through the
+            // page's ONE presentation like every other seat-only screen here.
+            cardSheet: { _ in
+                AnyView(XLiveLoginSheet(onCaptured: {
+                    liveConnected = true
+                    Task { await syncLive() }
+                }))
+            },
+            // Clears the LIVE half only — an imported archive's rows are
+            // untouched, the "delete things vs. delete access" split every
+            // other seat here follows (2026-07-13).
+            teardown: { XLiveAuth.clear() },
             sheet: $sheet,
             act: {
                 archiveBlock
+                liveBlock
                 if pending > 0 || pendingContext > 0 { secondActBlock }
             },
             more: {
@@ -68,11 +87,41 @@ struct XArchiveImportScreen: View {
             },
             keySheet: { EmptyView() }
         )
-        .onAppear { reread() }
+        .onAppear {
+            reread()
+            if liveConnected { Task { await syncLive() } }
+        }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
             guard case .success(let url) = outcome else { return }
             Task { await runImport(url) }
+        }
+    }
+
+    /// The live-notifications door (prd §701) — a sign-in inside this app,
+    /// through `XLiveLoginSheet`, entirely apart from the archive above. Read
+    /// live, so it is offered whether or not an archive has ever been picked.
+    @ViewBuilder private var liveBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if liveConnected {
+                HStack(spacing: DS.Space.s3) {
+                    Image(systemName: "bell.fill")
+                        .dsGlyph(17, weight: .medium)
+                        .foregroundStyle(DS.tint)
+                    Text("Live notifications — your own account, signed in")
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+            } else {
+                DSSlabButton(title: "Get live notifications",
+                             systemImage: "bell.badge",
+                             busy: false) { sheet = .card(id: "xLive") }
+            }
+            BridgeSyncStatusRows(syncing: liveSyncing,
+                                syncingLine: String(localized: "Checking your notifications…"),
+                                proof: liveResult)
+            DSSlabNote(text: "Sign in with your own X account, in this app. Read-only, and only for the account you sign into — it never touches your archive above.", plain: true)
         }
     }
 
@@ -148,6 +197,32 @@ struct XArchiveImportScreen: View {
         held = ImportRemoval.count(source: "X", context: modelContext)
         pending = XArchiveImport.pendingFaceCount(context: modelContext)
         pendingContext = XArchiveImport.pendingContextCount(context: modelContext)
+        liveConnected = XLiveAuth.connected
+    }
+
+    /// Runs the live-notifications read (prd §701) and reports it in the same
+    /// four-outcome shape `runFetch`/`runContextFetch` already use on this
+    /// screen — a refusal (stale cookies) reads differently from a plain
+    /// "nothing new".
+    private func syncLive() async {
+        guard !liveSyncing else { return }
+        liveSyncing = true
+        let added = await XLiveNotifications.refresh(context: modelContext)
+        liveSyncing = false
+        guard let added else {
+            liveResult = .failed(String(localized: "Couldn't read your notifications — sign in again if this keeps happening."))
+            return
+        }
+        liveResult = added > 0 ? .landed(added) : .upToDate
+        // Registers the seat even when no archive has ever been imported —
+        // the catalog tile and the dock chip both read `BridgeStore`, and a
+        // live-only connection is a real one.
+        let proof = added > 0 ? String(localized: "\(added) new") : String(localized: "Synced just now")
+        if store.registerConnected(id: "x", name: "X", proof: proof,
+                                   can: ["Reads your notifications live, with your own sign-in.",
+                                         "Read-only — never posts, likes, or follows for you."]) {
+            DSHaptic.success()
+        }
     }
 
     // MARK: - Run

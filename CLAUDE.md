@@ -249,6 +249,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-tiktokImport` `-tiktokFaces` — import a TikTok export (the user_data_tiktok.json file itself, or a folder holding it), -tiktokFaces <limit|YES> → docs/hooks/imports.md · prd §279
 - `-xArchiveImport` — import an UNZIPPED X archive folder (prd §280, 2026-08-02, Model/XArchiveImport.swift; screen → docs/hooks/imports.md · prd §280
 - **X joined OEmbed.endpoints the same day, and it is the inverse of the Instagram entry removed alongside it** → docs/hooks/imports.md · prd §280
+- `-xLiveProbe YES` — X's live-notifications door, read with the person's own browser-session cookies via an in-app sign-in, not the paid public API §280 declined → docs/hooks/bridges.md · prd §701
 - **Feeds (RSS + the four feed-follow bridges)** (`-feedFollow` `-feedHealthProbe`) → docs/hooks/bridges.md · prd §312
 - **The reading rooms, past §312** → docs/hooks/rooms.md · prd §455
 - **The vault (Obsidian)** (`-obsidianVault` `-obsidianProbe`) → docs/hooks/imports.md · prd §320

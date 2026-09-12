@@ -568,6 +568,19 @@ enum ProbeHooks {
                       XArchiveImport.pendingContextCount(context: context))
             }
         },
+        // `-xLiveProbe YES` — the live-notifications read, phase by phase
+        // (prd §701): X's own internal GraphQL API, read with cookies
+        // obtained through the in-app sign-in (`XLiveLoginSheet`), never the
+        // paid public API §280 declined. Reports whether cookies are stored,
+        // the raw HTTP status, the top-level JSON keys, any GraphQL
+        // `errors[]`, and the first few parsed entries — the measure tool for
+        // a bridge authored against a rotating, undocumented API and never
+        // run live (see `XLiveNotifications`'s own UNMEASURED note): a future
+        // stale query id or rotated feature flag is a one-launch diagnosis
+        // instead of a silently empty room.
+        Hook(key: "xLiveProbe") { _, _ in
+            Task { @MainActor in await XLiveNotifications.diagnose() }
+        },
         // `-xPersonProbe <handle>` — your years with one person (2026-08-18,
         // prd §396), line by line: one `xPerson|` per year, then the card's
         // own sentence.
