@@ -276,6 +276,13 @@ pieces = [
     "enum IngestSupport {",
     grab(support, "static func titleLine"),
     "}\n",
+    # `ASCShape.appIcon` (prd §714) reads a build row through `ASCFetch`'s
+    # field reader. The enum as a whole does network reads through
+    # `IngestSupport.getJSON`, so only the pure reader is taken — the
+    # `titleLine` precedent above, still the shipped function and never a copy.
+    "enum ASCFetch {",
+    grab(asc, "static func attributes(_ row: [String: Any])"),
+    "}\n",
 ]
 open(out, "w").write("\n".join(pieces))
 PY
