@@ -173,11 +173,11 @@ struct WalletRow<Trailing: View>: View {
     }
 }
 
-extension WalletRow where Trailing == WalletRowChevron {
+extension WalletRow where Trailing == DSChevron {
     /// The door form — a row whose whole job is to open something.
     init(mark: Mark, title: String, subtitle: String? = nil, titleWraps: Bool = false) {
         self.init(mark: mark, title: title, subtitle: subtitle,
-                  titleWraps: titleWraps) { WalletRowChevron() }
+                  titleWraps: titleWraps) { DSChevron() }
     }
 }
 
@@ -190,19 +190,6 @@ extension WalletRow where Trailing == EmptyView {
     }
 }
 
-/// The room's one "there's more" glyph. Before the pass, a single wallet
-/// screen carried a chevron, a "Where it's held ›" text link, a centered
-/// "See all 128 transactions ›" link, a "Revoke ↗" pill, range chips and jump
-/// chips — six grammars for the same promise. Two survive: this, on a row,
-/// and a count-link on a section label (`WalletSectionLabel`).
-struct WalletRowChevron: View {
-    var body: some View {
-        Image(systemName: "chevron.right")
-            .dsGlyph(12)
-            .foregroundStyle(DS.textTertiary)
-            .accessibilityHidden(true)
-    }
-}
 
 /// A row's trailing reading — the number, and optionally what it is. Money in
 /// the money face, its qualifier in the quietest ink, right-aligned so a
@@ -372,21 +359,7 @@ struct WalletSectionLabel: View {
                 .foregroundStyle(DS.textSecondary)
             Spacer(minLength: 0)
             if let trailingTitle, let onTapTrailing {
-                Button {
-                    DSHaptic.selection()
-                    onTapTrailing()
-                } label: {
-                    HStack(spacing: 3) {
-                        Text(trailingTitle)
-                            .dsText(.label12).fontWeight(.semibold)
-                            .monospacedDigit()
-                        Image(systemName: "chevron.right")
-                            .dsGlyph(9, weight: .bold)
-                    }
-                    .foregroundStyle(DS.tint)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                DSMoreLink(title: Text(trailingTitle), action: onTapTrailing)
             }
         }
     }

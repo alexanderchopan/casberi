@@ -88,4 +88,25 @@ extension View {
             }
         }
     }
+
+    /// **The READING sheet's presentation, drawn once (prd §715).** A thing,
+    /// a token and a post each opened at medium-with-a-large-detent with the
+    /// same four modifiers, copied by hand — the third sheet family, and the
+    /// only one without a chassis. `detent` binds the selection where the
+    /// sheet moves itself. Ink is NOT folded in: the thing sheet paints its
+    /// own ground.
+    @ViewBuilder
+    func dsReadSheet(detent: Binding<PresentationDetent>? = nil) -> some View {
+        if let detent {
+            presentationDetents([.medium, .large], selection: detent)
+                .dsPageSheet()
+                .presentationDragIndicator(.visible)
+                .dsSheetCorner()
+        } else {
+            presentationDetents([.medium, .large])
+                .dsPageSheet()
+                .presentationDragIndicator(.visible)
+                .dsSheetCorner()
+        }
+    }
 }

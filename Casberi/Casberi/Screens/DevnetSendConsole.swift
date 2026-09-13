@@ -424,7 +424,7 @@ struct DevnetSendPanel: View {
                              : AnyShapeStyle(DS.fillFaint))
                 .frame(width: DevnetConsole.mark, height: DevnetConsole.mark)
             if isTopUp, topUp?.busy == true {
-                ProgressView().controlSize(.small)
+                DSSpinner()
             } else {
                 Image(systemName: glyph(kind))
                     .accessibilityHidden(true)
@@ -481,7 +481,7 @@ struct DevnetCreatePanel: View {
                     Circle().fill(tint)
                         .frame(width: DevnetConsole.mark, height: DevnetConsole.mark)
                     if busy {
-                        ProgressView().controlSize(.small).tint(.white)
+                        DSSpinner(onFill: true)
                     } else {
                         Image(systemName: "key")
                             .accessibilityHidden(true)
@@ -837,11 +837,8 @@ struct DevnetAdvancedSheet: View {
     private var channel: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             caption(String(localized: "Nonce channel"))
-            TextField("0", text: $channelText)
-                .keyboardType(.numberPad)
-                .dsText(.heading17)
-                .padding(.horizontal, DS.Space.s3).padding(.vertical, DS.Space.s3)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(DS.fillFaint))
+            DSSlabField(placeholder: "0", text: $channelText, actionLabel: "",
+                        keyboard: .numberPad, size: .compact) {}
             Text(String(localized: "Sends in different channels don't queue behind each other."))
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -875,11 +872,8 @@ struct DevnetAdvancedSheet: View {
     private var metadata: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             caption(String(localized: "Note on chain"))
-            TextField(String(localized: "Optional"), text: $note, axis: .vertical)
-                .lineLimit(1...3)
-                .dsText(.callout15)
-                .padding(.horizontal, DS.Space.s3).padding(.vertical, DS.Space.s3)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(DS.fillFaint))
+            DSSlabField(placeholder: "Optional", text: $note, actionLabel: "",
+                        size: .compact, axis: .vertical, lines: 1...3) {}
         }
     }
 
@@ -1119,25 +1113,12 @@ struct DevnetSendSheet: View {
                 .dsHover()
                 .padding(.bottom, -DS.Space.s2)
             }
-            HStack(spacing: DS.Space.s3) {
-                Image(systemName: "magnifyingglass")
-                    .accessibilityHidden(true)
-                    .dsGlyph(16, weight: .semibold)
-                    .foregroundStyle(DS.textTertiary)
-                TextField("", text: $query,
-                          prompt: Text(String(localized: "Paste an address, or search"))
-                            .foregroundStyle(DS.textTertiary))
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .focused($searching)
-                    .submitLabel(.done)
-                    .onSubmit { if let pastedAddress { destination = pastedAddress } }
+            DSSlabField(placeholder: "Paste an address, or search", text: $query,
+                        actionLabel: "", focus: $searching, glyph: "magnifyingglass",
+                        size: .compact, submitLabel: .done,
+                        paste: { query = $0 }) {
+                if let pastedAddress { destination = pastedAddress }
             }
-            .padding(.horizontal, DS.Space.s4)
-            .frame(height: DS.Hit.min + DS.Space.s2)
-            .dsWell(cornerRadius: DS.Radius.control)
 
             if let pastedAddress {
                 Button {
@@ -1380,7 +1361,7 @@ struct DevnetSendSheet: View {
                               : (verb ?? String(localized: "Send")))
                      : (armed ? String(localized: "Add \(amount) \(unit)")
                               : String(localized: "Add")))
-                if busy { ProgressView().controlSize(.mini).tint(.white) }
+                if busy { DSSpinner(size: .mini, onFill: true) }
             }
             .dsText(.callout15).fontWeight(.semibold)
             .foregroundStyle(armed ? .white : DS.textTertiary)
@@ -1715,10 +1696,7 @@ struct DevnetSendSheet: View {
                         .dsText(.label12)
                         .foregroundStyle(advanced.isDefault ? DS.textTertiary : tint)
                         .lineLimit(1)
-                    Image(systemName: "chevron.right")
-                        .accessibilityHidden(true)
-                        .dsGlyph(11, weight: .semibold)
-                        .foregroundStyle(DS.textTertiary)
+                    DSChevron()
                 }
                 .padding(.vertical, DS.Space.s3)
                 .padding(.horizontal, DS.Space.s1)

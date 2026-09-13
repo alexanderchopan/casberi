@@ -222,12 +222,7 @@ struct AltanaKeyCard: View {
                         DSHaptic.selection()
                         onWallet(address)
                     } label: {
-                        Text(WalletStore.shortAddress(address))
-                            .dsText(.subhead13).fontWeight(.semibold)
-                            .foregroundStyle(DS.textPrimary)
-                            .padding(.horizontal, DS.Space.s3)
-                            .padding(.vertical, DS.Space.s2)
-                            .background(DS.surfaceWell, in: Capsule())
+                        Chip(text: WalletStore.shortAddress(address))
                     }
                     .buttonStyle(PressSpring())
                 }

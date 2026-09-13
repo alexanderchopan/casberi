@@ -189,24 +189,15 @@ struct L2beatDirectoryScreen: View {
 	private var emptySearchNote: some View {
 		let other: Layer = layer == .layer3 ? .layer2 : .layer3
 		let elsewhere = matches(in: other).count
-		VStack(alignment: .leading, spacing: DS.Space.s1) {
-			Text(elsewhere > 0
+		DSEmptyState(
+			headline: Text(elsewhere > 0
 				? String(localized: "Nothing under \(layer.label).")
-				: String(localized: "L2BEAT doesn't cover that one."))
-				.dsText(.subhead13)
-				.foregroundStyle(DS.textSecondary)
-			if elsewhere > 0 {
-				Text(elsewhere == 1
+				: String(localized: "L2BEAT doesn't cover that one.")),
+			words: Text(elsewhere == 0
+				? String(localized: "They assess \(L2beatDirectory.projects.count) chains so far.")
+				: elsewhere == 1
 					? String(localized: "One match under \(other.label).")
-					: String(localized: "\(elsewhere) matches under \(other.label)."))
-					.dsText(.label11)
-					.foregroundStyle(DS.textTertiary)
-			} else {
-				Text(String(localized: "They assess \(L2beatDirectory.projects.count) chains so far."))
-					.dsText(.label11)
-					.foregroundStyle(DS.textTertiary)
-			}
-		}
+					: String(localized: "\(elsewhere) matches under \(other.label).")))
 		.padding(.vertical, DS.Space.s3)
 	}
 

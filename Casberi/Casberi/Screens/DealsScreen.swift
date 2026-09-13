@@ -56,7 +56,7 @@ struct DealsScreen: View {
         }
         if syncing {
             HStack(spacing: DS.Space.s2) {
-                ProgressView().controlSize(.small)
+                DSSpinner()
                 Text("Reading the deals…")
                     .dsText(.callout15).foregroundStyle(DS.textTertiary)
             }

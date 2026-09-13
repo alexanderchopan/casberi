@@ -10,24 +10,12 @@ struct StarterPacksDoor: View {
     @State private var open = false
 
     var body: some View {
-        Button {
-            DSHaptic.tap()
-            open = true
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                BridgeIcon(name: "Bluesky", size: DS.Mark.list, circular: false)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Follow a starter pack").dsText(.body17).foregroundStyle(DS.textPrimary)
-                    Text("Someone's curated list, in one tap").dsText(.label12).foregroundStyle(DS.textTertiary)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .dsGlyph(13)
-                    .foregroundStyle(DS.textTertiary)
-            }
-            .dsListCardRow()
+        DSPushRow(title: Text("Follow a starter pack"),
+                  subtitle: Text("Someone's curated list, in one tap"),
+                  action: { open = true }) {
+            BridgeIcon(name: "Bluesky", size: DS.Mark.list, circular: false)
         }
-        .buttonStyle(.plain)
+        .dsListCardRow()
         .sheet(isPresented: $open) {
             StarterPackImportSheet(onImport: onImport)
         }
@@ -158,7 +146,7 @@ struct StarterPackImportSheet: View {
         }
         if loadingMembers {
             HStack(spacing: DS.Space.s2) {
-                ProgressView().controlSize(.small)
+                DSSpinner()
                 Text("Reading who's in this pack…")
                     .dsText(.callout15).foregroundStyle(DS.textTertiary)
             }
@@ -197,22 +185,13 @@ struct StarterPackImportSheet: View {
     }
 
     private func followButton(_ pack: BlueskyStarterPacks.Pack) -> some View {
-        Button {
+        DSSlabButton(title: followed.map { "Followed \($0)" } ?? "Follow all \(members.count)",
+                     enabled: followed == nil) {
             DSHaptic.tap()
             let n = BlueskyStarterPacks.followAll(members)
             followed = n
             onImport(n)
-        } label: {
-            Text(followed.map { "Followed \($0)" } ?? "Follow all \(members.count)")
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(followed != nil ? DS.textTertiary : .white)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 48)
-                .background(followed != nil ? DS.gray100 : DS.tint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
         }
-        .buttonStyle(PressSpring())
-        .disabled(followed != nil)
     }
 
     // MARK: - Loads

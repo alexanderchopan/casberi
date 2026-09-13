@@ -44,24 +44,14 @@ struct ConnectWalletRow: View {
                 DSHaptic.tap()
                 if connecting { cancelConnect() } else { connectWallet() }
             } label: {
-                HStack(spacing: DS.Space.s3) {
+                DSPushRowLabel(title: Text(connecting ? "Waiting — tap to cancel" : "Connect a wallet app"),
+                               prominent: true, busy: connecting) {
                     Image(systemName: "wallet.pass.fill")
                         .dsGlyph(15, weight: .medium)
                         .foregroundStyle(DS.tint)
                         .frame(width: 34, height: 34)
                         .background(DS.tintDim, in: RoundedRectangle(
                             cornerRadius: DS.Radius.appIcon(34), style: .continuous))
-                    Text(connecting ? "Waiting — tap to cancel" : "Connect a wallet app")
-                        .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    if connecting {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Image(systemName: "chevron.right")
-                            .dsGlyph(12, weight: .semibold)
-                            .foregroundStyle(DS.textTertiary)
-                    }
                 }
                 .padding(.horizontal, DS.Space.s3)
                 .padding(.vertical, 11)

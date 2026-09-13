@@ -923,15 +923,12 @@ struct ThingSheetView: View {
         // own, and `inlineRest` means it is rendered in place under the root's.
         // A second listener in one presentation buzzes twice.
         .modifier(SheetHaptics(active: onBack == nil && !inlineRest))
-        .presentationDetents([.medium, .large], selection: $detent)
-        // The Mac twin — detents are inert on Catalyst, so the app's
-        // MOST-OPENED sheet was rendering at the default ~540x620 form
-        // card. It is the fallback door for a thing (a row tap fills the
-        // detail pane instead), but every deep link, Spotlight hand-off
-        // and pane-less state still arrives here.
-        .dsPageSheet()
-        .presentationDragIndicator(.visible)
-        .dsSheetCorner()
+        // `dsReadSheet` carries the Mac twin (`dsPageSheet`) — detents are
+        // inert on Catalyst, so the app's MOST-OPENED sheet was rendering at
+        // the default ~540x620 form card. It is the fallback door for a thing
+        // (a row tap fills the detail pane instead), but every deep link,
+        // Spotlight hand-off and pane-less state still arrives here.
+        .dsReadSheet(detent: $detent)
         // Only when pushed (`onBack` set): the eyebrow carries its own back
         // chevron now, so the system's default pushed-view nav bar (and the
         // back button it would ALSO draw) is redundant chrome on top of it.

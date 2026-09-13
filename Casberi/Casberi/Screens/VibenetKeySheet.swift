@@ -216,35 +216,7 @@ struct VibenetKeySheet: View {
     private var permissions: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             caption(String(localized: "What it can do"))
-            chips
-        }
-    }
-
-    private var chips: some View {
-        let labels = actor.scope.grantedPlainLabels
-        let isAdmin = actor.scope.isAdmin
-        return FlowLayout(spacing: 6) {
-            ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
-                let isUnknownTail = index == labels.count - 1 && actor.scope.unknownCount > 0
-                Text(label)
-                    .dsText(.label11)
-                    .fontWeight(isAdmin ? .semibold : .regular)
-                    .foregroundStyle(isAdmin ? DS.page
-                                     : (isUnknownTail ? DS.textTertiary : DS.textPrimary))
-                    .lineLimit(1)
-                    .fixedSize()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background {
-                        if isAdmin {
-                            Capsule().fill(DS.textPrimary)
-                        } else if isUnknownTail {
-                            Capsule().strokeBorder(DS.textTertiary, lineWidth: 1)
-                        } else {
-                            Capsule().fill(Self.mark.opacity(0.12))
-                        }
-                    }
-            }
+            VibenetScopeChips(scope: actor.scope)
         }
     }
 
@@ -487,23 +459,9 @@ struct VibenetKeySheet: View {
             DSHaptic.tap()
             act()
         } label: {
-            HStack(spacing: 5) {
-                Image(systemName: symbol)
-                    .accessibilityHidden(true)
-                    .dsGlyph(11, weight: .semibold)
-                Text(title)
-            }
-            .dsText(.label12).fontWeight(.semibold)
-            .foregroundStyle(DS.textSecondary)
-            .lineLimit(1)
-            .fixedSize()
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, 7)
-            .background(Capsule(style: .continuous).fill(DS.fillFaint))
-            .contentShape(Capsule())
+            Chip(text: title, style: .neutral, glyph: symbol)
         }
         .buttonStyle(PressSpring())
-        .dsHover()
     }
 
     /// One block caption — the thing this sheet had none of, and the reason

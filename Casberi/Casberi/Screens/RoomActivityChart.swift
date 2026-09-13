@@ -106,7 +106,7 @@ struct RoomActivityChart: View {
                     .dsText(.label12)
                     .fontWeight(captionAddress == nil ? .medium : .semibold)
                     .foregroundStyle(captionAddress == nil ? DS.textTertiary : DS.textSecondary)
-                if onOpen != nil { WalletRowChevron() }
+                if onOpen != nil { DSChevron() }
             }
             Text(countLabel(count))
                 .dsText(.price40)

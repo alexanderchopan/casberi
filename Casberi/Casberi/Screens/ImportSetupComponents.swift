@@ -296,7 +296,7 @@ struct ImportUpkeepSection: View {
     private var removeLine: some View {
         Button(role: .destructive) { confirm = true } label: {
             HStack(spacing: DS.Space.s2) {
-                if removing { ProgressView().controlSize(.small) }
+                if removing { DSSpinner() }
                 Text(removing
                      ? String(localized: "Removing…")
                      : String(localized: "Remove all \(held) imported things"))

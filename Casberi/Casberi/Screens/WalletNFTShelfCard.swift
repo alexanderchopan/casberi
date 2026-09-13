@@ -183,12 +183,15 @@ struct WalletNFTShelfCard: View {
     /// since the pick). Said plainly rather than left as a blank card, which
     /// would read as a broken shelf.
     private var emptyNote: some View {
-        Text(loading
-             ? String(localized: "Loading…")
-             : String(localized: "Nothing to draw from these collections yet."))
-            .dsText(.subhead13)
-            .foregroundStyle(DS.textTertiary)
-            .padding(.horizontal, DS.Space.s4)
+        Group {
+            if loading {
+                DSSpinner()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                DSEmptyState(words: Text(String(localized: "Nothing to draw from these collections yet.")))
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
     }
 
     /// **THE PICKED PIECES, DRAWN IN THE SLOT** (2026-08-26, prd §483 — user:
@@ -447,9 +450,7 @@ struct WalletNFTCollectionRows: View {
             }
             Spacer(minLength: 0)
             if piece.openSeaURL != nil {
-                Image(systemName: "chevron.right")
-                    .dsGlyph(11)
-                    .foregroundStyle(DS.textTertiary)
+                DSChevron()
             }
         }
         .padding(.vertical, DS.Space.s2)

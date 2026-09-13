@@ -17,24 +17,12 @@ struct FarcasterPackDoor: View {
     @State private var didFollow = false
 
     var body: some View {
-        Button {
-            DSHaptic.tap()
-            open = true
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                BridgeIcon(name: "Farcaster", size: DS.Mark.list, circular: false)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Follow a starter pack").dsText(.body17).foregroundStyle(DS.textPrimary)
-                    Text("A hand-picked list, in one tap").dsText(.label12).foregroundStyle(DS.textTertiary)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .dsGlyph(13)
-                    .foregroundStyle(DS.textTertiary)
-            }
-            .dsListCardRow()
+        DSPushRow(title: Text("Follow a starter pack"),
+                  subtitle: Text("A hand-picked list, in one tap"),
+                  action: { open = true }) {
+            BridgeIcon(name: "Farcaster", size: DS.Mark.list, circular: false)
         }
-        .buttonStyle(.plain)
+        .dsListCardRow()
         .sheet(isPresented: $open, onDismiss: {
             if didFollow { onDismissAfterFollow?() }
         }) {
@@ -68,7 +56,7 @@ struct FarcasterPackSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
                 if loading {
                     HStack(spacing: DS.Space.s2) {
-                        ProgressView().controlSize(.small)
+                        DSSpinner()
                         Text("Reading the pack…")
                             .dsText(.callout15).foregroundStyle(DS.textTertiary)
                     }
@@ -113,21 +101,12 @@ struct FarcasterPackSheet: View {
     }
 
     private var followButton: some View {
-        Button {
+        DSSlabButton(title: followed.map { "Followed \($0)" } ?? "Follow all \(members.count)",
+                     enabled: followed == nil) {
             DSHaptic.tap()
             let n = FarcasterStarterPack.followAll()
             followed = n
             onImport(n)
-        } label: {
-            Text(followed.map { "Followed \($0)" } ?? "Follow all \(members.count)")
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(followed != nil ? DS.textTertiary : .white)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 48)
-                .background(followed != nil ? DS.gray100 : DS.tint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
         }
-        .buttonStyle(PressSpring())
-        .disabled(followed != nil)
     }
 }

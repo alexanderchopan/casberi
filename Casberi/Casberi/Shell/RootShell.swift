@@ -148,19 +148,7 @@ struct RootShell: View {
     }
 
     var body: some View {
-        // THROWAWAY (2026-07-19): `-summonProto YES` swaps the whole shell for
-        // the direction-F prototype. A full swap rather than a cover so the
-        // real shell's chrome can't leak into it — delete this branch and
-        // `SummonPrototype.swift` together when the experiment is settled.
-        if UserDefaults.standard.bool(forKey: "summonProto") {
-            // `dsColorScheme()` is not optional here: the branch sits ABOVE the
-            // shell's own `.preferredColorScheme`, so without it every adaptive
-            // token resolves against light traits and `DS.textPrimary` paints
-            // black on the dark page (i.e. invisible).
-            SummonPrototype().dsColorScheme()
-        } else {
-            shell
-        }
+        shell
     }
 
     /// THE ONCE-A-DAY WHISPER IS GONE (prd §550). What survives here is the

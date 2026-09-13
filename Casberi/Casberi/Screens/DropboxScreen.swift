@@ -62,7 +62,7 @@ struct DropboxScreen: View {
     @ViewBuilder private var connectBlock: some View {
         if connecting {
             HStack(spacing: DS.Space.s2) {
-                ProgressView().controlSize(.small)
+                DSSpinner()
                 Text("Waiting for Dropbox…")
                     .dsText(.callout15).foregroundStyle(DS.textTertiary)
             }

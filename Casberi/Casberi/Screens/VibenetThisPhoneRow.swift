@@ -88,7 +88,7 @@ struct VibenetThisPhoneRow: View {
                     HStack(spacing: 5) {
                         Text(verb)
                         if busy {
-                            ProgressView().controlSize(.mini)
+                            DSSpinner(size: .mini)
                         }
                     }
                     .dsText(.label12)

@@ -243,28 +243,17 @@ struct WalletConnectPickerSheet: View {
         // With no room at all there is nothing to add, so the button stops
         // pretending to be one rather than sitting there permanently inert.
         let closing = plan.selectionCeiling == 0
-        return Button {
+        return DSSlabButton(
+            title: closing ? String(localized: "Done")
+                           : (n == 0 ? (mode == .watch ? String(localized: "Pick what to watch")
+                                                       : String(localized: "Pick what to save"))
+                                     : (mode == .watch ? String(localized: "Watch \(n)")
+                                                       : String(localized: "Save \(n)"))),
+            enabled: n > 0 || closing
+        ) {
             if closing { dismiss() } else if mode == .watch { watchPicked() } else { namePicked() }
-        } label: {
-            Text(closing ? String(localized: "Done")
-                         : (n == 0 ? (mode == .watch ? String(localized: "Pick what to watch")
-                                                     : String(localized: "Pick what to save"))
-                                   : (mode == .watch ? String(localized: "Watch \(n)")
-                                                     : String(localized: "Save \(n)"))))
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(n == 0 && !closing ? DS.textTertiary : .white)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 48)
-                // A hand-rolled button paints its own background, and
-                // `.disabled` dims a label, not a fill — so the fill swaps
-                // itself or an inert button reads live (§83).
-                .background(n == 0 && !closing ? DS.gray100 : DS.tint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.control,
-                                                 style: .continuous))
         }
-        .buttonStyle(PressSpring())
         .armedPop(n > 0 || closing)
-        .disabled(n == 0 && !closing)
     }
 
     /// The book's landing (prd §462): a NAME per pick, nothing else. The name

@@ -40,9 +40,19 @@ struct DSStamp: View {
 
     let word: String
     var weight: Weight = .quiet
+    /// An SF Symbol before the word, in the word's ink (§715) — for a stamp
+    /// whose state has a conventional mark (a lock, a shield).
+    var glyph: String? = nil
 
     var body: some View {
-        Text(verbatim: word)
+        HStack(spacing: 3) {
+            if let glyph {
+                Image(systemName: glyph)
+                    .dsGlyph(10, weight: .semibold)
+                    .accessibilityHidden(true)
+            }
+            Text(verbatim: word)
+        }
             .dsText(.label12)
             .foregroundStyle(ink)
             // THE TURN (2026-09-05). A stamp whose fact changes under you —

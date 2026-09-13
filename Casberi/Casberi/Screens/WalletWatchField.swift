@@ -192,7 +192,7 @@ struct WalletWatchField: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
             } else if resolving {
                 HStack(spacing: DS.Space.s2) {
-                    ProgressView().controlSize(.mini)
+                    DSSpinner(size: .mini)
                     Text("Looking up \(draft)…")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     Spacer(minLength: 0)
@@ -238,17 +238,8 @@ struct WalletWatchField: View {
             newAddress = "vitalik.eth"
             watch()
         } label: {
-            HStack(spacing: DS.Space.s1) {
-                Image(systemName: "sparkles")
-                    .dsGlyph(12)
-                Text("Peek at vitalik.eth")
-                    .dsText(.subhead13).fontWeight(.medium)
-            }
-            .foregroundStyle(DS.tint)
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s2)
-            .background(DS.tint.opacity(0.12), in: Capsule(style: .continuous))
-            .contentShape(Capsule(style: .continuous))
+            Chip(text: String(localized: "Peek at vitalik.eth"), style: .tint, glyph: "sparkles")
+                .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(PressSpring())
     }

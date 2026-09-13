@@ -316,12 +316,7 @@ struct AgentGrantView: View {
     private var permissionStrip: some View {
         FlowLayout(spacing: DS.Space.s2) {
             ForEach(grant.permissions, id: \.self) { permission in
-                Text(verbatim: permission)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textPrimary)
-                    .padding(.horizontal, DS.Space.s3)
-                    .padding(.vertical, DS.Space.s1 + 2)
-                    .background(DS.fillFaint, in: Capsule())
+                Chip(text: permission, interactive: false)
             }
         }
     }

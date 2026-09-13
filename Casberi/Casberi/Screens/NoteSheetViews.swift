@@ -275,13 +275,7 @@ struct NoteTagRow: View {
     var body: some View {
         FlowLayout(spacing: DS.Space.s2) {
             ForEach(tags, id: \.self) { tag in
-                Text(tag)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                    .padding(.horizontal, DS.Space.s2)
-                    .padding(.vertical, 4)
-                    .background(DS.fillFaint,
-                                in: Capsule(style: .continuous))
+                Chip(text: tag, interactive: false)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

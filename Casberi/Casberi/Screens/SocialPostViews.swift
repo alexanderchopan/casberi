@@ -282,10 +282,7 @@ struct SocialPostSheet: View {
                     SocialPostThread(post: card, source: source, open: { path.append($0) })
                 }
         }
-        .presentationDetents([.medium, .large])
-        .dsPageSheet()
-        .presentationDragIndicator(.visible)
-        .dsSheetCorner()
+        .dsReadSheet()
         .dsInk()
     }
 }
@@ -598,8 +595,8 @@ struct SocialProfileCard: View {
         }
     }
 
-    /// A lit-or-quiet capsule: on wears the tint, off stays gray — the same
-    /// anatomy the setup screen's row used to wear directly.
+    /// A lit-or-quiet chip: on wears the tint, off is the neutral gray chip —
+    /// the same anatomy the setup screen's row used to wear directly.
     private func watchChipButton(_ watch: SocialWatch) -> some View {
         Button {
             guard let bridge else { return }
@@ -608,12 +605,8 @@ struct SocialProfileCard: View {
             DSHaptic.tap()
             if !watch.on { Task { await SocialPeople.sync(source: profile.source, context: modelContext) } }
         } label: {
-            Text(LocalizedStringKey(watch.label))
-                .dsText(.label12)
-                .foregroundStyle(watch.on ? DS.tint : DS.textTertiary)
-                .padding(.horizontal, DS.Space.s3)
-                .frame(minHeight: 28)
-                .background(watch.on ? DS.tintDim : DS.gray100, in: Capsule(style: .continuous))
+            Chip(text: String(localized: String.LocalizationValue(watch.label)),
+                 style: watch.on ? .tint : .neutral)
         }
         .buttonStyle(PressSpring())
     }

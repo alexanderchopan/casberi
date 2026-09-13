@@ -203,6 +203,8 @@ chip narrowing, streaming compose via `GenStream`/`GenRender`, `-summonQuery`
 hook) and the one branch in `Shell/RootShell.swift` (exists; keeps
 `.dsColorScheme()` — without it adaptive tokens resolve light-on-dark and
 text vanishes; already learned the hard way).
+**Both are DELETED (2026-09-13, prd §715)** — the prototype was a self-declared
+throwaway whose experiment had settled; this phase is a historical record.
 
 Build, in order:
 

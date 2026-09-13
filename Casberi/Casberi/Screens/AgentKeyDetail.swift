@@ -55,7 +55,7 @@ struct AgentModelRow: View {
                 }
                 if loading {
                     HStack(spacing: DS.Space.s2) {
-                        ProgressView().controlSize(.small)
+                        DSSpinner()
                         Text("Asking \(provider.company) what it offers…")
                             .dsText(.callout15).foregroundStyle(DS.textTertiary)
                     }
@@ -274,28 +274,16 @@ struct OpenRouterRoutingRow: View {
     var body: some View {
         if provider == .openrouter, AgentKey.isConfigured(.openrouter) {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Toggle(isOn: $privateRouting) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Only providers that don't keep your question")
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        // The cost is stated on the control that causes it,
-                        // not in fine print elsewhere — this is the one setting
-                        // here that can make a question fail to answer.
-                        Text("Some models won't be served that way — you'll be told which.")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
+                // The cost is stated on the control that causes it, not in
+                // fine print elsewhere — this is the one setting here that
+                // can make a question fail to answer.
+                DSToggleRow(title: Text("Only providers that don't keep your question"),
+                            detail: Text("Some models won't be served that way — you'll be told which."),
+                            isOn: $privateRouting)
                 .onChange(of: privateRouting) { _, on in AgentOpenRouter.privateRouting = on }
-                Toggle(isOn: $webSearch) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Let it search the web")
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        Text("Only when your own things fall short. Charged per result.")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
+                DSToggleRow(title: Text("Let it search the web"),
+                            detail: Text("Only when your own things fall short. Charged per result."),
+                            isOn: $webSearch)
                 .onChange(of: webSearch) { _, on in AgentOpenRouter.webSearch = on }
             }
             .dsListCardRow()
@@ -326,15 +314,9 @@ struct AgentLibrarianRow: View {
     var body: some View {
         if AgentKey.isConfigured, AgentKey.active != .bankr, !AgentLibrarian.deviceCanDoIt {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Toggle(isOn: $enabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Let your key organize too")
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        Text("Names screenshots and reads long chats so they can be found. No free on-device model here.")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
+                DSToggleRow(title: Text("Let your key organize too"),
+                            detail: Text("Names screenshots and reads long chats so they can be found. No free on-device model here."),
+                            isOn: $enabled)
                 .onChange(of: enabled) { _, on in
                     AgentLibrarian.isEnabled = on
                     result = nil
@@ -351,7 +333,7 @@ struct AgentLibrarianRow: View {
                     AgentBudgetControl(tick: $tick)
                     if working {
                         HStack(spacing: DS.Space.s2) {
-                            ProgressView().controlSize(.small)
+                            DSSpinner()
                             Text("Working through the backlog…")
                                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
                         }
@@ -491,15 +473,9 @@ struct MCPServerRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Toggle(isOn: $enabled) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Let agents on this Mac read your things")
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    Text("127.0.0.1 only, never the network. Anything it offers to save waits for your approval.")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
+            DSToggleRow(title: Text("Let agents on this Mac read your things"),
+                        detail: Text("127.0.0.1 only, never the network. Anything it offers to save waits for your approval."),
+                        isOn: $enabled)
             .onChange(of: enabled) { _, on in
                 MCPServer.isEnabled = on
                 if on { MCPServer.shared.start() } else { MCPServer.shared.stop() }

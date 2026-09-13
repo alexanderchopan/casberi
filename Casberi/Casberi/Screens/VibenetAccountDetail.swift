@@ -735,36 +735,15 @@ struct VibenetAccountDetail: View {
         VibenetValueHistory.windowed(history, range: range, now: .now)
     }
 
-    /// `VibenetRoomCard.rangeStrip`'s own recipe. Drawn only where the book
-    /// can answer more than one span, so it is never a row of chips redrawing
-    /// one line.
-    @ViewBuilder
+    /// The window chips — `DSRangeChips`, the crown's own picker. It draws
+    /// nothing under two options, so it is never a row of chips redrawing one
+    /// line.
     private var rangeStrip: some View {
-        let options = VibenetValueHistory.options(history, now: .now)
-        if options.count > 1 {
-            HStack(spacing: DS.Space.s2) {
-                ForEach(options, id: \.self) { option in
-                    let on = option == range
-                    Button {
-                        DSHaptic.selection()
-                        withAnimation(reduceMotion ? nil : DS.Motion.standard) { range = option }
-                    } label: {
-                        Text(option.label)
-                            .dsText(.label12).fontWeight(.semibold)
-                            .foregroundStyle(on ? DS.textPrimary : DS.textTertiary)
-                            .padding(.horizontal, DS.Space.s3)
-                            .padding(.vertical, 6)
-                            .background(Capsule(style: .continuous)
-                                .fill(on ? DS.fillStrong : Color.clear))
-                            .contentShape(Capsule())
-                    }
-                    .buttonStyle(PressSpring())
-                    .dsHover()
-                    .accessibilityAddTraits(on ? [.isSelected] : [])
-                }
-            }
-            .padding(.top, DS.Space.s2)
+        DSRangeChips(ranges: VibenetValueHistory.options(history, now: .now),
+                     range: range, label: { $0.label }) { option in
+            withAnimation(reduceMotion ? nil : DS.Motion.standard) { range = option }
         }
+        .padding(.top, DS.Space.s2)
     }
 
     /// Which permission the list is narrowed to, or nil for every key (prd
@@ -808,81 +787,7 @@ struct VibenetAccountDetail: View {
     private var keyFilterStrip: some View {
         let census = keyCensus
         if census.count > 1 {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
-                    keyChip(label: String(localized: "All"), count: nil, value: nil)
-                    ForEach(Array(census.enumerated()), id: \.offset) { _, entry in
-                        keyChip(label: entry.label, count: entry.count, value: entry.label)
-                    }
-                }
-            }
-            .scrollIndicators(.hidden)
-        }
-    }
-
-    private func keyChip(label: String, count: Int?, value: String?) -> some View {
-        let on = keyFilter == value
-        return Button {
-            DSHaptic.selection()
-            withAnimation(reduceMotion ? nil : DS.Motion.standard) { keyFilter = value }
-        } label: {
-            HStack(spacing: 5) {
-                Text(label)
-                    .dsText(.label12).fontWeight(.semibold)
-                if let count {
-                    Text("\(count)")
-                        .dsText(.label12)
-                        .monospacedDigit()
-                        .opacity(0.7)
-                }
-            }
-            // A NEUTRAL fill for the selection, never the room's mark: blue
-            // here means a key is about to expire, and which slice you are
-            // looking at is not urgent.
-            .foregroundStyle(on ? DS.textPrimary : DS.textSecondary)
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, 6)
-            .background(Capsule(style: .continuous).fill(on ? DS.fillStrong : DS.fillFaint))
-            .contentShape(Capsule())
-        }
-        .buttonStyle(PressSpring())
-        .dsHover()
-        .accessibilityAddTraits(on ? [.isSelected] : [])
-    }
-
-    /// One key's permissions — `VibenetKeySheet`'s own chip grammar (§463),
-    /// so a key reads the same on the row, the tray and its own sheet.
-    private func keyChips(_ actor: VibenetActor) -> some View {
-        let labels = actor.scope.grantedPlainLabels
-        let isAdmin = actor.scope.isAdmin
-        return FlowLayout(spacing: 6) {
-            ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
-                let isUnknownTail = index == labels.count - 1 && actor.scope.unknownCount > 0
-                Text(label)
-                    .dsText(.label11)
-                    .fontWeight(isAdmin ? .semibold : .regular)
-                    .foregroundStyle(isAdmin ? DS.page
-                                     : (isUnknownTail ? DS.textTertiary : DS.textPrimary))
-                    .lineLimit(1)
-                    .fixedSize()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background {
-                        // Three claims, three treatments. ADMIN inverts: scope
-                        // 0 is every capability there is, including reserved
-                        // ones this build cannot name, so it must not read as
-                        // one more permission among five. The unknown tail is
-                        // OUTLINED — a visibly different claim from a named
-                        // permission, never an invented name in the same fill.
-                        if isAdmin {
-                            Capsule().fill(DS.textPrimary)
-                        } else if isUnknownTail {
-                            Capsule().strokeBorder(DS.textTertiary, lineWidth: 1)
-                        } else {
-                            Capsule().fill(Self.mark.opacity(0.12))
-                        }
-                    }
-            }
+            VibenetKeyFilterStrip(census: census, filter: $keyFilter)
         }
     }
 
@@ -956,7 +861,7 @@ struct VibenetAccountDetail: View {
                 // The scope, as chips — `grantedPlainLabels` is never empty
                 // (see its doc), so there is no blank-row branch: an admin
                 // arrives as one inverted chip rather than as nothing.
-                keyChips(actor)
+                VibenetScopeChips(scope: actor.scope)
                     .padding(.top, 4)
             }
             Spacer(minLength: DS.Space.s2)
@@ -968,10 +873,7 @@ struct VibenetAccountDetail: View {
                 .multilineTextAlignment(.trailing)
                 .fixedSize(horizontal: false, vertical: true)
             if door {
-                Image(systemName: "chevron.right")
-                    .accessibilityHidden(true)
-                    .dsGlyph(11, weight: .semibold)
-                    .foregroundStyle(DS.textTertiary)
+                DSChevron()
                     .padding(.top, 2)
             }
         }
@@ -1217,17 +1119,13 @@ struct VibenetAccountDetail: View {
             // "Not watched", which names a fact and offers nothing — and the
             // row it sits on is the one place in this app where the answer to
             // that fact is one tap away.
+            //
+            // Inert here: the whole row is the button (`subAccountRow`), so a
+            // capsule with its own action would nest one control in another.
             if !sub.watched {
-                Text(String(localized: "Watch"))
-                    .dsText(.label11)
-                    .foregroundStyle(DS.tint)
-                    .lineLimit(1).fixedSize()
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background { Capsule().strokeBorder(DS.tint, lineWidth: 1) }
+                VerbCapsule(verb: .watch)
             } else {
-                Image(systemName: "chevron.right")
-                    .dsGlyph(11)
-                    .foregroundStyle(DS.textTertiary)
+                DSChevron()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

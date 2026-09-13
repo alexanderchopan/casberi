@@ -178,22 +178,14 @@ struct WalletbeatReportCard: View {
 
 	/// The honest alternative to a bar when there is almost nothing behind it.
 	private var unexaminedNote: some View {
-		VStack(alignment: .leading, spacing: DS.Space.s2) {
-			Text(counts.judged == 0
+		DSEmptyState(
+			headline: Text(counts.judged == 0
 				? String(localized: "Walletbeat hasn't rated this wallet yet")
-				: String(localized: "Walletbeat has barely started on this wallet"))
-				.dsText(.body17).fontWeight(.semibold)
-				.foregroundStyle(DS.textPrimary)
-				.fixedSize(horizontal: false, vertical: true)
-			Text(counts.judged == 0
+				: String(localized: "Walletbeat has barely started on this wallet")),
+			words: Text(counts.judged == 0
 				? String(localized: "It's listed, and none of its \(counts.applicable) checks has been judged. That's an absence of information, not a clean bill of health.")
-				: String(localized: "Only \(counts.judged) of \(counts.applicable) checks are judged, which is too few to compare against another wallet."))
-				.dsText(.subhead13)
-				.foregroundStyle(DS.textSecondary)
-				.fixedSize(horizontal: false, vertical: true)
-		}
+				: String(localized: "Only \(counts.judged) of \(counts.applicable) checks are judged, which is too few to compare against another wallet.")))
 		.padding(DS.Space.s4)
-		.frame(maxWidth: .infinity, alignment: .leading)
 		.dsWidgetSurface()
 	}
 

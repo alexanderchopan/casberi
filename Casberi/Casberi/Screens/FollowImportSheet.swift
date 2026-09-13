@@ -96,7 +96,7 @@ struct FollowImportSheet: View {
     /// paced), so the count climbs rather than a spinner sitting mute.
     private var loading: some View {
         HStack(spacing: DS.Space.s2) {
-            ProgressView().controlSize(.small)
+            DSSpinner()
             Text(read == 0 ? String(localized: "Reading the follow list…")
                            : String(localized: "Reading the follow list… \(read) so far"))
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)

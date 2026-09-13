@@ -575,8 +575,8 @@ struct AccountDetailSheet: View {
     }
 
     /// A row that opens a privacy sub-page. Two of them, so the shape lives in
-    /// one place. Badge-less since the Statement pass — the semibold title is
-    /// the wayfinding, the chevron is the affordance.
+    /// one place. Badge-less since the Statement pass — the title is the
+    /// wayfinding, the chevron is the affordance (`DSPushRow`).
     /// `subtitleTone` carries a door's own verdict where it has one — the same
     /// parameter `toggleRow` takes for a failing sync, and for the same
     /// reason: the state belongs on the line that states the fact, not on a
@@ -584,25 +584,8 @@ struct AccountDetailSheet: View {
     private func door(_ title: String, _ subtitle: String,
                       subtitleTone: Color = DS.textTertiary,
                       action: @escaping () -> Void) -> some View {
-        Button {
-            DSHaptic.tap()
-            action()
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title).dsText(.body17).fontWeight(.semibold)
-                        .foregroundStyle(DS.textPrimary)
-                    Text(subtitle)
-                        .dsText(.subhead13).foregroundStyle(subtitleTone)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .dsGlyph(13)
-                    .foregroundStyle(DS.textTertiary)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+        DSPushRow(title: Text(title), subtitle: Text(subtitle),
+                  subtitleTone: subtitleTone, action: action)
     }
 
     /// Your key (prd §67) — the BYO escape hatch, stated honestly: answers run
@@ -846,22 +829,15 @@ struct AccountDetailSheet: View {
         }
     }
 
-    /// A toggle row in the Statement grammar — semibold title + quiet
-    /// subtitle + the switch, no badge. `subtitleTone` carries the one state
-    /// the old badge's tone did: a failing sync reads red.
+    /// A toggle row — `DSToggleRow`, title + quiet subtitle + the switch, no
+    /// badge. `subtitleTone` carries the one state the old badge's tone did:
+    /// a failing sync reads red. The titles stay verbatim `String`s, as
+    /// they were drawn before the template.
     private func toggleRow(_ title: String, _ subtitle: String,
                            subtitleTone: Color = DS.textTertiary,
                            isOn: Binding<Bool>) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).dsText(.body17).fontWeight(.semibold)
-                    .foregroundStyle(DS.textPrimary)
-                Text(subtitle).dsText(.subhead13).foregroundStyle(subtitleTone)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 0)
-            Toggle("", isOn: isOn).labelsHidden().tint(DS.tint)
-        }
+        DSToggleRow(title: Text(title), detail: Text(subtitle),
+                    detailTone: subtitleTone, isOn: isOn)
     }
 
 

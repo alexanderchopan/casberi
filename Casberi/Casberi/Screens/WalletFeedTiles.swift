@@ -816,11 +816,10 @@ struct WalletCompositionStrip: View {
         let slots = places.count + (hasLocks ? 1 : 0)
         let step = width / CGFloat(max(1, slots))
         let barWidth = max(18, step - DS.Space.s3)
+        // No drawn axis (§715): deposits standing on one baseline and debts
+        // hanging from it already draw the line, and the design law has no
+        // hairline exception.
         ZStack(alignment: .topLeading) {
-            Rectangle()
-                .fill(DS.fillLine)
-                .frame(height: 1)
-                .offset(y: Self.baseline)
             // **EVERY LABEL ON ONE BASELINE, whether its column has debt or
             // not.** They hung off the bottom of each column at first, so a
             // place with a debt tail carried its name ~20pt lower than a place
@@ -893,56 +892,6 @@ struct WalletCompositionStrip: View {
         return String(localized: "\(WalletValue.money(composition.deposited)) at work. \(listed).")
     }
 
-
-    /// A section label, optionally a door.
-    @ViewBuilder
-    private func eyebrow(_ title: String, onOpen: (() -> Void)? = nil) -> some View {
-        let line = HStack(spacing: 4) {
-            Text(title)
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-            if onOpen != nil {
-                Image(systemName: "chevron.right")
-                    .dsGlyph(9)
-                    .foregroundStyle(DS.textTertiary)
-            }
-        }
-        if let onOpen {
-            Button(action: onOpen) { line.contentShape(Rectangle()) }
-                .buttonStyle(.plain)
-        } else {
-            line
-        }
-    }
-
-    /// One place: what it is on the left, how much on the right. `callout15`
-    /// under a 40pt figure for `line`'s old reason — a row-weight title here
-    /// would argue with the figure instead of supporting it.
-    @ViewBuilder
-    private func placeRow(_ title: String, _ value: String,
-                          onOpen: (() -> Void)? = nil) -> some View {
-        let row = HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(title)
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-            Spacer(minLength: DS.Space.s2)
-            Text(value)
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                .monospacedDigit()
-                .lineLimit(1)
-            if onOpen != nil {
-                Image(systemName: "chevron.right")
-                    .dsGlyph(9)
-                    .foregroundStyle(DS.textTertiary)
-            }
-        }
-        .padding(.vertical, 3)
-        if let onOpen {
-            Button(action: onOpen) { row.contentShape(Rectangle()) }
-                .buttonStyle(.plain)
-        } else {
-            row
-        }
-    }
 
     /// "12,977 AERO · 340 HYPE" — the locked total per UNIT. Individual locks
     /// live in the tray; here they merge, because a sum of AERO is still AERO
@@ -1550,23 +1499,12 @@ struct WalletAllocationDoor: View {
 
     var body: some View {
         if let onOpen, portfolio.tokenCount > 1 {
-            Button(action: onOpen) {
-                // No trailing `Spacer` (2026-08-22): this used to be a row of
-                // its own and now shares one with `shapeLine`, so it must HUG
-                // its content and let the caller's own spacer push it trailing.
-                // A spacer here would eat the row and shove the shape line off
-                // the leading edge.
-                HStack(spacing: 5) {
-                    Text("All \(portfolio.tokenCount)")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                    Image(systemName: "chevron.right")
-                        .dsGlyph(10)
-                        .foregroundStyle(DS.textTertiary)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+            // No trailing `Spacer` (2026-08-22): this used to be a row of its
+            // own and now shares one with `shapeLine`, so it must HUG its
+            // content and let the caller's own spacer push it trailing.
+            // `DSMoreLink` hugs by construction.
+            DSMoreLink(title: Text("All \(portfolio.tokenCount)"),
+                       tint: DS.textTertiary, action: onOpen)
         }
     }
 }
@@ -2090,9 +2028,7 @@ struct WalletWorthALookTray: View {
                     .foregroundStyle(DS.textTertiary)
             }
             .padding(.horizontal, DS.Space.s3).padding(.vertical, DS.Space.s3)
-            .background(
-                RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
-                    .fill(DS.fillFaint))
+            .dsWell(cornerRadius: DS.Radius.widget)
 
             if awareExpanded {
                 VStack(spacing: 0) {
@@ -2155,15 +2091,8 @@ struct WalletWorthALookTray: View {
                     DSHaptic.selection()
                     door.act()
                 } label: {
-                    HStack(spacing: 3) {
-                        Text(door.label)
-                        Image(systemName: door.leaves ? "arrow.up.right" : "arrow.up")
-                            .dsGlyph(9, weight: .bold)
-                    }
-                    .dsText(.subhead13).fontWeight(.semibold)
-                    .foregroundStyle(DS.tint)
-                    .padding(.horizontal, DS.Space.s3).padding(.vertical, 7)
-                    .background(Capsule().fill(DS.tint.opacity(0.16)))
+                    Chip(text: door.label, style: .tint,
+                         glyph: door.leaves ? "arrow.up.right" : "arrow.up")
                 }
                 .buttonStyle(PressSpring())
             }
@@ -2354,9 +2283,7 @@ struct WalletWorthALookTray: View {
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
                 Spacer(minLength: DS.Space.s2)
-                Image(systemName: "chevron.right")
-                    .dsGlyph(12)
-                    .foregroundStyle(DS.textTertiary)
+                DSChevron()
             }
             .frame(height: Self.rowHeight)
             .padding(.horizontal, 3)
@@ -2381,19 +2308,8 @@ struct WalletSeeAllRow: View {
         // bad") — a quiet inline door floating on the page itself, sized like
         // the section labels around it. The stream above it is the content;
         // this is just where it continues.
-        Button(action: onOpen) {
-            HStack(spacing: 5) {
-                Text("See all \(count) transactions")
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .monospacedDigit()
-                Image(systemName: "chevron.right")
-                    .dsGlyph(11)
-            }
-            .foregroundStyle(DS.tint)
+        DSMoreLink(title: Text("See all \(count) transactions"), action: onOpen)
             .frame(maxWidth: .infinity)
             .padding(.vertical, DS.Space.s1)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }

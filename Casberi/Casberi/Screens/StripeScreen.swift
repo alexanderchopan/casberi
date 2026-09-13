@@ -124,34 +124,24 @@ struct StripeScreen: View {
     /// yet shows nothing rather than a fake zero.
     @ViewBuilder private var balanceBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if let available {
-                readout(String(localized: "Available"), available)
-            }
-            if let pending {
-                readout(String(localized: "On the way"), pending)
-            }
             if available == nil && pending == nil {
                 Text("Reading your balance…")
                     .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            } else {
+                // Values are verbatim — a formatted amount, never a catalog key.
+                DSSpecTable {
+                    if let available {
+                        DSSpecRow(label: Text("Available"), value: Text(verbatim: available))
+                    }
+                    if let pending {
+                        DSSpecRow(label: Text("On the way"), value: Text(verbatim: pending))
+                    }
+                }
             }
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading Stripe…"),
                                  proof: result)
             DSSlabNote(text: "Disputes, payouts, cancellations and failed payments land on their own.", plain: true)
-        }
-    }
-
-    /// One figure and what it is. Local to this screen rather than a shared
-    /// component: it's two Texts, and the family's other setup screens have no
-    /// figure to show — a shared "readout" with one caller is a name to keep in
-    /// step for nothing.
-    private func readout(_ label: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(label)
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
-            Spacer(minLength: DS.Space.s2)
-            Text(value)
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
         }
     }
 

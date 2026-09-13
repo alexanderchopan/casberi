@@ -148,7 +148,7 @@ struct VibenetCreateSheet: View {
                                     sentence: headSentence)
                         switch phase {
                         case .checking:
-                            ProgressView().frame(maxWidth: .infinity)
+                            DSSpinner(size: .regular).frame(maxWidth: .infinity)
                         case .refused(let refusal):
                             refusedBody(refusal)
                         case .ready, .working:
@@ -334,9 +334,13 @@ struct VibenetCreateSheet: View {
                 // silence: it means this creation cannot go through at all,
                 // which is a fact worth having before the tap rather than
                 // after a Face ID.
-                fact(String(localized: "Gas"), gasSentence)
-                if isSponsored {
-                    fact(String(localized: "From you"), String(localized: "Nothing"))
+                DSSpecTable {
+                    DSSpecRow(label: Text(String(localized: "Gas")), value: Text(gasSentence),
+                              lineLimit: nil)
+                    if isSponsored {
+                        DSSpecRow(label: Text(String(localized: "From you")),
+                                  value: Text(String(localized: "Nothing")), lineLimit: nil)
+                    }
                 }
             }
 
@@ -441,19 +445,6 @@ struct VibenetCreateSheet: View {
             return String(localized: "Nobody is sponsoring \u{2014} a new account has nothing to pay with")
         case .unreadable:
             return String(localized: "Couldn't reach the sponsor to ask")
-        }
-    }
-
-    private func fact(_ key: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            Text(key)
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .frame(width: 76, alignment: .leading)
-            Text(value)
-                .dsText(.label12)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

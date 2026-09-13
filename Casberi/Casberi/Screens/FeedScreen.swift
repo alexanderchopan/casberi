@@ -4508,17 +4508,8 @@ struct FeedScreen: View {
                 DSHaptic.selection()
                 if case .openURL(let url) = action.run { openExternal(url) }
             } label: {
-                HStack(spacing: DS.Space.s1) {
-                    Image(systemName: "plus").dsGlyph(13)
-                        .accessibilityHidden(true)
-                    Text(LocalizedStringKey(action.label))
-                        .dsText(.subhead13).fontWeight(.medium)
-                }
-                .foregroundStyle(DS.tint)
-                .padding(.horizontal, DS.Space.s3)
-                .frame(minHeight: 30)
-                .background(DS.surfaceSheet, in: Capsule(style: .continuous))
-                .contentShape(Capsule())
+                Chip(text: String(localized: String.LocalizationValue(action.label)),
+                     style: .tint, glyph: "plus")
             }
             .buttonStyle(PressSpring())
             Spacer(minLength: 0)
@@ -8329,9 +8320,7 @@ struct FeedScreen: View {
                             .foregroundStyle(DS.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        Image(systemName: "chevron.right")
-                            .dsText(.label11)
-                            .foregroundStyle(DS.textTertiary)
+                        DSChevron()
                     }
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.vertical, DS.Space.s2)
@@ -11620,12 +11609,7 @@ struct FeedScreen: View {
                     filter.tag = "All"
                 }
             } label: {
-                Text("Show everything")
-                    .dsText(.label12)
-                    .foregroundStyle(DS.tint)
-                    .padding(.horizontal, DS.Space.s4)
-                    .frame(minHeight: 32)
-                    .background(DS.tintDim, in: Capsule(style: .continuous))
+                Chip(text: String(localized: "Show everything"), style: .tint)
             }
             .buttonStyle(PressSpring())
             tryItChip
@@ -11675,25 +11659,14 @@ struct FeedScreen: View {
         }
     }
 
-    /// One chip anatomy for every try-it — the vitalik.eth capsule's exact
-    /// styling, reused instead of re-spelled per source.
+    /// One chip anatomy for every try-it — the tint `Chip`, reused instead of
+    /// re-spelled per source.
     private func tryItButton(label: String, action: @escaping () async -> Void) -> some View {
         Button {
             DSHaptic.tap()
             Task { await action() }
         } label: {
-            HStack(spacing: DS.Space.s1) {
-                Image(systemName: "sparkles")
-                    .accessibilityHidden(true)
-                    .dsGlyph(12)
-                Text(label)
-                    .dsText(.subhead13).fontWeight(.medium)
-            }
-            .foregroundStyle(DS.tint)
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s2)
-            .background(DS.tint.opacity(0.12), in: Capsule(style: .continuous))
-            .contentShape(Capsule(style: .continuous))
+            Chip(text: label, style: .tint, glyph: "sparkles")
         }
         .buttonStyle(PressSpring())
         .padding(.top, DS.Space.s2)

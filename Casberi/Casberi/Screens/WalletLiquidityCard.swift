@@ -157,26 +157,18 @@ struct WalletLiquidityCard: View {
     @ViewBuilder
     private func outcomePill(_ position: UniswapLiquidity.Position) -> some View {
         if position.inRange, let fees = position.uncollectedFeeUSD, fees > 0.01 {
-            pill(String(localized: "Earning +\(WalletValue.money(fees))"), tone: DS.confirm)
+            DSStamp(word: String(localized: "Earning +\(WalletValue.money(fees))"), weight: .good)
         } else if position.inRange {
-            pill(String(localized: "In range"), tone: DS.textSecondary)
+            DSStamp(word: String(localized: "In range"), weight: .quiet)
         } else if let days = UniswapLiquidity.daysOutOfRange(
                     address: position.address, network: position.network,
                     version: position.version, tokenId: position.tokenId) {
-            pill(String(localized: "Idle \(days)d"), tone: DS.attention)
+            // Out of range earns nothing until somebody rebalances — waiting
+            // on YOU, which is `urgent`'s meaning rather than `waiting`'s.
+            DSStamp(word: String(localized: "Idle \(days)d"), weight: .urgent)
         } else {
-            pill(String(localized: "Idle"), tone: DS.attention)
+            DSStamp(word: String(localized: "Idle"), weight: .urgent)
         }
-    }
-
-    private func pill(_ text: String, tone: Color) -> some View {
-        Text(text)
-            .dsText(.label12).fontWeight(.bold)
-            .foregroundStyle(tone)
-            .lineLimit(1)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(tone.opacity(0.16), in: Capsule())
     }
 
     /// "In range · 0.30% · Base · v4" — status, the fee tier it earns at,

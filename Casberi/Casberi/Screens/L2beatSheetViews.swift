@@ -92,38 +92,27 @@ struct L2beatMilestoneHead: View {
 	@ViewBuilder
 	private func factCard(_ facts: L2beatMilestoneFacts) -> some View {
 		let project = L2beatState.best(facts.projectID)
-		VStack(alignment: .leading, spacing: DS.Space.s2) {
-			factRow(String(localized: "Chain"), facts.projectName ?? facts.projectID)
+		DSSpecTable {
+			DSSpecRow(label: Text(String(localized: "Chain")),
+					  value: Text(facts.projectName ?? facts.projectID),
+					  weight: .semibold, lineLimit: nil)
 			if let stage = project?.stage {
 				// L2BEAT's stage AS IT STANDS NOW, and the label says so: this is a record of
 				// something that happened, sometimes years ago, and the ladder has moved
 				// since. Printing today's rung beside a 2022 event without that word would
 				// read as the rung it had then.
-				factRow(String(localized: "L2BEAT stage today"), stage.label)
+				DSSpecRow(label: Text(String(localized: "L2BEAT stage today")),
+						  value: Text(stage.label),
+						  weight: .semibold, lineLimit: nil)
 			}
 			if let project, project.underReview {
-				factRow(String(localized: "Assessment"),
-						String(localized: "Under review"), tinted: true)
+				DSSpecRow(label: Text(String(localized: "Assessment")),
+						  value: Text(String(localized: "Under review")),
+						  tint: DS.attention, weight: .semibold, lineLimit: nil)
 			}
 		}
 		.padding(DS.Space.s4)
-		.frame(maxWidth: .infinity, alignment: .leading)
 		.dsWidgetSurface()
-	}
-
-	@ViewBuilder
-	private func factRow(_ key: String, _ value: String, tinted: Bool = false) -> some View {
-		HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-			Text(key)
-				.dsText(.subhead13)
-				.foregroundStyle(DS.textTertiary)
-			Spacer(minLength: DS.Space.s2)
-			Text(value)
-				.dsText(.subhead13).fontWeight(.semibold)
-				.foregroundStyle(tinted ? DS.attention : DS.textPrimary)
-				.multilineTextAlignment(.trailing)
-				.fixedSize(horizontal: false, vertical: true)
-		}
 	}
 
 	/// L2BEAT's own citation, a door to the original announcement. One, not a list — their

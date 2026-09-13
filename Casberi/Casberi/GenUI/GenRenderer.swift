@@ -1092,7 +1092,7 @@ private struct SoloTokenTile: View {
                     }
                 }
         } else {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
+            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
                 .fill(DS.surfaceWell).frame(height: 40)
         }
     }
@@ -1513,10 +1513,7 @@ struct CalendarHeatmapHero: View {
                             .dsText(.subhead13).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
-                        Image(systemName: "chevron.right")
-                            .accessibilityHidden(true)
-                            .dsGlyph(11)
-                            .foregroundStyle(DS.textTertiary)
+                        DSChevron()
                     }
                     .padding(.top, DS.Space.s1)
                     .contentShape(Rectangle())
@@ -2987,7 +2984,7 @@ private struct GenTokenChip: View {
                     }
                 }
         } else {
-            RoundedRectangle(cornerRadius: 6, style: .continuous).fill(DS.surfaceWell)
+            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous).fill(DS.surfaceWell)
         }
     }
 }
@@ -3608,26 +3605,15 @@ private struct GenAppsInvite: View {
             DSHaptic.selection()
             projectTap?("@apps")
         } label: {
-            HStack(spacing: DS.Space.s3) {
+            DSPushRowLabel(title: Text(el.str(0)),
+                           subtitle: el.str(1).isEmpty ? nil : Text(el.str(1)),
+                           subtitleTone: DS.textSecondary) {
                 HStack(spacing: -6) {
                     ForEach(Self.sampleApps, id: \.self) { name in
                         BridgeIcon(name: name, size: DS.Face.row, circular: true)
                             .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 1.5))
                     }
                 }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(el.str(0))
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    if !el.str(1).isEmpty {
-                        Text(el.str(1))
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    }
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .accessibilityHidden(true)
-                    .dsGlyph(14)
-                    .foregroundStyle(DS.textTertiary)
             }
             .padding(DS.Space.s4)
             .dsWidgetSurface()
@@ -4705,9 +4691,7 @@ struct GenFrontPage: View {
                         // Points RIGHT — it navigates. No chevron at all when
                         // there is nowhere to go.
                         if hasDoor {
-                            Image(systemName: "chevron.right")
-                                .dsGlyph(11)
-                                .foregroundStyle(DS.textTertiary)
+                            DSChevron()
                         }
                     }
                     if !stat.isEmpty {
@@ -5237,9 +5221,7 @@ private struct GenStatRow: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(DS.Space.s3)
-                        .background(DS.surfaceWell,
-                                    in: RoundedRectangle(cornerRadius: DS.Radius.widget,
-                                                         style: .continuous))
+                        .dsWell(cornerRadius: DS.Radius.widget, recessed: true)
                     }
                 }
                 .padding(.horizontal, DS.Space.s4)
@@ -5375,11 +5357,8 @@ private struct GenDayNoteLine: View {
             // control must look live). One that names no thing carries no
             // chevron rather than a dead one.
             if !id.isEmpty {
-                Image(systemName: "chevron.right")
-                    .dsGlyph(12)
-                    .foregroundStyle(DS.textTertiary)
+                DSChevron()
                     .padding(.top, 3)
-                    .accessibilityHidden(true)
             }
         }
         if id.isEmpty {
@@ -5744,27 +5723,10 @@ private struct GenMoneyHero: View {
             // transaction cases fall back to the plain subline.
             if !el.str(6).isEmpty {
                 Button { thingOpen?(el.str(8)) } label: {
-                    HStack(spacing: DS.Space.s3) {
+                    DSPushRowLabel(title: Text(el.str(6)),
+                                   subtitle: el.str(7).isEmpty ? nil : Text(el.str(7))) {
                         KindGlyph(kind: .transaction, size: 28)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(el.str(6))
-                                .dsText(.callout15)
-                                .foregroundStyle(DS.textPrimary)
-                                .lineLimit(1)
-                            if !el.str(7).isEmpty {
-                                Text(el.str(7))
-                                    .dsText(.subhead13)
-                                    .foregroundStyle(DS.textTertiary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        Spacer(minLength: DS.Space.s2)
-                        Image(systemName: "chevron.right")
-                            .dsGlyph(12)
-                            .foregroundStyle(DS.textTertiary)
-                            .accessibilityHidden(true)
                     }
-                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .disabled(el.str(8).isEmpty)

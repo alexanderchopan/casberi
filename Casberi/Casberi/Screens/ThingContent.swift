@@ -1513,10 +1513,7 @@ private struct FileChip: View {
                     }
                 }
                 if let ext {
-                    Text(ext)
-                        .dsText(.label12).foregroundStyle(DS.textSecondary)
-                        .padding(.horizontal, DS.Space.s2).frame(minHeight: 22)
-                        .background(DS.gray100, in: Capsule(style: .continuous))
+                    DSStamp(word: ext, weight: .quiet)
                 }
                 Spacer()
             }

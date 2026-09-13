@@ -207,18 +207,9 @@ struct PrivacyPoolsRoomCard: View {
     /// Two tiers and no more: the short state and one paragraph, in the
     /// card's own type. No door (prd §611).
     @ViewBuilder private func emptyBody(_ scope: PrivacyPoolsSection) -> some View {
-        if let headline = scope.emptyHeadline {
-            Text(headline)
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
         if let words = scope.emptyBody {
-            Text(words)
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s2)
+            DSEmptyState(headline: scope.emptyHeadline.map { Text($0) },
+                         words: Text(words))
         }
     }
 

@@ -118,22 +118,10 @@ struct PriceObjectCard<Evidence: View>: View {
     @ViewBuilder private var freshnessStamp: some View {
         switch object.freshness {
         case .live:
-            stamp(String(localized: "Live"), ink: DS.confirm,
-                  wash: DS.confirm.opacity(0.16))
+            DSStamp(word: String(localized: "Live"), weight: .good)
         case .aged(let when):
-            stamp(when.formatted(.relative(presentation: .named)),
-                  ink: DS.textTertiary, wash: DS.fillFaint)
+            DSStamp(word: when.formatted(.relative(presentation: .named)), weight: .quiet)
         }
-    }
-
-    private func stamp(_ word: String, ink: Color, wash: Color) -> some View {
-        Text(verbatim: word)
-            .dsText(.label12)
-            .foregroundStyle(ink)
-            .lineLimit(1)
-            .padding(.horizontal, DS.Space.s2)
-            .frame(minHeight: 24)
-            .background(wash, in: Capsule(style: .continuous))
     }
 
     /// The move, always naming its window. A percentage with no window is a

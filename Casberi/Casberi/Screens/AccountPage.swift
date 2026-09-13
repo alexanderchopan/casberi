@@ -688,24 +688,11 @@ struct AccountFactRow: View {
     }
 
     private var line: some View {
-        HStack(spacing: DS.Space.s3) {
+        DSPushRowLabel(title: Text(title), fact: Text(fact),
+                       prominent: true, opens: opens) {
             Self.disc(glyph)
-            Text(title)
-                .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-            Spacer(minLength: DS.Space.s2)
-            Text(fact)
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-            if opens {
-                Image(systemName: "chevron.right")
-                    .dsGlyph(12)
-                    .foregroundStyle(DS.textTertiary)
-            }
         }
         .frame(minHeight: Self.height)
-        .contentShape(Rectangle())
     }
 
     /// The leading disc — `DSActRow`'s, so a fact row and an act row cannot

@@ -32,7 +32,7 @@ surface and says what the surface is for. So the rule reads the width, which is
 the one property that separates them without needing to know what a screen
 means.
 
-FOUR DELIBERATE EXEMPTIONS, each a real boundary rather than a snooze:
+THREE DELIBERATE EXEMPTIONS, each a real boundary rather than a snooze:
 
   · `GenUI/` — model-authored documents. `GenRenderer` composes what the model
     asked for and its controls are the document's, not a screen's; the ramp
@@ -41,7 +41,6 @@ FOUR DELIBERATE EXEMPTIONS, each a real boundary rather than a snooze:
   · `CasberiWidgets/` — a different TARGET. `Design/` is app-only, so a widget
     physically cannot call these components; a finding there would be a demand
     nobody can satisfy.
-  · `SummonPrototype.swift` — a prototype, not a shipped surface.
   · A button inside a `safeAreaInset` — FLOATING CHROME, where §8 puts glass and
     the slab law does not reach. This is what keeps the onboarding greeting's
     "Try a demo" (a pinned bottom CTA in glass, deliberate) from being reported
@@ -78,8 +77,6 @@ SOURCES = [
 COMPONENTS = ("DSSlabButton", "DSActVerb", "DevnetSendPanel", "DevnetCreatePanel")
 
 EXEMPT_FILES = {
-    # A prototype surface, not a shipped screen.
-    "SummonPrototype.swift",
     # The components themselves: they ARE the hand-rolled fill, once, on
     # purpose. Excluding them by name rather than by a "does it define the
     # component" heuristic, which would also excuse any file that merely
@@ -349,8 +346,9 @@ def self_test():
         if got != want:
             ok = False
         print(f"  {mark} {name} (expected {want}, got {got})")
-    # The exemption must actually exempt, and only by NAME.
-    if findings_in(DIRTY_CAPSULE, "SummonPrototype.swift"):
+    # The exemption must actually exempt, and only by NAME. A component's own
+    # file is the live exemption (it IS the hand-rolled fill, once, on purpose).
+    if findings_in(DIRTY_CAPSULE, "DSSlab.swift"):
         print("  ✗ file exemption does not exempt")
         ok = False
     else:

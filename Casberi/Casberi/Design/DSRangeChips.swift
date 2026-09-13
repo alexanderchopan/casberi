@@ -12,10 +12,21 @@ import SwiftUI
 /// It draws NOTHING under two ranges, and that is the rule rather than the
 /// caller's manners: a lone chip is a control with no alternative, which §83
 /// calls a dead control.
-struct DSRangeChips: View {
-    let ranges: [WalletRange]
-    let range: WalletRange
-    let onPick: (WalletRange) -> Void
+struct DSRangeChips<Option: Hashable>: View {
+    let ranges: [Option]
+    let range: Option
+    /// The chip's word. Generic since §715: the vibenet account's window
+    /// strip was the last hand-drawn copy, and it picks a different type.
+    let label: (Option) -> String
+    let onPick: (Option) -> Void
+
+    init(ranges: [Option], range: Option, label: @escaping (Option) -> String,
+         onPick: @escaping (Option) -> Void) {
+        self.ranges = ranges
+        self.range = range
+        self.label = label
+        self.onPick = onPick
+    }
 
     var body: some View {
         if ranges.count > 1 {
@@ -30,7 +41,7 @@ struct DSRangeChips: View {
                         // the chips share one recessed track and the selected one
                         // is a raised tile inside it, rather than a lone capsule
                         // floating in space.
-                        Text(r.chipLabel)
+                        Text(label(r))
                             .dsText(.label12)
                             .fontWeight(r == range ? .semibold : .regular)
                             .lineLimit(1)
@@ -49,10 +60,17 @@ struct DSRangeChips: View {
                                             style: .continuous))
                     }
                     .buttonStyle(PressSpring())
+                    .accessibilityAddTraits(r == range ? .isSelected : [])
                 }
             }
             .padding(3)
             .dsWell()
         }
+    }
+}
+
+extension DSRangeChips where Option == WalletRange {
+    init(ranges: [WalletRange], range: WalletRange, onPick: @escaping (WalletRange) -> Void) {
+        self.init(ranges: ranges, range: range, label: { $0.chipLabel }, onPick: onPick)
     }
 }

@@ -1849,9 +1849,7 @@ struct MainSurface: View {
                 brief.detailText(scheme: .dark)
                     .dsText(.subhead13)
                 Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .dsGlyph(11)
-                    .foregroundStyle(DS.textTertiary)
+                DSChevron()
             }
             .lineLimit(1)
             .contentShape(Rectangle())

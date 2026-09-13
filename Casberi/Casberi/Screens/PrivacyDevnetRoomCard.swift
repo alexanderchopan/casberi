@@ -381,11 +381,7 @@ extension PrivacyDevnetRoomCard {
     /// 258pt box is the dead-air shape §602 and §596 each fixed once already.
     @ViewBuilder var emptyState: some View {
         if let words = section.emptyBody {
-            Text(words)
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            DSEmptyState(words: Text(words), scale: .room)
         }
     }
 
@@ -959,7 +955,7 @@ extension PrivacyDevnetRoomCard {
                                       subtitleText: Self.standingMeta(group.newest,
                                                                       headSlot: headSlot,
                                                                       count: group.count)) {
-                                WalletRowChevron()
+                                DSChevron()
                             }
                             .contentShape(Rectangle())
                         }

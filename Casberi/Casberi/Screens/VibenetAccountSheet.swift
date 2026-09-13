@@ -248,8 +248,7 @@ struct VibenetAccountSheet: View {
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(3...8)
                     .padding(DS.Space.s3)
-                    .background(DS.surfaceWell,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+                    .dsWell(cornerRadius: DS.Radius.control, recessed: true)
                 // The component, not `.borderedProminent` (prd §613). This was
                 // the last full-width centered fill in the app, and it wore
                 // SwiftUI's own prominent style rather than a hand-rolled one

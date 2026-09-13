@@ -346,7 +346,7 @@ struct BridgeSyncStatusRows: View {
     var body: some View {
         if syncing {
             HStack(spacing: DS.Space.s2) {
-                ProgressView().controlSize(.small)
+                DSSpinner()
                 Text(syncingLine)
                     .dsText(accountAct ? .subhead13 : .callout15)
                     .foregroundStyle(DS.textTertiary)

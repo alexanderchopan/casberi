@@ -111,16 +111,9 @@ struct DiagnosticsScreen: View {
             // first read, hence "next launch" — said on the control, not in
             // fine print elsewhere (the AgentKeyDetail rule).
             Section {
-                Toggle(isOn: $measuring) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Measure stalls")
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        Text("Times the next launch and counts main-thread stalls during each foreground sweep. Costs a 16ms heartbeat while a sweep runs. Takes effect on the next launch.")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .tint(DS.tint)
+                DSToggleRow(title: Text("Measure stalls"),
+                            detail: Text("Times the next launch and counts main-thread stalls during each foreground sweep. Costs a 16ms heartbeat while a sweep runs. Takes effect on the next launch."),
+                            isOn: $measuring)
                 .dsListCardRow()
                 .onChange(of: measuring) { _, on in PerfReadings.measuring = on }
             }

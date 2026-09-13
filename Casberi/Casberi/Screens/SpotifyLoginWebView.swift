@@ -77,19 +77,14 @@ struct SpotifyLoginWebView: View {
                     }
                 } else if loading {
                     stateBlock {
-                        ProgressView()
+                        DSSpinner(size: .regular)
                         Text("Opening Spotify's sign-in…")
                             .dsText(.callout15).foregroundStyle(DS.textTertiary)
                     }
                 }
             }
-            .navigationTitle("Log in to Spotify")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
+            .dsScreenTitle("Log in to Spotify")
+            .dsSheetDismiss { dismiss() }
         }
     }
 

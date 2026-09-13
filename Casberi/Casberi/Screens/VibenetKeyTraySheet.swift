@@ -147,7 +147,7 @@ struct VibenetKeyTraySheet: View {
                             .foregroundStyle(DS.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    if !census.isEmpty { filterStrip }
+                    if !census.isEmpty { VibenetKeyFilterStrip(census: census, filter: $filter) }
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(drawn.enumerated()), id: \.element.id) { index, key in
                             row(key)
@@ -202,57 +202,6 @@ struct VibenetKeyTraySheet: View {
     /// codebase's own ledger was before it happened.
     private func item(for address: String) -> VibenetAccountItem? {
         items.first { $0.address.caseInsensitiveCompare(address) == .orderedSame }
-    }
-
-    /// THE CENSUS, AS CONTROLS. The same counts the card states, in the same
-    /// order (`VibenetPolicyAggregation.compose`, forwarded — never a second
-    /// derivation, or a card would say 4 and the list it opens show 3).
-    ///
-    /// A capsule strip rather than headings, because a heading you scroll past
-    /// costs a screenful and a chip you tap costs nothing when you don't. "All"
-    /// leads and is the rest state, so the tray always opens showing every key
-    /// the card counted.
-    private var filterStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DS.Space.s2) {
-                filterChip(label: String(localized: "All"), count: nil, value: nil)
-                ForEach(Array(census.enumerated()), id: \.offset) { _, entry in
-                    filterChip(label: entry.label, count: entry.count, value: entry.label)
-                }
-            }
-        }
-        .scrollIndicators(.hidden)
-    }
-
-    private func filterChip(label: String, count: Int?, value: String?) -> some View {
-        let on = filter == value
-        return Button {
-            DSHaptic.selection()
-            withAnimation(reduceMotion ? nil : DS.Motion.standard) { filter = value }
-        } label: {
-            HStack(spacing: 5) {
-                Text(label)
-                    .dsText(.label12).fontWeight(.semibold)
-                if let count {
-                    Text("\(count)")
-                        .dsText(.label12)
-                        .monospacedDigit()
-                        .opacity(0.7)
-                }
-            }
-            // The SELECTED chip is a neutral fill, never the room's mark:
-            // blue in this room means urgency (a key about to lapse) and a
-            // filter is not urgent. `fillStrong`/`fillFaint` is the source
-            // strip's own selected grammar.
-            .foregroundStyle(on ? DS.textPrimary : DS.textSecondary)
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, 6)
-            .background(Capsule(style: .continuous).fill(on ? DS.fillStrong : DS.fillFaint))
-            .contentShape(Capsule())
-        }
-        .buttonStyle(PressSpring())
-        .dsHover()
-        .accessibilityAddTraits(on ? [.isSelected] : [])
     }
 
     /// One key. The ACCOUNT leads with its face because this list is
@@ -381,10 +330,7 @@ struct VibenetKeyTraySheet: View {
                 .multilineTextAlignment(.trailing)
                 .fixedSize(horizontal: false, vertical: true)
             if door {
-                Image(systemName: "chevron.right")
-                    .accessibilityHidden(true)
-                    .dsGlyph(11, weight: .semibold)
-                    .foregroundStyle(DS.textTertiary)
+                DSChevron()
                 // No top nudge: the row centres its columns now that it is two
                 // lines of a known height rather than a wrapping chip strip, so
                 // a 2pt correction for a `.top` alignment would push the

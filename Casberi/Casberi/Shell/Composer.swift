@@ -2464,9 +2464,7 @@ struct Composer: View {
                 .padding(.horizontal, DS.Space.s3)
                 .padding(.vertical, DS.Space.s3)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(DS.fillFaint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.sheet,
-                                                 style: .continuous))
+                .dsWell(cornerRadius: DS.Radius.sheet)
             // WHO ANSWERS, IN WORDS (2026-09-03, reported: "you can't tell
             // when you selected which agent"). A brand mark is opaque and
             // full-bleed, so a lit key's fill survives only as a ring around
@@ -3490,30 +3488,16 @@ struct Composer: View {
     /// This runs nothing and fetches nothing; it opens a catalog.
     @ViewBuilder private var agentsLink: some View {
         if let onOpenAgents, restChrome(keepBrief: false), configuredAgents.isEmpty {
-            Button {
-                DSHaptic.tap()
-                onOpenAgents()
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Text("Set up an agent")
-                        .dsText(.subhead13).fontWeight(.semibold)
-                        .foregroundStyle(DS.tint)
-                    Image(systemName: "chevron.right")
-                        .dsGlyph(11)
-                        .foregroundStyle(DS.tint)
-                        .accessibilityHidden(true)
-                    Spacer(minLength: 0)
-                }
-                .contentShape(Rectangle())
-                .dsHover()
+            HStack(spacing: 0) {
+                DSMoreLink(title: Text("Set up an agent"), action: onOpenAgents)
+                    .accessibilityLabel("Set up an agent")
+                    .accessibilityHint("Opens the agents in the app catalog")
+                Spacer(minLength: 0)
             }
-            .buttonStyle(.plain)
             // The two band paddings are GONE with the band (prd §575): this
             // is drawn inside the ask panel's head row now, beside the device
             // disc, so the panel's own insets place it and a second set here
             // pushed it off the row's trailing edge.
-            .accessibilityLabel("Set up an agent")
-            .accessibilityHint("Opens the agents in the app catalog")
         }
     }
 
@@ -4200,66 +4184,6 @@ struct Composer: View {
 /// the word "Ask", and a tooltip repeating a word that's on screen is noise.
 /// A modifier rather than a ternary because `dsTooltip` takes a String: the
 /// alternative is naming an empty one, which on Mac is a blank tooltip.
-
-/// A pill chip — the composer's and shell's smallest interactive unit.
-struct Chip: View {
-    /// `neutral` is a word you can tap, `tint` is one the app is nudging you
-    /// toward, and `primary` is THE verb of the block it sits in — filled,
-    /// white on tint (2026-08-28).
-    ///
-    /// The third rung exists because there was no small primary in the system
-    /// and `NameAddressPrompt` had hand-rolled one: `Text` in a
-    /// `Capsule().fill(DS.tint)` with its own padding, which is the shape this
-    /// type is. `VerbCapsule` was not it — that is the store's closed verb set
-    /// (Connect / Pair / Fix / Open / Soon) and takes a `CapsuleVerb`, not a
-    /// sentence. Deliberately still the chip's own size: a primary chip is a
-    /// chip, and the moment it grows its own metrics it is a button wearing a
-    /// chip's name.
-    enum Style { case tint, neutral, primary }
-    let text: String
-    var style: Style = .neutral
-    var glyph: String? = nil
-
-    var body: some View {
-        HStack(spacing: DS.Space.s1) {
-            if let glyph {
-                Image(systemName: glyph).dsGlyph(12, weight: .regular)
-                    .accessibilityHidden(true)
-            }
-            // A chip is a capsule — its label never breaks across lines
-            // (2026-07-21: a squeezed row wrapped "Try with your key" into
-            // "Try with / your key" inside a 28pt capsule).
-            Text(text).dsText(.label12).lineLimit(1)
-        }
-        .foregroundStyle(ink)
-        .padding(.horizontal, DS.Space.s3)
-        .frame(minHeight: 28)
-        .fixedSize(horizontal: true, vertical: false)
-        .background(wash, in: Capsule(style: .continuous))
-        // Folded in HERE rather than at each call site, the same reasoning
-        // `dsListCardRow` states: every Chip is the label of a Button, so a
-        // screen that reaches for one gets Mac hover with no separate
-        // decision. No tooltip — a chip is a word.
-        .dsHover()
-    }
-
-    private var ink: Color {
-        switch style {
-        case .tint:    return DS.tint
-        case .neutral: return DS.textPrimary
-        case .primary: return .white
-        }
-    }
-
-    private var wash: Color {
-        switch style {
-        case .tint:    return DS.tintDim
-        case .neutral: return DS.gray100
-        case .primary: return DS.tint
-        }
-    }
-}
-
 
 // MARK: - Placeholder helper
 

@@ -423,7 +423,7 @@ GRANTS="Casberi/Casberi/Screens/WalletApprovalExposureCard.swift"
 # the chevron explains the rule by naming the component, so a raw grep
 # scored the prose as the code and deleting the row's chevron ran green
 # (the Obsidian/Cursor lesson, caught by mutation on this guard's first run).
-strip "$GRANTS" | grep -q 'WalletRowChevron()' || fail "the approvals rows lost their chevron — they look exactly like the inert list above them"
+strip "$GRANTS" | grep -q 'DSChevron()' || fail "the approvals rows lost their chevron — they look exactly like the inert list above them"
 # ...and it must be the room's shared glyph, not a second grammar for the same
 # promise (`WalletRowChevron`'s own header: six spellings once, two survive).
 strip "$GRANTS" | grep -q 'Image(systemName: "chevron'   && fail "the approvals rows draw their own chevron instead of the room's one glyph"

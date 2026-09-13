@@ -41,8 +41,7 @@ struct ENSRenewCard: View {
 
             termPicker
 
-            priceRow
-            if let fee = quote.feeLine { feeRow(fee) }
+            priceTable
 
             // THE ONE SENTENCE THIS CARD OWES THAT NO OTHER PREPARE SURFACE
             // DOES. Renewing is permissionless — measured, the controller has
@@ -119,25 +118,20 @@ struct ENSRenewCard: View {
     /// between now and the signature — which is why `value` carries a buffer,
     /// and why the line says "about" rather than stating a figure as fixed
     /// (§83, on a screen where somebody is deciding to spend).
-    private var priceRow: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text("Renewal").dsText(.callout15).foregroundStyle(DS.textSecondary)
-                Spacer()
-                Text(verbatim: "~" + ENSRenew.ethLine(quote.price.base))
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+    ///
+    /// The explanation sits under BOTH rows: the fee is a live read too.
+    private var priceTable: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSpecTable {
+                DSSpecRow(label: Text("Renewal"),
+                          value: Text(verbatim: "~" + ENSRenew.ethLine(quote.price.base)))
+                if let fee = quote.feeLine {
+                    DSSpecRow(label: Text("Network fee"), value: Text(verbatim: fee))
+                }
             }
             Text("Priced in dollars and paid in ETH, so the exact amount moves. Your wallet sends a little over and ENS refunds the difference.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private func feeRow(_ fee: String) -> some View {
-        HStack {
-            Text("Network fee").dsText(.callout15).foregroundStyle(DS.textSecondary)
-            Spacer()
-            Text(verbatim: fee).dsText(.callout15).foregroundStyle(DS.textPrimary)
         }
     }
 

@@ -200,8 +200,7 @@ struct AgentPanelGrid: View {
                                alignment: .topTrailing)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(DS.surfaceWell,
-                            in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .dsWell(cornerRadius: DS.Radius.card, recessed: true)
                 // A caption under a wordless figure is its READING — what the
                 // shape means — not chrome. Only where the figure earns one
                 // (§339: the dial's busiest window); every other small tile

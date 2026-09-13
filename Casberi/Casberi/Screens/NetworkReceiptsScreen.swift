@@ -68,9 +68,7 @@ struct NetworkReceiptsScreen: View {
                 }
             } else {
                 Section {
-                    Text("Nothing yet. Every service reached shows up here.")
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    DSEmptyState(words: Text("Nothing yet. Every service reached shows up here."))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                 }
@@ -245,18 +243,12 @@ private struct ReachCard: View {
             : (reach.undeclaredHosts == 1
                ? String(localized: "1 not on the list")
                : String(localized: "\(reach.undeclaredHosts) not on the list"))
-        let tone = clean ? DS.confirm : DS.attention
-        return HStack(spacing: 4) {
-            Image(systemName: clean ? "checkmark" : "exclamationmark.triangle.fill")
-                .dsSymbolSwap(clean)
-                .dsGlyph(10, weight: .bold)
-            Text(word).dsText(.label12).fontWeight(.semibold)
-        }
-        .foregroundStyle(tone)
-        .padding(.horizontal, DS.Space.s2)
-        .padding(.vertical, 4)
-        .background(tone.opacity(0.16), in: Capsule(style: .continuous))
-        .accessibilityElement(children: .combine)
+        // A word in ink, no capsule (prd §583) — green for a clean week,
+        // attention for a finding the person should look at.
+        return DSStamp(word: word,
+                       weight: clean ? .good : .urgent,
+                       glyph: clean ? "checkmark" : "exclamationmark.triangle.fill")
+            .accessibilityElement(children: .combine)
     }
 
     /// Services is the headline unit — it's the one a person can act on. A

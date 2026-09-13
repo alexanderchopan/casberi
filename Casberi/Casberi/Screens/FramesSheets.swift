@@ -395,7 +395,7 @@ struct FramesMoveSheet: View {
                         .dsText(.label12).foregroundStyle(DS.textTertiary).monospacedDigit()
                 }
             }
-            WalletRowChevron().padding(.top, 3)
+            DSChevron().padding(.top, 3)
         }
     }
 
@@ -697,10 +697,7 @@ struct FramesFrameSheet: View {
         }
         .padding(.horizontal, DS.Space.s3)
         .padding(.vertical, DS.Space.s2)
-        .background {
-            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                .fill(DS.surfaceWell)
-        }
+        .dsWell(recessed: true)
     }
 
     // MARK: The budgets

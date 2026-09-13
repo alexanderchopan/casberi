@@ -65,30 +65,24 @@ struct PolarScreen: View {
     /// lands in the feed as a row.
     @ViewBuilder private var readingBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if let mrr {
-                readout(String(localized: "Recurring revenue"), "\(mrr)/mo")
-            }
-            if let activeSubs {
-                readout(String(localized: "Active subscribers"), "\(activeSubs)")
-            }
             if mrr == nil && activeSubs == nil {
                 Text("Reading your revenue…")
                     .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            } else {
+                // Values are verbatim — a formatted figure, never a catalog key.
+                DSSpecTable {
+                    if let mrr {
+                        DSSpecRow(label: Text("Recurring revenue"), value: Text(verbatim: "\(mrr)/mo"))
+                    }
+                    if let activeSubs {
+                        DSSpecRow(label: Text("Active subscribers"), value: Text(verbatim: "\(activeSubs)"))
+                    }
+                }
             }
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading Polar…"),
                                  proof: result)
             DSSlabNote(text: "Sales, refunds, disputes and subscriptions leaving a healthy state land on their own. Renewals stay out.", plain: true)
-        }
-    }
-
-    private func readout(_ label: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(label)
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
-            Spacer(minLength: DS.Space.s2)
-            Text(value)
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
         }
     }
 

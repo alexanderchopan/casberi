@@ -2271,11 +2271,7 @@ struct VibenetRoomCard: View {
     private func scopeEmptyFigure(_ section: VibenetSection) -> some View {
         scopeFigure(headline: section.emptyHeadline) {
             if let words = section.emptyBody {
-                Text(words)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                DSEmptyState(words: Text(words), scale: .room)
             }
         }
     }
@@ -2684,7 +2680,13 @@ struct VibenetRoomCard: View {
             DSHaptic.selection()
             onRequestWatch()
         } label: {
-            HStack(spacing: DS.Space.s3) {
+            // The subtitle says what the tap ASKS FOR, `createAccountRow`'s
+            // rule: one of these two rows wants an address you already have
+            // and the other does not, and that is the whole of how somebody
+            // picks between them.
+            DSPushRowLabel(title: Text(String(localized: "Watch an account")),
+                           subtitle: Text(String(localized: "Paste an address, or pick a new one")),
+                           prominent: true, tint: Self.mark) {
                 ZStack {
                     Circle().fill(Self.mark.opacity(0.18))
                         .frame(width: DS.Face.rowCircle, height: DS.Face.rowCircle)
@@ -2692,25 +2694,6 @@ struct VibenetRoomCard: View {
                         .dsGlyph(12, weight: .semibold)
                         .foregroundStyle(Self.mark)
                 }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(String(localized: "Watch an account"))
-                        .dsText(.heading17)
-                        .foregroundStyle(Self.mark)
-                        .lineLimit(1)
-                    // Says what the tap ASKS FOR, `createAccountRow`'s rule:
-                    // one of these two rows wants an address you already have
-                    // and the other does not, and that is the whole of how
-                    // somebody picks between them.
-                    Text(String(localized: "Paste an address, or pick a new one"))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: DS.Space.s2)
-                Image(systemName: "chevron.right")
-                    .accessibilityHidden(true)
-                    .dsGlyph(11, weight: .semibold)
-                    .foregroundStyle(Self.mark.opacity(0.6))
             }
             .padding(.vertical, DS.Space.s3)
             .padding(.horizontal, DSRoomChassis.contentInset)
@@ -2757,10 +2740,7 @@ struct VibenetRoomCard: View {
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: DS.Space.s2)
-                    Image(systemName: "chevron.right")
-                        .accessibilityHidden(true)
-                        .dsGlyph(11, weight: .semibold)
-                        .foregroundStyle(DS.textTertiary)
+                    DSChevron()
                         .rotationEffect(.degrees(linksOpen ? 90 : 0))
                 }
                 .padding(.vertical, DS.Space.s2)
@@ -2891,10 +2871,7 @@ struct VibenetRoomCard: View {
                 }
                 Spacer(minLength: DS.Space.s2)
                 if door {
-                    Image(systemName: "chevron.right")
-                        .accessibilityHidden(true)
-                        .dsGlyph(11, weight: .semibold)
-                        .foregroundStyle(DS.textTertiary)
+                    DSChevron()
                 }
             }
             // WHAT AN UNDEPLOYED ACCOUNT HAS TO SAY, and the one thing it can
@@ -3100,10 +3077,7 @@ struct VibenetRoomCard: View {
                         .dsText(.heading17)
                         .foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Image(systemName: "chevron.right")
-                        .accessibilityHidden(true)
-                        .dsGlyph(12, weight: .semibold)
-                        .foregroundStyle(DS.textTertiary)
+                    DSChevron()
                 }
                 .contentShape(Rectangle())
             }
@@ -3416,8 +3390,7 @@ struct VibenetRoomCard: View {
                         // R2.2: a key's own clock outranks the plain key
                         // count on the row that's about to be affected
                         // by it. The room's one color carries urgency
-                        // here (never bold-white-on-blue — that grammar
-                        // stays the lock pill's alone).
+                        // here (a stamp word stays the lock's alone).
                         Text(urgent)
                             .dsText(.label12).fontWeight(.semibold)
                             .foregroundStyle(Self.mark)
@@ -3431,19 +3404,14 @@ struct VibenetRoomCard: View {
                 }
                 Spacer(minLength: DS.Space.s2)
                 HStack(spacing: DS.Space.s2) {
-                    // The pill states the ALARM; the chevron states
-                    // there's more to see.
+                    // The stamp states the ALARM; the chevron states
+                    // there's more to see. `VibenetAccountSheet`'s own head
+                    // stamp: locked waits on YOU, unlocking on the chain.
                     if item.alarmed {
-                        Text(item.hasInitiatedUnlock ? String(localized: "Unlocking") : String(localized: "Locked"))
-                            .dsText(.label11).fontWeight(.bold)
-                            .foregroundStyle(Color.fixed("#ffffff"))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Self.mark, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+                        DSStamp(word: item.hasInitiatedUnlock ? String(localized: "Unlocking") : String(localized: "Locked"),
+                                weight: item.hasInitiatedUnlock ? .waiting : .urgent)
                     }
-                    Image(systemName: "chevron.right")
-                        .dsGlyph(12)
-                        .foregroundStyle(DS.textTertiary)
+                    DSChevron()
                 }
             }
             .contentShape(Rectangle())

@@ -61,17 +61,11 @@ struct TokenQuickSheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: DS.Space.s2) {
-                    BridgeIcon(name: "Tokens", size: DS.Face.badge, circular: true)
-                    Text("Token · held in a watched wallet")
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.top, DS.Space.s6)
-                Text(headerTitle)
-                    .dsText(.heading34).foregroundStyle(DS.textPrimary)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s3)
+                DSSheetHead(disc: {
+                    BridgeIcon(name: "Tokens", size: DS.Face.shelf, circular: true)
+                },
+                            lead: String(localized: "Token · held in a watched wallet"),
+                            title: headerTitle)
                 TokenChartView(chain: route.chain, address: route.address) {
                     // No pool anywhere (dead/illiquid) — say so; the door out
                     // is the explorer link, honestly labeled.
@@ -90,8 +84,8 @@ struct TokenQuickSheet: View {
                         }
                     }
                 }
+                // No top padding: the head block's own bottom inset is the gap.
                 .padding(.horizontal, DS.Space.s4)
-                .padding(.top, DS.Space.s3)
                 heldInSection
                 watchRow
                     .padding(.top, DS.Space.s6)
@@ -111,10 +105,7 @@ struct TokenQuickSheet: View {
         // own pure-black mark applies here too, this sheet just has no
         // variable `name` to call `bridgeSetupWash(name:)` with).
         .dsInk()
-        .presentationDetents([.medium, .large])
-        .dsPageSheet()
-        .presentationDragIndicator(.visible)
-        .dsSheetCorner()
+        .dsReadSheet()
         .task {
             // The address IS the query — but the SAME address can be a
             // different token on another chain (the OP-stack WETH predeploy,

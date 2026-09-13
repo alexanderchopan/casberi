@@ -87,11 +87,7 @@ struct HegotaRoomFigure: View {
     /// and Send are Home's (§594).
     @ViewBuilder private var emptyState: some View {
         if let words = section.emptyBody {
-            Text(words)
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            DSEmptyState(words: Text(words), scale: .room)
                 .padding(.trailing, DSRoomChassis.gearColumn)
         }
     }
@@ -835,13 +831,8 @@ struct HegotaRoomFigure: View {
             // scope is unconditional in order to be able to raise, and a bare
             // triangle beside three cheerful marks is not something a person
             // reads as "we could not reach the chain for this one".
-            HStack(spacing: 4) {
-                Image(systemName: "exclamationmark.triangle").dsGlyph(10, weight: .semibold)
-                Text(String(localized: "couldn't read")).dsText(.label12)
-            }
-            .foregroundStyle(tint)
-            .padding(.horizontal, 7).padding(.vertical, 2)
-            .background(Capsule().fill(tint.opacity(0.14)))
+            DSStamp(word: String(localized: "couldn't read"), weight: .urgent,
+                    glyph: "exclamationmark.triangle")
         } else if badge.mark.counted {
             HStack(spacing: 4) {
                 Image(systemName: rosterGlyph(badge.mark)).dsGlyph(10, weight: .semibold)
@@ -1286,10 +1277,7 @@ struct HegotaRoomFigure: View {
         // A well, so three numbers in a row read as three FACTS rather than as
         // a sentence that lost its words. `surfaceWell` is the ground every
         // other slab in this app sits on; the radius is the card's.
-        .background {
-            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                .fill(DS.surfaceWell)
-        }
+        .dsWell(recessed: true)
     }
 
 
@@ -1619,10 +1607,7 @@ struct HegotaChainNotice: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DS.Space.s4)
-            .background {
-                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                    .fill(DS.surfaceWell)
-            }
+            .dsWell(recessed: true)
         }
     }
 
@@ -1812,53 +1797,34 @@ struct HegotaRoomList: View {
     var onOpenSend: () -> Void = {}
 
     @ViewBuilder private var thisPhoneRow: some View {
-        Button {
-            DSHaptic.selection()
-            onOpenKeySheet()
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                ZStack {
-                    Circle().fill(HegotaModeStyle.room.opacity(0.18))
-                        .frame(width: DS.Mark.row, height: DS.Mark.row)
-                    // `plus` while there's nothing yet — the same CREATE
-                    // semantic vibenet's own `createAccountRow` icon carries,
-                    // rather than `key.fill` implying a credential already
-                    // exists to manage.
-                    Image(systemName: HegotaKey.presence() == .present ? "key.fill" : "plus")
-                        .dsGlyph(12, weight: .semibold)
-                        .foregroundStyle(HegotaModeStyle.room)
-                }
-                VStack(alignment: .leading, spacing: 1) {
-                    // The title is a VERB while there's no account yet — the
-                    // exact wording vibenet's own `createAccountRow` uses
-                    // (user, 2026-08-29: this row needs to say "create an
-                    // account", the same way vibenet does). A noun-phrase
-                    // label ("This phone's account") over an account that
-                    // doesn't exist yet reads as a fact rather than an
-                    // invitation, and hides the one thing this row does.
-                    Text(HegotaKey.presence() == .present
-                         ? String(localized: "This phone's account")
-                         : String(localized: "Create an account"))
-                        .dsText(.heading17)
-                        .foregroundStyle(HegotaModeStyle.room)
-                        .lineLimit(1)
-                    Text(HegotaKey.presence() == .present
-                         ? String(localized: "The one account here you control")
-                         : String(localized: "This phone becomes its key"))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: DS.Space.s2)
-                Image(systemName: "chevron.right")
-                    .accessibilityHidden(true)
-                    .dsGlyph(11, weight: .semibold)
-                    .foregroundStyle(HegotaModeStyle.room.opacity(0.6))
+        let present = HegotaKey.presence() == .present
+        // The title is a VERB while there's no account yet — the exact wording
+        // vibenet's own `createAccountRow` uses (user, 2026-08-29: this row
+        // needs to say "create an account", the same way vibenet does). A
+        // noun-phrase label ("This phone's account") over an account that
+        // doesn't exist yet reads as a fact rather than an invitation, and
+        // hides the one thing this row does.
+        DSPushRow(title: Text(present
+                              ? String(localized: "This phone's account")
+                              : String(localized: "Create an account")),
+                  subtitle: Text(present
+                                 ? String(localized: "The one account here you control")
+                                 : String(localized: "This phone becomes its key")),
+                  prominent: true,
+                  tint: HegotaModeStyle.room,
+                  action: onOpenKeySheet) {
+            ZStack {
+                Circle().fill(HegotaModeStyle.room.opacity(0.18))
+                    .frame(width: DS.Mark.row, height: DS.Mark.row)
+                // `plus` while there's nothing yet — the same CREATE
+                // semantic vibenet's own `createAccountRow` icon carries,
+                // rather than `key.fill` implying a credential already
+                // exists to manage.
+                Image(systemName: present ? "key.fill" : "plus")
+                    .dsGlyph(12, weight: .semibold)
+                    .foregroundStyle(HegotaModeStyle.room)
             }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .dsHover()
     }
 
     /// The rows under the treemap: richest first, balance trailing, the same
@@ -2103,11 +2069,6 @@ struct HegotaRoomList: View {
 
     private func owner(of move: HegotaMove) -> String {
         moves.first { $0.move.id == move.id }?.owner ?? ""
-    }
-
-    @ViewBuilder private func empty(_ text: String) -> some View {
-        Text(text).dsText(.body17).foregroundStyle(DS.textSecondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -2598,10 +2559,7 @@ struct HegotaMoveSheet: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, DS.Space.s3)
                         .padding(.vertical, DS.Space.s2)
-                        .background {
-                            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                                .fill(DS.surfaceWell)
-                        }
+                        .dsWell(recessed: true)
                     }
                 }
                 // NAMED, never dropped — three cells is a width budget, and a
@@ -2686,7 +2644,7 @@ struct HegotaMoveSheet: View {
                         .dsText(.label12).foregroundStyle(DS.textTertiary).monospacedDigit()
                 }
             }
-            WalletRowChevron().padding(.top, 3)
+            DSChevron().padding(.top, 3)
         }
     }
 }
@@ -3264,10 +3222,7 @@ struct HegotaAccountSheet: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .padding(.horizontal, DS.Space.s3)
         .padding(.vertical, DS.Space.s2)
-        .background {
-            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                .fill(DS.surfaceWell)
-        }
+        .dsWell(recessed: true)
     }
 
     private var name: String {
@@ -3378,7 +3333,7 @@ struct HegotaAccountSheet: View {
                              : String(localized: "\(String(held.count)) UTXOs in the vault"))
                             .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     }
-                    WalletRowChevron()
+                    DSChevron()
                 }
                 .contentShape(Rectangle())
             }

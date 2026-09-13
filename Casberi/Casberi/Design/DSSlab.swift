@@ -236,6 +236,10 @@ struct DSSlabField: View {
     /// It also disables itself when the clipboard holds no text, so an empty
     /// clipboard shows a dimmed control rather than a verb that does nothing.
     var paste: ((String) -> Void)? = nil
+    /// `.vertical` grows the field with its text, up to `lines` (§715) — a
+    /// note or a pasted key. A secure field ignores both.
+    var axis: Axis = .horizontal
+    var lines: ClosedRange<Int> = 1...1
     let action: () -> Void
 
     /// Inside an account page's act this draws its ROW form (prd §640).
@@ -485,6 +489,9 @@ struct DSSlabField: View {
         Group {
             if secure {
                 SecureField(LocalizedStringKey(placeholder), text: $text)
+            } else if axis == .vertical {
+                TextField(LocalizedStringKey(placeholder), text: $text, axis: .vertical)
+                    .lineLimit(lines)
             } else {
                 TextField(LocalizedStringKey(placeholder), text: $text)
             }

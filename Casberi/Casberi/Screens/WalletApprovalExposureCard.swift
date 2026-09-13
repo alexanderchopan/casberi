@@ -187,7 +187,7 @@ struct WalletApprovalExposureCard: View {
                 // grammars it replaced are exactly how this drifted. The
                 // asymmetry with the list above is now the information — a
                 // chevron means there is somewhere to go.
-                WalletRowChevron()
+                DSChevron()
                     // Optically on the title line, like the mark opposite it,
                     // rather than centred on the two-line block.
                     .padding(.top, 4)

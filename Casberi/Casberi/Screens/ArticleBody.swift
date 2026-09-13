@@ -165,16 +165,9 @@ struct ArticleListenButton: View {
                 speech.speak(text, id: id)
             }
         } label: {
-            HStack(spacing: DS.Space.s1) {
-                Image(systemName: isMine ? "stop.fill" : "speaker.wave.2")
-                    .imageScale(.small)
-                Text(isMine ? "Stop" : "Listen")
-                    .dsText(.subhead13).fontWeight(.semibold)
-            }
-            .foregroundStyle(isMine ? .white : DS.textSecondary)
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, 7)
-            .background(Capsule().fill(isMine ? DS.tint : DS.fillFaint))
+            Chip(text: isMine ? String(localized: "Stop") : String(localized: "Listen"),
+                 style: isMine ? .primary : .neutral,
+                 glyph: isMine ? "stop.fill" : "speaker.wave.2")
         }
         .buttonStyle(PressSpring())
         .accessibilityLabel(isMine

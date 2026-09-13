@@ -20,7 +20,6 @@ struct CardPointersScreen: View {
     @State private var result: BridgeProof?
     @State private var needsPlus = false
     @State private var upgradeURL: String?
-    @State private var codeCopied = false
 
     private var connected: Bool { CardPointersAuth.isConnected && CardPointersAuth.isPro }
 
@@ -72,24 +71,10 @@ struct CardPointersScreen: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
-                    Button(action: { copyCode(pending.userCode) }) {
-                        HStack(spacing: DS.Space.s1) {
-                            Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
-                                .dsSymbolSwap(codeCopied)
-                                .dsGlyph(13)
-                            Text(codeCopied ? "Copied" : "Copy")
-                                .dsText(.subhead13).fontWeight(.semibold)
-                        }
-                        .foregroundStyle(codeCopied ? DS.confirm : DS.tint)
-                        .padding(.horizontal, DS.Space.s3)
-                        .frame(minHeight: 34)
-                        .background(DS.gray100, in: Capsule(style: .continuous))
-                        .contentShape(Capsule(style: .continuous))
-                    }
-                    .buttonStyle(PressSpring())
+                    DSCopyCapsule(value: pending.userCode)
                 }
                 HStack(spacing: DS.Space.s2) {
-                    ProgressView().controlSize(.small)
+                    DSSpinner()
                     Text("Waiting for you to approve…")
                         .dsText(.callout15).foregroundStyle(DS.textTertiary)
                 }
@@ -106,13 +91,8 @@ struct CardPointersScreen: View {
         } else if needsPlus {
             // A real answer with a real door, not a failure. This account
             // signed in fine; it simply cannot read anything.
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("This account doesn't have CardPointers+")
-                    .dsText(.callout15)
-                Text("Their offer tools need the subscription. Nothing was connected.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            DSEmptyState(headline: Text("This account doesn't have CardPointers+"),
+                         words: Text("Their offer tools need the subscription. Nothing was connected."))
             if let upgradeURL {
                 DSSlabButton(title: "See CardPointers+",
                              systemImage: "arrow.up.forward",
@@ -211,16 +191,6 @@ struct CardPointersScreen: View {
         CardPointersAuth.disconnect()
         needsPlus = false
         result = nil
-    }
-
-    private func copyCode(_ code: String) {
-        DSPasteboard.copySensitive(code)
-        DSHaptic.tap()
-        withAnimation(DS.Motion.standard) { codeCopied = true }
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(2))
-            withAnimation(DS.Motion.standard) { codeCopied = false }
-        }
     }
 
     /// The ONE door with no row to carry a `url:` — the automatic trip out the

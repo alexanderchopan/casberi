@@ -744,10 +744,8 @@ struct AddressCard: View {
                         .accessibilityHidden(titleReveal < 0.5)
                 }
                 ToolbarItem(placement: .topBarLeading) { overflowMenu }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }.tint(DS.tint)
-                }
             }
+            .dsSheetDismiss { dismiss() }
             .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
             .task { await AddressKind.detect(entry.address) }
             .task {
@@ -788,13 +786,10 @@ struct AddressCard: View {
         // Declared HERE rather than at its call sites (2026-08-20): this
         // card is presented from the thing sheet's face tap AND the wallet
         // book, both inside a `switch`, so a call-site size would have to
-        // be written twice and could drift.
-        .dsPageSheet()
-        // …and the corner, for the same reason and in the same place (prd
-        // §560). With `DSTray` and `dsNavSheet` both carrying it, this card
-        // was the last presented sheet in the app still taking whatever
-        // corner the system happened to give it.
-        .dsSheetCorner()
+        // be written twice and could drift. The corner rides with it (prd
+        // §560) — this card was the last presented sheet in the app still
+        // taking whatever corner the system happened to give it.
+        .dsNavSheet()
     }
 
     /// 0 while the face is still on screen, 1 once it has cleared the bar.
@@ -1123,9 +1118,7 @@ struct AddressCard: View {
                     .onSubmit { commitName() }
                     .padding(.horizontal, DS.Space.s3)
                     .frame(minHeight: DS.Hit.min)
-                    .background(DS.surfaceWell,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.control,
-                                                     style: .continuous))
+                    .dsWell(cornerRadius: DS.Radius.control, recessed: true)
                     .padding(.horizontal, DS.Space.s4)
                 // The one consequence a field cannot state by its shape. It
                 // sat in the alert's message; without a container to carry it
@@ -2374,9 +2367,7 @@ struct AddressCard: View {
     @ViewBuilder
     private var bottomBar: some View {
         if bottomBarShown {
-            barButton(String(localized: "Name this address"), filled: true,
-                      enabled: true,
-                      accessibility: String(localized: "Name this address")) {
+            DSSlabButton(title: "Name this address") {
                 beginRename()
             }
             .padding(.horizontal, DS.Space.s4)
@@ -2396,29 +2387,9 @@ struct AddressCard: View {
     // watch verb at thumb height so the history could make its case for it, and
     // §446 gave the bar a second verb because most cards are ones where naming
     // is the thing to do. Both readings survive; the verb does not. Watching is
-    // the roster's membership now, so this card's bar is the naming verb alone
-    // — which is why `barButton`'s `filled`/`enabled` parameters have one caller
-    // and are kept anyway: they are the shape's own contract, not a switch this
-    // file happens to use twice.
-    /// The bar's one shape.
-    private func barButton(_ label: String, filled: Bool, enabled: Bool,
-                           accessibility: String,
-                           action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .dsText(.heading17)
-                .foregroundStyle(filled ? .white : DS.textSecondary)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity)
-                .frame(height: DS.Hit.min + 6)
-                .background(filled ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.fillFaint),
-                            in: Capsule(style: .continuous))
-                .contentShape(Capsule(style: .continuous))
-        }
-        .buttonStyle(PressSpring())
-        .disabled(!enabled)
-        .accessibilityLabel(Text(accessibility))
-    }
+    // the roster's membership now, so this card's bar is the naming verb alone,
+    // drawn by `DSSlabButton` (prd §715) — `barButton`, the capsule it replaced,
+    // had one caller.
 
     // `isWatching` / `watchMenuItem` / `toggleWatch` retired here 2026-08-24
     // (prd §461). The whole watch decision left this card with the star: a book

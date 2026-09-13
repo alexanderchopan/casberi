@@ -598,6 +598,16 @@ step "ShareLink style audit"
 "$ROOT/scripts/sharelink-style-audit.py" || fail "a share control in content takes its row's taps — see the output above"
 print -P "%F{green}✓ sharelink style audit%f"
 
+# Two hand-rolled template shapes a text check can tell apart objectively
+# (prd §715): a plain ProgressView and the reading sheet's detents. Everything
+# else the §715 sweep moved is a judgement a lint would cry wolf on, and is not
+# checked.
+step "Design-template audit"
+"$ROOT/scripts/ds-template-audit.py" --self-test >/dev/null \
+  || fail "the design-template audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/ds-template-audit.py" || fail "a template is drawn by hand outside Design/ — see the output above"
+print -P "%F{green}✓ design-template audit%f"
+
 # Keeps the "What this app reaches" registry complete (prd §205): every host
 # the app calls must be disclosed in NetworkReach.swift or the explicit
 # non-reach denylist — an undisclosed fetch host fails here.

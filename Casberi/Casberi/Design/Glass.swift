@@ -295,8 +295,10 @@ extension View {
     /// small inline control legitimately takes something tighter. What is
     /// shared and NOT negotiable is the fill — one token, so a well can never
     /// be a shade off a well.
-    func dsWell(cornerRadius: CGFloat = DS.Radius.card) -> some View {
-        background(DS.fillFaint,
+    /// `recessed` takes `surfaceWell` — an opaque well sunk below the page —
+    /// where the default `fillFaint` is a translucent lift over it (§715).
+    func dsWell(cornerRadius: CGFloat = DS.Radius.card, recessed: Bool = false) -> some View {
+        background(recessed ? DS.surfaceWell : DS.fillFaint,
                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 

@@ -92,7 +92,7 @@ struct WalletNFTPickerSheet: View {
 
     private var loading: some View {
         HStack(spacing: DS.Space.s2) {
-            ProgressView()
+            DSSpinner(size: .regular)
             Text(String(localized: "Reading \(label)…"))
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
         }
@@ -104,19 +104,13 @@ struct WalletNFTPickerSheet: View {
     /// sentence for both would read as a broken screen for the Solana case,
     /// which is not a failure but a fact about whose API exists.
     private var empty: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(String(localized: "Nothing to show yet"))
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(DS.textPrimary)
-            // Monad joined `WalletNFTShelf.networks` with the chain itself
-            // (prd §512). HyperEVM is deliberately not named — Alchemy's NFT
-            // API 400s there, so it is not a chain we looked at and found
-            // nothing on, and listing it would claim a read we never made.
-            Text(String(localized: "No collections were found on Ethereum, Base, Arbitrum, Optimism, Polygon, Monad or Robinhood. Solana and HyperEVM NFTs can't be read yet."))
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.top, DS.Space.s4)
+        // Monad joined `WalletNFTShelf.networks` with the chain itself
+        // (prd §512). HyperEVM is deliberately not named — Alchemy's NFT
+        // API 400s there, so it is not a chain we looked at and found
+        // nothing on, and listing it would claim a read we never made.
+        DSEmptyState(headline: Text(String(localized: "Nothing to show yet")),
+                     words: Text(String(localized: "No collections were found on Ethereum, Base, Arbitrum, Optimism, Polygon, Monad or Robinhood. Solana and HyperEVM NFTs can't be read yet.")))
+            .padding(.top, DS.Space.s4)
     }
 
     /// Two words, not a menu — there are exactly two orders worth having, and a

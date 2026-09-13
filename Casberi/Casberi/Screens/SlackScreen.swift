@@ -64,7 +64,7 @@ struct SlackScreen: View {
                                  proof: result)
         } else if connecting {
             HStack(spacing: DS.Space.s2) {
-                ProgressView().controlSize(.small)
+                DSSpinner()
                 Text("Waiting for Slack…")
                     .dsText(.callout15).foregroundStyle(DS.textTertiary)
             }

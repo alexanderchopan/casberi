@@ -195,18 +195,20 @@ struct VibenetAuthorizeSheet: View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 caption(String(localized: "Public key or address"))
-                well {
-                    TextField(String(localized: "Paste a P-256 key or an account address"),
-                              text: $pasted, axis: .vertical)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .tint(DS.tint)
-                        .keyboardType(.asciiCapable)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .lineLimit(1...3)
-                        .disabled(editing != nil)
-                }
+                TextField(String(localized: "Paste a P-256 key or an account address"),
+                          text: $pasted, axis: .vertical)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .tint(DS.tint)
+                    .keyboardType(.asciiCapable)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .lineLimit(1...3)
+                    .disabled(editing != nil)
+                    .padding(.horizontal, DS.Space.s3)
+                    .frame(minHeight: 44)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .dsWell(cornerRadius: DS.Radius.control, recessed: true)
                 if let parsedActor {
                     Text(parsedActor.isDelegate
                          ? String(localized: "Reads as an account address — that account becomes a delegate.")
@@ -236,17 +238,19 @@ struct VibenetAuthorizeSheet: View {
                         }
                     }
                 } label: {
-                    well {
-                        HStack {
-                            Text(VibenetScope.presets[scopeIndex].name)
-                                .dsText(.body17)
-                                .foregroundStyle(DS.textPrimary)
-                            Spacer()
-                            Image(systemName: "chevron.up.chevron.down")
-                                .dsGlyph(12)
-                                .foregroundStyle(DS.textTertiary)
-                        }
+                    HStack {
+                        Text(VibenetScope.presets[scopeIndex].name)
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textPrimary)
+                        Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .dsGlyph(12)
+                            .foregroundStyle(DS.textTertiary)
                     }
+                    .padding(.horizontal, DS.Space.s3)
+                    .frame(minHeight: 44)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .dsWell(cornerRadius: DS.Radius.control, recessed: true)
                 }
                 .dsHover()
             }
@@ -278,7 +282,7 @@ struct VibenetAuthorizeSheet: View {
                 HStack(spacing: 6) {
                     Image(systemName: "key.fill").dsGlyph(13, weight: .semibold)
                     Text(editing == nil ? String(localized: "Authorize") : String(localized: "Save"))
-                    if busy { ProgressView().controlSize(.mini) }
+                    if busy { DSSpinner(size: .mini) }
                 }
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(canSubmit ? .white : DS.textTertiary)
@@ -294,15 +298,6 @@ struct VibenetAuthorizeSheet: View {
             .dsHover()
             .padding(.top, DS.Space.s3)
         }
-    }
-
-    private func well<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        content()
-            .padding(.horizontal, DS.Space.s3)
-            .frame(minHeight: 44)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DS.surfaceWell,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
     }
 
     private func caption(_ text: String) -> some View {

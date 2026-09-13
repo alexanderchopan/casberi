@@ -174,10 +174,7 @@ struct VibenetEventCard: View {
                     .lineLimit(1)
             }
             Spacer(minLength: DS.Space.s2)
-            Image(systemName: "chevron.right")
-                .accessibilityHidden(true)
-                .dsGlyph(12, weight: .semibold)
-                .foregroundStyle(DS.textTertiary)
+            DSChevron()
         }
         .contentShape(Rectangle())
     }

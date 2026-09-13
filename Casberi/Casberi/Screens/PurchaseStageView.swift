@@ -155,14 +155,9 @@ struct PurchaseStageView: View {
                     .strikethrough()
                     .foregroundStyle(DS.textTertiary)
                 if let fraction = move.fraction {
-                    Text(verbatim: fraction.formatted(.percent.precision(.fractionLength(0))))
-                        .dsText(.label12)
+                    DSStamp(word: fraction.formatted(.percent.precision(.fractionLength(0))),
+                            weight: move.fell ? .good : .quiet)
                         .monospacedDigit()
-                        .foregroundStyle(move.fell ? DS.confirm : DS.textSecondary)
-                        .padding(.horizontal, DS.Space.s2)
-                        .padding(.vertical, DS.Space.s1)
-                        .background(move.fell ? DS.confirm.opacity(0.16) : DS.fillFaint,
-                                    in: Capsule())
                 }
             }
         }
@@ -239,20 +234,16 @@ struct PurchaseStageView: View {
     }
 
     private func badgeChip(_ badge: PurchaseStage.Badge) -> some View {
-        Text(verbatim: badge.word)
-            .dsText(.label12)
-            .foregroundStyle(tint(badge.tone))
-            .padding(.horizontal, DS.Space.s2 + 2)
-            .padding(.vertical, DS.Space.s1 + 1)
-            .background(tint(badge.tone).opacity(badge.tone == .neutral ? 0.10 : 0.16),
-                        in: Capsule())
+        DSStamp(word: badge.word, weight: weight(badge.tone))
     }
 
-    private func tint(_ tone: PurchaseStage.Tone) -> Color {
+    /// The model's tone as the stamp's closed weight. `PurchaseStage` is
+    /// Foundation-only, so it cannot name `DSStamp.Weight` itself.
+    private func weight(_ tone: PurchaseStage.Tone) -> DSStamp.Weight {
         switch tone {
-        case .neutral:   DS.textSecondary
-        case .attention: DS.attention
-        case .good:      DS.confirm
+        case .neutral:   .quiet
+        case .attention: .waiting
+        case .good:      .good
         }
     }
 

@@ -122,7 +122,6 @@ struct DemoBanner: View {
         }
         .sheet(isPresented: $explaining) {
             DemoExplainSheet(leave: { explaining = false; leave() })
-                .dsNavSheet()
         }
     }
 
@@ -158,12 +157,13 @@ private struct DemoExplainSheet: View {
     let leave: () -> Void
     @Environment(\.dismiss) private var dismiss
 
+    /// What the content below the title measures — `trayHeight`'s whole
+    /// input. 0 until the first layout pass.
+    @State private var contentHeight: CGFloat = 0
+
     var body: some View {
-        NavigationStack {
+        DSTray(title: "This is a demo.", height: trayHeight) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text("This is a demo.")
-                    .dsText(.heading22)
-                    .foregroundStyle(DS.textPrimary)
                 // ONE LINE (user, 2026-09-05: "this wording is long"). What
                 // happens on exit is said by the verb below it.
                 Text("None of it is yours. Exit whenever you're ready.")
@@ -185,14 +185,19 @@ private struct DemoExplainSheet: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(DS.Space.s4)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .dsPageBackground()
-            .navigationBarTitleDisplayMode(.inline)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                contentHeight = $0
+            }
         }
-        // Sized to its content (user, 2026-09-05: "this tray needs to be
-        // shortened, there is a gap that doesn't need to be there").
-        .presentationDetents([.height(292)])
-        .dsPageSheet()
+    }
+
+    /// Sized to its content (user, 2026-09-05: "this tray needs to be
+    /// shortened, there is a gap that doesn't need to be there") — MEASURED
+    /// rather than a tuned constant, so a wrapped sentence or a larger text
+    /// size cannot reopen the gap or clip "Keep looking". `DSTray`'s chrome is
+    /// "pad, title, gap, … pad"; the fallback lasts one layout pass.
+    private var trayHeight: CGFloat {
+        let chrome = DS.Space.s6 + 40 + DS.Space.s4 + DS.Space.s6
+        return (contentHeight > 0 ? contentHeight : 224) + chrome
     }
 }

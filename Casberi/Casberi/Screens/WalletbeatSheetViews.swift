@@ -90,40 +90,27 @@ struct WalletbeatIncidentHead: View {
 	/// What their record states, and nothing it doesn't.
 	@ViewBuilder
 	private func factCard(_ facts: WalletbeatIncidentFacts) -> some View {
-		VStack(alignment: .leading, spacing: DS.Space.s2) {
+		DSSpecTable {
 			if !facts.wallets.isEmpty {
-				affectedRow(facts.wallets)
+				affectedRows(facts.wallets)
 			}
 			if let funds = facts.fundsImpacted {
 				// The two readings are genuinely different and both are worth saying: a
 				// flaw that could reach funds is not the same as one that did.
-				factRow(String(localized: "Funds at risk"),
-						funds ? String(localized: "Yes, by Walletbeat's reading")
-							  : String(localized: "No, by Walletbeat's reading"),
-						tinted: funds)
+				DSSpecRow(label: Text(String(localized: "Funds at risk")),
+						  value: Text(funds ? String(localized: "Yes, by Walletbeat's reading")
+											: String(localized: "No, by Walletbeat's reading")),
+						  tint: funds ? DS.attention : DS.textPrimary,
+						  weight: .semibold, lineLimit: nil)
 			}
 			if let updated = facts.updatedAt, updated > facts.publishedAt {
-				factRow(String(localized: "Last revised"), Self.day.string(from: updated))
+				DSSpecRow(label: Text(String(localized: "Last revised")),
+						  value: Text(Self.day.string(from: updated)),
+						  weight: .semibold, lineLimit: nil)
 			}
 		}
 		.padding(DS.Space.s4)
-		.frame(maxWidth: .infinity, alignment: .leading)
 		.dsWidgetSurface()
-	}
-
-	@ViewBuilder
-	private func factRow(_ key: String, _ value: String, tinted: Bool = false) -> some View {
-		HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-			Text(key)
-				.dsText(.subhead13)
-				.foregroundStyle(DS.textTertiary)
-			Spacer(minLength: DS.Space.s2)
-			Text(value)
-				.dsText(.subhead13).fontWeight(.semibold)
-				.foregroundStyle(tinted ? DS.attention : DS.textPrimary)
-				.multilineTextAlignment(.trailing)
-				.fixedSize(horizontal: false, vertical: true)
-		}
 	}
 
 	/// Who it affected — and a door to what Walletbeat says about each of them (prd §430).
@@ -134,7 +121,7 @@ struct WalletbeatIncidentHead: View {
 	/// the report card. The card already cross-links the other way ("On record"); this is
 	/// the direction that was missing.
 	///
-	/// ONE WALLET PER LINE rather than a wrapping row of chips: a name is a door here, and
+	/// ONE WALLET PER ROW of the table rather than a wrapping row of chips: a name is a door here, and
 	/// a door clipped by its neighbour is a door nobody finds. Three named wallets is
 	/// three lines, which is the honest size of that fact.
 	///
@@ -144,39 +131,21 @@ struct WalletbeatIncidentHead: View {
 	/// wallet we cannot name is still about that wallet — and offering a report card that
 	/// does not exist would be the dead control §83 bans.
 	@ViewBuilder
-	private func affectedRow(_ ids: [String]) -> some View {
-		HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-			Text(String(localized: "Affects"))
-				.dsText(.subhead13)
-				.foregroundStyle(DS.textTertiary)
-			Spacer(minLength: DS.Space.s2)
-			VStack(alignment: .trailing, spacing: DS.Space.s1) {
-				ForEach(ids, id: \.self) { id in
-					if let entry = WalletbeatDirectory.wallets.first(where: { $0.id == id }) {
-						Button {
-							DSHaptic.tap()
-							openedWallet = id
-						} label: {
-							HStack(spacing: DS.Space.s1 + 2) {
-								Text(entry.name)
-									.dsText(.subhead13).fontWeight(.semibold)
-									.foregroundStyle(DS.tint)
-									.multilineTextAlignment(.trailing)
-								Image(systemName: "chevron.right")
-									.dsGlyph(10, weight: .bold)
-									.foregroundStyle(DS.tint)
-							}
-						}
-						.buttonStyle(.plain)
-						.dsHover()
-						.accessibilityLabel(Text(String(localized: "What Walletbeat says about \(entry.name)")))
-					} else {
-						Text(id)
-							.dsText(.subhead13).fontWeight(.semibold)
-							.foregroundStyle(DS.textPrimary)
-							.multilineTextAlignment(.trailing)
-					}
-				}
+	private func affectedRows(_ ids: [String]) -> some View {
+		ForEach(Array(ids.enumerated()), id: \.element) { index, id in
+			// The label rides the first row only; the rest share its column.
+			let label = Text(index == 0 ? String(localized: "Affects") : "")
+			if let entry = WalletbeatDirectory.wallets.first(where: { $0.id == id }) {
+				DSSpecRow(label: label, value: Text(entry.name),
+						  tint: DS.tint, weight: .semibold, lineLimit: nil,
+						  glyph: "chevron.right",
+						  action: {
+							  DSHaptic.tap()
+							  openedWallet = id
+						  })
+					.accessibilityLabel(Text(String(localized: "What Walletbeat says about \(entry.name)")))
+			} else {
+				DSSpecRow(label: label, value: Text(id), weight: .semibold, lineLimit: nil)
 			}
 		}
 	}

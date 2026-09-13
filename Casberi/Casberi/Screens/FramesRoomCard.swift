@@ -151,11 +151,7 @@ struct FramesRoomFigure: View {
     /// paragraph. No door — Top up and Send are Home's tiles (§553).
     @ViewBuilder private var emptyState: some View {
         if let words = section.emptyBody {
-            Text(words)
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            DSEmptyState(words: Text(words), scale: .room)
         }
     }
 
@@ -642,7 +638,7 @@ struct FramesRoomList: View {
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                 }
                 Spacer(minLength: 0)
-                ProgressView().controlSize(.mini)
+                DSSpinner(size: .mini)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .opacity(strength)
@@ -904,7 +900,7 @@ struct FramesPayerRow: View {
                 Text(fee).dsText(.label12).foregroundStyle(DS.textSecondary)
                     .monospacedDigit().lineLimit(1)
             }
-            WalletRowChevron()
+            DSChevron()
         }
     }
 }

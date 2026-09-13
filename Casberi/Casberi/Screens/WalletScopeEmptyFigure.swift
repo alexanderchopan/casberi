@@ -23,23 +23,13 @@ struct WalletScopeEmptyFigure: View {
     let section: WalletSection
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            if let headline = section.emptyHeadline {
-                Text(headline)
-                    .dsText(.stat24)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .frame(height: DSRoomChassis.headlineRow, alignment: .leading)
-            }
-            if let words = section.emptyBody {
-                Text(words)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        // Every scope that draws this has both a headline and a body; `.home`
+        // has neither and never reaches here.
+        if let words = section.emptyBody {
+            DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
+                         words: Text(words), scale: .room)
+                .padding(.horizontal, WalletCardStyle.pad)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .padding(.horizontal, WalletCardStyle.pad)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .accessibilityElement(children: .combine)
     }
 }

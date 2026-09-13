@@ -55,9 +55,6 @@ struct TokenSetupScreen: View {
     private enum DevicePhase { case idle, requesting, waiting(GitHubDeviceFlow.Code) }
     @State private var devicePhase: DevicePhase = .idle
     @State private var pollTask: Task<Void, Never>?
-    /// Bumped when the device code is copied — the copy button briefly reads
-    /// "Copied" so the tap is acknowledged.
-    @State private var codeCopied = false
     private var deviceFlowOffered: Bool {
         bridge == .github && GitHubDeviceFlow.isAvailable
     }
@@ -416,7 +413,7 @@ struct TokenSetupScreen: View {
                              action: startDeviceFlow)
             case .requesting:
                 HStack(spacing: DS.Space.s2) {
-                    ProgressView()
+                    DSSpinner(size: .regular)
                     Text("Asking GitHub for a code…")
                         .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 }
@@ -432,20 +429,7 @@ struct TokenSetupScreen: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
-                    Button(action: { copyCode(code.userCode) }) {
-                        HStack(spacing: DS.Space.s1) {
-                            Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
-                                .dsSymbolSwap(codeCopied)
-                                .dsGlyph(13)
-                            Text(codeCopied ? "Copied" : "Copy").dsText(.subhead13).fontWeight(.semibold)
-                        }
-                        .foregroundStyle(codeCopied ? DS.confirm : DS.tint)
-                        .padding(.horizontal, DS.Space.s3)
-                        .frame(minHeight: 34)
-                        .background(DS.gray100, in: Capsule(style: .continuous))
-                        .contentShape(Capsule(style: .continuous))
-                    }
-                    .buttonStyle(PressSpring())
+                    DSCopyCapsule(value: code.userCode)
                 }
                 .padding(DS.Space.s3)
                 .frame(maxWidth: .infinity)
@@ -461,7 +445,7 @@ struct TokenSetupScreen: View {
                              systemImage: "arrow.up.right",
                              url: code.verificationURL)
                 HStack(spacing: DS.Space.s2) {
-                    ProgressView()
+                    DSSpinner(size: .regular)
                     Text("Waiting for your approval…")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     Spacer()
@@ -514,16 +498,6 @@ struct TokenSetupScreen: View {
                     return
                 }
             }
-        }
-    }
-
-    private func copyCode(_ code: String) {
-        DSPasteboard.copySensitive(code)
-        DSHaptic.tap()
-        withAnimation(DS.Motion.standard) { codeCopied = true }
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(2))
-            withAnimation(DS.Motion.standard) { codeCopied = false }
         }
     }
 
