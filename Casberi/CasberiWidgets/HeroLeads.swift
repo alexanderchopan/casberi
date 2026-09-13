@@ -76,7 +76,7 @@ struct HeroContactSheet: View {
 
     @ViewBuilder
     private func cell(at index: Int, showing: Int, side: CGFloat) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: WidgetChrome.blockRadius, style: .continuous)
         if index < showing, index < shots.count, let image = UIImage(data: shots[index]) {
             Image(uiImage: image)
                 .resizable()
@@ -173,7 +173,7 @@ struct HeroSourceMix: View {
                 .frame(width: 108)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: WidgetChrome.blockRadius, style: .continuous))
         // One sentence for the tile, in rank order (prd §299, 2026-08-23).
         //
         // The cells draw a monogram and a name, so VoiceOver read three loose
@@ -192,7 +192,7 @@ struct HeroSourceMix: View {
     private func bigCell(_ cell: WidgetSourceCell) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Spacer(minLength: 0)
-            monogram(cell.name, side: 26, corner: 8, size: 13)
+            monogram(cell.name, side: 26, corner: 8, style: .widgetTimer13)
             Text(cell.name)
                 .dsText(.widgetTreemapTerm12)
                 .foregroundStyle(.white)
@@ -205,7 +205,7 @@ struct HeroSourceMix: View {
 
     private func smallCell(_ cell: WidgetSourceCell) -> some View {
         HStack(spacing: 6) {
-            monogram(cell.name, side: 20, corner: 6, size: 11)
+            monogram(cell.name, side: 20, corner: 6, style: .widgetEyebrow11)
             Text(cell.name)
                 .dsText(.widgetTreemapTerm12)
                 .foregroundStyle(.white)
@@ -217,13 +217,17 @@ struct HeroSourceMix: View {
         .background(Color.white.opacity(0.12))
     }
 
-    private func monogram(_ name: String, side: CGFloat, corner: CGFloat, size: CGFloat) -> some View {
+    /// The letter is set on a widget rung, not a raw `.font(.system(size:))`:
+    /// a frozen size stayed put at an accessibility text size while the name
+    /// beside it grew, and the widget rungs are the ones that keep
+    /// `macScales: false` (a tile is the same size on both platforms).
+    private func monogram(_ name: String, side: CGFloat, corner: CGFloat, style: DSTextStyle) -> some View {
         RoundedRectangle(cornerRadius: corner, style: .continuous)
             .fill(Color.white.opacity(0.22))
             .frame(width: side, height: side)
             .overlay(
                 Text(String(name.prefix(1)).uppercased())
-                    .font(.system(size: size, weight: .bold))
+                    .dsText(style)
                     .foregroundStyle(.white)
             )
     }

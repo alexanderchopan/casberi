@@ -41,9 +41,9 @@ One home for your things
 
 ### Promotional text  *(≤170 — editable anytime without review)*
 ```
-Connect your apps and wallets once. Everything lands in one feed, and the built-in agent answers questions from what you've actually saved.
+Connect your apps and wallets once. Everything lands in one private feed, so you read it all in one place.
 ```
-*(138 — rewritten 2026-07-21 for the agent-shell redesign; the old capture-first text also claimed "Nothing leaves your phone," which wallet syncs and optional BYOK made an overclaim)*
+*(106 — rewritten 2026-09-13: the built-in agent it named is deprecated (prd §697b), and the live promotional text is recorded in `docs/store-copy.md`. Before that, rewritten 2026-07-21 for the agent-shell redesign; the old capture-first text also claimed "Nothing leaves your phone," which wallet syncs and optional BYOK made an overclaim)*
 
 ### Keywords  *(≤100, comma-separated, NO spaces — spaces waste the budget)*
 ```
@@ -79,7 +79,7 @@ Git has the old text if it is ever wanted: `git show HEAD:docs/app-store-submiss
 ### What's New (version notes)  *(≤4000)*
 For a first public release, keep it simple:
 ```
-Casberi's first public release. One private home on your iPhone for everything you capture — screenshots, links, notes, events, voice memos, and more. Ask it anything; nothing leaves your phone.
+Casberi's first public release. One private home on your iPhone for everything you capture — screenshots, links, notes, events, voice memos, and more — in one feed you can read and search.
 ```
 
 ### Support URL  *(required)*

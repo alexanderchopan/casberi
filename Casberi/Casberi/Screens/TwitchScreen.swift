@@ -108,8 +108,12 @@ struct TwitchScreen: View {
                          systemImage: "person.badge.key",
                          action: connect)
         }
+        // Retry only once connected: a failed CONNECT brings its own
+        // Connect slab back, and re-reading follows without a token is no
+        // retry at all (prd §717).
         BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking who's live…"),
-                             proof: result)
+                             proof: result,
+                             retry: TwitchAuth.connected ? { Task { await sync() } } : nil)
         DSSlabNote(text: "On Twitch's own page — a short code, no password.", plain: true)
     }
 

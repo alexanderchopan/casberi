@@ -36,7 +36,8 @@ struct MailScreen: View {
                     addressLine
                     BridgeSyncStatusRows(syncing: syncing,
                                          syncingLine: String(localized: "Reading your mail…"),
-                                         proof: result)
+                                         proof: result,
+                                         retry: { Task { await sync(justConnected: false) } })
                 } else {
                     setupBlock
                 }
@@ -112,13 +113,13 @@ struct MailScreen: View {
             if justConnected { TokenVault.delete(provider.passwordKey) }
             switch MailIngest.lastError {
             case .login:
-                result = .says(String(localized: "Login rejected — check the address and app-specific password."))
+                result = .failed(String(localized: "Login rejected — check the address and app-specific password."))
             case .connect:
-                result = .says(String(localized: "Couldn't reach the mail server — check your connection."))
+                result = .failed(String(localized: "Couldn't reach the mail server — check your connection."))
             case .select, .fetch, .timeout:
-                result = .says(String(localized: "Signed in, but couldn't read the inbox — try again."))
+                result = .failed(String(localized: "Signed in, but couldn't read the inbox — try again."))
             case nil:
-                result = .says(String(localized: "Couldn't sign in — check the address and app-specific password."))
+                result = .failed(String(localized: "Couldn't sign in — check the address and app-specific password."))
             }
             return
         }

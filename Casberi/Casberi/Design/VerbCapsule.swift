@@ -115,7 +115,9 @@ struct VerbCapsule: View {
 
     var body: some View {
         if let action {
-            Button(action: action) { label }
+            // DRAWN 32, TARGETED 44 — on the actionable branch only; Soon is
+            // inert and keeps the capsule's own box.
+            Button(action: action) { label.dsTapTarget(Capsule(style: .continuous)) }
                 .buttonStyle(.plain)
                 // Hover rides the ACTIONABLE branch only — Soon is inert, and a
                 // cursor lighting it up would be the honesty rule's dead

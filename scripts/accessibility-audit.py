@@ -68,6 +68,30 @@ FOUR CHECKS, all static, none needing a build.
      the measurement that chose "circular only" and the two shapes this still
      cannot see are recorded at `MARK_CALL`.
 
+     WIDER AGAIN SINCE 2026-09-13, and this time past icons. The check matched
+     one spelling of a button (`Button {`) and one kind of label (no words), so
+     ten capsules drawn at 28-34pt were invisible to it: the `Chip` that is the
+     whole label of ~22 buttons, the catalogue's `VerbCapsule`, the toast's
+     Undo, a request's Approve / Deny, the thing sheet's 30pt back chevron
+     (`Button(action:)`, the spelling it never read). Three widenings:
+
+       a. `Button(action:)` and `Button("…")` are buttons too.
+       b. A WORDED button is held to the floor on HEIGHT — when its label's
+          ROOT view (or the button's own chain) pins `.frame(minHeight:)` or
+          `.frame(height:)` under it. Root only: a status dot nested inside a
+          row's HStack is not the target, and reading every frame in the
+          label reports correct rows (fixture `CLEAN_NESTED_DOT`).
+       c. A COMPONENT PASS (`small-tap-component`): a `struct …Capsule` or
+          `struct …Chip` that owns a Button, or is named as a Button's label
+          anywhere in the tree, and pins `minHeight` under the floor outside
+          any label b already reads. That is where `Chip` hides — its 28pt is
+          in its own body, never in the call site's label. `minHeight` only,
+          because a dot or a hairline is a `width`/`height` pair.
+
+     A capsule used as a WORD inside someone else's layout (`Chip(interactive:
+     false)`, a decorative pill) is not a target and stays clean
+     (`CLEAN_DECORATIVE_CAPSULE`, `CLEAN_UNUSED_CHIP`).
+
   4. A WORDLESS DRAWING DECLARES A STANCE. A `struct … : View` that draws from
      data (`Path`/`Canvas`/`Chart`, a trim, an extent multiplied by a value)
      and contains NO words of its own must either speak
@@ -107,8 +131,10 @@ liveness audit's stated lesson, and `design-motion-audit`'s):
   · It never demands a label on a decorative mark. `BridgeIcon`, `KindGlyph`,
     `CasberiMark` and friends draw identity beside text that already says the
     same thing; labelling them is VoiceOver noise, not access.
-  · It never flags a Button that carries WORDS. Its target is as wide as its
-    text and its label is its text — both checks are satisfied by construction.
+  · It never flags a Button that carries WORDS for its LABEL, or for its width.
+    Its label is its text and its target is as wide as its text. Its HEIGHT is
+    another matter since 2026-09-13 (check 3b): a word in a 28pt capsule is a
+    28pt target, and that is where the misses actually were.
   · It never asks a drawing to SPEAK rather than be hidden. Check 4 demands a
     stance and accepts either, because the right one depends on what sits
     beside the figure and no text check can see that: the Uniswap range bar
@@ -352,8 +378,27 @@ def modifier_chain(src: str, start: int) -> str:
     return "".join(out)
 
 
+def paren_span(src: str, open_idx: int) -> int:
+    depth = 0
+    for k in range(open_idx, len(src)):
+        if src[k] == "(":
+            depth += 1
+        elif src[k] == ")":
+            depth -= 1
+            if depth == 0:
+                return k + 1
+    return len(src)
+
+
 def button_bodies(src: str):
-    """Yield (line, body, chain) per Button.
+    """Yield (line, body, chain, label_span) per Button.
+
+    Three spellings since 2026-09-13 (check 3a): `Button { } label: { }`,
+    `Button(action: x) { label }` and `Button("…") { action }`. The string form
+    has NO label body — its label is its words — so its body is empty and only
+    its chain can pin a size. `label_span` is the (start, end) of the label in
+    `src`, so the component pass can leave a frame check 3b already read.
+    Any other `Button(` (a role, an intent) is still not read.
 
     BODY and CHAIN stay separate, and that separation is load-bearing rather
     than tidiness. Folding them together makes `accessibilityLabel(Text("Watch"))`
@@ -363,20 +408,109 @@ def button_bodies(src: str):
     self-test before it ever ran (`retriever-selftest`'s lesson: a fixture that
     passes for the wrong reason proves nothing).
     """
-    for m in re.finditer(r"\bButton\s*\{", src):
-        try:
-            o = src.index("{", m.start())
-        except ValueError:
+    for m in re.finditer(r"\bButton\s*(\{|\()", src):
+        line = src[:m.start()].count("\n") + 1
+        if m.group(1) == "{":
+            o = m.end() - 1
+            e = brace_span(src, o)
+            body, lo = src[o:e], o
+            tail = src[e:e + 4000]
+            lm = re.match(r"\s*label:\s*\{", tail)
+            if lm:
+                lo = e + tail.index("{", lm.start())
+                e = brace_span(src, lo)
+                body = src[lo:e]
+            yield line, body, modifier_chain(src, e), (lo, e)
             continue
-        e = brace_span(src, o)
-        body = src[o:e]
-        tail = src[e:e + 4000]
-        lm = re.match(r"\s*label:\s*\{", tail)
-        if lm:
-            lo = e + tail.index("{", lm.start())
+        po = m.end() - 1
+        pe = paren_span(src, po)
+        args = src[po + 1:pe - 1]
+        if re.match(r"\s*action\s*:", args):
+            lm = re.search(r"\blabel:\s*\{", args)
+            if lm:
+                lo = po + 1 + lm.end() - 1
+                le = brace_span(src, lo)
+                yield line, src[lo:le], modifier_chain(src, pe), (lo, le)
+                continue
+            tm = re.match(r"\s*\{", src[pe:])
+            if not tm:
+                continue
+            lo = pe + tm.end() - 1
             e = brace_span(src, lo)
-            body = src[lo:e]
-        yield src[:m.start()].count("\n") + 1, body, modifier_chain(src, e)
+            yield line, src[lo:e], modifier_chain(src, e), (lo, e)
+        elif re.match(r'\s*"', args):
+            tm = re.match(r"\s*\{", src[pe:])
+            e = brace_span(src, pe + tm.end() - 1) if tm else pe
+            yield line, "", modifier_chain(src, e), (pe, pe)
+
+
+# A height a frame pins: `minHeight: 32` or `height: 30`, never `maxHeight`.
+FRAME_HEIGHT = re.compile(r"(?<!\w)(?:minHeight|height):\s*(\d+)")
+FRAME_MIN_HEIGHT = re.compile(r"(?<!\w)minHeight:\s*(\d+)")
+
+# A component whose NAME says it is a capsule-shaped control (check 3c).
+COMPONENT_STRUCT = re.compile(
+    r"struct\s+(\w*(?:Capsule|Chip))\s*:\s*[^{\n]*\bView\b[^{\n]*\{")
+# `(?:[A-Z]\w*)?` and not `[A-Z]\w*`: the latter needs a character BEFORE the
+# suffix, so bare `Chip(` — the one component this pass was written for — never
+# matched, and a first measurement over the pre-fix tree found only `IconChip`.
+COMPONENT_CALL = re.compile(r"\b((?:[A-Z]\w*)?(?:Capsule|Chip))\s*\(")
+OWNS_BUTTON = re.compile(r"\bButton\s*[({]")
+
+
+def root_frame_args(body: str):
+    """The argument text of each `.frame(…)` on the label's ROOT view(s).
+
+    Depth 1 inside the label's own braces — so a dot drawn inside the row's
+    HStack, or inside an `.overlay { }`, is not read as the target.
+    """
+    out, depth, i = [], 0, 0
+    while i < len(body):
+        ch = body[i]
+        if ch in "{([":
+            depth += 1
+        elif ch in "})]":
+            depth -= 1
+        elif depth == 1 and body.startswith(".frame(", i):
+            e = paren_span(body, i + 6)
+            out.append(body[i + 7:e - 1])
+        i += 1
+    return out
+
+
+def small_label_height(body: str, chain: str, floor: int):
+    """The sub-floor height a worded button pins, or None (check 3b)."""
+    args = root_frame_args(body) if body else []
+    args += re.findall(r"\.frame\(([^()]*)\)", chain)
+    heights = [int(h) for a in args for h in FRAME_HEIGHT.findall(a)]
+    small = [h for h in heights if h < floor]
+    return max(small) if small else None
+
+
+# What excuses a HEIGHT (check 3b). `NAMED_SIZES` minus its two WIDTH entries
+# (`maxWidth:`, a bare `.infinity`), plus a parent-sized height. A full-width
+# button is not a tall one: the thing sheet's "Watch it from the lock screen"
+# capsule is 32pt tall and centred by an outer `.frame(maxWidth: .infinity)`,
+# and reusing `NAMED_SIZES` whole let that centring frame excuse it — measured
+# on the pre-fix tree, it was the one worded miss (`DIRTY_FULL_WIDTH_SHORT`).
+HEIGHT_NAMED = re.compile(
+    r"DS\.Hit\.|DS\.Face\.shelf|DS\.Mark\.tile|DS\.Mark\.hero|faceSize|slotHeight"
+    r"|doorSide|DS\.Radius\.widget|maxHeight:\s*\.infinity"
+)
+
+
+def height_floored(whole: str, floor: int) -> bool:
+    if "dsTapTarget" in whole or HEIGHT_NAMED.search(whole):
+        return True
+    return any(int(h) >= floor for h in FRAME_HEIGHT.findall(whole))
+
+
+def label_component_names(src: str) -> set:
+    """Every `…Capsule(` / `…Chip(` named inside a Button's label."""
+    names = set()
+    for _, body, _, _ in button_bodies(src):
+        names.update(COMPONENT_CALL.findall(body))
+    return names
 
 
 def view_struct_spans(src: str):
@@ -402,23 +536,37 @@ def hit_floor() -> int:
 # The checks
 # --------------------------------------------------------------------------
 
-def audit_text(path: str, raw: str, floor: int):
-    """Returns a list of (check, line, message)."""
+def audit_text(path: str, raw: str, floor: int, label_names=None):
+    """Returns a list of (check, line, message).
+
+    `label_names` is the TREE's set of components named as a Button label
+    (check 3c) — a `Chip` is declared in one file and used as a label in
+    twenty others. Omitted, only this file's own labels count.
+    """
     src = strip_noise(raw)
     found = []
 
     spans = view_struct_spans(src)
+    label_spans = []
+    names = label_component_names(src) | set(label_names or ())
 
-    for line, body, chain in button_bodies(src):
+    for line, body, chain, lspan in button_bodies(src):
+        label_spans.append(lspan)
         whole = body + chain
         glyph = "Image(systemName:" in body
         face = draws_face(body)
-        if not (glyph or face):
-            continue
-        if WORDS.search(body):
-            continue  # a button with words: labelled and wide by construction
         key = f"{os.path.basename(path)}:{line}"
         if key in KNOWN_EXEMPT:
+            continue
+        if not (glyph or face) or WORDS.search(body):
+            # CHECK 3b — a button with words is labelled and as WIDE as its
+            # text by construction, but not as TALL: a word in a 32pt capsule
+            # is a 32pt target (2026-09-13).
+            small = small_label_height(body, chain, floor)
+            if small is not None and not height_floored(whole, floor):
+                found.append(("small-tap-target", line,
+                              f"Button's label is pinned {small}pt tall, under the "
+                              f"{floor}pt floor — add dsTapTarget() after its background"))
             continue
 
         # CHECK 1 IS GLYPH-ONLY, DELIBERATELY, AND THE ASYMMETRY IS THE POINT
@@ -451,6 +599,39 @@ def audit_text(path: str, raw: str, floor: int):
                 found.append(("small-tap-target", line,
                               f"icon-only Button's target is {biggest or 'the glyph'}pt, "
                               f"under the {floor}pt floor — add dsTapTarget()"))
+
+    # --- CHECK 3c: a capsule-shaped COMPONENT is hittable -------------------
+    #
+    # `Chip` pins its 28pt in its own body, twenty files away from every
+    # `Button { } label: { Chip(…) }` that uses it, so no call site's label
+    # carries a frame for 3b to read. The component is the only place the
+    # number lives, so the component is where it is held.
+    for m in COMPONENT_STRUCT.finditer(src):
+        name = m.group(1)
+        o = src.index("{", m.start())
+        end = brace_span(src, o)
+        span = src[o:end]
+        if not (OWNS_BUTTON.search(span) or name in names):
+            continue  # a decorative capsule — a word, not a control
+        if "dsTapTarget" in span or "DS.Hit." in span:
+            continue
+        if any(int(h) >= floor for h in FRAME_HEIGHT.findall(span)):
+            continue
+        small = []
+        for fm in re.finditer(r"\.frame\(([^()]*)\)", span):
+            at = o + fm.start()
+            if any(a <= at < b for a, b in label_spans):
+                continue  # inside a Button label: check 3b's to judge
+            small += [int(h) for h in FRAME_MIN_HEIGHT.findall(fm.group(1)) if int(h) < floor]
+        if not small:
+            continue
+        line = src[:m.start()].count("\n") + 1
+        if f"{os.path.basename(path)}:{line}" in KNOWN_EXEMPT:
+            continue
+        found.append(("small-tap-component", line,
+                      f"{name} is a Button label drawn at minHeight {max(small)}, "
+                      f"under the {floor}pt floor, with no dsTapTarget() — every "
+                      "call site inherits the miss"))
 
     for m in re.finditer(r"\.onTapGesture\s*(\{|\()", src):
         if src[m.end() - 1] == "{":
@@ -882,6 +1063,191 @@ struct MapCell: View {
 """
 
 
+# --- Check 3a/3b/3c fixtures (2026-09-13) -------------------------------------
+# A request's Approve as it shipped in `ShapedRows`: words, a 32pt capsule.
+DIRTY_SMALL_WORD_BUTTON = """
+struct O: View {
+    var body: some View {
+        Button { onApprove() } label: {
+            Text("Approve").dsText(.label12)
+                .padding(.horizontal, DS.Space.s4).frame(minHeight: 32)
+                .background(DS.confirm, in: Capsule(style: .continuous))
+        }
+        .buttonStyle(PressSpring())
+    }
+}
+"""
+
+# The thing sheet's back chevron: the `Button(action:)` spelling, labelled on
+# purpose so it can only go red on size.
+DIRTY_ACTION_FORM_GLYPH = """
+struct P: View {
+    var body: some View {
+        Button(action: onBack) {
+            Image(systemName: "chevron.left")
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(DS.fillLine))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("Back"))
+    }
+}
+"""
+
+# The string spelling, whose only frame can be on its chain.
+DIRTY_STRING_FORM = """
+struct Q: View {
+    var body: some View {
+        Button("Done") { finish() }
+            .frame(height: 30)
+    }
+}
+"""
+
+CLEAN_WORD_BUTTON_TARGETED = """
+struct R: View {
+    var body: some View {
+        Button(action: onApprove) {
+            Text("Approve").dsText(.label12)
+                .padding(.horizontal, DS.Space.s4).frame(minHeight: 32)
+                .background(DS.confirm, in: Capsule(style: .continuous))
+                .dsTapTarget(Capsule(style: .continuous))
+        }
+        Button("Done") { finish() }
+    }
+}
+"""
+
+# The lock-screen capsule as it shipped: 32pt tall, centred by a full-width
+# frame on the button's chain. Excuse height with `maxWidth:` and this is green.
+DIRTY_FULL_WIDTH_SHORT = """
+struct X: View {
+    var body: some View {
+        Button { track() } label: {
+            HStack { Text("Watch it from the lock screen") }
+                .padding(.horizontal, DS.Space.s3)
+                .frame(minHeight: 32)
+                .background(DS.fillFaint, in: Capsule(style: .continuous))
+        }
+        .buttonStyle(PressSpring())
+        .frame(maxWidth: .infinity)
+    }
+}
+"""
+
+# A capsule that is a WORD, not a control: no Button anywhere near it.
+CLEAN_DECORATIVE_CAPSULE = """
+struct S: View {
+    var body: some View {
+        Text("Soon").dsText(.label12)
+            .padding(.horizontal, DS.Space.s3)
+            .frame(minHeight: 24)
+            .background(DS.fillFaint, in: Capsule(style: .continuous))
+    }
+}
+"""
+
+# THE DISCRIMINATING ONE FOR 3b's ROOT-ONLY READ. The catalogue row is a Button
+# whose label nests an 11pt status dot; the row itself is the target. Read every
+# frame in the label and this correct row is reported.
+CLEAN_NESTED_DOT = """
+struct T: View {
+    var body: some View {
+        Button { open() } label: {
+            HStack {
+                Circle().frame(width: 11, height: 11)
+                Text("Wallet")
+            }
+            .padding(.vertical, DS.Space.s3)
+        }
+    }
+}
+"""
+
+# `Chip` as it shipped: 28pt in its OWN body, used as a label elsewhere.
+DIRTY_SMALL_CHIP_COMPONENT = """
+struct MiniChip: View {
+    let text: String
+    var body: some View {
+        Text(text).dsText(.label12)
+            .padding(.horizontal, DS.Space.s3)
+            .frame(minHeight: 28)
+            .background(DS.gray100, in: Capsule(style: .continuous))
+    }
+}
+
+struct U: View {
+    var body: some View {
+        Button { go() } label: { MiniChip(text: "Go") }
+            .buttonStyle(.plain)
+    }
+}
+"""
+
+# `VerbCapsule` as it shipped: the component OWNS its Button, and its 32pt
+# lives in a computed `label` the Button body only names.
+DIRTY_CAPSULE_OWNS_BUTTON = """
+struct PillCapsule: View {
+    var action: (() -> Void)? = nil
+    var body: some View {
+        if let action {
+            Button(action: action) { label }
+        } else {
+            label
+        }
+    }
+    private var label: some View {
+        Text("Open").padding(.horizontal, DS.Space.s3)
+            .frame(minHeight: 32)
+            .background(DS.tint, in: Capsule(style: .continuous))
+    }
+}
+"""
+
+CLEAN_COMPONENT_TARGETED = """
+struct MiniChip: View {
+    let text: String
+    var interactive = true
+    var body: some View {
+        Text(text).dsText(.label12)
+            .frame(minHeight: 28)
+            .background(DS.gray100, in: Capsule(style: .continuous))
+            .dsTapTarget(Capsule(style: .continuous), size: interactive ? DS.Hit.min : 0)
+    }
+}
+
+struct V: View {
+    var body: some View {
+        Button { go() } label: { MiniChip(text: "Go") }
+    }
+}
+"""
+
+# THE DISCRIMINATING ONE FOR 3c: a `…Chip` nobody uses as a label and that owns
+# no Button is a word. Drop the "is it a control" test and this goes red.
+CLEAN_UNUSED_CHIP = """
+struct TagChip: View {
+    let text: String
+    var body: some View {
+        Text(text).frame(minHeight: 24)
+            .background(DS.gray100, in: Capsule(style: .continuous))
+    }
+}
+"""
+
+# Prose naming every new shape must not trip anything.
+CLEAN_WORD_PROSE = """
+struct W: View {
+    /// Never `Button(action: go) { Text("Approve").frame(minHeight: 32) }`
+    /// and never a `struct FooChip` at `.frame(minHeight: 28)` — see
+    /// `Button("Done") { }.frame(height: 30)`.
+    var body: some View {
+        Button { go() } label: { Text("Approve") }
+    }
+}
+"""
+
+
 def self_test() -> bool:
     floor = 44
     cases = [
@@ -906,6 +1272,26 @@ def self_test() -> bool:
         ("clean: the same drawing, hidden", CLEAN_DRAWING_HIDDEN, set()),
         ("clean: a bar beside its own number", CLEAN_DRAWING_HAS_WORDS, set()),
         ("clean: a treemap cell wired through dsReadout", CLEAN_DRAWING_READOUT, set()),
+        ("dirty: a worded button pinned at 32pt (3b)", DIRTY_SMALL_WORD_BUTTON,
+         {"small-tap-target"}),
+        ("dirty: a Button(action:) glyph at 30pt (3a)", DIRTY_ACTION_FORM_GLYPH,
+         {"small-tap-target"}),
+        ("dirty: a Button(\"…\") pinned at 30pt on its chain (3a)", DIRTY_STRING_FORM,
+         {"small-tap-target"}),
+        ("dirty: a 32pt capsule a full-width frame centres (3b)",
+         DIRTY_FULL_WIDTH_SHORT, {"small-tap-target"}),
+        ("clean: the worded button, targeted", CLEAN_WORD_BUTTON_TARGETED, set()),
+        ("clean: a decorative capsule outside any Button", CLEAN_DECORATIVE_CAPSULE, set()),
+        ("clean: a row label nesting an 11pt dot", CLEAN_NESTED_DOT, set()),
+        ("dirty: a Chip component at 28pt used as a label (3c)",
+         DIRTY_SMALL_CHIP_COMPONENT, {"small-tap-component"}),
+        ("dirty: a Capsule component owning its Button at 32pt (3c)",
+         DIRTY_CAPSULE_OWNS_BUTTON, {"small-tap-component"}),
+        ("clean: the Chip component, targeted", CLEAN_COMPONENT_TARGETED, set()),
+        ("dirty: the bare name `Chip` used as a label (3c)",
+         DIRTY_SMALL_CHIP_COMPONENT.replace("MiniChip", "Chip"), {"small-tap-component"}),
+        ("clean: a Chip nobody taps", CLEAN_UNUSED_CHIP, set()),
+        ("clean: prose naming the 3a/3b/3c shapes", CLEAN_WORD_PROSE, set()),
     ]
     ok = True
     for name, text, expected in cases:
@@ -932,6 +1318,13 @@ def self_test() -> bool:
         ok = False
     else:
         print("  ok  the floor actually drives the size check")
+    kinds = {k for k, _, _ in audit_text("fixture.swift", DIRTY_SMALL_WORD_BUTTON, 24)}
+    kinds |= {k for k, _, _ in audit_text("fixture.swift", DIRTY_SMALL_CHIP_COMPONENT, 24)}
+    if kinds:
+        print(f"  SELF-TEST FAIL  floor is ignored by 3b/3c — got {kinds} against a 24pt floor")
+        ok = False
+    else:
+        print("  ok  the floor drives 3b and 3c too")
 
     return ok
 
@@ -945,9 +1338,14 @@ def main() -> int:
 
     floor = hit_floor()
     findings = []
-    for path in walk():
-        raw = open(path, encoding="utf-8", errors="replace").read()
-        for kind, line, msg in audit_text(path, raw, floor):
+    sources = {p: open(p, encoding="utf-8", errors="replace").read() for p in walk()}
+    # Check 3c is a TREE question: `Chip` is declared once and named as a label
+    # in twenty other files.
+    label_names = set()
+    for raw in sources.values():
+        label_names |= label_component_names(strip_noise(raw))
+    for path, raw in sources.items():
+        for kind, line, msg in audit_text(path, raw, floor, label_names):
             findings.append((os.path.relpath(path, ROOT), line, kind, msg))
 
     if not findings:

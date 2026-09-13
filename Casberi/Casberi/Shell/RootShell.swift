@@ -4454,15 +4454,18 @@ struct RootShell: View {
             if let action = chrome.toastAction {
                 // The pane's one action reads as ITS interactive part —
                 // a tinted glass capsule riding the glass pill.
+                // DRAWN 28, TARGETED 44: the glass rides the label so it keeps
+                // the capsule's size, and the floor goes on after it.
                 Button(action: action.run) {
                     Text(action.label)
                         .dsText(.label12).fontWeight(.semibold)
                         .foregroundStyle(.white)
                         .padding(.horizontal, DS.Space.s3)
                         .frame(minHeight: 28)
+                        .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
+                        .dsTapTarget(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
             }
         }
         .padding(.horizontal, DS.Space.s4)

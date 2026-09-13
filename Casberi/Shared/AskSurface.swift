@@ -14,8 +14,10 @@ import Foundation
 /// **One flag, read everywhere, so the app cannot be half-deprecated.** The
 /// failure this shape prevents is the one that shipped the quick action for
 /// eleven days (§377): a feature reachable by five doors, four of them turned
-/// off. `ask-deprecation-audit.py` is the mechanical half — it sweeps for a
-/// raiser that forgot to ask.
+/// off. The mechanical half is `scripts/dock-selftest.sh`'s §697b checks,
+/// which name each door (the quick action, the Shortcuts phrase, the two
+/// widgets and the Control Center button, the deep links, the widget
+/// target's own links) rather than checking this flag.
 ///
 /// In `Shared/` because the widget extension reads it too: the ask widgets are
 /// gone from the bundle, and the gate that keeps them gone has to be visible

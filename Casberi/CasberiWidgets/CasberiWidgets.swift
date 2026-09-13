@@ -11,11 +11,11 @@ import ActivityKit
 /// computes anything, none reaches the network, and none can (see
 /// `WidgetPayload`).
 ///
-/// Four widgets since 2026-08-14 (prd §382), where there was one. The hero says
-/// what the day is; the kept-ask tile answers a standing question you chose;
-/// "Needs you" carries the deadlines nothing else on a Home Screen would show;
-/// the wallet draws the line the balance card draws. Plus two Control Center
-/// buttons and two Live Activities.
+/// Three widgets since the ask was deprecated (prd §697b, 2026-09-11). The hero
+/// says what the day is and what landed; "Needs you" carries the deadlines
+/// nothing else on a Home Screen would show; the wallet draws the line the
+/// balance card draws. Plus one Control Center button (capture) and the Live
+/// Activities below.
 @main
 struct CasberiWidgets: WidgetBundle {
     var body: some Widget {
@@ -168,7 +168,6 @@ struct BriefControl: ControlWidget {
 
 struct HeroEntry: TimelineEntry {
     let date: Date
-    let eyebrow: String
     let title: String
     let subline: String
     /// Something landed since the app was last open — a plain accent dot
@@ -259,7 +258,7 @@ struct WidgetRecentItem: Identifiable {
 
 struct HeroProvider: TimelineProvider {
     func placeholder(in context: Context) -> HeroEntry {
-        HeroEntry(date: .now, eyebrow: "",
+        HeroEntry(date: .now,
                   title: String(localized: "Your things, one place"),
                   subline: "Casberi")
     }
@@ -323,9 +322,14 @@ struct HeroProvider: TimelineProvider {
         if let lede = WidgetLede.current(defaults: group) {
             // No eyebrow above the lede: the sentence is already the whole
             // headline, and "This week" over "One overdue, six more due by
-            // Aug 25" would date a line that isn't about this week.
-            return HeroEntry(date: .now, eyebrow: "", title: lede,
-                             subline: "What's going on",
+            // Aug 25" would date a line that isn't about this week. (The
+            // eyebrow field itself is gone — every rung passed "".)
+            //
+            // The subline used to be "What's going on", the brief's own name,
+            // and the brief is deprecated with the ask (prd §697b) — so it
+            // says what the sentence IS: today's line.
+            return HeroEntry(date: .now, title: lede,
+                             subline: String(localized: "Today"),
                              hasNew: hasNew(since: lastSeen),
                              isLede: true, themes: themes,
                              lead: lead, shots: shots, wallet: wallet,
@@ -334,7 +338,7 @@ struct HeroProvider: TimelineProvider {
 
         // ── 2. The most recent thing, as itself ──────────────────────
         if let newest = recent {
-            return HeroEntry(date: .now, eyebrow: "",
+            return HeroEntry(date: .now,
                              title: newest.title,
                              subline: newest.source,
                              hasNew: newest.capturedAt.timeIntervalSince1970 > lastSeen
@@ -345,7 +349,7 @@ struct HeroProvider: TimelineProvider {
         }
 
         // ── 3. Nothing yet ───────────────────────────────────────────
-        return HeroEntry(date: .now, eyebrow: "",
+        return HeroEntry(date: .now,
                          title: String(localized: "Your things go here"),
                          subline: String(localized: "Save one in Casberi"))
     }
@@ -422,10 +426,12 @@ struct HeroWidget: Widget {
             HeroWidgetView(entry: entry)
                 .containerBackground(for: .widget) { WidgetField() }
         }
-        // Named for what it now shows (§193 renamed the brief "What's going
-        // on"); the old "Synthesis" described the tag-cluster line that's gone.
-        .configurationDisplayName("What's going on")
-        .description("Your day in one line.")
+        // Named for what it shows: the day's line, the day's lead, and what
+        // landed. It was "What's going on" — the brief's own name — until
+        // the brief went dark with the ask (prd §697b); a gallery entry named
+        // for a screen the app no longer opens is §83's promise problem.
+        .configurationDisplayName("Your day")
+        .description("Today's line and what just landed.")
         // Large joined the set 2026-08-14. It is not the medium tile with more
         // air: it is the only family with room for the sentence AND the themes
         // AND what actually landed, which is the brief's own shape — so it is
@@ -458,18 +464,13 @@ struct HeroWidgetView: View {
                 // predated the ruling and nobody had looked at the widget
                 // since. The type ramp carries the hierarchy on its own.
                 //
-                // The lede rung emits no eyebrow at all — the sentence IS the
-                // headline — so the row is dropped rather than left as an
-                // empty line eating one of three scarce lock-screen lines.
+                // No rung emits an eyebrow any more — the sentence IS the
+                // headline — so the title takes all three scarce lock-screen
+                // lines rather than leaving one to an empty row.
                 VStack(alignment: .leading, spacing: 1) {
-                    if !entry.eyebrow.isEmpty {
-                        Text(entry.eyebrow)
-                            .dsText(.widgetEyebrow11)
-                            .widgetAccentable()
-                    }
                     Text(entry.title)
                         .dsText(.widgetTitle14)
-                        .lineLimit(entry.eyebrow.isEmpty ? 3 : 2)
+                        .lineLimit(3)
                     Text(entry.subline)
                         .dsText(.widgetSubline11)
                         .opacity(0.7)
@@ -518,11 +519,6 @@ struct HeroWidgetView: View {
                 }
             default:
                 VStack(alignment: .leading, spacing: 4) {
-                    if !entry.eyebrow.isEmpty {
-                        Text(entry.eyebrow)
-                            .dsText(.label11)
-                            .foregroundStyle(accent)
-                    }
                     Text(entry.title)
                         .dsText(.widgetTitle17)
                         .foregroundStyle(.white)
@@ -551,10 +547,12 @@ struct HeroWidgetView: View {
                 }
             }
         }
-        // Lands on the brief itself — the sentence this tile is showing,
-        // opened — rather than the feed. A headline you can't open is the
-        // dead control the honesty rule forbids.
-        .widgetURL(URL(string: "casberi://brief"))
+        // Lands on the FEED (prd §697b). It used to open the brief, and the
+        // brief's route is gated off with the ask — so every tap on this tile
+        // was a dead tap, the control the honesty rule forbids. The feed is
+        // where the things this tile names actually are. `dock-selftest.sh`
+        // refuses an ask or brief link anywhere in this target.
+        .widgetURL(URL(string: "casberi://feed"))
     }
 }
 
@@ -569,7 +567,7 @@ struct HeroWidgetView: View {
 /// brief itself ranks them, and then the rows the map is made of.
 ///
 /// THREE TAP TARGETS, each landing where it says. The tile's own `widgetURL`
-/// opens the brief; each landed row opens THAT THING (`casberi://thing/<id>`)
+/// opens the feed; each landed row opens THAT THING (`casberi://thing/<id>`)
 /// rather than dumping you in the feed to find again what you were just
 /// reading; the button opens the composer. A row that showed you something and
 /// then couldn't open it is the dead control the honesty rule forbids, and at
@@ -666,7 +664,7 @@ private struct ThemesTreemap: View {
                 .frame(width: 100)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: WidgetChrome.blockRadius, style: .continuous))
     }
 
     private func cell(_ c: WidgetThemeCell, fill: AnyShapeStyle) -> some View {

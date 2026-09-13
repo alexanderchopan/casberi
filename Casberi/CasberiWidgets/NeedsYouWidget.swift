@@ -251,9 +251,10 @@ struct NeedsYouWidgetView: View {
 
     /// The signature request, drawn as a banner rather than a row.
     ///
-    /// It links to the pending transaction when the corpus has it, and to the
-    /// tile's own ask when it doesn't — never to `casberi://thing/` with an id
-    /// we don't have, which is a door onto nothing.
+    /// It links to the pending transaction when the corpus has it, and falls
+    /// back to the tile's own `widgetURL` (the feed) when it doesn't — never to
+    /// `casberi://thing/` with an id we don't have, which is a door onto
+    /// nothing.
     @ViewBuilder
     private func signatureCall(_ call: WidgetSafeCall) -> some View {
         let content = HStack(alignment: .top, spacing: 6) {
@@ -319,20 +320,4 @@ struct NeedsYouWidgetView: View {
             .foregroundStyle(.white.opacity(0.75))
             .lineLimit(2)
     }
-
-    /// DELIBERATELY NOT LOCALIZED, and this is the one place in the file where
-    /// that is the correct call rather than an oversight.
-    ///
-    /// The query is not copy — it is a TRIGGER. `KeptAskComposers.matchesUpcoming`
-    /// recognizes this ask by English substrings (`"coming up"`, `"due soon"`),
-    /// as every recognizer in the composer does. A localized query would be a
-    /// well-formed sentence that no composer matches, so on any non-English
-    /// device this tile's tap would quietly fall through to a generic answer
-    /// instead of the deadline list it is showing — a dead control that looks
-    /// alive, and one nothing in a build or a screen sweep could see.
-    ///
-    /// The composer shows the words it was handed, so they appear in English
-    /// there. That is a visible, honest limitation of an English-only
-    /// recognizer, and strictly better than a tap that does the wrong thing.
-    private var askQuery: String { "what's coming up" }
 }

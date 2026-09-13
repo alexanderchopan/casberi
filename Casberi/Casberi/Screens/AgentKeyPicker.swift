@@ -58,7 +58,7 @@ struct AgentKeyPicker: View {
                     .dsText(.label12).fontWeight(.semibold)
                     .foregroundStyle(DS.textTertiary)
                     .padding(.top, configured.isEmpty ? 0 : DS.Space.s2)
-                    .padding(.leading, 3)
+                    .padding(.leading, DS.Space.s1)
                 ForEach(unconfigured) { row($0) }
             }
         }
@@ -91,12 +91,8 @@ struct AgentKeyPicker: View {
                 // A STATE, not a control — the active provider is already
                 // active, so there's nothing to tap (the no-dead-controls
                 // rule: a button that performs its own current state is one).
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .dsGlyph(13, weight: .regular)
-                    Text("Active").dsText(.label12).fontWeight(.semibold)
-                }
-                .foregroundStyle(DS.confirm)
+                DSStamp(word: String(localized: "Active"), weight: .good,
+                        glyph: "checkmark.circle.fill")
             } else if isConfigured {
                 Button {
                     DSHaptic.selection()

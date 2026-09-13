@@ -40,6 +40,11 @@ struct Chip: View {
         .frame(minHeight: 28)
         .fixedSize(horizontal: true, vertical: false)
         .background(wash, in: Capsule(style: .continuous))
+        // DRAWN 28, TARGETED 44 — but only for a chip that IS a control. A
+        // non-interactive chip is a word inside someone else's layout (a
+        // note's tags, a permission list) and a 44pt floor there would push
+        // that layout apart for a target nothing can hit; size 0 is a no-op.
+        .dsTapTarget(Capsule(style: .continuous), size: interactive ? DS.Hit.min : 0)
         // Folded in HERE rather than at each call site, the same reasoning
         // `dsListCardRow` states: every Chip is the label of a Button, so a
         // screen that reaches for one gets Mac hover with no separate

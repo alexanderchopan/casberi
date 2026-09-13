@@ -97,7 +97,8 @@ struct SpotifyScreen: View {
         }
         BridgeSyncStatusRows(syncing: syncing || connecting,
                              syncingLine: String(localized: "Reading your Spotify…"),
-                             proof: result)
+                             proof: result,
+                             retry: { Task { await sync() } })
         DSSlabNote(text: "Your recently played tracks land in your feed. Read-only — never plays or changes anything.", plain: true)
     }
 

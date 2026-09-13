@@ -55,6 +55,10 @@ struct AgentRoomCard: View {
     /// the strip and the rows below it are on ONE scale and can't disagree.
     private var top: Int { room.busiest.conversations }
 
+    /// The month strip's full column height — the bar scale and the strip's
+    /// frame are one number, so a column can never outgrow its row.
+    private static let stripHeight: CGFloat = 38
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // No source-name eyebrow (prd §452): a room head renders only
@@ -156,12 +160,12 @@ struct AgentRoomCard: View {
                         // still a visible column rather than a sub-pixel
                         // nothing: a month you used it must never draw as one
                         // you didn't.
-                        .frame(height: max(4, 38 * AgentRoom.share(
+                        .frame(height: max(4, Self.stripHeight * AgentRoom.share(
                             conversations: month.conversations, of: top)))
                         .frame(maxWidth: .infinity)
                 }
             }
-            .frame(height: 38, alignment: .bottom)
+            .frame(height: Self.stripHeight, alignment: .bottom)
             .chartWipe(reduceMotion: reduceMotion)
             if let first = room.months.first, let last = room.months.last,
                room.months.count > 1 {
@@ -208,7 +212,9 @@ struct AgentRoomCard: View {
                          reduceMotion: reduceMotion)
             }
             .padding(.vertical, DS.Space.s1)
-            .contentShape(Rectangle())
+            // A month is a door, so it is a 44pt target: the label, the line
+            // and the share bar measure shorter than a finger.
+            .dsTapTarget()
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("\(AgentRoom.monthLabel(month.month)), \(AgentRoom.monthLine(month))"))

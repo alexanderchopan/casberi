@@ -573,8 +573,16 @@ struct AppsScreen: View {
             scopeSegmentHalf(String(localized: "Yours"), on: yoursOnly) { yoursOnly = true }
             scopeSegmentHalf(String(localized: "All"), on: !yoursOnly) { yoursOnly = false }
         }
-        .padding(2)
-        .background(DS.fillFaint, in: Capsule(style: .continuous))
+        .padding(.horizontal, 2)
+        // The TRACK is drawn at its own 36pt (a 32pt half plus 2pt each side)
+        // while each half is TARGETED at 44 — a `background` is proposed the
+        // floored box, so the pinned height centres the track where it always
+        // sat. The row it shares with the 56pt search slab does not grow.
+        .background {
+            Capsule(style: .continuous)
+                .fill(DS.fillFaint)
+                .frame(height: 36)
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("Which accounts"))
     }
@@ -594,6 +602,7 @@ struct AppsScreen: View {
                 .padding(.horizontal, DS.Space.s3)
                 .frame(minHeight: 32)
                 .background(on ? DS.tint : Color.clear, in: Capsule(style: .continuous))
+                .dsTapTarget(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])

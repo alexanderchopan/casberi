@@ -332,6 +332,10 @@ struct SafeSignBlock: View {
 
     @State private var phase: Phase = .checking
     @State private var signing = false
+    /// Bumped by "Try again" on an unreachable chain (prd §717). It is the
+    /// check's `.task` id, so a retry re-runs the SAME read-from-chain check
+    /// and nothing else — it never signs, and every refusal still stands.
+    @State private var attempt = 0
 
     private enum Phase {
         case checking
@@ -360,9 +364,21 @@ struct SafeSignBlock: View {
                 // states of almost every Safe row in the corpus, and a
                 // paragraph explaining them on each one is noise.
                 if let sentence = sentence(for: refusal) {
-                    Text(verbatim: sentence)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        Text(verbatim: sentence)
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        // The one refusal that is the NETWORK's, not the
+                        // transaction's — a mismatch, a missing owner or a
+                        // threshold of 1 is not answered by asking again.
+                        if case .chainUnreadable = refusal {
+                            DSSlabDoor(title: String(localized: "Try again"),
+                                       systemImage: "arrow.clockwise") {
+                                phase = .checking
+                                attempt += 1
+                            }
+                        }
+                    }
                 }
             case .keyDestroyed:
                 Text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Make a new one in the Safe screen.")
@@ -378,7 +394,7 @@ struct SafeSignBlock: View {
                 .settleIn()
             }
         }
-        .task {
+        .task(id: attempt) {
             guard let parts else { return }
             // The key can be GONE rather than merely locked — `.biometryCurrentSet`
             // destroys the item when the enrolled set changes. Said here as well

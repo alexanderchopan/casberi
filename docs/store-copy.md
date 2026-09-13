@@ -8,9 +8,16 @@ take a PATCH, description / What's New / keywords / subtitle answer 409.
 Caps: description 4000, What's New 4000, review notes 4000, keywords 100,
 promotional text 170, subtitle 30.
 
-## iOS — APPLIED 2026-09-07 (§643)
+## iOS — description REWRITTEN 2026-09-13 for §697b, NOT YET APPLIED
 
-The description below is LIVE on iOS. The user applied it by hand on
+**The live iOS and Mac descriptions and the promotional text still sell the
+ask** ("ASK IT", "an agent that answers from it"). prd §697b deprecated the
+ask on 2026-09-11 and recorded that copy as owed before the next submission.
+The text below is the replacement, rewritten in the repo on 2026-09-13 and
+not pushed to App Store Connect. When it is applied, change this heading and
+the Mac and promotional-text headings in the same breath.
+
+The description this replaces is LIVE on iOS. The user applied it by hand on
 2026-09-07, the day it was written. **This heading said "Pending, apply to
 1.0.12" for four days after the copy had moved on**, which is the whole reason
 the §643 session had to re-derive what was live rather than read it here — so
@@ -23,9 +30,9 @@ Still pending on iOS, refused with 409 on 2026-09-03 and already applied on Mac:
   a reviewer scans on an app that was just rejected under Guideline 3.1.5;
   reordering costs nothing, since keyword order does not affect search ranking)
 
-### iOS description (1,794 chars)
+### iOS description (1,767 chars)
 
-Everything you build is scattered across apps, wallets and agents. Casberi is a productivity app that puts all your accounts in one private feed, with an agent that answers from it. No account, no servers, no tracking.
+Everything you build is scattered across apps, wallets and agents. Casberi is a productivity app that puts all your accounts in one private feed, so you read them in one place. No account, no servers, no tracking.
 
 TRY IT BEFORE YOU CONNECT ANYTHING
 One tap fills Casberi with sample data, so you can feel the whole app first.
@@ -33,8 +40,8 @@ One tap fills Casberi with sample data, so you can feel the whole app first.
 ONE FEED
 A deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your workouts and your notes. Read it all together, or one app at a time. No dashboard tour every morning. In the US, Apple Card, Apple Cash and Savings land with the merchant's real name, read on this iPhone and never uploaded.
 
-ASK IT
-The agent searches your things, follows leads across sources, and shows exactly which things it read. Answers draw real charts. With Apple Intelligence it runs on Apple's on-device model, or bring your own key and it stays in your Keychain.
+SEE WHAT'S HAPPENING
+Every app opens as a room shaped like what's in it: a calendar reads as an agenda, a wallet leads with its balance. Home Screen widgets carry your day, what's due and your wallet. Spotlight and Shortcuts find any thing by what it says.
 
 CONNECT HONESTLY
 Over 90 apps across work, wallet, social, reading, notes, schedule, fitness, mail and storage. A tap for Apple apps. A read-only key for services. An import where there is no API. A pasted address for wallets, which can never trade or move funds. Never a password.
@@ -45,14 +52,14 @@ Share from any app and it lands instantly. Screenshots flow in on their own and 
 YOURS, ACTUALLY
 There is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.
 
-Casberi isn't another chatbot. It's your own things, in one feed, with an agent that knows them.
+Casberi isn't another chatbot. It's your own things, in one feed.
 
 ### iOS What's New — append these two bullets
 
 • Developer networks — Base Vibenet, Hegotá UTXO and Frames are test networks: make an account, claim from the faucet and send test transactions. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network.
 
 • Bankr — answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
-## Mac — APPLIED 2026-09-08, on 1.0.15
+## Mac — APPLIED 2026-09-08, on 1.0.15; description REWRITTEN 2026-09-13 for §697b, NOT YET APPLIED
 
 The 1.0.12 record (In Review since 2026-09-07, build 535) was cancelled on
 2026-09-08 by the user's call — "burn our queue position" — RENAMED to 1.0.15
@@ -72,9 +79,9 @@ differences in the copy below, each deliberate: no Apple Card block, "reading"
 where iOS says "workouts", no fitness in the category list, and a
 menu-bar-and-keyboard line where the Apple Card sentence sits on iOS.
 
-### Mac description (1,778 chars)
+### Mac description (1,739 chars)
 
-Everything you build is scattered across apps, wallets and agents. Casberi is a productivity app for Mac that puts all your accounts in one private feed, with an agent that answers from it. No account, no servers, no tracking.
+Everything you build is scattered across apps, wallets and agents. Casberi is a productivity app for Mac that puts all your accounts in one private feed, so you read them in one place. No account, no servers, no tracking.
 
 TRY IT BEFORE YOU CONNECT ANYTHING
 One tap fills Casberi with sample data, so you can feel the whole app first.
@@ -82,8 +89,8 @@ One tap fills Casberi with sample data, so you can feel the whole app first.
 ONE FEED
 A deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your reading and your notes. Read it all together, or one app at a time. No dashboard tour every morning. Rooms answer to the menu bar and the keyboard; a row copies, previews with Space, and drags out to any app.
 
-ASK IT
-The agent searches your things, follows leads across sources, and shows exactly which things it read. Answers draw real charts. With Apple Intelligence it runs on Apple's on-device model, or bring your own key and it stays in your Keychain.
+SEE WHAT'S HAPPENING
+Every app opens as a room shaped like what's in it: a calendar reads as an agenda, a wallet leads with its balance. Widgets carry your day, what's due and your wallet. Spotlight and Shortcuts find any thing by what it says.
 
 CONNECT HONESTLY
 Over 90 apps across work, wallet, social, reading, notes, schedule, mail and storage. A tap for Apple apps. A read-only key for services. An import where there is no API. A pasted address for wallets, which can never trade or move funds. Never a password.
@@ -94,9 +101,13 @@ Share from any app and it lands instantly. Screenshots flow in on their own and 
 YOURS, ACTUALLY
 There is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.
 
-Casberi isn't another chatbot. It's your own things, in one feed, with an agent that knows them.
+Casberi isn't another chatbot. It's your own things, in one feed.
 
 ### Mac What's New — APPLIED 2026-09-08 on 1.0.15 (1,891 chars)
+
+> A record of what shipped, kept verbatim. Its first Features bullet says the
+> demo can be "asked about" — true on 1.0.15, false since §697b. Do not reuse
+> it in a later What's New.
 
 The Mac sets type at its own size, the dock moves as one piece, and a first run opens into a live demo.
 
@@ -124,6 +135,6 @@ Bugs
 
 Bankr answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
 
-### Promotional text — both platforms (154 chars)
+### Promotional text — both platforms (149 chars) — REWRITTEN 2026-09-13, NOT YET APPLIED
 
-Everything you build is scattered across apps, wallets and agents. Casberi puts all your accounts in one private feed, with an agent that answers from it.
+Everything you build is scattered across apps, wallets and agents. Casberi puts all your accounts in one private feed, so you read them in one place.

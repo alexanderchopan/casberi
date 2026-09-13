@@ -339,6 +339,12 @@ struct BridgeSyncStatusRows: View {
     /// "these people arrived," not "a number arrived" (delight 2026-07-14).
     var faces: [String] = []
     var faceFallback: String = ""
+    /// Re-runs the read that just failed (prd §717). "Try again" used to be
+    /// prose inside the failure line with nothing to tap; when a screen passes
+    /// this, a `.failed` proof draws a "Try again" door directly under the
+    /// line. Nil where the failure already brings its own retry back (a
+    /// Connect slab reappearing), and never drawn for a non-failure.
+    var retry: (() -> Void)? = nil
     /// Inset to the title column inside an act (prd §640).
     @Environment(\.accountAct) private var accountAct
     @State private var shakes = 0
@@ -377,6 +383,12 @@ struct BridgeSyncStatusRows: View {
             .padding(.leading, accountAct ? DSActRow.inset : 0)
             .padding(.vertical, accountAct ? DS.Space.s2 : 0)
             .dsListCardRow()
+            if failed, let retry {
+                DSSlabDoor(title: String(localized: "Try again"),
+                           systemImage: "arrow.clockwise",
+                           action: retry)
+                    .dsListCardRow()
+            }
         }
     }
 }

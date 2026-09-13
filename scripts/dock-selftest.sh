@@ -413,6 +413,23 @@ grep -q 'WidgetAskLink.url' "Casberi/CasberiWidgets/NeedsYouWidget.swift" \
 grep -q 'guard AskSurface.enabled else { return }' "$TMP/root.nc" \
   || { echo "✗ RootShell no longer gates the ask's deep links (casberi://ask, ://brief)"; \
        echo "  and the quick action's landing."; fail=1; }
+# ...and because those two routes are gated, NO widget may mint them. The hero
+# tile's `widgetURL` was `casberi://brief` for two days after §697b, so every
+# tap on the one widget still in the bundle opened nothing — the gate above
+# and the link below are two files in two targets that cannot see each other.
+# Swept per file over a COMMENT-STRIPPED copy (the files explain the rule by
+# naming the link). `KeptAskWidget.swift` is exempt from the `WidgetAskLink`
+# half only: it is out of the bundle and returns with the flag, whole.
+# `DOCK_WIDGETS_DIR` exists so the check can be proven on a scratch copy.
+WIDGETS_DIR="${DOCK_WIDGETS_DIR:-Casberi/CasberiWidgets}"
+for wf in "$WIDGETS_DIR"/*.swift; do
+  strip_comments "$wf" > "$TMP/widget.nc"
+  grep -qE 'casberi://(brief|ask)' "$TMP/widget.nc" \
+    && { echo "✗ ${wf:t} mints a casberi://brief or casberi://ask link — both routes are"; \
+         echo "  gated off with the ask (prd §697b), so the tap would open nothing."; fail=1; }
+  [ "${wf:t}" != "KeptAskWidget.swift" ] && grep -q 'WidgetAskLink' "$TMP/widget.nc" \
+    && { echo "✗ ${wf:t} builds an ask link (WidgetAskLink) — the ask is deprecated (prd §697b)."; fail=1; }
+done
 
 # --- 7. a folder tap LANDS and opens; the standing chip only toggles ---------
 # prd §663 (2026-09-09) overturned the §591 amendment this guard used to pin

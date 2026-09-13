@@ -42,7 +42,10 @@ GRID="Casberi/Casberi/Screens/AgentPanelGrid.swift"
 # only the PER-ROOM function survived, for the chip peek. The invariants below
 # are unchanged — they just live one file over now.
 COMPOSER="Casberi/Casberi/Model/RoomFigure.swift"
-for f in "$SRC" "$MONEY" "$GRID" "$COMPOSER"; do
+# The bento grid that routed by `fit` was deleted (prd §715, no call site since
+# §386p); the chip peek is the one surface still choosing a slot from it.
+PEEK="Casberi/Casberi/Shell/ChipPeek.swift"
+for f in "$SRC" "$MONEY" "$GRID" "$COMPOSER" "$PEEK"; do
   [[ -f "$f" ]] || { print -u2 "missing $f"; exit 1; }
 done
 
@@ -383,7 +386,7 @@ guard_has "a flow figure demands full width" "$SRC" 'case \.flow:    return \.ba
 # comment. The guard moved with the logic: it lived on a helper in the grid
 # until §337 put routing in `AgentPanel.fit`, and a guard left pointing at the
 # old home reads ✗ while the behaviour is perfectly correct.
-guard_has "the grid routes by fit" "$GRID" 'AgentPanel\.fit\(\$0\.figure\) == \.bandOnly' || rc=1
+guard_has "the chip peek routes by fit" "$PEEK" 'AgentPanel\.fit\(card\.figure\) == \.bandOnly' || rc=1
 # §334's tripwire: the moment a figure can be words, the panel is a list again.
 if sed 's|//.*||' "$SRC" | grep -qE 'case text\('; then
   print "  ✗ a Figure case may never be text (§334's tripwire)"; rc=1

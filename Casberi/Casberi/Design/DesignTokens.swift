@@ -98,6 +98,18 @@ enum DS {
     static let stepVault  = Color.fixed("#4dc7eb")
     static let stepVerify = Color.fixed("#8c78ed")
 
+    /// The RANK hues (prd §715) — categories with no state to say and no
+    /// identity to borrow: a theme river's bands by rank, a distribution's
+    /// fifth and sixth segments. Were two spellings of one idea, a raw hex
+    /// array inside `RiverFigure` and `.purple` / `.pink` inside
+    /// `DistributionHero`; one palette now, read by index. FIXED for
+    /// `neutralBadge`'s reason: they are fills and legend swatches that must
+    /// read the same in both themes. Blue, purple, green, orange, pink.
+    static let rankHues: [Color] = [
+        Color.fixed("#4a9eff"), Color.fixed("#b06bff"), Color.fixed("#33c48d"),
+        Color.fixed("#f2a33c"), Color.fixed("#ff7a9c"),
+    ]
+
     static let gray100  = Color.adaptive(dark: "#2c2c2e", light: "#e5e5ea")
     static let gray200  = Color.adaptive(dark: "#3a3a3c", light: "#d1d1d6")
     static let gray300  = Color.adaptive(dark: "#48484a", light: "#c7c7cc")

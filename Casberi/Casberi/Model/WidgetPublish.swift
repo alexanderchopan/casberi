@@ -44,7 +44,11 @@ enum WidgetPublish {
         let things = things.live
         var stale: [String] = []
 
-        if writeAsks(to: group) { stale.append(WidgetAsks.kind) }
+        // The kept-ask payload only has a reader while the ask is drawn: its
+        // widget left the bundle with the ask (prd §697b), so writing it on
+        // every foreground and reloading a kind nothing registers is work for
+        // no tile. Returns with the flag, like the widget.
+        if AskSurface.enabled, writeAsks(to: group) { stale.append(WidgetAsks.kind) }
         if WidgetPayload.write(dayLead(things: things), key: WidgetLede.leadKey,
                                stampKey: WidgetLede.leadStampKey, defaults: group) {
             stale.append(WidgetLede.kind)
@@ -88,8 +92,11 @@ enum WidgetPublish {
     /// keep/remove path: a kept ask's title comes from `KeptAskStore` itself.
     /// The new question publishes with NO reading — its composer hasn't run yet
     /// — which the tile already renders honestly as "Open to answer".
+    ///
+    /// Dark while the ask is deprecated (prd §697b) — see `publishAll`.
     static func publishAsks() {
-        guard let group = UserDefaults(suiteName: SharedStore.appGroup) else { return }
+        guard AskSurface.enabled,
+              let group = UserDefaults(suiteName: SharedStore.appGroup) else { return }
         if writeAsks(to: group) {
             WidgetCenter.shared.reloadTimelines(ofKind: WidgetAsks.kind)
         }

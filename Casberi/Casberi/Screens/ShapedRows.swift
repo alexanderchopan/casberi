@@ -2081,12 +2081,14 @@ struct ApprovalCard: View {
                     Text("Approve").dsText(.label12).foregroundStyle(.black)
                         .padding(.horizontal, DS.Space.s4).frame(minHeight: 32)
                         .background(DS.confirm, in: Capsule(style: .continuous))
+                        .dsTapTarget(Capsule(style: .continuous))
                 }
                 .buttonStyle(PressSpring())
                 Button(action: onDeny) {
                     Text("Deny").dsText(.label12).foregroundStyle(DS.textPrimary)
                         .padding(.horizontal, DS.Space.s4).frame(minHeight: 32)
                         .background(DS.fillFaint, in: Capsule(style: .continuous))
+                        .dsTapTarget(Capsule(style: .continuous))
                 }
                 .buttonStyle(PressSpring())
                 Spacer()

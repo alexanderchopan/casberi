@@ -1,38 +1,14 @@
 import SwiftUI
 
-/// The agent's instrument panel (prd §334/§336/§337) — the bento.
+/// What is left of the agent's instrument panel (prd §334/§336/§337).
 ///
-/// The top-ranked card takes a full-width double-height hero, band-only figures
-/// take full-width rows of their own, and the rest fall into a tall cell beside
-/// two smalls and then pairs. The pattern is FIXED, never derived from content
-/// measurements: a layout that re-derives itself re-shuffles when a figure
-/// changes shape, and a panel that rearranges between opens reads as broken
-/// long before it reads as fresh.
-///
-/// **Bento means slots differ in SHAPE, not scale** (§337). A figure routed to
-/// a slot it can't hold doesn't shrink gracefully — it clips, collides or turns
-/// to mush, and all three render as a perfectly good-looking tile. So
-/// `AgentPanel.fit` is a constraint, and every figure below draws DIFFERENTLY
-/// per slot rather than being scaled into one.
-///
-/// Holds no `Thing` — value types in, a source name back on tap.
-struct AgentPanelGrid: View {
-    let cards: [AgentPanel.Card]
-    /// Fires with the card's source — the composer switches the feed to that
-    /// room and lowers the agent.
-    let onOpen: (String) -> Void
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private static let unit: CGFloat = 118
-    private static let gutter: CGFloat = DS.Space.s2
-    private static var double: CGFloat { unit * 2 + gutter }
-    private static let bandHeight: CGFloat = 150
-    private static func bandHeight(for figure: AgentPanel.Figure) -> CGFloat {
-        if case .scatter = figure { return 236 }
-        return bandHeight
-    }
-
+/// The bento grid itself was deleted with the panel (prd §386p) and sat here
+/// with no call site until prd §715's sweep removed it, along with its corner
+/// badge and its tile entrance. What survives is the part other surfaces
+/// still draw: the room hue below, and the figures under it, which the chip
+/// peek (`ChipPeek`) and the answer dial (`GenDial`) render through
+/// `FigureView`. An enum, not a view — nothing here is a screen any more.
+enum AgentPanelGrid {
     /// The room's hue, made safe to FILL with against a near-black well.
     ///
     /// `signalColor` solves the inverse problem — a near-black brand mark
@@ -53,250 +29,6 @@ struct AgentPanelGrid: View {
         }
         #endif
         return brand
-    }
-
-    var body: some View {
-        let bands = cards.filter { AgentPanel.fit($0.figure) == .bandOnly }
-        let tiles = cards.filter { AgentPanel.fit($0.figure) != .bandOnly }
-        VStack(spacing: Self.gutter) {
-            if let hero = tiles.first {
-                tile(hero, slot: .hero, index: 0).frame(height: Self.double)
-            }
-            ForEach(Array(bands.enumerated()), id: \.element.key) { i, band in
-                // A map needs vertical room the rails don't — its whole claim
-                // is spatial, and at rail height the clusters stack into one
-                // stripe.
-                tile(band, slot: .band, index: 1 + i)
-                    .frame(height: Self.bandHeight(for: band.figure))
-            }
-            let rest = Array(tiles.dropFirst())
-            // A `.large` figure can't sit in a small cell — it takes the tall
-            // column rather than being crushed into one.
-            let tall = rest.first { AgentPanel.fit($0.figure) == .large } ?? rest.first
-            let smalls = rest.filter { $0.key != tall?.key }
-            if let tall, smalls.count >= 2 {
-                HStack(alignment: .top, spacing: Self.gutter) {
-                    tile(tall, slot: .tall, index: 1).frame(height: Self.double)
-                    VStack(spacing: Self.gutter) {
-                        tile(smalls[0], slot: .small, index: 2).frame(height: Self.unit)
-                        tile(smalls[1], slot: .small, index: 3).frame(height: Self.unit)
-                    }
-                }
-                pairRows(Array(smalls.dropFirst(2)), startIndex: 4)
-            } else {
-                pairRows(rest, startIndex: 1)
-            }
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s3)
-    }
-
-    @ViewBuilder
-    private func pairRows(_ cards: [AgentPanel.Card], startIndex: Int) -> some View {
-        ForEach(Array(stride(from: 0, to: cards.count, by: 2)), id: \.self) { i in
-            HStack(alignment: .top, spacing: Self.gutter) {
-                tile(cards[i], slot: .small, index: startIndex + i).frame(height: Self.unit)
-                if i + 1 < cards.count {
-                    tile(cards[i + 1], slot: .small, index: startIndex + i + 1)
-                        .frame(height: Self.unit)
-                } else {
-                    Color.clear.frame(height: Self.unit)
-                }
-            }
-        }
-    }
-
-    /// One tile as one sentence — the §299 grammar applied to a card whose
-    /// figure cannot speak for itself.
-    ///
-    /// Order is deliberate and matches the eye: whose room, what the card is
-    /// called, the one reading under the figure, then the room's own subtitle.
-    /// `reading` leads `caption` because it is the fact ("$12,480 · +1.8%") and
-    /// the caption is context; a listener who stops after four words should
-    /// have heard the number.
-    ///
-    /// Every part is the ROOM's own text, never composed here — the panel is a
-    /// window onto the room (`Card.title`'s own rule), so inventing a phrase
-    /// would be the one way this sentence could describe a card the room does
-    /// not recognise.
-    static func spokenTile(_ card: AgentPanel.Card) -> String {
-        var parts = ["\(card.source): \(card.title)"]
-        if let reading = card.reading, !reading.isEmpty { parts.append(reading) }
-        let caption = card.caption.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !caption.isEmpty, caption != card.title { parts.append(caption) }
-        return parts.joined(separator: ". ")
-    }
-
-    private func tile(_ card: AgentPanel.Card, slot: AgentPanel.Slot, index: Int) -> some View {
-        // HUE IS IDENTITY (§336) — the brand colour the source strip and the
-        // seat chips already paint, so a figure says whose room it is before a
-        // word is read. Design law permits colour for identity; `signalColor`
-        // is the variant that survives a near-black tile hue.
-        let hue = Self.panelHue(for: card.source)
-        return Button {
-            DSHaptic.selection()
-            onOpen(card.source)
-        } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                // The hero carries ONE reading — the room's own sentence about
-                // itself, in the largest type on the tile. Every other slot is
-                // wordless: the figure is the content and the corner glyph says
-                // whose it is, which is what buys a small cell back the quarter
-                // of its height the old header row ate (§336).
-                if slot == .hero, let reading = card.reading {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text(reading)
-                            .dsText(.heading22)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                        if !card.caption.isEmpty {
-                            Text(card.caption)
-                                .dsText(.subhead13)
-                                .foregroundStyle(DS.textTertiary)
-                                .lineLimit(1)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 2)
-                } else if slot == .hero || slot == .band {
-                    HStack(spacing: DS.Space.s2) {
-                        // On a BAND the glyph rides the title, not the well
-                        // (§339). Both band figures label their left AND right
-                        // edges, top and bottom — there is no free corner, and
-                        // moving the badge merely traded a clipped "Uniswap"
-                        // for a covered "$600". Beside the heading it has
-                        // space of its own and reads as a heading mark.
-                        if slot == .band {
-                            TileBadge(card: card, hue: hue, size: 16, cornerRadius: 4)
-                        }
-                        Text(card.title)
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 2)
-                }
-
-                // The figure sits in a WELL — the elevation ladder's recess, a
-                // tonal step below the card, so charts read as instruments set
-                // INTO the panel rather than shapes floating on it. That is the
-                // job a border would do in a system that allowed them; §8
-                // forbids lines, so tone does it.
-                ZStack {
-                    FigureView(figure: card.figure, slot: slot, hue: hue,
-                               rising: card.rising, reduceMotion: reduceMotion)
-                        .padding(DS.Space.s2)
-                    // The glyph sits BOTTOM-trailing on a band (§339): the
-                    // sankey and the runway both label their right edge at the
-                    // top, and a badge in that corner clipped "Uniswap" to
-                    // "Uniswap …" on a real corpus. Corner tiles keep it top —
-                    // their figures start below the fold of the well.
-                    TileBadge(card: card, hue: hue, size: 18, cornerRadius: 5)
-                        .padding(6)
-                        .opacity(slot == .band ? 0 : 1)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity,
-                               alignment: .topTrailing)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .dsWell(cornerRadius: DS.Radius.card, recessed: true)
-                // A caption under a wordless figure is its READING — what the
-                // shape means — not chrome. Only where the figure earns one
-                // (§339: the dial's busiest window); every other small tile
-                // stays wordless.
-                if slot != .hero, !card.caption.isEmpty {
-                    Text(card.caption)
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                        .padding(.horizontal, 2)
-                }
-            }
-            .padding(DS.Space.s2 + 1)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .dsInkFill()
-            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-            .dsHover()
-        }
-        .buttonStyle(PressSpring())
-        .accessibilityElement(children: .combine)
-        // `children: .combine` merges the tile's own words and an explicit
-        // label then REPLACES them — so naming only the source and the title
-        // dropped both of the sentences the tile actually draws. The figure
-        // beside them is a `Path`/`Circle` stack that says nothing on its own
-        // (prd §299), which left the reading it illustrates unspoken too: a
-        // dial of 24 hourly marks announced itself as "GitHub: Your day" and
-        // stopped. The room's OWN words are used rather than a sentence
-        // composed here, so the tile and the room it opens can't disagree.
-        .accessibilityLabel(Text(Self.spokenTile(card)))
-        .modifier(TileEntrance(index: index, reduceMotion: reduceMotion))
-    }
-}
-
-/// The one mark every source tile wears — never the generic "app" grid glyph
-/// (spec "Agent panel tiles" item 1, user: "we need to make sure icons are
-/// always present when its for a source"). Three layers, checked in order:
-///
-/// 1. A CROSS-SOURCE card (`card.source == "All"` — the Day Dial, Theme
-///    River, Semantic Map) wears a FIGURE glyph on the person's own accent
-///    rather than a brand mark, since the corpus these draw is theirs, not
-///    any one room's.
-/// 2. A real source with a `BridgeGlyph` case wears its symbol on its hue,
-///    exactly as before.
-/// 3. Anything still falling through to `BridgeGlyph`'s generic `"app"`
-///    default wears its own first letter instead — a monogram is a mark,
-///    a grid icon is an apology. Precedent: App Store Connect's own glyph is
-///    deliberately a letter (`KindGlyph.swift`'s `"character"` case) because
-///    the App Store's mark is Apple's trademark and can't be borrowed.
-///
-/// `BridgeGlyph`'s own default is left untouched — settings' seat chips also
-/// read it, and this fallback belongs to the panel alone.
-private struct TileBadge: View {
-    let card: AgentPanel.Card
-    let hue: Color
-    let size: CGFloat
-    let cornerRadius: CGFloat
-
-    private static func crossSourceSymbol(for figure: AgentPanel.Figure) -> String {
-        switch figure {
-        case .dial:    return "clock"
-        case .river:   return "water.waves"
-        case .scatter: return "sparkles"
-        case .treemap: return "square.grid.2x2"
-        default:       return "circle.grid.2x2"
-        }
-    }
-
-    var body: some View {
-        Group {
-            if card.source == "All" {
-                // Cross-source, not brand-less — but "all of them at once"
-                // has no single identity either, so it takes the same
-                // neutral badge an unbranded source would (2026-08-10, was
-                // DS.tint).
-                IconChip(tone: DS.neutralBadge, size: size, radius: cornerRadius) {
-                    Image(systemName: Self.crossSourceSymbol(for: card.figure))
-                        .dsGlyph(9, weight: .bold)
-                }
-            } else {
-                let symbol = BridgeGlyph.symbol(for: card.source)
-                IconChip(tone: hue, size: size, radius: cornerRadius) {
-                    if symbol == "app" {
-                        Text(card.source.prefix(1).uppercased())
-                            // A letter standing in for a missing brand mark IS
-                            // a glyph — same rung as the two symbols either
-                            // side of it, so the chip never changes size with
-                            // which fallback it drew.
-                            .dsGlyph(9, weight: .bold)
-                    } else {
-                        Image(systemName: symbol)
-                            .dsGlyph(9, weight: .bold)
-                    }
-                }
-            }
-        }
-        .accessibilityHidden(true)
     }
 }
 
@@ -449,11 +181,11 @@ struct FigureView: View {
         let shown = Array(bars.prefix(rows))
         let shares = AgentPanel.normalized(shown)
         return GeometryReader { geo in
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
                 Spacer(minLength: 0)
                 ForEach(Array(shown.enumerated()), id: \.offset) { i, bar in
                     VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: DS.Space.s1) {
                             Text(bar.label)
                                 .dsText(.subhead13)
                                 .fontWeight(i == 0 ? .semibold : .regular)
@@ -507,7 +239,7 @@ struct FigureView: View {
             .frame(height: 10)
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(Array(segments.prefix(max(1, rows - 1)).enumerated()), id: \.offset) { _, seg in
-                    HStack(spacing: 5) {
+                    HStack(spacing: DS.Space.s1) {
                         Circle().fill(tone(seg.tone)).frame(width: 6, height: 6)
                         Text(seg.label)
                             .dsText(.subhead13)
@@ -708,7 +440,7 @@ private struct WallTileImage: View {
                                 .foregroundStyle(DS.textSecondary)
                                 .multilineTextAlignment(.center)
                                 .lineLimit(2)
-                                .padding(4)
+                                .padding(DS.Space.s1)
                         }
                     }
             }
@@ -743,7 +475,7 @@ private struct WallTileImage: View {
 private struct DialFigure: View {
     let marks: [AgentPanel.DialMark]
     let slot: AgentPanel.Slot
-    /// STRUCTURE — the ring strokes itself from 12 o'clock.
+    /// STRUCTURE — the hour anchors fading in before the marks.
     let ring: Double
     /// DATA — the radar sweep gating each mark by its own hour.
     let sweep: Double
@@ -760,14 +492,8 @@ private struct DialFigure: View {
             let rMax = side / 2 - (showsHours ? 14 : 3)
             let rMin = rMax * 0.34
             ZStack {
-                // The ring DRAWS ITSELF from 12 o'clock — structure before
-                // data, the way a hand starts a clock face.
-                Circle()
-                    .trim(from: 0, to: ring)
-                    .stroke(DS.fillLine, lineWidth: 1)
-                    .rotationEffect(.degrees(-90))
-                    .frame(width: rMax * 2, height: rMax * 2)
-                    .position(x: cx, y: cy)
+                // NO RING (§8: nothing draws a line). The hour anchors and
+                // the marks themselves are the clock face.
                 if showsHours {
                     // Six-hour anchors only — 24 ticks at tile scale is a
                     // dotted ring that reads as texture, not as a clock.
@@ -831,7 +557,7 @@ private struct RiverFigure: View {
     /// Fixed hues assigned by RANK, not by room — a theme spans rooms by
     /// definition. Stable across opens because `river` returns a totally
     /// ordered list.
-    private static let palette = ["#4a9eff", "#b06bff", "#33c48d", "#f2a33c", "#ff7a9c"]
+    private static let palette = DS.rankHues
 
     var body: some View {
         GeometryReader { geo in
@@ -870,7 +596,7 @@ private struct RiverFigure: View {
                             }
                             p.closeSubpath()
                         }
-                        .fill(Color(hex: Self.palette[bi % Self.palette.count]).opacity(0.8))
+                        .fill(Self.palette[bi % Self.palette.count].opacity(0.8))
                     }
                 }
                 // Fills left to right — a MASK, so the bands keep their shape
@@ -887,11 +613,11 @@ private struct RiverFigure: View {
                     }
                 }
                 .overlay(alignment: .bottomLeading) {
-                    HStack(spacing: 9) {
+                    HStack(spacing: DS.Space.s2) {
                         ForEach(Array(bands.prefix(3).enumerated()), id: \.offset) { i, band in
-                            HStack(spacing: 4) {
+                            HStack(spacing: DS.Space.s1) {
                                 Circle()
-                                    .fill(Color(hex: Self.palette[i % Self.palette.count]))
+                                    .fill(Self.palette[i % Self.palette.count])
                                     .frame(width: 6, height: 6)
                                 Text(band.label)
                                     .dsText(.subhead13)
@@ -981,7 +707,7 @@ struct ScatterFigure: View {
                     let cw = Self.halo(cluster.radius, w - inset * 2)
                     let ch = Self.halo(cluster.radius, h - inset * 2)
                     Circle()
-                        .fill(Color.white.opacity(0.028))
+                        .fill(DS.fillFaint)
                         .frame(width: cw, height: ch)
                         .opacity(halos)
                         .position(x: px(cluster.x), y: py(cluster.y))
@@ -1026,7 +752,7 @@ struct ScatterFigure: View {
                 if !legend.isEmpty {
                     HStack(spacing: DS.Space.s2) {
                         ForEach(legend, id: \.source) { entry in
-                            HStack(spacing: 3) {
+                            HStack(spacing: DS.Space.s1) {
                                 Circle()
                                     .fill(AgentPanelGrid.panelHue(for: entry.source))
                                     .frame(width: 5, height: 5)
@@ -1068,7 +794,7 @@ private struct RunwayFigure: View {
     let marks: [AgentPanel.RunwayMark]
     let span: String
     let slot: AgentPanel.Slot
-    /// STRUCTURE — the axis drawing left to right, then the "now" tick.
+    /// STRUCTURE — the clock the "now" tick pops on.
     let axis: Double
     /// DATA — deadlines LANDING on the axis.
     let drop: Double
@@ -1080,12 +806,9 @@ private struct RunwayFigure: View {
             let w = geo.size.width, h = geo.size.height
             let axisY = h / 2
             ZStack(alignment: .topLeading) {
-                Capsule()
-                    .fill(DS.fillLine)
-                    .frame(width: w * axis, height: 2)
-                    .position(x: w * axis / 2, y: axisY)
-                // "Now" — the tick every mark is measured from. Pops at the
-                // END of the structure phase, once the axis it sits on exists.
+                // No axis line (§8). "Now" — the tick every mark is measured
+                // from — pops at the END of the structure phase, and the
+                // deadlines land on the row it implies.
                 Capsule()
                     .fill(DS.textTertiary)
                     .frame(width: 2, height: 10)
@@ -1275,22 +998,4 @@ private struct FlowFigure: View {
     }
 
     private func compactUSD(_ usd: Double) -> String { AgentPanel.compactUSD(usd) }
-}
-
-/// One tile's staggered rise. Honours Reduce Motion — the audit's first check,
-/// and appear-triggered by construction.
-private struct TileEntrance: ViewModifier {
-    let index: Int
-    let reduceMotion: Bool
-    @State private var shown = false
-
-    func body(content: Content) -> some View {
-        content
-            .opacity(shown || reduceMotion ? 1 : 0)
-            .offset(y: shown || reduceMotion ? 0 : 10)
-            .animation(reduceMotion ? nil
-                       : DS.Motion.standard.delay(Double(min(index, 7)) * 0.04),
-                       value: shown)
-            .onAppear { shown = true }
-    }
 }

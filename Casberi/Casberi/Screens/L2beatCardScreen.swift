@@ -281,7 +281,10 @@ struct L2beatRiskCard: View {
 
 	private var footer: some View {
 		VStack(alignment: .leading, spacing: DS.Space.s3) {
-			if let onDismissForAsk {
+			// Dark while the ask is deprecated (prd §697b, "every door it had is
+			// dark"): this chip raised the composer onto a question, which is the
+			// ask itself, not the capture surface or a connected seat's own door.
+			if AskSurface.enabled, let onDismissForAsk {
 				Button {
 					DSHaptic.tap()
 					// Dismiss first: the composer rises over the shell, and a sheet still up

@@ -74,6 +74,10 @@ struct SpotifyLoginWebView: View {
                             reloadCount += 1
                         }
                         .dsText(.body17).foregroundStyle(DS.tint)
+                        // A text-height target was the only retry on this
+                        // cover (prd §717): the word stays, the tap grows.
+                        .padding(.horizontal, DS.Space.s4)
+                        .dsTapTarget(Capsule(style: .continuous))
                     }
                 } else if loading {
                     stateBlock {

@@ -448,6 +448,10 @@ struct HandleSetupScreen: View {
     /// the single/multi bridges' plain add field.
     @State private var query = ""
     @State private var syncing = false
+    /// The last sync failed to REACH the network (prd §717) — the one
+    /// failure a retry answers. "Couldn't find that channel" shares the
+    /// proof slot and is a spelling problem, so it draws no retry.
+    @State private var syncUnreachable = false
     @State private var result: BridgeProof?
     /// The page's one presentation (`AccountPage.sheet`): the reach sheet, or
     /// a profile raised from a roster row.
@@ -739,7 +743,8 @@ struct HandleSetupScreen: View {
         }
         BridgeSyncStatusRows(syncing: syncing,
                              syncingLine: omniSyncingLine,
-                             proof: result)
+                             proof: result,
+                             retry: syncUnreachable ? { Task { await sync() } } : nil)
         exportLink
     }
 
@@ -980,6 +985,7 @@ struct HandleSetupScreen: View {
                 await sync()
             } else {
                 syncing = false
+                syncUnreachable = false
                 result = .failed(String(localized: "Couldn't find that channel — check the name."))
             }
         }
@@ -1015,6 +1021,7 @@ struct HandleSetupScreen: View {
         // account snapshot before the change.
         guard !syncing else { resyncQueued = true; return }
         syncing = true
+        syncUnreachable = false
         let added = await bridge.refresh(context: modelContext)
         syncing = false
         // A sync is where a follow's feed URL resolves, and the export is
@@ -1044,7 +1051,8 @@ struct HandleSetupScreen: View {
                kind.store.entries.contains(where: { !$0.feedURL.isEmpty }) {
                 result = .says(String(localized: "Saved — \(bridge.rawValue) didn't answer just now. It'll fill in on the next refresh."))
             } else if bridge == .farcaster, accountNames.isEmpty {
-                result = .says(String(localized: "Couldn't reach Farcaster — try again."))
+                syncUnreachable = true
+                result = .failed(String(localized: "Couldn't reach Farcaster — try again."))
             } else {
                 result = .says(String(localized: "Couldn't find that \(bridge.nameNoun) — check the spelling."))
             }

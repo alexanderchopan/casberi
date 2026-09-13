@@ -31,7 +31,7 @@ struct DSCopyCapsule: View {
             .padding(.horizontal, DS.Space.s3)
             .frame(minHeight: 34)
             .background(DS.gray100, in: Capsule(style: .continuous))
-            .contentShape(Capsule(style: .continuous))
+            .dsTapTarget(Capsule(style: .continuous))
         }
         .buttonStyle(PressSpring())
         .dsHover()

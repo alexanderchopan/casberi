@@ -61,7 +61,8 @@ struct SlackScreen: View {
             }
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Checking your mentions…"),
-                                 proof: result)
+                                 proof: result,
+                                 retry: { Task { await sync() } })
         } else if connecting {
             HStack(spacing: DS.Space.s2) {
                 DSSpinner()

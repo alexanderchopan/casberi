@@ -4,7 +4,7 @@
 
 Website: https://casberi.app · Docs: https://casberi.app/docs.html · App Store: https://apps.apple.com/us/app/casberi/id6788637831 · Privacy: https://casberi.app/privacy.html
 
-Last updated: July 24, 2026
+Last updated: September 13, 2026
 
 ## Features — everything you can do
 
@@ -16,15 +16,15 @@ Last updated: July 24, 2026
 
 ### Keep tabs
 
-- Keep an ask — Ask a question, keep it — it updates as your things change.
+- Read each app's room — Calendar reads as an agenda, Photos as a grid, a wallet leads with its balance.
 - Act on items — From your feed: open, or share, in the app it came from.
 - Watch your wallets — Balances, activity, and what's worth a look. Read-only, always.
 
 ### Take action
 
-- Ask anything — A question, answered from your own things.
-- See what's going on — It opens on a brief of your things: the answer before you ask.
-- Jump to tools — From the composer: a note, message, email, event, reminder, or search — in the app that owns it.
+- Save in one gesture — Share from any app, take a screenshot, or tap Save a thing in Control Center.
+- See your day — Home Screen widgets carry today's line, what's due, and your wallet.
+- Find anything — Spotlight and Shortcuts search your things by what they say.
 
 ### Make it yours
 
@@ -34,7 +34,7 @@ Last updated: July 24, 2026
 
 ### The short version
 
-Connect your apps and everything lands in one private feed on your phone — no account, ever. Keep the asks you care about, then act on things in the apps they came from. The agent rides along the bottom of every screen: it opens on a brief of what's going on, answers anything from your own things, and jumps to your tools. And it's yours to shape: avatar, language, and where your data lives.
+Connect your apps and everything lands in one private feed on your phone — no account, ever. Each app opens as a room shaped like what's in it, and you act on things in the apps they came from. Widgets put your day on the Home Screen, and Spotlight finds any thing by what it says. And it's yours to shape: avatar, language, and where your data lives.
 
 ### The situation
 
@@ -105,7 +105,7 @@ Casberi is one assistant that works across your apps — not another app that ru
 
 ### Your things stay yours
 
-Casberi is a native iPhone app. Your things live in a database on your phone — no Casberi server holds them. iCloud sync is off until you turn it on. Reading and saving work offline. No analytics, no trackers. Answers are written on your own phone — and stay there unless you add your own agent key and tap to use it.
+Casberi is a native iPhone app. Your things live in a database on your phone — no Casberi server holds them. iCloud sync is off until you turn it on. Reading and saving work offline. No analytics, no trackers. Connected apps reach their own services straight from your phone — nothing routes through a Casberi server.
 
 ### What's deliberately not here
 
@@ -117,7 +117,7 @@ Some things are missing on purpose. There's no separate actions or to-do tab —
 
 #### One screen
 
-Casberi is one screen — no tabs to learn, no account to make. Open it and it's yours. A row of chips across the top stays put wherever you scroll: All (everything you've saved), then one chip for each app you've connected — the app you just heard from sits up front. Tap a chip to switch. Along the bottom, a glass bar reading "Ask your things…" — that's the agent, and it rides above whatever you're looking at. And two small doors up top: your avatar opens Settings, the grid opens your apps. That's the whole app: your things, and the agent that reads them.
+Casberi is one screen — no tabs to learn, no account to make. Open it and it's yours. Along the bottom sits the dock: All (everything you've saved) comes first, then a chip for each category. Tap one to land in its room; its folder opens with the apps inside. Your avatar sits at the start of the dock and opens Settings, the catalog of apps sits at the end of the strip, and a swipe walks from one room to the next. That's the whole app: your things, read in one place.
 
 #### Apps
 
@@ -139,24 +139,19 @@ Worth a look gathers what deserves your attention and sorts it by whether you ca
 
 #### Open a thing, act on it
 
-Tap any row to open it. From there you do the thing where it belongs — open it in the app it came from, or share it. Tags arrive on their own — the app labels what lands, and the agent reads those labels when you ask. There is nothing to file. Some rows let you act in place: start a new email from Gmail, a new event from Calendar, tick a reminder off for real. Casberi keeps tabs; your own apps do the work.
+Tap any row to open it. From there you do the thing where it belongs — open it in the app it came from, or share it. Tags arrive on their own — the app labels what lands, and search reads those labels. There is nothing to file. Some rows let you act in place: start a new email from Gmail, a new event from Calendar, tick a reminder off for real. Casberi keeps tabs; your own apps do the work.
 
 ### Take action
 
-#### The agent
+#### Save and find
 
-The glass bar along the bottom is the agent. It rides above every screen — your feed, an app's page, a settings sheet — so it's always one tap away. Tap it and it rises to fill the screen; lower it and you're back exactly where you were, mid-scroll and all. There is no second tab and no separate home screen to come back to: your things are the feed, and the agent is how you ask about them.
+Share from any app and it lands in your feed. Screenshots flow in on their own and become searchable by what's in them. Voice notes transcribe.
 
-Tapping it opens on "What's going on" — a brief built from your own things, right now: what landed and from where, how your money is doing, what's on your watchlist, what's next, and one plain read across the lot. It's a screen to take in, so the keyboard stays down and your asks sit docked underneath, ready when you are.
+Save a thing in Control Center opens the composer from anywhere — paste something to save it, or tap the mic and talk. Typing alone never saves.
 
-Once a day, on your first open, that headline comes to you instead — a single glass card resting above the bar, naming your day in one line. Tap it for the full brief; leave it and it's gone for the day. It never appears with nothing to say.
+To find a thing again, search from Spotlight, or ask Shortcuts to Search Casberi.
 
-- Ask a question, answered from your own things ("what did I save this week?"). Follow up, and keep an answer as a note.
-- Keep an ask — any question worth repeating becomes a chip that carries its own answer, with a dot when it has changed since you last looked.
-- Say what you want ("show my work stuff") and it takes you there.
-- Jump to a tool — create a note, message, email, event, reminder, or web search. The right app opens, ready to go. Nothing is created inside Casberi; you create in the tools you already use.
-
-You can also paste something to save it, or tap the mic and talk.
+Widgets put your day on the Home Screen: today's line and what just landed, what's due, and your wallet. Tap one and Casberi opens where those things are.
 
 ### Make it yours
 
@@ -164,12 +159,12 @@ You can also paste something to save it, or tap the mic and talk.
 
 Behind your avatar, one A–Z list: your photo, the color that washes the top of every screen (five to choose from), your data (all on your phone — export or delete anytime), diagnostics, how it works, language, light or dark, and your key. No account, no sign-in — there was never anything to sign up for.
 
-Your key is the one door out. Answers are written on your phone by default. Save your own key — Claude, ChatGPT, Gemini, Venice, Bankr, or OpenRouter — and every answer offers "Try with your key": the question and the few matched things go from your phone straight to that provider, only when you tap, billed to your key. The key lives in the Keychain. There is no Casberi server in between.
+Your key is for an agent you bring — Claude, ChatGPT, Gemini, Venice, Bankr, or OpenRouter. It lives in the Keychain, and what it sends goes from your phone straight to that provider, billed to your key. There is no Casberi server in between.
 
 ## Questions, answered
 
 - Do I need an account? — No. There is nothing to sign up for; Casberi works the moment it is installed.
 - Where do my things live? — In a database on your phone. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: Delete things wipes your data (this iPhone and iCloud); Delete access removes every token and key Casberi holds.
 - What does it cost? — It is free on the App Store.
-- What do I need to run it? — An iPhone. Answers are written on your phone with Apple Intelligence; nothing is billed, and no answer is sent away unless you add your own key and tap "Try with your key." Connected apps do reach their own services to fetch your things; that traffic goes from your phone to them, never through a Casberi server.
+- What do I need to run it? — An iPhone. Nothing is billed. Connected apps do reach their own services to fetch your things; that traffic goes from your phone to them, never through a Casberi server.
 - Can it act without asking? — No. Typed text never saves silently, any write that leaves the app waits for a tap, and connected wallets are read-only — Casberi can never trade or move funds.

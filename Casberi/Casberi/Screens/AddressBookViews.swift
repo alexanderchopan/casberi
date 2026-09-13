@@ -473,6 +473,8 @@ struct CopyAddressButton: View {
                     Text(copied ? "Copied" : "Copy")
                         .dsText(.subhead13).fontWeight(.semibold)
                         .foregroundStyle(copied ? DS.confirm : tint)
+                        // A bare word is as tall as its text — floored.
+                        .dsTapTarget()
                 case .pill:
                     HStack(spacing: DS.Space.s2) {
                         Image(systemName: copied ? "checkmark" : "doc.on.doc")
@@ -494,6 +496,8 @@ struct CopyAddressButton: View {
                         .foregroundStyle(copied ? DS.confirm : DS.textSecondary)
                         .frame(width: 28, height: 28)
                         .dsWell(cornerRadius: 9)
+                        // DRAWN 28, TARGETED 44.
+                        .dsTapTarget(RoundedRectangle(cornerRadius: 9, style: .continuous))
                 }
             }
             .contentShape(Rectangle())

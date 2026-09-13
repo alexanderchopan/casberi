@@ -53,6 +53,9 @@ struct FollowImportSheet: View {
     @State private var filter = ""
     /// How many the walk has read so far — the loading line's running count.
     @State private var read = 0
+    /// Bumped by "Try again" (prd §717), so the read runs as `.task(id:)` —
+    /// a retry cancels whatever is still walking and starts one clean read.
+    @State private var attempt = 0
 
     var body: some View {
         DSTray(title: "Who they follow", height: 660) {
@@ -64,6 +67,13 @@ struct FollowImportSheet: View {
                     // A read that FAILED and a read that found nothing are two
                     // different facts and never share a line (prd §85).
                     note("Couldn't reach \(source) just now. Try again in a moment.")
+                    DSSlabDoor(title: String(localized: "Try again"),
+                               systemImage: "arrow.clockwise") {
+                        rows = nil
+                        reachable = true
+                        read = 0
+                        attempt += 1
+                    }
                 } else if rows?.isEmpty == true {
                     note("@\(SocialThread.shortHandle(handle)) doesn't follow anyone on \(source).")
                 } else {
@@ -80,7 +90,7 @@ struct FollowImportSheet: View {
                 }
             }
         }
-        .task { await load() }
+        .task(id: attempt) { await load() }
     }
 
     private var blurb: String {

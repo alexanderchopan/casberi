@@ -317,6 +317,8 @@ struct ThingSheetView: View {
                                 .foregroundStyle(DS.textPrimary)
                                 .frame(width: 30, height: 30)
                                 .background(Circle().fill(DS.fillLine))
+                                // DRAWN 30, TARGETED 44.
+                                .dsTapTarget(Circle())
                         }
                         .buttonStyle(.plain)
                         .dsHover()
@@ -2331,6 +2333,7 @@ struct ThingSheetView: View {
                 .padding(.horizontal, DS.Space.s3)
                 .frame(minHeight: 32)
                 .background(DS.fillFaint, in: Capsule(style: .continuous))
+                .dsTapTarget(Capsule(style: .continuous))
             }
             .buttonStyle(PressSpring())
             .dsHover()
