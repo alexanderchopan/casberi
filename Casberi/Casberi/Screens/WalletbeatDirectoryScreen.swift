@@ -1,6 +1,8 @@
 import SwiftData
 import SwiftUI
 
+extension WalletbeatDirectoryScreen.Kind: DSSectionScope {}
+
 /// Every wallet Walletbeat rates (prd §419).
 ///
 /// THE SORT IS THE WHOLE DESIGN PROBLEM, and it is solved by refusing the obvious thing.
@@ -60,10 +62,11 @@ struct WalletbeatDirectoryScreen: View {
 		List {
 			Section {
 				VStack(alignment: .leading, spacing: DS.Space.s3) {
-					Picker("", selection: $kind) {
-						ForEach(Kind.allCases) { Text($0.label).tag($0) }
+					// The app's own scope control, not UIKit's gray segmented one
+					// (prd §716) — the switcher every room's rail already wears.
+					DSSectionSwitcher(sections: Kind.allCases, active: kind) { picked in
+						withAnimation(DS.Motion.standard) { kind = picked }
 					}
-					.pickerStyle(.segmented)
 
 					HStack(spacing: DS.Space.s4) {
 						ForEach(Order.allCases) { option in

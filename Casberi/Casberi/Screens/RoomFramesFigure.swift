@@ -119,11 +119,11 @@ struct RoomFramesFigure: View {
 /// nobody sees in a screenshot of one of them.
 enum RoomFrameStyle {
     /// The vault's cyan — `HegotaModeStyle.room` is this.
-    static let vault = Color(red: 0.30, green: 0.78, blue: 0.92)
+    static let vault = DS.stepVault
 
     static func hue(_ modeName: String) -> Color {
         switch modeName {
-        case String(localized: "Verify"): return Color(red: 0.55, green: 0.47, blue: 0.93)
+        case String(localized: "Verify"): return DS.stepVerify
         case String(localized: "Send"):   return DS.confirm
         case String(localized: "Call"):   return DS.tint
         case String(localized: "Check"):  return DS.attention

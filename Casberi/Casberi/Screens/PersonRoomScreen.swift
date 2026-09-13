@@ -70,8 +70,10 @@ struct PersonRoomScreen: View {
     /// store between rebuilds.
     @State private var mergedRows: [Thing] = []
 
-    private enum Filter: String, CaseIterable {
+    private enum Filter: String, CaseIterable, Identifiable, DSSectionScope {
         case all = "Everything", posts = "Posts", chain = "Onchain"
+        var id: String { rawValue }
+        var label: String { rawValue }
     }
 
     private var shown: SocialProfile { loaded ?? profile }
@@ -232,10 +234,11 @@ struct PersonRoomScreen: View {
     }
 
     private var filterPicker: some View {
-        Picker("", selection: $filter) {
-            ForEach(Filter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+        // The app's own scope control, not UIKit's gray segmented one
+        // (prd §716) — the switcher every room's rail already wears.
+        DSSectionSwitcher(sections: Filter.allCases, active: filter) { picked in
+            withAnimation(DS.Motion.standard) { filter = picked }
         }
-        .pickerStyle(.segmented)
         .padding(.top, DS.Space.s1)
     }
 

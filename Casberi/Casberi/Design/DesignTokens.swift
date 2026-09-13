@@ -88,6 +88,16 @@ enum DS {
     /// against anything" job.
     static let neutralBadge = Color.fixed("#6e6e73")
 
+    /// The two STEP hues no other token names (prd §716). A transaction step's
+    /// colour says what the step DID, and three of the five already had a
+    /// token (`confirm` / `tint` / `attention`); these two were spelled as raw
+    /// `Color(red:green:blue:)` inside `RoomFramesFigure`, the last invented
+    /// hues outside `Design/`. Same values, now named where colours live.
+    /// FIXED for `neutralBadge`'s reason: they sit on strips and legend
+    /// swatches that must read the same in both themes.
+    static let stepVault  = Color.fixed("#4dc7eb")
+    static let stepVerify = Color.fixed("#8c78ed")
+
     static let gray100  = Color.adaptive(dark: "#2c2c2e", light: "#e5e5ea")
     static let gray200  = Color.adaptive(dark: "#3a3a3c", light: "#d1d1d6")
     static let gray300  = Color.adaptive(dark: "#48484a", light: "#c7c7cc")
