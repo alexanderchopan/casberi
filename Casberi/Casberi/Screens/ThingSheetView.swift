@@ -306,6 +306,28 @@ struct ThingSheetView: View {
         ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                // EVERY SHAPE QUESTION, ANSWERED ONCE PER PASS (prd §718). Each
+                // name below is a computed property that re-derives from the
+                // record on every read, and three of them chain: `agentShape`
+                // asks `workReading`, which asks `purchaseReading`. The body
+                // read them about sixty times between the head, the content
+                // gate and the trailing blocks, so one sheet present ran the
+                // same derivation dozens of times per frame of its rise — the
+                // §646 cost, on the sheet. Shadowing under the SAME names keeps
+                // every call site and every self-test pin unchanged; the
+                // helpers outside the body still read the properties.
+                let socialShape = self.socialShape
+                let drawsSocialBody = socialShape == .post || socialShape == .notice
+                let noteShape = self.noteShape
+                let walletbeatShape = self.walletbeatShape
+                let l2beatShape = self.l2beatShape
+                let purchaseReading = self.purchaseReading
+                let workReading = self.workReading
+                let agentShape = self.agentShape
+                let agentConversation = agentShape == .conversation ? self.agentConversation : nil
+                let agentGrant = agentShape == .grant ? self.agentGrant : nil
+                let vibenetEventFacts = self.vibenetEventFacts
+                let linkOnlyBody = self.linkOnlyBody
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.

@@ -40,7 +40,11 @@ CARD="Casberi/Casberi/Screens/PolarRoomCard.swift"
 BRIDGES="Casberi/Casberi/Model/TokenBridges.swift"
 ROUTING="Casberi/Casberi/Model/BridgeRouting.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 for f in "$ROOM" "$SOURCE" "$BRIDGE" "$CARD" "$BRIDGES" "$ROUTING" "$REACH" "$FEED" "$PROBES"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }

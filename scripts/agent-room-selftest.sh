@@ -37,7 +37,11 @@ cd "$(dirname "$0")/.."
 ROOM="Casberi/Casberi/Model/AgentRoom.swift"
 SOURCE="Casberi/Casberi/Model/AgentRoomSource.swift"
 CARD="Casberi/Casberi/Screens/AgentRoomCard.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 TOPICS="Casberi/Casberi/Model/ScreenshotTopics.swift"
 IMPORT="Casberi/Casberi/Model/ClaudeCodeImport.swift"

@@ -44,7 +44,11 @@ TAG="Casberi/Casberi/Model/GitHubRowTag.swift"
 LINKS="Casberi/Casberi/Model/GitHubLinks.swift"
 FEEDS="Casberi/Casberi/Model/GitHubFeeds.swift"
 ROWS="Casberi/Casberi/Screens/ShapedRows.swift"
-FEEDSCREEN="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEEDSCREEN_DIR="$(mktemp -d -t feedscreen)"
+FEEDSCREEN="$FEEDSCREEN_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEEDSCREEN"
 RAIL="Casberi/Casberi/Shell/FaceScopeRail.swift"
 SHELL_="Casberi/Casberi/Shell/MainSurface.swift"
 WATCH="Casberi/Casberi/Model/GitHubRepoWatch.swift"

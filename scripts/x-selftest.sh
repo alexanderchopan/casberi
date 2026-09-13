@@ -288,7 +288,11 @@ grep -q 'summary.droppedPosts += max(0, rows.count - postCap)' "$XARCH" \
 # BandRow renders perfectly over a room of prose, and a treemap of `t.co`
 # renders perfectly over anybody's writing. Each guard below is the specific
 # line whose absence brings one of them back.
-FEEDSCREEN="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEEDSCREEN_DIR="$(mktemp -d -t feedscreen)"
+FEEDSCREEN="$FEEDSCREEN_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEEDSCREEN"
 grep -q 'case "X":                   self = .x' "$FEEDSCREEN" \
   || { echo "✗ X has no room shape again — it falls to .plain and the room is a wall of 80-char BandRows"; exit 1; }
 # AMENDED 2026-08-26 (prd §489): the five post rooms draw through one call, so

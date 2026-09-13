@@ -108,7 +108,11 @@ CARD_POOLS="Casberi/Casberi/Screens/PrivacyPoolsRoomCard.swift"
 CARD_GNOSIS="Casberi/Casberi/Screens/GnosisPayRoomCard.swift"
 CARD_RAILGUN="Casberi/Casberi/Screens/RailgunRoomCard.swift"
 CARD_SAFE="Casberi/Casberi/Screens/SafeRoomCard.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 DEMO="Casberi/Casberi/Model/DemoSeedAll.swift"
 

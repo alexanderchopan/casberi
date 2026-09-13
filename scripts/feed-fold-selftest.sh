@@ -39,7 +39,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 FOLD="Casberi/Casberi/Model/FeedFold.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 ROWS="Casberi/Casberi/Screens/ShapedRows.swift"
 for f in "$FOLD" "$FEED" "$ROWS"; do
   [[ -f "$f" ]] || { print -u2 "feed-fold-selftest: missing $f"; exit 1; }

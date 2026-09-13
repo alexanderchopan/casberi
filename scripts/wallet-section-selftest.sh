@@ -21,7 +21,11 @@ cd "$(dirname "$0")/.."
 SRC="Casberi/Casberi/Model/WalletSection.swift"
 VERIFY="scripts/verify.sh"
 MAIN="Casberi/Casberi/Shell/MainSurface.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Every check reads the room as ONE
+# text, so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
 SWITCH="Casberi/Casberi/Design/DSSectionSwitcher.swift"
 SLAB="Casberi/Casberi/Design/DSRoomRailSlab.swift"

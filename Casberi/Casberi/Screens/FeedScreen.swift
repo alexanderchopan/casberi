@@ -133,9 +133,9 @@ struct FeedScreen: View {
     /// only ever observes its own source's rows; only the "All" page still
     /// queries everything, because it genuinely shows everything.
     @Query private var things: [Thing]
-    @Environment(ShellChrome.self) private var chrome
+    @Environment(ShellChrome.self) var chrome
     @Environment(BridgeStore.self) private var bridges
-    @Environment(\.modelContext) private var modelContext
+    @Environment(\.modelContext) var modelContext
     /// Read by `isQuiet` (prd §378): under increased contrast the feed's rows
     /// never recede — that setting exists to refuse exactly this.
     @Environment(\.colorSchemeContrast) private var contrast
@@ -144,7 +144,7 @@ struct FeedScreen: View {
     /// the accent is scheme-keyed (§83's flat-move rule lives in there too).
     @Environment(\.colorScheme) private var colorScheme
     // This window's stack and detail pane (per-window since `SceneState`).
-    @Environment(HomeRoute.self) private var route
+    @Environment(HomeRoute.self) var route
     @Environment(PadDetailSelection.self) private var detail
     /// The safety-net refresh's trigger (see the `.task(id: scenePhase)`
     /// below) — a signal that changes independently of `@Query`'s own
@@ -465,7 +465,7 @@ struct FeedScreen: View {
     /// state settling, so it flashed open and closed; the second tap then
     /// worked because the machinery had quieted. One enum route behind one
     /// `.sheet(item:)` removes the contention entirely.
-    private enum FeedSheetRoute: Identifiable {
+    enum FeedSheetRoute: Identifiable {
         /// A row, and the LIST it was opened from (prd §645 pass 3). The scope
         /// is a VALUE — never a `[Thing]`, which is corollary 4 and build 177
         /// exactly — so the neighbour doors rebuild the predicate rather than
@@ -660,7 +660,7 @@ struct FeedScreen: View {
             }
         }
     }
-    @State private var feedSheet: FeedSheetRoute?
+    @State var feedSheet: FeedSheetRoute?
     /// Non-nil while the last-account confirm sits open for a vibenet
     /// "Stop watching" tap — see `vibenetUnwatch`/`commitVibenetUnwatch`.
     @State private var removingLastVibenet: String?
@@ -1573,8 +1573,8 @@ struct FeedScreen: View {
     /// this is the disclosure that brings it back. Collapsed by default; see
     /// `calendarSections`.
     @State private var pastEventsExpanded = false
-    @State private var blockStream = GenStream()
-    @Bindable private var wallet = WalletStore.shared
+    @State var blockStream = GenStream()
+    @Bindable var wallet = WalletStore.shared
     /// The wallet this room is scoped to (prd §128, widened by §356) — nil is
     /// "All". Scopes the balance lede, holdings treemap, NFT strip and the
     /// rows to one watched wallet.
@@ -1586,7 +1586,7 @@ struct FeedScreen: View {
     /// bit of its state — which is why the scope silently evaporated on a room
     /// change and why no wallet room but the balance room could be narrowed at
     /// all. Held on the shell, one scope now spans the whole category.
-    private var selectedWallet: String? {
+    var selectedWallet: String? {
         get { chrome.walletScope }
         nonmutating set { chrome.walletScope = newValue }
     }
@@ -1594,11 +1594,11 @@ struct FeedScreen: View {
     /// warnings rolled up from them plus Safe/poisoning/delegation. Never a
     /// landed thing: re-read each time this feed comes forward or its scope
     /// changes, exactly as the manage screen used to hold it.
-    @State private var walletLive = WalletLiveState()
+    @State var walletLive = WalletLiveState()
     /// Whether the scoped wallet holds any NFT collection at all (prd §387) —
     /// what decides between the shelf's invitation line and nothing. Owned by
     /// the room, filled by `loadWalletLive`; see there for why not by the card.
-    @State private var nftHasCollections = false
+    @State var nftHasCollections = false
     /// A card the risk strip asked to be walked to (prd §417), consumed and
     /// cleared by `listCore`.
     ///
@@ -1606,18 +1606,18 @@ struct FeedScreen: View {
     /// into `walletRiskSection`: the proxy lives at `feedList` and the strip is
     /// five call layers below it, so passing it would mean a signature change
     /// on `shapedSections` and every room's builder — for one tap in one room.
-    @State private var cardScrollTarget: String?
+    @State var cardScrollTarget: String?
     /// The combined portfolio behind the treemap (2026-07-21, prd §155) — one
     /// derivation the balance headline, the concentration line, and the
     /// allocation tray all read, so nothing on this screen can disagree with
     /// the map it's standing under. Lands with the treemap doc, from the same
     /// read.
-    @State private var portfolio: WalletPortfolio?
+    @State var portfolio: WalletPortfolio?
     /// The full allocation tray — every position and which wallets hold it.
     /// Routed through `feedSheet` (`.allocation`) now, not its own bool.
     /// The balance line's window (prd §155). Narrowed to what the record can
     /// actually answer each render; the choice persists across launches.
-    @State private var balanceRange: WalletRange = .watched
+    @State var balanceRange: WalletRange = .watched
     /// The wallet switcher's selection fill — ONE capsule that slides from
     /// the old chip to the new (the source chips' own ruling, 2026-07-14:
     /// "selection is an object traveling, not two states blinking").
@@ -1876,7 +1876,7 @@ struct FeedScreen: View {
     static func rendersPlain(_ source: String) -> Bool { Shape(source: source) == .plain }
 
     /// The shape a source takes when its chip is in force.
-    private enum Shape {
+    enum Shape {
         case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, snapchat, files, instagram, tiktok, x, appStoreConnect, cursor, cardPointers, walletbeat, l2beat, telegram, vibenet, plain
 
         /// Rooms whose lead is a GRID of pictures, and which therefore earn the
@@ -2145,8 +2145,7 @@ struct FeedScreen: View {
             }
         }
     }
-    private var shape: Shape { Shape(source: source) }
-
+    var shape: Shape { Shape(source: source) }
 
     /// Every feed row's entrance, from ONE place (prd §600, 2026-09-04).
     ///
@@ -2161,7 +2160,7 @@ struct FeedScreen: View {
     /// arrive at rest and every later row keeps its entrance. Nothing
     /// re-animates when the budget lifts — `reveal()` runs on appear and on a
     /// `wave` change, and this is neither.
-    private func rowEntrance(_ index: Int) -> RowEntrance {
+    func rowEntrance(_ index: Int) -> RowEntrance {
         RowEntrance(index: index, wave: shapeWave, style: entranceStyle,
                     instant: rowBudget != nil, waveAt: shapeWaveAt)
     }
@@ -2314,7 +2313,7 @@ struct FeedScreen: View {
         memo.l2beatWatched = Set(rows.compactMap { L2beatWatch.chainID(from: $0) })
     }
 
-    private var visible: [Thing] {
+    var visible: [Thing] {
         // Non-All rooms read their own source-filtered @Query directly — that
         // array is SwiftData-coordinated (its elements are live), so no
         // snapshot and no `.live` pass.
@@ -3188,7 +3187,7 @@ struct FeedScreen: View {
     /// keeps the diffing path off the model entirely; the model is only touched
     /// in the row body, which renders exclusively from the post-delete `@Query`
     /// snapshot that already excludes the deleted row.
-    private struct FeedRow: Identifiable {
+    struct FeedRow: Identifiable {
         let id: String
         let date: Date
         let kind: Kind
@@ -3480,7 +3479,7 @@ struct FeedScreen: View {
     /// render and shares them — as a bare computed property this rebuilt the
     /// whole bundle chain, and it was read once per row (the Feed-freeze
     /// O(rows × corpus) blowup, perf pass 2026-07-13).
-    private func boundaryID(in groups: [(String, [FeedRow])]) -> String? {
+    func boundaryID(in groups: [(String, [FeedRow])]) -> String? {
         guard let newSince else { return nil }
         let all = groups.flatMap(\.1)
         guard let first = all.first, first.date > newSince else { return nil }
@@ -3799,236 +3798,6 @@ struct FeedScreen: View {
             }
     }
 
-    /// Every token the treemap maps, as rows (prd §483).
-    ///
-    /// **The half this scope never had.** The room has drawn a holdings BOARD
-    /// since §158 and never a list, because the board was the only holdings
-    /// object in a room of cards and had to answer everything. Under §483 each
-    /// scope is one drawing and one list, and this is the list — the board
-    /// keeps the shape of the thing, these say what is in it.
-    ///
-    /// It reads the SAME `portfolio.positions` the treemap does rather than
-    /// re-deriving, so a cell and its row can never disagree about a number,
-    /// and it costs no read: the portfolio is already in hand for the crown.
-    ///
-    /// **`UnitTreemap` caps at six cells**, so on a wallet holding more than
-    /// that the board has always been a partial answer with nothing saying so.
-    /// The list is where the rest live, which is the other reason it belongs
-    /// here rather than behind a door.
-    /// **§295'S OWN READING, IN THE SCOPE IT NEVER HAD (prd §689).**
-    ///
-    /// `AddressConnections.map(context:)` is the adapter that has been
-    /// running all along — it builds the edges while the models are live and
-    /// hands back a value, which is what keeps this immune to the liveness
-    /// crash class rather than merely guarded against it (CLAUDE.md
-    /// corollaries 1–6).
-    @ViewBuilder private var walletActivitySection: some View {
-        let caption = selectedWallet.map {
-            WalletScopeRail.caption(for: $0, in: wallet.addresses).name
-        } ?? (wallet.addresses.count == 1
-              ? String(localized: "1 wallet")
-              : String(localized: "\(String(wallet.addresses.count)) wallets"))
-        Section {
-            RoomActivityChart(dates: visible.map(\.capturedAt),
-                              caption: caption,
-                              box: DSRoomChassis.visualSlot)
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                          bottom: DSRoomChassis.contentGap,
-                                          trailing: DSRoomChassis.inset))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-        }
-    }
-
-    @ViewBuilder private var walletConnectionsSection: some View {
-        Section {
-            RoomConnectionsFigure(map: AddressConnections.map(context: modelContext),
-                                  box: DSRoomChassis.visualSlot,
-                                  yours: String(localized: "the accounts you follow"))
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                          bottom: DSRoomChassis.contentGap,
-                                          trailing: DSRoomChassis.inset))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-        }
-    }
-
-    /// The wallets you watch — what each IS and how it relates, never what it
-    /// holds: Holdings owns that, one chip away (prd §689).
-    @ViewBuilder private var walletAccountsListSection: some View {
-        let map = AddressConnections.map(context: modelContext)
-        // `WalletStore.shared.addresses` is the same watched set the map is
-        // built from — one source, so a row can never name a wallet the spine
-        // has never heard of.
-        let rows = WalletStore.shared.addresses.map { wallet in
-            RoomAccountsRows.Row(
-                key: AddressBook.key(for: wallet.address),
-                address: wallet.address,
-                name: wallet.label.isEmpty ? wallet.short : wallet.label,
-                kind: nil,
-                connections: map?.nodes.filter {
-                    $0.walletKeys.contains(AddressBook.key(for: wallet.address))
-                }.count ?? 0,
-                unreached: false)
-        }
-        let tied = RoomAccountsRows.tied(
-            map, watchedKeys: Set(WalletStore.shared.addresses.map { AddressBook.key(for: $0.address) }))
-        if !rows.isEmpty {
-            Section {
-                RoomAccountsRows(rows: rows + tied)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var walletTokenListSection: some View {
-        if let portfolio, !portfolio.isEmpty {
-            Section {
-                ForEach(portfolio.positions) { position in
-                    Button {
-                        // The cell's own door, at row scale — a token's chart
-                        // when it is watched, the quick sheet when it is only
-                        // held (the 2026-07-14 split, unchanged).
-                        if let route = position.route,
-                           let r = TokenQuickRoute.from(sentinel: "@token:\(route):\(position.symbol)") {
-                            if let thing = r.watchedThing(in: modelContext) {
-                                openThing(thing)
-                            } else {
-                                feedSheet = .token(r.withHolders(position.holders))
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: DS.Space.s3) {
-                            TokenIcon(symbol: position.symbol, size: DS.Face.list)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(position.symbol)
-                                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                                    .lineLimit(1)
-                                // Whose it is, only where that is a real
-                                // question — one watched wallet has no split to
-                                // report and the line would be noise (§212's
-                                // own guard, one level down).
-                                if position.holders.count > 1 {
-                                    Text(position.holders.prefix(2)
-                                            .map(\.label).joined(separator: " · "))
-                                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                                        .lineLimit(1)
-                                }
-                            }
-                            Spacer(minLength: DS.Space.s2)
-                            VStack(alignment: .trailing, spacing: 1) {
-                                Text(WalletValue.money(position.usd))
-                                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                                    .monospacedDigit()
-                                // Its share of everything — the one fact the
-                                // board states that a bare amount does not, and
-                                // the reason someone opens this scope at all.
-                                if portfolio.totalUSD > 0 {
-                                    // Whole percents: a holdings share is read
-                                    // to compare, not to reconcile, and "56%"
-                                    // beside "55.7%" is precision nobody asked
-                                    // for on a figure that moves hourly.
-                                    Text("\(Int((position.usd / portfolio.totalUSD * 100).rounded()))%")
-                                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                                        .monospacedDigit()
-                                }
-                            }
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowPress())
-                    .dsHover()
-                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                              bottom: DS.Space.s2, trailing: DS.Space.s4))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                }
-            }
-        }
-    }
-
-    /// The one drawing this scope leads with, above the toggle (prd §483).
-    ///
-    /// **The rule, in the user's own words: "above the toggles is always a
-    /// visual of some kind and then a list below it".** Home's visual is the
-    /// sparkline, drawn by the crown itself, so this returns nothing there —
-    /// the slot is already filled rather than empty.
-    ///
-    /// Two scopes have no drawing yet and say so by drawing nothing rather than
-    /// by inventing one: `nfts`, whose grid IS its picture and belongs with its
-    /// rows, and `permissions`, whose exposure card is one object carrying both
-    /// halves. Splitting those is worth doing deliberately, not as a side
-    /// effect of a layout pass.
-    @ViewBuilder
-    private func walletScopeVisualSection(_ section: WalletSection) -> some View {
-        switch section {
-        // Home's drawing is the sparkline, which the crown draws itself — so
-        // this slot is already filled there rather than empty.
-        case .home:        EmptyView()
-        // **THE EMPTY STATE IS IN THE SLOT (prd §611, §610's ruling carried
-        // here).** Activity keeps `WalletFlowEmptyFigure`, which says which
-        // of three things is true of the window; the five standing scopes
-        // had nothing at all, so a chip onto Positions on a wallet with no
-        // positions opened 258 blank points.
-        case _ where walletScopeIsEmpty(section):
-            WalletScopeEmptyFigure(section: section)
-        // **THE FAMILY'S ACTIVITY CHART (prd §690, user: "Home Activity chart
-        // could be same chart the devnets have").** §483 kept the band here so
-        // Activity carried no second value figure; the band moves to Home and
-        // that substance holds — this slot draws WHEN, like the other four.
-        case .activity:    walletActivitySection
-        case .holdings:    holdingsBlockSection
-        // **§295 RESTORED (prd §689).** "N of your addresses are connected"
-        // drew at the foot of the Wallet manager until that screen went; the
-        // model never stopped running. This is its slot.
-        case .accounts:    walletConnectionsSection
-        case .positions:   walletCompositionSection
-        // **THE RANKED BARS LEAD, NOT "Worth a look"** (prd §483, 2026-08-26).
-        // The warnings row is a ROW — one line with a chevron — so in a 210pt
-        // slot it drew a sentence and 180pt of nothing, while the one drawing
-        // this scope has sat below it in the list. They swap: the bars head
-        // the scope, the row keeps its place at the top of the list where a
-        // door belongs.
-        case .risk:        walletRiskSection
-        case .nfts:        walletNFTSection
-        case .permissions: walletPermissionsSection
-        }
-    }
-
-    /// What the crown gives back when it stops drawing the line.
-    ///
-    /// **THE TOGGLE MUST NOT MOVE BETWEEN SCOPES** (user ruling, prd §483: *"when
-    /// toggling between home activity etc, the bar SHOULD NOT MOVE"*). A control
-    /// that jumps as you use it is one you stop aiming at — and it jumped by
-    /// construction, because Home's crown carries a 96pt chart plus its range
-    /// chips while every other scope's crown carries neither.
-    ///
-    /// So the non-Home crowns reserve exactly what Home's chart and chips
-    /// occupy, and the scope's own drawing sits in that reserved space. The
-    /// number is spelled here rather than measured, because measuring it would
-    /// mean the bar settles a frame LATE — which is the same jump, arriving
-    /// slower.
-    private static var walletVisualSlot: CGFloat { DSRoomChassis.visualSlot }
-
-    /// The wallet scope rail — the Address Book door, "All", and a face per
-    /// watched wallet — drawn in the room's own content directly under the
-    /// sparkline (prd §483, 2026-08-26, user: *"i now think these avatars and
-    /// address book should go BELOW the sparkline"*, and *"the toggles need to
-    /// go immediately below them"*).
-    ///
-    /// **It was pinned in `MainSurface.roomControls` until this.** That is what
-    /// made the room four strips of chips deep before any content — source
-    /// chips, venue rail, this, then the scope toggle — and pushed the crown to
-    /// about 45% down the screen. Both this and the toggle come down; the crown
-    /// and its chart are what the room opens with.
-    ///
-    /// **Derived from the FULL watch list, never from the scoped room.** The
-    /// trap, paid for in Vibenet the same afternoon: derive the items from the
-    /// scoped room and picking a face collapses the strip to one item, the
-    /// `shows(…)` gate then hides it, and the control deletes itself the moment
-    /// it is used — with no way back to the other wallets.
     // MARK: - Hegotá's three room sections
 
     /// Above the figure, because it governs everything below it: on a relaunched
@@ -4123,244 +3892,6 @@ struct FeedScreen: View {
                 .listRowSeparator(.hidden)
             }
         }
-    }
-
-    /// **THE FUSED RAIL** (prd §547, 2026-09-01) — the account rail and the
-    /// scope switcher as ONE slab, where they were two strips four points
-    /// apart disagreeing about bleed, shape and selection. `DSRoomRailSlab`
-    /// carries the reasoning; what changes HERE is that the rail gives up its
-    /// full bleed to share the switcher's inset, and the two `Section`s become
-    /// one.
-    ///
-    /// **It keeps its name deliberately.** This is still the section that
-    /// mounts the wallet's scope rail — `category-fold-selftest` asks for it
-    /// by that name, and a rename to advertise the extra deck would cost that
-    /// guard for nothing.
-    ///
-    /// The gate is `||`, not `&&`: a room with one watched wallet has no rail
-    /// and a room with one reading has no switcher, and either alone is still
-    /// a slab worth drawing. With neither, nothing is emitted rather than an
-    /// empty glass box.
-    @ViewBuilder
-    private func walletScopeRailSection(_ active: WalletSection) -> some View {
-        let showsRail = WalletScopeRail.shows(source: source,
-                                              watched: wallet.addresses.count)
-        let showsSwitcher = WalletSection.shows(present: chrome.walletSections)
-        if showsRail || showsSwitcher {
-            Section {
-                DSRoomRailSlab(
-                    showsRail: showsRail,
-                    showsSwitcher: showsSwitcher,
-                    sections: chrome.walletSections,
-                    active: active,
-                    attention: chrome.walletSectionAttention,
-                    // Instant, for the reason vibenet's own pick states at
-                    // length (prd §495): animating a swap between two slots of
-                    // different natural height moves everything below the bar
-                    // and settles it back.
-                    onPick: { picked in chrome.walletSection = picked }
-                ) {
-                    FaceScopeRail(
-                        items: WalletScopeRail.items(wallet.addresses),
-                        scope: chrome.walletScope,
-                    // Never folded now: `compact` existed for a pinned strip
-                    // that had to yield height to the content scrolling under
-                    // it. In the content there is nothing to yield to.
-                    compact: false,
-                    // **NAMES ARE BACK (prd §483 — amends §450).** That ruling
-                    // dropped the rail's captions on the strength of the crown
-                    // card naming the pick one row down. Two things since have
-                    // taken that away: the caption itself is gone (it read
-                    // "Across your accounts", which the lit "All" already said),
-                    // and the face stopped carrying identity at all — it is one
-                    // uniform person mark now, tinted only weakly. Five
-                    // identical glyphs with nothing under them is not a roster.
-                    //
-                    // Which is the trade §483 made deliberately, not a
-                    // regression: identity moved from a colour you had to learn
-                    // to a WORD you can read. The caption is where it lives now,
-                    // so it has to be drawn.
-                        namesInRoom: false,
-                        // A deck of the slab, not a strip of its own (prd §547).
-                        embedded: true,
-                        matches: WalletScopeRail.matches,
-                        onPick: { picked in
-                            withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
-                        },
-                        // No re-tap verb: there is no "deeper" a watched address
-                        // goes that the room you are already in does not show.
-                        onReTap: nil,
-                        // ONE slot, not two (prd §466) — watching another wallet
-                        // and seeing the roster are the same screen, so an ADD slot
-                        // would point at the book door beside it.
-                        addTitle: nil,
-                        onAdd: nil)
-                }
-                // ONE inset for the whole slab, where the rail used to run
-                // full bleed (`leading: 0`) under a switcher at
-                // `DSRoomChassis.inset`. That difference is a third of why the
-                // two never read as one object, so it is the first thing the
-                // fusion gives up — the faces stop reaching the screen edge.
-                // They scrolled at either inset (six 66pt slots overflow any
-                // phone), so nothing that used to fit stops fitting.
-                // **`railGap` ON TOP, NOT 0 (2026-09-03, prd §589, user: "the
-                // treemaps are clipping w/ the silhouette scope rail").** The
-                // chassis names a figure→rail gap and Vibenet pays it as its
-                // stack's spacing; this row paid nothing, so a figure that
-                // fills its whole box — the holdings treemap does, by
-                // construction since §495 — ended on the exact pixel the slab
-                // began (measured: cell to 484pt, glass from 485pt). The slab
-                // moves by one rung on every scope equally, so §483's "the
-                // bar must land in the same place" still holds.
-                .listRowInsets(EdgeInsets(top: DSRoomChassis.railGap, leading: DSRoomChassis.inset,
-                                          bottom: DSRoomChassis.contentGap,
-                                          trailing: DSRoomChassis.inset))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-        }
-    }
-
-    /// The composition strip, lifted OUT of the crown card and into the
-    /// `Positions` scope (prd §483, 2026-08-26).
-    ///
-    /// It sat in the crown until the toggle moved below the sparkline: with the
-    /// control under the chart, anything else still in that card would sit
-    /// between the sparkline and the toggle the user asked to put directly
-    /// beneath it. And it belongs here anyway — it is the SUMMARY of exactly
-    /// what this scope holds, which is the room's own rule that a scope leads
-    /// with the drawing that summarizes its own rows.
-    ///
-    /// §240's "inside the balance card rather than a card of its own" is the
-    /// ruling this amends: that reasoning was that "what's it worth" is one
-    /// glance and this is the rest of that glance's answer. Still true — the
-    /// crown is one tap away in every scope, and the figure it summarizes is
-    /// still directly above it on the Positions scope itself.
-    @ViewBuilder
-    private var walletCompositionSection: some View {
-        let composition = walletComposition
-        if !composition.isEmpty {
-                            WalletCompositionStrip(
-                    composition: composition,
-                    onOpenDeposits: { feedSheet = .deposits(composition) },
-                    // Owed gets no door on purpose — the Lending card below
-                    // already states health per protocol.
-                    onOpenLocks: { feedSheet = .locks(composition) })
-                    // BARE ON THE PAGE (user ruling, prd §483: *"we don't do
-                    // cards"*). A scope's lead drawing sits in the visual slot
-                    // exactly as the sparkline, the treemap and the flow band
-                    // do — a tinted plate under one of four otherwise
-                    // identical slots reads as that scope being a different
-                    // kind of thing, which it is not.
-                    .padding(.bottom, DS.Space.s3)
-        }
-    }
-
-    /// The Worth-a-look strip, lifted out of the crown card into the `Risk`
-    /// scope for the same reason (prd §483) — and it is what that scope is
-    /// FOR, so it heads it rather than trailing the leverage axis.
-    @ViewBuilder
-    private var walletWarningsSection: some View {
-        let warnings = walletLive.warnings
-        if !warnings.isEmpty {
-            Section {
-                WalletWarningsStrip(warnings: warnings) { feedSheet = .worthALook }
-                    // Bare, for `walletCompositionSection`'s reason.
-                    .padding(.bottom, DS.Space.s3)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
-        }
-    }
-
-    // **THE SCOPE TOGGLE'S OWN SECTION IS GONE** (prd §547) — it is the lower
-    // deck of `walletScopeRailSection`'s slab now. Two notes from it survive
-    // because both are still true of the fused control:
-    //
-    // It reads `chrome.walletSections` rather than deriving presence at the
-    // draw site: the publication is one value computed once per pass, and
-    // re-deriving it here is how the strip and the sections it scopes come to
-    // disagree about which scopes exist.
-    //
-    // **PINNING WAS TRIED AND DOES NOT WORK AS A HEADER** (prd §495,
-    // 2026-08-27), and fusing does not change that. The strip scrolls away
-    // with the crown — measured, entirely off screen — so the control that
-    // scopes the room cannot be reached from inside the room it scopes.
-    // `.plain` pins section headers, so `Section { EmptyView() } header: {
-    // switcher }` looked like the fix that costs no height at rest and
-    // therefore does not re-open §483 (which ruled this control OUT of
-    // `roomControls`, where pinning it makes a fourth row of chips and pushes
-    // the crown to 45% down the screen). It does not pin: a header only stays
-    // while its own section has ROWS on screen, and this section has none, so
-    // the header leaves with them. Verified on the device, not reasoned about.
-    //
-    // Pinning properly means making the slab the header of the section that
-    // carries the SCOPE'S CONTENT — which differs per scope across a dozen
-    // section builders — so it is a real refactor and its own ruling. What
-    // ships is §495's return-to-head on a scope change, which removes the JUMP
-    // without pretending to fix the reachability. Fusing makes that refactor
-    // CHEAPER, since there is now one view to hoist instead of two.
-
-    /// What this room publishes to the shell for §483's toggle — the scopes
-    /// that have something, and which of them want you.
-    ///
-    /// One value rather than two so a single `onChange` carries both; they are
-    /// read from the same live state on the same pass and must never be
-    /// published a frame apart, or the strip draws a dot on a scope it has
-    /// already stopped listing.
-    private var walletSectionPublication: WalletSectionPublication {
-        guard shape == .wallet else { return .init(sections: [], attention: []) }
-        // **EVERY SCOPE, ALWAYS (prd §611).** The five flags this used to
-        // pass are now `walletScopeIsEmpty`, which decides between a scope's
-        // figure and its empty state — the same expressions, one question,
-        // so a chip can never lead somewhere blank (§483's Risk report).
-        //
-        // **`warnings`, not "does Risk exist".** A wallet with a 3.0 health
-        // factor HAS a risk reading and is in no trouble at all, so lighting
-        // the dot on the reading's presence would light it on every levered
-        // wallet forever; it lights only on a position past its protocol's
-        // own alert threshold, and never on a scope drawing its empty state.
-        let sections = WalletSection.present()
-        let attention: Set<WalletSection> =
-            walletLive.warnings.isEmpty || walletScopeIsEmpty(.risk) ? [] : [.risk]
-        return .init(sections: sections, attention: attention)
-    }
-
-    /// **THE SCOPE'S RENDER GATE, SPELLED ONCE.** Before §611 these five
-    /// expressions were the strip's presence flags, and `wallet-section-selftest`
-    /// guarded that each matched its section's own `if` — reported from a
-    /// device as a Risk chip selected over an empty page, because `risk` was
-    /// flagged on `!= nil` while the section drew on non-empty. They are the
-    /// empty-state gate now and the guard is unchanged in spirit: a section
-    /// that draws on a different condition than this names a scope that shows
-    /// its figure AND its empty state, or neither.
-    ///
-    /// `permissions` is NOT `exposure.isEmpty` (prd §490): the scope draws for
-    /// a wallet with no token grant at all but a Safe module or a 7702 delegate
-    /// acting on it, so it reads the section's own holders.
-    private func walletScopeIsEmpty(_ section: WalletSection) -> Bool {
-        switch section {
-        case .home:        return false
-        case .activity:    return false
-        case .holdings:    return blockStream.els.isEmpty
-        // **EMPTY IS "NOTHING CONNECTS THEM" (prd §689)** — the rows list what
-        // you watch either way; the slot's job is the relationship.
-        case .accounts:    return AddressConnections.map(context: modelContext)?
-                                    .nodes.isEmpty ?? true
-        case .positions:   return !(hasLendingCard
-                                    || !walletLive.uniswap.isEmpty
-                                    || !walletLive.hyperliquid.positions.isEmpty)
-        case .nfts:        return nftShelfEntry == nil
-        case .risk:        return (walletRiskEntries ?? []).isEmpty
-        case .permissions: return WalletPermissionsSource.holders(exposure: walletLive.exposure,
-                                                                  acting: walletLive.acting).isEmpty
-        }
-    }
-
-    struct WalletSectionPublication: Equatable {
-        var sections: [WalletSection]
-        var attention: Set<WalletSection>
     }
 
     /// What the vibenet room publishes to the shell for §482's toggle — the
@@ -4525,7 +4056,6 @@ struct FeedScreen: View {
     // THE YEAR GRAPH LEFT THIS ROOM (user ruling, 2026-09-11) — see the room
     // head's own note below. It draws on the GitHub ACCOUNT PAGE now
     // (`TokenSetupScreen`), where facts about the account live.
-
 
     /// What each `FeedSheetRoute` presents.
     ///
@@ -7934,7 +7464,7 @@ struct FeedScreen: View {
             .listRowSeparator(.hidden)
     }
 
-    private var newSinceDivider: some View {
+    var newSinceDivider: some View {
         // A quiet capsule, not tint-colored prose (which reads as a tappable
         // link). The fill gives the boundary its line without drawing one.
         Text(newSinceText)
@@ -8334,10 +7864,6 @@ struct FeedScreen: View {
             }
         }
     }
-
-
-
-
 
     /// The CardPointers room grouped by DEADLINE rather than by day (prd §487)
     /// — the `x402Lanes` shape, for a sharper version of the same reason.
@@ -8869,7 +8395,7 @@ struct FeedScreen: View {
     /// history page (2026-07-20). Five is the count that still reads as "here's
     /// what's new" rather than a log — the reads above it are the point of this
     /// screen, and an unbounded stream buried all four of them.
-    private static let walletPreviewRows = 5
+    static let walletPreviewRows = 5
 
     /// How many transactions lead the room from inside the balance card
     /// (2026-08-18, user ruling — the answer to "the transactions are at the
@@ -8897,7 +8423,7 @@ struct FeedScreen: View {
     // `WalletCardStyle.fill` sitting in a different file — which is how a
     // room ends up at two opacities, the exact drift that type's own doc
     // was written to prevent.
-    private static let walletCardFill = WalletCardStyle.fill
+    static let walletCardFill = WalletCardStyle.fill
 
     /// The balance CARD, then Worth a look as a quiet line beneath it — the two
     /// questions a wallet screen answers at a glance ("what's it worth", "is it
@@ -9243,7 +8769,7 @@ struct FeedScreen: View {
     /// §240). Pure arithmetic over books `loadWalletLive` already fetched —
     /// no network of its own, and it follows the feed's wallet scope for free
     /// because `WalletWatch.liveState` reads every book at that same scope.
-    private var walletComposition: WalletComposition {
+    var walletComposition: WalletComposition {
         WalletComposition.from(aave: walletLive.positions,
                                morpho: walletLive.morpho,
                                uniswap: walletLive.uniswap,
@@ -9309,1038 +8835,6 @@ struct FeedScreen: View {
             .filter { $0.usd >= WalletIngest.holdingFloor }
             .map { WalletFaceChips.Entry(id: $0.address, value: $0.usd,
                                          change: nil, venueLabel: $0.label) }
-    }
-
-    // MARK: - The wallet room's section headers
-
-    /// A named block of the wallet room (2026-08-20, user ruling: *"should
-    /// there be section headers between things"*).
-    ///
-    /// The room stacks up to nine live-state cards before the stream, and its
-    /// arc — what you hold, what it's doing, who can reach it, what's ahead —
-    /// existed only in the `.wallet` case's own comments. On screen it read as
-    /// nine slabs of equal weight with no landmarks: no orientation, no sense
-    /// of how much was left, which is what "it seems like a long feed" is
-    /// describing. These are the landmarks.
-    ///
-    /// **The card labels STAY.** A header names the block; a card's own
-    /// `WalletSectionLabel` distinguishes it from its SIBLINGS inside that
-    /// block — "Lending", "Liquidity" and "Perps" all sit under "What it's
-    /// doing" and are indistinguishable without their names. The one label
-    /// that goes is `walletComingUpSection`'s, which said exactly what its
-    /// header now says (§208: never say one thing twice).
-    ///
-    /// **The grammar is the stream's own day header**, verbatim — `heading22`
-    /// in primary ink at the same insets. That is deliberate on two counts:
-    /// this room already had a group-header tier and it was the day names, so
-    /// "What you hold" and "Today" are peers because they ARE peers (both are
-    /// top-level blocks of one room); and a second, smaller tier would mean
-    /// inventing a rung the ramp doesn't carry between `heading22` and
-    /// `label12`, for one screen.
-    ///
-    /// **Never rendered over nothing.** Every card here self-gates, so a
-    /// header emitted unconditionally would promise content on the wallets
-    /// that have least of it — a "What it's doing" over a wallet with no
-    /// positions is worse than no header at all, because a header is a claim
-    /// that something follows. Hence the hoisted predicates below: each one
-    /// asks the same question its cards ask, so the header and the block can
-    /// never disagree.
-    ///
-    /// The hero (balance + flow) deliberately gets NO header — a title above
-    /// the first thing on a screen is noise, and the room's own name is the
-    /// chip you tapped to get here.
-    private func walletGroupHeader(_ title: String) -> some View {
-        Section {
-            Text(title)
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityAddTraits(.isHeader)
-                // Index 0 so the header LEADS its block's stagger rather than
-                // popping in ahead of it — every other row in this room wears
-                // this entrance, and a header that didn't would be the one
-                // thing on screen that arrives without the wave.
-                .modifier(rowEntrance(0))
-                .padding(.leading, DS.Space.s4)
-                // s8 above, s1 below (2026-08-22). At s6/s1 the header sat
-                // 24 from the card it left and 14 from the card it names —
-                // near enough to even that it read as floating between the
-                // two rather than belonging to the one below. The gap above
-                // has to beat the gap below by enough to be seen doing it;
-                // 32 against 14 is that. (Below is s1 plus the next card's
-                // own s3, which is why this is not simply doubled.)
-                .padding(.top, DS.Space.s8)
-                .padding(.bottom, DS.Space.s1)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-        }
-    }
-
-    /// The picked-NFT shelf's wallet, or nil when the shelf draws nothing.
-    ///
-    /// Hoisted out of `walletNFTSection` (2026-08-20) so the "What you hold"
-    /// header can ask whether that block has a second card without restating
-    /// the gate — two copies of this condition is how a header starts
-    /// appearing over an absent shelf.
-    private var nftShelfEntry: WalletStore.WatchedAddress? {
-        guard let entry = nftShelfWallet else { return nil }
-        // Gated on state the ROOM owns (`nftHasCollections`, filled by
-        // `loadWalletLive`), never on state the card would have to be alive to
-        // fetch — see that function for the pruning trap this avoids.
-        guard DemoMode.isActive || nftHasCollections
-                || WalletNFTStore.shared.hasPicks(wallet: entry.address)
-        else { return nil }
-        return entry
-    }
-
-    /// Every leveraged position on one axis, or nil when there are fewer than
-    /// two to compare. Hoisted for `nftShelfEntry`'s reason.
-    private var walletRiskEntries: [WalletRiskScale.Entry]? {
-        WalletRiskScaleSource.strip(aave: walletLive.positions,
-                                    morpho: walletLive.morpho,
-                                    hyperliquid: walletLive.hyperliquid)
-    }
-
-    // MARK: - Walking from the risk axis to a card (prd §417)
-
-    /// Scroll anchors for the two cards the risk strip's dots can reach.
-    /// Spelled once here and attached with `.id(…)` below, so the tap and the
-    /// target can't drift apart.
-    private static let lendingAnchor = "wallet.card.lending"
-    private static let perpsAnchor = "wallet.card.perps"
-    /// Reached from the Worth-a-look sheet's approvals walk row (prd §449),
-    /// not from the risk axis — approvals aren't a leveraged position and have
-    /// no dot. Spelled here beside its siblings so all three anchors and their
-    /// `.id(…)` sites stay in one place.
-    private static let approvalsAnchor = "wallet.card.approvals"
-
-    /// Which card states the position behind a dot, from the entry id
-    /// `WalletRiskScaleSource` stamped.
-    ///
-    /// **Matched on the id's namespace, never on the label** — a label is
-    /// localized display text ("Morpho · wstETH/USDC"), so keying on it would
-    /// send a Spanish device nowhere. nil is a deliberate, safe outcome: a
-    /// protocol that joins the axis without a card here scrolls nowhere rather
-    /// than scrolling to the wrong card.
-    private static func riskCardAnchor(for id: String) -> String? {
-        if id.hasPrefix("aave:") || id.hasPrefix("morpho:") { return lendingAnchor }
-        if id.hasPrefix("hl:") { return perpsAnchor }
-        return nil
-    }
-
-    /// The holdings card's tail — the book's shape on the left, the door to
-    /// the whole allocation on the right, in ONE tertiary row (2026-08-22,
-    /// prd §447).
-    ///
-    /// **This is what a four-line block reduced to.** §417 promoted the
-    /// concentration sentence to a `heading22` lead above the map, on the
-    /// reasoning that Lending and Approvals lead with their reading; that was
-    /// right for those cards and wrong here, because the §417 group headers
-    /// landed a 22pt "What you hold" in the same pass — so the card opened
-    /// with two stacked 22pt lines, and the map under them opened with its own
-    /// eyebrow repeating the header word for word. Three voices before the
-    /// drawing. The reading is not deleted, it is demoted to where its sibling
-    /// already lived.
-    ///
-    /// **What survives is exactly the pair the treemap cannot draw**, which is
-    /// the test every cut here was made against: `UnitTreemap` is rank-ordered
-    /// rather than area-proportional, so it cannot state a share; and stables
-    /// are scattered across its cells by symbol, so it cannot group them. Both
-    /// halves are composed by `WalletPortfolio.shapeLine`, never assembled
-    /// here — a sentence built in a view would be a second definition of
-    /// concentration, and the two would drift.
-    ///
-    /// Guarded as a WHOLE rather than per-child: both halves self-gate (a
-    /// single-position book has no shape, a single wallet has no door), so an
-    /// unguarded row would take a spacing slot in the card's stack and draw
-    /// nothing in it.
-    @ViewBuilder
-    private var holdingsTail: some View {
-        if let portfolio, !portfolio.isEmpty,
-           portfolio.shapeLine != nil || portfolio.walletCount > 1 {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                if let shape = portfolio.shapeLine {
-                    Text(shape)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                }
-                Spacer(minLength: 0)
-                WalletAllocationDoor(
-                    portfolio: portfolio,
-                    onOpen: portfolio.walletCount > 1 && selectedWallet == nil
-                        ? { feedSheet = .allocation } : nil)
-            }
-            .padding(.horizontal, DS.Space.s4)
-            // s2 from the stack + s1 here = s3 of air under the drawing. A
-            // caption sits closer to its figure than two cards sit to each
-            // other, and at the bare s2 the row read as a seventh cell.
-            .padding(.top, DS.Space.s1)
-        }
-    }
-
-    /// Does the "What you hold" block have anything in it — the treemap, the
-    /// NFT shelf, or both.
-    private var walletHoldsSomething: Bool {
-        !blockStream.els.isEmpty || nftShelfEntry != nil
-    }
-
-    /// Does the "What it's doing" block have anything in it.
-    ///
-    /// The risk strip is derived FROM the three books below it, so it can
-    /// never be the only thing here — it is named anyway rather than inferred,
-    /// because "the strip implies a book" is a cross-file fact that would fail
-    /// silently the day either side changes.
-    private var walletDoingSomething: Bool {
-        walletRiskEntries != nil
-            || !walletLive.positions.isEmpty
-            || !walletLive.morpho.isEmpty
-            || !walletLive.uniswap.isEmpty
-            || !walletLive.hyperliquid.positions.isEmpty
-    }
-
-    /// Where the money moved (2026-08-01, `WalletFlowBand`) — inflows, the
-    /// wallet, outflows, sized by what each was worth when it moved.
-    ///
-    /// Sits directly under the balance card ON PURPOSE, ahead of the treemap:
-    /// the crown number's own delta pill and sparkline raise the question
-    /// ("it moved — where to?") and this is the answer, so putting the
-    /// composition map between cause and effect would separate them for no
-    /// gain. It follows the balance card's own window, so the two can never
-    /// describe different periods on one screen.
-    ///
-    /// Nothing renders without a band worth drawing — `WalletFlow.band`
-    /// declines on an unpriceable or single-lane window.
-    ///
-    /// **A DECLINE IS DRAWN, NOT LEFT AS AIR (2026-09-03, prd §589).** The
-    /// slot is fixed (§483), so a nil band was a fixed box of nothing over a
-    /// stream full of moves — reported as "the activity chart isn't showing",
-    /// with no way from the screen to tell a quiet window from a broken price
-    /// read. `WalletFlowEmptyFigure` names the cause off the same ladder the
-    /// probe reads, the vibenet room's `activityEmptyFigure` rule one venue
-    /// over.
-    @ViewBuilder
-    private var walletFlowSection: some View {
-        let verdict = WalletFlowSource.verdict(from: visible, since: flowWindowStart)
-        if let band = verdict.band {
-            // **ROWS, NOT THE BAND (prd §692, user: "i don't like the sankey on
-            // the home list area it looks weird to have a chart there now that
-            // i see it").** Same `Band`, same window, same numbers — the list
-            // half of a room draws a list. `WalletFlowBand` itself stays: the
-            // brief renders it through `GenRenderer`, where a diagram is the
-            // right shape for a card somebody reads once.
-            WalletFlowRows(band: band, windowLabel: balanceRange.flowLabel)
-                    .modifier(rowEntrance(1))
-        } else if let decline = verdict.decline {
-            WalletFlowEmptyFigure(decline: decline, windowLabel: balanceRange.flowLabel,
-                                  spineAddress: spineWalletAddress)
-                .modifier(rowEntrance(1))
-        }
-    }
-
-    /// The cutoff the flow band reads back to — nil for `.watched`, which
-    /// means the whole record.
-    private var flowWindowStart: Date? {
-        balanceRange.span.map { Date.now.addingTimeInterval(-$0) }
-    }
-
-    /// Whose face rides the flow band's spine: the scoped wallet, or the sole
-    /// watched one. nil when several wallets are merged — the band is then
-    /// about all of them, and a face belonging to one would claim the flows
-    /// were that wallet's (the honesty rule, applied to a portrait).
-    private var spineWalletAddress: String? {
-        if let selectedWallet { return selectedWallet }
-        let watched = wallet.addresses
-        return watched.count == 1 ? watched.first?.address : nil
-    }
-
-    /// Whose NFT shelf this room draws (2026-08-15, prd §387) — the scoped
-    /// wallet, or the sole watched one.
-    ///
-    /// nil when several wallets are merged, and the shelf then draws nothing:
-    /// a pick is made PER WALLET, so a merged shelf would have to say whose
-    /// each piece is, and this room already declines to speak for merged
-    /// wallets rather than invent an attribution (`spineWalletAddress`, same
-    /// reasoning applied to a portrait). The wallet switcher is pinned above
-    /// the room, so narrowing to one is a tap away.
-    private var nftShelfWallet: WalletStore.WatchedAddress? {
-        let watched = wallet.addresses
-        if let selectedWallet {
-            return watched.first { WalletWatch.sameAddress($0.address, selectedWallet) }
-        }
-        // **UNSCOPED FALLS BACK TO THE FIRST WALLET WITH PICKS, not to nil**
-        // (2026-08-26, prd §483). The old `count == 1` rule predates the NFTs
-        // SCOPE existing: it was written when this card sat inside one long
-        // room, where showing one wallet's art unscoped would have been a
-        // silent claim about all of them. As a scope it is worse than
-        // conservative, it is broken — anybody watching two wallets got a
-        // chip that could never appear, however many collections they had
-        // picked, with no way to find out why short of unwatching a wallet.
-        //
-        // The pick book is what makes the fallback honest: a wallet only
-        // qualifies here because its owner named collections FOR it, so the
-        // shelf is answering a question that was actually asked. Watch order,
-        // never "the one with the most" — a shelf that reshuffles when an
-        // airdrop lands reads as broken (§292's total-order rule).
-        if watched.count == 1 { return watched.first }
-        // The demo has no pick book by ruling (§387 — a picker there teaches a
-        // decision that evaporates), so the pick test below would always fail
-        // and the scope could never appear in the one place it MUST (the demo
-        // is the north star, and a scope invisible there is a feature nobody
-        // sees).
-        if DemoMode.isActive { return watched.first }
-        return watched.first { WalletNFTStore.shared.hasPicks(wallet: $0.address) }
-    }
-
-    /// The collections behind the quad, one row each (prd §483, 2026-08-26).
-    ///
-    /// A separate section rather than a `layout` branch inside one call so the
-    /// room's own rule holds: ONE drawing in the slot, ONE list below, and the
-    /// slot is height-clipped while the list is not. Both read the same
-    /// cached pick fetch, so the pair costs one network read, not two.
-    ///
-    /// **No price on these rows**, which is the whole reason they can say what
-    /// they say: §387 refused a floor and §481 refused it again, on the same
-    /// ground — a floor is a bid on the thinnest book in this app, it moves
-    /// without you, and printing one puts a number people believe (§83)
-    /// beside art somebody keeps for reasons that are not the number. The
-    /// shelf stores no value anywhere, so there is nothing here to round.
-    @ViewBuilder
-    private var walletNFTListSection: some View {
-        if let entry = nftShelfEntry {
-            Section {
-                WalletNFTCollectionRows(
-                    wallet: entry.address,
-                    onEdit: { feedSheet = .nftPicks(address: entry.address,
-                                                    label: entry.label.isEmpty ? entry.short : entry.label) })
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-            }
-        }
-    }
-
-    /// The picked-NFT shelf. Renders nothing at all for a wallet with no picks
-    /// and no collections to pick — which is most wallets, and is why this is
-    /// the one wallet card that can be completely absent without meaning a
-    /// read failed.
-    @ViewBuilder
-    private var walletNFTSection: some View {
-        // The gate itself lives in `nftShelfEntry` (2026-08-20) — the "What
-        // you hold" header asks the same question, and one copy is what keeps
-        // the header and this card from ever disagreeing.
-        if let entry = nftShelfEntry {
-                            WalletNFTShelfCard(
-                    wallet: entry.address,
-                    label: entry.label.isEmpty ? entry.short : entry.label,
-                    onEdit: { feedSheet = .nftPicks(address: entry.address,
-                                                    label: entry.label.isEmpty ? entry.short : entry.label) })
-                    .modifier(rowEntrance(2))
-        }
-    }
-
-    /// Every leveraged position on one axis (2026-08-01, `WalletRiskStrip`),
-    /// directly ABOVE the lending card it summarises — the cards below state
-    /// each position in its own protocol's units, and this is the one view
-    /// that puts them in an order. Declines under two positions, where the
-    /// cards already say it better.
-    @ViewBuilder
-    private var walletRiskSection: some View {
-        if let entries = walletRiskEntries {
-                            WalletRiskStrip(entries: entries, onPick: { entry in
-                    // Overview → detail (prd §417). The strip ranks every
-                    // leveraged position on one axis; the card below states the
-                    // one you picked in its own protocol's units. The target is
-                    // derived from the entry's OWN id prefix, which
-                    // `WalletRiskScaleSource` already builds — so a new
-                    // protocol joining the axis lands on `nil` and simply
-                    // doesn't scroll, rather than scrolling somewhere wrong.
-                    cardScrollTarget = Self.riskCardAnchor(for: entry.id)
-                })
-                    .modifier(rowEntrance(2))
-        }
-    }
-
-    /// Approvals — what someone else can still move (2026-08-03, prd §292).
-    ///
-    /// Sits with the risk reads rather than the holdings ones, because that's
-    /// what it is: every card above says what your money is doing, and this
-    /// says who else can reach it. Nothing renders without a live grant, which
-    /// on most wallets is most of the time.
-    ///
-    /// The tap resolves the grant back to its `Thing` HERE rather than in the
-    /// card, and re-checks `isLive` at the moment of the tap: a foreground
-    /// heal can delete an approval row between the card being built and the
-    /// finger landing (corollary 4's stale-array window, one layer up).
-    /// WHO CAN ACT FOR YOU — the `Permissions` scope's lead (prd §490).
-    ///
-    /// The scope had NO drawing at all until this: it opened straight onto the
-    /// approvals list, which is the shape §247 named as the gap ("a room that
-    /// leads with a list of its own rows"). The reading it leads with now is
-    /// one the list structurally cannot make — a Safe module and an EIP-7702
-    /// delegate have no dollar amount, so they can never be ranked into a card
-    /// built on `min(allowance, balance) × price`, and they are the most
-    /// dangerous things in this scope.
-    ///
-    /// Declines when there is genuinely nothing, which on most wallets is most
-    /// of the time — no grants and nothing acting is the healthy state, and a
-    /// card announcing it would be a permanent fixture saying "fine".
-    @ViewBuilder
-    private var walletPermissionsSection: some View {
-        let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
-                                                      acting: walletLive.acting)
-        if !holders.isEmpty {
-                            WalletPermissionsCard(holders: holders)
-                    .modifier(rowEntrance(1))
-                    .padding(.bottom, DS.Space.s3)
-        }
-    }
-
-    /// The `Permissions` scope's OTHER list — everything that can act as one
-    /// of your wallets (prd §514).
-    ///
-    /// Separate from `walletApprovalsSection` because the two come from
-    /// different reads and only one of them can be tapped: a grant opens its
-    /// own prepare card (live allowance, revoke calldata, a Revoke.cash door)
-    /// and a delegate has no such destination, so folding them into one list
-    /// would give half its rows a chevron and half none.
-    @ViewBuilder
-    private var walletActingSection: some View {
-        let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
-                                                      acting: walletLive.acting)
-        if !WalletPermissions.actingHolders(holders).isEmpty
-            || walletLive.acting.contains(where: { $0.modulesUnreadable || $0.keystorePartial }) {
-            Section {
-                WalletActingPartiesRows(holders: holders, acting: walletLive.acting)
-                    .modifier(rowEntrance(2))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var walletApprovalsSection: some View {
-        if !walletLive.exposure.isEmpty {
-            Section {
-                WalletApprovalExposureCard(exposure: walletLive.exposure) { grant in
-                    guard let thing = walletLive.activeApprovals
-                        .first(where: { $0.isLive && $0.id == grant.thingID })
-                    else {
-                        // A row whose thing a foreground heal tombstoned
-                        // between the read and the tap. It used to return in
-                        // silence, which is indistinguishable from the door
-                        // being broken — and this list already had one
-                        // affordance problem (see the card's chevron note).
-                        chrome.flash(String(localized: "That grant is no longer here."),
-                                     tone: .failure)
-                        return
-                    }
-                    feedSheet = .thing(thing, walk: .none)
-                }
-                .id(Self.approvalsAnchor)
-                .modifier(rowEntrance(2))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(WalletCardStyle.rowInsets)
-            }
-        }
-    }
-
-    /// Lending — Aave and Morpho for the wallets in scope, in ONE card as two
-    /// rows (prd §212, 2026-07-25). They were two full cards until this pass;
-    /// they were never two subjects, just two providers of one. The treemap
-    /// says what you HOLD, this says what you OWE — which is why it earns a
-    /// seat here rather than staying two taps down. Nothing renders without a
-    /// position on either.
-    /// Whether `walletDeFiSection` will draw — the gate spelled once so the
-    /// Worth-a-look sheet's walk door and the card it points at can't disagree
-    /// (prd §449).
-    private var hasLendingCard: Bool {
-        !walletLive.positions.isEmpty || !walletLive.morpho.isEmpty
-    }
-
-    @ViewBuilder
-    private var walletDeFiSection: some View {
-        if hasLendingCard {
-            Section {
-                WalletLendingCard(aave: walletLive.positions, morpho: walletLive.morpho)
-                    // The risk strip's Aave and Morpho dots land here (§417).
-                    .id(Self.lendingAnchor)
-                    // Same reveal the balance card and holdings treemap wear —
-                    // lending is usually the last of the live reads to land, so
-                    // it gets the deepest stagger.
-                    .modifier(rowEntrance(2))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-            }
-        }
-    }
-
-    /// Liquidity — Uniswap V3 positions for the wallets in scope (2026-07-30),
-    /// a SIBLING to `walletDeFiSection`, not a third row inside it: lending
-    /// asks "is it safe", a liquidity position asks "is it working" — a
-    /// different subject earns a different card (see `WalletLiquidityCard`'s
-    /// own doc comment). Nothing renders without a position.
-    @ViewBuilder
-    private var walletLiquiditySection: some View {
-        if !walletLive.uniswap.isEmpty {
-            Section {
-                WalletLiquidityCard(book: walletLive.uniswap)
-                    .modifier(rowEntrance(3))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-            }
-        }
-    }
-
-    /// Perps — Hyperliquid's open positions for the wallets in scope
-    /// (2026-07-31). A SIBLING to lending and liquidity for the reason
-    /// `WalletPerpsCard`'s own doc gives at length: a perp is not lending, so
-    /// filing it under a card headed "Lending" would make the label wrong to
-    /// buy one fewer surface. Nothing renders without a position.
-    @ViewBuilder
-    private var walletPerpsSection: some View {
-        if !walletLive.hyperliquid.positions.isEmpty {
-            Section {
-                WalletPerpsCard(book: walletLive.hyperliquid)
-                    // The risk strip's perp dots land here (§417).
-                    .id(Self.perpsAnchor)
-                    .modifier(rowEntrance(4))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-            }
-        }
-    }
-
-    /// How many deadlines the room shows at once. Small on purpose: this is
-    /// the head of a history feed, not an agenda.
-    private static let walletUpcomingRows = 3
-
-    /// What's still ahead in this room — the in-scope things carrying a future
-    /// `dueAt`, soonest first (2026-07-31).
-    ///
-    /// These rows were effectively invisible, and it took two separate
-    /// mechanisms to hide them. `dayGroups` DROPS future-dated things by
-    /// design ("what's still ahead lives on Home's Coming up lane, not here",
-    /// 2026-07-19) — but that lane retired with the Home board in §131, so
-    /// what it pointed at no longer exists. And these particular rows dodge
-    /// that drop only to land in a worse place: `AerodromeDeFi`,
-    /// `HyperliquidDeFi` and `ENSExpiry` all stamp `capturedAt: .now` and
-    /// carry the deadline on `dueAt`, reconciling the row IN PLACE as the date
-    /// moves — so a vote window that first landed three weeks ago sorts three
-    /// weeks down a stream ordered by arrival, far past the five-row preview,
-    /// no matter how soon it closes.
-    ///
-    /// Which is the whole problem: a weekly vote deadline and a lock expiry
-    /// are the two rows in this room where being late is the only failure
-    /// mode, and they were the two least likely to be seen.
-    private func walletUpcoming(_ visible: [Thing]) -> [Thing] {
-        let now = Date.now
-        return Array(visible.live
-            .filter { ($0.dueAt ?? .distantPast) > now }
-            .sorted { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }
-            .prefix(Self.walletUpcomingRows))
-    }
-
-    /// "Coming up" — the room's deadlines, in its own card and its own row
-    /// shape. Renders nothing when nothing is due, like every other section
-    /// here (the honesty floor: no empty parcel holding a slot).
-    ///
-    /// A card rather than bare rows on the page, even though these ARE landed
-    /// things and the room's other cards are live state. What decides it is
-    /// what the reader is being asked to do: everything below is history to
-    /// scroll, and this is a standing fact to act on — the same register as
-    /// the cards above, and putting it on the page would make it read as the
-    /// top of the stream, which is exactly the misreading that buried these
-    /// rows in the first place.
-    @ViewBuilder
-    private func walletComingUpSection(_ upcoming: [Thing]) -> some View {
-        if !upcoming.isEmpty {
-            Section {
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    // No label of its own since 2026-08-20: the group header
-                    // directly above says "Coming up", and this card is the
-                    // only thing under it (§208 — never say one thing twice).
-                    // Every other card here keeps its label, because every
-                    // other card has siblings to be told apart from.
-                    //
-                    // The rail says what the rows can't: whether these are
-                    // bunched or spread (prd §417). Dates are read here, while
-                    // the models are known live, and handed on as plain values
-                    // — `WalletRunwayRail` never holds a `Thing` (the build-188
-                    // leaf rule).
-                    WalletRunwayRail(dates: upcoming.compactMap { $0.isLive ? $0.dueAt : nil })
-                        .padding(.bottom, 2)
-                    // `keyed` for identity + `live` inside the closure before
-                    // any stored read (corollaries 1 and 3): this is a derived
-                    // array, and a heal's delete can land in the same graph
-                    // update that re-evaluates this closure.
-                    ForEach(upcoming.keyed) { row in
-                        if let thing = row.live {
-                            Button {
-                                DSHaptic.selection()
-                                feedSheet = .thing(thing, walk: .none)
-                            } label: {
-                                WalletRow(mark: .kind(thing.kind),
-                                          title: thing.title,
-                                          subtitle: Self.dueLine(thing))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-                .padding(WalletCardStyle.pad)
-                .dsWidgetSurface(fillOpacity: Self.walletCardFill)
-                .modifier(rowEntrance(5))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(WalletCardStyle.rowInsets)
-            }
-        }
-    }
-
-    /// "Closes Thursday" / "In 3 weeks" — when the deadline lands, in the
-    /// grain that's actually useful at that distance. Guarded internally
-    /// because it takes a raw `Thing` from a call site that may re-evaluate
-    /// (corollary 4's rule for shared helpers).
-    ///
-    /// Forwards to `FeedLedeFace.dueLine` (prd §389 amendment) so the cover's
-    /// countdown and this one are the same formatting — they sit on the same
-    /// screen, often about the same thing, and two copies is where a countdown
-    /// quietly starts disagreeing with itself depending on where you read it.
-    private static func dueLine(_ thing: Thing) -> String? {
-        guard thing.isLive, let due = thing.dueAt else { return nil }
-        return FeedLedeFace.dueLine(due)
-    }
-
-    /// The wallet stream's preview rows, with routine transfers folded
-    /// (2026-07-31).
-    ///
-    /// The preview is five rows over a room whose stream mixes two very
-    /// different kinds of event: transfers, which a busy wallet produces by
-    /// the dozen and which ask nothing of anyone, and the rare rows that carry
-    /// a decision — a fresh approval, a liquidation crossing, a Privacy Pools
-    /// clear. Straight chronology lets the first kind evict the second, so on
-    /// an active wallet the one row worth acting on is behind "See all" and
-    /// the preview is five variations of "Sent 0.1 ETH".
-    ///
-    /// So a RUN of consecutive routine transfers collapses into a single
-    /// counted row, and the slots that frees go to whatever the run was
-    /// burying. Nothing is dropped or hidden: the fold states its own count,
-    /// the stream door below still totals the room unfolded, and the history
-    /// screen behind it lists every row as it always did.
-    ///
-    /// Only a run of `walletFoldMin`+ folds — collapsing two rows into a row
-    /// that says "2 transfers" saves nothing and costs the two titles.
-    private static let walletFoldMin = 3
-
-    /// The newest few transactions, drawn INSIDE the balance card
-    /// (2026-08-18, user ruling: "the real answer is the user will want to see
-    /// them above the fold").
-    ///
-    /// **Not a second row anatomy.** These are `BandRow`s with the money
-    /// column, byte-identical to what the stream below draws, because §212's
-    /// law for this room is one row shape and a compact variant here would be
-    /// the second. So a row reads the same whether you meet it up top or two
-    /// screens down, and the fold's rows and this card's can never disagree
-    /// about how a transfer looks.
-    ///
-    /// **The door is the section label's count-link, not a centred see-all
-    /// row.** `WalletRowChevron`'s own note records that this room once
-    /// carried six grammars for "there's more" and that exactly two survived
-    /// the §212 pass — a chevron on a row, and a count-link on a section
-    /// label. This is the second one, at its documented shape.
-    ///
-    /// **Every row it takes, the stream gives up** (see the `.wallet` case's
-    /// `led` set), so nothing is said twice and nothing is hidden: the rest of
-    /// the stream still reads below, and the full history is one tap away.
-    @ViewBuilder
-    private func walletTodayCard(_ rows: [Thing], streamTotal: Int) -> some View {
-        // Only when there IS more behind it — a wallet whose whole history is
-        // these three rows would otherwise get a door onto what it can already
-        // see (the honesty rule's dead-control clause).
-        let hasMore = streamTotal > rows.count
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            WalletSectionLabel(
-                title: walletLatestLabel(rows),
-                // NO COUNTER (user ruling, prd §483: *"we can just say see all
-                // activity or see activity. we dont need a counter"*). The
-                // number was a second fact competing with the verb, and it is
-                // the one that changes every sync.
-                trailingTitle: hasMore ? String(localized: "See activity") : nil,
-                onTapTrailing: hasMore
-                    ? { route.pushBridge(.walletHistory(scope: selectedWallet)) }
-                    : nil)
-            ForEach(Array(rows.keyed.enumerated()), id: \.element.id) { i, item in
-                // `live` INSIDE the closure, before any read (corollary 3):
-                // this re-evaluates against the array it already holds when a
-                // heal's delete lands.
-                if let thing = item.live {
-                    Button {
-                        openThing(thing)
-                    } label: {
-                        BandRow(thing: thing, moneyColumn: true, rippleIndex: i)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowPress())
-                    .dsHover()
-                    .macHoverLift()
-                }
-            }
-        }
-        // **NO SURFACE (user ruling, prd §483: *"we need to put the
-        // transactions that are showing outside of a card, remember we are
-        // going to the restrained design?"*).** The rows sit bare on the page
-        // and separate by air and heading weight, which is the direction's own
-        // rule: text sections lose their box, DRAWINGS keep one. The sparkline
-        // directly above still has its ground because `TokenChartPlot`'s fill
-        // is calibrated against it; three rows of type need nothing.
-        //
-        // Only the horizontal inset survives, so the rows land on the same
-        // 18pt margin the crown's figure and the toggle already sit on — a
-        // card's own padding was what put them 36pt in.
-        .padding(.vertical, DS.Space.s2)
-    }
-
-    /// What to call the card above — and the reason it is a function rather
-    /// than the literal "Today" the mock carried.
-    ///
-    /// A day word is only honest while every row it covers falls on that day.
-    /// A wallet that last moved in March would wear "Today" over three
-    /// five-month-old transfers — §83's fake status, in the largest claim on
-    /// the card. So the day label is used when the rows agree on a day (the
-    /// ordinary case on an active wallet, where it reads exactly as asked),
-    /// and the room's own neutral word otherwise. Each row carries its own
-    /// timestamp either way, so nothing is lost by the fallback.
-    private func walletLatestLabel(_ rows: [Thing]) -> String {
-        let days = Set(rows.live.map { Self.groupingCalendar.startOfDay(for: $0.capturedAt) })
-        if days.count == 1, let day = days.first { return dayLabel(day) }
-        // **"Recent", not "Activity" (prd §483).** This fallback read "Activity"
-        // until the scope strip took that word for a chip — and this card only
-        // draws in the scopes where that chip is NOT selected, so the room said
-        // "Activity" in a card 300pt below an "Activity" chip that was greyed
-        // out. Two different things wearing one word, with the deselected one
-        // implying the card belonged to a scope you were not in.
-        return String(localized: "Recent")
-    }
-
-    private func walletStreamRows(_ things: [Thing]) -> [FeedRow] {
-        var rows: [FeedRow] = []
-        var run: [Thing] = []
-        func flush() {
-            guard !run.isEmpty else { return }
-            if run.count >= Self.walletFoldMin, let newest = run.first {
-                // Never ambient: these are transactions, which `tier` files as
-                // concerning you by definition. Stated rather than derived
-                // because this fold is the Wallet ROOM's, where §378's weight
-                // axis does not run at all — the flag exists so the payload is
-                // honest if it ever does.
-                rows.append(.bundle(source: "Wallet",
-                                    word: String(localized: "transfers"),
-                                    count: run.count, newest: newest.capturedAt, art: [],
-                                    ambient: false))
-            } else {
-                rows += run.map(FeedRow.single)
-            }
-            run = []
-        }
-        for thing in things {
-            if Self.isRoutineTransfer(thing) {
-                // A run never crosses midnight. The fold takes its date from
-                // its newest member, so a run spanning three days would file
-                // all of them under "Today" — a day header that lies about
-                // what's under it, to save two rows. Same-day only.
-                if let open = run.first,
-                   !Self.groupingCalendar.isDate(open.capturedAt, inSameDayAs: thing.capturedAt) {
-                    flush()
-                }
-                run.append(thing)
-            } else {
-                flush()
-                rows.append(.single(thing))
-            }
-            // Stop once the folded list can fill the preview — a run still
-            // open may yet grow, so the loop runs one flush past the cap and
-            // the prefix below does the real trimming.
-            if rows.count > Self.walletPreviewRows { break }
-        }
-        flush()
-        return Array(rows.prefix(Self.walletPreviewRows))
-    }
-
-    /// A plain value transfer — the only thing this room folds.
-    ///
-    /// Deliberately an ALLOW-list, not "anything that isn't interesting":
-    /// every other row in this room is recognized by its own `sourceRef`
-    /// namespace (`wallet:approval:`, `wallet:permit2:`, `hyperliquid:*`,
-    /// `aerodrome:*`) and stands alone, so a bridge added tomorrow is
-    /// unfoldable by default rather than silently swept into a count. A
-    /// flagged transfer (poisoning, a spoofed symbol) is never routine, and
-    /// neither is anything carrying a deadline.
-    private static func isRoutineTransfer(_ thing: Thing) -> Bool {
-        guard thing.isLive, thing.kind == .transaction, !thing.isFlagged,
-              thing.dueAt == nil, let ref = thing.sourceRef,
-              ref.hasPrefix("wallet:")
-        else { return false }
-        return !ref.hasPrefix("wallet:approval:") && !ref.hasPrefix("wallet:permit2:")
-    }
-
-    /// The stream preview's day sections, over folded rows.
-    ///
-    /// A near-twin of `groupedSections`/`daySection`, and separate on purpose:
-    /// those speak `[Thing]`, and a fold is not a thing. Same guards
-    /// throughout — `live` re-checked inside the content closure, identity off
-    /// `FeedRow`'s stored id, never the model.
-    @ViewBuilder
-    private func walletStreamSections(_ rows: [FeedRow], nextEventID: UUID?) -> some View {
-        let groups = walletStreamDays(rows)
-        // The same boundary the rest of the feed draws, over `FeedRow`'s own
-        // stored dates — dropping it here would have quietly cost this room
-        // its "new since" divider.
-        let boundary = boundaryID(in: groups)
-        ForEach(Array(groups.enumerated()), id: \.element.0) { groupIndex, group in
-            let (label, dayRows) = group
-            // Rows in a day share ONE card silhouette (2026-07-21); a single
-            // that stands alone breaks the run, and a fold — like the All
-            // room's bundles — merges into it like any row-shaped thing.
-            let positions = cardRunPositions(
-                count: dayRows.count,
-                isBreaker: { i in
-                    if case .single(let item) = dayRows[i].kind,
-                       let thing = item.live { return standsAlone(thing) }
-                    return false
-                },
-                isBoundary: { dayRows[$0].id == boundary })
-            Section {
-                // UNPINNED (2026-08-29) — a ROW, not a `header:`, for the reason
-                // the twin in `bundledSections` gives at length: `.plain` pins a
-                // header, this one clears the backdrop that would make a pinned one
-                // legible, and a header with neither draws on top of the rows
-                // scrolling under it. Nothing moves — the insets were already zeroed
-                // and every pad is spelled out, so the row lands where the header
-                // did.
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(label).dsText(.heading22).foregroundStyle(DS.textPrimary)
-                }
-                .textCase(nil)
-                .padding(.leading, DS.Space.s4)
-                // The FIRST day heading sits directly under the scope
-                // switcher, which already carries its own bottom inset — the
-                // macro pad belongs BETWEEN days, not above the first one, and
-                // spending it there opened a ~45pt dead band on Activity that
-                // Home (whose lead section is a small header) never had.
-                .padding(.top, groupIndex == 0 ? DS.Space.s1 : DS.Space.s6)
-                .padding(.bottom, DS.Space.s1)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                ForEach(Array(dayRows.enumerated()), id: \.element.id) { i, row in
-                    if row.id == boundary { newSinceDivider }
-                    switch row.kind {
-                    case .single(let item):
-                        // `live` INSIDE the closure, before any read
-                        // (corollary 3): this re-evaluates against the array
-                        // it already holds when a heal's delete lands.
-                        if let thing = item.live {
-                            shapedListRow(thing, index: i, nextEventID: nextEventID,
-                                          position: positions[i])
-                        }
-                    case .bundle(_, let word, let count, let newest, _):
-                        // The fold's door is the history screen, NOT
-                        // `bundleListRow`'s source-filter tap: this room IS
-                        // the Wallet source, so filtering to it would be a
-                        // control that does nothing (the honesty rule's
-                        // dead-control clause).
-                        Button {
-                            DSHaptic.selection()
-                            route.pushBridge(.walletHistory(scope: selectedWallet))
-                        } label: {
-                            WalletRow(mark: .symbol("arrow.left.arrow.right", tint: DS.tint),
-                                      title: String(localized: "\(count) \(word)"),
-                                      subtitle: Self.foldSubline(newest))
-                        }
-                        .buttonStyle(.plain)
-                        .modifier(rowEntrance(i))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(.init(top: DS.Space.s2,
-                                             leading: DS.Space.s4 + DS.Space.s3,
-                                             bottom: DS.Space.s2,
-                                             trailing: DS.Space.s4 + DS.Space.s3))
-                    case .strip(_, let word, let count, let newest, _):
-                        // Drawn like `.bundle` above, and for that case's own
-                        // reason rather than by copying it: the generic
-                        // `stripListRow` opens the source filter, and this room
-                        // IS the Wallet source, so that tap would be a control
-                        // that does nothing. The door is the history screen.
-                        // The tiles are dropped with it — a strip earns its
-                        // picture row by having pictures, and a run of
-                        // transactions has none to show.
-                        Button {
-                            DSHaptic.selection()
-                            route.pushBridge(.walletHistory(scope: selectedWallet))
-                        } label: {
-                            WalletRow(mark: .symbol("arrow.left.arrow.right", tint: DS.tint),
-                                      title: String(localized: "\(count) \(word)"),
-                                      subtitle: Self.foldSubline(newest))
-                        }
-                        .buttonStyle(.plain)
-                        .modifier(rowEntrance(i))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(.init(top: DS.Space.s2,
-                                             leading: DS.Space.s4 + DS.Space.s3,
-                                             bottom: DS.Space.s2,
-                                             trailing: DS.Space.s4 + DS.Space.s3))
-                    }
-                }
-            }
-        }
-    }
-
-    /// "Most recent 2:14 PM" — a fold has no one title, so its subline says
-    /// where in the day the run starts, which is the only thing the rows it
-    /// replaced all agreed on.
-    private static func foldSubline(_ newest: Date) -> String {
-        String(localized: "Most recent \(newest.formatted(date: .omitted, time: .shortened))")
-    }
-
-    /// Day groups over folded rows, newest first — `dayGroups`' rule
-    /// (including its "drop what's still ahead" clause, which is now genuinely
-    /// true here: anything future-dated was promoted to Coming up above).
-    private func walletStreamDays(_ rows: [FeedRow]) -> [(String, [FeedRow])] {
-        let today = Self.groupingCalendar.startOfDay(for: .now)
-        var order: [String] = []
-        var groups: [String: [FeedRow]] = [:]
-        for row in rows where Self.groupingCalendar.startOfDay(for: row.date) <= today {
-            let label = dayLabel(row.date)
-            if groups[label] == nil { order.append(label) }
-            groups[label, default: []].append(row)
-        }
-        return order.map { ($0, groups[$0] ?? []) }
-    }
-
-    /// The stream's door — only when there's more behind it than the preview
-    /// showed (no dead control when five rows is the whole history).
-    @ViewBuilder
-    private func walletSeeAllSection(total: Int) -> some View {
-        if total > Self.walletPreviewRows {
-            Section {
-                WalletSeeAllRow(count: total) {
-                    route.pushBridge(.walletHistory(scope: selectedWallet))
-                }
-                .listRowSeparator(.hidden)
-                // On the page itself, not in a card — a quiet continuation
-                // line, not another surface (user, 2026-07-20, twice).
-                .listRowBackground(Color.clear)
-            }
-        }
-    }
-
-
-    /// The wallet leads with holdings — real, from Alchemy (WalletIngest),
-    /// one treemap per watched address, same doc Home and the Wallet screen
-    /// render (ruling 2026-07-09: the old mock demo-only block never showed a
-    /// real user anything real).
-    @ViewBuilder
-    private var holdingsBlockSection: some View {
-        if !blockStream.els.isEmpty {
-                            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    // THE DRAWING LEADS (2026-08-22, prd §447) — nothing above
-                    // the map at all. §417 put the concentration sentence here
-                    // at `heading22` on Lending's and Approvals' anatomy, and
-                    // the same pass put a 22pt "What you hold" header directly
-                    // above this card: two display lines stacked, then the
-                    // map's own eyebrow saying the header's words again. The
-                    // reading moved down to `holdingsTail`, beside the stables
-                    // line it always belonged with; the header is the card's
-                    // title and always was.
-                    GenRender(id: "root", els: blockStream.els)
-                        // A tapped holdings cell opens its token's chart
-                        // (2026-07-14): the thing sheet when watched, the quick
-                        // sheet when it's just held; a routeless native-coin
-                        // cell keeps its old door — the Wallet screen (no dead
-                        // controls). The Feed sets its own handler —
-                        // HomeScreen's doesn't reach this surface.
-                        .environment(\.genProjectTap) { name in
-                            if let route = TokenQuickRoute.from(sentinel: name) {
-                                if let thing = route.watchedThing(in: modelContext) {
-                                    openThing(thing)
-                                } else {
-                                    // The combined map merges wallets, so a
-                                    // cell tapped there carries the "held in"
-                                    // breakdown with it (prd §155) — the fact
-                                    // the per-wallet maps used to carry by
-                                    // never merging in the first place.
-                                    feedSheet = .token(route.withHolders(
-                                        portfolio?.holders(forSymbol: route.symbol ?? "") ?? []))
-                                }
-                            } else if name == "@wallet" {
-                                route.pushBridge(.wallet)
-                            }
-                        }
-                    // The map says WHAT you hold; this one row says the two
-                    // things it is structurally unable to say, and opens the
-                    // rest. Three separate text objects until 2026-08-22 — see
-                    // **THE TAIL LINE IS GONE** (user ruling, prd §483:
-                    // *"get rid of the words"*). It carried a concentration
-                    // sentence ("ETH 62% · 28% stables") and an "All 3 ›" door.
-                    //
-                    // Both were answers to a question the board alone could not
-                    // settle — WHICH tokens, in what share — and the token list
-                    // directly below the toggle now answers it properly, with
-                    // every holding, its amount and its own percentage. The
-                    // door in particular pointed at a tray showing less than
-                    // the list it would have covered.
-                }
-                // **THE MAP FILLS THE BOX, IT DOES NOT SPELL A HEIGHT**
-                // (2026-09-01, user: *"treemap is clipped in wallet"*).
-                //
-                // `GenTagMap` drew 160pt of cells under its own eyebrow,
-                // subline and 18pt top padding — ~250pt into a 210pt
-                // `DSRoomSlot`, which clips — so the bottom row of the
-                // treemap was sliced along its lower edge. The same class the
-                // chassis already records for the NFT quad, by a different
-                // route: there the box lost a reserved headline, here the
-                // drawing was taller than the box all along.
-                //
-                // The flag makes the cells absorb whatever the header leaves,
-                // so it fits at any Dynamic Type size and survives any later
-                // change to `visualSlot`.
-                .environment(\.genFillsRoomSlot, true)
-                // NO BOTTOM PADDING. The old `s3` closed the holdings CARD
-                // (prd §160), and §483 deleted that card; inside a fixed box
-                // it is no longer air below the map but 14pt taken OFF it,
-                // which is 14pt the cells are then clipped by. Every other
-                // scope's figure fills the slot — the NFT quad derives its
-                // cell size from the whole of `visualSlot` — and this one
-                // does now too.
-                // **NO CARD** (user ruling, prd §483: *"your treemap is in a
-                // card, we don't do cards"*). The room's drawings sit bare on
-                // the page — the sparkline does, the flow diagram does, and a
-                // surface under this one made it the only boxed figure left.
-                //
-                // **It IMPROVES the magnitude ramp rather than costing it**,
-                // which is the opposite of what I assumed: `DS.ink`'s dark floor
-                // is #131316 and the card was #111113 — two points apart, so the
-                // quietest cell was very nearly invisible ON the card. Against
-                // the #000 page it is nineteen points clear. The ramp is
-                // untouched, and the user's "Darker" pick from 2026-08-10
-                // stands.
-                // The SECTION's own arrival, not the cells' — GenTagMap
-                // already stages its cells once mounted; this is what
-                // stops the whole treemap from hard-popping in the moment
-                // the holdings read lands (2026-07-20, wallet streaming fix).
-                .modifier(rowEntrance(1))
-                // The card needs the page gutter the bare map didn't (it used
-                // to bleed to the screen edge and self-pad its cells).
-        }
     }
 
     /// A Snapchat memory that has its picture back — the grid's own membership
@@ -10858,14 +9352,14 @@ struct FeedScreen: View {
     /// section-lift mechanic brought to the plain list — while the
     /// rhythm-breakers (`standsAlone`) keep free-standing cards between
     /// runs, and the new-since seam splits a day's card in two.
-    private enum RunPosition { case only, first, middle, last }
+    enum RunPosition { case only, first, middle, last }
 
     /// Positions for a section's rows, index-based so All's FeedRow bundles
     /// and plain Thing arrays share one derivation. A run breaks at a
     /// free-standing row on either side, and at the new-since boundary
     /// (the divider renders BEFORE the boundary row, so the row above it
     /// closes its run and the boundary row opens a fresh one).
-    private func cardRunPositions(count: Int,
+    func cardRunPositions(count: Int,
                                   isBreaker: (Int) -> Bool = { _ in false },
                                   isBoundary: (Int) -> Bool = { _ in false }) -> [RunPosition] {
         (0..<count).map { i -> RunPosition in
@@ -10896,7 +9390,7 @@ struct FeedScreen: View {
     /// `thing.kind`/`thing.mark` below fault-resolve against the store and
     /// crashed (`_assertionFailure` inside SwiftData, real device only — a
     /// fresh install has no synced Calendar/Reminders/etc. yet to delete).
-    private func standsAlone(_ thing: Thing) -> Bool {
+    func standsAlone(_ thing: Thing) -> Bool {
         guard thing.modelContext != nil else { return false }
         if thing.kind == .approval && thing.mark != .done { return true }  // consent card
         // A POST CARD NEVER MERGES, IN ANY OF THE SEVEN ROOMS THAT DRAW ONE
@@ -11071,7 +9565,7 @@ struct FeedScreen: View {
     }
 
     /// The row inside a list section, with the standard list plumbing attached.
-    private func shapedListRow(_ thing: Thing, index: Int = 0, nextEventID: UUID?,
+    func shapedListRow(_ thing: Thing, index: Int = 0, nextEventID: UUID?,
                                position: RunPosition = .only,
                                imageOnly: Bool = false,
                                wideArt: Bool = false,
@@ -11776,7 +10270,7 @@ struct FeedScreen: View {
     /// is the point of the shape. `present` returns false wherever no pane
     /// exists (iPhone, an iPad mini in portrait, Slide Over), and the sheet
     /// path below is then exactly the one this app has always taken.
-    private func openThing(_ thing: Thing) {
+    func openThing(_ thing: Thing) {
         let walk = rowWalk
         guard !detail.present(thing, walk: walk) else { return }
         feedSheet = .thing(thing, walk: walk)
@@ -11994,7 +10488,6 @@ struct FeedScreen: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
     }
-
 
     // MARK: - Windowed rows (prd §264)
 
@@ -12236,7 +10729,6 @@ struct FeedScreen: View {
         }
     }
 
-
     /// Loads the real per-wallet holdings for the Wallet chip's own shape —
     /// the ONLY place holdings show in Feed (amendment 2026-07-10: the
     /// module already lives on Home; leading All with it doubled that).
@@ -12399,9 +10891,9 @@ struct FeedScreen: View {
     /// One calendar for the per-thing day grouping — `Calendar.current` copies
     /// the user's calendar on every access, and `dayLabel` runs once per thing
     /// inside `dayGroups`/`agendaSplit`, which the feed re-derives per paint.
-    private static let groupingCalendar = Calendar.current
+    static let groupingCalendar = Calendar.current
 
-    private func dayLabel(_ date: Date) -> String {
+    func dayLabel(_ date: Date) -> String {
         if Self.groupingCalendar.isDateInToday(date) { return String(localized: "Today") }
         if Self.groupingCalendar.isDateInYesterday(date) { return String(localized: "Yesterday") }
         // Only the agenda ever labels a day ahead (every other feed drops
@@ -12413,10 +10905,7 @@ struct FeedScreen: View {
     }
 }
 
-
 /// The compact Feed treemap — 5 cells, areas "a a b c / a a d e", 140pt tall,
-
-
 
 /// A feed row's long-press verbs, derived when the menu RISES (PERF
 /// 2026-09-09, prd §661).

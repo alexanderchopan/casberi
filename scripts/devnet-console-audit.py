@@ -27,6 +27,8 @@ CONSOLE = ROOT / "Casberi/Casberi/Screens/DevnetSendConsole.swift"
 HEGOTA = ROOT / "Casberi/Casberi/Screens/HegotaSendCard.swift"
 VIBENET = ROOT / "Casberi/Casberi/Screens/VibenetSendCard.swift"
 FEED = ROOT / "Casberi/Casberi/Screens/FeedScreen.swift"
+# The wallet room's half of FeedScreen (prd §718): read as one text with FEED.
+FEED_WALLET = ROOT / "Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift"
 
 # **THE MEASURED ALLOWANCE, AND THE DEVICE IT IS MEASURED ON.** 390x844,
 # measured off a screenshot of this build rather than estimated: the section
@@ -384,11 +386,11 @@ def main() -> int:
     if self_test():
         print("\033[31m✗ devnet-console audit: its own self-test failed\033[39m")
         return 1
-    for p in (CONSOLE, HEGOTA, VIBENET, FEED):
+    for p in (CONSOLE, HEGOTA, VIBENET, FEED, FEED_WALLET):
         if not p.exists():
             print("\033[31m✗ devnet-console audit: %s is missing\033[39m" % p.name)
             return 1
-    found = checks(CONSOLE.read_text(), HEGOTA.read_text(), VIBENET.read_text(), FEED.read_text())
+    found = checks(CONSOLE.read_text(), HEGOTA.read_text(), VIBENET.read_text(), FEED.read_text() + FEED_WALLET.read_text())
     if found:
         for f in found:
             print("\033[31m✗ %s\033[39m" % f)

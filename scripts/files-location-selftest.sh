@@ -43,7 +43,11 @@ LOC="Casberi/Casberi/Model/FilesLocation.swift"
 BRIDGE="Casberi/Casberi/Model/FilesBridge.swift"
 VERBS="Casberi/Casberi/Model/Verbs.swift"
 SHEET="Casberi/Casberi/Screens/ThingSheetView.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 PLIST="Casberi/Casberi/Info.plist"
 for f in "$LOC" "$BRIDGE" "$VERBS" "$SHEET" "$FEED" "$PLIST"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }

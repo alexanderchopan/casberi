@@ -46,7 +46,11 @@ SRC_STRIPE="Casberi/Casberi/Model/StripeRoomSource.swift"
 SRC_POSTHOG="Casberi/Casberi/Model/PostHogRoomSource.swift"
 CARD_STRIPE="Casberi/Casberi/Screens/StripeRoomCard.swift"
 CARD_POSTHOG="Casberi/Casberi/Screens/PostHogRoomCard.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 
 grep -q 'items.sort { $0.days < $1.days }' "$SRC_STRIPE" \

@@ -39,7 +39,11 @@ ROOM="Casberi/Casberi/Model/JournalRoom.swift"
 LEDE="Casberi/Casberi/Model/RoomLede.swift"   # prd §585 — the shared lede type this room now returns
 SOURCE="Casberi/Casberi/Model/JournalRoomSource.swift"
 CARD="Casberi/Casberi/Screens/JournalRoomCard.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 HERO="Casberi/Casberi/GenUI/GenRenderer.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 TOPICS="Casberi/Casberi/Model/ScreenshotTopics.swift"

@@ -63,7 +63,15 @@ cd "$(dirname "$SELF")/.."
 # concurrent session's `git add -A` landing in that moment publishes the
 # mutation under someone else's commit message. Copies remove the window
 # entirely rather than narrowing it.
-FEED="${ROOM_PERF_FEED:-Casberi/Casberi/Screens/FeedScreen.swift}"
+# FeedScreen is split across files (prd §718); the unmutated pass reads the room
+# as ONE text, and the mutation pass copies that text, so both see every half.
+if [[ -n "${ROOM_PERF_FEED:-}" ]]; then
+  FEED="$ROOM_PERF_FEED"
+else
+  FEED_DIR="$(mktemp -d -t feedscreen)"
+  FEED="$FEED_DIR/FeedScreen.swift"
+  cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+fi
 MAIN="${ROOM_PERF_MAIN:-Casberi/Casberi/Shell/MainSurface.swift}"
 SIGNAL="${ROOM_PERF_SIGNAL:-Casberi/Casberi/Model/CorpusSignal.swift}"
 CLOCK="${ROOM_PERF_CLOCK:-Casberi/Casberi/Shell/SwipeClock.swift}"
@@ -564,7 +572,7 @@ else
 fi
 # One construction site, so the flag cannot drift across twenty call sites.
 check "every row entrance is built through one helper" \
-      "$FEED" 'private func rowEntrance\(_ index: Int\) -> RowEntrance' yes
+      "$FEED" '(private )?func rowEntrance\(_ index: Int\) -> RowEntrance' yes
 check "the helper suppresses the entrance during a swipe" \
       "$FEED" 'instant: rowBudget != nil' yes
 

@@ -47,7 +47,9 @@ struct AgentModelRow: View {
                         .lineLimit(1).truncationMode(.middle)
                 }
                 if AgentModelStore.chosen(provider, task: task) == nil {
-                    Text(task == .librarian
+                    // "Same as your questions" names the ask; with it off the
+                    // librarian's default is simply the provider's (prd §718).
+                    Text(task == .librarian && AskSurface.enabled
                          ? String(localized: "Same model as your questions — a cheaper one usually names a screenshot just as well.")
                          : String(localized: "The default for \(provider.agent)."))
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
@@ -81,7 +83,7 @@ struct AgentModelRow: View {
                             AgentModelFacts.forget(provider, task: task)
                             tick += 1
                         } label: {
-                            Text(task == .librarian
+                            Text(task == .librarian && AskSurface.enabled
                                  ? String(localized: "Same as questions")
                                  : String(localized: "Default (\(provider.defaultModel))"))
                         }
@@ -186,7 +188,11 @@ struct AgentSpendRow: View {
                     Image(systemName: "chart.bar.doc.horizontal")
                         .foregroundStyle(DS.textSecondary)
                         .accessibilityHidden(true)
-                    Text(requestLine(entry))
+                    Text(AskSurface.enabled ? requestLine(entry)
+                         // With the ask off every request is the librarian's,
+                         // so none of them is "an ask" (prd §718).
+                         : entry.requests == 1 ? String(localized: "1 request")
+                         : String(localized: "\(entry.requests) requests"))
                         .dsText(.callout15).foregroundStyle(DS.textPrimary)
                 }
                 if let tokens = entry.tokenLine {
@@ -277,14 +283,19 @@ struct OpenRouterRoutingRow: View {
                 // The cost is stated on the control that causes it, not in
                 // fine print elsewhere — this is the one setting here that
                 // can make a question fail to answer.
-                DSToggleRow(title: Text("Only providers that don't keep your question"),
+                DSToggleRow(title: AskSurface.enabled
+                                ? Text("Only providers that don't keep your question")
+                                : Text("Only providers that don't keep what you send"),
                             detail: Text("Some models won't be served that way — you'll be told which."),
                             isOn: $privateRouting)
                 .onChange(of: privateRouting) { _, on in AgentOpenRouter.privateRouting = on }
-                DSToggleRow(title: Text("Let it search the web"),
-                            detail: Text("Only when your own things fall short. Charged per result."),
-                            isOn: $webSearch)
-                .onChange(of: webSearch) { _, on in AgentOpenRouter.webSearch = on }
+                // Web search only ever runs inside an ask (prd §718).
+                if AskSurface.enabled {
+                    DSToggleRow(title: Text("Let it search the web"),
+                                detail: Text("Only when your own things fall short. Charged per result."),
+                                isOn: $webSearch)
+                    .onChange(of: webSearch) { _, on in AgentOpenRouter.webSearch = on }
+                }
             }
             .dsListCardRow()
         }
@@ -314,7 +325,9 @@ struct AgentLibrarianRow: View {
     var body: some View {
         if AgentKey.isConfigured, AgentKey.active != .bankr, !AgentLibrarian.deviceCanDoIt {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSToggleRow(title: Text("Let your key organize too"),
+                DSToggleRow(title: AskSurface.enabled
+                                ? Text("Let your key organize too")
+                                : Text("Let your key organize"),
                             detail: Text("Names screenshots and reads long chats so they can be found. No free on-device model here."),
                             isOn: $enabled)
                 .onChange(of: enabled) { _, on in
@@ -436,9 +449,11 @@ struct AgentBudgetControl: View {
                 // Said out loud because it is the one thing somebody would
                 // otherwise assume wrongly, in the expensive direction: a cap
                 // stops the app spending on its own, and never stops YOU.
-                Text("Your own questions are never blocked.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if AskSurface.enabled {
+                    Text("Your own questions are never blocked.")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 // Only where it is true. A ceiling governs spend, and a free
                 // model spends nothing — so it keeps working past the cap, and
                 // saying so is what stops that reading as the cap being broken.

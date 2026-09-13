@@ -185,10 +185,24 @@ struct SettingsScreen: View {
     /// Same rule for the Keychain: `AgentKey.active` is a `SecItemCopyMatching`
     /// round trip to securityd, and `secondaryRows` read it per evaluation.
     @State private var keyedAgent: AgentProvider?
+    /// Whether "Your key" is drawn at all (prd §718). With the ask off, a key
+    /// on a phone that runs the on-device model does NOTHING: the librarian
+    /// only spends a key where the device cannot organize for itself. A row
+    /// that opens a paste field for a key that would sit unused is §83's dead
+    /// control. It stays for anyone who already saved one (so they can remove
+    /// it), on a device without the model, and on the Mac, where the same
+    /// sheet holds the MCP listener that App Review was pointed at.
+    @State private var keyRowShown = true
 
     private func readCounts() {
         thingCount = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
         keyedAgent = AgentKey.active
+        #if targetEnvironment(macCatalyst)
+        keyRowShown = true
+        #else
+        keyRowShown = AskSurface.enabled || keyedAgent != nil
+            || !AgentLibrarian.deviceCanDoIt
+        #endif
     }
 
     /// A corpus passing a round number is a real crossing, and this is the one
@@ -318,9 +332,13 @@ struct SettingsScreen: View {
             // the same hand-listing in the key card's console line by deriving
             // it — here the honest fix is to stop listing at all.
             RowSpec(title: "Your key",
+                    // With the ask off (prd §697b) a key answers nothing, so
+                    // the keyed fact is just whose key it is (prd §718).
                     value: keyedAgent.map {
-                       String.localizedStringWithFormat(
-                           String(localized: "%@ answers on tap"), $0.agent)
+                       AskSurface.enabled
+                           ? String.localizedStringWithFormat(
+                               String(localized: "%@ answers on tap"), $0.agent)
+                           : $0.agent
                     } ?? String(localized: "Bring your own agent"),
                     valueColor: keyed ? DS.confirm : DS.textTertiary,
                     badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
@@ -353,7 +371,9 @@ struct SettingsScreen: View {
                             openURL(url)
                         }
                     }),
-        ].sorted { $0.title < $1.title }
+        ]
+        .filter { $0.title != "Your key" || keyRowShown }
+        .sorted { $0.title < $1.title }
     }
 
     /// Whether "See the demo" belongs on screen — the demo mode's re-entry

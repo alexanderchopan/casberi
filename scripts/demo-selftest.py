@@ -733,7 +733,7 @@ def extract_shape_sources(feed_src, media_src, asc_src):
     from what the switch actually does. (`.x402` was a third such indirection
     until its seat and its code were deleted, 2026-09-06.)"""
     clean = strip_comments(feed_src)
-    m = re.search(r'private enum Shape \{(.*?)\n    \}', clean, re.DOTALL)
+    m = re.search(r'(?:private )?enum Shape \{(.*?)\n    \}', clean, re.DOTALL)
     if not m:
         return None
     body = m.group(1)

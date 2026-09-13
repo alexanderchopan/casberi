@@ -33,7 +33,11 @@ CONNECTIONS="Casberi/Casberi/Model/AddressConnections.swift"
 ALTANA="Casberi/Casberi/Model/AltanaKeystore.swift"
 ALTANA_SRC="Casberi/Casberi/Model/AltanaKeystoreSource.swift"
 PORTFOLIO="Casberi/Casberi/Model/WalletPortfolio.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Every check reads the room as ONE
+# text, so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 TILES="Casberi/Casberi/Screens/WalletFeedTiles.swift"
 INGEST="Casberi/Casberi/Model/WalletIngest.swift"
 for f in "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS" "$ALTANA" "$PORTFOLIO"; do

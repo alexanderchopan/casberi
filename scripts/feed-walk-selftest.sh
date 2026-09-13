@@ -39,7 +39,11 @@ cd "$(dirname "$0")/.."
 
 WALK="Casberi/Casberi/Model/SheetWalk.swift"
 SOURCE="Casberi/Casberi/Model/NoteSheetSource.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 SHEET="Casberi/Casberi/Screens/ThingSheetView.swift"
 for f in "$WALK" "$SOURCE" "$FEED" "$SHEET"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }

@@ -126,7 +126,11 @@ FIELD="Casberi/Casberi/Screens/VibenetWatchViews.swift"
 # ONE name per file (prd §568) — this was `$SHELL_SURFACE` here and `$SURFACE`
 # below, the same two-names-one-path split that let five §517 guards go dead.
 SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 for f in "$ROOM" "$LEDGER" "$BRIDGE" "$CATALOG" "$REACH" "$ROUTER" "$SETUP" "$CARD" "$FIELD" "$SURFACE" "$FEED"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done

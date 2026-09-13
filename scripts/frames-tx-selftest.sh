@@ -330,7 +330,11 @@ echo "  ok   drift guards: the strip keeps only the scopes this chain can fill"
 # Read from COMMENT-STRIPPED copies throughout — all three files document these
 # rules by naming what they must not do (the Obsidian/Cursor lesson).
 CARD="Casberi/Casberi/Screens/FramesRoomCard.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 for f in "$CARD" "$FEED"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done

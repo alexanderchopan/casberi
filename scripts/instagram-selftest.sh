@@ -36,7 +36,11 @@ LEDE="Casberi/Casberi/Model/RoomLede.swift"   # prd §585 — the shared lede ty
 SRC="Casberi/Casberi/Model/InstagramRoomSource.swift"
 IMPORT="Casberi/Casberi/Model/InstagramImport.swift"
 CAPTIONS="Casberi/Casberi/Model/InstagramCaptions.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 INSIGHT="Casberi/Casberi/Model/FeedInsight.swift"
 RETRIEVER="Casberi/Casberi/Model/Retriever.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"

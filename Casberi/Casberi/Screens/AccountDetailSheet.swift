@@ -407,7 +407,12 @@ struct AccountDetailSheet: View {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "sparkles")
                         .dsGlyph(13)
-                    Text("Private — answers run on \(DS.device)")
+                    // prd §718: "answers" named the deprecated ask. The app's
+                    // own claim without it is the one NetworkReach makes
+                    // checkable.
+                    (AskSurface.enabled
+                        ? Text("Private — answers run on \(DS.device)")
+                        : Text("Private — nothing routes through us"))
                         .dsText(.subhead13).fontWeight(.semibold)
                 }
                 .foregroundStyle(DS.confirm)
@@ -421,7 +426,16 @@ struct AccountDetailSheet: View {
                 // fork is not a nicety: with it on, the key is spent on the
                 // app's OWN schedule, so "when you tap" would be false in the
                 // one place a person checks whether that is true.
-                if let keyedAgent {
+                if let keyedAgent, !AskSurface.enabled {
+                    // With the ask off the key's ONLY departure from the
+                    // baseline is the librarian; without it there is none to
+                    // state (prd §718).
+                    if librarianOn {
+                        Text("The librarian sends things to \(keyedAgent.company) on its own to name and summarize them.")
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else if let keyedAgent {
                     Text(librarianOn
                          ? "Your \(keyedAgent.agent) key answers when you tap, and the librarian sends things to \(keyedAgent.company) on its own to name and summarize them."
                          : "Your \(keyedAgent.agent) key answers when you tap — that question and its matched things go to \(keyedAgent.company), per answer.")
@@ -526,7 +540,7 @@ struct AccountDetailSheet: View {
             // because the on-device model is deliberately NOT redacted — it
             // never leaves, and "what's my wifi password?" is a fair question
             // to ask your own corpus.
-            Text("Passwords and recovery phrases are kept out of search, Siri, and any ask sent with your key.")
+            Text("Passwords and recovery phrases are kept out of search, Siri, and anything sent with your key.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -607,16 +621,25 @@ struct AccountDetailSheet: View {
             // which one wins, so that's what this says now.
             aliveRow("key.fill", AgentKey.isConfigured ? DS.confirm : DS.textSecondary,
                      "Agent API key",
-                     AgentKey.active.map { String(localized: "Answers run on \($0.agent) when you tap") }
-                        ?? String(localized: "Answers run on \(DS.device) until you add one"))
-            Text("The question and its matched things go straight to the provider. They bill you directly.")
+                     AskSurface.enabled
+                        ? (AgentKey.active.map { String(localized: "Answers run on \($0.agent) when you tap") }
+                            ?? String(localized: "Answers run on \(DS.device) until you add one"))
+                        // prd §718: with the ask off nothing "answers", so the
+                        // summary states only whose key is saved.
+                        : (AgentKey.active.map { String(localized: "\($0.agent) key saved") }
+                            ?? String(localized: "No key saved")))
+            (AskSurface.enabled
+                ? Text("The question and its matched things go straight to the provider. They bill you directly.")
+                : Text("What you send goes straight to the provider. They bill you directly."))
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             // What THIS agent adds beyond a plain text answer — changes with
             // the picker below it, so the choice is informed before a key is
             // even saved (honesty rule: capability copy per agent, not one
             // line pretending they're all the same).
-            if let capability = keyProvider.capabilityLine {
+            // Every capability line describes ANSWERING (a chat's memory, web
+            // search), so it goes dark with the ask (prd §718).
+            if AskSurface.enabled, let capability = keyProvider.capabilityLine {
                 Text(capability)
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -633,7 +656,11 @@ struct AccountDetailSheet: View {
             // (2026-08-06). Both render nothing until this provider is
             // configured, so an unconfigured pick shows the field alone,
             // exactly as before.
-            AgentModelRow(provider: keyProvider)
+            // The ask's model picker; the librarian's own picker lives in
+            // `AgentLibrarianRow` and stays (prd §718).
+            if AskSurface.enabled {
+                AgentModelRow(provider: keyProvider)
+            }
             // Who may serve the request, and whether it may go looking
             // (2026-08-23, prd §459) — OpenRouter alone, since it is the only
             // seat here that routes rather than answers.
@@ -685,7 +712,9 @@ struct AccountDetailSheet: View {
                     keyConfigured = false
                     keyTick += 1
                     keyResultIsError = false
-                    keyResult = AgentKey.isConfigured
+                    keyResult = !AskSurface.enabled
+                        ? String(localized: "Key removed.")
+                        : AgentKey.isConfigured
                         ? "Removed — answers run on \(AgentKey.active?.agent ?? "") now."
                         : "Removed — answers stay on \(DS.device)."
                 } label: {

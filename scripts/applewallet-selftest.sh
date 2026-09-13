@@ -87,7 +87,11 @@ SRC="Casberi/Casberi/Model/AppleWalletRoomSource.swift"
 BRIDGE="Casberi/Casberi/Model/AppleWalletBridge.swift"
 CARD="Casberi/Casberi/Screens/AppleWalletRoomCard.swift"
 SCREEN="Casberi/Casberi/Screens/AppleWalletScreen.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 ENT="Casberi/Casberi/Casberi.entitlements"
 CAT_ENT="Casberi/Casberi/Casberi-Catalyst.entitlements"
 

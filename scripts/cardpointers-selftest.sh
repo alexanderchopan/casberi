@@ -308,7 +308,11 @@ mutate_offer "the merchant is SPLIT on the separator instead of stripped" 's{ret
 # bug costing `ondevice-selftest.sh` a real missed finding).
 strip_comments () { sed -e 's://.*::' "$1"; }
 
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 CARD="Casberi/Casberi/Screens/CardPointersRoomCard.swift"
 ROOMSRC="Casberi/Casberi/Model/CardPointersRoomSource.swift"
 BRIDGE="Casberi/Casberi/Model/CardPointersBridge.swift"

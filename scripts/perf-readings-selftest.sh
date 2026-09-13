@@ -37,7 +37,11 @@ SWEEP="Casberi/Casberi/Shell/SweepClock.swift"
 SAVE="Casberi/Shared/SaveHonestly.swift"
 SCREEN="Casberi/Casberi/Screens/DiagnosticsScreen.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 PERFSH="scripts/perf.sh"
 for f in "$SRC" "$SIGNPOSTS" "$SWEEP" "$SAVE" "$SCREEN" "$PROBES" "$FEED" "$PERFSH"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }

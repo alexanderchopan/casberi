@@ -65,7 +65,11 @@ FOLD="Casberi/Casberi/Model/CategoryFold.swift"
 # category. The guard below that it must stay gone reads the shell's own file.
 MAIN="Casberi/Casberi/Shell/MainSurface.swift"
 CHIPS="Casberi/Casberi/Shell/SourceChips.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Every check reads the room as ONE
+# text, so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 # `CategoryVenueSwitcher.swift` is DELETED (2026-09-05): a folder opens IN
 # PLACE now — the category chip itself grows to hold its venues
 # (`SourceChips.categoryTile` / `folderVenue`) — so every guard below that
@@ -640,7 +644,7 @@ grep -q 'dsTooltip' "$TMP/rail.nc" \
 # left this guard passing on almost any tree; a range whose START never matches
 # yields nothing, which is what it actually did. `walletCompositionSection` is
 # the next declaration after the slab and is the honest new terminator.
-railBlock=$(sed -n '/private func walletScopeRailSection/,/private var walletCompositionSection/p' "$TMP/feed.nc")
+railBlock=$(sed -nE '/(private )?func walletScopeRailSection\(/,/(private )?var walletCompositionSection:/p' "$TMP/feed.nc")
 [[ "$railBlock" == *"namesInRoom:"* ]] \
   || { echo "✗ the wallet rail's caption decision is implicit again (§450 → §495) — the"; \
        echo "  parameter defaults to false, so a rail that captions by OMISSION is a rail"; \

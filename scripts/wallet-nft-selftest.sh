@@ -44,7 +44,11 @@ VERBS="Casberi/Casberi/Model/WalletVerbs.swift"
 USEROPS="Casberi/Casberi/Model/WalletUserOps.swift"
 SHELF="Casberi/Casberi/Model/WalletNFTShelf.swift"
 INGEST="Casberi/Casberi/Model/WalletIngest.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Every check reads the room as ONE
+# text, so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 CARD="Casberi/Casberi/Screens/WalletNFTShelfCard.swift"
 PICKER="Casberi/Casberi/Screens/WalletNFTPickerSheet.swift"
 STORE="Casberi/Casberi/Model/WalletStore.swift"
@@ -216,7 +220,7 @@ ok "the demo shows the shelf and not the picker"
 python3 - "$TMP/feed.nc" <<'PY'
 import sys, re
 src = open(sys.argv[1]).read()
-m = re.search(r'private func walletScopeVisualSection.*?\n    \}', src, re.S)
+m = re.search(r'(?:private )?func walletScopeVisualSection.*?\n    \}', src, re.S)
 if not m:
     sys.exit("  ✗ could not find the wallet room's scope-visual switch")
 if not re.search(r'case \.nfts:\s*walletNFTSection', m.group(0)):

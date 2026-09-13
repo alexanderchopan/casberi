@@ -26,7 +26,11 @@ SRC="Casberi/Casberi/Model/WalletPermissions.swift"
 MAP="Casberi/Casberi/Model/WalletPermissionsSource.swift"
 CARD="Casberi/Casberi/Screens/WalletPermissionsCard.swift"
 FIGURE="Casberi/Casberi/Screens/RoomPermissionsFigure.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Every check reads the room as ONE
+# text, so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 STATE="Casberi/Casberi/Model/WalletWarnings.swift"
 
 work=$(mktemp -d)

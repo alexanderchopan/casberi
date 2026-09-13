@@ -50,7 +50,11 @@ AWS_ROOM="Casberi/Casberi/Model/AWSRoom.swift"
 VECTORS="scripts/support/aws-sigv4-vectors.py"
 BRIDGES="Casberi/Casberi/Model/TokenBridges.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 for f in "$AWS_BRIDGE" "$AWS_ROOM" "$VECTORS" "$BRIDGES" "$REACH" "$FEED"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done

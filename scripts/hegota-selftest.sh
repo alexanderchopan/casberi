@@ -1474,7 +1474,11 @@ deny account.bare "URLSession" "HegotaAccount reaches the network — it is valu
 # invisible to every check here and visible only by opening the room.
 BRIDGE="Casberi/Casberi/Model/HegotaBridge.swift"
 CARD="Casberi/Casberi/Screens/HegotaRoomCard.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 SCREEN="Casberi/Casberi/Screens/HegotaScreen.swift"
 # The four devnet setup screens share one accounts control since 2026-09-04,
 # so the rule the guard below protects now lives half here and half in the

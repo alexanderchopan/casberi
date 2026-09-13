@@ -41,7 +41,11 @@ ARTICLE="Casberi/Casberi/Model/FeedArticleText.swift"
 BODY="Casberi/Casberi/Screens/ArticleBody.swift"
 CONTENT="Casberi/Casberi/Screens/ThingContent.swift"
 INSIGHT="Casberi/Casberi/Model/FeedInsight.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 RENDER="Casberi/Casberi/GenUI/GenRenderer.swift"
 for f in "$HEALTH" "$SOURCE" "$ARTICLE" "$BODY" "$CONTENT" "$INSIGHT" "$FEED" "$RENDER"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }

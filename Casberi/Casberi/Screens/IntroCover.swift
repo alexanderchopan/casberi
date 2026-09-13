@@ -320,7 +320,9 @@ struct IntroCover: View {
     /// catalog with all four translations, so composing costs nothing.
     private var coverSpoken: String {
         [String(localized: "One inbox for all your accounts."),
-         String(localized: "Read it all together, or one app at a time. Ask your agents about any of it."),
+         AskSurface.enabled
+            ? String(localized: "Read it all together, or one app at a time. Ask your agents about any of it.")
+            : String(localized: "Read it all together, or one app at a time."),
          String(localized: "This is a demo.")].joined(separator: " ")
     }
 
@@ -367,7 +369,12 @@ struct IntroCover: View {
                         .dsText(.heading34)
                         .foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("Read it all together, or one app at a time. Ask your agents about any of it.")
+                    // The ask is off behind one flag (prd §697b), so the first
+                    // sentence a new person reads stops promising it (prd §718).
+                    // Flip the flag and the old sentence returns with it.
+                    (AskSurface.enabled
+                        ? Text("Read it all together, or one app at a time. Ask your agents about any of it.")
+                        : Text("Read it all together, or one app at a time."))
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)

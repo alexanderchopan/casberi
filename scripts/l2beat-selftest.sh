@@ -31,7 +31,11 @@ CARD="Casberi/Casberi/Screens/L2beatRoomCard.swift"
 DIRSCREEN="Casberi/Casberi/Screens/L2beatDirectoryScreen.swift"
 CARDSCREEN="Casberi/Casberi/Screens/L2beatCardScreen.swift"
 SHEETVIEWS="Casberi/Casberi/Screens/L2beatSheetViews.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 ROUTE="Casberi/Casberi/Shell/HomeRoute.swift"
 SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
 DEMO="Casberi/Casberi/Model/DemoSeedAll.swift"

@@ -42,7 +42,11 @@ SHARED_RUNWAY="Casberi/Casberi/Model/RoomRunway.swift"
 SOURCE="Casberi/Casberi/Model/DodoPaymentsRoomSource.swift"
 BRIDGE="Casberi/Casberi/Model/DodoPaymentsBridge.swift"
 CARD="Casberi/Casberi/Screens/DodoPaymentsRoomCard.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d -t feedscreen)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 THING="Casberi/Shared/Thing.swift"
 DEMO="Casberi/Casberi/Model/DemoSeedAll.swift"
