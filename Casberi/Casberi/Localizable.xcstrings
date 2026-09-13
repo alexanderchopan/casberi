@@ -122587,34 +122587,6 @@
         }
       }
     },
-    "Today's line and what just landed." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "La línea de hoy y lo que acaba de llegar."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "今日のひとことと、届いたばかりのもの。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "오늘의 한 줄과 방금 도착한 항목."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "今天的一句话和刚到的内容。"
-          }
-        }
-      }
-    },
     "Token" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -137497,34 +137469,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的验证码"
-          }
-        }
-      }
-    },
-    "Your day" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tu día"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "あなたの一日"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "나의 하루"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "你的一天"
           }
         }
       }

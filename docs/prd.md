@@ -54285,6 +54285,6 @@ Every change is a branch on `AskSurface.enabled`, so flipping the flag still bri
 
 **4. What was suggested and not done, and why.** (a) *Group Settings into two* — the 2026-07-05 account pass retired the You/App groups on purpose ("every tile sits in one A–Z grid"); reversing it is the user's call, not a sweep's. (b) *The empty feed's pile and the intro cover are two first-run idioms* — they are not competing: the cover rides the demo on first launch, the pile is drawn only on a real empty feed after the demo is left. (c) *Walk the demo on a device* — no device is reachable from this session.
 
-**5. The catalog.** 21 keys lacked es/ja/ko/zh-Hans: the 12 above and 9 that §713's notification pass left untranslated. All 21 are translated, `needs_review` like the rest.
+**5. The catalog.** 21 keys lacked es/ja/ko/zh-Hans: the 12 above and 9 that §713's notification pass left untranslated. All are translated, `needs_review` like the rest. **Two of them belonged to the widget target**, not the app: the first sync read every target's `.stringsdata` from the project build directory, so "Your day" and "Today's line and what just landed." landed in the APP catalog while `CasberiWidgets/Localizable.xcstrings` stayed behind, and `verify.sh`'s localization step caught it. They moved to the widget catalog with "Today"; sync each catalog from its OWN target's `…/<Target>.build` directory.
 
 **UNSEEN on a device.** Verified: iOS simulator and Mac Catalyst builds; all 46 scripts that read FeedScreen; every `scripts/*-audit.{py,sh}`; `catalog-sync.sh`.
