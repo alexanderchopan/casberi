@@ -54234,3 +54234,7 @@ One real session stored locally makes it a one-launch check.
 **Not done here, named:** a retry capsule for the ten sites where "Try again" is a sentence with nothing to tap (FollowImportSheet, SafeQueueCard, CardPointersScreen, VibenetAuthorizeSheet and others) — passed to §715's session, whose files they are.
 
 **UNSEEN on a device**: both switchers are an existing component at existing call-site shape; the only new thing a person sees is the control itself. Built clean for the iOS simulator and for Mac Catalyst; `verify.sh` was not run, because a concurrent session holds uncommitted edits in the same tree.
+
+## §716b — L2BEAT's layer picker follows, once §715 landed (2026-09-13)
+
+§716 held back `L2beatDirectoryScreen`'s gray segmented picker because §715's uncommitted tree was moving that file's empty-search note. §715 landed as `c2467077`, so the picker draws `DSSectionSwitcher` now, the same swap Walletbeat and a person's room took. That was the last `.pickerStyle(.segmented)` in the app. The `WalletFeedTiles` baseline §716 also deferred went out with §715. Built clean for the iOS simulator and for Mac Catalyst.

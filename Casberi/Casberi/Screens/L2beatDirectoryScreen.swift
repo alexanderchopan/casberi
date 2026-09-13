@@ -1,6 +1,8 @@
 import SwiftData
 import SwiftUI
 
+extension L2beatDirectoryScreen.Layer: DSSectionScope {}
+
 /// Every chain L2BEAT covers (prd §428).
 ///
 /// THE SORT IS THE WHOLE DESIGN PROBLEM, and §419 solved it for Walletbeat by refusing every
@@ -99,10 +101,11 @@ struct L2beatDirectoryScreen: View {
 				VStack(alignment: .leading, spacing: DS.Space.s3) {
 					searchField
 
-					Picker("", selection: $layer) {
-						ForEach(Layer.allCases) { Text($0.label).tag($0) }
+					// The app's own scope control, not UIKit's gray segmented one
+					// (prd §716b) — the switcher every room's rail already wears.
+					DSSectionSwitcher(sections: Layer.allCases, active: layer) { picked in
+						withAnimation(DS.Motion.standard) { layer = picked }
 					}
-					.pickerStyle(.segmented)
 
 					// Hidden while searching, the §200 shape: an ordering is a statement about
 					// a whole list, and three matches have no order worth choosing. Results
