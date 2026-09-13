@@ -39,7 +39,9 @@ struct VibenetUnlockActivity: Widget {
             }
             .padding(14)
             .activityBackgroundTint(.black.opacity(0.8))
-            .widgetURL(URL(string: "casberi://feed/Base%20Vibenet"))
+            // `feed/source/<name>` is the route (prd §717b); a bare
+            // `feed/<name>` matched neither branch and landed on All.
+            .widgetURL(URL(string: "casberi://feed/source/Base%20Vibenet"))
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {

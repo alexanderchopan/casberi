@@ -294,7 +294,10 @@ struct CasberiShortcuts: AppShortcutsProvider {
             intent: WeekSynthesisIntent(),
             phrases: [
                 "What's my week in \(.applicationName)",
-                "Ask \(.applicationName) about my week",
+                // "Ask Casberi about my week" is gone with the ask (prd §717b):
+                // this intent counts your things and asks nothing, and Siri
+                // offering an "Ask" phrase sells the retired feature.
+                "My week in \(.applicationName)",
             ],
             shortTitle: "My week",
             systemImageName: "sparkles"

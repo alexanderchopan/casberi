@@ -745,7 +745,7 @@ struct AccountRosterRow: View {
                         .dsText(.heading17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     if row.isYou {
-                        Chip(text: String(localized: "You"), style: .tint)
+                        Chip(text: String(localized: "You"), style: .tint, interactive: false)
                     }
                 }
                 Text(subline)

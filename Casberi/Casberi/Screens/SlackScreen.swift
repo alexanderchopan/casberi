@@ -59,10 +59,6 @@ struct SlackScreen: View {
                     Spacer(minLength: 0)
                 }
             }
-            BridgeSyncStatusRows(syncing: syncing,
-                                 syncingLine: String(localized: "Checking your mentions…"),
-                                 proof: result,
-                                 retry: { Task { await sync() } })
         } else if connecting {
             HStack(spacing: DS.Space.s2) {
                 DSSpinner()
@@ -83,8 +79,12 @@ struct SlackScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        // ONE status row for both branches (prd §717) — the connected branch
+        // drew its own copy above this one, so a connected page said its
+        // result twice.
         BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking your mentions…"),
-                             proof: result)
+                             proof: result,
+                             retry: SlackAuth.connected ? { Task { await sync() } } : nil)
         // Says what LANDS before what's safe (audit, 2026-07-31) — this
         // named PKCE, the missing password, the absent server and the
         // search-only scope, and never once said what a mention becomes

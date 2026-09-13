@@ -3,7 +3,7 @@ import SwiftUI
 /// What is left of the agent's instrument panel (prd §334/§336/§337).
 ///
 /// The bento grid itself was deleted with the panel (prd §386p) and sat here
-/// with no call site until prd §715's sweep removed it, along with its corner
+/// with no call site until prd §717's sweep removed it, along with its corner
 /// badge and its tile entrance. What survives is the part other surfaces
 /// still draw: the room hue below, and the figures under it, which the chip
 /// peek (`ChipPeek`) and the answer dial (`GenDial`) render through

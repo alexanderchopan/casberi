@@ -42,7 +42,7 @@ GRID="Casberi/Casberi/Screens/AgentPanelGrid.swift"
 # only the PER-ROOM function survived, for the chip peek. The invariants below
 # are unchanged — they just live one file over now.
 COMPOSER="Casberi/Casberi/Model/RoomFigure.swift"
-# The bento grid that routed by `fit` was deleted (prd §715, no call site since
+# The bento grid that routed by `fit` was deleted (prd §717, no call site since
 # §386p); the chip peek is the one surface still choosing a slot from it.
 PEEK="Casberi/Casberi/Shell/ChipPeek.swift"
 for f in "$SRC" "$MONEY" "$GRID" "$COMPOSER" "$PEEK"; do

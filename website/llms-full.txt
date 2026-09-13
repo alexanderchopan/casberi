@@ -121,9 +121,9 @@ Casberi is one screen — no tabs to learn, no account to make. Open it and it's
 
 #### Apps
 
-Open Apps from the grid icon. Search leads the page, then your connected apps, then the catalog — every app you can add, laid out as a wall of category bands: Wallet, Markets, Social, Mail, Agents, Media, and the rest. Each opens a page that says what it does and what shows up in your feed, with one clear button — Connect, Open, Fix, or Soon.
+Open Apps from the dock. Search leads the page. Yours shows the apps you've connected; All is the whole catalog, one row per app, grouped by category — Wallet, Work, Life, Agents, Media, Social, Reading, Shopping and Notes. Tap a row to set it up. The button on each row says what it takes: Allow, Sign in, Add key, Import, or Connect.
 
-There are nearly a hundred to choose from. The Apple apps you already use connect straight through iOS (Photos, Calendar, Reminders, Health, Music, HomeKit, Contacts). Services connect with a sign-in or a pasted token (Gmail and iCloud Mail, GitHub, Notion, Linear, Todoist, Readwise, Raindrop, Obsidian, Reddit, Twitch, Steam, Shopify, and more). Wallets, tokens, and markets connect with nothing at all — just an address or a symbol.
+There are nearly a hundred to choose from. The Apple apps you already use connect straight through iOS (Photos, Calendar, Reminders, Health, Music, Contacts, Apple Wallet). Services connect with a sign-in or a pasted token (Gmail and iCloud Mail, GitHub, Notion, Linear, Todoist, Readwise, Raindrop, Obsidian, Reddit, Twitch, Steam, Shopify, and more). Wallets, tokens, and stocks connect with nothing at all — just an address or a symbol.
 
 ### Keep tabs
 

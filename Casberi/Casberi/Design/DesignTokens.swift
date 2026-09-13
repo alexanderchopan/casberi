@@ -98,7 +98,7 @@ enum DS {
     static let stepVault  = Color.fixed("#4dc7eb")
     static let stepVerify = Color.fixed("#8c78ed")
 
-    /// The RANK hues (prd §715) — categories with no state to say and no
+    /// The RANK hues (prd §717) — categories with no state to say and no
     /// identity to borrow: a theme river's bands by rank, a distribution's
     /// fifth and sixth segments. Were two spellings of one idea, a raw hex
     /// array inside `RiverFigure` and `.purple` / `.pink` inside
