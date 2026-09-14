@@ -622,7 +622,7 @@ enum BridgeCatalog {
         // what you TAPPED arrives as a named link. Saying that here is the
         // honesty rule — the alternative is a seat that reads as full search
         // over your saves and isn't.
-        Offer(name: "Instagram",   tagline: "Your posts and saves, findable",        group: "Network",   connectable: true,
+        Offer(name: "Instagram",   tagline: "Notifications and saves, as they happen", group: "Network", connectable: true,
               needsSetup: true, added: day(2026, 7, 31)),
         // The second import-grade social seat, beside Instagram (2026-07-31, prd
         // §246). Snapchat has no keyless read either — and less than no read:
@@ -644,7 +644,7 @@ enum BridgeCatalog {
         // AND the one thing this import does that Instagram's can't — TikTok's
         // oEmbed endpoint is live and keyless, so a bare saved link can be
         // given back its caption, its creator and its cover.
-        Offer(name: "TikTok",      tagline: "Your saves, before the link expires",   group: "Network",   connectable: true,
+        Offer(name: "TikTok",      tagline: "Likes, comments and follows, as they happen", group: "Network", connectable: true,
               needsSetup: true, added: day(2026, 8, 2)),
         // The fourth import-grade social seat, and the one with the least
         // choice behind it (2026-08-02, prd §280). Instagram and TikTok at

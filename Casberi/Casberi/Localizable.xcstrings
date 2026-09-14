@@ -48012,6 +48012,34 @@
         }
       }
     },
+    "Checking TikTok…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comprobando TikTok…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TikTokを確認しています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TikTok 확인 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在检查 TikTok…"
+          }
+        }
+      }
+    },
     "Checking the key pair…" : {
       "localizations" : {
         "es" : {
@@ -54110,6 +54138,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法读取 Instagram——如果它要求你确认登录，请打开 Instagram 确认后重试。"
+          }
+        }
+      }
+    },
+    "Couldn't read TikTok — try again in a few minutes." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo leer TikTok — inténtalo de nuevo en unos minutos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TikTokを読み込めませんでした — 数分後にもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TikTok을 읽을 수 없습니다 — 몇 분 후에 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法读取 TikTok — 请几分钟后再试。"
           }
         }
       }
@@ -111002,6 +111058,34 @@
         }
       }
     },
+    "Sign in to TikTok" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Inicia sesión en TikTok"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TikTok にサインイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TikTok에 로그인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "登录 TikTok"
+          }
+        }
+      }
+    },
     "Sign in to X" : {
       "localizations" : {
         "es" : {
@@ -124431,6 +124515,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "股票代码或公司名称"
+          }
+        }
+      }
+    },
+    "TikTok signed this app out — tap Connect to sign in again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TikTok cerró la sesión de esta app — toca Conectar para volver a iniciar sesión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TikTokがこのアプリをサインアウトしました — 「接続」をタップしてもう一度サインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TikTok이 이 앱을 로그아웃했습니다 — 연결을 탭하여 다시 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TikTok 已将此 App 退出登录——轻点“连接”重新登录。"
           }
         }
       }
