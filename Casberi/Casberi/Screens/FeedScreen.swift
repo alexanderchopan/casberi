@@ -10452,6 +10452,16 @@ struct FeedScreen: View {
             }
             .padding(.top, DS.Space.s3)
             .listRowBackground(Color.clear)
+            // THE ROWS' OWN INSET (2026-09-14, user: "the icons should share
+            // same indentation"). A row's shape at the List's DEFAULT inset
+            // is not a row: `shapedListRow` sets `s4 + s3` leading, and this
+            // footer set nothing, so its mark sat ~7pt left of every mark
+            // above it and the room closed on a step. Same numbers as the
+            // row plumbing so the two can't drift apart again.
+            .listRowInsets(.init(top: DS.Space.s2,
+                                 leading: DS.Space.s4 + DS.Space.s3,
+                                 bottom: DS.Space.s2,
+                                 trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
             .accessibilityElement(children: .combine)
         } else {
