@@ -155,7 +155,11 @@ present "TikTok resolves to a room of its own" \
 # all — no head, no board, no grid.
 present "Nostr has an activity grid to fall back to" \
   '"Nostr": *Label\(' "$HEATMAP"
-present "Telegram has a head instead of leading with the year grid" \
+# Telegram's "Which channels fill this" was a board, deleted with the rest
+# (§723); a heatmap still wins the slot, so the room leads with its year.
+present "Telegram has a year grid to lead with" \
+  '"Telegram": *Label\(' "$HEATMAP"
+absent "the channels board came back" \
   'title: "Which channels fill this"' "$INSIGHT"
 
 [[ $fail -eq 0 ]] || { echo "social-room-selftest: ✗ drift guard(s) failed"; exit 1; }

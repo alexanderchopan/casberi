@@ -100,10 +100,10 @@ grep -qF 'InstagramRoomCard(room: room)' "$TMP/feed.nc" \
 # you save most", so it may not draw fewer accounts than that board would. The
 # two caps are spelled in different files and cannot see each other, so the only
 # thing keeping them equal is this line.
+# §723 deleted that board (and `FeedInsight.ranked` with it), so the cap no
+# longer has a twin to match; it is pinned at the value §349 set.
 grep -qF 'static let rowCap = 6' "$ROOM" \
-  || { echo "✗ InstagramRoom.rowCap moved — it must equal FeedInsight.ranked's own prefix(6), or the head draws less than the board it displaces (§349)"; exit 1; }
-grep -qF '.prefix(6)' "$INSIGHT" \
-  || { echo "✗ FeedInsight.ranked no longer caps at 6 — InstagramRoom.rowCap must follow it"; exit 1; }
+  || { echo "✗ InstagramRoom.rowCap moved from the six accounts §349 set"; exit 1; }
 
 # THE FIELDS the head reads, stamped where it expects them.
 grep -qF 'thing.socialContext = marker' "$TMP/import.nc" \

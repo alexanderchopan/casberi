@@ -133,8 +133,9 @@ grep -qF 'XPersonSource.compose(room, handle: handle)' Casberi/Casberi/Screens/P
   || { echo "✗ the person room no longer composes X's own head"; exit 1; }
 grep -qF 'src == XPersonSource.source' Casberi/Casberi/Screens/PersonRoomScreen.swift \
   || { echo "✗ the person room fetches X by authorHandle again — that answers with the LIKES alone and misses every reply"; exit 1; }
-grep -qF 'feedSheet = .person(source: XPersonSource.source' "$FEEDSCREEN_395" \
-  || { echo "✗ 'Who you reply to' is no longer a door"; exit 1; }
+# "Who you reply to" was a ranked board and its rows were the door; §723
+# deleted the board from every room, so that door is gone by ruling. The
+# person room stays reachable through casberi://person/X/<handle> above.
 # `SocialProfileCard` must stay gated on `isSocial`: its one verb is Watch and
 # on X that can never succeed — the dead control the honesty law bans.
 grep -qF 'private var facesAreDoors: Bool { SocialThread.isSocial(thing.source) }' Casberi/Casberi/Screens/ThingSheetView.swift \
@@ -500,8 +501,8 @@ grep -q 'if !words.isEmpty' Casberi/Casberi/Screens/SocialReceptionCard.swift \
 # room, so both checks went with it. What the archive stamps is still checked
 # below — `parent.handle` is read by the person room and the handle-scoped ask,
 # not only by a board.
-grep -q 'thing.parent?.handle' Casberi/Casberi/Model/FeedInsight.swift \
-  || { echo "✗ the reply board no longer reads the stored card (parsing the localized 'To @' title back apart is the failure it exists to avoid)"; exit 1; }
+grep -q 'thing.parent?.handle' Casberi/Casberi/Model/XPersonSource.swift \
+  || { echo "✗ the person room no longer reads the stored card (parsing the localized 'To @' title back apart is the failure it exists to avoid)"; exit 1; }
 # (5) THE ROOM HEAD. `XRoom` is compiled whole below; these are the three
 # wiring facts it can't prove about itself — that it is asked at all, that the
 # probe mirrors the chain (`-roomInsightProbe`'s own rule), and that the demo

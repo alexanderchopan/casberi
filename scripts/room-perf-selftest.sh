@@ -549,8 +549,11 @@ fi
 # …and nothing in it may take `visible` as the head's base any more. Negative,
 # so read from the stripped copy — this file documents the change by naming the
 # expression it no longer uses.
-if print -r -- "$heads_body" | grep -Eq '= visible\b'; then
-  fail "recomputeHeads still takes `visible` as the head's base (the bound would truncate the head)"
+# The pattern names the BASE. A bare `= visible\b` also matches §600's own
+# `let onScreen = visible.live`, which is only fullRoomRows' fallback (§723
+# widened it, unrun — no zsh on that machine).
+if print -r -- "$heads_body" | grep -Eq '(base|rows) = visible\b'; then
+  fail "recomputeHeads still takes 'visible' as the head's base (the bound would truncate the head)"
 else
   ok "recomputeHeads takes its base from fullRoomRows alone"
 fi
