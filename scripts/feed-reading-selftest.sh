@@ -169,6 +169,24 @@ grep -q 'LeaderboardHero' "$RENDER" \
 grep -q 'memo.lede = heroShown ? nil : ledeThingID' "$FEED" \
   || { echo "✗ the newest-thing cover is no longer gated on heroShown — the"; \
        echo "  rooms the board used to head would draw no card at all"; exit 1; }
+# A ROOM ALWAYS COVERS ITS NEWEST THING (prd §723). The age floor and the two
+# row floors are the All feed's alone: a river's cover claims recency, a room's
+# answers "the newest thing from this source", which is true at any age. Three
+# checks because the floor is asked in three places and a room must clear all
+# three — the first cut of this rule left the post-fold row floor behind, which
+# would have taken the cover off exactly the quiet rooms it was added for.
+grep -q 'let isRoom = source != "All"' "$FEED" \
+  || { echo "✗ ledeThingID no longer distinguishes a room from the All feed"; exit 1; }
+grep -q 'guard isRoom || Date.now.timeIntervalSince(thing.capturedAt) <= Self.ledeMaxAge' "$FEED" \
+  || { echo "✗ a room's cover is gated on ledeMaxAge again — a room whose newest"; \
+       echo "  item is a day old would draw no head at all"; exit 1; }
+grep -q 'if memo.lede != nil, source == "All",' "$FEED" \
+  || { echo "✗ the post-fold ledeMinRows floor applies to rooms again — a quiet"; \
+       echo "  room would lose the cover this rule exists to give it"; exit 1; }
+# …and `standsAlone` is NOT freshness, so it still applies in both.
+grep -q 'return standsAlone(thing) ? nil : thing.id' "$FEED" \
+  || { echo "✗ standsAlone no longer declines the cover — a consent card, a post"; \
+       echo "  card or a token pulse would draw twice, in two anatomies"; exit 1; }
 grep -q 'leaderboard' "$TMP/feed.nocomment" \
   && { echo "✗ FeedScreen's code still mentions a leaderboard (prd §723)"; exit 1; }
 

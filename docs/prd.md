@@ -54577,17 +54577,39 @@ used to head now draw the All feed's own cover on the All feed's own terms —
 `ledeThingID`: the newest row, nothing older than `ledeMaxAge` (24h), only on a
 feed at least `ledeMinRows` (3) deep, never a row that `standsAlone`.
 
-Two consequences, both deliberate and both worth stating rather than
-discovering: **a room whose newest item is more than a day old draws no head at
-all**, and **a room with fewer than three rows draws none either.** Those are
-`FeedLedeCard`'s existing rules, not new ones, and they are the honest shape —
-a cover is a claim that something just landed. A quiet room falls through to
-whatever ranks next (a distribution, a mosaic, its year heatmap) or to nothing,
-which is `RoomFigure`'s own standing ruling: an absent figure beats one that
-answers nothing.
+**AMENDED BEFORE IT SHIPPED: the freshness floors are the ALL FEED'S ALONE**
+(user, the same day: *"i think each room should always show its newest item in
+the card"*). The first cut inherited `FeedLedeCard`'s rules whole, which meant
+**a room whose newest item was more than a day old drew no head at all**, and
+**a room with fewer than three rows drew none either** — reported here as "the
+honest shape" on the grounds that a cover is a claim that something just
+landed. That reasoning is right about the All feed and wrong about a room, and
+the difference is what the question IS. The All feed is a river: a cover there
+says *this just arrived*, and a day-old one is a lie. A room is a PLACE you
+went to on purpose, and "the newest thing from this source" is the answer you
+came for whether it landed an hour ago or last month. A quiet room's honest
+head is its old item, not an empty slot.
+
+So `ledeThingID` asks `source != "All"` and skips both floors for a room, and
+the caller's post-fold row floor is gated the same way. Three sites, because
+the floor is asked three times and a room has to clear all three — the row
+floor is asked once in THINGS before the fold and again in ROWS after it, and
+missing the second would have taken the cover off exactly the quiet rooms this
+rule exists for.
+
+**`standsAlone` still declines in both**, and the distinction is the point: it
+is structural, not a judgement about freshness. A consent card, a post card, a
+takeaway card and a fat token row are full anatomies sized for their own
+reasons, and covering one draws the same thing twice.
+
+**A room with a head of its own keeps it.** `heroShown` is untouched — a
+`sourceHead`, a topic map, a distribution, a mosaic or a heatmap still wins the
+slot. The board was the generic figure; those are answers built for one room on
+purpose. The cover is what a room draws when it has nothing better, which after
+this pass is most of them.
 
 **What is pinned.** `feed-reading-selftest.sh` swaps its §455 section for the
-negative: `FeedScreen` may not name `FeedInsight.Leaderboard`, `LeaderboardHero`,
+negative, and pins the room/All split at all four of its sites: `FeedScreen` may not name `FeedInsight.Leaderboard`, `LeaderboardHero`,
 `readingScope` or `roomScoped`; `FeedInsight` may not grow a `Leaderboard` back;
 `GenRenderer` may not grow the hero back; and `memo.lede` must stay gated on
 `heroShown`, which is the one line the replacement rests on. `room-perf-selftest`

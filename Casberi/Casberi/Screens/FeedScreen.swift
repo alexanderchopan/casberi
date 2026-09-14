@@ -3455,19 +3455,32 @@ struct FeedScreen: View {
     /// law is that volume compresses and NEVER reorders (§35); the cover was
     /// the one place that reordered, so the fix is to make it unable to.
     ///
+    /// **THE TWO FRESHNESS GATES ARE THE ALL FEED'S ALONE (prd §723, user: "i
+    /// think each room should always show its newest item in the card").** A
+    /// ROOM always covers its newest thing. The two readings are different
+    /// questions and it took the board's deletion to see it: the All feed is a
+    /// river, so a cover there is a claim that something just landed and a
+    /// day-old one would be a lie. A room is a PLACE you went to on purpose —
+    /// "the newest thing from this source" is the answer you came for whether
+    /// it arrived an hour ago or last month, and a quiet room's honest reading
+    /// is the old item, not an empty head. `standsAlone` still applies in both:
+    /// that one is structural, not a judgement about freshness.
+    ///
     /// Three ways it declines, each because the card would say something
     /// untrue:
     ///
-    /// - The newest thing is older than `ledeMaxAge`. A cover is a claim about
-    ///   recency and nothing else. NOTE this is asked when the derivation memo
-    ///   is rebuilt rather than per render, so a session left open for a day
-    ///   keeps its cover until the next arrival — deliberate: the cover and the
-    ///   fold that excludes it MUST be decided together, and a per-render pick
-    ///   could name a thing that is still inside `memo.groups`' fold, drawing
-    ///   it twice.
-    /// - The feed is shorter than `ledeMinRows` — counted in THINGS here as a
-    ///   cheap upper bound, and re-asked in ROWS by the caller once the fold
-    ///   has run (the real floor; see `bundledSections`).
+    /// - The newest thing is older than `ledeMaxAge` — IN THE ALL FEED ONLY. A
+    ///   cover there is a claim about recency and nothing else. NOTE this is
+    ///   asked when the derivation memo is rebuilt rather than per render, so a
+    ///   session left open for a day keeps its cover until the next arrival —
+    ///   deliberate: the cover and the fold that excludes it MUST be decided
+    ///   together, and a per-render pick could name a thing that is still
+    ///   inside `memo.groups`' fold, drawing it twice.
+    /// - The feed is shorter than `ledeMinRows` — IN THE ALL FEED ONLY, counted
+    ///   in THINGS here as a cheap upper bound, and re-asked in ROWS by the
+    ///   caller once the fold has run (the real floor; see `bundledSections`).
+    ///   A room with one thing in it covers that thing and shows nothing below,
+    ///   which is what a room holding one thing looks like.
     /// - The newest thing `standsAlone` — a consent card, a token pulse, a post
     ///   card are full anatomies sized for their own reasons, and wrapping one
     ///   in a cover is two rhythm-breakers stacked (for `ApprovalCard` it would
@@ -3484,8 +3497,13 @@ struct FeedScreen: View {
     /// worst measured perf history (`derivationKey`'s own
     /// 6.3-seconds-across-44-renders note).
     private func ledeThingID(in days: [(String, [Thing])]) -> UUID? {
-        let count = days.reduce(0) { $0 + $1.1.count }
-        guard count >= Self.ledeMinRows, let head = days.first?.1 else { return nil }
+        // A room always covers its newest thing; the floors are the river's.
+        let isRoom = source != "All"
+        if !isRoom {
+            let count = days.reduce(0) { $0 + $1.1.count }
+            guard count >= Self.ledeMinRows else { return nil }
+        }
+        guard let head = days.first?.1 else { return nil }
         for thing in head {
             // `.isLive` before any stored read — a derived array read during the
             // same graph update a heal's delete can land in (the dead-Thing
@@ -3493,7 +3511,7 @@ struct FeedScreen: View {
             guard thing.isLive else { continue }
             // Newest-first, so the first one past the age bound means every
             // later one is too.
-            guard Date.now.timeIntervalSince(thing.capturedAt) <= Self.ledeMaxAge
+            guard isRoom || Date.now.timeIntervalSince(thing.capturedAt) <= Self.ledeMaxAge
             else { return nil }
             return standsAlone(thing) ? nil : thing.id
         }
@@ -7019,7 +7037,9 @@ struct FeedScreen: View {
             // cover, which is what that floor exists to prevent. Re-bundling
             // costs nothing precisely because it only ever happens on a feed
             // this small.
-            if memo.lede != nil,
+            // THE ROW FLOOR IS THE ALL FEED'S TOO (prd §723) — see
+            // `ledeThingID`. A room's cover is not a claim about volume.
+            if memo.lede != nil, source == "All",
                memo.groups.reduce(1, { $0 + $1.1.count }) < Self.ledeMinRows {
                 memo.lede = nil
                 memo.groups = bundle(memo.days, nextEventID: nextEventID)
