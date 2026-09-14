@@ -495,7 +495,7 @@ grep -q 'parent.text.isEmpty && !(parent.url ?? "").isEmpty' "$XARCH" \
   || { echo "✗ the pending test changed — check it still skips self-replies (already filled) and rows with no permalink"; exit 1; }
 grep -q 'if !words.isEmpty' Casberi/Casberi/Screens/SocialReceptionCard.swift \
   || { echo "✗ ReplyingToCard no longer draws the parent's words — the pass would fill a field nothing renders"; exit 1; }
-# (4) THE BOARDS ARE DELETED (prd §721). X's room used to pick between "Who you
+# (4) THE BOARDS ARE DELETED (prd §723). X's room used to pick between "Who you
 # reply to" and "Whose posts you like"; the ranked board is gone from every
 # room, so both checks went with it. What the archive stamps is still checked
 # below — `parent.handle` is read by the person room and the handle-scoped ask,

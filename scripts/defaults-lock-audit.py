@@ -1,447 +1,513 @@
 #!/usr/bin/env python3
-"""Casberi defaults-under-lock audit (prd §720, 2026-09-14).
+"""Defaults-under-a-lock audit (prd §721, 2026-09-14).
 
-A `UserDefaults` WRITE WHILE A LOCK IS HELD IS A DEADLOCK, and it killed build
-570 on a real phone. The crash report is a `0x8BADF00D` scene-update watchdog
-reading "is stuck (deadlock)", and the line that separates it from every other
-watchdog in this project's history is the CPU accounting:
+WHY THIS EXISTS. Build 570 died on the user's phone with `0x8BADF00D` — a
+scene-update watchdog, faulting thread `com.apple.main-thread`, four minutes
+after launch, reported as *"touching the app catalog icon in top is inactive
+and leads to crashing on multiple pages"*. Every page was inactive: the main
+thread was not slow, it was DEADLOCKED, and the crash report names both halves.
 
-    Elapsed application CPU time (seconds): 0.017, 0% CPU
+  · MAIN: `ViewBodyAccessor.updateBody` → Casberi → `__psynch_mutexwait`.
+    A view body, which by construction holds SwiftUI's update lock (every body
+    runs under `Update.ensure`), waiting on `BridgeHealth.lock`. All 55 account
+    pages ask `AccountPageState.of` from their body.
+  · A SWEEP, on `com.apple.root.user-initiated-qos.cooperative`: Casberi →
+    `-[NSNotificationCenter postNotificationName:…]` →
+    `UserDefaultObserver.userDefaultsDidChange` → `Update.enqueueAction` →
+    `Update.begin` → `_MovableLockLock` → `__psynch_mutexwait`.
+    It HOLDS `BridgeHealth.lock` (load-modify-save is one critical section,
+    prd §710) and inside it called `UserDefaults.standard.set` — which posts
+    `didChangeNotification` SYNCHRONOUSLY, on the calling thread. Any app with
+    an `@AppStorage` anywhere has SwiftUI's own observer on that notification,
+    and the observer takes the update lock main is holding.
 
-§614, §642, §646 and §657 are all the app doing too much work to answer in
-time. This one did nothing at all. The cycle, both halves of it in the report:
+Two locks, two orders, no way out. Three more threads in the same report were
+queued behind the same `BridgeHealth.lock`.
 
-  1. a background cooperative thread takes a store's NSLock and, holding it,
-     calls `UserDefaults.standard.set`;
-  2. `UserDefaults` posts its change notification SYNCHRONOUSLY on that thread;
-  3. SwiftUI's `UserDefaultObserver.userDefaultsDidChange` — how `@AppStorage`
-     invalidates — runs there and calls `Update.begin()`, taking SwiftUI's
-     global update lock;
-  4. the MAIN thread is inside `ViewBodyAccessor.updateBody`, already holding
-     SwiftUI's update lock, and the body it is evaluating asks the same store
-     for a reading.
+THE RULE THIS ENFORCES, which is broader than the one crash: code holding a
+lock must not write `UserDefaults`. The write reads as a pure store touch and
+is a synchronous call-out to every observer in the process, SwiftUI's included.
+`Model/DefaultsWrite.swift` is the door — it moves the store write to one
+serial queue, keeping same-key ordering (the reason those writes were put
+inside the lock) without the call-out.
 
-Background holds ours and wants SwiftUI's. Main holds SwiftUI's and wants ours.
+Five stores shipped this shape and are all fixed: `BridgeHealth` (the one that
+crashed), `FeedFreshness`, `NetworkLedger`, `AgentSpend` and `AppMetrics`.
 
-THE RULE: persistence from a locked store goes through `DefaultsWrite`, which
-hands the bytes to one serial queue — preserving the order the lock
-establishes — and touches `UserDefaults` on a thread holding nothing.
+WHAT IT CHECKS, static, no build:
 
-WHY A STATIC CHECK. Nothing that runs here can see this. The build is happy
-either way; the simulator never reproduced it; it needs a bridge sweep and a
-view body to collide inside the same millisecond on a real device under real
-load. And the shape is not exotic — it is the obvious way to write a
-thread-safe cache, it was written that way five times independently in this
-codebase, and two of those carried a comment explaining that the write stays
-inside the lock ON PURPOSE.
+  1. No `UserDefaults` write — `set`, `setValue`, `removeObject`, `register`,
+     `synchronize` — inside a critical section, whether written inline, in a
+     `defer`-unlocked function, or in a `withLock { }` block.
+  2. …including one level of indirection: a helper in the same file that
+     writes defaults, called from inside a critical section. That is exactly
+     how the crash was written (`record` held the lock and called `save`),
+     so a check that reads only the locked lines would have passed it.
+  3. No `NotificationCenter.post` inside a critical section either. Same
+     hazard by the same mechanism — a synchronous call-out to observers that
+     may take the main actor's or SwiftUI's own locks — and it is the general
+     form of what `UserDefaults.set` does behind your back.
 
-**THE WRITE IS USUALLY A FRAME DEEPER.** Four of the five shipped cases hold
-the lock across a CALL — `record()` takes the lock and calls `save()`,
-`note()` takes it and calls `write()` — so a scan that looks only between a
-`lock()` and its `unlock()` sees nothing. This resolves, per type, which of its
-own functions reach a `UserDefaults` write transitively, and then treats a call
-to one of those as a write.
+WHAT IT DELIBERATELY DOES NOT CHECK, so it stays honest about its reach:
 
-That precision is the point and it was earned twice. The first cut of this
-script scanned function-locally, passed twelve hand-written fixtures, and found
-ONE of the five real defects. The second cut flagged any locked type touching
-`UserDefaults` anywhere, caught all five, and falsely accused two more
-(`AgentAnswer`, `EmbeddingIndex`) whose writes no lock can reach. So
-`--self-test` runs BOTH ways against the real pre-fix files: all five must be
-caught, and those two must come back clean. Fixtures prove a check does what
-you meant; only the tree proves you meant the right thing.
-
-Exit non-zero on a finding.
+  · An actor, a `DispatchQueue.sync`, or `MainActor.assumeIsolated` holding
+    the same call-out. The crash was an `NSLock`, the fix is an `NSLock`
+    rule, and a scan for every serialization primitive in the tree would be
+    mostly false alarms this file cannot judge. `EmbeddingIndex.serialized`
+    is the one queue with the same shape and it writes no defaults.
+  · Whether a view body reads a lock-guarded store at all. It should not
+    (prd §628), and hundreds do through `AccountPageState.of`; making that
+    read cheap is what the memoised caches are for. This closes the deadlock,
+    which is the half that kills the app.
+  · A write reached two levels down (a helper calling a helper). No such call
+    exists today; the census names every helper resolved.
 """
 
 import re
-import subprocess
 import sys
-import pathlib
+import tempfile
+from pathlib import Path
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
-SOURCES = [ROOT / "Casberi" / "Casberi", ROOT / "Casberi" / "Shared"]
+ROOT = Path(__file__).resolve().parent.parent
+SOURCE_DIRS = ["Casberi/Casberi", "Casberi/Shared", "Casberi/CasberiWidgets",
+               "Casberi/ShareExtension"]
 
-# `DefaultsWrite` is the door itself; its queue body writes `UserDefaults`
-# deliberately, on a thread holding nothing.
-EXEMPT = {"DefaultsWrite.swift"}
+# A defaults WRITE. Reads (`data(forKey:)`, `bool(forKey:)`) are fine under a
+# lock — they post nothing.
+WRITE_VERBS = "set|setValue|removeObject|removePersistentDomain|register|synchronize"
+DEFAULTS_WRITE = re.compile(
+    r"\bUserDefaults\s*(?:\.\w+|\([^)]*\))?\s*(?:\?|!)?\s*\.\s*(?:" + WRITE_VERBS + r")\s*\(")
+# …and through a NAMED receiver. The name is not guessed: `defaults_receivers`
+# below reads the file for bindings and parameters that ARE a `UserDefaults`
+# (`let d = UserDefaults.standard`, `group: UserDefaults`), because a bare
+# `.set(` on any receiver would fire on every dictionary and Set in the tree.
+BINDING = re.compile(r"\b(?:let|var)\s+(\w+)\s*(?::\s*UserDefaults[?!]?\s*)?=\s*[^\n]*\bUserDefaults\b")
+TYPED = re.compile(r"\b(\w+)\s*:\s*UserDefaults[?!]?\b")
 
-LOCK = re.compile(r"\b\w*[Ll]ock\.lock\(\)")
-UNLOCK = re.compile(r"\b\w*[Ll]ock\.unlock\(\)")
-WRITE = re.compile(
-    r"(UserDefaults\s*\(\s*suiteName[^)]*\)\s*\??|UserDefaults\.\w+|"
-    r"\bgroupDefaults\s*\??|\bdefaults\s*\??|\bd)\s*\??\.\s*"
-    r"(set|setValue|removeObject|removePersistentDomain|synchronize)\s*\("
-)
-STRING = re.compile(r'"(?:[^"\\]|\\.)*"')
-TYPE_HEAD = re.compile(
-    r"^\s*(?:@\w+(?:\([^)]*\))?\s+)*"
-    r"(?:public\s+|internal\s+|private\s+|fileprivate\s+|final\s+|indirect\s+)*"
-    r"(?:enum|class|struct|actor|extension)\s+[\w.]+")
-# Deliberately loose: attributes and modifiers vary, and a declaration this
-# misses is a function whose writes go unattributed, i.e. a false NEGATIVE.
-FUNC_HEAD = re.compile(r"\bfunc\s+(\w+)")
+NOTIFY_POST = re.compile(r"NotificationCenter[^\n]*\.\s*post\s*\(|\.\s*post\s*\(\s*name\s*:")
 
-
-def strip(line):
-    """Comments and string bodies out, so braces and calls inside them neither
-    move the depth nor read as code."""
-    line = STRING.sub('""', line)
-    cut = line.find("//")
-    return line if cut < 0 else line[:cut]
+LOCK_CALL = re.compile(r"\b(\w+(?:\.\w+)*)\.lock\(\)")
+UNLOCK_CALL = re.compile(r"\b(\w+(?:\.\w+)*)\.unlock\(\)")
+WITH_LOCK = re.compile(r"\b(\w+(?:\.\w+)*)\.withLock\s*\{")
+FUNC_DECL = re.compile(r"^\s*(?:@\w+\s+)*(?:public |private |fileprivate |internal |static |class |final |nonisolated |@MainActor )*func\s+(\w+)")
 
 
-def blocks(lines, head, base_depth=0):
-    """(header index, [lines]) for every `head`-matching declaration whose body
-    opens at `base_depth`. Names are returned by the caller's own regex."""
-    out = []
-    depth = base_depth
-    start = None
-    opened = None
-    for n, raw in enumerate(lines):
-        line = strip(raw)
-        if start is None and depth == base_depth and head.search(line) and "{" in line:
-            start = n
-            opened = depth
-        depth += line.count("{") - line.count("}")
-        if start is not None and depth <= opened:
-            out.append((start, lines[start:n + 1]))
-            start = None
-    return out
+def strip_comments(text: str) -> str:
+    """Comments out, string literals kept, line numbers preserved.
 
-
-def reaching_writers(functions):
-    """Which of a type's own functions reach a `UserDefaults` write — directly,
-    or through another of its functions. Fixpoint over a one-type call graph."""
-    bodies = {name: "\n".join(strip(l) for l in body) for name, body in functions}
-    writers = {n for n, b in bodies.items() if WRITE.search(b)}
-    changed = True
-    while changed:
-        changed = False
-        for name, body in bodies.items():
-            if name in writers:
+    This repo documents its rules by NAMING the symbols they govern — the
+    fixed files above each carry a comment saying "not
+    `UserDefaults.standard.set`" — so a check reading raw source fires on the
+    prose explaining it. `sharelink-style-audit.py`'s own note, paid again
+    here on the first run.
+    """
+    out, line = [], []
+    in_block = in_string = False
+    i, n = 0, len(text)
+    while i < n:
+        ch = text[i]
+        nxt = text[i + 1] if i + 1 < n else ""
+        if in_block:
+            if ch == "*" and nxt == "/":
+                in_block = False
+                i += 2
                 continue
-            for target in writers:
-                if target == name:
-                    continue
-                if re.search(r"\b" + re.escape(target) + r"\s*\(", body):
-                    writers.add(name)
-                    changed = True
-                    break
-    return writers
-
-
-def held_scan(lines, offset, writers):
-    """Line numbers (1-based, `offset`-relative) where — with a lock held — a
-    `UserDefaults` write happens, or a function that reaches one is called.
-
-    Run over a WHOLE TYPE BODY rather than per function, on purpose: brace
-    depth releases a hold at a function's closing brace anyway, and a
-    declaration whose header this file's regexes did not recognise still gets
-    scanned."""
-    findings = []
-    depth = 0
-    held = None          # (kind, depth): "explicit" until .unlock(), "defer" to scope end
-    reaches = re.compile(r"\b(" + "|".join(re.escape(w) for w in sorted(writers)) +
-                         r")\s*\(") if writers else None
-    for n, raw in enumerate(lines):
-        line = strip(raw)
-        opens, closes = line.count("{"), line.count("}")
-
-        if held is not None and (WRITE.search(line) or (reaches and reaches.search(line))):
-            findings.append(offset + n + 1)
-
-        if held is not None and UNLOCK.search(line):
-            # `defer { lock.unlock() }` on its own line is not a release — it is
-            # what makes the hold last to the end of the scope. Reading it as a
-            # release is why an earlier cut called `NetworkLedger` and
-            # `AppMetrics` clean; both write those two lines separately.
-            if "defer" in line:
-                held = ("defer", held[1])
-            elif held[0] == "explicit":
-                held = None
-        elif LOCK.search(line):
-            held = ("defer" if ("defer" in line and UNLOCK.search(line)) else "explicit",
-                    depth)
-
-        depth += opens - closes
-        # A defer's hold ends when the scope that TOOK the lock closes, i.e.
-        # when the depth drops BELOW the depth that line sat at — not when it
-        # returns to it, which is where it already is.
-        if held is not None and held[0] == "defer" and depth < held[1]:
-            held = None
-    return findings
-
-
-def scan(text):
-    """Every line where a `UserDefaults` write is reachable under a held lock."""
-    lines = text.splitlines()
-    findings = []
-    for type_start, type_lines in blocks(lines, TYPE_HEAD):
-        inner = type_lines[1:]
-        functions = []
-        for idx, body in blocks(inner, FUNC_HEAD, base_depth=0):
-            match = FUNC_HEAD.search(strip(body[0]))
-            if match:
-                functions.append((match.group(1), body))
-        writers = reaching_writers(functions)
-        if not writers:
+            if ch == "\n":
+                out.append("".join(line))
+                line = []
+            i += 1
             continue
-        findings += held_scan(type_lines, type_start, writers)
-    return sorted(set(findings))
-
-
-def audit():
-    findings = []
-    for root in SOURCES:
-        for path in sorted(root.rglob("*.swift")):
-            if path.name in EXEMPT:
+        if in_string:
+            if ch == "\\":
+                line.append("  ")
+                i += 2
                 continue
-            rel = path.relative_to(ROOT)
-            for line in scan(path.read_text()):
-                findings.append(f"{rel}:{line}: a `UserDefaults` write is reached "
-                                f"with a lock held — route it through "
-                                f"`DefaultsWrite` (prd §720)")
-    return findings
+            if ch == '"':
+                in_string = False
+            line.append(ch)
+            i += 1
+            continue
+        if ch == '"':
+            in_string = True
+            line.append(ch)
+            i += 1
+            continue
+        if ch == "/" and nxt == "/":
+            while i < n and text[i] != "\n":
+                i += 1
+            continue
+        if ch == "/" and nxt == "*":
+            in_block = True
+            i += 2
+            continue
+        if ch == "\n":
+            out.append("".join(line))
+            line = []
+            i += 1
+            continue
+        line.append(ch)
+        i += 1
+    out.append("".join(line))
+    return "\n".join(out)
 
 
-FIXTURES = [
-    ("write inside an explicit lock/unlock pair", """
-enum S {
+def depths(lines):
+    """Brace depth BEFORE each line, and after it."""
+    before, depth = [], 0
+    for line in lines:
+        before.append(depth)
+        depth += line.count("{") - line.count("}")
+    return before
+
+
+def critical_regions(lines):
+    """Every (start, end, lock name) span where a lock is held.
+
+    A span opened by `x.lock()` runs to its matching `x.unlock()` at the same
+    brace depth, or — the `defer { unlock }` spelling, which is the majority
+    here — to the end of the enclosing scope. An unlock inside a `defer` does
+    NOT close the span: that is precisely the form that keeps the lock held to
+    the end of the function, and reading it as the end would clear every
+    finding in this repo's own stores. A `withLock { }` span is the closure's
+    own braces.
+    """
+    before = depths(lines)
+    after = [before[i] + lines[i].count("{") - lines[i].count("}") for i in range(len(lines))]
+    spans = []
+    for i, line in enumerate(lines):
+        for match in WITH_LOCK.finditer(line):
+            depth = before[i]
+            end = len(lines) - 1
+            for j in range(i + 1, len(lines)):
+                if after[j] <= depth:
+                    end = j
+                    break
+            spans.append((i, end, match.group(1)))
+        for match in LOCK_CALL.finditer(line):
+            name = match.group(1)
+            depth = before[i]
+            end = len(lines) - 1
+            for j in range(i + 1, len(lines)):
+                if after[j] < depth:
+                    end = j - 1
+                    break
+                if "defer" in lines[j]:
+                    continue
+                unlocked = [m.group(1) for m in UNLOCK_CALL.finditer(lines[j])]
+                if name in unlocked and before[j] == depth:
+                    end = j
+                    break
+            spans.append((i, end, name))
+    return spans
+
+
+def calling_out_functions(lines, receivers=frozenset()):
+    """Functions in THIS file whose own body makes the call-out, by name.
+
+    Check 2's whole point: `BridgeHealth.record` held the lock and called
+    `save`, so the offending write was never on a locked line.
+    """
+    before = depths(lines)
+    after = [before[i] + lines[i].count("{") - lines[i].count("}") for i in range(len(lines))]
+    names = {}
+    for i, line in enumerate(lines):
+        match = FUNC_DECL.match(line)
+        if not match:
+            continue
+        depth = before[i]
+        end = len(lines) - 1
+        for j in range(i + 1, len(lines)):
+            if after[j] <= depth:
+                end = j
+                break
+        body = lines[i + 1 : end + 1]
+        for row in body:
+            if writes_defaults(row, receivers):
+                names[match.group(1)] = (i + 1, "writes UserDefaults")
+                break
+            if NOTIFY_POST.search(row):
+                names[match.group(1)] = (i + 1, "posts a notification")
+                break
+    return names
+
+
+def defaults_receivers(lines):
+    """Every name in this file that holds a `UserDefaults`.
+
+    A binding (`let d = UserDefaults.standard`, `let group =
+    UserDefaults(suiteName:)`) or a declared type (a parameter or property
+    `defaults: UserDefaults`). Derived rather than listed, so a store spelling
+    it `prefs` is covered without this file having heard of `prefs`.
+    """
+    names = set()
+    for line in lines:
+        for match in BINDING.finditer(line):
+            names.add(match.group(1))
+        for match in TYPED.finditer(line):
+            names.add(match.group(1))
+    return names
+
+
+def writes_defaults(line: str, receivers=frozenset()) -> bool:
+    if DEFAULTS_WRITE.search(line):
+        return True
+    for name in receivers:
+        if re.search(r"(?<![\w.])" + re.escape(name) + r"\s*(?:\?|!)?\s*\.\s*(?:"
+                     + WRITE_VERBS + r")\s*\(", line):
+            return True
+    return False
+
+
+def audit(root: Path):
+    findings, census, resolved = [], [], []
+    for directory in SOURCE_DIRS:
+        base = root / directory
+        if not base.exists():
+            continue
+        for path in sorted(base.rglob("*.swift")):
+            rel = path.relative_to(root)
+            lines = strip_comments(path.read_text()).splitlines()
+            spans = critical_regions(lines)
+            if not spans:
+                continue
+            receivers = defaults_receivers(lines)
+            helpers = calling_out_functions(lines, receivers)
+            for helper, (decl, what) in helpers.items():
+                resolved.append((rel, decl, helper, what))
+            for start, end, name in spans:
+                for i in range(start, min(end + 1, len(lines))):
+                    line = lines[i]
+                    if writes_defaults(line, receivers):
+                        findings.append((rel, i + 1, f"a UserDefaults write under `{name}`"))
+                    elif NOTIFY_POST.search(line):
+                        findings.append((rel, i + 1, f"a NotificationCenter post under `{name}`"))
+                    else:
+                        for helper, (decl, what) in helpers.items():
+                            if re.search(r"(?<![\w.])" + re.escape(helper) + r"\s*\(", line) \
+                               and not FUNC_DECL.match(line):
+                                findings.append(
+                                    (rel, i + 1,
+                                     f"`{helper}()` {what} (line {decl}) and is "
+                                     f"called under `{name}`"))
+                                break
+                census.append((rel, start + 1, end + 1, name))
+    # One finding per line, whichever span reported it first.
+    seen, unique = set(), []
+    for rel, lineno, why in findings:
+        if (rel, lineno) in seen:
+            continue
+        seen.add((rel, lineno))
+        unique.append((rel, lineno, why))
+    return unique, census, resolved
+
+
+FIXTURE = '''import Foundation
+
+enum Store {
+    private static let key = "store.v1"
     private static let lock = NSLock()
-    static func flush() {
-        lock.lock()
-        UserDefaults.standard.set(data, forKey: storeKey)
-        lock.unlock()
+    private static var cache: [String: Int]?
+
+    static func record(_ name: String) {
+        lock.lock(); defer { lock.unlock() }
+        var book = loaded()
+        book[name, default: 0] += 1
+        save(book)
+    }
+
+    private static func loaded() -> [String: Int] {
+        if let cache { return cache }
+        let decoded = (UserDefaults.standard.dictionary(forKey: key) as? [String: Int]) ?? [:]
+        cache = decoded
+        return decoded
+    }
+
+    private static func save(_ book: [String: Int]) {
+        cache = book
+        DefaultsWrite.set(book, forKey: key)
+    }
+
+    static func count(_ name: String) -> Int {
+        lock.lock(); defer { lock.unlock() }
+        return loaded()[name] ?? 0
     }
 }
-""", True),
-    ("lock.lock() and defer on SEPARATE lines, write later", """
-final class S {
+
+final class Ledger {
     private let lock = NSLock()
+    private var entries: [String: Int] = [:]
+
+    func note(_ host: String) {
+        lock.lock()
+        entries[host, default: 0] += 1
+        lock.unlock()
+        flush()
+    }
+
     private func flush() {
         lock.lock()
         defer { lock.unlock() }
-        UserDefaults.standard.set(data, forKey: key)
+        DefaultsWrite.set(Data(), forKey: "ledger.v1")
     }
 }
-""", True),
-    ("lock.lock(); defer on ONE line, write later", """
-enum S {
-    static func flush() {
+'''
+
+
+def self_test() -> int:
+    failures = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        src = root / "Casberi/Casberi/Model"
+        src.mkdir(parents=True)
+        store = src / "Store.swift"
+        store.write_text(FIXTURE)
+        kept = FIXTURE
+
+        def flagged(needle: str) -> bool:
+            found, _, _ = audit(root)
+            return any(needle in why for _, _, why in found)
+
+        # CLEAN: the fixture is the shipped shape — a memoised, lock-guarded
+        # store whose persistence goes through `DefaultsWrite`.
+        found, census, _ = audit(root)
+        if found:
+            failures.append(f"the clean fixture was flagged: {found}")
+        if len(census) != 4:
+            failures.append(f"expected 4 critical sections, saw {len(census)}")
+
+        # MUTATION 1: the write moved back inline, under the lock. This is
+        # `AppMetrics`' pre-fix shape.
+        store.write_text(kept.replace(
+            '        DefaultsWrite.set(Data(), forKey: "ledger.v1")',
+            '        UserDefaults.standard.set(Data(), forKey: "ledger.v1")'))
+        if not flagged("UserDefaults write"):
+            failures.append("an inline defaults write under a lock was not caught")
+        store.write_text(kept)
+
+        # MUTATION 2: the write moved into the helper the locked function
+        # calls — build 570's actual shape, and the one a line-local check
+        # cannot see.
+        store.write_text(kept.replace(
+            "        DefaultsWrite.set(book, forKey: key)",
+            "        UserDefaults.standard.set(book, forKey: key)"))
+        if not flagged("`save()` writes UserDefaults"):
+            failures.append("a defaults write one call deep was not caught")
+        store.write_text(kept)
+
+        # MUTATION 3: a `withLock` span counts too.
+        store.write_text(kept.replace(
+            """        lock.lock()
+        entries[host, default: 0] += 1
+        lock.unlock()""",
+            """        lock.withLock {
+            entries[host, default: 0] += 1
+            UserDefaults.standard.set(1, forKey: "n")
+        }"""))
+        if not flagged("UserDefaults write"):
+            failures.append("a defaults write inside withLock was not caught")
+        store.write_text(kept)
+
+        # MUTATION 4: a notification post under a lock — the general form of
+        # what a defaults write does behind your back.
+        store.write_text(kept.replace(
+            "        book[name, default: 0] += 1",
+            "        book[name, default: 0] += 1\n"
+            "        NotificationCenter.default.post(name: .init(\"x\"), object: nil)"))
+        if not flagged("NotificationCenter post"):
+            failures.append("a notification post under a lock was not caught")
+        store.write_text(kept)
+
+        # MUTATION 4b: …and one call deep, the same way a write is.
+        store.write_text(kept.replace(
+            "        DefaultsWrite.set(book, forKey: key)",
+            "        NotificationCenter.default.post(name: .init(\"x\"), object: nil)"))
+        if not flagged("`save()` posts a notification"):
+            failures.append("a notification post one call deep was not caught")
+        store.write_text(kept)
+
+        # MUTATION 4c: a NAMED receiver — `let d = UserDefaults.standard`,
+        # which `AgentSpend` really spells that way. The receiver is derived
+        # from the file, never guessed, so a bare `.set(` on a dictionary is
+        # still not a finding (mutation 7).
+        store.write_text(kept.replace(
+            "        DefaultsWrite.set(book, forKey: key)",
+            "        let prefs = UserDefaults.standard\n"
+            "        prefs.set(book, forKey: key)"))
+        if not flagged("`save()` writes UserDefaults"):
+            failures.append("a write through a named UserDefaults receiver was not caught")
+        store.write_text(kept)
+
+        # MUTATION 7: `.set(` on something that is NOT a UserDefaults stays
+        # clean — the check reads receivers, not verbs.
+        store.write_text(kept.replace(
+            "        book[name, default: 0] += 1",
+            "        book[name, default: 0] += 1\n        seen.set(name)"))
+        found7, _, _ = audit(root)
+        if found7:
+            failures.append(f"a `.set(` on a non-defaults receiver was flagged: {found7}")
+        store.write_text(kept)
+
+        # MUTATION 5: the same write OUTSIDE any lock is not a finding — the
+        # rule is about the lock, and a check that failed on every defaults
+        # write in the tree would be turned off inside a week.
+        store.write_text(kept.replace(
+            """    static func count(_ name: String) -> Int {
         lock.lock(); defer { lock.unlock() }
-        UserDefaults.standard.set(data, forKey: key)
+        return loaded()[name] ?? 0
+    }""",
+            """    static func count(_ name: String) -> Int {
+        return 0
     }
-}
-""", True),
-    ("the write is a frame deeper, in a private helper", """
-enum S {
-    private static let lock = NSLock()
-    static func record() {
-        lock.lock(); defer { lock.unlock() }
-        save(book)
-    }
-    private static func save(_ book: Book) {
-        cache = book
-        UserDefaults.standard.set(data, forKey: key)
-    }
-}
-""", True),
-    ("two frames deeper", """
-enum S {
-    private static let lock = NSLock()
-    static func note() {
-        lock.lock(); defer { lock.unlock() }
-        write(records)
-    }
-    private static func write(_ r: R) { persist(r) }
-    private static func persist(_ r: R) {
-        UserDefaults.standard.set(data, forKey: key)
-    }
-}
-""", True),
-    ("removeObject under the lock", """
-final class S {
-    private let lock = NSLock()
-    func wipe() {
-        lock.lock()
-        entries = [:]
-        UserDefaults.standard.removeObject(forKey: storeKey)
-        lock.unlock()
-    }
-}
-""", True),
-    ("an app-group suite write under the lock", """
-enum S {
-    static func flush() {
-        lock.lock()
-        groupDefaults?.set(stamp, forKey: "widget.lastSeen")
-        lock.unlock()
-    }
-}
-""", True),
-    # --- must NOT flag -----------------------------------------------------
-    ("the write AFTER the unlock", """
-final class S {
-    private let lock = NSLock()
-    func flush() {
-        lock.lock()
-        let snapshot = entries
-        lock.unlock()
-        UserDefaults.standard.set(encode(snapshot), forKey: storeKey)
-    }
-}
-""", False),
-    ("a helper that writes, never called under the lock", """
-enum S {
-    private static let lock = NSLock()
-    static func configured() -> [P] {
-        lock.lock(); defer { lock.unlock() }
-        return memo
-    }
-    static func activate(_ p: P) {
-        UserDefaults.standard.set(p.rawValue, forKey: activeKey)
-    }
-}
-""", False),
-    ("a READ under the lock — reads post no notification", """
-enum S {
-    private static let lock = NSLock()
-    static func loaded() -> Data? {
-        lock.lock(); defer { lock.unlock() }
-        return UserDefaults.standard.data(forKey: key)
-    }
-    static func save() { UserDefaults.standard.set(d, forKey: key) }
-}
-""", False),
-    ("the DefaultsWrite hand-off under the lock, which is the fix", """
-enum S {
-    private static let lock = NSLock()
-    static func flush() {
-        lock.lock(); defer { lock.unlock() }
-        DefaultsWrite.set(data, forKey: storeKey)
-    }
-}
-""", False),
-    ("a lock+defer scope that closed before the write", """
-enum S {
-    private static let lock = NSLock()
-    static func outer() {
-        run {
-            lock.lock(); defer { lock.unlock() }
-            cache = book
-        }
-        UserDefaults.standard.set(data, forKey: key)
-    }
-}
-""", False),
-    ("the write named only inside a comment", """
-enum S {
-    private static let lock = NSLock()
-    static func flush() {
-        lock.lock()
-        // NOT UserDefaults.standard.set(data, forKey: key) — see DefaultsWrite
-        DefaultsWrite.set(data, forKey: key)
-        lock.unlock()
-    }
-}
-""", False),
-    ("a brace inside a string literal does not move the depth", """
-enum S {
-    private static let lock = NSLock()
-    static func flush() {
-        lock.lock(); defer { lock.unlock() }
-        log("closing } brace")
-        DefaultsWrite.set(data, forKey: key)
-    }
-}
-""", False),
-]
 
-# The pass's own evidence: the files as they shipped in build 570, and what
-# this check must say about each. Run from git, so it keeps testing the real
-# thing long after the working tree is fixed.
-SHIPPED = "9f398d6"
-MUST_CATCH = [
-    "Casberi/Casberi/Model/BridgeHealth.swift",     # the one in the crash report
-    "Casberi/Casberi/Model/FeedFreshness.swift",
-    "Casberi/Casberi/Model/NetworkLedger.swift",
-    "Casberi/Casberi/Model/AgentSpend.swift",
-    "Casberi/Casberi/Model/AppMetrics.swift",
-]
-MUST_PASS = [
-    # Both keep an NSLock and both write `UserDefaults` — and no lock-holding
-    # path of either reaches those writes. A coarser rule accused them.
-    "Casberi/Casberi/Model/AgentAnswer.swift",
-    "Casberi/Casberi/Model/EmbeddingIndex.swift",
-]
+    static func forget() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }"""))
+        found5, _, _ = audit(root)
+        if found5:
+            failures.append(f"a write outside every lock was flagged: {found5}")
+        store.write_text(kept)
+
+        # MUTATION 6: a defaults READ under the lock stays clean — `loaded()`
+        # is called under the lock on purpose and posts nothing.
+        store.write_text(kept.replace(
+            "        var book = loaded()",
+            "        var book = loaded()\n        _ = UserDefaults.standard.bool(forKey: \"flag\")"))
+        found6, _, _ = audit(root)
+        if found6:
+            failures.append(f"a defaults READ under a lock was flagged: {found6}")
+        store.write_text(kept)
+
+        if failures:
+            for failure in failures:
+                print(f"self-test FAILED: {failure}", file=sys.stderr)
+            return 1
+        print("defaults-lock audit self-test: ok (9 mutations)")
+        return 0
 
 
-def shipped(path):
-    out = subprocess.run(["git", "-C", str(ROOT), "show", f"{SHIPPED}:{path}"],
-                         capture_output=True, text=True)
-    return out.stdout if out.returncode == 0 else None
-
-
-def self_test():
-    failures = 0
-    for name, source, should_flag in FIXTURES:
-        if bool(scan(source)) != should_flag:
-            print(f"✗ fixture '{name}' should {'flag' if should_flag else 'pass'} and did not")
-            failures += 1
-
-    missing = False
-    for path in MUST_CATCH:
-        text = shipped(path)
-        if text is None:
-            missing = True
-            continue
-        if not scan(text):
-            print(f"✗ build 570's {path} is NOT caught — it shipped the deadlock shape")
-            failures += 1
-    for path in MUST_PASS:
-        text = shipped(path)
-        if text is None:
-            missing = True
-            continue
-        hits = scan(text)
-        if hits:
-            print(f"✗ build 570's {path} is falsely accused at {hits} — "
-                  f"no lock-holding path reaches those writes")
-            failures += 1
-    if missing:
-        print(f"  (skipped the build-570 checks: commit {SHIPPED} not in this clone)")
-
-    live = audit()
-    if live:
-        print("✗ self-test cannot run: the tree already has findings")
-        for f in live:
-            print("   " + f)
-        failures += 1
-    if failures:
-        return 1
-    print(f"✓ defaults-lock audit self-test: {len(FIXTURES)} fixtures, "
-          f"{len(MUST_CATCH)} shipped defects caught, {len(MUST_PASS)} lookalikes cleared")
-    return 0
-
-
-def main():
-    if "--self-test" in sys.argv:
+def main() -> int:
+    args = sys.argv[1:]
+    if "--self-test" in args:
         return self_test()
-    findings = audit()
-    if findings:
-        print("defaults-lock audit: FINDINGS")
-        for f in findings:
-            print("  ✗ " + f)
-        print("\nA `UserDefaults` write posts its change notification synchronously on "
-              "the writing thread; SwiftUI's @AppStorage observer takes SwiftUI's global "
-              "update lock there; and the main thread holds that lock whenever it is "
-              "inside a view body. Build 570 died this way. Hand the bytes to "
-              "`DefaultsWrite` instead — it keeps your ordering and writes on a thread "
-              "holding nothing.")
-        return 1
-    print("defaults-lock audit: ok — no UserDefaults write is reachable under a lock")
-    return 0
+
+    findings, census, resolved = audit(ROOT)
+    if "--census" in args:
+        for rel, start, end, name in census:
+            print(f"{rel}:{start}-{end}: held by `{name}`")
+        print()
+        for rel, decl, helper, what in resolved:
+            print(f"{rel}:{decl}: `{helper}()` {what} — resolved through call sites")
+    if not findings:
+        print(f"defaults-lock audit: ok ({len(census)} critical sections read)")
+        return 0
+    print("A lock is held across a synchronous call-out to observers:\n")
+    for rel, lineno, why in findings:
+        print(f"  {rel}:{lineno}: {why}")
+    print("\nA `UserDefaults` write posts its change notification synchronously, and")
+    print("SwiftUI's observer takes the update lock a view body already holds while")
+    print("waiting for this one — the deadlock that killed build 570 (prd §721).")
+    print("Persist through `DefaultsWrite` instead.")
+    return 1
 
 
 if __name__ == "__main__":

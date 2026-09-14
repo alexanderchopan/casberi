@@ -106,7 +106,7 @@ final class AgentSpend: @unchecked Sendable {
     private var entries: [String: Entry] = [:]
 
     private init() {
-        if let data = DefaultsWrite.data(forKey: storeKey),
+        if let data = UserDefaults.standard.data(forKey: storeKey),
            let decoded = try? JSONDecoder().decode([String: Entry].self, from: data) {
             entries = decoded
         }
@@ -236,16 +236,18 @@ final class AgentSpend: @unchecked Sendable {
         lock.lock()
         entries = [:]
         lock.unlock()
-        DefaultsWrite.set(nil, forKey: storeKey)
+        // The same queue the flushes ride, so one still in flight cannot land
+        // after the forget and bring the receipts back (prd §721).
+        DefaultsWrite.remove(storeKey)
     }
 
     // MARK: - Persistence
 
-    /// The hand-off stays INSIDE the lock so two racing flushes cannot persist
-    /// out of order — but the `UserDefaults` write itself goes to
-    /// `DefaultsWrite`, off this thread, because a defaults write under a lock
-    /// is build 570's deadlock (prd §720). `NetworkLedger`'s own note, same
-    /// reason, same correction.
+    /// The ENCODE stays inside the lock, so the payload is a consistent
+    /// snapshot; the store write goes through `DefaultsWrite`, which keeps two
+    /// racing flushes in order without posting a defaults change notification
+    /// under a lock the main thread can be waiting on (prd §721,
+    /// `NetworkLedger`'s own note, same reason).
     private func flush() {
         lock.lock()
         if entries.count > Self.maxProviders {

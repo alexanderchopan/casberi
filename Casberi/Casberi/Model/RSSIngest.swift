@@ -149,7 +149,7 @@ final class RSSStore {
         var title: String?
     }
 
-    /// The whole pass's learned facts, applied in ONE write (prd §719).
+    /// The whole pass's learned facts, applied in ONE write (prd §722).
     ///
     /// **`setTitle`/`setURL` in a loop is `add` in a loop.** §710 fixed the
     /// import path — `feeds` carries `didSet { persist() }`, so every mutation
@@ -331,7 +331,7 @@ enum RSSIngest {
         // 2026-07-28), doubling the DB round trip for no new information.
         // UNBOUNDED, and left that way on purpose — see `thingsByRef`'s own
         // doc for why a partial fetch is the wrong answer on a HEAL path
-        // (prd §719, found and not fixed).
+        // (prd §722, found and not fixed).
         let landed = IngestSupport.thingsByRef(context, source: "RSS")
         var existing = Set(landed.keys)
         let backfill = ArtlessBackfill(context, source: "RSS")
@@ -350,7 +350,7 @@ enum RSSIngest {
         }
 
         var reachedAny = false
-        // ONE STORE WRITE, ONE INDEX CALL, FOR THE WHOLE PASS (prd §719).
+        // ONE STORE WRITE, ONE INDEX CALL, FOR THE WHOLE PASS (prd §722).
         // Both of these were per feed and per item inside the loop below —
         // see `RSSStore.resolve` for the persist, and `SpotlightIndex.index`
         // for the XPC round trip it makes per call.
@@ -489,8 +489,6 @@ enum RSSIngest {
         // `[Thing]` onward (liveness corollary 4), not a suspicion about these.
         SpotlightIndex.index(indexed.filter(\.isLive))
         if added > 0 || backfill.any || touched { context.saveHonestly() }
-        // The pass's whole set of HTTP records, in one encode (prd §719).
-        Task.detached(priority: .utility) { FeedFreshness.flush() }
         // Every feed unreachable is a failed sync, not "up to date".
         return reachedAny ? added : nil
     }

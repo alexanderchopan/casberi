@@ -94,7 +94,7 @@ final class NetworkLedger: @unchecked Sendable {
     private let flushInterval: TimeInterval = 5
 
     private init() {
-        if let data = DefaultsWrite.data(forKey: storeKey),
+        if let data = UserDefaults.standard.data(forKey: storeKey),
            let decoded = try? JSONDecoder().decode([String: Entry].self, from: data) {
             entries = decoded
         }
@@ -163,20 +163,18 @@ final class NetworkLedger: @unchecked Sendable {
         entries = [:]
         lastFlush = Date()
         lock.unlock()
-        DefaultsWrite.set(nil, forKey: storeKey)
+        // Same queue as the writes, so a flush still in flight cannot land
+        // after the forget and resurrect the ledger.
+        DefaultsWrite.remove(storeKey)
     }
 
     // MARK: - Persistence
 
-    /// Prune, then persist.
-    ///
-    /// The hand-off stays INSIDE the lock — two flushes racing could otherwise
-    /// persist out of order and leave the older snapshot on disk — but the
-    /// `UserDefaults` write itself does NOT happen here (prd §720). It goes to
-    /// `DefaultsWrite`, whose one serial queue preserves exactly the order
-    /// this lock establishes and touches `UserDefaults` on a thread holding
-    /// nothing. Writing it here instead is the deadlock that killed build 570,
-    /// one store over.
+    /// Prune, then persist. The ENCODE stays inside the lock, so the payload
+    /// is a consistent snapshot; the store write itself is handed to
+    /// `DefaultsWrite`, whose serial queue keeps two racing flushes in order
+    /// without a defaults write — and its synchronous change notification —
+    /// happening under a lock the main thread can be waiting on (prd §721).
     private func flush() {
         lock.lock()
         defer { lock.unlock() }

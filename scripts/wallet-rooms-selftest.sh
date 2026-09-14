@@ -432,9 +432,9 @@ grep -q 'room.entries.prefix(SafeRoomSource.rowCap)' "$CARD_SAFE" \
 # card it displaced is a regression wearing a new feature.
 grep -q 'GnosisPayRoom.monthShare(total: month.total, of: top)' "$CARD_GNOSIS" \
   || { echo "✗ the Gnosis Pay history strip no longer sizes its columns through the shipped monthShare()"; exit 1; }
-# `cardMonths` went with the boards (prd §721); the Gnosis Pay head is no
+# `cardMonths` went with the boards (prd §723); the Gnosis Pay head is no
 # longer superseding anything, it is simply the room's head.
-# Peer's §311 board WAS the head's fallback below `minimumFills`, and prd §721
+# Peer's §311 board WAS the head's fallback below `minimumFills`, and prd §723
 # deleted every ranked board. Below the minimums Peer now falls through the
 # same chain every other room does — to a distribution, a mosaic, its heatmap,
 # or to no head and the newest thing as a card. Nothing to assert here that

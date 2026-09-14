@@ -608,6 +608,21 @@ step "Design-template audit"
 "$ROOT/scripts/ds-template-audit.py" || fail "a template is drawn by hand outside Design/ — see the output above"
 print -P "%F{green}✓ design-template audit%f"
 
+# A `UserDefaults` write inside a lock is a synchronous notification post
+# inside a lock, and SwiftUI observes that notification: its observer takes
+# the update lock that every view body already holds while waiting for the
+# store's own lock. That is a two-lock deadlock, and it killed build 570 on
+# the user's phone — main thread stuck in `ViewBodyAccessor.updateBody`, a
+# bridge sweep stuck in `UserDefaultObserver.userDefaultsDidChange`, the app
+# frozen on every page until the watchdog took it (prd §721). Five stores
+# shipped the shape; the audit reported exactly those five and nothing else
+# over the pre-fix tree, and zero after. Persist through `DefaultsWrite`.
+step "Defaults-lock audit"
+"$ROOT/scripts/defaults-lock-audit.py" --self-test >/dev/null \
+  || fail "the defaults-lock audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/defaults-lock-audit.py" || fail "a lock is held across a defaults write — see the output above"
+print -P "%F{green}✓ defaults-lock audit%f"
+
 # Keeps the "What this app reaches" registry complete (prd §205): every host
 # the app calls must be disclosed in NetworkReach.swift or the explicit
 # non-reach denylist — an undisclosed fetch host fails here.
@@ -900,27 +915,6 @@ python3 "$ROOT/scripts/background-launch-audit.py" --self-test >/dev/null \
 python3 "$ROOT/scripts/background-launch-audit.py" \
   || fail "the shell can be built for a scene connected in the background — see the output above"
 print -P "%F{green}✓ background launch audit%f"
-
-# A `UserDefaults` WRITE WHILE A LOCK IS HELD IS A DEADLOCK (prd §720, build
-# 570's crash report, 2026-09-13). `0x8BADF00D` again — but read the CPU line
-# before reaching for the family above it: "Elapsed application CPU time
-# (seconds): 0.017, 0% CPU". Every other watchdog here is the app doing too
-# much to answer in time; this one did NOTHING. A defaults write posts its
-# change notification synchronously on the writing thread, SwiftUI's
-# `@AppStorage` observer takes SwiftUI's global update lock there, and the main
-# thread holds that lock whenever it is inside a view body — so a background
-# thread holding a store's NSLock across the write, opposite a body asking that
-# store for a reading, is a cycle neither side leaves.
-#
-# Mechanical because nothing here can reproduce it: the build is happy either
-# way, three sessions of simulator launch cycles never saw it, and it needs a
-# bridge sweep and a view body to collide inside one millisecond on a real
-# device. Five stores shipped this shape independently and two carried comments
-# defending it, so it is not a slip — it is the obvious way to write the thing.
-step "Defaults-under-lock audit"
-python3 "$ROOT/scripts/defaults-lock-audit.py" --self-test >/dev/null   || fail "the defaults-lock audit's own self-test failed — the check is broken, not the code"
-python3 "$ROOT/scripts/defaults-lock-audit.py"   || fail "a UserDefaults write is reachable with a lock held — see the output above"
-print -P "%F{green}✓ defaults-under-lock audit%f"
 
 # A view body must not write the @Observable state it reads (PERF 2026-09-01).
 # `ShellChrome`'s generated setter mutates unconditionally, so a body that

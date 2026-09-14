@@ -430,7 +430,7 @@ struct FeedScreen: View {
         // Prefetched for the Snapchat room, a bulk import where omitting one
         // `Int?` would trade a cheap column for thousands of faults — the §260
         // mistake above in a different coat. Added 2026-08-14 with the
-        // source-room columns for "Who you snap with", whose board §721
+        // source-room columns for "Who you snap with", whose board §723
         // deleted; the column stays prefetched because it is one `Int?` and
         // the row itself reads it.
         \.messageCount,
@@ -441,7 +441,7 @@ struct FeedScreen: View {
     // a screenshot's OCR. This note used to record a cost against it: three
     // leaderboards (Steam hours, the `r/` subreddit, the host a link came
     // from) read `content` per row, so those rooms faulted once per row where
-    // the old unpredicated fetch had it loaded. §721 deleted all three boards,
+    // the old unpredicated fetch had it loaded. §723 deleted all three boards,
     // so the omission now costs nothing at all.
     //
     // UNMEASURED, and stated as such: the 26.6%-of-main-thread figure behind
@@ -5695,7 +5695,7 @@ struct FeedScreen: View {
         // bar, or a thumbnail mosaic. All render only when the real data is
         // there (guards live in FeedHeatmap / FeedInsight). A room that
         // qualifies for none draws the newest thing as a card instead — see
-        // `heroShown` (prd §721).
+        // `heroShown` (prd §723).
         // Derived once and reused: `heroShown` lets a shape's own recap lede
         // (music's "today", Gmail's "waiting") yield so a feed never stacks two
         // overview cards — the lede's records still ride the rows below.
@@ -5815,7 +5815,7 @@ struct FeedScreen: View {
             && sourceHead == nil
             ? FeedHeatmap.label(for: source) : nil
         // **A ROOM THAT DRAWS NO HEAD GETS THE NEWEST THING AS A CARD**
-        // (prd §721) — `memo.lede` is gated on exactly this flag, so the
+        // (prd §723) — `memo.lede` is gated on exactly this flag, so the
         // fifteen rooms the deleted board used to head now fall through to
         // `FeedLedeCard`, the All feed's own cover, on the All feed's own
         // terms (`ledeThingID`: newest row, under `ledeMaxAge`, at least
@@ -7963,7 +7963,7 @@ struct FeedScreen: View {
         // Instagram (2026-08-18, prd §389) — the second head over an import,
         // and the second that displaces a card the room already drew. It
         // carried `FeedInsight.leaderboard`'s board forward whole (§349's rule
-        // rather than a courtesy) until §721 deleted that board; see
+        // rather than a courtesy) until §723 deleted that board; see
         // `InstagramRoom`'s type note.
         case instagram(InstagramRoom)
         // The two journal rooms (2026-08-17, prd §398) — the first head serving
@@ -8482,7 +8482,17 @@ struct FeedScreen: View {
                             // cannot know when the box moves — which is
                             // exactly how a grown box leaves dead air under a
                             // drawing that never heard about it.
-                            chartHeight: DSRoomChassis.crownChart,
+                            //
+                            // **AND THE CHIPS ARE PAID FOR (2026-09-14, user:
+                            // "7d and watched is clipping").** This read the
+                            // bare `crownChart` constant, which budgets the
+                            // chrome §688 measured BEFORE the range chips
+                            // existed — so the line took the whole box and the
+                            // track below it ran out through `DSRoomSlot`'s
+                            // clip. The predicate is `WalletBalanceHeadline`'s
+                            // own gate for drawing them, not a second guess at
+                            // it.
+                            chartHeight: DSRoomChassis.crownChart(chips: ranges.count > 1),
                             ranges: ranges,
                             range: active,
                             onPickRange: { r in

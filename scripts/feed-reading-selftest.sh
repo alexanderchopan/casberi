@@ -149,7 +149,7 @@ done
 
 # ── 3. The board is DELETED, and so is the scope it was the control for ────
 # §455 made a reading room's board a switcher: tap a publisher, the room
-# narrows to them. prd §721 deleted the board from every room, so the scope
+# narrows to them. prd §723 deleted the board from every room, so the scope
 # lost its only control and went with it — `ReadingScope`, `roomScoped`,
 # `leaderboardPick`, `scopedBoard` and `LeaderboardHero` are all gone. These
 # are the checks that they STAY gone; a `readingScope` with no board to set it
@@ -158,19 +158,19 @@ done
 for gone in 'FeedInsight.Leaderboard' 'LeaderboardHero' 'readingScope' 'roomScoped'; do
   grep -q "$gone" "$FEED" \
     && { echo "✗ FeedScreen still names $gone — the ranked board and its room"; \
-         echo "  scope were deleted together (prd §721)"; exit 1; }
+         echo "  scope were deleted together (prd §723)"; exit 1; }
 done
 grep -qE '\bstruct Leaderboard\b|\bstatic func leaderboard\(' "$INSIGHT" \
-  && { echo "✗ FeedInsight grew a ranked board back (prd §721)"; exit 1; }
+  && { echo "✗ FeedInsight grew a ranked board back (prd §723)"; exit 1; }
 grep -q 'LeaderboardHero' "$RENDER" \
-  && { echo "✗ LeaderboardHero is back — nothing draws it (prd §721)"; exit 1; }
+  && { echo "✗ LeaderboardHero is back — nothing draws it (prd §723)"; exit 1; }
 # What REPLACED it: a room with no head falls through to the All feed's own
 # cover, on the All feed's own terms. `heroShown` is the whole mechanism.
 grep -q 'memo.lede = heroShown ? nil : ledeThingID' "$FEED" \
   || { echo "✗ the newest-thing cover is no longer gated on heroShown — the"; \
        echo "  rooms the board used to head would draw no card at all"; exit 1; }
 grep -q 'leaderboard' "$TMP/feed.nocomment" \
-  && { echo "✗ FeedScreen's code still mentions a leaderboard (prd §721)"; exit 1; }
+  && { echo "✗ FeedScreen's code still mentions a leaderboard (prd §723)"; exit 1; }
 
 # ── 4. Feed health, in the room ────────────────────────────────────────────
 grep -q 'FeedRoomHealthSource.standing(for: source)' "$FEED" \

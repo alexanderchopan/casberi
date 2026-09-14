@@ -264,6 +264,7 @@ marks chronological position within the pair.
 | §548's tail order ("frames leads the conditional tail") | the Frames devnet's strip ran home · activity · frames · sponsors, frames first among the scopes that can be empty | amended by §688 — Holdings exists on this chain after all and takes the family's third place (Wallet, Hegotá and vibenet all put it there), so the tail is holdings · frames · sponsors. The ruling's substance is intact: frames still leads every scope it outranks, and §548 stands in every other respect |
 | §306 (every class interrupts the same way; the badge is asked for) | alarms and arrivals share `.active` and the default sound, and the permission ask includes `.badge` | amended by §713 — arrivals are `.passive` and silent, alarms keep the level and sound, the badge leaves the ask; the two classes, the collapse rules and quiet hours are untouched |
 | §306 (the right-hand slot's ladder: a held photo, the source's mark, nothing) | rung 1 reads `authorAvatarURL` and `previewImageData`; rung 2 is the source's mark | amended by §714 — rung 1 reads every URL the row holds (`previewImageURL`, `imageURLs`), rung 2 names the event's own bundled mark (token, protocol, Safe) ahead of the source's; the never-invents rule and rung 3 are untouched |
+| §377 | A folded run of screenshots or posts is drawn as its members — the tiles fill the row's LEADING seat ("the tiles grow the leading seat and nothing else"), at `Mark.list` since the same day's amendment | overturned in part by §719 (the SEAT is the source's mark, as on every other row; the tiles are the text column's third line at `Mark.row`. The fold, the cap and the dedupe stand) |
 
 ## 1. Thesis
 
@@ -54289,7 +54290,83 @@ Every change is a branch on `AskSurface.enabled`, so flipping the flag still bri
 
 **UNSEEN on a device.** Verified: iOS simulator and Mac Catalyst builds; all 46 scripts that read FeedScreen; every `scripts/*-audit.{py,sh}`; `catalog-sync.sh`.
 
-## §719 — The RSS page freezes and crashes AGAIN: §710 bounded what the page DRAWS and left what it DOES, and the sync it runs on every appearance is five unbounded main-thread costs (user: "the rss page freezes then crashes", 2026-09-14)
+## §719 — Every bundle row leads with its mark; a strip's tiles move under the name (user: "what if instead for those we had icon then name then images … all rows would uniformly start w icon and name of source easy to scan down the column. mock it up for me" → "A looks cleaner than B" → "wait, maybe B is cleaner bc it'll be more standard. do B", 2026-09-14)
+
+**The report.** A screenshot of the All feed's count column: the Wallet row leads with its mark and then its name; the GitHub, Bluesky, Farcaster and Screenshots rows lead with four member tiles at 36pt and THEN the name. Reading down the column, the source names start at a different x on every other row.
+
+**Two shapes, mocked at real tokens before anything was built** (`design/bundle-lead/bundle-lead-mocks.html`, rendered to PNG; 26pt seat, 17pt name, 16pt count, 11pt unit, the same seven rows in each frame). **A** — mark, name, tiles between the name and the count, row height held: on a 390pt screen the name and four tiles fought for the middle and "Screenshots" truncated; a second render at 26pt tiles still truncated on 375. **B** — mark, name, time, then the tiles as a third line of the text column, one line taller per strip row: every name runs. The user took A first, then B ("more standard").
+
+**The ruling.** `StripRow` is `BundleRow`'s anatomy exactly — leader, then source and time, then the count and its unit — and the tiles are the text column's third line at `Mark.row`, the leader's own size. §377's "the tiles grow the leading seat and nothing else" is overturned for the leading seat and kept for the width: the strip sits inside the seat's indent and is never wider than its four tiles, so it is not the full-width banner §254 rejected. §377's own 2026-08-14 size amendment (`Mark.list`) was made while the tiles WERE the leader; its second half — a mark and the picture beside it are the same square — is what survives, re-applied to the mark one line up. `FeedFold.stripCap` stays four: 116pt inside a text column that is ~200pt wide on the narrowest phone.
+
+**Cost, stated.** A day with four strip rows is ~124pt longer than it was. `RowWindow`'s bound is unchanged.
+
+**UNCOMPILED — Linux session.** Verified: every `scripts/*-audit.py` that reads row views (row-cost, ds-template, design-ramp, face-ramp, feed-row-skeleton, query-read, liveness, mutation-liveness, accessibility, sentence-case, dead-closure, harness-exists); `feed-fold-selftest.sh` and the demo census need a Mac.
+
+## §720 — The crown's line pays for its own range chips, in one expression every crown reads (user: "7d and watched is clipping", 2026-09-14)
+
+**The report.** A screenshot of the Wallet room's Home: the balance, the line, and then the `7d | Watched` track cut across the middle by the rail slab's top edge.
+
+**Not an overlap — a clip.** `DSRoomSlot` is a hard `visualSlot` box with `.clipped()`, and the crown drew taller than it. §688 had already found and named this ("looks like the rail is touching the ranges"), measured the track at `DSRoomChassis.crownRangeChips` = 42, and spent it in `RoomHomeCrown` — the template §683 built so that five wallet-family Homes could stop drifting. **The Wallet room does not go through that template.** It builds `WalletBalanceHeadline` itself and read the bare `crownChart` constant, which budgets `crownChrome` alone. So the one room that has drawn range chips the longest was the only one still paying nothing for them, and §688's fix could not reach it. `RoomActivityChart` — the Activity tab's own shared template, §686 — draws the same chips under its bars against the same bare budget, and clips identically on any record offering more than one window; found by reading, not reported.
+
+**The ruling.** `crownChart` stops being a constant and becomes `DSRoomChassis.crownChart(box:chips:)` — `crownLine(box:chrome: crownChrome + (chips ? crownRangeChips : 0))`, the arithmetic §688 wrote inside `RoomHomeCrown`, lifted to the chassis where the three call sites can share it. It ASKS rather than reserving: the chips are not always offered (a record with one honest window draws none, §83's dead control), so a constant could not be right for both cases. The Wallet crown's line goes 192 → 150 when both windows are offered, and is unchanged when they are not.
+
+**The predicate is the chips' own draw gate, spelled the same way at every site** — `ranges.count > 1`, which is what `WalletBalanceHeadline` and `DSRangeChips` both test. A budget asking a different question than the drawing is the same clip wearing a second answer, so `wallet-section-selftest.sh` pins all four: the chassis's one expression, each call site's, and `DSRangeChips`' gate itself.
+
+**The class, for the next template.** A shared template is only shared by the call sites that go through it. §683/§686 moved five Homes and four Activity tabs onto two templates and left the room each was modelled on building its own — so a fix applied to the template reached everyone except the original. When a ruling fixes a template, check what still draws that shape by hand.
+
+**UNCOMPILED — Linux session.** Verified: `prd-index-audit.py`, and the five new drift guards dry-run against the fixed tree. The clip itself needs a simulator.
+
+## §721 — A defaults write inside a lock is a deadlock with every view body: build 570 froze on every page and the watchdog took it (user: "touching the app catalog icon in top is inactive and leads to crashing on multiple pages", 2026-09-14)
+
+**The report, and what it actually was.** A crash log from build 570 (1.0.19, iPhone 18,2, iOS 26.6.2) with `0x8BADF00D` — a scene-update watchdog, `ProcessVisibility: Background`, killed four minutes after launch. The catalogue door was NOT inactive in the sense its three earlier reports meant (a 24×21pt hit region inside a 46pt circle, 2026-07-26; a `safeAreaInset` Button losing arbitration to the pager, 2026-07-24). Its action is real and its shape is a `Circle`. **The main thread was deadlocked, so every control on every page was inactive** — a tap arrives, nothing draws, and the report is written from wherever the person happened to be standing.
+
+**Both halves are in the report, which is why this one is not a guess.**
+
+- **Main thread**, queue `com.apple.main-thread`: `ViewBodyAccessor.updateBody` → three Casberi frames → `__psynch_mutexwait`. A view body — which by construction holds SwiftUI's update lock, since every body runs under `Update.ensure` — waiting on `BridgeHealth.lock`. All 55 account pages ask `AccountPageState.of` from their body, and it takes that lock twice.
+- **A bridge sweep**, on `com.apple.root.user-initiated-qos.cooperative`: two Casberi frames → `-[NSNotificationCenter postNotificationName:object:userInfo:]` → `UserDefaultObserver.userDefaultsDidChange` → `Update.enqueueAction` → `Update.begin` → `_MovableLockLock` → `__psynch_mutexwait`. It HOLDS `BridgeHealth.lock` and called `UserDefaults.standard.set` inside it.
+- **Three more threads** sat behind the same `BridgeHealth.lock`, each a concurrent bridge response on the same funnel.
+
+**THE RULE. `UserDefaults.set` posts `didChangeNotification` SYNCHRONOUSLY, on the calling thread, and any app with an `@AppStorage` anywhere has SwiftUI's own observer on it — which takes the update lock.** So a defaults write inside a lock is a call-out to SwiftUI inside that lock, and any view body reading the same store closes the cycle. The write reads as a pure store touch; that is the whole trap. Nothing in a build, an audit or a probe here could see it: it needs a sweep response and a body evaluation to overlap on a device, and both sides render perfectly right up to the freeze.
+
+**The fix is one file.** `Model/DefaultsWrite.swift` — one serial queue, `set` and `remove`, nothing else. The value still moves under the store's own lock, so the in-memory cache stays authoritative and no reader reads stale; only the `UserDefaults` call is handed to the queue, which preserves same-key ordering. **That ordering is the reason those writes were put inside the lock in the first place** (`NetworkLedger`'s own note: two flushes racing must not leave the older snapshot on disk), so it had to be kept rather than argued away. The queue holds no other lock, so the cycle cannot form. There is deliberately **no blocking drain**: a `queue.sync` from the main thread re-opens the same deadlock one lock further out. The queue is `.userInitiated` and that is the deadlock's own argument turned around — `defaults.set` enters SwiftUI's update lock, main contends that lock on every body, and a background-priority thread holding it is a priority inversion with no donation.
+
+**The new loss window, stated rather than waved at.** The disk was never synchronous (CFPreferences coalesces on its own schedule), but the value used to reach `UserDefaults`' in-memory store on the calling line and now reaches it when the queue runs. A `BGAppRefreshTask` that calls `setTaskCompleted` can be suspended with a block still queued, and a suspended process later killed never runs it — so one background sweep's health or receipt record can be lost where the inline write would have survived. Microseconds on an unloaded queue, and every one of these stores keeps the value in its own cache for the life of the process. Against an app frozen on every page until the watchdog takes it, the trade is not close.
+
+**Five stores shipped the shape, and the audit reports exactly those five over the pre-fix tree.** `BridgeHealth` (the one that crashed — the write is one call deep, in `save`, so nothing on a locked line was wrong), `FeedFreshness` (the same shape, same author, `trouble(for:)` read from `HandleSetupScreen`'s body), `NetworkLedger.flush`, `AgentSpend.flush` and `AppMetrics.remember`. Every removal moved to the same queue too (`NetworkLedger.forget`, `AgentSpend.forgetAll`, `AppMetrics.forget`) — a synchronous `removeObject` would be overtaken by a write still queued for that key, which is a "delete everything" that leaves the record behind. `AppMetrics` gained the memoised cache the other four already had, because it re-read defaults on every merge and the queued write is no longer there to re-read.
+
+**`scripts/defaults-lock-audit.py`, three checks, static:** no defaults write inside a critical section (inline, `defer`-unlocked, or `withLock`); the same **one call deep**, which is the only form that would have caught build 570; and no `NotificationCenter.post` inside one either, the general form of the same hazard. Nine mutations in its self-test. The defaults RECEIVER is derived from each file (`let d = UserDefaults.standard`, a parameter typed `UserDefaults`) rather than guessed from a name list, so a store spelling it `prefs` is covered and a `.set(` on a dictionary is not a finding. **Measured: ten findings across the five stores before, zero after.** It deliberately does not check actors, `DispatchQueue.sync`, or whether a body reads a lock-guarded store at all — the last is prd §628's rule and hundreds of pages break it through `AccountPageState.of`; making that read cheap is what the caches are for, and this closes the half that kills the app.
+
+**Owed, named.** The body reads themselves stand: 55 account pages compute `state:` in their body, so a sweep's encode still contends with a frame, now for microseconds rather than forever. Moving them to `.task`-held state is a 55-screen change and a chassis decision, not a crash fix.
+
+**UNCOMPILED — Linux session.** Verified: every `scripts/*-audit.py` (48, all green, `defaults-lock` included) and the new audit's self-test. No simulator, no device, no `swiftc` on this machine.
+
+### §721a — The same deadlock, reported from the other end, diagnosed independently (2026-09-14)
+
+This entry was written from *"touching the app catalog icon in top is inactive
+and leads to crashing on multiple pages"*. A second session was working the
+same crash from *"the rss page freezes then crashes"* and the user's own crash
+report, reached the same cycle from the same frames, and wrote the same fix —
+`DefaultsWrite`, one serial queue, the same five stores. That branch's copy is
+discarded in favour of this one on merge; two things from it are worth keeping
+here.
+
+**The symptom is every page, not one.** Two reports named two different
+screens, and neither screen was at fault: a deadlocked main thread makes every
+control on every surface inert, so the page a person happens to be on when it
+happens is noise. A report of the form "X is broken and the app crashes" where
+X is simply where they were standing should raise this ahead of anything about
+X. The RSS branch spent two passes reading the RSS page — §710 and §722 — and
+found real defects each time, none of which was the cause.
+
+**Ask for the crash report.** Both passes on the RSS side were reasoning from
+the code to a plausible watchdog story of the §614 family (too much main-thread
+work). One line of the report ruled that entire family out: *"Elapsed
+application CPU time (seconds): 0.017, 0% CPU."* The app was doing nothing.
+That reading is what turns a `0x8BADF00D` from a perf question into a lock
+question, and it is free.
+
+
+## §722 — The RSS page freezes and crashes AGAIN: §710 bounded what the page DRAWS and left what it DOES, and the sync it runs on every appearance is five unbounded main-thread costs (user: "the rss page freezes then crashes", 2026-09-14)
 
 **The report is §710's report, two days later, against a build that carries
 §710's fix.** That is the finding. §710 read the screen, found four costs, and
@@ -54337,7 +54414,19 @@ screen §710 cited as the one that got `rows` right — had the identical shape
 and gets the identical fix.
 
 **2. `FeedFreshness` encoded its whole store once per feed fetch, under the
-lock the main thread reads through.** The type's own doc said "writes are one
+lock the main thread reads through. — SUPERSEDED BY §721, AND NOT RE-APPLIED.**
+This pass coalesced the encode behind a debounced flush. §721 landed on `main`
+first and fixed the same store a different way: the encode stays per-fetch and
+only the `UserDefaults` write leaves the thread, through `DefaultsWrite`. That
+answers the deadlock, which is what mattered, and this branch takes §721's
+version whole rather than layering a second mechanism on a file another pass
+just rewrote. What is left is a genuine but small perf point, recorded here and
+NOT fixed: `write` still runs a 400-record `JSONEncoder` pass per feed per
+sync, on the calling thread, under the lock. At four feeds that is nothing; at
+three hundred it is three hundred encodes. `row-cost-audit.py` loses the check
+that pinned the coalescing, because the coalescing is gone.
+
+**2b. The original finding, for the record.** The type's own doc said "writes are one
 small dictionary encode per fetch — cheap enough that a lock beats an actor's
 hop here", which is true of one feed and false of a feed LIST: `write` encodes
 up to `cap` = 400 records on every `note`, i.e. once per feed per pass, while
@@ -54421,7 +54510,7 @@ it is named here rather than done quietly.
 `swiftc` and no simulator. Verified: every `scripts/*-audit.py` green,
 `row-cost-audit.py --self-test` green at 21 mutations.
 
-**AMENDED THE SAME DAY BY §720, AND THE HEADLINE ABOVE IS WRONG.** The user
+**AMENDED THE SAME DAY BY §721, AND THE HEADLINE ABOVE IS WRONG.** The user
 sent the crash report. It is a `0x8BADF00D` scene-update watchdog saying *"is
 stuck (deadlock)"*, and its CPU accounting reads **"Elapsed application CPU
 time (seconds): 0.017, 0% CPU."** The app was not blocking the main thread with
@@ -54431,7 +54520,7 @@ says a short list drawn by a blocked main thread is the same watchdog is a
 plausible reading of a symptom, not the cause, and it was reached by reading
 the code instead of asking for the report. **Ask for the report.** Every fix in
 this section is independently correct and stays; none of them is why the page
-crashed. §720 is.
+crashed. §721 is.
 
 **And the volume this section reasons from does not exist.** Asked how many
 feeds they follow, the user answered: *"i only follow four feeds"* (2026-09-14).
@@ -54443,126 +54532,7 @@ LATER, and it is not a diagnosis. The deadlock needs no volume at all: one
 background bridge response and one view body, in the same millisecond.
 
 
-## §720 — A `UserDefaults` write while a lock is held: the RSS page's real crash is a deadlock, and §710's own memo is one half of it (crash report, build 570, 2026-09-13; user: "the rss page freezes then crashes", 2026-09-14)
-
-**The report settles what two passes of reading could not.** §710 and §719 both
-read this screen, both found real defects, and both assumed the watchdog was
-the family this ledger already knows — §614, §642, §646, §657, every one of
-them the app doing too much work to answer a scene update in time. The crash
-report says the opposite in one line:
-
-```
-Elapsed total CPU time (seconds): 7.060 (user 5.000, system 2.060), 22% CPU
-Elapsed application CPU time (seconds): 0.017, 0% CPU
-```
-
-**Seventeen milliseconds.** The app did nothing. `FRONTBOARD 0x8BADF00D`,
-`explanation: scene-update watchdog transgression: … is stuck (deadlock)`.
-
-**The cycle, with both halves in the report.** Thread 0, the main thread:
-
-```
-__psynch_mutexwait → _pthread_mutex_firstfit_lock_wait
-  → <Casberi> → <Casberi> → <Casberi>
-  → closure #1 in ViewBodyAccessor.updateBody(of:changed:)
-  → … DynamicPreferenceCombiner … → UIHostingController.transitionContent
-  → NavigationStackCoordinator.update(to:from:navigationController:…)
-```
-
-A SwiftUI **body** is being evaluated, and inside it Casberi code blocks on a
-mutex. The register state names it: `x14`/`x15` both point at
-`OBJC_CLASS_$_NSLock`. Now thread 358925, on
-`com.apple.root.user-initiated-qos.cooperative`:
-
-```
-__psynch_mutexwait → _pthread_mutex_firstfit_lock_wait
-  → _MovableLockLock                          (SwiftUICore)
-  → specialized static Update.begin()
-  → static Update.enqueueAction(reason:_:)
-  → UserDefaultObserver.userDefaultsDidChange(_:)
-  → __CFNOTIFICATIONCENTER_IS_CALLING_OUT_TO_AN_OBSERVER__
-  → -[NSNotificationCenter postNotificationName:object:userInfo:]
-  → <Casberi> → <Casberi> → <Casberi> → completeTask
-```
-
-Read it upwards. A background bridge pass wrote `UserDefaults`. `UserDefaults`
-posted `NSUserDefaultsDidChangeNotification` **synchronously, on that thread**.
-SwiftUI's `UserDefaultObserver` — the machinery that makes `@AppStorage`
-invalidate — ran there and called `Update.begin()`, which wants SwiftUI's
-global update lock. **The main thread is holding that lock**, because it is
-inside `updateBody`. And the background thread is holding a Casberi `NSLock`,
-because the write is inside it. Neither moves. Five more cooperative threads
-are queued behind the same Casberi lock in the same report.
-
-**Both halves were added deliberately, by the same pass, two days ago.** §710
-found that every account page asked `BridgeHealth` three times per body
-evaluation, each a `UserDefaults` read and a full decode — §628's banned shape,
-reached from the chassis. It memoised the book behind an `NSLock`, and it
-lock-guarded the writer because concurrent bridge reads were losing records.
-Both of those are right. What neither ruling noticed is that they compose: the
-reads §710 was making cheap are **in a view body**, and the writer §710 was
-making safe holds its lock across `UserDefaults.standard.set`. The faulting
-frame is `BridgeHealth.record(host:status:named:)` calling `save(book)`.
-
-**It was not one store. It was five, and two of them argued for it in
-writing.** `FeedFreshness`, `NetworkLedger`, `AgentSpend` and `AppMetrics` all
-hold a lock across a defaults write, and `NetworkLedger`'s comment — copied
-into `AgentSpend` by name — says the write stays inside the lock *on purpose*,
-because two racing flushes could otherwise persist out of order. That reasoning
-is correct and this keeps it. It is simply not a reason to touch `UserDefaults`
-on a thread holding a lock.
-
-**The fix: `Model/DefaultsWrite.swift`, one door.** Callers hand over the bytes
-while still holding their own lock, so the hand-off order is the snapshot order;
-one serial queue drains them in that order and touches `UserDefaults` on a
-thread holding nothing. `DefaultsWrite.data(forKey:)` is the matching read, for
-the store (`AppMetrics`) that folds new rows into what it reads back and would
-otherwise miss a write that has not drained. Deliberately NOT offered: a
-`drain()` that blocks until the queue empties — called from the main thread
-inside a body, that is this same deadlock from the other direction.
-
-**What is pinned — and what pinning it taught.**
-`scripts/defaults-lock-audit.py`, wired into `verify.sh`. Nothing that runs
-here can see this defect: the build is happy either way, three sessions of
-simulator launch cycles never reproduced it, and it needs a bridge sweep and a
-view body to collide inside one millisecond on a real device under load.
-
-The check took three cuts and the first two are the lesson. **Cut one** scanned
-each function between a `lock()` and its `unlock()`, passed twelve
-hand-written fixtures — and then caught **one of the five real defects**. Four
-of the five hold the lock across a CALL (`record()` takes the lock and calls
-`save()`; `note()` takes it and calls `write()`), so the write is a frame
-deeper than any function-local scan can see; and two of the five spell
-`lock.lock()` and `defer { lock.unlock() }` on separate lines, which cut one
-read as an immediate release. **Cut two** flagged any locked type touching
-`UserDefaults` anywhere: it caught all five and falsely accused `AgentAnswer`
-and `EmbeddingIndex`, both of which keep a lock and write defaults on paths no
-lock-holder can reach. **Cut three** resolves, per type, which of its own
-functions reach a defaults write transitively, and treats a call to one of
-those under a lock as the write it is.
-
-So `--self-test` does not stop at fixtures. It reads the five files **as they
-shipped in build 570, out of git**, and requires every one to be caught; it
-reads the two lookalikes from the same commit and requires both to come back
-clean. Fixtures prove a check does what you meant. Only the tree proves you
-meant the right thing — the first cut was green on fixtures while four of five
-real defects walked past it.
-
-**What was found and NOT fixed.** The body reads are still body reads:
-`AccountPageState.of` and the header's `metaLine` take `BridgeHealth`'s lock
-from inside a SwiftUI body, which is §628's rule broken from the chassis, and
-§710 made them cheap rather than moving them. With the writer fixed they can no
-longer deadlock — every holder of these locks now does nothing but in-memory
-work while holding one — so this is a correctness-neutral cleanup across 55
-screens, and it is not being written blind on the same day as the fix for the
-crash it would have prevented.
-
-**UNCOMPILED and UNSEEN** — Linux session, no Xcode, no `swiftc`, no
-simulator. Verified: `defaults-lock-audit.py --self-test` green (14 fixtures,
-5 shipped defects caught, 2 lookalikes cleared), every other
-`scripts/*-audit.py` and its self-test green.
-
-## §721 — The ranked board is deleted from every room, and the newest thing takes its slot (user: "i also don't like that chart we have on the header about who you read the most … i say we get rid of it" → "lets do everyroom it doesn't really seem useful seems like we were trying to add visualization data just for the sake of it" → "we should replace it with a card for the most recent item like we do on the all page", 2026-09-14)
+## §723 — The ranked board is deleted from every room, and the newest thing takes its slot (user: "i also don't like that chart we have on the header about who you read the most … i say we get rid of it" → "lets do everyroom it doesn't really seem useful seems like we were trying to add visualization data just for the sake of it" → "we should replace it with a card for the most recent item like we do on the all page", 2026-09-14)
 
 **The ruling, and its reason.** `FeedInsight.leaderboard` headed about fifteen
 rooms with ranked bars — "Your publishers", "Your top artists", "Who writes

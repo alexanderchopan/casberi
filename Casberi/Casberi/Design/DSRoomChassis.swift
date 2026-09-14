@@ -277,8 +277,25 @@ enum DSRoomChassis {
     /// points off the bottom of the line.
     static let crownRangeChips: CGFloat = 42
 
-    /// What is left of `visualSlot` for WALLET's crown line to draw into.
-    static let crownChart: CGFloat = crownLine(box: visualSlot, chrome: crownChrome)
+    /// **WHAT IS LEFT OF THE BOX FOR A CROWN'S LINE — chips included (prd §688
+    /// amendment, 2026-09-14, user: "7d and watched is clipping").**
+    ///
+    /// §688 added `crownRangeChips` and spent it in `RoomHomeCrown`, the shared
+    /// template. The WALLET room does not go through that template — it builds
+    /// `WalletBalanceHeadline` itself — and it read the bare `crownChart`
+    /// constant, which budgets `crownChrome` alone. So the one room that has
+    /// drawn range chips the longest was the one room still paying nothing for
+    /// them: its line took the whole box and pushed the track out through
+    /// `DSRoomSlot`'s clip, which is the report above. `RoomActivityChart` drew
+    /// the same chips against the same bare budget one tab over.
+    ///
+    /// A constant could not be right for both cases — the chips are not always
+    /// offered (a record with one honest window draws none, §83's dead control)
+    /// — so this asks, and there is nothing left for a caller to get wrong but
+    /// the question it is answering.
+    static func crownChart(box: CGFloat = DSRoomChassis.visualSlot, chips: Bool) -> CGFloat {
+        crownLine(box: box, chrome: crownChrome + (chips ? crownRangeChips : 0))
+    }
 
     /// **A CROWN'S LINE, GIVEN ITS BOX AND ITS OWN CHROME** (prd §588).
     ///

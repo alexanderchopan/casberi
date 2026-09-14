@@ -1,89 +1,87 @@
 import Foundation
 
-/// **A `UserDefaults` WRITE IS NEVER DONE WHILE HOLDING A LOCK (prd §720).**
+/// Persist a store's snapshot to `UserDefaults` WITHOUT posting its change
+/// notification from inside a lock (prd §721).
 ///
-/// This is a deadlock, not a slow path, and it killed build 570 on a real
-/// phone (crash report 2026-09-13, `0x8BADF00D` scene-update watchdog,
-/// *"is stuck (deadlock)"*). The give-away in that report is the CPU line:
-/// **"Elapsed application CPU time (seconds): 0.017, 0% CPU."** Every other
-/// watchdog in this project's history (§614, §642, §646, §657) is the app
-/// doing too much work to answer in time. This one did nothing at all.
+/// **The crash this exists to prevent.** Build 570 on a phone died
+/// `0x8BADF00D` — a scene-update watchdog, main thread deadlocked, four
+/// minutes after launch. It is not §614's family (nothing was rendering too
+/// slowly) and not §646's (no query was re-read): the main thread and a bridge
+/// sweep took two locks in opposite orders.
 ///
-/// The cycle, both halves of it in the report:
+///   · MAIN, inside a view body, holds SwiftUI's update lock (every body runs
+///     under `Update.ensure`) and asks `BridgeHealth` for a seat's record —
+///     which takes `BridgeHealth.lock`. Every account page does this: 55
+///     screens call `AccountPageState.of` from their body.
+///   · A SWEEP, off the main actor, holds `BridgeHealth.lock` (its whole
+///     load-modify-save is one critical section, prd §710) and calls
+///     `UserDefaults.standard.set` inside it. **That posts
+///     `didChangeNotification` synchronously, on the calling thread**, and any
+///     app with an `@AppStorage` anywhere has SwiftUI's own observer on it:
+///     `UserDefaultObserver.userDefaultsDidChange` → `Update.enqueueAction` →
+///     `Update.begin` → the update lock main is holding.
 ///
-/// 1. A background cooperative thread takes a store's `NSLock` and, while
-///    holding it, calls `UserDefaults.standard.set`.
-/// 2. `UserDefaults` posts `NSUserDefaultsDidChangeNotification`
-///    **synchronously, on that same thread**.
-/// 3. SwiftUI observes it — `UserDefaultObserver.userDefaultsDidChange`, which
-///    is how `@AppStorage` invalidates — and calls `Update.enqueueAction` →
-///    `Update.begin()`, which takes SwiftUI's own global update lock.
-/// 4. Meanwhile the MAIN thread is inside `ViewBodyAccessor.updateBody`, so it
-///    already holds SwiftUI's update lock, and the body it is evaluating asks
-///    the same store for a reading — `lock.lock()`.
+/// Neither side can finish. The app freezes wherever it is standing — a tap on
+/// the catalogue does nothing, no page redraws — and the watchdog kills it
+/// however many seconds later. Nothing here could ever see it: the deadlock
+/// needs a sweep response and a body evaluation to overlap on a device, both
+/// builds are clean, and every screenshot pass and probe launch renders it
+/// perfectly.
 ///
-/// Background holds ours and wants SwiftUI's; main holds SwiftUI's and wants
-/// ours. Neither ever moves, and the watchdog kills the process. In the
-/// report five more cooperative threads are queued behind the same lock.
+/// **THE RULE, and it is broader than this file.** Code holding a lock that
+/// the main thread can contend must not call out to anything that takes
+/// SwiftUI's update lock. `UserDefaults.set` is the one that hides it — it
+/// reads as a pure store write and is a synchronous notification post.
+/// `scripts/defaults-lock-audit.py` is that rule, mechanically.
 ///
-/// **Both halves were introduced deliberately and separately**, which is why
-/// nobody saw the pair: §710 memoised `BridgeHealth` behind a lock (to stop a
-/// body's three decodes per pass) and left its `UserDefaults` write inside
-/// that lock — and the body reads §710 was making cheap are the other half.
-/// `FeedFreshness`, `NetworkLedger`, `AgentSpend` and `AppMetrics` all had the
-/// same shape, two of them with a comment explaining that the write stays
-/// inside the lock deliberately, to keep two racing flushes in order.
+/// **What this changes, and what it does not.** The value still moves under
+/// the store's own lock — the in-memory cache is authoritative and every one
+/// of these stores reads it, so nothing reads stale. Only the `UserDefaults`
+/// call is handed to this one serial queue, which keeps same-key writes in the
+/// order they were made (the reason those writes were put inside the lock in
+/// the first place: two flushes racing must not leave the older snapshot on
+/// disk). The queue is the ONLY thing holding those writes, and it holds no
+/// other lock, so the cycle above cannot form.
 ///
-/// **That ordering reason is real and this keeps it.** Writes go out on ONE
-/// serial queue in the order they were handed over — and they are handed over
-/// while the caller still holds its own lock, so the enqueue order is the
-/// snapshot order. What changes is only that `UserDefaults` is touched on a
-/// thread that holds nothing, so the notification it posts can wait for
-/// SwiftUI's update lock without a single one of this app's locks being held.
-///
-/// `data(forKey:)` is the matching read: a store that round-trips through
-/// `UserDefaults` (`AppMetrics` reads its rows back to fold new ones in) would
-/// otherwise miss a write that has not drained yet. The memo holds the newest
-/// value handed over for each key and is never cleared — there are six keys.
-///
-/// Deliberately NOT offered: a `drain()` that blocks until the queue is empty.
-/// Called from the main thread inside a body it re-creates this exact deadlock
-/// from the other direction, and nothing needs it.
+/// **Durability, stated rather than assumed — there IS a new loss window.**
+/// The disk was never synchronous (CFPreferences coalesces and flushes on its
+/// own schedule), but the value used to reach `UserDefaults`' own in-memory
+/// store on the calling line and now reaches it when the queue runs, so a
+/// process that dies in between loses a write that would previously have
+/// survived. The real case is a background sweep: a `BGAppRefreshTask` that
+/// calls `setTaskCompleted` can be suspended with a block still queued, and a
+/// suspended process that is then killed never runs it. The window is
+/// microseconds on an unloaded queue, every one of these stores keeps the
+/// value in its own cache for the life of the process, and what can be lost is
+/// one sweep's health/receipt record — weighed against an app that freezes on
+/// every page until the watchdog kills it, the trade is not close. There is
+/// deliberately no blocking drain: a `queue.sync` from the main thread would
+/// re-open the exact deadlock this closes, one lock further out.
 enum DefaultsWrite {
 
-    private static let queue = DispatchQueue(label: "com.casberi.defaults-write",
-                                             qos: .utility)
+    /// Serial, so writes to one key land in the order they were made.
+    ///
+    /// **`.userInitiated`, not `.utility`, and that is the deadlock's own
+    /// argument turned around**: `defaults.set` enters SwiftUI's update lock
+    /// on this thread, and the main thread contends that lock on every body.
+    /// A background-priority thread holding it is a priority inversion with no
+    /// donation — a frame waiting on a queue the scheduler is in no hurry to
+    /// run. Nothing on screen waits for the VALUE (every reader of these
+    /// stores reads their in-memory cache); the main thread can wait for the
+    /// LOCK the write takes, which is a different thing and the reason for the
+    /// priority.
+    private static let queue = DispatchQueue(label: "com.casberi.defaults.write",
+                                             qos: .userInitiated)
 
-    /// The newest value handed over per key — a write-through memo, so a read
-    /// that follows a write sees the write whether or not it has drained.
-    /// `Data?` VALUES, stored with `updateValue` rather than a subscript
-    /// assignment: `memo[key] = nil` would REMOVE the entry, which is the
-    /// opposite of recording "this key was cleared".
-    private static let memoLock = NSLock()
-    private static var memo: [String: Data?] = [:]
-
-    /// Persist `data` for `key` off the caller's thread; nil removes the key.
-    /// **Safe to call while holding your own lock** — that is the whole point.
-    static func set(_ data: Data?, forKey key: String) {
-        memoLock.lock()
-        memo.updateValue(data, forKey: key)
-        memoLock.unlock()
-        queue.async {
-            if let data {
-                UserDefaults.standard.set(data, forKey: key)
-            } else {
-                UserDefaults.standard.removeObject(forKey: key)
-            }
-        }
+    static func set(_ value: Data, forKey key: String,
+                    in defaults: UserDefaults = .standard) {
+        queue.async { defaults.set(value, forKey: key) }
     }
 
-    /// The value a `set` would have left, whether or not it has drained yet.
-    /// Falls through to `UserDefaults` for a key this process has not written.
-    static func data(forKey key: String) -> Data? {
-        memoLock.lock()
-        let remembered = memo[key]
-        memoLock.unlock()
-        if let remembered { return remembered }
-        return UserDefaults.standard.data(forKey: key)
+    /// Removal rides the SAME queue as the writes. A synchronous
+    /// `removeObject` would be overtaken by a write still queued for that key
+    /// — "delete everything" followed by the record it was meant to delete.
+    static func remove(_ key: String, in defaults: UserDefaults = .standard) {
+        queue.async { defaults.removeObject(forKey: key) }
     }
 }

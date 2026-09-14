@@ -793,7 +793,7 @@ enum AccountWeek {
             predicate: #Predicate { $0.source == source && $0.capturedAt >= since })
         descriptor.fetchLimit = limit
         // THE COLUMNS THIS ACTUALLY READS, WHERE THE ADOPTER SAYS SO (prd
-        // §719). A `FetchDescriptor` with no `propertiesToFetch` realizes
+        // §722). A `FetchDescriptor` with no `propertiesToFetch` realizes
         // every attribute of every row — including `embedding`, `tags` and
         // the rest of a `Thing`'s bulk — and this is bounded at 2,000 rows, on
         // the main thread, run from `onAppear` and again after every sync. For

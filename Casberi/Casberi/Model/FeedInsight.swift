@@ -8,7 +8,7 @@ import Foundation
 /// Each `make…` returns nil unless the source qualifies and enough real data
 /// exists to say something — a near-empty overview simply doesn't render.
 ///
-/// **THERE WAS A THIRD, AND IT IS DELETED (prd §721, 2026-09-14.)** A
+/// **THERE WAS A THIRD, AND IT IS DELETED (prd §723, 2026-09-14.)** A
 /// ranked-bars leaderboard headed about fifteen rooms — "Your publishers",
 /// "Your top artists", "Who writes you", "Your subreddits" — and the user
 /// ruled it out entirely: *"i don't think it really matters … seems like we

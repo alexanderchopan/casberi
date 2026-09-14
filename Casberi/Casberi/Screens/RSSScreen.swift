@@ -124,7 +124,7 @@ struct RSSScreen: View {
         let weekly = AccountWeek.counts(source: "RSS", seatID: "rss",
                                         context: modelContext,
                                         // The two columns this read uses, and
-                                        // nothing else (prd §719) — RSS is the
+                                        // nothing else (prd §722) — RSS is the
                                         // seat whose week really is two
                                         // thousand rows.
                                         properties: [\.capturedAt, \.authorHandle]) { $0.authorHandle }
@@ -387,7 +387,7 @@ struct RSSScreen: View {
     /// small honesty gap in a screen whose whole pitch is "no server in
     /// between, nothing hidden."
     ///
-    /// NOT ON THE MAIN THREAD (prd §719). This built the whole OPML document
+    /// NOT ON THE MAIN THREAD (prd §722). This built the whole OPML document
     /// and wrote it to disk synchronously, from `onAppear` and again on every
     /// change to the followed list — a string the length of the person's whole
     /// reader export, and a file write, in front of the first frame. The

@@ -172,7 +172,7 @@ check "anniversary still derived in the body" \
 #     This is the cost removal itself; without it the memo is dead weight and
 #     every swipe pays exactly what it paid before, with a cache beside it
 #     saying otherwise.
-# `leaderboard` left this list with the ranked board itself (prd §721).
+# `leaderboard` left this list with the ranked board itself (prd §723).
 for field in topicMap distribution mosaic; do
   check "shapedSections reads heads?.$field" \
         "$FEED" "heads\?\.$field" yes
@@ -199,7 +199,7 @@ check "fullRoomRows filters .live before it hands rows back" \
 # A6. THE ROOM HAS NO NARROWING LEFT, and the guard is that none comes back.
 #     Two helpers have now held this slot and both were deleted with the room
 #     they scoped: `x402Scoped` with the Circle x402 seat (2026-09-06), and
-#     `roomScoped` with the ranked board that was its only control (prd §721).
+#     `roomScoped` with the ranked board that was its only control (prd §723).
 #     The rule they encoded still stands for whatever comes third — ONE
 #     narrowing rule, shared by the rows and the head, because two spellings of
 #     one scope is how a head ends up describing rows the reader filtered away.
@@ -216,7 +216,7 @@ check "recomputeHeads takes its base whole" \
 #     scope change would be a card about rows no longer on screen.
 head_key="$(perl -0777 -ne 'print $1 if /private var headIdentity: String \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
 # `x402Lane` was one of these until 2026-09-06 and `readingScope` until prd
-# §721; both were per-room view filters, and both were deleted with the control
+# §723; both were per-room view filters, and both were deleted with the control
 # that set them. No per-room filter survives, so this list is the shell-held
 # scopes plus the revision.
 #

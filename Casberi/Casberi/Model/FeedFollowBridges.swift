@@ -104,7 +104,7 @@ final class FeedFollowStore {
         var title: String?
     }
 
-    /// The whole pass's learned facts, in ONE write (prd §719) — `RSSStore`'s
+    /// The whole pass's learned facts, in ONE write (prd §722) — `RSSStore`'s
     /// own `resolve`, for the four feed-follow seats, for the same reason.
     /// `entries` carries `didSet { persist() }`, so `setFeedURL`/`setTitle`
     /// once per follow inside `FeedFollowIngest.refresh` is one full
@@ -738,7 +738,7 @@ enum FeedFollowIngest {
             guard !name.isEmpty else { return }
             if handleless == nil {
                 let src = kind.source
-                // Two columns, not every column (prd §719) — the same reading
+                // Two columns, not every column (prd §722) — the same reading
                 // `IngestSupport.existingSourceRefs` has always taken.
                 var descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == src })
                 descriptor.propertiesToFetch = [\.sourceRef, \.authorHandle]
@@ -764,7 +764,7 @@ enum FeedFollowIngest {
                 // Realizes every column, like `IngestSupport.thingsByRef` —
                 // and for the same reason it is left that way: this map's rows
                 // are PATCHED, and a partial fetch under a write path is the
-                // one thing no check here can verify (prd §719).
+                // one thing no check here can verify (prd §722).
                 let all = (try? context.fetch(FetchDescriptor<Thing>(
                     predicate: #Predicate { $0.source == src }))) ?? []
                 byRef = Dictionary(all.compactMap { t in t.sourceRef.map { ($0, t) } },
@@ -803,7 +803,7 @@ enum FeedFollowIngest {
         }
 
         var reachedAny = false
-        // ONE STORE WRITE AND ONE INDEX CALL FOR THE WHOLE PASS (prd §719).
+        // ONE STORE WRITE AND ONE INDEX CALL FOR THE WHOLE PASS (prd §722).
         var resolutions: [FeedFollowStore.Resolution] = []
         var indexed: [Thing] = []
         for case let f? in fetched {
@@ -958,12 +958,11 @@ enum FeedFollowIngest {
                 added += 1
             }
         }
-        // One persist, one index call, one encode of the freshness store for
-        // the whole pass (prd §719) — see `FeedFollowStore.resolve`.
+        // One persist and one index call for the whole pass (prd §722) —
+        // see `FeedFollowStore.resolve`.
         store.resolve(resolutions)
         SpotlightIndex.index(indexed.filter(\.isLive))
         if added > 0 || backfill.any || patchedHandle || extraPatched { context.saveHonestly() }
-        Task.detached(priority: .utility) { FeedFreshness.flush() }
         return reachedAny ? added : nil
     }
 }

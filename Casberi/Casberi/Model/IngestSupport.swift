@@ -86,7 +86,7 @@ enum IngestSupport {
     /// table every remote ingest opens with.
     ///
     /// **THIS REALIZES EVERY COLUMN OF EVERY ROW THE SOURCE HAS EVER LANDED,
-    /// and it is unbounded by construction (prd §719, found and NOT fixed).**
+    /// and it is unbounded by construction (prd §722, found and NOT fixed).**
     /// It grows with the corpus forever, runs on the main actor, and the feed
     /// bridges run it on every visit to their page and every foreground sweep
     /// — so on the highest-volume source (RSS: fifteen items per feed per

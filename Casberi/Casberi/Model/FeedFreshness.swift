@@ -194,40 +194,15 @@ enum FeedFreshness {
 
     /// Written from every concurrent feed fetch (`boundedGather` runs up to
     /// eight at once) and read from the main actor by the two screens, so
-    /// every access below takes this.
-    ///
-    /// **THE ENCODE IS NOT DONE UNDER IT, AND NOT ONCE PER FETCH (prd §719).**
-    /// This doc used to end "writes are one small dictionary encode per fetch
-    /// — cheap enough that a lock beats an actor's hop here", and that reading
-    /// is true of one feed and false of a feed LIST. `write` encoded the whole
-    /// store — up to `cap` = 400 records — on every `note`, i.e. once per feed
-    /// per pass, while holding this lock; and the lock is what
-    /// `troubles(for:)` takes on the main thread when the RSS page composes
-    /// its roster. A 300-feed sync was therefore 300 full encodes plus 300
-    /// `UserDefaults` writes, with the main thread queueing behind each one,
-    /// on a screen that syncs on every appearance. §710 fixed this exact shape
-    /// at `forget` and left it here.
-    ///
-    /// `cache` is authoritative in memory, so a write is now a dictionary
-    /// assignment plus a flag; the encode happens ONCE per burst, off this
-    /// lock and off the main thread. That is safe for precisely the reason
-    /// this type's own doc gives: *a lost cache costs one full fetch, never a
-    /// follow*.
+    /// every access below takes this. Writes are one small dictionary encode
+    /// per fetch — cheap enough that a lock beats an actor's hop here.
     private static let lock = NSLock()
     private static var cache: [String: Record]?
-    /// `cache` holds writes `UserDefaults` has not taken yet.
-    private static var dirty = false
-    /// A flush is already scheduled — single-flighted, so a burst of eight
-    /// concurrent fetches schedules one encode between them.
-    private static var flushScheduled = false
-    /// How long a burst may collect before it is written. Short enough that an
-    /// ordinary app kill loses nothing a re-fetch would not redo.
-    private static let flushDelay: Duration = .milliseconds(400)
 
     /// Caller must hold `lock`.
     private static func loaded() -> [String: Record] {
         if let cache { return cache }
-        let decoded = (DefaultsWrite.data(forKey: storeKey))
+        let decoded = (UserDefaults.standard.data(forKey: storeKey))
             .flatMap { try? JSONDecoder().decode([String: Record].self, from: $0) } ?? [:]
         cache = decoded
         return decoded
@@ -252,38 +227,11 @@ enum FeedFreshness {
             for key in doomed { records.removeValue(forKey: key) }
         }
         cache = records
-        dirty = true
-        guard !flushScheduled else { return }
-        flushScheduled = true
-        Task.detached(priority: .utility) {
-            try? await Task.sleep(for: flushDelay)
-            flush()
-        }
-    }
-
-    /// Encodes the store to `UserDefaults`, if anything has changed since the
-    /// last time (prd §719). Called on a short debounce after any write, and
-    /// explicitly at the end of a feed pass so a sync's whole record set is
-    /// durable without waiting out the debounce. **Both callers are off the
-    /// main thread and it must stay that way** — this is the encode the pass
-    /// exists to move, so calling it from the main actor would put it straight
-    /// back.
-    ///
-    /// The encode is deliberately OUTSIDE the lock: a `[String: Record]` is a
-    /// value, so the copy taken here cannot be torn by a concurrent write, and
-    /// holding the lock across a 400-record `JSONEncoder` pass is the cost
-    /// this whole change exists to take off the main thread.
-    static func flush() {
-        lock.lock()
-        flushScheduled = false
-        guard dirty, let records = cache else { lock.unlock(); return }
-        dirty = false
-        lock.unlock()
+        // Through `DefaultsWrite`, never `UserDefaults.standard.set`: this
+        // runs under `lock`, and a defaults write posts its notification
+        // synchronously into SwiftUI's update lock — prd §721's deadlock,
+        // which `BridgeHealth` (this file's own shape) shipped.
         if let data = try? JSONEncoder().encode(records) {
-            // `DefaultsWrite`, never `UserDefaults` directly (prd §720) — this
-            // store had build 570's exact deadlock shape too, and the lock
-            // being released two lines up is not on its own a guarantee: the
-            // rule is one door, checked mechanically.
             DefaultsWrite.set(data, forKey: storeKey)
         }
     }

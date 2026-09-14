@@ -367,7 +367,7 @@ guard_has() {
 # still holds where it moved — the brief draws those rails and excludes
 # receipts, and TodayBrief's own checks cover it there.
 guard_has "the chain still asks topicMap first" "$COMPOSER" 'FeedInsight\.topicMap\(source:' || rc=1
-# "…then leaderboard" is DELETED (prd §721) — the ranked board is gone from
+# "…then leaderboard" is DELETED (prd §723) — the ranked board is gone from
 # `RoomFigure`'s chain along with every room it headed, so a figure now goes
 # topic map → distribution → mosaic → heatmap.
 guard_has "…then distribution"  "$COMPOSER" 'FeedInsight\.distribution\(source:' || rc=1
