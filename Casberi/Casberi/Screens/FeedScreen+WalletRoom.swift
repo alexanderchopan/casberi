@@ -678,8 +678,9 @@ extension FeedScreen {
     /// gain. It follows the balance card's own window, so the two can never
     /// describe different periods on one screen.
     ///
-    /// Nothing renders without a band worth drawing — `WalletFlow.band`
-    /// declines on an unpriceable or single-lane window.
+    /// Nothing renders without something to list — `WalletFlow.home` declines
+    /// only when no move in the window carried a price AND none came in as a
+    /// token (prd §727). The brief keeps `WalletFlow.band` and its floor.
     ///
     /// **A DECLINE IS DRAWN, NOT LEFT AS AIR (2026-09-03, prd §589).** The
     /// slot is fixed (§483), so a nil band was a fixed box of nothing over a
@@ -690,15 +691,15 @@ extension FeedScreen {
     /// over.
     @ViewBuilder
     var walletFlowSection: some View {
-        let verdict = WalletFlowSource.verdict(from: visible, since: flowWindowStart)
-        if let band = verdict.band {
+        let verdict = WalletFlowSource.home(from: visible, since: flowWindowStart)
+        if let home = verdict.home {
             // **ROWS, NOT THE BAND (prd §692, user: "i don't like the sankey on
             // the home list area it looks weird to have a chart there now that
             // i see it").** Same `Band`, same window, same numbers — the list
             // half of a room draws a list. `WalletFlowBand` itself stays: the
             // brief renders it through `GenRenderer`, where a diagram is the
             // right shape for a card somebody reads once.
-            WalletFlowRows(band: band, windowLabel: balanceRange.flowLabel)
+            WalletFlowRows(home: home, windowLabel: balanceRange.flowLabel)
                     .modifier(rowEntrance(1))
         } else if let decline = verdict.decline {
             WalletFlowEmptyFigure(decline: decline, windowLabel: balanceRange.flowLabel,

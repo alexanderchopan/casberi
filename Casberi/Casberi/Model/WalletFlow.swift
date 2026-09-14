@@ -40,6 +40,13 @@ enum WalletFlow {
         /// to zero: an unpriced move is unknown, and a zero would shrink the
         /// band's own scale while pretending to be a measurement.
         let usd: Double?
+        /// The token and quantity the transfer was stamped with ("1,000
+        /// MCAT"), split at the boundary by `parseAmount` (prd §727). Read only
+        /// by `unpricedTokens`: a move nobody priced still has a quantity, and
+        /// Home says how much of a token came in without converting it. nil
+        /// when the row carried no stamped amount.
+        var token: String? = nil
+        var amount: Double? = nil
     }
 
     /// One counterparty's share of one side.
@@ -197,6 +204,15 @@ enum WalletFlow {
     /// data — they never reach the floor, and are carried only so the card can
     /// say they exist.
     static func band(legs: [Leg], predating: Int = 0) -> Band? {
+        build(legs: legs, predating: predating, floor: true, minimumLanes: 2)
+    }
+
+    /// The one grouping behind both readers. `band` keeps the floor and the
+    /// two-lane minimum, because it is a DIAGRAM sized by dollars (the brief,
+    /// the widget); `home` drops both, because a list accounts for its
+    /// unpriced moves by listing them (prd §727).
+    private static func build(legs: [Leg], predating: Int,
+                              floor: Bool, minimumLanes: Int) -> Band? {
         let unpriced = legs.filter { $0.usd == nil }.count
         let priced = legs.compactMap { leg -> (Leg, Double)? in
             guard let usd = leg.usd, usd > 0, usd.isFinite else { return nil }
@@ -206,7 +222,7 @@ enum WalletFlow {
         // Enough of the window has to be priced for the picture to be about
         // the window — see `minPricedShare`. The footnote alone doesn't undo a
         // confident five-lane band drawn over a tenth of the moves.
-        guard Double(priced.count) / Double(legs.count) >= minPricedShare else { return nil }
+        guard !floor || Double(priced.count) / Double(legs.count) >= minPricedShare else { return nil }
 
         let inTotal = priced.filter { $0.0.received }.reduce(0.0) { $0 + $1.1 }
         let outTotal = priced.filter { !$0.0.received }.reduce(0.0) { $0 + $1.1 }
@@ -220,8 +236,158 @@ enum WalletFlow {
         let band = Band(inLanes: inLanes, outLanes: outLanes,
                         inUSD: inTotal, outUSD: outTotal, unpricedCount: unpriced,
                         predatingCount: predating)
-        guard band.laneCount >= 2 else { return nil }
+        guard band.laneCount >= minimumLanes else { return nil }
         return band
+    }
+
+    // MARK: - Home: priced rows, and the tokens that came in with no price (prd §727)
+
+    /// One token that arrived with no dollar value, drawn as a plain row: its
+    /// symbol, how much of it came in, and over how many moves. No sender —
+    /// most of these are sent by the token's own launch contract, so a face
+    /// there names nobody (user: "plain row").
+    struct UnpricedToken: Identifiable, Equatable {
+        /// `"token:sym:MCAT"`, or `"token:other"` for the folded tail.
+        let id: String
+        let symbol: String
+        /// The summed quantity. nil when any of its moves carried no readable
+        /// amount — a sum over some of them is a smaller number wearing the
+        /// total's name.
+        let amount: Double?
+        /// How many moves this row stands for.
+        let count: Int
+        /// How many distinct tokens: 1, except on the folded tail.
+        let tokens: Int
+        let isOther: Bool
+    }
+
+    /// Home's list half for one window.
+    struct Home: Equatable {
+        /// The priced moves as lanes, with no `minPricedShare` floor and one
+        /// lane enough. The floor stopped a DIAGRAM claiming to show where the
+        /// money went while covering a tenth of it; a list that names the
+        /// unpriced moves beside the priced ones makes no such claim. nil when
+        /// nothing in the window carried a price.
+        let band: Band?
+        /// Incoming moves with no price, one row per token, tail folded.
+        let tokens: [UnpricedToken]
+        /// Unpriced moves no row names (sent ones, and incoming ones stamped
+        /// with no symbol) — said in the footnote, never dropped.
+        let unlistedUnpriced: Int
+        let predatingCount: Int
+    }
+
+    /// Token rows shown before the rest fold into one.
+    static let unpricedTokenLimit = 3
+
+    /// A leg carries a usable price. The ONE definition: `build`'s own filter
+    /// and the token rows must never disagree about which moves are priced,
+    /// or a move would be counted in dollars and listed as unpriced at once.
+    static func isPriced(_ leg: Leg) -> Bool {
+        guard let usd = leg.usd else { return false }
+        return usd > 0 && usd.isFinite
+    }
+
+    /// Home's rows, or nil when there is nothing to list — the slot then
+    /// draws `decline`'s sentence instead.
+    static func home(legs: [Leg], predating: Int = 0) -> Home? {
+        let band = build(legs: legs, predating: predating, floor: false, minimumLanes: 1)
+        let tokens = unpricedTokens(legs)
+        guard band != nil || !tokens.isEmpty else { return nil }
+        let unpriced = legs.filter { !isPriced($0) }.count
+        let listed = tokens.reduce(0) { $0 + $1.count }
+        return Home(band: band, tokens: tokens,
+                    unlistedUnpriced: max(0, unpriced - listed),
+                    predatingCount: predating)
+    }
+
+    /// One token's running total while the rows are folded. A named struct,
+    /// for the reason `Ranked` is one.
+    private struct TokenTotal {
+        let symbol: String
+        var amount: Double?
+        var count: Int
+    }
+
+    /// Incoming unpriced moves grouped by symbol, ranked by how many moves and
+    /// then by symbol. NEVER by amount: a million of one token and five of
+    /// another are not comparable quantities, and ranking by them would rank
+    /// whichever token was minted with the most units.
+    static func unpricedTokens(_ legs: [Leg]) -> [UnpricedToken] {
+        var totals: [String: TokenTotal] = [:]
+        for leg in legs where leg.received && !isPriced(leg) {
+            guard let symbol = leg.token, !symbol.isEmpty else { continue }
+            var entry = totals[symbol] ?? TokenTotal(symbol: symbol, amount: 0, count: 0)
+            if let sum = entry.amount, let amount = leg.amount, amount > 0, amount.isFinite {
+                entry.amount = sum + amount
+            } else {
+                entry.amount = nil
+            }
+            entry.count += 1
+            totals[symbol] = entry
+        }
+        let ranked: [TokenTotal] = totals.values.sorted { (a: TokenTotal, b: TokenTotal) -> Bool in
+            a.count == b.count ? a.symbol < b.symbol : a.count > b.count
+        }
+        // Folding ONE token into "1 more token" hides a row to save a row.
+        let limit = ranked.count <= unpricedTokenLimit + 1 ? ranked.count : unpricedTokenLimit
+        var rows: [UnpricedToken] = []
+        for entry in ranked.prefix(limit) {
+            rows.append(UnpricedToken(id: "token:sym:\(entry.symbol)", symbol: entry.symbol,
+                                      amount: entry.amount, count: entry.count,
+                                      tokens: 1, isOther: false))
+        }
+        let rest = ranked.dropFirst(limit)
+        if !rest.isEmpty {
+            rows.append(UnpricedToken(id: "token:other", symbol: "", amount: nil,
+                                      count: rest.reduce(0) { $0 + $1.count },
+                                      tokens: rest.count, isOther: true))
+        }
+        return rows
+    }
+
+    /// A stamped `transferAmount` ("1,000 MCAT", "0.5300 ETH", or a bare
+    /// "MCAT") split into its quantity and symbol.
+    ///
+    /// Not a parse of prose: the field is stamped by `WalletIngest.thing` in
+    /// one documented shape, `WalletIngest.format(v) + " " + asset`, the same
+    /// field `BalancePrivacy` already reads a symbol from. A head that isn't a
+    /// number in that formatter's shapes leaves the whole string as the symbol
+    /// and no amount, which draws a row with no quantity rather than a wrong one.
+    static func parseAmount(_ text: String) -> (amount: Double?, symbol: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard let space = trimmed.firstIndex(of: " "),
+              let amount = quantity(String(trimmed[..<space])) else {
+            return (nil, trimmed)
+        }
+        let symbol = trimmed[trimmed.index(after: space)...].trimmingCharacters(in: .whitespaces)
+        return symbol.isEmpty ? (nil, trimmed) : (amount, symbol)
+    }
+
+    /// One head in `WalletIngest.format`'s three shapes. Below 1,000 it is
+    /// POSIX-dotted with a FIXED number of decimals (`%.2f` from 1, `%.4f`
+    /// below it), so a dot followed by exactly those digits is a decimal
+    /// point. From 1,000 it is a whole number grouped in the INGESTING
+    /// device's locale ("1,000", "1.000", "1 000"), so every separator is
+    /// grouping — which is what makes a German "1.000" read as a thousand and
+    /// not as one.
+    static func quantity(_ head: String) -> Double? {
+        guard let first = head.first, first.isASCII, first.isNumber else { return nil }
+        if head.range(of: #"^[0-9]+\.[0-9]{2}$"#, options: .regularExpression) != nil
+            || head.range(of: #"^0\.[0-9]{4}$"#, options: .regularExpression) != nil {
+            return Double(head)
+        }
+        // No plain space: the head was already cut at the FIRST space, and the
+        // formatter's space-grouping locales use a no-break space instead.
+        let separators: Set<Character> = [",", ".", "'", "\u{00A0}", "\u{202F}", "\u{2019}"]
+        guard head.allSatisfy({ ($0.isASCII && $0.isNumber) || separators.contains($0) }) else {
+            return nil
+        }
+        let digits = head.filter { $0.isASCII && $0.isNumber }
+        // This branch is the formatter's >= 1,000 shape, so it has four digits
+        // or more; "0" is its zero. Anything shorter was never its output.
+        guard digits.count >= 4 || head == "0" else { return nil }
+        return Double(digits)
     }
 
     /// How tall each lane's slab draws on one side of the band.

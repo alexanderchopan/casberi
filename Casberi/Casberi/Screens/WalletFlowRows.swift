@@ -32,8 +32,18 @@ import SwiftUI
 ///
 /// The band itself is NOT deleted: `GenRenderer` draws it from
 /// `TodayBrief.flowBand`, where a diagram in a brief is the right shape.
+///
+/// **A TOKEN WITH NO PRICE IS A ROW, NOT A REASON TO DRAW NOTHING (prd §727,
+/// user: "it could also say how much of a token came in without converting it
+/// into dollars" → "plain row").** Home used to take the brief's `Band`, and
+/// with it the floor that refuses a window less than half priced — so a wallet
+/// that is mostly airdropped tokens nobody trades read "Only 31 of 99 moves
+/// carry a price" over an empty bar, while its real USDC and WETH moves went
+/// unlisted. It takes `WalletFlow.Home` now: the priced rows with no floor,
+/// then one plain row per token that came in unpriced — symbol and quantity,
+/// no sender, no dollar figure, and never in the net above.
 struct WalletFlowRows: View {
-    let band: WalletFlow.Band
+    let home: WalletFlow.Home
     /// The window the band was read over — "the last 24 hours", say. Stated
     /// once above the blocks rather than per block, since both describe it.
     let windowLabel: String
@@ -42,15 +52,22 @@ struct WalletFlowRows: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
-            summaryLine
-            if !band.inLanes.isEmpty {
-                RoomListBlock(caption: String(localized: "Came in · \(windowLabel)")) {
-                    lanes(band.inLanes, incoming: true)
+            if let band = home.band {
+                summaryLine(band)
+                if !band.inLanes.isEmpty {
+                    RoomListBlock(caption: String(localized: "Came in · \(windowLabel)")) {
+                        lanes(band.inLanes, incoming: true)
+                    }
+                }
+                if !band.outLanes.isEmpty {
+                    RoomListBlock(caption: String(localized: "Went out · \(windowLabel)")) {
+                        lanes(band.outLanes, incoming: false)
+                    }
                 }
             }
-            if !band.outLanes.isEmpty {
-                RoomListBlock(caption: String(localized: "Went out · \(windowLabel)")) {
-                    lanes(band.outLanes, incoming: false)
+            if !home.tokens.isEmpty {
+                RoomListBlock(caption: String(localized: "Came in with no price · \(windowLabel)")) {
+                    tokenRows(home.tokens)
                 }
             }
             if let note = unpricedNote {
@@ -78,7 +95,7 @@ struct WalletFlowRows: View {
     /// a down window stays in plain ink rather than red: spending is not a
     /// failure, and red here would be the app grading an ordinary week.
     @ViewBuilder
-    private var summaryLine: some View {
+    private func summaryLine(_ band: WalletFlow.Band) -> some View {
         let net = band.netUSD
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Text("in \(WalletValue.money(band.inUSD)) · out \(WalletValue.money(band.outUSD))")
@@ -103,9 +120,7 @@ struct WalletFlowRows: View {
             ForEach(Array(lanes.enumerated()), id: \.element.id) { index, lane in
                 WalletRow(mark: mark(lane),
                           title: title(lane),
-                          subtitle: lane.count == 1
-                              ? String(localized: "1 transaction")
-                              : String(localized: "\(String(lane.count)) transactions")) {
+                          subtitle: transactions(lane.count)) {
                     // **THE SIGN IS THE DIRECTION, and the block caption says
                     // it too.** Both, deliberately: a row read alone — by
                     // VoiceOver, or scrolled past its caption — has to carry
@@ -115,6 +130,48 @@ struct WalletFlowRows: View {
                 .chartArrival(index: index, reduceMotion: reduceMotion)
             }
         }
+    }
+
+    /// One plain row per token that came in with no price (prd §727). The
+    /// terminal form: nothing opens, because a row here is usually several
+    /// moves folded together, the same reason a lane opens nothing.
+    @ViewBuilder
+    private func tokenRows(_ tokens: [WalletFlow.UnpricedToken]) -> some View {
+        VStack(spacing: DS.Space.s2) {
+            ForEach(Array(tokens.enumerated()), id: \.element.id) { index, token in
+                WalletRow(terminal: tokenMark(token),
+                          title: tokenTitle(token),
+                          subtitle: transactions(token.count))
+                    .chartArrival(index: index, reduceMotion: reduceMotion)
+            }
+        }
+    }
+
+    /// The token's own mark where the app bundles one, a quiet monogram where
+    /// it doesn't. Quiet ink, because an unpriced token is not money this
+    /// card can vouch for.
+    private func tokenMark(_ token: WalletFlow.UnpricedToken) -> WalletRowMark {
+        if token.isOther { return .symbol("ellipsis", tint: DS.textTertiary) }
+        return .asset(token.symbol, tint: DS.textTertiary)
+    }
+
+    /// "1,000 MCAT", through `WalletValue.token` so hidden balances hide the
+    /// quantity and keep the symbol (§374). A token whose amount could not be
+    /// summed says its symbol alone rather than a partial number.
+    private func tokenTitle(_ token: WalletFlow.UnpricedToken) -> String {
+        if token.isOther {
+            return token.tokens == 1
+                ? String(localized: "1 more token")
+                : String(localized: "\(String(token.tokens)) more tokens")
+        }
+        guard let amount = token.amount else { return token.symbol }
+        return WalletValue.token(amount, token.symbol)
+    }
+
+    private func transactions(_ count: Int) -> String {
+        count == 1
+            ? String(localized: "1 transaction")
+            : String(localized: "\(String(count)) transactions")
     }
 
     /// A counterparty wears its FACE; the folded lane wears a glyph, because
@@ -133,19 +190,20 @@ struct WalletFlowRows: View {
         return WalletStore.shortAddress(lane.key)
     }
 
-    /// What the blocks could not price, said once. The band draws this inside
-    /// its own frame; a list has no frame, so it goes at the foot.
+    /// What no row names, said once at the foot. Since §727 the unpriced moves
+    /// that came in are ROWS, so this counts only the rest: sent ones, and any
+    /// stamped with no symbol.
     private var unpricedNote: String? {
         var parts: [String] = []
-        if band.unpricedCount > 0 {
-            parts.append(band.unpricedCount == 1
+        if home.unlistedUnpriced > 0 {
+            parts.append(home.unlistedUnpriced == 1
                          ? String(localized: "1 move had no price to read")
-                         : String(localized: "\(String(band.unpricedCount)) moves had no price to read"))
+                         : String(localized: "\(String(home.unlistedUnpriced)) moves had no price to read"))
         }
-        if band.predatingCount > 0 {
-            parts.append(band.predatingCount == 1
+        if home.predatingCount > 0 {
+            parts.append(home.predatingCount == 1
                          ? String(localized: "1 predates what this app priced")
-                         : String(localized: "\(String(band.predatingCount)) predate what this app priced"))
+                         : String(localized: "\(String(home.predatingCount)) predate what this app priced"))
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }

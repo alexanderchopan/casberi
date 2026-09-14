@@ -6727,6 +6727,34 @@
         }
       }
     },
+    "%@ more tokens" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ tokens más"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ほか%@トークン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "토큰 %@개 더"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "另外 %@ 个代币"
+          }
+        }
+      }
+    },
     "%@ more, with no block on them." : {
       "localizations" : {
         "es" : {
@@ -45637,6 +45665,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "调用了一个合约。"
+          }
+        }
+      }
+    },
+    "Came in with no price · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recibido sin precio · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "価格なしで受け取り · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가격 없이 받음 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无价格转入 · %@"
           }
         }
       }

@@ -48,6 +48,17 @@ enum WalletFlowSource {
         return (nil, WalletFlow.decline(legs: split.legs, predating: split.predating))
     }
 
+    /// Home's rows, or the reason there are none — exactly one is non-nil
+    /// (prd §727). `verdict` stays for the brief's diagram and keeps its floor.
+    static func home(from things: [Thing],
+                     since: Date?) -> (home: WalletFlow.Home?, decline: WalletFlow.Decline?) {
+        let split = partition(from: things, since: since)
+        if let home = WalletFlow.home(legs: split.legs, predating: split.predating) {
+            return (home, nil)
+        }
+        return (nil, WalletFlow.decline(legs: split.legs, predating: split.predating))
+    }
+
     /// The window's legs, split from the ones that can never carry a price.
     ///
     /// The split is what makes `minPricedShare` mean "how well is pricing
@@ -194,8 +205,11 @@ enum WalletFlowSource {
             let key = thing.transferCounterparty?.lowercased()
                 ?? address
                 ?? "unknown:\(thing.id.uuidString)"
+            // The stamped quantity, for Home's unpriced-token rows (prd §727).
+            let stamped = thing.transferAmount.map(WalletFlow.parseAmount)
             out.append((WalletFlow.Leg(received: received, name: name,
-                                       key: key, usd: thing.transferUSD),
+                                       key: key, usd: thing.transferUSD,
+                                       token: stamped?.symbol, amount: stamped?.amount),
                         thing.capturedAt))
         }
         return out

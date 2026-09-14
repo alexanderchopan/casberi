@@ -192,8 +192,8 @@ grep -q 'abs(net) >= 1' <<< "$ROWS_CODE" \
   || { echo "✗ a net that rounds to nothing is being given a direction (§83's isFlat rule)"; exit 1; }
 grep -q 'DS.destructive' <<< "$ROWS_CODE" \
   && { echo "✗ a down window is drawn in the alarm colour — spending is not a failure"; exit 1; }
-grep -q 'WalletFlowRows(band: band' <<< "$FEED_CODE" \
-  || { echo "✗ Home's flow slot no longer draws WalletFlowRows (prd §692) — a chart"; \
+grep -q 'WalletFlowRows(home: home' <<< "$FEED_CODE" \
+  || { echo "✗ Home's flow slot no longer draws WalletFlowRows from WalletFlow.Home (prd §692, §727) — a chart"; \
        echo "  in the list half is the shape this ruling replaced"; exit 1; }
 grep -q 'WalletFlowBand(band: band' <<< "$FEED_CODE" \
   && { echo "✗ the sankey is back in the room's list half (prd §692) — the band"; \
@@ -201,9 +201,17 @@ grep -q 'WalletFlowBand(band: band' <<< "$FEED_CODE" \
 grep -q 'WalletFlowEmptyFigure(decline: ' <<< "$FEED_CODE" \
   || { echo "✗ walletFlowSection no longer draws WalletFlowEmptyFigure when the band"; \
        echo "  declines (prd §589) — a fixed slot with nothing in it is a dead control"; exit 1; }
-grep -q 'WalletFlowSource.verdict(from: visible' <<< "$FEED_CODE" \
-  || { echo "✗ walletFlowSection no longer reads WalletFlowSource.verdict — band and"; \
-       echo "  decline must come from ONE walk of the room (prd §589)"; exit 1; }
+grep -q 'WalletFlowSource.home(from: visible' <<< "$FEED_CODE" \
+  || { echo "✗ walletFlowSection no longer reads WalletFlowSource.home — rows and"; \
+       echo "  decline must come from ONE walk of the room (prd §589), and Home must not"; \
+       echo "  take the brief's floored band back (prd §727)"; exit 1; }
+# (2e) A TOKEN WITH NO PRICE IS A ROW (prd §727). Its quantity goes through the
+# privacy gate like every other amount in the room, and the block exists at all.
+grep -q 'home.tokens' <<< "$ROWS_CODE" \
+  || { echo "✗ Home stopped listing the tokens that came in with no price (prd §727)"; exit 1; }
+grep -q 'WalletValue.token(amount, token.symbol)' <<< "$ROWS_CODE" \
+  || { echo "✗ an unpriced token's quantity no longer goes through WalletValue.token —"; \
+       echo "  hidden balances would show it (prd §374)"; exit 1; }
 grep -q 'portfolio.shapeLine' <<< "$FEED_CODE" \
   || { echo "✗ the holdings tail no longer reads WalletPortfolio.shapeLine — compose it"; \
        echo "  in the model, never in the view"; exit 1; }
@@ -525,6 +533,76 @@ do {
         leg(true, "Real", 100), leg(true, "Broken", .infinity), leg(false, "Out", 40),
     ])
     eq(band?.inUSD, 100, "a non-finite price is refused, not summed")
+}
+
+// HOME (prd §727): the priced moves as rows with no floor, and every token that
+// came in with no price as its own plain row. The brief's `band` keeps its floor.
+func tleg(_ symbol: String, _ amount: Double?, received: Bool = true) -> WalletFlow.Leg {
+    WalletFlow.Leg(received: received, name: "", key: "0x\(symbol)", usd: nil,
+                   token: symbol, amount: amount)
+}
+do {
+    // The reported wallet's shape: 31 priced moves, 68 unpriced airdrops.
+    var legs = (0..<31).map { leg($0 % 2 == 0, "USDC\($0 % 3)", 10) }
+    legs += (0..<68).map { tleg("T\($0 % 30)", 1000) }
+    check(WalletFlow.band(legs: legs) == nil, "the brief's diagram still declines below the floor")
+    let home = WalletFlow.home(legs: legs)
+    check(home?.band != nil, "Home lists the priced moves below the floor")
+    eq(home?.band?.inUSD, 160, "…in dollars, over the priced moves only")
+    eq(home?.band?.outUSD, 150, "…both sides")
+    check(home?.tokens.count == WalletFlow.unpricedTokenLimit + 1, "tokens fold after the limit")
+    check(home?.tokens.last?.isOther == true, "…into one row")
+    check(home?.tokens.last?.tokens == 27, "the folded row counts tokens")
+    check(home?.tokens.reduce(0) { $0 + $1.count } == 68, "every unpriced move that came in is on a row")
+    check(home?.unlistedUnpriced == 0, "nothing is left for the footnote")
+    check(home?.tokens.first?.symbol == "T0", "most moves first, ties by symbol")
+    eq(home?.tokens.first?.amount, 3000, "a token's moves sum")
+}
+do {
+    let t = WalletFlow.unpricedTokens([tleg("MCAT", 1_000_000), tleg("FEEDS", 2), tleg("FEEDS", nil)])
+    check(t.map(\.symbol) == ["FEEDS", "MCAT"], "ranked by moves, never by quantity")
+    eq(t.first(where: { $0.symbol == "FEEDS" })?.amount, nil,
+       "one unreadable amount withholds the sum rather than shrinking it")
+    check(WalletFlow.unpricedTokens([tleg("OUT", 5, received: false)]).isEmpty,
+          "a token sent away is not a came-in row")
+    let four = WalletFlow.unpricedTokens((0..<4).map { tleg("A\($0)", 1) })
+    check(four.count == 4 && !four.contains { $0.isOther }, "one token past the limit shows rather than folds")
+    let priced = WalletFlow.Leg(received: true, name: "", key: "k", usd: 5, token: "USDC", amount: 5)
+    check(WalletFlow.unpricedTokens([priced]).isEmpty, "a priced move is never also an unpriced row")
+    let broken = WalletFlow.Leg(received: true, name: "", key: "k", usd: .infinity, token: "BAD", amount: 5)
+    check(WalletFlow.unpricedTokens([broken]).map(\.symbol) == ["BAD"],
+          "a price the band refuses is unpriced here too — one definition of priced")
+    check(WalletFlow.home(legs: []) == nil, "an empty window lists nothing")
+    check(WalletFlow.home(legs: [leg(false, "B", nil)]) == nil, "a sent unpriced move alone lists nothing")
+    check(WalletFlow.home(legs: [leg(true, "Only", 500)])?.band?.inLanes.count == 1,
+          "one lane is a row on Home, not a decline")
+    let onlyTokens = WalletFlow.home(legs: [tleg("MCAT", 1)])
+    check(onlyTokens?.band == nil && onlyTokens?.tokens.count == 1, "tokens alone still list")
+    check(WalletFlow.home(legs: [leg(true, "A", 100), leg(false, "B", nil)])?.unlistedUnpriced == 1,
+          "a sent unpriced move goes to the footnote")
+    let a = WalletFlow.unpricedTokens((0..<9).map { tleg("Z\(8 - $0)", 1) })
+    for _ in 0..<20 {
+        let b = WalletFlow.unpricedTokens((0..<9).map { tleg("Z\($0)", 1) })
+        check(a.map(\.id) == b.map(\.id), "token order is stable whatever order the moves arrive in")
+    }
+}
+do {
+    // `parseAmount` over `WalletIngest.format`'s three shapes.
+    func amt(_ s: String) -> Double? { WalletFlow.parseAmount(s).amount }
+    func sym(_ s: String) -> String { WalletFlow.parseAmount(s).symbol }
+    eq(amt("1,000 MCAT"), 1000, "a grouped thousand")
+    check(sym("1,000 MCAT") == "MCAT", "…and its symbol")
+    eq(amt("1.000 MCAT"), 1000, "a German grouped thousand is a thousand, not one")
+    eq(amt("1\u{202F}234\u{202F}567 X"), 1_234_567, "narrow no-break space grouping")
+    eq(amt("12.50 USDC"), 12.5, "the two-decimal shape")
+    eq(amt("0.0042 ETH"), 0.0042, "the four-decimal shape")
+    check(sym("12.50 Nuclear Energy") == "Nuclear Energy", "a symbol with a space survives")
+    eq(amt("MCAT"), nil, "no amount stamped")
+    check(sym("MCAT") == "MCAT", "…keeps the symbol")
+    eq(amt("Nuclear Energy"), nil, "a word is not an amount")
+    check(sym("Nuclear Energy") == "Nuclear Energy", "…and the whole string is the symbol")
+    eq(amt("12abc X"), nil, "garbage is not an amount")
+    eq(amt("1 X"), nil, "a bare one is not a shape the formatter writes")
 }
 
 // Determinism: dictionary order must never reach the drawing.
