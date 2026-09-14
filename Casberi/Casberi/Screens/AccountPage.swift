@@ -786,11 +786,23 @@ struct AccountRosterRow: View {
 enum AccountWeek {
     static func counts(source: String, seatID: String, context: ModelContext,
                        limit: Int = 2000,
+                       properties: [PartialKeyPath<Thing>]? = nil,
                        key: (Thing) -> String?) -> [String: (week: Int, new: Bool)] {
         let since = Date.now.addingTimeInterval(-7 * 86_400)
         var descriptor = FetchDescriptor<Thing>(
             predicate: #Predicate { $0.source == source && $0.capturedAt >= since })
         descriptor.fetchLimit = limit
+        // THE COLUMNS THIS ACTUALLY READS, WHERE THE ADOPTER SAYS SO (prd
+        // §719). A `FetchDescriptor` with no `propertiesToFetch` realizes
+        // every attribute of every row — including `embedding`, `tags` and
+        // the rest of a `Thing`'s bulk — and this is bounded at 2,000 rows, on
+        // the main thread, run from `onAppear` and again after every sync. For
+        // a seat whose week IS two thousand rows (RSS with a reader's OPML
+        // followed) that is the page's single largest read and it is almost
+        // all columns nobody looks at. `SyncReconcile` is the precedent for
+        // the shape; opt-in per adopter because `key` is the adopter's own
+        // closure and only the adopter knows which column it reads.
+        if let properties { descriptor.propertiesToFetch = properties }
         let things = ((try? context.fetch(descriptor)) ?? []).filter(\.isLive)
         let lastLooked = AccountVisits.lastLooked(seatID)
         var book: [String: (week: Int, new: Bool)] = [:]

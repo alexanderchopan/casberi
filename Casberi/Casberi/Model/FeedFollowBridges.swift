@@ -97,6 +97,40 @@ final class FeedFollowStore {
         entries[i].title = title
     }
 
+    /// What ONE follow's fetch learned about it.
+    struct Resolution {
+        let id: UUID
+        var feedURL: String?
+        var title: String?
+    }
+
+    /// The whole pass's learned facts, in ONE write (prd §719) — `RSSStore`'s
+    /// own `resolve`, for the four feed-follow seats, for the same reason.
+    /// `entries` carries `didSet { persist() }`, so `setFeedURL`/`setTitle`
+    /// once per follow inside `FeedFollowIngest.refresh` is one full
+    /// `JSONEncoder` pass over the list and one `UserDefaults` write per
+    /// follow, on the main actor, on every sync.
+    func resolve(_ resolutions: [Resolution]) {
+        guard !resolutions.isEmpty else { return }
+        var next = entries
+        var index: [UUID: Int] = [:]
+        for (i, entry) in next.enumerated() { index[entry.id] = i }
+        var changed = false
+        for resolution in resolutions {
+            guard let i = index[resolution.id] else { continue }
+            if let url = resolution.feedURL, next[i].feedURL != url {
+                next[i].feedURL = url
+                changed = true
+            }
+            if let title = resolution.title, !title.isEmpty, next[i].title != title {
+                next[i].title = title
+                changed = true
+            }
+        }
+        guard changed else { return }
+        entries = next
+    }
+
     /// Forgets a learned title so the next sync re-learns it from the feed.
     /// `setTitle` deliberately refuses an empty string (a feed with no
     /// `<title>` must not blank a good name), so a genuine reset needs its own
@@ -704,8 +738,11 @@ enum FeedFollowIngest {
             guard !name.isEmpty else { return }
             if handleless == nil {
                 let src = kind.source
-                let all = (try? context.fetch(FetchDescriptor<Thing>(
-                    predicate: #Predicate { $0.source == src }))) ?? []
+                // Two columns, not every column (prd §719) — the same reading
+                // `IngestSupport.existingSourceRefs` has always taken.
+                var descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == src })
+                descriptor.propertiesToFetch = [\.sourceRef, \.authorHandle]
+                let all = (try? context.fetch(descriptor)) ?? []
                 handleless = Dictionary(all.filter { $0.authorHandle == nil }
                     .compactMap { t in t.sourceRef.map { ($0, t) } },
                     uniquingKeysWith: { first, _ in first })
@@ -724,6 +761,10 @@ enum FeedFollowIngest {
         func storedThing(_ ref: String) -> Thing? {
             if byRef == nil {
                 let src = kind.source
+                // Realizes every column, like `IngestSupport.thingsByRef` —
+                // and for the same reason it is left that way: this map's rows
+                // are PATCHED, and a partial fetch under a write path is the
+                // one thing no check here can verify (prd §719).
                 let all = (try? context.fetch(FetchDescriptor<Thing>(
                     predicate: #Predicate { $0.source == src }))) ?? []
                 byRef = Dictionary(all.compactMap { t in t.sourceRef.map { ($0, t) } },
@@ -762,9 +803,15 @@ enum FeedFollowIngest {
         }
 
         var reachedAny = false
+        // ONE STORE WRITE AND ONE INDEX CALL FOR THE WHOLE PASS (prd §719).
+        var resolutions: [FeedFollowStore.Resolution] = []
+        var indexed: [Thing] = []
         for case let f? in fetched {
             let entry = f.entry
-            if let resolvedFeedURL = f.resolvedFeedURL { store.setFeedURL(resolvedFeedURL, for: entry.id) }
+            if let resolvedFeedURL = f.resolvedFeedURL {
+                resolutions.append(FeedFollowStore.Resolution(
+                    id: entry.id, feedURL: resolvedFeedURL, title: nil))
+            }
             // A 304 counts as reached before the parse guard drops it — an
             // up-to-date sync must not read as an unreachable one.
             if f.reached { reachedAny = true }
@@ -773,7 +820,8 @@ enum FeedFollowIngest {
             // from; a resolution, if any, is saved above.
             guard let parsed = f.parsed else { continue }
             if entry.title.isEmpty, !parsed.title.isEmpty {
-                store.setTitle(parsed.title, for: entry.id)
+                resolutions.append(FeedFollowStore.Resolution(
+                    id: entry.id, feedURL: nil, title: parsed.title))
             }
             // The feed's own name, carried onto each item as `authorHandle` (the
             // same field RSS sets, RSSIngest.swift) — it names which channel /
@@ -906,11 +954,16 @@ enum FeedFollowIngest {
                 else if !item.mediaURL.isEmpty { thing.externalLink = item.mediaURL }
                 context.insert(thing)
                 existing.insert(ref)
-                SpotlightIndex.index([thing])
+                indexed.append(thing)
                 added += 1
             }
         }
+        // One persist, one index call, one encode of the freshness store for
+        // the whole pass (prd §719) — see `FeedFollowStore.resolve`.
+        store.resolve(resolutions)
+        SpotlightIndex.index(indexed.filter(\.isLive))
         if added > 0 || backfill.any || patchedHandle || extraPatched { context.saveHonestly() }
+        Task.detached(priority: .utility) { FeedFreshness.flush() }
         return reachedAny ? added : nil
     }
 }

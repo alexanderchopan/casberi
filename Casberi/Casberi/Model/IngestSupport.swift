@@ -82,6 +82,30 @@ enum IngestSupport {
         return Set(((try? context.fetch(descriptor)) ?? []).map(\.content))
     }
 
+    /// Every landed row of a source, keyed by its `sourceRef` — the dedupe
+    /// table every remote ingest opens with.
+    ///
+    /// **THIS REALIZES EVERY COLUMN OF EVERY ROW THE SOURCE HAS EVER LANDED,
+    /// and it is unbounded by construction (prd §719, found and NOT fixed).**
+    /// It grows with the corpus forever, runs on the main actor, and the feed
+    /// bridges run it on every visit to their page and every foreground sweep
+    /// — so on the highest-volume source (RSS: fifteen items per feed per
+    /// pass) it is the read that grows into a page that will not open.
+    ///
+    /// `propertiesToFetch` is the obvious answer and is NOT taken here.
+    /// `existingSourceRefs` one function up uses it, and so do
+    /// `SyncReconcile`, `ENSBridge` and the two GitHub watches — and every one
+    /// of those names EXACTLY the columns it goes on to read. That is the
+    /// convention, and this map is handed to callers that HEAL what they find:
+    /// RSS alone writes `title`, `tags`, `embedding`, `authorAvatarURL`,
+    /// `authorHandle`, `content`, `externalLink` and `postAuthor` through it,
+    /// each guarded on a read of that same column. Naming all of them realizes
+    /// nearly everything anyway; naming fewer and trusting the lazy fault is
+    /// the one thing no check here can verify and a wrong guess writes over
+    /// good data. The real fix is to scope the fetch to the refs a pass
+    /// actually carries, which is a predicate shape this codebase has been
+    /// burned by before (CLAUDE.md's `tags.contains`) and must be proved on a
+    /// device, not written blind.
     static func thingsByRef(_ context: ModelContext, source: String) -> [String: Thing] {
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
         var map: [String: Thing] = [:]

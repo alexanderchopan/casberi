@@ -54288,3 +54288,137 @@ Every change is a branch on `AskSurface.enabled`, so flipping the flag still bri
 **5. The catalog.** 21 keys lacked es/ja/ko/zh-Hans: the 12 above and 9 that §713's notification pass left untranslated. All are translated, `needs_review` like the rest. **Two of them belonged to the widget target**, not the app: the first sync read every target's `.stringsdata` from the project build directory, so "Your day" and "Today's line and what just landed." landed in the APP catalog while `CasberiWidgets/Localizable.xcstrings` stayed behind, and `verify.sh`'s localization step caught it. They moved to the widget catalog with "Today"; sync each catalog from its OWN target's `…/<Target>.build` directory.
 
 **UNSEEN on a device.** Verified: iOS simulator and Mac Catalyst builds; all 46 scripts that read FeedScreen; every `scripts/*-audit.{py,sh}`; `catalog-sync.sh`.
+
+## §719 — The RSS page freezes and crashes AGAIN: §710 bounded what the page DRAWS and left what it DOES, and the sync it runs on every appearance is five unbounded main-thread costs (user: "the rss page freezes then crashes", 2026-09-14)
+
+**The report is §710's report, two days later, against a build that carries
+§710's fix.** That is the finding. §710 read the screen, found four costs, and
+fixed them — and every one of the four is about the page's DRAW or its EDIT
+path: the roster's row count, `OPMLImport.land`'s per-feed persist,
+`RSSStore.removeAll`'s per-feed `forget`, the roster being a computed property
+a body read, `BridgeHealth` decoding per body pass. All correct, all still
+correct, and none of them touch the thing this screen does the moment it
+opens:
+
+```swift
+.onAppear {
+    refreshExportURL()
+    readRows()
+    Task { await sync() }        // ← every visit. "feeds are cheap to poll."
+}
+```
+
+`sync()` is `RSSIngest.refresh`, and `RSSIngest.refresh` is `@MainActor`. So
+the freeze §710 fixed at the import tap was still there at every single
+appearance of the page, by a different route, and with it the same watchdog:
+`MainSurface` presents every connect screen through one
+`.sheet(item: $route.connectForm)`, UIKit lays a sheet's hosting view out
+SYNCHRONOUSLY on every offset change (§657's mechanism, in full there), and a
+main actor busy for seconds cannot answer that layout. §710 made sure the list
+was short. It did not make sure the main thread was free, and a short list
+drawn by a blocked main thread is the same `0x8BADF00D`.
+
+Five costs, each unbounded, each on the main actor, each run on every visit
+and every foreground sweep. Four of the five are shapes this ledger has
+already ruled on, at other call sites, in §710 itself.
+
+**1. `setTitle`/`setURL` in a loop is `add` in a loop.** §710's own words:
+`RSSStore.feeds` carries `didSet { persist() }`, so every mutation is a full
+`JSONEncoder` pass over the array plus a `UserDefaults` write. §710 fixed the
+import path — one tap, once — and `RSSIngest.refresh` calls **both setters once
+per feed**, inside the landing loop, on the main actor. A 300-feed list
+learning its publishers' titles is ~45,000 `Feed` encodings and 300 defaults
+writes before a row is drawn: the import's cost, paid again on every visit
+rather than once on a tap. `RSSStore.resolve(_:)` takes the whole pass's
+learned facts and assigns `feeds` ONCE, with the two setters' own guards
+applied against the evolving copy so the semantics do not move.
+`FeedFollowStore` — the same page for the four feed-follow seats, and the
+screen §710 cited as the one that got `rows` right — had the identical shape
+and gets the identical fix.
+
+**2. `FeedFreshness` encoded its whole store once per feed fetch, under the
+lock the main thread reads through.** The type's own doc said "writes are one
+small dictionary encode per fetch — cheap enough that a lock beats an actor's
+hop here", which is true of one feed and false of a feed LIST: `write` encodes
+up to `cap` = 400 records on every `note`, i.e. once per feed per pass, while
+holding the lock — and that lock is what `troubles(for:)` takes on the main
+thread when the page composes its roster. §710 fixed exactly this at `forget`
+and left it at `note`, which is the one called on every pass rather than only
+on a disconnect. The cache is authoritative in memory now; a write is a
+dictionary assignment plus a flag, and the encode happens once per burst, off
+the lock and off the main thread, with an explicit `flush()` at the end of
+each pass. Safe for precisely the reason the type's own doc gives: **a lost
+cache costs one full fetch, never a follow.**
+
+**3. `SpotlightIndex.index([thing])`, once per item.** `index(_:)` takes an
+array and ends in `CSSearchableIndex.indexSearchableItems` — an XPC round
+trip. Both feed ingests called it inside the per-item loop, so a pass landing
+fifteen items per feed made one round trip per item. One call per pass now,
+`.filter(\.isLive)` at the boundary (liveness corollary 4, as the standing
+rule for handing `[Thing]` onward, not a suspicion about rows inserted three
+lines above).
+
+**4. `AccountWeek.counts` realized every column of 2,000 rows, from
+`onAppear`.** It is bounded at 2,000 rows and realizes every attribute of each
+of them — `embedding`, `tags`, the text, all of it — on the main thread,
+called on appearance and again after every sync. For a seat whose week really
+is two thousand rows it is the page's single largest read and almost all of it
+is columns nobody looks at. `properties:` is opt-in per adopter, because `key`
+is the adopter's own closure and only the adopter knows which column it reads;
+RSS passes `[\.capturedAt, \.authorHandle]`, which is every column this read
+touches. `FeedFollowIngest`'s `handleless` map gets the same treatment for the
+same reason — it reads and writes one column.
+
+**5. The dedupe table does the same, unbounded, and is left alone — see
+below.**
+
+**And the export.** `refreshExportURL` built the whole OPML document and wrote
+it to disk **synchronously**, from `onAppear` and again on every change to the
+followed list. It is only ever read by the `ShareLink`, which draws only once
+the URL exists, so nothing needed it synchronously. Off the main thread.
+
+**What is pinned.** `row-cost-audit.py` grows five checks with five mutations:
+the two setters back in the sync loop, the per-fetch freshness encode, the
+per-item Spotlight call, the week read dropping its column list, and the
+synchronous export write.
+
+**What was found and NOT fixed — the dedupe table.**
+`IngestSupport.thingsByRef` builds a `FetchDescriptor` with no
+`propertiesToFetch`, so it realizes EVERY attribute of every row the source has
+ever landed, on the main actor, unbounded by construction: it grows with the
+corpus forever, and RSS is the source that fills a corpus fastest. On a mature
+install this is plausibly larger than all five costs above put together, and it
+is deliberately not touched here.
+
+`propertiesToFetch` is the obvious answer and is the wrong one. Every site in
+this repo that uses it — `existingSourceRefs`, `SyncReconcile`, `ENSBridge`,
+both GitHub watches — names EXACTLY the columns it goes on to read; not one of
+them reads a column it did not fetch. That is the convention, and it exists
+because what an unfetched property returns is the one thing no check on this
+machine can verify. This map is handed to callers that HEAL what they find:
+RSS alone writes `title`, `tags`, `embedding`, `authorAvatarURL`,
+`authorHandle`, `content`, `externalLink` and `postAuthor` through it, each
+guarded on a read of that same column. Naming all eight realizes nearly
+everything anyway; naming fewer and trusting the lazy fault turns a guess into
+writes over good data. The real fix is to scope the fetch to the refs a pass
+actually carries — an `IN` predicate over the incoming window — and that is a
+predicate shape this codebase has been burned by before (CLAUDE.md's
+`tags.contains`, which compiled clean and crashed inside CoreData mid-fetch),
+so it is proved on a device or not written at all. Both feed ingests carry the
+reasoning at the call site.
+
+**What was found and NOT fixed — the crawl.** `FeedDiscovery.find` is `@MainActor` and
+parses every candidate it probes — up to fifteen HTTP fetches and parses, on
+the main actor, with up to eight of them interleaved — so a list of pasted
+SITE addresses (rather than feed addresses) puts all of that parsing on the
+main thread. It cannot simply be made nonisolated: `deadEnds` is main-actor
+state and `find` is the only writer. It is a smaller case than the five above
+(a resolved follow never re-enters it, and an OPML import lands feed URLs, not
+site URLs), and it is a different change with its own concurrency question, so
+it is named here rather than done quietly.
+
+**UNCOMPILED and UNSEEN** — written on a Linux session with no Xcode, no
+`swiftc` and no simulator. §710 carried the same warning and its fix did not
+reach the reported symptom; this one is aimed at the symptom, but it is still
+unbuilt. Verified: every `scripts/*-audit.py` green, `row-cost-audit.py
+--self-test` green at 21 mutations.

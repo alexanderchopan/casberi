@@ -128,6 +128,57 @@ CHECKS = [
         "account sheet on screen",
     ),
     (
+        "Casberi/Casberi/Model/RSSIngest.swift",
+        "store.resolve(resolutions)",
+        # `feeds` carries `didSet { persist() }`, so a setter per feed is a
+        # full JSONEncoder pass over the array plus a defaults write per feed,
+        # on the main actor, inside a sync the page runs on EVERY appearance.
+        # §710 fixed this shape on the import path and left it on this one.
+        r"store\.set(URL\(resolvedURL|Title\(parsed\.title)",
+        "RSSIngest.refresh persisting the follow list once per feed (prd §719)",
+        "N encodes of an N-element array and N defaults writes before a row is "
+        "drawn — the import's cost, paid again on every visit",
+    ),
+    (
+        "Casberi/Casberi/Model/FeedFollowBridges.swift",
+        "store.resolve(resolutions)",
+        r"store\.set(FeedURL\(resolvedFeedURL|Title\(parsed\.title)",
+        "FeedFollowIngest.refresh persisting the follow list once per follow (prd §719)",
+        "the same shape as RSS's, on the four feed-follow seats — `entries` "
+        "carries `didSet { persist() }` too",
+    ),
+    (
+        "Casberi/Casberi/Model/FeedFreshness.swift",
+        "static func flush() {",
+        # `write` encoded up to `cap` = 400 records on every `note` — once per
+        # feed per pass — while holding the lock `troubles(for:)` takes on the
+        # main thread to compose the RSS roster.
+        r"cache = records\n        if let data = try\? JSONEncoder\(\)",
+        "FeedFreshness encoding its whole store on every fetch (prd §719)",
+        "one 400-record encode and one defaults write per feed per pass, under "
+        "the lock the main thread reads the roster through",
+    ),
+    (
+        "Casberi/Casberi/Screens/RSSScreen.swift",
+        "properties: [\\.capturedAt, \\.authorHandle]",
+        None,
+        "the RSS roster's week read realizing every column of 2,000 rows (prd §719)",
+        "run from onAppear and again after every sync, on the main thread, for "
+        "a seat whose week really is two thousand rows — and almost all of it "
+        "is columns nobody looks at",
+    ),
+    (
+        "Casberi/Casberi/Screens/RSSScreen.swift",
+        "let written = await Task.detached(priority: .utility)",
+        # Built the whole OPML document and wrote it to disk synchronously,
+        # from onAppear and again on every change to the followed list.
+        r"try\? data\.write\(to: url, options: \.atomic\)\n        exportURL = url",
+        "refreshExportURL building and writing the export on the main thread (prd §719)",
+        "a document the length of the person's whole reader export, plus a file "
+        "write, in front of the first frame — read only by a ShareLink that is "
+        "not drawn until the URL exists",
+    ),
+    (
         "Casberi/Casberi/Model/BridgeHealth.swift",
         "if let cache { return cache }",
         None,
@@ -326,6 +377,42 @@ def self_test():
              "                summary.skipped += 1\n"
              "            }\n"
              "        }")),
+        ("the RSS sync persists the follow list once per feed again",
+         "Casberi/Casberi/Model/RSSIngest.swift",
+         lambda t: t.replace(
+             "        store.resolve(resolutions)",
+             "        for r in resolutions { store.setTitle(parsed.title, for: r.id) }")),
+        ("the feed-follow sync persists its list once per follow again",
+         "Casberi/Casberi/Model/FeedFollowBridges.swift",
+         lambda t: t.replace(
+             "        store.resolve(resolutions)",
+             "        for r in resolutions { store.setTitle(parsed.title, for: r.id) }")),
+        ("FeedFreshness encodes its whole store on every fetch again",
+         "Casberi/Casberi/Model/FeedFreshness.swift",
+         lambda t: t.replace(
+             "        cache = records\n"
+             "        dirty = true",
+             "        cache = records\n"
+             "        if let data = try? JSONEncoder().encode(records) {\n"
+             "            UserDefaults.standard.set(data, forKey: storeKey)\n"
+             "        }\n"
+             "        dirty = true").replace("    static func flush() {", "    static func flushed() {")),
+        ("the RSS week read stops naming its columns",
+         "Casberi/Casberi/Screens/RSSScreen.swift",
+         lambda t: t.replace("properties: [\\.capturedAt, \\.authorHandle]) ", "")),
+        ("the OPML export is built and written on the main thread again",
+         "Casberi/Casberi/Screens/RSSScreen.swift",
+         lambda t: t.replace(
+             "            let written = await Task.detached(priority: .utility) { () -> URL? in\n"
+             "                let data = OPMLImport.export(feeds)",
+             "            let written: URL? = {\n"
+             "                let data = OPMLImport.export(feeds)").replace(
+             "                return url\n"
+             "            }.value\n"
+             "            exportURL = written",
+             "        let url = FileManager.default.temporaryDirectory.appendingPathComponent(\"casberi-feeds.opml\")\n"
+             "        try? data.write(to: url, options: .atomic)\n"
+             "        exportURL = url")),
         ("BridgeHealth decodes its whole book per call again",
          "Casberi/Casberi/Model/BridgeHealth.swift",
          lambda t: t.replace("        if let cache { return cache }\n", "")),

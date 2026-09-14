@@ -141,6 +141,55 @@ final class RSSStore {
         feeds[i].url = url
     }
 
+    /// What ONE feed's fetch learned about it — the resolved address, the
+    /// publisher's own title, or both.
+    struct Resolution {
+        let id: UUID
+        var url: String?
+        var title: String?
+    }
+
+    /// The whole pass's learned facts, applied in ONE write (prd §719).
+    ///
+    /// **`setTitle`/`setURL` in a loop is `add` in a loop.** §710 fixed the
+    /// import path — `feeds` carries `didSet { persist() }`, so every mutation
+    /// is a full `JSONEncoder` pass over the array plus a `UserDefaults`
+    /// write, and landing an export one feed at a time cost N encodes of an
+    /// N-element array. The SYNC path had the identical shape and was not
+    /// looked at: `RSSIngest.refresh` calls both setters once per feed, on the
+    /// main actor, and the RSS page runs a sync on every single appearance.
+    /// A 300-feed list learning its titles is ~45,000 `Feed` encodings and 300
+    /// defaults writes before the first row is drawn — the import's cost, paid
+    /// again on every visit rather than once on a tap.
+    ///
+    /// The guards are the setters' own, applied against the evolving copy so
+    /// the semantics are unchanged: a title must differ and be non-empty, a
+    /// URL must differ and must not collapse two follows onto one feed.
+    func resolve(_ resolutions: [Resolution]) {
+        guard !resolutions.isEmpty else { return }
+        var next = feeds
+        var index: [UUID: Int] = [:]
+        for (i, feed) in next.enumerated() { index[feed.id] = i }
+        var taken = Set(next.map { $0.url.lowercased() })
+        var changed = false
+        for resolution in resolutions {
+            guard let i = index[resolution.id] else { continue }
+            if let url = resolution.url, next[i].url != url,
+               !taken.contains(url.lowercased()) {
+                taken.remove(next[i].url.lowercased())
+                taken.insert(url.lowercased())
+                next[i].url = url
+                changed = true
+            }
+            if let title = resolution.title, !title.isEmpty, next[i].title != title {
+                next[i].title = title
+                changed = true
+            }
+        }
+        guard changed else { return }
+        feeds = next
+    }
+
     private func persist() {
         if let data = try? JSONEncoder().encode(feeds) {
             UserDefaults.standard.set(data, forKey: Self.key)
@@ -280,6 +329,9 @@ enum RSSIngest {
         // separate `existingSourceRefs` call used to re-fetch the exact same
         // rows a second time just for their sourceRef column (perf,
         // 2026-07-28), doubling the DB round trip for no new information.
+        // UNBOUNDED, and left that way on purpose — see `thingsByRef`'s own
+        // doc for why a partial fetch is the wrong answer on a HEAL path
+        // (prd §719, found and not fixed).
         let landed = IngestSupport.thingsByRef(context, source: "RSS")
         var existing = Set(landed.keys)
         let backfill = ArtlessBackfill(context, source: "RSS")
@@ -298,6 +350,12 @@ enum RSSIngest {
         }
 
         var reachedAny = false
+        // ONE STORE WRITE, ONE INDEX CALL, FOR THE WHOLE PASS (prd §719).
+        // Both of these were per feed and per item inside the loop below —
+        // see `RSSStore.resolve` for the persist, and `SpotlightIndex.index`
+        // for the XPC round trip it makes per call.
+        var resolutions: [RSSStore.Resolution] = []
+        var indexed: [Thing] = []
         for case let f? in fetched {
             reachedAny = true
             let feed = f.feed
@@ -308,9 +366,10 @@ enum RSSIngest {
             // reached above (a sync that got five 304s is up to date, not
             // offline), then skipped: there is no body to land or heal from.
             guard let parsed = f.parsed else { continue }
-            if let resolvedURL = f.resolvedURL { store.setURL(resolvedURL, for: feed.id) }
-            if !parsed.title.isEmpty {
-                store.setTitle(parsed.title, for: feed.id)
+            if f.resolvedURL != nil || !parsed.title.isEmpty {
+                resolutions.append(RSSStore.Resolution(
+                    id: feed.id, url: f.resolvedURL,
+                    title: parsed.title.isEmpty ? nil : parsed.title))
             }
             // The feed's own logo, resolved once — the same mark rides every
             // item this feed lands (per-item favicon still varies by article
@@ -417,11 +476,21 @@ enum RSSIngest {
                 if !item.mediaURL.isEmpty { thing.externalLink = item.mediaURL }
                 context.insert(thing)
                 existing.insert(ref)
-                SpotlightIndex.index([thing])
+                indexed.append(thing)
                 added += 1
             }
         }
+        // The pass's learned titles and resolved addresses, in one persist.
+        store.resolve(resolutions)
+        // One `CSSearchableIndex` call, not one per item: `index(_:)` already
+        // takes an array, and each call is an XPC round trip. A sync landing
+        // fifteen items across a followed list made one of those per item.
+        // `.filter(\.isLive)` at the boundary is the standing rule for handing
+        // `[Thing]` onward (liveness corollary 4), not a suspicion about these.
+        SpotlightIndex.index(indexed.filter(\.isLive))
         if added > 0 || backfill.any || touched { context.saveHonestly() }
+        // The pass's whole set of HTTP records, in one encode (prd §719).
+        Task.detached(priority: .utility) { FeedFreshness.flush() }
         // Every feed unreachable is a failed sync, not "up to date".
         return reachedAny ? added : nil
     }

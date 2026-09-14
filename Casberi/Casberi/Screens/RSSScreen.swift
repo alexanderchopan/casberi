@@ -122,7 +122,12 @@ struct RSSScreen: View {
     private func readRows() {
         let feeds = rss.feeds
         let weekly = AccountWeek.counts(source: "RSS", seatID: "rss",
-                                        context: modelContext) { $0.authorHandle }
+                                        context: modelContext,
+                                        // The two columns this read uses, and
+                                        // nothing else (prd §719) — RSS is the
+                                        // seat whose week really is two
+                                        // thousand rows.
+                                        properties: [\.capturedAt, \.authorHandle]) { $0.authorHandle }
         let troubles = FeedFreshness.troubles(for: feeds.map(\.url))
         rows = feeds.map { feed in
             let counted = weekly[feed.displayName.lowercased()] ?? (week: 0, new: false)
@@ -381,11 +386,25 @@ struct RSSScreen: View {
     /// export offered stale (missing a feed followed seconds ago) would be a
     /// small honesty gap in a screen whose whole pitch is "no server in
     /// between, nothing hidden."
+    ///
+    /// NOT ON THE MAIN THREAD (prd §719). This built the whole OPML document
+    /// and wrote it to disk synchronously, from `onAppear` and again on every
+    /// change to the followed list — a string the length of the person's whole
+    /// reader export, and a file write, in front of the first frame. The
+    /// document is only ever read by the `ShareLink` below, which is not drawn
+    /// at all until the URL exists, so nothing needs it synchronously.
     private func refreshExportURL() {
-        guard !rss.feeds.isEmpty else { exportURL = nil; return }
-        let data = OPMLImport.export(rss.feeds)
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("casberi-feeds.opml")
-        try? data.write(to: url, options: .atomic)
-        exportURL = url
+        let feeds = rss.feeds
+        guard !feeds.isEmpty else { exportURL = nil; return }
+        Task {
+            let written = await Task.detached(priority: .utility) { () -> URL? in
+                let data = OPMLImport.export(feeds)
+                let url = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("casberi-feeds.opml")
+                guard (try? data.write(to: url, options: .atomic)) != nil else { return nil }
+                return url
+            }.value
+            exportURL = written
+        }
     }
 }
