@@ -132,8 +132,9 @@ grep -qiE 'nothing is uploaded|never uploaded|not uploaded|never leaves' "$SCREE
 # in the screen, so `verify.sh` was red from the commit that added it and the
 # guard proved nothing about the promise it was written to protect. The
 # standing lesson (CLAUDE.md, the reach-audit ship gate) earned again: run
-# `verify.sh`, not the audits you happen to remember.
-grep -q 'brought in is deleted' "$SCREEN" \
+# `verify.sh`, not the audits you happen to remember. Re-anchored 2026-09-14:
+# §729 reworded the line to "Disconnect deletes everything it brought in."
+grep -q 'deletes everything it brought in' "$SCREEN" \
   || { echo "✗ the setup screen no longer promises deletion on disconnect"; exit 1; }
 
 # Never re-present the system prompt on a background pass (the Contacts rule).
