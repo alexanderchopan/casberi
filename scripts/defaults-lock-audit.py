@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Defaults-under-a-lock audit (prd §720, 2026-09-14).
+"""Defaults-under-a-lock audit (prd §721, 2026-09-14).
 
 WHY THIS EXISTS. Build 570 died on the user's phone with `0x8BADF00D` — a
 scene-update watchdog, faulting thread `com.apple.main-thread`, four minutes
@@ -505,7 +505,7 @@ def main() -> int:
         print(f"  {rel}:{lineno}: {why}")
     print("\nA `UserDefaults` write posts its change notification synchronously, and")
     print("SwiftUI's observer takes the update lock a view body already holds while")
-    print("waiting for this one — the deadlock that killed build 570 (prd §720).")
+    print("waiting for this one — the deadlock that killed build 570 (prd §721).")
     print("Persist through `DefaultsWrite` instead.")
     return 1
 

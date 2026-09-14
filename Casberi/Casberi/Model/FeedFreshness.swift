@@ -229,7 +229,7 @@ enum FeedFreshness {
         cache = records
         // Through `DefaultsWrite`, never `UserDefaults.standard.set`: this
         // runs under `lock`, and a defaults write posts its notification
-        // synchronously into SwiftUI's update lock — prd §720's deadlock,
+        // synchronously into SwiftUI's update lock — prd §721's deadlock,
         // which `BridgeHealth` (this file's own shape) shipped.
         if let data = try? JSONEncoder().encode(records) {
             DefaultsWrite.set(data, forKey: storeKey)

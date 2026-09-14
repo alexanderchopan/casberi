@@ -237,7 +237,7 @@ final class AgentSpend: @unchecked Sendable {
         entries = [:]
         lock.unlock()
         // The same queue the flushes ride, so one still in flight cannot land
-        // after the forget and bring the receipts back (prd §720).
+        // after the forget and bring the receipts back (prd §721).
         DefaultsWrite.remove(storeKey)
     }
 
@@ -246,7 +246,7 @@ final class AgentSpend: @unchecked Sendable {
     /// The ENCODE stays inside the lock, so the payload is a consistent
     /// snapshot; the store write goes through `DefaultsWrite`, which keeps two
     /// racing flushes in order without posting a defaults change notification
-    /// under a lock the main thread can be waiting on (prd §720,
+    /// under a lock the main thread can be waiting on (prd §721,
     /// `NetworkLedger`'s own note, same reason).
     private func flush() {
         lock.lock()

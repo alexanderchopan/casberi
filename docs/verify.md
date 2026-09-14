@@ -717,7 +717,7 @@ The user's report was the whole diagnosis: *"i have three rss feeds but am unabl
 
 **Self-test**: seven fixtures (the shipped shape verbatim, its styled twin, two menu sites, a forwarder with a styled and an unstyled call site, an extracted menu view, and a string carrying `//` and an unbalanced-looking `(x)` that must not derail the scan) and six mutations — style it and the finding clears; unstyle the passing screen and it fires; `.borderless` passes; a neighbour's `buttonStyle` does not clear it; moving a link into a menu carves it out; raising a menu view as ordinary content brings it back.
 
-## Defaults-lock audit (`scripts/defaults-lock-audit.py`, 2026-09-14) → prd §720
+## Defaults-lock audit (`scripts/defaults-lock-audit.py`, 2026-09-14) → prd §721
 
 **What it catches.** A lock held across a `UserDefaults` write. That write posts `didChangeNotification` **synchronously, on the calling thread**, SwiftUI observes it (`UserDefaultObserver.userDefaultsDidChange` → `Update.enqueueAction` → `Update.begin`), and the observer takes the update lock that every view body already holds — while the body waits for the store's lock. Two locks, two orders, main thread dead, watchdog kill.
 

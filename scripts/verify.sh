@@ -614,7 +614,7 @@ print -P "%F{green}✓ design-template audit%f"
 # store's own lock. That is a two-lock deadlock, and it killed build 570 on
 # the user's phone — main thread stuck in `ViewBodyAccessor.updateBody`, a
 # bridge sweep stuck in `UserDefaultObserver.userDefaultsDidChange`, the app
-# frozen on every page until the watchdog took it (prd §720). Five stores
+# frozen on every page until the watchdog took it (prd §721). Five stores
 # shipped the shape; the audit reported exactly those five and nothing else
 # over the pre-fix tree, and zero after. Persist through `DefaultsWrite`.
 step "Defaults-lock audit"

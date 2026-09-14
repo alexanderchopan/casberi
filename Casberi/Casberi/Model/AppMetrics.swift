@@ -91,7 +91,7 @@ final class AppMetrics: NSObject, @unchecked Sendable {
     /// `BridgeHealth`'s shape, for `BridgeHealth`'s reason.
     private static let lock = NSLock()
     /// Memoised, because the store write below no longer lands synchronously
-    /// (prd §720): the cache is what every reader reads, so a row remembered a
+    /// (prd §721): the cache is what every reader reads, so a row remembered a
     /// microsecond ago is never missed by the next merge.
     private static var cache: [Remembered]?
 
@@ -110,7 +110,7 @@ final class AppMetrics: NSObject, @unchecked Sendable {
         Self.cache = kept
         // `DefaultsWrite`, not `UserDefaults.standard.set`: this is inside a
         // lock, and a defaults write posts its change notification
-        // synchronously into SwiftUI's update lock (prd §720).
+        // synchronously into SwiftUI's update lock (prd §721).
         if let data = try? JSONEncoder().encode(kept) {
             DefaultsWrite.set(data, forKey: Self.storeKey)
         }

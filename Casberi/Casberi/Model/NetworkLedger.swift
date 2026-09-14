@@ -174,7 +174,7 @@ final class NetworkLedger: @unchecked Sendable {
     /// is a consistent snapshot; the store write itself is handed to
     /// `DefaultsWrite`, whose serial queue keeps two racing flushes in order
     /// without a defaults write — and its synchronous change notification —
-    /// happening under a lock the main thread can be waiting on (prd §720).
+    /// happening under a lock the main thread can be waiting on (prd §721).
     private func flush() {
         lock.lock()
         defer { lock.unlock() }

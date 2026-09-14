@@ -1,7 +1,7 @@
 import Foundation
 
 /// Persist a store's snapshot to `UserDefaults` WITHOUT posting its change
-/// notification from inside a lock (prd §720).
+/// notification from inside a lock (prd §721).
 ///
 /// **The crash this exists to prevent.** Build 570 on a phone died
 /// `0x8BADF00D` — a scene-update watchdog, main thread deadlocked, four

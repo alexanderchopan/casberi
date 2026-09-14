@@ -54302,7 +54302,21 @@ Every change is a branch on `AskSurface.enabled`, so flipping the flag still bri
 
 **UNCOMPILED — Linux session.** Verified: every `scripts/*-audit.py` that reads row views (row-cost, ds-template, design-ramp, face-ramp, feed-row-skeleton, query-read, liveness, mutation-liveness, accessibility, sentence-case, dead-closure, harness-exists); `feed-fold-selftest.sh` and the demo census need a Mac.
 
-## §720 — A defaults write inside a lock is a deadlock with every view body: build 570 froze on every page and the watchdog took it (user: "touching the app catalog icon in top is inactive and leads to crashing on multiple pages", 2026-09-14)
+## §720 — The crown's line pays for its own range chips, in one expression every crown reads (user: "7d and watched is clipping", 2026-09-14)
+
+**The report.** A screenshot of the Wallet room's Home: the balance, the line, and then the `7d | Watched` track cut across the middle by the rail slab's top edge.
+
+**Not an overlap — a clip.** `DSRoomSlot` is a hard `visualSlot` box with `.clipped()`, and the crown drew taller than it. §688 had already found and named this ("looks like the rail is touching the ranges"), measured the track at `DSRoomChassis.crownRangeChips` = 42, and spent it in `RoomHomeCrown` — the template §683 built so that five wallet-family Homes could stop drifting. **The Wallet room does not go through that template.** It builds `WalletBalanceHeadline` itself and read the bare `crownChart` constant, which budgets `crownChrome` alone. So the one room that has drawn range chips the longest was the only one still paying nothing for them, and §688's fix could not reach it. `RoomActivityChart` — the Activity tab's own shared template, §686 — draws the same chips under its bars against the same bare budget, and clips identically on any record offering more than one window; found by reading, not reported.
+
+**The ruling.** `crownChart` stops being a constant and becomes `DSRoomChassis.crownChart(box:chips:)` — `crownLine(box:chrome: crownChrome + (chips ? crownRangeChips : 0))`, the arithmetic §688 wrote inside `RoomHomeCrown`, lifted to the chassis where the three call sites can share it. It ASKS rather than reserving: the chips are not always offered (a record with one honest window draws none, §83's dead control), so a constant could not be right for both cases. The Wallet crown's line goes 192 → 150 when both windows are offered, and is unchanged when they are not.
+
+**The predicate is the chips' own draw gate, spelled the same way at every site** — `ranges.count > 1`, which is what `WalletBalanceHeadline` and `DSRangeChips` both test. A budget asking a different question than the drawing is the same clip wearing a second answer, so `wallet-section-selftest.sh` pins all four: the chassis's one expression, each call site's, and `DSRangeChips`' gate itself.
+
+**The class, for the next template.** A shared template is only shared by the call sites that go through it. §683/§686 moved five Homes and four Activity tabs onto two templates and left the room each was modelled on building its own — so a fix applied to the template reached everyone except the original. When a ruling fixes a template, check what still draws that shape by hand.
+
+**UNCOMPILED — Linux session.** Verified: `prd-index-audit.py`, and the five new drift guards dry-run against the fixed tree. The clip itself needs a simulator.
+
+## §721 — A defaults write inside a lock is a deadlock with every view body: build 570 froze on every page and the watchdog took it (user: "touching the app catalog icon in top is inactive and leads to crashing on multiple pages", 2026-09-14)
 
 **The report, and what it actually was.** A crash log from build 570 (1.0.19, iPhone 18,2, iOS 26.6.2) with `0x8BADF00D` — a scene-update watchdog, `ProcessVisibility: Background`, killed four minutes after launch. The catalogue door was NOT inactive in the sense its three earlier reports meant (a 24×21pt hit region inside a 46pt circle, 2026-07-26; a `safeAreaInset` Button losing arbitration to the pager, 2026-07-24). Its action is real and its shape is a `Circle`. **The main thread was deadlocked, so every control on every page was inactive** — a tap arrives, nothing draws, and the report is written from wherever the person happened to be standing.
 
@@ -54325,3 +54339,4 @@ Every change is a branch on `AskSurface.enabled`, so flipping the flag still bri
 **Owed, named.** The body reads themselves stand: 55 account pages compute `state:` in their body, so a sweep's encode still contends with a frame, now for microseconds rather than forever. Moving them to `.task`-held state is a 55-screen change and a chassis decision, not a crash fix.
 
 **UNCOMPILED — Linux session.** Verified: every `scripts/*-audit.py` (48, all green, `defaults-lock` included) and the new audit's self-test. No simulator, no device, no `swiftc` on this machine.
+
