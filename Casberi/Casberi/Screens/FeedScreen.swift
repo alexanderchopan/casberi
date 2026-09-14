@@ -2193,7 +2193,7 @@ struct FeedScreen: View {
             // stamped `source: "Safari"`) while `BookmarksImport.land` had
             // been stamping `.link` things as "Bookmarks" since it shipped,
             // silently falling to `.plain`'s generic band row — exactly the
-            // saved-link reading list this shape (`ReadingRow`/`ReadingLede`)
+            // saved-link reading list this shape (`ReadingRow`)
             // was built for, wearing no Safari branding of its own.
             case "Bookmarks":           self = .bookmarks
             // Obsidian joins the notes room — the vault is notes (prd §59).
@@ -5866,8 +5866,8 @@ struct FeedScreen: View {
         // there (guards live in FeedHeatmap / FeedInsight). A room that
         // qualifies for none draws the newest thing as a card instead — see
         // `heroShown` (prd §723).
-        // Derived once and reused: `heroShown` lets a shape's own recap lede
-        // (music's "today", Gmail's "waiting") yield so a feed never stacks two
+        // Derived once and reused: `heroShown` lets a shape's own lede
+        // (a room's cover, Gmail's "waiting") yield so a feed never stacks two
         // overview cards — the lede's records still ride the rows below.
         //
         // Live outranks every aggregate (§164's one exception, cashed in by
@@ -6446,7 +6446,8 @@ struct FeedScreen: View {
             let rest = visible.live.filter { !Self.isMemoryTile($0) }
             if !memoryTiles.isEmpty { photoGridSection(memoryTiles) }
             let days = chronoGroups(rest)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                            cover: heroShown || !memoryTiles.isEmpty ? nil : ledeThingID(in: days))
         case .telegram:
             // The mixed room's fourth instance, and the widest: a followed
             // channel's wordless pictures lead as a grid, while its captioned
@@ -6456,7 +6457,8 @@ struct FeedScreen: View {
             if !tiles.isEmpty { photoGridSection(tiles) }
             let telegramDays = chronoGroups(rest)
             groupedSections(telegramDays, nextEventID: nextEventID,
-                            boundary: boundaryThingID(in: telegramDays))
+                            boundary: boundaryThingID(in: telegramDays),
+                            cover: heroShown || !tiles.isEmpty ? nil : ledeThingID(in: telegramDays))
         case .x:
             // The mixed room's third instance (2026-08-13, prd §375), and the
             // one that had to wait for the importer: until a wordless picture
@@ -6485,7 +6487,8 @@ struct FeedScreen: View {
             let (roomThings, threadReplies) = foldThreadReplies(rest)
             let days = chronoGroups(roomThings)
             groupedSections(days, nextEventID: nextEventID,
-                            boundary: boundaryThingID(in: days), replies: threadReplies)
+                            boundary: boundaryThingID(in: days), replies: threadReplies,
+                            cover: heroShown || !photoTiles.isEmpty ? nil : ledeThingID(in: days))
         case .instagram:
             // The mixed room's fourth instance (2026-08-18, prd §395), on
             // Snapchat's, Files' and X's terms: what has pixels AND nothing to
@@ -6493,7 +6496,8 @@ struct FeedScreen: View {
             let (photoTiles, rest) = Self.splitTiles(visible.live, by: Self.isInstagramPhotoTile)
             if !photoTiles.isEmpty { photoGridSection(photoTiles) }
             let days = chronoGroups(rest)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                            cover: heroShown || !photoTiles.isEmpty ? nil : ledeThingID(in: days))
         case .files:
             // The Snapchat split for a connected folder (2026-08-02): images
             // whose heal has landed a thumbnail lead as a grid, everything
@@ -6504,7 +6508,8 @@ struct FeedScreen: View {
             let (imageTiles, rest) = Self.splitTiles(visible.live, by: Self.isFileImageTile)
             if !imageTiles.isEmpty { photoGridSection(imageTiles) }
             let days = chronoGroups(rest)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                            cover: heroShown || !imageTiles.isEmpty ? nil : ledeThingID(in: days))
         case .wallet:
             // The reads first, then the stream (2026-07-20, the surface split):
             // balance + warnings side by side, the holdings treemap, DeFi, and
@@ -6783,11 +6788,13 @@ struct FeedScreen: View {
         case .reminders:
             reminderSections(visible, nextEventID: nextEventID)
         case .music:
-            if !heroShown { listeningLedeSection(visible) }
             // Sessions, not days (2026-07-21) — a listening sitting is music's
             // real unit; boundary rides the same capturedAt-keyed helper.
+            // The newest song is the room's cover (prd §732): the "N songs
+            // today" lede that stood here was §723's board in another shape.
             let days = sessionGroups(visible)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                            cover: heroShown ? nil : ledeThingID(in: days))
         case .vibenet:
             // THE EVENTS ARE A SCOPE NOW (prd §482) — "Recent", and the only
             // one of vibenet's four that is rows rather than cards. Drawn when
@@ -6866,13 +6873,13 @@ struct FeedScreen: View {
             watchlistLedeSection(visible)
             watchlistSection(visible, nextEventID: nextEventID)
         case .bookmarks:
-            // A reading list is doors, not reads (2026-07-21) — its lede owns
-            // the return-trip guilt: how much is piling up, and the oldest
-            // thing still waiting. Rows below stay chronological (coarsened
-            // when saves are sparse, like any door source).
-            if !heroShown { readingLedeSection(visible) }
+            // A reading list is doors, not reads (2026-07-21). Its newest save
+            // is the room's cover (prd §732), replacing the pile-count lede.
+            // Rows below stay chronological (coarsened when saves are sparse,
+            // like any door source).
             let days = chronoGroups(visible)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                            cover: heroShown ? nil : ledeThingID(in: days))
         case .bitrefill:
             bitrefillLedeSection(visible)
             let days = chronoGroups(visible)
@@ -6917,8 +6924,12 @@ struct FeedScreen: View {
                 // chronological, so it leads its group. No-op for sources
                 // with no live set.
                 let days = chronoDays(roomThings)
+                // A room with no head covers its newest thing (prd §732). A
+                // post or thread card declines it (`standsAlone`): the newest
+                // post already draws at card size.
                 groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
-                                replies: threadReplies)
+                                replies: threadReplies,
+                                cover: heroShown ? nil : ledeThingID(in: days))
             }
         }
     }
@@ -6961,18 +6972,6 @@ struct FeedScreen: View {
         let all = groups.flatMap(\.1)
         guard let first = all.first, first.capturedAt > newSince else { return nil }
         return all.first(where: { $0.capturedAt <= newSince })?.id
-    }
-
-    /// Music's lede: today's listening, covers lapped, count honest (the
-    /// distinct songs that landed today — recently-played dedupes per song).
-    @ViewBuilder
-    private func listeningLedeSection(_ visible: [Thing]) -> some View {
-        let today = visible.filter { Self.groupingCalendar.isDateInToday($0.capturedAt) }
-        if !today.isEmpty {
-            ledeSection(ListeningLede(
-                covers: today.compactMap(\.previewImageURL).filter { !$0.isEmpty },
-                count: today.count))
-        }
     }
 
     /// Tokens' lede: the watchlist's 24h at a glance — from the SAME cached
@@ -7159,9 +7158,9 @@ struct FeedScreen: View {
             // what the demo corpus shows every time (a Twitch hero over a
             // GeckoTerminal cover).
             //
-            // The rule is not new here, only newly applied: `waitingSection`,
-            // `listeningLedeSection` and `readingLedeSection` are all already
-            // gated on `heroShown` for exactly this reason. This card was the
+            // The rule is not new here, only newly applied: `waitingSection`
+            // and the shaped rooms' covers (prd §732) are gated on `heroShown`
+            // for exactly this reason. This card was the
             // one lede that never got the gate, because it arrived later
             // (§389) than the rule did.
             //
@@ -7804,7 +7803,8 @@ struct FeedScreen: View {
     private func groupedSections(_ groups: [(String, [Thing])],
                                  nextEventID: UUID?,
                                  boundary: UUID? = nil,
-                                 replies: [String: [Thing]] = [:]) -> some View {
+                                 replies: [String: [Thing]] = [:],
+                                 cover: UUID? = nil) -> some View {
         // Computed once for the whole feed rather than per section: every
         // shaped room routes its groups through here, so the folded tail's
         // lighter header (prd §254) reaches all of them from one place.
@@ -7816,7 +7816,7 @@ struct FeedScreen: View {
         let _ = { memo.windowHasMore = window.more }()
         ForEach(window.shown, id: \.0) { label, rows in
             daySection(label, rows, nextEventID: nextEventID, boundary: boundary,
-                       replies: replies, coarse: coarse.contains(label))
+                       replies: replies, coarse: coarse.contains(label), cover: cover)
         }
         if window.more { olderRow }
     }
@@ -9269,30 +9269,6 @@ struct FeedScreen: View {
         return out
     }
 
-    /// The reading list's lede (2026-07-21) — a saved link is a DOOR, not a
-    /// read, so the shape names the pile instead of pretending the rows are
-    /// consumed: how many landed this month, how many are older, and the
-    /// oldest one still waiting (a gentle "come back to this", never a
-    /// count-shaming streak — §10). Facts only, and no "unopened" claim the
-    /// model can't back (Thing tracks no read state) — "still here" is what's
-    /// true. Yields to an auto hero so a shape never stacks two overviews.
-    @ViewBuilder
-    private func readingLedeSection(_ visible: [Thing]) -> some View {
-        let cal = Self.groupingCalendar
-        let thisMonth = visible.filter {
-            cal.isDate($0.capturedAt, equalTo: .now, toGranularity: .month)
-        }.count
-        let older = visible.count - thisMonth
-        // Oldest still on the list, shown only once it's genuinely aged (30d+)
-        // — a fresh list has no pile to nudge about.
-        let monthAgo = Date.now.addingTimeInterval(-30 * 86_400)
-        let oldest = visible.filter { $0.capturedAt < monthAgo }
-            .min { $0.capturedAt < $1.capturedAt }
-        if visible.count >= 3 {
-            ledeSection(ReadingLede(thisMonth: thisMonth, older: older, oldest: oldest))
-        }
-    }
-
     /// Gmail: what's waiting on you, capped at two (mock G1). Doing-marked
     /// only (honesty fix 2026-07-13): the old `content.contains("?")` sniff
     /// promoted any newsletter with a question mark to "waiting on you" —
@@ -10359,7 +10335,11 @@ struct FeedScreen: View {
                             // (prd §254). Defaults false for the one caller
                             // that isn't a day at all (the kind-filtered All
                             // room, whose single header is the filter's name).
-                            coarse: Bool = false) -> some View {
+                            coarse: Bool = false,
+                            // A shaped room's cover (prd §732): drawn as
+                            // `FeedLedeCard` under the header of the group that
+                            // holds it, and lifted out of that group's run.
+                            cover: UUID? = nil) -> some View {
         // LIVE ONLY, before anything reads a stored property (build 150 crash,
         // 2026-07-25 — pull-to-refresh, symbolicated to `countLabel` inside
         // this section's own header). `rows` is a DERIVED array (the day
@@ -10378,9 +10358,12 @@ struct FeedScreen: View {
         // rows, and the header at once — a row that just died drops out of the
         // day it was in, which is what the next `@Query` emission says anyway.
         let rows = rows.filter(\.isLive)
-        let positions = cardRunPositions(count: rows.count,
-                                         isBreaker: { standsAlone(rows[$0]) },
-                                         isBoundary: { rows[$0].id == boundary })
+        // The header still counts the cover; only the run gives it up.
+        let coverThing = cover.flatMap { id in rows.first { $0.id == id } }
+        let run = coverThing == nil ? rows : rows.filter { $0.id != cover }
+        let positions = cardRunPositions(count: run.count,
+                                         isBreaker: { standsAlone(run[$0]) },
+                                         isBoundary: { run[$0].id == boundary })
         if !rows.isEmpty {
             Section {
                 // UNPINNED (2026-08-29) — a ROW, not a `header:`. The twin in
@@ -10418,7 +10401,8 @@ struct FeedScreen: View {
                 .listRowSeparator(.hidden)
                 // Rows dispatch by shape (shaped feeds); the swipe stays triage —
                 // reads only, writes live in the sheet (ruling), Copy sheet-only.
-                ForEach(Array(keyed(rows).enumerated()), id: \.element.id) { i, item in
+                if let coverThing, coverThing.isLive { ledeListRow(coverThing) }
+                ForEach(Array(keyed(run).enumerated()), id: \.element.id) { i, item in
                     // The `rows.filter(\.isLive)` above runs when this view
                     // VALUE is made; this runs again each time the closure is
                     // re-evaluated, which is when the delete actually lands

@@ -189,6 +189,19 @@ grep -q 'return standsAlone(thing) ? nil : thing.id' "$FEED" \
        echo "  card or a token pulse would draw twice, in two anatomies"; exit 1; }
 grep -q 'leaderboard' "$TMP/feed.nocomment" \
   && { echo "✗ FeedScreen's code still mentions a leaderboard (prd §723)"; exit 1; }
+# THE SHAPED ROOMS COVER TOO (prd §732). §723 reached only `bundledSections`;
+# music and the reading list route through `groupedSections` and kept a count
+# lede ("N songs today", "N saved this month") in the cover's slot.
+grep -qE '\b(ListeningLede|ReadingLede|listeningLedeSection|readingLedeSection)\b' "$TMP/feed.nocomment" \
+  && { echo "✗ a count lede is back in a shaped room — the newest thing is its head (prd §732)"; exit 1; }
+# Music, the reading list and the generic room path (social, RSS, notes, media…).
+[ "$(grep -c 'cover: heroShown ? nil : ledeThingID(in: days))' "$FEED")" -ge 3 ] \
+  || { echo "✗ a headless room no longer covers its newest thing (prd §732)"; exit 1; }
+# The five mixed rooms: the picture grid is the head, so the cover waits for no grid.
+[ "$(grep -cE 'cover: heroShown \|\| !(memoryTiles|tiles|photoTiles|imageTiles)\.isEmpty \? nil : ledeThingID' "$FEED")" -ge 5 ] \
+  || { echo "✗ a mixed room lost its cover, or draws one under its picture grid (prd §732)"; exit 1; }
+grep -q 'if let coverThing, coverThing.isLive { ledeListRow(coverThing) }' "$FEED" \
+  || { echo "✗ daySection no longer draws a shaped room's cover (prd §732)"; exit 1; }
 
 # ── 4. Feed health, in the room ────────────────────────────────────────────
 grep -q 'FeedRoomHealthSource.standing(for: source)' "$FEED" \
