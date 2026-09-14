@@ -223,13 +223,22 @@ enum BridgeHealth {
     // concurrent bridge reads, so the cache and the store must move together
     // under one lock — which is also what makes that writer stop losing
     // records (see its own note).
+    //
+    // **AND THE `UserDefaults` WRITE GOES THROUGH `DefaultsWrite`, NEVER
+    // DIRECTLY (prd §720).** Holding this lock across a defaults write is what
+    // killed build 570: the write posts its change notification synchronously
+    // on the writing thread, SwiftUI's `@AppStorage` observer takes SwiftUI's
+    // global update lock there — and the main thread is inside a view body
+    // holding that lock and waiting on THIS one, because the READ note above
+    // is describing calls that happen in a body. The memo and the body reads
+    // were two halves of one deadlock and were added by the same pass.
     private static let lock = NSLock()
     private static var cache: [String: Record]?
 
     /// Caller must hold `lock`.
     private static func loaded() -> [String: Record] {
         if let cache { return cache }
-        let decoded = (UserDefaults.standard.data(forKey: key))
+        let decoded = (DefaultsWrite.data(forKey: key))
             .flatMap { try? JSONDecoder().decode([String: Record].self, from: $0) } ?? [:]
         cache = decoded
         return decoded
@@ -244,6 +253,8 @@ enum BridgeHealth {
     private static func save(_ book: [String: Record]) {
         cache = book
         guard let data = try? JSONEncoder().encode(book) else { return }
-        UserDefaults.standard.set(data, forKey: key)
+        // NOT `UserDefaults.standard.set` — see the storage note above and
+        // `DefaultsWrite` (prd §720). This is called with `lock` held.
+        DefaultsWrite.set(data, forKey: key)
     }
 }

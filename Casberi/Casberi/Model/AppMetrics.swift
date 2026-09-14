@@ -101,12 +101,16 @@ final class AppMetrics: NSObject, @unchecked Sendable {
             .sorted { $0.at > $1.at }
             .prefix(Self.maxRemembered)
         if let data = try? JSONEncoder().encode(Array(kept)) {
-            UserDefaults.standard.set(data, forKey: Self.storeKey)
+            // Under `lock`, so it goes through `DefaultsWrite` (prd §720), and
+            // `loadRows` reads back through the same door for the matching
+            // reason: this store folds new rows into what it reads, so it has
+            // to see a write that has not drained yet.
+            DefaultsWrite.set(data, forKey: Self.storeKey)
         }
     }
 
     private static func loadRows() -> [Remembered] {
-        guard let data = UserDefaults.standard.data(forKey: storeKey),
+        guard let data = DefaultsWrite.data(forKey: storeKey),
               let rows = try? JSONDecoder().decode([Remembered].self, from: data)
         else { return [] }
         return rows
@@ -115,7 +119,7 @@ final class AppMetrics: NSObject, @unchecked Sendable {
     /// Empties the remembered diagnostics. The system's own store is not ours
     /// to clear, and saying so is the honest half of this verb.
     static func forget() {
-        UserDefaults.standard.removeObject(forKey: storeKey)
+        DefaultsWrite.set(nil, forKey: storeKey)
     }
 }
 

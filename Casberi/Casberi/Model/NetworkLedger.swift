@@ -94,7 +94,7 @@ final class NetworkLedger: @unchecked Sendable {
     private let flushInterval: TimeInterval = 5
 
     private init() {
-        if let data = UserDefaults.standard.data(forKey: storeKey),
+        if let data = DefaultsWrite.data(forKey: storeKey),
            let decoded = try? JSONDecoder().decode([String: Entry].self, from: data) {
             entries = decoded
         }
@@ -163,14 +163,20 @@ final class NetworkLedger: @unchecked Sendable {
         entries = [:]
         lastFlush = Date()
         lock.unlock()
-        UserDefaults.standard.removeObject(forKey: storeKey)
+        DefaultsWrite.set(nil, forKey: storeKey)
     }
 
     // MARK: - Persistence
 
-    /// Prune, then persist. The `UserDefaults` write stays INSIDE the lock:
-    /// outside it, two flushes racing could persist out of order and leave
-    /// the older snapshot on disk.
+    /// Prune, then persist.
+    ///
+    /// The hand-off stays INSIDE the lock — two flushes racing could otherwise
+    /// persist out of order and leave the older snapshot on disk — but the
+    /// `UserDefaults` write itself does NOT happen here (prd §720). It goes to
+    /// `DefaultsWrite`, whose one serial queue preserves exactly the order
+    /// this lock establishes and touches `UserDefaults` on a thread holding
+    /// nothing. Writing it here instead is the deadlock that killed build 570,
+    /// one store over.
     private func flush() {
         lock.lock()
         defer { lock.unlock() }
@@ -182,7 +188,7 @@ final class NetworkLedger: @unchecked Sendable {
         }
         lastFlush = Date()
         if let payload = try? JSONEncoder().encode(entries) {
-            UserDefaults.standard.set(payload, forKey: storeKey)
+            DefaultsWrite.set(payload, forKey: storeKey)
         }
     }
 }

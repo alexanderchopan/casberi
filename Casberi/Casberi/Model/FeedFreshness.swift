@@ -227,7 +227,7 @@ enum FeedFreshness {
     /// Caller must hold `lock`.
     private static func loaded() -> [String: Record] {
         if let cache { return cache }
-        let decoded = (UserDefaults.standard.data(forKey: storeKey))
+        let decoded = (DefaultsWrite.data(forKey: storeKey))
             .flatMap { try? JSONDecoder().decode([String: Record].self, from: $0) } ?? [:]
         cache = decoded
         return decoded
@@ -280,7 +280,11 @@ enum FeedFreshness {
         dirty = false
         lock.unlock()
         if let data = try? JSONEncoder().encode(records) {
-            UserDefaults.standard.set(data, forKey: storeKey)
+            // `DefaultsWrite`, never `UserDefaults` directly (prd §720) — this
+            // store had build 570's exact deadlock shape too, and the lock
+            // being released two lines up is not on its own a guarantee: the
+            // rule is one door, checked mechanically.
+            DefaultsWrite.set(data, forKey: storeKey)
         }
     }
 

@@ -54418,7 +54418,146 @@ site URLs), and it is a different change with its own concurrency question, so
 it is named here rather than done quietly.
 
 **UNCOMPILED and UNSEEN** — written on a Linux session with no Xcode, no
-`swiftc` and no simulator. §710 carried the same warning and its fix did not
-reach the reported symptom; this one is aimed at the symptom, but it is still
-unbuilt. Verified: every `scripts/*-audit.py` green, `row-cost-audit.py
---self-test` green at 21 mutations.
+`swiftc` and no simulator. Verified: every `scripts/*-audit.py` green,
+`row-cost-audit.py --self-test` green at 21 mutations.
+
+**AMENDED THE SAME DAY BY §720, AND THE HEADLINE ABOVE IS WRONG.** The user
+sent the crash report. It is a `0x8BADF00D` scene-update watchdog saying *"is
+stuck (deadlock)"*, and its CPU accounting reads **"Elapsed application CPU
+time (seconds): 0.017, 0% CPU."** The app was not blocking the main thread with
+work. It was doing nothing at all, in a real lock cycle, and the faulting frame
+is `BridgeHealth.record` → `save` — §710's own memo. So the sentence above that
+says a short list drawn by a blocked main thread is the same watchdog is a
+plausible reading of a symptom, not the cause, and it was reached by reading
+the code instead of asking for the report. **Ask for the report.** Every fix in
+this section is independently correct and stays; none of them is why the page
+crashed. §720 is.
+
+**And the volume this section reasons from does not exist.** Asked how many
+feeds they follow, the user answered: *"i only follow four feeds"* (2026-09-14).
+Every cost above was sized against a reader's OPML export — 300 feeds, ~45,000
+`Feed` encodings, 2,000 rows in a week. At four feeds those are four encodes of
+a four-element array and a roster that never reaches the window. So this
+section is a perf pass that found real waste on a path that had none to spare
+LATER, and it is not a diagnosis. The deadlock needs no volume at all: one
+background bridge response and one view body, in the same millisecond.
+
+
+## §720 — A `UserDefaults` write while a lock is held: the RSS page's real crash is a deadlock, and §710's own memo is one half of it (crash report, build 570, 2026-09-13; user: "the rss page freezes then crashes", 2026-09-14)
+
+**The report settles what two passes of reading could not.** §710 and §719 both
+read this screen, both found real defects, and both assumed the watchdog was
+the family this ledger already knows — §614, §642, §646, §657, every one of
+them the app doing too much work to answer a scene update in time. The crash
+report says the opposite in one line:
+
+```
+Elapsed total CPU time (seconds): 7.060 (user 5.000, system 2.060), 22% CPU
+Elapsed application CPU time (seconds): 0.017, 0% CPU
+```
+
+**Seventeen milliseconds.** The app did nothing. `FRONTBOARD 0x8BADF00D`,
+`explanation: scene-update watchdog transgression: … is stuck (deadlock)`.
+
+**The cycle, with both halves in the report.** Thread 0, the main thread:
+
+```
+__psynch_mutexwait → _pthread_mutex_firstfit_lock_wait
+  → <Casberi> → <Casberi> → <Casberi>
+  → closure #1 in ViewBodyAccessor.updateBody(of:changed:)
+  → … DynamicPreferenceCombiner … → UIHostingController.transitionContent
+  → NavigationStackCoordinator.update(to:from:navigationController:…)
+```
+
+A SwiftUI **body** is being evaluated, and inside it Casberi code blocks on a
+mutex. The register state names it: `x14`/`x15` both point at
+`OBJC_CLASS_$_NSLock`. Now thread 358925, on
+`com.apple.root.user-initiated-qos.cooperative`:
+
+```
+__psynch_mutexwait → _pthread_mutex_firstfit_lock_wait
+  → _MovableLockLock                          (SwiftUICore)
+  → specialized static Update.begin()
+  → static Update.enqueueAction(reason:_:)
+  → UserDefaultObserver.userDefaultsDidChange(_:)
+  → __CFNOTIFICATIONCENTER_IS_CALLING_OUT_TO_AN_OBSERVER__
+  → -[NSNotificationCenter postNotificationName:object:userInfo:]
+  → <Casberi> → <Casberi> → <Casberi> → completeTask
+```
+
+Read it upwards. A background bridge pass wrote `UserDefaults`. `UserDefaults`
+posted `NSUserDefaultsDidChangeNotification` **synchronously, on that thread**.
+SwiftUI's `UserDefaultObserver` — the machinery that makes `@AppStorage`
+invalidate — ran there and called `Update.begin()`, which wants SwiftUI's
+global update lock. **The main thread is holding that lock**, because it is
+inside `updateBody`. And the background thread is holding a Casberi `NSLock`,
+because the write is inside it. Neither moves. Five more cooperative threads
+are queued behind the same Casberi lock in the same report.
+
+**Both halves were added deliberately, by the same pass, two days ago.** §710
+found that every account page asked `BridgeHealth` three times per body
+evaluation, each a `UserDefaults` read and a full decode — §628's banned shape,
+reached from the chassis. It memoised the book behind an `NSLock`, and it
+lock-guarded the writer because concurrent bridge reads were losing records.
+Both of those are right. What neither ruling noticed is that they compose: the
+reads §710 was making cheap are **in a view body**, and the writer §710 was
+making safe holds its lock across `UserDefaults.standard.set`. The faulting
+frame is `BridgeHealth.record(host:status:named:)` calling `save(book)`.
+
+**It was not one store. It was five, and two of them argued for it in
+writing.** `FeedFreshness`, `NetworkLedger`, `AgentSpend` and `AppMetrics` all
+hold a lock across a defaults write, and `NetworkLedger`'s comment — copied
+into `AgentSpend` by name — says the write stays inside the lock *on purpose*,
+because two racing flushes could otherwise persist out of order. That reasoning
+is correct and this keeps it. It is simply not a reason to touch `UserDefaults`
+on a thread holding a lock.
+
+**The fix: `Model/DefaultsWrite.swift`, one door.** Callers hand over the bytes
+while still holding their own lock, so the hand-off order is the snapshot order;
+one serial queue drains them in that order and touches `UserDefaults` on a
+thread holding nothing. `DefaultsWrite.data(forKey:)` is the matching read, for
+the store (`AppMetrics`) that folds new rows into what it reads back and would
+otherwise miss a write that has not drained. Deliberately NOT offered: a
+`drain()` that blocks until the queue empties — called from the main thread
+inside a body, that is this same deadlock from the other direction.
+
+**What is pinned — and what pinning it taught.**
+`scripts/defaults-lock-audit.py`, wired into `verify.sh`. Nothing that runs
+here can see this defect: the build is happy either way, three sessions of
+simulator launch cycles never reproduced it, and it needs a bridge sweep and a
+view body to collide inside one millisecond on a real device under load.
+
+The check took three cuts and the first two are the lesson. **Cut one** scanned
+each function between a `lock()` and its `unlock()`, passed twelve
+hand-written fixtures — and then caught **one of the five real defects**. Four
+of the five hold the lock across a CALL (`record()` takes the lock and calls
+`save()`; `note()` takes it and calls `write()`), so the write is a frame
+deeper than any function-local scan can see; and two of the five spell
+`lock.lock()` and `defer { lock.unlock() }` on separate lines, which cut one
+read as an immediate release. **Cut two** flagged any locked type touching
+`UserDefaults` anywhere: it caught all five and falsely accused `AgentAnswer`
+and `EmbeddingIndex`, both of which keep a lock and write defaults on paths no
+lock-holder can reach. **Cut three** resolves, per type, which of its own
+functions reach a defaults write transitively, and treats a call to one of
+those under a lock as the write it is.
+
+So `--self-test` does not stop at fixtures. It reads the five files **as they
+shipped in build 570, out of git**, and requires every one to be caught; it
+reads the two lookalikes from the same commit and requires both to come back
+clean. Fixtures prove a check does what you meant. Only the tree proves you
+meant the right thing — the first cut was green on fixtures while four of five
+real defects walked past it.
+
+**What was found and NOT fixed.** The body reads are still body reads:
+`AccountPageState.of` and the header's `metaLine` take `BridgeHealth`'s lock
+from inside a SwiftUI body, which is §628's rule broken from the chassis, and
+§710 made them cheap rather than moving them. With the writer fixed they can no
+longer deadlock — every holder of these locks now does nothing but in-memory
+work while holding one — so this is a correctness-neutral cleanup across 55
+screens, and it is not being written blind on the same day as the fix for the
+crash it would have prevented.
+
+**UNCOMPILED and UNSEEN** — Linux session, no Xcode, no `swiftc`, no
+simulator. Verified: `defaults-lock-audit.py --self-test` green (14 fixtures,
+5 shipped defects caught, 2 lookalikes cleared), every other
+`scripts/*-audit.py` and its self-test green.
