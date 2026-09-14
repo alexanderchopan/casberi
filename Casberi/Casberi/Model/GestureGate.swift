@@ -31,7 +31,7 @@ enum GestureGate {
         if on { HitchMeter.shared.begin(kind) } else { HitchMeter.shared.end(kind) }
     }
 
-    /// **THE CAP IS FOR A STUCK FLAG, NOT A HAND (prd §722, 2026-09-13, user:
+    /// **THE CAP IS FOR A STUCK FLAG, NOT A HAND (prd §725, 2026-09-13, user:
     /// "the dock sometimes freezes when scrolling back and forth").** Every
     /// gesture ends, and every flag here is cleared at its end (§658's
     /// amendment closed the one door a flag could stick through), so the only

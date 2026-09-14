@@ -41,7 +41,7 @@ enum SaveCensus {
 /// exactly what it was: immediate, honest about its outcome. Nothing but the
 /// sweep's own saves are ever held, and none is held past a second of the
 /// sweep's own making — a scheduled flush also waits for a still hand
-/// (`holdForHand`, prd §722), bounded by the gate's stuck-flag cap.
+/// (`holdForHand`, prd §725), bounded by the gate's stuck-flag cap.
 ///
 /// **What it cannot break.** A fetch on the same context sees pending
 /// inserts (`includePendingChanges`, measured), so a bridge that reads back
@@ -67,7 +67,7 @@ enum SaveCoalescer {
     @MainActor private static var firstRequest: Date?
     @MainActor private static var flushTask: Task<Void, Never>?
 
-    /// **A SCHEDULED FLUSH WAITS FOR A STILL HAND (prd §722, 2026-09-13).**
+    /// **A SCHEDULED FLUSH WAITS FOR A STILL HAND (prd §725, 2026-09-13).**
     /// One save re-runs every mounted `@Query` (§646/§658), and this timer
     /// had never looked at what the finger was doing: a sweep's landings
     /// arrive one to ten seconds after foreground, which is exactly when a

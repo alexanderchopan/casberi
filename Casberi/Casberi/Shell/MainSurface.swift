@@ -2347,7 +2347,7 @@ struct MainSurface: View {
         // build landing under that motion is the hitch the report names.
         // `ShellChrome.dockBusy` is the strip's finger and its flick.
         //
-        // **THE FEED'S CAP DOES NOT APPLY TO THE DOCK (prd §722, 2026-09-13,
+        // **THE FEED'S CAP DOES NOT APPLY TO THE DOCK (prd §725, 2026-09-13,
         // user: "the dock sometimes freezes when scrolling back and forth").**
         // `stillnessCapMs` is §83's trade: a person scrolling the ROOM can
         // see its head describe 150 rows as the whole, so the build is owed
@@ -2515,7 +2515,7 @@ struct MainSurface: View {
     /// is longer than that, and a source change cancels the task.
     private func captureRestingLook() async {
         try? await Task.sleep(for: .milliseconds(900))
-        // …and never under a moving hand (prd §722): `drawHierarchy` renders
+        // …and never under a moving hand (prd §725): `drawHierarchy` renders
         // the whole window synchronously on main, and 900ms after a chip tap
         // is when a finger is flicking the strip to the next room. §661
         // guarded the feed's scroll and left the dock's; this waits for all

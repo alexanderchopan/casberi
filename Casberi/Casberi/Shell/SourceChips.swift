@@ -700,7 +700,7 @@ struct SourceChips: View {
             // A strip that leaves mid-flick never reports `.idle` — the
             // same door `minimizesChrome` closes for the feed's flag
             // (§658's amendment). Left set, `dockBusy` would hold every waiter for the
-            // whole stuck-flag cap (prd §722).
+            // whole stuck-flag cap (prd §725).
             .onDisappear {
                 if viewport.moving { viewport.moving = false; publishDockBusy() }
             }

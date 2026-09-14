@@ -59,7 +59,7 @@ need "$SWEEP" 'asked=%d' \
   "the sweepPass| line lost asked= — saves and asks must sit on ONE line, or the coalescer's effect cannot be read"
 need "$SAVE" 'if SaveCoalescer.landing, Thread.isMainThread {' \
   "saveHonestly no longer defers inside a pass"
-# §722 (2026-09-13): a SCHEDULED flush waits for a still hand — the app
+# §725 (2026-09-13): a SCHEDULED flush waits for a still hand — the app
 # installs the gate, the extension installs nothing — and flushNow() never
 # waits, because the background hook must write before the process is reaped.
 need "$SAVE" 'if let hold = holdForHand { await hold() }' \
@@ -172,7 +172,7 @@ func ms(_ n: Int) async { try? await Task.sleep(for: .milliseconds(n)) }
     SaveCoalescer.flushNow()
     check(saves == 0, "flushNow with nothing pending saves nothing")
 
-    // 7. The hand hold (prd §722): a scheduled flush waits for it; flushNow does not.
+    // 7. The hand hold (prd §725): a scheduled flush waits for it; flushNow does not.
     saves = 0
     var held = 0
     SaveCoalescer.holdForHand = { held += 1; await ms(500) }
@@ -230,6 +230,6 @@ mutate "flushNow no longer writes" \
   's/guard let context = pending else \{ return \}/guard let context = pending, false else { return }/'
 mutate "a request no longer re-arms the timer" \
   's/flushTask\?\.cancel\(\)\n        flushTask = Task/flushTask = Task/'
-mutate "the scheduled flush stops waiting for the hand (§722)" \
+mutate "the scheduled flush stops waiting for the hand (§725)" \
   's/            if let hold = holdForHand \{ await hold\(\) \}\n            guard !Task\.isCancelled else \{ return \}\n//'
 echo "✓ save-coalescer self-test: 6 mutations caught, 10 drift guards"

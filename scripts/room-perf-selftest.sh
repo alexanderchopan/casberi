@@ -393,7 +393,7 @@ fi
 #     build landing three seconds after arrival under whatever the finger was
 #     doing. Each check below is one door the flag is cleared through, or the
 #     dock's own hold on the lift.
-# THE FEED'S CAP DOES NOT APPLY TO THE DOCK (prd §722, 2026-09-13 — user: "the
+# THE FEED'S CAP DOES NOT APPLY TO THE DOCK (prd §725, 2026-09-13 — user: "the
 # dock sometimes freezes when scrolling back and forth"). `stillnessCapMs` is
 # §83's trade for a person reading the ROOM, who can see its head go stale;
 # a person flicking the dock can see nothing of the kind, and at three
@@ -448,7 +448,7 @@ if [[ -f "$CHIPS" ]]; then
   # other half is DELETED too (prd §662h), so the flick is the whole fact.
   check "the dock flag is the flick, and only the flick (the scrub is gone)" \
         "$CHIPS" 'let busy = viewport\.moving$' yes
-  # §722 review: a strip that leaves mid-flick clears its flag, as the feed's
+  # §725 review: a strip that leaves mid-flick clears its flag, as the feed's
   # observer does — a stuck dock flag would hold every waiter for the cap.
   checkm "the dock flag is cleared when the strip leaves" \
          "$CHIPS" '\.onDisappear \{\s*if viewport\.moving \{ viewport\.moving = false; publishDockBusy\(\) \}' yes
@@ -809,7 +809,7 @@ mutate "the budget is never released"  main 's/        swipeRowBudget = nil\n//'
 # landing under the next gesture, which is how it was reported.
 mutate "the lift stops waiting on the dock in hand"  main \
   's/while chrome\.dockBusy \|\| \(chrome\.scrolling && waited < Self\.stillnessCapMs\),/while chrome.scrolling && waited < Self.stillnessCapMs,/' || mfails=$((mfails + 1))
-# §722: the dock's hold capped at the feed's three seconds again — build 570's
+# §725: the dock's hold capped at the feed's three seconds again — build 570's
 # shape, the freeze as reported.
 mutate "the dock's hold on the lift is capped at the feed's three seconds"  main \
   's/while chrome\.dockBusy \|\| \(chrome\.scrolling && waited < Self\.stillnessCapMs\),/while chrome.scrolling || chrome.dockBusy, waited < Self.stillnessCapMs,/' || mfails=$((mfails + 1))

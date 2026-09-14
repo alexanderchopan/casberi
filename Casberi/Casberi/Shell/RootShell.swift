@@ -1785,7 +1785,7 @@ struct RootShell: View {
         // frames paint stalled the main thread mid-animation. A later
         // foreground has no launch animation to protect, so it runs
         // immediately.
-        // The landings' save waits for a still hand too (prd §722) — the
+        // The landings' save waits for a still hand too (prd §725) — the
         // gate lives in the app, the coalescer in `Shared/`, so the app
         // hands it over here. Idempotent; a static, set on every activation.
         SaveCoalescer.holdForHand = { await GestureGate.idle() }
