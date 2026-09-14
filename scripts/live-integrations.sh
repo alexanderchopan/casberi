@@ -1393,6 +1393,29 @@ if (( fr_up > 0 )); then
     warn "Frames — the genesis header did not read; the restart check could not run"
   fi
 
+  # 2b. **THE TWO CONTRACTS THE SENDS NOW DEPEND ON (prd §728b, §728d).**
+  #     Every send leads with a deadline frame that calls the expiry verifier
+  #     at 0x…8141, and a passkey account is installed through the deterministic
+  #     deployment proxy at 0x4e59…956c. A relaunch that ships without either
+  #     breaks both silently: the verify frame reverts and the node refuses
+  #     every send, or the passkey account's address can never get its code.
+  fexp=$(raw "$FR" '{"id":1,"jsonrpc":"2.0","method":"eth_getCode","params":["0x0000000000000000000000000000000000008141","latest"]}' \
+          | python3 -c 'import sys,json;print(json.load(sys.stdin).get("result",""))' 2>/dev/null)
+  if [[ "$fexp" == "0x60083614600a575f5ffd5b5f3560c01c4211601657005b5f5ffd" ]]; then
+    pass "Frames — the expiry verifier at 0x…8141 is the canonical code every send's deadline frame calls"
+  elif [[ -n "$fexp" ]]; then
+    fail "Frames — the expiry verifier at 0x…8141 is not the canonical code ($fexp); every send leads with a deadline frame that calls it"
+  else
+    warn "Frames — the expiry verifier's code did not read"
+  fi
+  fproxy=$(raw "$FR" '{"id":1,"jsonrpc":"2.0","method":"eth_getCode","params":["0x4e59b44847b379578588920ca78fbf26c0b4956c","latest"]}' \
+          | python3 -c 'import sys,json;print(len(json.load(sys.stdin).get("result","0x"))//2-1)' 2>/dev/null)
+  if [[ -n "$fproxy" ]] && (( fproxy > 0 )); then
+    pass "Frames — the deployment proxy a passkey account is installed through holds code ($fproxy bytes)"
+  else
+    warn "Frames — the deployment proxy at 0x4e59…956c holds no code; a new passkey account can never be installed on this chain"
+  fi
+
   # 3. **THE ENVELOPE'S OWN FIELD NAMES**, which is what the encoder is written
   #    against and what nothing else can check. `frames`/`signatures` on the
   #    transaction, and the frame's `gasLimit` — NOT Hegotá's

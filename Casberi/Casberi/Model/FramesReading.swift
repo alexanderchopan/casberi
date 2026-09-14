@@ -410,7 +410,7 @@ struct FramesMove: Identifiable, Equatable, Codable {
     /// Somebody else paid. The one reading this chain publishes that ordinary
     /// chains hide — and it is a comparison of two fields on the SAME receipt,
     /// never an inference.
-    var sponsored: Bool { payer.lowercased() != sender.lowercased() }
+    var sponsored: Bool { payer.lowercased() != sender.lowercased() && !paidForSomeoneElse }
 
     /// Did every frame RUN without reverting?
     ///
@@ -520,6 +520,18 @@ struct FramesMove: Identifiable, Equatable, Codable {
     /// payment as "Sent −0.0002 test ETH". Nil where tokens were not read;
     /// empty where they were and nothing moved.
     var tokenMoves: [FramesTokenMove]? = nil
+
+    /// **THE ADDRESS WHOSE READ PRODUCED THIS MOVE (prd §728c, code review).**
+    /// A sponsor's own history lists the transactions it paid for, and from
+    /// the sponsor's side those are not "somebody else paid" — the sponsor is
+    /// the somebody. Nil for a move read before this field existed.
+    var reader: String? = nil
+
+    /// This account paid the fee for a transaction somebody else sent.
+    var paidForSomeoneElse: Bool {
+        guard let reader else { return false }
+        return payer.lowercased() == reader.lowercased() && sender.lowercased() != reader.lowercased()
+    }
 
     /// The transaction's deadline, if it carried an expiry frame.
     var deadline: Date? { rows.lazy.compactMap(\.frame.deadline).first }
