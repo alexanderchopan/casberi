@@ -167,6 +167,13 @@ check(FeedFold.tileChoices([both, both, both], faceSources: FACES).first?.remote
 let threePeople = [post("a"), post("b"), post("c"), post("a"), post("b")]
 check(FeedFold.tileChoices(threePeople, faceSources: FACES).count == 3,
       "five posts from three people draw THREE faces")
+// …and once more STRICTLY under the cap. Since §730 took `stripCap` to 3 the
+// check above cannot tell dedupe from the cap — a dedupe that did nothing and
+// simply filled the cap would also answer 3. Two people can only be 2 by
+// deduping.
+let twoPeople = [post("a"), post("b"), post("a"), post("b"), post("a")]
+check(FeedFold.tileChoices(twoPeople, faceSources: FACES).count == 2,
+      "five posts from TWO people draw two faces — under the cap, so this is dedupe")
 let oneAlbum = [song("cover"), song("cover"), song("cover"), song("cover"), song("cover")]
 check(FeedFold.tileChoices(oneAlbum, faceSources: FACES).count == 1,
       "five songs off one record draw ONE cover")
