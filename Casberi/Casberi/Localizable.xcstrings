@@ -47732,6 +47732,34 @@
         }
       }
     },
+    "Checking Instagram…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comprobando Instagram…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Instagramを確認しています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Instagram 확인 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在检查 Instagram…"
+          }
+        }
+      }
+    },
     "Checking the key pair…" : {
       "localizations" : {
         "es" : {
@@ -53746,6 +53774,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法读取 %@ 的模型列表 — 保持使用 %@。"
+          }
+        }
+      }
+    },
+    "Couldn't read Instagram — if it asked you to confirm a sign-in, open Instagram and confirm, then try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo leer Instagram — si te pidió confirmar un inicio de sesión, abre Instagram, confírmalo y vuelve a intentarlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Instagramを読み込めませんでした — サインインの確認を求められた場合は、Instagramを開いて確認してから、もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Instagram을 읽을 수 없습니다 — 로그인 확인을 요청받았다면 Instagram을 열어 확인한 후 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法读取 Instagram——如果它要求你确认登录，请打开 Instagram 确认后重试。"
           }
         }
       }
@@ -68179,6 +68235,34 @@
         }
       }
     },
+    "Instagram signed this app out — tap Connect to sign in again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Instagram cerró la sesión de esta app — toca Conectar para volver a iniciar sesión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Instagramがこのアプリをサインアウトしました — 「接続」をタップしてもう一度サインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Instagram이 이 앱을 로그아웃했습니다 — 연결을 탭하여 다시 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Instagram 已将此 App 退出登录——轻点“连接”重新登录。"
+          }
+        }
+      }
+    },
     "Instagram's export records the handle and the date; the caption and the image stay on Instagram." : {
       "localizations" : {
         "es" : {
@@ -73943,6 +74027,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已在 App Store 上架"
+          }
+        }
+      }
+    },
+    "Live — your own account, signed in" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En directo — tu propia cuenta, con sesión iniciada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ライブ — ご自身のアカウントでサインイン中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "실시간 — 로그인된 내 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "实时——你自己的账户，已登录"
           }
         }
       }
@@ -109626,6 +109738,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Safe 应用中登录"
+          }
+        }
+      }
+    },
+    "Sign in to Instagram" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Inicia sesión en Instagram"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Instagramにサインイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Instagram에 로그인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "登录 Instagram"
           }
         }
       }
