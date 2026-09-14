@@ -173,7 +173,7 @@ enum FramesSend {
             deadline: deadline)
     }
 
-    /// **A TOKEN SEND, as the object that gets signed (prd §729)** — one token
+    /// **A TOKEN SEND, as the object that gets signed (prd §728b)** — one token
     /// leg under a deadline. The preview and the send both build it here.
     static func planToken(sender: Data, leg: FramesTransaction.Leg, nonce: UInt64,
                           deadline: UInt64?,
@@ -184,7 +184,7 @@ enum FramesSend {
                                    maxFeePerGas: maxFeePerGas, deadline: deadline)
     }
 
-    // MARK: - The deadline every send carries (prd §729)
+    // MARK: - The deadline every send carries (prd §728b)
 
     /// **FIVE MINUTES.** A send nobody can say the fate of is the defect this
     /// fixes: with no deadline, a transaction a node is still holding can land

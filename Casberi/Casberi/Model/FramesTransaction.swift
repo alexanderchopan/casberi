@@ -240,11 +240,11 @@ enum FramesTransaction {
         /// token leg it is the token CONTRACT, and the person is inside `data`.
         var recipient: Data
         var value: Data
-        /// Calldata. Empty for a coin leg (prd §729).
+        /// Calldata. Empty for a coin leg (prd §728b).
         var data: Data = Data()
     }
 
-    // MARK: - A deadline, and a token (prd §729)
+    // MARK: - A deadline, and a token (prd §728b)
 
     /// EIP-8141's `EXPIRY_VERIFIER`, `address(0x8141)`.
     static let expiryVerifier = Data(repeating: 0, count: 18) + Data([0x81, 0x41])

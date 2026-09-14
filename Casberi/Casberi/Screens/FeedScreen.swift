@@ -1119,7 +1119,7 @@ struct FeedScreen: View {
         }?.address ?? ""
     }
 
-    /// **ONE LEG, AS THE ENCODER TAKES IT (prd §729)** — a coin leg or a token
+    /// **ONE LEG, AS THE ENCODER TAKES IT (prd §728b)** — a coin leg or a token
     /// leg, parsed at the asset's own decimals. Used by the send and by the
     /// preview, so the strip and the signature cannot build different legs.
     private func framesLeg(_ leg: DevnetSendLeg) -> FramesTransaction.Leg? {
@@ -1135,7 +1135,7 @@ struct FeedScreen: View {
         return FramesTransaction.tokenLeg(contract: contract, to: target, amount: units)
     }
 
-    /// **WHAT THIS PHONE'S ACCOUNT CAN SEND (prd §729)** — the coin, then every
+    /// **WHAT THIS PHONE'S ACCOUNT CAN SEND (prd §728b)** — the coin, then every
     /// token it holds whose decimals read. Empty when it holds no token, which
     /// leaves the sheet's unit a plain label exactly as before.
     private var framesSendAssets: [DevnetSendAsset] {
@@ -1274,7 +1274,7 @@ struct FeedScreen: View {
             guard let nonce = await FramesSend.currentNonce(for: address) else {
                 return String(localized: "Couldn't reach the chain to read this account's nonce.")
             }
-            // **EVERY SEND CARRIES A DEADLINE (prd §729)**, and the pending row
+            // **EVERY SEND CARRIES A DEADLINE (prd §728b)**, and the pending row
             // is told it, so the row can say "it can't land now" with certainty.
             let deadline = FramesSend.deadline()
             let hash = try await FramesSend.sendValue(to: target, valueWei: valueWei, nonce: nonce,
@@ -4386,7 +4386,7 @@ struct FeedScreen: View {
                             .filter { $0.frame.mode != 1 }
                             .map(\.joinedToNext)
                     }),
-                // **TOKENS, THROUGH THE SAME SHEET (prd §729).** The coin still
+                // **TOKENS, THROUGH THE SAME SHEET (prd §728b).** The coin still
                 // goes through `perform`; a token rides the stitched path as a
                 // one-leg batch, so it is signed, noted and refreshed exactly as
                 // every other send here.

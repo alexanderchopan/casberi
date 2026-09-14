@@ -1694,7 +1694,7 @@ check("a move's deadline is its expiry frame's",
                  rows: [FramesFrameRow(frame: verifyFrame(expiryAddress, data: "0x000000006aa5f05c"), outcome: nil)],
                  deltaWei: 0).deadline == Date(timeIntervalSince1970: 0x6aa5f05c))
 
-// --- EVERY SEND CARRIES A DEADLINE, AND A TOKEN IS A CALL (prd §729) ---------
+// --- EVERY SEND CARRIES A DEADLINE, AND A TOKEN IS A CALL (prd §728b) ---------
 // **THREE PREIMAGES A NODE VERIFIED A SIGNATURE OVER.** Computed by an
 // independent encoder and broadcast on 2026-09-13 from an unfunded key: the
 // node refused all three with "Nonce mismatch: expected 0, got N", a check it

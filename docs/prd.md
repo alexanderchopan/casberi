@@ -54706,7 +54706,7 @@ green; `bash -n` clean on the edited shell harnesses that are bash
 
 ## §728 — The Frames devnet reads the chain itself: relaunch, stall, finality, where a send is, who signed, what a skipped frame is, and the tokens a transaction moved (user: "for frames devnet what else can we do to improve it and make it a first class citizen. does the devnet offer more stuff we read but don't use?" → "lets do all of these!", 2026-09-13)
 
-The first of four passes on one ask. This one is the READ side; the deadline and token send, sponsorship and passkey accounts follow as §729–§731.
+The first of four passes on one ask. This one is the READ side; the deadline and token send, sponsorship and passkey accounts follow as §728b–§728d.
 
 **THE CHAIN HAD STOPPED AND THE ROOM COULD NOT SAY SO.** Measured while scoping this: all three RPC hosts reported block 75,685, whose timestamp was 142,463 seconds old — no block for about 39 hours, missed slots on the explorer. Every read answered perfectly, so the room drew a healthy balance over a chain that was not running, and a send made then would have sat "Sending…" and faded out with no reason given. `NotifyPlan`'s own note had already named the sibling gap: Frames "has the same claim and no reset detection of its own". Both are three block headers the seat was not asking for, now one batched request per sweep (`FramesLiveState.readChain`).
 
@@ -54753,7 +54753,8 @@ The first of four passes on one ask. This one is the READ side; the deadline and
 
 **Verified:** built for the simulator from a worktree at HEAD carrying only this pass's files (the shared tree held another session's uncommitted Frames work, which did not compile at the time); `setup-copy-audit.py`, `connect-shape-audit.py`, `account-page-selftest.sh`, and the dead-closure, catalog-mode, design-template and accessibility audits. **UNSEEN on a device**, per the standing preference. The String Catalog carries the deleted strings until the pre-ship sync.
 
-## §729 — Every Frames send carries a deadline, and the sheet sends tokens (the second pass of §728's ask, 2026-09-13)
+## §728b — Every Frames send carries a deadline, and the sheet sends tokens (the second pass of §728's ask, 2026-09-13)
+*(committed as "§729" in 5ef80772's message; renumbered the same hour because a concurrent session's connect-page entry took §729 first — the lettered form keeps this ask's passes together and out of the way of the next number)*
 
 **A DEADLINE ON EVERY SEND, CHOSEN FOR THE PERSON, NOT OFFERED.** A send nobody could say the fate of was §728's pending-row defect: with no deadline, a transaction a node still holds can land an hour later, so "it didn't go" was never sayable. Every Frames send now leads with an expiry frame five minutes out (`FramesSend.deadlineWindow`). Past it the transaction CANNOT land — any block made after it is too late — and the pending row says "Past its deadline. It can't land now." Five minutes is fifty slots, far past a healthy chain's inclusion time, and short enough that whoever is watching the row is still there when it resolves. **Not a control**, deliberately: a per-send window is a setting nobody on this screen came for, and the amount screen's height is a budget.
 

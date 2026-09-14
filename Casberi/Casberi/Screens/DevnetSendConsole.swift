@@ -682,7 +682,7 @@ struct DevnetSendLeg: Identifiable, Equatable {
     var unit: String? = nil
 }
 
-/// **ONE THING THE SHEET CAN SEND (prd §729).** A venue whose accounts hold
+/// **ONE THING THE SHEET CAN SEND (prd §728b).** A venue whose accounts hold
 /// tokens as well as the coin hands the sheet a list, and the unit beside the
 /// figure becomes the choice. The empty `id` is the coin; every other `id` is
 /// the token contract, which is also what the venue's send is told.
@@ -1015,7 +1015,7 @@ struct DevnetSendSheet: View {
     /// by the caller. Nil is "Send".
     var verb: String? = nil
 
-    /// **WHAT THE SHEET CAN SEND, when that is more than the coin (prd §729).**
+    /// **WHAT THE SHEET CAN SEND, when that is more than the coin (prd §728b).**
     /// Fewer than two draws the plain unit exactly as before. With two or
     /// more, the unit beside the figure opens a menu — the one place the
     /// choice can sit without adding a row to a screen whose height is a
@@ -1374,7 +1374,7 @@ struct DevnetSendSheet: View {
         !busy && isValidAddress(destination) && amountIsValid
     }
 
-    // MARK: What is being sent (prd §729)
+    // MARK: What is being sent (prd §728b)
 
     private var selectedAsset: DevnetSendAsset? { assets.first { $0.id == assetID } }
     private var shownUnit: String { selectedAsset?.unit ?? unit }
@@ -1651,7 +1651,7 @@ struct DevnetSendSheet: View {
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                     .layoutPriority(1)
-                // **ONLY WHEN THE LEGS DIFFER (prd §729).** The unit stays off
+                // **ONLY WHEN THE LEGS DIFFER (prd §728b).** The unit stays off
                 // a list whose legs all send one thing, for the reason above;
                 // a batch paying ETH and DAI together must say which is which.
                 if mixedUnits {
@@ -1997,7 +1997,7 @@ enum DevnetSendParse {
         unitsData(from: text, decimals: 18)
     }
 
-    /// A typed decimal amount at a token's own `decimals` (prd §729) — the
+    /// A typed decimal amount at a token's own `decimals` (prd §728b) — the
     /// same string arithmetic, so a 6-decimal token is never scaled as 18.
     static func unitsData(from text: String, decimals: Int) -> Data? {
         guard (0...36).contains(decimals) else { return nil }

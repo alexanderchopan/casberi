@@ -141,7 +141,7 @@ enum FramesSendPlanSteps {
               let target = RLP.data(fromHex: destination)
         else { return [] }
         let nonce = FramesLiveState.shared.accounts.first?.nonce ?? 0
-        // The same deadline rule the send signs with (prd §729), so the
+        // The same deadline rule the send signs with (prd §728b), so the
         // preview shows the deadline frame the transaction will really lead with.
         let deadline = FramesSend.deadline()
 
