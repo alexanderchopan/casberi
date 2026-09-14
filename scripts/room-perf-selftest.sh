@@ -172,7 +172,8 @@ check "anniversary still derived in the body" \
 #     This is the cost removal itself; without it the memo is dead weight and
 #     every swipe pays exactly what it paid before, with a cache beside it
 #     saying otherwise.
-for field in topicMap leaderboard distribution mosaic; do
+# `leaderboard` left this list with the ranked board itself (prd §721).
+for field in topicMap distribution mosaic; do
   check "shapedSections reads heads?.$field" \
         "$FEED" "heads\?\.$field" yes
   check "shapedSections no longer calls FeedInsight.$field inline" \
@@ -195,29 +196,29 @@ check "recomputeHeads filters .live at the read" \
 check "fullRoomRows filters .live before it hands rows back" \
       "$FEED" 'let full = liveVisible\(rawOverride: raw\)\.live' yes
 
-# A6. ONE narrowing rule. The lane strip scopes the head as well as the rows
-#     (2026-08-06); two spellings of that scope is how a head ends up
-#     describing a marketplace the reader just filtered away.
-check "shapedSections narrows through roomScoped" \
-      "$FEED" 'let visible = roomScoped\(allVisible\)' yes
-#     Amended with A5 (prd §600): the argument is now the whole room rather than
-#     the bounded list, and the rule this pins — that both readers narrow through
-#     ONE function — is untouched.
-check "recomputeHeads narrows through the same roomScoped" \
-      "$FEED" 'let rows = roomScoped\(base\)' yes
-# The x402 room and its lane filter were deleted with the Circle x402 seat
-# (2026-09-06). The guard that the scoping was applied in ONE place is kept as
-# the stronger form — the helper must not come back at all, since the room it
-# scoped no longer exists.
+# A6. THE ROOM HAS NO NARROWING LEFT, and the guard is that none comes back.
+#     Two helpers have now held this slot and both were deleted with the room
+#     they scoped: `x402Scoped` with the Circle x402 seat (2026-09-06), and
+#     `roomScoped` with the ranked board that was its only control (prd §721).
+#     The rule they encoded still stands for whatever comes third — ONE
+#     narrowing rule, shared by the rows and the head, because two spellings of
+#     one scope is how a head ends up describing rows the reader filtered away.
 check "the x402 lane scoping is gone with its room" \
       "$FEED" 'x402Scoped' no
+check "the reading-board scoping is gone with its board" \
+      "$FEED" 'roomScoped' no
+check "shapedSections takes the room whole" \
+      "$FEED" 'let visible = allVisible' yes
+check "recomputeHeads takes its base whole" \
+      "$FEED" 'let rows = base' yes
 
 # A7. The key covers every scope the head describes. A head that survived a
 #     scope change would be a card about rows no longer on screen.
 head_key="$(perl -0777 -ne 'print $1 if /private var headIdentity: String \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
-# `x402Lane` was one of these until 2026-09-06, when the room it scoped was
-# deleted; `readingScope` is the surviving per-room view filter and carries the
-# property this list exists to hold.
+# `x402Lane` was one of these until 2026-09-06 and `readingScope` until prd
+# §721; both were per-room view filters, and both were deleted with the control
+# that set them. No per-room filter survives, so this list is the shell-held
+# scopes plus the revision.
 #
 # `chrome.refreshPulse` was this list's bridge-state term until 2026-09-08
 # (prd §655 amendment). The pulse was doing two unrelated jobs — it deals the
@@ -226,7 +227,7 @@ head_key="$(perl -0777 -ne 'print $1 if /private var headIdentity: String \{(.*?
 # jobs are two counters now: `roomRevision` moves the head and draws nothing,
 # `refreshPulse` deals the rain. `rain()` bumps BOTH, so `roomRevision` alone
 # still covers every case the pulse term covered here.
-for term in 'source' 'filter.tag' 'selectedWallet' 'chrome.personScope' 'readingScope' \
+for term in 'source' 'filter.tag' 'selectedWallet' 'chrome.personScope' \
             'chrome.roomRevision' 'revision'; do
   if print -r -- "$head_key" | grep -qF -- "$term"; then
     ok "headIdentity covers $term"
@@ -515,8 +516,8 @@ fi
 # …and nothing in it may take `visible` as the head's base any more. Negative,
 # so read from the stripped copy — this file documents the change by naming the
 # expression it no longer uses.
-if print -r -- "$heads_body" | grep -Eq 'roomScoped\(visible'; then
-  fail "recomputeHeads still scopes `visible` directly (the bound would truncate the head)"
+if print -r -- "$heads_body" | grep -Eq '= visible\b'; then
+  fail "recomputeHeads still takes `visible` as the head's base (the bound would truncate the head)"
 else
   ok "recomputeHeads takes its base from fullRoomRows alone"
 fi

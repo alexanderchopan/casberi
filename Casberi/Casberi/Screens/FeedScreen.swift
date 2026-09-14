@@ -267,7 +267,7 @@ struct FeedScreen: View {
             // the reading. "Your loudest year" computed over a truncated slice
             // is the §83 fake status, in the room whose entire promise is that
             // it holds your history. Same exposure for the topic treemap's
-            // "N of M" subtitle and every leaderboard.
+            // "N of M" subtitle.
             //
             // The 2026-08-06 All-room bound came with a user ruling that its
             // derivations may describe the recent window rather than all-time.
@@ -427,23 +427,22 @@ struct FeedScreen: View {
         // pass for a per-row fault, which is the same mistake wearing a
         // cheaper coat.
         \.detectedTel, \.detectedPlace, \.detectedMailto,
-        // `FeedInsight.leaderboard` reads this for EVERY row of a Snapchat
-        // room ("Who you snap with"), and Snapchat is a bulk-import room, so
-        // omitting one `Int?` would trade a cheap column for thousands of
-        // faults — the §260 mistake above in a different coat. Added
-        // 2026-08-14 with the source-room columns.
+        // Prefetched for the Snapchat room, a bulk import where omitting one
+        // `Int?` would trade a cheap column for thousands of faults — the §260
+        // mistake above in a different coat. Added 2026-08-14 with the
+        // source-room columns for "Who you snap with", whose board §721
+        // deleted; the column stays prefetched because it is one `Int?` and
+        // the row itself reads it.
         \.messageCount,
     ]
 
-    // KNOWN AND DELIBERATE: `content` stays OUT, and it is the one omission
-    // that costs something rather than saving it. `FeedInsight` reads it per
-    // row for three leaderboards — Steam hours, the `r/` subreddit, and the
-    // host a link came from — so those rooms now fault once per row where the
-    // old unpredicated fetch had it loaded. It is left out because `content`
-    // is the heavy column for the rooms this change is FOR: a note's whole
-    // body, a chat's transcript, a screenshot's OCR. The three rooms that pay
-    // are feed bridges holding tens to hundreds of rows; the rooms that gain
-    // are bulk imports holding thousands.
+    // KNOWN AND DELIBERATE: `content` stays OUT. It is the heavy column for
+    // the rooms this change is FOR — a note's whole body, a chat's transcript,
+    // a screenshot's OCR. This note used to record a cost against it: three
+    // leaderboards (Steam hours, the `r/` subreddit, the host a link came
+    // from) read `content` per row, so those rooms faulted once per row where
+    // the old unpredicated fetch had it loaded. §721 deleted all three boards,
+    // so the omission now costs nothing at all.
     //
     // UNMEASURED, and stated as such: the 26.6%-of-main-thread figure behind
     // the All room's own columns came from `scripts/main-thread-profile.sh` on
@@ -1542,28 +1541,6 @@ struct FeedScreen: View {
         return String(localized: "Nothing has landed here yet.")
     }
 
-    /// One publisher (or one writer), when the reading room has been narrowed
-    /// to them from its own board (2026-08-23, prd §455).
-    ///
-    /// `@State`, so it dies with the room — `MainSurface` gives its single
-    /// `FeedScreen` an `.id(filter.source)`, and that is the RIGHT lifetime
-    /// here for the reason the x402 lane filter had: this is how you are looking at
-    /// one room right now, not a setting you configured. It is deliberately
-    /// NOT the shell-held shape §356 gave the wallet scope, because that scope
-    /// spans a whole category of rooms and a publisher exists in exactly one.
-    ///
-    /// Carries the FIELD as well as the label. The board decides at runtime
-    /// which of the two it ranked (see `FeedInsight.Leaderboard.Scope`), so
-    /// the tap records what was on screen when it happened rather than letting
-    /// the filter guess later.
-    struct ReadingScope: Equatable {
-        let label: String
-        let scope: FeedInsight.Leaderboard.Scope
-        /// For the head's memo key, which is a string.
-        var key: String { "\(scope.rawValue):\(label)" }
-    }
-    @State private var readingScope: ReadingScope?
-
     @State private var confirming: (Verb, Thing)?
     /// Translate verb, swipe-triggered — same system sheet as ThingSheetView's.
     @State private var showTranslate = false
@@ -2134,8 +2111,7 @@ struct FeedScreen: View {
             // reasons NOT to build a mixed grid here: `FeedInsight.mosaic`
             // dedupes tiles by URL, so a show that stamps one cover on every
             // episode can never fill the 4-tile shelf and the head correctly
-            // declines it (and the "Latest episodes" leaderboard outranks the
-            // mosaic anyway); and `MediaShape.freshness` saturation now reaches
+            // declines it; and `MediaShape.freshness` saturation now reaches
             // podcast art, which is §219's own decay arriving as designed
             // rather than a new behaviour.
             case _ where MediaShape.isMediaFeed(source): self = .media
@@ -2445,7 +2421,6 @@ struct FeedScreen: View {
     private struct RoomHeads {
         let sourceHead: SourceHead?
         let topicMap: FeedInsight.TopicMap?
-        let leaderboard: FeedInsight.Leaderboard?
         let distribution: FeedInsight.Distribution?
         let mosaic: FeedInsight.Mosaic?
         /// Whether the feeds behind a reading room are still answering
@@ -2515,7 +2490,6 @@ struct FeedScreen: View {
                 // Omitted at first, and the symptom was exactly that —
                 // the face lit and the card kept listing every account.
                 chrome.vibenetScope ?? "",
-                readingScope?.key ?? "",
                 // Bridge state is the one input a corpus revision cannot see —
                 // `sourceHead` reads a Stripe balance, PostHog readings, an ASC
                 // standing, none of which is a `Thing`. A pull is when somebody
@@ -2694,31 +2668,6 @@ struct FeedScreen: View {
         return base + (drawn || !things.isEmpty ? "|rows" : "|empty")
     }
 
-    /// The room's own narrowing, as ONE rule — the lane strip scopes everything
-    /// below it, head included (2026-08-06). Shared by `shapedSections` (which
-    /// narrows the ROWS) and the head computation (which must describe exactly
-    /// those rows), because two spellings of one scope is how a head ends up
-    /// describing a marketplace the reader just filtered away.
-    /// `narrowingToPublisher` is the one asymmetry, and it exists because the
-    /// reading board is the CONTROL as well as the reading (2026-08-23, prd
-    /// §455): the rows narrow to one publisher, and the board must keep every
-    /// publisher on it or there is no way back — the venue switcher's rule
-    /// (§357), which shows every venue while the room shows one. Passed false
-    /// by `recomputeHeads` when it computes that one card and by nothing else,
-    /// so every other head still describes exactly the rows on screen.
-    private func roomScoped(_ rows: [Thing], narrowingToPublisher: Bool = true) -> [Thing] {
-        var out = rows
-        if narrowingToPublisher, let scope = readingScope {
-            // `.live` before a stored property is read (corollary 4) —
-            // `rows` may be the debounced All snapshot.
-            out = out.live.filter {
-                scope.scope.value(of: $0)?
-                    .trimmingCharacters(in: .whitespacesAndNewlines) == scope.label
-            }
-        }
-        return out
-    }
-
     /// The room's ENTIRE contents, for the head alone (prd §600, 2026-09-04).
     ///
     /// **This is the other half of `sourceRoomFetchLimit`, and neither half is
@@ -2793,20 +2742,10 @@ struct FeedScreen: View {
         // the entire objection the 2026-08-14 ruling raised.
         let onScreen = visible.live
         let base = fullRoomRows(fallback: onScreen)
-        let rows = roomScoped(base)
-        // THE BOARD ALONE IS COMPUTED OVER THE WHOLE ROOM (2026-08-23), when
-        // the room has been narrowed FROM that board — see `roomScoped`. A
-        // board recomputed over one publisher's rows is a single bar naming
-        // the choice you already made, with nothing to switch to and no way to
-        // clear it. Identical to `rows` whenever nothing is scoped, which is
-        // every other room and most of this one's life.
-        let boardRows = readingScope == nil
-            ? rows
-            : roomScoped(base, narrowingToPublisher: false)
+        let rows = base
         let computed = RoomHeads(
             sourceHead: sourceHead(rows),
             topicMap: FeedInsight.topicMap(source: source, things: rows),
-            leaderboard: FeedInsight.leaderboard(source: source, things: boardRows),
             distribution: FeedInsight.distribution(source: source, things: rows),
             mosaic: FeedInsight.mosaic(source: source, things: rows),
             // Reads the follow stores and `FeedFreshness`, never `rows` — the
@@ -5737,15 +5676,7 @@ struct FeedScreen: View {
     @ViewBuilder
     private func shapedSections(_ allVisible: [Thing], nextEventID: UUID?) -> some View {
         // THE LANE STRIP SCOPES EVERYTHING BELOW IT, head included (2026-08-06).
-        // Narrowed here, once, rather than at each reader: a head still
-        // describing the whole marketplace over rows you just filtered would be
-        // two surfaces disagreeing on screen.
-        //
-        // A chip reaches ANY lane a seller sells into, which is the capability
-        // the shelves structurally cannot offer — they file each seller under
-        // one primary lane, so Prediction markets and Creative have no shelf at
-        // all despite having real members, and were unreachable by any means.
-        let visible = roomScoped(allVisible)
+        let visible = allVisible
         // ABOVE THE HEAD, deliberately (2026-08-23, prd §455). This is not a
         // reading about the room, it is a statement about whether the room is
         // COMPLETE — and every reading below it (a board ranking publishers, a
@@ -5760,9 +5691,11 @@ struct FeedScreen: View {
         //
         // A per-source feed overview leads the rows — derived from THIS feed's
         // own things (the same `visible`), above whatever shape they take below.
-        // Each source qualifies for at most one: a habit heatmap, a ranked-bars
-        // leaderboard, a distribution bar, or a thumbnail mosaic. All render only
-        // when the real data is there (guards live in FeedHeatmap / FeedInsight).
+        // Each source qualifies for at most one: a habit heatmap, a distribution
+        // bar, or a thumbnail mosaic. All render only when the real data is
+        // there (guards live in FeedHeatmap / FeedInsight). A room that
+        // qualifies for none draws the newest thing as a card instead — see
+        // `heroShown` (prd §721).
         // Derived once and reused: `heroShown` lets a shape's own recap lede
         // (music's "today", Gmail's "waiting") yield so a feed never stacks two
         // overview cards — the lede's records still ride the rows below.
@@ -5859,13 +5792,11 @@ struct FeedScreen: View {
         // returns nil and the next card down takes the head.
         let topicMap = liveStream == nil && sourceHead == nil && anniversary == nil && rosterAccounts.isEmpty
             ? heads?.topicMap : nil
-        let leaderboard = liveStream == nil && sourceHead == nil && anniversary == nil && topicMap == nil && rosterAccounts.isEmpty
-            ? heads?.leaderboard : nil
         let distribution = liveStream == nil && sourceHead == nil && anniversary == nil && topicMap == nil
-            && leaderboard == nil && rosterAccounts.isEmpty
+            && rosterAccounts.isEmpty
             ? heads?.distribution : nil
         let mosaic = liveStream == nil && sourceHead == nil && anniversary == nil && topicMap == nil
-            && leaderboard == nil && distribution == nil && rosterAccounts.isEmpty
+            && distribution == nil && rosterAccounts.isEmpty
             ? heads?.mosaic : nil
         // The heatmap sits LAST (moved 2026-07-31), not third. It answers
         // WHEN, which is the weakest thing a room can lead with — every card
@@ -5874,17 +5805,24 @@ struct FeedScreen: View {
         // do. Third, it silently owned every room it was registered for; the
         // §219 social-roster bug was exactly that, caught late. Nothing
         // changes for any source that shipped before this: no source in the
-        // registry qualifies for a leaderboard, distribution or mosaic (the
+        // registry qualifies for a distribution or mosaic (the
         // sets don't intersect), so each still draws the one card it always
         // drew. Instagram and Snapchat are the first sources with two facts
         // to choose between, and for them the grid is the graceful fallback —
         // the role it already plays for Photos under the treemap.
         let heatmapLabel = liveStream == nil && rosterAccounts.isEmpty && anniversary == nil
-            && topicMap == nil && leaderboard == nil && distribution == nil && mosaic == nil
+            && topicMap == nil && distribution == nil && mosaic == nil
             && sourceHead == nil
             ? FeedHeatmap.label(for: source) : nil
+        // **A ROOM THAT DRAWS NO HEAD GETS THE NEWEST THING AS A CARD**
+        // (prd §721) — `memo.lede` is gated on exactly this flag, so the
+        // fifteen rooms the deleted board used to head now fall through to
+        // `FeedLedeCard`, the All feed's own cover, on the All feed's own
+        // terms (`ledeThingID`: newest row, under `ledeMaxAge`, at least
+        // `ledeMinRows` deep, never a row that `standsAlone`). Nothing new was
+        // built for it; the board was standing in the slot.
         let heroShown = liveStream != nil || anniversary != nil || topicMap != nil
-            || heatmapLabel != nil || leaderboard != nil || sourceHead != nil
+            || heatmapLabel != nil || sourceHead != nil
             || distribution != nil || mosaic != nil || !rosterAccounts.isEmpty
         if let liveStream {
             insightSection { LiveStreamHero(thing: liveStream) { openThing(liveStream) } }
@@ -6301,28 +6239,6 @@ struct FeedScreen: View {
             }
         } else if let topicMap {
             insightSection { TopicMapHero(map: topicMap) }
-        } else if let leaderboard {
-            insightSection {
-                // THE BOARD IS A DOOR, in the one room that can open one
-                // (2026-08-18, prd §396). "Who you reply to" names people you
-                // have talked to for a decade and, until this pass, tapping
-                // one did nothing — while the corpus behind it could answer
-                // "when, and how often" better than X can. Passed only for X:
-                // every other board here ranks subreddits, artists,
-                // publications and books, and a person room over an artist
-                // name would open an empty screen.
-                //
-                // A READING ROOM'S BOARD NARROWS ITS OWN ROOM instead
-                // (2026-08-23, prd §455) — see `FeedInsight.Leaderboard.Scope`
-                // for why the board carries the field it ranked and
-                // `roomScoped` for why this one card is not narrowed with the
-                // rows. Two destinations, never both: X's board opens a person
-                // and a reading board scopes, so `scope` being non-nil is the
-                // whole test and no room can accidentally get both.
-                LeaderboardHero(board: scopedBoard(leaderboard),
-                                onPick: leaderboardPick(leaderboard),
-                                selected: readingScope?.label)
-            }
         } else if let distribution {
             insightSection { DistributionHero(dist: distribution) }
         } else if let mosaic {
@@ -7769,8 +7685,8 @@ struct FeedScreen: View {
                 GenRender(id: "root", els: els)
                     // The Themes CARD (2026-07-21, the §160 ruling carried
                     // to the All room): every other feed-head read — the
-                    // wallet's two parcels, the heatmaps, the leaderboards,
-                    // the mosaics — wears the widget surface; this was the
+                    // wallet's two parcels, the heatmaps, the mosaics —
+                    // wears the widget surface; this was the
                     // last one floating bare on the page. Same recipe as
                     // the holdings card: GenTagMap self-pads horizontally,
                     // so only the bottom needs closing.
@@ -8046,8 +7962,9 @@ struct FeedScreen: View {
         case x(XRoom)
         // Instagram (2026-08-18, prd §389) — the second head over an import,
         // and the second that displaces a card the room already drew. It
-        // carries `FeedInsight.leaderboard`'s board forward whole, which is
-        // §349's rule rather than a courtesy; see `InstagramRoom`'s type note.
+        // carried `FeedInsight.leaderboard`'s board forward whole (§349's rule
+        // rather than a courtesy) until §721 deleted that board; see
+        // `InstagramRoom`'s type note.
         case instagram(InstagramRoom)
         // The two journal rooms (2026-08-17, prd §398) — the first head serving
         // MORE THAN ONE source, and the only place in this enum where that is
@@ -8289,54 +8206,6 @@ struct FeedScreen: View {
     /// generalised, for a head that ranks something owning MANY rows and so
     /// cannot name a single `sourceRef`. Liveness is checked inside the filter,
     /// before any stored property is read (corollary 3).
-    /// What a tapped bar does, or nil for a board with nowhere to go
-    /// (2026-08-23, prd §455).
-    ///
-    /// One place, so the two destinations can never both apply to one room:
-    /// X's board opens a person room, a scoped board narrows this one, and a
-    /// board with neither keeps the plain untappable row `LeaderboardHero`
-    /// has always drawn for it.
-    private func leaderboardPick(
-        _ board: FeedInsight.Leaderboard) -> ((FeedInsight.LeaderRow) -> Void)? {
-        if source == XPersonSource.source {
-            return { row in
-                feedSheet = .person(source: XPersonSource.source, handle: row.label)
-            }
-        }
-        guard let scope = board.scope else { return nil }
-        return { row in
-            // Tapping the row you are already scoped to CLEARS it. The board
-            // is the only control this scope has, so it has to be able to
-            // undo itself — a narrowing with no way out is the dead end §83
-            // forbids, and a separate "clear" chip for a state most readers
-            // will never enter is chrome on every other visit.
-            withAnimation(DS.Motion.standard) {
-                readingScope = readingScope?.label == row.label
-                    ? nil
-                    : ReadingScope(label: row.label, scope: scope)
-            }
-        }
-    }
-
-    /// The board as the switcher says it: unchanged, except that a narrowed
-    /// room replaces the subtitle's tally with what is actually on screen and
-    /// how to leave.
-    ///
-    /// The tally is the right subtitle for a READING and the wrong one for a
-    /// narrowed room — it counts every story while the rows below show one
-    /// publisher's, which is the two-surfaces-disagreeing failure this file
-    /// already forbids one level up. Replaced rather than appended: the count
-    /// is recoverable by tapping back to all, and a subtitle carrying both is
-    /// a sentence nobody finishes.
-    private func scopedBoard(_ board: FeedInsight.Leaderboard) -> FeedInsight.Leaderboard {
-        guard let scope = readingScope else { return board }
-        return FeedInsight.Leaderboard(
-            title: board.title,
-            subtitle: String(localized: "Showing \(scope.label) · tap again for all"),
-            rows: board.rows,
-            scope: board.scope)
-    }
-
     private func openNewest(source: String, in visible: [Thing],
                             where matches: (Thing) -> Bool) {
         let match = visible

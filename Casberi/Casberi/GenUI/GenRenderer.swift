@@ -1417,123 +1417,6 @@ struct CalendarHeatmapHero: View {
     }
 }
 
-/// A ranked-bars leaderboard (top senders, subreddits, artists, played games).
-/// One GeometryReader lays out every bar; the bars are proportional to the top
-/// group, the count sits at the trailing edge.
-struct LeaderboardHero: View {
-    let board: FeedInsight.Leaderboard
-    /// What a tapped row opens, when the room it is in has somewhere to go
-    /// (2026-08-18, prd §396). Nil for every board whose rows are subreddits,
-    /// artists, publications or books — a row that looks tappable and isn't is
-    /// the dead control the honesty law bans, so the row is only ever wrapped
-    /// in a button when a destination was handed in.
-    var onPick: ((FeedInsight.LeaderRow) -> Void)?
-    /// The row the room is currently narrowed to, when the board is acting as
-    /// a SWITCHER rather than a reading (2026-08-23, prd §455).
-    ///
-    /// The board keeps every row while the room shows one — the venue
-    /// switcher's rule (§357), and the reason this card is not narrowed along
-    /// with the rows it heads: a control that collapses to the one option you
-    /// already picked is a control you cannot leave.
-    var selected: String?
-    /// The bars' grow-on (delight, 2026-08-03): each bar grows from its
-    /// seed width to its real share, staggered top to bottom — the chart
-    /// drawing the ranking rather than presenting it pre-drawn. The same
-    /// per-appearance contract as `RowEntrance` and the sparkline draw-on;
-    /// Reduce Motion renders the final widths on the first frame.
-    @State private var grown = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    /// A row's height and the air under it. A plain board keeps the 20pt row
-    /// at the 28pt pitch it has always drawn; a board whose rows OPEN gives
-    /// each one the 44pt target (`DS.Hit.min`) and spends the gap inside it,
-    /// so the hit regions tile the card without overlapping. The card's height
-    /// is derived from the pitch, never spelled, so a tappable board grows
-    /// rather than letting its rows spill past the frame.
-    private var rowHeight: CGFloat { onPick == nil ? 20 : DS.Hit.min }
-    private var rowGap: CGFloat { onPick == nil ? 8 : 0 }
-
-    var body: some View {
-        let rows = board.rows
-        let maxV = max(rows.map(\.value).max() ?? 1, 1)
-        InsightCard {
-            InsightHeader(title: board.title, subtitle: board.subtitle)
-            GeometryReader { geo in
-                let w = geo.size.width
-                let labelW = min(max(w * 0.4, 88), 148)
-                let valueW: CGFloat = 40
-                let barW = max(w - labelW - valueW - DS.Space.s2 * 2, 24)
-                VStack(spacing: rowGap) {
-                    ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
-                        bar(row, index: i, labelW: labelW, barW: barW,
-                            valueW: valueW, maxV: maxV)
-                    }
-                }
-            }
-            .frame(height: CGFloat(rows.count) * (rowHeight + rowGap))
-            .onAppear { grown = true }
-        }
-    }
-
-    /// One ranked row. Wrapped in a button only when `onPick` was given, so a
-    /// board with nowhere to go keeps exactly the plain row it has always
-    /// drawn — no hit target, no press state, no promise.
-    @ViewBuilder
-    private func bar(_ row: FeedInsight.LeaderRow, index i: Int,
-                     labelW: CGFloat, barW: CGFloat, valueW: CGFloat,
-                     maxV: Int) -> some View {
-        if let onPick {
-            Button {
-                DSHaptic.selection()
-                onPick(row)
-            } label: {
-                barBody(row, index: i, labelW: labelW, barW: barW,
-                        valueW: valueW, maxV: maxV)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .dsHover()
-        } else {
-            barBody(row, index: i, labelW: labelW, barW: barW,
-                    valueW: valueW, maxV: maxV)
-        }
-    }
-
-    private func barBody(_ row: FeedInsight.LeaderRow, index i: Int,
-                         labelW: CGFloat, barW: CGFloat, valueW: CGFloat,
-                         maxV: Int) -> some View {
-        // A selection DIMS the others rather than tinting itself a new colour:
-        // the bar's hue already means magnitude, and a second meaning on the
-        // same channel is how a chart starts lying. Weight carries the label.
-        let isOn = selected == row.label
-        let dimmed = selected != nil && !isOn
-        return HStack(spacing: DS.Space.s2) {
-            Text(row.label)
-                .dsText(.callout15).fontWeight(isOn ? .semibold : .regular)
-                .foregroundStyle(dimmed ? DS.textSecondary : DS.textPrimary)
-                .lineLimit(1).truncationMode(.tail)
-                .frame(width: labelW, alignment: .leading)
-            ZStack(alignment: .leading) {
-                Capsule().fill(DS.surfaceWell).frame(height: 8)
-                Capsule().fill(DS.tint.opacity(dimmed ? 0.28 : 0.85))
-                    .frame(width: grown
-                           ? max(barW * CGFloat(row.value) / CGFloat(maxV), 4)
-                           : 4,
-                           height: 8)
-                    .animation(reduceMotion ? nil
-                               : DS.Motion.standard.delay(Double(i) * 0.05),
-                               value: grown)
-            }
-            .frame(width: barW)
-            Text(row.detail)
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                .monospacedDigit().lineLimit(1)
-                .frame(width: valueW, alignment: .trailing)
-        }
-        .frame(height: rowHeight)
-    }
-}
-
 /// A distribution bar — one stacked capsule split by share, with a legend below.
 /// Bull/bear on a ticker feed, the arrival mix of a social feed.
 struct DistributionHero: View {
@@ -1669,7 +1552,7 @@ struct ImageMosaicHero: View {
 /// is the only thing the fill says, exactly as the wallet holdings map and
 /// the All feed's themes map read.
 ///
-/// Display-only, like `LeaderboardHero` and `DistributionHero`: every cell is a
+/// Display-only, like `DistributionHero`: every cell is a
 /// fact the pixels state, and none is a door — the honesty rule bars a
 /// half-wired scope filter, so the map presents rather than pretends to
 /// navigate. The 4×3 unit-grid tiling lives in `UnitTreemap` (shared with the

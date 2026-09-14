@@ -7545,12 +7545,10 @@ enum ProbeHooks {
         for cell in map?.cells ?? [] {
             NSLog("[Casberi] roomInsightCell| %@ = %d", cell.label, cell.count)
         }
-        // 4. the bars
-        let board = FeedInsight.leaderboard(source: source, things: things)
-        note("leaderboard", board.map { "\($0.title) · \($0.subtitle) · \($0.rows.count) rows" })
-        for row in board?.rows ?? [] {
-            NSLog("[Casberi] roomInsightRow| %@ = %@", row.label, row.detail)
-        }
+        // 4. the bars ARE DELETED (prd §721) — the ranked board headed about
+        // fifteen rooms and answered a question nobody had. A room that drew
+        // one now falls through this chain to whatever ranks next, or to no
+        // head at all and the newest thing as a card.
         // 5. the split bar, 6. the wall
         note("distribution", FeedInsight.distribution(source: source, things: things)?.title)
         note("mosaic", FeedInsight.mosaic(source: source, things: things)

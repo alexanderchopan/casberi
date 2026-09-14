@@ -495,13 +495,11 @@ grep -q 'parent.text.isEmpty && !(parent.url ?? "").isEmpty' "$XARCH" \
   || { echo "✗ the pending test changed — check it still skips self-replies (already filled) and rows with no permalink"; exit 1; }
 grep -q 'if !words.isEmpty' Casberi/Casberi/Screens/SocialReceptionCard.swift \
   || { echo "✗ ReplyingToCard no longer draws the parent's words — the pass would fill a field nothing renders"; exit 1; }
-# (4) THE BOARDS. "Whose posts you like" is empty until the face pass runs, so
-# the room's only leaderboard could never render for someone who never tapped
-# it. The reply board needs nothing but the archive.
-grep -q 'case "X":' Casberi/Casberi/Model/FeedInsight.swift \
-  || { echo "✗ X has no leaderboard at all"; exit 1; }
-grep -q 'return xBoard(things)' Casberi/Casberi/Model/FeedInsight.swift \
-  || { echo "✗ X no longer picks between its two boards — the likes board alone is empty until the face pass runs"; exit 1; }
+# (4) THE BOARDS ARE DELETED (prd §721). X's room used to pick between "Who you
+# reply to" and "Whose posts you like"; the ranked board is gone from every
+# room, so both checks went with it. What the archive stamps is still checked
+# below — `parent.handle` is read by the person room and the handle-scoped ask,
+# not only by a board.
 grep -q 'thing.parent?.handle' Casberi/Casberi/Model/FeedInsight.swift \
   || { echo "✗ the reply board no longer reads the stored card (parsing the localized 'To @' title back apart is the failure it exists to avoid)"; exit 1; }
 # (5) THE ROOM HEAD. `XRoom` is compiled whole below; these are the three

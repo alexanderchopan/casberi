@@ -147,36 +147,30 @@ for banned in URLSession NetworkLedger; do
          echo "  reach here would be undeclared on the receipts screen"; exit 1; }
 done
 
-# ── 3. The board that narrows its own room ─────────────────────────────────
-grep -q 'case publisher' "$INSIGHT" \
-  || { echo "✗ FeedInsight.Leaderboard.Scope is gone — a reading board can no"; \
-       echo "  longer say which field it ranked, so the room cannot narrow"; exit 1; }
-# The two reading rooms that pick a board at RUNTIME must carry the scope down
-# BOTH arms, or the corpora that took the other branch narrow to nothing.
-grep -q 'scope: .writer, key: writer' "$INSIGHT" \
-  || { echo "✗ the bylines board no longer carries the writer scope"; exit 1; }
-grep -q 'scope: .publisher, key: handle' "$INSIGHT" \
-  || { echo "✗ a publisher board no longer carries the publisher scope"; exit 1; }
-grep -q 'scope: board.scope' "$INSIGHT" \
-  || { echo "✗ bylines' re-wrap drops the scope — a bylined room's board would"; \
-       echo "  silently lose the scope the board it wraps was built with"; exit 1; }
-# THE INVARIANT: the rows narrow and the BOARD does not. A board recomputed
-# over one publisher's rows is one bar naming the choice you already made.
-grep -q 'narrowingToPublisher: false' "$TMP/feed.nocomment" \
-  || { echo "✗ the room's board is computed over the narrowed rows — it would"; \
-       echo "  collapse to the one publisher you picked, with no way back"; exit 1; }
-grep -q 'readingScope?.key ?? ""' "$FEED" \
-  || { echo "✗ the reading scope is not in headIdentity — the head memo would"; \
-       echo "  serve a card describing rows that are no longer on screen"; exit 1; }
-grep -q 'selected: readingScope?.label' "$FEED" \
-  || { echo "✗ the board no longer shows which row the room is narrowed to"; exit 1; }
-grep -q 'var selected: String?' "$RENDER" \
-  || { echo "✗ LeaderboardHero cannot draw a selection"; exit 1; }
-# Tapping the selected row must CLEAR it: the board is this scope's only
-# control, so it has to be able to undo itself.
-grep -q 'readingScope?.label == row.label' "$TMP/feed.nocomment" \
-  || { echo "✗ tapping the scoped row no longer clears the scope — a narrowing"; \
-       echo "  with no way out is the dead end §83 forbids"; exit 1; }
+# ── 3. The board is DELETED, and so is the scope it was the control for ────
+# §455 made a reading room's board a switcher: tap a publisher, the room
+# narrows to them. prd §721 deleted the board from every room, so the scope
+# lost its only control and went with it — `ReadingScope`, `roomScoped`,
+# `leaderboardPick`, `scopedBoard` and `LeaderboardHero` are all gone. These
+# are the checks that they STAY gone; a `readingScope` with no board to set it
+# is the dead control §83 bans, and a `roomScoped` that narrows nothing is a
+# filter every room pays for and none uses.
+for gone in 'FeedInsight.Leaderboard' 'LeaderboardHero' 'readingScope' 'roomScoped'; do
+  grep -q "$gone" "$FEED" \
+    && { echo "✗ FeedScreen still names $gone — the ranked board and its room"; \
+         echo "  scope were deleted together (prd §721)"; exit 1; }
+done
+grep -qE '\bstruct Leaderboard\b|\bstatic func leaderboard\(' "$INSIGHT" \
+  && { echo "✗ FeedInsight grew a ranked board back (prd §721)"; exit 1; }
+grep -q 'LeaderboardHero' "$RENDER" \
+  && { echo "✗ LeaderboardHero is back — nothing draws it (prd §721)"; exit 1; }
+# What REPLACED it: a room with no head falls through to the All feed's own
+# cover, on the All feed's own terms. `heroShown` is the whole mechanism.
+grep -q 'memo.lede = heroShown ? nil : ledeThingID' "$FEED" \
+  || { echo "✗ the newest-thing cover is no longer gated on heroShown — the"; \
+       echo "  rooms the board used to head would draw no card at all"; exit 1; }
+grep -q 'leaderboard' "$TMP/feed.nocomment" \
+  && { echo "✗ FeedScreen's code still mentions a leaderboard (prd §721)"; exit 1; }
 
 # ── 4. Feed health, in the room ────────────────────────────────────────────
 grep -q 'FeedRoomHealthSource.standing(for: source)' "$FEED" \

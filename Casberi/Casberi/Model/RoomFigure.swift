@@ -117,12 +117,6 @@ enum RoomFigure {
                             AgentPanel.Cell(label: $0.label, weight: $0.count)
                         }))
         }
-        if let board = FeedInsight.leaderboard(source: source, things: things) {
-            return card(board.title, board.subtitle,
-                        .bars(board.rows.prefix(4).map {
-                            AgentPanel.Bar(label: $0.label, value: $0.value, detail: $0.detail)
-                        }))
-        }
         if let split = FeedInsight.distribution(source: source, things: things) {
             let total = max(1, split.segments.reduce(0) { $0 + $1.count })
             return card(split.title, split.subtitle,
@@ -151,7 +145,7 @@ enum RoomFigure {
             // chatting — and noise where the room is content that merely
             // arrived: three identical activity smudges saying "when" about
             // rooms whose whole point is WHO and WHAT. A content room whose
-            // better figures (topic map, leaderboard, mosaic) all declined
+            // better figures (topic map, mosaic) all declined
             // now composes NO tile — an absent tile beats a tile that
             // answers nothing — while its FEED keeps the year heatmap as the
             // documented fallback (§247's chain, unchanged).

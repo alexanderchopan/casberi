@@ -432,10 +432,13 @@ grep -q 'room.entries.prefix(SafeRoomSource.rowCap)' "$CARD_SAFE" \
 # card it displaced is a regression wearing a new feature.
 grep -q 'GnosisPayRoom.monthShare(total: month.total, of: top)' "$CARD_GNOSIS" \
   || { echo "✗ the Gnosis Pay history strip no longer sizes its columns through the shipped monthShare()"; exit 1; }
-grep -q 'case "Gnosis Pay":' "Casberi/Casberi/Model/FeedInsight.swift" \
-  || { echo "✗ FeedInsight's cardMonths entry for Gnosis Pay is gone — it is the head's FALLBACK below the minimums, not dead code"; exit 1; }
-grep -q 'case "Peer":' "Casberi/Casberi/Model/FeedInsight.swift" \
-  || { echo "✗ FeedInsight's §311 leaderboard for Peer is gone — it is the head's fallback below minimumFills"; exit 1; }
+# `cardMonths` went with the boards (prd §721); the Gnosis Pay head is no
+# longer superseding anything, it is simply the room's head.
+# Peer's §311 board WAS the head's fallback below `minimumFills`, and prd §721
+# deleted every ranked board. Below the minimums Peer now falls through the
+# same chain every other room does — to a distribution, a mosaic, its heatmap,
+# or to no head and the newest thing as a card. Nothing to assert here that
+# `FeedInsight` still owns.
 grep -q 'case "Privacy Pools": return shieldedReview' "Casberi/Casberi/Model/FeedInsight.swift" \
   || { echo "✗ FeedInsight's §311 distribution for Privacy Pools is gone — it is the head's fallback"; exit 1; }
 grep -q 'PrivacyPoolsRoom.share(count: segment.count,' "$CARD_POOLS" \

@@ -54561,3 +54561,87 @@ crash it would have prevented.
 simulator. Verified: `defaults-lock-audit.py --self-test` green (14 fixtures,
 5 shipped defects caught, 2 lookalikes cleared), every other
 `scripts/*-audit.py` and its self-test green.
+
+## §721 — The ranked board is deleted from every room, and the newest thing takes its slot (user: "i also don't like that chart we have on the header about who you read the most … i say we get rid of it" → "lets do everyroom it doesn't really seem useful seems like we were trying to add visualization data just for the sake of it" → "we should replace it with a card for the most recent item like we do on the all page", 2026-09-14)
+
+**The ruling, and its reason.** `FeedInsight.leaderboard` headed about fifteen
+rooms with ranked bars — "Your publishers", "Your top artists", "Who writes
+you", "Your subreddits", "Most highlighted", "Who you snap with", "Who you
+reply to", Steam hours, the two card-spend boards. Asked whether to cut it from
+the reading rooms alone or from everywhere, the user cut it everywhere, and
+said why: *"seems like we were trying to add visualization data just for the
+sake of it."* That is a judgement about the QUESTION, not the drawing, and it
+is the same judgement §386 made about the contribution grids ("kinda useless")
+— which is the precedent that should have been applied here first. A figure
+earns its slot by answering something you wanted to know. Nothing here did.
+
+**What went.** `Leaderboard`, `LeaderRow`, every builder that fed it
+(`counted`, `bylines`, `cardMonths`, `savedAuthors`, `snapchatConversations`,
+`xBoard`, `steamPlaytime`, `ranked`), every grouping key that existed only to
+rank (`redditGroup`, `handle`, `writer`, `sender`, `book`, `artist`,
+`merchant`, `domain`, `steamHours`, `repliedTo`), `LeaderboardHero`,
+`RoomFigure`'s board arm, and the probe's `roomInsightRow|` lines.
+`FeedInsight` loses 478 lines and is down to two shapes plus the topic map.
+
+**AND §455 WENT WITH IT, WHICH IS THE PART WORTH RECORDING.** A reading room's
+board was also a CONTROL: tap a publisher and the room narrowed to them
+(`ReadingScope`, `roomScoped`, `leaderboardPick`, `scopedBoard`, the board's
+`.publisher`/`.writer` `Scope`, and a term in the head's memo key). The board
+was that scope's only control — its own doc says so, in the note explaining why
+tapping the selected row has to clear it — so deleting the board without
+deleting the scope leaves a `@State` nothing can ever set and a `roomScoped`
+that filters nothing on every room in the app. **A feature deleted from the
+surface is deleted from the model, or it becomes the dead control §83 bans, one
+layer down where no screen sweep can see it.** `roomScoped` is the second
+helper to hold that slot and the second to be deleted with the room it scoped
+(`x402Scoped` was the first, §638); `room-perf-selftest` now guards against
+both by name and states the rule for whatever comes third.
+
+**What replaced it, and how little was built.** The user asked for "a card for
+the most recent item like we do on the all page" — and that card already
+existed, already applied to every source, and was being suppressed by the board
+itself. `FeedLedeCard` (§389) is promoted by `memo.lede`, which is gated on one
+flag: `memo.lede = heroShown ? nil : ledeThingID(in: memo.days)`. Removing the
+board from `heroShown`'s disjunction is the entire change. The rooms the board
+used to head now draw the All feed's own cover on the All feed's own terms —
+`ledeThingID`: the newest row, nothing older than `ledeMaxAge` (24h), only on a
+feed at least `ledeMinRows` (3) deep, never a row that `standsAlone`.
+
+Two consequences, both deliberate and both worth stating rather than
+discovering: **a room whose newest item is more than a day old draws no head at
+all**, and **a room with fewer than three rows draws none either.** Those are
+`FeedLedeCard`'s existing rules, not new ones, and they are the honest shape —
+a cover is a claim that something just landed. A quiet room falls through to
+whatever ranks next (a distribution, a mosaic, its year heatmap) or to nothing,
+which is `RoomFigure`'s own standing ruling: an absent figure beats one that
+answers nothing.
+
+**What is pinned.** `feed-reading-selftest.sh` swaps its §455 section for the
+negative: `FeedScreen` may not name `FeedInsight.Leaderboard`, `LeaderboardHero`,
+`readingScope` or `roomScoped`; `FeedInsight` may not grow a `Leaderboard` back;
+`GenRenderer` may not grow the hero back; and `memo.lede` must stay gated on
+`heroShown`, which is the one line the replacement rests on. `room-perf-selftest`
+drops `leaderboard` from the memo's field list and guards both deleted scoping
+helpers. `x-selftest`, `wallet-rooms-selftest` and `agent-panel-selftest` lose
+the four checks that asserted a board exists — Peer's board was the head's
+fallback below `minimumFills` and Gnosis Pay's `cardMonths` was the same, so
+both of those rooms now fall through the ordinary chain.
+
+**What was found and NOT done.** About thirty doc comments in other files still
+narrate a head "displacing" or "outranking" a board (`InstagramRoom`,
+`GnosisPayRoom`, `XArchiveImport`, `DemoSeedAll`, `AgentPanel`, …). They were
+true when written and they are historical narration, which this ledger's own
+convention is not to rewrite; the comments that describe CURRENT behaviour —
+`FeedScreen`'s prefetch notes, the head-chain comment, `RoomFigure`'s
+fall-through — are corrected. `DemoSeedAll` still has a "Rooms that lead with a
+leaderboard" section seeding corpora for a card that no longer exists; the seeds
+are still valid rows and the demo census passes, so they are left for a demo
+pass rather than trimmed blind.
+
+**UNCOMPILED and UNSEEN** — Linux session, no Xcode, no `swiftc`, no simulator.
+This is a ~700-line deletion across `FeedInsight`, `FeedScreen`, `GenRenderer`,
+`RoomFigure`, `ProbeHooks` and five harnesses, and the brace balance of every
+edited Swift file is unchanged from HEAD, which is the only structural check
+available here. Verified: every `scripts/*-audit.py` and its `--self-test`
+green; `bash -n` clean on the edited shell harnesses that are bash
+(`room-perf-selftest.sh` is zsh and no zsh exists on this machine).
