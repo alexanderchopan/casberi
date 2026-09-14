@@ -358,6 +358,23 @@ enum FramesKey {
         return [UInt8(compact.recoveryId)] + [UInt8](compact.signature)
     }
 
+    /// **WHO SIGNED THIS** — the address a `v ‖ r ‖ s` signature over `hash`
+    /// recovers to, or nil (prd §728c).
+    ///
+    /// A sponsor's phone asks this of the SENDER's signature before offering
+    /// to pay: a request whose signature does not recover to the sender it
+    /// names would be refused by the node, and asking for Face ID over it would
+    /// spend a prompt on nothing. No key is read — recovery is public.
+    static func recoverAddress(hash: [UInt8], signature vrs: [UInt8]) -> String? {
+        guard hash.count == 32, vrs.count == 65, vrs[0] <= 1,
+              let signature = try? P256K.Recovery.ECDSASignature(
+                compactRepresentation: Data(vrs[1...]), recoveryId: Int32(vrs[0])),
+              let key = try? P256K.Recovery.PublicKey(HashDigest(hash), signature: signature,
+                                                      format: .uncompressed)
+        else { return nil }
+        return ethereumAddress(uncompressedPublicKey: [UInt8](key.dataRepresentation))
+    }
+
     /// `keccak256(uncompressed public key without its 0x04 tag)`, last 20 bytes.
     static func ethereumAddress(uncompressedPublicKey key: [UInt8]) -> String? {
         guard key.count == 65, key.first == 0x04 else { return nil }

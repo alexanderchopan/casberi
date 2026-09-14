@@ -67,6 +67,34 @@ enum FramesSend {
         /// Refused HERE rather than by the node, because the node's own
         /// sentence for it names no remedy.
         case prefixTooLarge
+        /// A payment request that does not describe a transaction this app
+        /// builds (prd §728c).
+        case requestUnreadable
+        /// The request's own signature does not recover to the sender it names.
+        case requestSignatureInvalid
+        /// The request asks a different account to pay.
+        case notTheSponsor
+    }
+
+    /// **ONE SENTENCE PER FAILURE**, for the surfaces added with sponsorship
+    /// (prd §728c). The two send paths in `FeedScreen` keep their own wording
+    /// for the older cases and defer here for the new ones.
+    static func sentence(_ failure: Failure) -> String {
+        switch failure {
+        case .noKey:            return String(localized: "There's no account on this phone yet.")
+        case .signingRefused:   return String(localized: "The signature was refused.")
+        case .chainUnreachable: return String(localized: "Couldn't reach the chain — nothing was sent.")
+        case .prefixTooLarge:   return String(localized: "The verify steps ask for more gas than this chain allows.")
+        case .broadcastRefused(let why): return String(localized: "The network refused it: \(why)")
+        case .faucet(let verdict):
+            return verdict.sentence ?? String(localized: "The faucet didn't send anything.")
+        case .requestUnreadable:
+            return String(localized: "That request doesn't describe a transaction this app can pay for.")
+        case .requestSignatureInvalid:
+            return String(localized: "The request's signature doesn't match the account that sent it.")
+        case .notTheSponsor:
+            return String(localized: "This request asks a different account to pay.")
+        }
     }
 
     struct Claimed: Equatable { let transactionHash: String }
@@ -300,6 +328,84 @@ enum FramesSend {
         // hash that was just signed.
         fields.signatures = [.init(scheme: 1, signer: sender, msg: Data(),
                                    signature: Data(signature))]
+
+        let raw = "0x" + RLP.hex(FramesTransaction.encoded(fields))
+        return try await broadcast(rawTransaction: raw)
+    }
+
+    // MARK: - Asking somebody else to pay (prd §728c)
+
+    /// **SIGN A REQUEST FOR `sponsor` TO PAY**, and return it for the sponsor's
+    /// phone. Nothing is broadcast: the transaction is not valid until the
+    /// sponsor signs too, so this signs half of it and hands the rest over.
+    ///
+    /// The request is rebuilt from its own fields before it is returned and
+    /// must hash to what was just signed — the one check that the sponsor's
+    /// phone, rebuilding it the same way, will be looking at this transaction
+    /// and not a neighbour of it.
+    static func askSponsor(sponsor: Data,
+                           legs: [FramesTransaction.Leg],
+                           atomic: Bool,
+                           nonce: UInt64,
+                           deadline: UInt64,
+                           maxPriorityFeePerGas: UInt64 = 1_000_000_000,
+                           maxFeePerGas: UInt64 = 10_000_000_000) async throws -> FramesSponsorRequest {
+        guard let address = FramesKey.address(),
+              let sender = RLP.data(fromHex: address) else { throw Failure.noKey }
+        guard !legs.isEmpty, legs.count <= FramesSponsor.maxLegs,
+              sponsor.count == 20, sponsor != sender else { throw Failure.requestUnreadable }
+        let fields = FramesTransaction.sponsored(
+            sender: sender, sponsor: sponsor, legs: legs, atomic: atomic, nonce: nonce,
+            maxPriorityFeePerGas: maxPriorityFeePerGas, maxFeePerGas: maxFeePerGas,
+            deadline: deadline)
+        guard FramesTransaction.prefixWithinBudget(fields) else { throw Failure.prefixTooLarge }
+
+        let preimage = FramesTransaction.signingPreimage(fields)
+        let digest = [UInt8](Keccak256.hash([UInt8](preimage)))
+        let signature: [UInt8]
+        do {
+            signature = try FramesKey.sign(
+                hash: digest,
+                reason: String(localized: "Sign a request for someone else to pay"))
+        } catch { throw Failure.signingRefused }
+
+        let request = FramesSponsor.request(for: fields, sponsor: sponsor, legs: legs, atomic: atomic,
+                                            deadline: deadline, senderSignature: Data(signature))
+        guard let rebuilt = FramesSponsor.fields(request),
+              FramesTransaction.signingPreimage(rebuilt) == preimage else {
+            throw Failure.requestUnreadable
+        }
+        return request
+    }
+
+    /// **PAY FOR SOMEBODY ELSE'S TRANSACTION** — the sponsor's half.
+    ///
+    /// Refuses before the Face ID wherever it can (§530): a request that does
+    /// not rebuild, one addressed to another account, and one whose SENDER's
+    /// signature does not recover to the sender it names — which the node
+    /// would refuse anyway, after the prompt.
+    static func payForSponsor(_ request: FramesSponsorRequest) async throws -> String {
+        guard let address = FramesKey.address(),
+              let mine = RLP.data(fromHex: address) else { throw Failure.noKey }
+        guard var fields = FramesSponsor.fields(request) else { throw Failure.requestUnreadable }
+        guard fields.signatures.count == 2, fields.signatures[1].signer == mine else {
+            throw Failure.notTheSponsor
+        }
+        guard FramesTransaction.prefixWithinBudget(fields) else { throw Failure.prefixTooLarge }
+
+        let digest = [UInt8](Keccak256.hash([UInt8](FramesTransaction.signingPreimage(fields))))
+        guard let signer = FramesKey.recoverAddress(hash: digest,
+                                                    signature: [UInt8](fields.signatures[0].signature)),
+              signer.caseInsensitiveCompare(request.sender) == .orderedSame else {
+            throw Failure.requestSignatureInvalid
+        }
+        let signature: [UInt8]
+        do {
+            signature = try FramesKey.sign(
+                hash: digest,
+                reason: String(localized: "Pay the fee for this transaction"))
+        } catch { throw Failure.signingRefused }
+        fields.signatures[1].signature = Data(signature)
 
         let raw = "0x" + RLP.hex(FramesTransaction.encoded(fields))
         return try await broadcast(rawTransaction: raw)

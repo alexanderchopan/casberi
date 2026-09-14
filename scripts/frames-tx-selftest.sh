@@ -82,7 +82,7 @@ PYM
   # so this file was proven equivalent run-for-run by
   # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.9x faster).
   # Re-probe before trusting it again after adding mutations.
-  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift m/main.swift 2>/dev/null ) \
+  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift m/main.swift 2>/dev/null ) \
      && "$MW/m/run2" >/dev/null 2>&1; then
     echo "SURVIVED|$MID|$MLABEL"; exit 0
   fi
@@ -108,10 +108,13 @@ TOKENS="Casberi/Casberi/Model/DevnetTokens.swift"
 # where a pending send is. Foundation-only, compiled whole: nothing on this
 # machine can make a devnet stall or relaunch on demand.
 CHAINW="Casberi/Casberi/Model/FramesChainWatch.swift"
+# **Asking somebody else to pay (prd §728c)** — the sponsored shape, the
+# request one phone hands another, and what the sponsor's phone refuses.
+SPONSOR="Casberi/Casberi/Model/FramesSponsor.swift"
 KEY="Casberi/Casberi/Model/FramesKey.swift"
 SEND="Casberi/Casberi/Model/FramesSend.swift"
 BRIDGE="Casberi/Casberi/Model/FramesBridge.swift"
-for f in "$TX" "$RLPF" "$KC" "$MONEY" "$SECT" "$READ" "$KEY" "$SEND" "$BRIDGE" "$CHAINW"; do
+for f in "$TX" "$RLPF" "$KC" "$MONEY" "$SECT" "$READ" "$KEY" "$SEND" "$BRIDGE" "$CHAINW" "$SPONSOR"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -725,6 +728,7 @@ cp "$READ" "$WORK/FramesReading.swift"
 cp "$RFRAMES" "$WORK/RoomFrames.swift"
 cp "$TOKENS" "$WORK/DevnetTokens.swift"
 cp "$CHAINW" "$WORK/FramesChainWatch.swift"
+cp "$SPONSOR" "$WORK/FramesSponsor.swift"
 mkdir -p "$WORK/m"
 
 cat > "$WORK/m/main.swift" <<'SWIFT'
@@ -1757,12 +1761,80 @@ check("and an empty amount",
 check("the verify budget still fits with the deadline frame in the prefix",
       FramesTransaction.prefixWithinBudget(vMixed))
 
+// --- ASKING SOMEBODY ELSE TO PAY (prd §728c) ----------------------------------
+// **THE PREIMAGE BOTH SIGNATURES WERE VERIFIED OVER.** An independent encoder
+// built a sponsored transfer under a deadline, both keys signed it, and the
+// node refused it with "Nonce mismatch" — which it checks only after both
+// signatures validate at their fixed indices.
+let sponsoredLeg = FramesTransaction.Leg(recipient: deadAddr, value: oneGwei)
+let vSponsored = FramesTransaction.sponsored(
+    sender: senderA, sponsor: bobAddr, legs: [sponsoredLeg], atomic: false, nonce: 7,
+    maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: fixedDeadline)
+let sponsoredHash = "0xa898994ad6d82bd1d5eb9fc5e2d3b54a9a0ec3f92d9653a91af64434de0e9e3a"
+check("V-SPONSORED: somebody else paying is the preimage the node verified both signatures over",
+      keccakHex(FramesTransaction.signingPreimage(vSponsored)) == sponsoredHash)
+check("the sender approves running only, the sponsor paying only",
+      vSponsored.frames.map(\.flags) == [0, 2, 1, 0])
+check("signatures are sender then sponsor — the default code reads 0 to run and 1 to pay",
+      vSponsored.signatures.map(\.signer) == [senderA, bobAddr])
+check("the paying frame carries the state budget, for a sender that does not exist yet",
+      vSponsored.frames[2].stateGas == 250_000 && vSponsored.frames[1].stateGas == 0)
+let aliceSig = hx("0x010afe41ede03a018aa0646893a82f638bc9e6548b0cfa26b14adf4d4529312d6830469b9383fca8430da0a0fae4edfb3c0268d3a907950baedfabacd2f9fb2f31")
+let ask = FramesSponsor.request(for: vSponsored, sponsor: bobAddr, legs: [sponsoredLeg], atomic: false,
+                                deadline: fixedDeadline, senderSignature: aliceSig)
+let askLink = FramesSponsor.link(ask)
+check("a request travels as a casberi link",
+      askLink?.absoluteString.hasPrefix("casberi://frames/sponsor?r=") == true)
+let askBack = askLink.flatMap(FramesSponsor.request(from:))
+check("and arrives identical", askBack == ask)
+check("and rebuilds the exact transaction the sender signed",
+      askBack.flatMap(FramesSponsor.fields).map { keccakHex(FramesTransaction.signingPreimage($0)) } == sponsoredHash)
+check("with the sender's signature in place and the sponsor's empty",
+      askBack.flatMap(FramesSponsor.fields)?.signatures.map(\.signature) == [aliceSig, Data()])
+let bobHex = "0x61c93cfd66431c2d6f5e29d224fd29afd4550f2e"
+let inTime = Date(timeIntervalSince1970: TimeInterval(fixedDeadline) - 60)
+check("a readable request for this phone, in time, at the sender's nonce, is payable",
+      FramesSponsor.refusal(ask, mine: bobHex, now: inTime, senderNonce: 7) == nil)
+check("an unread nonce refuses nothing yet",
+      FramesSponsor.refusal(ask, mine: bobHex, now: inTime, senderNonce: nil) == nil)
+check("a request for another account is refused",
+      FramesSponsor.refusal(ask, mine: "0x285dc41e452865032197bd1d44e4a9e1179c994c", now: inTime, senderNonce: 7)
+        == .notForThisPhone)
+check("past its deadline it is refused",
+      FramesSponsor.refusal(ask, mine: bobHex, now: inTime.addingTimeInterval(120), senderNonce: 7) == .expired)
+check("a sender who has sent something since makes it stale",
+      FramesSponsor.refusal(ask, mine: bobHex, now: inTime, senderNonce: 8) == .stale)
+var futureFormat = ask; futureFormat.format = 2
+check("malformed outranks everything else",
+      FramesSponsor.refusal(futureFormat, mine: nil, now: inTime.addingTimeInterval(9_999), senderNonce: 0) == .malformed)
+let daiHex = "0x7d6fa7c366f36046656b019dc9a27f171628cf3f"
+var approveCall = ask
+approveCall.legs = [.init(target: daiHex, value: "0x",
+                          data: "0x095ea7b3" + String(repeating: "0", count: 24) + "61c93cfd66431c2d6f5e29d224fd29afd4550f2e" + String(repeating: "f", count: 64))]
+check("a call a sponsor cannot read is malformed — approve(), not transfer()",
+      FramesSponsor.fields(approveCall) == nil)
+var tokenAsk = ask
+tokenAsk.legs = [.init(target: daiHex, value: "0x", data: "0x" + RLP.hex(daiLeg.data))]
+check("a plain token transfer is payable", FramesSponsor.fields(tokenAsk) != nil)
+var tokenAndCoin = tokenAsk
+tokenAndCoin.legs[0].value = "0x3b9aca00"
+check("a token transfer that also sends coin is malformed", FramesSponsor.fields(tokenAndCoin) == nil)
+var selfSponsor = ask; selfSponsor.sponsor = ask.sender
+check("asking yourself to pay is malformed", FramesSponsor.fields(selfSponsor) == nil)
+var tooManyLegs = ask; tooManyLegs.legs = Array(repeating: ask.legs[0], count: 9)
+check("nine legs is past what a sponsor is asked to read", FramesSponsor.fields(tooManyLegs) == nil)
+check("a link whose request is not JSON is no request",
+      FramesSponsor.request(from: URL(string: "casberi://frames/sponsor?r=bm90IGpzb24")!) == nil)
+check("the fee ceiling covers every budget the frames were given",
+      FramesTransaction.maxGas(vSponsored)
+        >= vSponsored.frames.reduce(UInt64(0)) { $0 + $1.executionGas + $1.stateGas })
+
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
 print("  ok   encoder: 3 real vectors byte-exact, keccak == the chain's own hash (1 on the post-restart chain)")
 SWIFT
 
 build_run() {
-  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift m/main.swift 2>&1 )
+  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift m/main.swift 2>&1 )
 }
 if ! out="$(build_run)"; then echo "✗ harness did not compile"; echo "$out"; exit 1; fi
 "$WORK/m/run" || exit 1
@@ -2056,6 +2128,27 @@ mutate "a token amount sent as coin value too" FramesTransaction.swift \
   'return Leg(recipient: contract, value: Data(), data: data)' 'return Leg(recipient: contract, value: amount, data: data)'
 mutate "a stitched leg losing its calldata" FramesTransaction.swift \
   'value: leg.value, data: leg.data)' 'value: leg.value, data: Data())'
+F7=FramesSponsor.swift
+mutate "the sender approving payment as well as running" $F7 \
+  'Frame(mode: 1, flags: 0x02, target: sender,' 'Frame(mode: 1, flags: 0x03, target: sender,'
+mutate "the sponsor's signature placed first" $F7 \
+  'signatures: [Signature(scheme: 1, signer: sender, msg: Data(), signature: Data()),
+                         Signature(scheme: 1, signer: sponsor, msg: Data(), signature: Data())],' \
+  'signatures: [Signature(scheme: 1, signer: sponsor, msg: Data(), signature: Data()),
+                         Signature(scheme: 1, signer: sender, msg: Data(), signature: Data())],'
+mutate "any 68-byte call payable" $F7 \
+  'guard data.count == 68, data.starts(with: FramesTransaction.erc20TransferSelector),' 'guard data.count == 68,'
+mutate "an expired request payable" $F7 \
+  'if now.timeIntervalSince1970 > TimeInterval(request.deadline) { return .expired }' ''
+mutate "a stale request payable" $F7 \
+  'if let senderNonce, senderNonce != request.nonce { return .stale }' ''
+mutate "another account's request payable" $F7 \
+  'guard let mine, mine.caseInsensitiveCompare(request.sponsor) == .orderedSame' 'guard let mine, !mine.isEmpty'
+mutate "asking yourself to pay allowed" $F7 \
+  '              sender != sponsor,
+' ''
+mutate "the sender's signature filed as the sponsor's" $F7 \
+  'fields.signatures[0].signature = signature' 'fields.signatures[1].signature = signature'
 F5=FramesChainWatch.swift
 mutate "an install's first genesis called a relaunch" $F5 \
   'guard let baseline, !baseline.isEmpty else { return .adopt(observed) }' \

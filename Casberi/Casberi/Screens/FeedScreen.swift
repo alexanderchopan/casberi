@@ -605,6 +605,9 @@ struct FeedScreen: View {
         case framesPayer(FramesPayer, [FramesMove])
         /// One watched Frames address, or this phone's own.
         case framesAccount(FramesAccount)
+        /// Somebody asking this phone to pay their fee (prd §728c), opened by a
+        /// `casberi://frames/sponsor` link through `chrome.framesSponsorRequest`.
+        case framesSponsor(FramesSponsorRequest)
         /// Carries the sending account, which only `signableVibenetAccount()`
         /// can resolve — the sheet must never re-derive it and disagree.
         case vibenetSend(Data)
@@ -653,6 +656,7 @@ struct FeedScreen: View {
             case .framesFrame(let m, let i): "framesFrame:\(m.id)#\(i)"
             case .framesPayer(let p, _): "framesPayer:\(p.id)"
             case .framesAccount(let a): "framesAccount:\(a.address)"
+            case .framesSponsor(let r): "framesSponsor:\(r.id)"
             case .vibenetSend(let a): "vibenetSend:\(VibenetTransaction.hex(a))"
             case .vibenetAuthorize(let account, _, _, let editing):
                 "vibenetAuthorize:\(VibenetTransaction.hex(account)):\(editing?.actorId ?? "new")"
@@ -1252,9 +1256,61 @@ struct FeedScreen: View {
             case .prefixTooLarge:   return String(localized: "That's more frames than this chain will verify at once — remove one.")
             case .broadcastRefused(let why): return String(localized: "The network refused it: \(why)")
             case .faucet(let verdict): return verdict.sentence
+            case .requestUnreadable, .requestSignatureInvalid, .notTheSponsor:
+                return FramesSend.sentence(failure)
             }
         } catch {
             return String(localized: "Couldn't send.")
+        }
+    }
+
+    /// **WHO CAN BE ASKED TO PAY (prd §728c)** — the addresses you watch, not
+    /// the measured examples the recipient picker offers: a request goes to a
+    /// person who has to open it and agree, so only somebody you follow makes
+    /// sense to ask. Empty draws no row.
+    private var framesPayerCandidates: [(address: String, name: String?)] {
+        let me = FramesKey.address()
+        return FramesWatch.shared.addresses
+            .filter { me == nil || $0.caseInsensitiveCompare(me!) != .orderedSame }
+            .map { ($0, FramesWatch.shared.name(for: $0)) }
+    }
+
+    /// Sign the batch as a request for `payer`, and hand back the link.
+    /// **A THIRTY-MINUTE DEADLINE**, not a send's five — see
+    /// `FramesSponsor.requestWindow`.
+    private func askFramesSponsor(_ legs: [DevnetSendLeg], atomic: Bool,
+                                  payer: String) async -> DevnetAskResult {
+        guard !DemoMode.isActive else {
+            return DevnetAskResult(failure: String(localized: "Nothing is signed in the demo — this is where your own key would sign the request."))
+        }
+        guard let address = FramesKey.address() else {
+            return DevnetAskResult(failure: String(localized: "There's no account on this phone yet."))
+        }
+        guard let sponsor = RLP.data(fromHex: payer) else {
+            return DevnetAskResult(failure: String(localized: "Couldn't read who pays."))
+        }
+        var built: [FramesTransaction.Leg] = []
+        for leg in legs {
+            guard let frame = framesLeg(leg) else {
+                return DevnetAskResult(failure: String(localized: "Couldn't read one of the frames."))
+            }
+            built.append(frame)
+        }
+        guard let nonce = await FramesSend.currentNonce(for: address) else {
+            return DevnetAskResult(failure: String(localized: "Couldn't reach the chain to read this account's nonce."))
+        }
+        let deadline = UInt64(Date().timeIntervalSince1970 + FramesSponsor.requestWindow)
+        do {
+            let request = try await FramesSend.askSponsor(sponsor: sponsor, legs: built, atomic: atomic,
+                                                          nonce: nonce, deadline: deadline)
+            guard let link = FramesSponsor.link(request) else {
+                return DevnetAskResult(failure: String(localized: "Couldn't make a link for the request."))
+            }
+            return DevnetAskResult(link: link, expires: FramesSend.date(deadline))
+        } catch let failure as FramesSend.Failure {
+            return DevnetAskResult(failure: FramesSend.sentence(failure))
+        } catch {
+            return DevnetAskResult(failure: String(localized: "Couldn't sign the request."))
         }
     }
 
@@ -1293,6 +1349,8 @@ struct FeedScreen: View {
             // acted on, and on a send that is the worst place for it.
             case .broadcastRefused(let why): return String(localized: "The network refused it: \(why)")
             case .faucet(let verdict): return verdict.sentence
+            case .requestUnreadable, .requestSignatureInvalid, .notTheSponsor:
+                return FramesSend.sentence(failure)
             }
         } catch {
             return String(localized: "Couldn't send.")
@@ -4170,6 +4228,8 @@ struct FeedScreen: View {
                 // definition NOT it.
                 feedSheet = .framesMove(move, framesOwner(of: move))
             }
+        case .framesSponsor(let request):
+            FramesSponsorSheet(request: request)
         case .framesAccount(let account):
             FramesAccountSheet(account: account) { section in
                 // The sheet's facts are doors: scope the room to this account
@@ -4398,7 +4458,14 @@ struct FeedScreen: View {
                 },
                 planAsset: { destination, amount, asset in
                     FramesSendPlanSteps.steps(destination: destination, amount: amount, asset: asset)
-                })
+                },
+                // **SOMEBODY ELSE CAN PAY (prd §728c)** — a row on the batch,
+                // drawn only when there is somebody you follow to ask.
+                payerChoice: DevnetPayerChoice(
+                    candidates: framesPayerCandidates,
+                    ask: { legs, atomic, payer in
+                        await askFramesSponsor(legs, atomic: atomic, payer: payer)
+                    }))
         // **ETHREX PRIVACY'S SEND (prd §593d)** — the seat's first act. It
         // shipped watch-only because §593a could not reproduce the type-`0x6`
         // envelope; §593c settled that against the node and wrote the encoder,
@@ -5664,6 +5731,15 @@ struct FeedScreen: View {
             guard let person else { return }
             openPerson = person
             chrome.personRequest = nil
+        }
+        // **A PAYMENT REQUEST A LINK OPENED (prd §728c).** `initial: true`
+        // because the link also switches the room: the Frames room's screen
+        // mounts AFTER the request is set, so a change-only handler would
+        // never see it.
+        .onChange(of: chrome.framesSponsorRequest, initial: true) { _, request in
+            guard let request else { return }
+            feedSheet = .framesSponsor(request)
+            chrome.framesSponsorRequest = nil
         }
         // A raised sheet owns the keyboard (Mac, 2026-07-31 — see
         // `ShellChrome.canWalk`). It matters most where the detail pane

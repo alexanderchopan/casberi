@@ -88,6 +88,14 @@ KNOWN_UNSWEPT = {
         "`-uiAnswerProbe` are its headless doors, and they read the document "
         "rather than photograph it."
     ),
+    "frames": (
+        "`casberi://frames/sponsor?r=` carries a payment request SIGNED by "
+        "another phone's key (prd §728c), addressed to this phone's Frames "
+        "account. No pass has a second key to mint one or an account it is "
+        "addressed to, so the sweep could only photograph the unreadable-"
+        "request toast and certify it as the sheet. The request's rules are "
+        "`frames-tx-selftest.sh`'s, read rather than photographed."
+    ),
 }
 
 # An iOS entitlement with no Catalyst counterpart, by Apple's own platform

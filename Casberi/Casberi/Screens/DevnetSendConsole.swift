@@ -682,6 +682,26 @@ struct DevnetSendLeg: Identifiable, Equatable {
     var unit: String? = nil
 }
 
+/// **WHO PAYS THE FEE, for a venue that can ask somebody else (prd §728c).**
+///
+/// Nil for every venue whose chain has no sponsorship. On Frames the sponsor
+/// is named BEFORE anybody signs, because the signature commits to the frame
+/// that says who pays — so the choice is a row on the list, and the verb it
+/// changes is the one beneath it.
+struct DevnetPayerChoice {
+    /// Who can be asked, by name. Never the sender.
+    let candidates: [(address: String, name: String?)]
+    /// Sign the batch as a request for `payer`, and return what to hand them.
+    let ask: (_ legs: [DevnetSendLeg], _ atomic: Bool, _ payer: String) async -> DevnetAskResult
+}
+
+/// What asking produced: a link to share and when it stops working, or why not.
+struct DevnetAskResult {
+    var link: URL? = nil
+    var expires: Date? = nil
+    var failure: String? = nil
+}
+
 /// **ONE THING THE SHEET CAN SEND (prd §728b).** A venue whose accounts hold
 /// tokens as well as the coin hands the sheet a list, and the unit beside the
 /// figure becomes the choice. The empty `id` is the coin; every other `id` is
@@ -1028,6 +1048,8 @@ struct DevnetSendSheet: View {
     /// from a coin send, and a preview that did not know which would be a
     /// description of the wrong transaction.
     var planAsset: ((_ destination: String, _ amount: String, _ asset: DevnetSendAsset?) -> [DevnetSendStep])? = nil
+    /// Who pays the fee, when somebody else can (prd §728c). Nil draws no row.
+    var payerChoice: DevnetPayerChoice? = nil
 
 
     @Environment(\.dismiss) private var dismiss
@@ -1052,6 +1074,11 @@ struct DevnetSendSheet: View {
     /// `@State` initialiser cannot read another stored property.
     @State private var choiceOn = false
     @State private var assetID = ""
+    /// Nil is "you". An address is the sponsor being asked.
+    @State private var payer: String? = nil
+    /// Set once a request is signed: the sheet stops offering to send and
+    /// offers the link instead.
+    @State private var askReady: DevnetAskResult? = nil
     @State private var showingAdvanced = false
 
     /// What this send will DO. For a venue whose batch is atomic by
@@ -1544,6 +1571,9 @@ struct DevnetSendSheet: View {
 
                 atomicRow(stitch)
                 advancedRow
+                if let payerChoice, askReady == nil, !payerChoice.candidates.isEmpty {
+                    payerRow(payerChoice)
+                }
 
                 if let errorText {
                     Text(errorText)
@@ -1554,9 +1584,124 @@ struct DevnetSendSheet: View {
                         .padding(.bottom, DS.Space.s2)
                 }
 
-                sendAll
+                if let ready = askReady, let link = ready.link {
+                    askShare(link, expires: ready.expires)
+                } else {
+                    sendAll
+                }
             }
         }
+    }
+
+    // MARK: Who pays (prd §728c)
+
+    private func payerName(_ address: String) -> String {
+        payerChoice?.candidates.first { $0.address.caseInsensitiveCompare(address) == .orderedSame }?.name
+            ?? WalletStore.shortAddress(address)
+    }
+
+    /// **A ROW, NOT A SCREEN**, on the atomic row's own chrome: it is a choice
+    /// about the same transaction the row above describes, and both states are
+    /// spelled (`DevnetSendChoice`'s rule) — "you" is the state nearly everyone
+    /// is in and must not read as the absence of a feature.
+    private func payerRow(_ choice: DevnetPayerChoice) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(String(localized: "Who pays the fee"))
+                    .dsText(.callout15).fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+                Text(payer == nil
+                     ? String(localized: "You do, from this account.")
+                     : String(localized: "They sign it too. Nothing sends until they do."))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: DS.Space.s2)
+            Menu {
+                Button {
+                    DSHaptic.selection()
+                    payer = nil
+                } label: {
+                    Text(String(localized: "You"))
+                }
+                ForEach(choice.candidates, id: \.address) { candidate in
+                    Button {
+                        DSHaptic.selection()
+                        payer = candidate.address
+                    } label: {
+                        Text(candidate.name ?? WalletStore.shortAddress(candidate.address))
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(payer.map(payerName) ?? String(localized: "You"))
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .lineLimit(1)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .dsGlyph(11, weight: .semibold)
+                        .accessibilityHidden(true)
+                }
+                .foregroundStyle(tint)
+                .contentShape(Rectangle())
+            }
+        }
+        .modifier(DevnetAtomicRowChrome(animatesOn: false))
+    }
+
+    private func actAsk() {
+        guard let choice = payerChoice, let payer else { return }
+        busy = true
+        errorText = nil
+        let built = legs
+        let allOrNothing = atomic
+        Task { @MainActor in
+            let result = await choice.ask(built, allOrNothing, payer)
+            busy = false
+            if let failure = result.failure {
+                errorText = failure
+                return
+            }
+            DSHaptic.success()
+            askReady = result
+        }
+    }
+
+    /// **THE REQUEST IS SIGNED; NOW IT HAS TO REACH THEM.** One tile, in the
+    /// place the send tile stood, so the sheet still has one saturated block
+    /// (§563's hero rule) — and it says when the request stops working, since
+    /// that is the one thing the person handing it over needs to pass on.
+    @ViewBuilder private func askShare(_ link: URL, expires: Date?) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text(String(localized: "Signed. Now send it to \(payer.map(payerName) ?? "")."))
+                .dsText(.callout15).fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let expires {
+                Text(String(localized: "It sends when they pay, and stops working at \(expires.formatted(date: .omitted, time: .shortened))."))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ShareLink(item: link,
+                      message: Text(String(localized: "Can you pay the fee for this on \(venue)?"))) {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "square.and.arrow.up")
+                        .dsGlyph(15, weight: .semibold)
+                        .accessibilityHidden(true)
+                    Text(String(localized: "Share the request"))
+                }
+                .dsText(.callout15).fontWeight(.semibold)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, DS.Space.s4)
+                .background(tint, in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, DS.Space.s2)
+        }
+        .padding(.top, DS.Space.s3)
     }
 
     /// **THE ROWS ARE ONE SIZE** (user, 2026-09-01: "the add frame card should
@@ -1889,15 +2034,16 @@ struct DevnetSendSheet: View {
     /// `disabled` is `legs.isEmpty` and NOT `!armedAll`: a busy tile keeps its
     /// fill and spins in the disc, because it is acting rather than refusing.
     private var sendAll: some View {
-        DSActVerb(title: total.map { String(localized: "Send \($0)") }
-                         ?? String(localized: "Send"),
-                  unit: total == nil ? nil : (legs.first?.unit ?? unit),
-                  glyph: "arrow.up.right",
+        DSActVerb(title: payer == nil
+                            ? (total.map { String(localized: "Send \($0)") } ?? String(localized: "Send"))
+                            : String(localized: "Ask to pay"),
+                  unit: payer.map(payerName) ?? (total == nil ? nil : (legs.first?.unit ?? unit)),
+                  glyph: payer == nil ? "arrow.up.right" : "paperplane",
                   tint: tint,
                   busy: busy,
                   disabled: legs.isEmpty,
                   accessory: stitchPreview,
-                  act: actAll)
+                  act: payer == nil ? actAll : actAsk)
             .armedPop(armedAll)
             .animation(DS.Motion.standard, value: armedAll)
     }

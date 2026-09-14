@@ -448,6 +448,12 @@ final class ShellChrome {
     /// goes to the screen that owns the right destination.
     var personRequest: SocialProfile?
 
+    /// **A SPONSORSHIP REQUEST A LINK OPENED (prd §728c).** Set by `RootShell`'s
+    /// `casberi://frames/sponsor` route and consumed by `FeedScreen`, which
+    /// owns the Frames room's one sheet — `personRequest`'s own hop, for its
+    /// reason: the destination lives on the screen, not the shell.
+    var framesSponsorRequest: FramesSponsorRequest?
+
     /// The crown pour's hue override (prd §159, 2026-07-21). nil = Casberi's
     /// own tint, the permanent field; the Wallet feed sets a scoped wallet's
     /// face tint here while you stand in that wallet, so the whole crown —

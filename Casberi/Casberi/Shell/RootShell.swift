@@ -2518,6 +2518,18 @@ struct RootShell: View {
                     predicate: #Predicate { $0.id == uuid }
                 )))?.first
             }
+        // casberi://frames/sponsor?r=<request> — somebody asked this phone to
+        // pay for a Frames transaction (prd §728c). Lands in the Frames room
+        // and hands the request to it; a link that is not a readable request
+        // says so rather than opening a room with nothing to explain.
+        case "frames":
+            sceneState.filter.source = FramesIdentity.source
+            sceneState.filter.tag = "All"
+            if let request = FramesSponsor.request(from: url) {
+                chrome.framesSponsorRequest = request
+            } else {
+                chrome.flash(String(localized: "That payment request couldn't be read."), tone: .failure)
+            }
         default: break
         }
     }

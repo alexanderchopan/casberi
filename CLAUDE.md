@@ -310,7 +310,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **A 200 from `open.spotify.com/api/token` is not a signed-in session (`isAnonymous`); only `.refused` clears the credential, and a 429 is `.throttled`** → docs/hooks/bridges.md · prd §711 · §711b
 - `-stockWatch` — resolves each query on Stocktwits (keyless symbol search), watches the top match, and syncs → docs/hooks/bridges.md
 
-Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (internal, no UI produces it, prd §269), `casberi://account`, `casberi://settings`, `casberi://thing/<id>`, `casberi://person/<Bluesky|Farcaster>/<handle>`, `casberi://ask?q=<question>` (the widgets' door, prd §382).
+Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (internal, no UI produces it, prd §269), `casberi://account`, `casberi://settings`, `casberi://thing/<id>`, `casberi://person/<Bluesky|Farcaster>/<handle>`, `casberi://ask?q=<question>` (the widgets' door, prd §382), `casberi://frames/sponsor?r=` (a payment request, prd §728c).
 
 - **The widgets** → docs/hooks/system.md · prd §382
 
