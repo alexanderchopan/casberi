@@ -1934,7 +1934,7 @@ struct BundleRow: View {
 
 /// A folded run drawn as its MEMBERS (prd §377) — screenshots and file images
 /// as their pictures, posts as their authors' faces, songs as their covers —
-/// side by side in the row's own leading seat.
+/// in a line under the source's name.
 ///
 /// `BundleRow`'s fan and this are the same compression with opposite
 /// priorities. The fan OVERLAPS three pictures behind one leader: it says "a
@@ -1943,10 +1943,21 @@ struct BundleRow: View {
 /// for the two families where the members ARE the content (a screenshot's
 /// pixels, a post's author) and a sentence about them shows none of it.
 ///
-/// Anatomy is `BundleRow`'s, unchanged: leader, then source and time, then the
-/// count and its unit. The band is the one row anatomy (ruling 2026-07-06), so
-/// the tiles grow the leading seat and nothing else — §254 rejected a
-/// full-width banner beneath the title for the same reason.
+/// THE MARK LEADS, THE TILES FOLLOW THE NAME (prd §719, 2026-09-14). §377 put
+/// the tiles in the leading seat, so a day's column read mark, strip, mark,
+/// strip, and the source names started at a different x on every other row
+/// (user, off a screenshot of the wallet row beside the GitHub row: "all rows
+/// would uniformly start w icon and name of source easy to scan down the
+/// column"). Two shapes were mocked at real tokens (`design/bundle-lead/`):
+/// tiles BETWEEN the name and the count kept the row's height and truncated
+/// "Screenshots" on a 390pt screen; tiles UNDER the time line cost one line
+/// per strip row and let every name run. The user took the second ("more
+/// standard"). Anatomy is `BundleRow`'s now, exactly: leader, then source and
+/// time, then the count and its unit — the strip is a third line of the text
+/// column at `Mark.row`, the leader's own size, so a mark and the members
+/// beside it are the same square. It is NOT the full-width banner §254
+/// rejected: it sits in the text column, inside the leading seat's indent,
+/// and is never wider than the four tiles.
 struct StripRow: View {
     let source: String
     let count: Int
@@ -1954,61 +1965,65 @@ struct StripRow: View {
     /// when mixed.
     let word: String
     let newest: Date
-    /// Up to `FeedScreen.stripCap` members, newest first.
+    /// Up to `FeedFold.stripCap` members, newest first.
     let tiles: [StripTile]
 
     /// The gap between tiles — the deck's own 4pt step (§254), so a strip and
     /// a stack read as the same family seen from two angles.
     private static let gap: CGFloat = 4
 
-    /// Every tile draws at `Mark.list`, faces and pictures alike (2026-08-14,
-    /// user, off the first real screenshots: "i really think they should be
-    /// bigger? you can't really see the image … what would it look like if the
-    /// icons and images are the same size … wouldn't that make things more
-    /// choesive?"). §377 shipped them at `Mark.row` — the seat a lone leader
-    /// occupies — and left the size as its stated open question; the answer
-    /// was already ON the ramp: `Mark.list` is documented as "a taller band
-    /// row … and the size a row's thumbnail already uses, so a mark and a
-    /// picture in the same slot are the same square", which is the user's
-    /// cohesion argument as a token. ONE size for every tile, no `rowCircle`
-    /// optical bump — that compensation is for a circle standing in a MIXED
-    /// column beside squircles (its own doc), and a strip's tiles are a line
-    /// of their own kind.
-    private static let tile: CGFloat = DS.Mark.list
+    /// Every tile draws at `Mark.row`, faces and pictures alike — the seat the
+    /// row's own mark occupies, one line up. §377's 2026-08-14 amendment took the tiles
+    /// to `Mark.list` while they WERE the leader ("you can't really see the
+    /// image … what would it look like if the icons and images are the same
+    /// size"); §719 keeps the second half of that amendment and re-applies it to
+    /// the new neighbour: the picture beside a 26pt mark is a 26pt picture.
+    /// ONE size for every tile, no `rowCircle` optical bump — that
+    /// compensation is for a circle standing in a MIXED column beside
+    /// squircles (its own doc), and a strip's tiles are a line of their own
+    /// kind.
+    private static let tile: CGFloat = DS.Mark.row
 
     var body: some View {
         HStack(spacing: DS.Space.s3) {
-            HStack(spacing: Self.gap) {
-                ForEach(tiles) { tile in
-                    if let remote = tile.remote {
-                        // A remote image (a face, a cover, an article's art):
-                        // no model read at all, so nothing here can touch a
-                        // tombstone.
-                        RemoteThumb(urlString: remote, size: Self.tile,
-                                    fallback: source, circular: tile.circular)
-                    } else if let thing = tile.item.live {
-                        // `.live` INSIDE the closure before the first stored
-                        // read (corollary 3, build 176 — see `ThingRowKeying`):
-                        // this closure is re-evaluated against the array it
-                        // already holds when a heal's delete lands, ahead of
-                        // any guard `PhotoWell` does for itself.
-                        PhotoWell(thing: thing, size: Self.tile)
-                            .frame(width: Self.tile, height: Self.tile)
-                            .clipShape(RoundedRectangle(
-                                cornerRadius: DS.Radius.appIcon(Self.tile),
-                                style: .continuous))
-                    }
-                }
-            }
-            // The tiles already say "several"; a screen reader gets that from
-            // the count and unit below, in words.
-            .accessibilityHidden(true)
+            // The SEAT is `BundleRow`'s, byte for byte: the source's mark at
+            // `Mark.row`, so this row's name starts where every other row's
+            // does.
+            BridgeIcon(name: source, size: DS.Mark.row)
+                .frame(width: DS.Mark.row, alignment: .leading)
             VStack(alignment: .leading, spacing: 1) {
                 Text(source)
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 LiveTimeText(date: newest)
+                HStack(spacing: Self.gap) {
+                    ForEach(tiles) { tile in
+                        if let remote = tile.remote {
+                            // A remote image (a face, a cover, an article's
+                            // art): no model read at all, so nothing here can
+                            // touch a tombstone.
+                            RemoteThumb(urlString: remote, size: Self.tile,
+                                        fallback: source, circular: tile.circular)
+                        } else if let thing = tile.item.live {
+                            // `.live` INSIDE the closure before the first
+                            // stored read (corollary 3, build 176 — see
+                            // `ThingRowKeying`): this closure is re-evaluated
+                            // against the array it already holds when a
+                            // heal's delete lands, ahead of any guard
+                            // `PhotoWell` does for itself.
+                            PhotoWell(thing: thing, size: Self.tile)
+                                .frame(width: Self.tile, height: Self.tile)
+                                .clipShape(RoundedRectangle(
+                                    cornerRadius: DS.Radius.appIcon(Self.tile),
+                                    style: .continuous))
+                        }
+                    }
+                }
+                .padding(.top, DS.Space.s1)
+                // The tiles already say "several"; a screen reader gets that
+                // from the count and unit, in words.
+                .accessibilityHidden(true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .trailing, spacing: 0) {
