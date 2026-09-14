@@ -6611,6 +6611,28 @@ enum ProbeHooks {
             }
         },
 
+        // `-framesPasskeyProbe YES` — the passkey account (prd §728d): whether
+        // this device CAN make the key, whether one exists, the account address
+        // it derives, and whether the chain holds its code yet. **It never
+        // creates or signs** — a key made by a probe is a Face-ID-bound key
+        // nobody chose, and every simulator reports `enclave=NO` anyway, which
+        // is the finding: no simulator run can exercise this seat's signing.
+        Hook(key: "framesPasskeyProbe") { _, _ in
+            Task { @MainActor in
+                let account = FramesPasskey.accountAddress()
+                NSLog("[Casberi] framesPasskey| enclave=%@ biometry=%@ presence=%@ account=%@",
+                      FramesPasskey.enclaveAvailable ? "YES" : "NO",
+                      FramesPasskey.biometryAvailable() ? "YES" : "NO",
+                      String(describing: FramesPasskey.presence()),
+                      account ?? "-")
+                guard let account else { return }
+                let code = await FramesRPC.call(method: "eth_getCode", params: [account, "latest"]) as? String
+                let nonce = await FramesSend.currentNonce(for: account)
+                NSLog("[Casberi] framesPasskey| code=%@ nonce=%@",
+                      code.map { $0 == "0x" ? "none yet" : "\(($0.count - 2) / 2) bytes" } ?? "unread",
+                      nonce.map { String($0) } ?? "-")
+            }
+        },
         // `-framesKeyProbe YES|claim` — this phone's Frames signing key, and
         // §531's whole triple, because that bug is transplanted code and so
         // is its blind spot: `presence()` answers `.none` the moment the

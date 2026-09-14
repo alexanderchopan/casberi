@@ -921,6 +921,18 @@ struct FeedScreen: View {
     /// addresses the connect screen offers and they are MEASURED, not invented:
     /// each has really transacted here (see `FramesExample`). Watched
     /// addresses lead, because those are somebody's own choice.
+    /// **WHO SENDS (prd §728d)** — the passkey account when the room is scoped
+    /// to it on the face rail, this phone's key otherwise. The held line says
+    /// which, so the sheet never sends as an account it did not name.
+    private var framesSendsFromPasskey: Bool {
+        guard let passkey = FramesPasskey.accountAddress(), let scope = chrome.framesScope else { return false }
+        return scope.caseInsensitiveCompare(passkey) == .orderedSame
+    }
+
+    private var framesSenderAddress: String? {
+        framesSendsFromPasskey ? FramesPasskey.accountAddress() : FramesKey.address()
+    }
+
     private var framesSendCandidates: [(address: String, name: String?)] {
         let me = FramesKey.address()
         var seen = Set<String>()
@@ -941,12 +953,14 @@ struct FeedScreen: View {
     /// reach the chain: a failed read and a real zero must not look alike
     /// (§83), so the line is absent rather than claiming nothing is held.
     private var framesHeldLine: String? {
-        guard let mine = FramesKey.address(),
+        guard let mine = framesSenderAddress,
               let account = FramesLiveState.shared.accounts.first(where: {
                   $0.address.caseInsensitiveCompare(mine) == .orderedSame
               }), account.reached else { return nil }
         return FramesMoney.balanceLine(weiHex: account.balanceWeiHex)
-            .map { String(localized: "\($0) available") }
+            .map { framesSendsFromPasskey
+                ? String(localized: "\($0) available · passkey account")
+                : String(localized: "\($0) available") }
     }
 
     /// Who Ethrex Privacy can send to, watched addresses first.
@@ -1143,7 +1157,7 @@ struct FeedScreen: View {
     /// token it holds whose decimals read. Empty when it holds no token, which
     /// leaves the sheet's unit a plain label exactly as before.
     private var framesSendAssets: [DevnetSendAsset] {
-        guard let mine = FramesKey.address(),
+        guard let mine = framesSenderAddress,
               let account = FramesLiveState.shared.accounts.first(where: {
                   $0.address.caseInsensitiveCompare(mine) == .orderedSame
               }), account.reached else { return [] }
@@ -1215,7 +1229,7 @@ struct FeedScreen: View {
         guard !DemoMode.isActive else {
             return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
         }
-        guard let address = FramesKey.address() else {
+        guard let address = framesSenderAddress else {
             return String(localized: "There's no account on this phone yet.")
         }
         // **EVERY LEG IS PARSED BEFORE ANY IS SENT.** One unreadable amount
@@ -1237,15 +1251,16 @@ struct FeedScreen: View {
                 return String(localized: "Couldn't reach the chain to read this account's nonce.")
             }
             let deadline = FramesSend.deadline()
-            let hash = try await FramesSend.sendStitched(legs: built, atomic: atomic, nonce: nonce,
-                                                         deadline: deadline)
+            let hash = try await framesSendsFromPasskey
+                ? FramesSend.sendFromPasskey(legs: built, atomic: atomic, nonce: nonce, deadline: deadline)
+                : FramesSend.sendStitched(legs: built, atomic: atomic, nonce: nonce, deadline: deadline)
             // **SAY IT WENT, BEFORE THE CHAIN CAN.** `sendStitched` returns
             // when the node accepts the bytes, which is before any block
             // carries them — so the sheet dismissed onto a room showing the
             // world as it was, and from outside a send that worked looked
             // exactly like one that vanished.
             FramesLiveState.shared.notePending(hash: hash, legs: built.count,
-                                               deadline: FramesSend.date(deadline))
+                                               deadline: FramesSend.date(deadline), sender: address)
             await FramesLiveState.shared.refresh()
             return nil
         } catch let failure as FramesSend.Failure {
@@ -1320,7 +1335,7 @@ struct FeedScreen: View {
         }
         guard let target = RLP.data(fromHex: to),
               let valueWei = DevnetSendParse.weiData(from: amount),
-              let address = FramesKey.address() else {
+              let address = framesSenderAddress else {
             return String(localized: "Couldn't send.")
         }
         do {
@@ -1333,10 +1348,12 @@ struct FeedScreen: View {
             // **EVERY SEND CARRIES A DEADLINE (prd §728b)**, and the pending row
             // is told it, so the row can say "it can't land now" with certainty.
             let deadline = FramesSend.deadline()
-            let hash = try await FramesSend.sendValue(to: target, valueWei: valueWei, nonce: nonce,
-                                                      deadline: deadline)
+            let hash = try await framesSendsFromPasskey
+                ? FramesSend.sendFromPasskey(legs: [FramesTransaction.Leg(recipient: target, value: valueWei)],
+                                             atomic: false, nonce: nonce, deadline: deadline)
+                : FramesSend.sendValue(to: target, valueWei: valueWei, nonce: nonce, deadline: deadline)
             FramesLiveState.shared.notePending(hash: hash, legs: 1,
-                                               deadline: FramesSend.date(deadline))
+                                               deadline: FramesSend.date(deadline), sender: address)
             await FramesLiveState.shared.refresh()
             return nil
         } catch let failure as FramesSend.Failure {
@@ -4462,7 +4479,10 @@ struct FeedScreen: View {
                 // **SOMEBODY ELSE CAN PAY (prd §728c)** — a row on the batch,
                 // drawn only when there is somebody you follow to ask.
                 payerChoice: DevnetPayerChoice(
-                    candidates: framesPayerCandidates,
+                    // A request is signed by this phone's secp256k1 key, so the
+                    // passkey account cannot ask — its sponsor would be asked to
+                    // pay for an account the request's signature does not speak for.
+                    candidates: framesSendsFromPasskey ? [] : framesPayerCandidates,
                     ask: { legs, atomic, payer in
                         await askFramesSponsor(legs, atomic: atomic, payer: payer)
                     }))

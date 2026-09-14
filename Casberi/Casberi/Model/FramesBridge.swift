@@ -360,12 +360,22 @@ final class FramesLiveState {
     private static let relaunchHashKey = "frames.chain.relaunchHash.v1"
     private static let relaunchAtKey = "frames.chain.relaunchAt.v1"
     private static let headAtKey = "frames.chain.headAt.v1"
+    private static let headBlockKey = "frames.chain.headBlock.v1"
+    private static let headSinceKey = "frames.chain.headSince.v1"
     private static let finalizedKey = "frames.chain.finalized.v1"
     private static let sentKey = "frames.sent.v1"
 
     /// When the chain's newest block was made, as it said. Persisted, so a
     /// cold launch onto a stalled chain can say so before the sweep returns.
     private(set) var headAt: Date? = UserDefaults.standard.object(forKey: headAtKey) as? Date
+    /// The head NUMBER this device last saw, and when it first saw it — the
+    /// stall reading (`FramesChainWatch.stallAge`). Persisted, so a stall
+    /// spanning launches is still a stall.
+    private(set) var headBlock: UInt64? = {
+        (UserDefaults.standard.object(forKey: headBlockKey) as? NSNumber).map { $0.uint64Value }
+    }()
+    private(set) var headSince: Date? = UserDefaults.standard.object(forKey: headSinceKey) as? Date
+
     /// The chain's own `finalized` head.
     private(set) var finalizedBlock: UInt64? = {
         let n = UserDefaults.standard.object(forKey: finalizedKey) as? NSNumber
@@ -377,7 +387,8 @@ final class FramesLiveState {
 
     /// What the room should say instead of nothing, right now.
     func alert(now: Date = .now) -> FramesChainWatch.Alert? {
-        FramesChainWatch.alert(relaunchObservedAt: relaunchObservedAt, headAt: headAt, now: now)
+        FramesChainWatch.alert(relaunchObservedAt: relaunchObservedAt, headAt: headAt,
+                               headSince: headSince, now: now)
     }
 
     /// Genesis, head and finalized in ONE batched request. Internal rather
@@ -393,6 +404,15 @@ final class FramesLiveState {
            let seconds = FramesRead.hexInt(head["timestamp"]), seconds > 0 {
             headAt = Date(timeIntervalSince1970: TimeInterval(seconds))
             UserDefaults.standard.set(headAt, forKey: Self.headAtKey)
+            let seen = FramesChainWatch.headSince(previousBlock: headBlock, previousSince: headSince,
+                                                  observedBlock: FramesRead.hexInt(head["number"]),
+                                                  now: Date())
+            headBlock = seen.block
+            headSince = seen.since
+            if let block = seen.block {
+                UserDefaults.standard.set(NSNumber(value: block), forKey: Self.headBlockKey)
+            }
+            UserDefaults.standard.set(seen.since, forKey: Self.headSinceKey)
         }
         if let finalized = answers[2] as? [String: Any],
            let number = FramesRead.hexInt(finalized["number"]) {

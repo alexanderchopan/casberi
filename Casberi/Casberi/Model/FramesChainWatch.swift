@@ -64,15 +64,36 @@ enum FramesChainWatch {
     /// enough that a handful of missed proposals never reads as an outage.
     static let stallAfter: TimeInterval = 10 * 60
 
-    /// The head's age, only when it is old enough to be a stall.
+    /// **WHEN THIS DEVICE FIRST SAW THE CHAIN'S CURRENT HEAD NUMBER.** The same
+    /// number keeps its first sighting; a new one starts a new sighting; an
+    /// unread head changes nothing.
+    static func headSince(previousBlock: UInt64?, previousSince: Date?,
+                          observedBlock: UInt64?, now: Date) -> (block: UInt64?, since: Date?) {
+        guard let observedBlock else { return (previousBlock, previousSince) }
+        if observedBlock == previousBlock, let previousSince { return (observedBlock, previousSince) }
+        return (observedBlock, now)
+    }
+
+    /// **A STALL IS A HEAD NUMBER THAT STOPPED MOVING, NOT AN OLD TIMESTAMP.**
     ///
-    /// **Nil when the head was not read** — not knowing the head's time is not
-    /// evidence the chain is running, and it is not evidence it has stopped.
-    /// A negative age (the device clock behind the chain's) is not a stall.
-    static func stallAge(headAt: Date?, now: Date) -> TimeInterval? {
-        guard let headAt else { return nil }
-        let age = now.timeIntervalSince(headAt)
-        return age > stallAfter ? age : nil
+    /// The first cut read the head's TIMESTAMP age, and a measurement the same
+    /// day proved it wrong in the direction that matters: after the 39-hour
+    /// stall the chain resumed by catching up — making real blocks, carrying
+    /// real transactions, stamped with slots from a day and a half earlier. The
+    /// timestamp rule said "Stalled for 40 hours, nothing sent now can land"
+    /// while six transactions this pass sent landed within minutes.
+    ///
+    /// So the stall is OBSERVED: this device must have seen the same head number
+    /// for longer than `stallAfter`. Until it has, nothing is claimed — a head
+    /// first seen a moment ago is not evidence either way (§515a). Once it has,
+    /// the age said is the longer of what was watched and the head block's own
+    /// age, since a chain with no newer block has made nothing since that one.
+    static func stallAge(headAt: Date?, headSince: Date?, now: Date) -> TimeInterval? {
+        guard let headSince else { return nil }
+        let watched = now.timeIntervalSince(headSince)
+        guard watched > stallAfter else { return nil }
+        let made = headAt.map { now.timeIntervalSince($0) } ?? 0
+        return max(watched, made)
     }
 
     /// What the room says instead of nothing, ranked. **A relaunch outranks a
@@ -84,12 +105,12 @@ enum FramesChainWatch {
         case stalled(age: TimeInterval)
     }
 
-    static func alert(relaunchObservedAt: Date?, headAt: Date?, now: Date) -> Alert? {
+    static func alert(relaunchObservedAt: Date?, headAt: Date?, headSince: Date?, now: Date) -> Alert? {
         if let seen = relaunchObservedAt {
             let age = now.timeIntervalSince(seen)
             if age >= 0, age <= sayRelaunchFor { return .relaunched(observedAt: seen) }
         }
-        if let age = stallAge(headAt: headAt, now: now) { return .stalled(age: age) }
+        if let age = stallAge(headAt: headAt, headSince: headSince, now: now) { return .stalled(age: age) }
         return nil
     }
 

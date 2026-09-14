@@ -410,4 +410,48 @@ enum FramesSend {
         let raw = "0x" + RLP.hex(FramesTransaction.encoded(fields))
         return try await broadcast(rawTransaction: raw)
     }
+
+    // MARK: - Sending from the passkey account (prd §728d)
+
+    /// **A SEND SIGNED BY THE SECURE ENCLAVE.** The account's code goes
+    /// on-chain with its first send — asked of the chain, never remembered,
+    /// because an install that deployed it and a reinstall that did not look
+    /// alike from here — and every send after that is the deadline, the VERIFY
+    /// frame the code answers, and the legs.
+    ///
+    /// The entry is present before the hash is taken (this file's own trap,
+    /// and `FramesPasskeyAccount.transaction` seeds it), and the P-256 bytes
+    /// are `r ‖ s ‖ qx ‖ qy` with `s` folded low.
+    static func sendFromPasskey(legs: [FramesTransaction.Leg],
+                                atomic: Bool,
+                                nonce: UInt64,
+                                deadline: UInt64,
+                                maxPriorityFeePerGas: UInt64 = 1_000_000_000,
+                                maxFeePerGas: UInt64 = 10_000_000_000) async throws -> String {
+        guard let xy = FramesPasskey.publicKey(),
+              let owner = FramesPasskeyAccount.owner(publicKey: xy) else { throw Failure.noKey }
+        guard !legs.isEmpty else { throw Failure.chainUnreachable }
+        let account = "0x" + RLP.hex(FramesPasskeyAccount.address(owner: owner))
+        guard let code = await FramesRPC.call(method: "eth_getCode", params: [account, "latest"]) as? String
+        else { throw Failure.chainUnreachable }
+        let deploy = code == "0x" || code.isEmpty
+
+        var fields = FramesPasskeyAccount.transaction(
+            owner: owner, deploy: deploy, legs: legs, atomic: atomic, nonce: nonce,
+            maxPriorityFeePerGas: maxPriorityFeePerGas, maxFeePerGas: maxFeePerGas,
+            deadline: deadline)
+        guard FramesTransaction.prefixWithinBudget(fields) else { throw Failure.prefixTooLarge }
+
+        let digest = Data(Keccak256.hash([UInt8](FramesTransaction.signingPreimage(fields))))
+        let rs: Data
+        do {
+            rs = try FramesPasskey.sign(digest: digest,
+                                        reason: String(localized: "Sign this frame transaction with your passkey"))
+        } catch { throw Failure.signingRefused }
+        guard let bytes = FramesPasskeyAccount.signatureBytes(rs: rs, publicKey: xy) else {
+            throw Failure.signingRefused
+        }
+        fields.signatures[0].signature = bytes
+        return try await broadcast(rawTransaction: "0x" + RLP.hex(FramesTransaction.encoded(fields)))
+    }
 }

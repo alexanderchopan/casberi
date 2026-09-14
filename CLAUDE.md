@@ -192,7 +192,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **The agent rooms, past §367 — and the fold that already existed** → docs/hooks/agent.md · prd §418
 - **External agents got two doors, and neither is a server** → docs/hooks/agent.md · prd §34
 - `-ghWatchPerson` `-ghPeopleProbe` — Watching a PERSON on GitHub (prd §519, 2026-08-29): -ghWatchPerson "<username|@username|profile URL>" watches → docs/hooks/bridges.md · prd §519
-- `-framesProbe` `-framesTxProbe` `-framesKeyProbe` `-framesPendingProbe` — The Frames devnet (prd §548) → docs/hooks/devnets.md · prd §548 · §728
+- `-framesProbe` `-framesTxProbe` `-framesKeyProbe` `-framesPendingProbe` `-framesPasskeyProbe` — The Frames devnet (prd §548) → docs/hooks/devnets.md · prd §548 · §728 · §728d
 - `-ghClientID <id>` — override the GitHub device-flow client id; `-ghDeviceProbe YES` — run the device-flow start and NSLog the user code (`Model/GitHubDeviceFlow.swift`).
 - `-intentProbe "<query>"` — run the Shortcuts intents' shared matcher (`IntentCorpus.match` in `Model/CasberiIntents.swift`, grounding Search Casberi / Ask Casberi) and NSLog the hits.
 - `-viProbe` — run the Visual Intelligence label→corpus matcher headlessly (VisualCorpusMatch → docs/hooks/system.md

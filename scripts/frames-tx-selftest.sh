@@ -82,7 +82,7 @@ PYM
   # so this file was proven equivalent run-for-run by
   # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.9x faster).
   # Re-probe before trusting it again after adding mutations.
-  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift m/main.swift 2>/dev/null ) \
+  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift FramesPasskeyAccount.swift m/main.swift 2>/dev/null ) \
      && "$MW/m/run2" >/dev/null 2>&1; then
     echo "SURVIVED|$MID|$MLABEL"; exit 0
   fi
@@ -111,10 +111,13 @@ CHAINW="Casberi/Casberi/Model/FramesChainWatch.swift"
 # **Asking somebody else to pay (prd §728c)** — the sponsored shape, the
 # request one phone hands another, and what the sponsor's phone refuses.
 SPONSOR="Casberi/Casberi/Model/FramesSponsor.swift"
+# **The passkey account (prd §728d)** — its 64 bytes of code, its CREATE2
+# address, and the transaction it signs. The code is RUN here, below.
+PASSKEY="Casberi/Casberi/Model/FramesPasskeyAccount.swift"
 KEY="Casberi/Casberi/Model/FramesKey.swift"
 SEND="Casberi/Casberi/Model/FramesSend.swift"
 BRIDGE="Casberi/Casberi/Model/FramesBridge.swift"
-for f in "$TX" "$RLPF" "$KC" "$MONEY" "$SECT" "$READ" "$KEY" "$SEND" "$BRIDGE" "$CHAINW" "$SPONSOR"; do
+for f in "$TX" "$RLPF" "$KC" "$MONEY" "$SECT" "$READ" "$KEY" "$SEND" "$BRIDGE" "$CHAINW" "$SPONSOR" "$PASSKEY"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -729,6 +732,7 @@ cp "$RFRAMES" "$WORK/RoomFrames.swift"
 cp "$TOKENS" "$WORK/DevnetTokens.swift"
 cp "$CHAINW" "$WORK/FramesChainWatch.swift"
 cp "$SPONSOR" "$WORK/FramesSponsor.swift"
+cp "$PASSKEY" "$WORK/FramesPasskeyAccount.swift"
 mkdir -p "$WORK/m"
 
 cat > "$WORK/m/main.swift" <<'SWIFT'
@@ -1560,22 +1564,39 @@ check("a different genesis is a relaunch",
 check("an unread genesis is no verdict", CW.verdict(baseline: genesisOld, observed: nil) == .unread)
 check("a malformed hash is no verdict", CW.verdict(baseline: genesisOld, observed: "0x1234") == .unread)
 let t0 = Date(timeIntervalSince1970: 1_789_300_000)
-check("a head nine minutes old is not a stall", CW.stallAge(headAt: t0.addingTimeInterval(-540), now: t0) == nil)
-check("eleven minutes is", CW.stallAge(headAt: t0.addingTimeInterval(-660), now: t0) != nil)
-check("an unread head is not a stall", CW.stallAge(headAt: nil, now: t0) == nil)
-check("a device clock behind the chain is not a stall", CW.stallAge(headAt: t0.addingTimeInterval(900), now: t0) == nil)
+check("a head number watched for nine minutes is not a stall",
+      CW.stallAge(headAt: t0.addingTimeInterval(-540), headSince: t0.addingTimeInterval(-540), now: t0) == nil)
+check("eleven minutes without a new block is",
+      CW.stallAge(headAt: t0.addingTimeInterval(-660), headSince: t0.addingTimeInterval(-660), now: t0) != nil)
+check("AN OLD TIMESTAMP ALONE IS NOT A STALL — a chain catching up makes blocks dated a day and a half ago",
+      CW.stallAge(headAt: t0.addingTimeInterval(-142_463), headSince: nil, now: t0) == nil)
+check("nor is a head first seen just now, however old its timestamp",
+      CW.stallAge(headAt: t0.addingTimeInterval(-142_463), headSince: t0, now: t0) == nil)
+check("once observed, a stall's age is the head block's own when that is longer",
+      CW.stallAge(headAt: t0.addingTimeInterval(-142_463), headSince: t0.addingTimeInterval(-700), now: t0) == 142_463)
+check("the same head number keeps its first sighting",
+      CW.headSince(previousBlock: 75_685, previousSince: t0.addingTimeInterval(-900),
+                   observedBlock: 75_685, now: t0).since == t0.addingTimeInterval(-900))
+check("a new head number starts a new sighting",
+      CW.headSince(previousBlock: 75_685, previousSince: t0.addingTimeInterval(-900),
+                   observedBlock: 75_704, now: t0).since == t0)
+check("an unread head keeps what was known",
+      CW.headSince(previousBlock: 75_685, previousSince: t0.addingTimeInterval(-900),
+                   observedBlock: nil, now: t0).since == t0.addingTimeInterval(-900))
 check("the measured stall reads in hours",
       CW.headline(.stalled(age: 142_463), now: t0) == "Stalled for 39 hours")
 check("a relaunch outranks a stall — a wiped chain is not one to wait for",
-      CW.alert(relaunchObservedAt: t0.addingTimeInterval(-3600), headAt: t0.addingTimeInterval(-142_463), now: t0)
+      CW.alert(relaunchObservedAt: t0.addingTimeInterval(-3600), headAt: t0.addingTimeInterval(-142_463),
+               headSince: t0.addingTimeInterval(-3600), now: t0)
         == .relaunched(observedAt: t0.addingTimeInterval(-3600)))
 check("a relaunch a week old stops being said, and the stall is still said",
-      CW.alert(relaunchObservedAt: t0.addingTimeInterval(-8 * 86_400), headAt: t0.addingTimeInterval(-142_463), now: t0)
+      CW.alert(relaunchObservedAt: t0.addingTimeInterval(-8 * 86_400), headAt: t0.addingTimeInterval(-142_463),
+               headSince: t0.addingTimeInterval(-3600), now: t0)
         == .stalled(age: 142_463))
 check("a healthy chain says nothing",
-      CW.alert(relaunchObservedAt: nil, headAt: t0.addingTimeInterval(-6), now: t0) == nil)
+      CW.alert(relaunchObservedAt: nil, headAt: t0.addingTimeInterval(-6), headSince: t0.addingTimeInterval(-6), now: t0) == nil)
 check("a relaunch 'observed' in the future is not said",
-      CW.alert(relaunchObservedAt: t0.addingTimeInterval(60), headAt: nil, now: t0) == nil)
+      CW.alert(relaunchObservedAt: t0.addingTimeInterval(60), headAt: nil, headSince: nil, now: t0) == nil)
 check("the block at the finalized head is final", CW.isFinal(block: 100, finalized: 100) == true)
 check("the one above it is not yet", CW.isFinal(block: 101, finalized: 100) == false)
 check("an unread finalized head says nothing", CW.isFinal(block: 1, finalized: nil) == nil)
@@ -1829,12 +1850,199 @@ check("the fee ceiling covers every budget the frames were given",
       FramesTransaction.maxGas(vSponsored)
         >= vSponsored.frames.reduce(UInt64(0)) { $0 + $1.executionGas + $1.stateGas })
 
+// --- THE PASSKEY ACCOUNT (prd §728d) -----------------------------------------
+// The key's public half and every expected byte below were produced by an
+// independent implementation. A valid P-256 signature over V-PASSKEY passed
+// the node's signature check and a corrupted one was refused as "Invalid frame
+// transaction signature" (2026-09-13).
+let pkX = "c2de27efb59662488b4b6d6ff699c2dccd148510c6eda3f9c99eb8e17c464adb"
+let pkY = "49c9e8b7f98a71150bf175a22c49278c0a8dde08496efcdb321496e340df34cc"
+let passkeyOwner = FramesPasskeyAccount.owner(publicKey: hx("0x" + pkX + pkY))
+check("a P-256 signer is keccak(qx ‖ qy)[12:]",
+      passkeyOwner == hx("0x33d79af4cbc639f33ba44457f4fedd1d9268c468"))
+let ownerBytes = passkeyOwner ?? Data()
+check("the account's code is the 64 bytes that were measured",
+      "0x" + RLP.hex(FramesPasskeyAccount.runtime(owner: ownerBytes))
+        == "0x3360aa14600857005b60015fb460021460025fb415165f5fb47333d79af4cbc639f33ba44457f4fedd1d9268c46814166036575f5ffd5b6006600ab0b35f5faa")
+check("its constructor copies and returns exactly that code",
+      "0x" + RLP.hex(FramesPasskeyAccount.initcode(owner: ownerBytes).prefix(10)) == "0x6040600a5f3960405ff3")
+check("its address is fixed by CREATE2 before it exists",
+      FramesPasskeyAccount.address(owner: ownerBytes) == hx("0x9c2e4702d6209ab2ce4f1aa2c9bb08a62133195d"))
+let deployF = FramesPasskeyAccount.deployFrame(owner: ownerBytes)
+check("the deploy frame is DEFAULT, to the proxy, salt then initcode, with the state budget",
+      deployF.mode == 0 && deployF.flags == 0 && deployF.target == FramesPasskeyAccount.deployer
+        && deployF.data.count == 32 + 74 && deployF.stateGas == 450_000)
+let vPasskey = FramesPasskeyAccount.transaction(
+    owner: ownerBytes, deploy: true, legs: [.init(recipient: deadAddr, value: oneGwei)], atomic: false,
+    nonce: 0, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: fixedDeadline)
+check("V-PASSKEY: the first send — deadline, deploy, verify, send — is the preimage the node checked a P-256 signature over",
+      keccakHex(FramesTransaction.signingPreimage(vPasskey))
+        == "0xf2e4e15d557ff4ae2759bd6b84dae2bc5139740a0e8469eb1015692ac4424cdb")
+check("its one signature entry is P-256, naming the owner",
+      vPasskey.signatures.count == 1 && vPasskey.signatures[0].scheme == 2
+        && vPasskey.signatures[0].signer == ownerBytes)
+let vPasskeyNext = FramesPasskeyAccount.transaction(
+    owner: ownerBytes, deploy: false, legs: [.init(recipient: deadAddr, value: oneGwei)], atomic: false,
+    nonce: 2, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: fixedDeadline)
+check("V-PASSKEY-NEXT: once the code exists, no deploy frame",
+      keccakHex(FramesTransaction.signingPreimage(vPasskeyNext))
+        == "0x804194e5fc2152a02ee4e68707d0e94889766e5140164d84c401e76758fdc8ac")
+check("the deploy frame is inside the verify budget", FramesTransaction.prefixWithinBudget(vPasskey))
+// Low-s: EIP-8141 refuses a high-s P-256 signature, and the Enclave signs either half.
+let halfN = FramesPasskeyAccount.curveHalfOrder
+let r32 = Data(repeating: 0x11, count: 32)
+var highS = halfN; highS[31] = highS[31] &+ 1
+let folded = FramesPasskeyAccount.lowS(r32 + Data(highS))
+check("s just above n/2 is folded to n - s", Data(folded.suffix(32)) != Data(highS) && folded.prefix(32) == r32)
+func add256(_ a: [UInt8], _ b: [UInt8]) -> [UInt8] {
+    var out = [UInt8](repeating: 0, count: 32); var carry = 0
+    for i in stride(from: 31, through: 0, by: -1) { let v = Int(a[i]) + Int(b[i]) + carry; out[i] = UInt8(v & 0xff); carry = v >> 8 }
+    return out
+}
+check("and the folded s plus the original is exactly n",
+      add256([UInt8](folded.suffix(32)), highS) == FramesPasskeyAccount.curveOrder)
+check("s at exactly n/2 is already low", FramesPasskeyAccount.lowS(r32 + Data(halfN)) == r32 + Data(halfN))
+check("a signature entry is r ‖ s ‖ qx ‖ qy",
+      FramesPasskeyAccount.signatureBytes(rs: r32 + Data(halfN), publicKey: hx("0x" + pkX + pkY))?.count == 128)
+
+// **THE CODE, RUN.** A small interpreter for exactly the opcodes those 64
+// bytes use, reading EIP-8141's stack orders as the pinned text states them
+// (SIGPARAM and FRAMEPARAM: index on top, param beneath; APPROVE: offset, then
+// length, then scope). It proves the jumps land and the checks gate what they
+// should under that reading — the chain is what proves the reading.
+enum Halt: Equatable { case stop, revert, approve(UInt64), invalid }
+struct VerifyContext {
+    var caller: UInt64 = 0xaa
+    var scheme: UInt64 = 2
+    var msgEmpty = true
+    var signer: Data
+    var allowedScope: UInt64 = 3
+}
+func word(_ v: UInt64) -> [UInt8] { var w = [UInt8](repeating: 0, count: 32); var x = v; for i in stride(from: 31, through: 24, by: -1) { w[i] = UInt8(x & 0xff); x >>= 8 }; return w }
+func wordData(_ d: Data) -> [UInt8] { [UInt8](repeating: 0, count: 32 - d.count) + [UInt8](d) }
+func small(_ w: [UInt8]) -> UInt64? { guard w.prefix(24).allSatisfy({ $0 == 0 }) else { return nil }; return w.suffix(8).reduce(0) { $0 << 8 | UInt64($1) } }
+func runVerify(_ code: [UInt8], _ c: VerifyContext) -> Halt {
+    var pc = 0; var st: [[UInt8]] = []; var steps = 0
+    func pop() -> [UInt8]? { st.popLast() }
+    while pc < code.count, steps < 200 {
+        steps += 1
+        let op = code[pc]
+        switch op {
+        case 0x00: return .stop
+        case 0x33: st.append(word(c.caller)); pc += 1
+        case 0x5f: st.append(word(0)); pc += 1
+        case 0x60: guard pc + 1 < code.count else { return .invalid }; st.append(word(UInt64(code[pc + 1]))); pc += 2
+        case 0x73: guard pc + 20 < code.count else { return .invalid }; st.append(wordData(Data(code[(pc + 1)...(pc + 20)]))); pc += 21
+        case 0x14: guard let a = pop(), let b = pop() else { return .invalid }; st.append(word(a == b ? 1 : 0)); pc += 1
+        case 0x15: guard let a = pop() else { return .invalid }; st.append(word(a.allSatisfy { $0 == 0 } ? 1 : 0)); pc += 1
+        case 0x16: guard let a = pop(), let b = pop() else { return .invalid }; st.append(zip(a, b).map { $0 & $1 }); pc += 1
+        case 0x57:
+            guard let dest = pop().flatMap(small), let cond = pop() else { return .invalid }
+            if cond.contains(where: { $0 != 0 }) {
+                guard Int(dest) < code.count, code[Int(dest)] == 0x5b else { return .invalid }
+                pc = Int(dest)
+            } else { pc += 1 }
+        case 0x5b: pc += 1
+        case 0xfd: _ = pop(); _ = pop(); return .revert
+        case 0xb4: // SIGPARAM: signatureIndex on top, param beneath
+            guard let index = pop().flatMap(small), let param = pop().flatMap(small), index == 0 else { return .invalid }
+            switch param {
+            case 0: st.append(wordData(c.signer))
+            case 1: st.append(word(c.scheme))
+            case 2: st.append(word(c.msgEmpty ? 0 : 0xabcdef))
+            default: return .invalid
+            }
+            pc += 1
+        case 0xb0: // TXPARAM: one param
+            guard let param = pop().flatMap(small), param == 0x0a else { return .invalid }
+            st.append(word(1)); pc += 1
+        case 0xb3: // FRAMEPARAM: frameIndex on top, param beneath
+            guard let index = pop().flatMap(small), let param = pop().flatMap(small),
+                  index == 1, param == 0x06 else { return .invalid }
+            st.append(word(c.allowedScope)); pc += 1
+        case 0xaa: // APPROVE: offset on top, then length, then scope
+            guard pop() != nil, pop() != nil, let scope = pop().flatMap(small) else { return .invalid }
+            return .approve(scope)
+        default: return .invalid
+        }
+    }
+    return .invalid
+}
+let accountCode = [UInt8](FramesPasskeyAccount.runtime(owner: ownerBytes))
+check("the entry point with this owner's P-256 signature over the transaction approves the frame's scope",
+      runVerify(accountCode, VerifyContext(signer: ownerBytes)) == .approve(3))
+check("a sponsored frame that allows running only approves running only",
+      runVerify(accountCode, VerifyContext(signer: ownerBytes, allowedScope: 2)) == .approve(2))
+check("another key's P-256 signature reverts",
+      runVerify(accountCode, VerifyContext(signer: hx("0x285dc41e452865032197bd1d44e4a9e1179c994c"))) == .revert)
+check("a secp256k1 signature naming the owner reverts",
+      runVerify(accountCode, VerifyContext(scheme: 1, signer: ownerBytes)) == .revert)
+check("a P-256 signature over some other digest reverts",
+      runVerify(accountCode, VerifyContext(msgEmpty: false, signer: ownerBytes)) == .revert)
+check("anybody but the entry point is an ordinary receive",
+      runVerify(accountCode, VerifyContext(caller: 0x1234, signer: ownerBytes)) == .stop)
+
+// --- EXECUTED ON CHAIN (prd §728d) --------------------------------------------
+// **FOUR TRANSACTIONS THAT RAN**, sent from scratch keys on 2026-09-13 after the
+// chain resumed, each returning the hash it was predicted to have. Every field
+// below is read back off the node, signature bytes included, and the builders
+// this app ships must reproduce the node's own hash byte for byte.
+let executedSponsorSigA = hx("0x010671a039dec54217e54ff6a0aa52be7cc9907d7bdf2533d044234486fca678df111e3d1f7de32464f857cf48571a12610f5de019c52c24be06a42029f2c4402c")
+let executedSponsorSigB = hx("0x01a4498bd019ce4e55df468e894554099cd418f0679fec6da4d0fc4a0a4ff475dc68fb4acd08d4fd2c252915ca32f8bef57bb5563b2de7401bf8aafd5cd6097c73")
+var executedPasskey = FramesPasskeyAccount.transaction(
+    owner: ownerBytes, deploy: true, legs: [.init(recipient: deadAddr, value: oneGwei)], atomic: false,
+    nonce: 0, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: 0x6aa8326c)
+executedPasskey.signatures[0].signature = hx("0x9bb0f1baad24b97bcc41e9412a4363924bbf4d12fe1e682ce4c42c466ffe05ba4f0a111085ac106fd5f9adb3bb6c1ab0b221becf6c05be0c3e9e7090ee11baedc2de27efb59662488b4b6d6ff699c2dccd148510c6eda3f9c99eb8e17c464adb49c9e8b7f98a71150bf175a22c49278c0a8dde08496efcdb321496e340df34cc")
+check("EXECUTED: the passkey account's first transaction — deploy, P-256 verify, send — is the one that ran (block 75,719)",
+      keccakHex(FramesTransaction.encoded(executedPasskey))
+        == "0x176065d6cd418811c1349e9259d18b49b546a510f3413a243dd89a229bf2dcb3")
+var executedSponsored = FramesTransaction.sponsored(
+    sender: senderA, sponsor: bobAddr, legs: [.init(recipient: deadAddr, value: oneGwei)], atomic: false,
+    nonce: 1, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: 0x6aa83316)
+executedSponsored.signatures[0].signature = executedSponsorSigA
+executedSponsored.signatures[1].signature = executedSponsorSigB
+check("EXECUTED: a transfer somebody else paid for is the one that ran, payer the sponsor (block 75,720)",
+      keccakHex(FramesTransaction.encoded(executedSponsored))
+        == "0xaeef4a327474272a42689a1e1ff4acafbfad7b7fac086021cf1f00bba0f17a4e")
+var executedToken = FramesTransaction.stitched(
+    sender: senderA,
+    legs: [.init(recipient: daiAddr, value: Data(),
+                 data: FramesTransaction.erc20TransferSelector + Data(repeating: 0, count: 12) + bobAddr + Data(repeating: 0, count: 32))],
+    atomic: false, nonce: 2, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: 0x6aa83318)
+executedToken.signatures = [.init(scheme: 1, signer: senderA, msg: Data(),
+    signature: hx("0x01e418028ed673b4dd4df5f2406000d5f4e4c3b0e536db49c6955b5f508518ad8d5794705a74455625a3f119f4f7402fcf940f5a840f45fdc405004252fd121cf7"))]
+check("EXECUTED: a frame CARRYING CALLDATA reproduces the chain's own hash — §654a's open question, closed for this encoder (block 75,722)",
+      keccakHex(FramesTransaction.encoded(executedToken))
+        == "0xbfa7da5cd4385a591875ffe8f50b7b7c6c9c505d6f834b5cf0732736dd0172cd")
+var executedSkip = FramesTransaction.stitched(
+    sender: senderA,
+    legs: [.init(recipient: bobAddr, value: hx("0x01")),
+           .init(recipient: bobAddr, value: hx("0x0c9f2c9cd04674edea40000000")),
+           .init(recipient: bobAddr, value: hx("0x01"))],
+    atomic: true, nonce: 3, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: 0x6aa8331f)
+executedSkip.signatures = [.init(scheme: 1, signer: senderA, msg: Data(),
+    signature: hx("0x003f61939dcc7a95b7d5d0e0beb37c37e29b32da01267db47bcac9a99332d6b2794953434922a89dcf74c5eb3faef2ed53cbc75149b5a85106c1833536b24ded43"))]
+check("EXECUTED: an atomic batch whose middle leg could not pay is the one that ran (block 75,724)",
+      keccakHex(FramesTransaction.encoded(executedSkip))
+        == "0x55625eafb20f47a9f36c109bc4bf5237b7ba525dcffcbb7c3ad1e0a756f6b883")
+// Its receipt, as the node reported it: deadline, verify, then the three legs —
+// the first ran and was undone (no log), the second failed, the third never ran.
+let executedSkipOut = FramesRead.outcomes(inReceipt: ["frameReceipts": [
+    ["status": "0x1", "gasUsed": "0xbeb", "stateGasUsed": "0x0", "logs": [[String: Any]]()],
+    ["status": "0x1", "gasUsed": "0x64", "stateGasUsed": "0x0", "logs": [[String: Any]]()],
+    ["status": "0x1", "gasUsed": "0xbb8", "stateGasUsed": "0x0", "logs": [[String: Any]]()],
+    ["status": "0x0", "gasUsed": "0x64", "stateGasUsed": "0x0", "logs": [[String: Any]]()],
+    ["status": "0x2", "gasUsed": "0x0", "stateGasUsed": "0x0", "logs": [[String: Any]]()],
+]])
+check("the chain's own 0x2 reads as skipped, and only on the leg that never ran",
+      executedSkipOut.map(\.skipped) == [false, false, false, false, true])
+
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
 print("  ok   encoder: 3 real vectors byte-exact, keccak == the chain's own hash (1 on the post-restart chain)")
 SWIFT
 
 build_run() {
-  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift m/main.swift 2>&1 )
+  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift FramesPasskeyAccount.swift m/main.swift 2>&1 )
 }
 if ! out="$(build_run)"; then echo "✗ harness did not compile"; echo "$out"; exit 1; fi
 "$WORK/m/run" || exit 1
@@ -2149,12 +2357,32 @@ mutate "asking yourself to pay allowed" $F7 \
 ' ''
 mutate "the sender's signature filed as the sponsor's" $F7 \
   'fields.signatures[0].signature = signature' 'fields.signatures[1].signature = signature'
+F8=FramesPasskeyAccount.swift
+mutate "the approve jump landing a byte short" $F8 \
+  'code += [0x60, 0x36, 0x57]' 'code += [0x60, 0x35, 0x57]'
+mutate "a secp256k1 signature accepted as the owner's" $F8 \
+  'code += [0x60, 0x02, 0x14]' 'code += [0x60, 0x01, 0x14]'
+mutate "SIGPARAM's index and param swapped" $F8 \
+  'code += [0x60, 0x01, 0x5f, 0xb4]' 'code += [0x5f, 0x60, 0x01, 0xb4]'
+mutate "RETURN instead of APPROVE" $F8 \
+  'code += [0x5f, 0x5f, 0xaa]' 'code += [0x5f, 0x5f, 0xf3]'
+mutate "CREATE2's 0xff prefix wrong" $F8 \
+  'let preimage = [UInt8]([0xff])' 'let preimage = [UInt8]([0xfe])'
+mutate "a high s left high" $F8 \
+  'high = s[i] > curveHalfOrder[i]' 'high = s[i] < curveHalfOrder[i]'
+mutate "the passkey signature entry written as secp256k1" $F8 \
+  'Signature(scheme: 2, signer: owner,' 'Signature(scheme: 1, signer: owner,'
 F5=FramesChainWatch.swift
 mutate "an install's first genesis called a relaunch" $F5 \
   'guard let baseline, !baseline.isEmpty else { return .adopt(observed) }' \
   'guard let baseline, !baseline.isEmpty else { return .relaunched(observed) }'
 mutate "every head called a stall" $F5 \
-  'return age > stallAfter ? age : nil' 'return age > 0 ? age : nil'
+  'guard watched > stallAfter else { return nil }' 'guard watched > 0 else { return nil }'
+mutate "an old timestamp alone called a stall" $F5 \
+  'guard let headSince else { return nil }' 'guard let headSince = headSince ?? headAt else { return nil }'
+mutate "a new head number keeping the old sighting" $F5 \
+  'if observedBlock == previousBlock, let previousSince { return (observedBlock, previousSince) }' \
+  'if let previousSince { return (observedBlock, previousSince) }'
 mutate "a relaunch from the future said" $F5 \
   'if age >= 0, age <= sayRelaunchFor {' 'if age <= sayRelaunchFor {'
 mutate "a stall outranking a relaunch" $F5 \
@@ -2162,8 +2390,8 @@ mutate "a stall outranking a relaunch" $F5 \
             let age = now.timeIntervalSince(seen)
             if age >= 0, age <= sayRelaunchFor { return .relaunched(observedAt: seen) }
         }
-        if let age = stallAge(headAt: headAt, now: now) { return .stalled(age: age) }' \
-  '        if let age = stallAge(headAt: headAt, now: now) { return .stalled(age: age) }
+        if let age = stallAge(headAt: headAt, headSince: headSince, now: now) { return .stalled(age: age) }' \
+  '        if let age = stallAge(headAt: headAt, headSince: headSince, now: now) { return .stalled(age: age) }
         if let seen = relaunchObservedAt {
             let age = now.timeIntervalSince(seen)
             if age >= 0, age <= sayRelaunchFor { return .relaunched(observedAt: seen) }
