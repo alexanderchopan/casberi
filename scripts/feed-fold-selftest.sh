@@ -171,8 +171,8 @@ let oneAlbum = [song("cover"), song("cover"), song("cover"), song("cover"), song
 check(FeedFold.tileChoices(oneAlbum, faceSources: FACES).count == 1,
       "five songs off one record draw ONE cover")
 check(FeedFold.tileChoices([shot(), shot(), shot(), shot(), shot()],
-                           faceSources: FACES).count == 4,
-      "five screenshots draw four DIFFERENT pictures — stored pixels never dedupe")
+                           faceSources: FACES).count == FeedFold.stripCap,
+      "five screenshots fill the cap with DIFFERENT pictures — stored pixels never dedupe")
 check(FeedFold.tileChoices(Array(repeating: 0, count: 9).map { _ in post(UUID().uuidString) },
                            faceSources: FACES).count == FeedFold.stripCap,
       "the cap holds")

@@ -1957,7 +1957,12 @@ struct BundleRow: View {
 /// column at `Mark.row`, the leader's own size, so a mark and the members
 /// beside it are the same square. It is NOT the full-width banner §254
 /// rejected: it sits in the text column, inside the leading seat's indent,
-/// and is never wider than the four tiles.
+/// and is never wider than its tiles.
+///
+/// THE TILES ARE 44pt (prd §730, 2026-09-14, user: "i'm less concerned about
+/// empty space and more interested in making the visuals bigger for user").
+/// §719 settled WHERE the strip sits; this settles how big it draws, and the
+/// shape above is what bounds it — see `tile`.
 struct StripRow: View {
     let source: String
     let count: Int
@@ -1968,21 +1973,39 @@ struct StripRow: View {
     /// Up to `FeedFold.stripCap` members, newest first.
     let tiles: [StripTile]
 
-    /// The gap between tiles — the deck's own 4pt step (§254), so a strip and
-    /// a stack read as the same family seen from two angles.
-    private static let gap: CGFloat = 4
+    /// The gap between tiles — 6pt since §730. It was the deck's own 4pt step
+    /// (§254), so a strip and a stack read as the same family seen from two
+    /// angles; that held at `Mark.row`, where 4pt is 15% of a tile. At
+    /// `Mark.tile` the same 4pt is 9% and the line closes up into one bar, so
+    /// the gap grows with the tile to keep the proportion.
+    private static let gap: CGFloat = 6
 
-    /// Every tile draws at `Mark.row`, faces and pictures alike — the seat the
-    /// row's own mark occupies, one line up. §377's 2026-08-14 amendment took the tiles
-    /// to `Mark.list` while they WERE the leader ("you can't really see the
-    /// image … what would it look like if the icons and images are the same
-    /// size"); §719 keeps the second half of that amendment and re-applies it to
-    /// the new neighbour: the picture beside a 26pt mark is a 26pt picture.
+    /// Every tile draws at `Mark.tile`, faces and pictures alike — 44pt since
+    /// §730. It was `Mark.row`, the seat the row's own mark occupies one line
+    /// up, which made the picture beside a 26pt mark a 26pt picture; the ask
+    /// was for the pictures themselves to be worth looking at, and a mark is
+    /// not the ceiling for one.
+    ///
+    /// **Why 44 and not larger, in one sum.** The room leaves 658pt between
+    /// the day header and the dock, this row is `88 + tile`, and rows on
+    /// screen is the first over the second. So a row COUNT caps the tile:
+    /// five rows at 44, four at 78, three at 104. A size inside a band rather
+    /// than at its ceiling pays a row and does not collect it — 63 was mocked
+    /// and read as neither a caption nor the row's content (user: "the 63
+    /// almost looks garish"). 44 is its band's ceiling: five of six sources
+    /// still on screen, at 2.9× the picture area.
+    ///
+    /// **And 78 is not reachable from here.** Above `Mark.tile` the strip no
+    /// longer clears the count column on a narrow screen, so it would have to
+    /// leave the text column for a full-width line of its own — which is the
+    /// banner §254 rejected and the shape §719 settled. 44 is the largest tile
+    /// that keeps both.
+    ///
     /// ONE size for every tile, no `rowCircle` optical bump — that
     /// compensation is for a circle standing in a MIXED column beside
     /// squircles (its own doc), and a strip's tiles are a line of their own
     /// kind.
-    private static let tile: CGFloat = DS.Mark.row
+    private static let tile: CGFloat = DS.Mark.tile
 
     var body: some View {
         HStack(spacing: DS.Space.s3) {

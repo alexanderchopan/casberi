@@ -54805,3 +54805,64 @@ So §728b's and §728c's "NOT PROVEN: execution" lines are superseded by this ta
 **§728's STALL READING WAS WRONG, AND THE RESUME IS WHAT SHOWED IT.** It read the head's TIMESTAMP age. The chain resumed by catching up — real blocks, carrying the six transactions above, stamped with slots a day and a half old — so the rule said "Stalled for 40 hours, nothing sent now can land" while everything landed. A stall is now OBSERVED: this device must have watched the same head NUMBER for more than ten minutes (`FramesChainWatch.headSince`, persisted across launches). Until then nothing is claimed, and once it is, the age said is the longer of what was watched and the head block's own. **The class, for the next reading of a devnet's clock: a block's timestamp says when its slot was, not when it was made.**
 
 **UNSEEN on a device**, and the passkey path specifically cannot be seen on any simulator: no Secure Enclave. The scratch-key proofs used an independent P-256 signer; the Enclave's own signing is `VibenetDeviceKey`'s shipped, device-verified body.
+
+## §730 — The All room's strip tiles are 44pt, three of them (user: "we have a lot of space below the rows in All. what if we made the pictures and avatars we show on the second rows bigger to fill the space. i'm less concerned about empty space and more interested in making the visuals bigger for user. mock it up." → "three at 76 seems ideal bc patterns of three are more elegant than of four" → "the 63 almost looks garish" → "lets do 44", 2026-09-14)
+
+`StripRow`'s tiles were `Mark.row`, 26pt — the size of the source mark one line
+up, which §719 chose so "a mark and the members beside it are the same square".
+The ask reverses the priority: the pictures are the point, and a mark is not a
+ceiling for one. They are `Mark.tile` now, 44pt, three of them (`stripCap` 4 → 3),
+gap 4 → 6.
+
+**ROWS ON SCREEN IS A DIVISION, AND IT CAPS THE TILE.** The All room has no head
+at all — `roomHead` composes to `EmptyView` for "All", so the first thing on
+screen is the day header, `heading22` in a 44pt row. Between that header's bottom
+(y 106, under the device's own 62pt inset) and the dock slab's top edge (y 764)
+the room leaves **658pt**. A strip row is `88 + tile` (25 name + 17 time + 2 stack
+gaps + 4 strip pad + tile, plus 10pt of its own vertical padding and 10pt of list
+inset each side). So:
+
+| tile | row | sources on screen | picture area |
+|---|---|---|---|
+| 26 (was) | 114pt | 6 | 1× |
+| 44 | 132pt | 5 | 2.9× |
+| 63 | 151pt | 4 | 5.9× |
+| 76 | 164pt (own line) | 4 | 8.5× |
+| 104 | 192pt (own line) | 3 | 16× |
+
+Each row COUNT has a ceiling — five rows cap the tile at 44, four at 78, three at
+104 — and **a size inside a band rather than at its ceiling pays a row and does
+not collect it.** That is what 63 was: it cost the fifth row and stopped 15pt
+short of what four rows allowed, landing too big to read as a caption under the
+name and too small to read as the row's content, in a column narrow enough to
+fill neither. The user saw it before the arithmetic did ("the 63 almost looks
+garish"). The three real candidates were the three ceilings.
+
+**WHY THE STRIP CANNOT SIMPLY GROW.** Above 44 the tiles stop clearing the count
+column on a narrow screen, because the count block is as wide as its NOUN and the
+noun comes from the run's kind — "links" takes ~34pt, "screenshots" ~74pt. On a
+375pt iPhone the longest noun leaves the strip about 188pt; four tiles at 44 need
+194pt, which is why the cap is three (three need 144pt and clear it everywhere),
+and three at 76 need 244pt, which nothing narrow can give. So anything past this
+band has to leave the text column for a full-width line of its own — which is the
+banner §254 rejected and the anatomy §719 settled. **44 is the largest tile that
+keeps both rulings.** If the strip is ever wanted bigger than this, that is a
+re-litigation of §254, not a constant.
+
+Three mock rounds informed this, at real tokens against the code's own chrome:
+the row alone at 26/44/56/76, then three-up
+at 63/76/104 with the overflow case drawn, then five whole screens in size order
+so rows-on-screen was visible rather than argued. They are deliberately NOT in
+the repo: every tile in them is a crop of a real avatar out of the corpus, and
+`origin` is public. Two findings came only from the full screen. **The mark drifts as the tiles grow:** the row's `HStack` centres the
+leading mark against the whole name-and-tiles block, so at 63 it sat level with
+the tiles instead of the name — invisible at 26 because the block is short, and a
+cost any under-name size above ~50 would have had to pay. **And the dock carries
+what is behind it:** §677 deleted the band's scrim, so rows stay visible and
+refract through the slab's glass, and a bigger tile puts more picture under it.
+
+NOT PROVEN HERE: this landed in a Linux session with no Xcode, so it is unbuilt.
+`scripts/verify.sh` and a look on device are still owed — specifically whether a
+Bluesky avatar, which arrives as the AppView's thumbnail variant near 128px,
+holds at the 132px this now requests (`RemoteThumb` asks `size * 3` and
+`prepareThumbnail` never upscales, so a source under the request draws stretched).

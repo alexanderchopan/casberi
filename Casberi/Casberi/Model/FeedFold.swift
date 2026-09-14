@@ -47,12 +47,17 @@ enum FeedFold {
     static let bundleThreshold = 3
 
     /// How many members a strip draws before the count carries the rest.
-    /// Four — at `Mark.list` (36pt, the user's 2026-08-14 size ruling) four
-    /// tiles plus gaps take 156pt of a 393pt row, leaving the source name and
-    /// the count column clear on the narrowest iPhone; a fifth starts eating
-    /// the title. Volume beyond the cap is what the source's room is for
-    /// (§35).
-    static let stripCap = 4
+    /// Three since §730, and the tile size is what decides it: at `Mark.tile`
+    /// (44pt, §730) four tiles plus gaps take 194pt, while the narrowest
+    /// iPhone leaves the strip roughly 188pt once the leading mark, the two
+    /// row gaps and the longest count word ("screenshots") are out — so a
+    /// fourth tile would run into the count on a 375pt screen. Three take
+    /// 144pt and clear it on every size. It is also the user's own ruling on
+    /// the shape ("patterns of three are more elegant than of four",
+    /// 2026-09-14). It was four at `Mark.row`, where all four fit.
+    ///
+    /// Volume beyond the cap is what the source's room is for (§35).
+    static let stripCap = 3
 
     /// One member the strip will draw, named by its INDEX into the run rather
     /// than by the model it came from — which is what keeps this whole file
