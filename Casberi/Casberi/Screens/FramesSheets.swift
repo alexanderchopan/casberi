@@ -391,7 +391,7 @@ struct FramesMoveSheet: View {
                                                lineWidth: row.valueLanded == false ? 1.5 : 0))
                 .frame(width: 7, height: 7).padding(.top, 6)
             VStack(alignment: .leading, spacing: 1) {
-                Text(String(localized: "\(String(index + 1)). \(row.frame.modeName)"))
+                Text(String(localized: "\(String(index + 1)). \(row.frame.stepName)"))
                     .dsText(.callout15).foregroundStyle(DS.textPrimary)
                 if let target = row.frame.target, !target.isEmpty {
                     Text(FramesName.of(target, mine: mine, watched: watched))
@@ -618,7 +618,7 @@ struct FramesFrameSheet: View {
 
     var body: some View {
         let height = trayHeight
-        DSTray(title: row?.frame.modeName ?? String(localized: "Step"),
+        DSTray(title: row?.frame.stepName ?? String(localized: "Step"),
                height: height, ink: true, detents: [.height(height), .large]) {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
@@ -688,7 +688,10 @@ struct FramesFrameSheet: View {
     /// whose job is more specific than their mode (prd §728).
     private func meaning(_ row: FramesFrameRow) -> String {
         if let deadline = row.frame.deadline {
-            return String(localized: "The deadline. This transaction could only land in a block made by \(deadline.formatted(date: .abbreviated, time: .standard)).")
+            return String(localized: "The expiry check. This transaction could only land in a block made by \(deadline.formatted(date: .abbreviated, time: .standard)).")
+        }
+        if row.frame.isDeploy {
+            return String(localized: "Installs the account's code, so the step after it has code to verify with. Only on an account's first send.")
         }
         if row.frame.tokenTransfer != nil {
             return String(localized: "Acts as the sender, calling a token contract to move its tokens.")
@@ -976,7 +979,7 @@ struct FramesFrameSheet: View {
         } label: {
             HStack(spacing: DS.Space.s2) {
                 if back { Image(systemName: "chevron.left").dsGlyph(12) }
-                Text(move.rows[target].frame.modeName).dsText(.callout15)
+                Text(move.rows[target].frame.stepName).dsText(.callout15)
                 if !back { Image(systemName: "chevron.right").dsGlyph(12) }
             }
             .foregroundStyle(DS.tint)

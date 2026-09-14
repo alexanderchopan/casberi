@@ -166,7 +166,10 @@ enum FramesSendPlanSteps {
     /// where the vocabulary gets learned, and this chain is named for frames.
     private static func name(for frame: FramesTransaction.Frame) -> String {
         if frame.mode == 1, frame.target == FramesTransaction.expiryVerifier {
-            return String(localized: "Deadline")
+            return String(localized: "Expiry")
+        }
+        if frame.mode == 0, frame.target == FramesPasskeyAccount.deployer {
+            return String(localized: "Deploy")
         }
         return switch frame.mode {
         case 1: String(localized: "Verify")
@@ -185,6 +188,9 @@ enum FramesSendPlanSteps {
         if frame.mode == 1, frame.target == FramesTransaction.expiryVerifier {
             let minutes = Int(FramesSend.deadlineWindow / 60)
             return String(localized: "lands within \(String(minutes)) min or never")
+        }
+        if frame.mode == 0, frame.target == FramesPasskeyAccount.deployer {
+            return String(localized: "installs the account's code")
         }
         if frame.data.starts(with: FramesTransaction.erc20TransferSelector) {
             return String(localized: "sends the token")

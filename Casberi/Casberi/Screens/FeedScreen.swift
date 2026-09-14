@@ -4413,7 +4413,7 @@ struct FeedScreen: View {
                 // built exactly two.
                 stitch: DevnetStitch(
                     headName: String(localized: "Verify"),
-                    headDetail: String(localized: "A deadline, then your signature · always first"),
+                    headDetail: String(localized: "An expiry check, then your signature · always first"),
                     atomicity: .chosen(
                         title: String(localized: "All or nothing"),
                     // **BOTH STATES ARE SPELLED, and OFF is the one that
