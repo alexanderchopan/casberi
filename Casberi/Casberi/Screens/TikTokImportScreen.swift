@@ -17,6 +17,12 @@ import UniformTypeIdentifiers
 /// names don't expire, so a library imported today can be given its faces
 /// whenever. That is the whole pitch of importing at all, and it belongs on the
 /// screen rather than only in the ledger.
+///
+/// AMENDED 2026-09-14 (prd §731): a SECOND door, §726's Instagram one seat
+/// over. A sign-in inside this app, through `TikTokLiveLoginSheet`, reads the
+/// person's own Activity inbox — likes, comments, follows — with their own
+/// session cookies. The doors are uncoupled: the seat reads connected when
+/// EITHER is open, and disconnecting clears only the live session.
 struct TikTokImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
@@ -28,6 +34,10 @@ struct TikTokImportScreen: View {
     @State private var held = 0
     @State private var fetching = false
     @State private var pending = 0
+    /// The live door (prd §731), apart from the export.
+    @State private var liveConnected = false
+    @State private var liveSyncing = false
+    @State private var liveResult: BridgeProof?
     /// The page's one presentation (`AccountPage.sheet`).
     @State private var sheet: AccountPageSheet?
 
@@ -35,14 +45,21 @@ struct TikTokImportScreen: View {
     var body: some View {
         AccountPage(
             name: "TikTok", seatID: "tiktok", source: "TikTok",
-            // An import has no live connection, so "is anything here" is the
-            // only honest test of whether this seat is connected at all.
+            // Connected if EITHER door is open (prd §731).
             state: AccountPageState.of(name: "TikTok", seatID: "tiktok",
-                                       connected: held > 0, store: store),
-            mode: .oneTimeImport,
-            teardown: {},
+                                       connected: held > 0 || liveConnected, store: store),
+            mode: .signIn,
+            cardSheet: { _ in
+                AnyView(TikTokLiveLoginSheet(onCaptured: {
+                    liveConnected = true
+                    Task { await syncLive() }
+                }))
+            },
+            // Clears the LIVE half only — imported rows are untouched.
+            teardown: { TikTokLiveAuth.clear() },
             sheet: $sheet,
             act: {
+                liveBlock
                 pickBlock
                 if pending > 0 { facesBlock }
             },
@@ -63,7 +80,64 @@ struct TikTokImportScreen: View {
             guard case .success(let url) = outcome else { return }
             Task { await runImport(url) }
         }
-        .onAppear { reread() }
+        .onAppear {
+            reread()
+            // The sweep's throttle, shared: opening the page counts as the
+            // ten-minute read rather than adding one.
+            if liveConnected, BridgeRefresh.dueForHeal("tiktok.live") {
+                Task { await syncLive() }
+            }
+        }
+    }
+
+    /// The live door (prd §731) — likes, comments and follows as they happen,
+    /// which no export can carry. First, because it is the news.
+    @ViewBuilder private var liveBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if liveConnected {
+                HStack(spacing: DS.Space.s3) {
+                    Image(systemName: "bell.fill")
+                        .dsGlyph(17, weight: .medium)
+                        .foregroundStyle(DS.tint)
+                    Text(TikTokLiveAuth.username.map { "Signed in as @\($0)" }
+                         ?? String(localized: "Live — your own account, signed in"))
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+            } else {
+                DSSlabButton(title: "Connect your account",
+                             systemImage: "bell.badge",
+                             busy: false) { sheet = .card(id: "tiktokLive") }
+            }
+            BridgeSyncStatusRows(syncing: liveSyncing,
+                                syncingLine: String(localized: "Checking TikTok…"),
+                                proof: liveResult)
+            DSSlabNote(text: "TikTok may ask you to confirm it was you.", plain: true)
+        }
+    }
+
+    /// Runs the live read (prd §731). A refusal clears the session inside
+    /// `refresh`, so the re-read below falls back to Connect.
+    private func syncLive() async {
+        guard !liveSyncing else { return }
+        liveSyncing = true
+        let added = await TikTokLive.refresh(context: modelContext)
+        liveSyncing = false
+        liveConnected = TikTokLiveAuth.connected
+        guard let added else {
+            liveResult = .failed(liveConnected
+                ? String(localized: "Couldn't read TikTok — try again in a few minutes.")
+                : String(localized: "TikTok signed this app out — tap Connect to sign in again."))
+            return
+        }
+        liveResult = added > 0 ? .landed(added) : .upToDate
+        let proof = added > 0 ? String(localized: "\(added) new") : String(localized: "Synced just now")
+        if store.registerConnected(id: "tiktok", name: "TikTok", proof: proof,
+                                   can: ["Reads your likes, comments and follows, with your own sign-in.",
+                                         "Read-only — never posts, likes, or follows for you."]) {
+            DSHaptic.success()
+        }
     }
 
     /// No door: TikTok's export is requested inside TikTok's own app, not at a
@@ -96,6 +170,7 @@ struct TikTokImportScreen: View {
         staleness = ImportRemoval.stalenessLine(source: "TikTok", context: modelContext)
         held = ImportRemoval.count(source: "TikTok", context: modelContext)
         pending = TikTokImport.pendingFaceCount(context: modelContext)
+        liveConnected = TikTokLiveAuth.connected
     }
 
     /// The second act. Only ever on screen when there is genuinely something

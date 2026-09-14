@@ -29,6 +29,8 @@ enum ProbeHooks {
         "-trelloKey",
         // An Instagram web session — full account access (prd §726).
         "-igLiveSession",
+        // A TikTok web session's whole cookie header (prd §731).
+        "-tiktokLiveSession",
         // The `.p8` itself — a real ECDSA private key, and the most sensitive
         // value any probe in this file takes. `-ascKeyID`/`-ascIssuer` are
         // deliberately NOT here: they are identifiers, useless without the
@@ -643,6 +645,29 @@ enum ProbeHooks {
         // one-launch diagnosis.
         Hook(key: "igLiveProbe") { _, _ in
             Task { @MainActor in await InstagramLive.diagnose() }
+        },
+        // `-tiktokLiveSession "<cookie header>"` — store a TikTok web session
+        // lifted from a signed-in browser, exactly as the in-app sign-in would
+        // (prd §731). Refused unless it holds `sessionid`. On `secretArgKeys`.
+        Hook(key: "tiktokLiveSession") { spec, _ in
+            let jar = spec.split(separator: ";").compactMap { part -> (name: String, value: String)? in
+                let kv = part.split(separator: "=", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+                return kv.count == 2 ? (name: kv[0], value: kv[1]) : nil
+            }
+            guard let header = TikTokLiveFeed.cookieHeader(jar) else {
+                NSLog("[Casberi] tiktokLive| -tiktokLiveSession wants a cookie header holding sessionid")
+                return
+            }
+            TikTokLiveAuth.store(cookieHeader: header)
+            NSLog("[Casberi] tiktokLive| session stored (%d cookies)", jar.count)
+        },
+        // `-tiktokLiveProbe YES` — the TikTok live read, link by link (prd
+        // §731): cookie names / signed in as / inbox status and body code /
+        // notices parsed / first three / one raw notice / a group scan. The
+        // measure tool for the notice shapes no build host has seen — a like,
+        // a comment, a follow.
+        Hook(key: "tiktokLiveProbe") { _, _ in
+            Task { @MainActor in await TikTokLive.diagnose() }
         },
         // `-xPersonProbe <handle>` — your years with one person (2026-08-18,
         // prd §396), line by line: one `xPerson|` per year, then the card's

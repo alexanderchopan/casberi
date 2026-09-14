@@ -291,6 +291,16 @@ enum BridgeRefresh {
                 _ = await sweepTimed("instagram.live") { await InstagramLive.refresh(context: context) }
             }
         }
+        // TikTok's live door (prd §731), on the same ten-minute throttle and
+        // the same by-name pause: a busy session is the one TikTok flags.
+        let tiktokPaused = store.bridges.contains { $0.id == "tiktok" && $0.status == .paused }
+        if TikTokLiveAuth.connected, !tiktokPaused,
+           force || BridgeRefresh.dueForHeal("tiktok.live") {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await sweepTimed("tiktok.live") { await TikTokLive.refresh(context: context) }
+            }
+        }
         if !RSSStore.shared.feeds.isEmpty {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)

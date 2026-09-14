@@ -155,6 +155,12 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Instagram"),
                  purpose: "Reads your notifications and your saved posts, using your OWN Instagram sign-in inside this app — a personal account has no API. The requests carry the session cookies from that sign-in and nothing else.",
                  hosts: ["www.instagram.com"]),
+        // And for TikTok (prd §731), keyed by the catalogue name for the same
+        // reason; the video-names entry above is keyed by seat id.
+        Endpoint(service: "TikTok live",
+                 reach: .whenConnected(bridge: "TikTok"),
+                 purpose: "Reads your likes, comments and follows, using your OWN TikTok sign-in inside this app. The requests carry the session cookies from that sign-in and nothing else, and never mark anything read.",
+                 hosts: ["www.tiktok.com"]),
         Endpoint(service: "Snapchat Memories",
                  reach: .whenConnected(bridge: "snapchat"),
                  purpose: "Your Snapchat export holds links, not pictures — and they expire. When you tap to fetch your Memories, \(DS.device) asks Snapchat's own link for each one and downloads that picture.",

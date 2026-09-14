@@ -1079,18 +1079,18 @@ enum BridgeSetupMode {
     /// A sign-in on the provider's page — the OAuth seats, and GitHub while
     /// its device-flow client id ships. Every one is a `.signIn` on its own
     /// screen; `catalog-mode-audit.py` holds the two in step.
-    /// X and Instagram sign in since §701/§726 — each keeps its export as a
-    /// second act, but the word on the catalogue is the first door.
+    /// X, Instagram and TikTok sign in since §701/§726/§731 — each keeps its
+    /// export as a second act, but the word on the catalogue is the first door.
     static let signInSeats: Set<String> = ["Dropbox", "Slack", "Twitch", "CardPointers", "GitHub", "X", "Spotify",
-        "Instagram"]
+        "Instagram", "TikTok"]
 
     /// A one-time export you point at. Instagram and Snapchat were missed in
     /// this list's first life (2026-07-31) and TikTok would have been missed
-    /// the same way; the audit is why that cannot recur. (Instagram moved to
-    /// `signInSeats` with its live door, prd §726.)
+    /// the same way; the audit is why that cannot recur. (Instagram and TikTok
+    /// moved to `signInSeats` with their live doors, prd §726/§731.)
     static let importSeats: Set<String> = ["ChatGPT", "Claude", "Claude Code", "Gemini",
         "Day One", "Apple Journal", "Kindle", "Bookmarks",
-        "Snapchat", "TikTok"]
+        "Snapchat"]
 
     /// A system permission or a folder on this device, behind a setup screen
     /// (the pure one-tap grants have no screen and are `mode == nil`).

@@ -1374,6 +1374,10 @@ harness "Instagram pure-logic self-test" "Instagram pure-logic self-test" "scrip
 # the page publishes it PRE-ROUNDED ("12.6M"), so landing it in an Int would
 # fabricate precision on the one figure that looks most like a fact.
 harness "Telegram pure-logic self-test" "Telegram pure-logic self-test" "scripts/telegram-selftest.sh" "the Telegram logic self-test failed — run scripts/telegram-selftest.sh"
+# TikTok's live door (prd §731): a read must never mark the inbox read, a dead
+# session is a 200 whose body says "Login expired", and the notices' prefix must
+# sit inside `tiktok:` and in Corpus.liveRefPrefixes.
+harness "TikTok live self-test" "TikTok live self-test" "scripts/tiktok-live-selftest.sh" "the TikTok live self-test failed — run scripts/tiktok-live-selftest.sh"
 
 # The export half's own harness (prd §456) — `TelegramExport.swift`, compiled
 # whole. UNMEASURED against a real Telegram archive more strongly than any

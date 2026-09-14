@@ -297,9 +297,11 @@ enum Corpus {
     /// the thing sheet called it an archive row and wrote "From your X
     /// archive." under a notice that arrived four minutes ago.
     ///
-    /// **The other three bulk sources declare nothing here and are
-    /// unaffected** — Instagram, Snapchat and TikTok have no live half.
-    static let liveRefPrefixes: Set<String> = ["telegram:post:", "x-live:notif:"]
+    /// **TikTok joined on 2026-09-14 (prd §731)** with its Activity inbox,
+    /// under `tiktok:live:notif:` — deliberately inside the `tiktok:` family,
+    /// so `ImportRemoval.hasLiveHalf` sees it and "Remove import" steps over
+    /// the notices. Snapchat still has no live half.
+    static let liveRefPrefixes: Set<String> = ["telegram:post:", "x-live:notif:", "tiktok:live:notif:"]
 
     /// Did this row arrive live rather than out of an imported file?
     static func arrivedLive(_ thing: Thing) -> Bool {
