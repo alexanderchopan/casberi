@@ -832,6 +832,8 @@ struct FramesMoveRow: View {
         if let token = move.leadToken {
             return token.raw > 0 ? String(localized: "Received") : String(localized: "Sent")
         }
+        // The fee is all that left, and it paid for somebody else's send.
+        if move.paidForSomeoneElse { return String(localized: "Paid their fee") }
         guard let delta = move.deltaWei, delta != 0 else {
             return String(localized: "Transaction")
         }

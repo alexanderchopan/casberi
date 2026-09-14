@@ -128,6 +128,11 @@ enum RoomFrameStyle {
         case String(localized: "Call"):   return DS.tint
         case String(localized: "Check"):  return DS.attention
         case String(localized: "UTXO"):   return vault
+        // The spec's own subclassifications (prd §728e): an expiry check is a
+        // VERIFY frame and a deploy is a DEFAULT frame, so each keeps its
+        // mode's hue — the name is what separates them.
+        case String(localized: "Expiry"): return DS.stepVerify
+        case String(localized: "Deploy"): return DS.tint
         // An unnamed mode is drawn as a step rather than given a hue of its
         // own: a colour is a claim about what the step DID, and we do not know.
         default: return DS.textTertiary

@@ -2037,6 +2037,37 @@ let executedSkipOut = FramesRead.outcomes(inReceipt: ["frameReceipts": [
 check("the chain's own 0x2 reads as skipped, and only on the leg that never ran",
       executedSkipOut.map(\.skipped) == [false, false, false, false, true])
 
+// --- A SPONSOR'S OWN SIDE (prd §728c, code review 2026-09-14) ----------------
+let paidForBob = FramesMove(hash: "0xpf", blockNumber: 1, sender: "0xaaaa", payer: "0xBBBB", succeeded: true,
+                            rows: [], deltaWei: -210_790, reader: "0xbbbb")
+check("a fee this account paid for somebody else is not 'somebody else paid'", !paidForBob.sponsored)
+check("…it is paying for somebody else", paidForBob.paidForSomeoneElse)
+check("so the sponsor never appears in its own list of sponsors", FramesPayers.roster([paidForBob]).isEmpty)
+let paidForMe = FramesMove(hash: "0xpm", blockNumber: 1, sender: "0xaaaa", payer: "0xbbbb", succeeded: true,
+                           rows: [], deltaWei: 0, reader: "0xAAAA")
+check("read by the sender, the same transaction IS sponsored", paidForMe.sponsored && !paidForMe.paidForSomeoneElse)
+
+// --- THE SPEC'S OWN STEP NAMES (prd §728e) -----------------------------------
+let namedExpiry = verifyFrame(expiryAddress, data: "0x000000006aa5f05c")
+let namedDeploy = FramesRead.Frame(mode: 0, flags: 0, target: "0x4E59b44847b379578588920ca78fbf26c0b4956c",
+                                   executionGas: 150_000, stateGas: 450_000, value: "0x0", data: "0x00")
+check("an expiry verifier frame is named Expiry, not Verify", namedExpiry.stepName == "Expiry")
+check("a DEFAULT frame to the deployment proxy is named Deploy, not Call", namedDeploy.stepName == "Deploy")
+check("a DEFAULT frame to any other contract is not a deploy — this app cannot know it installs anything",
+      FramesRead.Frame(mode: 0, flags: 0, target: "0x7d6fa7c366f36046656b019dc9a27f171628cf3f",
+                       executionGas: 1, stateGas: 1, value: "0x0", data: "0x00").stepName == "Default")
+check("an ordinary verify frame keeps its mode's name",
+      verifyFrame("0x285dc41e452865032197bd1d44e4a9e1179c994c", data: "0x").stepName == "Verify")
+let namedRuns = FramesFrames.runs([FramesMove(
+    hash: "0xn", blockNumber: 1, sender: "0xa", payer: "0xa", succeeded: true,
+    rows: [FramesFrameRow(frame: namedExpiry, outcome: nil),
+           FramesFrameRow(frame: namedDeploy, outcome: nil),
+           FramesFrameRow(frame: verifyFrame("0x9c2e4702d6209ab2ce4f1aa2c9bb08a62133195d", data: "0x"), outcome: nil),
+           FramesFrameRow(frame: payFrame("0xb"), outcome: nil)],
+    deltaWei: 0)])
+check("the census counts a send's expiry check and its deploy apart from verification",
+      namedRuns.first?.steps.map(\.modeName) == ["Expiry", "Deploy", "Verify", "Send"])
+
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
 print("  ok   encoder: 3 real vectors byte-exact, keccak == the chain's own hash (1 on the post-restart chain)")
 SWIFT
@@ -2372,6 +2403,15 @@ mutate "a high s left high" $F8 \
   'high = s[i] > curveHalfOrder[i]' 'high = s[i] < curveHalfOrder[i]'
 mutate "the passkey signature entry written as secp256k1" $F8 \
   'Signature(scheme: 2, signer: owner,' 'Signature(scheme: 1, signer: owner,'
+mutate "a sponsor listed as its own sponsor" FramesReading.swift \
+  'var sponsored: Bool { payer.lowercased() != sender.lowercased() && !paidForSomeoneElse }' \
+  'var sponsored: Bool { payer.lowercased() != sender.lowercased() }'
+mutate "an expiry check counted as Verify in the census" FramesReading.swift \
+  'RoomFrames.Step(modeName: row.frame.isExpiry ? String(localized: "Expiry")' \
+  'RoomFrames.Step(modeName: false ? String(localized: "Expiry")'
+mutate "a deploy frame recognised by mode alone" FramesReading.swift \
+  'var isDeploy: Bool { mode == 0 && target?.lowercased() == Self.deploymentProxy }' \
+  'var isDeploy: Bool { mode == 0 }'
 F5=FramesChainWatch.swift
 mutate "an install's first genesis called a relaunch" $F5 \
   'guard let baseline, !baseline.isEmpty else { return .adopt(observed) }' \

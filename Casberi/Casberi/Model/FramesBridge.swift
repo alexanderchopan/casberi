@@ -501,8 +501,12 @@ final class FramesLiveState {
     /// may say "dropped".
     private func lookUpPending() async {
         let now = Date()
-        for index in pending.indices where !pending[index].state.isFinal {
-            let hash = pending[index].hash
+        // **BY HASH, NEVER BY INDEX.** Each hash awaits three hosts, and while
+        // it does a refresh can reconcile landed sends away or a relaunch can
+        // empty the list — an index captured before the awaits then reads
+        // past the end and traps (code review, 2026-09-14).
+        let hashes = pending.filter { !$0.state.isFinal }.map(\.hash)
+        for hash in hashes {
             var sightings: [FramesChainWatch.Sighting?] = []
             for host in FramesRPC.hosts {
                 let answer = await FramesRPC.ask(host: host, method: "eth_getTransactionByHash",
@@ -511,8 +515,8 @@ final class FramesLiveState {
                 sightings.append(FramesChainWatch.sighting(answered: answer.answered, transaction: tx))
                 if let block = FramesRead.hexInt(tx?["blockNumber"]) { noteMined(hash, block: block) }
             }
-            // The array can have changed across the awaits — a relaunch clears it.
-            guard index < pending.count, pending[index].hash == hash else { return }
+            // Re-found after the awaits: it may have landed, or been cleared.
+            guard let index = pending.firstIndex(where: { $0.hash == hash }) else { continue }
             let state = FramesChainWatch.pendingState(sentAt: pending[index].at,
                                                       deadline: pending[index].deadline,
                                                       now: now, sightings: sightings)
@@ -929,7 +933,8 @@ final class FramesLiveState {
                 // Sorted by contract so two reads of one transaction list its
                 // tokens in one order.
                 tokenMoves: (tokenDeltas[hash] ?? [:]).sorted { $0.key < $1.key }
-                    .map { FramesTokenMove(contract: $0.key, raw: $0.value) }))
+                    .map { FramesTokenMove(contract: $0.key, raw: $0.value) },
+                reader: address))
         }
         return out.sorted { $0.blockNumber > $1.blockNumber }
     }

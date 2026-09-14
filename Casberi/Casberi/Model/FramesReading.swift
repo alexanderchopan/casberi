@@ -74,6 +74,24 @@ enum FramesRead {
         /// EIP-8141's `EXPIRY_VERIFIER`, `address(0x8141)`.
         static let expiryVerifier = "0x0000000000000000000000000000000000008141"
 
+        /// The deterministic deployment proxy a passkey account is installed
+        /// through (prd §728d).
+        static let deploymentProxy = "0x4e59b44847b379578588920ca78fbf26c0b4956c"
+
+        /// **THE STEP'S NAME, in the spec's own words (prd §728e).** A mode
+        /// number says how a frame runs; two frames this app now builds have a
+        /// more specific job that EIP-8141's mempool section names itself —
+        /// `expiry_verify` and `deploy` — and counting them as "Verify" and
+        /// "Call" made every send read as mostly verification. Anything else
+        /// keeps its mode's name.
+        var isExpiry: Bool { deadline != nil }
+        var isDeploy: Bool { mode == 0 && target?.lowercased() == Self.deploymentProxy }
+        var stepName: String {
+            if isExpiry { return String(localized: "Expiry") }
+            if isDeploy { return String(localized: "Deploy") }
+            return modeName
+        }
+
         /// **THE DEADLINE, when this frame is the chain's expiry check** (prd
         /// §728). A VERIFY frame targeting `0x…8141` whose data is an 8-byte
         /// big-endian timestamp: the transaction is valid only in a block no
@@ -410,7 +428,7 @@ struct FramesMove: Identifiable, Equatable, Codable {
     /// Somebody else paid. The one reading this chain publishes that ordinary
     /// chains hide — and it is a comparison of two fields on the SAME receipt,
     /// never an inference.
-    var sponsored: Bool { payer.lowercased() != sender.lowercased() }
+    var sponsored: Bool { payer.lowercased() != sender.lowercased() && !paidForSomeoneElse }
 
     /// Did every frame RUN without reverting?
     ///
@@ -521,6 +539,18 @@ struct FramesMove: Identifiable, Equatable, Codable {
     /// empty where they were and nothing moved.
     var tokenMoves: [FramesTokenMove]? = nil
 
+    /// **THE ADDRESS WHOSE READ PRODUCED THIS MOVE (prd §728c, code review).**
+    /// A sponsor's own history lists the transactions it paid for, and from
+    /// the sponsor's side those are not "somebody else paid" — the sponsor is
+    /// the somebody. Nil for a move read before this field existed.
+    var reader: String? = nil
+
+    /// This account paid the fee for a transaction somebody else sent.
+    var paidForSomeoneElse: Bool {
+        guard let reader else { return false }
+        return payer.lowercased() == reader.lowercased() && sender.lowercased() != reader.lowercased()
+    }
+
     /// The transaction's deadline, if it carried an expiry frame.
     var deadline: Date? { rows.lazy.compactMap(\.frame.deadline).first }
 
@@ -618,7 +648,9 @@ enum FramesFrames {
         moves.compactMap { move in
             guard !move.rows.isEmpty else { return nil }
             let steps = move.rows.enumerated().map { index, row in
-                RoomFrames.Step(modeName: RoomFrames.modeName(row.frame.mode),
+                RoomFrames.Step(modeName: row.frame.isExpiry ? String(localized: "Expiry")
+                                    : row.frame.isDeploy ? String(localized: "Deploy")
+                                    : RoomFrames.modeName(row.frame.mode),
                                 weight: Double(row.outcome?.gasUsed ?? row.frame.executionGas ?? 0),
                                 outcome: outcome(of: row),
                                 id: index)
