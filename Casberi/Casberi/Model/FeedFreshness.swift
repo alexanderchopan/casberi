@@ -227,8 +227,12 @@ enum FeedFreshness {
             for key in doomed { records.removeValue(forKey: key) }
         }
         cache = records
+        // Through `DefaultsWrite`, never `UserDefaults.standard.set`: this
+        // runs under `lock`, and a defaults write posts its notification
+        // synchronously into SwiftUI's update lock — prd §720's deadlock,
+        // which `BridgeHealth` (this file's own shape) shipped.
         if let data = try? JSONEncoder().encode(records) {
-            UserDefaults.standard.set(data, forKey: storeKey)
+            DefaultsWrite.set(data, forKey: storeKey)
         }
     }
 

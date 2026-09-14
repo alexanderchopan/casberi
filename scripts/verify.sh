@@ -608,6 +608,21 @@ step "Design-template audit"
 "$ROOT/scripts/ds-template-audit.py" || fail "a template is drawn by hand outside Design/ — see the output above"
 print -P "%F{green}✓ design-template audit%f"
 
+# A `UserDefaults` write inside a lock is a synchronous notification post
+# inside a lock, and SwiftUI observes that notification: its observer takes
+# the update lock that every view body already holds while waiting for the
+# store's own lock. That is a two-lock deadlock, and it killed build 570 on
+# the user's phone — main thread stuck in `ViewBodyAccessor.updateBody`, a
+# bridge sweep stuck in `UserDefaultObserver.userDefaultsDidChange`, the app
+# frozen on every page until the watchdog took it (prd §720). Five stores
+# shipped the shape; the audit reported exactly those five and nothing else
+# over the pre-fix tree, and zero after. Persist through `DefaultsWrite`.
+step "Defaults-lock audit"
+"$ROOT/scripts/defaults-lock-audit.py" --self-test >/dev/null \
+  || fail "the defaults-lock audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/defaults-lock-audit.py" || fail "a lock is held across a defaults write — see the output above"
+print -P "%F{green}✓ defaults-lock audit%f"
+
 # Keeps the "What this app reaches" registry complete (prd §205): every host
 # the app calls must be disclosed in NetworkReach.swift or the explicit
 # non-reach denylist — an undisclosed fetch host fails here.

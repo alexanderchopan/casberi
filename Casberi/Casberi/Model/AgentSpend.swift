@@ -236,14 +236,18 @@ final class AgentSpend: @unchecked Sendable {
         lock.lock()
         entries = [:]
         lock.unlock()
-        UserDefaults.standard.removeObject(forKey: storeKey)
+        // The same queue the flushes ride, so one still in flight cannot land
+        // after the forget and bring the receipts back (prd §720).
+        DefaultsWrite.remove(storeKey)
     }
 
     // MARK: - Persistence
 
-    /// The `UserDefaults` write stays INSIDE the lock: outside it, two flushes
-    /// racing could persist out of order and leave the older snapshot on disk
-    /// (`NetworkLedger`'s own note, same reason).
+    /// The ENCODE stays inside the lock, so the payload is a consistent
+    /// snapshot; the store write goes through `DefaultsWrite`, which keeps two
+    /// racing flushes in order without posting a defaults change notification
+    /// under a lock the main thread can be waiting on (prd §720,
+    /// `NetworkLedger`'s own note, same reason).
     private func flush() {
         lock.lock()
         if entries.count > Self.maxProviders {
@@ -251,7 +255,7 @@ final class AgentSpend: @unchecked Sendable {
             entries = Dictionary(uniqueKeysWithValues: keep.map { ($0.provider, $0) })
         }
         if let data = try? JSONEncoder().encode(entries) {
-            UserDefaults.standard.set(data, forKey: storeKey)
+            DefaultsWrite.set(data, forKey: storeKey)
         }
         lock.unlock()
     }

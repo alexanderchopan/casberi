@@ -86,36 +86,57 @@ final class AppMetrics: NSObject, @unchecked Sendable {
     private static let retention: TimeInterval = 90 * 86_400
     private static let maxRemembered = 40
 
-    private let lock = NSLock()
+    /// Payloads arrive on a background queue and the Diagnostics screen reads
+    /// on the main one, so the cache and the store move together under this —
+    /// `BridgeHealth`'s shape, for `BridgeHealth`'s reason.
+    private static let lock = NSLock()
+    /// Memoised, because the store write below no longer lands synchronously
+    /// (prd §720): the cache is what every reader reads, so a row remembered a
+    /// microsecond ago is never missed by the next merge.
+    private static var cache: [Remembered]?
 
     /// Payloads arrive on a background queue, so every touch is locked.
     private func remember(_ rows: [Remembered]) {
         guard !rows.isEmpty else { return }
-        lock.lock()
-        defer { lock.unlock() }
+        Self.lock.lock()
+        defer { Self.lock.unlock() }
         var byID: [String: Remembered] = [:]
-        for row in Self.loadRows() + rows { byID[row.id] = row }
+        for row in Self.loaded() + rows { byID[row.id] = row }
         let cutoff = Date().addingTimeInterval(-Self.retention)
-        let kept = byID.values
+        let kept = Array(byID.values
             .filter { $0.at > cutoff }
             .sorted { $0.at > $1.at }
-            .prefix(Self.maxRemembered)
-        if let data = try? JSONEncoder().encode(Array(kept)) {
-            UserDefaults.standard.set(data, forKey: Self.storeKey)
+            .prefix(Self.maxRemembered))
+        Self.cache = kept
+        // `DefaultsWrite`, not `UserDefaults.standard.set`: this is inside a
+        // lock, and a defaults write posts its change notification
+        // synchronously into SwiftUI's update lock (prd §720).
+        if let data = try? JSONEncoder().encode(kept) {
+            DefaultsWrite.set(data, forKey: Self.storeKey)
         }
     }
 
-    private static func loadRows() -> [Remembered] {
-        guard let data = UserDefaults.standard.data(forKey: storeKey),
-              let rows = try? JSONDecoder().decode([Remembered].self, from: data)
-        else { return [] }
+    /// Caller must hold `lock`.
+    private static func loaded() -> [Remembered] {
+        if let cache { return cache }
+        let rows = (UserDefaults.standard.data(forKey: storeKey))
+            .flatMap { try? JSONDecoder().decode([Remembered].self, from: $0) } ?? []
+        cache = rows
         return rows
+    }
+
+    private static func loadRows() -> [Remembered] {
+        lock.lock(); defer { lock.unlock() }
+        return loaded()
     }
 
     /// Empties the remembered diagnostics. The system's own store is not ours
     /// to clear, and saying so is the honest half of this verb.
     static func forget() {
-        UserDefaults.standard.removeObject(forKey: storeKey)
+        lock.lock()
+        cache = []
+        lock.unlock()
+        DefaultsWrite.remove(storeKey)
     }
 }
 

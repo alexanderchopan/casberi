@@ -241,9 +241,16 @@ enum BridgeHealth {
     }
 
     /// Caller must hold `lock`.
+    ///
+    /// The store write goes through `DefaultsWrite` and NOT
+    /// `UserDefaults.standard.set` — a defaults write posts its change
+    /// notification synchronously, SwiftUI observes it, and the observer takes
+    /// the update lock a view body already holds while waiting for `lock`
+    /// right here. That is the deadlock that killed build 570 (prd §720); this
+    /// file was the one that shipped it.
     private static func save(_ book: [String: Record]) {
         cache = book
         guard let data = try? JSONEncoder().encode(book) else { return }
-        UserDefaults.standard.set(data, forKey: key)
+        DefaultsWrite.set(data, forKey: key)
     }
 }
