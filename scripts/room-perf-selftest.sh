@@ -79,6 +79,7 @@ COMPOSER="${ROOM_PERF_COMPOSER:-Casberi/Casberi/Shell/Composer.swift}"
 ROOT="${ROOM_PERF_ROOT:-Casberi/Casberi/Shell/RootShell.swift}"
 CHROME="${ROOM_PERF_CHROME:-Casberi/Casberi/Shell/ShellChrome.swift}"
 CHIPS="${ROOM_PERF_CHIPS:-Casberi/Casberi/Shell/SourceChips.swift}"
+GATE="${ROOM_PERF_GATE:-Casberi/Casberi/Model/GestureGate.swift}"
 
 fails=0
 ok()   { print -r -- "  ✓ $1" }
@@ -392,8 +393,36 @@ fi
 #     build landing three seconds after arrival under whatever the finger was
 #     doing. Each check below is one door the flag is cleared through, or the
 #     dock's own hold on the lift.
-check "the lift waits on the feed's scroll AND the dock in hand" \
-      "$MAIN" 'while chrome\.scrolling \|\| chrome\.dockBusy,' yes
+# THE FEED'S CAP DOES NOT APPLY TO THE DOCK (prd §722, 2026-09-13 — user: "the
+# dock sometimes freezes when scrolling back and forth"). `stillnessCapMs` is
+# §83's trade for a person reading the ROOM, who can see its head go stale;
+# a person flicking the dock can see nothing of the kind, and at three
+# seconds of back-and-forth the 1,200-row build landed under the strip. The
+# dock holds the lift until its flick is over; only a stuck flag bounds it.
+check "the lift waits on the dock in hand past the feed's own cap" \
+      "$MAIN" 'while chrome\.dockBusy \|\| \(chrome\.scrolling && waited < Self\.stillnessCapMs\),' yes
+check "a stuck flag still bounds the lift" \
+      "$MAIN" 'waited < GestureGate\.stuckFlagCapMs, !Task\.isCancelled' yes
+if [[ -f "$GATE" ]]; then
+  # A cap a deliberate hand can reach is a cap that lands every waiter at
+  # once, under the finger. Eight seconds is past any back-and-forth; five is
+  # the floor this guard accepts.
+  check "the gate's cap is for a stuck flag, not a hand (>= 5s)" \
+        "$GATE" 'static let stuckFlagCapMs = ([5-9][0-9]{3}|[0-9]{5,})$' yes
+  check "idle() defaults to that cap" \
+        "$GATE" 'static func idle\(cap: Duration = stuckFlagCap\) async' yes
+  # A cancelled waiter must leave: `Task.sleep` throws on cancellation and a
+  # `try?` around it turns the poll into a main-actor spin for the whole cap.
+  check "a cancelled idle() waiter leaves the loop" \
+        "$GATE" 'while busy, !Task\.isCancelled, ContinuousClock\.now < deadline' yes
+else
+  fail "GestureGate.swift is missing"
+fi
+# The resting snapshot is a synchronous `drawHierarchy` of the whole window,
+# 900ms after a landing — when a finger is on the strip. It waits for every
+# gesture and skips rather than draw under one that outlived the cap.
+checkm "the resting snapshot waits for a still hand and skips a busy one" \
+       "$MAIN" 'private func captureRestingLook\(\) async \{(?:(?!\n    \}).)*await GestureGate\.idle\(\)(?:(?!\n    \}).)*guard !Task\.isCancelled, !GestureGate\.busy,(?:(?!\n    \}).)*!chrome\.dockBusy else \{ return \}' yes
 checkm "a room change clears the scroll flag for the arriving room" \
        "$MAIN" 'private func land\(_ target: String[^)]*\) \{(?:(?!\n    \}).)*chrome\.scrolling = false' yes
 if [[ -f "$CHROME" ]]; then
@@ -419,6 +448,10 @@ if [[ -f "$CHIPS" ]]; then
   # other half is DELETED too (prd §662h), so the flick is the whole fact.
   check "the dock flag is the flick, and only the flick (the scrub is gone)" \
         "$CHIPS" 'let busy = viewport\.moving$' yes
+  # §722 review: a strip that leaves mid-flick clears its flag, as the feed's
+  # observer does — a stuck dock flag would hold every waiter for the cap.
+  checkm "the dock flag is cleared when the strip leaves" \
+         "$CHIPS" '\.onDisappear \{\s*if viewport\.moving \{ viewport\.moving = false; publishDockBusy\(\) \}' yes
 else
   fail "SourceChips.swift is missing"
 fi
@@ -453,7 +486,7 @@ checkm "the row's verbs are derived when the menu rises, not when the row builds
 checkm "nothing in the menu builder derives verbs inline" \
        "$FEED" '\.contextMenu \{[^}]*VerbDerivation\.verbs' no
 check "the resting look is not captured while the feed is moving" \
-      "$MAIN" 'chrome\.fold == 0, !chrome\.scrolling else \{ return \}' yes
+      "$MAIN" 'chrome\.fold == 0, !chrome\.scrolling, !chrome\.dockBusy else \{ return \}' yes
 
 # ------------------------------------------------------------ the instrument
 
@@ -603,6 +636,7 @@ mutate() {  # mutate <description> <which: feed|main> <perl-expression>
   cp "$ROOT"     "$dir/RootShell.swift"
   cp "$CHROME"   "$dir/ShellChrome.swift"
   cp "$CHIPS"    "$dir/SourceChips.swift"
+  cp "$GATE"     "$dir/GestureGate.swift"
   local src tgt
   case "$which" in
     feed)     src="$FEED";     tgt="$dir/FeedScreen.swift"  ;;
@@ -612,6 +646,7 @@ mutate() {  # mutate <description> <which: feed|main> <perl-expression>
     clock)    src="$CLOCK";    tgt="$dir/SwipeClock.swift"  ;;
     chrome)   src="$CHROME";   tgt="$dir/ShellChrome.swift" ;;
     chips)    src="$CHIPS";    tgt="$dir/SourceChips.swift" ;;
+    gate)     src="$GATE";     tgt="$dir/GestureGate.swift"  ;;
     *)    print -r -- "  ✗ unknown mutation target: $which"; rm -rf "$dir"; return 1 ;;
   esac
   perl -0777 -i -pe "$expr" "$tgt"
@@ -643,6 +678,7 @@ mutate() {  # mutate <description> <which: feed|main> <perl-expression>
   ROOM_PERF_ROOT="$dir/RootShell.swift" \
   ROOM_PERF_CHROME="$dir/ShellChrome.swift" \
   ROOM_PERF_CHIPS="$dir/SourceChips.swift" \
+  ROOM_PERF_GATE="$dir/GestureGate.swift" \
     "$SELF" --checks-only >/dev/null 2>&1 && survived=1
   rm -rf "$dir"
   if (( survived )); then
@@ -772,13 +808,25 @@ mutate "the budget is never released"  main 's/        swipeRowBudget = nil\n//'
 # a room that arrives correctly — three seconds late, with its biggest build
 # landing under the next gesture, which is how it was reported.
 mutate "the lift stops waiting on the dock in hand"  main \
-  's/while chrome\.scrolling \|\| chrome\.dockBusy,/while chrome.scrolling,/' || mfails=$((mfails + 1))
+  's/while chrome\.dockBusy \|\| \(chrome\.scrolling && waited < Self\.stillnessCapMs\),/while chrome.scrolling && waited < Self.stillnessCapMs,/' || mfails=$((mfails + 1))
+# §722: the dock's hold capped at the feed's three seconds again — build 570's
+# shape, the freeze as reported.
+mutate "the dock's hold on the lift is capped at the feed's three seconds"  main \
+  's/while chrome\.dockBusy \|\| \(chrome\.scrolling && waited < Self\.stillnessCapMs\),/while chrome.scrolling || chrome.dockBusy, waited < Self.stillnessCapMs,/' || mfails=$((mfails + 1))
+mutate "the resting snapshot draws under a moving hand again"  main \
+  's/        await GestureGate\.idle\(\)\n        guard !Task\.isCancelled, !GestureGate\.busy,\n/        guard !Task.isCancelled,\n/' || mfails=$((mfails + 1))
+mutate "a cancelled waiter spins the gate for the whole cap"  gate \
+  's/while busy, !Task\.isCancelled, ContinuousClock\.now < deadline/while busy, ContinuousClock.now < deadline/' || mfails=$((mfails + 1))
+mutate "the gate's cap shrinks back to a hand's length"  gate \
+  's/static let stuckFlagCapMs = 8000/static let stuckFlagCapMs = 3000/' || mfails=$((mfails + 1))
 mutate "a room change no longer clears the scroll flag (it sticks for every later room)"  main \
   's/\n        chrome\.scrolling = false\n//' || mfails=$((mfails + 1))
 mutate "the scroll flag outlives the screen that set it"  chrome \
   's/\.onDisappear \{\n\s*if active, chrome\.scrolling \{ chrome\.scrolling = false; GestureGate\.set\(scrolling: false\) \}\n\s*\}\n//' || mfails=$((mfails + 1))
 mutate "scrolling becomes a body dependency (a rebuild per scroll phase)"  chrome \
   's/\@ObservationIgnored var scrolling = false/var scrolling = false/' || mfails=$((mfails + 1))
+mutate "the dock flag outlives the strip that set it"  chips \
+  's/\.onDisappear \{\n\s*if viewport\.moving \{ viewport\.moving = false; publishDockBusy\(\) \}\n\s*\}\n//' || mfails=$((mfails + 1))
 mutate "the flick stops holding the lift (the dock flag goes dead)"  chips \
   's/let busy = viewport\.moving\n/let busy = false\n/' || mfails=$((mfails + 1))
 
@@ -792,7 +840,7 @@ mutate "a wave bump stops stamping its time"  feed \
 mutate "the menu derives its verbs per row build again"  feed \
   's/RowVerbMenu\(thing: thing, room: source\) \{ run\(\$0, on: \$1\) \}/let verbs = VerbDerivation.verbs(for: thing)\n                if let v = verbs.first { Button { run(v, on: thing) } label: { Text(v.label) } }/' || mfails=$((mfails + 1))
 mutate "the resting look is captured mid-scroll again"  main \
-  's/chrome\.fold == 0, !chrome\.scrolling else \{ return \}/chrome.fold == 0 else { return }/' || mfails=$((mfails + 1))
+  's/chrome\.fold == 0, !chrome\.scrolling, !chrome\.dockBusy else \{ return \}/chrome.fold == 0, !chrome.dockBusy else { return }/' || mfails=$((mfails + 1))
 
 # Section D (prd §600). Each of these builds green and renders a room that
 # looks entirely correct while making a false claim about it, or pays back the

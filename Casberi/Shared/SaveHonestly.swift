@@ -39,7 +39,9 @@ enum SaveCensus {
 /// after the first, whichever comes first. A save asked for from anywhere
 /// else (a pin, a delete, an edit, an import screen, the share extension) is
 /// exactly what it was: immediate, honest about its outcome. Nothing but the
-/// sweep's own saves are ever held, and none is held past a second.
+/// sweep's own saves are ever held, and none is held past a second of the
+/// sweep's own making — a scheduled flush also waits for a still hand
+/// (`holdForHand`, prd §722), bounded by the gate's stuck-flag cap.
 ///
 /// **What it cannot break.** A fetch on the same context sees pending
 /// inserts (`includePendingChanges`, measured), so a bridge that reads back
@@ -65,6 +67,17 @@ enum SaveCoalescer {
     @MainActor private static var firstRequest: Date?
     @MainActor private static var flushTask: Task<Void, Never>?
 
+    /// **A SCHEDULED FLUSH WAITS FOR A STILL HAND (prd §722, 2026-09-13).**
+    /// One save re-runs every mounted `@Query` (§646/§658), and this timer
+    /// had never looked at what the finger was doing: a sweep's landings
+    /// arrive one to ten seconds after foreground, which is exactly when a
+    /// person is flicking the dock, and each one froze the strip for the
+    /// room's re-materialisation. The app installs `GestureGate.idle` here
+    /// at launch (`RootShell`); the extension installs nothing and is
+    /// unchanged. `flushNow()` is NOT held — the background hook must write
+    /// before the process can be reaped, whatever the hand is doing.
+    @MainActor static var holdForHand: (@MainActor () async -> Void)?
+
     /// Note a deferred save and (re)arm the flush.
     @MainActor
     static func request(_ context: ModelContext, site: String) {
@@ -82,6 +95,8 @@ enum SaveCoalescer {
         flushTask?.cancel()
         flushTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(Int(wait)))
+            guard !Task.isCancelled else { return }
+            if let hold = holdForHand { await hold() }
             guard !Task.isCancelled else { return }
             flushNow()
         }

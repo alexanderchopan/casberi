@@ -59,6 +59,16 @@ need "$SWEEP" 'asked=%d' \
   "the sweepPass| line lost asked= — saves and asks must sit on ONE line, or the coalescer's effect cannot be read"
 need "$SAVE" 'if SaveCoalescer.landing, Thread.isMainThread {' \
   "saveHonestly no longer defers inside a pass"
+# §722 (2026-09-13): a SCHEDULED flush waits for a still hand — the app
+# installs the gate, the extension installs nothing — and flushNow() never
+# waits, because the background hook must write before the process is reaped.
+need "$SAVE" 'if let hold = holdForHand { await hold() }' \
+  "the scheduled flush no longer waits for the hand — every landing's save re-runs the room's @Query under the finger again"
+need "$ROOT_SHELL" 'SaveCoalescer.holdForHand = { await GestureGate.idle() }' \
+  "RootShell no longer installs the hand hold — the coalescer's hook is nil in the app"
+if perl -0777 -ne 'exit(/static func flushNow\(\) \{(?:(?!\n    \}).)*holdForHand/s ? 1 : 0)' <<< "$(strip "$SAVE")"; then :; else
+  echo "✗ flushNow waits for the hand — a held save could die with the process on background"; exit 1
+fi
 echo "✓ save-coalescer drift guards green"
 
 # --- the coalescer, compiled verbatim ---------------------------------------
@@ -161,6 +171,27 @@ func ms(_ n: Int) async { try? await Task.sleep(for: .milliseconds(n)) }
     saves = 0
     SaveCoalescer.flushNow()
     check(saves == 0, "flushNow with nothing pending saves nothing")
+
+    // 7. The hand hold (prd §722): a scheduled flush waits for it; flushNow does not.
+    saves = 0
+    var held = 0
+    SaveCoalescer.holdForHand = { held += 1; await ms(500) }
+    await SaveCoalescer.$landing.withValue(true) {
+        ctx.insert(Item(name: "g")); ctx.saveHonestly()
+    }
+    await ms(SaveCoalescer.quietMs + 150)
+    check(saves == 0 && SaveCoalescer.isHolding, "a scheduled flush is held while the hand moves (saves=\(saves))")
+    await ms(600)
+    check(saves == 1 && held == 1 && !ctx.hasChanges, "the held flush lands once the hand is still (saves=\(saves), held=\(held))")
+    saves = 0
+    await SaveCoalescer.$landing.withValue(true) {
+        ctx.insert(Item(name: "h")); ctx.saveHonestly()
+        SaveCoalescer.flushNow()
+        check(saves == 1, "flushNow is not held by the hand (saves=\(saves))")
+    }
+    await ms(SaveCoalescer.quietMs + 700)
+    check(saves == 1, "nothing was written twice after a flushNow under a hold (saves=\(saves))")
+    SaveCoalescer.holdForHand = nil
 }
 let sem = DispatchSemaphore(value: 0)
 Task { @MainActor in
@@ -169,7 +200,7 @@ Task { @MainActor in
 }
 while sem.wait(timeout: .now()) != .success { RunLoop.main.run(until: Date().addingTimeInterval(0.01)) }
 if failures > 0 { print("✗ save-coalescer self-test: \(failures) failure(s)"); exit(1) }
-print("✓ save-coalescer self-test: 22 assertions green")
+print("✓ save-coalescer self-test: 26 assertions green")
 SWIFT
 
 build() { # build <dir> <save.swift>
@@ -199,4 +230,6 @@ mutate "flushNow no longer writes" \
   's/guard let context = pending else \{ return \}/guard let context = pending, false else { return }/'
 mutate "a request no longer re-arms the timer" \
   's/flushTask\?\.cancel\(\)\n        flushTask = Task/flushTask = Task/'
-echo "✓ save-coalescer self-test: 5 mutations caught, 7 drift guards"
+mutate "the scheduled flush stops waiting for the hand (§722)" \
+  's/            if let hold = holdForHand \{ await hold\(\) \}\n            guard !Task\.isCancelled else \{ return \}\n//'
+echo "✓ save-coalescer self-test: 6 mutations caught, 10 drift guards"

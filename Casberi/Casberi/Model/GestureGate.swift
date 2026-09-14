@@ -31,13 +31,32 @@ enum GestureGate {
         if on { HitchMeter.shared.begin(kind) } else { HitchMeter.shared.end(kind) }
     }
 
-    /// Returns when no gesture is under way, or after `cap` — a hand that
-    /// never settles must not starve the work forever. Polled rather than
-    /// awaited on a continuation because the flags are written from three
-    /// places that must stay cheap; 50ms is below what any sweep can feel.
-    static func idle(cap: Duration = .seconds(3)) async {
+    /// **THE CAP IS FOR A STUCK FLAG, NOT A HAND (prd §722, 2026-09-13, user:
+    /// "the dock sometimes freezes when scrolling back and forth").** Every
+    /// gesture ends, and every flag here is cleared at its end (§658's
+    /// amendment closed the one door a flag could stick through), so the only
+    /// thing a cap protects against is a flag nobody clears. Three seconds
+    /// was short enough that a person flicking the dock back and forth
+    /// reached it — and at the cap EVERY waiter landed at once, under the
+    /// finger: the unbounded room build, the sweep's kick, its landings'
+    /// save and every `@Query` that save re-runs. That is the freeze.
+    /// A flick decelerates in under two seconds; eight is past any
+    /// deliberate back-and-forth and still bounds a flag that stuck.
+    static let stuckFlagCapMs = 8000
+    static let stuckFlagCap: Duration = .milliseconds(stuckFlagCapMs)
+
+    /// Returns when no gesture is under way, or after `cap` (see
+    /// `stuckFlagCap`). Polled rather than awaited on a continuation because
+    /// the flags are written from three places that must stay cheap; 50ms is
+    /// below what any sweep can feel.
+    static func idle(cap: Duration = stuckFlagCap) async {
         let deadline = ContinuousClock.now + cap
-        while busy, ContinuousClock.now < deadline {
+        // A CANCELLED waiter leaves at once: `Task.sleep` throws the moment
+        // its task is cancelled, and `try?` swallowed that — so a waiter
+        // whose task was cancelled (a room change under `.task(id:)`, a
+        // coalescer re-arm) spun this loop flat out on the main actor for
+        // the rest of the cap (code review, 2026-09-13).
+        while busy, !Task.isCancelled, ContinuousClock.now < deadline {
             try? await Task.sleep(for: .milliseconds(50))
         }
     }

@@ -697,6 +697,13 @@ struct SourceChips: View {
                 viewport.moving = phase != .idle
                 publishDockBusy()
             }
+            // A strip that leaves mid-flick never reports `.idle` — the
+            // same door `minimizesChrome` closes for the feed's flag
+            // (§658's amendment). Left set, `dockBusy` would hold every waiter for the
+            // whole stuck-flag cap (prd §722).
+            .onDisappear {
+                if viewport.moving { viewport.moving = false; publishDockBusy() }
+            }
             // The strip's own window x, so a chip's content-space frame can be
             // turned into the anchor a springing folder grows out of.
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minX } action: { x in

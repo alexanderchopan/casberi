@@ -2346,9 +2346,20 @@ struct MainSurface: View {
         // often already sliding the strip toward the next room, and this
         // build landing under that motion is the hitch the report names.
         // `ShellChrome.dockBusy` is the strip's finger and its flick.
+        //
+        // **THE FEED'S CAP DOES NOT APPLY TO THE DOCK (prd §722, 2026-09-13,
+        // user: "the dock sometimes freezes when scrolling back and forth").**
+        // `stillnessCapMs` is §83's trade: a person scrolling the ROOM can
+        // see its head describe 150 rows as the whole, so the build is owed
+        // to them at three seconds even under their finger. A person
+        // flicking the DOCK is not reading the room and can see no such
+        // thing — so the dock holds the lift until the flick is over, and
+        // three seconds of back-and-forth no longer lands the 1,200-row
+        // build under the strip. `GestureGate.stuckFlagCapMs` still bounds
+        // it, for a flag nobody clears, never for a hand.
         var waited = 0
-        while chrome.scrolling || chrome.dockBusy,
-              waited < Self.stillnessCapMs, !Task.isCancelled {
+        while chrome.dockBusy || (chrome.scrolling && waited < Self.stillnessCapMs),
+              waited < GestureGate.stuckFlagCapMs, !Task.isCancelled {
             try? await Task.sleep(for: .milliseconds(100))
             waited += 100
         }
@@ -2504,10 +2515,18 @@ struct MainSurface: View {
     /// is longer than that, and a source change cancels the task.
     private func captureRestingLook() async {
         try? await Task.sleep(for: .milliseconds(900))
-        guard !Task.isCancelled, scenePhase == .active, route.path.isEmpty,
+        // …and never under a moving hand (prd §722): `drawHierarchy` renders
+        // the whole window synchronously on main, and 900ms after a chip tap
+        // is when a finger is flicking the strip to the next room. §661
+        // guarded the feed's scroll and left the dock's; this waits for all
+        // three gestures and, if the cap ran out on a still-busy hand, skips
+        // — the snapshot is a nicety and is retaken on the next room change.
+        await GestureGate.idle()
+        guard !Task.isCancelled, !GestureGate.busy,
+              scenePhase == .active, route.path.isEmpty,
               chrome.pageDragX == 0, chrome.pageDragTarget == nil,
               !chrome.walkModalOpen, !chrome.walkSheetOpen,
-              chrome.fold == 0, !chrome.scrolling else { return }
+              chrome.fold == 0, !chrome.scrolling, !chrome.dockBusy else { return }
         RoomSnapshots.capture(source: filter.source, frame: chrome.pagerFrame)
     }
 
