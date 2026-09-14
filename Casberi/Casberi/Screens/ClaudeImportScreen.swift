@@ -58,7 +58,7 @@ struct ClaudeImportScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ImportArchiveSection(
                 source: "Claude",
-                steps: ["In Claude, open Settings → Privacy → Export data.",
+                steps: ["Settings → Privacy → Export data",
                         "Anthropic emails a link — unzip it in Files."],
                 pickTitle: "Choose conversations.json",
                 pickIcon: "square.and.arrow.down",

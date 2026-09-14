@@ -52,6 +52,18 @@ enum DSActRow {
     static let discSize: CGFloat = 32
     static var inset: CGFloat { discSize + DS.Space.s3 }
 
+    /// THE ENTRY WELL (prd §729). The one thing on an account page that may
+    /// be a box, because it is a box you put something in: an entry row that
+    /// was only a placeholder in the title column read as one more title, and
+    /// nobody could tell it took a paste. The disc's own recipe — the well
+    /// tone under `DS.pourInk` — so a field and the discs beside it are one
+    /// material, and on ink it has an edge (§545's finding).
+    static let wellHeight: CGFloat = 44
+    static var well: some View {
+        let shape = RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
+        return shape.fill(DS.surfaceWell).overlay { shape.fill(DS.pourInk) }
+    }
+
     /// The leading disc: a glyph on the well fill, the mark grammar every
     /// settings row in the app already uses. ONE definition — `AccountFactRow`
     /// forwards to it, so a fact row and an act row can never drift apart.
@@ -87,20 +99,6 @@ extension EnvironmentValues {
     var accountAct: Bool {
         get { self[AccountActKey.self] }
         set { self[AccountActKey.self] = newValue }
-    }
-}
-
-private struct AccountDoorOpenedKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
-extension EnvironmentValues {
-    /// True once the account page has opened its provider door in-app (prd
-    /// §653) — the entry rows read it to offer the paste the person came
-    /// back to make. Set by `AccountPage` alone.
-    var accountDoorOpened: Bool {
-        get { self[AccountDoorOpenedKey.self] }
-        set { self[AccountDoorOpenedKey.self] = newValue }
     }
 }
 

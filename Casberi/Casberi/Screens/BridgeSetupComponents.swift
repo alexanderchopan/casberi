@@ -83,8 +83,6 @@ struct BridgeSetupCard<Door: View>: View {
     let steps: [String]
     var startingAt = 2
     var numbered = false
-    var acknowledges = false
-    var doneThrough = 0
     @ViewBuilder var door: () -> Door
 
     var body: some View {
@@ -92,8 +90,7 @@ struct BridgeSetupCard<Door: View>: View {
             door()
             if !steps.isEmpty {
                 BridgeStepLines(steps: steps, inCard: true, startingAt: startingAt,
-                                numbered: numbered, acknowledges: acknowledges,
-                                doneThrough: doneThrough)
+                                numbered: numbered)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -124,122 +121,48 @@ struct BridgeStepLines: View {
     var startingAt = 2
     /// Off when what's left after the door isn't a SEQUENCE (prd §220): a lone
     /// bold "2" under an unnumbered button sends the eye hunting for a missing
-    /// 1, and one instruction was never a series of steps. Since 2026-08-14
-    /// that reasoning covers every door screen — the door does step one
-    /// itself, so ANY numeral run starting at 2 poses the same missing-1
-    /// riddle; two short lines in reading order need no numbers at all.
+    /// 1, and one instruction was never a series of steps.
     var numbered = true
-    /// Unnumbered lines that still TRACK doneness (`doneThrough`) keep the
-    /// confirm-green check — the 2026-08-04 "that worked" delight — in a slot
-    /// reserved up front, so the first check never re-indents the list.
-    /// Opt-in, because a list that can never complete (the exchanges, Mail)
-    /// would otherwise wear a phantom inset.
-    var acknowledges = false
-    /// How many steps are PROVABLY done, counted in the same numbering the
-    /// lines wear (so a door that did step one passes 1, even though step one
-    /// isn't rendered here). The delight pass, 2026-08-04: a form told you
-    /// what to do and then never acknowledged any of it — the numerals sat
-    /// identical from arrival to success, and success replaced the whole form
-    /// anyway, so nothing on these screens ever said "that worked."
-    ///
-    /// Each done step's numeral becomes a confirm-green check, and the NEXT
-    /// one brightens as the live instruction — a "you are here", not a
-    /// progress bar. Callers pass only what they can OBSERVE (a door tapped,
-    /// a field carrying text); no caller may infer that someone finished a
-    /// step off-screen, which is why "Copy it and paste it below" only counts
-    /// once there is really something in the field. Defaults to 0, so the
-    /// seventeen screens that don't pass it render exactly as before.
-    var doneThrough = 0
 
-    /// Quieter and inset inside an act (prd §640): three steps at
-    /// `callout15` secondary were the largest block of text on a setup page,
-    /// out-weighing the rows they explain.
+    /// NO TICKS (prd §729, user: "why do we even need those checks no body is
+    /// going to check them"). The 2026-08-04 delight pass turned a done step's
+    /// numeral into a green check, counted from what the screen could observe
+    /// — a door tapped, a field with text. Nobody ticks these lines and the
+    /// app could never prove the middle ones, so the check was a progress
+    /// grammar over a list read once. `acknowledges` and `doneThrough` are
+    /// deleted with it, and so is every screen's step counter.
     @Environment(\.accountAct) private var accountAct
-
-    /// Ticks trail `doneThrough` by one cascade so the checks land in
-    /// sequence rather than all at once (set immediately under Reduce Motion).
-    @State private var ticked = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    /// The step number this line wears.
-    private func number(_ i: Int) -> Int { i + startingAt }
 
     var body: some View {
         VStack(alignment: .leading, spacing: accountAct ? DS.Space.s1 : DS.Space.s2) {
             ForEach(Array(steps.enumerated()), id: \.offset) { i, text in
-                let done = number(i) <= ticked
-                let live = number(i) == ticked + 1
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                     if numbered {
-                        Group {
-                            if done {
-                                Image(systemName: "checkmark")
-                                    .dsGlyph(12, weight: .bold)
-                                    .foregroundStyle(DS.confirm)
-                                    .transition(.scale.combined(with: .opacity))
-                            } else {
-                                Text("\(number(i))")
-                                    .dsText(.callout15).fontWeight(.bold)
-                                    .foregroundStyle(live ? DS.tint : DS.textTertiary)
-                            }
-                        }
-                        .frame(width: 13, alignment: .trailing)
-                    } else if acknowledges {
-                        Group {
-                            if done {
-                                Image(systemName: "checkmark")
-                                    .dsGlyph(12, weight: .bold)
-                                    .foregroundStyle(DS.confirm)
-                                    .transition(.scale.combined(with: .opacity))
-                            } else {
-                                // A hidden numeral, not Color.clear: it keeps
-                                // the numeral's own metrics, so the check lands
-                                // on the same baseline the numbered form uses.
-                                Text("1")
-                                    .dsText(.callout15).fontWeight(.bold)
-                                    .hidden()
-                            }
-                        }
-                        .frame(width: 13, alignment: .trailing)
+                        Text("\(i + startingAt)")
+                            .dsText(.callout15).fontWeight(.bold)
+                            .foregroundStyle(DS.textTertiary)
+                            .frame(width: 13, alignment: .trailing)
                     }
+                    // 15pt inside an act too (prd §729, user: "subtext seems
+                    // unnecessarily small"). §640 dropped it to 13 because
+                    // three steps out-weighed the rows they explained; the
+                    // answer to that was fewer words, not smaller ones.
                     Text(LocalizedStringKey(text))
-                        .dsText(accountAct ? .subhead13 : .callout15)
-                        // A finished step recedes; the live one is the sentence
-                        // to read. Neither is ever hidden — §186's "the steps
-                        // stay whole and visible" is what this component is for.
-                        .foregroundStyle(done ? DS.textTertiary : DS.textSecondary)
+                        .dsText(.callout15)
+                        .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                 }
             }
         }
         // A FOOTER RUNS IN ITS ROW'S OWN COLUMN (prd §708) — inset to the
-        // title column, where `DSSlabNote` and `DSCheckList` already sat,
+        // title column, where `DSSlabNote` and `DSCheckList` already sit,
         // because these lines explain the DOOR ABOVE THEM and text starting
         // at the margin under a column of discs draws a second left edge.
-        // §640b's measured one-line bound survives with room: 330pt here
-        // against the 290pt the 54-character cap was measured at.
         .padding(.leading, accountAct ? DSActRow.inset : (inCard ? 0 : DS.Space.s2))
         .padding(.trailing, DS.Space.s2)
         .padding(.top, accountAct ? 0 : DS.Space.s1)
         .padding(.bottom, accountAct ? DS.Space.s2 : DS.Space.s1)
-        .onAppear { ticked = doneThrough }
-        .onChange(of: doneThrough) { old, now in
-            // Backwards (a field cleared, a key replaced) settles at once —
-            // an un-tick is a correction, not an achievement.
-            guard now > old else { ticked = now; return }
-            guard !reduceMotion else { ticked = now; return }
-            Task { @MainActor in
-                for n in (old + 1)...now {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) { ticked = n }
-                    // Only a step that is really ON SCREEN gets a haptic — a
-                    // door's step one is counted here but rendered elsewhere,
-                    // and a tap that ticks nothing visible must not buzz.
-                    if n >= startingAt { DSHaptic.selection() }
-                    try? await Task.sleep(for: .milliseconds(120))
-                }
-            }
-        }
     }
 }
 
@@ -354,7 +277,7 @@ struct BridgeSyncStatusRows: View {
             HStack(spacing: DS.Space.s2) {
                 DSSpinner()
                 Text(syncingLine)
-                    .dsText(accountAct ? .subhead13 : .callout15)
+                    .dsText(.callout15)
                     .foregroundStyle(DS.textTertiary)
             }
             .padding(.leading, accountAct ? DSActRow.inset : 0)
@@ -377,7 +300,7 @@ struct BridgeSyncStatusRows: View {
                         CountUpText(text: proof.line)
                     }
                 }
-                .dsText(accountAct ? .subhead13 : .callout15)
+                .dsText(.callout15)
                 .foregroundStyle(failed ? DS.attention : DS.confirm)
             }
             .padding(.leading, accountAct ? DSActRow.inset : 0)

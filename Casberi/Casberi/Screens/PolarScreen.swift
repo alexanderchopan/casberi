@@ -109,7 +109,6 @@ struct PolarScreen: View {
                                 "Refunds — read",
                                 "Subscriptions — read",
                                 "Organizations — read"])
-            BridgeStepLines(steps: [TokenBridge.polar.steps[1]], numbered: false)
             DSSlabField(placeholder: TokenBridge.polar.placeholder,
                         text: $tokenField, actionLabel: "Save", secure: true,
                         action: saveToken)

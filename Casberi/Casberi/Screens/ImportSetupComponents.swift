@@ -34,8 +34,7 @@ import SwiftData
 /// So the block STAGES itself. One primary verb at a time, chosen by where the
 /// person actually is, and the stage is read from things we genuinely observed:
 /// a door tapped (`ImportRequestMark`) and rows in the corpus. Nothing here
-/// infers that a step was finished off-screen — the same contract
-/// `BridgeStepLines.doneThrough` already holds itself to.
+/// infers that a step was finished off-screen.
 
 /// The one fact an import screen can observe about the waiting: that the
 /// person tapped the door out to the service's export page, and when.
@@ -89,8 +88,7 @@ enum ImportRequestMark {
 ///      present but QUIET — someone arriving with a zip already in Files must
 ///      not be blocked, but they are the rare case and shouldn't set the
 ///      screen's weight.
-///   2. **Nothing imported, door tapped.** The two swap. Step one ticks green
-///      (`doneThrough: 1` — observed, not inferred), the door drops to a quiet
+///   2. **Nothing imported, door tapped.** The two swap. The door drops to a quiet
 ///      slab wearing how long ago it was asked, and the pick becomes the verb.
 ///   3. **Something imported.** The whole block collapses to ONE quiet row.
 ///      That job is done; the tutorial for it is not a permanent fixture of the
@@ -166,14 +164,11 @@ struct ImportArchiveSection: View {
     private var openBlock: some View {
         // Unnumbered under a door (ruling 2026-08-14): the door did step one,
         // so numerals starting at 2 sent the eye hunting for a missing 1.
-        // `startingAt` still rides, because `doneThrough` counts in that same
-        // numbering — a door that did step one passes 1 even though step one
-        // is rendered above rather than in this list.
+        // `startingAt` still rides: a door did step one, so a numbered list
+        // under no door starts at 1 and under one would start at 2.
         BridgeSetupCard(steps: steps,
                         startingAt: doorTitle == nil ? 1 : 2,
-                        numbered: doorTitle == nil,
-                        acknowledges: true,
-                        doneThrough: waiting != nil ? 1 : 0) {
+                        numbered: doorTitle == nil) {
             if let doorTitle, let doorURL {
                 // The address rides UNDER the verb (the 2026-08-14 anatomy) — but
                 // the waiting line wins that slot when there is one: "Requested

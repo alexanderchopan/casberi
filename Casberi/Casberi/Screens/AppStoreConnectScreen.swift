@@ -182,11 +182,6 @@ struct AppStoreConnectScreen: View {
     /// field proves it was generated AND downloaded; a Key ID proves the page
     /// was read. Opening the door proves none of them — it is not a step in
     /// this list.
-    private var stepsDone: Int {
-        if keyField.isEmpty { return 0 }
-        return keyIDField.isEmpty ? 3 : 4
-    }
-
     /// Read the `.p8` where it landed. The security-scoped read is the same
     /// shape every import screen uses; what is different is the size guard —
     /// this is a 250-byte file, and a picker that will happily open anything
@@ -224,10 +219,9 @@ struct AppStoreConnectScreen: View {
             // checklist — step 2, a list of four, then steps 3 and 4 —
             // which broke the one sequence on the screen in half and read
             // as more text than it was. Unnumbered (ruling 2026-08-14):
-            // the door did step one; `acknowledges` keeps the green check.
+            // the door did step one.
             BridgeSetupCard(steps: bridge.steps, startingAt: 2,
-                            numbered: false, acknowledges: true,
-                            doneThrough: stepsDone) {
+                            numbered: false) {
                 if let url = bridge.setupURL {
                     // Step one, doing itself (prd §218) — and it hands the
                     // filled slab over to the pick once it has been tapped, the
@@ -247,17 +241,6 @@ struct AppStoreConnectScreen: View {
                     }
                 }
             }
-            // The READ BOUNDARY, and the only place it can be stated before
-            // somebody decides to paste. Unlike Stripe's and PostHog's
-            // checklists this is NOT a set of boxes to tick — Apple grants
-            // a ROLE — so it says what the role lets this app see and what
-            // it will never do, which is the whole substitute for a scope
-            // this API doesn't offer. TWO lines, not the four it shipped
-            // with: each pair said one thing across two lines, and on a
-            // screen already carrying a door, three steps and three fields
-            // the halving is the difference between a promise and a wall.
-            DSCheckList(lines: ["Reads review status, reviews and builds",
-                                "Never submits, releases, replies or sells"])
             // THE FILE ITSELF (report, 2026-08-14). Apple hands you a
             // download, and every path from there to a text field runs
             // through a desktop text editor — which is what the one person
@@ -303,7 +286,7 @@ struct AppStoreConnectScreen: View {
             // choice Apple's own token spec defines, and somebody with an
             // individual key who feels obliged to invent a value here gets
             // a 401 they cannot diagnose.
-            DSSlabNote(text: "Leave the Issuer ID empty if your key is an individual key rather than a team's.", plain: true)
+            DSSlabNote(text: "Leave the Issuer ID empty for an individual key.", plain: true)
         BridgeSyncStatusRows(syncing: connecting,
                              syncingLine: String(localized: "Checking the key…"),
                              proof: result)

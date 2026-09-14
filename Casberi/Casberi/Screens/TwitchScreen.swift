@@ -114,7 +114,6 @@ struct TwitchScreen: View {
         BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking who's live…"),
                              proof: result,
                              retry: TwitchAuth.connected ? { Task { await sync() } } : nil)
-        DSSlabNote(text: "On Twitch's own page — a short code, no password.", plain: true)
     }
 
 

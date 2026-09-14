@@ -69,8 +69,7 @@ struct OpenRouterSetupScreen: View {
             // your OpenRouter key" — §220's own finding, in the family it
             // was never applied to (2026-07-31). With one instruction left
             // the numerals go too, per §220's boundary.
-            BridgeSetupCard(steps: ["Create a key — checked before it saves"],
-                            numbered: false) {
+            BridgeSetupCard(steps: [], numbered: false) {
                 DSSlabButton(title: "Get your API key",
                              detail: "openrouter.ai",
                              systemImage: "arrow.up.right",
@@ -86,7 +85,7 @@ struct OpenRouterSetupScreen: View {
             // the header's own tagline — "One key, whichever model fits" —
             // a screen apart (2026-07-31). "there" lost its antecedent
             // with it, so it names OpenRouter now.
-            DSSlabNote(text: "The key lives in the Keychain, goes only to OpenRouter, which bills you directly.")
+            DSSlabNote(text: "OpenRouter bills you directly.")
         }
     }
 

@@ -199,7 +199,15 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
 
-    /// What's left after the door — stated plainly, step by step. Rendered
+    /// What's left after the door — and since prd §729, ONLY what the door's
+    /// title and the fields beneath it don't already say. "Copy it and paste
+    /// it below" sat over a field holding out a Paste on eighteen of these;
+    /// "Create a key" sat under a door reading "Get your API key". Most seats
+    /// have no steps now. What survives is a choice made on the provider's
+    /// site that nothing on this page can make for you — a scope, a role, a
+    /// template, a menu path the landing page does not open onto.
+    ///
+    /// Before that: what's left after the door — stated plainly, step by step. Rendered
     /// UNNUMBERED on screen (ruling 2026-08-14): the door does step one
     /// itself, so numerals starting at 2 sent the eye hunting for a missing 1;
     /// two short lines in reading order need no numbers at all.
@@ -210,45 +218,29 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     /// 1Claw's did the same until its seat was deleted (2026-09-06).
     var steps: [String] {
         switch self {
-        case .readwise: [
-            "Sign in if asked — the token appears on the page.",
-            "Copy it and paste it below."]
+        case .readwise: []
         case .github: [
-            "Read-only: repositories, gists, profile",
-            "Copy it and paste it below."]
-        case .todoist: [
-            "Copy the API token shown there.",
-            "Paste it below."]
+            "Read-only: repositories, gists, profile"]
+        case .todoist: []
         // The tab IS named here — raindrop's door lands on Integrations, and
         // the token hides one tab over (the trail used to live in the door's
         // own label, which is a route map no button should carry).
         case .raindrop: [
-            "For Developers → create an app",
-            "Paste it below."]
-        case .calcom: [
-            "Add a new key.",
-            "Copy it and paste it below."]
-        case .calendly: [
-            "Generate a personal access token.",
-            "Copy it and paste it below."]
+            "For Developers → create an app"]
+        case .calcom: []
+        case .calendly: []
         case .notion: [
-            "Copy the Internal Integration Secret",
             "On each page: ⋯ → Connections → add it"]
         case .linear: [
-            "Create a key — read access is enough.",
-            "Copy it and paste it below."]
-        case .bitrefill: [
-            "API Keys → create a key, any name",
-            "Copy it and paste it below."]
+            "Read access is enough"]
+        case .bitrefill: []
         case .privacy: [
-            "Generate an API key (paid plan required)",
-            "Copy it and paste it below."]
+            "Needs a paid plan"]
         // The three scopes are NOT named here — the checklist directly beneath
         // this step is the list, the same fix Stripe took the day before
         // (§220, "a step that was already on screen twice"; audit 2026-07-31).
         case .posthog: [
-            "Create a personal key with these scopes:",
-            "Paste it below, then pick a project"]
+            "Give it only these scopes:"]
         // The six scopes are NOT named here — the checklist directly beneath
         // this step is the list, and naming them twice on one screen is §220's
         // "a step that was already on screen twice" (user, seeing the built
@@ -256,31 +248,26 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // Same for the test-mode refusal, which the placeholder shows and the
         // failure sentence explains at the moment it actually matters.
         case .stripe: [
-            "Create a RESTRICTED key with only these reads:",
-            "Copy it and paste it below."]
+            "A restricted key with only these reads:"]
         // The three scopes are NOT named here — Stripe's/PostHog's exact
         // reasoning: this bridge owns its own screen and renders a
         // `DSCheckList` under this step, so naming them twice is §220's "a
         // step that was already on screen twice".
         case .polar: [
-            "Developers → New Token, these scopes:",
-            "Copy it and paste it below."]
+            "Developers → New Token, only these scopes:"]
         // The read-only box IS named here, the Cloudflare/PagerDuty reason: a
         // `.token` bridge renders the generic `TokenSetupScreen`, which has
         // no checklist, so this step is the only place it can be said —
         // leaving it unsaid means minting a key that can issue refunds.
         case .dodoPayments: [
-            "Developer → API Keys — leave write off",
-            "Copy it and paste it below."]
+            "Leave write off"]
         // Trello's steps are the SECOND stage only — the key stage carries its
         // own (`TokenSetupScreen.trelloKeySection`), because this bridge is the
         // one here that needs two pastes. The scope is not named in a step: the
         // authorize link above it is one Casberi builds with `scope=read`, and
         // the note under the field says so once (§220 — a step never re-types
         // what is already on screen).
-        case .trello: [
-            "Allow — Trello shows a token on the page.",
-            "Copy it and paste it below."]
+        case .trello: []
         // The permissions ARE named here, unlike PostHog's and Stripe's, and
         // that is not a §220 slip: those two own their own screens and render a
         // `DSCheckList` under the step, so naming them twice would be the thing
@@ -290,45 +277,39 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // Cloudflare's own template is named rather than four permission rows
         // spelled out, because a template is one click and cannot be mistyped.
         case .cloudflare: [
-            "Use the Read all resources template",
-            "Copy it and paste it below."]
+            "Use the Read all resources template"]
         // No scope to choose, and the steps deliberately don't pretend there
         // is one: Cursor's keys carry no permissions at all (see
         // `CursorFetch`). What that means is said once, in `canLine`, which is
         // the line about trust — not repeated here as an instruction nobody
         // can act on (§220).
         case .cursor: [
-            "API Keys → create a Cloud Agents key",
-            "Copy it and paste it below."]
+            "API Keys → create a Cloud Agents key"]
         // The three scopes are NOT named here — Sentry owns its own screen and
         // renders a `DSCheckList` under this step, so naming them twice is
         // §220's "a step that was already on screen twice" (the PostHog and
         // Stripe precedent).
         case .sentry: [
-            "Create a token with only these scopes:",
-            "Paste it below, then pick an organization"]
+            "Give it only these scopes:"]
         // No scope to choose, and no pretending otherwise: a Vercel token is
         // account-wide (see `VercelFetch`). What that means is said once, in
         // `canLine`.
         case .vercel: [
-            "Create a token scoped to your team",
-            "Copy it and paste it below."]
+            "Scope it to your team"]
         // The read-only box IS named here, unlike PostHog's and Stripe's
         // checklists, because a `.token` bridge renders `TokenSetupScreen`,
         // which has no checklist — so this step is the only place it can be
         // said, and leaving it unsaid means minting a key that can page
         // everyone in the company (the Cloudflare reasoning).
         case .pagerduty: [
-            "General Access REST API Key, Read-only",
-            "Copy it and paste it below."]
+            "General Access REST API Key, Read-only"]
         // The scope IS named here, for the Cloudflare/pagerduty reason: a
         // `.token` bridge renders the generic `TokenSetupScreen`, which has
         // no checklist, so this step is the only place it can be said.
         // `read_api` alone covers everything this bridge reads — issues and
         // merge requests assigned to you — and nothing it doesn't.
         case .gitlab: [
-            "Create a token with only the read_api scope.",
-            "Copy it and paste it below."]
+            "Only the read_api scope"]
         // FOUR steps, not two, and this is the only bridge here that needs
         // them — Apple hands back three separate values and a downloadable
         // file, and the download happens ONCE (the `.p8` can never be
@@ -337,31 +318,26 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // App Store Connect owns its own screen the checklist beneath step 2
         // carries the reads rather than this step naming them twice (§220,
         // the PostHog/Stripe precedent).
-        // THREE steps, not four — the fourth was "Paste all three below", which
+        // TWO steps (prd §729 cut the third: the Key ID and Issuer ID fields
+        // already name what is on that page). Before that, the fourth was "Paste all three below", which
         // is §220's own example of a step re-typing what is already on screen
         // (three labelled fields sit directly beneath it). The role is named
         // because it is the only lever anyone has over reach; the checklist
         // under it says what that role lets Casberi see, so this step doesn't.
         case .appStoreConnect: [
             "Use the Developer role — the narrowest",
-            "Download the .p8. Apple only offers it once.",
-            "The Key ID and Issuer ID are on the same page."]
+            "Download the .p8. Apple only offers it once."]
         // Jira's steps are the SECOND stage only — the site stage carries its
         // own (`TokenSetupScreen.jiraSiteSection`), Trello's exact reason:
         // this is the one bridge here besides Trello that needs two pastes.
         // No scope to name: a Jira API token carries the same access as your
         // account (see `canLine`), so there is no box to tick the way
         // Cloudflare's or Sentry's steps name one.
-        case .jira: [
-            "Create an API token — name it Casberi.",
-            "Copy it and paste it below."]
+        case .jira: []
         // AWS has a real read-only IAM POLICY — unlike Cursor's or App Store
         // Connect's key, which carry no such thing — so the step names it
         // rather than leaving the promise to conduct alone (see `canLine`).
-        case .aws: [
-            "Give it ReadOnlyAccess, or narrower",
-            "Create an access key for it",
-            "Paste the Access Key ID and Secret below"]
+        case .aws: []
         }
     }
 

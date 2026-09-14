@@ -128,7 +128,7 @@ struct ENSScreen: View {
             // than the pitch: `.eth` is the only thing with a registrar
             // expiry to read, so a `.com` or a subname is refused at the
             // field instead of following into a row that can never speak.
-            DSSlabNote(text: "Second-level .eth names only — a subname's lifetime belongs to its parent, and an imported .com expires in DNS where no ENS read can see it.", plain: true)
+            DSSlabNote(text: "Second-level .eth names only.", plain: true)
         }
     }
 

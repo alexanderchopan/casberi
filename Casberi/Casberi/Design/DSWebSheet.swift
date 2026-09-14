@@ -36,8 +36,9 @@ import SafariServices
 /// so the trip is: door, sign in, copy, drag the sheet down, scroll, tap
 /// Paste; drag it back up if the site is needed again, same page, still
 /// signed in. It opens full, because a form wants the room. The sheet
-/// DISMISSING is not what offers the paste (the row lights on first open,
-/// `accountDoorOpened`), so nothing depends on catching a dismissal. The
+/// DISMISSING is not what offers the paste (every empty secret field holds
+/// one out from the first frame, prd §729), so nothing depends on catching a
+/// dismissal. The
 /// way OUT is on both sides: the sheet's own compass opens the page in
 /// Safari, and a long press on the door does the same (`dsDoorWayOut`).
 ///

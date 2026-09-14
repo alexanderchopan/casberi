@@ -155,10 +155,6 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// raises the count at which it dies; not drawing the rows is the fix
     /// (`RowWindow`'s own ruling).
     @State private var windowSteps = 0
-    /// THE DOOR OPENED IN-APP (prd §653). Sticky for the page's life: the
-    /// paste the person came back to make is offered from the first return
-    /// on, whether the sheet is down or parked at half height over the rows.
-    @State private var doorOpened = false
 
     private var seat: BridgeApp? { store.bridges.first { $0.id == seatID } }
 
@@ -264,13 +260,6 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         OpenURLAction { url in
             guard let scheme = url.scheme?.lowercased(),
                   scheme == "http" || scheme == "https" else { return .systemAction }
-            // THE RETURN LEG IS NOT THE SHEET'S (prd §653). Mac opens the door
-            // in a real browser window beside the app, which is the platform
-            // where the trip out works BEST — so the stamp is set on both
-            // sides of this branch and only the presentation differs. Setting
-            // it after the `#if` would have left the Mac's paste row dark
-            // forever, and `mac-parity-audit.py` cannot see that class.
-            doorOpened = true
             #if targetEnvironment(macCatalyst)
             return .systemAction
             #else
@@ -355,7 +344,6 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         // not inherit this (verified in the simulator: the door there
         // opened real Safari until it got one).
         .environment(\.openURL, doorAction)
-        .environment(\.accountDoorOpened, doorOpened)
         // THE ACT DRAWS ROWS, NOT SLABS (prd §640) — one environment flag, so
         // all 55 screens change with their call sites untouched. See
         // `Design/DSAccountAct.swift` for what each primitive becomes.

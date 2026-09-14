@@ -85,14 +85,6 @@ struct SlackScreen: View {
         BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking your mentions…"),
                              proof: result,
                              retry: SlackAuth.connected ? { Task { await sync() } } : nil)
-        // Says what LANDS before what's safe (audit, 2026-07-31) — this
-        // named PKCE, the missing password, the absent server and the
-        // search-only scope, and never once said what a mention becomes
-        // once it's here. The scope's own clause then said "Casberi can
-        // look up your mentions and nothing else", which is the first
-        // sentence again; the SCOPE (prd §192) is what it's there for, and
-        // that survives whole.
-        DSSlabNote(text: "On Slack's own page — no password ever touches the app.", plain: true)
     }
 
 

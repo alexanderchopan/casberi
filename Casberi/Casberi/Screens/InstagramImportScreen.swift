@@ -143,7 +143,7 @@ struct InstagramImportScreen: View {
             BridgeSyncStatusRows(syncing: liveSyncing,
                                 syncingLine: String(localized: "Checking Instagram…"),
                                 proof: liveResult)
-            DSSlabNote(text: "Sign in with your own Instagram account, in this app. Reads your notifications and saved posts, read-only. Instagram may ask you to confirm it was you.", plain: true)
+            DSSlabNote(text: "Instagram may ask you to confirm it was you.", plain: true)
         }
     }
 

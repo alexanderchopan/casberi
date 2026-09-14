@@ -149,7 +149,6 @@ struct PostHogScreen: View {
             // list IS the read-only promise, so the gray note that restated
             // it is gone.
             DSCheckList(lines: ["query:read", "annotation:read", "event_definition:read"])
-            BridgeStepLines(steps: [TokenBridge.posthog.steps[1]], numbered: false)
             // The host has no verb of its own — SAVE below commits both.
             // A `BridgeFieldRow` with an empty label still paints its
             // capsule, and a pre-filled host made it read as a live,

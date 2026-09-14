@@ -20,12 +20,10 @@ import SwiftUI
 struct AccountDoorHost<Content: View>: View {
     @ViewBuilder var content: () -> Content
     @State private var web: AccountDoorTarget?
-    @State private var opened = false
 
     var body: some View {
         content()
             .environment(\.openURL, action)
-            .environment(\.accountDoorOpened, opened)
             .sheet(item: $web) { target in
                 DSWebSheet(url: target.url) { web = nil }
             }
@@ -35,10 +33,6 @@ struct AccountDoorHost<Content: View>: View {
         OpenURLAction { url in
             guard let scheme = url.scheme?.lowercased(),
                   scheme == "http" || scheme == "https" else { return .systemAction }
-            // Stamped on BOTH sides — see `AccountPage.doorAction`: Mac opens
-            // the door in a real browser beside the app, so it is the platform
-            // that most needs the row holding out its hand on return.
-            opened = true
             #if targetEnvironment(macCatalyst)
             return .systemAction
             #else

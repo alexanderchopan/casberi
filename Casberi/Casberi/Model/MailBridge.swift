@@ -71,18 +71,12 @@ enum MailProvider: String, CaseIterable, Identifiable {
     var steps: [String] {
         switch self {
         case .icloud: [
-            "Go to Sign-In and Security → App-Specific Passwords, generate one named \u{201C}Casberi\u{201D}, and copy it."]
+            "Sign-In and Security → App-Specific Passwords"]
         case .gmail: [
-            "Turn on 2-Step Verification first if it asks, then create an app password named \u{201C}Casberi\u{201D} and copy it."]
+            "Turn on 2-Step Verification first if asked"]
         }
     }
 
-    /// Says what LANDS before what's safe (audit, 2026-07-31) — this named the
-    /// app password, IMAP and the read-only promise, and never once said what a
-    /// mail becomes once it's here.
-    var footer: String {
-        "Your recent mail lands in your feed, findable by sender and subject. The inbox is read over IMAP with this app-specific password — your real password is never shared, and mail is read-only."
-    }
 }
 
 enum MailIngest {

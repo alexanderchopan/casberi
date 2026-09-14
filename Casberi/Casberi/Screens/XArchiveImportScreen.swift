@@ -124,7 +124,7 @@ struct XArchiveImportScreen: View {
             BridgeSyncStatusRows(syncing: liveSyncing,
                                 syncingLine: String(localized: "Checking your notifications…"),
                                 proof: liveResult)
-            DSSlabNote(text: "Sign in with your own X account, in this app. Read-only, and only for the account you sign into — it never touches your archive above.", plain: true)
+            DSSlabNote(text: "Live notifications never touch your archive above.", plain: true)
         }
     }
 
@@ -138,7 +138,7 @@ struct XArchiveImportScreen: View {
                 doorTitle: "Open X settings",
                 doorURL: URL(string: "https://x.com/settings/download_your_data"),
                 steps: [
-                    "Tap Request archive and confirm your password.",
+                    "Request archive, then confirm your password",
                     "Ready within about 24 hours",
                     "Save the zip to Files and tap it once to unzip.",
                 ],

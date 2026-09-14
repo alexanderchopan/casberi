@@ -76,9 +76,7 @@ struct GrokSetupScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             // Verb over address, the 2026-08-14 anatomy.
             // Unnumbered — the door did step one (ruling 2026-08-14).
-            BridgeSetupCard(steps: ["Create an API key and copy it.",
-                                 "Paste it below — checked before it saves"],
-                            numbered: false) {
+            BridgeSetupCard(steps: [], numbered: false) {
                 DSSlabButton(title: "Get your API key",
                              detail: "console.x.ai",
                              systemImage: "arrow.up.right",
@@ -93,7 +91,7 @@ struct GrokSetupScreen: View {
             // The opening clause was the header's own tagline — "Try with
             // your key, on Grok" — restated a screen below it
             // (2026-07-31). The consent clause it carried stays.
-            DSSlabNote(text: "xAI has no free tier — buy credits before a key can answer.", plain: true)
+            DSSlabNote(text: "xAI has no free tier — buy credits first.", plain: true)
         }
     }
 

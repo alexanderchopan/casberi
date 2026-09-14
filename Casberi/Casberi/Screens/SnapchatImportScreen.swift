@@ -81,7 +81,7 @@ struct SnapchatImportScreen: View {
                 source: "Snapchat",
                 steps: [
                     "My Data → request your data, format JSON",
-                    "They email a link in a few hours — unzip it in Files.",
+                    "Snapchat emails a link — unzip it in Files.",
                 ],
                 pickTitle: "Choose folder",
                 alreadyImported: held > 0) { importing = true }

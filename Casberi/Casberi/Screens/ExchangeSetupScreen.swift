@@ -119,7 +119,7 @@ struct ExchangeSetupScreen: View {
             // capability line, and the doc note at the top of this file
             // rules that the copy shouldn't be leaning on "Casberi can't
             // trade" in the first place.
-            DSSlabNote(text: "\(venue.display) is asked what this key can do before it's stored — anything that can move money is refused.", plain: true)
+            DSSlabNote(text: "A key that can move money is refused.", plain: true)
         }
     }
 
@@ -175,13 +175,13 @@ struct ExchangeSetupScreen: View {
             // Kraken's dashboard is checkboxes across four groups, so the line
             // has to name which to tick AND which to leave — one clause each,
             // not a paragraph carrying both plus a conditional.
-            return ["Create a key with only the Query permissions ticked — Query Funds, plus Query Ledger Entries for deposits and withdrawals."]
+            return ["Tick only Query Funds and Query Ledger Entries"]
         case .coinbase:
-            return ["Create an API key with View permission only — not Trade, not Transfer."]
+            return ["View permission only — not Trade or Transfer"]
         case .binance:
-            return ["Create an API key with only \"Enable Reading\" ticked — leave Spot & Margin Trading, Withdrawals, and everything else off."]
+            return ["Tick only Enable Reading"]
         case .geminiExchange:
-            return ["Create an API key with the Auditor role — not Trader, not Fund Manager."]
+            return ["Auditor role only"]
         }
     }
 

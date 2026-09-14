@@ -89,7 +89,7 @@ struct AppleWalletScreen: View {
         BridgeStepLines(steps: [
             String(localized: "Read on this \(DS.device). Nothing is uploaded."),
             String(localized: "It can't spend or move money."),
-            String(localized: "Disconnect and everything it brought in is deleted."),
+            String(localized: "Disconnect deletes everything it brought in."),
         ], numbered: false)
     }
 

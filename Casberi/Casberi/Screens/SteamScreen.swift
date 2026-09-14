@@ -71,7 +71,7 @@ struct SteamScreen: View {
     /// was carrying is a real one nothing else on the screen states, so that
     /// half stayed.
     private var steps: [String] = [
-        "Enter any domain (casberi.app works) and copy the key.",
+        "Any domain works — casberi.app is fine.",
         "Your profile must be public.",
     ]
 
@@ -95,14 +95,6 @@ struct SteamScreen: View {
                         secure: true, isArmed: canConnect, action: connect)
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your games…"),
                                  proof: result)
-            // What LANDS is the header's own line — `BridgeSetupHeader`
-            // shows Steam's tagline, "What you play, in your feed", in
-            // primary body type at the top of this screen, so the sentence
-            // added here earlier the same day ("The games you play land in
-            // your feed") was that line paraphrased 60 points lower
-            // (audit, 2026-07-31). What's left is the part the header
-            // can't say.
-            DSSlabNote(text: "Stays in \(DS.device)'s Keychain, and only ever reads public profile data.", plain: true)
         }
     }
 

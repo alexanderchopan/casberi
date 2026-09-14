@@ -75,12 +75,6 @@ struct TokenSetupScreen: View {
     /// person. `looksLikeRepo` decides which verb it is.
     @State private var watchQuery = ""
 
-    /// Whether the "Open <page>" door has been tapped this visit — step one,
-    /// observed rather than assumed (see `tokenStepsDone`). Not persisted: a
-    /// step ticked from a previous session would be a claim about a form the
-    /// person is looking at fresh.
-    @State private var doorOpened = false
-
     /// GitHub only — the contribution year, which LEFT THE ROOM on 2026-09-11
     /// (user: *"i also really don't think the year in code matters as much does
     /// it? it's kind of a static thing"*, and then the ruling that made the room
@@ -256,7 +250,6 @@ struct TokenSetupScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             BridgeSetupCard(steps: [
                 String(localized: "Create a Power-Up named Casberi"),
-                String(localized: "Paste the key below."),
             ], numbered: false) {
                 if let url = bridge.setupURL {
                     DSSlabButton(title: bridge.doorTitle,
@@ -269,7 +262,6 @@ struct TokenSetupScreen: View {
                         actionLabel: trelloKey == nil
                             ? String(localized: "Next") : String(localized: "Replace"),
                         action: saveTrelloKey)
-            DSSlabNote(text: "It names the Power-Up, not you. The token below is what reads your cards.")
         }
     }
 
@@ -310,7 +302,6 @@ struct TokenSetupScreen: View {
                         isArmed: !jiraDomainField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             && !jiraEmailField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                         action: saveJiraSite)
-            DSSlabNote(text: "Jira needs both to know whose issues \"assigned to you\" means.")
         }
     }
 
@@ -358,9 +349,7 @@ struct TokenSetupScreen: View {
             // the eye hunting for a missing 1 (ruling 2026-08-14).
             BridgeSetupCard(steps: bridge.steps,
                             startingAt: doorURL == nil ? 1 : 2,
-                            numbered: doorURL == nil,
-                            acknowledges: true,
-                            doneThrough: tokenStepsDone) {
+                            numbered: doorURL == nil) {
                 if let url = doorURL {
                     // Step one, doing itself (prd §218). This screen used to
                     // say "Open readwise.io/access_token" in body text and
@@ -371,8 +360,7 @@ struct TokenSetupScreen: View {
                     // lives in the steps.
                     DSSlabButton(title: doorTitle,
                                  detail: bridge.doorHost,
-                                 systemImage: "arrow.up.right", url: url,
-                                 onOpen: { doorOpened = true })
+                                 systemImage: "arrow.up.right", url: url)
                 }
             }
             DSSlabField(placeholder: bridge.placeholder, text: $tokenField,
@@ -382,19 +370,6 @@ struct TokenSetupScreen: View {
                                  syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
                                  proof: result)
         }
-    }
-
-    /// How far through the token steps we can PROVE someone is (2026-08-04).
-    /// Two observable facts and no inference: the door was tapped, and the
-    /// field carries text. Everything between them happens on somebody else's
-    /// website, so it is deliberately not counted — the middle step ticks only
-    /// when the paste arrives, because that's the first moment we know it
-    /// happened. Every token bridge's `steps` ends in "paste it below", so
-    /// text in the field really does finish the list.
-    private var tokenStepsDone: Int {
-        guard doorURL != nil else { return tokenField.isEmpty ? 0 : bridge.steps.count }
-        if !tokenField.isEmpty { return bridge.steps.count + 1 }
-        return doorOpened ? 1 : 0
     }
 
     /// `keychainNote` is GONE (prd §639): "stays in the Keychain, goes only

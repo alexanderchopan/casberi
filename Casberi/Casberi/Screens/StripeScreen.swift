@@ -103,7 +103,6 @@ struct StripeScreen: View {
                                 "Subscriptions — read",
                                 "Invoices — read",
                                 "Balance — read"])
-            BridgeStepLines(steps: [TokenBridge.stripe.steps[1]], numbered: false)
             // Slabbed with the rest of the family (audit, 2026-07-31) — it
             // was a `BridgeFieldRow` capsule, the one control on the screen
             // still wearing the pre-§218 shape.

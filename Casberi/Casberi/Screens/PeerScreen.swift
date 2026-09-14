@@ -84,7 +84,7 @@ struct PeerScreen: View {
                              syncingLine: String(localized: "Reading your fills…"),
                              proof: lastResult)
         DSSlabNote(text: hasWallets
-            ? String(localized: "On automatically. Read-only, never trades.")
+            ? String(localized: "On automatically.")
             : String(localized: "Watching a wallet is all it takes."),
             plain: true)
     }

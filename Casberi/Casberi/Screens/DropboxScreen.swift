@@ -82,7 +82,6 @@ struct DropboxScreen: View {
         }
         BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),
                              proof: result)
-        DSSlabNote(text: "On Dropbox's own page — your password never enters this app.", plain: true)
     }
 
     @ViewBuilder private var folderBlock: some View {

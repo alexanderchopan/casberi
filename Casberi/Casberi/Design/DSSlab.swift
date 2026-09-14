@@ -244,15 +244,6 @@ struct DSSlabField: View {
 
     /// Inside an account page's act this draws its ROW form (prd §640).
     @Environment(\.accountAct) private var accountAct
-    /// THE RETURN LEG (prd §653). Once the page's door has opened in-app, an
-    /// empty SECRET row (`secure`) offers the same system `PasteButton` §618
-    /// gives the address fields — the key was just copied one sheet up, and
-    /// the row it belongs in should already be holding out its hand when the
-    /// sheet drops. Secret rows only: Jira's page has a site, an email and a
-    /// token, GitHub's a repo finder, and a paste chip on each would offer to
-    /// put an API key in a domain. The system reads the clipboard, never
-    /// this app; the button dims itself while the clipboard holds no text.
-    @Environment(\.accountDoorOpened) private var doorOpened
 
     private var armed: Bool {
         if let isArmed { return isArmed }
@@ -276,16 +267,31 @@ struct DSSlabField: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: DS.Space.s3) {
                 if let glyph { DSActRow.disc(glyph) }
-                Group {
-                    if let focus { field.focused(focus) } else { field }
+                // THE WELL (prd §729): the field, its paste and its clear sit
+                // inside it; the disc stays outside, in the page's column.
+                HStack(spacing: DS.Space.s2) {
+                    Group {
+                        if let focus { field.focused(focus) } else { field }
+                    }
+                    if busy { ProgressView().controlSize(.small) }
+                    // Every empty SECRET field holds out a Paste from the
+                    // first frame (prd §729 — it waited for the door to be
+                    // opened, §653, so a person who copied the key before
+                    // arriving saw no sign the row took one). The system
+                    // reads the clipboard, never this app, and the button
+                    // dims itself while the clipboard holds no text.
+                    if let paste, !hasText {
+                        pasteButton(paste)
+                    } else if secure, !hasText {
+                        pasteButton { text = $0 }
+                    }
+                    if clearable, hasText { clearButton }
                 }
-                if busy { ProgressView().controlSize(.small) }
-                if let paste, !hasText {
-                    pasteButton(paste)
-                } else if doorOpened, secure, !hasText {
-                    pasteButton { text = $0 }
-                }
-                if clearable, hasText { clearButton }
+                .padding(.leading, DS.Space.s3)
+                .padding(.trailing, DS.Space.s2)
+                .padding(.vertical, DS.Space.s2)
+                .frame(minHeight: DSActRow.wellHeight)
+                .background { DSActRow.well }
             }
             .dsActRowFrame(glyphless: glyph == nil)
             // The verb is its own row for the reason the slab put it inside
@@ -297,20 +303,28 @@ struct DSSlabField: View {
             }
             if !actionLabel.isEmpty {
                 verbRow(actionLabel, live: armed,
-                        tone: armed ? DS.tint : DS.textTertiary, act: action)
+                        tone: armed ? DS.tint : DS.textTertiary,
+                        glyph: "checkmark", act: action)
             }
         }
         .animation(DS.Motion.standard, value: secondaryArmed)
     }
 
+    /// The commit wears a disc (prd §729) — the commit row's own form, tinted
+    /// once it can act — because a bare grey word under a field read as dead
+    /// text rather than as the control that finishes the page.
     private func verbRow(_ label: String, live: Bool, tone: Color,
+                         glyph: String? = nil,
                          act: @escaping () -> Void) -> some View {
         Button(action: act) {
-            Text(LocalizedStringKey(label))
-                .dsText(.heading17)
-                .foregroundStyle(tone)
-                .animation(DS.Motion.standard, value: live)
-                .dsActRowFrame(glyphless: true)
+            HStack(spacing: DS.Space.s3) {
+                if let glyph { DSActRow.disc(glyph, tinted: live) }
+                Text(LocalizedStringKey(label))
+                    .dsText(.heading17)
+                    .foregroundStyle(tone)
+            }
+            .animation(DS.Motion.standard, value: live)
+            .dsActRowFrame(glyphless: glyph == nil)
         }
         .buttonStyle(.plain)
         .disabled(!live)
@@ -846,7 +860,9 @@ struct DSSlabNote: View {
 
     var body: some View {
         Text(LocalizedStringKey(text))
-            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            // 15pt inside an act (prd §729): the page's words were set at the
+            // meta size, on a page whose content is the words.
+            .dsText(accountAct ? .callout15 : .subhead13).foregroundStyle(DS.textTertiary)
             .multilineTextAlignment(left ? .leading : .center)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: left ? .leading : .center)
@@ -889,11 +905,16 @@ struct DSCheckList: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ForEach(lines, id: \.self) { line in
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Image(systemName: systemImage)
-                        .dsGlyph(11, weight: .bold)
-                        .foregroundStyle(tint ?? DS.confirm)
+                    // No mark inside an act (prd §729): a check on a line
+                    // nobody ticks claims nothing. What survives there is a
+                    // list of scopes to tick on the provider's site.
+                    if !accountAct {
+                        Image(systemName: systemImage)
+                            .dsGlyph(11, weight: .bold)
+                            .foregroundStyle(tint ?? DS.confirm)
+                    }
                     Text(LocalizedStringKey(line))
-                        .dsText(accountAct ? .subhead13 : .callout15)
+                        .dsText(.callout15)
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

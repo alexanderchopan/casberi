@@ -69,8 +69,7 @@ struct VeniceSetupScreen: View {
             // your Venice key" — §220's own finding, in the family it was
             // never applied to (2026-07-31). With one instruction left the
             // numerals go too, per §220's boundary.
-            BridgeSetupCard(steps: ["Create a key — checked before it saves"],
-                            numbered: false) {
+            BridgeSetupCard(steps: [], numbered: false) {
                 DSSlabButton(title: "Get your API key",
                              detail: "venice.ai",
                              systemImage: "arrow.up.right",
@@ -82,7 +81,7 @@ struct VeniceSetupScreen: View {
                         isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
                         action: connect)
             BridgeSyncStatusRows(proof: result)
-            DSSlabNote(text: "The key lives in the Keychain, goes only to Venice, and Venice bills you directly.", plain: true)
+            DSSlabNote(text: "Venice bills you directly.", plain: true)
         }
     }
 

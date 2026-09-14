@@ -81,7 +81,6 @@ struct SpotifyScreen: View {
         BridgeSyncStatusRows(syncing: syncing,
                              syncingLine: String(localized: "Reading your Spotify…"),
                              proof: result)
-        DSSlabNote(text: "On Spotify's own page — your password never enters this app.", plain: true)
     }
 
     @ViewBuilder private var connectedBlock: some View {
@@ -99,7 +98,7 @@ struct SpotifyScreen: View {
                              syncingLine: String(localized: "Reading your Spotify…"),
                              proof: result,
                              retry: { Task { await sync() } })
-        DSSlabNote(text: "Your recently played tracks land in your feed. Read-only — never plays or changes anything.", plain: true)
+        DSSlabNote(text: "Your recently played tracks land in your feed.", plain: true)
     }
 
     /// The web view handed back a session. Store it, confirm it works, sync.

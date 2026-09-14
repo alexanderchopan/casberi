@@ -85,7 +85,6 @@ struct MailScreen: View {
                         secure: true, isArmed: canConnect, action: connect)
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your inbox…"),
                                  proof: result)
-            DSSlabNote(text: provider.footer, plain: true)
         }
     }
 

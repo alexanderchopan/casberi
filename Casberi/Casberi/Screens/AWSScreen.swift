@@ -80,8 +80,7 @@ struct AWSScreen: View {
     @ViewBuilder private var keyBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             BridgeSetupCard(steps: bridge.steps, startingAt: 2,
-                            numbered: false, acknowledges: true,
-                            doneThrough: hasBothRequired ? 4 : 0) {
+                            numbered: false) {
                 if let url = bridge.setupURL {
                     if doorTapped {
                         DSSlabDoor(title: bridge.doorTitle,
@@ -96,10 +95,9 @@ struct AWSScreen: View {
                     }
                 }
             }
-            DSCheckList(lines: ["Reads alarms, deploys, cost, and a resource count",
-                                "Never creates, changes, or deletes anything"])
             DSSlabField(placeholder: "Access Key ID (AKIA…)",
                         text: $accessKeyIDField, actionLabel: "",
+                        paste: { accessKeyIDField = $0 },
                         action: {})
             DSSlabField(placeholder: bridge.placeholder,
                         text: $secretKeyField, actionLabel: "", secure: true,
@@ -110,7 +108,7 @@ struct AWSScreen: View {
                         text: $regionField, actionLabel: "Save",
                         isArmed: hasBothRequired,
                         action: save)
-            DSSlabNote(text: "Cost Explorer always reads from us-east-1 — AWS's own rule, not a mistake here. Every other read uses the region above.", plain: true)
+            DSSlabNote(text: "Cost Explorer always reads from us-east-1.", plain: true)
             BridgeSyncStatusRows(syncing: connecting,
                                  syncingLine: String(localized: "Checking the key pair…"),
                                  proof: result)

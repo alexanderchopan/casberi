@@ -106,7 +106,7 @@ struct CardPointersScreen: View {
 
         BridgeSyncStatusRows(syncing: false, syncingLine: "",
                              proof: result)
-        DSSlabNote(text: "Requires CardPointers+ — a free account can't read its offers.", plain: true)
+        DSSlabNote(text: "Needs CardPointers+.", plain: true)
     }
 
     // MARK: - Flow

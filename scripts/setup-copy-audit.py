@@ -48,6 +48,21 @@ SEVEN CHECKS, all static — no build, no simulator:
      must be a string some bridge really stamps as `Thing.source`, and every
      `TokenBridge` rawValue must be one too (that enum's `source` forwards it
      for the whole paste-a-token family). See the ROOM DOOR section below.
+  8. SAID ONCE (prd §729, user: "it says read only like several times.
+     drastically remove redundancy we want this as concise as possible").
+     Three shapes, each one a line that repeats what a control beside it
+     already says, so each can be caught by its words rather than by a
+     judgement about quality:
+       · a STEP that says copy or paste — the field under it holds out a
+         Paste, and its placeholder names the value;
+       · a CHECKLIST line that is a CLAIM ("Reads …", "Never …") rather than
+         a scope to tick — the door says read-only, and a claim nobody ticks
+         wore a green check that meant nothing;
+       · a NOTE that reassures about where a secret goes ("Keychain", "own
+         page", "password never …") — the in-app sheet IS the provider's
+         page, and the app's reaches are stated once, in Settings (§702).
+     The shared step tables (`TokenBridges.steps`, `MailProvider.steps`) are
+     read too, because most seats draw their steps from there.
 
 Run standalone, or via `scripts/verify.sh`'s static head. `--self-test` proves
 each check catches its own shape before it certifies the tree — a check that
@@ -84,18 +99,19 @@ MAX_INTRO_SENTENCES = 2
 MAX_INTRO_WORDS = 30
 MAX_STEP_WORDS = 14
 # ONE LINE, MEASURED (prd §640b, user: "each bullet should only be one line
-# no orphan words"). A step or a checklist line renders at 12pt regular inside
-# the guide card, where the widest it can be without wrapping is 290pt on a
-# 390pt screen — measured with `UIFont.systemFont(ofSize: 12)` over the whole
-# catalogue, not guessed. This cap is that bound expressed in characters: the
-# widest surviving string in the tree is 53, and a character count is what a
-# static audit can enforce. It is a PROXY and deliberately slack by one — a
-# string of 54 capital Ws would pass it and wrap — but every real sentence in
-# this family is mixed case, and the alternative (shipping a font metric table
-# into a text audit) buys precision nobody needs. Localised copy is out of
-# scope on purpose: a German step wraps and must, which is why the rule is
-# about the SOURCE copy being tight rather than about no line ever wrapping.
-MAX_STEP_CHARS = 54
+# no orphan words"; re-measured for prd §729). A step or a checklist line
+# renders at 15pt regular in the act's title column, 330pt wide on a 390pt
+# screen — §729 raised it from 13pt (user: "subtext seems unnecessarily
+# small"). Measured with `NSFont.systemFont(ofSize: 15)` over all 82 step and
+# checklist lines in the tree: every line of 45 characters or fewer fits (the
+# widest, 328pt), four of 46–53 wrapped and were rewritten, and every surviving
+# 46–47 character line measures 305–323pt. This cap is that bound as
+# characters, slack by two on purpose — a character count is what a static
+# audit can enforce, and a font metric table in a text audit buys precision
+# nobody needs. It was 54 at §640b's 12pt. Localised copy is out of scope on
+# purpose: a German step wraps and must, which is why the rule is about the
+# SOURCE copy being tight rather than about no line ever wrapping.
+MAX_STEP_CHARS = 47
 MAX_SLAB_NOTES = 2
 FOOTER_WORD_FLOOR = 25
 
@@ -737,6 +753,55 @@ def audit_catalog(src: str):
 
 # ── the checks ─────────────────────────────────────────────────────────────
 
+# ── check 8: said once (prd §729) ─────────────────────────────────────────
+
+COPY_PASTE_RE = re.compile(r"\b(copy|paste)\b", re.I)
+CLAIM_RE = re.compile(r"^(Reads|Never|Can't|Cannot|Only reads)\b")
+REASSURANCE_RE = re.compile(r"Keychain|own page|password never|never (enters|touches) (this|the) app", re.I)
+
+
+def step_findings(where: str, lit: str):
+    if COPY_PASTE_RE.search(lit):
+        return [f"{where}: a step says copy or paste — the field under it holds "
+                f"out a Paste and names the value (§729) — {lit[:60]}"]
+    return []
+
+
+def audit_said_once(name: str, body: str):
+    findings = []
+    for pat in (r"BridgeStepLines\(", r"BridgeSetupCard\("):
+        for m in re.finditer(pat, body):
+            call = balanced(body, m.end() - 1)
+            steps = re.search(r"steps:\s*\[", call)
+            if not steps:
+                continue
+            for lit in literals(balanced(call, steps.end() - 1)):
+                findings += step_findings(name, lit)
+    for m in re.finditer(r"DSCheckList\(lines:\s*\[", body):
+        for lit in literals(balanced(body, m.end() - 1)):
+            if CLAIM_RE.search(lit):
+                findings.append(f"{name}: a checklist line is a claim, not a scope "
+                                f"to tick — the door already says it (§729) — {lit[:60]}")
+    for m in re.finditer(r"\bDSSlabNote\(", body):
+        for lit in literals(balanced(body, m.end() - 1)):
+            if REASSURANCE_RE.search(lit):
+                findings.append(f"{name}: a note reassures where a secret goes — the "
+                                f"sheet is the provider's page, and reaches are "
+                                f"stated once in Settings (§729) — {lit[:60]}")
+    return findings
+
+
+def audit_step_table(name: str, body: str):
+    """The `var steps: [String]` switch a model enum serves many seats from."""
+    m = re.search(r"var steps:\s*\[String\]\s*\{", body)
+    if not m:
+        return [f"{name}: no `var steps: [String]` table found — check 8 is reading nothing"]
+    findings = []
+    for lit in literals(balanced(body, m.end() - 1)):
+        findings += step_findings(name, lit)
+    return findings
+
+
 def audit_source(name: str, src: str, stamped: set = None,
                  roomless: set = frozenset()):
     """Returns a list of finding strings for one screen's source text."""
@@ -839,6 +904,9 @@ def audit_source(name: str, src: str, stamped: set = None,
             findings.append(f"{name}: section footer carries {total} words "
                             f"(max {FOOTER_WORD_FLOOR}) — that is the wall again")
 
+    # 8: said once (prd §729).
+    findings += audit_said_once(name, body)
+
     # 6: the door is a verb, not a route.
     findings += audit_doors(name, body)
 
@@ -930,7 +998,30 @@ struct S: View { var body: some View { List {
         "Download or transfer → Some of your info",
         "Format JSON, not HTML → Download",
     ], startingAt: 2)
-    DSSlabNote(text: "Your token stays in this iPhone's Keychain.")
+    DSSlabNote(text: "Leave the Issuer ID empty for an individual key.")
+    DSCheckList(lines: ["org:read", "project:read"])
+} } }
+'''
+
+DIRTY_PASTE_STEP = '''
+struct S: View { var body: some View { List {
+    AccountPage(name: "X", seatID: "x", source: "X", mode: .pasteKey, intro: "Short.")
+    BridgeSetupCard(steps: ["Copy it and paste it below."], numbered: false) { door }
+} } }
+'''
+
+DIRTY_CLAIM_LIST = '''
+struct S: View { var body: some View { List {
+    AccountPage(name: "X", seatID: "x", source: "X", mode: .pasteKey, intro: "Short.")
+    DSCheckList(lines: ["Reads alarms, deploys, cost, and a resource count",
+                        "Never creates, changes, or deletes anything"])
+} } }
+'''
+
+DIRTY_REASSURANCE = '''
+struct S: View { var body: some View { List {
+    AccountPage(name: "X", seatID: "x", source: "X", mode: .signIn, intro: "Short.")
+    DSSlabNote(text: "On Dropbox's own page — your password never enters this app.", plain: true)
 } } }
 '''
 
@@ -945,6 +1036,9 @@ def self_test() -> bool:
         ("a door loose above its steps", DIRTY_LOOSE_DOOR, "one object"),
         ("footer wall", DIRTY_FOOTER, "footer carries"),
         ("too many notes", DIRTY_NOTES, "DSSlabNotes"),
+        ("a step that says paste", DIRTY_PASTE_STEP, "says copy or paste"),
+        ("a checklist of claims", DIRTY_CLAIM_LIST, "is a claim"),
+        ("a note reassuring where a secret goes", DIRTY_REASSURANCE, "reassures"),
     ]
     ok = True
     for label, src, expect in cases:
@@ -1288,6 +1382,24 @@ def self_test() -> bool:
     else:
         print("  ✓ catches the Activity row's door disappearing")
 
+    # Check 8's table form: the shared steps most seats draw.
+    f = audit_step_table("fixture.swift",
+                         'var steps: [String] { switch self {\n'
+                         'case .todoist: ["Copy the API token shown there.", "Paste it below."]\n} }')
+    if not any("says copy or paste" in x for x in f):
+        print(f"  SELF-TEST FAIL: a paste step in a steps TABLE was not caught — {f}")
+        ok = False
+    else:
+        print("  ✓ catches a paste step in a steps table")
+    f = audit_step_table("fixture.swift",
+                         'var steps: [String] { switch self {\n'
+                         'case .gitlab: ["Only the read_api scope"]\n} }')
+    if f:
+        print(f"  SELF-TEST FAIL: a scope step in a steps table was flagged — {f}")
+        ok = False
+    else:
+        print("  ✓ passes a scope step in a steps table")
+
     # And the table form, which serves many screens from one entry.
     f = audit_door_table("fixture.swift",
                          'var doorTitle: String { switch self {\n'
@@ -1330,6 +1442,11 @@ def main() -> int:
 
     findings += audit_token_sources(
         strip_comments(open(os.path.join(MODEL, "TokenBridges.swift")).read()), stamped)
+
+    # Check 8 — the shared step tables (prd §729).
+    for table in ("TokenBridges.swift", "MailBridge.swift"):
+        findings += audit_step_table(
+            table, strip_comments(open(os.path.join(MODEL, table)).read()))
 
     # Check 7d — the door's own mechanics, which serve every caller at once.
     findings += audit_door_mechanics(

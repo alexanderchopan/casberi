@@ -29,9 +29,6 @@ struct SentryScreen: View {
     @State private var result: BridgeProof?
     /// The delight pass's coin-flip on the header, fired the moment the
     /// connection really goes live.
-    /// Whether the mint door has been tapped — the only observable fact about
-    /// step one, since everything after it happens on Sentry's website.
-    @State private var doorTapped = false
 
     private var hasToken: Bool {
         _ = accountVersion
@@ -93,18 +90,15 @@ struct SentryScreen: View {
     @ViewBuilder private var tokenBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             // Unnumbered since 2026-08-14 (the door did step one; a "2"
-            // under it read as a missing-1 riddle); `acknowledges` keeps
-            // the confirm-green check when a step provably lands.
+            // under it read as a missing-1 riddle).
             BridgeSetupCard(steps: [TokenBridge.sentry.steps[0]], startingAt: 2,
-                            numbered: false, acknowledges: true,
-                            doneThrough: stepsDone) {
+                            numbered: false) {
                 if let url = TokenBridge.sentry.setupURL {
                     // Step one, doing itself (prd §218) — verb over address,
                     // the 2026-08-14 anatomy.
                     DSSlabButton(title: TokenBridge.sentry.doorTitle,
                                  detail: TokenBridge.sentry.doorHost,
-                                 systemImage: "arrow.up.right", url: url,
-                                 onOpen: { doorTapped = true })
+                                 systemImage: "arrow.up.right", url: url)
                 }
             }
             // The scopes are the honest ask, and they are why this
@@ -113,9 +107,6 @@ struct SentryScreen: View {
             // resolve an issue or change a project, whatever this app
             // does. The list IS the promise, so no gray note restates it.
             DSCheckList(lines: ["org:read", "project:read", "event:read"])
-            BridgeStepLines(steps: [TokenBridge.sentry.steps[1]], startingAt: 3,
-                            numbered: false, acknowledges: true,
-                            doneThrough: stepsDone)
             // The host has no verb of its own — SAVE below commits both.
             // An empty-verb field still paints its capsule, so a pre-filled
             // host would read as a live, tinted, inert button (§83's
@@ -134,15 +125,6 @@ struct SentryScreen: View {
             DSSlabNote(text: "EU region? Use de.sentry.io. Self-hosted? Use your own domain.",
                        plain: true)
         }
-    }
-
-    /// Only OBSERVABLE facts count (the delight pass's rule): the door really
-    /// being tapped, and text really arriving in the field. Nothing here infers
-    /// that someone finished a step on Sentry's website.
-    private var stepsDone: Int {
-        if !tokenField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return 3 }
-        if doorTapped { return 1 }
-        return 0
     }
 
     // MARK: - Step two: the organization
