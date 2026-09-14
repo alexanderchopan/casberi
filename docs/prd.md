@@ -54968,3 +54968,15 @@ the map like every other seat, and the spelling no longer matters.
 NOT PROVEN HERE: `swiftc -parse` and the self-tests/audits only; no
 `xcodebuild`, no simulator (a live Instagram session is not reachable from this
 host, and §726's door is itself unmeasured).
+
+## §734 — Under a picture the cover's title is a caption, not a head (user: "on the home screen, the header card seems too large with the font so big. It basically takes up half the screen", 2026-09-14)
+
+**Measured, from the screenshot.** The picture face stacked 176pt of art, a 36pt source disc, four lines of `heading34` (40pt heavy, 40pt leading) and the eyebrow inside `s4` padding — about 385pt on an 874pt phone, 44% of the page before a single row of the feed. The reported title was "Documentation Audits X Terms Privacy": the OCR line the Photos heal wrote onto a screenshot, set as a headline.
+
+**Why the rung was wrong there specifically.** §567 promoted the cover's title to the head rung by LENGTH, and the head rung is for the one object a surface is about. On the picture face that object is the picture, which already has 176pt; the words under it are its caption. The other three faces have no picture, so the words genuinely are the card and they keep §567 untouched — a note IS its words.
+
+**The ruling.** `FeedLedeCard.titleBlock(underArt:)`. The picture face takes `heading22` at two lines, no `minimumScaleFactor`, and drops its excerpt: the picture, the title and the eyebrow already say it three ways, and a fourth block of copy is what the words face exists for. `statementLimit` now decides only the pictureless faces. The card comes to about 326pt — 37% — and nothing else moves: art height, disc, deck colour, pour, shadow and the money/clock faces are all as they were.
+
+**Why this landed now rather than in August.** §732 had just put this card at the head of every ROOM as well as the All feed, so a 44% cover stopped being one screen's cost and became the first thing on a dozen.
+
+Not built or run here (no Xcode in this checkout) — the rung change is layout-only; the simulator pass is owed.

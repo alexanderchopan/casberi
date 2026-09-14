@@ -82,7 +82,8 @@ struct FeedLedeCard: View {
                 BridgeIcon(name: thing.source, size: DS.Face.list, circular: true)
                     .padding(.bottom, DS.Space.s1)
                 switch face {
-                case .picture, .words: titleBlock
+                case .picture:         titleBlock(underArt: true)
+                case .words:           titleBlock(underArt: false)
                 case .money:           moneyBlock(receipt)
                 case .clock:           clockBlock
                 }
@@ -140,19 +141,42 @@ struct FeedLedeCard: View {
     /// A paragraph never takes it. §559: at the head rung a long title is a
     /// sentence set as a headline, and the rung stops meaning anything the
     /// first time it wraps to six lines.
+    ///
+    /// **The picture face left this rule on 2026-09-14 (§734, below).** The
+    /// length threshold now decides only the faces that have no picture, which
+    /// is where it was always doing the work it claims to.
     private static let statementLimit = 56
 
-    private var titleBlock: some View {
+    /// **UNDER A PICTURE THE TITLE IS A CAPTION, NOT A HEAD (prd §734, user:
+    /// "the header card seems too large with the font so big. It basically
+    /// takes up half the screen").** The head rung is for the one object a
+    /// surface is about, and on the picture face that object is the picture —
+    /// 176pt of it, already. Four lines of 40pt heavy under it made the card
+    /// ~385pt on an 874pt phone, and §732 has just put this card at the top of
+    /// every ROOM as well as the All feed, so that height is now the first
+    /// thing on a dozen screens rather than one.
+    ///
+    /// The picture face alone drops to `heading22` at two lines, and gives up
+    /// its excerpt: the picture, the title and the eyebrow say it three ways
+    /// already, and a fourth block is what the words face exists for. The
+    /// wordless faces keep the head rung untouched — a note IS its words
+    /// (§567), and there is no picture there competing for the claim.
+    ///
+    /// The pictureless rung is also the honest one for what these titles ARE:
+    /// a screenshot's title is the OCR line the heal wrote and a folder image's
+    /// is its filename, so display type is the app shouting a string it
+    /// assembled.
+    private func titleBlock(underArt: Bool) -> some View {
         let short = thing.title.count <= Self.statementLimit
         return VStack(alignment: .leading, spacing: DS.Space.s1) {
             Text(thing.title)
-                .dsText(short ? .heading34 : .heading22)
+                .dsText(underArt ? .heading22 : (short ? .heading34 : .heading22))
                 .foregroundStyle(DS.textPrimary)
                 .multilineTextAlignment(.leading)
-                .lineLimit(short ? 4 : 3)
-                .minimumScaleFactor(short ? 0.8 : 1)
+                .lineLimit(underArt ? 2 : (short ? 4 : 3))
+                .minimumScaleFactor(!underArt && short ? 0.8 : 1)
                 .fixedSize(horizontal: false, vertical: true)
-            if let note = excerpt {
+            if let note = excerpt, !underArt {
                 Text(note)
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textSecondary)
