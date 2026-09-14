@@ -33,6 +33,10 @@ enum RoomFrames {
     /// What became of one step.
     enum Outcome: String, Equatable, Sendable, CaseIterable {
         case ran, failed, rolledBack, unread
+        /// **Never ran** — an earlier step of its atomic batch failed, so the
+        /// chain skipped it and refunded its gas (EIP-8141 status `0x2`, prd
+        /// §728). Not a failure: nothing went wrong in THIS step.
+        case skipped
     }
 
     /// One frame of one transaction.
@@ -79,6 +83,9 @@ enum RoomFrames {
         let rolledBack: Int
         /// Steps whose receipt could not be paired, so the outcome is unknown.
         let unread: Int
+        /// Steps a failed batch skipped. Counted apart from `failed` for the
+        /// same reason a rollback is.
+        let skipped: Int
 
         /// The modes that SHARE the top count — one normally, several on a tie.
         ///
@@ -136,7 +143,7 @@ enum RoomFrames {
         guard !framed.isEmpty else { return nil }
 
         var tally: [String: Int] = [:]
-        var failed = 0, rolledBack = 0, unread = 0, total = 0
+        var failed = 0, rolledBack = 0, unread = 0, skipped = 0, total = 0
         for run in framed {
             for step in run.steps {
                 tally[step.modeName, default: 0] += 1
@@ -145,6 +152,7 @@ enum RoomFrames {
                 case .failed:      failed += 1
                 case .rolledBack:  rolledBack += 1
                 case .unread:      unread += 1
+                case .skipped:     skipped += 1
                 case .ran:         break
                 }
             }
@@ -153,7 +161,7 @@ enum RoomFrames {
             $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key
         }.map { Mix.Slice(modeName: $0.key, count: $0.value) }
         return Mix(slices: slices, transactions: framed.count, total: total,
-                   failed: failed, rolledBack: rolledBack, unread: unread)
+                   failed: failed, rolledBack: rolledBack, unread: unread, skipped: skipped)
     }
 
     /// **"N steps", not "N transactions"** — the transaction count is the

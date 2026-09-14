@@ -592,14 +592,18 @@ enum NotifyDevnet {
     /// The seats, closed. Each carries its own copy so the words live where
     /// the harness can read them.
     ///
-    /// **Ethrex Privacy joined in §593d and Ethrex Frames deliberately did
-    /// not.** A relaunch is only news about a chain somebody has state on, and
-    /// the Privacy seat now makes a key, claims from a faucet and sends — so a
-    /// relaunch there really does take something that was somebody's. Frames
-    /// has the same claim and no reset detection of its own to feed this, which
-    /// is a gap worth closing and not one to close by inventing a signal here.
+    /// **Ethrex Privacy joined in §593d, and Hegotá Frames in §728.** A
+    /// relaunch is only news about a chain somebody has state on, and both
+    /// seats make a key, claim from a faucet and send — so a relaunch there
+    /// really does take something that was somebody's. Frames waited until it
+    /// had reset detection of its own to feed this (a stored genesis baseline,
+    /// `FramesChainWatch.verdict`), rather than a signal invented here.
+    ///
+    /// **A STALL IS NOT ANNOUNCED.** It takes nothing, it ends by itself, and
+    /// nothing a notification could lead to would change it — §306's "can it
+    /// be acted on", failed. The room says it instead.
     enum Seat: String, Sendable, CaseIterable {
-        case vibenet, hegota, privacy
+        case vibenet, hegota, privacy, frames
 
         /// **MUST equal `VibenetIdentity.source` / `HegotaIdentity.source` /
         /// `PrivacyDevnetIdentity.source`.**
@@ -612,6 +616,7 @@ enum NotifyDevnet {
             case .vibenet: return "Base Vibenet"
             case .hegota:  return "Hegotá UTXO"
             case .privacy: return "Hegotá Privacy"
+            case .frames:  return "Hegotá Frames"
             }
         }
 
@@ -678,6 +683,8 @@ enum NotifyDevnet {
             // that words it differently lands somebody in a room that appears
             // to be talking about something else.
             body = String(localized: "This devnet was relaunched from genesis, so everything it held is gone. The addresses you watch are still yours.")
+        case .frames:
+            body = String(localized: "Hegotá Frames was relaunched from genesis, so everything it held is gone. Your key and the addresses you watch are still yours.")
         }
         return NotifyPlan(id: "devnet:reset:\(r.seat.rawValue):\(r.key)",
                           kind: .chainReset,

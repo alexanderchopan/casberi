@@ -50,6 +50,11 @@ enum FramesRoom {
         /// Addresses are watched and NOT ONE answered. Distinct from a zero
         /// balance, and the distinction is the whole of §515a.
         case unreached
+        /// **The chain relaunched or stopped (prd §728).** Outranks the
+        /// reading below it, because a balance drawn over a chain that is not
+        /// running — or that was wiped — is a confident fact about the wrong
+        /// thing.
+        case chainAlert
         /// Money the sender meant to move and which was rolled back. Leads
         /// because it is the only thing here somebody might act on.
         case rolledBack
@@ -93,6 +98,8 @@ enum FramesRoom {
         /// The same walk, DATED — what the Home crown draws, so this room
         /// offers the range chips the rest of the family does (2026-09-10).
         let series: [WalletStore.ValueSample]
+        /// What the chain itself is doing, when it is worth saying (prd §728).
+        var alert: FramesChainWatch.Alert? = nil
 
         /// Some answered and some did not. The room says so rather than
         /// drawing a total that silently omits an address.
@@ -108,7 +115,8 @@ enum FramesRoom {
     /// black.
     static func head(_ accounts: [FramesAccount],
                      hasRead: Bool = true,
-                     watching: Int = 0) -> Head? {
+                     watching: Int = 0,
+                     alert: FramesChainWatch.Alert? = nil) -> Head? {
         let watched = max(watching, accounts.count)
         guard watched > 0 else { return nil }
 
@@ -146,6 +154,8 @@ enum FramesRoom {
             lead = .reading
         } else if reached.isEmpty {
             lead = .unreached
+        } else if alert != nil {
+            lead = .chainAlert
         } else if rolled > 0 {
             lead = .rolledBack
         } else {
@@ -172,7 +182,7 @@ enum FramesRoom {
             frameCount: moves.filter { $0.rows.count > 1 }.count,
             sponsoredCount: moves.filter(\.sponsored).count,
             rolledBackCount: rolled,
-            curve: curve, series: series)
+            curve: curve, series: series, alert: alert)
     }
 
     /// Walk backwards from the balance that IS known, subtracting each

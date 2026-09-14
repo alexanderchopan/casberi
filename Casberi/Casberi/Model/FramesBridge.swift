@@ -96,6 +96,22 @@ enum FramesRPC {
         return nil
     }
 
+    /// **ONE HOST, and whether it answered at all** (prd §728).
+    ///
+    /// `call` walks the hosts and returns the first answer, which is right for
+    /// a read and wrong for asking whether a transaction is still anywhere:
+    /// "absent" has to mean every node said so, and a node that did not reply
+    /// has said nothing. `answered` is false only when no JSON came back.
+    static func ask(host: String, method: String, params: [Any]) async -> (answered: Bool, result: Any?) {
+        let body: [String: Any] = ["id": 1, "jsonrpc": "2.0", "method": method, "params": params]
+        guard let root = await IngestSupport.postJSON(host, body: body,
+                                                      service: FramesIdentity.source)
+                as? [String: Any] else { return (false, nil) }
+        if root["error"] != nil { return (false, nil) }
+        let result = root["result"]
+        return (true, result is NSNull ? nil : result)
+    }
+
     /// A batch of calls in ONE request.
     ///
     /// Results are matched by the `id` each call was sent with, NEVER by array
@@ -240,7 +256,32 @@ struct FramesPending: Identifiable, Equatable {
     var hash: String
     var legs: Int
     var at: Date = .now
+    /// The deadline its expiry frame carries (prd §728). Past it, the
+    /// transaction cannot land, which is the one thing about a pending send
+    /// this room can say with certainty.
+    var deadline: Date? = nil
+    /// What the nodes last said about it — `FramesChainWatch.pendingState`.
+    var state: FramesChainWatch.PendingState = .sending
+    /// When it was judged dropped or expired, so the row can say so for a
+    /// while and then go.
+    var judgedAt: Date? = nil
     var id: String { hash }
+}
+
+/// **EVERY TRANSACTION THIS PHONE BROADCAST, and the block that carried it
+/// (prd §728).**
+///
+/// The room found an address's history through its Transfer logs, so a
+/// transaction that moved nothing — a batch whose frames all reverted, which
+/// still paid its fee — never appeared anywhere, and neither did the send
+/// somebody was watching. This ledger lists the hashes the room must look up
+/// whether or not a log names them.
+struct FramesSentRecord: Codable, Equatable {
+    var hash: String
+    var sender: String
+    var at: Date
+    /// Filled when a node reports it in a block.
+    var block: UInt64?
 }
 
 @MainActor
@@ -304,9 +345,189 @@ final class FramesLiveState {
     private(set) var pending: [FramesPending] = []
 
     /// Record a broadcast. Called by the send path, never by a read.
-    func notePending(hash: String, legs: Int) {
+    func notePending(hash: String, legs: Int, deadline: Date? = nil, sender: String? = nil) {
         guard !pending.contains(where: { $0.hash.lowercased() == hash.lowercased() }) else { return }
-        pending.append(FramesPending(hash: hash, legs: legs))
+        pending.append(FramesPending(hash: hash, legs: legs, deadline: deadline))
+        if let sender = sender ?? FramesKey.address() {
+            noteSent(hash: hash, sender: sender)
+        }
+        watchPending()
+    }
+
+    // MARK: - The chain itself (prd §728)
+
+    private static let genesisKey = "frames.chain.genesis.v1"
+    private static let relaunchHashKey = "frames.chain.relaunchHash.v1"
+    private static let relaunchAtKey = "frames.chain.relaunchAt.v1"
+    private static let headAtKey = "frames.chain.headAt.v1"
+    private static let finalizedKey = "frames.chain.finalized.v1"
+    private static let sentKey = "frames.sent.v1"
+
+    /// When the chain's newest block was made, as it said. Persisted, so a
+    /// cold launch onto a stalled chain can say so before the sweep returns.
+    private(set) var headAt: Date? = UserDefaults.standard.object(forKey: headAtKey) as? Date
+    /// The chain's own `finalized` head.
+    private(set) var finalizedBlock: UInt64? = {
+        let n = UserDefaults.standard.object(forKey: finalizedKey) as? NSNumber
+        return n.map { $0.uint64Value }
+    }()
+    /// When this device first saw the current genesis replace another one.
+    private(set) var relaunchObservedAt: Date? =
+        UserDefaults.standard.object(forKey: relaunchAtKey) as? Date
+
+    /// What the room should say instead of nothing, right now.
+    func alert(now: Date = .now) -> FramesChainWatch.Alert? {
+        FramesChainWatch.alert(relaunchObservedAt: relaunchObservedAt, headAt: headAt, now: now)
+    }
+
+    /// Genesis, head and finalized in ONE batched request. Internal rather
+    /// than private for `-framesProbe`, which reads the chain with nothing
+    /// watched.
+    func readChain() async {
+        guard let answers = await FramesRPC.batch([
+            (method: "eth_getBlockByNumber", params: ["0x0", false]),
+            (method: "eth_getBlockByNumber", params: ["latest", false]),
+            (method: "eth_getBlockByNumber", params: ["finalized", false]),
+        ]) else { return }
+        if let head = answers[1] as? [String: Any],
+           let seconds = FramesRead.hexInt(head["timestamp"]), seconds > 0 {
+            headAt = Date(timeIntervalSince1970: TimeInterval(seconds))
+            UserDefaults.standard.set(headAt, forKey: Self.headAtKey)
+        }
+        if let finalized = answers[2] as? [String: Any],
+           let number = FramesRead.hexInt(finalized["number"]) {
+            finalizedBlock = number
+            UserDefaults.standard.set(NSNumber(value: number), forKey: Self.finalizedKey)
+        }
+        let observed = (answers[0] as? [String: Any])?["hash"] as? String
+        let baseline = UserDefaults.standard.string(forKey: Self.genesisKey)
+        switch FramesChainWatch.verdict(baseline: baseline, observed: observed) {
+        case .unread, .same:
+            break
+        case .adopt(let hash):
+            UserDefaults.standard.set(hash, forKey: Self.genesisKey)
+        case .relaunched(let hash):
+            // Stamped ONCE per genesis, and the new one becomes the baseline in
+            // the same step — so the observation cannot be re-made every pass,
+            // and a second relaunch is news again.
+            let now = Date()
+            UserDefaults.standard.set(hash, forKey: Self.genesisKey)
+            UserDefaults.standard.set(hash, forKey: Self.relaunchHashKey)
+            UserDefaults.standard.set(now, forKey: Self.relaunchAtKey)
+            relaunchObservedAt = now
+            // Every hash from the old chain describes a transaction that no
+            // longer exists.
+            pending = []
+            sentLedger = []
+            persistLedger()
+        }
+    }
+
+    /// The relaunch this device observed, for the notification sweep. **A
+    /// READ, never a claim** — `PrivacyDevnetLiveState.observedRelaunch`'s
+    /// rule.
+    nonisolated static func observedRelaunch() -> (key: String, at: Date)? {
+        guard let hash = UserDefaults.standard.string(forKey: relaunchHashKey),
+              let at = UserDefaults.standard.object(forKey: relaunchAtKey) as? Date
+        else { return nil }
+        return (hash, at)
+    }
+
+    // MARK: - What this phone sent (prd §728)
+
+    private(set) var sentLedger: [FramesSentRecord] = {
+        guard let data = UserDefaults.standard.data(forKey: sentKey),
+              let saved = try? JSONDecoder().decode([FramesSentRecord].self, from: data)
+        else { return [] }
+        return saved
+    }()
+
+    /// Bounded, and an unmined entry does not outlive a day: a hash no node
+    /// ever carried is not history.
+    private static let sentCap = 40
+
+    private func noteSent(hash: String, sender: String) {
+        guard !sentLedger.contains(where: { $0.hash.lowercased() == hash.lowercased() }) else { return }
+        sentLedger.insert(FramesSentRecord(hash: hash, sender: sender, at: .now, block: nil), at: 0)
+        persistLedger()
+    }
+
+    private func noteMined(_ hash: String, block: UInt64) {
+        guard let i = sentLedger.firstIndex(where: { $0.hash.lowercased() == hash.lowercased() }),
+              sentLedger[i].block != block else { return }
+        sentLedger[i].block = block
+        persistLedger()
+    }
+
+    private func forgetSent(_ hash: String) {
+        sentLedger.removeAll { $0.hash.lowercased() == hash.lowercased() }
+        persistLedger()
+    }
+
+    private func persistLedger() {
+        let cutoff = Date().addingTimeInterval(-86_400)
+        sentLedger = Array(sentLedger.filter { $0.block != nil || $0.at > cutoff }
+                                     .prefix(Self.sentCap))
+        guard let data = try? JSONEncoder().encode(sentLedger) else { return }
+        UserDefaults.standard.set(data, forKey: Self.sentKey)
+    }
+
+    // MARK: - Asking where a pending send is (prd §728)
+
+    /// **EVERY HOST, EVERY PENDING HASH.** A node that accepted a transaction
+    /// holds it in its pool at once, and this chain propagates frame
+    /// transactions by announcement only, so the three can disagree for a few
+    /// seconds — which is why `pendingState` needs all three answers before it
+    /// may say "dropped".
+    private func lookUpPending() async {
+        let now = Date()
+        for index in pending.indices where !pending[index].state.isFinal {
+            let hash = pending[index].hash
+            var sightings: [FramesChainWatch.Sighting?] = []
+            for host in FramesRPC.hosts {
+                let answer = await FramesRPC.ask(host: host, method: "eth_getTransactionByHash",
+                                                 params: [hash])
+                let tx = answer.result as? [String: Any]
+                sightings.append(FramesChainWatch.sighting(answered: answer.answered, transaction: tx))
+                if let block = FramesRead.hexInt(tx?["blockNumber"]) { noteMined(hash, block: block) }
+            }
+            // The array can have changed across the awaits — a relaunch clears it.
+            guard index < pending.count, pending[index].hash == hash else { return }
+            let state = FramesChainWatch.pendingState(sentAt: pending[index].at,
+                                                      deadline: pending[index].deadline,
+                                                      now: now, sightings: sightings)
+            guard state != pending[index].state else { continue }
+            pending[index].state = state
+            if state.isFinal {
+                pending[index].judgedAt = now
+                forgetSent(hash)
+            }
+        }
+    }
+
+    /// **A PENDING SEND IS WATCHED UNTIL IT HAS AN ANSWER.** Before this, the
+    /// row was told nothing until the next sweep happened to run, so a send
+    /// that landed in six seconds could sit "Sending…" for as long as the app
+    /// stayed open. One loop, a slot apart, ending the moment nothing is
+    /// pending — bounded by the deadline every send now carries.
+    private var pendingWatch: Task<Void, Never>?
+
+    private func watchPending() {
+        guard pendingWatch == nil, !DemoMode.isActive else { return }
+        pendingWatch = Task { @MainActor [weak self] in
+            defer { self?.pendingWatch = nil }
+            for _ in 0..<120 {
+                try? await Task.sleep(for: .seconds(6))
+                guard let self, !Task.isCancelled, !self.pending.isEmpty else { return }
+                let before = self.pending.map(\.state)
+                await self.lookUpPending()
+                if self.pending.contains(where: { $0.state == .mined }) {
+                    await self.refresh()
+                } else if self.pending.map(\.state) != before {
+                    self.reconcilePending(against: self.accounts)
+                }
+            }
+        }
     }
 
     // MARK: - What arrived while somebody was looking
@@ -414,8 +635,19 @@ final class FramesLiveState {
            let settled = pending.first(where: { landed.contains($0.hash.lowercased()) }) {
             firstSettle = settled.hash
         }
-        let cutoff = Date().addingTimeInterval(-Self.pendingWindow)
-        pending.removeAll { landed.contains($0.hash.lowercased()) || $0.at < cutoff }
+        let now = Date()
+        let cutoff = now.addingTimeInterval(-Self.pendingWindow)
+        pending.removeAll { item in
+            if landed.contains(item.hash.lowercased()) { return true }
+            // A final word is said for a while, then the row goes.
+            if let judged = item.judgedAt {
+                return now.timeIntervalSince(judged) > FramesChainWatch.finalWordFor
+            }
+            // A send with a deadline is judged by it (prd §728); one without
+            // keeps the old ceiling, because nothing else can ever end it.
+            if item.deadline == nil || item.state == .mined { return item.at < cutoff }
+            return false
+        }
     }
 
     /// When a pending claim starts to look doubtful.
@@ -489,6 +721,11 @@ final class FramesLiveState {
         }
         guard !wanted.isEmpty else { clear(); return }
 
+        // **THE CHAIN FIRST (prd §728)** — a relaunch clears the pending sends
+        // and the ledger, so it has to be known before either is consulted.
+        await readChain()
+        await lookUpPending()
+
         var read: [FramesAccount] = []
         var anyAnswered = false
         for address in wanted {
@@ -496,14 +733,15 @@ final class FramesLiveState {
             async let nonceCall = FramesRPC.call(method: "eth_getTransactionCount", params: [address, "latest"])
             let (rawBal, rawNonce) = await (balCall, nonceCall)
             if rawBal != nil || rawNonce != nil { anyAnswered = true }
-            let moves = await self.moves(for: address)
-            // **WHAT ELSE IT HOLDS (prd §688)** — two log reads filtered to
-            // this address, then a balance per token it has actually touched.
-            // Proportional to what you watch, never to the chain; see
-            // `DevnetTokens` for why discovery is per address.
-            let tokens = await DevnetTokens.holdings(address: address) { method, params in
+            let logs = await transferLogs(for: address)
+            var moves = await self.moves(for: address, logs: logs)
+            // **WHAT ELSE IT HOLDS (prd §688)** — a balance per token it has
+            // actually touched, off the SAME logs the moves were read from.
+            let tokens = await DevnetTokens.holdings(address: address,
+                                                     logs: logs.sent + logs.received) { method, params in
                 await FramesRPC.call(method: method, params: params)
             }
+            await Self.nameTokens(in: &moves, holdings: tokens)
             read.append(FramesAccount(address: address,
                                       balanceWeiHex: rawBal as? String,
                                       nonce: FramesRead.hexInt(rawNonce),
@@ -548,37 +786,93 @@ final class FramesLiveState {
     /// address's history is two filtered `eth_getLogs` calls rather than a
     /// walk over every block — and no indexer exists for this chain, so there
     /// is no other way to get it.
-    private func moves(for address: String) async -> [FramesMove] {
-        let padded = "0x000000000000000000000000" + address.lowercased()
-            .replacingOccurrences(of: "0x", with: "")
-        let transferTopic = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-        let logAddress = "0xfffffffffffffffffffffffffffffffffffffffe"
+    /// The EIP-7708 coin log's address — every ETH movement on this chain.
+    private static let coinLog = "0xfffffffffffffffffffffffffffffffffffffffe"
 
-        // Two reads: sent (topic 1) and received (topic 2). A single read with
-        // both positions is not expressible — a topic filter is positional.
+    /// **EVERY TRANSFER LOG NAMING THIS ADDRESS, the coin's and every token's
+    /// (prd §728).** Filtered on the topics alone, not on the coin's log
+    /// address, because a DAI send is a Transfer log at DAI's address — and
+    /// the coin filter this replaced is why a token payment was invisible in
+    /// Activity while Holdings listed the token. Two reads: sent (topic 1) and
+    /// received (topic 2), since a topic filter is positional.
+    private func transferLogs(for address: String) async -> (sent: [[String: Any]], received: [[String: Any]]) {
+        let padded = DevnetTokens.topic(address)
         async let outCall = FramesRPC.call(method: "eth_getLogs", params: [[
-            "fromBlock": "0x0", "toBlock": "latest", "address": logAddress,
-            "topics": [transferTopic, padded],
+            "fromBlock": "0x0", "toBlock": "latest",
+            "topics": [DevnetTokens.transferTopic, padded],
         ]])
         async let inCall = FramesRPC.call(method: "eth_getLogs", params: [[
-            "fromBlock": "0x0", "toBlock": "latest", "address": logAddress,
-            "topics": [transferTopic, NSNull(), padded],
+            "fromBlock": "0x0", "toBlock": "latest",
+            "topics": [DevnetTokens.transferTopic, NSNull(), padded],
         ]])
         let (rawOut, rawIn) = await (outCall, inCall)
+        return ((rawOut as? [[String: Any]]) ?? [], (rawIn as? [[String: Any]]) ?? [])
+    }
 
+    /// Fill each token move's symbol and decimals — from what the address
+    /// holds where it still holds it, and by asking the contract where it does
+    /// not (a token sent away entirely is not a holding). Bounded per sweep.
+    private static func nameTokens(in moves: inout [FramesMove],
+                                   holdings: [DevnetTokens.Holding]) async {
+        var known: [String: (symbol: String?, decimals: Int?)] = [:]
+        for holding in holdings { known[holding.contract.lowercased()] = (holding.symbol, holding.decimals) }
+        let missing = Set(moves.flatMap { $0.tokenMoves ?? [] }.map { $0.contract.lowercased() })
+            .subtracting(known.keys).sorted().prefix(4)
+        for contract in missing {
+            known[contract] = await DevnetTokens.metadata(contract: contract) { method, params in
+                await FramesRPC.call(method: method, params: params)
+            }
+        }
+        for i in moves.indices {
+            guard var tokens = moves[i].tokenMoves else { continue }
+            for j in tokens.indices {
+                let meta = known[tokens[j].contract.lowercased()]
+                tokens[j].symbol = meta?.symbol
+                tokens[j].decimals = meta?.decimals
+            }
+            moves[i].tokenMoves = tokens
+        }
+    }
+
+    private func moves(for address: String,
+                       logs: (sent: [[String: Any]], received: [[String: Any]])) async -> [FramesMove] {
         var byHash: [String: UInt64] = [:]
         // Signed movement per transaction, accumulated from the two filtered
         // reads: an OUT log leaves, an IN log arrives. The fee is added below,
         // where the receipt says who paid it.
         var moved: [String: Decimal] = [:]
-        for (side, sign) in [(rawOut, Decimal(-1)), (rawIn, Decimal(1))] {
-            for log in (side as? [[String: Any]]) ?? [] {
+        var tokenDeltas: [String: [String: Decimal]] = [:]
+        for (side, sign) in [(logs.sent, Decimal(-1)), (logs.received, Decimal(1))] {
+            for log in side {
                 guard let hash = log["transactionHash"] as? String else { continue }
-                byHash[hash] = FramesRead.hexInt(log["blockNumber"]) ?? 0
-                if let amount = (log["data"] as? String).flatMap(FramesMoney.decimal(fromHex:)) {
-                    moved[hash, default: 0] += sign * amount
+                let contract = ((log["address"] as? String) ?? "").lowercased()
+                if contract == Self.coinLog {
+                    byHash[hash] = FramesRead.hexInt(log["blockNumber"]) ?? 0
+                    if let amount = (log["data"] as? String).flatMap(FramesMoney.decimal(fromHex:)) {
+                        moved[hash, default: 0] += sign * amount
+                    }
+                } else if !DevnetTokens.systemContracts.contains(contract),
+                          // ERC-20's three topics. ERC-721 shares the event
+                          // name and indexes a fourth; it is not a quantity.
+                          (log["topics"] as? [Any])?.count == 3,
+                          let amount = DevnetTokens.decimal(fromHex: log["data"] as? String) {
+                    byHash[hash] = FramesRead.hexInt(log["blockNumber"]) ?? 0
+                    // Every coin movement for this address was just listed,
+                    // so a transaction with no coin log moved no coin: zero is
+                    // KNOWN here, not assumed, and the fee below still applies.
+                    moved[hash, default: 0] += 0
+                    tokenDeltas[hash, default: [:]][contract, default: 0] += sign * amount
                 }
             }
+        }
+        // **THE SENDS THAT MOVED NOTHING (prd §728).** A hash this phone
+        // broadcast is listed from the ledger once a node has reported its
+        // block, whether or not a log names it — a reverted batch still paid.
+        for record in sentLedger
+            where record.sender.caseInsensitiveCompare(address) == .orderedSame {
+            guard let block = record.block, byHash[record.hash] == nil else { continue }
+            byHash[record.hash] = block
+            moved[record.hash, default: 0] += 0
         }
         let newest = byHash.sorted { $0.value > $1.value }.prefix(Self.moveDepth)
         guard !newest.isEmpty else { return [] }
@@ -610,7 +904,12 @@ final class FramesLiveState {
                 rows: frames.enumerated().map { i, f in
                     FramesFrameRow(frame: f, outcome: i < outcomes.count ? outcomes[i] : nil)
                 },
-                deltaWei: Self.delta(moved: moved[hash], receipt: receipt, address: address)))
+                deltaWei: Self.delta(moved: moved[hash], receipt: receipt, address: address),
+                signatures: FramesRead.signatures(inTransaction: tx),
+                // Sorted by contract so two reads of one transaction list its
+                // tokens in one order.
+                tokenMoves: (tokenDeltas[hash] ?? [:]).sorted { $0.key < $1.key }
+                    .map { FramesTokenMove(contract: $0.key, raw: $0.value) }))
         }
         return out.sorted { $0.blockNumber > $1.blockNumber }
     }
@@ -711,6 +1010,11 @@ extension FramesLiveState {
         func outcome(_ ok: Bool, _ used: UInt64, logs: Int) -> FramesRead.FrameOutcome {
             .init(succeeded: ok, gasUsed: used, stateGasUsed: nil, logCount: logs)
         }
+        // Every frame transaction on this chain is signed by its sender with
+        // secp256k1 and a literal signer (prd §548, 5 of 5).
+        func signed(_ who: String) -> FramesRead.Signature {
+            .init(scheme: 1, signer: who, signsTransaction: true)
+        }
 
         // **WHEN: THE SPACING IS MEASURED, ONLY THE ANCHOR MOVES.**
         //
@@ -764,7 +1068,8 @@ extension FramesLiveState {
                 .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
                 .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
             ],
-            deltaWei: -(Decimal(string: "1210790000000000")!))
+            deltaWei: -(Decimal(string: "1210790000000000")!),
+            signatures: [signed(me)])
 
         // 3. **A TRANSACTION THAT FAILED AND MOVED MONEY ANYWAY.** Not
         //    invented: this is the shape measured on chain (§548's second
@@ -781,7 +1086,8 @@ extension FramesLiveState {
                 .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
                 .init(frame: frame(2, 0x00, to: peer, value: "0x38d7ea4c68000"), outcome: outcome(false, 100_000, logs: 0)),
             ],
-            deltaWei: -(Decimal(string: "1316273000000000")!))
+            deltaWei: -(Decimal(string: "1316273000000000")!),
+            signatures: [signed(me)])
 
         // 4. **A ROLLED-BACK BATCH.** The frame reports `status: 0x1` and
         //    emitted no log, because the batch it was in reverted — the trap
@@ -795,7 +1101,8 @@ extension FramesLiveState {
                 .init(frame: frame(2, 0x04, to: peer, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 0)),
                 .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(false, 100_000, logs: 0)),
             ],
-            deltaWei: -(Decimal(string: "240100000000000")!))
+            deltaWei: -(Decimal(string: "240100000000000")!),
+            signatures: [signed(me)])
 
         // 4b. **A THREE-LEG STITCH THAT WORKED** — the capability this chain
         //     exists for, and the shape the send now builds (prd §548 sixth
@@ -823,7 +1130,8 @@ extension FramesLiveState {
                                    value: "0xaa87bee538000"), outcome: outcome(true, 3_000, logs: 1)),
             ],
             // 0.006 out plus the measured fee, to the wei.
-            deltaWei: -(Decimal(string: "6595948004171636")!))
+            deltaWei: -(Decimal(string: "6595948004171636")!),
+            signatures: [signed(me)])
 
         // 5. **SOMEBODY ELSE PAID.** `payer` differs from `sender`, which
         //    lights the Sponsors scope — the reading this chain publishes that
@@ -840,7 +1148,11 @@ extension FramesLiveState {
             ],
             // The fee is NOT subtracted: somebody else paid it. That is the
             // whole point of the scope, and of `delta`'s payer check.
-            deltaWei: -(Decimal(string: "1000000000000000")!))
+            deltaWei: -(Decimal(string: "1000000000000000")!),
+            // A sponsored transaction carries BOTH signatures: the sender's,
+            // then the payer's (EIP-8141's default code reads index 0 for
+            // execution and index 1 for payment).
+            signatures: [signed(me), signed(peer)])
 
         // **THE TOKENS ARE THIS CHAIN'S OWN (prd §688).** Both contracts and
         // both symbols were read off rpc1.frames.ethrex.xyz on 2026-09-11 —
@@ -878,7 +1190,8 @@ extension FramesLiveState {
                 .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"),
                       outcome: outcome(true, 3_000, logs: 1)),
             ],
-            deltaWei: -(Decimal(string: "1210790000000000")!))
+            deltaWei: -(Decimal(string: "1210790000000000")!),
+            signatures: [signed("0x5b3772a23fa2214ad2c7ec27dd74bde28dac3ba9")])
 
         let watched = FramesAccount(
             address: "0x5b3772a23fa2214ad2c7ec27dd74bde28dac3ba9",

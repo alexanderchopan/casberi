@@ -217,6 +217,7 @@ struct RoomFrameStrip: View {
         case .failed:     return String(localized: "\(step.modeName), failed")
         case .rolledBack: return String(localized: "\(step.modeName), rolled back")
         case .unread:     return String(localized: "\(step.modeName), outcome unread")
+        case .skipped:    return String(localized: "\(step.modeName), skipped")
         }
     }
 
@@ -238,6 +239,15 @@ struct RoomFrameStrip: View {
         case .unread:
             Rectangle().fill(Color.clear)
                 .overlay { Rectangle().strokeBorder(DS.fillLine, lineWidth: 1) }
+        // **SKIPPED IS DASHED AND NEUTRAL (prd §728)** — it never ran, so it
+        // takes no mode fill and no alarm, and the dash keeps it from reading
+        // as an unread receipt.
+        case .skipped:
+            Rectangle().fill(Color.clear)
+                .overlay {
+                    Rectangle().strokeBorder(DS.textTertiary,
+                                             style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
+                }
         case .ran:
             Rectangle().fill(hue(step.modeName).opacity(0.85))
         }

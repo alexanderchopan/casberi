@@ -47,7 +47,11 @@ enum FramesRoomSource {
                       // that is black until the first read is worse than
                       // one that says it is reading.
                       FramesKey.address() == nil ? 0 : 1,
-                      DemoMode.isActive ? 1 : 0))
+                      DemoMode.isActive ? 1 : 0),
+            // **NEVER IN THE DEMO** — a fixture has no chain under it, and a
+            // stall read on the live seat before entering must not follow the
+            // person into a room that is not reading anything.
+            alert: DemoMode.isActive ? nil : live.alert())
     }
 
     /// The accounts this room is showing, after the face rail's scope.
@@ -91,7 +95,14 @@ enum FramesRoomSource {
         // `reached` is in the key because it changes what the room SAYS
         // without necessarily changing the account count — a sweep that found
         // the same addresses and this time got no answer must redraw.
-        return "frames:\(live.accounts.count):\(live.readAt?.timeIntervalSince1970 ?? 0):\(live.reached ? 1 : 0)"
+        // The alert is in the key for the same reason (prd §728): a sweep that
+        // finds the chain stalled changes what the room says and nothing else.
+        let alert: String = switch live.alert() {
+        case .relaunched(let at): "r\(Int(at.timeIntervalSince1970))"
+        case .stalled: "s"
+        case nil: "-"
+        }
+        return "frames:\(live.accounts.count):\(live.readAt?.timeIntervalSince1970 ?? 0):\(live.reached ? 1 : 0):\(alert)"
     }
 
     /// Which scopes the room offers: **every one, always (prd §611).**

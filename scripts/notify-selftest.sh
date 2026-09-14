@@ -193,9 +193,10 @@ fi
 DEVNET="Casberi/Casberi/Model/DevnetNotify.swift"
 VIB="Casberi/Casberi/Model/VibenetBridge.swift"
 HEG="Casberi/Casberi/Model/HegotaBridge.swift"
+FRAMESB="Casberi/Casberi/Model/FramesBridge.swift"
 DRIVER="Casberi/Casberi/Model/VibenetUnlockActivityDriver.swift"
 BG="Casberi/Casberi/Model/WalletBackgroundRefresh.swift"
-for f in "$DEVNET" "$VIB" "$HEG" "$DRIVER" "$BG"; do
+for f in "$DEVNET" "$VIB" "$HEG" "$FRAMESB" "$DRIVER" "$BG"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -205,7 +206,7 @@ guard "the headline has ONE authority, forwarded from the sweep" \
 # A seat name that does not equal the source the bridge really stamps fails at
 # NEITHER end: the notification arrives with a blank right-hand slot and its tap
 # opens the All feed. Derived from the bridges rather than typed twice here.
-for pair in "vibenet:$VIB" "Hegotá:$HEG"; do
+for pair in "vibenet:$VIB" "Hegotá:$HEG" "Frames:$FRAMESB"; do
   label="${pair%%:*}"; file="${pair#*:}"
   src=$(grep -oE 'static let source = "[^"]+"' "$file" | head -1 | sed 's/.*"\(.*\)"/\1/')
   if [[ -n "$src" ]] && grep -qF "return \"$src\"" "$PLAN"; then

@@ -73,6 +73,11 @@ enum DevnetNotify {
         out.append("hegota watching=\(hWatching) accounts=\(HegotaLiveState.shared.accounts.count) restart=" +
                    (hRestart.map { "\($0.key) observed \($0.at)" } ?? "none observed"))
 
+        let fWatching = FramesWatch.shared.addresses.count + (FramesKey.address() == nil ? 0 : 1)
+        let fReset = FramesLiveState.observedRelaunch()
+        out.append("frames watching=\(fWatching) relaunch=" +
+                   (fReset.map { "\($0.key) observed \($0.at)" } ?? "none observed"))
+
         return out
     }
 
@@ -96,6 +101,14 @@ enum DevnetNotify {
         if let seen = PrivacyDevnetLiveState.observedRelaunch() {
             out.append(.init(seat: .privacy, key: seen.key, observedAt: seen.at,
                              watching: PrivacyDevnetWatch.shared.addresses.count))
+        }
+        // Hegotá Frames (prd §728). **The key counts as something watched**:
+        // the seat reads this phone's own account whether or not it is on the
+        // watch list, and a relaunch takes its balance just the same.
+        if let seen = FramesLiveState.observedRelaunch() {
+            out.append(.init(seat: .frames, key: seen.key, observedAt: seen.at,
+                             watching: FramesWatch.shared.addresses.count
+                                 + (FramesKey.address() == nil ? 0 : 1)))
         }
         return out
     }

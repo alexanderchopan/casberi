@@ -6451,6 +6451,18 @@ enum ProbeHooks {
                     // about a chain that is not the one anything was done on.
                     NSLog("[Casberi] frames| chain id disagrees with the encoder's — this is a different chain")
                 }
+                // **THE CHAIN ITSELF (prd §728)** — genesis against this
+                // install's baseline, the head's age, the finalized head, and
+                // what the room would say. One line, because a stalled chain
+                // and a relaunched one both answer every read above perfectly.
+                let live = FramesLiveState.shared
+                await live.readChain()
+                let headAge = live.headAt.map { Int(Date().timeIntervalSince($0)) }
+                NSLog("[Casberi] framesChain| headAge=%@s finalized=%@ relaunchObserved=%@ alert=%@",
+                      headAge.map(String.init) ?? "-",
+                      live.finalizedBlock.map { String($0) } ?? "-",
+                      live.relaunchObservedAt.map { "\($0)" } ?? "none",
+                      live.alert().map { FramesChainWatch.headline($0, now: .now) } ?? "none")
                 guard let account = FramesKey.address() else {
                     NSLog("[Casberi] frames| no key on this phone — pass -framesKeyProbe first")
                     return
@@ -6514,6 +6526,36 @@ enum ProbeHooks {
                           out.map { $0.succeeded ? "YES" : "NO" } ?? "-",
                           starved.map { String(describing: $0) } ?? "-")
                 }
+            }
+        },
+        // `-framesPendingProbe <0x…>` — ask EVERY host where one transaction
+        // is, and print the state the pending row would draw (prd §728).
+        //
+        // The pending row's whole claim rests on three answers agreeing, and
+        // the one case that matters — a hash every node has let go of — cannot
+        // be made on demand. This separates "a host did not answer" (which
+        // must never read as dropped) from "a host answered null" in one launch.
+        // The state is computed as if the send were old and carried no
+        // deadline, so it is the sightings that decide it.
+        Hook(key: "framesPendingProbe") { value, _ in
+            let hash = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            Task { @MainActor in
+                guard hash.hasPrefix("0x"), hash.count == 66 else {
+                    NSLog("[Casberi] framesPending| pass a transaction hash"); return
+                }
+                var sightings: [FramesChainWatch.Sighting?] = []
+                for host in FramesRPC.hosts {
+                    let answer = await FramesRPC.ask(host: host, method: "eth_getTransactionByHash",
+                                                     params: [hash])
+                    let sighting = FramesChainWatch.sighting(answered: answer.answered,
+                                                             transaction: answer.result as? [String: Any])
+                    sightings.append(sighting)
+                    NSLog("[Casberi] framesPending| host=%@ sighting=%@",
+                          host, sighting.map { String(describing: $0) } ?? "no answer")
+                }
+                let state = FramesChainWatch.pendingState(sentAt: .distantPast, deadline: nil,
+                                                          now: .now, sightings: sightings)
+                NSLog("[Casberi] framesPending| state=%@", state.rawValue)
             }
         },
         // `-framesStitchProbe "<0xaddr:amount[,0xaddr:amount…]>[|atomic]"` —

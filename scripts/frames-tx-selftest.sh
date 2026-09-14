@@ -82,7 +82,7 @@ PYM
   # so this file was proven equivalent run-for-run by
   # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.9x faster).
   # Re-probe before trusting it again after adding mutations.
-  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift m/main.swift 2>/dev/null ) \
+  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift m/main.swift 2>/dev/null ) \
      && "$MW/m/run2" >/dev/null 2>&1; then
     echo "SURVIVED|$MID|$MLABEL"; exit 0
   fi
@@ -104,10 +104,14 @@ RFRAMES="Casberi/Casberi/Model/RoomFrames.swift"
 # Stubbing it would let the harness disagree with the app about a type the app
 # stores; it is Foundation-only by design for exactly this.
 TOKENS="Casberi/Casberi/Model/DevnetTokens.swift"
+# **What the chain itself is doing (prd §728)** — relaunch, stall, finality and
+# where a pending send is. Foundation-only, compiled whole: nothing on this
+# machine can make a devnet stall or relaunch on demand.
+CHAINW="Casberi/Casberi/Model/FramesChainWatch.swift"
 KEY="Casberi/Casberi/Model/FramesKey.swift"
 SEND="Casberi/Casberi/Model/FramesSend.swift"
 BRIDGE="Casberi/Casberi/Model/FramesBridge.swift"
-for f in "$TX" "$RLPF" "$KC" "$MONEY" "$SECT" "$READ" "$KEY" "$SEND" "$BRIDGE"; do
+for f in "$TX" "$RLPF" "$KC" "$MONEY" "$SECT" "$READ" "$KEY" "$SEND" "$BRIDGE" "$CHAINW"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -720,6 +724,7 @@ cp "$SECT" "$WORK/FramesSection.swift"
 cp "$READ" "$WORK/FramesReading.swift"
 cp "$RFRAMES" "$WORK/RoomFrames.swift"
 cp "$TOKENS" "$WORK/DevnetTokens.swift"
+cp "$CHAINW" "$WORK/FramesChainWatch.swift"
 mkdir -p "$WORK/m"
 
 cat > "$WORK/m/main.swift" <<'SWIFT'
@@ -1535,12 +1540,166 @@ check("a fee-sized delta is still visible",
       FramesMoney.signedETH(wei: Decimal(210_790) * Decimal(1_000_000_000))
         .contains("210"))
 
+// --- THE CHAIN ITSELF (prd §728) -------------------------------------------
+// Measured 2026-09-13: every host reported block 75,685, 142,463 seconds old.
+// Nothing on this machine can make a chain stall, relaunch or finalize, so
+// these fixtures are the only proof the readings hold.
+typealias CW = FramesChainWatch
+let genesisNow = "0x4225d87803ea7b0da245a4390c18e8afe373cb0eb1482e218e1cdc200cfc27ab"
+let genesisOld = "0x372a923b" + String(repeating: "0", count: 56)
+check("a first read ADOPTS its genesis silently — an install that arrives after a relaunch lost nothing",
+      CW.verdict(baseline: nil, observed: genesisNow) == .adopt(genesisNow))
+check("the same genesis in another case is the same chain",
+      CW.verdict(baseline: "0x" + genesisNow.dropFirst(2).uppercased(), observed: genesisNow) == .same)
+check("a different genesis is a relaunch",
+      CW.verdict(baseline: genesisOld, observed: genesisNow) == .relaunched(genesisNow))
+check("an unread genesis is no verdict", CW.verdict(baseline: genesisOld, observed: nil) == .unread)
+check("a malformed hash is no verdict", CW.verdict(baseline: genesisOld, observed: "0x1234") == .unread)
+let t0 = Date(timeIntervalSince1970: 1_789_300_000)
+check("a head nine minutes old is not a stall", CW.stallAge(headAt: t0.addingTimeInterval(-540), now: t0) == nil)
+check("eleven minutes is", CW.stallAge(headAt: t0.addingTimeInterval(-660), now: t0) != nil)
+check("an unread head is not a stall", CW.stallAge(headAt: nil, now: t0) == nil)
+check("a device clock behind the chain is not a stall", CW.stallAge(headAt: t0.addingTimeInterval(900), now: t0) == nil)
+check("the measured stall reads in hours",
+      CW.headline(.stalled(age: 142_463), now: t0) == "Stalled for 39 hours")
+check("a relaunch outranks a stall — a wiped chain is not one to wait for",
+      CW.alert(relaunchObservedAt: t0.addingTimeInterval(-3600), headAt: t0.addingTimeInterval(-142_463), now: t0)
+        == .relaunched(observedAt: t0.addingTimeInterval(-3600)))
+check("a relaunch a week old stops being said, and the stall is still said",
+      CW.alert(relaunchObservedAt: t0.addingTimeInterval(-8 * 86_400), headAt: t0.addingTimeInterval(-142_463), now: t0)
+        == .stalled(age: 142_463))
+check("a healthy chain says nothing",
+      CW.alert(relaunchObservedAt: nil, headAt: t0.addingTimeInterval(-6), now: t0) == nil)
+check("a relaunch 'observed' in the future is not said",
+      CW.alert(relaunchObservedAt: t0.addingTimeInterval(60), headAt: nil, now: t0) == nil)
+check("the block at the finalized head is final", CW.isFinal(block: 100, finalized: 100) == true)
+check("the one above it is not yet", CW.isFinal(block: 101, finalized: 100) == false)
+check("an unread finalized head says nothing", CW.isFinal(block: 1, finalized: nil) == nil)
+
+// --- WHERE A PENDING SEND IS (prd §728) --------------------------------------
+let sentAt = t0.addingTimeInterval(-60)
+check("a block wins outright",
+      CW.pendingState(sentAt: sentAt, deadline: t0.addingTimeInterval(-600), now: t0,
+                      sightings: [.absent, .mined, nil]) == .mined)
+check("past its deadline it cannot land, even while a node still pools it",
+      CW.pendingState(sentAt: sentAt, deadline: t0.addingTimeInterval(-30), now: t0,
+                      sightings: [.pooled, .pooled, .pooled]) == .expired)
+check("inside the clock grace it is still queued",
+      CW.pendingState(sentAt: sentAt, deadline: t0.addingTimeInterval(-5), now: t0,
+                      sightings: [.pooled, .absent, .absent]) == .queued)
+check("every host answering absent, late enough, is dropped",
+      CW.pendingState(sentAt: sentAt, deadline: nil, now: t0,
+                      sightings: [.absent, .absent, .absent]) == .dropped)
+check("ONE SILENT HOST keeps it sending — a host that did not answer did not say no",
+      CW.pendingState(sentAt: sentAt, deadline: nil, now: t0,
+                      sightings: [.absent, nil, .absent]) == .sending)
+check("absent everywhere seconds after sending is propagation, not loss",
+      CW.pendingState(sentAt: t0.addingTimeInterval(-5), deadline: nil, now: t0,
+                      sightings: [.absent, .absent, .absent]) == .sending)
+check("a node answering null is absent", CW.sighting(answered: true, transaction: nil) == .absent)
+check("a node not answering is no sighting", CW.sighting(answered: false, transaction: nil) == nil)
+check("a null block number is pooled",
+      CW.sighting(answered: true, transaction: ["blockNumber": NSNull()]) == .pooled)
+check("a block number is mined",
+      CW.sighting(answered: true, transaction: ["blockNumber": "0x1e0d"]) == .mined)
+check("the countdown is minutes and seconds",
+      CW.pendingLine(state: .queued, deadline: t0.addingTimeInterval(125), now: t0)
+        == "Waiting for a block · 2:05 left")
+check("dropped and expired are final words and queued is not",
+      CW.PendingState.dropped.isFinal && CW.PendingState.expired.isFinal && !CW.PendingState.queued.isFinal)
+
+// --- SKIPPED IS NOT FAILED (prd §728) ------------------------------------------
+let batchReceipt: [String: Any] = ["frameReceipts": [
+    ["status": "0x1", "gasUsed": "0x64", "logs": [[String: Any]]()],
+    ["status": "0x0", "gasUsed": "0x186a0", "logs": [[String: Any]]()],
+    ["status": "0x2", "gasUsed": "0x0", "logs": [[String: Any]]()],
+]]
+let batchOut = FramesRead.outcomes(inReceipt: batchReceipt)
+check("status 0x2 reads as skipped", batchOut.count == 3 && batchOut[2].skipped && !batchOut[2].succeeded)
+check("a reverted frame is not skipped", !batchOut[1].skipped)
+check("a success is neither", batchOut[0].succeeded && !batchOut[0].skipped)
+func payFrame(_ to: String, value: String = "0x1", data: String = "0x") -> FramesRead.Frame {
+    .init(mode: 2, flags: 0, target: to, executionGas: 100_000, stateGas: 250_000, value: value, data: data)
+}
+let batchRuns = FramesFrames.runs([FramesMove(
+    hash: "0xk", blockNumber: 1, sender: "0xa", payer: "0xa", succeeded: false,
+    rows: [FramesFrameRow(frame: payFrame("0xb"), outcome: batchOut[1]),
+           FramesFrameRow(frame: payFrame("0xc"), outcome: batchOut[2])],
+    deltaWei: 0)])
+check("a skipped step is its own outcome in the census",
+      batchRuns.first?.steps.map(\.outcome) == [.failed, .skipped])
+let skipMix = RoomFrames.mix(batchRuns)
+check("and it is counted apart from the failure", skipMix?.skipped == 1 && skipMix?.failed == 1)
+
+// --- WHO SIGNED (prd §728) ----------------------------------------------------
+let signedTx: [String: Any] = ["signatures": [
+    ["scheme": "0x1", "signer": "0x2c835d53b4c19cb1dd6c7cf28c4b87240f7e5a15", "msg": "0x", "signature": "0x00"],
+    ["scheme": "0x2", "signer": "0x", "msg": "0x" + String(repeating: "ab", count: 32), "signature": "0x00"],
+]]
+let readSigs = FramesRead.signatures(inTransaction: signedTx)
+check("signatures read in the envelope's order", readSigs.map(\.scheme) == [1, 2])
+check("a literal signer is kept", readSigs.first?.signer == "0x2c835d53b4c19cb1dd6c7cf28c4b87240f7e5a15")
+check("an empty signer is no address, and resolves to the sender",
+      readSigs.last?.signer == nil && readSigs.last?.resolvedSigner(sender: "0xS") == "0xS")
+check("an empty msg signs the transaction and a digest does not",
+      readSigs.first?.signsTransaction == true && readSigs.last?.signsTransaction == false)
+check("an arbitrary entry speaks for no address",
+      FramesRead.Signature(scheme: 0, signer: nil, signsTransaction: true).resolvedSigner(sender: "0xS") == nil)
+check("no signatures field reads none", FramesRead.signatures(inTransaction: [:]).isEmpty)
+
+// --- THE DEADLINE, AND A TOKEN PAYMENT (prd §728) -----------------------------
+let expiryAddress = "0x0000000000000000000000000000000000008141"
+func verifyFrame(_ to: String, data: String) -> FramesRead.Frame {
+    .init(mode: 1, flags: 0, target: to, executionGas: 20_000, stateGas: 0, value: "0x0", data: data)
+}
+check("an expiry frame's 8 bytes are its deadline",
+      verifyFrame(expiryAddress, data: "0x000000006aa5f05c").deadline == Date(timeIntervalSince1970: 0x6aa5f05c))
+check("nine bytes is no deadline — the node refuses that frame, so it never ran",
+      verifyFrame(expiryAddress, data: "0x00000000006aa5f05c").deadline == nil)
+check("a sender frame to that address is not a deadline",
+      payFrame(expiryAddress, value: "0x0", data: "0x000000006aa5f05c").deadline == nil)
+let bob = "61c93cfd66431c2d6f5e29d224fd29afd4550f2e"
+let dai = "0x7d6fa7c366f36046656b019dc9a27f171628cf3f"
+let fiveDAI = String(repeating: "0", count: 48) + "4563918244f40000"
+let transferData = "0xa9059cbb" + String(repeating: "0", count: 24) + bob + fiveDAI
+let transfer = payFrame(dai, value: "0x0", data: transferData).tokenTransfer
+check("a transfer's recipient is its ARGUMENT, not the contract", transfer?.recipient == "0x" + bob)
+check("and its amount is exact", transfer?.raw == Decimal(string: "5000000000000000000"))
+check("a verify frame never carries a payment",
+      verifyFrame(dai, data: transferData).tokenTransfer == nil)
+check("an address word with its high bytes set is not an address",
+      payFrame(dai, value: "0x0", data: "0xa9059cbb" + "01" + String(repeating: "0", count: 22) + bob + fiveDAI).tokenTransfer == nil)
+check("a truncated call is not a transfer",
+      payFrame(dai, value: "0x0", data: String(transferData.dropLast(2))).tokenTransfer == nil)
+let daiOut = FramesTokenMove(contract: dai, raw: -Decimal(string: "5000000000000000000")!, symbol: "DAI", decimals: 18)
+let tokenSend = FramesMove(hash: "0xt", blockNumber: 1, sender: "0xa", payer: "0xa", succeeded: true,
+                           rows: [FramesFrameRow(frame: payFrame(dai, value: "0x0", data: transferData), outcome: nil)],
+                           deltaWei: -210_790, tokenMoves: [daiOut])
+check("a token send's recipient is the person paid", tokenSend.recipients == ["0x" + bob])
+check("a token payment leads with the token", tokenSend.leadToken?.symbol == "DAI")
+check("in the token's own unit, with a true minus", tokenSend.leadToken?.signedLine == "\u{2212}5 DAI")
+let coinAndToken = FramesMove(hash: "0xu", blockNumber: 1, sender: "0xa", payer: "0xa", succeeded: true,
+                              rows: [FramesFrameRow(frame: payFrame("0xb", value: "0x1"),
+                                                    outcome: .init(succeeded: true, gasUsed: 1, stateGasUsed: nil, logCount: 1))],
+                              deltaWei: -1, tokenMoves: [daiOut])
+check("a coin payment that also touched a token leads with the coin", coinAndToken.leadToken == nil)
+let daiIn = FramesMove(hash: "0xv", blockNumber: 1, sender: "0xz", payer: "0xz", succeeded: true,
+                       rows: [], deltaWei: 0,
+                       tokenMoves: [FramesTokenMove(contract: dai, raw: Decimal(string: "5000000000000000000")!, symbol: "DAI", decimals: 18)])
+check("tokens received lead with the token", daiIn.leadToken?.signedLine == "+5 DAI")
+check("a token that never said its decimals is not scaled by a guess",
+      FramesTokenMove(contract: dai, raw: 42, symbol: nil, decimals: nil).signedLine == "+42 0x7d6f…cf3f")
+check("a move's deadline is its expiry frame's",
+      FramesMove(hash: "0xw", blockNumber: 1, sender: "0xa", payer: "0xa", succeeded: true,
+                 rows: [FramesFrameRow(frame: verifyFrame(expiryAddress, data: "0x000000006aa5f05c"), outcome: nil)],
+                 deltaWei: 0).deadline == Date(timeIntervalSince1970: 0x6aa5f05c))
+
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
 print("  ok   encoder: 3 real vectors byte-exact, keccak == the chain's own hash (1 on the post-restart chain)")
 SWIFT
 
 build_run() {
-  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift m/main.swift 2>&1 )
+  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift m/main.swift 2>&1 )
 }
 if ! out="$(build_run)"; then echo "✗ harness did not compile"; echo "$out"; exit 1; fi
 "$WORK/m/run" || exit 1
@@ -1821,6 +1980,59 @@ mutate "the receipt hero rounded to the balance line's four places" $F2 \
         formatter.usesGroupingSeparator = true
         let text = formatter.string(from: rounded as NSDecimalNumber) ?? "0"
         // A movement of exactly nothing has no direction'
+
+F5=FramesChainWatch.swift
+mutate "an install's first genesis called a relaunch" $F5 \
+  'guard let baseline, !baseline.isEmpty else { return .adopt(observed) }' \
+  'guard let baseline, !baseline.isEmpty else { return .relaunched(observed) }'
+mutate "every head called a stall" $F5 \
+  'return age > stallAfter ? age : nil' 'return age > 0 ? age : nil'
+mutate "a relaunch from the future said" $F5 \
+  'if age >= 0, age <= sayRelaunchFor {' 'if age <= sayRelaunchFor {'
+mutate "a stall outranking a relaunch" $F5 \
+  '        if let seen = relaunchObservedAt {
+            let age = now.timeIntervalSince(seen)
+            if age >= 0, age <= sayRelaunchFor { return .relaunched(observedAt: seen) }
+        }
+        if let age = stallAge(headAt: headAt, now: now) { return .stalled(age: age) }' \
+  '        if let age = stallAge(headAt: headAt, now: now) { return .stalled(age: age) }
+        if let seen = relaunchObservedAt {
+            let age = now.timeIntervalSince(seen)
+            if age >= 0, age <= sayRelaunchFor { return .relaunched(observedAt: seen) }
+        }'
+mutate "a pooled send past its deadline called queued" $F5 \
+  '        if let deadline, now.timeIntervalSince(deadline) > deadlineGrace { return .expired }
+        if sightings.contains(.pooled) { return .queued }' \
+  '        if sightings.contains(.pooled) { return .queued }
+        if let deadline, now.timeIntervalSince(deadline) > deadlineGrace { return .expired }'
+mutate "a silent host read as a host that said no" $F5 \
+  'if !sightings.isEmpty, answered.count == sightings.count,' 'if !sightings.isEmpty,'
+mutate "propagation read as loss" $F5 \
+  'now.timeIntervalSince(sentAt) > droppedAfter {' 'now.timeIntervalSince(sentAt) >= 0 {'
+mutate "a null answer read as silence" $F5 \
+  'guard let transaction else { return .absent }' 'guard let transaction else { return nil }'
+mutate "the finalized block itself not final" $F5 \
+  'return block <= finalized' 'return block < finalized'
+F6=FramesReading.swift
+mutate "a reverted frame called skipped" $F6 \
+  'var skipped: Bool { status == 2 }' 'var skipped: Bool { status == 0 }'
+mutate "a skipped step drawn as a failure" $F6 \
+  '        if landed.skipped { return .skipped }
+' ''
+mutate "a nine-byte expiry read as a deadline" $F6 \
+  'guard body.count == 16, let seconds = UInt64(body, radix: 16) else { return nil }' \
+  'guard let seconds = UInt64(body, radix: 16) else { return nil }'
+mutate "a dirty address word read as an address" $F6 \
+  'guard addressWord.prefix(24).allSatisfy({ $0 == "0" }),' 'guard addressWord.prefix(24).count == 24,'
+mutate "a token contract listed as the person paid" $F6 \
+  'guard let to = row.frame.tokenTransfer?.recipient ?? row.frame.target,' 'guard let to = row.frame.target,'
+mutate "a coin payment led by a token it merely touched" $F6 \
+  'return movedCoin ? nil : first' 'return first'
+mutate "an empty signer kept as an address" $F6 \
+  'let signer = (entry["signer"] as? String).flatMap { $0.count == 42 ? $0 : nil }' \
+  'let signer = entry["signer"] as? String'
+mutate "a skip counted as a failure" RoomFrames.swift \
+  'case .skipped:     skipped += 1' 'case .skipped:     failed += 1'
 
 # --- the fan-out must be LAST, and this proves it -----------------------------
 # **A mutation recorded AFTER this block is never dispatched, and the run still

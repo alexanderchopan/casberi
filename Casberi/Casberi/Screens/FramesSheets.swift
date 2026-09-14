@@ -164,9 +164,10 @@ struct FramesMoveSheet: View {
         // this sheet below its own edge. The `.large` detent made it
         // reachable and nothing said so — a sheet that must be dragged to
         // finish reading is a sheet that looks broken.
-        let facts: CGFloat = hasFacts ? 80 : 0
+        let facts: CGFloat = hasFacts ? CGFloat(factCount) * 40 + 8 : 0
+        let tokens: CGFloat = CGFloat(tokenLines.count) * 32
         let explorer: CGFloat = 40
-        return min(920, 400 + paper + crossing + sponsored + watch + facts + explorer
+        return min(920, 400 + paper + crossing + sponsored + watch + facts + tokens + explorer
                         + CGFloat(move.rows.count) * 56)
     }
 
@@ -214,6 +215,20 @@ struct FramesMoveSheet: View {
     }
 
     @ViewBuilder private var amount: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            coinAmount
+            // **THE TOKENS IT MOVED (prd §728)** — under the coin, one rung
+            // down, because on a token payment the coin line is the fee.
+            ForEach(Array(tokenLines.enumerated()), id: \.offset) { _, token in
+                Text(token.signedLine)
+                    .dsText(.stat24)
+                    .foregroundStyle(token.raw > 0 ? DS.confirm : DS.textPrimary)
+                    .monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
+            }
+        }
+    }
+
+    @ViewBuilder private var coinAmount: some View {
         if let delta = move.deltaWei {
             Text(FramesMoney.signedETH(wei: delta))
                 // `price40` — the app's money-receipt hero (§363/§551), the
@@ -402,7 +417,7 @@ struct FramesMoveSheet: View {
     /// Hollow for a rolled-back frame (the strip's own dashed treatment as a
     /// dot), clear for an unread outcome, the mode's hue otherwise.
     private func pipFill(_ row: FramesFrameRow) -> Color {
-        if row.valueLanded == false { return .clear }
+        if row.outcome?.skipped == true || row.valueLanded == false { return .clear }
         guard let outcome = row.outcome else { return DS.textTertiary.opacity(0.4) }
         return outcome.succeeded ? FramesModeStyle.hue(row.frame.mode) : DS.destructive
     }
@@ -427,6 +442,18 @@ struct FramesMoveSheet: View {
                 if let fee = FramesMoney.fee(wei: move.feeWeiIfSelfPaid) {
                     DSSpecRow(label: Text("Fee"), value: Text(verbatim: fee))
                 }
+                // **WHO SIGNED, WHEN IT EXPIRED, WHETHER IT IS FINAL (prd §728).**
+                if let signers = signedByLine {
+                    DSSpecRow(label: Text("Signed by"), value: Text(verbatim: signers))
+                }
+                if let deadline = move.deadline {
+                    DSSpecRow(label: Text("Deadline"),
+                              value: Text(verbatim: deadline.formatted(date: .omitted, time: .standard)))
+                }
+                if let final = finality {
+                    DSSpecRow(label: Text("Final"),
+                              value: Text(final ? String(localized: "Yes") : String(localized: "Not yet")))
+                }
                 if let gas = move.gasUsed {
                     // **THE RECEIPT'S OWN, NEVER A SUM OF THE FRAMES.**
                     // Measured on a transaction this app sent: the frames
@@ -441,8 +468,37 @@ struct FramesMoveSheet: View {
 
     /// An empty `DSSpecTable` is a zero-height `Grid` that still costs its
     /// stack a `DS.Space.s6` gap — a hole in the sheet with nothing in it.
-    private var hasFacts: Bool {
-        move.feeWeiIfSelfPaid != nil || move.gasUsed != nil
+    private var hasFacts: Bool { factCount > 0 }
+
+    private var factCount: Int {
+        [move.feeWeiIfSelfPaid != nil, move.gasUsed != nil, signedByLine != nil,
+         move.deadline != nil, finality != nil].filter { $0 }.count
+            + max(0, (move.signatures?.count ?? 0) - 1)
+    }
+
+    /// **WHICH KEYS SIGNED IT** — one line per signature, named from this
+    /// room's point of view, with the key type (prd §728). A sponsored
+    /// transaction carries two, and that is the evidence the payer agreed.
+    private var signedByLine: String? {
+        guard let signatures = move.signatures, !signatures.isEmpty else { return nil }
+        return signatures.map { signature in
+            let who = signature.resolvedSigner(sender: sender)
+                .map { FramesName.leading($0, mine: mine, watched: watched) }
+                ?? String(localized: "a contract")
+            return "\(who) · \(signature.schemeName)"
+        }.joined(separator: "\n")
+    }
+
+    /// Whether the chain has finalized this block. Nil where its finalized
+    /// head was not read — not knowing is not "not yet".
+    private var finality: Bool? {
+        FramesChainWatch.isFinal(block: move.blockNumber,
+                                 finalized: FramesLiveState.shared.finalizedBlock)
+    }
+
+    /// The tokens this transaction moved for its reader, drawn under the coin.
+    private var tokenLines: [FramesTokenMove] {
+        (move.tokenMoves ?? []).filter { $0.raw != 0 }
     }
 
     // MARK: The doors
@@ -610,7 +666,7 @@ struct FramesFrameSheet: View {
                     .dsText(.price40).foregroundStyle(DS.textPrimary)
                     .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                     .padding(.top, 2)
-                Text(FramesModeStyle.meaning(row.frame.mode))
+                Text(meaning(row))
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s4)
@@ -619,13 +675,25 @@ struct FramesFrameSheet: View {
                 // `reading20` — running prose that is the whole point of the
                 // surface it sits on, which is that rung's own definition. The
                 // mode name is not repeated: the tray title already carries it.
-                Text(FramesModeStyle.meaning(row.frame.mode))
+                Text(meaning(row))
                     .dsText(.reading20).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
             }
         }
         .dsSheetHeadBlock()
+    }
+
+    /// What this step is FOR — the mode's meaning, except for the two frames
+    /// whose job is more specific than their mode (prd §728).
+    private func meaning(_ row: FramesFrameRow) -> String {
+        if let deadline = row.frame.deadline {
+            return String(localized: "The deadline. This transaction could only land in a block made by \(deadline.formatted(date: .abbreviated, time: .standard)).")
+        }
+        if row.frame.tokenTransfer != nil {
+            return String(localized: "Acts as the sender, calling a token contract to move its tokens.")
+        }
+        return FramesModeStyle.meaning(row.frame.mode)
     }
 
     private var position: String {
@@ -638,6 +706,9 @@ struct FramesFrameSheet: View {
     /// "Ran" over it would be the §548 lie in the slot every sheet in this app
     /// keeps for a state.
     private func outcomeWord(_ row: FramesFrameRow) -> String {
+        // Before "Rolled back": a skipped frame also has no log, and it did
+        // not roll back — it never ran (prd §728).
+        if row.outcome?.skipped == true { return String(localized: "Skipped") }
         if row.valueLanded == false { return String(localized: "Rolled back") }
         guard let outcome = row.outcome else { return String(localized: "Outcome unknown") }
         return outcome.succeeded ? String(localized: "Ran") : String(localized: "Reverted")
@@ -648,6 +719,7 @@ struct FramesFrameSheet: View {
     /// — `DSStamp`'s own doc, that quiet is a real answer rather than an
     /// absence.
     private func outcomeWeight(_ row: FramesFrameRow) -> DSStamp.Weight {
+        if row.outcome?.skipped == true { return .quiet }
         if row.valueLanded == false { return .urgent }
         guard let outcome = row.outcome else { return .quiet }
         return outcome.succeeded ? .good : .urgent
@@ -859,6 +931,17 @@ struct FramesFrameSheet: View {
     /// indistinguishable from every day before it. The selector is the first
     /// four bytes — the only part of a call anybody reads at a glance.
     private func calldataLine(_ row: FramesFrameRow) -> String {
+        // **THE TWO CALLS THIS ROOM CAN READ, read (prd §728).**
+        if let deadline = row.frame.deadline {
+            return String(localized: "deadline · \(deadline.formatted(date: .omitted, time: .standard))")
+        }
+        if let transfer = row.frame.tokenTransfer, let contract = row.frame.target {
+            let known = move.tokenMoves?.first { $0.contract.lowercased() == contract.lowercased() }
+            let amount = FramesTokenMove(contract: contract, raw: transfer.raw,
+                                         symbol: known?.symbol, decimals: known?.decimals)
+            let to = FramesName.leading(transfer.recipient, mine: mine, watched: watched)
+            return String(localized: "transfer · \(String(amount.signedLine.dropFirst())) to \(to)")
+        }
         let raw = row.frame.data ?? ""
         let body = raw.hasPrefix("0x") || raw.hasPrefix("0X") ? String(raw.dropFirst(2)) : raw
         guard !body.isEmpty else { return String(localized: "none") }

@@ -70,6 +70,99 @@ enum FramesRead {
         /// Bit 2 marks an atomic batch, terminated by a following non-batch
         /// frame.
         var startsBatch: Bool { flags & 0x4 != 0 }
+
+        /// EIP-8141's `EXPIRY_VERIFIER`, `address(0x8141)`.
+        static let expiryVerifier = "0x0000000000000000000000000000000000008141"
+
+        /// **THE DEADLINE, when this frame is the chain's expiry check** (prd
+        /// §728). A VERIFY frame targeting `0x…8141` whose data is an 8-byte
+        /// big-endian timestamp: the transaction is valid only in a block no
+        /// later than that second. Measured against the node on 2026-09-13 —
+        /// a deadline in the past is refused as "expiry deadline has passed"
+        /// and a 9-byte one as "data must be 8 bytes", so the node reads this
+        /// field exactly as it is decoded here.
+        ///
+        /// Nil for every other frame, and for a frame at that address whose
+        /// data is not 8 bytes — which the node refuses, so it can never have
+        /// run and must not be drawn as a deadline.
+        var deadline: Date? {
+            guard mode == 1, let target, target.lowercased() == Self.expiryVerifier,
+                  let raw = data else { return nil }
+            let body = raw.hasPrefix("0x") || raw.hasPrefix("0X") ? String(raw.dropFirst(2)) : raw
+            guard body.count == 16, let seconds = UInt64(body, radix: 16) else { return nil }
+            return Date(timeIntervalSince1970: TimeInterval(seconds))
+        }
+
+        /// An ERC-20 `transfer(address,uint256)` carried in this frame's data.
+        struct TokenTransfer: Equatable, Sendable {
+            /// Who the tokens go to — the ARGUMENT, not the frame's target,
+            /// which is the token contract.
+            let recipient: String
+            /// In the token's smallest unit.
+            let raw: Decimal
+        }
+
+        /// **A TOKEN SEND NAMES ITS CONTRACT AS THE TARGET** (prd §728), so a
+        /// room reading `target` as the recipient would list DAI's contract as
+        /// the person who got paid. Decoded only for the exact shape — the
+        /// selector and two full words — and only when the address word is a
+        /// real left-padded address, so a call that merely starts with the
+        /// same four bytes is not read as a payment.
+        var tokenTransfer: TokenTransfer? {
+            guard mode != 1, let raw = data else { return nil }
+            let body = (raw.hasPrefix("0x") || raw.hasPrefix("0X") ? String(raw.dropFirst(2)) : raw)
+                .lowercased()
+            guard body.count == 8 + 128, body.hasPrefix("a9059cbb") else { return nil }
+            let words = Array(body.dropFirst(8))
+            let addressWord = String(words[0..<64])
+            guard addressWord.prefix(24).allSatisfy({ $0 == "0" }),
+                  let amount = DevnetTokens.decimal(fromHex: "0x" + String(words[64..<128]))
+            else { return nil }
+            return TokenTransfer(recipient: "0x" + String(addressWord.suffix(40)), raw: amount)
+        }
+    }
+
+    /// One entry of the transaction's `signatures` list.
+    ///
+    /// **Read, never drawn from the frames** (prd §728): which key signed is
+    /// not in any frame — a VERIFY frame only says a signature at some index
+    /// was checked — so until this the room could say a transaction was
+    /// authorised and never by what.
+    struct Signature: Equatable, Codable, Sendable {
+        /// `0` arbitrary, `1` secp256k1, `2` P-256.
+        var scheme: UInt64
+        /// The address the entry names, or nil where it is empty — which for
+        /// secp256k1 and P-256 means "the sender".
+        var signer: String?
+        /// An empty `msg`: the signature is over this transaction itself
+        /// rather than over a separate 32-byte digest.
+        var signsTransaction: Bool
+
+        /// The address this signature speaks for.
+        func resolvedSigner(sender: String) -> String? {
+            guard scheme == 1 || scheme == 2 else { return nil }
+            return signer ?? sender
+        }
+
+        /// The key type, in the words a developer on this chain uses.
+        var schemeName: String {
+            switch scheme {
+            case 0: return String(localized: "arbitrary")
+            case 1: return "secp256k1"
+            case 2: return String(localized: "passkey (P-256)")
+            default: return String(localized: "scheme \(String(scheme))")
+            }
+        }
+    }
+
+    static func signatures(inTransaction tx: [String: Any]) -> [Signature] {
+        guard let raw = tx["signatures"] as? [[String: Any]] else { return [] }
+        return raw.map { entry in
+            let msg = (entry["msg"] as? String) ?? "0x"
+            let signer = (entry["signer"] as? String).flatMap { $0.count == 42 ? $0 : nil }
+            return Signature(scheme: hexInt(entry["scheme"]) ?? 0, signer: signer,
+                             signsTransaction: msg == "0x" || msg.isEmpty)
+        }
     }
 
     /// One frame's outcome.
@@ -91,6 +184,18 @@ enum FramesRead {
         /// time. A figure draws the state bar only when this is non-nil.
         var stateGasUsed: UInt64?
         var logCount: Int
+        /// **THE WIRE'S STATUS, KEPT WHOLE (prd §728).** EIP-8141 adds `0x2`
+        /// for a frame SKIPPED because an earlier frame of its atomic batch
+        /// failed — it never ran and its gas is refunded. `succeeded` above is
+        /// `status == 0x1`, so a skipped frame read as a reverted one and the
+        /// room raised an alarm about a step that did nothing at all.
+        ///
+        /// Optional with a default because this type is cached `Codable`, and a
+        /// non-Optional field fails the decode of every outcome already on disk.
+        var status: UInt64? = nil
+
+        /// Skipped by a failed atomic batch: never executed.
+        var skipped: Bool { status == 2 }
     }
 
     static func hexInt(_ any: Any?) -> UInt64? {
@@ -124,7 +229,8 @@ enum FramesRead {
             FrameOutcome(succeeded: (r["status"] as? String) == "0x1",
                          gasUsed: hexInt(r["gasUsed"]),
                          stateGasUsed: hexInt(r["stateGasUsed"]),
-                         logCount: (r["logs"] as? [[String: Any]])?.count ?? 0)
+                         logCount: (r["logs"] as? [[String: Any]])?.count ?? 0,
+                         status: hexInt(r["status"]))
         }
     }
 
@@ -274,7 +380,10 @@ struct FramesMove: Identifiable, Equatable, Codable {
         var seen: Set<String> = []
         var out: [String] = []
         for row in rows where row.frame.mode != 1 {
-            guard let to = row.frame.target, !to.isEmpty else { continue }
+            // A token send's target is the CONTRACT; the person is the
+            // transfer's own argument (prd §728).
+            guard let to = row.frame.tokenTransfer?.recipient ?? row.frame.target,
+                  !to.isEmpty else { continue }
             guard to.lowercased() != sender.lowercased() else { continue }
             if seen.insert(to.lowercased()).inserted { out.append(to) }
         }
@@ -399,6 +508,64 @@ struct FramesMove: Identifiable, Equatable, Codable {
     /// subtracted only from whoever actually paid it, which is the difference
     /// between a curve and a guess on a chain where somebody else can pay.
     var deltaWei: Decimal?
+
+    /// **WHICH KEYS SIGNED IT (prd §728)**, in the envelope's order. Nil where
+    /// the transaction was not read with them — a cached move from before this
+    /// field existed, or a fixture — which draws nothing rather than "unsigned".
+    var signatures: [FramesRead.Signature]? = nil
+
+    /// **THE TOKENS IT MOVED FOR THE ADDRESS THAT READ IT (prd §728).** Every
+    /// ETH movement is an EIP-7708 log, so `deltaWei` is exact for the coin —
+    /// and a DAI send's own `deltaWei` is just the fee, which drew a token
+    /// payment as "Sent −0.0002 test ETH". Nil where tokens were not read;
+    /// empty where they were and nothing moved.
+    var tokenMoves: [FramesTokenMove]? = nil
+
+    /// The transaction's deadline, if it carried an expiry frame.
+    var deadline: Date? { rows.lazy.compactMap(\.frame.deadline).first }
+
+    /// **THE FIGURE A ROW LEADS WITH.** A token when this address moved one
+    /// and the coin moved only the fee (or nothing), because then the fee is
+    /// not what the transaction was for; the coin otherwise.
+    var leadToken: FramesTokenMove? {
+        guard let first = tokenMoves?.first(where: { $0.raw != 0 }) else { return nil }
+        if let delta = deltaWei, delta > 0 { return nil }
+        let movedCoin = rows.contains { $0.valueWeiHex != nil && $0.valueLanded != false }
+        return movedCoin ? nil : first
+    }
+}
+
+/// ONE TOKEN, MOVED BY ONE TRANSACTION, from the point of view of the address
+/// that read it (prd §728).
+struct FramesTokenMove: Equatable, Codable, Sendable {
+    var contract: String
+    /// Signed, in the token's smallest unit: out is negative.
+    var raw: Decimal
+    /// The token's own `symbol()`, or nil where it did not answer.
+    var symbol: String?
+    /// The token's own `decimals()`. **Never assumed** — `DevnetTokens`' rule.
+    var decimals: Int?
+
+    /// The asset's name: its symbol, or its short contract.
+    var name: String {
+        if let symbol, !symbol.isEmpty { return symbol }
+        guard contract.count >= 10 else { return contract }
+        return String(contract.prefix(6)) + "…" + String(contract.suffix(4))
+    }
+
+    /// "−5 DAI". **Without decimals the raw count is said with no scaling**
+    /// rather than a guessed 18, and still names the asset.
+    var signedLine: String {
+        let sign = raw < 0 ? "\u{2212}" : "+"
+        let magnitude = raw < 0 ? -raw : raw
+        guard let decimals else {
+            return "\(sign)\(NSDecimalNumber(decimal: magnitude).stringValue) \(name)"
+        }
+        var divisor = Decimal(1)
+        for _ in 0..<max(0, decimals) { divisor *= 10 }
+        let amount = NSDecimalNumber(decimal: magnitude / divisor).doubleValue
+        return "\(sign)\(DevnetTokens.quantity(amount)) \(name)"
+    }
 }
 
 /// One address, as the chain currently reports it.
@@ -462,6 +629,8 @@ enum FramesFrames {
 
     private static func outcome(of row: FramesFrameRow) -> RoomFrames.Outcome {
         guard let landed = row.outcome else { return .unread }
+        // Skipped is not failed (prd §728): the step never ran.
+        if landed.skipped { return .skipped }
         if !landed.succeeded { return .failed }
         // A frame that carried value the chain never logged ran and was undone.
         // `valueLanded` is nil for a frame that carried none, which is most of

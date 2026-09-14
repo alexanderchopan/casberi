@@ -162,6 +162,20 @@ enum DevnetTokens {
         return f.string(from: NSNumber(value: amount)) ?? String(amount)
     }
 
+    /// A contract's own `symbol()` and `decimals()`, for a token an address
+    /// MOVED but no longer holds — `holdings` skips a zero balance, so a room
+    /// naming the DAI somebody sent away needs to ask separately (prd §728).
+    /// Neither is assumed on a failed read.
+    static func metadata(contract: String,
+                         call: (String, [Any]) async -> Any?) async -> (symbol: String?, decimals: Int?) {
+        let symbol = decodeString(await call(
+            "eth_call", [["to": contract, "data": symbolData], "latest"]) as? String)
+        let decimals = (decimal(fromHex: await call(
+            "eth_call", [["to": contract, "data": decimalsData], "latest"]) as? String))
+            .map { NSDecimalNumber(decimal: $0).intValue }
+        return (symbol, decimals)
+    }
+
     /// Read what one address holds.
     ///
     /// `call` is the room's own JSON-RPC door, handed in rather than reached
@@ -169,12 +183,22 @@ enum DevnetTokens {
     /// host list, failover and logging.
     static func holdings(address: String,
                          cap: Int = 12,
+                         logs prefetched: [[String: Any]]? = nil,
                          call: (String, [Any]) async -> Any?) async -> [Holding] {
-        async let out = call("eth_getLogs", [["fromBlock": "0x0", "toBlock": "latest",
-                                              "topics": [transferTopic, topic(address)]]])
-        async let into = call("eth_getLogs", [["fromBlock": "0x0", "toBlock": "latest",
-                                               "topics": [transferTopic, NSNull(), topic(address)]]])
-        let logs = ((await out) as? [[String: Any]] ?? []) + ((await into) as? [[String: Any]] ?? [])
+        // **A ROOM THAT ALREADY ASKED FOR THESE LOGS HANDS THEM IN (prd §728).**
+        // The Frames room reads the same two Transfer filters to find what each
+        // transaction moved, so asking again here was two identical requests
+        // per address per sweep.
+        let logs: [[String: Any]]
+        if let prefetched {
+            logs = prefetched
+        } else {
+            async let out = call("eth_getLogs", [["fromBlock": "0x0", "toBlock": "latest",
+                                                  "topics": [transferTopic, topic(address)]]])
+            async let into = call("eth_getLogs", [["fromBlock": "0x0", "toBlock": "latest",
+                                                   "topics": [transferTopic, NSNull(), topic(address)]]])
+            logs = ((await out) as? [[String: Any]] ?? []) + ((await into) as? [[String: Any]] ?? [])
+        }
         var found: [Holding] = []
         // Bounded: an address that has touched dozens of tokens is a test
         // harness, not a person, and the treemap draws six cells anyway.

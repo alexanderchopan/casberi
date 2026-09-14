@@ -165,6 +165,12 @@ struct FramesRoomFigure: View {
             // empty account, and on a devnet that may have been reset it is
             // the likeliest reading of all.
             note(String(localized: "Couldn't reach the chain."))
+        } else if section == .home, let alert = head.alert {
+            // **THE CHAIN, BEFORE ITS BALANCE (prd §728).** A crown over a
+            // chain that stopped or was wiped states a figure about the wrong
+            // thing with full confidence; the balance is still said, a line
+            // down, as a fact rather than as the headline.
+            chainAlert(alert)
         } else if isEmpty(section) {
             // **THE EMPTY STATE IS IN THE SLOT (prd §611)** — the chip is
             // always there now, so what it opens onto has to say what the
@@ -444,6 +450,25 @@ struct FramesRoomFigure: View {
         return [RoomPermissions.Kind(label: String(localized: "Sponsors"), count: payers)]
     }
 
+    /// **WHAT THE CHAIN ITSELF IS DOING (prd §728)** — relaunched or stalled,
+    /// said in Home's place: the phrase in the headline rung every scope uses,
+    /// one sentence on what it changes, and what the account holds.
+    @ViewBuilder private func chainAlert(_ alert: FramesChainWatch.Alert) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text(FramesChainWatch.headline(alert, now: .now))
+                .dsText(.stat24).foregroundStyle(DS.textPrimary)
+                .lineLimit(1).minimumScaleFactor(0.7)
+            Text(FramesChainWatch.consequence(alert))
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let held = Self.heldETH(head) {
+                Text(String(localized: "Holds \(FramesMoney.eth(held)) test ETH"))
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .monospacedDigit()
+            }
+        }
+    }
+
     @ViewBuilder private func note(_ text: String) -> some View {
         Text(text)
             .dsText(.subhead13)
@@ -606,43 +631,29 @@ struct FramesRoomList: View {
     /// true — that this phone sent it, and how many frames went — and nothing
     /// else.
     private func pendingRow(_ item: FramesPending) -> some View {
-        // **THE CLAIM DECAYS RATHER THAN POPPING** (2026-09-01).
-        //
-        // `reconcilePending` drops a hash the chain has not carried inside its
-        // window, and its own doc says why: we cannot tell "still queued" from
-        // "dropped" from here, so we stop narrating rather than call it
-        // failed. That is right and it was drawn wrong — the row stood at full
-        // strength saying "Sending…" and then was simply gone, which from
-        // outside reads as the transaction being lost rather than as us losing
-        // our grip on a claim.
-        //
-        // A 1Hz tick, bounded by construction: it exists only while something
-        // is pending, in a stack that is already redrawing a spinner, and
-        // blocks here land in seconds so the common life of this view is two
-        // or three ticks.
+        // **THE ROW SAYS WHERE THE SEND IS (prd §728).** It used to stand at
+        // full strength saying "Sending…" and then dim and vanish, because
+        // nothing could tell "still queued" from "dropped". Every host is now
+        // asked, and every send carries a deadline, so the row can say the
+        // true thing: waiting, in a block, dropped, or past the point where it
+        // can ever land. A 1Hz tick only for the deadline's countdown, and only
+        // while something is pending.
         TimelineView(.periodic(from: item.at, by: 1)) { tick in
-            let age = tick.date.timeIntervalSince(item.at)
-            let doubt = FramesLiveState.pendingDoubtAfter
-            let span = max(1, FramesLiveState.pendingWindow - doubt)
-            // Never below a floor: a row you can barely see is a row that has
-            // already made the claim this dim exists to withdraw.
-            let strength = age <= doubt ? 1
-                : max(0.4, 1 - (age - doubt) / span * 0.6)
             HStack(spacing: DS.Space.s3) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.legs == 1
                          ? String(localized: "1 frame")
                          : String(localized: "\(String(item.legs)) frames"))
                         .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    Text(String(localized: "Sending\u{2026}"))
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    Text(FramesChainWatch.pendingLine(state: item.state, deadline: item.deadline,
+                                                      now: tick.date))
+                        .dsText(.label12)
+                        .foregroundStyle(item.state.isFinal ? DS.destructive : DS.textTertiary)
                 }
                 Spacer(minLength: 0)
-                DSSpinner(size: .mini)
+                if !item.state.isFinal { DSSpinner(size: .mini) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .opacity(strength)
-            .animation(DS.Motion.standard, value: strength)
         }
         .transition(.opacity)
     }
@@ -816,6 +827,11 @@ struct FramesMoveRow: View {
     /// did not read says "Transaction" rather than guessing a direction — the
     /// nil-is-not-zero rule this room already keeps for the figure column.
     private var titleText: String {
+        // A token payment is named by the token (prd §728): its coin delta is
+        // only the fee, and "Sent" over the fee was true of the wrong thing.
+        if let token = move.leadToken {
+            return token.raw > 0 ? String(localized: "Received") : String(localized: "Sent")
+        }
         guard let delta = move.deltaWei, delta != 0 else {
             return String(localized: "Transaction")
         }
@@ -850,7 +866,12 @@ struct FramesMoveRow: View {
             // which is what left the metadata line no room at all. It is exact
             // (§548): every ETH movement is a log and the receipt names both
             // the fee and who paid it. Nil draws nothing rather than a zero.
-            if let delta = move.deltaWei {
+            if let token = move.leadToken {
+                Text(token.signedLine)
+                    .dsText(.price16)
+                    .foregroundStyle(token.raw > 0 ? DS.confirm : DS.textPrimary)
+                    .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+            } else if let delta = move.deltaWei {
                 // One rung for a signed amount in a row (prd §587) — see
                 // `HegotaMoveRow` for the measurement. `callout15` is 17pt
                 // REGULAR, so this figure was the same size as the sentence
@@ -1137,7 +1158,12 @@ private struct FramesSequenceCanvas: View, Animatable {
                     let rect = CGRect(x: x, y: y, width: w, height: height)
                     let path = Path(roundedRect: rect, cornerRadius: 3)
                     let ran = cell.outcome?.succeeded ?? true
-                    if cell.valueLanded == false {
+                    // **SKIPPED: DASHED, NEUTRAL (prd §728)** — it never ran,
+                    // so it is neither a failure nor a rollback.
+                    if cell.outcome?.skipped == true {
+                        ctx.stroke(path, with: .color(palette.verify),
+                                   style: StrokeStyle(lineWidth: 1.5, dash: [2, 2]))
+                    } else if cell.valueLanded == false {
                         ctx.stroke(path, with: .color(palette.failed),
                                    style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
                     } else if ran {
