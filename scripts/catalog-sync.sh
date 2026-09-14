@@ -41,11 +41,6 @@ cd "$(dirname "$0")/.."
 
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
 ONBOARD="Casberi/Casberi/Screens/IntroCover.swift"
-# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
-# so a guard can neither fail nor pass because its code moved next door.
-FEED_DIR="$(mktemp -d -t feedscreen)"
-FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 INDEX="website/index.html"
 # Overridable so the check can be proven against fixtures without mutating a
 # tracked file (a peer session's `git add -A` would commit the mutation).
@@ -57,6 +52,14 @@ fi
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
+
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door. The
+# joined copy lives in $tmp: a plain `mktemp -d` is the one form both mktemps
+# accept — GNU's `-t feedscreen` fails ("too few X's"), which is what turned
+# the audits job red on every push since §718. CI runs this on ubuntu.
+FEED="$tmp/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 
 # --- 1. Canonical sets from the Swift source of truth ---------------------
 # Each Offer(...) declares name and connectable on the same physical line.
