@@ -259,6 +259,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-xArchiveImport` — import an UNZIPPED X archive folder (prd §280, 2026-08-02, Model/XArchiveImport.swift; screen → docs/hooks/imports.md · prd §280
 - **X joined OEmbed.endpoints the same day, and it is the inverse of the Instagram entry removed alongside it** → docs/hooks/imports.md · prd §280
 - `-xLiveProbe YES` — X's live-notifications door, read with the person's own browser-session cookies via an in-app sign-in, not the paid public API §280 declined → docs/hooks/bridges.md · prd §701
+- `-igLiveProbe YES` `-igLiveSession` — Instagram's live door: notifications and saved posts with the person's own web-session cookies, and a live save FILLS the export's pointer by shortcode. Only a refusal clears the session; a checkpoint keeps it → docs/hooks/bridges.md · prd §726
 - **An X notice's post rides `quote`, NEVER `postText` (prd §704).** Row and sheet both LEAD with `postText`, so stamping it drops the news. `SocialSheet.Shape.notice`: after the words test, before the save fallback, gated on the RECORD → prd §704
 - **Feeds (RSS + the four feed-follow bridges)** (`-feedFollow` `-feedHealthProbe`) → docs/hooks/bridges.md · prd §312
 - **The reading rooms, past §312** → docs/hooks/rooms.md · prd §455

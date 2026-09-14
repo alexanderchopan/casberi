@@ -473,8 +473,25 @@ enum InstagramImport {
         }.sorted { $0.date > $1.date }
         summary.dropped += max(0, dated.count - tapCap)
 
+        // THE SAME POST UNDER ANOTHER SPELLING (prd §726). The live door lands
+        // a save under its canonical permalink, and Meta's export writes its
+        // hrefs `/p/` or `/reel/`, with or without `www` — so an exact-ref
+        // `seen` would land one post twice. The shortcode is the post.
+        let prefix = "instagram:\(marker):"
+        var codes: [String: String] = [:]
+        for known in seen where known.hasPrefix(prefix) {
+            if let code = InstagramLive.shortcode(inPermalink: String(known.dropFirst(prefix.count))) {
+                codes[code] = known
+            }
+        }
+
         for row in dated.prefix(tapCap) {
             let ref = "instagram:\(marker):\(row.link)"
+            let code = InstagramLive.shortcode(inPermalink: row.link)
+            if !seen.contains(ref), let code, codes[code] != nil {
+                summary.skipped += 1
+                continue
+            }
             guard !seen.contains(ref) else {
                 // Already here — repair its author if it predates the field.
                 // `isLive` because a heal or a CloudKit delete can tombstone a
@@ -488,6 +505,7 @@ enum InstagramImport {
                 continue
             }
             seen.insert(ref)
+            if let code { codes[code] = ref }
             // The handle is the only name this row will ever have; a rare
             // entry with none falls back to the permalink so it is still
             // openable rather than being dropped.

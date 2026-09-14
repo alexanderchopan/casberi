@@ -27,6 +27,8 @@ enum ProbeHooks {
         // the same reason `-wcProjectID` is: anything credential-shaped stays
         // out of the log, so nobody has to remember which ones are safe.
         "-trelloKey",
+        // An Instagram web session — full account access (prd §726).
+        "-igLiveSession",
         // The `.p8` itself — a real ECDSA private key, and the most sensitive
         // value any probe in this file takes. `-ascKeyID`/`-ascIssuer` are
         // deliberately NOT here: they are identifiers, useless without the
@@ -614,6 +616,33 @@ enum ProbeHooks {
         // instead of a silently empty room.
         Hook(key: "xLiveProbe") { _, _ in
             Task { @MainActor in await XLiveNotifications.diagnose() }
+        },
+        // `-igLiveSession "<sessionid>:<csrftoken>:<ds_user_id>"` — store an
+        // Instagram web session lifted from a browser, exactly as the in-app
+        // sign-in would (prd §726; `-spotifySession`'s door, three cookies
+        // wide). Split on the LAST two colons: a `sessionid` carries `%3A`
+        // rather than a literal colon, but nothing here should depend on that.
+        // On `secretArgKeys`, so `probeArgs:` never echoes it.
+        Hook(key: "igLiveSession") { spec, _ in
+            let parts = spec.split(separator: ":").map(String.init)
+            guard parts.count >= 3 else {
+                NSLog("[Casberi] igLive| -igLiveSession wants sessionid:csrftoken:ds_user_id")
+                return
+            }
+            let user = parts[parts.count - 1], csrf = parts[parts.count - 2]
+            let session = parts.dropLast(2).joined(separator: ":")
+            InstagramLiveAuth.store(sessionID: session, csrfToken: csrf, userID: user)
+            NSLog("[Casberi] igLive| session stored for user id %@", user)
+        },
+        // `-igLiveProbe YES` — the Instagram live read, link by link (prd
+        // §726): stored / signed in as / inbox status and its `message` /
+        // stories parsed / first three / saved status / first three. The
+        // measure tool for a bridge authored against Meta's undocumented web
+        // API with no live session on any build host — every silence has a
+        // name here (`InstagramLive.Failure`) so "connected and empty" is a
+        // one-launch diagnosis.
+        Hook(key: "igLiveProbe") { _, _ in
+            Task { @MainActor in await InstagramLive.diagnose() }
         },
         // `-xPersonProbe <handle>` — your years with one person (2026-08-18,
         // prd §396), line by line: one `xPerson|` per year, then the card's

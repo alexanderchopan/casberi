@@ -274,6 +274,23 @@ enum BridgeRefresh {
                 _ = await SpotifyIngest.refresh(context: context)
             }
         }
+        // Instagram's live door (prd §726) — the person's own session, read
+        // on `dueForHeal`'s ten-minute throttle and NEVER every foreground:
+        // Meta flags a busy session harder than X or Spotify do, and the cost
+        // of a flag lands on the person's real account, not on this app. A
+        // pull-to-refresh (`force`) reads regardless, the gesture's own
+        // contract.
+        // A PAUSED seat reads nothing: every other seat gets that from
+        // `connected(_:)`, and this gate reads the Keychain, not the store —
+        // so the pause has to be asked for by name.
+        let instagramPaused = store.bridges.contains { $0.id == "instagram" && $0.status == .paused }
+        if InstagramLiveAuth.connected, !instagramPaused,
+           force || BridgeRefresh.dueForHeal("instagram.live") {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await sweepTimed("instagram.live") { await InstagramLive.refresh(context: context) }
+            }
+        }
         if !RSSStore.shared.feeds.isEmpty {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
