@@ -54902,3 +54902,56 @@ holds at the 132px this now requests (`RemoteThumb` asks `size * 3` and
 **Verified:** built clean for the iOS simulator; `tiktok-live-selftest.sh` (34 checks) and the catalog-mode, network-reach, setup-copy, keychain, receipts, redaction, liveness, dead-closure, defaults-lock, ref-shape, demo-parity, Mac parity, catalog-sync, design-template, harness-exists and prd-index audits, all green. Demo parity caught one false accusation on the first pass: the importer stamps `source: source`, so the live file's literal `"TikTok"` became the only bridge the audit could read and it judged the demo's `.note` rows against `.link`; the live file uses `TikTokImport.source` instead, the importer's own idiom. **UNSEEN on a device, and no sign-in has run through the app**: every measured fact above came from Chrome, so the WKWebView capture and a request from `URLSession` carrying only the jar are the first things `-tiktokLiveProbe` has to confirm. Mac Catalyst not compiled in this pass.
 
 **The taglines follow the first door (user: "yes change both insta and tiktok appropriately", 2026-09-14).** Both catalogue words had moved to Sign in while the taglines still described the export: Instagram's "Your posts and saves, findable" and TikTok's "Your saves, before the link expires". They are now "Notifications and saves, as they happen" and "Likes, comments and follows, as they happen", mirrored on the website's catalog shelf and docs list. TikTok's promises likes, comments and follows, the three shapes this entry marks UNMEASURED: the first `-tiktokLiveProbe` on an account that has them is what makes that tagline a measured claim. X's tagline was not in the ask and is unchanged.
+## §733 — An Instagram notice is a live row: its namespace joins the live set, and a seat's live half is looked up by source, not guessed from a spelling (2026-09-14)
+
+**The miss, and it is §704's exactly.** §726 gave Instagram a live door whose
+notices land under `ig-live:notif:`, and the prefix never reached
+`Corpus.liveRefPrefixes`. Instagram is a `bulkImportSources` member, so every
+live notice was kept out of the All feed, and `Corpus.arrivedLive` read it as
+an archive row — the thing sheet wrote "From your Instagram archive." under a
+notice minutes old. §704 fixed this for X and wrote down that the other bulk
+sources had no live half; §726 made that false a day later and nothing said so.
+
+**A second, quieter miss, on both X and Instagram.** `ImportRemoval.hasLiveHalf`
+decided whether a source had a live half by asking whether any live prefix
+began with `source.lowercased() + ":"`. That holds for Telegram's
+`telegram:post:` and for nothing else: `x-live:` is not `x:` and `ig-live:` is
+not `instagram:`. Both seats took the SQL-count fast path, so "Remove import"
+named a count that included live notices. `removeAll` itself was always right —
+it steps over rows by `arrivedLive`, not by `hasLiveHalf` — so the harm was a
+wrong number on the button, never a wrong deletion.
+
+**The ruling: keep the namespaces, name the owner.** Renaming `ig-live:notif:`
+into the `instagram:` family (say `instagram:live:notif:`, which collides with
+none of the importer's `instagram:saved:`/`instagram:comment:` refs) would have
+made the spelling rule true again, and it is the wrong trade: every notice
+already landed carries the old ref and is CloudKit-synced, so a rename needs a
+rewrite-and-dedupe backfill on every device, and X would need the same for a
+namespace shipped since §701. A map needs none. `Corpus.liveRefPrefixesBySource`
+is `[source: prefixes]`; `liveRefPrefixes` (what `arrivedLive` reads) is
+DERIVED from it, never spelled twice; and `hasLiveHalf` asks the map by source.
+Not one stored row changes and there is no CloudKit deploy.
+
+**The saved-post half is untouched, deliberately.** A live save lands under the
+import's own `instagram:saved:` namespace (§726: a live save and an imported
+save are one object), so it stays an import row — out of All, and removable by
+"Remove import". That is §726's decision, not this miss.
+
+**Guarded** in `scripts/social-sheet-selftest.sh`, beside X's §704 guard: the
+literal `InstagramLive.noticeRefPrefix` builds must be Instagram's entry in the
+map (and X's likewise); the flat set must be derived; `hasLiveHalf` must read
+the map, and the spelling inference must be absent from a comment-stripped
+`ImportRemoval.swift`; and every map key must be a `bulkImportSources` member,
+because a key the source set doesn't hold is a live half nothing ever asks
+about. Proven by mutation: restoring the spelling rule, dropping the Instagram
+entry and lower-casing the X key each fail the pass.
+
+**For a seat that adds a live half next:** add its row to the map in the same
+change that lands its first live row. TikTok's live door (§731), which landed
+while this was in review, chose a prefix inside its own family
+(`tiktok:live:notif:`) so the spelling rule would see it; it holds its row in
+the map like every other seat, and the spelling no longer matters.
+
+NOT PROVEN HERE: `swiftc -parse` and the self-tests/audits only; no
+`xcodebuild`, no simulator (a live Instagram session is not reachable from this
+host, and §726's door is itself unmeasured).

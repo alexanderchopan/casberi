@@ -39,7 +39,9 @@ POSTS="Casberi/Casberi/Screens/SocialPostViews.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
 THING="Casberi/Shared/Thing.swift"
 XLIVE="Casberi/Casberi/Model/XLiveNotifications.swift"
-for f in "$SHEET" "$SOURCE" "$CARD" "$VIEW" "$CONTENT" "$POSTS" "$CATALOG" "$THING" "$XLIVE"; do
+IGLIVE="Casberi/Casberi/Model/InstagramLive.swift"
+REMOVAL="Casberi/Casberi/Model/ImportRemoval.swift"
+for f in "$SHEET" "$SOURCE" "$CARD" "$VIEW" "$CONTENT" "$POSTS" "$CATALOG" "$THING" "$XLIVE" "$IGLIVE" "$REMOVAL"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -95,8 +97,24 @@ guard "the archive sentence excludes a row that arrived live" \
 # X archive." — and nothing anywhere reports an error.
 guard "the live notice namespace is the literal XLiveNotifications builds" \
   'static let sourceRefPrefix = "x-live:notif:"' "$XLIVE"
-guard "…and the same literal is in Corpus.liveRefPrefixes" \
-  '"x-live:notif:"' "$THING"
+guard "…and the same literal is X's entry in Corpus.liveRefPrefixesBySource" \
+  '^[[:space:]]*"X": \["x-live:notif:"\],' "$THING"
+# INSTAGRAM, the same miss one seat over (prd §733): §726's notices landed
+# under `ig-live:notif:` for a day with the prefix absent from the live set, so
+# every one was kept out of All and wore "From your Instagram archive."
+guard "the Instagram notice namespace is the literal InstagramLive builds" \
+  'static let noticeRefPrefix = "ig-live:notif:"' "$IGLIVE"
+guard "…and the same literal is Instagram's entry in Corpus.liveRefPrefixesBySource" \
+  '^[[:space:]]*"Instagram": \["ig-live:notif:"\],' "$THING"
+# The flat set `arrivedLive` reads is DERIVED from the map, never spelled again
+# — a second spelling is how a seat reaches one reader and not the other.
+guard "Corpus.liveRefPrefixes is derived from the per-source map" \
+  'static let liveRefPrefixes: Set<String> = Set\(liveRefPrefixesBySource\.values\.joined\(\)\)' "$THING"
+# `hasLiveHalf` asks the map BY SOURCE (prd §733). It used to infer the owner
+# from the spelling (`source.lowercased() + ":"`), which `x-live:` and
+# `ig-live:` both fail — so "Remove import" counted live notices as imported.
+guard "ImportRemoval.hasLiveHalf asks the per-source map" \
+  'Corpus\.liveRefPrefixesBySource\[source\]' "$REMOVAL"
 guard "the reception block is drawn by the sheet" \
   'SocialReceptionCard\(reception: reception\)' "$VIEW"
 guard "the reception is recomposed when the live read answers" \
@@ -190,6 +208,34 @@ absent "the sheet no longer gates its anatomy on a source list" \
 # shape does, one level up.
 absent "the chat branch no longer asks isSocial" \
   'case \.chat:.*SocialThread\.isSocial' "$TMP/content.nc"
+
+# The spelling inference is GONE from ImportRemoval, not merely bypassed
+# (prd §733) — `ImportRemoval.swift` names it in the prose that explains why.
+strip "$REMOVAL" > "$TMP/removal.nc"
+absent "ImportRemoval no longer infers a live half from a prefix's spelling" \
+  'lowercased\(\) \+ ":"' "$TMP/removal.nc"
+
+# Every key of the live map must be a bulk-import source, spelled exactly. A
+# key the source set doesn't hold is a live half nothing ever asks about: a
+# "instagram" typo makes `hasLiveHalf("Instagram")` false and the count takes
+# the fast path again, with every notice still let into All by the flat set.
+python3 - "$THING" <<'PY' || fail=1
+import re, sys
+thing = open(sys.argv[1]).read()
+bulk = set(re.findall(r'"([^"]+)"', re.search(
+    r'static let bulkImportSources: Set<String> = \[(.*?)\]', thing, re.S).group(1)))
+block = re.search(
+    r'static let liveRefPrefixesBySource: \[String: Set<String>\] = \[(.*?)\n\s*\]', thing, re.S)
+if not block:
+    print("  ✗ Corpus.liveRefPrefixesBySource not found"); sys.exit(1)
+keys = re.findall(r'^\s*"([^"]+)":', block.group(1), re.M)
+stray = [k for k in keys if k not in bulk]
+if not keys or stray:
+    print("  ✗ liveRefPrefixesBySource keys not in bulkImportSources: "
+          + (", ".join(stray) or "(no keys parsed)"))
+    sys.exit(1)
+print("  ✓ every live-map key is a bulk-import source (%s)" % ", ".join(keys))
+PY
 
 # The source set is a literal for speed; the catalog is the authority. A
 # `Network` seat added or renamed without this list fails the build rather than

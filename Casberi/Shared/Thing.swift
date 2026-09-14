@@ -297,11 +297,34 @@ enum Corpus {
     /// the thing sheet called it an archive row and wrote "From your X
     /// archive." under a notice that arrived four minutes ago.
     ///
-    /// **TikTok joined on 2026-09-14 (prd §731)** with its Activity inbox,
-    /// under `tiktok:live:notif:` — deliberately inside the `tiktok:` family,
-    /// so `ImportRemoval.hasLiveHalf` sees it and "Remove import" steps over
-    /// the notices. Snapchat still has no live half.
-    static let liveRefPrefixes: Set<String> = ["telegram:post:", "x-live:notif:", "tiktok:live:notif:"]
+    /// **Instagram joined on 2026-09-14 (prd §733)**, one day after §726 gave
+    /// it a live door whose notices land under `ig-live:notif:` — and it was
+    /// §704's miss a second time: the door shipped, the prefix never reached
+    /// this set, and every notice was kept out of All and introduced as
+    /// "From your Instagram archive."
+    ///
+    /// **TikTok joined the same day (prd §731)** with its Activity inbox,
+    /// under `tiktok:live:notif:`. Snapchat has no live half.
+    ///
+    /// **Keyed by SOURCE, and that is the fix for a second, quieter miss.**
+    /// `ImportRemoval.hasLiveHalf` used to infer the owner from the spelling
+    /// (`prefix.hasPrefix(source.lowercased() + ":")`), which holds for
+    /// `telegram:post:` and for nothing else: `x-live:` is not `x:` and
+    /// `ig-live:` is not `instagram:`, so both seats took the SQL-count fast
+    /// path and "Remove import" offered to remove live notices it then
+    /// (correctly) stepped over. Renaming the namespaces into their source's
+    /// family would have needed a rewrite of every landed, CloudKit-synced
+    /// row; naming the owner here needs none.
+    static let liveRefPrefixesBySource: [String: Set<String>] = [
+        "Telegram": ["telegram:post:"],
+        "X": ["x-live:notif:"],
+        "Instagram": ["ig-live:notif:"],
+        "TikTok": ["tiktok:live:notif:"],
+    ]
+
+    /// Every live namespace, whatever its source — what `arrivedLive` reads.
+    /// Derived, never spelled twice.
+    static let liveRefPrefixes: Set<String> = Set(liveRefPrefixesBySource.values.joined())
 
     /// Did this row arrive live rather than out of an imported file?
     static func arrivedLive(_ thing: Thing) -> Bool {

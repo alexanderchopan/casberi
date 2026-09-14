@@ -12,10 +12,9 @@
 #     measured) — classified by HTTP status alone it reads as an empty inbox,
 #     the cookies are never cleared, and the page says "signed in" forever
 #   · a sign-out visit's cookie jar stored as a session
-#   · a ref prefix outside `tiktok:` hides from ImportRemoval.hasLiveHalf, so
-#     "Remove import" deletes every notice
-#   · a ref prefix missing from Corpus.liveRefPrefixes keeps every notice out
-#     of All — the Instagram live door's state as of this writing
+#   · a ref prefix missing from TikTok's entry in Corpus.liveRefPrefixesBySource
+#     keeps every notice out of All and lets "Remove import" count them — the
+#     Instagram live door's state for its first day (prd §733)
 #
 # The system-notice fixtures are the MEASURED shapes (2026-09-14). The like,
 # comment and follow fixtures are the payload names TikTok's notice model uses
@@ -34,8 +33,8 @@ done
 
 grep -qF 'static let refPrefix = "tiktok:live:notif:"' "$FEED" \
   || { echo "✗ TikTokLiveFeed.refPrefix moved — it must be the literal \"tiktok:live:notif:\""; exit 1; }
-grep -qF '"tiktok:live:notif:"' "$THING" \
-  || { echo "✗ \"tiktok:live:notif:\" is not in Corpus.liveRefPrefixes — notices land and never reach the All feed"; exit 1; }
+grep -qE '^[[:space:]]*"TikTok": \["tiktok:live:notif:"\],' "$THING" \
+  || { echo "✗ \"tiktok:live:notif:\" is not TikTok's entry in Corpus.liveRefPrefixesBySource — notices land and never reach the All feed"; exit 1; }
 grep -qE 'if case \.refused = failure \{ TikTokLiveAuth\.clear\(\) \}' "$LIVE" \
   || { echo "✗ TikTokLive.refresh no longer clears the session on a refusal (and only a refusal) — §711"; exit 1; }
 # Code lines only: the file's own header quotes the page's `is_mark_read: 1`.

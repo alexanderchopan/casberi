@@ -31,9 +31,10 @@ import Foundation
 /// prints the keys and one raw notice, so the first real like is a one-launch
 /// correction rather than a guess.
 enum TikTokLiveFeed {
-    /// Starts with `tiktok:` on purpose: `ImportRemoval.hasLiveHalf` asks
-    /// whether a live prefix begins with the SOURCE's own name, and that is
-    /// what keeps "Remove import" from deleting the notices. Distinct from
+    /// Spelled a second time as TikTok's entry in
+    /// `Corpus.liveRefPrefixesBySource` (prd §733), which is what lets a
+    /// notice into All and keeps "Remove import" from counting it; the
+    /// `tiktok:` family no longer matters to either. Distinct from
     /// every `tiktok:video:` / `tiktok:post:` / `tiktok:comment:` the export
     /// writes, so a notice about a video never shares a row with the video.
     static let refPrefix = "tiktok:live:notif:"

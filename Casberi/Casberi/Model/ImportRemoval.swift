@@ -41,14 +41,15 @@ enum ImportRemoval {
     static func count(source: String, context: ModelContext) -> Int {
         guard Corpus.bulkImportSources.contains(source) else { return 0 }
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
-        // The fast path, and the only one the four original bulk sources ever
-        // take: none of them has a live half, so a SQL COUNT is the answer.
+        // The fast path, for a bulk source with no live half (Snapchat,
+        // TikTok): every row is imported, so a SQL COUNT is the answer.
         guard hasLiveHalf(source) else {
             return (try? context.fetchCount(descriptor)) ?? 0
         }
-        // Telegram does have one (prd §456): its followed-channel posts share
-        // this source and are NOT part of any import, so counting them here
-        // would offer to remove rows this button must never touch.
+        // Telegram has one (prd §456), and X and Instagram their notices
+        // (§704, §733): those rows share this source and are NOT part of any
+        // import, so counting them here would offer to remove rows this
+        // button must never touch.
         // `propertiesToFetch` keeps the walk to the one column that decides.
         var scan = descriptor
         scan.propertiesToFetch = [\.sourceRef]
@@ -61,8 +62,14 @@ enum ImportRemoval {
     /// Read off the registry rather than hardcoded, so a second such seat is
     /// covered the day it declares a prefix — and so this file never needs to
     /// know which seat it is.
+    ///
+    /// Asked BY SOURCE (prd §733). This used to infer the owner from the
+    /// prefix's spelling (`source.lowercased() + ":"`), which only Telegram's
+    /// `telegram:post:` satisfies: X's `x-live:notif:` and Instagram's
+    /// `ig-live:notif:` both read as "no live half", so the count took the
+    /// SQL fast path and named live notices among the rows it would remove.
     static func hasLiveHalf(_ source: String) -> Bool {
-        Corpus.liveRefPrefixes.contains { $0.hasPrefix(source.lowercased() + ":") }
+        !(Corpus.liveRefPrefixesBySource[source] ?? []).isEmpty
     }
 
     /// Removes every thing from an imported source, its receipt included, and

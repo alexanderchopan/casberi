@@ -110,6 +110,12 @@ enum InstagramLive {
     /// Distinct from EVERY `instagram:` ref the importer writes, on purpose —
     /// `XLiveNotifications.sourceRefPrefix`'s reasoning: a notice about a post
     /// and the post itself can share an id and must never share a row.
+    ///
+    /// **Spelled a second time in `Corpus.liveRefPrefixesBySource`, under
+    /// "Instagram" (prd §733)**, and the two must match: that entry is what
+    /// lets a notice into All, keeps the sheet from calling it an archive row,
+    /// and keeps "Remove import" from counting it. `social-sheet-selftest.sh`
+    /// holds the two spellings together.
     static let noticeRefPrefix = "ig-live:notif:"
     /// SHARED with `InstagramImport.landSaves` on purpose — see the header. A
     /// live save and an imported save of the same post are one thing.
