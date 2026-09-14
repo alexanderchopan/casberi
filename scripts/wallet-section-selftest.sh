@@ -175,7 +175,7 @@ mutate() {
   if build "$work/m.swift" && "$work/run" >/dev/null 2>&1; then
     fail "mutation SURVIVED — $why"
   fi
-  print "  ok   catches  $why"
+  echo "  ok   catches  $why"
 }
 
 mutate "a conditional scope moved out of the tail (the strip reflows)" \
@@ -334,5 +334,5 @@ guard RoomActivityChart.swift "chartHeight(chips: offered.count > 1)" \
 guard DSRangeChips.swift "if ranges.count > 1" \
   "the chips' own draw gate moved — every budget above spells this predicate and would now be asking the wrong question"
 
-print "  ok   drift guards: mount, gate, publication, clear, dot, scopes, generic control, crown chip budget"
-print "✓ wallet sections: order, presence, resolve, shows, labels, 8 mutations, 16 drift guards"
+echo "  ok   drift guards: mount, gate, publication, clear, dot, scopes, generic control, crown chip budget"
+echo "✓ wallet sections: order, presence, resolve, shows, labels, 8 mutations, 16 drift guards"

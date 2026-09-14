@@ -54637,3 +54637,13 @@ edited Swift file is unchanged from HEAD, which is the only structural check
 available here. Verified: every `scripts/*-audit.py` and its `--self-test`
 green; `bash -n` clean on the edited shell harnesses that are bash
 (`room-perf-selftest.sh` is zsh and no zsh exists on this machine).
+
+## §724 — A scope chip's word never accepts a narrower width (user: "on 0xbow privacy pools there is clipping in the chip", 2026-09-13)
+
+**Reported** with a still: the Privacy Pools strip's picked chip reading `● Revi…`. Not §553's hard-edge cut (that was a strip scrolled past the capsule's edge, answered with the fade) — this is `Text` TRUNCATION, an ellipsis inside a chip that has all the room in the world to its right.
+
+**Cause.** `DSSectionSwitcher` is a horizontal `ScrollView` inside a `List` row (every room head is), and a horizontal scroll inside a List row keeps the content width it FIRST measured. Two things grow a chip after that measure: the pick (`.fontWeight(.semibold)` over `.medium` is 1pt wider — the 2026-08-11 measurement, 47.0 → 48.0) and the attention dot, 6pt plus its spacing, which arrives once the room resolves `needsYou`. Review on the 0xBow room is the one chip that gets BOTH, so its label was squeezed by ~9pt and `lineLimit(1)` did what it does. Wallet's seven scopes and Vibenet's five never showed it because a picked chip there rarely also carries the dot.
+
+**Ruling.** The label takes `.fixedSize(horizontal: true, vertical: false)` — a chip's word never accepts a narrower proposal; when the strip is short of room the strip scrolls. `DSChip` has carried the same modifier for the same reason since it was written. One line in the shared control, so all six strips (Wallet, Vibenet, Privacy Pools, the catalog, the two directories, the person room) take it at once.
+
+**Not done.** No harness pins it — a `grep` for a modifier is the kind of guard §627 calls a passing line that ran nothing, and the failure renders as an ellipsis no text check can see. **UNSEEN on a device**; the still that reported it is the evidence, and the next 0xBow room with a deposit awaiting proof is the check.
