@@ -675,6 +675,25 @@ struct DevnetSendLeg: Identifiable, Equatable {
     let id = UUID()
     var address: String
     var amount: String
+    /// Which asset this leg sends — `DevnetSendAsset.id`, empty for the coin.
+    var asset: String = ""
+    /// That asset's unit, carried so a list of mixed legs can say which is
+    /// which. Nil for the coin.
+    var unit: String? = nil
+}
+
+/// **ONE THING THE SHEET CAN SEND (prd §729).** A venue whose accounts hold
+/// tokens as well as the coin hands the sheet a list, and the unit beside the
+/// figure becomes the choice. The empty `id` is the coin; every other `id` is
+/// the token contract, which is also what the venue's send is told.
+struct DevnetSendAsset: Identifiable, Equatable {
+    let id: String
+    let unit: String
+    /// "12.5 available", or nil where the balance did not read.
+    let heldLine: String?
+    /// The token's own decimals. **Never a guess** — an asset whose decimals
+    /// did not read is not offered at all.
+    let decimals: Int
 }
 
 /// **WHAT TURNS THE SHEET INTO A BUILDER.** Nil for every venue whose send is
@@ -996,6 +1015,20 @@ struct DevnetSendSheet: View {
     /// by the caller. Nil is "Send".
     var verb: String? = nil
 
+    /// **WHAT THE SHEET CAN SEND, when that is more than the coin (prd §729).**
+    /// Fewer than two draws the plain unit exactly as before. With two or
+    /// more, the unit beside the figure opens a menu — the one place the
+    /// choice can sit without adding a row to a screen whose height is a
+    /// budget (`devnet-console-audit.py`).
+    var assets: [DevnetSendAsset] = []
+    /// Sends a non-coin asset. The coin still goes through `perform`, so a
+    /// venue that passes no assets is untouched.
+    var sendAsset: ((_ to: String, _ amount: String, _ asset: DevnetSendAsset) async -> String?)? = nil
+    /// `plan`, told which asset is chosen — a token send runs different frames
+    /// from a coin send, and a preview that did not know which would be a
+    /// description of the wrong transaction.
+    var planAsset: ((_ destination: String, _ amount: String, _ asset: DevnetSendAsset?) -> [DevnetSendStep])? = nil
+
 
     @Environment(\.dismiss) private var dismiss
     @Environment(ShellChrome.self) private var chrome
@@ -1018,6 +1051,7 @@ struct DevnetSendSheet: View {
     /// Seeded from the venue's own default in `onAppear`, never here — a
     /// `@State` initialiser cannot read another stored property.
     @State private var choiceOn = false
+    @State private var assetID = ""
     @State private var showingAdvanced = false
 
     /// What this send will DO. For a venue whose batch is atomic by
@@ -1230,19 +1264,17 @@ struct DevnetSendSheet: View {
                     .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.4)
-                Text(unit)
-                    .dsText(.price16)
-                    .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
+                unitLabel
             }
             .padding(.top, DS.Space.s4)
 
             HStack(spacing: DS.Space.s2) {
-                if let heldLine {
+                if let heldLine = shownHeldLine {
                     Text(heldLine)
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                 }
-                if let maxAmount, !maxAmount.isEmpty {
+                if assetID.isEmpty, let maxAmount, !maxAmount.isEmpty {
                     Button {
                         DSHaptic.selection()
                         amount = DevnetAmountInput.sanitize(maxAmount, previous: amount)
@@ -1271,8 +1303,9 @@ struct DevnetSendSheet: View {
             // overflows and simply continues past the fold — which renders
             // perfectly and is what `devnet-console-audit.py` exists for. Its
             // height is a term in that audit's sum.
-            if let plan {
-                let steps = plan(destination, amount)
+            if plan != nil || planAsset != nil {
+                let steps = planAsset?(destination, amount, selectedAsset)
+                    ?? plan?(destination, amount) ?? []
                 // **THE CONTROL IS DRAWN UNCONDITIONALLY AND THE EXPLANATION
                 // BELOW IT YIELDS** — this file's own rule, stated in the
                 // strip's comment: "Stepping aside is honest here because the
@@ -1338,7 +1371,58 @@ struct DevnetSendSheet: View {
     }
 
     private var armed: Bool {
-        !busy && isValidAddress(destination) && isValidAmount(amount)
+        !busy && isValidAddress(destination) && amountIsValid
+    }
+
+    // MARK: What is being sent (prd §729)
+
+    private var selectedAsset: DevnetSendAsset? { assets.first { $0.id == assetID } }
+    private var shownUnit: String { selectedAsset?.unit ?? unit }
+    private var shownHeldLine: String? {
+        if let asset = selectedAsset { return asset.heldLine }
+        return heldLine
+    }
+
+    /// A token is parsed at ITS decimals; the coin keeps the venue's own rule.
+    private var amountIsValid: Bool {
+        if let asset = selectedAsset, !asset.id.isEmpty {
+            return DevnetSendParse.unitsData(from: amount, decimals: asset.decimals) != nil
+        }
+        return isValidAmount(amount)
+    }
+
+    /// A batch whose legs send different assets has no one total and no one
+    /// unit, so each leg says its own and the tile says none.
+    private var mixedUnits: Bool { Set(legs.map(\.asset)).count > 1 }
+
+    @ViewBuilder private var unitLabel: some View {
+        if assets.count > 1 {
+            Menu {
+                ForEach(assets) { asset in
+                    Button {
+                        DSHaptic.selection()
+                        // A typed amount means nothing in another unit.
+                        if assetID != asset.id { assetID = asset.id; amount = "" }
+                    } label: {
+                        Text(asset.unit)
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(shownUnit).dsText(.price16)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .dsGlyph(11, weight: .semibold)
+                        .accessibilityHidden(true)
+                }
+                .foregroundStyle(tint)
+                .contentShape(Rectangle())
+            }
+            .accessibilityLabel(Text(String(localized: "What to send: \(shownUnit)")))
+        } else {
+            Text(unit)
+                .dsText(.price16)
+                .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
+        }
     }
 
     /// **THE BUTTON NAMES THE AMOUNT** once there is one (§538): it moves money
@@ -1357,9 +1441,9 @@ struct DevnetSendSheet: View {
                 // §83 fake status in the one place it would cost money: you
                 // would tap it believing the transaction had gone.
                 Text(stitch == nil
-                     ? (armed ? "\(verb ?? String(localized: "Send")) \(amount) \(unit)"
+                     ? (armed ? "\(verb ?? String(localized: "Send")) \(amount) \(shownUnit)"
                               : (verb ?? String(localized: "Send")))
-                     : (armed ? String(localized: "Add \(amount) \(unit)")
+                     : (armed ? String(localized: "Add \(amount) \(shownUnit)")
                               : String(localized: "Add")))
                 if busy { DSSpinner(size: .mini, onFill: true) }
             }
@@ -1380,7 +1464,8 @@ struct DevnetSendSheet: View {
     // MARK: The legs
 
     private func addLeg() {
-        legs.append(DevnetSendLeg(address: destination, amount: amount))
+        legs.append(DevnetSendLeg(address: destination, amount: amount, asset: assetID,
+                                  unit: assetID.isEmpty ? nil : selectedAsset?.unit))
         destination = ""
         amount = ""
         query = ""
@@ -1396,7 +1481,7 @@ struct DevnetSendSheet: View {
     /// `DevnetSendParse.weiData`, which is string arithmetic throughout; this
     /// figure is for reading, and never for signing.
     private var total: String? {
-        guard !legs.isEmpty else { return nil }
+        guard !legs.isEmpty, !mixedUnits else { return nil }
         var sum = Decimal(0)
         for leg in legs {
             guard let d = Decimal(string: leg.amount, locale: Locale(identifier: "en_US_POSIX"))
@@ -1566,6 +1651,15 @@ struct DevnetSendSheet: View {
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                     .layoutPriority(1)
+                // **ONLY WHEN THE LEGS DIFFER (prd §729).** The unit stays off
+                // a list whose legs all send one thing, for the reason above;
+                // a batch paying ETH and DAI together must say which is which.
+                if mixedUnits {
+                    Text(leg.unit ?? unit)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
                 // **REMOVE IS A BUTTON, NOT A SWIPE.** A swipe here would be
                 // the only swipe in this sheet, and the list is short enough
                 // that a hidden gesture is a control nobody finds.
@@ -1797,7 +1891,7 @@ struct DevnetSendSheet: View {
     private var sendAll: some View {
         DSActVerb(title: total.map { String(localized: "Send \($0)") }
                          ?? String(localized: "Send"),
-                  unit: total == nil ? nil : unit,
+                  unit: total == nil ? nil : (legs.first?.unit ?? unit),
                   glyph: "arrow.up.right",
                   tint: tint,
                   busy: busy,
@@ -1865,7 +1959,12 @@ struct DevnetSendSheet: View {
         busy = true
         errorText = nil
         Task { @MainActor in
-            let failure = await perform(to, spending, advanced, choiceOn)
+            let failure: String?
+            if let asset = selectedAsset, !asset.id.isEmpty, let sendAsset {
+                failure = await sendAsset(to, spending, asset)
+            } else {
+                failure = await perform(to, spending, advanced, choiceOn)
+            }
             busy = false
             if let failure {
                 errorText = failure
@@ -1895,15 +1994,22 @@ enum DevnetSendParse {
     /// arithmetic throughout, never `Double`: Hegotá's own faucet balances run
     /// into the billions of ETH, well past `Double`'s exact-integer range.
     static func weiData(from text: String) -> Data? {
+        unitsData(from: text, decimals: 18)
+    }
+
+    /// A typed decimal amount at a token's own `decimals` (prd §729) — the
+    /// same string arithmetic, so a 6-decimal token is never scaled as 18.
+    static func unitsData(from text: String, decimals: Int) -> Data? {
+        guard (0...36).contains(decimals) else { return nil }
         let s = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else { return nil }
         let parts = s.split(separator: ".", omittingEmptySubsequences: false)
         guard parts.count == 1 || parts.count == 2 else { return nil }
         let whole = parts[0].isEmpty ? "0" : String(parts[0])
         let frac = parts.count == 2 ? String(parts[1]) : ""
-        guard whole.allSatisfy(\.isNumber), frac.allSatisfy(\.isNumber), frac.count <= 18
+        guard whole.allSatisfy(\.isNumber), frac.allSatisfy(\.isNumber), frac.count <= decimals
         else { return nil }
-        let combined = whole + frac + String(repeating: "0", count: 18 - frac.count)
+        let combined = whole + frac + String(repeating: "0", count: decimals - frac.count)
         guard let word = SafeABI.word(uint256: combined) else { return nil }
         let trimmed = word.drop(while: { $0 == 0 })
         guard !trimmed.isEmpty else { return nil }

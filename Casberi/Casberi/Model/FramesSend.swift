@@ -164,11 +164,43 @@ enum FramesSend {
     /// is a VERIFY frame that authorises and a SENDER frame that moves, and
     /// nothing about a to-and-amount form says so.
     static func plan(sender: Data, to target: Data, valueWei: Data, nonce: UInt64,
+                     deadline: UInt64?,
                      maxPriorityFeePerGas: UInt64 = 1_000_000_000,
                      maxFeePerGas: UInt64 = 10_000_000_000) -> FramesTransaction.Fields {
         FramesTransaction.transfer(
             sender: sender, to: target, value: valueWei, nonce: nonce,
-            maxPriorityFeePerGas: maxPriorityFeePerGas, maxFeePerGas: maxFeePerGas)
+            maxPriorityFeePerGas: maxPriorityFeePerGas, maxFeePerGas: maxFeePerGas,
+            deadline: deadline)
+    }
+
+    /// **A TOKEN SEND, as the object that gets signed (prd §729)** — one token
+    /// leg under a deadline. The preview and the send both build it here.
+    static func planToken(sender: Data, leg: FramesTransaction.Leg, nonce: UInt64,
+                          deadline: UInt64?,
+                          maxPriorityFeePerGas: UInt64 = 1_000_000_000,
+                          maxFeePerGas: UInt64 = 10_000_000_000) -> FramesTransaction.Fields {
+        FramesTransaction.stitched(sender: sender, legs: [leg], atomic: false, nonce: nonce,
+                                   maxPriorityFeePerGas: maxPriorityFeePerGas,
+                                   maxFeePerGas: maxFeePerGas, deadline: deadline)
+    }
+
+    // MARK: - The deadline every send carries (prd §729)
+
+    /// **FIVE MINUTES.** A send nobody can say the fate of is the defect this
+    /// fixes: with no deadline, a transaction a node is still holding can land
+    /// an hour later, so "it didn't go" was never a thing the room could say.
+    /// With one, past it the transaction CANNOT land — any block made from then
+    /// on is too late — and the pending row says so. Five minutes is fifty
+    /// slots, far past a healthy chain's inclusion time, and short enough that
+    /// somebody watching the row is still there when it resolves.
+    static let deadlineWindow: TimeInterval = 5 * 60
+
+    static func deadline(from now: Date = Date()) -> UInt64 {
+        UInt64(now.timeIntervalSince1970 + deadlineWindow)
+    }
+
+    static func date(_ deadline: UInt64) -> Date {
+        Date(timeIntervalSince1970: TimeInterval(deadline))
     }
 
     // MARK: - Send a value transfer
@@ -182,6 +214,7 @@ enum FramesSend {
     static func sendValue(to target: Data,
                           valueWei: Data,
                           nonce: UInt64,
+                          deadline: UInt64,
                           maxPriorityFeePerGas: UInt64 = 1_000_000_000,
                           maxFeePerGas: UInt64 = 10_000_000_000) async throws -> String {
         guard let address = FramesKey.address(),
@@ -189,6 +222,7 @@ enum FramesSend {
 
         return try await signAndBroadcast(
             plan(sender: sender, to: target, valueWei: valueWei, nonce: nonce,
+                 deadline: deadline,
                  maxPriorityFeePerGas: maxPriorityFeePerGas,
                  maxFeePerGas: maxFeePerGas),
             sender: sender)
@@ -213,6 +247,7 @@ enum FramesSend {
     static func sendStitched(legs: [FramesTransaction.Leg],
                              atomic: Bool,
                              nonce: UInt64,
+                             deadline: UInt64,
                              maxPriorityFeePerGas: UInt64 = 1_000_000_000,
                              maxFeePerGas: UInt64 = 10_000_000_000) async throws -> String {
         guard let address = FramesKey.address(),
@@ -222,7 +257,8 @@ enum FramesSend {
             FramesTransaction.stitched(sender: sender, legs: legs, atomic: atomic,
                                        nonce: nonce,
                                        maxPriorityFeePerGas: maxPriorityFeePerGas,
-                                       maxFeePerGas: maxFeePerGas),
+                                       maxFeePerGas: maxFeePerGas,
+                                       deadline: deadline),
             sender: sender)
     }
 

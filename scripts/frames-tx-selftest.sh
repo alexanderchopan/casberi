@@ -1694,6 +1694,69 @@ check("a move's deadline is its expiry frame's",
                  rows: [FramesFrameRow(frame: verifyFrame(expiryAddress, data: "0x000000006aa5f05c"), outcome: nil)],
                  deltaWei: 0).deadline == Date(timeIntervalSince1970: 0x6aa5f05c))
 
+// --- EVERY SEND CARRIES A DEADLINE, AND A TOKEN IS A CALL (prd §729) ---------
+// **THREE PREIMAGES A NODE VERIFIED A SIGNATURE OVER.** Computed by an
+// independent encoder and broadcast on 2026-09-13 from an unfunded key: the
+// node refused all three with "Nonce mismatch: expected 0, got N", a check it
+// makes only AFTER every signature validates. So each preimage below is one
+// the node agrees with, and these builders must reproduce it byte for byte.
+let senderA = hx("0x285dc41e452865032197bd1d44e4a9e1179c994c")
+let bobAddr = hx("0x61c93cfd66431c2d6f5e29d224fd29afd4550f2e")
+let deadAddr = hx("0x000000000000000000000000000000000000dead")
+let daiAddr = hx("0x7d6fa7c366f36046656b019dc9a27f171628cf3f")
+let oneGwei = hx("0x3b9aca00")
+let fixedDeadline: UInt64 = 0x6aa5f05c
+func signedBy(_ fields: FramesTransaction.Fields, _ who: Data) -> FramesTransaction.Fields {
+    var out = fields
+    out.signatures = [.init(scheme: 1, signer: who, msg: Data(), signature: Data())]
+    return out
+}
+let vDeadline = signedBy(FramesTransaction.transfer(
+    sender: senderA, to: deadAddr, value: oneGwei, nonce: 3,
+    maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000,
+    deadline: fixedDeadline), senderA)
+check("V-DEADLINE: a transfer under a deadline is the preimage the node verified",
+      keccakHex(FramesTransaction.signingPreimage(vDeadline))
+        == "0x730c502c1d349fc3ce6c7ac582f5164fbff3f995dfe9cf08f0ad6c79bfb4f573")
+let expiryFrameBuilt = vDeadline.frames[0]
+check("the deadline frame leads: VERIFY, flags 0, no value, no state budget, 8 big-endian bytes, at 0x8141",
+      expiryFrameBuilt.mode == 1 && expiryFrameBuilt.flags == 0 && expiryFrameBuilt.value.isEmpty
+        && expiryFrameBuilt.stateGas == 0 && expiryFrameBuilt.data == hx("0x000000006aa5f05c")
+        && expiryFrameBuilt.target == hx("0x0000000000000000000000000000000000008141"))
+check("no deadline is still the pinned two-frame transfer",
+      FramesTransaction.transfer(sender: senderA, to: deadAddr, value: oneGwei, nonce: 3,
+                                 maxPriorityFeePerGas: 1, maxFeePerGas: 1).frames.count == 2)
+let daiLeg = FramesTransaction.tokenLeg(contract: daiAddr, to: bobAddr, amount: hx("0x4563918244f40000"))!
+let vToken = signedBy(FramesTransaction.stitched(
+    sender: senderA, legs: [daiLeg], atomic: false, nonce: 4,
+    maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000,
+    deadline: fixedDeadline), senderA)
+check("V-TOKEN: five DAI to Bob under a deadline is the preimage the node verified",
+      keccakHex(FramesTransaction.signingPreimage(vToken))
+        == "0xebba1b3911663f9e6eacd3bdfe0b67e0ac522352f8d1c78c3b2a79507d1fa128")
+check("a token leg targets the CONTRACT and moves no coin",
+      daiLeg.recipient == daiAddr && daiLeg.value.isEmpty && daiLeg.data.count == 68)
+check("and reads back as a payment to the person",
+      FramesRead.Frame(mode: 2, flags: 0, target: "0x7d6fa7c366f36046656b019dc9a27f171628cf3f",
+                       executionGas: 1, stateGas: 1, value: "0x0",
+                       data: "0x" + RLP.hex(daiLeg.data)).tokenTransfer?.recipient
+        == "0x61c93cfd66431c2d6f5e29d224fd29afd4550f2e")
+let vMixed = signedBy(FramesTransaction.stitched(
+    sender: senderA, legs: [.init(recipient: deadAddr, value: oneGwei), daiLeg], atomic: true, nonce: 5,
+    maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000,
+    deadline: fixedDeadline), senderA)
+check("V-STITCH: a coin leg joined to a token leg, under a deadline, is the preimage the node verified",
+      keccakHex(FramesTransaction.signingPreimage(vMixed))
+        == "0xf534109cf8b23f70624cb33a864e3c310db7db8f2b8f74147d3fcbc2c68d138b")
+check("the join still skips the last payload frame, and the deadline frame is never joined",
+      vMixed.frames.map(\.flags) == [0, 3, 4, 0])
+check("a token leg refuses an amount wider than a word",
+      FramesTransaction.tokenLeg(contract: daiAddr, to: bobAddr, amount: Data(repeating: 1, count: 33)) == nil)
+check("and an empty amount",
+      FramesTransaction.tokenLeg(contract: daiAddr, to: bobAddr, amount: Data()) == nil)
+check("the verify budget still fits with the deadline frame in the prefix",
+      FramesTransaction.prefixWithinBudget(vMixed))
+
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
 print("  ok   encoder: 3 real vectors byte-exact, keccak == the chain's own hash (1 on the post-restart chain)")
 SWIFT
@@ -1861,16 +1924,16 @@ mutate "the atomic flag reaching the last payload frame" $F \
   'let joined = atomic && index < last' \
   'let joined = atomic'
 mutate "the VERIFY frame dropped from a stitch" $F \
-  'frames: [Frame(mode: 1, flags: 0x03, target: sender,
+  'frames: expiryPrefix(deadline) + [Frame(mode: 1, flags: 0x03, target: sender,
                                      executionGas: executionGas, stateGas: stateGas,
                                      value: Data(), data: Data())]
                           + legs.enumerated().map { index, leg in' \
-  'frames: legs.enumerated().map { index, leg in'
+  'frames: expiryPrefix(deadline) + legs.enumerated().map { index, leg in'
 mutate "the VERIFY frame no longer approving payment" $F \
-  'frames: [Frame(mode: 1, flags: 0x03, target: sender,
+  'frames: expiryPrefix(deadline) + [Frame(mode: 1, flags: 0x03, target: sender,
                                      executionGas: executionGas, stateGas: stateGas,
                                      value: Data(), data: Data())]' \
-  'frames: [Frame(mode: 1, flags: 0x01, target: sender,
+  'frames: expiryPrefix(deadline) + [Frame(mode: 1, flags: 0x01, target: sender,
                                      executionGas: executionGas, stateGas: stateGas,
                                      value: Data(), data: Data())]'
 mutate "a payload frame built as a VERIFY frame" $F \
@@ -1981,6 +2044,18 @@ mutate "the receipt hero rounded to the balance line's four places" $F2 \
         let text = formatter.string(from: rounded as NSDecimalNumber) ?? "0"
         // A movement of exactly nothing has no direction'
 
+mutate "the deadline written little-endian" FramesTransaction.swift \
+  'var bigEndian = deadline.bigEndian' 'var bigEndian = deadline.littleEndian'
+mutate "the deadline frame given a state budget (the node refuses it)" FramesTransaction.swift \
+  'executionGas: expiryExecutionGas, stateGas: 0,' 'executionGas: expiryExecutionGas, stateGas: 250_000,'
+mutate "the deadline silently dropped from every send" FramesTransaction.swift \
+  'deadline.map { [expiryFrame(deadline: $0)] } ?? []' '[]'
+mutate "a token leg calling transferFrom" FramesTransaction.swift \
+  'Data([0xa9, 0x05, 0x9c, 0xbb])' 'Data([0x23, 0xb8, 0x72, 0xdd])'
+mutate "a token amount sent as coin value too" FramesTransaction.swift \
+  'return Leg(recipient: contract, value: Data(), data: data)' 'return Leg(recipient: contract, value: amount, data: data)'
+mutate "a stitched leg losing its calldata" FramesTransaction.swift \
+  'value: leg.value, data: leg.data)' 'value: leg.value, data: Data())'
 F5=FramesChainWatch.swift
 mutate "an install's first genesis called a relaunch" $F5 \
   'guard let baseline, !baseline.isEmpty else { return .adopt(observed) }' \

@@ -214,11 +214,12 @@ enum FramesTransaction {
                          maxPriorityFeePerGas: UInt64,
                          maxFeePerGas: UInt64,
                          executionGas: UInt64 = 100_000,
-                         stateGas: UInt64 = 250_000) -> Fields {
+                         stateGas: UInt64 = 250_000,
+                         deadline: UInt64? = nil) -> Fields {
         Fields(chainID: chainID,
                nonce: nonce,
                sender: sender,
-               frames: [
+               frames: expiryPrefix(deadline) + [
                    Frame(mode: 1, flags: 0x03, target: sender,
                          executionGas: executionGas, stateGas: stateGas,
                          value: Data(), data: Data()),
@@ -235,8 +236,60 @@ enum FramesTransaction {
 
     /// ONE LEG OF A STITCHED TRANSACTION.
     struct Leg: Equatable {
+        /// The frame's TARGET. For a coin leg that is the person paid; for a
+        /// token leg it is the token CONTRACT, and the person is inside `data`.
         var recipient: Data
         var value: Data
+        /// Calldata. Empty for a coin leg (prd §729).
+        var data: Data = Data()
+    }
+
+    // MARK: - A deadline, and a token (prd §729)
+
+    /// EIP-8141's `EXPIRY_VERIFIER`, `address(0x8141)`.
+    static let expiryVerifier = Data(repeating: 0, count: 18) + Data([0x81, 0x41])
+
+    /// Execution gas for the expiry check: a cold account access and 26 bytes
+    /// of code. Generous on purpose — a VERIFY frame that runs out invalidates
+    /// the transaction, and this one costs nobody anything it does not use.
+    static let expiryExecutionGas: UInt64 = 20_000
+
+    /// **THE DEADLINE FRAME — first, VERIFY, flags 0, no value, NO STATE
+    /// BUDGET, 8 bytes of big-endian seconds.** Every one of those is a validity
+    /// rule in EIP-8141, and two were confirmed by being refused (2026-09-13):
+    /// a 9-byte deadline answers "expiry verifier frame data must be 8 bytes",
+    /// and one in the past answers "expiry deadline has passed". The mempool
+    /// recognises it only as the FIRST frame and matches the prefix as if it
+    /// were absent, which is why it can lead every send without changing which
+    /// shape the node sees.
+    static func expiryFrame(deadline: UInt64) -> Frame {
+        var bigEndian = deadline.bigEndian
+        let seconds = withUnsafeBytes(of: &bigEndian) { Data($0) }
+        return Frame(mode: 1, flags: 0x00, target: expiryVerifier,
+                     executionGas: expiryExecutionGas, stateGas: 0,
+                     value: Data(), data: seconds)
+    }
+
+    /// The frames a deadline adds: one, first, or none.
+    static func expiryPrefix(_ deadline: UInt64?) -> [Frame] {
+        deadline.map { [expiryFrame(deadline: $0)] } ?? []
+    }
+
+    /// ERC-20 `transfer(address,uint256)`.
+    static let erc20TransferSelector = Data([0xa9, 0x05, 0x9c, 0xbb])
+
+    /// **A TOKEN PAYMENT IS A CALL, NOT A VALUE.** A SENDER frame whose target
+    /// is the token contract and whose data is `transfer(to, amount)`, moving
+    /// no coin — the sender pays the person by asking the contract to. Nil for
+    /// anything that is not a 20-byte address or a 1-to-32-byte amount, so a
+    /// malformed leg is refused before a signature rather than encoded.
+    static func tokenLeg(contract: Data, to recipient: Data, amount: Data) -> Leg? {
+        guard contract.count == 20, recipient.count == 20,
+              !amount.isEmpty, amount.count <= 32 else { return nil }
+        let data = erc20TransferSelector
+            + Data(repeating: 0, count: 12) + recipient
+            + Data(repeating: 0, count: 32 - amount.count) + amount
+        return Leg(recipient: contract, value: Data(), data: data)
     }
 
     /// **THE FLAG THAT MAKES A BATCH ALL-OR-NOTHING**, and the whole reason a
@@ -300,12 +353,13 @@ enum FramesTransaction {
                          maxPriorityFeePerGas: UInt64,
                          maxFeePerGas: UInt64,
                          executionGas: UInt64 = 100_000,
-                         stateGas: UInt64 = 250_000) -> Fields {
+                         stateGas: UInt64 = 250_000,
+                         deadline: UInt64? = nil) -> Fields {
         let last = legs.count - 1
         return Fields(chainID: chainID,
                       nonce: nonce,
                       sender: sender,
-                      frames: [Frame(mode: 1, flags: 0x03, target: sender,
+                      frames: expiryPrefix(deadline) + [Frame(mode: 1, flags: 0x03, target: sender,
                                      executionGas: executionGas, stateGas: stateGas,
                                      value: Data(), data: Data())]
                           + legs.enumerated().map { index, leg in
@@ -316,7 +370,7 @@ enum FramesTransaction {
                               return Frame(mode: 2, flags: joined ? atomicFlag : 0x00,
                                            target: leg.recipient,
                                            executionGas: executionGas, stateGas: stateGas,
-                                           value: leg.value, data: Data())
+                                           value: leg.value, data: leg.data)
                           },
                       signatures: [],
                       maxPriorityFeePerGas: maxPriorityFeePerGas,

@@ -6600,7 +6600,8 @@ enum ProbeHooks {
                       account, legs.count, atomic ? "YES" : "NO", nonce)
                 do {
                     let hash = try await FramesSend.sendStitched(legs: legs, atomic: atomic,
-                                                                 nonce: nonce)
+                                                                 nonce: nonce,
+                                                                 deadline: FramesSend.deadline())
                     NSLog("[Casberi] framesStitch| sent tx=%@", hash)
                 } catch let f as FramesSend.Failure {
                     NSLog("[Casberi] framesStitch| refused=%@", String(describing: f))

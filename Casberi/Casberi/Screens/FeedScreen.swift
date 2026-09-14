@@ -1119,10 +1119,46 @@ struct FeedScreen: View {
         }?.address ?? ""
     }
 
+    /// **ONE LEG, AS THE ENCODER TAKES IT (prd §729)** — a coin leg or a token
+    /// leg, parsed at the asset's own decimals. Used by the send and by the
+    /// preview, so the strip and the signature cannot build different legs.
+    private func framesLeg(_ leg: DevnetSendLeg) -> FramesTransaction.Leg? {
+        guard let target = RLP.data(fromHex: leg.address) else { return nil }
+        if leg.asset.isEmpty {
+            guard let value = DevnetSendParse.weiData(from: leg.amount) else { return nil }
+            return FramesTransaction.Leg(recipient: target, value: value)
+        }
+        guard let asset = framesSendAssets.first(where: { $0.id == leg.asset }),
+              let contract = RLP.data(fromHex: asset.id),
+              let units = DevnetSendParse.unitsData(from: leg.amount, decimals: asset.decimals)
+        else { return nil }
+        return FramesTransaction.tokenLeg(contract: contract, to: target, amount: units)
+    }
+
+    /// **WHAT THIS PHONE'S ACCOUNT CAN SEND (prd §729)** — the coin, then every
+    /// token it holds whose decimals read. Empty when it holds no token, which
+    /// leaves the sheet's unit a plain label exactly as before.
+    private var framesSendAssets: [DevnetSendAsset] {
+        guard let mine = FramesKey.address(),
+              let account = FramesLiveState.shared.accounts.first(where: {
+                  $0.address.caseInsensitiveCompare(mine) == .orderedSame
+              }), account.reached else { return [] }
+        let tokens = account.tokens.compactMap { holding -> DevnetSendAsset? in
+            guard let decimals = holding.decimals, let amount = holding.amount else { return nil }
+            return DevnetSendAsset(id: holding.contract,
+                                   unit: holding.symbol ?? WalletStore.shortAddress(holding.contract),
+                                   heldLine: String(localized: "\(DevnetTokens.quantity(amount)) available"),
+                                   decimals: decimals)
+        }
+        guard !tokens.isEmpty else { return [] }
+        return [DevnetSendAsset(id: "", unit: String(localized: "test ETH"),
+                                heldLine: framesHeldLine, decimals: 18)] + tokens
+    }
+
     private func framesPreviewRun(_ legs: [DevnetSendLeg]) -> [FramesFrameRow] {
         let built = legs.map {
-            FramesTransaction.Leg(recipient: RLP.data(fromHex: $0.address) ?? Data(),
-                                  value: DevnetSendParse.weiData(from: $0.amount) ?? Data())
+            framesLeg($0) ?? FramesTransaction.Leg(recipient: RLP.data(fromHex: $0.address) ?? Data(),
+                                                   value: Data())
         }
         // **BUILT JOINED, AND THE TOGGLE DIALS THE TIE** (2026-09-01).
         //
@@ -1145,7 +1181,8 @@ struct FeedScreen: View {
         // that stays true right up until somebody gives `flags` a second
         // meaning.
         let fields = FramesTransaction.stitched(sender: Data(), legs: built, atomic: true,
-                                                nonce: 0, maxPriorityFeePerGas: 0, maxFeePerGas: 0)
+                                                nonce: 0, maxPriorityFeePerGas: 0, maxFeePerGas: 0,
+                                                deadline: FramesSend.deadline())
         return fields.frames.map { frame in
             FramesFrameRow(
                 frame: FramesRead.Frame(mode: frame.mode,
@@ -1183,11 +1220,10 @@ struct FeedScreen: View {
         // the atomic control exists to let somebody rule out.
         var built: [FramesTransaction.Leg] = []
         for leg in legs {
-            guard let target = RLP.data(fromHex: leg.address),
-                  let value = DevnetSendParse.weiData(from: leg.amount) else {
+            guard let frame = framesLeg(leg) else {
                 return String(localized: "Couldn't read one of the frames.")
             }
-            built.append(FramesTransaction.Leg(recipient: target, value: value))
+            built.append(frame)
         }
         do {
             // The nonce is READ, never taken from the snapshot — `sendFrames`'
@@ -1196,13 +1232,16 @@ struct FeedScreen: View {
             guard let nonce = await FramesSend.currentNonce(for: address) else {
                 return String(localized: "Couldn't reach the chain to read this account's nonce.")
             }
-            let hash = try await FramesSend.sendStitched(legs: built, atomic: atomic, nonce: nonce)
+            let deadline = FramesSend.deadline()
+            let hash = try await FramesSend.sendStitched(legs: built, atomic: atomic, nonce: nonce,
+                                                         deadline: deadline)
             // **SAY IT WENT, BEFORE THE CHAIN CAN.** `sendStitched` returns
             // when the node accepts the bytes, which is before any block
             // carries them — so the sheet dismissed onto a room showing the
             // world as it was, and from outside a send that worked looked
             // exactly like one that vanished.
-            FramesLiveState.shared.notePending(hash: hash, legs: built.count)
+            FramesLiveState.shared.notePending(hash: hash, legs: built.count,
+                                               deadline: FramesSend.date(deadline))
             await FramesLiveState.shared.refresh()
             return nil
         } catch let failure as FramesSend.Failure {
@@ -1235,8 +1274,13 @@ struct FeedScreen: View {
             guard let nonce = await FramesSend.currentNonce(for: address) else {
                 return String(localized: "Couldn't reach the chain to read this account's nonce.")
             }
-            let hash = try await FramesSend.sendValue(to: target, valueWei: valueWei, nonce: nonce)
-            FramesLiveState.shared.notePending(hash: hash, legs: 1)
+            // **EVERY SEND CARRIES A DEADLINE (prd §729)**, and the pending row
+            // is told it, so the row can say "it can't land now" with certainty.
+            let deadline = FramesSend.deadline()
+            let hash = try await FramesSend.sendValue(to: target, valueWei: valueWei, nonce: nonce,
+                                                      deadline: deadline)
+            FramesLiveState.shared.notePending(hash: hash, legs: 1,
+                                               deadline: FramesSend.date(deadline))
             await FramesLiveState.shared.refresh()
             return nil
         } catch let failure as FramesSend.Failure {
@@ -4285,7 +4329,6 @@ struct FeedScreen: View {
                 perform: { to, amount, _, _ in await sendFrames(to: to, amount: amount) },
                 // The one thing neither neighbour can say — see
                 // `FramesSendPlanSteps`.
-                plan: FramesSendPlanSteps.steps,
                 // **THE ONLY VENUE THAT STITCHES** (prd §548 sixth follow-up).
                 // vibenet and Hegotá pass nil and keep the two-screen send
                 // exactly as it was; this chain's whole capability is putting
@@ -4293,7 +4336,7 @@ struct FeedScreen: View {
                 // built exactly two.
                 stitch: DevnetStitch(
                     headName: String(localized: "Verify"),
-                    headDetail: String(localized: "Your signature · always first"),
+                    headDetail: String(localized: "A deadline, then your signature · always first"),
                     atomicity: .chosen(
                         title: String(localized: "All or nothing"),
                     // **BOTH STATES ARE SPELLED, and OFF is the one that
@@ -4342,7 +4385,20 @@ struct FeedScreen: View {
                         return framesPreviewRun(legs)
                             .filter { $0.frame.mode != 1 }
                             .map(\.joinedToNext)
-                    }))
+                    }),
+                // **TOKENS, THROUGH THE SAME SHEET (prd §729).** The coin still
+                // goes through `perform`; a token rides the stitched path as a
+                // one-leg batch, so it is signed, noted and refreshed exactly as
+                // every other send here.
+                assets: framesSendAssets,
+                sendAsset: { to, amount, asset in
+                    await sendFramesStitched([DevnetSendLeg(address: to, amount: amount,
+                                                            asset: asset.id, unit: asset.unit)],
+                                             atomic: false)
+                },
+                planAsset: { destination, amount, asset in
+                    FramesSendPlanSteps.steps(destination: destination, amount: amount, asset: asset)
+                })
         // **ETHREX PRIVACY'S SEND (prd §593d)** — the seat's first act. It
         // shipped watch-only because §593a could not reproduce the type-`0x6`
         // envelope; §593c settled that against the node and wrote the encoder,

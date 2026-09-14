@@ -134,15 +134,29 @@ struct FramesSendCard: View {
 /// diagram of nothing.
 enum FramesSendPlanSteps {
     @MainActor
-    static func steps(destination: String, amount: String) -> [DevnetSendStep] {
+    static func steps(destination: String, amount: String,
+                      asset: DevnetSendAsset? = nil) -> [DevnetSendStep] {
         guard let sender = FramesKey.address().flatMap({ RLP.data(fromHex: $0) }),
               DevnetSendParse.isValidAddress(destination),
-              let target = RLP.data(fromHex: destination),
-              let wei = DevnetSendParse.weiData(from: amount)
+              let target = RLP.data(fromHex: destination)
         else { return [] }
+        let nonce = FramesLiveState.shared.accounts.first?.nonce ?? 0
+        // The same deadline rule the send signs with (prd §729), so the
+        // preview shows the deadline frame the transaction will really lead with.
+        let deadline = FramesSend.deadline()
 
-        let fields = FramesSend.plan(sender: sender, to: target, valueWei: wei,
-                                     nonce: FramesLiveState.shared.accounts.first?.nonce ?? 0)
+        let fields: FramesTransaction.Fields
+        if let asset, !asset.id.isEmpty {
+            guard let contract = RLP.data(fromHex: asset.id),
+                  let units = DevnetSendParse.unitsData(from: amount, decimals: asset.decimals),
+                  let leg = FramesTransaction.tokenLeg(contract: contract, to: target, amount: units)
+            else { return [] }
+            fields = FramesSend.planToken(sender: sender, leg: leg, nonce: nonce, deadline: deadline)
+        } else {
+            guard let wei = DevnetSendParse.weiData(from: amount) else { return [] }
+            fields = FramesSend.plan(sender: sender, to: target, valueWei: wei,
+                                     nonce: nonce, deadline: deadline)
+        }
         return fields.frames.map { frame in
             DevnetSendStep(name: name(for: frame), detail: detail(for: frame))
         }
@@ -151,7 +165,10 @@ enum FramesSendPlanSteps {
     /// The chain's own words — `FramesSection.label`'s ruling: the chip is
     /// where the vocabulary gets learned, and this chain is named for frames.
     private static func name(for frame: FramesTransaction.Frame) -> String {
-        switch frame.mode {
+        if frame.mode == 1, frame.target == FramesTransaction.expiryVerifier {
+            return String(localized: "Deadline")
+        }
+        return switch frame.mode {
         case 1: String(localized: "Verify")
         case 2: String(localized: "Sender")
         case 0: String(localized: "Default")
@@ -165,6 +182,13 @@ enum FramesSendPlanSteps {
     /// ruling). Without an APPROVE the transaction has no payer and is
     /// invalid, so "approves both" is load-bearing rather than a detail.
     private static func detail(for frame: FramesTransaction.Frame) -> String {
+        if frame.mode == 1, frame.target == FramesTransaction.expiryVerifier {
+            let minutes = Int(FramesSend.deadlineWindow / 60)
+            return String(localized: "lands within \(String(minutes)) min or never")
+        }
+        if frame.data.starts(with: FramesTransaction.erc20TransferSelector) {
+            return String(localized: "sends the token")
+        }
         if frame.mode == 1 {
             let execution = frame.flags & 0x1 != 0
             let payment = frame.flags & 0x2 != 0
