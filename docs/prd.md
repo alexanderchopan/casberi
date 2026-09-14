@@ -54301,3 +54301,17 @@ Every change is a branch on `AskSurface.enabled`, so flipping the flag still bri
 **Cost, stated.** A day with four strip rows is ~124pt longer than it was. `RowWindow`'s bound is unchanged.
 
 **UNCOMPILED — Linux session.** Verified: every `scripts/*-audit.py` that reads row views (row-cost, ds-template, design-ramp, face-ramp, feed-row-skeleton, query-read, liveness, mutation-liveness, accessibility, sentence-case, dead-closure, harness-exists); `feed-fold-selftest.sh` and the demo census need a Mac.
+
+## §720 — The crown's line pays for its own range chips, in one expression every crown reads (user: "7d and watched is clipping", 2026-09-14)
+
+**The report.** A screenshot of the Wallet room's Home: the balance, the line, and then the `7d | Watched` track cut across the middle by the rail slab's top edge.
+
+**Not an overlap — a clip.** `DSRoomSlot` is a hard `visualSlot` box with `.clipped()`, and the crown drew taller than it. §688 had already found and named this ("looks like the rail is touching the ranges"), measured the track at `DSRoomChassis.crownRangeChips` = 42, and spent it in `RoomHomeCrown` — the template §683 built so that five wallet-family Homes could stop drifting. **The Wallet room does not go through that template.** It builds `WalletBalanceHeadline` itself and read the bare `crownChart` constant, which budgets `crownChrome` alone. So the one room that has drawn range chips the longest was the only one still paying nothing for them, and §688's fix could not reach it. `RoomActivityChart` — the Activity tab's own shared template, §686 — draws the same chips under its bars against the same bare budget, and clips identically on any record offering more than one window; found by reading, not reported.
+
+**The ruling.** `crownChart` stops being a constant and becomes `DSRoomChassis.crownChart(box:chips:)` — `crownLine(box:chrome: crownChrome + (chips ? crownRangeChips : 0))`, the arithmetic §688 wrote inside `RoomHomeCrown`, lifted to the chassis where the three call sites can share it. It ASKS rather than reserving: the chips are not always offered (a record with one honest window draws none, §83's dead control), so a constant could not be right for both cases. The Wallet crown's line goes 192 → 150 when both windows are offered, and is unchanged when they are not.
+
+**The predicate is the chips' own draw gate, spelled the same way at every site** — `ranges.count > 1`, which is what `WalletBalanceHeadline` and `DSRangeChips` both test. A budget asking a different question than the drawing is the same clip wearing a second answer, so `wallet-section-selftest.sh` pins all four: the chassis's one expression, each call site's, and `DSRangeChips`' gate itself.
+
+**The class, for the next template.** A shared template is only shared by the call sites that go through it. §683/§686 moved five Homes and four Activity tabs onto two templates and left the room each was modelled on building its own — so a fix applied to the template reached everyone except the original. When a ruling fixes a template, check what still draws that shape by hand.
+
+**UNCOMPILED — Linux session.** Verified: `prd-index-audit.py`, and the five new drift guards dry-run against the fixed tree. The clip itself needs a simulator.

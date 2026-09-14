@@ -60,8 +60,14 @@ struct RoomActivityChart: View {
         dates.sorted().map { WalletStore.ValueSample(at: $0, usd: 0) }
     }
 
-    private var chartHeight: CGFloat {
-        DSRoomChassis.crownLine(box: box, chrome: DSRoomChassis.crownChrome)
+    /// **THE CHIPS ARE PART OF THE CHROME WHEN THEY DRAW (prd §688, applied
+    /// here 2026-09-14).** This control draws `DSRangeChips` under its bars and
+    /// budgeted `crownChrome` alone, which is the chrome measured before those
+    /// chips existed — so on any record offering more than one window the bars
+    /// took the whole box and the track went out through `DSRoomSlot`'s clip,
+    /// exactly as the Wallet crown did one tab over.
+    private func chartHeight(chips: Bool) -> CGFloat {
+        DSRoomChassis.crownChart(box: box, chips: chips)
     }
 
     var body: some View {
@@ -70,12 +76,16 @@ struct RoomActivityChart: View {
         let active = offered.contains(range) ? range : WalletRange.remembered(offered: offered)
         let inWindow = active.clip(all).map(\.at)
         let buckets = Self.buckets(dates: inWindow, range: active)
+        // The chips' own gate, read ONCE and spent on the budget and the
+        // drawing alike — `DSRangeChips` draws nothing under two windows, so a
+        // second reading of the same question is a second thing to get wrong.
+        let height = chartHeight(chips: offered.count > 1)
 
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             reading(count: inWindow.count, priorChange: Self.change(all: all.map(\.at), range: active))
             if buckets.contains(where: { $0 > 0 }) {
                 ActivityBars(counts: buckets)
-                    .frame(height: chartHeight)
+                    .frame(height: height)
                     .id(active)
             } else {
                 // An empty window states the fact and draws no bars, rather
@@ -83,7 +93,7 @@ struct RoomActivityChart: View {
                 Text("Nothing in this window.")
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
-                    .frame(height: chartHeight, alignment: .top)
+                    .frame(height: height, alignment: .top)
             }
             DSRangeChips(ranges: offered, range: active) { picked in
                 range = picked

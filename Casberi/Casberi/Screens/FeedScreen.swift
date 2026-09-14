@@ -8613,7 +8613,17 @@ struct FeedScreen: View {
                             // cannot know when the box moves — which is
                             // exactly how a grown box leaves dead air under a
                             // drawing that never heard about it.
-                            chartHeight: DSRoomChassis.crownChart,
+                            //
+                            // **AND THE CHIPS ARE PAID FOR (2026-09-14, user:
+                            // "7d and watched is clipping").** This read the
+                            // bare `crownChart` constant, which budgets the
+                            // chrome §688 measured BEFORE the range chips
+                            // existed — so the line took the whole box and the
+                            // track below it ran out through `DSRoomSlot`'s
+                            // clip. The predicate is `WalletBalanceHeadline`'s
+                            // own gate for drawing them, not a second guess at
+                            // it.
+                            chartHeight: DSRoomChassis.crownChart(chips: ranges.count > 1),
                             ranges: ranges,
                             range: active,
                             onPickRange: { r in

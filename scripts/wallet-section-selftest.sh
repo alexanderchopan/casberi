@@ -29,6 +29,9 @@ cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
 SWITCH="Casberi/Casberi/Design/DSSectionSwitcher.swift"
 SLAB="Casberi/Casberi/Design/DSRoomRailSlab.swift"
+CHASSIS="Casberi/Casberi/Design/DSRoomChassis.swift"
+ACTIVITY="Casberi/Casberi/Screens/RoomActivityChart.swift"
+CHIPS="Casberi/Casberi/Design/DSRangeChips.swift"
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -197,7 +200,7 @@ mutate "the ruled short noun becomes a question again" \
 # these files DOCUMENT the rules by naming what they must not do, so a guard
 # grepping raw source scores prose as compliance (the Obsidian/Cursor lesson).
 strip_comments() { perl -pe 's{//.*$}{}g' "$1"; }
-for f in "$MAIN" "$FEED" "$CHROME" "$SWITCH" "$SLAB" "$SRC"; do
+for f in "$MAIN" "$FEED" "$CHROME" "$SWITCH" "$SLAB" "$SRC" "$CHASSIS" "$ACTIVITY" "$CHIPS"; do
   strip_comments "$f" > "$work/$(basename $f).bare"
 done
 
@@ -310,5 +313,26 @@ deny DSSectionSwitcher.swift "WalletSection" \
 grep -q "wallet-section-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-print "  ok   drift guards: mount, gate, publication, clear, dot, scopes, generic control"
+# ── the crown's budget pays for its range chips (2026-09-14) ─────────────────
+# `DSRoomSlot` is a hard box with `.clipped()`, so a crown whose line takes the
+# whole box pushes its own range track out through the bottom edge — reported
+# as "7d and watched is clipping", and the failure renders as an ordinary room
+# with a sliced control. §688 measured the chips and spent them in
+# `RoomHomeCrown` only; the Wallet's crown and `RoomActivityChart` build their
+# own headline and went on budgeting them at nothing. One expression now, asked
+# per drawing, because the chips are not always offered.
+guard DSRoomChassis.swift "crownChrome + (chips ? crownRangeChips : 0)" \
+  "the chips left the crown's budget — every crown drawing a range track clips it again"
+guard FeedScreen.swift "DSRoomChassis.crownChart(chips: ranges.count > 1)" \
+  "the wallet crown stopped paying for its range chips — the 7d/Watched track clips at the slot's edge"
+guard RoomActivityChart.swift "DSRoomChassis.crownChart(box: box, chips: chips)" \
+  "the activity chart stopped paying for its range chips — its track clips exactly as the crown's did"
+# The predicate must stay the chips' OWN gate. A budget that asks a different
+# question than the drawing does is the same clip wearing a second answer.
+guard RoomActivityChart.swift "chartHeight(chips: offered.count > 1)" \
+  "the activity chart's budget no longer reads the offered windows — it can reserve the track on a record that draws none, or none on one that does"
+guard DSRangeChips.swift "if ranges.count > 1" \
+  "the chips' own draw gate moved — every budget above spells this predicate and would now be asking the wrong question"
+
+print "  ok   drift guards: mount, gate, publication, clear, dot, scopes, generic control, crown chip budget"
 print "✓ wallet sections: order, presence, resolve, shows, labels, 8 mutations, 16 drift guards"

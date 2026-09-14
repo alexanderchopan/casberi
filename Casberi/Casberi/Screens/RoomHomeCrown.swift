@@ -56,10 +56,13 @@ struct RoomHomeCrown: View {
     /// are not always offered — a record with one honest window draws none
     /// (§83's dead control) — so the budget asks rather than reserving space
     /// that is usually empty.
+    ///
+    /// The arithmetic moved to `DSRoomChassis.crownChart(box:chips:)` on
+    /// 2026-09-14: it lived here, so the two crowns that do NOT come through
+    /// this template — the Wallet room's own, and `RoomActivityChart` — went on
+    /// budgeting the chips at nothing and clipped their tracks.
     private func chartHeight(chips: Bool) -> CGFloat {
-        DSRoomChassis.crownLine(
-            box: box,
-            chrome: DSRoomChassis.crownChrome + (chips ? DSRoomChassis.crownRangeChips : 0))
+        DSRoomChassis.crownChart(box: box, chips: chips)
     }
 
     // **THE UNDATED PATH IS GONE (2026-09-10).** Hegotá and Frames used to
