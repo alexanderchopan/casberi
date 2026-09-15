@@ -20,7 +20,7 @@ struct L2beatRoomCard: View {
 			footnotes: [.quiet(L2beatRoom.coverageNote(room))]) {
 			if !room.items.isEmpty {
 				DSRoomChassis.Block {
-					ForEach(Array(room.items.enumerated()), id: \.element.id) { index, item in
+					DSRoomChassis.Rows(items: room.items) { index, item in
 						DSRoomChassis.MarkedRow(
 							name: item.name,
 							flag: flag(item),

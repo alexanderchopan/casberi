@@ -51,6 +51,9 @@ struct FeedLedeCard: View {
     /// opaque surface — a wash underneath it would be invisible. Only ever
     /// true on Mac; `ShellChrome.canWalk` is Mac-only.
     var selected: Bool = false
+    /// The room's head sentence when the head had nothing else to draw (prd
+    /// §760) — "Nothing needs you" — under the cover, in the note's register.
+    var note: String? = nil
 
     /// The art's height. Fixed rather than an aspect ratio so the card's own
     /// height is known before the image resolves — a ratio would restate the
@@ -82,6 +85,35 @@ struct FeedLedeCard: View {
         let face = FeedLedeFace.kind(isMoney: receipt != nil,
                                      hasArt: artURL != nil || thing.previewImageData != nil,
                                      hasClock: thing.dueAt != nil)
+        // THE LONGEST EXCERPT THAT FITS THE LEAD'S BOX (prd §760, user: "up to
+        // six lines"). Six, four, then two: a four-line statement title leaves
+        // less room than a one-line one, and only the layout knows which it is.
+        ViewThatFits(in: .vertical) {
+            cover(face, receipt: receipt, excerptLines: 6)
+            cover(face, receipt: receipt, excerptLines: 4)
+            cover(face, receipt: receipt, excerptLines: 2)
+        }
+        // Every room's lead is one height (prd §760) — the wallet head's box.
+        // The cover has no surface, so the rest of the box is the page's; the
+        // clip sits before the selection so the wash can still bleed past it.
+        .frame(maxWidth: .infinity,
+               minHeight: DSRoomChassis.leadHeight, maxHeight: DSRoomChassis.leadHeight,
+               alignment: .topLeading)
+        .clipped()
+        // The Mac walk's selection — the one surface the cover may wear, bled
+        // past the content so the words do not touch its edge.
+        .background {
+            if selected {
+                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .fill(DS.tintDim)
+                    .padding(-DS.Space.s3)
+            }
+        }
+    }
+
+    /// One spelling of the cover at an excerpt length (prd §760).
+    private func cover(_ face: FeedLedeFace.Kind, receipt: MoneyReceipt?,
+                       excerptLines: Int) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if face == .picture {
                 art
@@ -99,23 +131,22 @@ struct FeedLedeCard: View {
                 postDisc
                     .padding(.bottom, DS.Space.s1)
                 switch face {
-                case .picture:         titleBlock(underArt: true)
-                case .words:           titleBlock(underArt: false)
+                case .picture:         titleBlock(underArt: true, excerptLines: excerptLines)
+                case .words:           titleBlock(underArt: false, excerptLines: excerptLines)
                 case .money:           moneyBlock(receipt)
                 case .clock:           clockBlock
                 }
                 eyebrow
+                if let note {
+                    Text(note)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, DS.Space.s1)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        // The Mac walk's selection — the one surface the cover may wear, bled
-        // past the content so the words do not touch its edge.
-        .background {
-            if selected {
-                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                    .fill(DS.tintDim)
-                    .padding(-DS.Space.s3)
-            }
         }
     }
 
@@ -159,7 +190,7 @@ struct FeedLedeCard: View {
     /// a screenshot's title is the OCR line the heal wrote and a folder image's
     /// is its filename, so display type is the app shouting a string it
     /// assembled.
-    private func titleBlock(underArt: Bool) -> some View {
+    private func titleBlock(underArt: Bool, excerptLines: Int) -> some View {
         let short = words.count <= Self.statementLimit
         return VStack(alignment: .leading, spacing: DS.Space.s1) {
             Text(words)
@@ -173,7 +204,7 @@ struct FeedLedeCard: View {
                 Text(note)
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textSecondary)
-                    .lineLimit(2)
+                    .lineLimit(excerptLines)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

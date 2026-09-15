@@ -281,8 +281,11 @@ print("Rows")
 let ranked = AgentRoom.compose(
     spread(4, month: m(2025, 1)) + spread(9, month: m(2025, 2), from: 200)
     + spread(2, month: m(2025, 3), from: 400) + spread(6, month: m(2025, 4), from: 600))!
-check("busiest first", AgentRoom.rows(ranked).map(\.month) == [m(2025, 2), m(2025, 4), m(2025, 1)])
-check("capped at rowCap", AgentRoom.rows(ranked).count == AgentRoom.rowCap)
+check("busiest first", AgentRoom.rows(ranked).map(\.month) == [m(2025, 2), m(2025, 4), m(2025, 1), m(2025, 3)])
+// The cap is headRowCap's 8 since prd §760, so it needs a room with more months
+// than that to bind; the lead's box then draws as many of those as fit.
+let crowded = AgentRoom.compose((1...10).reduce([]) { $0 + spread($1 + 1, month: m(2025, $1), from: $1 * 100) })!
+check("capped at rowCap", AgentRoom.rows(crowded).count == AgentRoom.rowCap)
 check("the strip is never capped — a truncated span is a lie about when you started",
       ranked.months.count == 4)
 

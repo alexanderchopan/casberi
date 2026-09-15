@@ -75,7 +75,7 @@ struct GnosisPayRoomCard: View {
             // the type note.
             if drawn.count > 1 {
                 DSRoomChassis.Block {
-                    ForEach(Array(drawn.enumerated()), id: \.element.id) { index, currency in
+                    DSRoomChassis.Rows(items: drawn) { index, currency in
                         let line = GnosisPayRoom.currencyLine(currency, mask: mask)
                         DSRoomChassis.Row(
                             title: currency.code,

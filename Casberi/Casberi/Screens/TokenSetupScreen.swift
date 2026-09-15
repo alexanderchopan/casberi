@@ -524,7 +524,8 @@ struct TokenSetupScreen: View {
         if let year = githubGraph.year, year.total > 0 {
             CalendarHeatmapHero(title: String(localized: "Your year in code"),
                                 subtitle: String(localized: "\(year.total.formatted()) contributions"),
-                                year: year)
+                                year: year,
+                                fillsLead: false)
         }
     }
 

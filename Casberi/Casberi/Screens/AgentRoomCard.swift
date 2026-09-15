@@ -61,7 +61,7 @@ struct AgentRoomCard: View {
             DSRoomChassis.Block { monthStrip }
 
             DSRoomChassis.Block {
-                ForEach(Array(AgentRoom.rows(room).enumerated()), id: \.element.id) { index, month in
+                DSRoomChassis.Rows(items: AgentRoom.rows(room)) { index, month in
                     DSRoomChassis.Row(
                         title: AgentRoom.monthLabel(month.month),
                         line: AgentRoom.monthLine(month),

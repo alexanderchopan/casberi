@@ -60,7 +60,7 @@ struct DodoPaymentsRoomCard: View {
             if !room.retries.isEmpty {
                 DSRoomChassis.Block {
                     rail
-                    ForEach(Array(room.retries.enumerated()), id: \.element.id) { index, retry in
+                    DSRoomChassis.Rows(items: room.retries) { index, retry in
                         DSRoomChassis.DeadlineRow(
                             name: retry.name,
                             stamp: DodoPaymentsRoom.retryChip(retry),
@@ -75,7 +75,7 @@ struct DodoPaymentsRoomCard: View {
 
             if room.currencies.count > 1 {
                 DSRoomChassis.Block {
-                    ForEach(Array(room.currencies.enumerated()), id: \.element.id) { index, currency in
+                    DSRoomChassis.Rows(items: room.currencies) { index, currency in
                         DSRoomChassis.Row(
                             title: currency.code,
                             line: DodoPaymentsRoom.currencyLine(currency, mask: mask),

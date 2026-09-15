@@ -19,7 +19,7 @@ enum PeerRoomSource {
 
     /// The card draws at most this many rails; the rest are counted in the
     /// footnote rather than silently dropped.
-    static let rowCap = 3
+    static let rowCap = 8   // DSRoomChassis.headRowCap (prd §760)
 
     /// The head, or nil when there is nothing worth drawing.
     ///

@@ -77,7 +77,7 @@ struct SafeRoomCard: View {
             if !drawn.isEmpty {
                 DSRoomChassis.Block {
                     VStack(alignment: .leading, spacing: DS.Space.s3) {
-                        ForEach(Array(drawn.enumerated()), id: \.element.id) { index, entry in
+                        DSRoomChassis.Rows(items: drawn) { index, entry in
                             row(entry)
                                 .chartArrival(index: index, reduceMotion: reduceMotion)
                         }

@@ -51,7 +51,7 @@ struct XRoomCard: View {
             // The biggest years, each with what it was about — the "mostly …"
             // clause is the half the strip cannot say.
             DSRoomChassis.Block {
-                ForEach(Array(XRoom.rows(room).enumerated()), id: \.element.id) { index, year in
+                DSRoomChassis.Rows(items: XRoom.rows(room)) { index, year in
                     DSRoomChassis.Row(
                         title: String(year.year),
                         line: XRoom.yearLine(year),

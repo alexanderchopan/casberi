@@ -54,7 +54,7 @@ struct RailgunRoomCard: View {
             footnotes: [.quiet(RailgunRoom.footnote(room, drawn: drawn.count))]) {
             if !drawn.isEmpty {
                 DSRoomChassis.Block {
-                    ForEach(Array(drawn.enumerated()), id: \.element.id) { index, token in
+                    DSRoomChassis.Rows(items: drawn) { index, token in
                         // No symbol inside the figures — the row's leading label
                         // is already the token's name.
                         DSRoomChassis.Row(

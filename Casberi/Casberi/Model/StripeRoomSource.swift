@@ -23,7 +23,7 @@ enum StripeRoomSource {
     static let overdueGraceDays = 14
     /// The card draws at most this many rows; the rest are counted in the
     /// coverage note rather than silently dropped.
-    static let rowCap = 3   // DSRoomChassis.headRowCap (prd §751)
+    static let rowCap = 8   // DSRoomChassis.headRowCap (prd §751, §760)
 
     @MainActor
     static func compose(things: [Thing], now: Date = .now) -> StripeRoom? {

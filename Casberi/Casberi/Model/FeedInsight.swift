@@ -226,7 +226,8 @@ enum FeedInsight {
             tiles.append(Mosaic.Tile(
                 url: url,
                 freshness: art == nil ? 1 : MediaShape.freshness(of: thing.capturedAt)))
-            if tiles.count >= 8 { break }
+            // Enough for the rows a lead's box can hold (prd §760).
+            if tiles.count >= 16 { break }
         }
         // A wide medium fills its shelf with fewer, larger tiles (two 16:9
         // frames, not eight), so it qualifies on fewer images than the square

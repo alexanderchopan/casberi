@@ -28,11 +28,12 @@ import SwiftUI
 ///      owns the `headBlockGap` above it;
 ///   4. **footnotes** — quiet `Line`s, one `headBlockGap` below the last block.
 ///
-/// **The fixed slot does not apply here, on purpose.** `visualSlot` is a box
-/// sized for a figure that scopes change under; these heads have no scopes and
-/// their honest height is what they have to say (a quiet AWS account is one
-/// sentence, a Safe queue is three rows). Clipping a Safe queue to 300pt would
-/// be §665's silent lost row, in the room where a lost row is a transaction.
+/// **The fixed slot did not apply here, and since §760 it does.** §745 left
+/// the height to the content, because clipping a Safe queue to 300pt would be
+/// §665's silent lost row in the room where a lost row is a transaction. §760
+/// fixes the card at `leadHeight` and keeps that reason: a head that runs long
+/// draws fewer rows through `LeadFit` and `Rows`, and says how many it left
+/// off, so no row is lost silently.
 ///
 /// FLAT BY LAW, like every head it replaces: one `VStack`, no generic
 /// `Widget`/`Row` mount beneath it (the first-frame stack lesson). The one
@@ -68,10 +69,13 @@ extension DSRoomChassis {
     /// and devnet rooms draw into `visualSlot` and are not governed by this.
     static let figureHeight: CGFloat = 56
 
-    /// The most rows a head draws (prd §751). Heads capped at three or four;
-    /// they cap at three. The models spell the literal (they compile without
+    /// The most rows a model hands a head (prd §751, raised by §760). §751
+    /// capped every head at three; §760 fills the lead's fixed box instead
+    /// (user: "put as many rows in the header as fit"), so the model hands over
+    /// up to eight — more than a 286pt box can hold — and `LeadFit` draws as
+    /// many as fit. The models spell the literal (they compile without
     /// SwiftUI), and `room-heads-selftest.sh` holds each one to this.
-    static let headRowCap = 3
+    static let headRowCap = 8
 
     /// The gap in a SCOPED head (Privacy Pools, §486): lead, scope switcher,
     /// the scope's card. `s4` rather than `headBlockGap` because those are
@@ -163,20 +167,24 @@ extension DSRoomChassis {
         }
 
         var body: some View {
-            faceDoor(VStack(alignment: .leading, spacing: 0) {
-                leadView
-                ForEach(notes.indices, id: \.self) { index in
-                    LineText(line: notes[index])
-                        .padding(.top, DSRoomChassis.headNoteGap)
-                }
-                content
-                if !footnotes.isEmpty {
-                    VStack(alignment: .leading, spacing: DSRoomChassis.headFootnoteGap) {
-                        ForEach(footnotes.indices, id: \.self) { index in
-                            LineText(line: footnotes[index])
-                        }
+            // `dsRoomHeadBlock` pads `s4` on every side, so the box inside is
+            // `leadHeight` less that twice (prd §760).
+            faceDoor(LeadFit(height: DSRoomChassis.leadHeight - 2 * DS.Space.s4) {
+                VStack(alignment: .leading, spacing: 0) {
+                    leadView
+                    ForEach(notes.indices, id: \.self) { index in
+                        LineText(line: notes[index])
+                            .padding(.top, DSRoomChassis.headNoteGap)
                     }
-                    .padding(.top, DSRoomChassis.headBlockGap)
+                    content
+                    if !footnotes.isEmpty {
+                        VStack(alignment: .leading, spacing: DSRoomChassis.headFootnoteGap) {
+                            ForEach(footnotes.indices, id: \.self) { index in
+                                LineText(line: footnotes[index])
+                            }
+                        }
+                        .padding(.top, DSRoomChassis.headBlockGap)
+                    }
                 }
             }
             .dsRoomHeadBlock()
@@ -232,6 +240,74 @@ extension DSRoomChassis {
             VStack(alignment: .leading, spacing: 0) { content }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, DSRoomChassis.headBlockGap)
+        }
+    }
+
+    /// **THE LEAD'S FIXED BOX, AND HOW A HEAD FITS IT (prd §760).**
+    ///
+    /// The same content at a falling row limit — every row, then seven down to
+    /// none — and `ViewThatFits` draws the first whose natural height
+    /// fits the box. Every `Rows` inside reads the limit, so a head that runs
+    /// long gives up whole rows from the bottom and counts them; the spellings
+    /// that do not fit are measured and never mounted. Asking the layout rather
+    /// than adding up the ramp is deliberate: a heading wraps to one line or
+    /// two depending on its words, and no spelled sum knows which.
+    ///
+    /// The clip is the floor under the last spelling. A lead, its notes and
+    /// its footnotes that are taller than the card on their own (the largest
+    /// Dynamic Type sizes) are the one case that can still lose their bottom.
+    struct LeadFit<Content: View>: View {
+        let height: CGFloat
+        let content: Content
+
+        init(height: CGFloat, @ViewBuilder content: () -> Content) {
+            self.height = height
+            self.content = content()
+        }
+
+        var body: some View {
+            ViewThatFits(in: .vertical) {
+                content.environment(\.dsHeadRowLimit, nil)
+                content.environment(\.dsHeadRowLimit, 7)
+                content.environment(\.dsHeadRowLimit, 6)
+                content.environment(\.dsHeadRowLimit, 5)
+                content.environment(\.dsHeadRowLimit, 4)
+                content.environment(\.dsHeadRowLimit, 3)
+                content.environment(\.dsHeadRowLimit, 2)
+                content.environment(\.dsHeadRowLimit, 1)
+                content.environment(\.dsHeadRowLimit, 0)
+            }
+            .frame(maxWidth: .infinity, minHeight: height, maxHeight: height,
+                   alignment: .topLeading)
+            .clipped()
+        }
+    }
+
+    /// A head's rows, under `LeadFit`'s limit (prd §760). What the limit leaves
+    /// off is counted on a quiet line under the last row drawn — "2 more", not
+    /// "2 more below", because a ranked year or a currency is not a row further
+    /// down the room (§83).
+    struct Rows<Item: Identifiable, RowContent: View>: View {
+        let items: [Item]
+        let row: (Int, Item) -> RowContent
+
+        @Environment(\.dsHeadRowLimit) private var limit
+
+        init(items: [Item], @ViewBuilder row: @escaping (Int, Item) -> RowContent) {
+            self.items = items
+            self.row = row
+        }
+
+        var body: some View {
+            let shown = limit.map { Array(items.prefix($0)) } ?? items
+            ForEach(Array(shown.enumerated()), id: \.element.id) { index, item in
+                row(index, item)
+            }
+            if shown.count < items.count {
+                LineText(line: Line(text: String(localized: "\(items.count - shown.count) more"),
+                                    tone: .quiet))
+                    .padding(.top, DS.Space.s1)
+            }
         }
     }
 
@@ -614,6 +690,19 @@ extension DSRoomChassis.Row where Measure == EmptyView {
          action: @escaping () -> Void) {
         self.init(title: title, truncation: truncation, line: line, detail: detail,
                   spoken: spoken, index: index, action: action) { EmptyView() }
+    }
+}
+
+private struct DSHeadRowLimitKey: EnvironmentKey {
+    static let defaultValue: Int? = nil
+}
+
+extension EnvironmentValues {
+    /// How many rows each `DSRoomChassis.Rows` draws; nil draws them all. Set
+    /// only by `DSRoomChassis.LeadFit` (prd §760).
+    var dsHeadRowLimit: Int? {
+        get { self[DSHeadRowLimitKey.self] }
+        set { self[DSHeadRowLimitKey.self] = newValue }
     }
 }
 

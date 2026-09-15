@@ -20,7 +20,7 @@ enum GnosisPayRoomSource {
     /// hold three (EURe, GBPe, USDCe) and the cap is deliberately all of them:
     /// unlike a rail or a repository board, this set is closed and small, so
     /// there is nothing to hide behind a "1 more".
-    static let rowCap = 3
+    static let rowCap = 8   // DSRoomChassis.headRowCap (prd §760)
 
     /// The head, or nil when there is nothing worth drawing.
     @MainActor
