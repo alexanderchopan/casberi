@@ -582,8 +582,25 @@ struct MainSurface: View {
         // ride the folder's own capsule AFTER the venues, so §649's reason
         // survives inside the row: the venues lead, the tail still lands on a
         // venue over its chip, and nothing that points sits above anything it
-        // does not point at. With the folder closed the capsule carries the
-        // faces alone and draws no tail.
+        // does not point at. With the folder closed the capsule draws no tail.
+        //
+        // **AND THE VENUES LEAD IT WITH THE FOLDER SHUT TOO (prd §754, user:
+        // "this isn't how we designed the dock, how a user know they're on
+        // forecastor").** For a day the closed capsule carried the faces
+        // ALONE — a pill of avatars over a dock whose lit tile said `Social`.
+        // That tile names the CATEGORY, and it may not name the room: a
+        // category chip carries no brand mark by the 2026-08-11 ruling
+        // ("honestly i think it just looks confusing for those logos to be in
+        // the category chips"), so with the venue row gone nothing on the
+        // screen said Farcaster rather than Bluesky or Nostr. The capsule now
+        // always leads with WHERE YOU ARE: one seat shut, the category's
+        // venues open, and `lead` is nil whenever `venues` is not.
+        //
+        // The MOUNT is untouched, which is the whole of 2026-09-06's objection
+        // ("every folded room wear[ing] its venues row permanently … 80-odd
+        // rooms each carrying a second row"): this row appears where it already
+        // appeared — an open folder, or a room whose faces show — and a room
+        // with neither still has no row at all.
         //
         // **A FACE RAIL SHOWS WHENEVER ITS ROOM HAS SOMETHING TO PICK (prd
         // §750, 2026-09-15).** It showed only while the category's folder was
@@ -603,6 +620,8 @@ struct MainSurface: View {
                 DockFolderRow(
                     venues: venues,
                     standing: filter.source,
+                    lead: venues.isEmpty ? standingVenue : nil,
+                    onOpenFolder: openStandingFolder,
                     category: openCategory ?? currentCategory ?? "",
                     compact: chrome.minimized && !showsRail,
                     anchorLocalX: anchorLocalX,
@@ -641,6 +660,29 @@ struct MainSurface: View {
         let venues = categoryVenues[category] ?? []
         guard venues.count >= CategoryFold.switcherFloor else { return [] }
         return CategoryFold.scopes(category: category, present: Set(venues))
+    }
+
+    /// The seat drawn alone at the capsule's head while the folder is shut
+    /// (prd §754) — the room you are standing in.
+    ///
+    /// Nil where there is no room to name: the All feed, and any seat the
+    /// catalogue files under no category. `filter.source` is a REAL seat at all
+    /// times (`CategoryFold`'s central invariant), so this is never a category
+    /// word and `BridgeIcon` always has a mark to draw.
+    private var standingVenue: String? {
+        guard currentCategory != nil, !filter.source.isEmpty else { return nil }
+        return filter.source
+    }
+
+    /// The lead seat's act: spring the standing room's folder open.
+    ///
+    /// Routed through `ShellChrome.folderRequest` rather than set here, because
+    /// the ANCHOR is the strip's own geometry — the tail must land on the
+    /// category's chip, and only `SourceChips` knows where that chip is (see
+    /// `anchorX(for:)`). Same hop, same reason, as `sourceRequest`.
+    private func openStandingFolder() {
+        guard let category = currentCategory else { return }
+        chrome.folderRequest = category
     }
 
     /// Whether any of the room's face rails has something to pick — the same

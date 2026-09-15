@@ -166,6 +166,14 @@ final class ShellChrome {
     /// opens a folder, before `openFolder` is set.
     var folderAnchorX: CGFloat = 0
 
+    /// A category's folder asked to spring from somewhere that is not its own
+    /// chip — the capsule's lead seat (prd §754). The STRIP answers it, and it
+    /// has to: the tail lands on the category's chip, and the chip's centre is
+    /// the strip's geometry (`SourceChips.anchorX(for:)`), which nothing above
+    /// it can compute. Same hop, same reason, as `sourceRequest` — cleared by
+    /// the reader.
+    var folderRequest: String?
+
     /// The one transient message surface — the glass toast above the bar.
     /// Any screen can flash an outcome ("On your list", "Copied", a denial);
     /// the shell renders it, so feedback looks the same everywhere.

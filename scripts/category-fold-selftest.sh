@@ -586,6 +586,77 @@ _inFolder=$(grep -c 'inFolder: true' "$TMP/main.nc" || true)
 [[ "$_inFolder" -eq 3 ]] \
   || { echo "✗ the shell passes inFolder: true $_inFolder times, not 3 (§753) — a rail drawn"; \
        echo "  in the capsule without it brings its own glass, scroll view and captions."; exit 1; }
+# --- the capsule always says WHERE YOU ARE (prd §754) ------------------------
+# The closed capsule carried the faces ALONE for a day (user: "this isn't how we
+# designed the dock, how a user know they're on forecastor"). Nothing else on
+# the screen could answer that: the lit dock tile says `Social`, which is the
+# CATEGORY, and a category tile may carry no brand mark (2026-08-11, "honestly i
+# think it just looks confusing for those logos to be in the category chips") —
+# so Farcaster, Bluesky and Nostr were one word and the room had no name.
+#
+# This fails INVISIBLY, which is why it is here: a capsule of avatars over a lit
+# category tile is a handsome band in every screenshot and every sweep. The
+# sweep's own shots are what shipped it.
+_hstack=$(awk '/HStack\(spacing: 2\)/{f=1} f{print} f&&/^        }$/{exit}' "$TMP/folder.nc")
+[[ "$_hstack" == *"leadSeat(lead)"* ]] \
+  || { echo "✗ the dock capsule no longer leads with the room you are standing in (§754) —"; \
+       echo "  with the folder shut it draws faces over a tile that names the CATEGORY, so"; \
+       echo "  nothing on the screen says Farcaster rather than Bluesky."; exit 1; }
+# Split on the bare symbol: zsh reads `(` in a glob as grouping, so a pattern
+# carrying `leadSeat(lead)` would match the literal string `leadSeatlead`.
+_leadPos=${_hstack%%leadSeat*}
+[[ "$_leadPos" != *"venueSeats("* && "$_leadPos" != *"faces()"* ]] \
+  || { echo "✗ the standing seat is drawn after the venues or the faces (§754/§753) — WHERE"; \
+       echo "  YOU ARE leads this capsule, and the tail lands on the seat over its chip."; exit 1; }
+_lead=$(awk '/private func leadSeat\(/{f=1} f{print} f&&/^    }$/{exit}' "$TMP/folder.nc")
+[[ "$_lead" == *"BridgeIcon("* && "$_lead" != *"dsText("* ]] \
+  || { echo "✗ the standing seat is not a bare mark (§754, user picked \"mark only, no word\")"; \
+       echo "  — the row is marks-only by the venue switcher's own ruling, and a word here is"; \
+       echo "  the one caption in a capsule whose faces have none (§753)."; exit 1; }
+[[ "$_lead" == *"VenueGlass(on: true"* ]] \
+  || { echo "✗ the standing seat no longer wears the venue lens (§754/§637) — it is the same"; \
+       echo "  selection as the lit venue, so it wears the same glass and morphs into its"; \
+       echo "  seat when the folder springs."; exit 1; }
+[[ "$_lead" == *"accessibilityLabel"* ]] \
+  || { echo "✗ the standing seat names nothing to VoiceOver (§358) — with no word drawn this"; \
+       echo "  is the only naming the control has."; exit 1; }
+# A DEAD control is the other way to fail this (§83): `folderVenue` returns
+# early on the lit venue, so the lead seat needs an act of its own.
+[[ "$_lead" == *"onOpenFolder()"* ]] \
+  || { echo "✗ the standing seat does nothing when tapped (§83) — the lit venue's own button"; \
+       echo "  returns early, so a lead seat wired to it is a control that cannot be pressed."; exit 1; }
+# The two halves are mutually exclusive: with the folder OPEN the venues carry
+# the standing seat lit among its siblings, and a lead beside them would draw
+# that seat twice.
+grep -q 'lead: venues.isEmpty ? standingVenue : nil' "$TMP/main.nc" \
+  || { echo "✗ the shell no longer nils the lead seat while the folder is open (§754) — the"; \
+       echo "  standing room would draw twice, once alone and once among its venues."; exit 1; }
+# THE MOUNT IS UNCHANGED, and that is the whole of 2026-09-06's objection: a
+# venues row on every folded room was "80-odd rooms each carrying a second row".
+# §754 adds a seat to a row that is already there; it may never add the row.
+_controlsGate=$(awk '/private var roomControls: some View/{f=1;print;next} f&&(/^    private var /||/^    @ViewBuilder/){exit} f{print}' "$TMP/main.nc")
+[[ "$_controlsGate" == *"if !venues.isEmpty || facesShow {"* ]] \
+  || { echo "✗ roomControls no longer mounts on venues-or-faces alone (§754) — a lead seat"; \
+       echo "  that mounts the capsule by itself gives every folded room the permanent second"; \
+       echo "  row 2026-09-06 deleted."; exit 1; }
+# The anchor is the STRIP's geometry, so the strip serves the request — and it
+# must set the anchor BEFORE the folder opens, or the row's first frame springs
+# from wherever the last tap left it (the chip's own rule, `anchorX(for:)`).
+grep -q 'chrome.folderRequest = category' "$TMP/main.nc" \
+  || { echo "✗ the lead seat opens the folder without the strip (§754) — MainSurface cannot"; \
+       echo "  know where the category's chip is, so the tail would point at a stale anchor."; exit 1; }
+_serve=$(awk '/onChange\(of: chrome.folderRequest\)/{f=1} f{print} f&&/^        }$/{exit}' "$TMP/chips.nc")
+[[ "$_serve" == *"folderAnchorX"* && "$_serve" == *"openFolder = .category"* ]] \
+  || { echo "✗ the strip no longer answers a folder request (§754) — the capsule's lead seat"; \
+       echo "  would be a control wired to nothing."; exit 1; }
+_anchorPos=${_serve%%openFolder = .category*}
+[[ "$_anchorPos" == *"folderAnchorX"* ]] \
+  || { echo "✗ the strip opens the requested folder BEFORE publishing its anchor (§754) — the"; \
+       echo "  row's first frame grows out of the last chip anybody tapped."; exit 1; }
+[[ "$_serve" == *"chrome.folderRequest = nil"* ]] \
+  || { echo "✗ the folder request is never cleared (§754) — it would re-fire on every strip"; \
+       echo "  that mounts afterwards."; exit 1; }
+
 # A face with no picture carries its own characters, and an address's are bare
 # (user: "just xxxx with no elipsis"). Read into a variable, never `awk | grep -q`
 # (the pipefail race recorded further down).

@@ -56092,3 +56092,70 @@ ellipsis.
 **Not done.** A press-and-slide label over a face (the Mac dock's hover name) was
 considered for long names and left out: the room already names the pick, and a
 floating label is a fourth object in the band.
+
+## §754 — The dock capsule always leads with the room you are standing in (user: "this isn't how we designed the dock, how a user know they're on forecastor", then on three shapes "mark only, no word" and "only where the row already is", 2026-09-15)
+
+**The report, with a screenshot.** A Farcaster room: a capsule of eight avatars
+above the dock, and in the dock the lit tile reads `Social`. Nothing on the
+screen said Farcaster.
+
+**How the room lost its name, in three moves nobody made together.** §351 built
+the venue switcher as chrome that says WHICH ROOM YOU ARE IN — its own floor is
+1 for that reason ("at one member it names the room and shows you its face").
+2026-09-06 stopped the folder opening on arrival, which was right for the eighty
+rooms then wearing a permanent second row, and left the lit category chip as the
+only answer. §750 then mounted the faces with the folder shut, and §753 moved
+them into the folder's capsule. Each step was sound; together they left the
+"where" half of a capsule whose whole grammar is where-then-who empty, and put a
+row of avatars where the room's name had been.
+
+**The category chip cannot cover for it.** It is a WORD, by the 2026-08-11
+ruling that took the landing seat's logo back out of it ("honestly i think it
+just looks confusing for those logos to be in the category chips") — and a
+category is Farcaster, Bluesky, Nostr, Telegram and four more. The tile says
+which folder you are in. It has never said which room.
+
+**The ruling** (`DockFolderRow.lead`, `MainSurface.standingVenue` /
+`openStandingFolder`, `ShellChrome.folderRequest`, `SourceChips`):
+
+1. **The capsule always carries WHERE YOU ARE.** Open, that is the category's
+   venues with the standing one lit, exactly as §753 left it. Shut, it is ONE
+   seat — the room you are standing in — at the capsule's head, before the `s2`
+   gap and the faces. `lead` is nil whenever `venues` is not, so the standing
+   room never draws twice.
+2. **A mark, no word** (user, choosing it over a nameplate pairing the mark with
+   the room's name). The row is marks-only by the venue switcher's own ruling —
+   a seat is an app the person went and connected, wearing the mark it is known
+   by — and a caption here would be the only one in a capsule whose faces have
+   none (§753). VoiceOver takes the name, and so does the Mac tooltip.
+3. **It wears the venue lens and the same `glassEffectID`**, so springing the
+   folder does not swap one selection for another: the lens travels from this
+   seat to wherever this seat lands among its siblings.
+4. **Its tap springs the folder** — §83, because `folderVenue` returns early on
+   the lit venue, so a lead seat wired to the pick would be a control that
+   cannot be pressed. Routed through `ShellChrome.folderRequest` and served by
+   `SourceChips`, which sets `folderAnchorX` first and opens second: the tail
+   lands on the category's chip, and only the strip knows where that chip is.
+5. **The MOUNT is untouched, and that is 2026-09-06's whole objection.** The
+   capsule appears where it already appeared — an open folder, or a room whose
+   faces show. A seat that mounted the row by itself would hand every folded
+   room the permanent second row that pass deleted.
+
+**The accepted cost**, chosen by the user over the alternative: a room with one
+account and a shut folder still has no capsule and still does not name itself.
+Naming it would cost a glass row above the dock in every such room, which is the
+trade 2026-09-06 already ruled on.
+
+**Considered and not taken.** Letting the lit dock tile become the room — its
+mark over its name — answers the question with no chrome at all, and was
+declined: it reverses the 2026-08-11 ruling, and the tile's caption is
+`dockCaption10` in a 52pt cell, which cuts `GeckoTerminal` and `App Store
+Connect`.
+
+**Guarded** in `category-fold-selftest.sh`: the lead seat is drawn first in the
+capsule's `HStack`, it is a `BridgeIcon` with no `dsText`, it wears
+`VenueGlass(on: true)`, it names itself to VoiceOver, it calls `onOpenFolder()`,
+the shell nils it while the folder is open, `roomControls` still mounts on
+venues-or-faces alone, and the strip publishes the anchor before it opens the
+folder. Every one of these fails INVISIBLY — a capsule of avatars over a lit
+category tile is a handsome band in every screenshot, which is how it shipped.

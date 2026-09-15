@@ -29,9 +29,10 @@ import SwiftUI
 /// or swiping rooms closes it too.
 struct DockSpringRow<Content: View>: View {
     /// The tapped chip's centre, window space. **nil when no folder is open**
-    /// (prd §753): the row then carries the room's faces alone, points at
-    /// nothing, and sits at the band's leading inset — a tail aimed at a chip
-    /// nobody tapped would be the §649 lie told the other way round.
+    /// (prd §753): the row then carries the room's own seat and its faces
+    /// (§754), points at nothing, and sits at the band's leading inset — a tail
+    /// aimed at a chip nobody tapped would be the §649 lie told the other way
+    /// round.
     let anchorX: CGFloat?
     /// Built with the anchor's x IN THE ROW'S OWN SPACE, so the content can
     /// flow out of that point (see `DockFolderRow`).
@@ -114,13 +115,32 @@ struct DockSpringRow<Content: View>: View {
 /// dock, one pointing and one not, which read as one object repeated. Where
 /// you are (the venues) leads, so the tail still lands on a venue over the
 /// chip; who you are looking at (the faces) follows a gap. Either half may be
-/// empty: a closed folder leaves the faces alone, a room with one account
-/// leaves the venues alone. The capsule scrolls sideways inside
-/// `DockSpringRow`, which is what a long roster needs.
+/// empty: a room with one account leaves the venues alone, and a closed folder
+/// leaves ONE venue — the room you are standing in (prd §754), never none. The
+/// capsule scrolls sideways inside `DockSpringRow`, which is what a long roster
+/// needs.
 struct DockFolderRow<Faces: View>: View {
     let venues: [String]
     /// The room you are standing in — the lit venue.
     let standing: String
+    /// **THE ROOM YOU ARE STANDING IN, ALONE AT THE CAPSULE'S HEAD WHILE THE
+    /// FOLDER IS SHUT (prd §754, user: "this isn't how we designed the dock,
+    /// how a user know they're on forecastor").** Nil when the folder is open,
+    /// because `venues` then carries this seat lit among its siblings, and nil
+    /// in a room the catalogue gives no category.
+    ///
+    /// The capsule drew the faces alone once the folder stopped opening on
+    /// arrival (2026-09-06): a pill of avatars over a dock whose lit tile said
+    /// `Social`, which names the category and never the room. Farcaster,
+    /// Bluesky and Nostr are one tile, so nothing on the screen said which of
+    /// the three you were reading. The venues lead in this capsule by §753, and
+    /// they lead whether or not the folder is up — one seat when it is shut,
+    /// the category's when it is open.
+    var lead: String? = nil
+    /// Springs the standing room's folder — the lead seat's whole act, and the
+    /// same act its dock tile performs (§83: the lit seat may not be a control
+    /// that does nothing, and `folderVenue` returns early on the lit one).
+    var onOpenFolder: () -> Void = {}
     /// The folder's name, for VoiceOver's group label.
     var category: String = ""
     var compact: Bool = false
@@ -160,10 +180,16 @@ struct DockFolderRow<Faces: View>: View {
         // The container the lit venue's lens morphs within — see `folderVenue`.
         DSGlassContainer(spacing: 2) {
         HStack(spacing: 2) {
+            // WHERE YOU ARE, always — one seat with the folder shut (§754),
+            // the category's venues with it open. `lead` is nil whenever
+            // `venues` is not, so the two never draw together.
+            if let lead {
+                leadSeat(lead)
+            }
             venueSeats(broken: broken)
             // The gap between WHERE and WHO. Spacing, never a line (§8: no
             // hairlines); only drawn when both halves are there.
-            if !venues.isEmpty {
+            if !venues.isEmpty || lead != nil {
                 Color.clear.frame(width: DS.Space.s2, height: 1)
             }
             faces()
@@ -187,6 +213,40 @@ struct DockFolderRow<Faces: View>: View {
         .onChange(of: venues.isEmpty) { _, empty in
             flowed = !empty
         }
+    }
+
+    /// The lone standing seat, drawn while the folder is shut (prd §754).
+    ///
+    /// **A MARK, NO WORD** (user, 2026-09-15, choosing it over a nameplate
+    /// pairing the mark with the room's name). The row is marks-only by the
+    /// venue switcher's own ruling — a seat is an app the person went and
+    /// connected, wearing the mark it is known by, so recognition is already
+    /// paid for — and a word here would be the one caption in a capsule that
+    /// has none, including under the faces beside it (§753).
+    ///
+    /// It wears the SAME lens as the lit venue and the same `glassEffectID`,
+    /// so opening the folder does not swap one selection for another: the lens
+    /// travels from this seat to wherever this seat lands among its siblings.
+    private func leadSeat(_ venue: String) -> some View {
+        Button {
+            onOpenFolder()
+        } label: {
+            BridgeIcon(name: venue, size: markSize, circular: true)
+                .padding(6)
+                .modifier(VenueGlass(on: true, reduceMotion: reduceMotion, ns: selectionNS,
+                                     radius: (markSize + 12) / 2))
+                .frame(width: DS.Hit.min, height: DS.Hit.min)
+                .contentShape(Capsule(style: .circular))
+                .dsHover()
+        }
+        .buttonStyle(.plain)
+        .dsTooltip(venue)
+        // The only naming this control has, the same as every other seat in
+        // the row: the mark is the label for everyone who can read it, and
+        // this is the label for everyone who cannot.
+        .accessibilityLabel(venue)
+        .accessibilityAddTraits(.isSelected)
+        .accessibilityHint(Text("Shows the other sources in this category"))
     }
 
     /// The venue seats — the part of the row that flows out of the chip.

@@ -491,9 +491,32 @@ struct SourceChips: View {
     }
 
     var body: some View {
-        switch axis {
-        case .horizontal: horizontalStrip
-        case .vertical:   verticalRail
+        Group {
+            switch axis {
+            case .horizontal: horizontalStrip
+            case .vertical:   verticalRail
+            }
+        }
+        // **A FOLDER ASKED FOR FROM ABOVE THE DOCK (prd §754).** The capsule's
+        // lead seat is the standing room, and its tap opens that room's folder
+        // — but the folder springs out of the category's CHIP, whose centre is
+        // this view's own geometry and nobody else's. So the shell posts the
+        // category and the strip answers it here, exactly as it would have
+        // answered the chip's own tap: the anchor first, then the spring, so
+        // the row's first frame already knows where to grow from.
+        //
+        // Only one `SourceChips` is mounted at a time (the band draws the
+        // horizontal strip only while the iPad rail is absent), and the
+        // request is cleared before it is served, so a second reader would
+        // find nothing.
+        .onChange(of: chrome.folderRequest) { _, request in
+            guard let request else { return }
+            chrome.folderRequest = nil
+            if let x = anchorX(for: request) { chrome.folderAnchorX = x }
+            // The spring is felt when a folder OPENS (2026-09-06, the haptic
+            // grammar) — this door only opens one.
+            DSHaptic.spring()
+            withAnimation(DS.Motion.folder) { chrome.openFolder = .category(request) }
         }
     }
 
