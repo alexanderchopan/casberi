@@ -1609,14 +1609,9 @@ struct FeedScreen: View {
     @ViewBuilder
     private var vibenetEmptyRow: some View {
         Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text(vibenetEmptyLine)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, DS.Space.s6)
+            // Rows drawn empty (prd §769); the sentence is what VoiceOver reads.
+            DSSkeletonRows(label: Text(vibenetEmptyLine))
+                .padding(.vertical, DS.Space.s2)
             // The send panel's row chrome (see `vibenetSendRow`): a bare
             // Section in this `.plain` List draws the default hairline
             // separator, which nothing in this app may draw.
@@ -2839,7 +2834,9 @@ struct FeedScreen: View {
     private static func leadFooter(source: String, rows: [Thing]) -> String? {
         guard source != "All", let oldest = rows.lazy.map(\.capturedAt).min() else { return nil }
         let since = oldest.formatted(.dateTime.month(.abbreviated).year())
-        return String(localized: "^[\(rows.count) thing](inflect: true) since \(since)")
+        // `String(localized:)` never applies `inflect` — only the attributed
+        // form runs the grammar agreement, so the foot drew the raw markup.
+        return String(AttributedString(localized: "^[\(rows.count) thing](inflect: true) since \(since)").characters)
     }
 
     @MainActor
@@ -6782,11 +6779,17 @@ struct FeedScreen: View {
                 }
                 walletStreamSections(walletStreamRows(all), nextEventID: nextEventID)
                 walletSeeAllSection(total: all.count)
+                // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** Each
+                // arm's test is the gate its own sections draw on, so the
+                // skeleton stands only where nothing else would.
+                if all.isEmpty { walletSkeletonRowsSection }
             case .holdings:
+                if portfolio?.isEmpty ?? true { walletSkeletonRowsSection }
                 walletTokenListSection
             case .accounts:
                 walletAccountsListSection
             case .positions:
+                if walletScopeIsEmpty(.positions) { walletSkeletonRowsSection }
                 walletDeFiSection
                 walletLiquiditySection
                 walletPerpsSection
@@ -6794,10 +6797,15 @@ struct FeedScreen: View {
                 // The QUAD is the drawing above; these are the collections
                 // behind it, named (prd §483, user: *"below the toggle bar is
                 // those four in a list w/ collection name and so on"*).
+                if nftShelfEntry == nil { walletSkeletonRowsSection }
                 walletNFTListSection
             case .risk:
                 // The bars moved up into the slot, so the list is the door
                 // they were covering — see `walletScopeVisualSection`.
+                if walletLive.warnings.isEmpty, !hasLendingCard,
+                   walletLive.hyperliquid.positions.isEmpty {
+                    walletSkeletonRowsSection
+                }
                 walletWarningsSection
                 // **§417's OVERVIEW→DETAIL PAIR, restored.** `WalletRiskStrip`
                 // is documented as the overview of exactly these cards ("the
@@ -6823,6 +6831,10 @@ struct FeedScreen: View {
                 // ARE the unbounded ones — a delegate listed under the capped
                 // token grants would contradict the card a centimetre above
                 // it. It is also the half that had no list at all.
+                if walletScopeIsEmpty(.permissions), walletLive.exposure.isEmpty,
+                   !walletLive.acting.contains(where: { $0.modulesUnreadable || $0.keystorePartial }) {
+                    walletSkeletonRowsSection
+                }
                 walletActingSection
                 walletApprovalsSection
             }

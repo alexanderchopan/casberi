@@ -56822,3 +56822,19 @@ The octopus the person sees "while the app is loading" is the app-switcher cover
 "Hello" and "Hello, %@" are in the catalog in all four languages.
 
 **UNSEEN on a device.** Verified by an iOS simulator build and the privacy-cover, design-ramp and footnote audits; nothing was driven on the simulator.
+
+## §769 — An empty scope draws its own figure as a skeleton, its short state centred on it, and its list as skeleton rows (user: "we need to do a better job on empty states for wallet screens in the slot and in the list. look at this, it's really weak", then "i would expect to see empty skeleton charts", "i don't think we need the sub texts", "the transparent oval … looks vibe coded", "you need to also have skeletons for the lists below the slot", 2026-09-15)
+
+**The report.** Wallet's Holdings on an account with nothing priced: "Nothing held" and three lines of paragraph ("dust below the floor is left out") pinned to the top of the 300pt lead, ~170pt of black under it, and nothing at all under the tiles. The same `DSEmptyState(.room)` drew every empty scope in the six wallet-family rooms.
+
+**The ruling.** Mockups were put to the user: the figure drawn as a dashed outline with a foot-line statement, the tile's glyph centred, and then skeleton charts with centred words. They chose skeletons, and cut the sub line and the soft veil behind the words.
+- **The lead.** `DSEmptyState` `.room(figure)` draws `DSSkeletonFigure` — the scope's OWN drawing, and only what that drawing contains (Holdings is the treemap; its rows belong to the list) — in three existing fills (`fillLine`, `fillFaint`, `fillStrong`), with `emptyHeadline` centred on it at `heading24`, primary ink. No veil. An empty scope takes the whole box: the rooms pass `reservesHeadline: false` and a nil chassis headline while it draws, and the skeleton clears the gear through `clearance`.
+- **One figure per scope NAME**, keyed on `ScopeTileGlyph` (`DSSkeleton.Figure(glyph:)`): Home the line and range chips, Activity bars, Holdings the treemap, Accounts the connections map, Positions the composition strip, NFTs the quad, Risk ranked bars against a threshold, Permissions holders ranked by reach, Frames rows of steps, UTXOs a grid, Snapshots rings.
+- **The list.** `DSSkeletonRows` — three rows in the feed row's anatomy (26pt lead, title, line, trailing fact) — wherever a scope's list would draw nothing. Each gate is the list arm's OWN condition, so a skeleton never stands where a real row would; Accounts lists what you follow either way and never takes one. Frames' "Nothing here yet." and vibenet's empty stream line became skeleton rows.
+- **Static, always.** No shimmer: a moving skeleton is the platform's "loading", and these say "empty" (§83).
+- **The paragraph stays in the model.** `emptyBody` is the VoiceOver value of the lead (and the label of a list skeleton that stands alone), so §611's obligation to explain the scope still holds and the selftests that pin the copy are unchanged.
+- **Not the brand pink.** The headline is primary ink: `DS.brandInk` is the day divider's alone (§740/§742), and pink on grey reads as an alert.
+
+**Not done.** No door on an empty list (§611's "no door" stands; Follow address is Home's act). The seven inline empty states (Accounts, Wallet history, Receipts, the NFT shelf and picker, CardPointers, L2BEAT/Walletbeat) keep `.inline`.
+
+**Guarded** in `privacy-selftest.sh` (the chassis guard reads the new slot line). **UNSEEN on a device**: an iOS simulator build, the footnote, ds-template, design-ramp, design-motion, plate, row-cost, query-read, dead-closure, room-chassis and swiftdata-liveness audits and the wallet-section, vibenet, privacy and altana selftests ran; nothing was driven on the simulator.

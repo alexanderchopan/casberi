@@ -765,22 +765,27 @@ struct VibenetRoomCard: View {
                         .padding(.leading, DS.Face.rowCircle + DS.Space.s2)
                 }
             }
+            // **ONE INSET, THE CHROME'S (2026-09-15).** The margin below
+            // used to wrap the whole stack, `scopeChrome` included, and
+            // `DSRoomScopeChrome` pads `DSRoomChassis.inset` itself, so this
+            // room's lead, tiles and account line stood 16pt further in than
+            // every other wallet-family room. It pads the rows it scopes now.
+            // **THE MARGIN FROM THE SCREEN EDGE (2026-08-25, prd §474).** Reported:
+            // "the margins aren't the same consistency as on the wallet, so it
+            // looks like they are touching the screen." Correct, and measurable:
+            // this room is presented through `insightSection`, which is
+            // DELIBERATELY edge-to-edge ("the card owns its own padding" — every
+            // sibling room-head card, `GnosisPayRoomCard`/`StripeRoomCard`/
+            // `SafeRoomCard` among them, applies `.padding(.horizontal, DS.Space
+            // .s4)` after its own `dsWidgetSurface()` for exactly that reason —
+            // the same rung `WalletCardStyle.rowInsets` gives every Wallet card via
+            // `listRowInsets`. This card never did, on either of its two shapes
+            // (this one and `oneSurface` below), so its `surfaceSheet` background
+            // ran flush to both edges of the phone while every neighbouring room's
+            // card sat 18pt in from them — the exact inconsistency reported, and
+            // the fix is the one line every sibling already carries.
+            .padding(.horizontal, DS.Space.s4)
         }
-        // **THE MARGIN FROM THE SCREEN EDGE (2026-08-25, prd §474).** Reported:
-        // "the margins aren't the same consistency as on the wallet, so it
-        // looks like they are touching the screen." Correct, and measurable:
-        // this room is presented through `insightSection`, which is
-        // DELIBERATELY edge-to-edge ("the card owns its own padding" — every
-        // sibling room-head card, `GnosisPayRoomCard`/`StripeRoomCard`/
-        // `SafeRoomCard` among them, applies `.padding(.horizontal, DS.Space
-        // .s4)` after its own `dsWidgetSurface()` for exactly that reason —
-        // the same rung `WalletCardStyle.rowInsets` gives every Wallet card via
-        // `listRowInsets`. This card never did, on either of its two shapes
-        // (this one and `oneSurface` below), so its `surfaceSheet` background
-        // ran flush to both edges of the phone while every neighbouring room's
-        // card sat 18pt in from them — the exact inconsistency reported, and
-        // the fix is the one line every sibling already carries.
-        .padding(.horizontal, DS.Space.s4)
     }
 
     /// The scope strip, BELOW the crown (prd §482 amendment, 2026-08-26).
@@ -2359,9 +2364,14 @@ struct VibenetRoomCard: View {
     /// which know whether the account was unreached, undeployed or merely
     /// empty. Two tiers and no more; no door.
     private func scopeEmptyFigure(_ section: VibenetSection) -> some View {
-        scopeFigure(headline: section.emptyHeadline) {
+        // The whole box, not `scopeFigure` (prd §769): the headline is centred
+        // on the skeleton, so no row is reserved and the gear is cleared by
+        // the skeleton alone.
+        DSRoomSlot(headline: nil, reservesHeadline: false) {
             if let words = section.emptyBody {
-                DSEmptyState(words: Text(words), scale: .room)
+                DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
+                             words: Text(words), scale: .room(section.skeleton),
+                             clearance: DSRoomChassis.gearColumn)
             }
         }
     }

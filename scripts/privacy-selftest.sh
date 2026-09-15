@@ -1453,7 +1453,7 @@ grep -qF 'struct PrivacyDevnetMoveSheet' "Casberi/Casberi/Screens/PrivacyDevnetS
 
 # **THE SCOPE HEADLINE IS A COUNT DRAWN BY THE CHASSIS, NEVER THE SUMMARY
 # SENTENCE OVER THE CHART** (reported: "Charts have sentences over them").
-grep -qF 'DSRoomSlot(headline: slotHeadline' "$work/card.bare" \
+grep -qF 'DSRoomSlot(headline: empty ? nil : slotHeadline' "$work/card.bare" \
   || fail "the card stopped handing its headline to the chassis — the scope line drifts back into the slot, over the figure (prd §596)"
 grep -qF 'section.summary' "$work/card.bare" \
   && fail "the summary sentence is back on the card — a sentence standing on a chart is the jam §596 removed; the chassis headline carries a COUNT"

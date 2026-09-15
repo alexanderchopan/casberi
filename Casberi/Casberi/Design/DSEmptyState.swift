@@ -1,44 +1,50 @@
 import SwiftUI
 
 /// **A PLACE WITH NOTHING IN IT SAYS WHAT IT WOULD HOLD (prd §611, drawn
-/// once by §715, 2026-09-13).**
+/// once by §715, 2026-09-13; the room form redrawn by §769).**
 ///
-/// Two tiers and no more: an optional headline and one paragraph. Before
-/// §715 the room form was byte-identical in three room cards and a fourth
-/// wrapped it, and the inline form was drawn at three rungs.
-///
-/// - `.room` — a room card's figure slot: `stat24` headline in the chassis's
-///   reserved row, `body17` words. With no headline the words sit centred in
-///   the slot; with one, both sit at the top.
+/// - `.room(figure)` — a room's lead: the scope's own figure as a still
+///   skeleton (`DSSkeletonFigure`), and the short state centred on it at the
+///   lead's words rung (`heading24`, §766). Nothing else is drawn: `words` is
+///   what VoiceOver reads, because the drawing already shows what the scope
+///   holds and a paragraph over it was the weak state §769 replaced.
 /// - `.inline` — under a list or in a sheet: `body17` semibold, `subhead12`.
 ///
 /// No door. A way out is the caller's, and most empty states have none.
 struct DSEmptyState: View {
-    enum Scale { case room, inline }
+    enum Scale: Equatable {
+        case room(DSSkeleton.Figure)
+        case inline
+    }
 
     var headline: Text? = nil
     let words: Text
     var scale: Scale = .inline
+    /// How far the skeleton stops short of the trailing edge — the rooms that
+    /// keep their drawings clear of the settings gear pass
+    /// `DSRoomChassis.gearColumn`, so the empty figure ends where a real one
+    /// would. The headline stays centred in the whole box.
+    var clearance: CGFloat = 0
 
     var body: some View {
         switch scale {
-        case .room:
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
+        case .room(let figure):
+            ZStack {
+                DSSkeletonFigure(figure: figure)
+                    .padding(.trailing, clearance)
                 if let headline {
                     headline
-                        .dsText(.stat24)
+                        .dsText(.heading24)
                         .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                        .frame(height: DSRoomChassis.headlineRow, alignment: .leading)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .padding(.horizontal, DS.Space.s4)
                 }
-                words
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity,
-                   alignment: headline == nil ? .leading : .topLeading)
-            .accessibilityElement(children: .combine)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(headline ?? words)
+            .accessibilityValue(headline == nil ? Text(verbatim: "") : words)
         case .inline:
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let headline {

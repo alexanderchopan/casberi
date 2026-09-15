@@ -67,12 +67,15 @@ struct PrivacyDevnetRoomCard: View {
         // Home's sentence IS the crown — a figure that occupies exactly the
         // role a headline plays — so the row is reserved only where the
         // chassis draws one (`DSRoomSlot.reservesHeadline`'s own rule).
-        DSRoomSlot(headline: slotHeadline,
+        // **AN EMPTY SCOPE TAKES THE WHOLE BOX (prd §769)** — its headline is
+        // centred on the skeleton, so no row is reserved above it.
+        let empty = section != .home && isEmpty(section)
+        DSRoomSlot(headline: empty ? nil : slotHeadline,
                    // **RESERVE THE ROW ONLY WHEN THERE IS SOMETHING IN IT
                    // (prd §683).** Home's headline is nil once the shared
                    // crown draws — the crown owns the number — and the
                    // reserved row then sat above it as a band of air.
-                   reservesHeadline: slotHeadline != nil) { content }
+                   reservesHeadline: !empty && slotHeadline != nil) { content }
     }
 
     /// One `stat24` line per scope, drawn by the CHASSIS (prd §495/§596) —
@@ -176,7 +179,9 @@ struct PrivacyDevnetRoomCard: View {
                            alignment: .topLeading)
             }
         }
-        .padding(.trailing, DSRoomChassis.gearColumn)
+        // The empty state clears the gear itself (`clearance`), so its
+        // headline centres in the whole box.
+        .padding(.trailing, section != .home && isEmpty(section) ? 0 : DSRoomChassis.gearColumn)
     }
 
     /// Every shown move with the address whose read produced it — Hegotá's
@@ -355,8 +360,12 @@ extension PrivacyDevnetRoomCard {
         // nobody else's shielded balance is visible to anyone — that is the
         // pool. So the scope fills for a phone that holds notes, and says what
         // it would hold for one that does not.
+        // **ONE ASSET IS NOT NOTHING (2026-09-15).** This was `count < 2`,
+        // so an address holding a single open balance drew "Holds nothing"
+        // over a row listing that balance — §83's fake status. It fills with
+        // one cell now, the way Frames and UTXO draw theirs.
         case .holdings:   return PrivacyHoldings.cells(accounts: accounts,
-                                                       shielded: shielded).count < 2
+                                                       shielded: shielded).isEmpty
         // **EMPTY IS "NOTHING CONNECTS THEM" (prd §689)** — the rows list
         // what you watch either way; the slot's job is the relationship.
         case .accounts:   return PrivacyConnections.map(accounts)?.nodes.isEmpty ?? true
@@ -381,7 +390,9 @@ extension PrivacyDevnetRoomCard {
     /// 258pt box is the dead-air shape §602 and §596 each fixed once already.
     @ViewBuilder var emptyState: some View {
         if let words = section.emptyBody {
-            DSEmptyState(words: Text(words), scale: .room)
+            DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
+                         words: Text(words), scale: .room(section.skeleton),
+                         clearance: DSRoomChassis.gearColumn)
         }
     }
 
@@ -407,12 +418,31 @@ extension PrivacyDevnetRoomCard {
         // copy of rows that Activity already owns in full, and they pushed the
         // verbs off the screen, which is what made them look deleted.
         case .home:       EmptyView()
-        case .activity:   list(pairs)
-        case .holdings:   holdingsRoster
+        // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769)**, on each arm's
+        // own gate.
+        case .activity:
+            if pairs.isEmpty { DSSkeletonRows() } else { list(pairs) }
+        case .holdings:
+            if PrivacyHoldings.cells(accounts: accounts, shielded: shielded).isEmpty {
+                DSSkeletonRows()
+            } else {
+                holdingsRoster
+            }
         case .accounts:   roster
-        case .frames:     list(pairs.filter { !$0.move.frames.isEmpty })
-        case .permissions: permissionsScope
-        case .roots:      rootScope
+        case .frames:
+            if pairs.allSatisfy({ $0.move.frames.isEmpty }) {
+                DSSkeletonRows()
+            } else {
+                list(pairs.filter { !$0.move.frames.isEmpty })
+            }
+        case .permissions:
+            if keyRows.isEmpty && !moves.contains(where: \.sponsored) {
+                DSSkeletonRows()
+            } else {
+                permissionsScope
+            }
+        case .roots:
+            if accounts.allSatisfy({ $0.roots.isEmpty }) { DSSkeletonRows() } else { rootScope }
         }
     }
 

@@ -41,7 +41,8 @@ struct HegotaRoomFigure: View {
     // of that arithmetic at this slot height rather than being written down.
 
     var body: some View {
-        DSRoomSlot(headline: slotHeadline) {
+        DSRoomSlot(headline: isEmpty(section) ? nil : slotHeadline,
+                   reservesHeadline: !isEmpty(section)) {
             // **THE EMPTY STATE IS IN THE SLOT (prd §611)** — every scope is a
             // chip on every address now, so a scope with nothing in it says
             // what it would hold here rather than drawing a figure of zeros
@@ -87,8 +88,9 @@ struct HegotaRoomFigure: View {
     /// and Send are Home's (§594).
     @ViewBuilder private var emptyState: some View {
         if let words = section.emptyBody {
-            DSEmptyState(words: Text(words), scale: .room)
-                .padding(.trailing, DSRoomChassis.gearColumn)
+            DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
+                         words: Text(words), scale: .room(section.skeleton),
+                         clearance: DSRoomChassis.gearColumn)
         }
     }
 
@@ -1715,12 +1717,23 @@ struct HegotaRoomList: View {
             // passed from `FeedScreen` and read by nobody. Home's list is the
             // scope door rows the chrome draws above this view.
             case .home:     EmptyView()
-            case .activity: movesList(moves)
-            case .holdings: holdingsList
+            // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** Each test is
+            // the arm's own gate, so a skeleton never stands where a row would.
+            case .activity:
+                if moves.isEmpty { DSSkeletonRows() } else { movesList(moves) }
+            case .holdings:
+                if HegotaHoldings.cells(shown).isEmpty { DSSkeletonRows() } else { holdingsList }
             case .accounts: accountsList
-            case .frames:   framesList
-            case .coins:    coinsList
-            case .permissions: permissionsList
+            case .frames:
+                if framedPairs.isEmpty { DSSkeletonRows() } else { framesList }
+            case .coins:
+                if coins.isEmpty && spentCoins.isEmpty { DSSkeletonRows() } else { coinsList }
+            case .permissions:
+                if lanes.isEmpty && !moves.contains(where: \.move.isSponsored) {
+                    DSSkeletonRows()
+                } else {
+                    permissionsList
+                }
             }
         }
     }

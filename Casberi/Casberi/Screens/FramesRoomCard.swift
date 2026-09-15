@@ -97,7 +97,11 @@ struct FramesRoomFigure: View {
     /// It also cost the 12pt `contentInset`, so the drawing was wider than the
     /// toggle bar that scopes it — Hegotá's own note on the same line.
     var body: some View {
-        DSRoomSlot(headline: slotHeadline) {
+        // **AN EMPTY SCOPE TAKES THE WHOLE BOX (prd §769)** — its headline is
+        // centred on the skeleton, so the chassis reserves no row for it.
+        DSRoomSlot(headline: drawsEmptyState ? nil : slotHeadline,
+                   reservesHeadline: !drawsEmptyState) {
+            if drawsEmptyState { emptyState } else {
             // **NO TRAILING `Spacer` (prd §588).** There was one here, and
             // while the box was 166pt it was harmless — nothing inside
             // `reading` wanted the leftover. Two of these figures now do
@@ -121,7 +125,17 @@ struct FramesRoomFigure: View {
             // 44pt short beside one that reaches the edge reads as a bug in
             // the shorter one.
             .padding(.trailing, DSRoomChassis.gearColumn)
+            }
         }
+    }
+
+    /// Whether the slot draws the empty state: the chain was read and
+    /// reached, Home has no alert to lead with, and the scope has nothing.
+    /// The same order `reading` used to test, so no read state is hidden.
+    private var drawsEmptyState: Bool {
+        head.hasRead && !head.everythingUnreached
+            && !(section == .home && head.alert != nil)
+            && isEmpty(section)
     }
 
     /// Whether a scope has nothing to draw, so the slot shows its empty state
@@ -151,7 +165,9 @@ struct FramesRoomFigure: View {
     /// paragraph. No door — Top up and Send are Home's tiles (§553).
     @ViewBuilder private var emptyState: some View {
         if let words = section.emptyBody {
-            DSEmptyState(words: Text(words), scale: .room)
+            DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
+                         words: Text(words), scale: .room(section.skeleton),
+                         clearance: DSRoomChassis.gearColumn)
         }
     }
 
@@ -171,11 +187,6 @@ struct FramesRoomFigure: View {
             // thing with full confidence; the balance is still said, a line
             // down, as a fact rather than as the headline.
             chainAlert(alert)
-        } else if isEmpty(section) {
-            // **THE EMPTY STATE IS IN THE SLOT (prd §611)** — the chip is
-            // always there now, so what it opens onto has to say what the
-            // scope holds and why this address has none.
-            emptyState
         } else {
             switch section {
             case .home:     sponsorship
@@ -562,7 +573,11 @@ struct FramesRoomList: View {
         case .activity:
             rows(pairs)
         case .holdings:
-            holdingsRows
+            if FramesHoldings.cells(head: head, accounts: accounts).isEmpty {
+                DSSkeletonRows()
+            } else {
+                holdingsRows
+            }
         case .accounts:
             accountsRows
         case .frames:
@@ -582,6 +597,11 @@ struct FramesRoomList: View {
             // **`RoomListBlock` is that rule, shared (prd §692)** — the
             // three Hegotá rooms each list two kinds of permission under this
             // scope now, and all of them caption their blocks the same way.
+            // Nothing sponsored: the rows drawn empty rather than two
+            // captions over nothing (prd §769).
+            if FramesPayers.roster(moves).isEmpty && !pairs.contains(where: { $0.move.sponsored }) {
+                DSSkeletonRows()
+            } else {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 RoomListBlock(caption: String(localized: "Sponsors")) { payers }
                 RoomListBlock(caption: String(localized: "What they paid for")) {
@@ -592,6 +612,7 @@ struct FramesRoomList: View {
                     // sentence on Activity, one chip over.
                     rows(pairs.filter { $0.move.sponsored }, showsSponsorship: false)
                 }
+            }
             }
         }
     }
@@ -684,10 +705,8 @@ struct FramesRoomList: View {
             .animation(DS.Motion.standard, value: inFlight.map(\.id))
         }
         if list.isEmpty, inFlight.isEmpty {
-            Text(String(localized: "Nothing here yet."))
-                .dsText(.subhead12)
-                .foregroundStyle(DS.textTertiary)
-                .padding(.vertical, DS.Space.s3)
+            // Rows drawn empty (prd §769); the sentence is what VoiceOver reads.
+            DSSkeletonRows(label: Text(String(localized: "Nothing here yet.")))
         } else {
             VStack(spacing: DS.Space.s2) {
                 ForEach(list, id: \.move.id) { pair in

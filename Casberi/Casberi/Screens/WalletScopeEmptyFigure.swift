@@ -39,7 +39,7 @@ struct WalletScopeEmptyFigure: View {
         // has words now, and this is still the one place they are drawn.
         if let words = section.emptyBody {
             DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
-                         words: Text(words), scale: .room)
+                         words: Text(words), scale: .room(section.skeleton))
                 .padding(.horizontal, padded ? WalletCardStyle.pad : 0)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }

@@ -563,6 +563,19 @@ extension FeedScreen {
         }
     }
 
+    /// An empty scope's list: rows with nothing in them (prd §769), at the
+    /// room's row insets. The lead above already says the state, so VoiceOver
+    /// skips these.
+    var walletSkeletonRowsSection: some View {
+        Section {
+            DSSkeletonRows()
+                .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+        }
+    }
+
     struct WalletSectionPublication: Equatable {
         var sections: [WalletSection]
         var attention: Set<WalletSection>
