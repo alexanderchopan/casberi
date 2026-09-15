@@ -4110,19 +4110,14 @@ struct FeedScreen: View {
     /// where adding is a frequent verb the wallet face rail already carries it
     /// (§357).
     private func sourceComposeRow(_ action: SourceAction) -> some View {
-        HStack(spacing: DS.Space.s2) {
-            Button {
-                DSHaptic.selection()
-                if case .openURL(let url) = action.run { openExternal(url) }
-            } label: {
-                Chip(text: String(localized: String.LocalizationValue(action.label)),
-                     style: .tint, glyph: "plus")
-            }
-            .buttonStyle(PressSpring())
-            Spacer(minLength: 0)
+        // A verb, so a row (prd §746).
+        DSDoorRow(icon: "plus",
+                  title: Text(String(localized: String.LocalizationValue(action.label)))) {
+            DSHaptic.selection()
+            if case .openURL(let url) = action.run { openExternal(url) }
         }
         .padding(.horizontal, DS.Space.s4)
-        // The capsule's own generous top gap (2026-07-14: s3 read as still
+        // The old capsule's generous top gap (2026-07-14: s3 read as still
         // touching the chip row), kept — this row sits in the same place under
         // the same strip.
         .padding(.top, DS.Space.s8)
@@ -7557,14 +7552,10 @@ struct FeedScreen: View {
     }
 
     var newSinceDivider: some View {
-        // A quiet capsule, not tint-colored prose (which reads as a tappable
-        // link). The fill gives the boundary its line without drawing one.
-        Text(newSinceText)
-            .dsText(.label12)
-            .foregroundStyle(DS.textSecondary)
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s1)
-            .background(DS.fillFaint, in: Capsule(style: .continuous))
+        // A FACT, so a stamp (prd §746) — it was a quiet capsule. Still not
+        // tint-coloured prose, which reads as a tappable link; the air around
+        // a centred word is the boundary.
+        DSStamp(word: newSinceText)
             .settleIn()   // see `caughtUpSeam`
             .frame(maxWidth: .infinity)
             .padding(.vertical, DS.Space.s1)
@@ -10140,16 +10131,15 @@ struct FeedScreen: View {
                 .dsText(.body17)
                 .foregroundStyle(DS.textSecondary)
                 .multilineTextAlignment(.center)
-            Button {
+            // The one way back, as a row sized to its words (prd §746).
+            DSDoorRow(icon: "line.3.horizontal.decrease.circle", label: "Show everything") {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.standard) {
                     filter.source = "All"
                     filter.tag = "All"
                 }
-            } label: {
-                Chip(text: String(localized: "Show everything"), style: .tint)
             }
-            .buttonStyle(PressSpring())
+            .fixedSize(horizontal: true, vertical: false)
             tryItChip
             // The empty room previews its own shape (2026-07-13) — the
             // all-feed empty state already does this with skeleton rows;
@@ -10197,16 +10187,15 @@ struct FeedScreen: View {
         }
     }
 
-    /// One chip anatomy for every try-it — the tint `Chip`, reused instead of
-    /// re-spelled per source.
+    /// One anatomy for every try-it — a door row (prd §746; it was a tint
+    /// `Chip`, a verb wearing a choice's shape). Sized to its words, because it
+    /// stands in a centred empty state rather than a list.
     private func tryItButton(label: String, action: @escaping () async -> Void) -> some View {
-        Button {
+        DSDoorRow(icon: "sparkles", title: Text(LocalizedStringKey(label))) {
             DSHaptic.tap()
             Task { await action() }
-        } label: {
-            Chip(text: label, style: .tint, glyph: "sparkles")
         }
-        .buttonStyle(PressSpring())
+        .fixedSize(horizontal: true, vertical: false)
         .padding(.top, DS.Space.s2)
     }
 

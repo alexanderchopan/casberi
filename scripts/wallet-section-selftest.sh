@@ -31,7 +31,7 @@ SWITCH="Casberi/Casberi/Design/DSSectionSwitcher.swift"
 SLAB="Casberi/Casberi/Design/DSRoomRailSlab.swift"
 CHASSIS="Casberi/Casberi/Design/DSRoomChassis.swift"
 ACTIVITY="Casberi/Casberi/Screens/RoomActivityChart.swift"
-CHIPS="Casberi/Casberi/Design/DSRangeChips.swift"
+CHIPS="Casberi/Casberi/Design/DSChip.swift"   # DSRangeChips lives beside Chip since prd §746
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -331,7 +331,7 @@ guard RoomActivityChart.swift "DSRoomChassis.crownChart(box: box, chips: chips)"
 # question than the drawing does is the same clip wearing a second answer.
 guard RoomActivityChart.swift "chartHeight(chips: offered.count > 1)" \
   "the activity chart's budget no longer reads the offered windows — it can reserve the track on a record that draws none, or none on one that does"
-guard DSRangeChips.swift "if ranges.count > 1" \
+guard DSChip.swift "if ranges.count > 1" \
   "the chips' own draw gate moved — every budget above spells this predicate and would now be asking the wrong question"
 
 echo "  ok   drift guards: mount, gate, publication, clear, dot, scopes, generic control, crown chip budget"

@@ -157,19 +157,17 @@ struct ArticleListenButton: View {
     private var isMine: Bool { speech.speakingID == id }
 
     var body: some View {
-        Button {
+        // A verb, so a row (prd §746) — it was a chip that turned filled
+        // blue while speaking, which is a button wearing a chip's name.
+        DSDoorRow(icon: isMine ? "stop.fill" : "speaker.wave.2",
+                  title: isMine ? Text("Stop") : Text("Listen")) {
             DSHaptic.selection()
             if isMine {
                 speech.stop()
             } else {
                 speech.speak(text, id: id)
             }
-        } label: {
-            Chip(text: isMine ? String(localized: "Stop") : String(localized: "Listen"),
-                 style: isMine ? .primary : .neutral,
-                 glyph: isMine ? "stop.fill" : "speaker.wave.2")
         }
-        .buttonStyle(PressSpring())
         .accessibilityLabel(isMine
                             ? Text("Stop reading aloud")
                             : Text("Read this article aloud"))

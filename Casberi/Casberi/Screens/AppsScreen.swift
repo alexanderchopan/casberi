@@ -908,7 +908,8 @@ struct AppsScreen: View {
         }
     }
 
-    /// One app — icon, name, honest subline, action capsule.
+    /// One app — icon, name, honest subline, and its verb as the row's last
+    /// word (prd §746; an action capsule until then).
     ///
     /// The catalog's ONE cell since prd §518, where it had been the search
     /// results' alone and the wall drew a separate `appTile` beside it. That
@@ -972,7 +973,13 @@ struct AppsScreen: View {
                         .foregroundStyle(entry.tier == 0 ? DS.attention : DS.textTertiary)
                         .lineLimit(1)
                     }
-                    Spacer(minLength: 0)
+                    Spacer(minLength: DS.Space.s2)
+                    // THE VERB IS THE ROW'S LAST WORD (prd §746) — the
+                    // capsule that sat beside the row ran the same
+                    // `rowAction`, so it was one act drawn twice.
+                    if let rowVerb = verb(entry) {
+                        DSPushRowTrail(verb: rowVerb)
+                    }
                 }
                 .contentShape(Rectangle())
             }
@@ -986,7 +993,6 @@ struct AppsScreen: View {
             // on a seat that has none: Wallet's was a treemap and two rows for
             // a seat that lands approvals, delegation warnings, poisoned
             // transfers, gas, six protocols and the Safe queue.)
-            capsule(entry)
         }
         // NO HORIZONTAL INSET OF ITS OWN (prd §590). This `s4` held the row
         // off the card's edge; with the card gone it was a second page inset
@@ -1010,29 +1016,25 @@ struct AppsScreen: View {
 
     /// The verb a wallet-riding seat wears while it is dark (prd §515) — nil
     /// for every ordinary bridge, which keeps Connect.
-    private func walletSeatVerb(_ offer: BridgeCatalog.Offer) -> CapsuleVerb? {
+    private func walletSeatVerb(_ offer: BridgeCatalog.Offer) -> RowVerb? {
         guard let id = BridgeRouter.id(forOffer: offer.name),
               WalletSeatStanding.rides(id: id) else { return nil }
-        return CapsuleVerb(WalletSeatStanding.verb(
+        return RowVerb(WalletSeatStanding.verb(
             watched: WalletStore.shared.addresses.count))
     }
 
-    @ViewBuilder
-    private func capsule(_ entry: Ranked) -> some View {
+    /// The row's verb — the row's LAST WORD since prd §746, where it had been
+    /// a capsule beside the row running the same `rowAction`. Two controls for
+    /// one act, and the louder of the two was the pill, repeated down every
+    /// row of the catalogue. nil draws no trailing word at all (a connected
+    /// tier whose bridge record is missing has nowhere to go).
+    private func verb(_ entry: Ranked) -> RowVerb? {
         switch entry.tier {
         case 0:
             // Broken connection — Fix opens management, where Reconnect lives.
-            if let bridge = entry.bridge {
-                VerbCapsule(verb: .fix) {
-                    route.pushBridge(BridgeRouter.destination(forID: bridge.id))
-                }
-            }
+            return entry.bridge == nil ? nil : .fix
         case 2:
-            if let bridge = entry.bridge {
-                VerbCapsule(verb: .open) {
-                    BridgeRouter.open(seatID: bridge.id, route: route, chrome: chrome)
-                }
-            }
+            return entry.bridge == nil ? nil : .open
         case 1:
             if entry.offer.needsSetup {
                 // Setup bridges collect input first — Connect raises their
@@ -1061,17 +1063,14 @@ struct AppsScreen: View {
                 // (user, 2026-09-08: "i like connect better") — a paused seat
                 // is one tap from reading again, and a verb of its own for a
                 // state that resolves itself is furniture.
-                VerbCapsule(verb: walletSeatVerb(entry.offer)
-                            ?? (entry.bridge == nil ? CapsuleVerb(mode: entry.offer.mode) : .connect)) {
-                    route.openSetup(forOffer: entry.offer.name)
-                }
-            } else {
-                // One system sheet — the tap IS the grant, so the word is
-                // Allow (§653), not a Connect that hides which kind it is.
-                VerbCapsule(verb: .allow) { attemptConnect(entry.offer) }
+                return walletSeatVerb(entry.offer)
+                    ?? (entry.bridge == nil ? RowVerb(mode: entry.offer.mode) : .connect)
             }
+            // One system sheet — the tap IS the grant, so the word is
+            // Allow (§653), not a Connect that hides which kind it is.
+            return .allow
         default:
-            VerbCapsule(verb: .soon)
+            return .soon
         }
     }
 

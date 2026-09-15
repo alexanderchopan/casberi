@@ -64,15 +64,14 @@ struct CardPointersScreen: View {
                 // went unnoticed (user, 2026-07-15), and Twitch's screen
                 // repeated it until the 2026-07-31 audit. Third time, on
                 // purpose, rather than a fourth report.
-                HStack(spacing: DS.Space.s3) {
-                    Text(pending.userCode)
-                        .dsText(.monoCode34)
-                        .foregroundStyle(DS.textPrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .minimumScaleFactor(0.6)
-                        .lineLimit(1)
-                    DSCopyCapsule(value: pending.userCode)
-                }
+                Text(pending.userCode)
+                    .dsText(.monoCode34)
+                    .foregroundStyle(DS.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                // A row, not a capsule beside the code (prd §746).
+                DSCopyRow(value: pending.userCode)
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner()
                     Text("Waiting for you to approve…")

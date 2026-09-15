@@ -57,19 +57,18 @@ struct TwitchScreen: View {
                 // this the hard way: a bare tap-to-copy went unnoticed
                 // (user, 2026-07-15), and this screen never got the fix
                 // (audit 2026-07-31).
-                HStack(spacing: DS.Space.s3) {
-                    Text(code.userCode)
-                        .dsText(.monoCode34)
-                        .foregroundStyle(DS.textPrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .minimumScaleFactor(0.6)
-                        .lineLimit(1)
-                        .settleIn()
-                    DSCopyCapsule(value: code.userCode)
-                }
+                Text(code.userCode)
+                    .dsText(.monoCode34)
+                    .foregroundStyle(DS.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                    .settleIn()
                 .padding(DS.Space.s3)
                 .frame(maxWidth: .infinity)
                 .background(DS.surfaceWell, in: DSSlab.shape)
+                // A row under the well, not a capsule inside it (prd §746).
+                DSCopyRow(value: code.userCode)
                 // The door, as this state's one filled block. It was a
                 // hand-painted capsule in Twitch purple: a primary control
                 // never sits on brand color, because two near-match colors

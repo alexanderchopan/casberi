@@ -69,9 +69,9 @@ enum BridgeCatalog {
         /// under the names... extra text the user doesn't need"*) and the
         /// Discover eyebrow it also fed went with the product page (§641), so
         /// for seven weeks it computed three words nobody drew. §653 puts the
-        /// cost back on the row WITHOUT a second line: the capsule's VERB
-        /// says it — Allow / Sign in / Add key / Import / Connect — one slot,
-        /// the same slot, no wallpaper (`CapsuleVerb.init(mode:)`).
+        /// cost back on the row WITHOUT a second line: the row's VERB says it
+        /// — Allow / Sign in / Add key / Import / Connect — one slot, the same
+        /// slot, no wallpaper (`RowVerb.init(mode:)`; a capsule until §746).
         ///
         /// The sets below are the screens' own `mode:` literals, gathered
         /// (`scripts/catalog-mode-audit.py` proves EVERY screen agrees —

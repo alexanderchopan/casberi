@@ -370,13 +370,13 @@ struct VibenetEventCard: View {
     }
 }
 
-/// The permission chips — one per thing a key may do.
+/// The permissions — one word per thing a key may do.
 ///
-/// A CHIP and not a grid cell, which is a ruling rather than a style: a matrix
-/// of every key against every permission was drawn, reviewed and refused
-/// ("the grid is just really bad"), because comparing keys is not what anybody
-/// opens one key to do. Chips read as what this key IS allowed, which is the
-/// question.
+/// A list of words and not a grid cell, which is a ruling rather than a style:
+/// a matrix of every key against every permission was drawn, reviewed and
+/// refused ("the grid is just really bad"), because comparing keys is not what
+/// anybody opens one key to do. They read as what this key IS allowed, which
+/// is the question — a FACT, so a `DSStamp` since prd §746, not a capsule.
 struct VibenetPermissionChips: View {
     let names: [String]
     var reduceMotion: Bool = false
@@ -387,12 +387,7 @@ struct VibenetPermissionChips: View {
         // reads.
         FlowLayout(spacing: DS.Space.s2) {
             ForEach(Array(names.enumerated()), id: \.offset) { index, name in
-                Text(name)
-                    .dsText(.subhead13).fontWeight(.medium)
-                    .foregroundStyle(DS.textPrimary)
-                    .padding(.horizontal, DS.Space.s3)
-                    .padding(.vertical, 6)
-                    .background(DS.fillStrong, in: Capsule())
+                DSStamp(word: name)
                     .chartArrival(index: index, reduceMotion: reduceMotion)
             }
         }

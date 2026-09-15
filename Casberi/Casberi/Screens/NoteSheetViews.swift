@@ -275,7 +275,8 @@ struct NoteTagRow: View {
     var body: some View {
         FlowLayout(spacing: DS.Space.s2) {
             ForEach(tags, id: \.self) { tag in
-                Chip(text: tag, interactive: false)
+                // A fact, never a control: `DSStamp` (prd §746).
+                DSStamp(word: tag)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

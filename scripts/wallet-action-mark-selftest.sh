@@ -103,8 +103,10 @@ guard "the heal only fills a NIL direction" "$INGEST" \
 # ignores is the whole feature drawing nothing, with every call site intact.
 guard "KindGlyph honours the symbol override" "$GLYPH" \
   'Image\(systemName: symbol \?\? kind\.symbol\)'
+# Since §744 the mark is drawn by `WalletMarkView(mark:size:)`, in the same file,
+# so a feed row can size it; the overrides still pass straight through.
 guard "WalletRow.Mark.kind carries both overrides through" "$ROW" \
-  'KindGlyph\(kind: kind, size: Self\.markSize, tint: tint, symbol: symbol\)'
+  'KindGlyph\(kind: kind, size: size, tint: tint, symbol: symbol\)'
 guard "the wallet history screen asks for the action mark" "$HISTORY" \
   'WalletActionMark\.action\('
 guard "an address's own history asks for it too" "$BOOK" \

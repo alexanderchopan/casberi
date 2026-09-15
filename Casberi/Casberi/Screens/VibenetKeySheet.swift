@@ -295,11 +295,11 @@ struct VibenetKeySheet: View {
 
     // MARK: - 5. The verbs
 
-    /// §470's copy verbs — ONE row of quiet capsules (§480), not three blue
-    /// links side by side, which is web-footer grammar and made three
-    /// secondary actions look like the sheet's primary content.
+    /// §470's copy verbs — not three blue links side by side (§480, which is
+    /// web-footer grammar), and since prd §746 not a flow of quiet capsules
+    /// either: a stack of door rows, each a verb with its own glyph column.
     private var doors: some View {
-        FlowLayout(spacing: DS.Space.s2) {
+        VStack(alignment: .leading, spacing: 0) {
             door(String(localized: "Copy key id"), symbol: "doc.on.doc") {
                 DSPasteboard.copySensitive(actor.actorId)
             }
@@ -360,27 +360,12 @@ struct VibenetKeySheet: View {
     private var revokeDoor: some View {
         if let onRevoke, thisPhoneIsAdmin {
             if revocable {
-                Button(role: .destructive) {
+                // A destructive ROW, not a red capsule (prd §746): the role's
+                // ink is the one colour a door row may take.
+                DSDoorRow(icon: "key.slash", label: "Revoke this key", role: .destructive) {
                     DSHaptic.tap()
                     confirmingRevoke = true
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "key.slash")
-                            .accessibilityHidden(true)
-                            .dsGlyph(11, weight: .semibold)
-                        Text(String(localized: "Revoke this key"))
-                    }
-                    .dsText(.label12).fontWeight(.semibold)
-                    .foregroundStyle(DS.destructive)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .padding(.horizontal, DS.Space.s3)
-                    .padding(.vertical, 7)
-                    .background(Capsule(style: .continuous).fill(DS.destructive.opacity(0.10)))
-                    .contentShape(Capsule())
                 }
-                .buttonStyle(PressSpring())
-                .dsHover()
                 // **NATIVE, NOT AN INLINE ARMED STATE.** §478 closed the last
                 // inline expander in this room and this sheet is the surface it
                 // moved to; growing a confirmation inside it would rebuild
@@ -454,14 +439,14 @@ struct VibenetKeySheet: View {
         }
     }
 
+    /// A copy or a way out is a VERB, so a row (prd §746) — these were a flow
+    /// of neutral chips, which §480 chose over three blue links and which
+    /// read as a menu of choices rather than as things you can do.
     private func door(_ title: String, symbol: String, act: @escaping () -> Void) -> some View {
-        Button {
+        DSDoorRow(icon: symbol, title: Text(title)) {
             DSHaptic.tap()
             act()
-        } label: {
-            Chip(text: title, style: .neutral, glyph: symbol)
         }
-        .buttonStyle(PressSpring())
     }
 
     /// One block caption — the thing this sheet had none of, and the reason

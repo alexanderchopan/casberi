@@ -127,18 +127,12 @@ struct WalletNFTPickerSheet: View {
                 Button {
                     withAnimation(reduceMotion ? nil : DS.Motion.standard) { sort = option }
                 } label: {
-                    Text(option == .name
+                    // A CHOICE, so `Chip` (prd §746) — selection is its fill,
+                    // never a border.
+                    Chip(text: option == .name
                          ? String(localized: "A–Z")
-                         : String(localized: "Recent"))
-                        .dsText(.subhead13)
-                        .fontWeight(on ? .semibold : .regular)
-                        .foregroundStyle(on ? DS.textPrimary : DS.textSecondary)
-                        .padding(.horizontal, DS.Space.s3)
-                        .padding(.vertical, DS.Space.s1)
-                        // Selection is a FILL, never a border — the design law
-                        // draws no lines.
-                        .background(on ? DS.gray200.opacity(0.55) : .clear,
-                                    in: Capsule())
+                         : String(localized: "Recent"),
+                         selected: on)
                 }
                 .buttonStyle(PressSpring())
                 .accessibilityAddTraits(on ? [.isButton, .isSelected] : [.isButton])

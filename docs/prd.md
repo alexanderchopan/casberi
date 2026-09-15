@@ -55479,3 +55479,144 @@ surface and margin; the Privacy Pools note guard follows the call into `LineText
 Guards removed with what they guarded: listed under the Instagram and Apple Wallet
 deletions above. `prd-index-audit.py` carries a `KNOWN_DANGLING` entry for §745 while
 this entry is a draft — delete it when this lands in the ledger.
+
+## §746 — A pill is a choice or a fact, and every verb is a row (user: "most people only need two: a pill you tap to choose something, and a pill that just shows a fact", 2026-09-15)
+
+**The ruling, and its reason.** Asked why the app still reads as vibecoded,
+the user named the capsule: *"when every choice is a capsule, the screen reads
+as generated."* The count bore it out. `Design/` held eight components with
+chip or capsule in their story, and roughly sixty call sites reached for them
+to mean three different things: a choice (a window, a filter, a sort), a fact
+(a tag, a permission, a state), and a verb (Connect, Copy, Make active, Listen,
+Ask about this). They all looked the same, so none of them said which it was.
+The approved plan, in the user's words: *"There are eight different pill shapes
+in the app for tapping. Most people only need two: a pill you tap to choose
+something, and a pill that just shows a fact. Everything else becomes a row."*
+
+**What each one is now.**
+- **`Chip` is the CHOICE.** It has alternatives and a `selected` state, and
+  nothing else. Its `tint`, `primary` and `neutral` styles are deleted, and so
+  is `interactive:`. A filled blue chip was a button wearing a chip's name, and
+  an inert chip was a fact wearing a control's. Selection is a NEUTRAL fill,
+  `fillStrong` over `fillFaint`. That is what the range strip and the vibenet
+  filter strip already used, and §715 kept it because blue means urgency in
+  the vibenet room. The target stays 44pt (§717). The one exception is the
+  range strip inside a crown, which is budgeted at `crownRangeChips` (42), so
+  it keeps the 32pt hit its segmented box had.
+- **`DSStamp` is the FACT.** It is never tappable, and it stays a word with no
+  capsule, as §583 drew it.
+- **A verb is a ROW.** A verb that stands alone is `DSDoorRow`. It is 44pt tall
+  now, and it takes `role: .destructive` for the one colour that is a meaning.
+  A slot that owns its own control (a `ShareLink`, a `Menu`, a custom press)
+  uses the new `DSDoorRowLabel` instead. A verb that copies is `DSCopyRow`. A
+  verb that belongs to a row is that row's last word, through
+  `DSPushRowTrail`: the word in its own ink, then the chevron or a named glyph.
+
+**Components, 8 → 2 pill shapes.**
+
+| Was | Now |
+|---|---|
+| `Chip` | the choice; styles and `interactive:` deleted, `selected`/`count`/`hit` added |
+| `DSRangeChips` | a thin wrapper that composes `Chip`, moved into `DSChip.swift`; **`DSRangeChips.swift` deleted**. Call signature unchanged, so the crown, `RoomActivityChart` and the vibenet account compile untouched. |
+| `VerbCapsule` | **deleted**; `CapsuleVerb` became `RowVerb` (`Design/RowVerb.swift`, the same ten words, an `ink` instead of a fill) |
+| `DSCopyCapsule` | **deleted**; `DSCopyRow` in `DSDoorRow.swift` |
+| `DSStamp` | the fact, unchanged |
+| `IconChip` | **not a pill**: a squircle glyph mark that leads a settings row. Left as it is. |
+| `DSCount` | **not a pill, not a view**: the grouped-number formatter. Left as it is. |
+| `DSAccountAct` | **not a pill**: the account page's act flag, which draws discs and one entry well. Left as it is. |
+
+`CopyAddressButton`'s `.pill` style is deleted too; its one caller, the
+address card, uses `DSCopyRow`.
+
+**Where the call sites went.**
+- **Choice → `Chip` (9):** the composer's tag completions; the model picker and
+  the monthly-cap picker in `AgentKeyDetail`; a person's watch toggles
+  (`SocialPostViews`); the vibenet key filter strip and the NFT picker's
+  A–Z / Recent sort, which were both hand-drawn capsules; and, through
+  `DSRangeChips`, the wallet crown, the Activity chart and the vibenet account's
+  window.
+- **Fact → `DSStamp` (9):** the roster's "You"; a note's tags; an agent key's
+  permissions; the vibenet permission list and scope list (hand-drawn); the
+  settings privacy line; a watched token's "Watching …" (hand-drawn); the
+  feed's new-since divider (hand-drawn); a work item's labels (hand-drawn, with
+  the label's colour kept as its dot). **Three facts lost the capsule without
+  going through `DSStamp`**, each because a stamp's weights are states and these
+  are not: the price card's move (its direction ink stays), L2BEAT's stage (the
+  stage ink ramp stays, and forcing Stage 2 into "good" would be this app
+  grading the chain), and GenUI's `Chip` shelf unit.
+- **Verb → row (33):** the catalogue's Fix / Open / Connect / Allow / Sign in /
+  Add key / Import / Watch / Automatic / Soon (five `VerbCapsule` sites, now one
+  trailing word; §641 already ran the whole row through `rowAction`, so the
+  capsule was one act drawn twice); the vibenet sub-account's Watch; Make
+  active in `AgentKeyPicker` and `BridgeSetupComponents`; the wallet sheet's
+  action-row doors (the ↗/↑ arrow survives as the trail's glyph, so "am I
+  leaving?" is still answered); the three device-code Copy buttons and the
+  address card's copy; Choose a model, Catch up now and Copy the key; Listen /
+  Stop; Name it / Not now; Peek at vitalik.eth; Altana's also-signs-for
+  wallets; Ask about this (Walletbeat, L2BEAT); Carry on; Watch it from the
+  lock screen; Keep / Save as a note; the vibenet key sheet's five copy doors
+  and Revoke this key (destructive); the feed's compose row, Show everything
+  and the try-its; and the data tray's Export, Import, Remove key and the key
+  form's Save.
+- **Verb → a word (1):** the send console's Max. It sits inside the amount
+  field's own line, where a row has nowhere to stand.
+
+**SUPERSEDED, named so nobody re-litigates from the old entry.** §653's
+`VerbCapsule` drawing (the words and the price they say survive as `RowVerb`).
+§715's `DSCopyCapsule` and `Chip(interactive:)`, and two of its "deliberately
+NOT migrated" items: the devnet console's Max capsule, and the vibenet filter
+chips, which now go through `Chip` and keep their neutral selection. §686 and
+the 2026-08-16 Stocks redraw's segmented box. The 2026-08-28 `Chip.primary`
+and `NameAddressPrompt`'s small primary. §446's address-card copy pill. §480's
+"one row of quiet capsules" on the key sheet. §463's permission chips as
+capsules; the ruling against a grid stands. The 2026-08-03 Statement pass's
+54pt action capsules on the data tray. §613's full-width "Watching" capsule.
+**§583 is NOT superseded:** the user said "a pill that just shows a fact", and
+`DSStamp` has been a word with no capsule since §583. No wash was put back. If
+the user meant a literal pill, that is a new ruling to ask for.
+
+**The guard.** `scripts/ds-template-audit.py` check C fails a capsule drawn as
+the ground of other content outside `Design/`. That means the shape argument of
+`.background`, `.overlay` or `.clipShape`, in either spelling, through
+`if`/`else` branches, and `.capsule` as a shape style. A capsule standing alone
+in a stack is a drawing (a progress track, a waveform bar, a tick, a caret, a
+skeleton) and is not matched. Neither are `contentShape` and `dsTapTarget`.
+`--self-test` plants seven spellings that must fire and one file of tracks,
+bars, hit shapes, comments and a `Design/` chip that must not. The exemptions
+are a RATCHET keyed by file: over the allowance fails, an allowance with nothing
+left fails as stale, and under it passes with a note.
+
+Twelve files hold exemptions. **Owned by other sessions today:** `ShapedRows`
+(feed rows), `HegotaRoomCard`, `PrivacyPoolsRoomCard`, `VibenetRoomCard` (room
+heads), and `DockFolderRow` (the dock, user-protected). **Not pills, measured:**
+the A–Z scrub track, a cluster label's plate over a map, the devnet join bar,
+and two privacy-figure encodings. **Real pills, OWED:**
+- The Accounts door's Yours | All segment. It was user-ruled and declined by
+  §715; it is a choice, and it moves to `Chip` only on a new ruling.
+- The wallet crown's face chips. Each carries a face, a value and a delta that
+  `Chip` cannot, and they wait for the room-head migration.
+- GenUI's Suggest "Review" and the approval card's Approve / Deny. These are
+  model-emitted display forms with no action. Whether an inert verb shape may
+  render at all is a §83 question, not a shape swap.
+
+**Guards that moved.** `wallet-section-selftest.sh` read the range chips' draw
+gate from `DSRangeChips.swift`; it reads `DSChip.swift` now, and the assertion is
+the same. No guard was deleted.
+
+**What changes on screen, UNSEEN.**
+- **The catalogue:** rows lose their filled pills and end in a coloured word
+  and a chevron. Soon has no chevron.
+- **Range pickers:** they are separate chips now, not a segmented well.
+- **Door rows are 44pt tall.** Every `DSDoorRow` grows by up to 16pt, including
+  the pre-existing ones on `ENSRenewCard`, `SafeQueueCard`,
+  `ApprovalPrepareCard`, Diagnostics and a link's "Read on …".
+- **Taller stacks:** the key sheet's copy doors stack vertically instead of
+  flowing, and the data tray's Export / Import / Remove key become rows instead
+  of 54pt capsules, so both are taller.
+- **Lost emphasis:** the vibenet admin scope loses its inverted fill and wears a
+  key mark in confirm ink. L2BEAT's stage and the price move lose their fills.
+  "You" on the roster is confirm ink, not tint.
+
+**None of this has been seen on a device or a simulator.** The evidence is an
+iOS simulator build, a Mac Catalyst build, every `*-audit.py`, and the harnesses
+that name a changed file.

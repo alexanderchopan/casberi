@@ -316,7 +316,8 @@ struct AgentGrantView: View {
     private var permissionStrip: some View {
         FlowLayout(spacing: DS.Space.s2) {
             ForEach(grant.permissions, id: \.self) { permission in
-                Chip(text: permission, interactive: false)
+                // A fact about the key, never a control (prd §746).
+                DSStamp(word: permission)
             }
         }
     }

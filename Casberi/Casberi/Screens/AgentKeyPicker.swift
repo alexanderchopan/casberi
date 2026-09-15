@@ -94,14 +94,18 @@ struct AgentKeyPicker: View {
                 DSStamp(word: String(localized: "Active"), weight: .good,
                         glyph: "checkmark.circle.fill")
             } else if isConfigured {
+                // The row's trailing VERB, not a capsule on it (prd §746):
+                // the word in tint, where `Active` stands once it is.
                 Button {
                     DSHaptic.selection()
                     AgentKey.activate(provider)
                     tick += 1
                 } label: {
-                    Chip(text: "Make active", style: .tint, glyph: "checkmark")
+                    DSPushRowTrail(fact: Text("Make active"), factTone: DS.tint, opens: false)
+                        .dsTapTarget()
                 }
                 .buttonStyle(.plain)
+                .dsHover()
             }
         }
         .padding(.horizontal, DS.Space.s3)

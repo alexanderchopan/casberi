@@ -1,0 +1,397 @@
+<title>Cleanup Pass</title>
+<style>
+:root{
+  --page:#0a0b0f;--screen:#000;--plate:#08080a;--card:#131316;--ink:#f2f4f8;
+  --sec:rgba(235,235,245,.62);--tert:rgba(235,235,245,.46);--faint:#626b80;
+  --tint:#3a76ff;--pink:#ff4f9a;--green:#30c46b;--amber:#f0a53a;
+  --fillFaint:rgba(255,255,255,.08);--fillStrong:rgba(255,255,255,.2);
+  --slab:rgba(30,32,38,.72);
+  --text:-apple-system,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{background:var(--page);color-scheme:dark}
+body{font-family:var(--text);color:var(--ink);background:var(--page);padding-inline:24px;padding-block:40px 72px}
+.wrap{max-width:1180px;margin:0 auto}
+header{max-width:720px;margin-bottom:34px}
+.eyebrow{font-size:12px;font-weight:600;color:var(--tint);margin-bottom:8px}
+h1{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin-bottom:10px;text-wrap:balance}
+header p{font-size:15px;line-height:1.5;color:var(--sec);max-width:64ch}
+section{margin-top:56px}
+section>h2{font-size:22px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+section>p{font-size:15px;line-height:1.5;color:var(--sec);max-width:66ch;margin-bottom:22px}
+.pair{display:flex;gap:28px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+.side{width:370px;max-width:100%}
+.tag{font-size:12px;font-weight:700;color:var(--faint);margin:0 0 10px 6px}
+.tag.after{color:var(--green)}
+.phone{border-radius:44px;padding:8px;background:#16181d;box-shadow:0 26px 60px rgba(0,0,0,.55)}
+.screen{position:relative;border-radius:36px;overflow:hidden;background:var(--screen);padding:50px 14px 20px;min-height:560px}
+.note{font-size:13px;line-height:1.5;color:var(--sec);margin:12px 6px 0}
+.note b{color:var(--ink);font-weight:600}
+.day{height:40px;display:flex;align-items:center;gap:8px}
+.day b{font-size:22px;font-weight:700;color:var(--pink)}
+.day span{font-size:12px;font-weight:700;color:var(--faint)}
+
+/* shared bits */
+.mark{width:26px;height:26px;border-radius:6px;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.face{border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:600;color:#fff}
+.time{font-size:13px;color:var(--tert);flex:none;font-variant-numeric:tabular-nums}
+.tile{width:44px;height:44px;border-radius:8px;flex:none}
+
+/* BEFORE rows: the old per-source shapes */
+.b-row{display:flex;gap:12px;padding:9px 2px}
+.b-row.top{align-items:flex-start}.b-row.mid{align-items:center}
+.b-title{font-size:17px;line-height:1.25}
+.b-sub{font-size:13px;color:var(--tert)}
+.b-lab{font-size:11px;font-weight:600;text-align:right}
+.b-col{display:flex;flex-direction:column;min-width:0;flex:1}
+.b-right{display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex:none}
+.b-post{padding:9px 2px}
+.b-post .hd{display:flex;align-items:center;gap:8px}
+.b-post .who{font-size:13px;font-weight:500;color:var(--sec);flex:1}
+.b-post .words{font-size:17px;line-height:1.3;margin-top:8px}
+
+/* AFTER rows: DSFeedRow on its plate */
+.a-row{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;margin:0 -2px 8px;background:var(--plate);border-radius:10px}
+.a-lead{width:26px;height:26px;flex:none;display:flex;align-items:center;justify-content:center}
+.a-col{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.a-head{display:flex;align-items:baseline;gap:8px}
+.a-name{font-size:17px;line-height:1.25;flex:1;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.a-name.one{-webkit-line-clamp:1}
+.a-line{font-size:15px;color:var(--sec);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.a-tiles{display:flex;gap:6px;margin-top:4px}
+.a-words{font-size:17px;line-height:1.3;margin-top:4px}
+
+/* room head */
+.head{background:var(--card);border-radius:16px;padding:16px}
+.h-lead{font-size:22px;font-weight:700;line-height:1.2;text-wrap:balance}
+.h-note{font-size:13px;color:var(--sec);margin-top:4px;line-height:1.4}
+.h-row{display:flex;align-items:baseline;gap:8px;padding:8px 0}
+.h-row .nm{font-size:17px;font-weight:600}
+.h-row .kd{font-size:12px;color:var(--sec)}
+.h-row .val{font-size:16px;font-variant-numeric:tabular-nums;color:var(--sec);margin-left:auto}
+.h-bar{height:6px;border-radius:3px;background:var(--fillFaint);margin-top:6px;overflow:hidden}
+.h-bar i{display:block;height:100%;background:#8e8e93}
+.h-foot{font-size:11px;color:var(--tert);margin-top:2px}
+.h-foot.v12{font-size:12px}
+.h-gap-s2{margin-top:8px}.h-gap-s3{margin-top:12px}.h-gap-s4{margin-top:16px}
+.struck{position:relative;opacity:.38}
+.struck::after{content:"";position:absolute;left:-6px;right:-6px;top:50%;height:2px;background:#ff453a;opacity:.9}
+.removed{border:1.5px dashed rgba(255,69,58,.55);border-radius:10px;padding:8px;margin-top:12px}
+.removed .why{font-size:11px;font-weight:700;color:#ff6961;margin-bottom:6px}
+
+/* catalogue rows */
+.c-row{display:flex;align-items:center;gap:12px;padding:11px 2px}
+.c-row .nm{font-size:17px;flex:1}
+.c-row .ct{font-size:13px;color:var(--tert)}
+.pill{font-size:13px;font-weight:600;padding:5px 12px;border-radius:99px;flex:none}
+.trail{display:flex;align-items:center;gap:10px;flex:none;font-size:13px}
+.chev{width:7px;height:12px;flex:none}
+.seg{display:inline-flex;background:var(--fillFaint);border-radius:9px;padding:2px}
+.seg span{font-size:12px;padding:5px 12px;border-radius:7px;color:var(--sec)}
+.seg span.on{background:rgba(255,255,255,.22);color:var(--ink);font-weight:600}
+.chips{display:inline-flex;gap:8px}
+.chips span{font-size:12px;padding:6px 12px;border-radius:99px;background:var(--fillFaint);color:var(--sec)}
+.chips span.on{background:var(--fillStrong);color:var(--ink);font-weight:600}
+.lbl{font-size:12px;color:var(--tert);margin:18px 2px 8px}
+
+/* setup screen */
+.acct{display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:8px}
+.acct .big{width:64px;height:64px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:30px}
+.acct .nm{font-size:26px;font-weight:700;margin-top:10px}
+.acct .st{font-size:13px;color:var(--green);margin-top:4px}
+.field{margin-top:22px;background:var(--fillFaint);border-radius:12px;padding:13px 14px;font-size:17px;color:var(--tert)}
+.btn{margin-top:10px;background:var(--tint);border-radius:12px;padding:13px;text-align:center;font-size:17px;font-weight:600}
+.slabnote{font-size:13px;color:var(--tert);margin-top:10px;line-height:1.4}
+.p-row{display:flex;align-items:center;gap:12px;padding:12px 2px}
+.p-row .ic{width:30px;height:30px;border-radius:50%;background:var(--fillFaint);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--sec)}
+.p-row .t{font-size:17px;flex:1}
+.p-row .f{font-size:13px;color:var(--tert)}
+
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--sec);margin-top:14px}
+.legend i{display:inline-block;width:14px;height:10px;border:1.5px dashed rgba(255,69,58,.7);border-radius:3px;margin-right:6px;vertical-align:middle}
+@media (max-width:440px){body{padding-inline:16px}.side{width:100%}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the cleanup pass</div>
+  <h1>Before and after, four fixes</h1>
+  <p>Mockups, not screenshots. The sizes, gaps, layout and the deleted sentences come from the code. The names, amounts and counts are example data. None of it has been seen on a phone yet. The dock and its sources are untouched in all four.</p>
+  <div class="legend"><span><i></i>Deleted in this pass</span></div>
+</header>
+
+<!-- ===================== 0. ALL ROOM ===================== -->
+<section>
+  <h2>The All room now</h2>
+  <p>Every row on its own dark plate, one left edge from top to bottom, with the pink day header between days. The plate is the darkest step the app has, 3% off black. On a phone's OLED screen it reads a little stronger than it does here.</p>
+  <div class="pair">
+    <div class="side" style="width:390px">
+      <div class="phone"><div class="screen" style="min-height:820px;padding-bottom:110px">
+        <div class="day"><b>Today</b><span>9</span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="mark" style="background:#2a3a5a">◧</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name one">Screenshots</span><span class="time">12m</span></span>
+          <span class="a-line">4 screenshots</span>
+          <span class="a-tiles"><i class="tile" style="background:#2b2f3a"></i><i class="tile" style="background:#3a2f2b"></i><i class="tile" style="background:#2b3a33"></i></span></span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="face" style="width:28px;height:28px;background:#5a4a8a;font-size:12px">M</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name">Coffee on Thursday?</span><span class="time">40m</span></span>
+          <span class="a-line">Mail · Mara Lindqvist</span></span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="mark" style="background:#f26522">≋</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name">Why every inbox eventually becomes a feed</span><span class="time">1h</span></span>
+          <span class="a-line">RSS · The Verge</span>
+          <span class="a-tiles"><i class="tile" style="background:linear-gradient(135deg,#2f2a44,#15121f)"></i></span></span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="mark" style="background:#24292f">⌥</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name">Retry the sync when the token expires</span><span class="time">1h</span></span>
+          <span class="a-line">GitHub · <span style="color:#8b949e;font-weight:600">issue</span></span></span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="mark" style="background:#627eea">Ξ</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name">Received from Base bridge</span><span style="display:flex;flex-direction:column;align-items:flex-end"><b style="font-size:16px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--green)">+0.25 ETH</b><span class="time">2h</span></span></span>
+          <span class="a-line">Wallet · Main</span></span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="mark" style="background:#1db954">♫</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name one">Blue in Green</span><span class="time">3h</span></span>
+          <span class="a-line">Spotify · Miles Davis</span>
+          <span class="a-tiles"><i class="tile" style="background:linear-gradient(135deg,#1d3a2a,#0d1a12)"></i></span></span></div>
+
+        <div class="day" style="margin-top:6px"><b>Yesterday</b><span>21</span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="mark" style="background:#0085ff">🦋</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name one">Bluesky</span><span class="time">Yesterday</span></span>
+          <span class="a-line">9 posts</span>
+          <span class="a-tiles"><i class="tile" style="border-radius:50%;background:#5a4a8a"></i><i class="tile" style="border-radius:50%;background:#3a6a5a"></i><i class="tile" style="border-radius:50%;background:#8a4a4a"></i></span></span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="mark" style="background:#3478f6">✉</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name">Your September statement is ready</span><span class="time">Yesterday</span></span>
+          <span class="a-line">Mail · Mercury</span></span></div>
+
+        <div style="position:absolute;left:0;right:0;bottom:0;height:130px;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.6) 55%,rgba(0,0,0,.9))"></div>
+        <div style="position:absolute;left:12px;right:12px;bottom:14px;height:72px;border-radius:26px;background:var(--slab);backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:space-around;padding:0 6px;font-size:10px;color:var(--sec)">
+          <span style="width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.14);color:var(--ink);display:flex;align-items:center;justify-content:center">All</span>
+          <span>Social</span><span>Reading</span><span>Work</span><span>Wallet</span><span>Media</span>
+        </div>
+      </div></div>
+      <p class="note">The dock is drawn as it ships and was not changed. Names, amounts and counts are example data.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 1. ROWS ===================== -->
+<section>
+  <h2>1 · Feed rows: one anatomy</h2>
+  <p>Before, each source drew its own row. The lead sat at 26, 36 or 44pt, pictures went left or right, and a bundle's count took the corner where every other row put the time. After, every row is the same four slots on its dark plate. The pieces vary, but their places never do.</p>
+  <div class="pair">
+    <div class="side">
+      <div class="tag">BEFORE</div>
+      <div class="phone"><div class="screen">
+        <div class="day"><b>Today</b><span>14</span></div>
+
+        <div class="b-row mid"><span class="mark" style="background:#2a3a5a">◧</span>
+          <span class="b-col"><span class="b-title">Screenshots</span><span class="b-sub">2h</span></span>
+          <span class="b-right"><b style="font-size:16px">6</b><span class="b-sub" style="font-size:11px">screenshots</span></span></div>
+
+        <div class="b-post"><div class="hd"><span class="face" style="width:26px;height:26px;background:#5a4a8a;font-size:12px">M</span><span class="who">Mara Lindqvist</span><span class="time">9m</span></div>
+          <div class="words">Finally moved my reading list off the browser. Every article I save lands next to the messages that sent it.</div></div>
+
+        <div class="b-row top"><span class="mark" style="background:#c4302b">▶</span>
+          <span class="b-col"><span class="b-title">The case for slower software</span><span class="b-sub">Tidy Systems</span></span>
+          <span style="width:64px;height:40px;border-radius:6px;background:linear-gradient(135deg,#3a1d1d,#1a0d0d);flex:none"></span>
+          <span class="time">1h</span></div>
+
+        <div class="b-row mid"><span class="face" style="width:36px;height:36px;background:#627eea;font-size:15px">Ξ</span>
+          <span class="b-col"><span class="b-title" style="font-weight:600">Ethereum</span><span class="b-sub" style="font-size:12px">ETH · $411B cap</span></span>
+          <span class="b-right"><b style="font-size:16px;font-weight:500">$3,412</b><span style="font-size:12px;font-weight:700;color:var(--green)">+1.2%</span></span></div>
+
+        <div class="b-row mid"><span class="tile" style="background:linear-gradient(135deg,#1d3a2a,#0d1a12)"></span>
+          <span class="b-col"><span class="b-title">Blue in Green</span><span class="b-sub">Miles Davis</span></span><span class="time">3h</span></div>
+
+        <div class="b-row top"><span class="mark" style="background:#24292f">⌥</span>
+          <span class="b-col"><span class="b-title">Retry the sync when the token expires</span></span>
+          <span class="b-right"><span class="time">1h</span><span class="b-lab" style="color:#8b949e">issue</span></span></div>
+      </div></div>
+      <p class="note">Five different left edges and two ways to say the time. The token's disc is the loudest thing on screen.</p>
+    </div>
+
+    <div class="side">
+      <div class="tag after">AFTER</div>
+      <div class="phone"><div class="screen">
+        <div class="day"><b>Today</b><span>14</span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="mark" style="background:#2a3a5a">◧</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name one">Screenshots</span><span class="time">2h</span></span>
+          <span class="a-line">6 screenshots</span>
+          <span class="a-tiles"><i class="tile" style="background:#2b2f3a"></i><i class="tile" style="background:#3a2f2b"></i><i class="tile" style="background:#2b3a33"></i></span></span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="face" style="width:28px;height:28px;background:#5a4a8a;font-size:12px">M</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name one">Mara Lindqvist</span><span class="time">9m</span></span>
+          <span class="a-words">Finally moved my reading list off the browser. Every article I save lands next to the messages that sent it.</span></span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="mark" style="background:#c4302b">▶</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name">The case for slower software</span><span class="time">1h</span></span>
+          <span class="a-line">YouTube · Tidy Systems</span>
+          <span class="a-tiles"><i class="tile" style="width:78px;background:linear-gradient(135deg,#3a1d1d,#1a0d0d)"></i></span></span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="face" style="width:28px;height:28px;background:#627eea;font-size:12px">Ξ</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name one">Ethereum</span><span style="display:flex;flex-direction:column;align-items:flex-end"><b style="font-size:16px;font-weight:500;font-variant-numeric:tabular-nums">$3,412</b><span style="font-size:12px;font-weight:700;color:var(--green)">+1.2%</span></span></span>
+          <span class="a-line">ETH · $411B cap</span></span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="mark" style="background:#1db954">♫</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name one">Blue in Green</span><span class="time">3h</span></span>
+          <span class="a-line">Miles Davis</span>
+          <span class="a-tiles"><i class="tile" style="background:linear-gradient(135deg,#1d3a2a,#0d1a12)"></i></span></span></div>
+
+        <div class="a-row"><span class="a-lead"><span class="mark" style="background:#24292f">⌥</span></span>
+          <span class="a-col"><span class="a-head"><span class="a-name">Retry the sync when the token expires</span><span class="time">1h</span></span>
+          <span class="a-line">GitHub · <span style="color:#8b949e;font-weight:600">issue</span></span></span></div>
+      </div></div>
+      <p class="note"><b>One left edge.</b> The title leads, and the line says who and where. Pictures sit under the name as 44pt tiles, and the time always takes the corner.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 2. ROOM HEADS ===================== -->
+<section>
+  <h2>2 · Room heads: one template</h2>
+  <p>Twenty-two rooms had a hand-drawn top card. They now share one head: a lead, notes, blocks and footnotes, with one set of gaps. Most rooms change only in spacing. A few lose a figure that repeated the feed below it. Apple Wallet is the clearest case.</p>
+  <div class="pair">
+    <div class="side">
+      <div class="tag">BEFORE · Apple Wallet</div>
+      <div class="phone"><div class="screen">
+        <div class="head">
+          <div class="h-lead">$1,284 on Apple Card this month</div>
+          <div class="h-note">$212 more than August at this point.</div>
+          <div class="removed">
+            <div class="why">Merchant board, deleted</div>
+            <div class="h-row"><span class="nm">Whole Foods</span><span class="val">$318</span></div>
+            <div class="h-bar"><i style="width:100%"></i></div>
+            <div class="h-row"><span class="nm">Uber</span><span class="val">$204</span></div>
+            <div class="h-bar"><i style="width:64%"></i></div>
+            <div class="h-row"><span class="nm">Blue Bottle</span><span class="val">$96</span></div>
+            <div class="h-bar"><i style="width:30%"></i></div>
+            <div class="h-foot h-gap-s2">and 14 more</div>
+          </div>
+          <div class="h-foot h-gap-s4">Read from Wallet on this iPhone.</div>
+        </div>
+      </div></div>
+      <p class="note">A ranking of where you spend, which §723 already removed from every other room as a chart for its own sake.</p>
+    </div>
+    <div class="side">
+      <div class="tag after">AFTER · Apple Wallet</div>
+      <div class="phone"><div class="screen">
+        <div class="head">
+          <div class="h-lead">$1,284 on Apple Card this month</div>
+          <div class="h-note">$212 more than August at this point.</div>
+          <div class="h-foot v12 h-gap-s3">Read from Wallet on this iPhone.</div>
+        </div>
+      </div></div>
+      <p class="note"><b>The figure and its comparison stay.</b> The transactions below the head already name the merchants. Footnotes are 12pt in every room now, not 11pt in seven of them.</p>
+    </div>
+  </div>
+
+  <div class="pair" style="margin-top:30px">
+    <div class="side">
+      <div class="tag">BEFORE · Cursor</div>
+      <div class="phone"><div class="screen" style="min-height:0">
+        <div class="head">
+          <div class="h-lead">7 agents ran this week</div>
+          <div class="h-note">Mostly the sync refactor.</div>
+          <div class="h-gap-s2"><div class="h-row"><span class="nm">casberi</span><span class="kd">5 runs · 1 unfinished</span></div>
+          <div class="h-bar struck"><i style="width:100%"></i></div></div>
+        </div>
+      </div></div>
+      <p class="note">The lead's bar was scaled against its own count, so it was always full.</p>
+    </div>
+    <div class="side">
+      <div class="tag after">AFTER · Cursor</div>
+      <div class="phone"><div class="screen" style="min-height:0">
+        <div class="head">
+          <div class="h-lead">7 agents ran this week</div>
+          <div class="h-note">Mostly the sync refactor.</div>
+          <div class="h-gap-s3"><div class="h-row"><span class="nm">casberi</span><span class="kd">5 runs · 1 unfinished</span></div></div>
+        </div>
+      </div></div>
+      <p class="note"><b>The bar that could only ever be full is gone.</b> The row keeps what the headline can't say: which runs didn't finish.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 3. CHIPS ===================== -->
+<section>
+  <h2>3 · Chips: two kinds, verbs become rows</h2>
+  <p>A pill now means one of two things: a choice you tap, or a fact you read. Anything that does something, like Connect, Copy or Open, is a row. In the catalogue the whole row already did the verb, so the pill was the same action drawn twice.</p>
+  <div class="pair">
+    <div class="side">
+      <div class="tag">BEFORE · Accounts catalogue</div>
+      <div class="phone"><div class="screen" style="min-height:0">
+        <div class="c-row"><span class="mark" style="background:#24292f">⌥</span><span class="nm">GitHub<br><span class="ct">Work</span></span><span class="pill" style="background:rgba(48,196,107,.18);color:var(--green)">Open</span></div>
+        <div class="c-row"><span class="mark" style="background:#635bff">S</span><span class="nm">Stripe<br><span class="ct">Work</span></span><span class="pill" style="background:rgba(58,118,255,.2);color:#6f9bff">Add key</span></div>
+        <div class="c-row"><span class="mark" style="background:#0085ff">🦋</span><span class="nm">Bluesky<br><span class="ct">Social</span></span><span class="pill" style="background:rgba(240,165,58,.18);color:var(--amber)">Fix</span></div>
+        <div class="c-row"><span class="mark" style="background:#333">✦</span><span class="nm">Granola<br><span class="ct">Notes</span></span><span class="pill" style="background:var(--fillFaint);color:var(--tert)">Soon</span></div>
+        <div class="lbl">Crown range picker</div>
+        <div class="seg"><span>1D</span><span class="on">7D</span><span>1M</span><span>1Y</span></div>
+      </div></div>
+    </div>
+    <div class="side">
+      <div class="tag after">AFTER · Accounts catalogue</div>
+      <div class="phone"><div class="screen" style="min-height:0">
+        <div class="c-row"><span class="mark" style="background:#24292f">⌥</span><span class="nm">GitHub<br><span class="ct">Work</span></span><span class="trail" style="color:var(--green)">Open<svg class="chev" viewBox="0 0 7 12"><path d="M1 1l5 5-5 5" fill="none" stroke="rgba(235,235,245,.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+        <div class="c-row"><span class="mark" style="background:#635bff">S</span><span class="nm">Stripe<br><span class="ct">Work</span></span><span class="trail" style="color:var(--tint)">Add key<svg class="chev" viewBox="0 0 7 12"><path d="M1 1l5 5-5 5" fill="none" stroke="rgba(235,235,245,.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+        <div class="c-row"><span class="mark" style="background:#0085ff">🦋</span><span class="nm">Bluesky<br><span class="ct">Social</span></span><span class="trail" style="color:var(--amber)">Fix<svg class="chev" viewBox="0 0 7 12"><path d="M1 1l5 5-5 5" fill="none" stroke="rgba(235,235,245,.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+        <div class="c-row"><span class="mark" style="background:#333">✦</span><span class="nm">Granola<br><span class="ct">Notes</span></span><span class="trail" style="color:var(--tert)">Soon</span></div>
+        <div class="lbl">Crown range picker</div>
+        <div class="chips"><span>1D</span><span class="on">7D</span><span>1M</span><span>1Y</span></div>
+      </div></div>
+    </div>
+  </div>
+  <p class="note" style="max-width:66ch;margin:16px auto 0;text-align:center">The verb is the row's last word, in the same colour it had. A range is a choice, so it stays a set of chips, now separate instead of a segmented box.</p>
+</section>
+
+<!-- ===================== 4. WORDS ===================== -->
+<section>
+  <h2>4 · Words: one explaining sentence, at most</h2>
+  <p>Twenty-five sentences that repeated a label, a field or the screen itself are gone. What stays goes through one footnote view. Honesty, money, signing and privacy lines are kept on purpose.</p>
+  <div class="pair">
+    <div class="side">
+      <div class="tag">BEFORE · Hugging Face</div>
+      <div class="phone"><div class="screen" style="min-height:0">
+        <div class="acct"><span class="big" style="background:#ffd21e">🤗</span><span class="nm">Hugging Face</span><span class="st">● Reading · 8m ago</span></div>
+        <div class="field">Watch a model or org</div>
+        <div class="btn">Watch</div>
+        <div class="slabnote struck">A name like meta-llama, or any Hugging Face link.</div>
+        <div class="p-row" style="margin-top:14px"><span class="ic">↗</span><span class="t">Activity</span><span class="f">14 today</span></div>
+      </div></div>
+      <p class="note">The field's placeholder already says what goes in it.</p>
+    </div>
+    <div class="side">
+      <div class="tag after">AFTER · Hugging Face</div>
+      <div class="phone"><div class="screen" style="min-height:0">
+        <div class="acct"><span class="big" style="background:#ffd21e">🤗</span><span class="nm">Hugging Face</span><span class="st">● Reading · 8m ago</span></div>
+        <div class="field">Watch a model or org</div>
+        <div class="btn">Watch</div>
+        <div class="p-row" style="margin-top:14px"><span class="ic">↗</span><span class="t">Activity</span><span class="f">14 today</span></div>
+      </div></div>
+      <p class="note"><b>Same screen, one fewer sentence.</b> The same cut ran on Radicle's "An id like rad:z3gqcJ…, or any Radicle link."</p>
+    </div>
+  </div>
+
+  <div class="pair" style="margin-top:30px">
+    <div class="side">
+      <div class="tag">BEFORE · X room, caught up</div>
+      <div class="phone"><div class="screen" style="min-height:0;text-align:center;padding-top:70px;padding-bottom:50px">
+        <div style="font-size:17px;font-weight:600">That's everything from X so far</div>
+        <div class="slabnote struck" style="display:inline-block">New things from X land here.</div>
+      </div></div>
+    </div>
+    <div class="side">
+      <div class="tag after">AFTER · X room, caught up</div>
+      <div class="phone"><div class="screen" style="min-height:0;text-align:center;padding-top:70px;padding-bottom:50px">
+        <div style="font-size:17px;font-weight:600">That's everything from X so far</div>
+      </div></div>
+      <p class="note"><b>The headline already said it.</b> Kept on purpose: lines like "End-to-end encrypted requires Advanced Data Protection" and every signing and spend disclosure.</p>
+    </div>
+  </div>
+</section>
+</div>

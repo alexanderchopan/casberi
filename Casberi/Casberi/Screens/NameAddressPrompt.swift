@@ -89,8 +89,9 @@ struct NameAddressPrompt: View {
     // coded") — the old card wore a heading, a three-line paragraph, and two
     // full-width buttons, which made a tertiary prompt the loudest block on
     // the sheet, louder than the transaction it sat under. One title line,
-    // one short fact, two compact controls — the primary a small tinted
-    // capsule, the decline a plain word — so the card reads as an aside.
+    // one short fact, and its two ways out as two ROWS (prd §746, which
+    // retired the small filled capsule this used to lead with: a verb drawn
+    // as a pill is the "generated" read the 2026-07-23 note was fighting).
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text("Name this address?")
@@ -99,29 +100,15 @@ struct NameAddressPrompt: View {
             Text(reason)
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: DS.Space.s4) {
-                Button {
+            VStack(alignment: .leading, spacing: 0) {
+                DSDoorRow(icon: "character.cursor.ibeam", label: "Name it") {
                     DSHaptic.tap()
                     onName()
-                } label: {
-                    // The system's own small primary (2026-08-28). This was a
-                    // hand-rolled `Text` in a filled capsule with its own
-                    // padding — the shape `Chip` already is, three rows below
-                    // an `AgentKeyPicker` that draws real ones.
-                    Chip(text: String(localized: "Name it"), style: .primary)
                 }
-                .buttonStyle(PressSpring())
-                Button {
+                DSDoorRow(icon: "xmark", label: "Not now") {
                     DSHaptic.tap()
                     onDismiss()
-                } label: {
-                    Text("Not now")
-                        .dsText(.subhead13).fontWeight(.semibold)
-                        .foregroundStyle(DS.textSecondary)
-                        .padding(.vertical, 7)
                 }
-                .buttonStyle(.plain)
-                Spacer(minLength: 0)
             }
             .padding(.top, DS.Space.s1)
         }

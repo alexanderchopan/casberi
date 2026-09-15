@@ -256,19 +256,15 @@ struct WorkStageView: View {
         // label that mattered.
         FlowRail(spacing: DS.Space.s2 - 3) {
             ForEach(Array(pills.enumerated()), id: \.offset) { _, pill in
+                // A FACT — the person's own label — so a stamp, not a pill
+                // (prd §746). The label's colour stays as its dot.
                 HStack(spacing: DS.Space.s2 - 4) {
                     if let dot = pill.1 {
                         Circle().fill(dot).frame(width: 6, height: 6)
                             .accessibilityHidden(true)
                     }
-                    Text(verbatim: pill.0)
-                        .dsText(.label12)
-                        .foregroundStyle(pill.1 == nil ? DS.textSecondary : DS.textPrimary)
+                    DSStamp(word: pill.0)
                 }
-                .padding(.horizontal, DS.Space.s2)
-                .padding(.vertical, DS.Space.s1 + 1)
-                .background(pill.1 == nil ? DS.fillFaint : DS.fillLine,
-                            in: Capsule())
             }
         }
     }
