@@ -6649,18 +6649,6 @@ struct FeedScreen: View {
             // "never say one thing twice"; in every other scope the room is
             // answering a different question entirely.
 
-            // The hero, and the only block with no header of its own: a title
-            // above the first thing on a screen is noise (see
-            // `walletGroupHeader` for the whole ruling).
-            // ONE SLOT, SHARED. The crown IS Home's drawing, so it lives in
-            // the same fixed box every other scope's drawing does — otherwise
-            // Home is a crown plus an empty slot and the bar sits a third of a
-            // screen lower there than anywhere else.
-            // NOT EMITTED off Home — see the visual slot's own note below for
-            // why collapsing it to `maxHeight: 0` was not enough: an empty
-            // `Section` still takes list spacing, so a zero-height box is not a
-            // absent one, and the count of sections above the bar has to match
-            // on every scope for the bar to land in the same place.
             // **THE CHROME LEADS, AND ON HOME IT IS THE WHOLE ROOM** (prd
             // §744). The crown no longer stands in a section of its own: it
             // rides the account card inside `walletScopeChromeSection`, which
@@ -6758,8 +6746,9 @@ struct FeedScreen: View {
             // the one that shipped, moved and not redrawn.
             //
             // The headers themselves are gone rather than kept inside their
-            // scopes, because the chip now says the same words in the same
-            // place; two of them would be §208's rule broken by the very pass
+            // scopes, because the chrome says the same words in the same place
+            // — the scope's own row on Home, its own title inside it (§744) —
+            // and two of them would be §208's rule broken by the very pass
             // that cites it. They come back the day a scope holds two unlike
             // kinds of thing.
             switch section {
