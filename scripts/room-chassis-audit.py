@@ -19,9 +19,12 @@ TWO CHECKS, both on the comment- and string-stripped body of every
      card that keeps a chassis constant in a helper and hand-draws its body
      would pass a file-wide grep, and a doc comment naming the template would
      pass a raw one.
-  B. The card's body does not apply `.dsWidgetSurface()` itself. The head
-     card's surface is the template's (`dsRoomHeadCard()`), and a body that
-     paints its own is a hand-drawn card that also mentions the chassis.
+  B. The card's body does not apply `.dsWidgetSurface()` itself. The head's
+     layout is the template's (`dsRoomHeadBlock()`), and since prd §758 that
+     template paints NO plate — so a body that paints one is not merely a
+     second surface, it is the elevated card coming back to the one kind of
+     block the user has now asked three times to see without one (§749, §757,
+     §758).
 
 WHAT IT CANNOT SEE: whether the card composes the template WELL — a body that
 wraps a hand-drawn VStack in one `DSRoomChassis.Block` passes. It reads shapes,
@@ -180,7 +183,7 @@ def scan(root: Path):
                                            "a hand-drawn room head (prd §745)"))
             if SURFACE.search(body):
                 findings.append(("B", rel, f"{name}'s body paints its own .dsWidgetSurface() — "
-                                           "the head card's surface is the template's (prd §745)"))
+                                           "a room head draws no plate (prd §745/§758)"))
         if not named:
             findings.append(("A", rel, f"no `struct …RoomCard` or `{stem}RoomFigure` in a *RoomCard.swift file"))
     return findings, cards

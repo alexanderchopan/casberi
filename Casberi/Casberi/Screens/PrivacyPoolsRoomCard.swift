@@ -25,7 +25,7 @@ import SwiftUI
 /// Every other source room's head is one `DSRoomChassis.Head` card. This one is
 /// a lead standing bare on the page, a switcher, then AT MOST one card — so it
 /// composes the template's PARTS rather than its card: `LeadView` for the lead,
-/// `dsRoomHeadCard()` for each scope's box, `LineText` for every line and
+/// `dsRoomHeadBlock()` for each scope's block, `LineText` for every line and
 /// `HeadLink` for the door, spaced by `scopedHeadGap`. The words, the box and the
 /// door are therefore the same objects every other head draws.
 ///
@@ -146,13 +146,17 @@ struct PrivacyPoolsRoomCard: View {
         }
     }
 
-    /// The surface every scope's card wears — the head template's own box, so
-    /// a scope card and every other room's head cannot drift into two slightly
-    /// different boxes.
+    /// The block every scope wears — the head template's own layout, so a scope
+    /// and every other room's head cannot drift apart.
+    ///
+    /// It is not a card any more (prd §758): the template draws no plate, and
+    /// this reaches through it rather than around it, so these scopes lost
+    /// theirs in the same edit. The name stays `card` at the four call sites
+    /// only because it names the CALLER's block, not a surface.
     @ViewBuilder
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 0) { content() }
-            .dsRoomHeadCard()
+            .dsRoomHeadBlock()
     }
 
     // MARK: - Shielded

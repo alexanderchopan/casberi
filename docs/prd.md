@@ -83,6 +83,8 @@ at all.
 | §36 (Fileverse clause) | Fileverse declined as "E2EE by design; revisit if they ship a hosted API" | amended by §669 (the DECLINE stands and the REASON does not — the reopening clause was met. `@fileverse/api` has been on npm since 2026-02-11: the key is a seed the UCAN, ECIES and ERC-4337 keys all derive from, gas is sponsored by a Pimlico paymaster, and a Swift client could skip their self-hosted Node satellite entirely. It is declined on POSITIONING instead — an editor, a doc list and a conflict story serve authoring, and §26 already ruled that Casberi collects and connects while Apple Notes authors. §36's other declines are untouched) |
 | §629 | The two ethrex seats are renamed, and migration v9 — a one-time pass gated on the `migrations.version` stamp — rewrites the rows already landed under the old names | amended by §647 (the rename stands; the repair could not. The store mirrors to CloudKit, so rows arrive after a one-shot has run and it never runs again — every one of those kept the old name, resolved to no seat, and reached a device as an unfoldable chip with a blank mark. `Corpus.renamedSources` makes RESOLUTION tolerant and `SourceRename.sweep` converges the corpus at every launch; v9 is deleted so there is one mechanism, not two) |
 | §647 | `Corpus.renamedSources` is a source→source table, and `SourceRename.sweep` converges the corpus off it at every launch | amended by §650 (the mechanism stands whole; the table's SHAPE widens. Migration v3 — the same one-shot, one seat over — also moved the rows' ref namespace (`dexscreener:` → `tokens:`), which a source→source entry cannot express, so an entry now carries an optional `refPrefix` pair and the sweep rewrites both strings. That half matters more than the name: the ref failure RENDERS PERFECTLY, and `TokenWatch.add`'s already-watching guard misses the row, so the same coin lands twice. §647's "two entries today" is three) |
+| §745 (the "one surface" clause) | Every room head composes one template AND draws it on the elevated card | superseded by §758 as the SURFACE only — `dsRoomHeadCard()` becomes `dsRoomHeadBlock()` and paints no plate, the fourth report in a week about that card (§749, §708, §757). §745's composition rule — a lead, notes, blocks, footnotes, one door — is untouched |
+| §757 (the head keeps its card) | The wallet family's Actions and Readings lose their plates and the HEAD keeps its, because a head card is what every room draws | superseded by §758 — "every room draws one" is a reason the change is big, not a reason it is wrong. The head's plate goes too, here and in the template for every other room; everything else in §757 stands |
 | §675 (the selection's animation set to nil) | `SelectionTravel`'s transaction stops animating, measured as a one-frame switch | superseded by §676 — that measurement ran on a COLD snapshot cache; warm it is 8 frames, because `matchedGeometryEffect` is a travel mechanism rather than an animation you can switch off. The effect is removed outright. |
 | §649 (the band's scrim) | an opaque page-colour plate behind the bottom band, masked to a soft top edge, so feed text cannot read between stacked strips | overturned by §677 — the plate is deleted; the glass controls carry their own legibility over live rows, and the sliver between folder and dock is the platform's own behaviour |
 | §649 amendment (the ramp is a fixed 24pt) | the plate's fade is `DS.Space.s6`, never a fraction of the band's height | overturned with §649 by §677 — there is no plate to ramp |
@@ -56313,3 +56315,50 @@ branches of `SlotBox` must clip. Nine mutations, nine catches.
 
 Not built or run here (no Swift toolchain in this checkout); the simulator pass
 is owed, and the room at its new heights is a design checkpoint.
+
+## §758 — A room head draws no plate either (user: "again here, we don't want cards that are like this", on the Safe room's head, 2026-09-15)
+
+**The report.** The Safe room's head: a `4`, "waiting on your signature", an
+orange module warning, three signature rows and "1 more pending" — all on
+`dsWidgetSurface`, the elevated card, about half a screen of it before the first
+day divider.
+
+**This is the last block in the app wearing that surface, and the fourth report
+about it.** §749 took it off every row ("i made a mistake by adding cards to rows
+i think it makes the app look worse") and off the reading cover's deck; §708 took
+it off every account page; §757, a day earlier, took it off the wallet family's
+Actions and Readings and KEPT it on the head, on the grounds that a head card is
+what every room draws. That was the wrong half to keep: "every room draws one" is
+a reason the change is big, not a reason it is wrong.
+
+**The ruling.** `dsRoomHeadCard()` becomes `dsRoomHeadBlock()` and applies no
+surface. One definition, so this reaches every `DSRoomChassis.Head`, Privacy
+Pools' per-scope blocks (which compose it) and — separately spelled, separately
+edited — the wallet family's crown on Home. A room head is content on the page,
+like the rows under it.
+
+**The padding stays, both halves**, and that is deliberate rather than leftover:
+with no fill to define an edge an inset looks purposeless, and its job is that
+the head's words land on the left edge they landed on yesterday
+(`dsRoomHeadPlacement`'s `s4` plus the block's own). Removing the plate moves
+nothing sideways, in any room.
+
+**What is NOT touched.** A figure's own well inside a head, the gear disc, the
+day divider's pink (§740/§742), and every surface that is not the elevated
+card — `dsWell` is the recessed rung and says something different (a block sunk
+into the page rather than lifted off it).
+
+**Supersedes** §745's "one surface" clause and §757's "the head keeps its card",
+both as the surface only: §745's composition rule (a lead, notes, blocks,
+footnotes, one door) is untouched, and so is every other part of §757.
+
+**Guarded**: `altana-selftest.sh` asserted the template HAD the surface since
+§488 — the guard is inverted rather than deleted, because the template is where
+a plate would come back for every room at once, and it reads the file
+comment-stripped since the note there names the surface it stopped applying;
+`wallet-section-selftest.sh`'s §757 pair becomes a plain `deny` on both files,
+so nothing on the wallet family's Home stands on a plate; `room-chassis-audit.py`
+check B keeps its shape and states the stronger reason.
+
+Not built or run here (no Swift toolchain in this checkout); the simulator pass
+is owed, and every room head at its new weight is a design checkpoint.

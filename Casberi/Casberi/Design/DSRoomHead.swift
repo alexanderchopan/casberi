@@ -179,7 +179,7 @@ extension DSRoomChassis {
                     .padding(.top, DSRoomChassis.headBlockGap)
                 }
             }
-            .dsRoomHeadCard()
+            .dsRoomHeadBlock()
             .dsRoomHeadPlacement())
         }
 
@@ -618,13 +618,28 @@ extension DSRoomChassis.Row where Measure == EmptyView {
 }
 
 extension View {
-    /// The head card's own surface: the inset, the full width and the widget
-    /// rung. One definition, so a scoped head's cards (Privacy Pools) and every
-    /// `DSRoomChassis.Head` are the same box.
-    func dsRoomHeadCard() -> some View {
+    /// The head's own block: the inset and the full width. One definition, so a
+    /// scoped head (Privacy Pools) and every `DSRoomChassis.Head` are laid out
+    /// the same.
+    ///
+    /// **IT DRAWS NO PLATE (prd §758, user: "again here, we don't want cards
+    /// that are like this").** It was `dsRoomHeadCard()` and it applied
+    /// `dsWidgetSurface` — the elevated card. That surface has now been taken
+    /// off every other kind of block in the app, one report at a time: §743's
+    /// row plates (§749), the reading cover's own deck (§749), every account
+    /// page (§708), the wallet family's Actions and Readings (§757). The head
+    /// was the last, and it is the biggest — a Safe room's head is a number, a
+    /// warning and three rows, so the plate was a card the height of half a
+    /// screen.
+    ///
+    /// **The padding stays, both halves.** With no fill to define an edge the
+    /// inset looks like it has nothing to do, and it has one job: the head's
+    /// words land on the same left edge they landed on yesterday
+    /// (`dsRoomHeadPlacement`'s `s4` plus this one), so removing the plate
+    /// moves nothing sideways.
+    func dsRoomHeadBlock() -> some View {
         padding(DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWidgetSurface()
     }
 
     /// Where a head stands in the feed. `FeedScreen.insightSection` presents

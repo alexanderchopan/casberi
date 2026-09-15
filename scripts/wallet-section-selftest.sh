@@ -324,17 +324,15 @@ rows_at=$(grep -n "DSScopeRows(sections:" "$CHROME" | head -1 | cut -d: -f1 || t
 # §708 off every account page ("nothing on an account page is boxed but the
 # entry well"). This was the last surface in the app drawing rows on plates.
 #
-# The HEAD keeps its card, so this cannot be a file-wide `deny`: it is a COUNT
-# plus a POSITION, and the position is what makes it a real check — a plate
-# moved from the acts to the readings would keep the count at one.
+# §757 kept the HEAD's plate on the grounds that a head card is what every room
+# draws. A day later the user said the same thing about a room head ("again
+# here, we don't want cards that are like this"), so §758 took it off the head
+# template and off this crown: NOTHING on Home stands on a plate, and the guard
+# is a plain `deny` on both files.
 deny DSScopeRows.swift "dsWidgetSurface" \
   "the readings are back on a plate — §749 took the card off every row in the app (§757)"
-plate_lines=$(grep -c "dsWidgetSurface" "$work/DSRoomScopeChrome.swift.bare" || true)
-[[ "$plate_lines" -eq 1 ]] \
-  || fail "drift: DSRoomScopeChrome draws $plate_lines plates, not 1 — the head keeps its card and the two row blocks stand on nothing (§757)"
-plate_at=$(grep -n "dsWidgetSurface" "$work/DSRoomScopeChrome.swift.bare" | head -1 | cut -d: -f1 || true)
-[[ -n "$plate_at" ]] && (( head_at < plate_at && plate_at < acts_at )) \
-  || fail "drift: the one plate on Home is not the head's — Actions or Readings took it back (§757)"
+deny DSRoomScopeChrome.swift "dsWidgetSurface" \
+  "a block on the wallet family's Home is on a plate again — the head, the acts and the readings are all content on the page (§757/§758)"
 
 # **THE 300pt BOX ON HOME, AND THE DECK THAT IS NOT THERE.** `DSRoomSlot` pins
 # every scope figure to `visualSlot` so the scopes align and the drawings sized

@@ -93,10 +93,25 @@ print -r -- "$CARDVIEW" | grep -q 'DSRoomChassis.Head(' \
   || { echo "✗ the Altana head no longer composes DSRoomChassis.Head — prd §488/§745: the"
        echo "  card surface and outer margin every room head wears live in that template"; exit 1; }
 TEMPLATE="Casberi/Casberi/Design/DSRoomHead.swift"
-grep -q '\.dsWidgetSurface()' "$TEMPLATE" \
-  || { echo "✗ the room head template lost its card surface — prd §488/§745"; exit 1; }
+# **THE TEMPLATE DRAWS NO PLATE, AND THAT IS THE ASSERTION NOW (prd §758, user:
+# "again here, we don't want cards that are like this").** This guard demanded
+# `.dsWidgetSurface()` from §488 until §758 took the elevated card off every
+# room head — the last block in the app still wearing one. Inverted rather than
+# deleted: the template is exactly where a plate would come back for every room
+# at once, which is what made it worth guarding in the first place.
+#
+# Read comment-stripped, because the note above `dsRoomHeadBlock` names the
+# surface it stopped applying.
+perl -pe 's{//.*$}{}g' "$TEMPLATE" | grep -q 'dsWidgetSurface' \
+  && { echo "✗ the room head template paints the elevated card again — prd §758 took it"
+       echo "  off every room head at once, and this is the one place it comes back from"; exit 1; }
 grep -q 'padding(.horizontal, DS.Space.s4)' "$TEMPLATE" \
   || { echo "✗ the room head template lost its outer margin — prd §488/§474/§745"; exit 1; }
+# The inset half of the block stays: with no fill to define an edge it looks
+# purposeless, and its job is that the head's words keep the left edge they had.
+grep -q 'func dsRoomHeadBlock() -> some View' "$TEMPLATE" \
+  || { echo "✗ the room head block is gone or renamed — every head's layout is one"
+       echo "  definition (prd §745/§758)"; exit 1; }
 
 # ONE BAR OBJECT. The room next door rolled its own capsule pair for two
 # months; two keystore rooms drawing one figure two ways is what

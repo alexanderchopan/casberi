@@ -28,12 +28,14 @@ import SwiftUI
 ///      be actions"). Not "Test": the devnets are test networks, but the
 ///      Wallet room holds real money and the label is shared.
 ///
-/// **THE TWO ROW BLOCKS STAND ON NOTHING (prd §757, user: "they should not have
-/// cards").** Actions and Readings drew on `dsWidgetSurface`, the elevated
-/// card — the one thing §749 took off every row in the app and §708 off every
-/// account page. This was the last surface in the app drawing rows on plates.
-/// The HEAD keeps its card, because that is what a room head is everywhere
-/// else (`dsRoomHeadCard`, §745's "one surface").
+/// **NOTHING ON HOME STANDS ON A PLATE (prd §757, then §758).** Actions and
+/// Readings drew on `dsWidgetSurface`, the elevated card — the one thing §749
+/// took off every row in the app and §708 off every account page — and §757
+/// took it off both, keeping the head's on the grounds that a head card is what
+/// every room draws. A day later the user said the same thing about a room head
+/// ("again here, we don't want cards that are like this"), so the head's plate
+/// went too, here and in `dsRoomHeadBlock` for every other room. Home is three
+/// blocks of content on the page, separated by air.
 ///
 /// The rail truncates a long name at its 66pt slot, which was §747's first
 /// complaint. The head names the picked account in FULL beside the figure
@@ -106,10 +108,11 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Acts: View>: View {
         if active == home {
             VStack(alignment: .leading, spacing: DSRoomChassis.contentGap) {
                 if let showing {
+                    // NO PLATE (prd §758) — the head is content, like the rows
+                    // under it. The paddings stay so nothing moves sideways.
                     crown(showing)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, DS.Space.s2)
-                        .dsWidgetSurface()
                         .padding(.horizontal, DSRoomChassis.inset)
                 }
                 if let actsSlot {
