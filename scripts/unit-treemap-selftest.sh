@@ -204,8 +204,7 @@ mutate() {  # name, which (treemap|genui|leader|heg), from, to
     leader)  src="$LEADER";  l="$target" ;;
     heg)     src="$HEG";     h="$target" ;;
   esac
-  MUT_FROM="$from" MUT_TO="$to" python3 - "$src" "$target" <<'PY' \
-    || { echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1; }
+  MUT_FROM="$from" MUT_TO="$to" python3 - "$src" "$target" <<'PY' || { echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1; }
 import os, sys
 src = open(sys.argv[1]).read()
 frm, to = os.environ["MUT_FROM"], os.environ["MUT_TO"]
