@@ -512,7 +512,7 @@ struct VibenetRoomCard: View {
         // this stack's own `s6` — `railGap - s6` and `contentGap - s6` — which
         // is only a spacing correction while something follows. On the Home
         // scope with several accounts nothing does: every branch below the slab
-        // is gated on a scope this one is not, so `railSlab` is the LAST child
+        // is gated on a scope this one is not, so the chrome is the LAST child
         // and its `-14` is not a correction, it is 14pt of the slab drawn BELOW
         // the stack. This card is one `List` row (`FeedScreen.insightSection`,
         // `listRowInsets(EdgeInsets())`) and a list cell clips to its bounds, so
@@ -938,7 +938,7 @@ struct VibenetRoomCard: View {
         return out
     }
 
-    /// The rail deck's gate, spelled once so `railSlab` cannot ask it and
+    /// The rail deck's gate, spelled once so `scopeChrome` cannot ask it and
     /// `accountChips` answer differently — the failure that leaves a slab with
     /// a deck-shaped hole in it.
     private func showsRailDeck(_ strip: [VibenetAccountItem]) -> Bool {
@@ -2490,7 +2490,7 @@ struct VibenetRoomCard: View {
                 // the rail — on Home the list is three events, so nothing else
                 // says which account is which.
                 namesInRoom: false,
-                // A deck of `railSlab`, not a strip of its own (prd §547).
+                // A deck of the room's head, not a strip of its own (prd §547).
                 embedded: true,
                 matches: VibenetScopeRail.matches,
                 onPick: { picked in onScope(picked ?? "") },
