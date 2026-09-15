@@ -636,6 +636,19 @@ step "Day-divider audit"
 "$ROOT/scripts/day-divider-audit.py" || fail "a day divider lost the brand ink, or a named group lost its opt-out — see the output above"
 print -P "%F{green}✓ day-divider audit%f"
 
+# Every source room's head composes the shared chassis (prd §745). Twenty-two of
+# twenty-six heads were drawn by hand the day their source landed — one anatomy
+# at four gap rungs, two footnote rungs and ten copies of one row — and §495
+# already recorded that shared components never held a shared template. It fails
+# a `*RoomCard` whose own body names neither `DSRoomChassis` nor `DSRoomSlot`,
+# or paints its own widget surface. It reads shapes, not layouts: a hand-drawn
+# stack wrapped in one `Block` passes it and is wrong on screen.
+step "Room-chassis audit"
+"$ROOT/scripts/room-chassis-audit.py" --self-test >/dev/null \
+  || fail "the room-chassis audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/room-chassis-audit.py" || fail "a room head is drawn by hand instead of composing DSRoomChassis — see the output above"
+print -P "%F{green}✓ room-chassis audit%f"
+
 # Keeps the "What this app reaches" registry complete (prd §205): every host
 # the app calls must be disclosed in NetworkReach.swift or the explicit
 # non-reach denylist — an undisclosed fetch host fails here.

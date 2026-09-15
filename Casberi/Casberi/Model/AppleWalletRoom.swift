@@ -26,9 +26,10 @@ import Foundation
 ///     tell you is that it quietly isn't happening any more.
 ///   • `upcoming` — the next expected date per recurring merchant, plus the
 ///     one real deadline FinanceKit hands over, `nextPaymentDueDate`.
-///   • `merchants` — the leaderboard, which is the room's identity even when
-///     nothing changed. `FeedInsight.leaderboard` can't build it, because that
-///     registry ranks by ROW COUNT and money ranks by AMOUNT.
+///   • `merchants` — who you pay, ranked by AMOUNT. It names the lede's top
+///     merchant and feeds the Today brief. The head's drawn board of it is
+///     deleted (prd §745, §723's card-spend board), so nothing here folds a
+///     tail for a drawing any more.
 ///
 /// ## Currencies are NEVER summed
 ///
@@ -164,8 +165,6 @@ enum AppleWalletRoom {
         var lede: RoomLede?
         var subline: String?
         var merchants: [MerchantRow]
-        /// Merchants beyond `merchantCap`, folded rather than dropped.
-        var moreMerchants: Int
         var creep: Creep?
         var silences: [Silence]
         var upcoming: [Upcoming]
@@ -182,8 +181,8 @@ enum AppleWalletRoom {
     /// How far back the leaderboard looks. A calendar month is the unit people
     /// already think in for a card, and it's the unit the statement uses.
     static let windowDays = 30
-    /// Rows drawn before the tail folds. Five names is a leaderboard; ten is a
-    /// list, and the room already has rows underneath it.
+    /// How many ranked merchants the card carries — enough for the lede's top
+    /// name and the Today brief's four.
     static let merchantCap = 5
     /// A merchant needs this many settled charges in the window to rank. One
     /// charge is a purchase, not a pattern — and without this the card is
@@ -289,7 +288,6 @@ enum AppleWalletRoom {
                                          total: spentTotal, prevTotal: prevTotal,
                                          prevCount: prevCount, currency: currency),
                     merchants: Array(merchants.prefix(merchantCap)),
-                    moreMerchants: max(0, merchants.count - merchantCap),
                     creep: creepRow,
                     silences: silenceRows,
                     upcoming: rail,

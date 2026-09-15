@@ -6030,13 +6030,10 @@ struct FeedScreen: View {
                         openBySourceRef(PostHogWatch.metricRef(event), in: visible)
                     }
                 case .appleWallet(let room):
-                    // Opens by MERCHANT rather than by `sourceRef`: the card
-                    // ranks a merchant across many charges, so there is no one
-                    // row it names — the honest tap is "show me this merchant",
-                    // which is the tag filter the room already supports.
-                    AppleWalletRoomCard(room: room) { merchant in
-                        openMerchant(merchant, in: visible)
-                    }
+                    // No door since prd §745: the merchant board was the only
+                    // thing on this head that named a merchant to open, and it
+                    // is deleted. Every charge is its own row below.
+                    AppleWalletRoomCard(room: room)
                 case .appStoreConnect(let room):
                     AppStoreConnectRoomCard(room: room) { app in
                         openNewest(source: ASCShape.source, in: visible) { thing in
@@ -8297,18 +8294,6 @@ struct FeedScreen: View {
         }
     }
 
-    /// Open a merchant's newest charge. The Apple Wallet head ranks a merchant
-    /// across many rows, so it can't name a `sourceRef` — the honest landing is
-    /// the most recent charge from that merchant, matched on the stored
-    /// counterparty rather than by parsing the title back apart.
-    private func openMerchant(_ merchant: String, in visible: [Thing]) {
-        let match = visible.live
-            .filter { $0.source == AppleWalletBridge.sourceName
-                      && $0.transferCounterparty == merchant }
-            .max { $0.capturedAt < $1.capturedAt }
-        if let match { openThing(match) }
-    }
-
     /// Open the row a head card named, by its `sourceRef`. The cards hold no
     /// `Thing` (corollary 5), so every one of them hands back a value and the
     /// lookup lands here, against the live corpus.
@@ -8393,8 +8378,8 @@ struct FeedScreen: View {
         openThing(match)
     }
 
-    /// Open the newest row of a source that a predicate accepts — `openMerchant`
-    /// generalised, for a head that ranks something owning MANY rows and so
+    /// Open the newest row of a source that a predicate accepts — for a head
+    /// that ranks something owning MANY rows and so
     /// cannot name a single `sourceRef`. Liveness is checked inside the filter,
     /// before any stored property is read (corollary 3).
     private func openNewest(source: String, in visible: [Thing],

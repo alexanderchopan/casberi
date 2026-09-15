@@ -514,9 +514,13 @@ def label_component_names(src: str) -> set:
 
 
 def view_struct_spans(src: str):
-    """(start, end) for each `struct X: View` — the scope a card's tap lives in."""
+    """(start, end) for each `struct X: View` — the scope a card's tap lives in.
+
+    GENERIC structs count (prd §745): `struct Head<Content: View>: View` was
+    invisible to this regex, so the room-head template's whole-card gesture had
+    no enclosing struct, and the `dsCardLead` beside it could not answer for it."""
     spans = []
-    for m in re.finditer(r"struct\s+\w+\s*:\s*[^{\n]*\bView\b[^{\n]*\{", src):
+    for m in re.finditer(r"struct\s+\w+(?:<[^>\n]*>)?\s*:\s*[^{\n]*\bView\b[^{\n]*\{", src):
         o = src.index("{", m.start())
         spans.append((m.start(), brace_span(src, o)))
     return spans
@@ -1248,9 +1252,45 @@ struct W: View {
 """
 
 
+# A GENERIC view struct is a struct too (prd §745). The room-head template is
+# `struct Head<Content: View>: View`, which the span regex could not see, so its
+# whole-face gesture had no enclosing struct and its own `dsCardLead` could not
+# answer for it. The clean fixture pins the fix; the dirty one pins that a
+# generic struct is still held to the rule.
+CLEAN_GENERIC_LEAD = """
+struct Head<Content: View>: View {
+    let content: Content
+    var body: some View {
+        face(VStack { Text(title).dsCardLead(Text("Opens it")) { open() }; content })
+    }
+    @ViewBuilder
+    private func face<Face: View>(_ f: Face) -> some View {
+        f.contentShape(Rectangle()).onTapGesture { open() }
+    }
+}
+"""
+
+DIRTY_GENERIC_TAP = """
+struct Lead: View {
+    var body: some View { Text(title).dsCardLead(Text("Opens it")) { open() } }
+}
+
+struct Head<Content: View>: View {
+    let content: Content
+    var body: some View {
+        content.contentShape(Rectangle()).onTapGesture { open() }
+    }
+}
+"""
+
+
 def self_test() -> bool:
     floor = 44
     cases = [
+        ("clean: a GENERIC struct's card lead answers for its tap (§745)",
+         CLEAN_GENERIC_LEAD, set()),
+        ("dirty: a GENERIC struct with a lead only next door (§745)",
+         DIRTY_GENERIC_TAP, {"untraited-tap-target"}),
         ("dirty: unlabelled icon button", DIRTY_UNLABELLED, {"unlabelled-icon-button"}),
         ("dirty: sub-floor target", DIRTY_SMALL, {"small-tap-target"}),
         ("dirty: sub-floor ROUND MARK target (§541)", DIRTY_SMALL_FACE,

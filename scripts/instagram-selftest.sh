@@ -282,14 +282,8 @@ check("…and states it as the reading no service can make",
       (InstagramRoom.footnote(dead) ?? "").contains("3"))
 
 // --- the bars --------------------------------------------------------------
-check("every bar is a share of the biggest account's",
-      InstagramRoom.top(lib) == 8
-      && InstagramRoom.share(kept: 8, of: 8) == 1
-      && InstagramRoom.share(kept: 4, of: 8) == 0.5)
-check("a zero leader draws flat bars rather than NaN, which SwiftUI draws as nothing",
-      InstagramRoom.share(kept: 0, of: 0) == 0)
-check("…and a share can never exceed the full width",
-      InstagramRoom.share(kept: 99, of: 8) == 1)
+// Removed with the account board (prd §745): `share(kept:of:)` and `top(_:)`
+// scaled bars the head no longer draws, and are deleted from the model.
 
 print("")
 if failures > 0 { print("\(failures) failed"); exit(1) }
@@ -384,11 +378,10 @@ mutate "your own posts are counted into the library" \
   '                             kept: keeps.count,' \
   '                             kept: keeps.count + made,'
 
-# A grant with no leader divides by nothing. SwiftUI draws a NaN frame as no bar
-# at all, so the card renders as a list with its bars silently missing.
-mutate "the zero-leader guard is dropped" \
-  '        guard top > 0 else { return 0 }' \
-  '        guard top >= 0 else { return 0 }'
+# (Removed, prd §745: "the zero-leader guard is dropped" mutated
+# `InstagramRoom.share(kept:of:)`, which is deleted with the account board whose
+# bars it scaled. A mutation whose anchor is gone changes nothing and would
+# report a pass it never ran.)
 
 # A whitespace handle ranked as an account of its own, which files every save
 # the export named nobody for under one invented name.

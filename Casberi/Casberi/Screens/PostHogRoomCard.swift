@@ -6,12 +6,8 @@ import SwiftUI
 /// `MetricDisc` has existed since §223 and lived in two places people rarely
 /// are: the setup screen's roster and a metric's detail sheet. The FEED room —
 /// the surface you actually live in — led with plain rows. This is the same
-/// disc, unchanged, at the room's head.
-///
-/// The anatomy is the room-head family's (kicker, headline, note, the drawing,
-/// coverage note) and the roster below is `AssetRoster`'s slot, so a watched
-/// metric wears exactly what a watched token does. Reusing both is the point:
-/// this card introduces no new component at all.
+/// disc, unchanged, at the room's head, in `AssetRoster`'s slot, so a watched
+/// metric wears exactly what a watched token does.
 ///
 /// ## Silent metrics lead, and that is the whole ordering
 ///
@@ -26,8 +22,8 @@ import SwiftUI
 /// boundary by `PostHogRoomSource`. The tap hands back the EVENT NAME, and the
 /// section that owns the sheet does the lookup.
 ///
-/// FLAT BY LAW like its neighbours: a plain VStack, no generic `Widget`/`Row`
-/// mount.
+/// Composed through `DSRoomChassis.Head` (prd §745): the roster is this room's
+/// own block, and everything around it is the template's.
 struct PostHogRoomCard: View {
     let room: PostHogRoom
     /// Opens the metric's own row. The card holds no `Thing`, so it hands back
@@ -41,40 +37,14 @@ struct PostHogRoomCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
-            // head renders only inside its own source's room, under a chip strip
-            // where that source's chip is the lit one — so the card introduced
-            // itself with a word already on screen, one row up.
-            Text(PostHogRoom.headline(room))
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(PostHogRoom.note(room, nextRung: PostHogMilestone.next(after:)))
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s1)
-
-            roster
-                .padding(.top, DS.Space.s4)
-
-            if let note = PostHogRoom.coverageNote(shown: drawn.count,
-                                                   total: room.metrics.count,
-                                                   unread: room.unread) {
-                Text(note)
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s3)
-            }
+        DSRoomChassis.Head(
+            lead: .sentence(PostHogRoom.headline(room)),
+            notes: [.note(PostHogRoom.note(room, nextRung: PostHogMilestone.next(after:)))],
+            footnotes: [.quiet(PostHogRoom.coverageNote(shown: drawn.count,
+                                                        total: room.metrics.count,
+                                                        unread: room.unread))]) {
+            DSRoomChassis.Block { roster }
         }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWidgetSurface()
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s2)
     }
 
     /// The discs, in the order the model ranked them — silent first, then

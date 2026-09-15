@@ -3,23 +3,23 @@ import SwiftUI
 /// THE GNOSIS PAY ROOM'S HEAD (2026-08-10, prd §349) — what the card cost you
 /// this month, and whether that's more than usual.
 ///
-/// The anatomy is `CursorRoomCard`'s: kicker, heavy headline stating the whole
-/// finding as a sentence, ranked rows, nothing drawn that isn't a reading.
-///
 /// ## No green, no red, no arrow
 ///
 /// The card states a change in words ("18% more than the 30 days before") and
 /// never paints it. Spending more is not a failure and spending less is not a
 /// win — the app has no idea which of those the person wanted, and colouring it
-/// would be the app taking a view on someone's life off a single number. It is
-/// the same restraint `StripeRoomCard` shows over a dispute, applied to the one
-/// place the temptation is strongest.
+/// would be the app taking a view on someone's life off a single number.
 ///
 /// ## The rows exist only when there is more than one currency
 ///
 /// A single-currency account — the ordinary case — gets the headline, the
-/// change, and one bar. The per-currency rows appear only when the account
-/// really settles in several, because a legend of one row is a restatement.
+/// change and the month span. The per-currency rows appear only when the
+/// account really settles in several, because a legend of one row is a
+/// restatement.
+///
+/// **The single-currency bar is deleted (prd §745).** It drew the lead's share
+/// of the lead's own count — `top` is that count — so it was full on every card
+/// it ever drew: one possible length, no reading.
 ///
 /// ## Liveness
 ///
@@ -27,7 +27,7 @@ import SwiftUI
 /// boundary by `GnosisPayRoomSource`. The tap hands back a `Currency` and the
 /// section that owns the sheet does the lookup (corollary 5).
 ///
-/// FLAT BY LAW: a plain VStack, no generic `Widget`/`Row` mount.
+/// Composed through `DSRoomChassis.Head`, its `SpanStrip` and its ranked `Row`.
 struct GnosisPayRoomCard: View {
     let room: GnosisPayRoom
     /// Hands back the CURRENCY, not a `Thing` — a currency owns many spends, so
@@ -49,89 +49,46 @@ struct GnosisPayRoomCard: View {
     private var top: Int { room.lead?.spends ?? 0 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
-            // head renders only inside its own source's room, under a chip strip
-            // where that source's chip is the lit one — so the card introduced
-            // itself with a word already on screen, one row up.
-            // THE LEDE (prd §585) — see `JournalRoomCard` for the rule. The
-            // mask is threaded through rather than applied after, so a hidden
-            // balance suppresses the digit ROLL as well as the string.
-            let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-            Group {
-                if let lede = GnosisPayRoom.lede(room, mask: mask) {
-                    RoomLedeView(lede: lede,
-                                 spoken: GnosisPayRoom.headline(room, mask: mask))
-                } else {
-                    Text(GnosisPayRoom.headline(room, mask: mask))
-                        .dsText(.heading22)
-                        .foregroundStyle(DS.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-                // The whole card is a tap target for touch and pointer and
-                // carries nothing for VoiceOver; this states the same verb on
-                // the line that names its destination.
-                .dsCardLead(Text("Opens this currency")) {
-                    guard let lead = room.lead else { return }
-                    DSHaptic.selection()
-                    onOpen(lead)
-                }
-
-            Text(GnosisPayRoom.note(room))
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s1)
-
-            // A single-currency account gets one bar and no rows. With several
-            // currencies the lead gets its bar INSIDE its own row instead —
-            // drawing it here as well would put the same bar on the card twice,
-            // at two different widths once the rows rescale nothing.
-            if drawn.count == 1, let lead = room.lead {
-                ShareBar(fraction: GnosisPayRoom.share(spends: lead.spends, of: top),
-                         reduceMotion: reduceMotion)
-                    .padding(.top, DS.Space.s2)
-            }
-
+        // THE LEDE (prd §585). The mask is threaded through rather than
+        // applied after, so a hidden balance suppresses the digit ROLL as well
+        // as the string.
+        let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+        DSRoomChassis.Head(
+            lead: .figure(GnosisPayRoom.lede(room, mask: mask),
+                          otherwise: GnosisPayRoom.headline(room, mask: mask)),
+            door: room.lead.map { lead in
+                DSRoomChassis.Door(hint: Text("Opens this currency")) { onOpen(lead) }
+            },
+            notes: [.note(GnosisPayRoom.note(room))],
+            footnotes: [.quiet(GnosisPayRoom.footnote(room))]) {
             if !room.months.isEmpty {
-                monthStrip
-                    .padding(.top, DS.Space.s3)
-                if let caption = GnosisPayRoom.historyNote(room) {
-                    Text(caption)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .padding(.top, DS.Space.s1)
+                DSRoomChassis.Block {
+                    monthStrip
+                    if let caption = GnosisPayRoom.historyNote(room) {
+                        DSRoomChassis.LineText(line: DSRoomChassis.Line(text: caption, tone: .quiet))
+                            .padding(.top, DS.Space.s1)
+                    }
                 }
             }
 
             // Only when the account really settles in several currencies — see
             // the type note.
             if drawn.count > 1 {
-                ForEach(Array(drawn.enumerated()), id: \.element.id) { index, currency in
-                    row(currency, index: index)
-                        .chartArrival(index: index, reduceMotion: reduceMotion)
+                DSRoomChassis.Block {
+                    ForEach(Array(drawn.enumerated()), id: \.element.id) { index, currency in
+                        let line = GnosisPayRoom.currencyLine(currency, mask: mask)
+                        DSRoomChassis.Row(
+                            title: currency.code,
+                            line: line,
+                            index: index,
+                            action: { onOpen(currency) }) {
+                            ShareBar(fraction: GnosisPayRoom.share(spends: currency.spends, of: top),
+                                     index: index,
+                                     reduceMotion: reduceMotion)
+                        }
+                    }
                 }
-                .padding(.top, DS.Space.s3)
             }
-
-            if let footnote = GnosisPayRoom.footnote(room) {
-                Text(footnote)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.top, DS.Space.s3)
-            }
-        }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWidgetSurface()
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s2)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard let lead = room.lead else { return }
-            DSHaptic.selection()
-            onOpen(lead)
         }
     }
 
@@ -139,71 +96,21 @@ struct GnosisPayRoomCard: View {
 
     /// A column per month of the LEAD currency's spending, oldest at the left.
     /// It exists because this head outranks `FeedInsight.cardMonths`, the
-    /// 12-month leaderboard the room drew before — a head that showed less than
-    /// the card it displaced would be a regression wearing a new feature.
+    /// 12-month board the room drew before.
     ///
     /// Heights are a share of the biggest month DRAWN, so the strip is a
-    /// comparison among the months you can see. Only the first and last months
-    /// are labelled: twelve ticks at label size is a row of noise, and the two
-    /// ends are what make the middle readable.
+    /// comparison among the months you can see.
     private var monthStrip: some View {
         let top = room.months.map(\.total).max() ?? 0
-        return VStack(alignment: .leading, spacing: DS.Space.s1) {
-            HStack(alignment: .bottom, spacing: 3) {
-                ForEach(room.months) { month in
-                    Capsule(style: .continuous)
-                        .fill(Self.mark.opacity(0.85))
-                        // Floored so a month with a single small spend is still
-                        // a visible column rather than a sub-pixel nothing — a
-                        // month that had spending must never draw as one that
-                        // did not.
-                        .frame(height: max(4, 34 * GnosisPayRoom.monthShare(total: month.total, of: top)))
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .frame(height: 34, alignment: .bottom)
-            .chartWipe(reduceMotion: reduceMotion)
-            if let first = room.months.first, let last = room.months.last, room.months.count > 1 {
-                HStack {
-                    Text(GnosisPayRoom.monthLabel(first.start))
-                    Spacer(minLength: DS.Space.s2)
-                    Text(GnosisPayRoom.monthLabel(last.start))
-                }
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-            }
-        }
-        .accessibilityElement()
-        .accessibilityLabel(Text(GnosisPayRoom.historyNote(room) ?? ""))
-    }
-
-    // MARK: - Rows
-
-    private func row(_ currency: GnosisPayRoom.Currency, index: Int) -> some View {
-        Button {
-            DSHaptic.selection()
-            onOpen(currency)
-        } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(currency.code)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Spacer(minLength: DS.Space.s2)
-                    Text(GnosisPayRoom.currencyLine(currency, mask: BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil))
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-                ShareBar(fraction: GnosisPayRoom.share(spends: currency.spends, of: top),
-                         index: index,
-                         reduceMotion: reduceMotion)
-            }
-            .padding(.vertical, DS.Space.s1)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("\(currency.code), \(GnosisPayRoom.currencyLine(currency, mask: BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil))"))
+        return DSRoomChassis.SpanStrip(
+            columns: room.months.enumerated().map { index, month in
+                DSRoomChassis.SpanStrip.Column(
+                    id: index,
+                    share: GnosisPayRoom.monthShare(total: month.total, of: top))
+            },
+            fill: Self.mark,
+            first: room.months.first.map { GnosisPayRoom.monthLabel($0.start) },
+            last: room.months.last.map { GnosisPayRoom.monthLabel($0.start) },
+            spoken: GnosisPayRoom.historyNote(room) ?? "")
     }
 }

@@ -3,40 +3,31 @@ import SwiftUI
 /// THE CURSOR ROOM'S HEAD (2026-08-08, prd §340) — what your coding agents
 /// actually did, and where.
 ///
-/// The anatomy is `AppStoreConnectRoomCard`'s, which took it from
-/// `StripeRoomCard` and `CloudflareRunwayCard`: a kicker in the card's one hue,
-/// a heavy headline stating the whole finding as a sentence, ranked rows, and
-/// no decoration that isn't a reading. What was ruled out there is out here —
-/// no coloured rail down a row's side, and **no green/red**: a repository with
+/// A heavy headline stating the whole finding as a sentence, the other
+/// repositories as ranked rows, and no decoration that isn't a reading. No
+/// coloured rail down a row's side and **no green/red**: a repository with
 /// broken runs is stated in words and by its position, never painted, exactly
 /// as a Stripe dispute is.
 ///
 /// ## The one drawing, and what it means
 ///
-/// A `ShareBar` per repository, scaled against the busiest one, encoding ONE
-/// thing: how much of your agent time went here. It is deliberately not a
+/// A `ShareBar` per repository row, scaled against the busiest one, encoding
+/// ONE thing: how much of your agent time went there. It is deliberately not a
 /// pass/fail split bar — a two-tone bar invites reading the ratio as a success
 /// rate, which over the newest thirty runs is a statistic nobody chose the
-/// window for (§83). The failures are counted in words beside it, where a
-/// number can be exact.
+/// window for (§83). The failures are counted in words beside it.
 ///
-/// ## The kicker's hue
-///
-/// Cursor's brand is pure black by their own guidance — the Grok/X case, a
-/// genuinely monochrome mark rather than a logo-on-black lockup. Black text on
-/// the dark theme is invisible and on the light theme is indistinguishable from
-/// body ink, so the kicker takes `DS.legibleCardFill`, the design layer's
-/// existing substitution for exactly this (a too-dark brand hue lifts toward
-/// the app tint). The identity here is the word.
+/// **The lead's own bar is deleted (prd §745).** It was scaled against `top`,
+/// which IS the lead's run count, so it drew full on every card that ever
+/// rendered — a bar with one possible length encodes nothing, and
+/// `accessibility-audit.py` had already filed it as "a scale anchor carrying no
+/// information at all". The lead's line stays as the note under the headline.
 ///
 /// ## Liveness
 ///
 /// Stores no `Thing` — only value types out of `CursorRoom`, filtered at the
 /// boundary by `CursorRoomSource`. The tap hands back a `Repo` and the section
 /// that owns the sheet does the lookup (corollary 5).
-///
-/// FLAT BY LAW like its neighbours: a plain VStack, no generic `Widget`/`Row`
-/// mount (the eager-head render-depth lesson, paid three times).
 struct CursorRoomCard: View {
     let room: CursorRoom
     /// Hands back the REPOSITORY, not a `Thing` — the card never holds one.
@@ -44,8 +35,6 @@ struct CursorRoomCard: View {
     var onOpen: (CursorRoom.Repo) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private static let mark = DS.legibleCardFill(for: "Cursor")
 
     private var drawn: [CursorRoom.Repo] {
         Array(room.repos.prefix(CursorRoomSource.rowCap))
@@ -56,105 +45,35 @@ struct CursorRoomCard: View {
     private var top: Int { room.lead?.runs ?? 0 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
-            // head renders only inside its own source's room, under a chip strip
-            // where that source's chip is the lit one — so the card introduced
-            // itself with a word already on screen, one row up.
-            // THE LEDE (prd §585) — see `JournalRoomCard` for the rule. The
-            // card lead rides whichever branch draws, because this headline is
-            // still the ONLY place the lead repository's destination can be
-            // reached (see below) — a lede that dropped it would be a door
-            // deleted rather than restyled.
-            Group {
-                if let lede = CursorRoom.lede(room) {
-                    RoomLedeView(lede: lede, spoken: CursorRoom.headline(room))
-                } else {
-                    Text(CursorRoom.headline(room))
-                        .dsText(.heading22)
-                        .foregroundStyle(DS.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .dsCardLead(Text("Opens this repository")) {
-                guard let lead = room.lead else { return }
-                DSHaptic.selection()
-                onOpen(lead)
-            }
-
+        DSRoomChassis.Head(
+            // THE LEDE (prd §585). The door rides whichever branch draws,
+            // because the headline is still the ONLY place the lead
+            // repository's destination can be reached.
+            lead: .figure(CursorRoom.lede(room), otherwise: CursorRoom.headline(room)),
+            door: room.lead.map { lead in
+                DSRoomChassis.Door(hint: Text("Opens this repository")) { onOpen(lead) }
+            },
+            notes: [.note(room.lead.map(CursorRoom.repoLine))],
+            footnotes: [.quiet(CursorRoom.note(room, drawn: drawn.count))]) {
             // Only the repositories BEYOND the lead get a row — the lead is the
             // headline, and repeating its name directly underneath is the card
-            // arguing with itself. Its own line and bar still draw, because
-            // neither is carried by the headline.
-            if let lead = room.lead {
-                Text(CursorRoom.repoLine(lead))
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
-                    .padding(.top, DS.Space.s1)
-                ShareBar(fraction: CursorRoom.share(runs: lead.runs, of: top),
-                         reduceMotion: reduceMotion)
-                    .padding(.top, DS.Space.s2)
-            }
-
+            // arguing with itself.
             if drawn.count > 1 {
-                ForEach(Array(drawn.dropFirst().enumerated()), id: \.element.id) { index, repo in
-                    row(repo, index: index)
-                        .chartArrival(index: index, reduceMotion: reduceMotion)
+                DSRoomChassis.Block {
+                    ForEach(Array(drawn.dropFirst().enumerated()), id: \.element.id) { index, repo in
+                        DSRoomChassis.Row(
+                            title: repo.name,
+                            truncation: .middle,
+                            line: CursorRoom.repoLine(repo),
+                            index: index,
+                            action: { onOpen(repo) }) {
+                            ShareBar(fraction: CursorRoom.share(runs: repo.runs, of: top),
+                                     index: index + 1,
+                                     reduceMotion: reduceMotion)
+                        }
+                    }
                 }
-                .padding(.top, DS.Space.s3)
-            }
-
-            if let note = CursorRoom.note(room, drawn: drawn.count) {
-                Text(note)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.top, DS.Space.s3)
             }
         }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWidgetSurface()
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s2)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard let lead = room.lead else { return }
-            DSHaptic.selection()
-            onOpen(lead)
-        }
-    }
-
-    // MARK: - Rows
-
-    private func row(_ repo: CursorRoom.Repo, index: Int) -> some View {
-        Button {
-            DSHaptic.selection()
-            onOpen(repo)
-        } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(repo.name)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Spacer(minLength: DS.Space.s2)
-                    Text(CursorRoom.repoLine(repo))
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-                // The stagger index is shared with the row's own arrival, so a
-                // bar lands with the row that owns it rather than on a cadence
-                // of its own (one beat per row — `ChartEntrance`'s rule).
-                ShareBar(fraction: CursorRoom.share(runs: repo.runs, of: top),
-                         index: index + 1,
-                         reduceMotion: reduceMotion)
-            }
-            .padding(.vertical, DS.Space.s1)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("\(repo.name), \(CursorRoom.repoLine(repo))"))
     }
 }

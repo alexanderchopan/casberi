@@ -1,142 +1,41 @@
 import SwiftUI
 
-/// THE APPLE WALLET ROOM'S HEAD (2026-08-06, prd §313) — who you actually pay,
-/// and what changed since last time.
+/// THE APPLE WALLET ROOM'S HEAD (2026-08-06, prd §313) — what changed since last
+/// time, and what is coming.
 ///
-/// Three things get drawn, in the order they cost you to miss:
+/// Two things get drawn, in the order they cost you to miss:
 ///  1. **The change line** — a recurring price that rose, a subscription that
 ///     stopped. This is the room's reason to exist: your bank told you about
 ///     the charge, nothing told you about the delta.
-///  2. **The merchants** — ranked bars, because money ranks by AMOUNT and
-///     `FeedInsight.leaderboard` ranks by ROW COUNT. Ten coffees and one
-///     flight are the same height there and nothing alike here.
-///  3. **The clock rail** — what's due, soonest first.
+///  2. **The clock rail** — what's due, soonest first.
+///
+/// **The merchant board is deleted (prd §745).** It ranked who you pay by
+/// amount under ten-pixel bars — "Who you actually pay" — which is the
+/// card-spend board §723 deleted from every other room ("visualization data
+/// just for the sake of it"), surviving here because this head drew it by hand
+/// rather than through `FeedInsight.leaderboard`. The lede still names the top
+/// merchant, and every charge is its own row a scroll below.
 ///
 /// Judgement lives in `AppleWalletRoom` (Foundation-only, harness-compiled);
-/// this file only draws. It holds NO `Thing` (corollary 5) — every tap hands
-/// back a merchant name and the lookup happens against the live corpus.
-///
-/// The `chartArrival` entrances are the design-motion audit's requirement for a
-/// drawing sized from data (prd §299), and every one honours Reduce Motion.
+/// this file only draws. It holds NO `Thing` (corollary 5) and, with the board
+/// gone, no door: nothing on it names a single row.
 struct AppleWalletRoomCard: View {
     let room: AppleWalletRoom.Card
-    /// Hands back the MERCHANT NAME, never a `Thing`.
-    var onOpenMerchant: (String) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Apple Card's own graphite, from the brand table — never inlined.
     private static let mark = DS.brandHue(for: "Apple Wallet") ?? Color.fixed("#1d1d1f")
-    private static let barHeight: CGFloat = 10
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
-            // head renders only inside its own source's room, under a chip strip
-            // where that source's chip is the lit one — so the card introduced
-            // itself with a word already on screen, one row up.
-            // THE LEDE (prd §585) — see `JournalRoomCard` for the rule.
-            if let lede = room.lede {
-                RoomLedeView(lede: lede, spoken: room.headline)
-            } else {
-                Text(room.headline)
-                    .dsText(.heading22)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if let subline = room.subline {
-                Text(subline)
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s1)
-            }
-
-            if !room.merchants.isEmpty {
-                merchants.padding(.top, DS.Space.s4)
-            }
-
+        DSRoomChassis.Head(
+            lead: .figure(room.lede, otherwise: room.headline),
+            notes: [.note(room.subline)],
+            footnotes: [.quiet(room.note)]) {
             if !room.upcoming.isEmpty {
-                rail.padding(.top, DS.Space.s4)
-            }
-
-            if let note = room.note {
-                Text(note)
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.top, DS.Space.s3)
+                DSRoomChassis.Block { rail }
             }
         }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWidgetSurface()
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s2)
-    }
-
-    // MARK: - Who you actually pay
-
-    /// Bars are proportional to NET SPEND and to nothing else. Opacity carries
-    /// rank so the eye lands on the top row, and neither channel carries state
-    /// — the reach-map invariant (§300): area means magnitude and only
-    /// magnitude.
-    private var merchants: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            ForEach(Array(room.merchants.enumerated()), id: \.element.name) { index, row in
-                Button {
-                    DSHaptic.selection()
-                    onOpenMerchant(row.name)
-                } label: {
-                    merchantRow(row, lead: index == 0)
-                }
-                .buttonStyle(.plain)
-                .chartArrival(index: index, reduceMotion: reduceMotion)
-            }
-
-            // The tail is FOLDED and named, never truncated — a dropped sixth
-            // merchant looks exactly like a card that only had five (§300).
-            if room.moreMerchants > 0 {
-                Text(room.moreMerchants == 1
-                     ? String(localized: "1 more merchant")
-                     : String(localized: "\(room.moreMerchants) more merchants"))
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-            }
-        }
-    }
-
-    private func merchantRow(_ row: AppleWalletRoom.MerchantRow, lead: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(row.name)
-                    .dsText(.subhead13)
-                    .fontWeight(lead ? .semibold : .regular)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                Spacer(minLength: DS.Space.s2)
-                Text(AppleWalletRoom.money(row.total, row.currency))
-                    .dsText(.subhead13)
-                    .fontWeight(lead ? .semibold : .regular)
-                    .foregroundStyle(lead ? DS.textPrimary : DS.textSecondary)
-                    .monospacedDigit()
-            }
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(DS.fillLine)
-                    Capsule()
-                        .fill(Self.mark.opacity(lead ? 0.95 : 0.55))
-                        .frame(width: max(3, geo.size.width * row.share))
-                }
-            }
-            .frame(height: Self.barHeight)
-            Text(row.count == 1
-                 ? String(localized: "1 charge")
-                 : String(localized: "\(row.count) charges"))
-                .dsText(.label11)
-                .foregroundStyle(DS.textTertiary)
-        }
-        .contentShape(Rectangle())
     }
 
     // MARK: - The clock rail

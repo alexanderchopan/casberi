@@ -3,28 +3,27 @@ import SwiftUI
 /// THE PEER ROOM'S HEAD (2026-08-10, prd §349) — which rail your money moves
 /// on, and which way it goes.
 ///
-/// The anatomy is `CursorRoomCard`'s, which took it from `StripeRoomCard`: a
-/// kicker in the card's one hue, a heavy headline stating the whole finding as
-/// a sentence, ranked rows, and no decoration that isn't a reading. No coloured
-/// rail down a row's side and no green/red — a rail is not good or bad, it is
-/// the one you use.
+/// A heavy headline stating the whole finding as a sentence, the other rails as
+/// ranked rows, and no decoration that isn't a reading. No coloured rail down a
+/// row's side and no green/red — a rail is not good or bad, it is the one you
+/// use.
 ///
 /// ## The one drawing, and what it means
 ///
-/// A `ShareBar` per rail, scaled against the busiest one, encoding ONE thing:
-/// how much of your Peer traffic went this way. It is deliberately not a
+/// A `ShareBar` per rail row, scaled against the busiest one, encoding ONE
+/// thing: how much of your Peer traffic went this way. It is deliberately not a
 /// buy/sell split bar — a two-tone bar invites reading the ratio as a balance
-/// somebody chose, and the two counts are stated exactly in words beside it,
-/// where a number can be exact.
+/// somebody chose, and the two counts are stated exactly in words beside it.
+///
+/// **The lead's own bar is deleted (prd §745).** `top` is the lead's fill
+/// count, so the lead's bar was full on every card — `accessibility-audit.py`'s
+/// "scale anchor carrying no information at all".
 ///
 /// ## Liveness
 ///
 /// Stores no `Thing` — only value types out of `PeerRoom`, filtered at the
 /// boundary by `PeerRoomSource`. The tap hands back a `Rail` and the section
 /// that owns the sheet does the lookup (corollary 5).
-///
-/// FLAT BY LAW like its neighbours: a plain VStack, no generic `Widget`/`Row`
-/// mount (the eager-head render-depth lesson, paid three times).
 struct PeerRoomCard: View {
     let room: PeerRoom
     /// Hands back the RAIL, not a `Thing` — the card never holds one, and a
@@ -42,107 +41,36 @@ struct PeerRoomCard: View {
     private var top: Int { room.lead?.fills ?? 0 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
-            // head renders only inside its own source's room, under a chip strip
-            // where that source's chip is the lit one — so the card introduced
-            // itself with a word already on screen, one row up.
-            Text(PeerRoom.headline(room))
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                // The lead has no row of its own (see below), so this headline
-                // is the only place its destination can be reached.
-                .dsCardLead(Text("Opens this rail")) {
-                    guard let lead = room.lead else { return }
-                    DSHaptic.selection()
-                    onOpen(lead)
-                }
-
-            Text(PeerRoom.note(room))
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .padding(.top, DS.Space.s1)
-
+        DSRoomChassis.Head(
+            lead: .sentence(PeerRoom.headline(room)),
+            // The lead has no row of its own (see below), so the headline is
+            // the only place its destination can be reached.
+            door: room.lead.map { lead in
+                DSRoomChassis.Door(hint: Text("Opens this rail")) { onOpen(lead) }
+            },
             // The rail grouping and the token grouping are two different
-            // readings of the same fills (2026-08-11) — this line is the
+            // readings of the same fills (2026-08-11) — the quiet line is the
             // second one, and it stays silent (see `tokenNote`) rather than
             // repeat the rail note in different words.
-            if let tokenNote = PeerRoom.tokenNote(room) {
-                Text(tokenNote)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.top, DS.Space.s1)
-            }
-
+            notes: [.note(PeerRoom.note(room)), .quiet(PeerRoom.tokenNote(room))],
+            footnotes: [.quiet(PeerRoom.footnote(room, drawn: drawn.count))]) {
             // Only the rails BEYOND the lead get a row — the lead is already in
-            // the headline, and repeating its name directly underneath is the
-            // card arguing with itself. Its bar still draws, because the
-            // headline does not carry a proportion.
-            if let lead = room.lead {
-                ShareBar(fraction: PeerRoom.share(fills: lead.fills, of: top),
-                         reduceMotion: reduceMotion)
-                    .padding(.top, DS.Space.s2)
-            }
-
+            // the headline.
             if drawn.count > 1 {
-                ForEach(Array(drawn.dropFirst().enumerated()), id: \.element.id) { index, rail in
-                    row(rail, index: index)
-                        .chartArrival(index: index, reduceMotion: reduceMotion)
+                DSRoomChassis.Block {
+                    ForEach(Array(drawn.dropFirst().enumerated()), id: \.element.id) { index, rail in
+                        DSRoomChassis.Row(
+                            title: rail.name,
+                            line: PeerRoom.railLine(rail),
+                            index: index,
+                            action: { onOpen(rail) }) {
+                            ShareBar(fraction: PeerRoom.share(fills: rail.fills, of: top),
+                                     index: index + 1,
+                                     reduceMotion: reduceMotion)
+                        }
+                    }
                 }
-                .padding(.top, DS.Space.s3)
-            }
-
-            if let footnote = PeerRoom.footnote(room, drawn: drawn.count) {
-                Text(footnote)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.top, DS.Space.s3)
             }
         }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWidgetSurface()
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s2)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard let lead = room.lead else { return }
-            DSHaptic.selection()
-            onOpen(lead)
-        }
-    }
-
-    // MARK: - Rows
-
-    private func row(_ rail: PeerRoom.Rail, index: Int) -> some View {
-        Button {
-            DSHaptic.selection()
-            onOpen(rail)
-        } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(rail.name)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Spacer(minLength: DS.Space.s2)
-                    Text(PeerRoom.railLine(rail))
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-                // The stagger index is shared with the row's own arrival, so a
-                // bar lands with the row that owns it rather than on a cadence
-                // of its own (one beat per row — `ChartEntrance`'s rule).
-                ShareBar(fraction: PeerRoom.share(fills: rail.fills, of: top),
-                         index: index + 1,
-                         reduceMotion: reduceMotion)
-            }
-            .padding(.vertical, DS.Space.s1)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("\(rail.name), \(PeerRoom.railLine(rail))"))
     }
 }

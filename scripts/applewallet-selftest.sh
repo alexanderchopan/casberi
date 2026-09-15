@@ -158,9 +158,14 @@ grep -q 'case .appleWallet(let room)' "$FEED" \
   || { echo "✗ the Apple Wallet head is no longer rendered from the sourceHead chain"; exit 1; }
 grep -q 'case AppleWalletBridge.sourceName' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Apple Wallet room"; exit 1; }
-# The tail is folded, never truncated (§300).
-grep -q 'room.moreMerchants > 0' "$CARD" \
-  || { echo "✗ the merchant board no longer folds its tail — a dropped row would look like a shorter board"; exit 1; }
+# (The "tail is folded" guard is removed with the merchant board it guarded,
+# prd §745. The NEGATIVE half keeps it deleted: §723 cut the card-spend board
+# from every room, and this head was the copy that survived by being hand-drawn.)
+grep -q 'room.merchants' "$CARD" \
+  && { echo "✗ the Apple Wallet head draws the merchant board again — prd §745/§723 deleted it"; exit 1; }
+# The head is the shared template, not a hand-drawn card (prd §745).
+grep -q 'DSRoomChassis.Head(' "$CARD" \
+  || { echo "✗ the Apple Wallet head no longer composes DSRoomChassis.Head — prd §745"; exit 1; }
 # A guess must not look like the bank's fact.
 grep -q 'item.kind == .payment' "$CARD" \
   || { echo "✗ the rail no longer distinguishes a real payment deadline from an inferred recurring date"; exit 1; }
@@ -487,7 +492,8 @@ do {
     for i in 0..<8 { s.append(spend("M\(i)", Double(100 - i), Double(i + 1))) }
     let card = AppleWalletRoom.compose(spends: s, now: now)
     check("the board caps", card?.merchants.count == AppleWalletRoom.merchantCap)
-    check("the tail is FOLDED, not dropped", card?.moreMerchants == 3)
+    // "the tail is FOLDED, not dropped" is removed with `moreMerchants` (prd
+    // §745): the drawn board it folded is deleted, so there is no tail to fold.
 }
 do {
     // Older than the window: history exists, but the board is this month.
@@ -889,10 +895,8 @@ mutate "inferred dates outrank real deadlines" \
   'if a.kind != b.kind { return a.kind == .payment }' \
   'if a.kind != b.kind { return a.kind == .recurring }'
 
-# 11. The tail dropped instead of folded.
-mutate "merchant tail silently truncated" \
-  'moreMerchants: max(0, merchants.count - merchantCap),' \
-  'moreMerchants: 0,'
+# 11. (Removed, prd §745: "the tail dropped instead of folded" mutated
+#     `moreMerchants`, which is deleted with the drawn merchant board.)
 
 # 12. Refunds rank as purchases.
 mutate "a refund ranks its merchant" \

@@ -55348,3 +55348,134 @@ harnesses pass. No screenshot was taken, by the standing rule that visual work i
 checked by mock and build rather than the simulator. The first thing to look at
 on a phone is a post with a quote and media in the Social room, and a Notes row
 whose three-line excerpt is now 15pt rather than 13pt.
+
+## §745 — Every source room's head composes `DSRoomChassis`; the twenty-two hand-drawn heads are one template, and what they drew that the template has no place for is cut (user: "move the other 22 onto the shared template, so every room's top looks like it came from the same hand, and anything a card draws that the template has no place for is either added to the template or cut", 2026-09-15)
+
+**The report, and the count behind it.** The app reads "vibecoded" partly because
+each of the twenty-six source rooms has a head card in `Screens/*RoomCard.swift`
+made the day that source landed. Four — vibenet, Hegotá, Frames, the Privacy
+devnet — compose `DSRoomChassis` (§491, §495, §683). The other twenty-two never
+touched it. Read side by side they were ONE anatomy — a `heading22` sentence or a
+§585 lede, a secondary line, a drawing, a few rows, tertiary small print, inside
+`dsWidgetSurface()` — spelled twenty-two ways: the gap above a drawing was `s2`,
+`s3` or `s4` depending on the file; footnotes were `label11` in seven heads and
+`label12` in the rest; the whole card was a tap target in eleven and a dead face in
+the others; the ranked row (a name, a line, a `ShareBar`) existed as ten copies at
+two paddings, one of them with a 44pt target; the deadline row three copies, each
+with its own spelling of the stamp; the year/month span four copies at 34 and 38pt;
+and Altana alone had no top margin. §495 already named the failure and it applies
+unchanged: shared COMPONENTS (`ShareBar`, `RoomLedeView`, `DSRunwayRail`) are not a
+shared TEMPLATE, and the composition around them had twenty-two owners.
+
+**The ruling.** `DSRoomChassis.Head` (`Design/DSRoomHead.swift`) owns the
+composition, in reading order, and a room supplies facts:
+
+1. **lead** — `Lead.sentence` or `Lead.lede` (`Lead.figure(_:otherwise:)` is §585's
+   rule, which every room had spelled by hand);
+2. **door** — `Door(hint:wholeCard:action:)`: `dsCardLead` on the lead for
+   VoiceOver and, where `wholeCard`, the face-wide gesture for touch and pointer,
+   both applied by the template in one struct so the two halves cannot drift. No
+   door is a legitimate door (§83, the Safe module-only card);
+3. **notes** — `Line`s under the lead, `headNoteGap` (`s1`) apart;
+4. **blocks** — `Block { … }`, each owning `headBlockGap` (`s3`) above itself, so a
+   block a room declines to draw takes no air with it;
+5. **footnotes** — quiet `Line`s, `headBlockGap` below the last block and 2pt apart.
+
+The surface and the margin are `dsRoomHeadCard()` and `dsRoomHeadPlacement()`, one
+definition each. The Privacy Pools head is the only SCOPED head (§486 — a lead bare
+on the page, a switcher, at most one card) and composes the parts rather than the
+card: `LeadView`, `dsRoomHeadCard()` per scope, `LineText`, `HeadLink`, spaced by
+`scopedHeadGap` (`s4`, §471's reason).
+
+**Why not `visualSlot`.** The slot is a fixed, clipped 300pt box sized for a figure
+that scopes change under. These heads have no scopes, and their honest height is
+what they have to say — a quiet AWS account is one sentence, a Safe queue is three
+rows. Clipping a Safe queue to 300pt is §665's silent lost row, in the room where
+a lost row is a transaction. So the chassis gained a head family beside the slot,
+not a second use of it.
+
+**What the chassis gained, and the rule it was held to.** A slot was added only
+where several heads drew the same thing:
+
+| Addition | Drawn by |
+|---|---|
+| `Row` (title · line · optional detail · measure) | X, Journal, Agent, Cursor, Peer, Gnosis Pay, Dodo Payments, Railgun, Radicle, App Store Connect |
+| `DeadlineRow` (name · stamp · kind · value) | Stripe, Polar, Dodo Payments |
+| `MarkedRow` (mark · name · flag · line · trailing) | Walletbeat, L2BEAT |
+| `SpanStrip` (a column per period, silent faint, ends labelled) | X, Journal, Agent, Gnosis Pay |
+| `HeadLink` | Walletbeat, L2BEAT, Privacy Pools |
+| `Line` tones `note` / `quiet` / `alert` | every head; `alert` is Safe's module warning alone |
+
+`alert` is the one tone only one room uses, and it is a TONE of a line every head
+already has, not a slot: the module warning is the highest-stakes sentence the app
+states and cutting it was never on the table. Room-specific drawings that restate
+nothing — PostHog's metric discs, the runway rails, Altana's key rows, Safe's
+signature discs, Railgun's in/back pair, App Store Connect's build runway — stay in
+their rooms, inside a `Block` or a `Row`'s measure.
+
+**What was cut, and why each is §723's class or §83's.**
+
+- **The Instagram account board.** Its own doc said it carried
+  `FeedInsight.leaderboard`'s "Who you save most" forward whole, on §349's rule that
+  a head may not draw less than it displaces. §723 then deleted that board from every
+  room as visualization for its own sake; this copy survived only by being drawn by
+  hand. Deleted with it: `InstagramRoom.share(kept:of:)`, `InstagramRoom.top(_:)`, the
+  probe's `share=` column, the harness's three bar checks and its "zero-leader guard"
+  mutation (its anchor is gone, so it could only report a pass it never ran). The head
+  keeps the three facts the board could not state, and its door (the lead account's
+  newest post).
+- **The Apple Wallet merchant board** — "Who you actually pay", ranked by amount under
+  ten-point bars: the card-spend board §723 names, surviving the same way. Deleted
+  with it: `Card.moreMerchants`, the probe's "folded" line, `FeedScreen.openMerchant`
+  (its only caller was the board), the harness's fold guard, fold check and fold
+  mutation. `merchants` stays — it names the lede's top merchant and feeds the Today
+  brief. **The head has no door now**: nothing on it names a single row, and every
+  charge is its own row below.
+- **Three always-full bars.** Cursor's and Peer's lead bar and Gnosis Pay's
+  single-currency bar were each a share of `top`, and `top` IS the lead's own count,
+  so each drew full on every card that ever rendered. `accessibility-audit.py` had
+  already filed them as "scale anchors carrying no information at all". A bar with
+  one possible length encodes nothing. Cursor keeps the lead's line as its note.
+- **Safe's `CardTap` modifier and every head's private copy of the card recipe** —
+  moved into the template, not lost.
+
+**Not cut, and named so it is a decision rather than an oversight.** The ranked rows
+in X, Journal, Agent, Cursor and Peer are the nearest thing left to §723's board: a
+count per year, month, repository or rail under a share bar. They stay because each
+row carries what its strip or headline cannot — X/Journal/Agent a "mostly …" subject
+per period, Cursor the runs that didn't finish, Peer the in/out split — and each row
+is a door. If the user reads them as the board, deleting them is one `Block` per room
+and the `rows`/`share` functions behind it.
+
+**What changes on screen, UNSEEN.** Normalising the gaps moves pixels in most heads:
+Stripe, Polar and Dodo's rail sits `s3` below the note (was `s4`), and their rows
+follow the rail directly; Apple Wallet's rail, PostHog's roster and Altana's rows move
+up one rung; AWS's region line drops to the footnote gap; footnotes go 11pt → 12pt in
+Stripe, Polar, Dodo Payments, PostHog, Walletbeat, L2BEAT and Apple Wallet; Altana
+gains the `s2` top margin every sibling had; every ranked row takes a 44pt minimum
+(Agent's alone had it), which can add height to a one-line row; Dodo's currency rows
+now arrive with the entrance their siblings had; Gnosis Pay's month span grows 34 →
+38pt; agent-room spans shorter than 25 months get 3pt column gaps (were 2);
+Privacy Pools' scope cards tighten their inner gaps to the template's and its
+"Respond on 0xBow" door becomes a `HeadLink` (tinted `subhead13` with a trailing
+arrow, was a primary `callout15` with a leading one); App Store Connect's build
+runway gains a left-to-right wipe. **None of this has been seen on a device or a
+simulator.** The evidence is a build for the iOS simulator and for Mac Catalyst, the
+static audits, and the room harnesses listed below.
+
+**Guards.** `scripts/room-chassis-audit.py` (in `verify.sh`, `--self-test`) fails a
+`*RoomCard` whose own body — plus the view members it names, one hop — reaches neither
+`DSRoomChassis` nor `DSRoomSlot`, or that paints its own `dsWidgetSurface()`; a file
+declaring no `RoomCard` struct is read through `<Stem>RoomFigure` (Frames, Hegotá). It
+reads shapes, not layouts: a hand-drawn stack wrapped in one `Block` passes it.
+`accessibility-audit.py`'s struct scoping learned generic structs — `struct
+Head<Content: View>: View` was invisible to it, so the template's own `dsCardLead` could
+not answer for its gesture — with a clean and a dirty fixture. Guards that followed code
+into the template were AMENDED, not deleted: the X lead (`support/x-head-lead.py`) and
+the journal lead now pin the card's `.sentence(note)` AND the template's `heading22`;
+the journal's faint silent year pins the card's `silent:` and the template's
+`0.18 : 0.85`; Altana's card recipe pins `DSRoomChassis.Head(` and the template's
+surface and margin; the Privacy Pools note guard follows the call into `LineText`.
+Guards removed with what they guarded: listed under the Instagram and Apple Wallet
+deletions above. `prd-index-audit.py` carries a `KNOWN_DANGLING` entry for §745 while
+this entry is a draft — delete it when this lands in the ledger.

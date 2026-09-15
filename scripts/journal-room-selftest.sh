@@ -99,9 +99,17 @@ grep -q 'JournalRoomCard(room: room, source: name)' "$FEED" \
 python3 - "$CARD" <<'PYCHK' || { echo "✗ the journal head no longer promotes the note when there is no run — a room with no streak would draw a head with no lead (§451)"; exit 1; }
 import re, sys
 src = open(sys.argv[1]).read()
-# the note must be drawn at the HEAD rung in the branch the lede declines to
-m = re.search(r'Text\(JournalRoom\.note\(room\)\)\s*\n\s*\.dsText\(\.heading22\)', src)
+# the note must be the LEAD SENTENCE in the branch the lede declines to. Since
+# prd §745 the card hands the template a `Lead` and `DSRoomChassis.LeadView`
+# draws `.sentence` at `heading22` for every room head — pinned below — so the
+# promotion is asserted here and the rung once, at the template.
+m = re.search(r'return\s+\.sentence\(JournalRoom\.note\(room\)\)', re.sub(r'//.*', '', src))
 sys.exit(0 if m else 1)
+PYCHK
+python3 - Casberi/Casberi/Design/DSRoomHead.swift <<'PYCHK' || { echo "✗ DSRoomChassis.LeadView no longer draws a sentence lead at heading22 — every room head's lead drops a rung (prd §451/§745)"; exit 1; }
+import re, sys
+src = re.sub(r'//.*', '', open(sys.argv[1]).read())
+sys.exit(0 if re.search(r'case \.sentence\(let sentence\):\s*\n\s*Text\(verbatim: sentence\)\s*\n\s*\.dsText\(\.heading22\)', src) else 1)
 PYCHK
 # …and the lede must decline on the same condition the headline does, or the
 # promotion fires on a room that has a run.
@@ -158,8 +166,13 @@ grep -q 'JournalRoom.rows(room)' "$CARD" \
   || { echo "✗ the card no longer draws the model's ranked rows"; exit 1; }
 grep -q 'JournalRoom.share(entries: year.entries, of: top)' "$CARD" \
   || { echo "✗ the card no longer scales bars through the model"; exit 1; }
-grep -q 'year.entries == 0 ? 0.18 : 0.85' "$CARD" \
-  || { echo "✗ a silent year is no longer drawn faint — dropping or hiding it rescales the axis (JournalRoom's own note)"; exit 1; }
+# Re-pointed for prd §745: the strip is `DSRoomChassis.SpanStrip`, shared with
+# the X and agent rooms, so the card marks a silent year and the template owns
+# the faint fill. Both halves are pinned, or either could drop the reading.
+grep -q 'silent: year.entries == 0' "$CARD" \
+  || { echo "✗ a silent year is no longer marked silent — dropping or hiding it rescales the axis (JournalRoom's own note)"; exit 1; }
+grep -q 'column.silent ? 0.18 : 0.85' Casberi/Casberi/Design/DSRoomHead.swift \
+  || { echo "✗ SpanStrip no longer draws a silent column faint — a year with nothing reads as absent (JournalRoom's own note)"; exit 1; }
 
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation

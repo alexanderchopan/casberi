@@ -124,12 +124,11 @@ enum InstagramRoomSource {
         out.append("totals| kept=\(room.kept) accounts=\(room.accountCount)"
                    + " made=\(room.made) gone=\(room.gone)"
                    + " span=\(room.span) (\(room.firstYear)–\(room.lastYear))")
-        let top = InstagramRoom.top(room)
-        // One line PER ACCOUNT (the `-todayProbe` truncation lesson).
+        // One line PER ACCOUNT (the `-todayProbe` truncation lesson). No share
+        // column since prd §745: the bars it described are deleted.
         for account in room.accounts {
             out.append("instagramAccount| @\(account.handle)"
                        + " · \(InstagramRoom.accountLine(account, act: room.act))"
-                       + " · share=\(String(format: "%.2f", InstagramRoom.share(kept: account.kept, of: top)))"
                        + " · newest=\(account.newestRef ?? "none")")
         }
         return out
