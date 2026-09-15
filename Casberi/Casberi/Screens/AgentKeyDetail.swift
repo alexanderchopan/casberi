@@ -46,7 +46,7 @@ struct AgentModelRow: View {
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1).truncationMode(.middle)
                 }
-                // No caption under the model (prd §747): the menu's own first
+                // No caption under the model (prd §748): the menu's own first
                 // row already says "Default (…)" / "Same as questions".
                 if loading {
                     HStack(spacing: DS.Space.s2) {
@@ -502,7 +502,7 @@ struct MCPServerRow: View {
                         DSPasteboard.copySensitive(MCPPairing.token())
                         copied = true
                     }
-                    // ONE sentence for the row (prd §747), where there were
+                    // ONE sentence for the row (prd §748), where there were
                     // two. Measured 2026-08-08 (prd §340): the standard MCP
                     // inspector connects over HTTP and both lists and calls
                     // the tools — the sentence names what was checked rather

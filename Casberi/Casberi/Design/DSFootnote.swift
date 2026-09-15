@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// **ONE EXPLAINING SENTENCE, DRAWN ONE WAY (prd §747, user: "one explaining
+/// **ONE EXPLAINING SENTENCE, DRAWN ONE WAY (prd §748, user: "one explaining
 /// sentence per screen at most, and only if it says something the controls
 /// don't", 2026-09-15).**
 ///

@@ -77,7 +77,7 @@ struct WalletConnectionScreen: View {
             .frame(minHeight: AccountFactRow.height)
             .plainAccountRow()
             // "A Bitcoin address is read too, from its own public API." is
-            // gone (prd §747): the row above says Bitcoin is read when you
+            // gone (prd §748): the row above says Bitcoin is read when you
             // watch one, and where the app reaches is stated once, in
             // Settings (§702).
             // The promise, and the only thing left on this page that is not a

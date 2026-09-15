@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Footnote audit (prd §747, 2026-09-15).
+"""Footnote audit (prd §748, 2026-09-15).
 
 THE RULING. The user, on why the app reads as "vibecoded": copy that explains
 itself — state lines, captions under marks, footers under rows, empty-state
@@ -389,7 +389,7 @@ def main() -> int:
         print("  self-test PASSED" if ok else "  self-test FAILED")
         return 0 if ok else 1
 
-    print("footnote-audit (prd §747)")
+    print("footnote-audit (prd §748)")
     if not self_test():
         print("  refusing to certify: the audit's own self-test failed")
         return 1

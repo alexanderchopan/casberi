@@ -752,7 +752,7 @@ struct SocialProfileCard: View {
                     Text("No \(other) account by that name.")
                         .dsText(.callout15).foregroundStyle(DS.textTertiary)
                 } else {
-                    // "— tap to watch one" restated the rows under it (prd §747).
+                    // "— tap to watch one" restated the rows under it (prd §748).
                     Text("\(other) accounts by that name")
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                     ForEach(elsewhere) { hit in

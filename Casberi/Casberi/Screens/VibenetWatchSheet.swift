@@ -47,7 +47,7 @@ struct VibenetWatchSheet: View {
                             onWatched()
                             dismiss()
                         })
-                        // ONE sentence, and only its second half (prd §747):
+                        // ONE sentence, and only its second half (prd §748):
                         // the field and the list below already say "paste an
                         // address, or pick one". What neither can say is the
                         // cost and the ceiling.

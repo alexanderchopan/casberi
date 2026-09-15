@@ -697,7 +697,7 @@ struct AccountDetailSheet: View {
                     .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
                     .settleIn()
             }
-            // No sentence under the key field (prd §747). "From the agent's
+            // No sentence under the key field (prd §748). "From the agent's
             // own console. It stays in Keychain and goes only to that
             // provider." said where the card's one disclosure above already
             // says it goes straight to the provider, in §729's banned

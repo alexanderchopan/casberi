@@ -94,7 +94,7 @@ struct NetworkReachScreen: View {
                     .listRowSeparator(.hidden)
             }
 
-            // No section footers (prd §747): "The always-on essentials, plus
+            // No section footers (prd §748): "The always-on essentials, plus
             // the apps you've connected" and "These reach nothing until you
             // connect them" each restated the header directly above them.
             group(String(localized: "Reaching now"), reachingNow)

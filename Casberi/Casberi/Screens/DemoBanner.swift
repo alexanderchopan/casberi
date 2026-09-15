@@ -167,7 +167,7 @@ private struct DemoExplainSheet: View {
                 // ONE LINE (user, 2026-09-05: "this wording is long"). What
                 // happens on exit is said by the verb below it.
                 // "Exit whenever you're ready" restated the verb under it
-                // (prd §747).
+                // (prd §748).
                 Text("None of it is yours.")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)

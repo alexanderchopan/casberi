@@ -415,7 +415,7 @@ struct VibenetCreateSheet: View {
                                            : String(localized: "Copy address"))
             }
             // The act is in `pinnedAction`, and it says what it will do
-            // (prd §747 deleted the sentence restating it).
+            // (prd §748 deleted the sentence restating it).
         }
     }
 

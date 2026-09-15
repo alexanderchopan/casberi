@@ -10486,7 +10486,7 @@ struct FeedScreen: View {
                 BridgeIcon(name: source, size: DS.Mark.row)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    // "New things from X land here." is gone (prd §747): the
+                    // "New things from X land here." is gone (prd §748): the
                     // line above already says this is everything SO FAR.
                     Text("That's everything from \(source) so far · \(countLabel(rows))")
                         .dsText(.subhead13)

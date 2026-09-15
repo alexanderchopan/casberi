@@ -859,7 +859,7 @@ struct DSSlabNote: View {
     private var left: Bool { plain || accountAct }
 
     var body: some View {
-        // Drawn by `DSFootnote` (prd §747), the one view an explaining
+        // Drawn by `DSFootnote` (prd §748), the one view an explaining
         // sentence has, so `footnote-audit.py` counts this note with the rest.
         // 15pt inside an act (prd §729) is the footnote's own rule now.
         DSFootnote(Text(LocalizedStringKey(text)), centered: !left)

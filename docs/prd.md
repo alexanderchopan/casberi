@@ -55621,7 +55621,7 @@ the same. No guard was deleted.
 iOS simulator build, a Mac Catalyst build, every `*-audit.py`, and the harnesses
 that name a changed file.
 
-## §747 — An explaining sentence has one view and one screen gets one of them: `DSFootnote`, counted by `footnote-audit.py` (user: "one explaining sentence per screen at most, and only if it says something the controls don't", 2026-09-15)
+## §748 — An explaining sentence has one view and one screen gets one of them: `DSFootnote`, counted by `footnote-audit.py` (user: "one explaining sentence per screen at most, and only if it says something the controls don't", 2026-09-15)
 
 **The report was a feeling, and the feeling had a cause.** The user named part of why the app reads as "vibecoded": copy that explains itself — state lines, meta lines, captions under marks, footers under rows, empty-state sentences, prose next to every control. §708 took the boxes off the account page and §729 cut its copy until each thing was said once, and `setup-copy-audit.py` check 8 holds the 56 connect screens to that. Everywhere else the rule lived in memory. This ledger has already watched that fail: §218b ruled "one gray sentence per screen", and by §314 the import screens carried five.
 

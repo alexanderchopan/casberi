@@ -772,7 +772,7 @@ step "Setup copy audit"
 "$ROOT/scripts/setup-copy-audit.py" || fail "a connect page drifted past its copy budget — see the output above"
 print -P "%F{green}✓ setup copy audit%f"
 
-# The same rule for every OTHER screen (prd §747, user: "one explaining
+# The same rule for every OTHER screen (prd §748, user: "one explaining
 # sentence per screen at most, and only if it says something the controls
 # don't"). The audit above holds the connect pages; everywhere else the rule
 # lived in memory, which is how §218b's "one gray sentence" grew back to five.
