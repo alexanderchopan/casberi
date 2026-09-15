@@ -55104,3 +55104,40 @@ symlinks into `Sources/ZKP` and `Submodules/`, so `sed -i` on the path the
 compiler reports fails with "in-place editing only works for regular files" and
 the build fails again with the same error. Patch the target, or copy with
 `cp -RL`.
+
+## §739 — Hover goes through `AutomaticHoverEffect()`, because the iOS 27 SDK linked a conformance no older OS has (2026-09-14)
+
+**What verify caught.** The first Xcode 27 build (585, after §738) launched and
+died in dyld on the iOS 26.5 simulator before a line of Swift ran: `Symbol not
+found: $s7SwiftUI11HoverEffectVAA06CustomcD0AAWP`, the witness table for
+`HoverEffect : CustomHoverEffect`. It surfaced in `verify.sh`'s unit-test step
+as "Early unexpected exit, operation never finished bootstrapping", with the
+reason only in `~/Library/Logs/DiagnosticReports/Casberi-*.ips`. Shipped, it
+would have crashed at launch for everyone not yet on iOS 27.
+
+**Why.** The 27 SDK marks `hoverEffect(_: HoverEffect)` `@_disfavoredOverload`
+and declares `extension HoverEffect : CustomHoverEffect` as `@available(iOS 18.0)`.
+So `dsHover()`'s `hoverEffect(effect)` (121 call sites, all the default) and
+`dsListCardRow()`'s `.hoverEffect(.automatic)` resolved to the generic
+`some CustomHoverEffect` overload through that conformance, and the app
+strong-linked it. Neither the 18.6 nor the 26.5 runtime exports it. The
+availability is wrong and the compiler believes it, so no warning, no error.
+
+**The fix** passes `AutomaticHoverEffect()`, the iOS 18 type the generic overload
+was designed for (its type, `init()` and `.automatic` are all exported on 18.6
+and 26.5). `dsHover` lost its `HoverEffect` parameter, which no caller used.
+
+**How it was checked, and what the check is worth.** Every strong import of the
+app binary was compared with the exports of its library on the 18.6 and 26.5
+simulator runtimes, following re-exports. It flagged 13; 12 of those
+(`NSURLSession*`, `NSHTTPCookie`, `AVAudioSession*`, and in the Xcode 26 build
+`MXSignpostMetricsSnapshot`) also flag on build 583, which runs on phones, so
+they resolve through a path the comparison does not model (CFNetwork behind
+Foundation, AudioSession behind AVFAudio). The one real finding was the
+conformance. So the comparison is a lead to confirm by launching, not a gate,
+and it is not in `verify.sh`; the launch in the unit-test step is what caught it.
+Widgets and the share extension: 0 missing on both runtimes.
+
+**The class to watch on every new SDK:** a `@_disfavoredOverload` added to an old
+API moves existing call sites onto a newer one without a diagnostic. After an
+Xcode upgrade, launch on the OLDEST runtime installed, not just the newest.

@@ -368,13 +368,21 @@ extension View {
         listRowBackground(
             DS.surfaceListRow.shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
         )
-        .hoverEffect(.automatic)
+        .hoverEffect(AutomaticHoverEffect())
     }
 
     /// The same cursor-aware treatment for anything that ISN'T a List row —
     /// the source chips, the avatar/catalogue doors, a card grid tile.
-    func dsHover(_ effect: HoverEffect = .automatic) -> some View {
-        hoverEffect(effect)
+    ///
+    /// **`AutomaticHoverEffect()`, never a `HoverEffect` value (prd §739).** The
+    /// iOS 27 SDK disfavours `hoverEffect(_: HoverEffect)`, so a `HoverEffect`
+    /// argument resolves to the generic `some CustomHoverEffect` overload through
+    /// a `HoverEffect : CustomHoverEffect` conformance the SDK dates iOS 18 but no
+    /// OS before 27 exports. The app strong-links its witness table and dies in
+    /// dyld at launch on every iOS 18–26 device. `AutomaticHoverEffect` is the
+    /// iOS 18 type the generic overload was built for, exported on 18.6 and 26.5.
+    func dsHover() -> some View {
+        hoverEffect(AutomaticHoverEffect())
     }
 
     /// Grow a small control's TAP TARGET to the 44pt floor without growing what
