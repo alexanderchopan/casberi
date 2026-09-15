@@ -112,7 +112,6 @@ struct L2beatMilestoneHead: View {
 			}
 		}
 		.padding(DS.Space.s4)
-		.dsWidgetSurface()
 	}
 
 	/// L2BEAT's own citation, a door to the original announcement. One, not a list — their
@@ -143,7 +142,6 @@ struct L2beatMilestoneHead: View {
 				.contentShape(Rectangle())
 			}
 			.buttonStyle(.plain)
-			.dsWidgetSurface()
 			.dsHover()
 		}
 	}
@@ -207,7 +205,6 @@ struct L2beatRevisionHead: View {
 			}
 			.padding(DS.Space.s4)
 			.frame(maxWidth: .infinity, alignment: .leading)
-			.dsWidgetSurface()
 
 			if let summary = thing.summary, !summary.isEmpty {
 				Text(summary)

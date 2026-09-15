@@ -1145,7 +1145,6 @@ extension FeedScreen {
                     }
                 }
                 .padding(WalletCardStyle.pad)
-                .dsWidgetSurface(fillOpacity: Self.walletCardFill)
                 .modifier(rowEntrance(5))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)

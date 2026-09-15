@@ -113,7 +113,6 @@ struct NameAddressPrompt: View {
             .padding(.top, DS.Space.s1)
         }
         .padding(DS.Space.s3)
-        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
     }
 
     /// The fact that earns the prompt — one sentence now; what a name does

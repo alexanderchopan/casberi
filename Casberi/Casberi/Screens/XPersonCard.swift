@@ -68,7 +68,6 @@ struct XPersonCard: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWidgetSurface()
     }
 
     /// The three memberships, largest first, and a zero is DROPPED rather than

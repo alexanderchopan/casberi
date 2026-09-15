@@ -56362,3 +56362,52 @@ check B keeps its shape and states the stronger reason.
 
 Not built or run here (no Swift toolchain in this checkout); the simulator pass
 is owed, and every room head at its new weight is a design checkpoint.
+
+## §759 — The elevated card has one caller left (user: "more cards, these gotta go", then "finish removing the plates", 2026-09-15)
+
+**The sixth report in a week, and the last.** `dsWidgetSurface` — the sheet fill
+at the widget radius, lifted by the ambient card shadow — was this app's default
+way of saying "these things belong together". It came off one kind of block at a
+time, each after its own screenshot: every row and the reading cover (§749),
+every account page (§708), the wallet family's Actions and Readings (§757), every
+room head (§758). This pass deletes the remaining forty-four:
+
+- **23 gen-UI modules** (`GenRenderer`) — every synthesized answer surface,
+  including the module card, the solo tile's chrome and the words module;
+- **L2BEAT and Walletbeat**, 7 in the two room screens and 6 in their sheets
+  (stage cards, dimension summaries, fact cards, sources, cross-links);
+- **the settings list** (`SettingsScreen.rowList`);
+- **the two wallet cards** at `walletCardFill` — the themes lede and the wallet
+  room's coming-up section;
+- **the naming prompt**, the address book's name nudge, the X person card,
+  Cloudflare's runway card, and vibenet's roster branch.
+
+**What separates two blocks is air.** No call site's padding changed, so nothing
+moves sideways in any of them — the same property §757 and §758 kept, for the
+same reason: a plate removal that also re-inset its content is two changes
+reported as one, and only one of them was asked for.
+
+**The one caller left is `DSScopeTiles`, and it is a CONTROL.** A tile you press
+needs an edge to be pressable, which is the reason §746 lets a chip carry a fill
+while a fact carries none. The elevated surface finally says exactly one thing.
+
+**`plate-audit.py`** (new, in `verify.sh`) fails any other caller, and it pins
+all three spellings of the same lift — `dsWidgetSurface`, `dsCard`,
+`dsElevatedSurface` — because a sweep that named one is answered by renaming the
+call. Five deletions of one modifier is five chances for the next session to
+paste it onto the next block it writes: it is one line, it reads as harmless, and
+it renders as a tidy card in every screenshot, every screen sweep and every
+build. A grep on every verify is the only thing that can see it. Its `ALLOWED`
+map is two entries and each is a ruling, not a snooze.
+
+**Deliberately NOT touched, so this is not mistaken for a no-backgrounds rule:**
+`dsWell` — the RECESSED rung, a block sunk into the page — is untouched and says
+something different; so are glass (the floating layer's own material, design law
+§8), row fills, chips, and every `background(…)` a component draws for contrast.
+This ruling is about ONE modifier and the lift it added.
+
+Not built or run here (no Swift toolchain in this checkout). Forty-four
+deletions across thirteen files is a wide change that cannot be seen from a
+static pass: the simulator sweep and the demo census are owed, and the gen-UI
+modules — 23 of the 44, and the surface the answer path is made of — are the
+design checkpoint.

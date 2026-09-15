@@ -164,7 +164,6 @@ struct WalletbeatReportCard: View {
 		}
 		.padding(DS.Space.s4)
 		.frame(maxWidth: .infinity, alignment: .leading)
-		.dsWidgetSurface()
 	}
 
 	private var legend: some View {
@@ -186,7 +185,6 @@ struct WalletbeatReportCard: View {
 				? String(localized: "It's listed, and none of its \(counts.applicable) checks has been judged. That's an absence of information, not a clean bill of health.")
 				: String(localized: "Only \(counts.judged) of \(counts.applicable) checks are judged, which is too few to compare against another wallet.")))
 		.padding(DS.Space.s4)
-		.dsWidgetSurface()
 	}
 
 	/// What the ratings cannot say: whether anything has actually gone wrong.
@@ -218,7 +216,6 @@ struct WalletbeatReportCard: View {
 		}
 		.padding(DS.Space.s4)
 		.frame(maxWidth: .infinity, alignment: .leading)
-		.dsWidgetSurface()
 	}
 
 	// MARK: - Attributes
@@ -245,7 +242,6 @@ struct WalletbeatReportCard: View {
 				}
 				.padding(DS.Space.s4)
 				.frame(maxWidth: .infinity, alignment: .leading)
-				.dsWidgetSurface()
 			}
 			.padding(.top, DS.Space.s2)
 		}

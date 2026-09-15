@@ -515,7 +515,6 @@ struct SettingsScreen: View {
             }
         }
         .padding(.vertical, DS.Space.s2)
-        .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
     }
 }

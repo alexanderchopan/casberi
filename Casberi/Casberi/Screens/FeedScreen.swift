@@ -7999,7 +7999,6 @@ struct FeedScreen: View {
                     // the holdings card: GenTagMap self-pads horizontally,
                     // so only the bottom needs closing.
                     .padding(.bottom, DS.Space.s3)
-                    .dsWidgetSurface(fillOpacity: Self.walletCardFill)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     // The card needs the page gutter the bare map didn't.

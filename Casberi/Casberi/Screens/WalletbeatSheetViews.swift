@@ -110,7 +110,6 @@ struct WalletbeatIncidentHead: View {
 			}
 		}
 		.padding(DS.Space.s4)
-		.dsWidgetSurface()
 	}
 
 	/// Who it affected — and a door to what Walletbeat says about each of them (prd §430).
@@ -183,7 +182,6 @@ struct WalletbeatIncidentHead: View {
 					.contentShape(Rectangle())
 				}
 				.buttonStyle(.plain)
-				.dsWidgetSurface()
 				.dsHover()
 			}
 		}
@@ -256,7 +254,6 @@ struct WalletbeatRevisionHead: View {
 			}
 			.padding(DS.Space.s4)
 			.frame(maxWidth: .infinity, alignment: .leading)
-			.dsWidgetSurface()
 			.accessibilityElement(children: .combine)
 			.accessibilityLabel(Text(revision.before.map {
 				String(localized: "Walletbeat moved this from \(WalletbeatCopy.label($0)) to \(WalletbeatCopy.label(revision.after))")

@@ -1188,7 +1188,6 @@ struct VibenetRoomCard: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWidgetSurface()
         // Same fix, same reason as `stackedRoom` — this is the room's OTHER
         // shape (a single account, or the roster on `VibenetScreen`/the
         // address book), and it had the identical gap: no outer margin, so

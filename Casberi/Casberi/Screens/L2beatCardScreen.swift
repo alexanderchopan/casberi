@@ -158,7 +158,6 @@ struct L2beatRiskCard: View {
 		}
 		.padding(DS.Space.s4)
 		.frame(maxWidth: .infinity, alignment: .leading)
-		.dsWidgetSurface()
 	}
 
 	/// What a tap on the strip key does — remember the axis, then ask the host to scroll.
@@ -221,7 +220,6 @@ struct L2beatRiskCard: View {
 		}
 		.padding(DS.Space.s4)
 		.frame(maxWidth: .infinity, alignment: .leading)
-		.dsWidgetSurface()
 	}
 
 	// MARK: - The five
@@ -271,7 +269,6 @@ struct L2beatRiskCard: View {
 				}
 				.padding(DS.Space.s4)
 				.frame(maxWidth: .infinity, alignment: .leading)
-				.dsWidgetSurface()
 			}
 			.padding(.top, DS.Space.s2)
 		}

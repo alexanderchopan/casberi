@@ -266,6 +266,20 @@ extension View {
     /// ~0.82 the field still travels under the surface while the card keeps its
     /// edge and its lift. Still a fill, never a material: glass is the floating
     /// layer's alone (design law), and this is content.
+    /// **NOTHING THAT IS CONTENT WEARS THIS ANY MORE (prd §759, user: "more
+    /// cards, these gotta go").** Forty-four calls were deleted in one pass —
+    /// every gen-UI module, both review rooms and their sheets, the settings
+    /// list, the wallet cards, the two ledes, the naming prompt, the X person
+    /// card, Cloudflare's runway, vibenet's roster — after five earlier reports
+    /// took it off rows (§749), the reading cover (§749), account pages (§708),
+    /// the wallet family's Actions and Readings (§757) and every room head
+    /// (§758). What separates two blocks now is air.
+    ///
+    /// The ONE caller left is `DSScopeTiles`, and it is a CONTROL: a tile you
+    /// press, which needs an edge to be pressable, the same reason a chip has a
+    /// fill (§746). `plate-audit.py` fails any other caller, so a plate coming
+    /// back is a ruling somebody takes deliberately rather than a modifier that
+    /// crept into a paste.
     func dsWidgetSurface(cornerRadius: CGFloat = DS.Radius.widget,
                          fillOpacity: Double = 1) -> some View {
         dsElevatedSurface(cornerRadius: cornerRadius, fillOpacity: fillOpacity)

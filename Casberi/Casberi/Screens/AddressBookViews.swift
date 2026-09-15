@@ -2170,7 +2170,6 @@ struct AddressCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DS.Space.s4)
-            .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s6)
             .settleIn(delay: 0.14)

@@ -649,6 +649,20 @@ step "Room-chassis audit"
 "$ROOT/scripts/room-chassis-audit.py" || fail "a room head is drawn by hand instead of composing DSRoomChassis — see the output above"
 print -P "%F{green}✓ room-chassis audit%f"
 
+# THE ELEVATED CARD HAS ONE CALLER LEFT (prd §759). Five passes deleted
+# `dsWidgetSurface` from every kind of block in the app, each after its own
+# report: rows and the reading cover (§749), account pages (§708), the wallet
+# family's Actions and Readings (§757), every room head (§758), and the
+# remaining forty-four (§759). The sixth session will paste it onto the next
+# block it writes — it is one line, it reads as harmless, and it renders as a
+# tidy card in every screenshot, every sweep and every build. Only a grep
+# catches that. `DSScopeTiles` keeps it: a tile you press needs an edge.
+step "Plate audit"
+"$ROOT/scripts/plate-audit.py" --self-test >/dev/null \
+  || fail "the plate audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/plate-audit.py" || fail "the elevated card is back on content — see the output above"
+print -P "%F{green}✓ plate audit%f"
+
 # Keeps the "What this app reaches" registry complete (prd §205): every host
 # the app calls must be disclosed in NetworkReach.swift or the explicit
 # non-reach denylist — an undisclosed fetch host fails here.

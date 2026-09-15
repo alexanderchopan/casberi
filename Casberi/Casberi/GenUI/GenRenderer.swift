@@ -767,7 +767,6 @@ private struct GenWidget: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, DS.Space.s2)
-        .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
     }
@@ -830,7 +829,6 @@ private extension View {
         self
             .padding(DS.Space.s4)
             .frame(maxWidth: .infinity, minHeight: 150, maxHeight: .infinity, alignment: .topLeading)
-            .dsWidgetSurface()
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
     }
 }
@@ -1154,7 +1152,6 @@ private struct InsightCard<Content: View>: View {
             .padding(.horizontal, DS.Space.s4)
             .padding(.vertical, DS.Space.s3)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWidgetSurface()
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s2)
     }
@@ -1283,7 +1280,6 @@ struct OnThisDayHero: View {
             }
             .padding(DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWidgetSurface()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -2250,7 +2246,6 @@ private struct GenClusterMap: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.Space.s4)
-                .dsWidgetSurface()
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s2)
             }
@@ -2382,7 +2377,6 @@ private struct GenDayFold: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.Space.s4)
-                .dsWidgetSurface()
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s2)
             }
@@ -2679,7 +2673,6 @@ private struct GenTile: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
-        .dsWidgetSurface()
     }
 }
 
@@ -2709,7 +2702,6 @@ private struct GenProjectTile: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, minHeight: el.str(0) == "2" ? 132 : 120, alignment: .topLeading)
-        .dsWidgetSurface()
         .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .dsHover()
         .onTapGesture {
@@ -2738,7 +2730,6 @@ private struct GenPhotoTile: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .dsWidgetSurface()
     }
 }
 
@@ -2763,7 +2754,6 @@ private struct GenVoiceTile: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
-        .dsWidgetSurface()
     }
 }
 
@@ -3253,7 +3243,6 @@ private struct GenAppsInvite: View {
                 }
             }
             .padding(DS.Space.s4)
-            .dsWidgetSurface()
         }
         .buttonStyle(DSTileButtonStyle())
         .padding(.horizontal, DS.Space.s4)
@@ -3527,7 +3516,6 @@ private struct GenTakeawayCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
-        .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
     }
@@ -3641,7 +3629,6 @@ private struct GenFaces: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.Space.s4)
-                .dsWidgetSurface()
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s2)
             }
@@ -3715,7 +3702,6 @@ private struct GenContactSheet: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.Space.s4)
-                .dsWidgetSurface()
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s2)
             }
@@ -4034,7 +4020,6 @@ private struct GenApprovalCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
-        .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
     }
@@ -4686,7 +4671,6 @@ private struct GenValueSpark: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.Space.s4)
-                .dsWidgetSurface()
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s2)
                 .onAppear {
@@ -4783,7 +4767,6 @@ private struct GenBars: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.Space.s4)
-                .dsWidgetSurface()
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s2)
                 .onAppear {
@@ -4822,7 +4805,6 @@ private struct GenChartCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
-        .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
     }
@@ -4911,7 +4893,6 @@ private struct GenAllocBar: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.Space.s4)
-                .dsWidgetSurface()
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s2)
             }
@@ -5372,7 +5353,6 @@ private struct GenMoneyHero: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
-        .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
         .onAppear { fireEntrance() }
@@ -5799,7 +5779,6 @@ private struct GenMoversTile: View {
                 // card beside a tall one reads as a rendering fault, not as
                 // "this one has less to say".
                 .frame(maxHeight: .infinity, alignment: .topLeading)
-                .dsWidgetSurface()
             }
         }
     }
@@ -5951,7 +5930,6 @@ private struct GenNextTile: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
         .frame(maxHeight: .infinity, alignment: .topLeading)
-        .dsWidgetSurface()
         if id.isEmpty {
             card
         } else {
@@ -6026,7 +6004,6 @@ private struct GenSourceMix: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.Space.s4)
-                .dsWidgetSurface()
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s2)
                 // A one-shot @State set — SwiftUI never replays a stale
