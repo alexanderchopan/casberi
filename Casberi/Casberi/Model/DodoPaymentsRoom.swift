@@ -135,7 +135,7 @@ struct DodoPaymentsRoom: Equatable {
     /// Currencies drawn. Unlike Gnosis Pay's closed three-stablecoin set, a
     /// payment processor can bill in anything, so the tail is folded and NAMED
     /// by `coverageNote` rather than silently cut.
-    static let rowCap = 3
+    static let rowCap = 8   // DSRoomChassis.headRowCap (prd §760)
 
     /// Retries drawn on the rail.
     static let retryCap = 3

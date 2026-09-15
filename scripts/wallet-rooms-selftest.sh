@@ -386,7 +386,7 @@ grep -q 'RailgunRoom.pair(token)' "$CARD_RAILGUN" \
 # EVERY drawn token gets a row, the lead included. Before this the lead was
 # named inside the prose headline and drew a bar with no label of its own, two
 # lines below the words it belonged to.
-grep -q 'ForEach(Array(drawn.enumerated())' "$CARD_RAILGUN" \
+grep -q 'DSRoomChassis.Rows(items: drawn)' "$CARD_RAILGUN" \
   || { echo "✗ the Railgun card no longer gives every drawn token a row — a lead with a bar and no label is what this pass removed"; exit 1; }
 # The negative half, on a COMMENT-STRIPPED copy: both files explain this pass by
 # NAMING the deleted function, so a guard grepping raw source fires on the prose

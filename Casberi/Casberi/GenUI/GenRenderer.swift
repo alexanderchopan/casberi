@@ -1005,8 +1005,32 @@ struct ContributionGraph: View {
     /// just a picture. nil (the default) keeps every existing mount exactly
     /// as it was: no gesture, no hit shape, a Canvas and nothing else.
     var onPick: ((ContributionDay) -> Void)? = nil
+    /// The most recent weeks to draw, at squares that fill the grid's width
+    /// (prd §760). Nil is the whole year at the reference size.
+    var window: Int? = nil
 
     private static let gap: CGFloat = 3
+
+    /// The fewest weeks a lead's grid draws: a quarter, so a tall box grows the
+    /// squares rather than cutting the reading to a few weeks.
+    static let minimumWindow = 13
+
+    /// How many recent weeks fill `size` at the largest square that fits both
+    /// ways (prd §760), never more than `available` and never fewer than a
+    /// quarter. Rounded UP so the width, not the height, sets the square.
+    static func window(for size: CGSize, available: Int) -> Int {
+        let side = (size.height - gap * 6) / 7
+        guard side > 0, available > 0 else { return max(available, 1) }
+        let fitted = Int(((size.width + gap) / (side + gap)).rounded(.up))
+        return min(available, max(minimumWindow, fitted))
+    }
+
+    /// The weeks drawn: the trailing `window` when one is set.
+    private var drawnWeeks: [ContributionWeek] {
+        let weeks = year?.weeks ?? []
+        guard let window else { return weeks }
+        return Array(weeks.suffix(window))
+    }
     /// The geometry every heatmap is measured against — a full year. Cell size
     /// is derived from THIS, never from the grid's own column count, so a
     /// windowed heatmap draws the same squares as the year graph and simply
@@ -1018,11 +1042,12 @@ struct ContributionGraph: View {
     private static let referenceColumns = 53
 
     var body: some View {
-        let weeks = year?.weeks ?? []
-        let cols = max(weeks.count, minColumns)
+        let weeks = drawnWeeks
+        let cols = window ?? max(weeks.count, minColumns)
         // A grid longer than a year (never today, but the type allows it)
-        // measures against itself rather than overflowing the card.
-        let reference = max(cols, Self.referenceColumns)
+        // measures against itself rather than overflowing the card. A window
+        // measures against itself too, which is what grows its squares.
+        let reference = window ?? max(cols, Self.referenceColumns)
         Canvas { ctx, size in
             let gap = Self.gap
             let cell = min((size.width - gap * CGFloat(reference - 1)) / CGFloat(reference),
@@ -1109,10 +1134,10 @@ struct ContributionGraph: View {
     /// which on a trackpad is a stutter rather than feedback.
     private func pick(at point: CGPoint, size: CGSize, silent: Bool = false) {
         guard let onPick else { return }
-        let weeks = year?.weeks ?? []
+        let weeks = drawnWeeks
         guard !weeks.isEmpty else { return }
-        let cols = max(weeks.count, minColumns)
-        let reference = max(cols, Self.referenceColumns)
+        let cols = window ?? max(weeks.count, minColumns)
+        let reference = window ?? max(cols, Self.referenceColumns)
         let gap = Self.gap
         let cell = min((size.width - gap * CGFloat(reference - 1)) / CGFloat(reference),
                        (size.height - gap * 6) / 7)
@@ -1146,9 +1171,21 @@ struct ContributionGraph: View {
 
 /// The shared card surface + title row for the insight heroes.
 private struct InsightCard<Content: View>: View {
+    /// False where the card is not a room's lead — the GitHub setup page's
+    /// year — so it keeps its own height there.
+    var fillsLead: Bool = true
     @ViewBuilder var content: Content
+    /// The box inside the card's vertical padding (prd §760).
+    static var inner: CGFloat { DSRoomChassis.leadHeight - 2 * DS.Space.s3 }
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) { content }
+            // Every room's lead is one height (prd §760): the card's outer
+            // edge is `leadHeight`, and what it holds sits at the top.
+            .frame(maxWidth: .infinity,
+                   minHeight: fillsLead ? Self.inner : nil,
+                   maxHeight: fillsLead ? Self.inner : nil,
+                   alignment: .topLeading)
+            .clipped()
             .padding(.horizontal, DS.Space.s4)
             .padding(.vertical, DS.Space.s3)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1220,8 +1257,9 @@ struct OnThisDayHero: View {
             DSHaptic.selection()
             onTap()
         } label: {
+            // The lead's one height (prd §760), where 190 was.
             PhotoWell(thing: echo.thing, size: nil)
-                .frame(height: 190)
+                .frame(height: DSRoomChassis.leadHeight)
                 .frame(maxWidth: .infinity)
                 .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
@@ -1278,6 +1316,12 @@ struct OnThisDayHero: View {
                         .padding(.top, DS.Space.s1)
                 }
             }
+            // The lead's one height (prd §760), inside the card's padding.
+            .frame(maxWidth: .infinity,
+                   minHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4,
+                   maxHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4,
+                   alignment: .topLeading)
+            .clipped()
             .padding(DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
@@ -1303,6 +1347,9 @@ struct CalendarHeatmapHero: View {
     /// the feed's one-hero-per-source slot. nil renders nothing extra.
     var onThisDay: OnThisDay.Echo? = nil
     var onTapOnThisDay: (() -> Void)? = nil
+    /// Whether the card takes a room lead's one height (prd §760). The GitHub
+    /// setup page passes false: its year is a reading on an account page.
+    var fillsLead: Bool = true
     /// The year's draw-on (delight, 2026-08-03): a 0 → 1 mask sweeps the
     /// grid left to right, so the year fills the way it accrued — the
     /// balance sparkline's own draw-on grammar, at the heatmap's dose.
@@ -1329,8 +1376,37 @@ struct CalendarHeatmapHero: View {
         return "\(day) · \(count)"
     }
 
+    /// The caption's line under a windowed grid, and its gap (prd §760).
+    private static let windowCaption: CGFloat = 20
+
+    /// The year's grid, pressable, at a window or the whole year.
+    private func graph(window: Int?) -> some View {
+        ContributionGraph(year: year, minColumns: minColumns, onPick: { day in
+            // Press a day, read the day (prd §384). The label swaps into
+            // the subtitle slot and reverts on its own — a reading, not a
+            // mode.
+            withAnimation(DS.Motion.standard) { picked = day }
+            pickedClear?.cancel()
+            pickedClear = Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2.5))
+                guard !Task.isCancelled else { return }
+                withAnimation(DS.Motion.standard) { picked = nil }
+            }
+        }, window: window)
+            .mask(alignment: .leading) {
+                GeometryReader { geo in
+                    Rectangle().frame(width: geo.size.width * drawn)
+                }
+            }
+            .onAppear {
+                if reduceMotion { drawn = 1 } else {
+                    withAnimation(.easeOut(duration: 0.6)) { drawn = 1 }
+                }
+            }
+    }
+
     var body: some View {
-        InsightCard {
+        InsightCard(fillsLead: fillsLead) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 InsightHeader(title: title, subtitle: pickedLabel ?? subtitle)
                 Spacer(minLength: DS.Space.s2)
@@ -1349,28 +1425,28 @@ struct CalendarHeatmapHero: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Share")
             }
-            ContributionGraph(year: year, minColumns: minColumns, onPick: { day in
-                // Press a day, read the day (prd §384). The label swaps into
-                // the subtitle slot and reverts on its own — a reading, not a
-                // mode.
-                withAnimation(DS.Motion.standard) { picked = day }
-                pickedClear?.cancel()
-                pickedClear = Task { @MainActor in
-                    try? await Task.sleep(for: .seconds(2.5))
-                    guard !Task.isCancelled else { return }
-                    withAnimation(DS.Motion.standard) { picked = nil }
-                }
-            })
-                .mask(alignment: .leading) {
-                    GeometryReader { geo in
-                        Rectangle().frame(width: geo.size.width * drawn)
+            // THE GRID GROWS INTO THE LEAD'S BOX (prd §760): the recent weeks
+            // that fill it at the largest square, named under the grid when
+            // that is less than the whole window.
+            if fillsLead {
+                GeometryReader { geo in
+                    let available = max(year?.weeks.count ?? 0, minColumns)
+                    let window = ContributionGraph.window(
+                        for: CGSize(width: geo.size.width,
+                                    height: geo.size.height - Self.windowCaption),
+                        available: available)
+                    VStack(alignment: .leading, spacing: DS.Space.s1) {
+                        graph(window: window)
+                        if window < available {
+                            Text(String(localized: "Last \(window) weeks"))
+                                .dsText(.label12)
+                                .foregroundStyle(DS.textTertiary)
+                        }
                     }
                 }
-                .onAppear {
-                    if reduceMotion { drawn = 1 } else {
-                        withAnimation(.easeOut(duration: 0.6)) { drawn = 1 }
-                    }
-                }
+            } else {
+                graph(window: nil)
+            }
             // `isLive` because this card HOLDS the echo's model across renders
             // and a heal can delete under it (COROLLARY 5 — a leaf view is
             // re-evaluated on the model's own observation, with no help from
@@ -1422,33 +1498,33 @@ struct DistributionHero: View {
 
     var body: some View {
         let segments = dist.segments
-        let total = max(segments.reduce(0) { $0 + $1.count }, 1)
+        let top = max(segments.map(\.count).max() ?? 1, 1)
         InsightCard {
             InsightHeader(title: dist.title, subtitle: dist.subtitle)
-            GeometryReader { geo in
-                let gaps = CGFloat(segments.count - 1) * 2
-                HStack(spacing: 2) {
-                    ForEach(segments) { seg in
-                        color(seg.tone)
-                            .frame(width: max((geo.size.width - gaps) * CGFloat(seg.count) / CGFloat(total), 3))
+            // THE SPLIT AS ROWS (prd §760). A 12pt bar and a legend line left
+            // most of the lead's box empty; a row per segment says the same
+            // split at a size worth reading, each bar on the largest's scale
+            // (the ranked rows' own rule), in the tone the bar wore.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                ForEach(Array(segments.enumerated()), id: \.element.id) { index, seg in
+                    VStack(alignment: .leading, spacing: DS.Space.s1) {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                            Text(seg.label)
+                                .dsText(.body17)
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                            Spacer(minLength: DS.Space.s2)
+                            Text("\(seg.count)")
+                                .dsText(.subhead13)
+                                .foregroundStyle(DS.textSecondary)
+                                .monospacedDigit()
+                        }
+                        ShareBar(fraction: Double(seg.count) / Double(top),
+                                 index: index,
+                                 fill: color(seg.tone),
+                                 reduceMotion: reduceMotion)
                     }
                 }
-                .clipShape(Capsule(style: .continuous))
-            }
-            .frame(height: 12)
-            // The bar fills left to right (2026-08-04, prd §298) — a split is
-            // read as proportions of one length, so revealing along that length
-            // is the split being stated. The legend below simply follows.
-            .chartWipe(reduceMotion: reduceMotion)
-            HStack(spacing: DS.Space.s3) {
-                ForEach(segments) { seg in
-                    HStack(spacing: DS.Space.s1) {
-                        Circle().fill(color(seg.tone)).frame(width: 7, height: 7)
-                        Text("\(seg.label) \(seg.count)")
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary).lineLimit(1)
-                    }
-                }
-                Spacer(minLength: 0)
             }
         }
         // One sentence, with the SHARES (prd §299, 2026-08-23).
@@ -1499,21 +1575,21 @@ struct ImageMosaicHero: View {
 
     var body: some View {
         let l = layout
-        let shown = Array(mosaic.tiles.prefix(l.columns * l.maxRows))
-        let rows = max(1, Int(ceil(Double(shown.count) / Double(l.columns))))
-        // The block's own aspect derives the height from the width: with
-        // `columns` tiles of aspect `a` across and `rows` down, the whole
-        // block is (columns · a / rows) wide-to-tall.
-        let blockAspect = CGFloat(l.columns) * l.aspect / CGFloat(rows)
         InsightCard {
             InsightHeader(title: mosaic.title, subtitle: mosaic.subtitle)
+            // THE WALL GROWS INTO THE LEAD'S BOX (prd §760): the medium's own
+            // tile at the width's size, and as many whole rows of it as the
+            // height holds from the tiles there are. `maxRows` no longer caps
+            // it; the box does.
             Color.clear
-                .aspectRatio(blockAspect, contentMode: .fit)
-                .overlay {
+                .overlay(alignment: .top) {
                     GeometryReader { geo in
                         let gap: CGFloat = 4
                         let tileW = (geo.size.width - gap * CGFloat(l.columns - 1)) / CGFloat(l.columns)
                         let tileH = tileW / l.aspect
+                        let fit = max(1, Int((geo.size.height + gap) / (tileH + gap)))
+                        let rows = max(1, min(fit, mosaic.tiles.count / l.columns))
+                        let shown = Array(mosaic.tiles.prefix(l.columns * rows))
                         let radius = min(DS.Radius.control, min(tileW, tileH) * 0.22)
                         VStack(spacing: gap) {
                             ForEach(0..<rows, id: \.self) { r in
@@ -1562,47 +1638,49 @@ struct TopicMapHero: View {
         let maxCount = max(cells.first?.count ?? 1, 1)
         InsightCard {
             InsightHeader(title: map.title, subtitle: map.subtitle)
-            UnitTreemap(count: cells.count, height: Self.boardHeight, cell: { i in
-                let cell = cells[i]
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(cell.label)
-                        .dsText(.callout15).fontWeight(.semibold)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(2).minimumScaleFactor(0.82)
-                    Text("\(cell.count)")
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
-                    Spacer(minLength: 0)
-                }
-                .padding(DS.Space.s3)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .background {
-                    ZStack {
-                        DS.surfaceSheet
-                        DS.ink(magnitude: Double(cell.count) / Double(maxCount))
+            // The cells take what the header leaves of the lead's one
+            // height (prd §760), where a spelled 200pt board was.
+            GeometryReader { geo in
+                UnitTreemap(count: cells.count, height: geo.size.height, cell: { i in
+                    let cell = cells[i]
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(cell.label)
+                            .dsText(.callout15).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(2).minimumScaleFactor(0.82)
+                        Text("\(cell.count)")
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            .monospacedDigit()
+                        Spacer(minLength: 0)
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                }
-            // One stop per cell, and the RANK said out loud (prd §299,
-            // 2026-08-23). The cell draws its label over its count as two
-            // `Text`s, so VoiceOver read every cell as two fragments and the
-            // ordering — which is the entire claim of a rank-ordered tiling —
-            // was carried by area alone, i.e. by nothing at all off-screen.
-            //
-            // Supplied as `readout` rather than as a label of this view's own
-            // so it goes through `UnitTreemap`'s one door: the same string
-            // becomes the Mac cursor's tooltip and the spoken label, and the
-            // two can never drift apart.
-            }, readout: { i in
-                let cell = cells[i]
-                return i == 0
-                    ? String(localized: "\(cell.label), \(cell.count). Largest.")
-                    : String(localized: "\(cell.label), \(cell.count).")
-            })
+                    .padding(DS.Space.s3)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .background {
+                        ZStack {
+                            DS.surfaceSheet
+                            DS.ink(magnitude: Double(cell.count) / Double(maxCount))
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                    }
+                // One stop per cell, and the RANK said out loud (prd §299,
+                // 2026-08-23). The cell draws its label over its count as two
+                // `Text`s, so VoiceOver read every cell as two fragments and the
+                // ordering — which is the entire claim of a rank-ordered tiling —
+                // was carried by area alone, i.e. by nothing at all off-screen.
+                //
+                // Supplied as `readout` rather than as a label of this view's own
+                // so it goes through `UnitTreemap`'s one door: the same string
+                // becomes the Mac cursor's tooltip and the spoken label, and the
+                // two can never drift apart.
+                }, readout: { i in
+                    let cell = cells[i]
+                    return i == 0
+                        ? String(localized: "\(cell.label), \(cell.count). Largest.")
+                        : String(localized: "\(cell.label), \(cell.count).")
+                })
+            }
         }
     }
-
-    private static let boardHeight: CGFloat = 200
 }
 
 
@@ -1636,8 +1714,9 @@ struct LiveStreamHero: View {
 
     @ViewBuilder private var liveBody: some View {
         Button(action: onOpen) {
+            // The lead's one height (prd §760), where a 16:9 frame was.
             Color.clear
-                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .frame(height: DSRoomChassis.leadHeight)
                 .overlay {
                     GeometryReader { geo in
                         if let url = thing.previewImageURL, !url.isEmpty {

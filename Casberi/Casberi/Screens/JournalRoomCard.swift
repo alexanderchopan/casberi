@@ -49,7 +49,7 @@ struct JournalRoomCard: View {
             DSRoomChassis.Block { yearStrip }
 
             DSRoomChassis.Block {
-                ForEach(Array(JournalRoom.rows(room).enumerated()), id: \.element.id) { index, year in
+                DSRoomChassis.Rows(items: JournalRoom.rows(room)) { index, year in
                     DSRoomChassis.Row(
                         title: String(year.year),
                         line: JournalRoom.yearLine(year),

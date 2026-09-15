@@ -66,53 +66,54 @@ struct CloudflareRunwayCard: View {
 
     var body: some View {
         let words = words
-        VStack(alignment: .leading, spacing: 0) {
-            // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
-            // head renders only inside its own source's room, under a chip strip
-            // where that source's chip is the lit one — so the card introduced
-            // itself with a word already on screen, one row up.
-            Text(words.headline)
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(words.note)
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s1)
-
-            // The same axis in both states. Drawing it on a quiet card rather
-            // than hiding it is what makes them one card: the runway is CLEAR,
-            // which is a different statement from "there is no runway".
-            rail
-                .padding(.top, DS.Space.s4)
-
-            // Empty in the quiet state, so it needs no branch of its own.
-            // Enumerated for the entrance stagger only — the items are already
-            // soonest-first, so the arrival narrates the order the card made.
-            ForEach(Array(runway.items.enumerated()), id: \.element.id) { index, item in
-                row(item, lead: index == 0)
-                    .chartArrival(index: index, reduceMotion: reduceMotion)
-                    // The rail's pick lands HERE — the pressed dot's own row
-                    // glows once, in the card's hue (prd §384).
-                    .landFlash(item.id == railPicked ? railPickTick : 0, tint: Self.mark)
-            }
-            .padding(.top, DS.Space.s1)
-
-            if let note = CloudflareRunway.coverageNote(uncovered: runway.uncovered,
-                                                        zonesSeen: runway.zonesSeen) {
-                Text(note)
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
+        // The lead's one height (prd §760), on the template's own card.
+        DSRoomChassis.LeadFit(height: DSRoomChassis.leadHeight - 2 * DS.Space.s4) {
+            VStack(alignment: .leading, spacing: 0) {
+                // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
+                // head renders only inside its own source's room, under a chip strip
+                // where that source's chip is the lit one — so the card introduced
+                // itself with a word already on screen, one row up.
+                Text(words.headline)
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s3)
+
+                Text(words.note)
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s1)
+
+                // The same axis in both states. Drawing it on a quiet card rather
+                // than hiding it is what makes them one card: the runway is CLEAR,
+                // which is a different statement from "there is no runway".
+                rail
+                    .padding(.top, DS.Space.s4)
+
+                // Empty in the quiet state, so it needs no branch of its own.
+                // Enumerated for the entrance stagger only — the items are already
+                // soonest-first, so the arrival narrates the order the card made.
+                DSRoomChassis.Rows(items: runway.items) { index, item in
+                    row(item, lead: index == 0)
+                        .chartArrival(index: index, reduceMotion: reduceMotion)
+                        // The rail's pick lands HERE — the pressed dot's own row
+                        // glows once, in the card's hue (prd §384).
+                        .landFlash(item.id == railPicked ? railPickTick : 0, tint: Self.mark)
+                        .padding(.top, DS.Space.s1)
+                }
+
+                if let note = CloudflareRunway.coverageNote(uncovered: runway.uncovered,
+                                                            zonesSeen: runway.zonesSeen) {
+                    Text(note)
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, DS.Space.s3)
+                }
             }
         }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s2)
+        .dsRoomHeadBlock()
+        .dsRoomHeadPlacement()
     }
 
     /// The card's two sentences — the one place the two states differ. Both

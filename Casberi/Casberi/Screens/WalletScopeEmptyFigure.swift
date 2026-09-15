@@ -26,7 +26,7 @@ struct WalletScopeEmptyFigure: View {
     /// expansion that puts the words at the top of a 300pt box rather than
     /// floating in the middle of it.
     ///
-    /// **False on Home's crown (prd §760).** That crown is not in a slot —
+    /// **False on Home's crown (prd §761).** That crown is not in a slot —
     /// §757 dropped `DSRoomSlot`'s floor there, and it never carried the
     /// scope's pad, so keeping either would put these words 16pt right of the
     /// balance they replace and hand back the 300pt box §757 removed, with a
@@ -34,7 +34,7 @@ struct WalletScopeEmptyFigure: View {
     var inSlot: Bool = true
 
     var body: some View {
-        // `.home` returned nil for both until §760 and never reached here; it
+        // `.home` returned nil for both until §761 and never reached here; it
         // has words now, and this is still the one place they are drawn.
         if let words = section.emptyBody {
             DSEmptyState(headline: section.emptyHeadline.map { Text($0) },

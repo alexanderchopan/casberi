@@ -71,6 +71,20 @@ enum DSRoomChassis {
     /// for when reading any screenshot of this change.
     static let visualSlot: CGFloat = 300
 
+    /// **THE HEIGHT OF EVERY ROOM'S LEAD (prd §760, user: "you know how wallet
+    /// and devnets use a template that is slot at the top? i'd like all rooms
+    /// to have that same dimension for their lead so it looks uniform").**
+    ///
+    /// The wallet family's head was `visualSlot` inside `DSRoomScopeChrome`'s
+    /// `s2` of vertical padding — this is that block's outer height, spelled
+    /// from the same two terms. §757 has since let the wallet family's HOME
+    /// crown drop the slot's floor, so on Home it is a ceiling there and a
+    /// fixed height everywhere else.
+    /// Every other room's lead takes it: a `Head` card, the insight heroes and
+    /// the cover. A lead with less to say keeps the air under it; one with more
+    /// gives up whole rows through `LeadFit` and counts them.
+    static let leadHeight: CGFloat = visualSlot + 2 * DS.Space.s2
+
     // **THE THREE GAPS WERE TIGHTENED ONE RUNG (prd §495, user: "should we
     // move the silouhette rail and the toggle rail higher on both vibenet and
     // wallet to let more of the lists show" → "just a tiny bit higher… so

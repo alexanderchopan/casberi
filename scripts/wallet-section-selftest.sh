@@ -100,7 +100,7 @@ let emptyBodies = WalletSection.allCases.compactMap(\.emptyBody)
 check(Set(emptyBodies).count == emptyBodies.count, "no two scopes explain themselves the same way")
 let emptyHeads = WalletSection.allCases.compactMap(\.emptyHeadline)
 check(Set(emptyHeads).count == emptyHeads.count, "no two scopes name the same empty state")
-// **HOME CAN BE EMPTY, AND IT SAYS SO (prd §760).** This asserted the opposite
+// **HOME CAN BE EMPTY, AND IT SAYS SO (prd §761).** This asserted the opposite
 // until then — "home carries no empty copy, because it can never be empty" —
 // on the premise that its crown IS its content. `walletTilesSection`'s own gate
 // disproves it: no total, no line, no warning, no composition and no recent row
@@ -217,7 +217,7 @@ mutate "an empty scope left with nothing to say — the dead control this ruling
   's/A position a price move could liquidate, and how close it stands\. Nothing here carries leverage\./ /'
 mutate "the ruled short noun becomes a question again" \
   's/String\(localized: "Permissions"\)/String(localized: "Who can reach it")/'
-mutate "home loses its empty copy again, so the wallet room says nothing when nothing came back (prd §760)" \
+mutate "home loses its empty copy again, so the wallet room says nothing when nothing came back (prd §761)" \
   's/case \.home:        return String\(localized: "No balance yet"\)/case .home:        return nil/'
 mutate "home's empty copy promises a load state it cannot know (§83)" \
   's/Nothing priced was found for them\./The balance will appear once the read lands./'
@@ -363,19 +363,19 @@ deny DSScopeRows.swift "dsWidgetSurface" \
 deny DSRoomScopeChrome.swift "dsWidgetSurface" \
   "a block on the wallet family's Home is on a plate again — the head, the acts and the readings are all content on the page (§757/§758)"
 
-# **THE CROWN'S EMPTY BRANCH SAYS WHAT IT WOULD HOLD (prd §760).**
+# **THE CROWN'S EMPTY BRANCH SAYS WHAT IT WOULD HOLD (prd §761).**
 # `walletTilesSection`'s gate is an honesty floor — nothing drawn rather than a
 # card with nothing in it — and for as long as `DSRoomSlot` reserved 300pt, that
 # rendered as a card of black; §757 dropped the floor and it renders as a room
 # that opens on `Actions` with no explanation. Home is a scope like the other
 # seven now: its words live in `WalletSection` and are drawn by the one figure.
 guard FeedScreen.swift "WalletScopeEmptyFigure(section: .home, inSlot: false)" \
-  "the wallet crown's empty branch draws nothing again, or hand-rolls its own copy instead of \`WalletSection\`'s (§611/§760)"
+  "the wallet crown's empty branch draws nothing again, or hand-rolls its own copy instead of \`WalletSection\`'s (§611/§761)"
 # `inSlot: false` is not decoration: the crown carries no horizontal pad of its
 # own and has no slot to fill since §757, so the slot form would put these words
 # 16pt right of the balance they replace, inside the box §757 removed.
 guard WalletScopeEmptyFigure.swift "var inSlot: Bool = true" \
-  "the empty figure lost its slot switch — Home's crown would take the scope slot's pad and its 300pt expansion (§760)"
+  "the empty figure lost its slot switch — Home's crown would take the scope slot's pad and its 300pt expansion (§761)"
 
 # **THE 300pt BOX ON HOME, AND THE DECK THAT IS NOT THERE.** `DSRoomSlot` pins
 # every scope figure to `visualSlot` so the scopes align and the drawings sized

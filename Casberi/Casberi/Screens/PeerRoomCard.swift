@@ -58,7 +58,7 @@ struct PeerRoomCard: View {
             // the headline.
             if drawn.count > 1 {
                 DSRoomChassis.Block {
-                    ForEach(Array(drawn.dropFirst().enumerated()), id: \.element.id) { index, rail in
+                    DSRoomChassis.Rows(items: Array(drawn.dropFirst())) { index, rail in
                         DSRoomChassis.Row(
                             title: rail.name,
                             line: PeerRoom.railLine(rail),

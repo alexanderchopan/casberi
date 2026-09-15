@@ -20,7 +20,7 @@ struct WalletbeatRoomCard: View {
 			footnotes: [.quiet(WalletbeatRoom.coverageNote(room))]) {
 			if !room.items.isEmpty {
 				DSRoomChassis.Block {
-					ForEach(Array(room.items.enumerated()), id: \.element.id) { index, item in
+					DSRoomChassis.Rows(items: room.items) { index, item in
 						DSRoomChassis.MarkedRow(
 							name: item.name,
 							// An unresolved incident is the one thing that outranks the

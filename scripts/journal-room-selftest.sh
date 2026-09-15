@@ -336,8 +336,11 @@ print("Rows")
 let ranked = JournalRoom.compose(
     spread(4, year: 2020) + spread(9, year: 2021, from: 400)
     + spread(2, year: 2022, from: 800) + spread(6, year: 2023, from: 1200))!
-check("fullest first", JournalRoom.rows(ranked).map(\.year) == [2021, 2023, 2020])
-check("capped at rowCap", JournalRoom.rows(ranked).count == JournalRoom.rowCap)
+check("fullest first", JournalRoom.rows(ranked).map(\.year) == [2021, 2023, 2020, 2022])
+// The cap is headRowCap's 8 since prd §760, so it needs more years than that to
+// bind; the lead's box then draws as many of those as fit.
+let crowded = JournalRoom.compose((1...10).reduce([]) { $0 + spread($1 + 1, year: 2010 + $1, from: $1 * 400) })!
+check("capped at rowCap", JournalRoom.rows(crowded).count == JournalRoom.rowCap)
 check("the strip is NEVER capped — a truncated span is a lie about when you started",
       ranked.years.count == 4)
 

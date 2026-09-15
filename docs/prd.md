@@ -79,11 +79,13 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §751 (heads cap at three rows) | `headRowCap` is 3 and every chart head's model spells `rowCap = 3` | amended by §760 (the cap is 8 and the lead's fixed box decides how many draw, dropping whole rows and counting them) |
+| §745 (the fixed slot does not apply to heads) | a head's honest height is what it has to say, so no head is held to `visualSlot` | amended by §760 (every room's lead is `leadHeight`; the reason stands — a head that runs long drops whole rows and counts them, never clips one silently) |
 | §708 | The only filled element on an account page is the input field — and the act drew its entry rows with no fill, its footers at 13pt, and its steps ticking green as they were done | amended by §729 (an entry row is a 44pt well holding out Paste; the act's words are 15pt; the step ticks are deleted) |
 | §36 (Fileverse clause) | Fileverse declined as "E2EE by design; revisit if they ship a hosted API" | amended by §669 (the DECLINE stands and the REASON does not — the reopening clause was met. `@fileverse/api` has been on npm since 2026-02-11: the key is a seed the UCAN, ECIES and ERC-4337 keys all derive from, gas is sponsored by a Pimlico paymaster, and a Swift client could skip their self-hosted Node satellite entirely. It is declined on POSITIONING instead — an editor, a doc list and a conflict story serve authoring, and §26 already ruled that Casberi collects and connects while Apple Notes authors. §36's other declines are untouched) |
 | §629 | The two ethrex seats are renamed, and migration v9 — a one-time pass gated on the `migrations.version` stamp — rewrites the rows already landed under the old names | amended by §647 (the rename stands; the repair could not. The store mirrors to CloudKit, so rows arrive after a one-shot has run and it never runs again — every one of those kept the old name, resolved to no seat, and reached a device as an unfoldable chip with a blank mark. `Corpus.renamedSources` makes RESOLUTION tolerant and `SourceRename.sweep` converges the corpus at every launch; v9 is deleted so there is one mechanism, not two) |
 | §647 | `Corpus.renamedSources` is a source→source table, and `SourceRename.sweep` converges the corpus off it at every launch | amended by §650 (the mechanism stands whole; the table's SHAPE widens. Migration v3 — the same one-shot, one seat over — also moved the rows' ref namespace (`dexscreener:` → `tokens:`), which a source→source entry cannot express, so an entry now carries an optional `refPrefix` pair and the sweep rewrites both strings. That half matters more than the name: the ref failure RENDERS PERFECTLY, and `TokenWatch.add`'s already-watching guard misses the row, so the same coin lands twice. §647's "two entries today" is three) |
-| §611 (the home exemption) | Every scope that can be empty says what it would hold — and `.home` carries no empty copy, "because it can never be empty: its crown IS its content" | amended by §760 — `walletTilesSection`'s own gate draws nothing when there is no total, no line, no warning, no composition and no recent row, so home CAN be empty and was rendering as a card of black. It carries `emptyHeadline`/`emptyBody` like every other scope; the obligation §611 wrote is unchanged, only the exemption from it |
+| §611 (the home exemption) | Every scope that can be empty says what it would hold — and `.home` carries no empty copy, "because it can never be empty: its crown IS its content" | amended by §761 — `walletTilesSection`'s own gate draws nothing when there is no total, no line, no warning, no composition and no recent row, so home CAN be empty and was rendering as a card of black. It carries `emptyHeadline`/`emptyBody` like every other scope; the obligation §611 wrote is unchanged, only the exemption from it |
 | §745 (the "one surface" clause) | Every room head composes one template AND draws it on the elevated card | superseded by §758 as the SURFACE only — `dsRoomHeadCard()` becomes `dsRoomHeadBlock()` and paints no plate, the fourth report in a week about that card (§749, §708, §757). §745's composition rule — a lead, notes, blocks, footnotes, one door — is untouched |
 | §757 (the head keeps its card) | The wallet family's Actions and Readings lose their plates and the HEAD keeps its, because a head card is what every room draws | superseded by §758 — "every room draws one" is a reason the change is big, not a reason it is wrong. The head's plate goes too, here and in the template for every other room; everything else in §757 stands |
 | §675 (the selection's animation set to nil) | `SelectionTravel`'s transaction stops animating, measured as a one-frame switch | superseded by §676 — that measurement ran on a COLD snapshot cache; warm it is 8 frames, because `matchedGeometryEffect` is a travel mechanism rather than an animation you can switch off. The effect is removed outright. |
@@ -56453,7 +56455,86 @@ static pass: the simulator sweep and the demo census are owed, and the gen-UI
 modules — 23 of the 44, and the surface the answer path is made of — are the
 design checkpoint.
 
-## §760 — Home is a scope that can be empty, and it says what it would hold (user: "re empty wallet head pls fix", 2026-09-15)
+## §760 — Every room's lead is the wallet head's height, and a head that runs long draws fewer rows and counts them (user: "you know how wallet and devnets use a template that is slot at the top? i'd like all rooms to have that same dimension for their lead so itlooks uniform", then on the fit "Show fewer rows", and on the picture covers "Yes, those too", 2026-09-15)
+
+**What was measured.** The wallet family's head is `visualSlot` (300pt) inside
+`DSRoomScopeChrome`'s `s2` of vertical padding, a 316pt card on iPhone. Every other
+room's lead sized itself to its content: a one-sentence head (AWS, a quiet Stripe
+account) was about 70pt, and Stripe with three deadlines about 390pt. So two rooms
+side by side started their lists at different heights.
+
+**The ruling.** `DSRoomChassis.leadHeight` is `visualSlot + 2 * DS.Space.s2`, the
+wallet card's outer height spelled from the same two terms. Three kinds of lead take it:
+
+- **The head cards.** `DSRoomChassis.Head`, and Cloudflare's hand-drawn head, which
+  now wears `dsRoomHeadCard()`.
+- **The insight heroes.** The topic map, the heatmap, the mosaic, the distribution
+  bar, On this day and the live stream. The topic map's cells fill what the header
+  leaves; the photograph and the stream frame fill the whole box.
+- **The cover** (`FeedLedeCard`). It has no surface (§749), so the part of the box
+  it doesn't use is plain page. The Mac walk's selection wash still bleeds past it.
+
+A lead with less to say keeps the air under it.
+
+**Too much for the box.** `DSRoomChassis.LeadFit` draws the head at a falling row
+limit: every row, then `headRowCap`, two, one, none. `ViewThatFits` takes the first
+spelling whose natural height fits. Each head's rows go through
+`DSRoomChassis.Rows`, which reads the limit and puts what it left off on a quiet
+line, "2 more". The line doesn't say "below", because a ranked year or a currency
+isn't a row further down the room (§83). This amends §745's "the fixed slot does not
+apply here": that ruling's reason, that no row may be lost silently, is kept by the
+count. The layout does the measuring rather than a sum of the type ramp, because a
+heading wraps to one line or two depending on its words.
+
+**The clip is the floor.** A lead, its notes and footnotes that are taller than the
+card with no rows at all (the largest Dynamic Type sizes) can still lose their
+bottom. The cover's line limits keep it inside the box at default sizes.
+
+**Not changed.** The heatmap card on the GitHub setup page is a reading on an
+account page, not a room's lead, and passes `fillsLead: false`. Privacy Pools' scoped head
+(a bare lead, a switcher, then a scope card) is three objects rather than one card,
+and keeps its heights. PostHog's discs are one row across and are not trimmed.
+Altana keeps its own cap of six, because its rows are tall enough that six never fits.
+
+**What enforces it.** `wallet-rooms-selftest.sh`'s Railgun guard now requires
+`DSRoomChassis.Rows(items: drawn)`, which still gives every drawn token a row.
+
+**Nothing in the box is air it could honestly fill (the same day, user: "the cover
+should always be there thats why i was confused about air … put as may rows in the
+header as fit … drawing grows into box and split thin bar splits as rows … up to
+six lines").** Four mockups were drawn and all four were built.
+
+- **As many rows as fit.** This amends §751's cap of three: `headRowCap` and the
+  twelve models' `rowCap` are 8, more than the box holds, and `LeadFit` falls from
+  every row down through seven to none. `room-heads-selftest.sh` now holds the
+  models to 8.
+- **A quiet head gives way to the cover.** `SourceHead.quietLine` is the head's
+  sentence when it has nothing else to draw: Cloudflare, Stripe and Polar with no
+  deadlines, Dodo Payments with no retries and one currency, CardPointers with no
+  dated offer, Peer with one rail, Altana with no keys, Railgun with no tokens,
+  Gnosis Pay with no history and one currency, and a Safe with nothing pending and
+  no module, guard or state line. Then the head draws no card, the room leads with
+  its newest thing (`FeedLedeCard`), and the sentence is the cover's `note`.
+  Walletbeat and L2BEAT keep their cards, because the directory link is the only
+  door to that screen (§421). If no cover qualifies (the newest row stands alone),
+  the room has no lead at all; that case was not built for.
+- **The drawings grow.** The heatmap draws the recent weeks that fill the box, at
+  the largest square that fits and never fewer than thirteen, captioned "Last N
+  weeks" when that is less than its window. The mosaic draws as many whole rows of
+  its medium's tile as the height holds, from up to sixteen tiles
+  (`FeedInsight.mosaic`). The distribution bar is a row per segment, with a
+  `ShareBar` on the largest segment's scale.
+- **The words cover reads up to six lines.** `ViewThatFits` over excerpts of six,
+  four and two lines.
+
+**UNSEEN on a device.** iOS simulator build, `room-chassis-audit.py`,
+`ds-template-audit.py`, `footnote-audit.py`, `design-ramp-audit.py`,
+`accessibility-audit.py`, `feed-row-skeleton-audit.py`, `room-heads-selftest.sh` and
+`wallet-rooms-selftest.sh` were run. First to look at on a phone: Stripe or Polar
+with many deadlines (the trim and its count), a quiet Stripe room (the cover and its
+line), a journal's heatmap, and a cover with a long words-only title.
+
+## §761 — Home is a scope that can be empty, and it says what it would hold (user: "re empty wallet head pls fix", 2026-09-15)
 
 **The report, from a screenshot.** The Wallet room opening on a card with nothing
 in it — no balance, no line, no words — above Actions and Readings.

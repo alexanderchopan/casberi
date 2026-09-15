@@ -139,7 +139,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// §611).** Nil for `home`, which is never empty: the crown is its content.
     var emptyHeadline: String? {
         switch self {
-        // **HOME HAS WORDS SINCE prd §760** (user: "re empty wallet head pls
+        // **HOME HAS WORDS SINCE prd §761** (user: "re empty wallet head pls
         // fix"). It returned nil on the premise that the room always has a
         // crown, and the crown's own gate disproves it: no total, no line, no
         // warning, no composition and no recent row draws NOTHING — which the

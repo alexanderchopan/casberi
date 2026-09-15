@@ -202,7 +202,7 @@ struct AgentRoom: Equatable {
     /// The card draws at most this many month ROWS under the strip. The strip
     /// itself is never capped — it is the span, and a truncated span is a lie
     /// about when you started.
-    static let rowCap = 3
+    static let rowCap = 8   // DSRoomChassis.headRowCap (prd §760)
 
     /// The head, or nil when this room has no shape to show.
     ///

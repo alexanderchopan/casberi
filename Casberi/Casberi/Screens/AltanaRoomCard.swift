@@ -78,7 +78,7 @@ struct AltanaRoomCard: View {
             if !card.drawn.isEmpty {
                 DSRoomChassis.Block {
                     VStack(alignment: .leading, spacing: DS.Space.s3) {
-                        ForEach(Array(card.drawn.enumerated()), id: \.element.id) { index, row in
+                        DSRoomChassis.Rows(items: card.drawn) { index, row in
                             keyRow(row, index: index)
                                 .chartArrival(index: index, reduceMotion: reduceMotion)
                         }

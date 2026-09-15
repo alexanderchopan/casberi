@@ -2527,6 +2527,9 @@ struct FeedScreen: View {
         /// refresh itself and would copy its whole record dictionary once per
         /// followed feed per body pass.
         var feedHealth: FeedRoomHealth.Standing? = nil
+        /// A head that had only its sentence (prd §760). Held as the head rather
+        /// than as the string so the balance mask is read when it is drawn.
+        var quietHead: SourceHead? = nil
     }
 
     /// The last head computed for each room, kept ACROSS the mount.
@@ -2839,15 +2842,18 @@ struct FeedScreen: View {
         let onScreen = visible.live
         let base = fullRoomRows(fallback: onScreen)
         let rows = base
+        let head = sourceHead(rows)
+        let quiet = head?.quietLine != nil
         let computed = RoomHeads(
-            sourceHead: sourceHead(rows),
+            sourceHead: quiet ? nil : head,
             topicMap: FeedInsight.topicMap(source: source, things: rows),
             distribution: FeedInsight.distribution(source: source, things: rows),
             mosaic: FeedInsight.mosaic(source: source, things: rows),
             // Reads the follow stores and `FeedFreshness`, never `rows` — the
             // whole point is a feed that has stopped producing rows, so a
             // verdict derived from the room's contents could not see it.
-            feedHealth: FeedRoomHealthSource.standing(for: source))
+            feedHealth: FeedRoomHealthSource.standing(for: source),
+            quietHead: quiet ? head : nil)
         Self.headMemo[headIdentity] = computed
         heads = computed
         SwipeClock.mark("heads", detail: "rows=\(rows.count)")
@@ -7840,7 +7846,9 @@ struct FeedScreen: View {
         } label: {
             FeedLedeCard(thing: thing,
                          selected: DS.isMac
-                            && chrome.walkSelected == thing.id.uuidString)
+                            && chrome.walkSelected == thing.id.uuidString,
+                         // A quiet head's sentence, under the cover (prd §760).
+                         note: heads?.quietHead?.quietLine)
                 .modifier(rowEntrance(0))
                 .contentShape(Rectangle())
         }
@@ -8268,6 +8276,47 @@ struct FeedScreen: View {
         // one card that differs only by a hue. It carries its source so the
         // card can pick that hue without storing a `Thing`.
         case agent(AgentRoom, source: String)
+
+        /// THE HEAD'S SENTENCE, WHEN THE SENTENCE IS ALL IT HAS (prd §760, user:
+        /// "the cover should always be there"). A head with no rows, no axis and
+        /// no strip is a line of words in a box the height of the wallet head,
+        /// so the room leads with its newest thing as the cover instead, and
+        /// this sentence rides under it. Nil for a head that draws anything
+        /// else, which keeps its card. Walletbeat and L2BEAT always keep theirs:
+        /// the directory link is the room's only door to that screen (§421).
+        var quietLine: String? {
+            let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+            switch self {
+            case .runway(let room):
+                guard room.items.isEmpty, let next = room.next else { return nil }
+                return CloudflareRunway.quietHeadline(days: next.days)
+            case .stripe(let room):
+                return room.items.isEmpty ? StripeRoom.headline(room) : nil
+            case .polar(let room):
+                return room.items.isEmpty ? PolarRoom.headline(room) : nil
+            case .dodoPayments(let room):
+                return room.retries.isEmpty && room.currencies.count <= 1
+                    ? DodoPaymentsRoom.headline(room, mask: mask) : nil
+            case .cardPointers(let room):
+                return room.deadlines.isEmpty ? room.headline : nil
+            case .peer(let room):
+                return room.rails.count <= 1 ? PeerRoom.headline(room) : nil
+            case .altana(let card):
+                return card.drawn.isEmpty ? card.headline : nil
+            case .railgun(let room):
+                return room.tokens.isEmpty ? RailgunRoom.headline(room) : nil
+            case .safe(let room):
+                // A module or a guard is a fact about money that keeps the card.
+                return room.entries.isEmpty && SafeRoom.note(room) == nil
+                    && SafeRoom.guardNote(room) == nil && SafeRoom.stateNote(room) == nil
+                    ? SafeRoom.headline(room) : nil
+            case .gnosisPay(let room):
+                return room.months.isEmpty && room.currencies.count <= 1
+                    ? GnosisPayRoom.headline(room, mask: mask) : nil
+            case .posthog, .walletbeat, .l2beat, .vibenet, .privacyPools, .x, .journal, .agent:
+                return nil
+            }
+        }
     }
 
     /// Which rooms may lead with an anniversary, and what it reaches into.
@@ -8297,7 +8346,8 @@ struct FeedScreen: View {
     /// over the same array, and a cached flag is one more thing that can
     /// disagree with what actually drew.
     private var sourceHeadIsAbsent: Bool {
-        sourceHead(liveVisible()) == nil
+        // A quiet head draws no card (prd §760), so it is absent here too.
+        sourceHead(liveVisible()).map { $0.quietLine != nil } ?? true
     }
 
     /// Resolve this room's own head, or nil. One `switch` so adding a fourth
@@ -8863,7 +8913,7 @@ struct FeedScreen: View {
                 // separate surface into the room.
                 .modifier(rowEntrance(0))
         } else {
-            // **A ROOM WITH NOTHING TO READ SAYS WHAT IT WOULD HOLD (prd §760,
+            // **A ROOM WITH NOTHING TO READ SAYS WHAT IT WOULD HOLD (prd §761,
             // user: "re empty wallet head pls fix").** The gate above is an
             // honesty floor — no balance, no line, no warning, no composition,
             // no recent row, so nothing is drawn rather than a card with

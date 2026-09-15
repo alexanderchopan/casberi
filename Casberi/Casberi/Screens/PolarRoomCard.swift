@@ -32,7 +32,7 @@ struct PolarRoomCard: View {
             if !room.items.isEmpty {
                 DSRoomChassis.Block {
                     rail
-                    ForEach(Array(room.items.enumerated()), id: \.element.id) { index, item in
+                    DSRoomChassis.Rows(items: room.items) { index, item in
                         DSRoomChassis.DeadlineRow(
                             name: item.name,
                             stamp: PolarRoom.chip(item),

@@ -84,8 +84,8 @@ grep -q 'frame(height: DSRoomChassis.figureHeight)' Casberi/Casberi/Screens/Card
 grep -q 'static var markSize: CGFloat { 56 }' Casberi/Casberi/Screens/AssetRoster.swift \
   || { echo "✗ the metric disc's size moved — DSRoomChassis.figureHeight was taken from it (§751)"; exit 1; }
 for f in StripeRoomSource PolarRoomSource WalletbeatRoomSource L2beatRoomSource DodoPaymentsRoom XRoom AgentRoom JournalRoom GnosisPayRoomSource; do
-  grep -qE 'static let rowCap = 3\b' "Casberi/Casberi/Model/$f.swift" \
-    || { echo "✗ $f.rowCap is not DSRoomChassis.headRowCap (3) — a chart head draws a different number of rows (§751)"; exit 1; }
+  grep -qE 'static let rowCap = 8\b' "Casberi/Casberi/Model/$f.swift" \
+    || { echo "✗ $f.rowCap is not DSRoomChassis.headRowCap (8) — a head is handed a different number of rows than the fit can choose from (§751, §760)"; exit 1; }
 done
 
 # The §219 failure inverted — see the probe's own comment.
