@@ -255,11 +255,18 @@ extension FeedScreen {
     /// only one is `WalletWatchField` on the account page, five taps away
     /// behind the room gear (user, 2026-09-15: *"the wallets follow button is
     /// missing and that's a fail"*). This is a DOOR to that field and not a
-    /// second field, so §466's "one way to watch a wallet" is intact: the tile
+    /// second field, so §466's "one way to watch a wallet" is intact: the row
     /// pushes `WalletScreen`, exactly as the four bridge setup screens' own
-    /// `Watch a wallet` slabs do, and it wears their word rather than a new
-    /// one. It rides the ALL card only — watching is something the room does,
-    /// not something one account does.
+    /// slabs do.
+    ///
+    /// **It says "Follow address", which is the user's word and not the app's
+    /// existing one** (2026-09-15, ruling on the first cut: *"as for watch a
+    /// wallet i would say follow address"*). The four setup screens still say
+    /// `Watch a wallet` for this same destination — a drift worth closing, and
+    /// a wider change than this pass.
+    ///
+    /// It rides the ALL card only, like every act in this family: following is
+    /// something the ROOM does, not something one account does.
     @ViewBuilder
     func walletScopeChromeSection(_ active: WalletSection,
                                   visible: [Thing],
@@ -295,7 +302,7 @@ extension FeedScreen {
                 },
                 acts: { slot in
                     if slot.id.isEmpty {
-                        DSPushRow(title: Text("Watch a wallet"),
+                        DSPushRow(title: Text("Follow address"),
                                   subtitle: Text("Paste an address, or connect a wallet app"),
                                   prominent: true,
                                   action: { route.pushBridge(.wallet) }) {
