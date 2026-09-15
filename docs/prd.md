@@ -55272,3 +55272,79 @@ The one-row-grammar collapse the same mock proposed (frame C: one anatomy, 26pt
 lead on every row) is a separate ruling and is not taken here. **UNSEEN on a
 device**: the build compiles; the 3% step was chosen from a browser mock on a
 Mac LCD, and the user is to look at it on the phone before it ships.
+
+## §744 — Every feed row is one anatomy: a 26pt lead, the name and the time, one line, and whatever is its content below (user: "what parts of the app make it feel vibecoded?", then on the spec "one shape every row uses: picture on the left, name and time, one line, maybe some tiles": "awesome do it all", 2026-09-15)
+
+**The template is `Design/DSFeedRow.swift`, and eighteen row species compose it.**
+`BandRow`, `ReadingRow`, `ExcerptRow`, `MediaRow`, `MusicRow`, `TokenRow`,
+`BundleRow`, `StripRow`, `PostCard`, `SocialThreadCard`, `AppReviewRow`,
+`TakeawayCard`, `CursorRow`, both Walletbeat rows, both L2BEAT rows, and
+`VibenetEventRow`; the card-offers room's row in `FeedScreen` too. Only their
+BODIES changed — every derivation, clamp, ladder and liveness guard above them is
+untouched. `ApprovalCard` stays its own shape, because two buttons that sign or
+refuse are not a row's single tap.
+
+**What was wrong, measured before touching anything.** §586 had found five rows
+agreeing on a skeleton and made an audit of the agreement; nobody had looked at the
+other thirteen, because the audit's list was the five that agreed. Across the
+eighteen: the lead was 26, 36, 38, 44 or 56pt, or absent (`AppReviewRow`,
+`CursorRow`, `TakeawayCard`); the name was 12, 13 or 17pt, regular, medium or
+semibold; the picture sat left of the name, right of it or under it; a bundle's
+count was a trailing figure where every other row put the time. Scanned down All
+that is nine apps. The user had approved the mock of the alternative (frame C of
+`design/row-grammar/row-grammar-mocks.html`) and caught its one flaw before code
+existed — a post's text column 10pt right of every other.
+
+**The anatomy.**
+
+| slot | what | rung |
+|---|---|---|
+| lead | a source's mark, or a person's face at `Face.rowCircle`, always framed at `Mark.row` | 26pt |
+| name | the title; a person on a post; the source on a bundle | `body17`, regular |
+| trailing | the time; a signed amount over the time; a token's price; a watched rating's stage | on the name's baseline |
+| line | who and where, the count, the excerpt | `callout15`, secondary |
+| below | tiles at `Mark.tile` (§730), a post's words and media, a rating's bars | — |
+
+**One judgement taken against the mock, and why.** Frame C put the SOURCE on the
+name line and the title on the line under it. For a single thing the title leads
+here and the source is the line's first clause in rooms that mix sources. The
+feed is for reading (the core loop is capture then read), and a headline at 15pt
+secondary under the word "YouTube" is the reading the app exists for, demoted.
+A post keeps the person on top, as the mock had it, because a post's words are
+its content and sit below. If the mock's order is wanted instead it is one
+argument in `BandRow`'s call.
+
+**What each row gave up in the row, all of it still in the sheet.**
+
+- **The 17pt source badge over a face** (`sourceBadgeView`) is deleted. It was
+  the only row that put two marks in the lead; in a mixed room the line names
+  the source now. Its `design-ramp-audit` exemption went with it.
+- **A bundle's and a strip's trailing count** is the line ("6 screenshots").
+- **Right-hand art** (the art that rode beside an identity, a video still, a
+  reading thumb, an album cover in the lead) is a tile under the name. A
+  video still keeps its aspect at tile height rather than cropping to a square.
+  The day's anchor (§254) keeps its wide frame, under the name.
+- **The token's 36pt disc and semibold name.** Price and move stay trailing.
+- **The thread's 2pt rule down the replies** is deleted. It was a line, and
+  nothing in this app draws one (§8).
+- **L2BEAT's and Walletbeat's 38pt marks** are 26pt, their status dots 9pt with
+  a ring in the plate's fill (§743), not the page's.
+- **Cursor's outcome word before the title** moves to a quiet line under the
+  report, in its attention ink.
+
+**What enforces it.** `feed-row-skeleton-audit.py` now checks the template once
+(the name at `body17`, the rhythm, the 26pt framed lead, the line at
+`callout15`, no `AnyView`) and each row for composing it and saying when; three
+rows trail something other than a time, each with a reason. **The list is proven
+complete now**: the audit reads every species `shapedRow` and `socialRow`
+construct and fails on one that is neither a listed row nor a reasoned non-row,
+which is exactly how thirteen rows went unaudited under §586.
+
+`WalletRow`'s mark became `WalletMarkView(mark:size:)` so a feed row can draw it
+at 26pt; `WalletRow` itself is unchanged and still owns the wallet room's lists.
+
+**UNSEEN on a device.** iOS and Mac Catalyst build; the row audit and the row
+harnesses pass. No screenshot was taken, by the standing rule that visual work is
+checked by mock and build rather than the simulator. The first thing to look at
+on a phone is a post with a quote and media in the Social room, and a Notes row
+whose three-line excerpt is now 15pt rather than 13pt.

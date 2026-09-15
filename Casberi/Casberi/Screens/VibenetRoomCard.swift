@@ -3571,31 +3571,12 @@ struct VibenetEventRow: View {
 
     var body: some View {
         if thing.isLive {
-            // **ONE ANATOMY WITH THE OTHER THREE ROOMS (prd §588).** This was
-            // a hand-rolled `HStack`, and it differed from `WalletRow` in
-            // three ways, NONE of them a type size — which is why these four
-            // lists read as four different fonts while a grep of the ramp
-            // found nothing wrong. The mark was a rounded SQUARE where every
-            // other room's is a circle; the second line was `label12` (12
-            // MEDIUM, secondary) against the shared row's `subhead13` (12
-            // regular, tertiary); and the title was `lineLimit(2)` against a
-            // clamped one, so this room's rows stood at two heights.
-            //
-            // **THE CLOCK'S GRAMMAR IS KEPT WHOLE** (prd §495, user: *"would
-            // it be better if the alert went the whole way across and the
-            // timestamp was on line two?"* — neither, as it turned out: the
-            // layout was fine and the FORMAT was the outlier). This row said
-            // "23 hours ago", ~110pt of a 402pt screen, where every `BandRow`
-            // says "23h" through `LiveTimeText`. Same component, still
-            // ticking on the minute.
-            //
-            // Its `.dsText(.label11)` is GONE rather than moved: it was dead
-            // code, since `LiveTimeText` carries its own `subhead13` and the
-            // innermost font wins. Both resolve to 12pt, so the drift was
-            // invisible — and now it is one rung, said once.
-            WalletRow(mark: mark,
-                      title: thing.summary ?? thing.title,
-                      subtitle: accountLabel) {
+            // ONE ANATOMY (prd §744): the event's glyph at the 26pt lead, not
+            // `WalletRow`'s 36, so this room's column matches every other.
+            DSFeedRow(name: thing.summary ?? thing.title, nameLines: 2,
+                      line: Text(accountLabel)) {
+                WalletMarkView(mark: mark, size: DS.Mark.row)
+            } trailing: {
                 LiveTimeText(date: thing.capturedAt, color: DS.textTertiary)
                     .lineLimit(1).fixedSize()
             }

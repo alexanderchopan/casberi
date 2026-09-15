@@ -186,10 +186,6 @@ def widget_rung_findings(path=TYPOGRAPHY):
 
 # Each entry is a ruling: "this size is not the ramp's to decide."
 KNOWN_EXEMPT = {
-    # Sized by the 17pt well it overlays, not by anything beside it — the same
-    # carve-out `DS.Face` already makes for `SourceChips.iconSize` and the
-    # Sources Tray, whose marks are sized by their own grid.
-    ("Casberi/Casberi/Screens/ShapedRows.swift", "sourceBadgeView"),
     # A BITMAP RESOLUTION, not a layout size (prd §619, 2026-09-05). The pull's
     # rain deals CALayer tiles, and `face(for:scale:)` renders each app's mark
     # ONCE through `ImageRenderer` at a fixed 32pt to cache a CGImage. The

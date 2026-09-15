@@ -9808,16 +9808,21 @@ struct FeedScreen: View {
             // row in the single Button that opens the sheet, and a second one
             // here would be a button inside a button.
             case .cardPointers:
-                WalletRow(mark: CardPointers.initials(card: thing.authorHandle).isEmpty
-                            ? .kind(thing.kind)
-                            : .monogram(CardPointers.initials(card: thing.authorHandle),
-                                        tint: DS.textSecondary),
-                          title: CardPointers.merchant(title: thing.title,
-                                                       card: thing.authorHandle),
+                // ONE ANATOMY (prd §744): the card's initials at the 26pt lead,
+                // not `WalletRow`'s 36, so this room's column matches every other.
+                DSFeedRow(name: CardPointers.merchant(title: thing.title,
+                                                      card: thing.authorHandle),
+                          nameLines: 1,
                           // Their words for what the offer gives, never a
                           // number we made (§420's no-total refusal, on the row
                           // this time).
-                          subtitle: thing.summary) {
+                          line: DSFeed.line(thing.summary)) {
+                    WalletMarkView(mark: CardPointers.initials(card: thing.authorHandle).isEmpty
+                                     ? .kind(thing.kind)
+                                     : .monogram(CardPointers.initials(card: thing.authorHandle),
+                                                 tint: DS.textSecondary),
+                                   size: DS.Mark.row)
+                } trailing: {
                     if let due = thing.dueAt {
                         Text(FeedLedeFace.dueLine(due))
                             .dsText(.subhead13)

@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""THE FEED ROW SKELETON (prd §586) — one grammar for the surface people read.
+"""THE FEED ROW SKELETON (prd §586, §744) — one anatomy for the surface people read.
+
+**Since §744 the skeleton is a TEMPLATE, `Design/DSFeedRow.swift`, and this
+audit asserts that every feed row composes it.** The five-row agreement below
+was what §586 found; §744 found the other fifteen rows it never listed (a 36pt
+token disc, a 38pt L2BEAT mark, a 44pt album lead, a 56pt reading thumb, a post
+whose name was 13pt) and put all of them through one view. The template owns the
+lead size, the name rung and the rhythm, so those are checked ONCE, on the
+template; each row is checked for composing it and for saying when.
 
 The feed is the product, and a reader learns a row shape ONCE. Measured
 2026-09-03, the seven row species in `ShapedRows.swift` already agree on a
@@ -32,21 +40,44 @@ from __future__ import annotations
 import re, sys, pathlib
 
 ROWS = "Casberi/Casberi/Screens/ShapedRows.swift"
+TEMPLATE = "Casberi/Casberi/Design/DSFeedRow.swift"
+FEEDSCREEN = "Casberi/Casberi/Screens/FeedScreen.swift"
 # Every directory whose views may animate a figure — checked by `check_rolls`.
 ROLL_DIRS = ["Casberi/Casberi/Screens", "Casberi/Casberi/Design",
              "Casberi/Casberi/Shell", "Casberi/Casberi/GenUI"]
 
-# Every row species the feed draws. A new one must be added here WITH a reason
-# if it cannot meet the skeleton — the curated-set shape `catalog-sync.sh` uses,
-# so the list stays provably complete rather than silently short.
-FEED_ROWS = ["BandRow", "ReadingRow", "ExcerptRow", "MediaRow", "MusicRow",
-             "TokenRow"]
+# Every row species the feed draws, and the file it lives in. `check_complete`
+# proves this list against what `FeedScreen`'s row builders actually construct,
+# so a new species cannot land without being named here.
+FEED_ROWS = {
+    "BandRow": ROWS, "ReadingRow": ROWS, "ExcerptRow": ROWS, "MediaRow": ROWS,
+    "MusicRow": ROWS, "TokenRow": ROWS, "BundleRow": ROWS, "StripRow": ROWS,
+    "PostCard": ROWS, "SocialThreadCard": ROWS, "AppReviewRow": ROWS,
+    "TakeawayCard": ROWS,
+    "CursorRow": "Casberi/Casberi/Screens/CursorRow.swift",
+    "WalletbeatWalletRow": "Casberi/Casberi/Screens/WalletbeatRow.swift",
+    "WalletbeatNewsRow": "Casberi/Casberi/Screens/WalletbeatRow.swift",
+    "L2beatChainRow": "Casberi/Casberi/Screens/L2beatRow.swift",
+    "L2beatNewsRow": "Casberi/Casberi/Screens/L2beatRow.swift",
+}
+
+# Constructed by a row builder but NOT a feed row, and why.
+NOT_ROWS = {
+    "ApprovalCard": "a consent card: two buttons that sign or refuse, which a "
+                    "row's single tap-to-open cannot carry (prd §83)",
+    "VibenetEventRow": "composes DSFeedRow in VibenetRoomCard.swift, checked by "
+                       "name below",
+}
 
 # A row that trails something other than a time, and why.
 KNOWN_NO_TIME = {
     "TokenRow": "trails the live price (price16) — a watched token's row is "
                 "about what it costs now, and a timestamp would report when we "
                 "last fetched",
+    "WalletbeatWalletRow": "a watched wallet's standing rating trails its stage — "
+                           "a rating is not an event, so it has no when",
+    "L2beatChainRow": "a watched chain's standing assessment trails its stage — "
+                      "an assessment is not an event, so it has no when",
 }
 
 def body(src: str, name: str) -> str | None:
@@ -87,28 +118,76 @@ def strip_comments(src: str) -> str:
             out.append(src[i]); i += 1
     return "".join(out)
 
-def check(src: str) -> list[str]:
+def check(src: str, only: "str | None" = None) -> list[str]:
+    """Each row composes the template and says when. `src` is one file's text;
+    rows that live in another file are skipped unless `only` names them."""
     bad = []
-    for name in FEED_ROWS:
+    for name, path in FEED_ROWS.items():
+        if only is not None and name != only:
+            continue
         b = body(src, name)
         if b is None:
-            bad.append(f"{name}: not found in ShapedRows.swift — the feed-row "
-                       f"list is stale, so this audit is covering less than it claims")
+            bad.append(f"{name}: not found in {path} — the feed-row list is stale, "
+                       f"so this audit is covering less than it claims")
             continue
         b = strip_comments(b)
-        if ".dsText(.body17)" not in b:
-            bad.append(f"{name}: the title is not at body17 — the feed's own reading rung")
-        if "DS.Space.s2" not in b:
-            bad.append(f"{name}: no vertical rhythm (DS.Space.s2) — rows would sit at two heights")
+        if "DSFeedRow(" not in b:
+            bad.append(f"{name}: does not compose DSFeedRow — a row that draws its "
+                       f"own HStack picks its own lead, name rung and edge (prd §744)")
         if "LiveTimeText" not in b and name not in KNOWN_NO_TIME:
             bad.append(f"{name}: nothing in the trailing slot — every feed row "
                        f"says WHEN there, or is named in KNOWN_NO_TIME with why")
     for name in KNOWN_NO_TIME:
+        if only is not None and name != only:
+            continue
         b = body(src, name)
         if b and "LiveTimeText" in strip_comments(b):
             bad.append(f"{name}: is exempted from the trailing time but draws one — "
                        f"remove the exemption, it is now a snooze")
     return bad
+
+
+def check_template(src: str) -> list[str]:
+    """The anatomy lives in ONE place; these are its load-bearing facts."""
+    b = strip_comments(src)
+    bad = []
+    for needle, why in [
+        (".dsText(.body17)", "the name is not at body17 — the feed's own reading rung"),
+        ("DS.Space.s2", "no vertical rhythm (DS.Space.s2) — rows would sit at two heights"),
+        ("DS.Mark.row", "the lead is not the 26pt row mark — the column loses its one edge"),
+        (".frame(width: Self.leadSize, height: Self.leadSize)",
+         "the lead is not framed — a 28pt face or a 38pt mark would push the column right"),
+        (".dsText(.callout15)", "the line is not at callout15"),
+    ]:
+        if needle not in b:
+            bad.append(f"DSFeedRow: {why}")
+    if "AnyView" in b:
+        bad.append("DSFeedRow: erases through AnyView — the template draws for every "
+                   "visible row, and depth is the first-frame stack overflow")
+    return bad
+
+
+def check_complete(feedscreen: str) -> list[str]:
+    """Every species a row builder constructs is a listed row or a reasoned
+    non-row — so the list above cannot silently fall short."""
+    src = strip_comments(feedscreen)
+    built = set()
+    for fn in ("private func shapedRow(", "private func socialRow("):
+        i = src.find(fn)
+        if i < 0:
+            return [f"FeedScreen: `{fn}` is gone — completeness cannot be proven"]
+        j = src.find("\n    private ", i + 1)
+        j2 = src.find("\n    func ", i + 1)
+        end = min(x for x in (j, j2, len(src)) if x > 0)
+        built |= set(re.findall(r'\b([A-Z]\w*(?:Row|Card))\(', src[i:end]))
+    built -= {"DSFeedRow", "WalletRow"}
+    bad = []
+    for name in sorted(built):
+        if name not in FEED_ROWS and name not in NOT_ROWS:
+            bad.append(f"{name}: a row builder constructs it and it is neither a "
+                       f"listed feed row nor a reasoned non-row")
+    return bad
+
 
 # Every surface that draws a SIGNED AMOUNT in a row, and the file it lives in.
 # A row that moves money states the figure in its trailing slot at one rung —
@@ -188,31 +267,50 @@ def check_rolls(files: "list[tuple[str, str]]") -> "list[str]":
 
 def self_test() -> None:
     good = ("struct ARow: View {\n  var body: some View {\n"
-            "    Text(x).dsText(.body17)\n    LiveTimeText(date: d)\n"
-            "  }.padding(.vertical, DS.Space.s2)\n}\n")
+            "    DSFeedRow(name: x) { m } trailing: {\n    LiveTimeText(date: d)\n"
+            "  } }\n}\n")
     cases = [
-        ("a clean row passes", good.replace("ARow", "BandRow"), False),
-        ("a title off the reading rung is flagged",
-         good.replace("ARow", "BandRow").replace("body17", "heading22"), True),
+        ("a row composing the template passes", good.replace("ARow", "BandRow"), False),
+        ("a row drawing its own HStack is flagged",
+         good.replace("ARow", "BandRow").replace("DSFeedRow(name: x)", "HStack"), True),
         ("a row with no trailing time is flagged",
          good.replace("ARow", "BandRow").replace("    LiveTimeText(date: d)\n", ""), True),
-        ("a row with no vertical rhythm is flagged",
-         good.replace("ARow", "BandRow").replace("DS.Space.s2", "12"), True),
-        ("a missing row species is flagged, not skipped", "", True),
-        ("an exempt row keeps the rest of the skeleton",
+        ("a missing row species is flagged, not skipped", "struct Other: View {}\n", True),
+        ("an exempt row keeps the template",
          good.replace("ARow", "TokenRow").replace("    LiveTimeText(date: d)\n", ""), False),
         ("an exemption that no longer applies is flagged",
          good.replace("ARow", "TokenRow"), True),
-        ("a commented-out time does not satisfy the check",
-         good.replace("ARow", "BandRow").replace("LiveTimeText(date: d)", "// LiveTimeText"), True),
+        ("a commented-out template does not satisfy the check",
+         good.replace("ARow", "BandRow").replace("DSFeedRow(name: x)", "// DSFeedRow(name: x)\n HStack"), True),
     ]
     for label, src, should_fail in cases:
-        # only the row under test is present; the others are absent by design,
-        # so compare against the findings for THAT row alone
-        name = re.search(r'struct (\w+):', src).group(1) if src else None
-        found = [f for f in check(src) if name and f.startswith(name)]
-        failed = bool(found) if name else bool(check(src))
+        name = "BandRow" if "BandRow" in src or "Other" in src else "TokenRow"
+        failed = bool(check(src, only=name))
         if failed != should_fail:
+            print(f"  ✗ self-test: {label}"); sys.exit(1)
+        print(f"  ok   {label}")
+    tmpl = ("struct DSFeedRow { .dsText(.body17) DS.Space.s2 DS.Mark.row "
+            ".frame(width: Self.leadSize, height: Self.leadSize) .dsText(.callout15) }")
+    for label, src, should_fail in [
+        ("the template's facts pass", tmpl, False),
+        ("a template whose lead is unframed is flagged",
+         tmpl.replace(".frame(width: Self.leadSize, height: Self.leadSize)", ""), True),
+        ("a template off the reading rung is flagged", tmpl.replace("body17", "heading22"), True),
+        ("a template erasing through AnyView is flagged", tmpl + " AnyView(", True),
+    ]:
+        if bool(check_template(src)) != should_fail:
+            print(f"  ✗ self-test: {label}"); sys.exit(1)
+        print(f"  ok   {label}")
+    fs = ("    private func shapedRow(_ t: Thing) {\n  BandRow(thing: t)\n  NEWROW\n}\n"
+          "    private func socialRow(_ t: Thing) {\n  PostCard(thing: t)\n}\n"
+          "    private func other() {}\n")
+    for label, src, should_fail in [
+        ("every constructed row is listed", fs.replace("NEWROW", ""), False),
+        ("an unlisted row species is flagged", fs.replace("NEWROW", "ShinyRow(thing: t)"), True),
+        ("a reasoned non-row passes", fs.replace("NEWROW", "ApprovalCard(thing: t)"), False),
+        ("a vanished builder is flagged", "nothing here", True),
+    ]:
+        if bool(check_complete(src)) != should_fail:
             print(f"  ✗ self-test: {label}"); sys.exit(1)
         print(f"  ok   {label}")
     rolls = [
@@ -258,18 +356,28 @@ if __name__ == "__main__":
     if "--self-test" in sys.argv:
         self_test(); sys.exit(0)
     self_test()
-    src = pathlib.Path(ROWS).read_text()
+    bad = []
+    by_file: "dict[str, str]" = {}
+    for name, path in FEED_ROWS.items():
+        src = by_file.setdefault(path, pathlib.Path(path).read_text())
+        bad += check(src, only=name)
+    vib = pathlib.Path("Casberi/Casberi/Screens/VibenetRoomCard.swift").read_text()
+    vb = body(vib, "VibenetEventRow")
+    if vb is None or "DSFeedRow(" not in strip_comments(vb):
+        bad.append("VibenetEventRow: does not compose DSFeedRow (prd §744)")
+    bad += check_template(pathlib.Path(TEMPLATE).read_text())
+    bad += check_complete(pathlib.Path(FEEDSCREEN).read_text())
     files = []
     for d in ROLL_DIRS:
         for f in sorted(pathlib.Path(d).glob("*.swift")):
             files.append((str(f), f.read_text()))
-    bad = check(src) + check_rolls(files) + check_money({})
+    bad += check_rolls(files) + check_money({})
     if bad:
         for b in bad: print(f"✗ {b}")
         sys.exit(1)
     rolls = sum(s.count("numericText") for _, s in files)
-    print(f"✓ feed row skeleton: {len(FEED_ROWS)} row species, "
-          f"{len(KNOWN_NO_TIME)} trailing a price with a reason; "
+    print(f"✓ feed row skeleton: {len(FEED_ROWS) + 1} row species compose DSFeedRow, "
+          f"{len(KNOWN_NO_TIME)} trailing something other than a time with a reason; "
           f"{rolls} rolling figures, all tabular; "
           f"{len(MONEY_ROWS)} money rows at one rung, "
           f"{len(KNOWN_NO_AMOUNT)} stating no amount with a reason")
