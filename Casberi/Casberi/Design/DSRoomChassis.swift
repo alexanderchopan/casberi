@@ -128,7 +128,7 @@ enum DSRoomChassis {
     /// the groupings inside the thing it separates, and under a filled tile
     /// with a shadow that reads as contact. The rule above is unchanged and is
     /// the reason for the direction: this gap says "chrome ends here", and it
-    /// has to out-state `slabPadding` and `slabDeckGap` by more than a hair to
+    /// has to out-state `slabPadding` by more than a hair to
     /// do it.
     static let contentGap: CGFloat = DS.Space.s3
 
@@ -166,10 +166,10 @@ enum DSRoomChassis {
     /// first row is a different question and stays open.
     static let slabPadding: CGFloat = DS.Space.s1
 
-    /// Rail deck → switcher deck. Equal to the padding around them on purpose:
-    /// a container whose inner gap matches its own margin reads as one evenly
-    /// packed object, where a wider inner gap reads as two things sharing a box.
-    static let slabDeckGap: CGFloat = DS.Space.s1
+    // `slabDeckGap` is deleted with `DSRoomRailSlab` (prd §744): it spaced
+    // that slab's two decks and nothing else. `slabPadding` survives because
+    // `slabInnerRadius` derives from it, and `slabRadius` because the shell
+    // and the face rail still draw glass at it.
 
     /// The slab's own corner — `DS.Radius.widget`, because that is the rung for
     /// an object of this size and this is not a new kind of thing.

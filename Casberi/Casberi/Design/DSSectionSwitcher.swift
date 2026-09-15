@@ -70,25 +70,20 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
     /// optional so the caller is never forced to decide which one "the" alarm
     /// belongs to — several can want you at once, and each says so for itself.
     var attention: Set<Scope> = []
-    /// **Was the lower deck of `DSRoomRailSlab`, which is deleted (prd §744).**
-    /// The flag survives with no caller setting it true; it is the next thing
-    /// to retire here, and left standing only because collapsing it touches
-    /// five screens that still draw this switcher un-embedded.
-    ///
-    /// **Drawn as the lower deck of a slab rather than standing on
-    /// its own** (prd §547, 2026-09-01).
-    ///
-    /// It gives up exactly three things, each of which becomes a DOUBLE inside
-    /// a container that already provides it: its glass, its own `.padding(4)`,
-    /// and — the one worth naming — the `fillFaint` capsule under every chip at
-    /// rest. A pill inside a pill is the doubling this fusion exists to remove,
-    /// so embedded the slab IS the container and only the PICK fills.
-    ///
-    /// The selected fill also changes shape, from a capsule to the slab's own
-    /// concentric rounded rect, so it is the same mark the face deck above
-    /// draws. Everything behavioural is untouched: the travel, its Reduce
-    /// Motion branch, the re-centre, the dot, the edge ease.
-    var embedded: Bool = false
+    // **`embedded` IS DELETED (prd §744, 2026-09-15).** It was §547's flag for
+    // drawing this switcher as the lower deck of `DSRoomRailSlab` — no glass of
+    // its own, no outer padding, no rest fill, and a concentric rounded-rect
+    // pick instead of a capsule — so that a pill inside a pill did not double.
+    // The slab is gone and no caller set it, which made every one of those
+    // branches unreachable. The five screens that still draw this switcher all
+    // drew it un-embedded, so what survives is exactly what they were already
+    // getting.
+    //
+    // **§553's edge fade is NOT deleted with it.** It was reported on the
+    // embedded strip and lived in that branch, but the ruling is about any
+    // overflowing strip — a cut word reads as a layout fault rather than as
+    // more content — so it moves onto the surviving branch rather than going
+    // out with the mode it happened to be written in.
     let onPick: (Scope) -> Void
 
     @Namespace private var ns
@@ -96,12 +91,7 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
 
     /// The shape a pick fills, and the shape a tap is caught by — one value, so
     /// the target can never drift from the thing that looks tappable.
-    private var pickShape: AnyShape {
-        embedded
-            ? AnyShape(RoundedRectangle(cornerRadius: DSRoomChassis.slabInnerRadius,
-                                        style: .continuous))
-            : AnyShape(Capsule(style: .continuous))
-    }
+    private var pickShape: AnyShape { AnyShape(Capsule(style: .continuous)) }
 
     /// **A CUT WORD IS NOT AN AFFORDANCE (prd §553 amendment, 2026-09-01).**
     ///
@@ -139,41 +129,33 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-            Group {
-                if embedded {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 2) {
-                            ForEach(sections) { section in
-                                chip(section)
-                            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                DSGlassContainer(spacing: 2) {
+                    HStack(spacing: 2) {
+                        ForEach(sections) { section in
+                            chip(section)
                         }
-                        .background(GeometryReader { g in
-                            Color.clear.onAppear { contentWidth = g.size.width }
-                                .onChange(of: g.size.width) { _, w in contentWidth = w }
-                        })
                     }
-                    .background(GeometryReader { g in
-                        Color.clear.onAppear { viewportWidth = g.size.width }
-                            .onChange(of: g.size.width) { _, w in viewportWidth = w }
-                    })
-                    .mask(overflows ? AnyView(edgeFade) : AnyView(Color.black))
-                    .scrollBounceBehavior(.basedOnSize)
-                } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        DSGlassContainer(spacing: 2) {
-                            HStack(spacing: 2) {
-                                ForEach(sections) { section in
-                                    chip(section)
-                                }
-                            }
-                        }
-                        .padding(4)
-                    }
-                    .scrollBounceBehavior(.basedOnSize)
-                    .clipShape(Capsule(style: .continuous))
-                    .dsGlass(cornerRadius: 999)
                 }
+                .padding(4)
+                .background(GeometryReader { g in
+                    Color.clear.onAppear { contentWidth = g.size.width }
+                        .onChange(of: g.size.width) { _, w in contentWidth = w }
+                })
             }
+            .background(GeometryReader { g in
+                Color.clear.onAppear { viewportWidth = g.size.width }
+                    .onChange(of: g.size.width) { _, w in viewportWidth = w }
+            })
+            .scrollBounceBehavior(.basedOnSize)
+            // §553's fade, INSIDE the clip: it fades the chips, and the glass
+            // capsule painted behind them by `dsGlass` stays whole. Only when
+            // the strip actually overflows — a permanent fade would dim the
+            // last scope of every short strip, which is the same lie pointing
+            // the other way.
+            .mask(overflows ? AnyView(edgeFade) : AnyView(Color.black))
+            .clipShape(Capsule(style: .continuous))
+            .dsGlass(cornerRadius: 999)
             .onAppear { proxy.scrollTo(active.id, anchor: .center) }
             .onChange(of: active) { _, now in
                 withAnimation(DS.Motion.standard) { proxy.scrollTo(now.id, anchor: .center) }
@@ -222,11 +204,7 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
             .padding(.vertical, DS.Space.s2)
             .background {
                 ZStack {
-                    // Embedded, the SLAB is the container — see `embedded`. A
-                    // rest fill here would be a pill inside a pill.
-                    if !embedded {
-                        Capsule(style: .continuous).fill(DS.fillFaint)
-                    }
+                    Capsule(style: .continuous).fill(DS.fillFaint)
                     if isOn {
                         // `DS.tintDim` — the token whose documented job is exactly this
                         // ("tint at rest-chip opacity"), rather than a second

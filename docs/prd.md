@@ -55382,11 +55382,23 @@ verbs (`vibenetSendRow`) mounted as a `Section` BELOW the card, which put them
 under the list on any Home with history — §682's complaint one seat over, now
 structurally impossible because they are on the card.
 
-**What is left behind, named rather than hidden.** `DSSectionSwitcher.embedded`
-has no caller setting it true: it was the slab's doing. It is a defaulted
-parameter rather than a control on a screen, and collapsing it touches the five
-screens that still draw that switcher un-embedded, so it is the next cleanup
-here and not this pass's.
+**`DSSectionSwitcher.embedded` GOES TOO** (user: *"make the fix that you are
+talking about it"*). It was §547's flag for drawing the switcher as the slab's
+lower deck — no glass, no outer padding, no rest fill, a concentric
+rounded-rect pick instead of a capsule — so that a pill inside a pill did not
+double. With the slab deleted no caller set it, which made every one of those
+branches unreachable. The five screens that still draw this switcher all drew
+it un-embedded, so what survives is exactly what they were already getting, and
+`DSRoomChassis.slabDeckGap` goes with it (it spaced the slab's two decks and
+nothing else).
+
+**§553's edge fade is NOT deleted with the mode it lived in.** It was reported
+on the embedded strip and its code sat in that branch, but the ruling is about
+any overflowing strip — a cut word reads as a layout fault rather than as more
+content — so it moves onto the surviving branch, inside the clip, fading the
+chips while the glass capsule behind them stays whole. Deleting a ruling as a
+side effect of retiring a rendering mode is the same silent loss §723 forbids
+in the other direction.
 
 **UNBUILT.** Written in a Linux container with no Swift toolchain — nothing here
 has been compiled, installed, or seen on a screen. `scripts/verify.sh` is the
