@@ -689,7 +689,10 @@ enum WalletScopeRail {
                         in addresses: [WalletStore.WatchedAddress])
     -> (name: String, detail: String?) {
         let short = WalletStore.shortAddress(address)
-        guard let entry = addresses.first(where: { matches($0.address, address) }),
+        // Case-insensitive, as the deleted `matches` compared (prd §747): a stored
+        // address and a scope can differ only in EIP-55 casing.
+        guard let entry = addresses.first(where: {
+                  $0.address.caseInsensitiveCompare(address) == .orderedSame }),
               !entry.label.isEmpty,
               !WalletStore.isAutoName(entry.label, for: entry.address)
         else { return (short, nil) }

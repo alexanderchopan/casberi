@@ -397,7 +397,7 @@ extension FeedScreen {
                 if count > 0 { out[section] = String(localized: "\(count) to watch") }
             case .permissions:
                 let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
-                                                              context: modelContext)
+                                                              acting: walletLive.acting)
                 if !holders.isEmpty {
                     out[section] = String(localized: "\(holders.count) live approvals")
                 }
