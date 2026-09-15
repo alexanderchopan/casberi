@@ -635,6 +635,55 @@ this crash.
 
 **The review pass.** `/code-review` on the fix found three things, all fixed and all now guarded above: the window bounded SwiftUI's list-diff term and left `merged`'s own n log n sort growing with the corpus on the same per-frame path (memoised into `mergedRows`, `.live` at the handoff); the opener's `DSHaptic.tap()` was silent on the room's primary door, because a sheet covers `RootShell`'s listener and this room is not a `DSTray`; and the harness's own negative sweeps read raw source, against the rule this repo has already paid for twice.
 
+## Lead-body audit (scripts/lead-body-audit.py, 2026-09-15)
+
+The wiring behind §772's ladder. It exists because of the shape of the defect
+that produced §772: **the lead rendered perfectly, every audit was green, and
+what was wrong was what was not there.** §766 ruled that a room's lead is one
+well with a statement, a body and a foot, and the body zone shipped with one
+possible filler — `thing.summary`. An article has one. A notice, a screenshot, a
+chat, a contact, a receipt do not. So the ruling reached RSS and left every other
+kind drawing a sentence over 176pt of black, and nobody saw it until a user sent
+a screenshot of an X notice naming eight people with one face drawn.
+
+No screen sweep catches that class, because the screen looks fine. Five checks,
+static, no build.
+
+1. **Every `FeedLedeFace.Kind` arm reaches the body.** The four faces are one
+   `switch` in `FeedLedeCard.cover`, and `bodyBlock` is drawn OUTSIDE it, once,
+   for all of them — a picture cover with a cast still has a cast. A call inside
+   an arm gives the ladder to one face, which is how the summary became the only
+   filler to begin with.
+2. **The fit candidates are literal, never a loop.** `ViewThatFits` measures its
+   SUBVIEWS, and a `ForEach` is one subview however many rows it makes — so
+   `ViewThatFits { ForEach(fits) { … } }` compiles, renders, and silently always
+   picks the first candidate. Unseeable in a screenshot: the lead looks right for
+   every thing short enough not to need the fit.
+3. **The cast is a shelf, not a pile.** `FacePile` is the 20pt overlapping
+   proof-line detail; the lead's cast is the body's whole payload, and
+   overlapping hides all but the first face. One grep apart, and a reviewer
+   reading `DSLeadCast` cannot tell which was meant.
+4. **The lead's quote draws no well.** `SocialQuoteCard` is `dsWell` — right in a
+   row (§749: rows stand on nothing) and wrong in a lead, which since §766 IS a
+   well. A well inside a well is the plate-on-a-plate §759 spent a pass deleting,
+   and it would be the last one in the app.
+5. **Every `BodyRung` has an arm in `rungView`.** A rung the model offers and the
+   view swallows shows up as "the lead just doesn't fill for this kind" and
+   nothing louder — `rungCap` draws only the richest two, so a missing arm is
+   invisible on every thing that has a different rung above it.
+
+**What it deliberately does not check**, so it stays honest about its reach:
+whether the rungs are the right ones or in the right order (§772's ruling and a
+person's judgement); whether anything FITS, which needs a device — eight
+candidates at AX5 type on an SE is a layout question and this file cannot see a
+clipped shelf; whether `fillsTheBox` decides WELL, as opposed to being asked; and
+anything about a room `Head`, whose box is `LeadFit`'s and whose rows are
+`room-chassis-audit.py`'s.
+
+The self-test breaks each check against a copy of the real tree: a cover with no
+`bodyBlock`, a `ForEach` inside `ViewThatFits`, the cast drawn as a `FacePile`, a
+`dsWell` inside `DSLeadQuote`, and a `BodyRung` case with no arm.
+
 ## Harness-exists audit (scripts/harness-exists-audit.py, 2026-09-08)
 
 The missing half of the check-completeness guard. That guard globs the disk and

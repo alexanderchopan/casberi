@@ -85,22 +85,63 @@ struct FeedLedeCard: View {
         let face = FeedLedeFace.kind(isMoney: receipt != nil,
                                      hasArt: artURL != nil || thing.previewImageData != nil,
                                      hasClock: thing.dueAt != nil)
-        // THE LONGEST EXCERPT THAT FITS THE LEAD'S BOX (prd §760, user: "up to
-        // six lines"). Six, four, then two: a four-line statement title leaves
-        // less room than a one-line one, and only the layout knows which it is.
-        ViewThatFits(in: .vertical) {
-            cover(face, receipt: receipt, excerptLines: 6)
-            cover(face, receipt: receipt, excerptLines: 4)
-            cover(face, receipt: receipt, excerptLines: 2)
+        let rungs = bodyRungs
+        let box = DSRoomChassis.leadHeight - 2 * DS.Space.s4
+        // THE LONGEST COMPOSITION THAT FITS THE LEAD'S BOX (prd §760, widened
+        // by §772). It used to vary one number — the excerpt's line count, six
+        // then four then two — because the excerpt was the only thing the body
+        // could hold. Now the STATEMENT gives way too: it was pinned at three
+        // lines while 176pt of black sat under it, so a note longer than three
+        // lines was cut in a box with room for eight (§766 set the RUNG, and
+        // said nothing about how many lines of it a lead may draw).
+        let full = fillsTheBox(face, rungs: rungs)
+        // Spelled out, never a `ForEach`: `ViewThatFits` measures its subviews,
+        // and a `ForEach` is ONE subview however many rows it makes — so a loop
+        // here would offer the layout a single candidate and the fit would
+        // silently stop working.
+        //
+        // **AND ONLY WHERE THE BOX IS DEFINITE.** `ViewThatFits` fits against
+        // the height it is PROPOSED, and the frame below proposes one only when
+        // `minHeight == maxHeight`. A `List` row proposes nil, so on the shrink
+        // path the ladder would be handed no box, take candidate 0 unconditionally
+        // — eight lines of statement — and hand it to a `maxHeight` + `.clipped()`
+        // that cuts the bottom, taking the pinned foot with it. That is worse
+        // than the air it replaces, so the shrink path draws ONE spelling whose
+        // statement cannot overrun: see `shortFit`.
+        Group {
+            if full {
+                ViewThatFits(in: .vertical) {
+                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[0])
+                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[1])
+                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[2])
+                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[3])
+                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[4])
+                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[5])
+                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[6])
+                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[7])
+                }
+            } else {
+                cover(face, receipt: receipt, rungs: rungs, fit: Self.shortFit)
+            }
         }
         // Every room's lead is one height (prd §760), and since §766 the cover
         // draws it the way a head does: `dsRoomHeadBlock` — the inset, the air
         // and the well — around a box `2 × s4` shorter than the lead. It was
         // the one lead with no inner padding, so its words started 15pt higher
         // than a head's in the room next door.
+        //
+        // **AND THE BOX GIVES WAY WHEN THERE IS NOTHING TO PUT IN IT (prd
+        // §772).** This is the one place §760's fixed height is withdrawn, and
+        // it is withdrawn on §766's own terms: the rule was never "316pt", it
+        // was "nothing in it is air it could honestly fill". A cover that has
+        // reached the bottom of the ladder with a sentence and a couple of tags
+        // cannot fill it, and a uniform box around a void is the defect, not
+        // the uniformity. `fillsTheBox` is a MODEL question — does this thing
+        // carry a substantial rung — never a measurement, so the height is
+        // decided before layout and a lead cannot flicker between two of them.
         .frame(maxWidth: .infinity,
-               minHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4,
-               maxHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4,
+               minHeight: full ? box : 0,
+               maxHeight: box,
                alignment: .topLeading)
         .clipped()
         .dsRoomHeadBlock()
@@ -114,9 +155,9 @@ struct FeedLedeCard: View {
         }
     }
 
-    /// One spelling of the cover at an excerpt length (prd §760).
+    /// One spelling of the cover at a fit (prd §760, §772).
     private func cover(_ face: FeedLedeFace.Kind, receipt: MoneyReceipt?,
-                       excerptLines: Int) -> some View {
+                       rungs: [BodyRung], fit: Fit) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             if face == .picture {
                 art
@@ -141,13 +182,27 @@ struct FeedLedeCard: View {
                 eyebrow
                 Group {
                     switch face {
-                    case .picture:         titleBlock(underArt: true, excerptLines: excerptLines)
-                    case .words:           titleBlock(underArt: false, excerptLines: excerptLines)
+                    case .picture:         titleBlock(underArt: true, fit: fit)
+                    case .words:           titleBlock(underArt: false, fit: fit)
                     case .money:           moneyBlock(receipt)
                     case .clock:           clockBlock
                     }
                 }
                 .padding(.top, DS.Space.s2)
+                // THE BODY (prd §772). Under the statement, above the note and
+                // the foot. `bodyBlock` draws nothing on an empty ladder, so a
+                // thing with no rung pays nothing for this — not even the gap.
+                //
+                // **THE PICTURE FACE PASSES NONE, and that is §734 standing
+                // rather than an exception to §772.** There the object is the
+                // picture: `leadArtHeight` plus the eyebrow, two lines and the
+                // foot already come to ~254 of the box's 286, so this face has
+                // no void to fill and no room to fill one — a 56pt face shelf
+                // under it would clip, which is a worse answer than the 32pt of
+                // air it replaces. §734 took the excerpt off this face for the
+                // same reason and on the user's own report ("the header card
+                // seems too large … it basically takes up half the screen").
+                bodyBlock(face == .picture ? [] : rungs, fit: fit)
                 if let note {
                     Text(note)
                         .dsText(.subhead12)
@@ -210,22 +265,23 @@ struct FeedLedeCard: View {
     /// a screenshot's title is the OCR line the heal wrote and a folder image's
     /// is its filename, so display type is the app shouting a string it
     /// assembled.
-    private func titleBlock(underArt: Bool, excerptLines: Int) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(words)
-                .dsText(.heading24)
-                .foregroundStyle(DS.textPrimary)
-                .multilineTextAlignment(.leading)
-                .lineLimit(underArt ? 2 : 3)
-                .fixedSize(horizontal: false, vertical: true)
-            if let note = excerpt, !underArt {
-                Text(note)
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(excerptLines)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
+    /// **THE STATEMENT ONLY — the excerpt moved out (prd §772).** It was drawn
+    /// here because it was the body's only rung; now that the body is a ladder
+    /// it is one rung of it, drawn by `body(_:fit:)` beside the cast, the post
+    /// and the parts. Two places drawing the summary is how the summary ends up
+    /// under a cover twice, which is §709's defect one surface over.
+    ///
+    /// **And the line limit is the fit's, not a constant.** Three lines was the
+    /// cap in a box with room for eight, so a note longer than three lines was
+    /// cut with 176pt of black beneath the cut. Under a picture it stays at two:
+    /// there the object is the picture (§734) and the words are its caption.
+    private func titleBlock(underArt: Bool, fit: Fit) -> some View {
+        Text(words)
+            .dsText(.heading24)
+            .foregroundStyle(DS.textPrimary)
+            .multilineTextAlignment(.leading)
+            .lineLimit(underArt ? 2 : fit.statementLines)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     /// The figure leads, the sentence follows — `MoneyReceipt`'s own anatomy at
@@ -439,5 +495,172 @@ struct FeedLedeCard: View {
         guard let summary = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
               !summary.isEmpty, summary != thing.title else { return nil }
         return summary
+    }
+
+    // MARK: - The body ladder (prd §772)
+
+    /// How many lines the statement and the body each get in one spelling of the
+    /// cover. `ViewThatFits` walks these richest-first and takes the first that
+    /// fits the box.
+    struct Fit: Hashable {
+        let statementLines: Int
+        let bodyLines: Int
+    }
+
+    /// Richest first. The statement gives way before the body does at the top of
+    /// the ladder — an eight-line sentence that crowds out the post a notice is
+    /// about has said less than a four-line one beside it — and the body gives
+    /// way last, because the last two rungs exist precisely to keep the box from
+    /// being empty.
+    static let fits: [Fit] = [
+        Fit(statementLines: 8, bodyLines: 6),
+        Fit(statementLines: 6, bodyLines: 6),
+        Fit(statementLines: 5, bodyLines: 4),
+        Fit(statementLines: 4, bodyLines: 3),
+        Fit(statementLines: 3, bodyLines: 3),
+        Fit(statementLines: 3, bodyLines: 2),
+        Fit(statementLines: 2, bodyLines: 2),
+        Fit(statementLines: 2, bodyLines: 1),
+    ]
+
+    /// The ONE spelling a shrinking cover takes, with no fit ladder behind it.
+    ///
+    /// **Its statement limit is a proof, not a taste.** On the shrink path
+    /// nothing proposes a definite height, so `ViewThatFits` cannot choose and a
+    /// candidate that overruns would be cut by `maxHeight` — taking the pinned
+    /// foot with it, since the foot is last. So the cap is the largest statement
+    /// that cannot overrun the box on its own: the box is
+    /// `leadHeight - 2 × s4` = 286; the eyebrow and its gap are ~44 (`Face.list`
+    /// plus `s2`); the foot is ~23; the quietest body rung, a row of tag stamps
+    /// with its gap, is ~32. That leaves ~187, and a `heading24` line is ~29 —
+    /// six lines, with a line to spare. A statement longer than six lines is
+    /// clipped at the sixth, which is what `lineLimit` is for and where the cut
+    /// is visibly a cut; it is never the foot that goes.
+    ///
+    /// `bodyLines` is nominal here: the only rungs that reach this path are tags
+    /// and a short parts list, and neither reads it as a line count.
+    static let shortFit = Fit(statementLines: 6, bodyLines: 2)
+
+    /// One thing a lead can put under its statement. See `DSLeadBody` for the
+    /// drawings and for why the ladder exists at all.
+    enum BodyRung {
+        /// The people the thing names, as faces (`ThingCast`).
+        case cast(ThingCastRoll)
+        /// The post the thing is ABOUT — `Thing.quote`, which the row and the
+        /// sheet have drawn for a year and the cover never did.
+        case quote(SocialCard)
+        /// `summary`, this app's one display-copy field.
+        case excerpt(String)
+        /// The structured parts a bridge landed (`ThingFact`).
+        case facts([ThingFact])
+        /// What it is filed under. The quietest rung, and the one nearly every
+        /// thing has.
+        case tags([String])
+
+        /// Whether this rung is enough to hold a 316pt box open on its own.
+        /// Tags are not: four stamps on one line under a sentence is a fuller
+        /// void, not a filled box.
+        var substantial: Bool {
+            switch self {
+            case .cast, .quote, .excerpt: return true
+            case .facts(let f):           return f.count >= 3
+            case .tags:                   return false
+            }
+        }
+    }
+
+    /// What this thing can fill its body with, richest first.
+    ///
+    /// **Ordered by how much each says about the thing**, which on a notice is
+    /// exactly the order the user ruled (2026-09-15, "The cast, then the post"):
+    /// who it is about, then what it is about, then what it says about itself.
+    ///
+    /// Read once per body pass and handed down, never re-derived per fit — the
+    /// `ViewThatFits` above builds up to eight spellings of the cover and every
+    /// one of them would otherwise decode `facts` and hit the cast store again
+    /// (§626's per-render class, and §628's rule about reads in a body).
+    private var bodyRungs: [BodyRung] {
+        var out: [BodyRung] = []
+        if let roll = ThingCast.shared.cast(for: thing.sourceRef), roll.members.count > 1 {
+            out.append(.cast(roll))
+        }
+        if let quote = thing.quote, DSLeadQuote.draws(quote) {
+            out.append(.quote(quote))
+        }
+        if let excerpt { out.append(.excerpt(excerpt)) }
+        let facts = thing.factList
+        if !facts.isEmpty { out.append(.facts(facts)) }
+        let tags = thing.tags.filter { !$0.isEmpty }
+        if !tags.isEmpty { out.append(.tags(tags)) }
+        return out
+    }
+
+    /// **TWO RUNGS, at most.** The ladder is what the thing COULD say; this is
+    /// what the box can hold well. A cast, a post and an excerpt and a parts
+    /// list and a tag row stacked in 286pt is a screen inside a screen, and the
+    /// fit ladder can only take lines away from the last of them — the fixed-
+    /// height rungs above it would clip instead. Two is the user's own ruling
+    /// for the notice ("the cast, then the post") generalised: the richest thing
+    /// the lead knows, and the next richest.
+    private static let rungCap = 2
+
+    /// Named `bodyBlock` rather than `body`: a `View`'s `body` is the protocol's
+    /// own requirement, and a second member of that name in the same type is a
+    /// diagnostic nobody should have to read.
+    @ViewBuilder private func bodyBlock(_ rungs: [BodyRung], fit: Fit) -> some View {
+        let drawn = Array(rungs.prefix(Self.rungCap))
+        if !drawn.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                ForEach(Array(drawn.enumerated()), id: \.offset) { _, rung in
+                    rungView(rung, fit: fit)
+                }
+            }
+            .padding(.top, DSLeadBody.gap)
+        }
+    }
+
+    @ViewBuilder private func rungView(_ rung: BodyRung, fit: Fit) -> some View {
+        switch rung {
+        case .cast(let roll):
+            DSLeadCast(roll: roll, source: thing.source)
+        case .quote(let card):
+            DSLeadQuote(card: card, source: thing.source, lines: fit.bodyLines)
+        case .excerpt(let text):
+            Text(text)
+                .dsText(.subhead12)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(fit.bodyLines)
+                .fixedSize(horizontal: false, vertical: true)
+        case .facts(let facts):
+            DSLeadFacts(facts: facts, limit: min(fit.bodyLines, 3))
+        case .tags(let tags):
+            DSLeadTags(tags: tags)
+        }
+    }
+
+    /// **DOES THIS COVER EARN THE FULL BOX (prd §772).**
+    ///
+    /// A face with a figure always does: a picture is `leadArtHeight` already, a
+    /// receipt's `price40` and a countdown are drawn to be read at size, and
+    /// none of the three has ever left a void. A `.words` cover earns it when
+    /// the ladder gave it something substantial to say — a cast, a post, a lede,
+    /// a parts list — and does not when all it has is a sentence and the tags it
+    /// is filed under.
+    ///
+    /// A MODEL question, asked before layout, so the height is a property of the
+    /// thing rather than of a measurement that could resolve two ways on two
+    /// passes and leave a lead flickering between heights as a picture loads.
+    private func fillsTheBox(_ face: FeedLedeFace.Kind, rungs: [BodyRung]) -> Bool {
+        switch face {
+        // A picture is `leadArtHeight` of the box before a word is set, and a
+        // receipt's `price40` and a countdown are drawn to be read at size.
+        // None of the three has ever left a void, and the picture face is the
+        // one that passes no ladder at all (§734) — so a height rule keyed on
+        // the ladder would shrink exactly the face that least needs it.
+        case .picture, .money, .clock:
+            return true
+        case .words:
+            return rungs.prefix(Self.rungCap).contains { $0.substantial }
+        }
     }
 }

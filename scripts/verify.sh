@@ -584,6 +584,22 @@ step "Dead-closure audit"
 "$ROOT/scripts/dead-closure-audit.py" || fail "a control calls a closure nothing supplies — see the output above"
 print -P "%F{green}✓ dead-closure audit%f"
 
+# A lead that would draw AIR (prd §772). §766 ruled that a room's lead is a
+# statement, a body and a foot and that "nothing in it is air it could honestly
+# fill" — and the body zone shipped with one possible filler, `summary`, which
+# an article has and a notice, a screenshot, a chat and a contact do not. The
+# ruling reached RSS and left every other kind drawing a sentence over 176pt of
+# black, and it took a user's screenshot to see it, because the lead RENDERS
+# perfectly and what is wrong is what is not there. Holds the ladder's wiring:
+# every face reaches it, the `ViewThatFits` candidates are literal (a `ForEach`
+# inside one is a single subview, so the fit silently stops working), the cast
+# is a shelf rather than an overlapping pile, and the lead holds one well.
+step "Lead-body audit"
+python3 "$ROOT/scripts/lead-body-audit.py" --self-test >/dev/null \
+  || fail "the lead-body audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/lead-body-audit.py" || fail "a lead's body would draw air — see the output above"
+print -P "%F{green}✓ lead-body audit%f"
+
 # A share control left on the AUTOMATIC button style inside a `List` row is
 # not a button in a row — SwiftUI gives the ROW its action (prd §693). The
 # account pages draw their whole act as one row, so RSS's unstyled "Export as

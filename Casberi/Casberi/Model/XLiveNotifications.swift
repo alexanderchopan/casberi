@@ -53,6 +53,11 @@ enum XLiveAuth {
     static func clear() {
         TokenVault.delete(authTokenVaultKey)
         TokenVault.delete(ct0VaultKey)
+        // The rosters go with the session (prd §772) — the `FollowerLedger`
+        // teardown discipline `SocialLikers.forget` already carries, so
+        // disconnecting doesn't leave casts to be re-adopted by a later
+        // reconnect under the same entry ids.
+        ThingCast.shared.forget(refPrefix: XLiveNotifications.sourceRefPrefix)
     }
 }
 
@@ -159,10 +164,20 @@ enum XLiveNotifications {
                     fill(existing, with: subject)
                     touched = true
                 }
+                // THE CAST, asked on every sweep (prd §772). Unconditional, and
+                // for the reason the other two backfills are asked separately:
+                // the roster is device-local, so it is missing on a notice this
+                // device landed before this pass AND on one another device
+                // synced over, and `record` is already a no-op when the roll is
+                // unchanged. It does not set `touched` — nothing about the
+                // `Thing` moved, and a save per sweep is what that flag exists
+                // to avoid.
+                recordCast(from: entry, ref: ref, at: at ?? existing.capturedAt)
                 if touched { healed += 1 }
                 continue
             }
             guard let thing = thing(from: entry, ref: ref, at: at ?? now) else { continue }
+            recordCast(from: entry, ref: ref, at: at ?? now)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
@@ -270,6 +285,23 @@ enum XLiveNotifications {
                       a.handle ?? "MISSING", a.avatar ?? "MISSING")
             } else {
                 NSLog("[Casberi] xLiveActor| none — no person behind this notice")
+            }
+            // THE WHOLE CAST (prd §772), separately again, and for the same
+            // reason: the lead's shelf reads `from_users` as an ARRAY where the
+            // face above reads its first element, so a shelf that stays empty
+            // while the face draws has to be diagnosable on its own line.
+            // Prints how many carry a picture, because a member with a handle
+            // and no avatar draws a fallback mark rather than a portrait — a
+            // shelf of bridge glyphs is a parse that half-worked, and it looks
+            // from a screenshot like a parse that failed.
+            let members = cast(from: entry)
+            if members.isEmpty {
+                NSLog("[Casberi] xLiveCast| none — nobody named on this notice")
+            } else {
+                let faced = members.filter { !($0.avatarURL?.isEmpty ?? true) }.count
+                NSLog("[Casberi] xLiveCast| %d named, %d with a face: %@",
+                      members.count, faced,
+                      members.prefix(8).map(\.handle).joined(separator: ", "))
             }
         }
         // WHEN (prd §741). The time is read from two unmeasured fields, so the
@@ -526,6 +558,78 @@ enum XLiveNotifications {
         else { return nil }
         let read = face(of: user)
         return read.avatar == nil && read.handle == nil ? nil : read
+    }
+
+    // MARK: - EVERYONE the notice names (prd §772, 2026-09-15)
+
+    /// The whole cast — every person `from_users` carries, in X's own order.
+    ///
+    /// **`actor(from:)` above stays exactly as it is, and that is the point.**
+    /// §707's "the FIRST actor, deliberately" is a ruling about a ROW: the lead
+    /// is a 26pt disc, one face is all it can hold, and the sentence already
+    /// says how many there were. It is still correct there. What changed under
+    /// it is that §755/§756 put the same notice in a 316pt lead, where one face
+    /// and a two-line sentence leave 176pt of black — so the array X has always
+    /// sent is now worth keeping, for the one surface with room to draw it.
+    /// Two readers of one key, each sized to its own surface; neither is the
+    /// other's fallback.
+    ///
+    /// **`from_users` first, the posts' authors second.** A like or a repost
+    /// notice hangs its people off `from_users` (§707). A "New post
+    /// notifications for X and 7 others" DIGEST hangs eight posts off
+    /// `template.target_objects` and the people are those posts' authors — the
+    /// same accounts the sentence names, reached one key over. Both are read,
+    /// `from_users` winning where it has anything, and either failing to an
+    /// empty array the way every path in this file fails.
+    ///
+    /// Deduped by handle, keeping first appearance: a digest of two posts from
+    /// one account names that account once, and a shelf drawing the same face
+    /// twice is a roster that cannot be counted.
+    static func cast(from entry: [String: Any]) -> [ThingCastMember] {
+        guard let itemContent = (entry["content"] as? [String: Any])?["itemContent"] as? [String: Any]
+        else { return [] }
+        let template = itemContent["template"] as? [String: Any]
+        var faces: [(handle: String?, avatar: String?)] = []
+        for user in (template?["from_users"] as? [[String: Any]]) ?? [] {
+            guard let result = (user["user_results"] as? [String: Any])?["result"] as? [String: Any]
+            else { continue }
+            faces.append(face(of: result))
+        }
+        if faces.isEmpty {
+            for target in (template?["target_objects"] as? [[String: Any]]) ?? [] {
+                guard let results = target["tweet_results"] as? [String: Any],
+                      var result = results["result"] as? [String: Any] else { continue }
+                if let inner = result["tweet"] as? [String: Any] { result = inner }
+                faces.append(author(result))
+            }
+        }
+        var seen = Set<String>()
+        var out: [ThingCastMember] = []
+        for read in faces {
+            guard let handle = read.handle, !handle.isEmpty else { continue }
+            guard seen.insert(handle.lowercased()).inserted else { continue }
+            out.append(ThingCastMember(handle: handle, avatarURL: read.avatar))
+        }
+        return out
+    }
+
+    /// Records a notice's cast, or says nothing.
+    ///
+    /// `ThingCast.record` refuses a cast of one by its own rule — that person is
+    /// `authorHandle`/`authorAvatarURL` and both surfaces already draw them —
+    /// so this passes what it read and lets the store decide, rather than
+    /// spelling the same test a second time here (§489's rule).
+    ///
+    /// `total` is `members.count` and not a headline parse. X states the count
+    /// inside the sentence ("and 7 others") and nowhere as a number, and
+    /// reading an integer back out of localized prose would be a count this app
+    /// invented — §83, in arithmetic. So the remainder a shelf draws is the
+    /// people we HAVE and cannot fit, never a claim about people we never saw.
+    @MainActor
+    private static func recordCast(from entry: [String: Any], ref: String, at: Date) {
+        let members = cast(from: entry)
+        guard !members.isEmpty else { return }
+        ThingCast.shared.record(ref: ref, members: members, total: members.count, when: at)
     }
 
     /// One user object → its handle and its face. Shared by the post's author

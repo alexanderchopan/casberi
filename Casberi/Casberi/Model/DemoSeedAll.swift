@@ -105,6 +105,68 @@ enum DemoSeedAll {
         ("bsky:demo:0", ["uma", "nils", "mia"], 18),
     ]
 
+    /// The demo's X notices — (title, actor, the post it concerns, that post's
+    /// author, days, hour).
+    ///
+    /// **DAYS AND AN HOUR, never fractional days**: `at` snaps to `startOfDay`
+    /// and then adds the hour, so notices seeded hours apart on one fractional
+    /// day collapse onto the SAME timestamp and the room shows a stack of rows
+    /// all reading "23h". The hour is what separates times within a day.
+    ///
+    /// All of them sit a day or two back rather than a few hours: the demo is
+    /// poured whenever somebody opens the app, and a row dated "3 hours ago"
+    /// seeded at 2am is dated in the FUTURE. They are still far newer than the
+    /// 3-day import receipt and the years of archive under it, which is the
+    /// whole arrangement `xNotices()` exists to show.
+    ///
+    /// A property rather than a local, so `xDigestRef` below can find the digest
+    /// in the same list the rows are built from — see its own note.
+    static let xNoticeRows: [(String, String, String, String, Double, Int)] = [
+        ("sam liked your post",
+         "sam", "Interfaces that age well say less.", "you", 1, 20),
+        ("mia and 2 others liked your repost",
+         "mia", "Most product demos show a screen nobody has ever had.", "mia", 1, 15),
+        ("sam reposted your post",
+         "sam", "Archives are the only honest analytics.", "you", 1, 9),
+        ("New post from mia",
+         "mia", "Shipped the thing that reads the other things.", "mia", 2, 18),
+        // THE DIGEST (prd §772). X files "new posts from accounts you have
+        // notifications on" as one notice naming every account, and it is the
+        // shape that sent the user to this pass: a sentence about seven people
+        // over a lead that drew one of them and 176pt of black.
+        ("New post notifications for mia and 6 others",
+         "mia", "Interfaces should say what they know.", "mia", 2, 11),
+    ]
+
+    /// The digest row's ref, FOUND rather than remembered.
+    ///
+    /// `xNotices()` keys every row on its index in `xNoticeRows`, so a hard-coded
+    /// `"x-live:notif:demo-4"` here would be silently orphaned the first time
+    /// somebody inserted a notice above the digest — the roster would stay in the
+    /// store under a ref no row carries, the shelf would vanish, and every check
+    /// in the repo would stay green. Nothing here counts rows or trusts a
+    /// remembered position: the digest is the one notice whose sentence is a list
+    /// of people, and that is what it is found by.
+    static var xDigestRef: String {
+        let index = xNoticeRows.firstIndex { $0.0.hasPrefix("New post notifications") } ?? 0
+        return "x-live:notif:demo-\(index)"
+    }
+
+    /// The cast behind the demo's X digest notice (prd §772) — the one notice
+    /// shape whose whole sentence is a list of people, and therefore the one the
+    /// lead's face shelf exists for. Seven, so the shelf overflows on a phone
+    /// and draws its "+N" counter: a demo that fits exactly demonstrates the
+    /// half of the component that never has to decide anything.
+    ///
+    /// The demo's own people, like every other roster here — one set of people
+    /// across the whole demo reads as a life; a second disjoint set reads as
+    /// filler. `avatarArt` gives each a face, so the shelf shows portraits
+    /// rather than the initial fallback, which is what a screenshot needs to
+    /// show the component working.
+    static var demoNoticeCast: [(ref: String, handles: [String], total: Int)] {
+        [(xDigestRef, ["mia", "sam", "nils", "uma", "ana", "leo", "kit"], 7)]
+    }
+
     static let refPrefixes = ["demo:", "sample:demo-shot-", "files:demo/",
                               // The person's OWN casts and posts wear the real
                               // bridges' prefixes (see `social()`), so the
@@ -615,6 +677,7 @@ enum DemoSeedAll {
         for event in demoMetrics { PostHogState.forget(event) }
         ChipMemory.forgetDemo(Array(demoVisits.keys))
         SocialLikers.shared.forgetDemo(refs: demoLikerRolls.map(\.ref))
+        ThingCast.shared.forgetDemo(refs: demoNoticeCast.map(\.ref))
         // The x402 seller reading, by key rather than through its own type:
         // the bridge is deleted (2026-09-06), and an older pour's blob would
         // otherwise outlive both the demo and the code that wrote it.
@@ -1710,31 +1773,10 @@ enum DemoSeedAll {
     /// The FACE is the person who acted, never yours (§707) — the demo is where
     /// that distinction is most visible, since every archive row directly below
     /// wears your own.
+    /// The rows, their shape and their dating are `xNoticeRows`' own — the list
+    /// moved out of this function so `xDigestRef` can find the digest in it.
     private static func xNotices() -> [Thing] {
-        // (title, actor, the post it concerns, that post's author, days, hour)
-        //
-        // DAYS AND AN HOUR, never fractional days: `at` snaps to `startOfDay`
-        // and then adds the hour, so four notices seeded hours apart on one
-        // fractional day collapse onto the SAME timestamp and the room shows a
-        // stack of rows all reading "23h". The hour is what separates times
-        // within a day.
-        //
-        // All four sit a day or two back rather than a few hours: the demo is
-        // poured whenever somebody opens the app, and a row dated "3 hours ago"
-        // seeded at 2am is dated in the FUTURE. They are still far newer than
-        // the 3-day import receipt and the years of archive under it, which is
-        // the whole arrangement this function exists to show.
-        let notices: [(String, String, String, String, Double, Int)] = [
-            ("sam liked your post",
-             "sam", "Interfaces that age well say less.", "you", 1, 20),
-            ("mia and 2 others liked your repost",
-             "mia", "Most product demos show a screen nobody has ever had.", "mia", 1, 15),
-            ("sam reposted your post",
-             "sam", "Archives are the only honest analytics.", "you", 1, 9),
-            ("New post from mia",
-             "mia", "Shipped the thing that reads the other things.", "mia", 2, 18),
-        ]
-        return notices.enumerated().map { i, n in
+        xNoticeRows.enumerated().map { i, n in
             row(.link, n.0, source: "X", ref: "x-live:notif:demo-\(i)",
                 days: n.4, hour: n.5,
                 // The permalink an Open verb follows. A demo quote card carries
@@ -5132,6 +5174,11 @@ enum DemoSeedAll {
             }
         }
         SocialLikers.shared.seedDemo(demoLikerRolls.map { ($0.ref, $0.handles, $0.total) })
+        ThingCast.shared.seedDemo(demoNoticeCast.map { cast in
+            (cast.ref,
+             cast.handles.map { ThingCastMember(handle: $0, avatarURL: avatarArt($0)) },
+             cast.total)
+        })
         if BlueskyStore.shared.accounts.isEmpty {
             BlueskyStore.shared.accounts = demoBluesky.map {
                 var a = BlueskyStore.Account(handle: $0.handle)
