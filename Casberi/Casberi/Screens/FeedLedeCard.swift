@@ -22,18 +22,13 @@ import SwiftUI
 ///
 /// **It never declines for want of a picture** (§389 amendment, user: "we
 /// should still show it but in a nice card somehow"). `FeedLedeFace` picks one
-/// of four faces and the three pictureless ones take a solved colour ground.
+/// of four faces; since §749 none of them takes a ground.
 ///
-/// **The colour, and why it is allowed here.** `DS.deckFill` is the register
-/// the 2026-08-15 colour night kept after rejecting the same colour on ROWS
-/// three times in one evening — its own doc reserves it for "one bright object
-/// per screen (the wallet hero, the brief's lede card)", and it had no callers
-/// until this. One cover per feed is that one object; the user's ruling was
-/// "color is fine now that it has a reason and isn't everywhere". The fill and
-/// the ink are ONE decision (deckFill's own doc), so a coloured face pins
-/// `.dark` on its subtree and every token below re-points itself. A
-/// near-neutral brand (X, ChatGPT, 0xBow) returns nil by design and lands on
-/// the neutral card — restraint, not failure.
+/// **The colour ground is withdrawn (prd §749).** The pictureless faces stood
+/// on `DS.deckFill`, the brand's hue solved for white ink, under the reasoning
+/// that one cover per feed is the one bright object a screen may spend. The
+/// user ruled the cover unbacked in every room, so the deck, the pour and the
+/// shadow are gone and the card reads its tokens against the page like a row.
 ///
 /// **Still no invented picture.** A face is never a photograph we did not
 /// have; decoration in the picture's slot is a claim that there was something
@@ -45,8 +40,6 @@ struct FeedLedeCard: View {
     /// opaque surface — a wash underneath it would be invisible. Only ever
     /// true on Mac; `ShellChrome.canWalk` is Mac-only.
     var selected: Bool = false
-
-    @Environment(\.colorScheme) private var colorScheme
 
     /// The art's height. Fixed rather than an aspect ratio so the card's own
     /// height is known before the image resolves — a ratio would restate the
@@ -64,21 +57,27 @@ struct FeedLedeCard: View {
         if thing.isLive { liveBody }
     }
 
+    /// **NO BACKING (prd §749, user: "the most recent item in a lede card w/o
+    /// backing like we do on the home page and on music and on rss").** The
+    /// cover stands on the page's own ink like the rows under it: no fill, no
+    /// brand deck, no pour, no shadow. The picture keeps its own rounded
+    /// corners, because a photograph needs an edge; the words sit in the rows'
+    /// column, so the cover reads as the room's first object rather than a
+    /// box above it. On Home, music and the reading list this was already how
+    /// it looked in dark (a picture on `surfaceSheet`, which is black); a
+    /// pictureless cover was the one that showed a card, as a brand hue.
     @ViewBuilder private var liveBody: some View {
         let receipt = MoneyReceiptSource.receipt(for: thing)
         let face = FeedLedeFace.kind(isMoney: receipt != nil,
                                      hasArt: artURL != nil || thing.previewImageData != nil,
                                      hasClock: thing.dueAt != nil)
-        // Nil for a picture face (the picture is the ground) and for a
-        // near-neutral brand — both land on the neutral surface below.
-        let deck = face == .picture ? nil : deckGround
-        VStack(alignment: .leading, spacing: 0) {
-            if face == .picture { art }
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if face == .picture {
+                art
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            }
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                // **THE MARK LEADS AS A DISC (prd §567).** It was 14pt inline
-                // ahead of the source's own name, in the same row as the time
-                // — the §553 grammar has it at 36 and top-left, where it heads
-                // the card instead of labelling it.
+                // **THE MARK LEADS AS A DISC (prd §567).**
                 BridgeIcon(name: thing.source, size: DS.Face.list, circular: true)
                     .padding(.bottom, DS.Space.s1)
                 switch face {
@@ -87,43 +86,19 @@ struct FeedLedeCard: View {
                 case .money:           moneyBlock(receipt)
                 case .clock:           clockBlock
                 }
-                eyebrow(onDeck: deck != nil)
+                eyebrow
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(DS.Space.s4)
         }
-        .background(background(deck))
-        // The card's TOP (prd §542). With no deck the fill is ink on the ink
-        // page, so the pour is the only thing separating this card from the
-        // feed behind it; over a deck it is §524's rule applied evenly, the
-        // same top every other card in the app now wears.
-        .background(alignment: .top) {
-            LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: 150)
-                .frame(maxWidth: .infinity, alignment: .top)
+        // The Mac walk's selection — the one surface the cover may wear, bled
+        // past the content so the words do not touch its edge.
+        .background {
+            if selected {
+                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .fill(DS.tintDim)
+                    .padding(-DS.Space.s3)
+            }
         }
-        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-        .shadow(color: DS.raisedShadow, radius: 10, x: 0, y: 2)
-        // The fill and the ink are ONE decision (`DS.deckFill`'s doc): the
-        // solver always returns the DARK register, so the whole subtree reads
-        // its tokens against `.dark` and every rung of the ramp — primary,
-        // secondary, tertiary, glyphs — re-points in one line. Exactly the
-        // mechanic `shapedListRow` uses for a skinned row.
-        .environment(\.colorScheme, deck != nil ? .dark : colorScheme)
-    }
-
-    @ViewBuilder private func background(_ deck: Color?) -> some View {
-        // `DS.surfaceSheet`, not the gray (prd §542): this is a feed card
-        // and every other card in the feed is that token, so the no-deck
-        // fallback was the one row in the run wearing a different surface.
-        if selected { DS.tintDim } else if let deck { deck } else { DS.surfaceSheet }
-    }
-
-    /// The source's own hue, solved to the register. Nil when the brand is
-    /// near-neutral — `deckFill`'s documented "no honest colour, no card".
-    private var deckGround: Color? {
-        DS.brandHue(for: thing.source).flatMap { DS.deckFill(for: $0) }
     }
 
     // MARK: - Faces
@@ -212,11 +187,10 @@ struct FeedLedeCard: View {
                             .lineLimit(1)
                     }
                 }
-                // The tone COLOUR is deliberately dropped here. The receipt
-                // card greens an arrival against the page's own ink ramp; this
-                // card's ground is an arbitrary brand hue solved for WHITE ink
-                // (`DS.deckFill`), so nothing guarantees `confirm` clears
-                // contrast on it. Direction is not lost — the sign is a glyph
+                // The tone COLOUR is deliberately dropped here. It was dropped
+                // for a brand-hue ground that no longer exists (§749); it
+                // stays dropped because the figure is the cover's head, not a
+                // verdict. Direction is not lost — the sign is a glyph
                 // inside `number` (U+2212 / "+"), which is §363's own rule and
                 // the reason its spoken form spells the sign out.
                 .foregroundStyle(DS.textPrimary)
@@ -290,10 +264,7 @@ struct FeedLedeCard: View {
     // MARK: - Shared pieces
 
     /// Who and when — the two facts the enlarged title drops by not being a
-    /// band. On a deck the source name takes the primary ramp: `legibleInk`'s
-    /// brand tint is solved against the PAGE, and this ground is the brand's
-    /// own hue, so a tinted name on it is the one place that tint cannot be
-    /// read.
+    /// band.
     /// Where it came from and when, under the thing itself (prd §567).
     ///
     /// **The icon is gone from this row and the NAME is not.** §565's rule is
@@ -303,11 +274,11 @@ struct FeedLedeCard: View {
     /// this row. The name stays because dropping it would lose the source on
     /// the feed's cover for every seat whose `BridgeIcon` has no bundled art,
     /// which is a real regression to buy a tidier line.
-    private func eyebrow(onDeck: Bool) -> some View {
+    private var eyebrow: some View {
         HStack(spacing: DS.Space.s2) {
             Text(thing.source)
                 .dsText(.label12)
-                .foregroundStyle(onDeck ? DS.textPrimary : DS.textSecondary)
+                .foregroundStyle(DS.textSecondary)
             LiveTimeText(date: thing.capturedAt)
         }
         .padding(.top, DS.Space.s1)

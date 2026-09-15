@@ -150,10 +150,9 @@ grep -q 'AWSIngest.refresh(context: context)' "$BRIDGES" \
   || { echo "✗ TokenIngest no longer routes AWS to AWSIngest — the bridge lands nothing"; exit 1; }
 grep -q 'amazonaws.com' "$REACH" \
   || { echo "✗ amazonaws.com is not in the reach registry — the privacy screen is wrong"; exit 1; }
-grep -q 'AWSRoomSource.compose(things: visible)' "$FEED" \
-  || { echo "✗ the AWS head is not wired into shapedSections — it can never draw"; exit 1; }
-grep -q 'AWSRoomCard(standing: standing)' "$FEED" \
-  || { echo "✗ the head resolves but no card renders it"; exit 1; }
+# No head card since prd §749: the room covers its newest row.
+! grep -q 'AWSRoomCard(' "$FEED" \
+  || { echo "✗ the AWS head card is drawn again — the room covers its newest row (§749)"; exit 1; }
 
 # CloudWatch: only a real transition lands, and first sight seeds in silence
 # — else an account with a year of alarm history lands a year of fake news

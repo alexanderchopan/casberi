@@ -213,12 +213,13 @@ grep -q 'standing.observed ? ASCRoom.days' "$ROOMSRC" \
 grep -q 'mayExpire: index == 0' "$ASC" \
   || { echo "✗ every build can land an expiry row again — the feed fills with superseded deadlines"; exit 1; }
 
-# The head must be REACHED. A perfect ranking is worthless if no room draws it —
-# the §219 social-roster bug, which shipped and rendered nowhere for weeks.
-grep -q 'ASCRoomSource.compose(things: visible)' "$FEED" \
-  || { echo "✗ the App Store Connect head is not wired into shapedSections — it can never draw"; exit 1; }
-grep -q 'AppStoreConnectRoomCard(room: room)' "$FEED" \
-  || { echo "✗ the head resolves but no card renders it"; exit 1; }
+# THE ROOM DRAWS NO HEAD CARD (prd §749). Its room covers its newest row like
+# every room without a visualization; the standing model stays for the connect
+# screen and the probe. A card coming back is the text head the user rejected.
+! grep -q 'AppStoreConnectRoomCard(' "$FEED" \
+  || { echo "✗ the App Store Connect head card is drawn again — the room covers its newest row (§749)"; exit 1; }
+[ ! -f Casberi/Casberi/Screens/AppStoreConnectRoomCard.swift ] \
+  || { echo "✗ AppStoreConnectRoomCard.swift is back (§749)"; exit 1; }
 # …and the review row, for the same reason.
 grep -q 'AppReviewRow(thing: thing)' "$FEED" \
   || { echo "✗ reviews no longer render as their own row — the words go back to being invisible"; exit 1; }

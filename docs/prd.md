@@ -55833,3 +55833,44 @@ deleted, and every rewritten guard was dry-run by hand against the new tree.
 **Visible changes a reviewer should look for.** Kept sentences that were hand-drawn in `textSecondary`, `label12` or `label11` are now `textTertiary` at `subhead13`. The biggest shifts: the wallet connection page's read-only promise and the approvals card's gas line, both secondary → tertiary. The directory attributions and the vibenet sheets' captions, label11/label12 → subhead13. The key card's provider disclosure, secondary → tertiary. Sizes are unchanged everywhere, because every one of those rungs is 12pt.
 
 **Verified:** the iOS build and the Mac Catalyst build, `footnote-audit.py` (clean, self-test green), every `scripts/*-audit.py`, and every harness that greps a changed file. None of them pinned a deleted sentence. **UNSEEN on a device or simulator** — every change here is pixels and words.
+
+## §749 — Rows are bare again, and every room without a visualization leads with its newest thing, unbacked (user: "i made a mistake by adding cards to rows i think it makes the app look worse. i also hate the how this card at the top looks, and i want EVERY room to be uniform besides wallet and other rooms w/ a visualization, to have the most recent item in a lede card w/o backing like we do on the home page and on music and on rss", 2026-09-15)
+
+**Supersedes §743 in full.** No feed row wears a plate: `runBackground` returns
+clear for every row, the cards by anatomy included, and the "Older" fold is bare.
+The Mac walk's selection wash is the only surface a list row may wear, and it no
+longer sits on a plate. `DS.surfaceListRow` keeps its other callers.
+
+**The cover has no backing.** `FeedLedeCard` drew a brand-hue ground
+(`DS.deckFill`) on its three pictureless faces, a `surfaceSheet` fill under the
+picture face, a pour at its top and a shadow. All four are deleted. The picture
+keeps its own rounded corners and the words sit in the rows' column. On Home,
+music and the reading list the picture face already read as unbacked in dark,
+because `surfaceSheet` is black there; the pictureless faces were the ones that
+showed a card, and a light-mode cover was a white card on gray.
+
+**Three text heads are deleted, and their rooms take the cover.** The screenshot
+was App Store Connect's head: a sentence, a 5pt build runway and a ranked row per
+app. AWS's head was a sentence and a line; Radicle's was a sentence and rows of
+open items. None is a visualization in the sense the user excepted, so the three
+cards and their `SourceHead` cases are gone, and each room falls to the generic
+path's cover (§732). Their standing models stay: the App Store Connect and AWS
+connect screens read them, and the probes and the demo census compose them.
+
+**Kept, and why each counts as a visualization or as wallet.** The wallet family
+and its riders (Peer, Altana, Vibenet, Privacy Pools, Gnosis Pay, Railgun, Safe).
+The heads that draw a figure: runway rails (Cloudflare, Stripe, Polar, Dodo
+Payments, CardPointers), PostHog's metric discs, the `.figure` heads (Apple
+Wallet, Cursor, Instagram), the span strips (X, the journals, the agent rooms),
+and Walletbeat and L2BEAT, whose rows carry the rating shape and whose head is
+the room's only door to its directory. The registry heads (treemap,
+distribution, mosaic, heatmap), the faces rail, a live stream and an anniversary
+still take the slot when they qualify.
+
+**Not changed.** Gmail's waiting section, Bitrefill's balance lede and the token
+watchlist lede. Rooms whose first row is not the newest (Calendar, Reminders,
+CardPointers, Cursor) still draw no cover.
+
+**Enforced by** `appstoreconnect-selftest.sh` and `aws-selftest.sh`, which now
+fail if either head card is drawn again. **UNSEEN on a device**: built for the
+iOS simulator only.

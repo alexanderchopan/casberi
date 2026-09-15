@@ -6158,17 +6158,6 @@ struct FeedScreen: View {
                     // thing on this head that named a merchant to open, and it
                     // is deleted. Every charge is its own row below.
                     AppleWalletRoomCard(room: room)
-                case .appStoreConnect(let room):
-                    AppStoreConnectRoomCard(room: room) { app in
-                        openNewest(source: ASCShape.source, in: visible) { thing in
-                            // The card ranks an APP, which owns many rows, so
-                            // it can't name a `sourceRef` — the honest landing
-                            // is that app's most recent row, matched on the
-                            // link every one of its rows carries (the Apple
-                            // Wallet merchant rule).
-                            thing.content.contains("/apps/\(app.id)")
-                        }
-                    }
                 case .cursor(let room):
                     CursorRoomCard(room: room) { repo in
                         // The card ranks a REPOSITORY, which owns many rows, so
@@ -6178,25 +6167,6 @@ struct FeedScreen: View {
                         // field over).
                         openNewest(source: CursorRoomSource.source, in: visible) { thing in
                             thing.authorHandle == repo.name
-                        }
-                    }
-                case .aws(let standing):
-                    // Opens whichever row the headline actually names — the
-                    // App Store Connect app / Cursor repo rule, one level
-                    // more literal since a standing carries the concern's
-                    // own identifying string directly.
-                    AWSRoomCard(standing: standing) {
-                        openNewest(source: AWSShape.source, in: visible) { thing in
-                            if let alarm = standing.alarmsInAlarm.first {
-                                return thing.title.contains(alarm)
-                            }
-                            if let pipeline = standing.lastFailedPipeline {
-                                return thing.authorHandle == pipeline
-                            }
-                            if let day = standing.costAnomalyDay {
-                                return thing.sourceRef == "aws:costanomaly:\(day)"
-                            }
-                            return true
                         }
                     }
                 case .cardPointers(let room):
@@ -6227,19 +6197,6 @@ struct FeedScreen: View {
                         // straight to the directory rather than via the connect screen
                         // (§234 — a browse is mounted by the room).
                         route.path.append(.l2beatDirectory)
-                    }
-                case .radicle(let room):
-                    RadicleRoomCard(room: room) { rid, id, kind in
-                        // This head reads STATE, so the item it names may have
-                        // no landed row at all — an issue opened before you
-                        // started watching is in the store's open list and was
-                        // never landed as news. So the landing is the row when
-                        // one exists, and nothing when it doesn't, rather than
-                        // a guess at a neighbouring row.
-                        let ref = "radicle:\(kind.rawValue):\(rid):\(id):opened"
-                        openNewest(source: RadicleRoomSource.source, in: visible) { thing in
-                            thing.sourceRef == ref
-                        }
                     }
                 case .peer(let room):
                     PeerRoomCard(room: room) { rail in
@@ -8207,11 +8164,7 @@ struct FeedScreen: View {
         case dodoPayments(DodoPaymentsRoom)
         case posthog(PostHogRoom)
         case appleWallet(AppleWalletRoom.Card)
-        case appStoreConnect(ASCRoom)
         case cursor(CursorRoom)
-        // AWS (2026-08-30) — one account, one region, so the value is the
-        // standing itself rather than a wrapper type. See `AWSRoomSource`.
-        case aws(AWSStanding)
         // Walletbeat (prd §419) — the only head here whose subject is not the
         // person's own data at all, but somebody else's review of the software
         // they use. It reads stored ratings beside the landed rows.
@@ -8224,12 +8177,6 @@ struct FeedScreen: View {
         // that runs out soonest. The only head here whose subject is a
         // DEADLINE somebody else set.
         case cardPointers(CardPointers.Room)
-        // The two CODE rooms (prd §401). GitHub had led with the contributions
-        // heatmap since it shipped — a decorative card answering "how much did
-        // I write", in the slot the rows that actually need you were competing
-        // for. Radicle shipped headless on purpose (§400 refused the
-        // `/activity` span strip), and this is the head that entry pointed at.
-        case radicle(RadicleRoom)
         // Ethrex Hegotá deliberately has NO case here (prd §500). Its room is
         // four sections of its own — figure, rail, switcher, list — which is
         // what Wallet does, and what keeps its rails on the ROOM's insets
@@ -8332,27 +8279,14 @@ struct FeedScreen: View {
             return PostHogRoomSource.compose(things: visible).map { .posthog($0) }
         case AppleWalletBridge.sourceName:
             return AppleWalletRoomSource.compose(things: visible).map { .appleWallet($0) }
-        // The one head here that reads no rows at all — its subject is STATE,
-        // and replaying the feed for it would let this card and the connect
-        // screen disagree about the same corpus. See `ASCRoomSource.compose`.
-        case ASCShape.source:
-            return ASCRoomSource.compose(things: visible).map { .appStoreConnect($0) }
         case CursorRoomSource.source:
             return CursorRoomSource.compose(things: visible).map { .cursor($0) }
-        // Reads no rows at all — its subject is bridge STATE (alarms,
-        // deploys, resource counts), `ASCRoomSource`'s reason exactly.
-        case AWSShape.source:
-            return AWSRoomSource.compose(things: visible).map { .aws($0) }
         case WalletbeatRoomSource.source:
             return WalletbeatRoomSource.compose(things: visible).map { .walletbeat($0) }
         case L2beatRoomSource.source:
             return L2beatRoomSource.compose(things: visible).map { .l2beat($0) }
         case CardPointersRoomSource.source:
             return CardPointersRoomSource.compose(things: visible).map { .cardPointers($0) }
-        // Reads no rows at all — its subject is bridge STATE, since no landed
-        // row can say a patch is still unresolved. See `RadicleRoomSource`.
-        case RadicleRoomSource.source:
-            return RadicleRoomSource.compose(things: visible).map { .radicle($0) }
         // Reads no rows at all — this seat lands none. Its subject is chain
         // state read live (`HegotaLiveState`), so there is nothing in `visible`
         // for it to replay — and no head CARD either: its room is four sections
@@ -9473,7 +9407,7 @@ struct FeedScreen: View {
                         .contentShape(Rectangle())
                         .onTapGesture { withAnimation(DS.Motion.standard) { staleExpanded = true } }
                         .dsTapCard()
-                        .listRowBackground(rowPlate)   // a row like any other (prd §743)
+                        .listRowBackground(Color.clear)   // bare, like every row (prd §749)
                         .listRowInsets(.init(top: DS.Space.s2,
                                              leading: DS.Space.s4 + DS.Space.s3,
                                              bottom: DS.Space.s2,
@@ -9687,39 +9621,27 @@ struct FeedScreen: View {
             // sites pass a breaker predicate they have no reason to know about.
             dayCardBackground(.only, fill: skin.fill, shadowed: false)
         } else {
-            // EVERY ROW WEARS THE PLATE (prd §743, 2026-09-15, user: "i think
-            // the cards would make it look more purposeful"). `bare` and
-            // `position` are deliberately NOT read here: the plate is per
-            // row, never a merged run, and it is `surfaceListRow` — the 3%
-            // step the user ruled "enough edge to group on an OLED, not
-            // enough body to read as a gray box" — with no shadow, because
-            // forty 18pt blurs per screenful is the cost §61's runs existed
-            // to avoid, and a 3% fill has nothing for a shadow to lift.
-            // `surfaceSheet` (pure black in dark) is what a post's card wore
-            // until now, which on the ink page is no card at all.
-            rowPlate
+            // ROWS ARE BARE AGAIN (prd §749, 2026-09-15, user: "i made a
+            // mistake by adding cards to rows i think it makes the app look
+            // worse"). §743's per-row plate is withdrawn for every row,
+            // cards by anatomy included: the day header groups, the ink is
+            // the ground, and the only surface a list row may wear is the
+            // Mac walk's selection wash below.
+            Color.clear
         }
-    }
-
-    /// The one plate every feed row stands on (prd §743). One expression so
-    /// the wash below and the resting row can never disagree about the shape.
-    private var rowPlate: some View {
-        dayCardBackground(.only, fill: DS.surfaceListRow, shadowed: false)
     }
 
     /// The walk's position, wearing the run's own corners and insets. A bare
     /// row gets the wash alone; a card row keeps its surface with the wash over
     /// it, so a consent card or a post still reads as the card it is.
     private func selectionWash(_ position: RunPosition, bare: Bool) -> some View {
-        // `position` and `bare` are unread since prd §743: the plate is per
-        // row, so the wash takes the plate's own `.only` shoulders and insets.
-        ZStack {
-            rowPlate
-            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                .fill(DS.tintDim)
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.vertical, DS.Space.s1)
-        }
+        // `position` and `bare` are unread since prd §743: the wash takes
+        // one `.only` shape and inset. Since §749 there is no plate under
+        // it — the row is bare, so the wash is the whole surface.
+        RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+            .fill(DS.tintDim)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s1)
     }
 
     /// The row inside a list section, with the standard list plumbing attached.
