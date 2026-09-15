@@ -119,41 +119,31 @@ guard "the reception block is drawn by the sheet" \
   'SocialReceptionCard\(reception: reception\)' "$VIEW"
 guard "the reception is recomposed when the live read answers" \
   'live: live, context: modelContext' "$VIEW"
-# The From row must stand down where the sentence speaks, or the sheet says the
-# same fact twice in two voices — which is what §363 set out to end.
-# The From row must stand down where the sentence speaks, or the sheet says the
-# same fact twice in two voices — which is what §363 set out to end.
+# THE FROM ROW IS DELETED (prd §736), and these two guards became one.
 #
-# Checked across the WHOLE `hasFrom` assignment rather than on one line, and
-# that is not fussiness: this sheet serves every category, four passes have
-# added their own conjunct to this exact expression, and it is now six lines
-# long. A line-anchored grep passed, then failed the moment a sibling pass
-# wrapped it — reporting a deleted gate that was sitting three lines below,
-# which is a guard crying wolf about its own regex.
-python3 - "$VIEW" <<'PY' || fail=1
-import re, sys
-src = open(sys.argv[1]).read()
-m = re.search(r'let hasFrom =(.*?)\n\s*let ', src, re.S)
-if m and 'reception?.provenance == nil' in m.group(1):
-    print("  ✓ the From spec row stands down for a composed sentence")
-else:
-    print("  ✗ the From spec row stands down for a composed sentence")
+# They protected §363 ("the From row stands down where the reception composed a
+# sentence") and §451 ("…and where the EYEBROW is the sentence"), each written
+# after a pass put the row back on sheets that already said it better. Those
+# were the right guards while the row existed on any sheet at all. §736 deleted
+# it on every sheet: the dial already carried a door for every kind the row
+# named a place for, so the row was the same fact twice with the weaker half on
+# top — §363's own finding, applied everywhere instead of to social alone.
+#
+# So the guard inverts. There is no stand-down to check any more; there is a
+# row that must not come back. Read from a COMMENT-STRIPPED copy, because the
+# view carries a tombstone naming `hasFrom` and `fromRow` and saying why they
+# went (the Obsidian/Cursor lesson) — a raw grep fires on the prose explaining
+# the deletion.
+python3 - "$VIEW" <<'FROMGONE' || fail=1
+import sys
+code = "\n".join(l for l in open(sys.argv[1]).read().splitlines()
+                 if not l.strip().startswith("//"))
+bad = [n for n in ("hasFrom", "fromRow", "PlaceWords") if n in code]
+if bad:
+    print("  ✗ the From spec row is back (%s) — prd §736 deleted it" % ", ".join(bad))
     sys.exit(1)
-PY
-# …and stands down again where the EYEBROW is the sentence (prd §451). The
-# live sentence is suppressed there, so `provenance == nil` on exactly those
-# sheets — and without this second conjunct the row §363 deleted returns on
-# every one of them, which is the cut running backwards. Checked across the
-# same whole assignment, for the same reason.
-python3 - "$VIEW" <<'PY' || fail=1
-import re, sys
-src = open(sys.argv[1]).read()
-m = re.search(r'let hasFrom =(.*?)\n\s*let ', src, re.S)
-ok = m and '!SocialSheetSource.eyebrowLeadsWithPerson(' in m.group(1)
-print("  ✓ the From spec row stands down where the eyebrow speaks"
-      if ok else "  ✗ the From spec row stands down where the eyebrow speaks")
-sys.exit(0 if ok else 1)
-PY
+print("  ✓ the From spec row stays deleted")
+FROMGONE
 # ONE PREDICATE (§451). The eyebrow's own condition and the sentence's
 # stand-down must be the SAME function, or the card either repeats itself or
 # says neither line. A second copy in the view is how that drifts.

@@ -55006,3 +55006,30 @@ Not built or run here (no Xcode in this checkout) — the rung change is layout-
 **CloudKit.** `CD_mailMessageID` is additive, so SwiftData needs no version stage — but Production never auto-creates a field, and a TestFlight build mirrors to Production. It is in `docs/cloudkit-schema.ckdb`; the deploy (`docs/cloudkit-deploy.md`) is owed before the next TestFlight, or the door exists on the device that landed the mail and on no other.
 
 Not built or run here (no Xcode in this checkout) — the pure logic is mirrored and green, the simulator pass and `-mailOpenProbe` are owed.
+
+## §736 — The "From" row is DELETED: the dial was already the open button, and the two facts the row alone held are now words on it (user: "can we apply that same principle to all the things that say from something / why even have them say from, why not just have an open button", 2026-09-15)
+
+**Asked the day after §735 made the mail row a door, and it is the right question about that ruling.** The answer is not a third wiring of the same row.
+
+**The finding: the open button already exists, on every kind that named a place.** `VerbDerivation` gives a `.event` "Open in Calendar", a Files `.file` "Show in Files", a social `.chat` "Open thread", a `.transaction` "Explorer", a `.product` "Open in store", a `.screenshot` "Zoom" and "Open in Photos", a Reminders row the `x-apple-reminderkit` hand-off, an Obsidian `.note` "Open in Obsidian" — and, since §735, a `.mail` "Open in Mail" / "Open in Gmail". So the row was not a door waiting to be wired. It was the same fact a second time, stated weaker, above the disc that already did it.
+
+**And §634 set a test the survivors fail.** That ruling deleted four arms of `PlaceWords` for saying something true of every row in the corpus — "saved by you", "written by you", "recorded by you", "banked by you" — and kept the rest on the grounds that they "name a real place". Applied honestly to what was left:
+
+- **"in your photos"** is true of every screenshot, **"in your contacts"** of every contact, **"in your home"** of every accessory, **"from your machines"** of every run. Same sentence, different preposition.
+- **"awaiting your call"** is a state wearing the label "From". Not a place, not a sentence.
+- **`.mail` and `.file` shared one arm**, so every Dropbox file in the corpus read **"in your inbox"** — a fact that is not merely thin but false. The Files carve-out for §408 went in above it and nobody re-read the arm underneath.
+
+**Two arms passed: "in Receipts" and "in Main"** — the only two that said WHICH one. Both are now the word on a button that goes there, following `walletVerbs`' 2026-08-04 ruling that a disc's glyph says it opens something and its word says where you land:
+
+- **"Show in Receipts"**, not "Show in Files" — `FilesLocation.folderName` off the ref the verb already parses, and `FilesStore.shared.folderName` (an in-memory string, the `ObsidianStore.shared.vaultName` precedent; never `folderURL()`, which is the disk read that arm's own comment refuses).
+- **The wallet's own name on a new `Verb.Action.openAddress`** — the only destination in that enum that never leaves the app, because the place a wallet row comes from is a screen Casberi draws. `WalletStore.displayName(forStored:)` is the word and the gate both: it carries the ENS-vs-hex matching and answers nil for an address that is not a watched wallet, so a stranger's transaction grows no disc. The stage sheets have had this door since §369 (the receipt's subject face); a mint, a card spend or a DeFi move gets no stage, so it held the fact and had nowhere to go — §408's shape, one kind over.
+
+**`dialLabel` gains `"Show in "`.** Without it "Show in Receipts" is 16 characters, falls past the 12-char gate to `shortLabel`, and reads "Files" — this whole ruling undone by a length check.
+
+**Deleted from the model, not just the surface (§723).** `PlaceWords` is gone, `walletPlace` with it, `hasFrom` and `fromRow` with them. Nothing composes a place phrase anywhere now. `WalletStore.isAutoName` keeps its caller — it tells a name the person typed from a placeholder this app generated, which is what decides between "Main" and "Wallet …4f4f" on the new disc.
+
+**What the spec table holds now**: Landed, Site, Also saved from, By, Who. Every one a fact about this thing.
+
+**§408 and §735 are not reversed, they are absorbed.** Both were right that people press that row — twice, two different moments, which is evidence and not coincidence. They press it because it makes a claim about a place. The claim now lives on the control that honours it.
+
+Not built or run here (no Xcode in this checkout) — the simulator pass is owed, and the two doors' probes (`-filesRevealProbe`, `-mailOpenProbe`) now read the destination out of `discs=` rather than a From line.

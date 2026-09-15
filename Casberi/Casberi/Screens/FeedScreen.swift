@@ -10745,6 +10745,12 @@ struct FeedScreen: View {
             // this verb (it picks out the open and translate verbs by hand), so
             // this arm exists for completeness, not as a second door.
             openThing(thing)
+        case .openAddress:
+            // `.viewImage`'s rule directly above, and for its reason: an
+            // in-app destination the feed cannot present itself opens the
+            // sheet that can. The address card is a `FaceTarget` on
+            // `ThingSheetView`, which is where this row's tap already goes.
+            openThing(thing)
         case .approve:
             // An MCP client asked to save a thing (PRD §34) — the approval
             // carries the payload; the tap is what commits it. Consent → write.

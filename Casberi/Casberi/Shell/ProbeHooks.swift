@@ -4956,8 +4956,11 @@ enum ProbeHooks {
                 for thing in rows {
                     NSLog("[Casberi] filesRow| %@ · ref=%@", thing.title,
                           thing.sourceRef ?? "(none)")
-                    NSLog("[Casberi] filesRow|   from=\"%@\" · url=%@",
-                          PlaceWords.line(for: thing),
+                    // The "From" row this probe used to print is DELETED
+                    // (prd §736) and so is the phrase it printed — the folder
+                    // is the DISC's word now, so `discs=` below is where you
+                    // read it ("Receipts", not "Files").
+                    NSLog("[Casberi] filesRow|   url=%@",
                           FilesIngest.revealURL(for: thing.sourceRef)?.absoluteString ?? "(none)")
                     let discs = VerbDerivation.verbs(for: thing)
                         .map { VerbDial.dialLabel(for: $0) }.joined(separator: ", ")
@@ -5017,8 +5020,8 @@ enum ProbeHooks {
                 for thing in rows {
                     NSLog("[Casberi] mailRow| %@ · source=%@ · ref=%@",
                           thing.title, thing.source, thing.sourceRef ?? "(none)")
-                    NSLog("[Casberi] mailRow|   messageID=%@ · from=\"%@\"",
-                          thing.mailMessageID ?? "(none)", PlaceWords.line(for: thing))
+                    NSLog("[Casberi] mailRow|   messageID=%@",
+                          thing.mailMessageID ?? "(none)")
                     NSLog("[Casberi] mailRow|   url=%@",
                           MailLocation.messageURL(source: thing.source,
                                                   messageID: thing.mailMessageID,

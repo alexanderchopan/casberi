@@ -164,8 +164,15 @@ struct VerbDial: View {
     /// "Open", so a sheet with Directions + Photos + Call would read "Open
     /// Open Open" — the destination is the differentiator, so it's what the
     /// disc says.
+    ///
+    /// `"Show in "` joined the strip list on 2026-09-15 (prd §736), when the
+    /// Files verb started naming the folder rather than the app. Without it
+    /// "Show in Receipts" is 16 characters, falls past the 12-char gate to
+    /// `shortLabel`, and reads "Files" — i.e. the disc would silently drop the
+    /// one fact the deleted "From — in Receipts" row existed to carry, which
+    /// is the whole of that ruling undone by a length check.
     static func dialLabel(for verb: Verb) -> String {
-        for prefix in ["Open in ", "Send to ", "Add to "] where verb.label.hasPrefix(prefix) {
+        for prefix in ["Open in ", "Send to ", "Add to ", "Show in "] where verb.label.hasPrefix(prefix) {
             return String(verb.label.dropFirst(prefix.count))
         }
         if verb.label.hasPrefix("Open") { return "Open" }

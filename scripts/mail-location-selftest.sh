@@ -103,19 +103,31 @@ grep -q 'schemes.contains(openScheme)' "$LOC" \
   || { echo "✗ the Apple Mail arm is ungated — an unclaimed scheme is refused"; \
        echo "  asynchronously and reports success, so it would be a door that does nothing"; exit 1; }
 
-# Both doors run the SAME builder, or the row and the dial disagree about
-# where a mail goes.
+# The door lives in the DIAL, and only there (prd §736). §735 drew it twice —
+# once on the dial, once on the sheet's "From" row — and the row is deleted,
+# because the disc below it was always saying the same thing with a destination
+# in its word. The guard runs both ways: the builder must still be wired, and
+# the row must not come back.
 grep -q 'MailLocation.messageURL(source: thing.source,' "$VERBS" \
-  || { echo "✗ the dial no longer builds its mail door through MailLocation"; exit 1; }
-grep -q 'MailLocation.messageURL(source: thing.source,' "$SHEET" \
-  || { echo "✗ the sheet's From row no longer builds its door through MailLocation"; exit 1; }
-# The row the feedback pointed at. `specRow` is a label; `fromRow` is the one
-# that can become a door.
-grep -q 'fromRow(PlaceWords.line(for: thing))' "$SHEET" \
-  || { echo "✗ the sheet's From row is a plain label again — the press that was"; \
-       echo "  asked for goes nowhere"; exit 1; }
-grep -q 'else if thing.kind == .mail,' "$SHEET" \
-  || { echo "✗ the From row's mail door is gone, or is no longer scoped to mail"; exit 1; }
+  || { echo "✗ the dial no longer builds its mail door through MailLocation — with"; \
+       echo "  the From row deleted (§736) this is the only door a mail has"; exit 1; }
+grep -q 'MailLocation.appName(source: thing.source)' "$VERBS" \
+  || { echo "✗ the mail verb no longer names the app it opens"; exit 1; }
+# COMMENT-STRIPPED, for the reason the `mailto` guard below gives: the sheet
+# carries a tombstone naming `fromRow` and what it drew, so a guard grepping
+# raw source fires on the prose explaining the deletion.
+python3 - "$SHEET" <<'ROWGONE' || exit 1
+import sys
+sheet = "\n".join(l for l in open(sys.argv[1]).read().splitlines()
+                  if not l.strip().startswith("//"))
+if "fromRow" in sheet:
+    print("✗ the sheet's From row is back (prd §736 deleted it)")
+    sys.exit(1)
+if "MailLocation" in sheet:
+    print("✗ the thing sheet builds a mail door of its own again — §736 left the")
+    print("  dial as the single door, so a second one can only drift from it")
+    sys.exit(1)
+ROWGONE
 # Two discs a millimetre apart, one landing on the message and one on the
 # inbox, is the menu brief §12 bans — so the front door stands down for a mail
 # that has a real one.

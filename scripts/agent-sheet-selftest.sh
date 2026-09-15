@@ -83,8 +83,21 @@ guard "the chat branch draws the turns" \
 # all.
 guard "the Site row stands down on an agent sheet" \
   'hasSite = .*agentShape == nil' "$VIEW"
-guard "the From row stands down on an agent sheet" \
-  'hasFrom = .*|.*agentShape == nil' "$VIEW"
+# The From row it also took no longer exists on ANY sheet (prd §736): the dial
+# already carried a door for every kind that row named a place for, so it was
+# the same fact twice — §367's own finding here ("From — from your session was
+# this table's whole contribution to a chat"), applied everywhere. There is no
+# stand-down left to assert, only a row that must not come back. Comment-
+# stripped, because the view now carries a tombstone naming it.
+python3 - "$VIEW" <<'FROMGONE' || fail=1
+import sys
+code = "\n".join(l for l in open(sys.argv[1]).read().splitlines()
+                 if not l.strip().startswith("//"))
+if any(n in code for n in ("hasFrom", "fromRow", "PlaceWords")):
+    print("  ✗ the From row is back on the sheet — prd §736 deleted it")
+    sys.exit(1)
+print("  ✓ the From row stays deleted (prd §736)")
+FROMGONE
 # A grant draws no content: its link is the same dashboard URL on every row.
 guard "a grant shows no link preview" \
   'agentShape != \.grant' "$VIEW"
