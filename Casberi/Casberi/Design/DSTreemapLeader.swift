@@ -12,7 +12,7 @@ import SwiftUI
 /// earns a place, the number at `price40` hard against the bottom-left, its
 /// name dropped to `label12` beside the baseline. **Slot 0 only, and the tail
 /// of the map is untouched** — same slots, same ramp, same 12pt names — so the
-/// change is one cell and `UnitTreemap`'s tiling never moves.
+/// change is one cell and the tiling `unit-treemap-selftest.sh` guards never moves.
 ///
 /// **THE RULE THAT DECIDES A CALLER: the leader must be sayable as a NUMBER.**
 /// A share, a count, a tally. Where the leader is a WORD this must not be used:

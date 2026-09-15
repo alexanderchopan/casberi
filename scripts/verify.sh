@@ -1540,7 +1540,8 @@ harness "Bankr pure-logic self-test" "bankr self-test" "scripts/bankr-selftest.s
 # (Circle x402's harness, `x402-selftest.sh`, ran between here and the App
 # Store Connect one from 2026-08-06 until 2026-09-06 — deleted with the seat's
 # catalog entry, prd §638. The bridge file stays one release; nothing offers
-# it, so nothing proves it.)
+# it, so nothing proves it. Its UnitTreemap half had nothing to do with x402
+# and is `unit-treemap-selftest.sh` since 2026-09-15.)
 # App Store Connect (2026-08-06, prd §323). Its conduct guard is the strongest
 # reason any harness here exists: an App Store Connect key carries a ROLE, not
 # scopes, and no role is read-only for what this bridge reads — the narrowest
@@ -2213,6 +2214,14 @@ harness "Keyed-agent reach and budget self-test" "agent keyed self-test" "script
 # "3 more" hides the one row the screen exists to surface, and a truncated tail
 # makes a nine-service ledger look exactly like a six-service one.
 harness "Receipts-insight pure-logic self-test" "receipts-insight self-test" "scripts/receipts-insight-selftest.sh" "the receipts-insight logic self-test failed — run scripts/receipts-insight-selftest.sh"
+
+# The ONE 4×3 table every treemap tiles on (`Design/UnitTreemap.swift`): one
+# cell per count, area never rising with rank, no hole or overlap, no second
+# table anywhere in the app, and the leader lockup kept off the word maps
+# (prd §565). It lived in `x402-selftest.sh` and went with that seat on
+# 2026-09-06; nothing guarded it until 2026-09-15. Its scan walks all of
+# `Casberi/`, which the skip cache cannot key — see the script's stated ceiling.
+harness "Unit-treemap table self-test" "unit-treemap self-test" "scripts/unit-treemap-selftest.sh" "the unit-treemap table self-test failed — run scripts/unit-treemap-selftest.sh"
 
 # The 2026-08-21 perf pass's two invariants (see the script's own header). Both
 # removed a real cost from a path a person feels, and both are correct only
