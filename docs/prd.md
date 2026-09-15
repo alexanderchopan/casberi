@@ -56043,3 +56043,52 @@ FeedScreen.
 **UNSEEN on a device.** Built for the iOS simulator; the wallet-section,
 category-fold and vibenet self-tests and the template, ramp, chassis,
 harness-exists and dead-closure audits pass. Not built for Mac Catalyst.
+
+## §753 — The room's faces ride the dock folder's capsule, after the venues, and they draw no words (user: "in wallet and social rooms we have the silhouttes of the accounts basically on a third row. is that the right design?", then on three mockups "b seems most like a mac dock", "lets go with B", and on labels "if no avatar then ...xxxx is used or even jsuut xxxx with no elipsis", "you decide", "just build it", 2026-09-15)
+
+**The report.** A social or wallet room stacked three glass strips over the feed:
+the face rail, the category folder, the dock. Two of them were the same object —
+a pill of circles — one pointing at its chip and one not, so the band read as a
+control repeated rather than as two controls.
+
+**Three directions were drawn** (one card with faces as the folder's upper deck;
+venues and faces on one row; a vertical rail at the trailing edge). The user
+picked the one row: it is the Mac dock, where everything in reach sits in one
+strip. The vertical rail was ruled nice to look at and hard to navigate.
+
+**The ruling** (`MainSurface.roomControls`, `DockFolderRow`, `FaceScopeRail.inFolder`):
+
+1. **One capsule.** The venues lead and the faces follow an `s2` gap — spacing,
+   never a line. §649's reason survives inside the row: the tail still lands on a
+   venue over the chip that opened it, and nothing that points sits above
+   something it does not point at.
+2. **A closed folder leaves the faces alone in the capsule, with no tail** and at
+   the band's leading inset. §750's gate is untouched: a rail shows whenever its
+   room has more than one account, folder or not. Opening the folder over faces
+   already up still springs the venues out of the chip (`flowed` resets on the
+   way out).
+3. **No words on the row.** A caption under a 36pt face fits about nine
+   characters, so every address and a name like `lightclients.eth` came out cut,
+   and no length fixes that in a row. An avatar is its own label. A face with no
+   picture carries its own characters INSIDE the circle: an address is its last
+   four, bare — no ellipsis, because four characters in a circle are visibly a
+   fragment and `…` spends a fifth of it saying so — and a person with no avatar
+   is their name's first letter. The room names the pick: the crown's caption in
+   the wallet family, the author on every row of a social room. VoiceOver still
+   speaks each slot's full caption; the Mac tooltip still shows it.
+4. **A face slot is a venue seat.** Drawn at the venue mark's rung (36, folding to
+   26 with it), the pick a glass lens six points out, a 44pt target. `ringed`
+   keeps its one meaning (posted since you looked).
+
+**What this supersedes.** §649's line order (faces above the folder) and §750's
+"the accounts are the face rail above the dock", as placement only. §362's one
+component holds: all three rooms still draw `FaceScopeRail`.
+
+**Guarded** in `category-fold-selftest.sh`: the faces are handed to the row built
+inside `DockSpringRow`, `roomControls` emits no face rail as its own strip, all
+three shell rails pass `inFolder: true`, and the tail takes `suffix(4)` with no
+ellipsis.
+
+**Not done.** A press-and-slide label over a face (the Mac dock's hover name) was
+considered for long names and left out: the room already names the pick, and a
+floating label is a fourth object in the band.

@@ -28,8 +28,11 @@ import SwiftUI
 /// has been seen arriving on the pick. Retapping the chip, tapping the feed
 /// or swiping rooms closes it too.
 struct DockSpringRow<Content: View>: View {
-    /// The tapped chip's centre, window space.
-    let anchorX: CGFloat
+    /// The tapped chip's centre, window space. **nil when no folder is open**
+    /// (prd §753): the row then carries the room's faces alone, points at
+    /// nothing, and sits at the band's leading inset — a tail aimed at a chip
+    /// nobody tapped would be the §649 lie told the other way round.
+    let anchorX: CGFloat?
     /// Built with the anchor's x IN THE ROW'S OWN SPACE, so the content can
     /// flow out of that point (see `DockFolderRow`).
     @ViewBuilder let content: (CGFloat) -> Content
@@ -45,6 +48,7 @@ struct DockSpringRow<Content: View>: View {
     private var tail: CGFloat { 10 }
 
     private var leading: CGFloat {
+        guard let anchorX else { return DS.Space.s4 }
         let wanted = anchorX - bandMinX - seatHalf
         let maxLeading = max(DS.Space.s4, bandWidth - rowWidth - DS.Space.s4)
         return min(max(DS.Space.s4, wanted), maxLeading)
@@ -53,7 +57,7 @@ struct DockSpringRow<Content: View>: View {
     /// Where along the row the anchor falls, 0…1, for the tail and the
     /// transition's origin.
     private var anchorShare: CGFloat {
-        guard rowWidth > 0 else { return 0.1 }
+        guard let anchorX, rowWidth > 0 else { return 0.1 }
         let x = anchorX - bandMinX - leading
         return min(max(x / rowWidth, 0.06), 0.94)
     }
@@ -72,12 +76,14 @@ struct DockSpringRow<Content: View>: View {
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { rowWidth = $0 }
                 // The tail — a rounded diamond under the row, pointing at the chip.
                 .overlay(alignment: .bottomLeading) {
-                    RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                        .fill(DS.fillStrong)
-                        .frame(width: tail, height: tail)
-                        .rotationEffect(.degrees(45))
-                        .offset(x: rowWidth * anchorShare - tail / 2, y: tail / 2)
-                        .allowsHitTesting(false)
+                    if anchorX != nil {
+                        RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                            .fill(DS.fillStrong)
+                            .frame(width: tail, height: tail)
+                            .rotationEffect(.degrees(45))
+                            .offset(x: rowWidth * anchorShare - tail / 2, y: tail / 2)
+                            .allowsHitTesting(false)
+                    }
                 }
                 .padding(.leading, leading)
                 .padding(.trailing, DS.Space.s4)
@@ -101,7 +107,17 @@ struct DockSpringRow<Content: View>: View {
 /// content `DockSpringRow` springs up. Marks, not words, and no captions
 /// (the venue switcher's own grammar): a recognisable mark in a circle, the
 /// lit one ringed, a broken one dashed.
-struct DockFolderRow: View {
+///
+/// **THE ROOM'S FACES RIDE THE SAME CAPSULE, AFTER THE VENUES (prd §753,
+/// user: "b seems most like a mac dock", then "lets go with B").** They were a
+/// third glass strip above this one — two pills of circles stacked over the
+/// dock, one pointing and one not, which read as one object repeated. Where
+/// you are (the venues) leads, so the tail still lands on a venue over the
+/// chip; who you are looking at (the faces) follows a gap. Either half may be
+/// empty: a closed folder leaves the faces alone, a room with one account
+/// leaves the venues alone. The capsule scrolls sideways inside
+/// `DockSpringRow`, which is what a long roster needs.
+struct DockFolderRow<Faces: View>: View {
     let venues: [String]
     /// The room you are standing in — the lit venue.
     let standing: String
@@ -111,6 +127,8 @@ struct DockFolderRow: View {
     /// The chip's x in this row's space — where the venues flow out from.
     var anchorLocalX: CGFloat = 0
     let onPick: (String) -> Void
+    /// The room's face rail, drawn `inFolder` — see the note on the type.
+    @ViewBuilder let faces: () -> Faces
 
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -124,7 +142,7 @@ struct DockFolderRow: View {
     @State private var flowed = false
 
     private var markSize: CGFloat { compact ? DS.Face.row : DS.Face.list }
-    private static let seatPitch: CGFloat = DS.Hit.min + 2
+    private static var seatPitch: CGFloat { DS.Hit.min + 2 }
 
     /// **THE BROKEN SET, ONE PASS PER BODY (prd §668).** `folderVenue` asked
     /// `bridges.bridges.contains { … }` per venue — a linear scan of the whole
@@ -142,39 +160,13 @@ struct DockFolderRow: View {
         // The container the lit venue's lens morphs within — see `folderVenue`.
         DSGlassContainer(spacing: 2) {
         HStack(spacing: 2) {
-            ForEach(Array(venues.enumerated()), id: \.element) { i, venue in
-                // THE FLOW (user, 2026-09-05: "they should flow out of the
-                // chip in some springy way and feel sort of fun"): each
-                // venue starts on the chip and springs to its seat, one
-                // after another — the nearest first — so the row is seen
-                // dealt out of the chip rather than switched on.
-                let seatX = 2 + CGFloat(i) * Self.seatPitch + DS.Hit.min / 2
-                let settled = flowed || reduceMotion
-                folderVenue(venue, broken: broken.contains(venue))
-                    .scaleEffect(settled ? 1 : 0.3)
-                    .opacity(settled ? 1 : 0)
-                    .offset(x: settled ? 0 : anchorLocalX - seatX)
-                    // **NO CASCADE — THE ROW ARRIVES WHOLE (prd §678, user:
-                    // "when you click on the 'life' icon it flashes briefly
-                    // that black bar").** The glass slab below is sized by
-                    // these seats at their FULL frames — `scaleEffect`,
-                    // `opacity` and `offset` are render-only and change no
-                    // layout — so the strip is full width from its first
-                    // frame while the seats are still invisible behind their
-                    // delays. The slab's own fade beat them: measured on the
-                    // Life folder, frames 158-161 are a full-width dark strip
-                    // lying over a feed heading with two seats on it. The
-                    // longer the category, the longer that window, which is
-                    // why Life named itself.
-                    //
-                    // Every seat still springs out of the chip — the scale,
-                    // the fade and the offset from `anchorLocalX` are all
-                    // untouched, so §621's "flow out of the chip in some
-                    // springy way" survives. Only the CASCADE goes, and with
-                    // it the window in which the slab has nothing on it.
-                    .animation(reduceMotion ? nil : DS.Motion.folder,
-                               value: settled)
+            venueSeats(broken: broken)
+            // The gap between WHERE and WHO. Spacing, never a line (§8: no
+            // hairlines); only drawn when both halves are there.
+            if !venues.isEmpty {
+                Color.clear.frame(width: DS.Space.s2, height: 1)
             }
+            faces()
         }
         }
         .padding(2)
@@ -187,7 +179,52 @@ struct DockFolderRow: View {
         .clipShape(Capsule(style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("\(category) sources"))
-        .onAppear { flowed = true }
+        .onAppear { flowed = !venues.isEmpty }
+        // A folder opening over faces that are already up: the seats are
+        // new while the row is not, so `onAppear` has long since fired. Reset
+        // on the way out and settle on the way in, or the venues would pop
+        // in place rather than spring out of the chip (§621).
+        .onChange(of: venues.isEmpty) { _, empty in
+            flowed = !empty
+        }
+    }
+
+    /// The venue seats — the part of the row that flows out of the chip.
+    @ViewBuilder
+    private func venueSeats(broken: Set<String>) -> some View {
+        ForEach(Array(venues.enumerated()), id: \.element) { i, venue in
+            // THE FLOW (user, 2026-09-05: "they should flow out of the
+            // chip in some springy way and feel sort of fun"): each
+            // venue starts on the chip and springs to its seat, one
+            // after another — the nearest first — so the row is seen
+            // dealt out of the chip rather than switched on.
+            let seatX = 2 + CGFloat(i) * Self.seatPitch + DS.Hit.min / 2
+            let settled = flowed || reduceMotion
+            folderVenue(venue, broken: broken.contains(venue))
+                .scaleEffect(settled ? 1 : 0.3)
+                .opacity(settled ? 1 : 0)
+                .offset(x: settled ? 0 : anchorLocalX - seatX)
+                // **NO CASCADE — THE ROW ARRIVES WHOLE (prd §678, user:
+                // "when you click on the 'life' icon it flashes briefly
+                // that black bar").** The glass slab below is sized by
+                // these seats at their FULL frames — `scaleEffect`,
+                // `opacity` and `offset` are render-only and change no
+                // layout — so the strip is full width from its first
+                // frame while the seats are still invisible behind their
+                // delays. The slab's own fade beat them: measured on the
+                // Life folder, frames 158-161 are a full-width dark strip
+                // lying over a feed heading with two seats on it. The
+                // longer the category, the longer that window, which is
+                // why Life named itself.
+                //
+                // Every seat still springs out of the chip — the scale,
+                // the fade and the offset from `anchorLocalX` are all
+                // untouched, so §621's "flow out of the chip in some
+                // springy way" survives. Only the CASCADE goes, and with
+                // it the window in which the slab has nothing on it.
+                .animation(reduceMotion ? nil : DS.Motion.folder,
+                           value: settled)
+        }
     }
 
     private func folderVenue(_ venue: String, broken: Bool) -> some View {

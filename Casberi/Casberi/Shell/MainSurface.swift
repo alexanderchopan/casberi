@@ -575,49 +575,46 @@ struct MainSurface: View {
         // room it lands you in is a separate object and belongs further from
         // the hand.
         //
-        // So the faces are emitted FIRST (this is a `VStack`, top to bottom)
-        // and the two spring rows last, against the dock. They remain mutually
-        // exclusive — `openFolder` is a category or the doors, never both — so
-        // exactly one row ever sits between the faces and the dock.
+        // **…AND SINCE §753 THEY ARE ONE ROW** (user: "b seems most like a mac
+        // dock", then "lets go with B"). Three glass strips stacked — faces,
+        // folder, dock — put two pills of circles over the dock, one pointing
+        // and one not, and they read as one object repeated. The faces now
+        // ride the folder's own capsule AFTER the venues, so §649's reason
+        // survives inside the row: the venues lead, the tail still lands on a
+        // venue over its chip, and nothing that points sits above anything it
+        // does not point at. With the folder closed the capsule carries the
+        // faces alone and draws no tail.
+        //
         // **A FACE RAIL SHOWS WHENEVER ITS ROOM HAS SOMETHING TO PICK (prd
         // §750, 2026-09-15).** It showed only while the category's folder was
         // up or a scope was already live, so a person who swiped into
         // Farcaster or Wallet with the folder closed never learned the faces
-        // existed — the folder was the door to a control that has nothing to
-        // do with it. Each rail's own `shows` (more than one account) is the
-        // whole gate now. §674 is untouched: a room change still settles this
-        // row's height on `glide`, and with the folder out of the gate the
-        // height changes less often than it did.
-        socialScopeRail
-        githubScopeRail
-        accountRail
+        // existed. Each rail's own `shows` (more than one account) is the
+        // whole gate. §674 is untouched: a room change still settles this
+        // row's height on `glide`.
+        //
         // **THE FOLDERS SPRING UP OUT OF THEIR CHIP (2026-09-05, the Mac-dock
-        // folder — see `DockSpringRow`).** A category's venues and the
-        // octopus's four doors each rise above the dock anchored to the chip
-        // that was tapped, on `DS.Motion.folder`'s spring; the chip itself
-        // never moves, so the word that closes the folder is where the finger
-        // just was.
-        if case .category(let category) = chrome.openFolder {
-            let venues = categoryVenues[category] ?? []
-            if venues.count >= CategoryFold.switcherFloor {
-                DockSpringRow(anchorX: chrome.folderAnchorX) { anchorLocalX in
-                    DockFolderRow(
-                        venues: CategoryFold.scopes(category: category, present: Set(venues)),
-                        standing: filter.source,
-                        category: category,
-                        compact: chrome.minimized && !showsRail,
-                        anchorLocalX: anchorLocalX) { venue in
-                        // A finger on the strip, one row down (prd §674): the
-                        // folder sits over the chips, so its pick must
-                        // suppress the re-centre exactly as a chip's own tap
-                        // does — this is the route the old label comparison
-                        // could not see.
+        // folder — see `DockSpringRow`).** The chip itself never moves, so the
+        // word that closes the folder is where the finger just was.
+        let venues = folderVenues
+        let facesShow = roomFacesShow
+        if !venues.isEmpty || facesShow {
+            DockSpringRow(anchorX: venues.isEmpty ? nil : chrome.folderAnchorX) { anchorLocalX in
+                DockFolderRow(
+                    venues: venues,
+                    standing: filter.source,
+                    category: openCategory ?? currentCategory ?? "",
+                    compact: chrome.minimized && !showsRail,
+                    anchorLocalX: anchorLocalX,
+                    onPick: { venue in
+                        // A finger on the strip, one row down (prd §674).
                         chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
                         chrome.sourceRequest = venue
-                    }
-                }
-                .padding(.horizontal, DS.Space.s4)
+                    },
+                    faces: { roomFaces })
             }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, facesShow && showsRail && !demoActive ? DS.Space.s2 : 0)
         }
         // THE OCTOPUS'S FOLDER IS GONE (prd §697, 2026-09-11) — with the
         // ask deprecated it held two doors, and two doors are cheaper drawn
@@ -630,6 +627,41 @@ struct MainSurface: View {
     // rooms and the two behaviours had to share one gesture. A folder tap no
     // longer switches anything, so `CategoryFold.isCategory` answers the whole
     // question at the call site: a category chip opens, everything else moves.
+
+    /// The category whose folder is open, if one is.
+    private var openCategory: String? {
+        if case .category(let category) = chrome.openFolder { return category }
+        return nil
+    }
+
+    /// The open folder's venues, or none. Under `CategoryFold.switcherFloor` a
+    /// folder has nothing to switch between, so it draws no seats.
+    private var folderVenues: [String] {
+        guard let category = openCategory else { return [] }
+        let venues = categoryVenues[category] ?? []
+        guard venues.count >= CategoryFold.switcherFloor else { return [] }
+        return CategoryFold.scopes(category: category, present: Set(venues))
+    }
+
+    /// Whether any of the room's face rails has something to pick — the same
+    /// test each rail makes, asked once so the folder row can decide to mount
+    /// with no venues in it (prd §753).
+    private var roomFacesShow: Bool {
+        SocialScopeRail.shows(source: filter.source, accounts: socialAccounts.count)
+            || GitHubScopeRail.shows(source: filter.source,
+                                     watched: GitHubWatchStore.shared.watches.count)
+            || accountRailItems.count > 1
+    }
+
+    /// The faces the folder row carries after its venues (prd §753). At most
+    /// one of the three draws: a source is a social room, GitHub, or in the
+    /// wallet family, never two.
+    @ViewBuilder
+    private var roomFaces: some View {
+        socialScopeRail
+        githubScopeRail
+        accountRail
+    }
 
     /// The category the room you are STANDING IN belongs to, if any.
     private var currentCategory: String? {
@@ -647,6 +679,7 @@ struct MainSurface: View {
                                              fresh: chrome.freshHandles),
                 scope: chrome.personScope,
                 compact: chrome.minimized && !showsRail,
+                inFolder: true,
                 matches: SocialScopeRail.matches,
                 onPick: { picked in
                     withAnimation(DS.Motion.standard) { chrome.personScope = picked }
@@ -664,7 +697,6 @@ struct MainSurface: View {
                             return nil
                         }())
                 })
-            .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
         }
     }
 
@@ -697,19 +729,25 @@ struct MainSurface: View {
     /// rail belongs to the room on screen and nothing else. It draws only with
     /// two or more real accounts — "All" beside one face picks nothing. The
     /// head names the picked account in full, so the rail's caption is a label.
+    private var accountRailItems: [FaceScopeRail.Item] {
+        guard let rail = chrome.accountRail, rail.source == filter.source else { return [] }
+        return rail.slots.compactMap { slot in
+            guard !slot.id.isEmpty, let face = slot.faces.first else { return nil }
+            return FaceScopeRail.Item(id: slot.id, caption: slot.name, face: face,
+                                      tooltip: slot.sub.map { "\(slot.name) · \($0)" })
+        }
+    }
+
     @ViewBuilder
     private var accountRail: some View {
         if let rail = chrome.accountRail, rail.source == filter.source {
-            let items: [FaceScopeRail.Item] = rail.slots.compactMap { slot in
-                guard !slot.id.isEmpty, let face = slot.faces.first else { return nil }
-                return FaceScopeRail.Item(id: slot.id, caption: slot.name, face: face,
-                                          tooltip: slot.sub.map { "\(slot.name) · \($0)" })
-            }
+            let items = accountRailItems
             if items.count > 1 {
                 FaceScopeRail(
                     items: items,
                     scope: rail.scope.flatMap { $0.isEmpty ? nil : $0 },
                     compact: chrome.minimized && !showsRail,
+                    inFolder: true,
                     matches: { a, b in a.caseInsensitiveCompare(b) == .orderedSame },
                     onPick: { picked in
                         withAnimation(DS.Motion.standard) { rail.onPick(picked) }
@@ -717,7 +755,6 @@ struct MainSurface: View {
                     onReTap: nil,
                     addTitle: nil,
                     onAdd: nil)
-                .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
             }
         }
     }
@@ -730,6 +767,7 @@ struct MainSurface: View {
                 items: GitHubScopeRail.items(watches),
                 scope: chrome.githubScope,
                 compact: chrome.minimized && !showsRail,
+                inFolder: true,
                 matches: GitHubScopeRail.matches,
                 onPick: { picked in
                     withAnimation(DS.Motion.standard) { chrome.githubScope = picked }
@@ -737,7 +775,6 @@ struct MainSurface: View {
                 onReTap: nil,
                 addTitle: nil,
                 onAdd: nil)
-            .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
         }
     }
 

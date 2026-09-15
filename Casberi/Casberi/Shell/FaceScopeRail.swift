@@ -124,6 +124,20 @@ struct FaceScopeRail: View {
     /// belongs to `ringed` (social: they posted since you last looked) and to
     /// `namesInRoom` rails, and no embedded rail is either.
     var embedded: Bool = false
+    /// **Drawn inside the dock's folder capsule, after the venues** (prd §753,
+    /// user: "b seems most like a mac dock", "lets go with B").
+    ///
+    /// The capsule already is the glass, the scroll view and the glass
+    /// container, so the rail gives up all three. Its slots take the venue
+    /// seat's exact shape — the face at the venue mark's rung, the pick a glass
+    /// lens six points out, a 44pt target — and they draw NO words. A name
+    /// under a 36pt face fits about nine characters, so `lightclients.eth`
+    /// and every address came out cut; there is no length that fixes that in
+    /// a row. Instead an avatar is its own label, a face with no picture
+    /// carries its own characters inside the circle (`characters(for:)`), and
+    /// the room names the pick: the crown's caption in the wallet family, the
+    /// author on every row in a social room. `ringed` keeps its one meaning.
+    var inFolder: Bool = false
     /// Scope equality. A closure because the two adapters do NOT agree on it:
     /// hex compares case-insensitively (EIP-55 case is a checksum) while a
     /// handle is a plain string. Getting this wrong empties a room rather than
@@ -210,7 +224,12 @@ struct FaceScopeRail: View {
     /// cap, which §83 wants anyway: an "Add a wallet" that cannot add is a
     /// control that does nothing, and the roster screen still states the cap
     /// where it can be acted on.
-    private var slotWidth: CGFloat { namesInRoom ? DS.Hit.min : 66 }
+    private var slotWidth: CGFloat {
+        // In the folder the slot is the LENS (the venue seat's face + 12); the
+        // 44pt target is claimed outside it, as `folderVenue` claims its own.
+        if inFolder { return faceSize + 12 }
+        return namesInRoom ? DS.Hit.min : 66
+    }
 
     /// Slot height tracks the face, so the fold actually returns vertical space
     /// to the room rather than shrinking a circle inside a hole the same size.
@@ -220,9 +239,14 @@ struct FaceScopeRail: View {
     /// would fall to 34 folded, under the floor, on a control whose whole slot
     /// is the thing you aim at.
     private var slotHeight: CGFloat {
-        namesInRoom ? max(DS.Hit.min, faceSize + DS.Space.s1 * 2)
-                    : faceSize + DS.Space.s1 + 16
+        if inFolder { return faceSize + 12 }
+        return namesInRoom ? max(DS.Hit.min, faceSize + DS.Space.s1 * 2)
+                           : faceSize + DS.Space.s1 + 16
     }
+
+    /// Whether a slot draws its name under the face. Off on a `namesInRoom`
+    /// rail and off in the folder (§753) — two rulings with one consequence.
+    private var drawsCaption: Bool { !namesInRoom && !inFolder }
 
     /// How far an out-of-scope slot recedes (user, 2026-08-13: *"the avatars on
     /// socials that aren't selected but followed are very dim. same for
@@ -254,38 +278,49 @@ struct FaceScopeRail: View {
     private var restOpacity: Double { scope == nil ? 1 : 0.7 }
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            // The one container the picked slot's glass morphs within — see
-            // `pickFill`. Spacing matches the row so the container never
-            // fuses two slots' glass (only one slot carries glass at a time).
-            DSGlassContainer(spacing: 2) {
-            HStack(spacing: 2) {
-                // THE BOOK LEADS (user ruling, prd §483, 2026-08-26: *"address
-                // book can be first before All"*). It trailed the faces until
-                // this, which put the one slot that is a DOOR at the far end of
-                // a scrolling strip — reachable only after scrolling past every
-                // face, on the rail whose whole job is to get you to a face.
-                // Leading, it is where a nav control sits and it never moves as
-                // the watch list grows.
-                //
-                // It is also the only slot here that LEAVES the room, so the
-                // strip now reads outward-in: the door, then everything, then
-                // each one.
-                allSlot
-                ForEach(items) { item in
-                    slot(item)
+        if inFolder {
+            // The folder capsule is the glass, the container and the scroll
+            // view (§753) — nesting any of them again here would double it.
+            seats
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+                // The one container the picked slot's glass morphs within — see
+                // `pickFill`. Spacing matches the row so the container never
+                // fuses two slots' glass (only one slot carries glass at a time).
+                DSGlassContainer(spacing: 2) {
+                    seats
                 }
-                if let addTitle, onAdd != nil {
-                    addSlot(title: addTitle)
-                }
+                // Embedded, the SLAB carries the inset and the packing — see
+                // `embedded`. Applying either here again doubles it.
+                .padding(.horizontal, embedded ? 0 : DS.Space.s4)
+                .padding(.vertical, embedded ? 0 : DS.Space.s1)
             }
-            }
-            // Embedded, the SLAB carries the inset and the packing — see
-            // `embedded`. Applying either here again doubles it.
-            .padding(.horizontal, embedded ? 0 : DS.Space.s4)
-            .padding(.vertical, embedded ? 0 : DS.Space.s1)
+            .scrollIndicators(.hidden)
         }
-        .scrollIndicators(.hidden)
+    }
+
+    @ViewBuilder
+    private var seats: some View {
+        HStack(spacing: 2) {
+            // THE BOOK LEADS (user ruling, prd §483, 2026-08-26: *"address
+            // book can be first before All"*). It trailed the faces until
+            // this, which put the one slot that is a DOOR at the far end of
+            // a scrolling strip — reachable only after scrolling past every
+            // face, on the rail whose whole job is to get you to a face.
+            // Leading, it is where a nav control sits and it never moves as
+            // the watch list grows.
+            //
+            // It is also the only slot here that LEAVES the room, so the
+            // strip now reads outward-in: the door, then everything, then
+            // each one.
+            allSlot
+            ForEach(items) { item in
+                slot(item)
+            }
+            if let addTitle, onAdd != nil {
+                addSlot(title: addTitle)
+            }
+        }
     }
 
     /// What "All" draws inside its circle — see the note at the call site for
@@ -318,7 +353,9 @@ struct FaceScopeRail: View {
     /// `matchedGeometryEffect` id the fill did, so the selection is still an
     /// object moving between faces (2026-07-14).
     private func pickGlass(_ isOn: Bool) -> some ViewModifier {
-        PickGlass(on: embedded && isOn, reduceMotion: reduceMotion, ns: pickNS)
+        PickGlass(on: (embedded || inFolder) && isOn,
+                  radius: inFolder ? (faceSize + 12) / 2 : DSRoomChassis.slabInnerRadius,
+                  reduceMotion: reduceMotion, ns: pickNS)
     }
 
     /// The picked slot IS the glass — the face and its name sit inside the
@@ -330,12 +367,14 @@ struct FaceScopeRail: View {
     /// this reason; this is that pattern.
     private struct PickGlass: ViewModifier {
         let on: Bool
+        /// The slab's inner radius when embedded; a circle in the folder (§753).
+        let radius: CGFloat
         let reduceMotion: Bool
         let ns: Namespace.ID
         @ViewBuilder
         func body(content: Content) -> some View {
             if on {
-                content.dsGlass(cornerRadius: DSRoomChassis.slabInnerRadius,
+                content.dsGlass(cornerRadius: radius,
                                 glassID: reduceMotion ? nil : "dsRailActiveFill",
                                 in: reduceMotion ? nil : ns)
             } else {
@@ -398,13 +437,15 @@ struct FaceScopeRail: View {
                 // Reserves the caption's line so this circle sits level with
                 // the faces beside it. With no captions in the rail there is no
                 // line to reserve, and it centres in its slot instead.
-                if !namesInRoom { Spacer(minLength: 0) }
+                if drawsCaption { Spacer(minLength: 0) }
             }
             .frame(width: slotWidth, height: slotHeight,
-                   alignment: namesInRoom ? .center : .top)
+                   alignment: drawsCaption ? .top : .center)
             .opacity(isOn ? 1 : restOpacity)
-            .padding(.vertical, DS.Space.s1)
+            .padding(.vertical, inFolder ? 0 : DS.Space.s1)
             .modifier(pickGlass(isOn))
+            // In the folder the lens overhangs a 44pt seat, as a venue's does.
+            .frame(width: inFolder ? DS.Hit.min : nil, height: inFolder ? DS.Hit.min : nil)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -441,12 +482,12 @@ struct FaceScopeRail: View {
             }
         } label: {
             VStack(spacing: DS.Space.s1) {
-                face(item.face)
+                face(item)
                     .overlay(
                         ring(item.face, width: ringWidth(item, isOn: isOn))
                             .padding(-3)
                     )
-                if !namesInRoom {
+                if drawsCaption {
                     Text(item.caption)
                         .dsText(.label12)
                         .fontWeight(isOn ? .semibold : .regular)
@@ -459,14 +500,16 @@ struct FaceScopeRail: View {
             // largest accessibility size. Pinned, the name under every face
             // was cut off; a floor keeps the rail's rhythm at every ordinary
             // size and lets it grow rather than clip at the extremes.
-            .frame(minHeight: slotHeight, alignment: namesInRoom ? .center : .top)
+            .frame(minHeight: slotHeight, alignment: drawsCaption ? .top : .center)
             // A 44pt-wide slot is the touch floor; the extra width is what gives
             // a name room to read rather than truncate at the face — see
             // `slotWidth` for why a rail that names elsewhere gives it back.
             .frame(width: slotWidth)
             .opacity(isOn ? 1 : restOpacity)
-            .padding(.vertical, DS.Space.s1)
+            .padding(.vertical, inFolder ? 0 : DS.Space.s1)
             .modifier(pickGlass(isOn))
+            // In the folder the lens overhangs a 44pt seat, as a venue's does.
+            .frame(width: inFolder ? DS.Hit.min : nil, height: inFolder ? DS.Hit.min : nil)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -503,8 +546,45 @@ struct FaceScopeRail: View {
     }
 
     @ViewBuilder
-    private func face(_ face: Item.Face) -> some View {
-        RailFace(face: face, size: faceSize)
+    private func face(_ item: Item) -> some View {
+        if inFolder, let characters = Self.characters(for: item) {
+            Text(characters)
+                .dsText(.label11).fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(width: faceSize, height: faceSize)
+                .background(Circle().fill(DS.fillStrong))
+        } else {
+            RailFace(face: item.face, size: faceSize)
+        }
+    }
+
+    /// What a face with no picture says inside its circle on the folder row
+    /// (prd §753, user: "if no avatar then ...xxxx is used or even just xxxx
+    /// with no elipsis"). An address is its last four characters — the ones a
+    /// person checks — and a person with no avatar is the first letter of
+    /// their name. nil means the face is a picture or a mark, which is its own
+    /// label.
+    static func characters(for item: Item) -> String? {
+        switch item.face {
+        case .wallet(let address):
+            return tail(address)
+        case .avatar(let url, _):
+            guard url?.isEmpty ?? true else { return nil }
+            return item.caption.first.map { String($0) }
+        case .mark:
+            return nil
+        }
+    }
+
+    /// An address's last four characters, bare. No ellipsis: four characters
+    /// in a circle are visibly a fragment already, and `…` would spend a fifth
+    /// of the circle saying so. Hex is lowercased so an EIP-55 checksum cannot
+    /// make one address's tail read two ways.
+    static func tail(_ address: String) -> String {
+        let four = String(address.suffix(4))
+        return address.hasPrefix("0x") ? four.lowercased() : four
     }
 
     /// The ring a slot wears, following the FACE's own shape — a squircle mark
@@ -541,10 +621,10 @@ struct FaceScopeRail: View {
                     .foregroundStyle(DS.tint)
                     .frame(width: faceSize, height: faceSize)
                     .background(Circle().fill(DS.tintDim))
-                if !namesInRoom { Spacer(minLength: 0) }
+                if drawsCaption { Spacer(minLength: 0) }
             }
             .frame(width: slotWidth, height: slotHeight,
-                   alignment: namesInRoom ? .center : .top)
+                   alignment: drawsCaption ? .top : .center)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

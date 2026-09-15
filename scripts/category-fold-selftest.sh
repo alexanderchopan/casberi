@@ -555,14 +555,47 @@ grep -q 'roomControls' "$MAIN" \
 # of them rather than out of the chip it was opened from. A `VStack` builds top
 # to bottom, so the faces must come first in this file and the spring rows last.
 #
+# **AMENDED FOR §753 (2026-09-15, user: "lets go with B").** The faces no
+# longer stack as their own strip above the folder: they ride the folder's own
+# capsule, after the venues. §649's reason survives inside the row — the venues
+# lead, so the tail still lands on a venue over its chip — and the check follows
+# the rule rather than the old line order: the faces are handed to the row
+# built inside `DockSpringRow`, and `roomControls` emits no face rail as a
+# sibling strip.
+#
 # Line order in the COMMENT-STRIPPED copy, because the source documents this
 # rule by naming both symbols in the prose above them.
-_facesLine=$(grep -nE '^[[:space:]]*socialScopeRail$' "$TMP/main.nc" | head -1 | cut -d: -f1)
-_springLine=$(grep -n 'DockSpringRow(anchorX:' "$TMP/main.nc" | head -1 | cut -d: -f1)
-[ -n "$_facesLine" ] && [ -n "$_springLine" ] && [ "$_facesLine" -lt "$_springLine" ] \
-  || { echo "✗ the dock folder no longer sits directly on the dock — with the face rail"; \
-       echo "  under it, DockSpringRow's tail points at a row of avatars and the folder"; \
-       echo "  reads as springing out of them, not out of its chip (§649)."; exit 1; }
+# `|| true`: under errexit + pipefail a grep with no match would end the script
+# silently here, and a guard that fails without saying why costs a hunt.
+_springLine=$(grep -n 'DockSpringRow(anchorX:' "$TMP/main.nc" | head -1 | cut -d: -f1 || true)
+_facesLine=$(grep -n 'faces: { roomFaces }' "$TMP/main.nc" | head -1 | cut -d: -f1 || true)
+[ -n "$_springLine" ] && [ -n "$_facesLine" ] && [ "$_facesLine" -gt "$_springLine" ] \
+  && [ $(( _facesLine - _springLine )) -lt 20 ] \
+  || { echo "✗ the room's faces no longer ride the dock folder's capsule (§753) — a face"; \
+       echo "  rail as its own strip is the third pill of circles the user replaced with one"; \
+       echo "  row, and one under the folder points its tail at avatars (§649)."; exit 1; }
+_controls=$(awk '/private var roomControls: some View/{f=1;print;next} f&&(/^    private var /||/^    @ViewBuilder/){exit} f{print}' "$TMP/main.nc")
+[[ -n "$_controls" ]] \
+  || { echo "✗ could not read MainSurface.roomControls — the §753 check below would pass"; \
+       echo "  on nothing."; exit 1; }
+[[ "$_controls" == *"socialScopeRail"* || "$_controls" == *"githubScopeRail"* \
+   || "$_controls" == *"accountRail"* ]] \
+  && { echo "✗ roomControls emits a face rail as its own strip again (§753) — the faces"; \
+       echo "  ride the folder capsule, after the venues."; exit 1; }
+_inFolder=$(grep -c 'inFolder: true' "$TMP/main.nc" || true)
+[[ "$_inFolder" -eq 3 ]] \
+  || { echo "✗ the shell passes inFolder: true $_inFolder times, not 3 (§753) — a rail drawn"; \
+       echo "  in the capsule without it brings its own glass, scroll view and captions."; exit 1; }
+# A face with no picture carries its own characters, and an address's are bare
+# (user: "just xxxx with no elipsis"). Read into a variable, never `awk | grep -q`
+# (the pipefail race recorded further down).
+_tail=$(awk '/static func tail\(/{f=1} f{print} f&&/^    }$/{exit}' "$TMP/rail.nc")
+[[ "$_tail" == *"suffix(4)"* ]] \
+  || { echo "✗ FaceScopeRail.tail no longer takes an address's last four characters (§753)."; exit 1; }
+[[ "$_tail" == *"…"* ]] \
+  && { echo "✗ FaceScopeRail.tail grew an ellipsis (§753) — four characters in a circle are"; \
+       echo "  visibly a fragment, and the mark spends a fifth of the circle saying so."; exit 1; }
+
 # …and NOT on FeedScreen, which is the regression §357 exists to prevent: any
 # top inset there is inside the `.id(filter.source)` subtree, so it travels
 # with the room and dies on every move it commands. (`walletSwitcherBar` and
