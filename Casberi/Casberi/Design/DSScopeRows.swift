@@ -50,15 +50,25 @@ struct DSScopeRows<Scope: DSSectionScope>: View {
         // control offering a single choice is not a control. The rule is
         // unchanged and the gate moved HERE, because the chrome around these
         // rows must still draw on Home either way — it carries the crown and
-        // the acts now. An empty `VStack` on a widget surface is a plate with
-        // nothing in it, which is the same dead control wearing a background.
+        // the acts now. An empty `VStack` was a plate with nothing in it, which
+        // is the same dead control wearing a background; with the plate gone
+        // (below) it is nothing at all, and the gate still earns its place by
+        // keeping the `Readings` label off a list with one row in it.
+        //
+        // **NO PLATE (prd §757, user: "they should not have cards").** These
+        // rows stood on `dsWidgetSurface` — the elevated card — which is the
+        // one thing §749 took off every row in the app ("i made a mistake by
+        // adding cards to rows i think it makes the app look worse") and §708
+        // took off every account page ("nothing on an account page is boxed but
+        // the entry well"). The wallet family's Home was the last surface
+        // drawing rows on plates. Nothing else moves: the rows keep their own
+        // `dsScopeRow` insets, so the words stay exactly where they were.
         if !sections.isEmpty {
             VStack(spacing: 0) {
                 ForEach(sections) { section in
                     row(section)
                 }
             }
-            .dsWidgetSurface()
         }
     }
 

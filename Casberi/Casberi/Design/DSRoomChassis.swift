@@ -396,6 +396,32 @@ struct DSRoomSlot<Figure: View>: View {
     /// `DSRoomChassis.visualSlot` directly rather than from what it is
     /// offered.
     var reservesHeadline: Bool = true
+    /// Whether to pin the slot to `visualSlot` at all.
+    ///
+    /// **FALSE ON A HOME CROWN, AND THE REASON IT WAS TRUE IS DELETED (prd
+    /// §757).** The box exists so that SCOPES ALIGN: every scope of a room
+    /// draws into one 300pt box, so switching between them does not move the
+    /// screen, and the drawings that size themselves off `visualSlot` (the
+    /// holdings treemap, the NFT quad) get the height they assume. §747 gave
+    /// Home the same box for a second reason — the account DECK paged
+    /// sideways, and a deck whose cards are different heights jumps as you
+    /// page.
+    ///
+    /// **There is no deck.** §750 moved the accounts to the shell's face rail
+    /// and §753 into the dock's capsule; `DSAccountDeck` is gone, and Home
+    /// draws exactly one crown that nothing pages. What was left was a fixed
+    /// 300pt box around a crown that, before its second reading lands, is a
+    /// number and one footnote — a card with 200pt of black under it, which is
+    /// what the plates were reported alongside.
+    ///
+    /// A scope figure keeps the box (`true`), including the Wallet room's own
+    /// off-Home figure, whose comment records the clipping that happens when
+    /// a drawing sized for the whole slot is given less.
+    ///
+    /// `false` drops the FLOOR ONLY — the slot still caps at `visualSlot` and
+    /// still clips (see `SlotBox`), so nothing that fits inside it today
+    /// renders one point differently.
+    var reservesBox: Bool = true
     @ViewBuilder let figure: () -> Figure
 
     var body: some View {
@@ -407,10 +433,7 @@ struct DSRoomSlot<Figure: View>: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.horizontal, DSRoomChassis.contentInset)
-        .frame(minHeight: DSRoomChassis.visualSlot,
-               maxHeight: DSRoomChassis.visualSlot,
-               alignment: .top)
-        .clipped()
+        .modifier(SlotBox(on: reservesBox))
     }
 
     @ViewBuilder
@@ -458,5 +481,35 @@ struct DSRoomSlot<Figure: View>: View {
             }
             .frame(height: DSRoomChassis.headlineRow, alignment: .leading)
             .padding(.bottom, DS.Space.s3)
+    }
+}
+
+/// The slot's fixed box, applied or not (prd §757) — a modifier rather than an
+/// `if` in the body, so the figure inside keeps ONE identity either way. A
+/// branch there would rebuild it on the frame a room's box was dropped, and a
+/// figure that rebuilds is a chart that redraws itself from zero.
+private struct SlotBox: ViewModifier {
+    let on: Bool
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if on {
+            content
+                .frame(minHeight: DSRoomChassis.visualSlot,
+                       maxHeight: DSRoomChassis.visualSlot,
+                       alignment: .top)
+                .clipped()
+        } else {
+            // **A CEILING, NOT A BOX.** Only the FLOOR is dropped: the slot
+            // still caps at `visualSlot` and still clips, so every drawing that
+            // fits today is rendered exactly as it is today, and one that
+            // overflows is cut where it has always been cut. The defect §757
+            // fixes is the minimum — 200pt of reserved black under a balance
+            // with no line yet — and a change that also lifted the ceiling
+            // would let a figure sized against this constant push the whole
+            // room down on the first frame its data lands.
+            content
+                .frame(maxHeight: DSRoomChassis.visualSlot, alignment: .top)
+                .clipped()
+        }
     }
 }

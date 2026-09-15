@@ -317,6 +317,50 @@ rows_at=$(grep -n "DSScopeRows(sections:" "$CHROME" | head -1 | cut -d: -f1 || t
 (( head_at < acts_at && acts_at < rows_at )) \
   || fail "drift: Home is out of order — the head, then Actions, then Readings (§750)"
 
+# ── §757: the rows stand on nothing, and Home reserves no box ────────────────
+# **THE PLATES** (user, 2026-09-15: "they should not have cards"). Actions and
+# Readings drew on `dsWidgetSurface`, the elevated card — the one thing §749
+# took off every row in the app ("i made a mistake by adding cards to rows") and
+# §708 off every account page ("nothing on an account page is boxed but the
+# entry well"). This was the last surface in the app drawing rows on plates.
+#
+# The HEAD keeps its card, so this cannot be a file-wide `deny`: it is a COUNT
+# plus a POSITION, and the position is what makes it a real check — a plate
+# moved from the acts to the readings would keep the count at one.
+deny DSScopeRows.swift "dsWidgetSurface" \
+  "the readings are back on a plate — §749 took the card off every row in the app (§757)"
+plate_lines=$(grep -c "dsWidgetSurface" "$work/DSRoomScopeChrome.swift.bare" || true)
+[[ "$plate_lines" -eq 1 ]] \
+  || fail "drift: DSRoomScopeChrome draws $plate_lines plates, not 1 — the head keeps its card and the two row blocks stand on nothing (§757)"
+plate_at=$(grep -n "dsWidgetSurface" "$work/DSRoomScopeChrome.swift.bare" | head -1 | cut -d: -f1 || true)
+[[ -n "$plate_at" ]] && (( head_at < plate_at && plate_at < acts_at )) \
+  || fail "drift: the one plate on Home is not the head's — Actions or Readings took it back (§757)"
+
+# **THE 300pt BOX ON HOME, AND THE DECK THAT IS NOT THERE.** `DSRoomSlot` pins
+# every scope figure to `visualSlot` so the scopes align and the drawings sized
+# off that constant get their height. §747 gave HOME the same box for a second
+# reason — the account deck paged sideways — and §750/§753 deleted the deck. All
+# it reserved afterwards was 200pt of black under a balance whose second reading
+# has not landed yet.
+guard DSRoomChassis.swift "var reservesBox: Bool = true" \
+  "DSRoomSlot lost its box switch — a Home crown is pinned to 300pt again (§757)"
+guard DSRoomChassis.swift "struct SlotBox: ViewModifier" \
+  "the box is an if in the slot's body again — the figure inside gets two identities and a chart redraws from zero (§757)"
+# The unreserved slot is a CEILING, not an open stack: only the floor goes, so a
+# drawing that overflows is cut where it has always been cut and nothing that
+# fits changes by a point. Both branches of the modifier clip.
+slot_clips=$(sed -n '/struct SlotBox: ViewModifier/,/^}/p' "$work/DSRoomChassis.swift.bare" | grep -c "clipped()" || true)
+[[ "$slot_clips" -eq 2 ]] \
+  || fail "drift: SlotBox clips in $slot_clips of its 2 branches — an unreserved slot must still cap at visualSlot, or a figure sized against that constant pushes the room down on the frame its data lands (§757)"
+# Every Home crown drops it; the wallet's OFF-Home figure keeps it, and that one
+# is not a nicety: its own comment records the treemap and the NFT quad clipped
+# along the bottom the first time they were given less than the whole slot.
+home_boxes=$(grep -c "reservesHeadline: false, reservesBox: false" "$work/FeedScreen.swift.bare" || true)
+[[ "$home_boxes" -eq 4 ]] \
+  || fail "drift: $home_boxes of the 4 Home crowns in FeedScreen drop the fixed box (§757)"
+grep -q "DSRoomSlot(headline: nil, reservesHeadline: false) {" "$work/FeedScreen.swift.bare" \
+  || fail "drift: the wallet's OFF-Home figure lost the fixed slot — a drawing sized for the whole box is clipped along its bottom (§757/§495)"
+
 # EVERY empty-state gate must be the section's OWN render gate, spelled the same
 # way (prd §611 moved these from presence flags to `walletScopeIsEmpty`; the
 # rule is unchanged). Reported from the device as "we can't do this" — the Risk

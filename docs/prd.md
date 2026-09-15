@@ -56258,3 +56258,58 @@ again. Ten mutations, ten catches.
 
 Not built or run here (no Swift toolchain in this checkout); the simulator pass
 is owed, and the picture of a post at head size is a design checkpoint.
+
+## §757 — The wallet family's rows stand on nothing, and Home reserves no box (user: "they should not have cards", 2026-09-15)
+
+**The report, from a screenshot of the Wallet room.** Three stacked cards: the
+balance head, `Actions`, `Readings`. The two row blocks drew on
+`dsWidgetSurface` — the elevated card.
+
+**This surface was the last one that had not heard.** §749 took the card off
+every row in the app ("i made a mistake by adding cards to rows i think it makes
+the app look worse"); §708 took it off every account page ("nothing on an
+account page is boxed but the entry well"). The wallet family's Home was built
+against §747's picture in between, and kept its plates through §750 and §752.
+
+**The ruling.** Actions and Readings stand on the page. They lose it together —
+they are one grammar, and a card under one of them is exactly §750's own
+complaint ("these all look like different apps"). The HEAD keeps its card,
+because that is what a room head is everywhere else (`dsRoomHeadCard`, §745's
+"one surface"), and because the user's own §749 carve-out is rooms with a
+visualization. Nothing moves sideways: the rows keep their `dsScopeRow` insets,
+so every word stays at the x it was at.
+
+**The empty box, found while removing the plates.** `DSRoomSlot` pins its figure
+to `visualSlot` (300pt) so that a room's SCOPES align with each other and the
+drawings that size themselves off that constant — the holdings treemap, the NFT
+quad — get the height they assume. §747 gave HOME the same box for a second
+reason: the account DECK paged sideways, and a deck of unequal cards jumps as you
+page. **There is no deck** — §750 moved the accounts to the shell's face rail and
+§753 into the dock's capsule, `DSAccountDeck` is deleted, and Home draws one
+crown that nothing pages. All the box reserved was 200pt of black under a balance
+whose second reading has not landed, which is the shape in the screenshot. The
+five Home crowns (Wallet, Vibenet, Hegotá, Frames, the Privacy devnet) pass
+`reservesBox: false`; every scope figure keeps it, the Wallet room's own off-Home
+figure included, whose comment records the clipping that happens when a drawing
+sized for the whole slot is handed less.
+
+**Only the FLOOR is dropped.** The unreserved slot still caps at `visualSlot`
+and still clips, so every drawing that fits today renders exactly as it does
+today and one that overflows is cut where it has always been cut. The defect is
+the minimum, and a change that also lifted the ceiling would let a figure sized
+against this constant push the whole room down on the first frame its data
+lands.
+
+`SlotBox` is a `ViewModifier` rather than an `if` in the slot's body: a branch
+there gives the figure inside two identities, and a figure that rebuilds is a
+chart that redraws itself from zero.
+
+**Guarded** in `wallet-section-selftest.sh`: the readings file draws no
+`dsWidgetSurface` at all; the chrome draws exactly ONE, and its line sits between
+the crown and the `Actions` label — a count alone would pass a plate that simply
+moved. The switch and the modifier must exist, the four Home crowns in the
+FeedScreen pair must drop the box, the off-Home figure must keep it, and BOTH
+branches of `SlotBox` must clip. Nine mutations, nine catches.
+
+Not built or run here (no Swift toolchain in this checkout); the simulator pass
+is owed, and the room at its new heights is a design checkpoint.

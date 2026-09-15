@@ -3986,7 +3986,7 @@ struct FeedScreen: View {
                 },
                 reading: { readings[$0] },
                 crown: { slot in
-                    DSRoomSlot(headline: nil, reservesHeadline: false) {
+                    DSRoomSlot(headline: nil, reservesHeadline: false, reservesBox: false) {
                         if slot.isShowing(chrome.framesScope) {
                             FramesRoomFigure(head: head,
                                              accounts: framesAccounts,
@@ -4119,7 +4119,7 @@ struct FeedScreen: View {
                 },
                 reading: { readings[$0] },
                 crown: { slot in
-                    DSRoomSlot(headline: nil, reservesHeadline: false) {
+                    DSRoomSlot(headline: nil, reservesHeadline: false, reservesBox: false) {
                         if slot.isShowing(chrome.privacyDevnetScope) {
                             PrivacyDevnetRoomCard(
                                 head: head,
@@ -4181,7 +4181,7 @@ struct FeedScreen: View {
                     },
                     reading: { readings[$0] },
                     crown: { slot in
-                        DSRoomSlot(headline: nil, reservesHeadline: false) {
+                        DSRoomSlot(headline: nil, reservesHeadline: false, reservesBox: false) {
                             if slot.isShowing(chrome.hegotaScope) {
                                 HegotaRoomFigure(head: head,
                                                  accounts: roster,

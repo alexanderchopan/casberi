@@ -28,6 +28,13 @@ import SwiftUI
 ///      be actions"). Not "Test": the devnets are test networks, but the
 ///      Wallet room holds real money and the label is shared.
 ///
+/// **THE TWO ROW BLOCKS STAND ON NOTHING (prd §757, user: "they should not have
+/// cards").** Actions and Readings drew on `dsWidgetSurface`, the elevated
+/// card — the one thing §749 took off every row in the app and §708 off every
+/// account page. This was the last surface in the app drawing rows on plates.
+/// The HEAD keeps its card, because that is what a room head is everywhere
+/// else (`dsRoomHeadCard`, §745's "one surface").
+///
 /// The rail truncates a long name at its 66pt slot, which was §747's first
 /// complaint. The head names the picked account in FULL beside the figure
 /// (§450's caption, drawn by each room's crown), so the rail's word is a
@@ -109,10 +116,13 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Acts: View>: View {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                         WalletSectionLabel(title: String(localized: "Actions"))
                             .padding(.horizontal, DSRoomChassis.inset)
+                        // NO PLATE (prd §757) — see `DSScopeRows`. The acts and
+                        // the readings are one grammar, so they lose the card
+                        // together or the two blocks read as different kinds of
+                        // thing, which is §750's own complaint.
                         VStack(spacing: 0) {
                             acts(actsSlot)
                         }
-                        .dsWidgetSurface()
                     }
                     .padding(.horizontal, DSRoomChassis.inset)
                 }
