@@ -28,7 +28,12 @@ FEED="$FEED_DIR/FeedScreen.swift"
 cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
 SWITCH="Casberi/Casberi/Design/DSSectionSwitcher.swift"
-SLAB="Casberi/Casberi/Design/DSRoomRailSlab.swift"
+# The one template all five wallet-family rooms wear (prd §747), and the three
+# views it composes. Every guard below reads them comment-stripped, because
+# these files DOCUMENT the ruling by naming what they replaced.
+CHROMEVIEW="Casberi/Casberi/Design/DSRoomScopeChrome.swift"
+SCOPEROWS="Casberi/Casberi/Design/DSScopeRows.swift"
+SCOPEHEAD="Casberi/Casberi/Design/DSScopeHeader.swift"
 CHASSIS="Casberi/Casberi/Design/DSRoomChassis.swift"
 ACTIVITY="Casberi/Casberi/Screens/RoomActivityChart.swift"
 CHIPS="Casberi/Casberi/Design/DSChip.swift"   # DSRangeChips lives beside Chip since prd §746
@@ -200,7 +205,8 @@ mutate "the ruled short noun becomes a question again" \
 # these files DOCUMENT the rules by naming what they must not do, so a guard
 # grepping raw source scores prose as compliance (the Obsidian/Cursor lesson).
 strip_comments() { perl -pe 's{//.*$}{}g' "$1"; }
-for f in "$MAIN" "$FEED" "$CHROME" "$SWITCH" "$SLAB" "$SRC" "$CHASSIS" "$ACTIVITY" "$CHIPS"; do
+for f in "$MAIN" "$FEED" "$CHROME" "$SWITCH" "$CHROMEVIEW" "$SCOPEROWS" "$SCOPEHEAD" \
+         "$SRC" "$CHASSIS" "$ACTIVITY" "$CHIPS"; do
   strip_comments "$f" > "$work/$(basename $f).bare"
 done
 
@@ -222,21 +228,34 @@ guard MainSurface.swift "extension WalletSection: DSSectionScope" \
 # and pushed the crown to about 45% down the screen.
 deny MainSurface.swift "walletSectionSwitcher" \
   "the switcher is back in roomControls — it belongs in the room's content, under the crown"
-# THE GUARD FOLLOWED ITS SUBJECT (prd §547, 2026-09-01). It asked for
-# `DSSectionSwitcher(` in FeedScreen until the switcher stopped being drawn
-# there directly: it is the lower deck of `DSRoomRailSlab` now, which the room
-# mounts instead. The RULE is unchanged and is the only thing this ever meant —
-# the control that scopes the room is drawn in the room's own content, not
-# pinned in `roomControls` (the `deny` directly above is its other half).
-guard FeedScreen.swift "DSRoomRailSlab(" \
+# THE GUARD FOLLOWED ITS SUBJECT, TWICE (§547 → prd §747, 2026-09-15). It asked
+# for `DSSectionSwitcher(` in FeedScreen until the switcher became the slab's
+# lower deck, then for `DSRoomRailSlab(` until the slab was deleted outright.
+# The RULE is unchanged and is the only thing this ever meant — the control that
+# scopes the room is drawn in the room's own content, not pinned in
+# `roomControls` (the `deny` directly above is its other half).
+guard FeedScreen.swift "DSRoomScopeChrome(" \
   "the scope control is not drawn in the room's content"
-# ...and the slab really carries the switcher, rather than having become a rail
-# with the scope control quietly dropped. Without this the pair above passes on
-# a room that lost half of what it is scoping by.
-guard DSRoomRailSlab.swift "DSSectionSwitcher(" \
-  "the slab no longer draws the scope switcher — fusing must not delete a deck"
-guard FeedScreen.swift "WalletSection.shows(present:" \
-  "the draw is not gated on shows() — a single scope would draw a control (\u00a783)"
+# ...and the chrome really carries BOTH halves, rather than having become a deck
+# with the readings quietly dropped. Home draws them as rows, a pushed scope as
+# a header; without both this passes on a room that lost what it scopes by.
+guard DSRoomScopeChrome.swift "DSScopeRows(" \
+  "the chrome no longer draws the scope rows — Home's list IS the readings (§747)"
+guard DSRoomScopeChrome.swift "DSScopeHeader(" \
+  "the chrome no longer draws the scope header — a pushed scope must name itself (§747)"
+guard DSRoomScopeChrome.swift "DSAccountDeck(" \
+  "the chrome no longer draws the account deck — a name needs the card's width (§747)"
+# THE SWIPE IS THE ROOM'S, NOT THE SCOPES' (user ruling, prd §747: "inside can't
+# be swipe bc swipe is for rooms but can be a scroll header"). A header that
+# grew a DragGesture would make one gesture mean two things by depth.
+deny DSScopeHeader.swift "DragGesture" \
+  "the scope header takes a swipe — travel here is the strip's scroll and the pick is a tap (§747)"
+# A ROOM WITH ONE READING DRAWS NO ROWS (\u00a783). The gate used to sit in the
+# room, beside the switcher it suppressed; under \u00a7744 the chrome must draw on
+# Home either way (it carries the crown and the acts), so the gate moved into
+# the rows themselves. Same rule, one place, all five rooms.
+guard DSScopeRows.swift "if !sections.isEmpty" \
+  "the rows are not gated — a room with one reading would draw an empty plate (\u00a783)"
 guard FeedScreen.swift "WalletSection.resolve(" \
   "the room reads chrome.walletSection raw instead of resolving it"
 

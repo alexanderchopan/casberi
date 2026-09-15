@@ -1203,20 +1203,29 @@ grep -q 'return .home' "Casberi/Casberi/Model/VibenetSection.swift" \
 # from the room feeding it.
 # The gate lives in the CARD now, not the shell — see the placement note
 # below. Still gated entirely on what the room published, never a source name.
-# **THE GUARD FOLLOWED ITS SUBJECT** (prd §547, 2026-09-01). `scopeStrip` is
-# gone: the switcher is the lower deck of `DSRoomRailSlab`, which all three
-# chain rooms share, so a per-room copy could only be a place for them to drift
-# apart again. `railSlab` is what composes the pair here, and the gate it must
-# still hold is the same one, spelled the same way.
-stripFn=$(sed -n '/private var railSlab: some View {/,/^    }$/p' "$TMP/card.nc.swift")
+# **THE GUARD FOLLOWED ITS SUBJECT, TWICE** (§547 → prd §747, 2026-09-15).
+# `scopeStrip` went when the switcher became the slab's lower deck; the slab
+# went when the bar was deleted. `scopeChrome` is what composes the room's head
+# here now, and the gate it must still hold is the same one, spelled the same
+# way.
+stripFn=$(sed -n '/private var scopeChrome: some View {/,/^    }$/p' "$TMP/card.nc.swift")
 [[ "$stripFn" == *'VibenetSection.shows(present: scopes)'* ]] \
   || { echo "✗ the vibenet switcher's gate moved — prd §482: it is gated ENTIRELY on the"
        echo "  scopes the room published, so a room with one reading draws no control."; exit 1; }
-# The slab must really carry BOTH decks here, or fusing quietly deleted one.
-[[ "$stripFn" == *'showsRail:'* && "$stripFn" == *'showsSwitcher:'* ]] \
-  || { echo "✗ vibenet's railSlab no longer passes both decks — prd §547: the fused rail"
-       echo "  is the face rail AND the scope switcher, and either may be absent only"
-       echo "  because its own gate said so."; exit 1; }
+# The chrome must really carry every half, or the conversion quietly deleted
+# one: the accounts it pages, the readings it lists, the crown and the acts the
+# card carries. Without this the gate above passes on a head that lost them.
+for half in 'accounts:' 'reading:' 'crown:' 'acts:'; do
+  [[ "$stripFn" == *"$half"* ]] \
+    || { echo "✗ vibenet's scopeChrome no longer passes $half — prd §747: the account is a"
+         echo "  card carrying the crown and the acts, and the readings are door rows."; exit 1; }
+done
+# **THE ACTS ARE ON THE CARD, NOT A SECTION BELOW IT** (prd §747, keeping §682's
+# ruling by construction). `vibenetSendRow` mounted under the card until today,
+# which put the verbs below the list on any Home with history.
+grep -q 'acts: { AnyView(vibenetSendRow) }' "$TMP/feed.nc.swift" \
+  || { echo "✗ vibenet's verbs are not handed to the card — prd §747/§682: they ride the"
+       echo "  account card beside the crown, never a Section under the room's list."; exit 1; }
 # **AND NOTHING MAY DRAW BELOW THE FIGURE SLOT EITHER** (2026-09-02, reported
 # in the same breath, on the Permissions scope: the census grid's second row of
 # cells cut in half along the top edge of the slab). Same family, different box.
@@ -1251,7 +1260,7 @@ fi
 # "clipping on vibenet"). The chassis spelled its two gaps as NEGATIVE bottom
 # paddings against the card stack's `s6` — a spacing correction that is only a
 # correction while something FOLLOWS. On the Home scope every branch under the
-# slab is gated on another scope, so `railSlab` was the last child and its `-14`
+# slab is gated on another scope, so the chrome was the last child and its `-14`
 # was 14pt drawn below the stack; this card is one `List` row
 # (`FeedScreen.insightSection`, `listRowInsets(EdgeInsets())`) and a list cell
 # clips to its bounds, so the switcher lost its bottom padding and half its
@@ -1290,7 +1299,7 @@ grep -q 'VStack(alignment: .leading, spacing: DSRoomChassis.railGap)' "$TMP/card
 # naming what was removed.
 if grep -q 'vibenetSectionSwitcher' "$TMP/surface.nc.swift"; then
   echo "✗ the vibenet scope strip is pinned at the shell again — prd §482: it belongs"
-  echo "  below the crown, inside the card. See VibenetRoomCard.railSlab, which also"
+  echo "  below the crown, inside the card. See VibenetRoomCard.scopeChrome, which also"
   echo "  states what that placement costs (it scrolls away)."
   exit 1
 fi

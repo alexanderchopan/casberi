@@ -109,6 +109,11 @@ at all.
 | §566 | The sponsor scope's figure is a split bar of whose gas paid | superseded by §692 (the share leads the shared grid; the bar is deleted) |
 | §606 | The spend-key scope draws one bar per address; Holdings and Accounts draw no figure | superseded in part by §692 (the spend-key bar goes with the scope; the no-figure rulings stand) |
 | §690 | Wallet Home is the crown and the flow BAND; Activity is the family's chart | amended by §692 (Home's list half draws the flow as rows — the band stays in the brief) |
+| §547 | The account rail and the scope switcher are ONE fused glass slab | superseded by §747 (the slab is deleted — the accounts become paged cards, the readings become door rows; a name in a 66pt slot cut at ten characters) |
+| §483 | The wallet room's readings are a chip strip above the content | amended by §747 (the readings are door rows on Home and a scroll header inside one; the scopes, their order and their empty states are untouched) |
+| §611 | Every scope is present always, and an empty one says what it would hold | amended by §747 (it says so BEFORE the tap now — the row states the reading, and an empty scope's row reads its own `emptyHeadline`) |
+| §690 | Wallet Home's second half is the flow band | amended by §747 (the band moves to Activity, where the moves it decomposes are; Home's list is the scope rows) |
+| §466 | Watching a wallet and seeing the roster are the same screen, so the rail has no add slot | amended by §747 (the room gets a DOOR to that screen on the All card — still one watch field, and the rail it applied to no longer exists) |
 | §498 | `DSReceiptPaper` is the shared silhouette, so two rooms cannot drift into two papers | amended by §583 (the reasoning is why a modifier SURVIVES the deletion: strip the ground, the pour, the clip and the shadow and what is left is spacing, and five heads composing their own insets is how they drift apart with every check still green. `DSSheetHeadBlock` is that modifier) |
 | §583 | A capsule is a small card, so the state stamp loses its fill | extended by §584 to the three hand-rolled news pills the `DSStamp` sweep could not reach — and BOUNDED there: measured over all 145 capsules in the app, most are progress tracks or controls, and a capsule that GROUPS (a glyph with its word, one token among several) is earning its place |
 | §584 | A room head's headline cannot take the head rung, because a composed sentence measures 141pt on a 250pt card | answered by §585 — the rung was never the problem, the CONTENT was. A room that opens on a FIGURE puts the figure at `price40` and demotes its sentence; a room that opens on a statement keeps `heading22`, exactly as §584 measured |
@@ -55620,6 +55625,166 @@ the same. No guard was deleted.
 **None of this has been seen on a device or a simulator.** The evidence is an
 iOS simulator build, a Mac Catalyst build, every `*-audit.py`, and the harnesses
 that name a changed file.
+
+## §747 — The wallet family's bar is deleted: the account is a card you page, the readings are door rows (user: "I think this bar that we made is the right idea, but doesn't really get where we need and feels vibe coded", then "WOW D is cool", then "inside can't be swipe bc swipe is for rooms but can be a scroll header", 2026-09-15)
+
+**The complaint, and both halves are measurable rather than matters of taste.**
+From a screenshot of build 588's wallet room: *"one the name gets truncated, so
+you don't see the full name of the account. Two, I think the sections like
+holdings accounts, et cetera, don't really look like sections or buttons to tap,
+and they look so small, especially if they're supposed to be for a category of
+the wallet."*
+
+The truncation is `FaceScopeRail`'s 66pt slot: the caption cut at ten characters
+(`accountle…` beside `alexanderc…` — two wallets whose names differ only past
+the cut), and no amount of type tuning fixes a name that is longer than its
+box. The second is `DSSectionSwitcher` embedded in the slab: `label12`, which is
+the rung the app uses for a month beside a date, and — since §547 removed the
+rest fill as a pill inside a pill — no fill at all. At rest a scope was a
+caption on glass.
+
+Both have ONE cause, and it is not the ramp: a strip gives a name whatever fits
+after everything else on the line, and §547 had stacked two strips of everything
+else. So the bar goes, rather than being re-tuned for the third time.
+
+**Four directions were drawn** (`design/account-bar/`, published as a canvas).
+A: named chips, the same slab with whole names and 40pt scope capsules. B: the
+account as the room's 24pt title, opening a list. C: the scopes as dock-grammar
+tiles in a 4×2 grid. D: no bar at all. The user picked D outright — *"WOW D is
+cool"* — and then *"BUILD IT ALL"*.
+
+**D, as shipped.**
+
+- **The account is a CARD you page between**, one on screen with the next
+  peeking 32pt (`DSAccountDeck`, `DSAccountSlot`). A name gets 330pt on a 390pt
+  phone instead of a slot's leftovers, which is the whole of the first
+  complaint. The card carries what the room drew under the bar: the crown, and
+  the acts.
+- **The readings are DOOR ROWS** (`DSScopeRows`, built on `DSPushRow`): a word
+  at `body17`, what is behind it on the right, a chevron. That is the app's own
+  answer to "this is a door", and it answers the second complaint by
+  construction rather than by sizing.
+- **Every row states its reading before the tap.** §611 made every scope present
+  on every wallet on the rule that a chip onto a sentence teaching the scope
+  beats a chip onto nothing — but a chip could only keep that promise after the
+  tap. `Permissions · 4 live approvals` keeps it before, and an EMPTY scope
+  reads its own `emptyHeadline`, so the row and the slot behind it cannot
+  disagree.
+- **A pushed scope wears a SCROLL header, never a swipe** (`DSScopeHeader`), and
+  that is the user's ruling: *"inside can't be swipe bc swipe is for rooms but
+  can be a scroll header"*. A horizontal swipe on room content already walks the
+  rooms in dock order (§648/§663); a second horizontal swipe that walked scopes
+  would make the gesture mean two things depending on how deep you are. Travel
+  is the strip's scroll, the pick is a tap, and Home is the back chevron rather
+  than a word in the strip.
+- **One component, five rooms** (`DSRoomScopeChrome`), shaped as a drop-in for
+  `DSRoomRailSlab`: the same arguments on both sides. The rooms disagree about
+  mounting — Vibenet's chrome is inside its card, Hegotá's is four `FeedScreen`
+  sections, Frames mounts its send card in the list and the Privacy devnet
+  mounts its own as a section — so a component that asked them to agree about
+  MOUNTING would have converted none of them.
+
+**The Wallet's follow button did not exist, and that is the defect this pass
+found** (user: *"the wallets follow button is missing and that's a fail"*).
+Traced: the only way to watch a wallet is `WalletWatchField` on `WalletScreen`,
+reached through the room gear — the room itself had no add affordance at all,
+and `FaceScopeRail`'s add slot has been passed `addTitle: nil` since §466. The
+All card carries it now. **§466 is intact**: the row is a DOOR to that one
+field, not a second field.
+
+**It says `Follow address`, and so does every other door to that field.** The
+first cut wore the word the four bridge setup screens already used
+(`Watch a wallet`). The user ruled otherwise on sight — *"as for watch a wallet
+i would say follow address"*, then *"change all to follow address"* — so the
+wallet room's row and the Peer, Privacy Pools, Railgun and Safe setup screens
+all say it. `WalletWatchField`'s own armed verb becomes **Follow** in the same
+pass: a door reading `Follow address` onto a button reading `Watch` is one act
+under two words, one tap apart, which is the drift the ruling closes.
+
+**AND THE NOUN IS `address` WHEREVER THE LIST IS COUNTED** (user: *"it should
+always say watching addresses"*, then *"except for farcaster"*). The first cut
+left the state copy alone on the reasoning that `Watching N wallet` is shared
+with `Watching N card` and `Watching N Safe`; the ruling overrides it, and it is
+the better vocabulary anyway — the model has always called the thing a
+`WalletStore.WatchedAddress`, and the door that fills the list says `Follow
+address`. Changed: `BridgeStore`'s wallet arm, the four setup screens'
+`Watching N wallet` doors, the WalletConnect picker's `Watching N more wallets`,
+and the widget's gallery line and empty state. The `card` / `Safe` / generic
+arms are untouched — they count different things.
+
+**The Farcaster profile is the named exception.** `Watch their wallet`, and the
+cap flash beside it, stay as they are by ruling.
+
+**Also unchanged, and not covered by it.** `AddressCard`'s `Watch` / `Stop
+watching` menu acts on an address the app already holds rather than opening
+this field, and `WalletConnectBridge`'s pairing description is text this app
+sends TO a wallet app, where `wallet` is the accurate word.
+
+**Five string-catalog keys moved with their translations.** `Watching %lld
+wallet` carries plural rules in five languages, so the rename is a key move
+rather than an edit; the four non-English values are a mechanical noun swap and
+drop to `needs_review` for a translator.
+
+**What went with the bar.** Wallet Home's flow band (§690/§692) is rehomed to
+Activity — §723 leaves no third option, since an unmounted `walletFlowSection`
+is the dead control one layer down that no screen sweep sees. Frames'
+`FramesRoomList.onSend` is deleted with the `.home` arm that called it.
+`WalletScopeRail.items` and `.matches` are deleted with the rail they fed;
+`shows` survives because the shell and the crown card ask it too. The wallet
+crown's `latest` was computed at the call site and never passed, so
+`walletTodayCard` has never drawn — the dead local is removed and the card is
+left for its own ruling.
+
+**Known, and named rather than hidden.** A card mid-drag shows its head over an
+empty crown box until the page settles, because the crown's inputs
+(`portfolio`, `walletLive`, `selectedWallet`) are room state rather than
+parameters. The fix is to thread a scope through `walletTilesSection` and its
+four sources, which is a change to the reading layer and does not belong in the
+pass that moves the chrome. **Frames' acts ride the ALL card only**, which is
+NOT what the mockup drew: this device holds one key, so Send and Top up act for
+that key whichever card is showing, and per-card tiles would promise that paging
+changes what Send sends from.
+
+**ALL FIVE ROOMS ARE ON IT, and `DSRoomRailSlab` IS DELETED** (user: *"and we
+will have one template for the wallet and all the dev nets, right"*). Wallet,
+Hegotá Frames, Hegotá UTXO, Ethrex Privacy and Base Vibenet. The slab file, and
+the three rail adapters that existed only to feed it
+(`HegotaScopeRail`, `FramesScopeRail`, `PrivacyDevnetScopeRail`), go with it per
+§723. `VibenetScopeRail` survives — vibenet still draws a rail in its
+single-account branch — as does `WalletScopeRail.shows`, which the shell and the
+crown card read.
+
+**Two dead wires the conversion surfaced, both §83.** Hegotá's Send tile has
+been inert since the room shipped: `HegotaRoomList` declared `onOpenSend` and
+`FeedScreen` passed it, but the `.home` arm called `HegotaSendCard()` with no
+arguments, so the card kept its `= {}` default. It is wired now. And vibenet's
+verbs (`vibenetSendRow`) mounted as a `Section` BELOW the card, which put them
+under the list on any Home with history — §682's complaint one seat over, now
+structurally impossible because they are on the card.
+
+**`DSSectionSwitcher.embedded` GOES TOO** (user: *"make the fix that you are
+talking about it"*). It was §547's flag for drawing the switcher as the slab's
+lower deck — no glass, no outer padding, no rest fill, a concentric
+rounded-rect pick instead of a capsule — so that a pill inside a pill did not
+double. With the slab deleted no caller set it, which made every one of those
+branches unreachable. The five screens that still draw this switcher all drew
+it un-embedded, so what survives is exactly what they were already getting, and
+`DSRoomChassis.slabDeckGap` goes with it (it spaced the slab's two decks and
+nothing else).
+
+**§553's edge fade is NOT deleted with the mode it lived in.** It was reported
+on the embedded strip and its code sat in that branch, but the ruling is about
+any overflowing strip — a cut word reads as a layout fault rather than as more
+content — so it moves onto the surviving branch, inside the clip, fading the
+chips while the glass capsule behind them stays whole. Deleting a ruling as a
+side effect of retiring a rendering mode is the same silent loss §723 forbids
+in the other direction.
+
+**UNBUILT.** Written in a Linux container with no Swift toolchain — nothing here
+has been compiled, installed, or seen on a screen. `scripts/verify.sh` is the
+gate. The three structural self-tests that guarded the old shape
+(`wallet-section`, `vibenet`, `privacy`) follow their subject rather than being
+deleted, and every rewritten guard was dry-run by hand against the new tree.
 
 ## §748 — An explaining sentence has one view and one screen gets one of them: `DSFootnote`, counted by `footnote-audit.py` (user: "one explaining sentence per screen at most, and only if it says something the controls don't", 2026-09-15)
 

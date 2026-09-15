@@ -103,7 +103,7 @@ struct FaceScopeRail: View {
     /// anatomy and one behaviour; what differs is whether the name is drawn HERE
     /// or one card down, which is a fact about the room, not a style.
     var namesInRoom: Bool = false
-    /// **Drawn as the upper deck of `DSRoomRailSlab` rather than standing on its
+    /// **Drawn as the upper deck of a container rather than standing on its
     /// own** (prd §547, 2026-09-01).
     ///
     /// Three consequences, and all three exist because the slab already
@@ -504,22 +504,7 @@ struct FaceScopeRail: View {
 
     @ViewBuilder
     private func face(_ face: Item.Face) -> some View {
-        switch face {
-        case .wallet(let address):
-            WalletFace(address: address, size: faceSize, circular: true)
-        case .avatar(let url, let source):
-            if let url, !url.isEmpty {
-                RemoteThumb(urlString: url, size: faceSize, fallback: source, circular: true)
-            } else {
-                BridgeIcon(name: source, size: faceSize, circular: true)
-            }
-        case .mark(let url, let source):
-            if let url, !url.isEmpty {
-                RemoteThumb(urlString: url, size: faceSize, fallback: source, circular: false)
-            } else {
-                BridgeIcon(name: source, size: faceSize, circular: false)
-            }
-        }
+        RailFace(face: face, size: faceSize)
     }
 
     /// The ring a slot wears, following the FACE's own shape — a squircle mark
@@ -636,139 +621,23 @@ enum VibenetScopeRail {
     }
 }
 
-/// The same rail for the Frames devnet (prd §548).
-///
-/// **`watched > 1` is the rule, not an accident**: a rail over one face is a
-/// label rather than a control (§83), and on this chain the common case is a
-/// single account — the one this phone made. It appears the moment a second
-/// address is watched, which is what the connect screen's worked examples are
-/// for.
-enum FramesScopeRail {
-    /// **ONE FACE IS ENOUGH HERE, and that is a deliberate divergence from
-    /// `HegotaScopeRail` above** (user, 2026-09-01: *"shouldn't the rail be
-    /// there regardless?"* — yes, and the reason is this chain's, not a
-    /// relaxation of §83).
-    ///
-    /// Hegotá requires `watched > 1` because there you watch STRANGERS: the
-    /// rail is a filter across several addresses, and over one it filters
-    /// nothing and is a label wearing a control's clothes.
-    ///
-    /// Here the account is YOURS and it is the main path — `registerBridge`
-    /// registers on the key OR the watch list for exactly that reason. The
-    /// face is the room's SUBJECT rather than a filter across other people:
-    /// it says whose room this is, and it is the anchor for the Send tile
-    /// directly beneath it. Picking it still does something perceptible (the
-    /// mark carries selection, and picking again clears it), so it is a
-    /// low-value control rather than a dead one — which is the line §83 draws.
-    ///
-    /// It also keeps §547's fusion honest. That ruling joined the rail and the
-    /// switcher so they would stop reading as two unrelated strips; a room
-    /// that draws only the switcher is that failure wearing the fused
-    /// component's name, which is what a device showed twice before this
-    /// changed.
-    static func shows(source: String, watched: Int) -> Bool {
-        source == FramesIdentity.source && watched > 0
-    }
-
-    /// **THE CAPTION IS WHAT THE ACCOUNT HOLDS, and that is this rail's own
-    /// stated job** rather than a new idea (user, 2026-09-01: *"don't you
-    /// think we need a holdings slot on the rail?"*). `FaceScopeRail`'s header
-    /// says it outright — "the strip that scopes the room is the same strip
-    /// that says what each account holds, one row doing both jobs instead of
-    /// two rows doing one each".
-    ///
-    /// The first cut captioned with the short address, which put `…7d5f`
-    /// six points below the account row already saying `…7d5f` — the rail
-    /// costing a row and carrying nothing the room did not already state. A
-    /// balance is the thing the face cannot say by itself.
-    ///
-    /// Takes ACCOUNTS rather than addresses for that reason: a caption that
-    /// needs the balance cannot be built from a string. A name, where somebody
-    /// has given one, still wins — they named it so they would recognise it.
-    static func items(_ accounts: [FramesAccount]) -> [FaceScopeRail.Item] {
-        accounts.map { account in
-            FaceScopeRail.Item(
-                id: account.address,
-                caption: FramesWatch.shared.name(for: account.address)
-                    // **Nil is not zero.** An address that did not answer gets
-                    // its short form back rather than "0.0000", which would be
-                    // a claim about somebody's balance made from a failed read
-                    // (§515a, on the line most likely to be believed).
-                    ?? FramesMoney.eth(fromWeiHex: account.balanceWeiHex ?? "")
-                    ?? WalletStore.shortAddress(account.address),
-                face: .wallet(address: account.address))
-        }
-    }
-
-    static func matches(_ scope: String?, _ id: String) -> Bool {
-        guard let scope else { return false }
-        return scope.caseInsensitiveCompare(id) == .orderedSame
-    }
-}
-
-/// The Ethrex Privacy room's face rail (prd §593).
-enum PrivacyDevnetScopeRail {
-    /// **Draws for ONE watched address, and that is Frames' rule rather than
-    /// Hegotá's** — §547's fusion is the reason. That ruling joined the rail
-    /// and the switcher so they would stop reading as two unrelated strips, so
-    /// a room drawing only the switcher is that failure wearing the fused
-    /// component's name. The first cut of this room did exactly that, passing
-    /// `showsRail: false` and an `EmptyView`, and it was caught by looking at
-    /// the room on a simulator — nothing static can see half a fused control.
-    ///
-    /// Unlike Frames the account here is NOT necessarily yours (this seat makes
-    /// no key), so the face is the room's SUBJECT rather than its owner. That
-    /// still earns the rail: it says whose room this is, and picking it does
-    /// something perceptible.
-    static func shows(source: String, watched: Int) -> Bool {
-        source == PrivacyDevnetIdentity.source && watched > 0
-    }
-
-    /// **THE CAPTION IS WHO, NEVER WHAT THEY HOLD (user ruling, 2026-09-04:
-    /// "the silhouette rail shouldn't have balances only addresses").**
-    ///
-    /// This rail captioned each face with its balance, and it was the odd one
-    /// out: `VibenetScopeRail` and `HegotaScopeRail` both caption `name ??
-    /// shortAddress` and neither has ever shown a figure. It is the same
-    /// ruling the address book already carries — a rail of faces is a PEOPLE
-    /// strip, and money belongs where the room states it once rather than
-    /// under every silhouette.
-    ///
-    /// It also read badly for a reason particular to this chain: the accounts
-    /// worth watching here include genesis fixtures holding ~1,000,000 test
-    /// ETH beside real ones holding 0.44, so three captions in a row were a
-    /// truncated seven-figure number next to two four-decimal ones, comparing
-    /// quantities that have no market and no meaning against each other.
-    ///
-    /// `PrivacyDevnetMoney` still spells the balance everywhere it IS stated —
-    /// the account sheet, the send form, the roster row — so nothing is lost
-    /// and there is still exactly one spelling of it.
-    @MainActor
-    static func items(_ accounts: [PrivacyDevnetAccount]) -> [FaceScopeRail.Item] {
-        accounts.map { account in
-            FaceScopeRail.Item(
-                id: account.address,
-                // A chosen name wins; the AUTO one is the short address, which
-                // is what this falls back to anyway, so the two rungs collapse
-                // into `PrivacyDevnetName.of` — the seat's one naming, which
-                // also answers "This phone" for the account this app made.
-                caption: PrivacyDevnetName.of(account.address),
-                face: .wallet(address: account.address))
-        }
-    }
-
-    static func matches(_ scope: String?, _ id: String) -> Bool {
-        guard let scope else { return false }
-        return scope.caseInsensitiveCompare(id) == .orderedSame
-    }
-}
+// **`HegotaScopeRail`, `FramesScopeRail` AND `PrivacyDevnetScopeRail`
+// ARE DELETED (prd §747, 2026-09-15).** Those three rooms draw no
+// `FaceScopeRail` any more — their accounts are the cards of
+// `DSAccountDeck`, built by each room's own `slots(_:)` — so the
+// adapters that existed only to feed a rail went with it, per §723.
+//
+// `VibenetScopeRail` survives because vibenet still draws a rail in its
+// single-account branch (`VibenetRoomCard.detailBranch`) and the shell
+// reads its `shows`; `WalletScopeRail.shows` survives for the same
+// reason its own note gives.
 
 enum WalletScopeRail {
-    /// Whether the rail draws at all — which is ALSO the test for whether it,
-    /// rather than a room's own header, carries the add-a-wallet verb
-    /// (`FeedScreen.showsAddHint`). One rule with two readers on two different
-    /// screens, so it is spelled once here: two `+`s a thumb-width apart, both
-    /// opening the wallet manager, is one control too many, and a copy of this
+    /// Whether this room has a roster worth scoping at all. It outlived the
+    /// rail it was named for (§747): the shell reads it to decide whether the
+    /// room takes an account scope, and the crown card reads it to decide
+    /// whether to name the pick. One rule with two readers on two different
+    /// screens, so it is spelled once here, and a copy of this
     /// predicate in the feed would be free to drift out of step with the rail it
     /// is describing.
     static func shows(source: String, watched: Int) -> Bool {
@@ -784,23 +653,16 @@ enum WalletScopeRail {
             && watched > 1
     }
 
-    static func items(_ addresses: [WalletStore.WatchedAddress]) -> [FaceScopeRail.Item] {
-        addresses.map { addr in
-            let label = addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label
-            return FaceScopeRail.Item(
-                id: addr.address,
-                caption: label,
-                face: .wallet(address: addr.address),
-                tooltip: addr.label.isEmpty ? addr.address : "\(addr.label) · \(addr.address)")
-        }
-    }
-
-    /// Hex compares case-insensitively (EIP-55 case is a checksum), base58
-    /// exactly (Solana case is identity) — `WalletWatch.sameAddress`, which the
-    /// scope machinery (`WalletStore.scopeMatches`) already runs on.
-    static func matches(_ scope: String, _ id: String) -> Bool {
-        WalletWatch.sameAddress(scope, id)
-    }
+    // **`items` AND `matches` ARE DELETED (prd §747, 2026-09-15).** The wallet
+    // room draws no `FaceScopeRail` any more — its accounts are the cards of
+    // `DSAccountDeck`, built by `FeedScreen.walletAccountSlots` — so the two
+    // members that existed only to feed that rail went with it, per §723: a
+    // feature deleted from the surface is deleted from the model, or it is the
+    // dead control one layer down that no screen sweep sees.
+    //
+    // `shows` survives because it never belonged to the rail alone: the shell
+    // and the crown card both ask it whether this room has a roster worth
+    // scoping, and both still do.
 
     /// What the CROWN CARD calls the scoped wallet (prd §450) — its name, and
     /// the address tail that goes beside it.
@@ -930,34 +792,45 @@ enum GitHubScopeRail {
     }
 }
 
-/// The Hegotá room's face rail — the same shape as vibenet's, one chain over.
+
+/// THE ONE DRAWER FOR A RAIL ITEM'S FACE (2026-09-15, prd §747).
 ///
-/// **Folded into the crown rather than mounted as its own row** (vibenet's
-/// §482 amendment: *"we cannot have four rows of chips"*). The rail lives under
-/// the sparkline, where the strip that scopes the room is the same strip that
-/// says what each account holds — one row doing both jobs instead of two rows
-/// doing one each.
-enum HegotaScopeRail {
-    static func shows(source: String, watched: Int) -> Bool {
-        source == HegotaIdentity.source && watched > 1
-    }
+/// It was `FaceScopeRail.face(_:)` and stayed private for as long as the rail
+/// was the only thing that drew one. `DSAccountDeck` draws the same faces at
+/// card size, and the alternative was a second copy of this switch — which is
+/// exactly how the wallet rail and `SocialRosterHero` drifted into the three
+/// differences §362 spent a pass collapsing.
+///
+/// The circle/squircle split is load-bearing rather than cosmetic: a project's
+/// mark in a circle says a PERSON published it (the same distinction
+/// `ShapedRows` draws between `faceSources` and `publisherMarkSources`), so
+/// `.mark` never rounds and `.avatar` always does.
+struct RailFace: View {
+    let face: FaceScopeRail.Item.Face
+    /// **A TIER, and defaulted to one on purpose.** `face-ramp-audit.py`
+    /// resolves a face's size by reading the declaration it comes from, and a
+    /// bare `let size: CGFloat` resolves to nothing — which is the audit
+    /// working, not the audit being wrong: a face whose size is a free number
+    /// is how the ramp drifted before it existed. `list` is the rail's own
+    /// rung; the deck passes `shelf` and the header's line passes `row`.
+    var size: CGFloat = DS.Face.list
 
-    /// One watched address per face, in the watch list's own order.
-    /// `WalletFace` draws a deterministic identicon for any hex address, so
-    /// these are the SAME faces the room card and the accounts list show — one
-    /// address never reads as two different marks.
-    static func items(_ addresses: [String]) -> [FaceScopeRail.Item] {
-        addresses.map { address in
-            FaceScopeRail.Item(
-                id: address,
-                caption: HegotaWatch.shared.name(for: address)
-                    ?? WalletStore.shortAddress(address),
-                face: .wallet(address: address))
+    var body: some View {
+        switch face {
+        case .wallet(let address):
+            WalletFace(address: address, size: size, circular: true)
+        case .avatar(let url, let source):
+            if let url, !url.isEmpty {
+                RemoteThumb(urlString: url, size: size, fallback: source, circular: true)
+            } else {
+                BridgeIcon(name: source, size: size, circular: true)
+            }
+        case .mark(let url, let source):
+            if let url, !url.isEmpty {
+                RemoteThumb(urlString: url, size: size, fallback: source, circular: false)
+            } else {
+                BridgeIcon(name: source, size: size, circular: false)
+            }
         }
-    }
-
-    static func matches(_ scope: String?, _ id: String) -> Bool {
-        guard let scope else { return false }
-        return scope.caseInsensitiveCompare(id) == .orderedSame
     }
 }

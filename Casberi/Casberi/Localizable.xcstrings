@@ -131358,7 +131358,7 @@
         }
       }
     },
-    "Watching %lld wallet" : {
+    "Watching %lld address" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -131367,13 +131367,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Watching 1 wallet"
+                  "value" : "Watching 1 address"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Watching %lld wallets"
+                  "value" : "Watching %lld addresses"
                 }
               }
             }
@@ -131384,14 +131384,14 @@
             "plural" : {
               "one" : {
                 "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Siguiendo 1 wallet"
+                  "state" : "needs_review",
+                  "value" : "Siguiendo 1 dirección"
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Siguiendo %lld wallets"
+                  "state" : "needs_review",
+                  "value" : "Siguiendo %lld direcciones"
                 }
               }
             }
@@ -131402,8 +131402,8 @@
             "plural" : {
               "other" : {
                 "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld個のウォレットを監視中"
+                  "state" : "needs_review",
+                  "value" : "%lld個のアドレスを監視中"
                 }
               }
             }
@@ -131414,8 +131414,8 @@
             "plural" : {
               "other" : {
                 "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "지갑 %lld개 지켜보는 중"
+                  "state" : "needs_review",
+                  "value" : "주소 %lld개 지켜보는 중"
                 }
               }
             }
@@ -131426,8 +131426,8 @@
             "plural" : {
               "other" : {
                 "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "正在关注 %lld 个钱包"
+                  "state" : "needs_review",
+                  "value" : "正在关注 %lld 个地址"
                 }
               }
             }
