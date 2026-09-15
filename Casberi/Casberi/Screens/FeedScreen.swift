@@ -6837,7 +6837,7 @@ struct FeedScreen: View {
             // for x402's reason one room over: every offer carries the
             // `capturedAt` of the sync that first saw it, so a new-since
             // divider in this room marks nothing.
-            groupedSections(cardPointersGroups(visible), nextEventID: nextEventID)
+            groupedSections(cardPointersGroups(visible), nextEventID: nextEventID, dated: false)
         case .walletbeat:
             // Your watched wallets lead as standing report cards, then the news
             // below in days. A rating is not an event and must not be filed under
@@ -6846,7 +6846,8 @@ struct FeedScreen: View {
                 WalletbeatWatch.isWatchRef($0.sourceRef)
             }
             if !watches.isEmpty {
-                groupedSections([(String(localized: "Your wallets"), watches)], nextEventID: nextEventID)
+                groupedSections([(String(localized: "Your wallets"), watches)],
+                                nextEventID: nextEventID, dated: false)
             }
             let days = chronoGroups(rest)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
@@ -6858,7 +6859,8 @@ struct FeedScreen: View {
                 L2beatWatch.isChainRef($0.sourceRef)
             }
             if !watches.isEmpty {
-                groupedSections([(String(localized: "Your chains"), watches)], nextEventID: nextEventID)
+                groupedSections([(String(localized: "Your chains"), watches)],
+                                nextEventID: nextEventID, dated: false)
             }
             let days = chronoGroups(rest)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
@@ -6868,7 +6870,7 @@ struct FeedScreen: View {
             // real time and the new-since divider means something.
             let repos = cursorRepos(visible)
             groupedSections(repos, nextEventID: nextEventID,
-                            boundary: boundaryThingID(in: repos))
+                            boundary: boundaryThingID(in: repos), dated: false)
         case .tokens:
             watchlistLedeSection(visible)
             watchlistSection(visible, nextEventID: nextEventID)
@@ -6894,9 +6896,9 @@ struct FeedScreen: View {
                 // header, below things you pinned weeks ago. That is exactly
                 // the failure `Thing.pinnedAt` is a DATE rather than a Bool to
                 // avoid, and it would arrive by the back door.
-                daySection(Pinboard.room, visible, nextEventID: nextEventID)
+                daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false)
             } else if filter.tag != "All" && shape == .all {
-                daySection(filterLabel, visible, nextEventID: nextEventID)
+                daySection(filterLabel, visible, nextEventID: nextEventID, dated: false)
             } else if shape == .all {
                 // The Themes treemap no longer renders here — it moved ABOVE
                 // the shape chain entirely (prd §385, see the call site in
@@ -7366,7 +7368,13 @@ struct FeedScreen: View {
                         // dropping a SIZE step instead would land the header at
                         // 18pt, which is the row titles beneath it.
                         .fontWeight(coarse.contains(label) ? .semibold : .bold)
-                        .foregroundStyle(DS.textPrimary)
+                        // THE DAY WEARS THE BRAND HUE (prd §740, user: "pink
+                        // for all the days is good. it breaks up the content
+                        // of the day and the rows"). Every label this builder
+                        // draws is a day or a folded week/month — the All
+                        // feed groups by nothing else — so there is no
+                        // `dated` question to ask here.
+                        .foregroundStyle(DS.brandInk)
                     // What the group was mostly about (prd §379) — coarse
                     // groups only, and only when a term actually recurs, so
                     // the recent days keep their bare date and nothing is
@@ -7804,6 +7812,16 @@ struct FeedScreen: View {
                                  nextEventID: UUID?,
                                  boundary: UUID? = nil,
                                  replies: [String: [Thing]] = [:],
+                                 // Do these labels name a TIME? (prd §740.)
+                                 // Every chronological room says yes by
+                                 // default; the handful grouped by something
+                                 // else — repositories, watched wallets, a
+                                 // due-date bucket — pass false and keep the
+                                 // primary ramp. Spelled at the call site
+                                 // rather than sniffed from the label: the
+                                 // labels are localized, and a new room's
+                                 // author should have to answer this.
+                                 dated: Bool = true,
                                  cover: UUID? = nil) -> some View {
         // Computed once for the whole feed rather than per section: every
         // shaped room routes its groups through here, so the folded tail's
@@ -7816,7 +7834,8 @@ struct FeedScreen: View {
         let _ = { memo.windowHasMore = window.more }()
         ForEach(window.shown, id: \.0) { label, rows in
             daySection(label, rows, nextEventID: nextEventID, boundary: boundary,
-                       replies: replies, coarse: coarse.contains(label), cover: cover)
+                       replies: replies, coarse: coarse.contains(label),
+                       dated: dated, cover: cover)
         }
         if window.more { olderRow }
     }
@@ -9278,7 +9297,7 @@ struct FeedScreen: View {
     private func waitingSection(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let waiting = visible.filter { $0.mark == .doing }.prefix(2).map { $0 }
         if !waiting.isEmpty {
-            daySection("Waiting on you", waiting, nextEventID: nextEventID)
+            daySection("Waiting on you", waiting, nextEventID: nextEventID, dated: false)
         }
     }
 
@@ -9299,7 +9318,7 @@ struct FeedScreen: View {
         let doneToday = visible.filter {
             $0.mark == .done && Calendar.current.isDateInToday($0.capturedAt)
         }
-        if !doing.isEmpty { daySection("Doing", doing, nextEventID: nextEventID) }
+        if !doing.isEmpty { daySection("Doing", doing, nextEventID: nextEventID, dated: false) }
         if !fresh.isEmpty || !stale.isEmpty {
             // One To do card (2026-07-21): the Older toggle — or the stale
             // rows it expands into — continues the fresh rows' surface
@@ -9360,7 +9379,7 @@ struct FeedScreen: View {
                 }
             }
         }
-        if !doneToday.isEmpty { daySection("Done", doneToday, nextEventID: nextEventID) }
+        if !doneToday.isEmpty { daySection("Done", doneToday, nextEventID: nextEventID, dated: false) }
     }
 
     // MARK: - Row dispatch (the shape decides what a row leads with)
@@ -10336,6 +10355,12 @@ struct FeedScreen: View {
                             // that isn't a day at all (the kind-filtered All
                             // room, whose single header is the filter's name).
                             coarse: Bool = false,
+                            // Does this label name a TIME? (prd §740.) True
+                            // takes the brand hue; the named-group callers
+                            // below ("Doing", "Waiting on you", a pinned room,
+                            // a kind filter) pass false and stay on the
+                            // primary ramp.
+                            dated: Bool = true,
                             // A shaped room's cover (prd §732): drawn as
                             // `FeedLedeCard` under the header of the group that
                             // holds it, and lifted out of that group's run.
@@ -10379,7 +10404,10 @@ struct FeedScreen: View {
                         // The folded tail weighs less than today (prd §254) —
                         // see the twin in `bundledSections` for the reasoning.
                         .fontWeight(coarse ? .semibold : .bold)
-                        .foregroundStyle(DS.textPrimary)
+                        // The day wears the brand hue (prd §740); a group
+                        // named by something other than time keeps the
+                        // primary ramp.
+                        .foregroundStyle(dated ? DS.brandInk : DS.textPrimary)
                     // In a source's own room the count speaks the source's unit —
                     // "3 events", "5 screenshots" (2026-07-13). All keeps the
                     // bare number: mixed kinds have no one unit worth naming.
