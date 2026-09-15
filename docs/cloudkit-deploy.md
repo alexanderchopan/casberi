@@ -116,3 +116,15 @@ catalog and the network-reach registry already follow. The reason this drifted
 20 fields deep is that no shipped iOS build had the iCloud entitlement at all
 (see `scripts/testflight.sh` and the 2026-08-01 entitlements commit), so
 Production sync had never once been exercised and nothing ever complained.
+
+## `CD_mailMessageID` — deployed to both environments (2026-09-14)
+
+§735 added `Thing.mailMessageID` and updated `docs/cloudkit-schema.ckdb`, so the
+static audit stayed green while neither live environment had the field. It was
+caught by `scripts/cloudkit-schema-audit.py --live production` before build 585
+shipped (1 missing, in both environments). Development: export, insert the one
+field line after `CD_likeCount`, `validate-schema`, `import-schema`. Production:
+promoted in the Console by the user. Both re-checked live, 61 of 61. The lesson
+is the one at the top of this file: a green static audit means the snapshot is
+current, not that anything is deployed. Run `--live production` on every ship
+that touches `Thing`.
