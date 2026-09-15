@@ -644,13 +644,16 @@ grep -q 'dsTooltip' "$TMP/rail.nc" \
 # left this guard passing on almost any tree; a range whose START never matches
 # yields nothing, which is what it actually did. `walletCompositionSection` is
 # the next declaration after the slab and is the honest new terminator.
-railBlock=$(sed -nE '/(private )?func walletScopeRailSection\(/,/(private )?var walletCompositionSection:/p' "$TMP/feed.nc")
-[[ "$railBlock" == *"namesInRoom:"* ]] \
-  || { echo "✗ the wallet rail's caption decision is implicit again (§450 → §495) — the"; \
-       echo "  parameter defaults to false, so a rail that captions by OMISSION is a rail"; \
-       echo "  nobody decided about. §450 banned these captions outright; §483 shipped them"; \
-       echo "  and the user then refined their format rather than questioning them, so what"; \
-       echo "  is enforced now is that the choice is made on purpose."; exit 1; }
+# **THE RAIL IS DELETED; THE DECISION MOVED WITH IT** (prd §747). The wallet
+# room draws no `FaceScopeRail` now — its accounts are `DSAccountDeck` cards
+# built by `walletAccountSlots` — so no rail is left to caption by omission.
+# What §450 → §495 enforced survives in the slots: every account is NAMED on
+# purpose, by an explicit `name:`, and never by a default.
+slotBlock=$(sed -nE '/var walletAccountSlots: \[DSAccountSlot\]/,/^    }$/p' "$TMP/feed.nc")
+[[ "$slotBlock" == *"DSAccountSlot("* && "$slotBlock" == *"name:"* ]] \
+  || { echo "✗ the wallet's account cards no longer name each account explicitly (§450 →"; \
+       echo "  §495 → §747). A card that names its account by omission is a card nobody"; \
+       echo "  decided about."; exit 1; }
 socialBlock=$(sed -n '/private var socialScopeRail/,/private var socialAccounts/p' "$TMP/main.nc")
 [[ "$socialBlock" == *"namesInRoom"* ]] \
   && { echo "✗ the SOCIAL rail has taken §450's flag. It has no crown card to name a pick"; \
@@ -761,15 +764,17 @@ grep -qE '\.opacity\(isOn \? 1 : 0\.[0-9]' "$TMP/rail.nc" \
 # named is real and is now carried by §495's return-to-head on a scope change,
 # with pinning left as its own open ruling rather than assumed here.
 socialRail=$(grep -c 'socialScopeRail' "$TMP/main.nc" || true)
-walletRail=$(grep -c 'walletScopeRailSection' "$TMP/feed.nc" || true)
+# Since §747 the wallet's scope control is the account deck in
+# `walletScopeChromeSection`, in the room's content where §483 put the rail.
+walletRail=$(grep -c 'walletScopeChromeSection(' "$TMP/feed.nc" || true)
 [[ "$socialRail" -gt 0 ]] \
   || { echo "✗ the social rail is gone from MainSurface.roomControls — it is pinned chrome"; \
        echo "  (§357/§362): a person filter you are standing in that scrolls away is a"; \
        echo "  filter with no visible way out."; exit 1; }
 [[ "$walletRail" -gt 0 ]] \
-  || { echo "✗ the wallet rail is gone from the room's content — §483 moved it OUT of"; \
-       echo "  roomControls deliberately ('we cannot have four rows of chips'), so its home"; \
-       echo "  is FeedScreen's walletScopeRailSection, not the shell."; exit 1; }
+  || { echo "✗ the wallet's account deck is gone from the room's content — §483 moved the"; \
+       echo "  scope control OUT of roomControls deliberately, and since §747 its home is"; \
+       echo "  walletScopeChromeSection, not the shell."; exit 1; }
 # The social scope must die with the room. A handle belongs to ONE network, so a
 # Farcaster handle carried into Bluesky matches no row and paints an empty feed
 # with nothing on screen able to explain why.

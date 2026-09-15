@@ -387,7 +387,11 @@ grep -q 'walletActingSection' "$FEED" \
 # Anchored on the ROW switch, not the head switch — `case .permissions:` also
 # names the drawing one level up, and an unanchored grep reads that block's
 # closing brace as this one's first row.
-order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 2 '^            case .permissions:$')
+# Since the Frames restore (1610c0ad) a second `case .permissions:` at the same
+# indent — Frames' reading headline — sits EARLIER in the file, so the first
+# match is no longer the room's rows. Take the block that draws the acting list.
+order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 2 '^            case .permissions:$' \
+        | grep -B 1 -A 1 'walletActingSection' | head -3)
 print -r -- "$order" | sed -n '2p' | grep -q 'walletActingSection' \
   || fail "the acting list no longer leads the Permissions scope's rows"
 print -r -- "$order" | sed -n '3p' | grep -q 'walletApprovalsSection' \

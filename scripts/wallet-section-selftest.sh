@@ -274,19 +274,23 @@ guard FeedScreen.swift "WalletSection.resolve(" \
 # for several commits. Anchored on the FUNCTION NAME plus its first argument,
 # which is what this guard actually cares about — the crown's position — and
 # not on a signature that will keep changing.
-crown_at=$(grep -n "walletTilesSection(visible" "$work/FeedScreen.swift.bare" | head -1 | cut -d: -f1 || true)
-# The CALL SITE, not the declaration — which sits earlier in the file and
-# made this guard fire on a correctly-ordered room the first time it ran.
-#
-# **The anchor moved with its subject** (prd §547): the switcher's own section
-# is gone, so what has to sit below the crown is the SLAB that carries it.
-# `walletScopeRailSection(section)` is that call, and it takes an argument now
-# precisely because it absorbed the switcher's — which is what keeps this
-# anchored on a call site rather than on a bare identifier that also matches
-# the declaration.
-switch_at=$(grep -n "walletScopeRailSection(section)" "$work/FeedScreen.swift.bare" | head -1 | cut -d: -f1 || true)
-[[ -n "$crown_at" && -n "$switch_at" ]] || fail "drift: cannot locate the crown or the switcher in the wallet block"
-(( crown_at < switch_at )) || fail "drift: the switcher is drawn ABOVE the crown — it must sit below the sparkline"
+# **The anchor moved with its subject again** (prd §747). The slab and its
+# switcher are deleted: the crown is the `crown:` argument of
+# `DSRoomScopeChrome`, drawn inside the account deck's card, and the scopes are
+# `DSScopeRows` BELOW that deck. Source order in FeedScreen no longer says draw
+# order (a closure argument follows its call), so the guard reads both halves:
+# the wallet passes its sparkline as the chrome's crown, and the chrome draws
+# the deck — the crown — above the scope rows.
+chrome_fn=$(sed -n '/func walletScopeChromeSection(/,/^    }$/p' "$work/FeedScreen.swift.bare")
+[[ "$chrome_fn" == *"DSRoomScopeChrome("* && "$chrome_fn" == *"crown: { slot in"* \
+   && "$chrome_fn" == *"walletTilesSection(visible"* ]] \
+  || fail "drift: the wallet no longer passes its crown into DSRoomScopeChrome"
+CHROME="Casberi/Casberi/Design/DSRoomScopeChrome.swift"
+deck_at=$(grep -n "DSAccountDeck(slots:" "$CHROME" | head -1 | cut -d: -f1 || true)
+rows_at=$(grep -n "DSScopeRows(sections:" "$CHROME" | head -1 | cut -d: -f1 || true)
+[[ -n "$deck_at" && -n "$rows_at" ]] || fail "drift: cannot locate the deck or the scope rows in DSRoomScopeChrome"
+(( deck_at < rows_at )) || fail "drift: the scope rows are drawn ABOVE the crown's deck — they must sit below it"
+grep -q "crown(slot)" "$CHROME" || fail "drift: the deck's card no longer draws the crown"
 
 # EVERY empty-state gate must be the section's OWN render gate, spelled the same
 # way (prd §611 moved these from presence flags to `walletScopeIsEmpty`; the
