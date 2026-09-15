@@ -56159,3 +56159,45 @@ the shell nils it while the folder is open, `roomControls` still mounts on
 venues-or-faces alone, and the strip publishes the anchor before it opens the
 folder. Every one of these fails INVISIBLY — a capsule of avatars over a lit
 category tile is a handsome band in every screenshot, which is how it shipped.
+
+## §755 — A suppression term is not a head: every social room covers its newest thing (user: "also recall, we want the most recent post to be big, like it is on the all screen and that pattern should be on every screen", 2026-09-15)
+
+**The report.** A Farcaster room opening on plain rows — a follow, a `Gm` — all
+at one size, with nothing at the top. §732 had already ruled that every room
+without a head covers its newest thing, so the room was not following a ruling
+it was already meant to.
+
+**One term in the wrong expression.** `rosterAccounts` — the accounts behind a
+social room — appears in five gates in `FeedScreen`. In four of them it is a
+SUPPRESSION: it is why a social room draws no topic map, no mosaic, no
+distribution and, since §219, no density grid ("a density grid says nothing a
+face with a ring doesn't already say better"). The fifth was `heroShown`, which
+means *a head card is drawn on this page* — and the roster branch draws
+`EmptyView()`, by §362's own decision, because the faces left the feed for the
+shell that day. §723 then handed the empty head slot to the cover and gated it
+on `heroShown`, so the one branch that draws nothing became the one that refuses
+the cover. Every social room with two or more accounts has drawn no head and no
+cover since.
+
+**The ruling.** `rosterAccounts` comes out of `heroShown` and stays in all four
+gates above it. A social room draws no head card, as §362 ruled, and covers its
+newest thing, as §732 ruled. Nothing else moves: the branch still holds the slot
+against the heatmap, and no room that draws a real head gains a cover.
+
+**What this does NOT reach**, and the shapes that still decline, so the next
+session does not re-derive them: a room with a real visualization (the user's own
+carve-out in §749, "besides wallet and other rooms w/ a visualization"); the five
+mixed rooms while their picture grid draws (the grid is their head); a newest row
+that `standsAlone` — a consent card, a token pulse, a chat takeaway, and a social
+POST or thread (§732's "option A"); the rooms whose first row is not their newest
+(Calendar, Reminders, Cursor, CardPointers); and Gmail's waiting section and
+Bitrefill's balance lede, which are ledes themselves.
+
+**Guarded** in `feed-reading-selftest.sh`, read off `heroShown`'s own expression
+rather than the file — the term must still be present in the gates above it, so
+a file-wide grep would prove nothing. The density-grid gate is guarded beside it,
+because the cheap way to pass the first check is to delete the term everywhere.
+Both fire under mutation.
+
+Not built or run here (no Swift toolchain in this checkout); the simulator pass
+is owed.

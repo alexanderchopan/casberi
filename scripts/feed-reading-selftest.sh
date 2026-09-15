@@ -202,6 +202,35 @@ grep -qE '\b(ListeningLede|ReadingLede|listeningLedeSection|readingLedeSection)\
   || { echo "✗ a mixed room lost its cover, or draws one under its picture grid (prd §732)"; exit 1; }
 grep -q 'if let coverThing, coverThing.isLive { ledeListRow(coverThing) }' "$FEED" \
   || { echo "✗ daySection no longer draws a shaped room's cover (prd §732)"; exit 1; }
+# A SUPPRESSION TERM IS NOT A HEAD (prd §755). `rosterAccounts` belongs in every
+# gate that picks a head card — it is why a social room draws no topic map, no
+# mosaic, no distribution and no density grid — and it draws NOTHING itself, so
+# `heroShown` may not carry it. It did for a month: the faces were a card in the
+# feed when the term was written (§219), left for the shell in §362 and for the
+# dock's own capsule in §753, and the term stayed. Every social room with two or
+# more accounts drew no head and no cover — an empty slot at the top of the one
+# room family whose newest thing is what you came for.
+#
+# Read off `heroShown`'s own expression, not the file: the term must still be
+# present in the gates above it, so a file-wide grep would prove nothing.
+_hero=$(awk '/let heroShown = /{f=1} f{print} f&&/mosaic != nil/{exit}' "$TMP/feed.nocomment")
+[ -n "$_hero" ] \
+  || { echo "✗ could not read heroShown's expression — the §755 check below would"; \
+       echo "  pass on nothing."; exit 1; }
+case "$_hero" in
+  *rosterAccounts*) echo "✗ heroShown counts rosterAccounts as a head again (prd §755) — the faces"; \
+       echo "  have not drawn in the feed since §362, so this suppresses the cover in"; \
+       echo "  every social room and puts nothing in its place."; exit 1;;
+esac
+# …and the term must STILL suppress the density grid, which is the job §362 kept
+# it alive for ("a density grid says nothing a face with a ring doesn't already
+# say better").
+_heat=$(awk '/let heatmapLabel = /{f=1} f{print} f&&/FeedHeatmap.label\(for: source\)/{exit}' "$TMP/feed.nocomment")
+case "$_heat" in
+  *rosterAccounts.isEmpty*) ;;
+  *) echo "✗ a social room can draw the density grid again (prd §219/§755) — the"; \
+     echo "  faces say what it says, one tier up."; exit 1;;
+esac
 
 # ── 4. Feed health, in the room ────────────────────────────────────────────
 grep -q 'FeedRoomHealthSource.standing(for: source)' "$FEED" \

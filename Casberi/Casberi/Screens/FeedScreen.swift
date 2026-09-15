@@ -6124,9 +6124,21 @@ struct FeedScreen: View {
         // terms (`ledeThingID`: newest row, under `ledeMaxAge`, at least
         // `ledeMinRows` deep, never a row that `standsAlone`). Nothing new was
         // built for it; the board was standing in the slot.
+        //
+        // **`rosterAccounts` IS NOT A HEAD, AND HAS NOT BEEN SINCE §362 (prd
+        // §755, user: "we want the most recent post to be big, like it is on
+        // the all screen and that pattern should be on every screen").** It
+        // belongs in every gate ABOVE — it suppresses the topic map, the
+        // mosaic, the distribution and the heatmap, which is the whole job the
+        // branch below keeps doing — but it draws NOTHING, so a term meaning
+        // "a head card is on the page" may not carry it. It did, and the cost
+        // was that every social room with two or more accounts drew no head
+        // AND no cover: the suppression was written when the faces were a card
+        // in the feed, and they left for the shell in §362, then for the dock's
+        // own capsule in §753. The room went a month with an empty slot.
         let heroShown = liveStream != nil || anniversary != nil || topicMap != nil
             || heatmapLabel != nil || sourceHead != nil
-            || distribution != nil || mosaic != nil || !rosterAccounts.isEmpty
+            || distribution != nil || mosaic != nil
         if let liveStream {
             insightSection { LiveStreamHero(thing: liveStream) { openThing(liveStream) } }
         } else if let sourceHead {
@@ -6495,6 +6507,13 @@ struct FeedScreen: View {
             // tier up, permanently — so the grid has no more claim on this room
             // than it had yesterday, and a room that answers a ruling by growing
             // a card back is the opposite of the simplification this was.
+            //
+            // **THE SLOT IS NOT EMPTY ANY MORE — IT HOLDS THE COVER (prd
+            // §755).** §723 gave a headless room its newest thing at size, and
+            // this term was still inside `heroShown`, so the one branch that
+            // draws nothing was also the one that refused the cover. Suppressing
+            // the density grid is this term's whole job and it keeps it; naming
+            // a head that isn't drawn was never part of it.
             EmptyView()
         }
         switch shape {
