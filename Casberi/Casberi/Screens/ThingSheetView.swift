@@ -1861,6 +1861,32 @@ struct ThingSheetView: View {
                       glyph: "arrow.up.right") {
                 runVerb(Verb(label: "Show in Files", icon: "folder", action: .showInFiles))
             }
+        } else if thing.kind == .mail,
+                  let app = MailLocation.appName(source: thing.source),
+                  let url = MailLocation.messageURL(source: thing.source,
+                                                    messageID: thing.mailMessageID,
+                                                    schemes: HandOffState.installedSchemes) {
+            // "From — in your inbox", pressed (2026-09-15, prd §735). The
+            // request word for word: "see how this says from your inbox? can
+            // we make it so that if you tap it, it takes the user to the email
+            // in the inbox" — the second time the same row has been pressed by
+            // somebody expecting it to be a door (the first was the folder
+            // above, prd §408), which is what a row that states a place is.
+            //
+            // The same verb the dial carries, through the same `runVerb`, so
+            // the two doors can never behave differently or report
+            // differently. The gate is CHEAP for the Files rule's reason — a
+            // set lookup and a string parse, on every evaluation of this body.
+            // A `Message-ID` that the mail app has since dropped (the message
+            // moved out of the inbox, the account was removed) therefore
+            // reaches the TAP rather than the gate: the app opens and shows
+            // what it has, which is a hand-off landing short, not a control
+            // that does nothing.
+            DSSpecRow(label: Text("From"), value: Text(LocalizedStringKey(value)),
+                      glyph: "arrow.up.right") {
+                runVerb(Verb(label: "Open in \(app)", icon: "envelope.open",
+                             action: .openURL(url)))
+            }
         } else {
             specRow("From", value)
         }

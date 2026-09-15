@@ -26,6 +26,7 @@ DEFINE SCHEMA
         CD_imageURLs            BYTES QUERYABLE SORTABLE,
         CD_kind                 BYTES QUERYABLE SORTABLE,
         CD_likeCount            INT64 QUERYABLE SORTABLE,
+        CD_mailMessageID        STRING QUERYABLE SEARCHABLE SORTABLE,
         CD_mark                 BYTES QUERYABLE SORTABLE,
         CD_marketResolvedYes    INT64 QUERYABLE SORTABLE,
         CD_messageCount         INT64 QUERYABLE SORTABLE,

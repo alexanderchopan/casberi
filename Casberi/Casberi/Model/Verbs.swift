@@ -428,19 +428,44 @@ enum VerbDerivation {
         // address or a display name (`mailtoURL`) — a coin flip, not a
         // ruling.
         //
-        // Still only the app, never the message: no iOS URL opens a specific
-        // email (`message://<Message-ID>` is macOS Mail's, undocumented here,
-        // and mail things key on the IMAP UID anyway). "Open in Gmail" is the
-        // whole promise, the same one "Open in Calendar" makes. iCloud Mail
-        // gets nothing because Apple publishes no scheme that opens Mail's
-        // inbox — `mailto:` is a composer, and a disc that opens a blank
-        // draft while claiming to open your mail is the dead control §83
-        // bans. The verb drops instead, which is why this reads through
-        // `sourceURL` rather than special-casing the kind.
+        // 2a — THE MESSAGE, not the app (2026-09-15, prd §735).
+        //
+        // This block used to be a paragraph explaining why it could not exist:
+        // "no iOS URL opens a specific email (`message://<Message-ID>` is
+        // macOS Mail's, undocumented here, and mail things key on the IMAP UID
+        // anyway)", and iCloud Mail therefore got no hand-off at all. Only the
+        // last clause was true, and it was the work rather than the obstacle —
+        // the UID is mailbox-local, so the door needed the `Message-ID`, which
+        // `Thing.mailMessageID` now keeps. `MailLocation` carries the rest and
+        // states what each half is measured to.
+        //
+        // Placed BEFORE `handsOffAlready` is read, so a mail that has this
+        // door doesn't also get the front-door one below: two discs a
+        // millimetre apart, one landing on the message and one on the inbox,
+        // is the menu brief §12 bans — and the Gmail exception exists to
+        // guarantee a door, which this already is.
+        let mailDoor: URL? = thing.kind == .mail
+            ? MailLocation.messageURL(source: thing.source,
+                                      messageID: thing.mailMessageID,
+                                      schemes: HandOffState.installedSchemes)
+            : nil
+        if let mailDoor, let app = MailLocation.appName(source: thing.source) {
+            out.append(Verb(label: "Open in \(app)", icon: "envelope.open",
+                            action: .openURL(mailDoor)))
+        }
+
+        // The front door, for everything else — and for a mail whose envelope
+        // never carried a usable `Message-ID`. "Open in Gmail" is the whole
+        // promise there, the same one "Open in Calendar" makes. iCloud Mail
+        // still gets nothing on that path, because Apple publishes no scheme
+        // that opens Mail's INBOX — `message:` opens a message or nothing, and
+        // `mailto:` is a composer, so a disc that opens a blank draft while
+        // claiming to open your mail would be the dead control §83 bans.
         let handsOffAlready = out.contains(where: {
             if case .openURL = $0.action { return true } else { return false }
         })
-        if let url = sourceURL(thing.source), !handsOffAlready || thing.source == "Gmail" {
+        if let url = sourceURL(thing.source),
+           !handsOffAlready || (thing.source == "Gmail" && mailDoor == nil) {
             out.append(Verb(label: "Open in \(thing.source)", icon: "arrow.up.right",
                             action: .openURL(url)))
         }
@@ -738,11 +763,17 @@ enum HandOffState {
     /// device — and on Mac Catalyst nothing claims the scheme at all, which is
     /// the platform that turned the Calendar miss above into an App Store
     /// rejection.
+    /// `message` joined 2026-09-15 with the mail door (prd §735), and is the
+    /// `shareddocuments` case exactly: connecting a mailbox over IMAP says the
+    /// person has an ADDRESS, which says nothing about whether Apple Mail is
+    /// set up on this device — reading iCloud Mail entirely on the web is an
+    /// ordinary way to live — and an unclaimed scheme is refused
+    /// asynchronously while reporting success.
     private static let candidates = ["todoist", "googlegmail", "photos-redirect",
                                      "youtube", "obsidian",
                                      "calshow", "x-apple-reminderkit",
                                      "chatgpt", "music", "spotify", "mobilenotes",
-                                     "shareddocuments"]
+                                     "shareddocuments", "message"]
 
     #if DEBUG
     /// The same list, for `-photoVerbProbe`'s census. Exposed rather than

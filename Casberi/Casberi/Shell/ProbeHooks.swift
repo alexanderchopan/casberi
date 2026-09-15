@@ -4965,6 +4965,71 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-mailOpenProbe YES|"<subject prefix>"` — the message door on a mail
+        // thing (2026-09-15, prd §735): what the sheet's "From" row SAYS, and
+        // where pressing it would land.
+        //
+        // IT EXISTS BECAUSE ONE HALF IS UNMEASURED, and only one. Gmail's arm
+        // is an ordinary `https` URL and a documented search operator, so it
+        // can be read by eye; Apple Mail's `message:` is an archived scheme,
+        // so this is the `-filesRevealProbe` situation exactly — `claimed` is
+        // ground truth, `inSet` is what the door is gated on, and `url` is the
+        // exact string handed to LaunchServices, so one launch separates all
+        // three. A missing door has four causes and three are healthy: the
+        // envelope carried no `Message-ID`, the row predates the column and
+        // its UID has fallen out of the server's recent window, the source
+        // isn't a mail bridge, or the scheme is unclaimed — which on a device
+        // with no Mail account is the correct answer.
+        //
+        // Delayed for `HandOffState`'s reason: the set it reads is written by
+        // the first foreground pass, which has not run when `runAll` fires.
+        Hook(key: "mailOpenProbe") { spec, context in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                let scheme = MailLocation.openScheme
+                let claimed = URL(string: "\(scheme)://").map {
+                    UIApplication.shared.canOpenURL($0)
+                } ?? false
+                NSLog("[Casberi] mailOpen| scheme=%@ claimed=%@ inSet=%@",
+                      scheme, claimed ? "YES" : "NO",
+                      HandOffState.installedSchemes.contains(scheme) ? "YES" : "NO")
+                // Scoped by SOURCE, not by kind: `Thing.kind` mirrors to
+                // CloudKit as bytes and no predicate in this codebase reads
+                // it, where plain string equality is the shape SwiftData is
+                // proven on here (CLAUDE.md's `tags.contains` rule).
+                let icloud = MailProvider.icloud.source
+                let gmail = MailProvider.gmail.source
+                var descriptor = FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == icloud || $0.source == gmail },
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                descriptor.fetchLimit = 300
+                let mail = ((try? context.fetch(descriptor)) ?? [])
+                    .filter { $0.isLive && $0.kind == .mail }
+                let prefix = (spec == "YES" || spec.isEmpty) ? "" : spec.lowercased()
+                let rows = prefix.isEmpty
+                    ? Array(mail.prefix(5))
+                    : mail.filter { $0.title.lowercased().hasPrefix(prefix) }
+                guard !rows.isEmpty else {
+                    NSLog("[Casberi] mailOpen| no mail thing%@ in the corpus",
+                          prefix.isEmpty ? "" : " whose subject starts with \(spec)")
+                    return
+                }
+                for thing in rows {
+                    NSLog("[Casberi] mailRow| %@ · source=%@ · ref=%@",
+                          thing.title, thing.source, thing.sourceRef ?? "(none)")
+                    NSLog("[Casberi] mailRow|   messageID=%@ · from=\"%@\"",
+                          thing.mailMessageID ?? "(none)", PlaceWords.line(for: thing))
+                    NSLog("[Casberi] mailRow|   url=%@",
+                          MailLocation.messageURL(source: thing.source,
+                                                  messageID: thing.mailMessageID,
+                                                  schemes: HandOffState.installedSchemes)?
+                            .absoluteString ?? "(none)")
+                    let discs = VerbDerivation.verbs(for: thing)
+                        .map { VerbDial.dialLabel(for: $0) }.joined(separator: ", ")
+                    NSLog("[Casberi] mailRow|   discs=%@", discs.isEmpty ? "(none)" : discs)
+                }
+            }
+        },
         // `-topicMapProbe YES` — the Photos feed's OCR treemap (2026-07-30),
         // headless. Runs the `ocrTopics` backfill first (reads the OCR text
         // already on each shot — no PHAsset walk), then composes

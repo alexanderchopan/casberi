@@ -98,6 +98,7 @@ deliberately does not check are in `docs/verify.md`.
 - **RULE: a feature deleted from the surface is deleted from the model**, or it is §83's dead control one layer down where no screen sweep sees it (the ranked board and `roomScoped`) → docs/hooks/system.md · prd §723
 - **RULE: name every column a `propertiesToFetch` read touches** (the RSS page's sync) → docs/hooks/system.md · prd §722
 - **Feed-walk self-test (scripts/feed-walk-selftest.sh, 2026-09-08) — next/previous follows the list you opened from; `FeedSheetRoute.thing` carries a `WalkScope` value, never a `[Thing]`** → docs/verify.md · prd §645
+- **Mail-location self-test (scripts/mail-location-selftest.sh, 2026-09-15) — the message door: a `Message-ID` fence, and an unencoded `/` that turns Gmail's one search into a PATH** → docs/hooks/bridges.md · prd §735
 - **Readable-body self-test (scripts/readable-body-selftest.sh, 2026-09-08) — the page extractor: one 200-paragraph / 8,000-character bound across app and appex, and which hosts a scrape is fair on** → docs/verify.md · prd §645
 - **Reading-draw self-test (scripts/reading-draw-selftest.sh, 2026-09-08) — the sheet's `.link` arm: *has a body* draws, *could get one* fetches; an article draws the art, the words, then the door** → docs/verify.md · prd §645 · §709
 - **Health-riders self-test (scripts/health-riders-selftest.sh, 2026-09-06) — the Strava/Garmin seats and the activity dedupe** → docs/verify.md
@@ -263,6 +264,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **The reading rooms, past §312** → docs/hooks/rooms.md · prd §455
 - **The vault (Obsidian)** (`-obsidianVault` `-obsidianProbe`) → docs/hooks/imports.md · prd §320
 - **The folder a file is saved in (user feedback: "would be great to be able to press here and it takes you to folder where the file is saved")** (`-filesRevealProbe`) → docs/hooks/imports.md · prd §408
+- **The email a mail row came from (user: "see how this says from your inbox? Can we make it so that if you tap it, it takes the user to the email in the inbox") — §408's door on the same row, one bridge over; `message:` for Apple Mail (gated, unmeasured), `rfc822msgid:` for Gmail (ungated — an `https` URL cannot silently do nothing)** (`-mailOpenProbe`) → docs/hooks/bridges.md · prd §735
 - **A connected folder's images could not be read at all, and iCloud was never why** (`-filesHealProbe`) → docs/hooks/imports.md · prd §604
 - **Telegram, through the two doors §57 never weighed** → docs/hooks/bridges.md · prd §456
 - `-rssFeed` `-chatgptImport` `-claudeImport` — follow a feed and sync headlessly; -chatgptImport <path> → docs/hooks/imports.md

@@ -115,6 +115,33 @@ enum IngestSupport {
         return map
     }
 
+    /// One source's mail things that carry no `Message-ID` yet, keyed by ref —
+    /// the door's backfill (2026-09-15, prd §735).
+    ///
+    /// `artlessThings`' shape and `artlessThings`' reason: a row that landed
+    /// before its bridge learned a field stays without it forever unless the
+    /// pass that already has the field patches it. `MailIngest.refresh` fetches
+    /// the twenty newest UIDs with their full `ENVELOPE` every foreground and
+    /// discards every one it has already landed — so the `Message-ID` for
+    /// those rows is in hand and thrown away, and this map is what catches it.
+    /// No extra request, ever.
+    ///
+    /// NEWEST FIRST AND BOUNDED, unlike `artlessThings`. The only rows this can
+    /// ever patch are ones still inside the server's recent window, i.e. the
+    /// newest ones, so a cap loses nothing real and keeps a large mail corpus
+    /// from paying a full realize on every activation.
+    static func mailIDlessThings(_ context: ModelContext, source: String) -> [String: Thing] {
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == source && $0.mailMessageID == nil },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = 100
+        var idless: [String: Thing] = [:]
+        for thing in (try? context.fetch(descriptor)) ?? [] {
+            if let ref = thing.sourceRef { idless[ref] = thing }
+        }
+        return idless
+    }
+
     static func artlessThings(_ context: ModelContext, source: String) -> [String: Thing] {
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
             $0.source == source && $0.previewImageURL == nil

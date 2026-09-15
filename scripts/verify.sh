@@ -1776,6 +1776,25 @@ harness "Obsidian pure-logic self-test" "obsidian self-test" "scripts/obsidian-s
 # quietly take the pasteboard on the way out.
 harness "Files-location pure-logic self-test" "files-location self-test" "scripts/files-location-selftest.sh" "the Files-location self-test failed — run scripts/files-location-selftest.sh"
 
+# The message door on a mail thing (prd §735) — the same request as the folder
+# door above, one bridge over: the sheet's "From — in your inbox" row is a row
+# that STATES a place, so it is a row people press. What it catches is invisible
+# from a build, a sweep or a screenshot, and every failure renders as an
+# ordinary row: a `NIL` atom or a truncated envelope reaching the URL (a door on
+# every mail in the corpus, opening nothing on any of them), an unencoded `/`
+# turning Gmail's one search into a PATH — a door onto the WRONG page, which is
+# the only failure here worse than none — angle brackets kept for
+# `rfc822msgid:`, which Gmail refuses, or stripped for `message:`, which Mail
+# needs, and the two providers' arms crossed, which reads as "it just doesn't
+# work" for exactly one mailbox. Its drift guards cover what the pure file
+# cannot: the column exists and is in the deployed CloudKit schema (an
+# undeployed field syncs NOWHERE and the door would exist only on the device
+# that landed the mail), the ingest fills it AND backfills the rows that landed
+# before it, the envelope parser still reads field 10, the Apple scheme is
+# declared, probed and GATED while Gmail's `https` arm is deliberately not, and
+# the front door stands down where the message door exists.
+harness "Mail-location pure-logic self-test" "mail-location self-test" "scripts/mail-location-selftest.sh" "the Mail-location self-test failed — run scripts/mail-location-selftest.sh"
+
 # The connected folder's byte reads must open the security scope THEMSELVES
 # (2026-09-04). A picked folder's file is readable only inside an active
 # `startAccessingSecurityScopedResource` window, and outside one the refusal is
