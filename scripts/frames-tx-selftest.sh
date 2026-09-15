@@ -559,6 +559,16 @@ j = src.find("} else if source == HegotaIdentity.source", i)
 if i < 0 or j < 0:
     print("✗ FeedScreen no longer mounts the Frames room"); sys.exit(1)
 body = src[i:j]
+# **THE CHROME SECTION IS PART OF THE ROOM (prd §765).** The figure and the
+# crown moved out of the branch into `framesScopeChromeSection`, the helper the
+# branch calls on every page, and the account door rides the figure — so the
+# window is the branch PLUS that helper, or the guard fails on a door that is
+# still wired. The helper runs to the next member declaration.
+k = src.find("func framesScopeChromeSection(")
+if k < 0:
+    print("✗ FeedScreen no longer draws the Frames chrome through framesScopeChromeSection"); sys.exit(1)
+m = re.search(r"\n    (private |fileprivate )?(static )?(func|var|let) ", src[k + 1:])
+body += src[k:k + 1 + m.start()] if m else src[k:]
 if "FramesRoomList(head:" not in body:
     print("✗ FeedScreen no longer mounts FramesRoomList"); sys.exit(1)
 if re.search(r"onOpenMove:\s*\{\s*_\s*in\s*\}", body):

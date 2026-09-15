@@ -242,6 +242,10 @@ NAMED_SIZES = re.compile(
     # shelf it sized — Watching is a section of the book now, and its rows are
     # ordinary `AddressBookRow`s already covered by the row tiers above.
     r"|doorSide|\.infinity|maxWidth:|DS\.Radius\.widget"
+    # `categoryTile` is the dock's 52pt category tile (`SourceChips.tileWidth`,
+    # prd §662); since §767 made "All" a tile too, the chip button's label is
+    # this call and nothing else, which check 3 otherwise reads as a bare glyph.
+    r"|categoryTile\("
 )
 
 # A ROUND IDENTITY MARK standing as a button's whole label (prd §541,
