@@ -87,6 +87,7 @@ at all.
 | §757 (Home reserves no box) | the five Home crowns pass `reservesBox: false` and drop the slot's 300pt floor | amended by §760 (Home keeps the box; `reservesBox` and `SlotBox` are deleted, because every room's lead is held to that height) |
 | §751 (heads cap at three rows) | `headRowCap` is 3 and every chart head's model spells `rowCap = 3` | amended by §760 (the cap is 8 and the lead's fixed box decides how many draw, dropping whole rows and counting them) |
 | §745 (the fixed slot does not apply to heads) | a head's honest height is what it has to say, so no head is held to `visualSlot` | amended by §760 (every room's lead is `leadHeight`; the reason stands — a head that runs long drops whole rows and counts them, never clips one silently) |
+| §772 (a figure face always earns the box) | a picture, a receipt or a countdown cover holds `leadHeight` wherever it draws | amended by §775 (in the All feed no cover holds the box; every face takes the shrink path, `fillsLead: false`) |
 | §708 | The only filled element on an account page is the input field — and the act drew its entry rows with no fill, its footers at 13pt, and its steps ticking green as they were done | amended by §729 (an entry row is a 44pt well holding out Paste; the act's words are 15pt; the step ticks are deleted) |
 | §36 (Fileverse clause) | Fileverse declined as "E2EE by design; revisit if they ship a hosted API" | amended by §669 (the DECLINE stands and the REASON does not — the reopening clause was met. `@fileverse/api` has been on npm since 2026-02-11: the key is a seed the UCAN, ECIES and ERC-4337 keys all derive from, gas is sponsored by a Pimlico paymaster, and a Swift client could skip their self-hosted Node satellite entirely. It is declined on POSITIONING instead — an editor, a doc list and a conflict story serve authoring, and §26 already ruled that Casberi collects and connects while Apple Notes authors. §36's other declines are untouched) |
 | §629 | The two ethrex seats are renamed, and migration v9 — a one-time pass gated on the `migrations.version` stamp — rewrites the rows already landed under the old names | amended by §647 (the rename stands; the repair could not. The store mirrors to CloudKit, so rows arrive after a one-shot has run and it never runs again — every one of those kept the old name, resolved to no seat, and reached a device as an unfoldable chip with a blank mark. `Corpus.renamedSources` makes RESOLUTION tolerant and `SourceRename.sweep` converges the corpus at every launch; v9 is deleted so there is one mechanism, not two) |
@@ -56927,3 +56928,17 @@ The octopus the person sees "while the app is loading" is the app-switcher cover
 **The ruling.** Today is never quiet. `isQuiet` returns false for a row `FeedScreen.groupingCalendar.isDateInToday` accepts, after the increased-contrast guard and before either §378 reason is asked, so one guard reaches all three call sites (single rows, bundles, strips). A bundle's date is its newest member, so a fold that reaches today stays lit. Yesterday and older recede exactly as §378 ruled.
 
 **Deliberately untouched.** §219's art desaturation already spares the first 48 hours. §386d's Today brief dims a module whose content is unchanged since the last brief, which is a statement about the content rather than its day, and it stays.
+
+## §775 — The All feed's cover never holds the box (user: "i want the same well we have but i'm just not liking the ones that aren't filled. like the stripe payout for example b/c it has so much air underneath", then on three mockups "ok lets do C. this is for the All page", 2026-09-15)
+
+**What was seen.** A Stripe payout at the top of the All feed: the eyebrow, one line, and ~180pt of empty well. §772 had already let a words cover with nothing substantial shrink, but a payout is a RECEIPT, and §772 rules that every face with a figure — a picture, a receipt, a countdown — always earns the box. So the one cover the user pointed at was the one the ladder does not reach.
+
+**Three ways to fill it were drawn:** (A) lift the next newest rows into the well, (B) draw the thing at its sheet's fidelity, (C) let the well fit its words. The user chose C, for the All feed.
+
+**The ruling.** `FeedLedeCard.fillsLead` is false in the All feed, and `full` is `fillsLead && fillsTheBox(…)`. So every All cover takes §772's shrink path: one spelling (`shortFit`), `minHeight: 0` under the same `maxHeight` and clip, the same well, inset and `leadGap`. A room passes `true` and keeps §772's rule exactly. The All feed has no foot (§766), so nothing pinned to the bottom is lost.
+
+**Not changed.** The cover's pick (`ledeThingID`'s floors), the faces, the body ladder, the art height and the eyebrow.
+
+**Guarded** in `feed-reading-selftest.sh`: the card gates `full` on `fillsLead`, and the mount decides it by feed. Each guard was mutated and failed.
+
+**UNSEEN on a device.** First to look at on a phone: a receipt cover in All (the payout), and a picture cover in All, which is now its art and words with no box below.

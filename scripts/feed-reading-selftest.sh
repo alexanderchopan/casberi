@@ -245,6 +245,14 @@ grep -q 'LeadFooter()' "$TMP/lede.nocomment" \
 grep -q 'heading40' "$TMP/lede.nocomment" \
   && { echo "✗ the cover sets its statement at heading40 again — a lead's words are"; \
        echo "  heading24 in every room (prd §766)"; exit 1; }
+# THE ALL FEED'S COVER NEVER HOLDS THE BOX (prd §775). Both halves: the switch on
+# the card gating `full`, and the one call site deciding it by feed.
+grep -q 'let full = fillsLead && fillsTheBox(face, rungs: rungs)' "$TMP/lede.nocomment" \
+  || { echo "✗ the cover's fixed box no longer yields to fillsLead — the All feed's"; \
+       echo "  payout draws one line over an empty well again (prd §775)"; exit 1; }
+grep -q 'fillsLead: source != "All"' "$TMP/feed.nocomment" \
+  || { echo "✗ the cover's mount no longer decides fillsLead by feed — either the"; \
+       echo "  All feed is held to leadHeight or a room stops being (prd §775)"; exit 1; }
 # ONE COPY OF THE POST'S TWO FACTS (prd §756, the §396a class). Three readers
 # now — the cover and the two post cards — and the two that existed before
 # carried the same lines under a comment saying they were the same lines.

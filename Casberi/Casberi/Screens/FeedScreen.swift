@@ -7812,7 +7812,10 @@ struct FeedScreen: View {
                          selected: DS.isMac
                             && chrome.walkSelected == thing.id.uuidString,
                          // A quiet head's sentence, under the cover (prd §760).
-                         note: heads?.quietHead?.quietLine)
+                         note: heads?.quietHead?.quietLine,
+                         // The All feed's cover fits its words; a room's may
+                         // hold the lead's height (prd §775).
+                         fillsLead: source != "All")
                 .modifier(rowEntrance(0))
                 .contentShape(Rectangle())
         }

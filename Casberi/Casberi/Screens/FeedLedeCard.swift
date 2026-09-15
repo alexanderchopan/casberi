@@ -54,6 +54,11 @@ struct FeedLedeCard: View {
     /// The room's head sentence when the head had nothing else to draw (prd
     /// §760) — "Nothing needs you" — under the cover, in the note's register.
     var note: String? = nil
+    /// Whether the cover may hold the lead's fixed height (prd §760). A room's
+    /// cover holds it when `fillsTheBox` says it has something to fill it with
+    /// (§772); the All feed's never does, and fits its words inside the same
+    /// well (prd §775).
+    var fillsLead: Bool = true
 
     /// The art's height. Fixed rather than an aspect ratio so the card's own
     /// height is known before the image resolves — a ratio would restate the
@@ -94,7 +99,10 @@ struct FeedLedeCard: View {
         // lines while 176pt of black sat under it, so a note longer than three
         // lines was cut in a box with room for eight (§766 set the RUNG, and
         // said nothing about how many lines of it a lead may draw).
-        let full = fillsTheBox(face, rungs: rungs)
+        // THE ALL FEED'S COVER ALWAYS TAKES THE SHRINK PATH (prd §775): a payout
+        // is a figure face, which §772 lets hold the box, and it drew one line
+        // over ~180pt of well. The shrink path's reasoning below is unchanged.
+        let full = fillsLead && fillsTheBox(face, rungs: rungs)
         // Spelled out, never a `ForEach`: `ViewThatFits` measures its subviews,
         // and a `ForEach` is ONE subview however many rows it makes — so a loop
         // here would offer the layout a single candidate and the fit would
