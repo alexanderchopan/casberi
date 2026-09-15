@@ -17,9 +17,11 @@ because nothing is wrong on the screen you are looking at.
 
 Four checks.
 
-**(1) Both day headers take `DS.brandInk`.** `FeedScreen` draws day labels at
-exactly two sites (`bundledSections` and `daySection`); both must reach
-`brandInk`, and neither may fall back to `DS.textPrimary` on the label itself.
+**(1) Both day headers take `DS.brandInk`.** The day label is drawn at exactly
+two sites — `daySection` in `FeedScreen` and the All feed's `FeedDayDivider`
+(its own file since prd §767, where `bundledSections` used to draw the label
+inline); both must reach `brandInk`, and neither may fall back to
+`DS.textPrimary` on the label itself.
 
 **(2) The flag exists and defaults true.** `groupedSections` and `daySection`
 both declare `dated: Bool = true`. The default is what makes a new
@@ -54,6 +56,7 @@ import sys
 from pathlib import Path
 
 FEED = "Casberi/Casberi/Screens/FeedScreen.swift"
+DIVIDER = "Casberi/Casberi/Screens/FeedDayDivider.swift"
 TOKENS = "Casberi/Casberi/Design/DesignTokens.swift"
 BRAND_HEX = "FF2D87"
 MIN_OPT_OUTS = 9
@@ -190,7 +193,11 @@ def main() -> int:
         print("SELF-TEST FAILED")
         return 1
 
-    feed = (root / FEED).read_text(encoding="utf-8", errors="replace")
+    # The All feed's divider moved into its own view in prd §767, so the two
+    # label sites span two files; check (1) counts across both.
+    feed = "\n".join(
+        (root / f).read_text(encoding="utf-8", errors="replace") for f in (FEED, DIVIDER)
+    )
     tokens = (root / TOKENS).read_text(encoding="utf-8", errors="replace")
     mark = (root / "Casberi/Casberi/Design/CasberiMark.swift").read_text(
         encoding="utf-8", errors="replace"
