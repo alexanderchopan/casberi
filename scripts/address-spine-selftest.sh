@@ -456,17 +456,18 @@ check("caption with no grant date",
                                    now: now, calendar: cal),
       "Manages all Doodles.")
 // Past the cap it counts rather than writing a paragraph at body17.
-// The overflow clause is asserted as its RAW inflection markup: this harness
-// runs outside an app bundle, so `String(localized:)` has no catalog to
-// resolve `^[…](inflect: true)` against and hands the markup straight back.
-// Asserting the resolved English would make the fixture pass only inside the
-// app — which is the one place it cannot run.
+// The overflow clause is asserted INFLECTED (2026-09-15). It was asserted as
+// raw `^[…](inflect: true)` markup, reasoning that no catalog was present to
+// resolve it — but the markup came back raw in the APP too, because
+// `String(localized:)` never runs the agreement at all. The caption goes
+// through `AttributedString(localized:)` now, which inflects from the source
+// string itself, so the harness and the app say the same English.
 check("caption caps and counts",
       AddressSpine.standingCaption([("A", nil, true), ("B", nil, true),
                                     ("C", nil, true), ("D", nil, true),
                                     ("E", nil, true)],
                                    now: now, calendar: cal),
-      "A. B. C. ^[2 more grant](inflect: true).")
+      "A. B. C. 2 more grants.")
 check("caption cap", AddressSpine.captionCap, 3)
 
 // ── The address, in chunks: EVERY character, and no invented ones ─────────

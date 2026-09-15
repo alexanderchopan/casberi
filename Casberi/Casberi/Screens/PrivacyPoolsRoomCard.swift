@@ -104,29 +104,51 @@ struct PrivacyPoolsRoomCard: View {
     /// gesture. Each scope draws at most one block, and a scope with nothing
     /// to put in one draws none — **a scoped-to empty scope says what it
     /// would hold (prd §611).**
+    ///
+    /// **THE TILES STAND UNDER THE WELL, THE WALLET'S WAY (2026-09-15, user:
+    /// "privacy pools page isn't a wallet but it should adhere to our uniform
+    /// template we use for wallet").** They were a block INSIDE the lead, three
+    /// narrow tiles under the sentence, so the one scoped room outside the
+    /// wallet family put its control somewhere no other room does. They ride
+    /// the head's `scopes` slot now: the same four-column grid, the same inset
+    /// and the same height under the well as `DSRoomScopeChrome`.
+    @ViewBuilder
     var body: some View {
-        DSRoomChassis.Head(
-            lead: .sentence(PrivacyPoolsRoom.headline(room)),
-            door: room.lead.map { lead in
-                DSRoomChassis.Door(hint: Text("Opens these deposits"), wholeCard: false) {
-                    onOpen(.state(lead.state))
-                }
-            },
-            footnotes: [shows(.activity) ? .quiet(PrivacyPoolsRoom.activityNote(room)) : nil]) {
-            if onPickScope != nil, PrivacyPoolsSection.shows(present: scopes) {
-                DSRoomChassis.Block {
-                    DSScopeTiles(sections: scopes,
-                                 active: section ?? .activity,
-                                 attention: scopeAttention) { picked in
-                        onPickScope?(picked)
-                    }
+        if onPickScope != nil, PrivacyPoolsSection.shows(present: scopes) {
+            DSRoomChassis.Head(lead: .sentence(PrivacyPoolsRoom.headline(room)), door: headDoor, footnotes: headFootnotes) {
+                scopeBlocks
+            } scopes: {
+                DSScopeTiles(sections: scopes,
+                             active: section ?? .activity,
+                             attention: scopeAttention) { picked in
+                    onPickScope?(picked)
                 }
             }
-            if shows(.shielded), shieldedHasContent { DSRoomChassis.Block { shieldedBody } }
-            else if section == .shielded { DSRoomChassis.Block { emptyBody(.shielded) } }
-            if shows(.review), reviewHasContent { DSRoomChassis.Block { reviewBody } }
-            else if section == .review { DSRoomChassis.Block { emptyBody(.review) } }
+        } else {
+            DSRoomChassis.Head(lead: .sentence(PrivacyPoolsRoom.headline(room)), door: headDoor, footnotes: headFootnotes) {
+                scopeBlocks
+            }
         }
+    }
+
+    private var headDoor: DSRoomChassis.Door? {
+        room.lead.map { lead in
+            DSRoomChassis.Door(hint: Text("Opens these deposits"), wholeCard: false) {
+                onOpen(.state(lead.state))
+            }
+        }
+    }
+
+    private var headFootnotes: [DSRoomChassis.Line?] {
+        [shows(.activity) ? .quiet(PrivacyPoolsRoom.activityNote(room)) : nil]
+    }
+
+    @ViewBuilder
+    private var scopeBlocks: some View {
+        if shows(.shielded), shieldedHasContent { DSRoomChassis.Block { shieldedBody } }
+        else if section == .shielded { DSRoomChassis.Block { emptyBody(.shielded) } }
+        if shows(.review), reviewHasContent { DSRoomChassis.Block { reviewBody } }
+        else if section == .review { DSRoomChassis.Block { emptyBody(.review) } }
     }
 
     // MARK: - Shielded

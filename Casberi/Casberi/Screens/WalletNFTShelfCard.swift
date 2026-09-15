@@ -229,13 +229,31 @@ struct WalletNFTShelfCard: View {
         let columns = NFTGrid.columns(available: pieces.count)
         let shown = Array(pieces.prefix(NFTGrid.cap(available: pieces.count)))
         let rows = NFTGrid.rows(shown, columns: columns)
-        let cell = CGSize(width: Self.cellWidth(columns: columns),
-                          height: Self.cellHeight(rows: rows.count))
         // A `LazyVGrid` is deliberately NOT used — there are at most nine
         // cells, all on screen, so laziness buys nothing and costs a sizing
         // pass; stacked `HStack`s settle their frame immediately, which is
         // `coverSide`'s own reason for being spelled rather than measured.
-        return VStack(spacing: Self.quadGap) {
+        // **THE WIDTH IS THE BOX'S, MEASURED (2026-09-15).** The cells were
+        // spelled from a 402pt phone less two room insets, then padded by
+        // those insets again — right while the shelf stood on the bare page,
+        // and 2×(inset + s3) too wide once §766 seated every figure inside
+        // the lead's well. The overflow widened the well, the column under
+        // it, and the section tiles with it, which ran to both screen edges
+        // on NFTs alone (user: "it spread out and touches the edge of the
+        // screen"). The box's height is fixed by the chassis, so a
+        // `GeometryReader` here settles in one pass and never grows the slot.
+        return GeometryReader { geo in
+            let cell = CGSize(width: NFTGrid.side(box: geo.size.width,
+                                                  gap: Self.quadGap, count: columns),
+                              height: Self.cellHeight(rows: rows.count))
+            grid(rows, columns: columns, cell: cell)
+        }
+        .frame(height: DSRoomChassis.visualSlot, alignment: .top)
+    }
+
+    private func grid(_ rows: [[WalletNFTShelf.NFTPiece]], columns: Int,
+                      cell: CGSize) -> some View {
+        VStack(spacing: Self.quadGap) {
             ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                 HStack(spacing: Self.quadGap) {
                     ForEach(row) { piece in
@@ -272,8 +290,9 @@ struct WalletNFTShelfCard: View {
         // wide, which clears it; at three the cells fill the width the way the
         // quadrants did, and the gear covers a corner of one piece, which is
         // the trade the 2x2 already made ("fine if the gear covers one").
+        // No horizontal padding: the lead's well already stands the drawing
+        // in the rows' column (prd §766).
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, DSRoomChassis.inset)
     }
 
     /// Which chain a piece lives on, in a word — the one fact a row can add
@@ -311,18 +330,6 @@ struct WalletNFTShelfCard: View {
     /// cannot drift and a change to the chassis moves the art with it.
     private static func cellHeight(rows: Int) -> CGFloat {
         NFTGrid.side(box: DSRoomChassis.visualSlot, gap: Self.quadGap, count: rows)
-    }
-
-    /// One cell's WIDTH. Derived from the phone's own width less the room's
-    /// two insets, because the grid has to fill the box rather than sit
-    /// centred in it — see `quadArt` for the ruling.
-    ///
-    /// Spelled from the layout rather than measured, for `visualSlot`'s
-    /// reason. 402 is the design width; a wider screen simply gives each cell
-    /// more, which is what `maxWidth: .infinity` on the row already allows for.
-    private static func cellWidth(columns: Int) -> CGFloat {
-        NFTGrid.side(box: 402 - DSRoomChassis.inset * 2,
-                     gap: Self.quadGap, count: columns)
     }
 
     /// The air between the four covers (user, 2026-08-27: *"we can space them

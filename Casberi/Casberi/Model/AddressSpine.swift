@@ -219,7 +219,7 @@ enum AddressSpine {
             return grant.stateLine + ", " + String(localized: "granted \(day)")
         }
         let rest = grants.count - shown.count
-        if rest > 0 { clauses.append(String(localized: "^[\(rest) more grant](inflect: true)")) }
+        if rest > 0 { clauses.append(String(AttributedString(localized: "^[\(rest) more grant](inflect: true)").characters)) }
         return clauses.joined(separator: ". ") + "."
     }
 

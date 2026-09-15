@@ -139,12 +139,18 @@ extension DSRoomChassis {
 
     // MARK: - The card
 
-    struct Head<Content: View>: View {
+    struct Head<Content: View, Scopes: View>: View {
         let lead: Lead
         var door: Door?
         let notes: [Line]
         let footnotes: [Line]
         let content: Content
+        /// The room's section tiles, UNDER the well — the wallet family's
+        /// place for them (`DSRoomScopeChrome`), so a scoped room that is not a
+        /// wallet still wears the one template (user, 2026-09-15: "privacy
+        /// pools page isn't a wallet but it should adhere to our uniform
+        /// template we use for wallet"). Nil draws the head alone.
+        let scopes: Scopes?
 
         /// `notes` and `footnotes` take optionals so a room can hand over its
         /// model's `String?`s as they come; an absent line takes no gap.
@@ -152,15 +158,29 @@ extension DSRoomChassis {
              door: Door? = nil,
              notes: [Line?] = [],
              footnotes: [Line?] = [],
-             @ViewBuilder content: () -> Content) {
+             @ViewBuilder content: () -> Content,
+             @ViewBuilder scopes: () -> Scopes) {
             self.lead = lead
             self.door = door
             self.notes = notes.compactMap { $0 }
             self.footnotes = footnotes.compactMap { $0 }
             self.content = content()
+            self.scopes = scopes()
         }
 
         var body: some View {
+            // THE WALLET'S GEOMETRY WHEN THERE ARE TILES: the well at the top
+            // of the row, the tiles `contentGap` under it, both at the rows'
+            // inset — `DSRoomScopeChrome.content`'s own arithmetic, so the
+            // tiles land at one height in every scoped room.
+            VStack(alignment: .leading, spacing: DSRoomChassis.contentGap) {
+                well
+                if let scopes { scopes }
+            }
+            .dsRoomHeadPlacement(top: scopes == nil ? DS.Space.s2 : 0)
+        }
+
+        private var well: some View {
             // `dsRoomHeadBlock` pads `s4` on every side, so the box inside is
             // `leadHeight` less that twice (prd §760).
             faceDoor(LeadFit(height: DSRoomChassis.leadHeight - 2 * DS.Space.s4) {
@@ -186,8 +206,7 @@ extension DSRoomChassis {
                     LeadFooter()
                 }
             }
-            .dsRoomHeadBlock()
-            .dsRoomHeadPlacement())
+            .dsRoomHeadBlock())
         }
 
         /// The door's VoiceOver half, on the lead: a `Text` is already an
@@ -673,7 +692,23 @@ extension DSRoomChassis {
     }
 }
 
-extension DSRoomChassis.Head where Content == EmptyView {
+extension DSRoomChassis.Head where Scopes == EmptyView {
+    /// A head with no section tiles — every room but a scoped one.
+    init(lead: DSRoomChassis.Lead,
+         door: DSRoomChassis.Door? = nil,
+         notes: [DSRoomChassis.Line?] = [],
+         footnotes: [DSRoomChassis.Line?] = [],
+         @ViewBuilder content: () -> Content) {
+        self.lead = lead
+        self.door = door
+        self.notes = notes.compactMap { $0 }
+        self.footnotes = footnotes.compactMap { $0 }
+        self.content = content()
+        self.scopes = nil
+    }
+}
+
+extension DSRoomChassis.Head where Content == EmptyView, Scopes == EmptyView {
     /// A head that is its words alone (AWS, Instagram).
     init(lead: DSRoomChassis.Lead,
          door: DSRoomChassis.Door? = nil,
@@ -764,9 +799,9 @@ extension View {
     /// **And the air under it is the lead's (prd §763).** Every lead — a head,
     /// a hero, the cover — ends `leadGap` above the first day, so the divider
     /// lands at one y in every room.
-    func dsRoomHeadPlacement() -> some View {
+    func dsRoomHeadPlacement(top: CGFloat = DS.Space.s2) -> some View {
         padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s2)
+            .padding(.top, top)
             .padding(.bottom, DSRoomChassis.leadGap)
     }
 }

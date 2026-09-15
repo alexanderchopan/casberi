@@ -166,17 +166,28 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
     /// a builder that produced nothing has no layout presence (Vibenet's
     /// measured 575 → 355pt jump), and the tiles would ride up by the slot.
     /// NO PLATE (prd §758) — the head is content, like the rows under it.
+    ///
+    /// **THE BOX IS THE CHASSIS', NEVER THE FIGURE'S (2026-09-15).** The drawing
+    /// is an OVERLAY on a fixed box rather than a sibling in a `ZStack`: a
+    /// `ZStack` takes its widest child's width, so a figure even a point wider
+    /// than the well widened the well, and the tiles and account line under it
+    /// with it. It happened twice in one day — the NFT grid ran the tiles to
+    /// both screen edges, and the Snapshots ring moved them by a point. An
+    /// overlay is proposed the box's size and can never report a size back.
     private var lead: some View {
-        ZStack(alignment: .topLeading) {
-            Color.clear
-            if active == home {
-                if let showing { crown(showing) }
-            } else {
-                figure(active)
+        Color.clear
+            .frame(maxWidth: .infinity)
+            .frame(height: DSRoomChassis.visualSlot)
+            .overlay(alignment: .topLeading) {
+                ZStack(alignment: .topLeading) {
+                    if active == home {
+                        if let showing { crown(showing) }
+                    } else {
+                        figure(active)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .frame(height: DSRoomChassis.visualSlot, alignment: .top)
         // THE WELL (prd §766), the head template's own. The box is still
         // `leadHeight` — the slot and its `s2` — so no figure loses a point of
         // height; the drawing stands `s3` inside the well's edge, at the rows'
