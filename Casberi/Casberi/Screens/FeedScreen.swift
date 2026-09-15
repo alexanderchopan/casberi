@@ -7368,7 +7368,7 @@ struct FeedScreen: View {
                         // dropping a SIZE step instead would land the header at
                         // 18pt, which is the row titles beneath it.
                         .fontWeight(coarse.contains(label) ? .semibold : .bold)
-                        // THE DAY WEARS THE BRAND HUE (prd §735, user: "pink
+                        // THE DAY WEARS THE BRAND HUE (prd §737, user: "pink
                         // for all the days is good. it breaks up the content
                         // of the day and the rows"). Every label this builder
                         // draws is a day or a folded week/month — the All
@@ -7812,7 +7812,7 @@ struct FeedScreen: View {
                                  nextEventID: UUID?,
                                  boundary: UUID? = nil,
                                  replies: [String: [Thing]] = [:],
-                                 // Do these labels name a TIME? (prd §735.)
+                                 // Do these labels name a TIME? (prd §737.)
                                  // Every chronological room says yes by
                                  // default; the handful grouped by something
                                  // else — repositories, watched wallets, a
@@ -10355,7 +10355,7 @@ struct FeedScreen: View {
                             // that isn't a day at all (the kind-filtered All
                             // room, whose single header is the filter's name).
                             coarse: Bool = false,
-                            // Does this label name a TIME? (prd §735.) True
+                            // Does this label name a TIME? (prd §737.) True
                             // takes the brand hue; the named-group callers
                             // below ("Doing", "Waiting on you", a pinned room,
                             // a kind filter) pass false and stay on the
@@ -10404,7 +10404,7 @@ struct FeedScreen: View {
                         // The folded tail weighs less than today (prd §254) —
                         // see the twin in `bundledSections` for the reasoning.
                         .fontWeight(coarse ? .semibold : .bold)
-                        // The day wears the brand hue (prd §735); a group
+                        // The day wears the brand hue (prd §737); a group
                         // named by something other than time keeps the
                         // primary ramp.
                         .foregroundStyle(dated ? DS.brandInk : DS.textPrimary)

@@ -54981,7 +54981,7 @@ host, and §726's door is itself unmeasured).
 
 Not built or run here (no Xcode in this checkout) — the rung change is layout-only; the simulator pass is owed.
 
-## §735 — The day divider wears the brand pink (user: "i think pink for all the days is good. it breaks up the content of the day and the rows", 2026-09-15)
+## §737 — The day divider wears the brand pink (user: "i think pink for all the days is good. it breaks up the content of the day and the rows", 2026-09-15)
 
 **Where this started, and where it landed.** The ask was the cover card's title in `#FF2D87` — the octopus mark's pink, which until now the mark had entirely to itself. Mocked up, the title fails twice. On a `deckFill` ground (a source with an honest brand hue) the pink measures ~1.8:1, under the 3:1 large-text bar, and the ground changes with every source, so no single pink clears them all. On the money and clock faces the lead is a figure, and colour on a figure in this app means direction (§363). Narrowing it — pink only on the plain card, or only on the pictureless faces — fixed the contrast and bought a worse problem: the hue would appear on roughly one cover in five, gated on whether the thing happened to arrive with a picture or a price, which is not a rule a person can learn by scrolling.
 

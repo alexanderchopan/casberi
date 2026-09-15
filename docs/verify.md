@@ -769,7 +769,7 @@ Verbatim. CLAUDE.md now carries a one-line index entry for each, pointing here.
 
 ## Day-divider audit (scripts/day-divider-audit.py, 2026-09-15)
 
-Pins prd §735: the feed's day headers take `DS.brandInk`, and only labels that
+Pins prd §737: the feed's day headers take `DS.brandInk`, and only labels that
 name a time do. Four checks — both header sites reach the brand ink, both
 section builders still declare `dated: Bool = true`, at least nine call sites
 still pass `dated: false` (a FLOOR, so a tenth non-dated room does not fail the

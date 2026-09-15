@@ -35,7 +35,7 @@ struct CasberiMark: View {
 
     /// The brand hue, and the only one. Lives in the token layer now
     /// (`DS.brand`) because the feed's day dividers took the same hue
-    /// (prd §735) and two spellings of one hex is one hex too many.
+    /// (prd §737) and two spellings of one hex is one hex too many.
     static let pink = DS.brand
     /// Whatever the mark is standing on — black in dark, white in light. The
     /// eyes and suckers are this, so they punch rather than print.

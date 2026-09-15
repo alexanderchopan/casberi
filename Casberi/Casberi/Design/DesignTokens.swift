@@ -340,7 +340,7 @@ enum DS {
     static let brand = Color.fixed("#FF2D87")
 
     /// **The brand hue as INK** — the day dividers, and nothing else yet
-    /// (prd §735).
+    /// (prd §737).
     ///
     /// Why a colour rule that bans decoration admits this one. §8 allows
     /// identity, state or magnitude; a day header is the app's OWN voice —

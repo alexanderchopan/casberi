@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""THE DAY DIVIDER WEARS THE BRAND HUE, AND NOTHING ELSE DOES (prd §735).
+"""THE DAY DIVIDER WEARS THE BRAND HUE, AND NOTHING ELSE DOES (prd §737).
 
 The user asked for the feed cover's title in the brand pink. Mocked up it
 fails twice — ~1.8:1 on a `deckFill` ground, and a coloured figure on the
@@ -76,7 +76,7 @@ def audit(feed: str, tokens: str, mark: str) -> list:
     if hits < 2:
         out.append(
             f"only {hits} of 2 day headers take DS.brandInk — a divider slid "
-            "back to the primary ramp (prd §735)"
+            "back to the primary ramp (prd §737)"
         )
 
     # (2) the flag exists on both builders, defaulting true
@@ -89,7 +89,7 @@ def audit(feed: str, tokens: str, mark: str) -> list:
         elif "dated: Bool = true" not in body.group(0):
             out.append(
                 f"{fn} lost `dated: Bool = true` — without the default a new "
-                "chronological room draws a primary-ramp divider (prd §735)"
+                "chronological room draws a primary-ramp divider (prd §737)"
             )
 
     # (3) the named-group callers still opt out
@@ -98,7 +98,7 @@ def audit(feed: str, tokens: str, mark: str) -> list:
         out.append(
             f"{opts} `dated: false` call sites, expected at least "
             f"{MIN_OPT_OUTS} — a group named by something other than time is "
-            "wearing the brand hue (prd §735)"
+            "wearing the brand hue (prd §737)"
         )
 
     # (4) one spelling of the hex
@@ -107,7 +107,7 @@ def audit(feed: str, tokens: str, mark: str) -> list:
     if BRAND_HEX.lower() in strip_comments(mark).lower():
         out.append(
             f"CasberiMark re-spells #{BRAND_HEX} — it reads DS.brand, so the "
-            "mark and the dividers cannot drift to two pinks (prd §735)"
+            "mark and the dividers cannot drift to two pinks (prd §737)"
         )
     return out
 
