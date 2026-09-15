@@ -55978,3 +55978,68 @@ is still drawn by hand and its item list is uncapped; its rail takes the new
 height through `DSRunwayRail`. PostHog's discs keep their cap of four, because
 they sit in one row across. **UNSEEN on a device**: built for the iOS simulator
 only.
+
+## §752 — Inside a wallet-family room's section, the sections are tiles UNDER the figure, and nothing that scopes the room sits at the top of the screen (user: "can we have those go in the middle of the page where the account bar used to be? the reason to me is that i don't want the app to have controls at the top of the screen anywhere", then "the buttons seem more utile", 2026-09-15)
+
+**What §747 shipped.** A pushed section (Permissions, Holdings…) wore
+`DSScopeHeader` at the top of the screen: a back chevron, then every section's
+name at 22pt in a sideways-scrolling strip. The strip scrolled to the active
+word, so on Wallet's last section, Permissions, it pushed Activity and Holdings
+off the leading edge. The fade covers only the trailing edge, so the names were
+simply gone. Asked where the old tabs were, the user could not find them.
+
+**The rule behind the ask.** No controls at the top of the screen, anywhere in
+the app. The room gear (the four-squares icon, top right) is the stated
+exception and stays.
+
+**Three shapes were drawn for scrolling** (strip in the middle with nothing
+pinned, a strip that pins to the top once scrolled past, and buttons). Pinning
+is out by the rule itself: once scrolled, it IS a control at the top. The
+user compared a mid-page strip and a 4×2 grid of buttons and picked buttons.
+Their first complaint about the §547 bar was that the sections "don't really
+look like sections or buttons to tap", and a strip of grey words mid-page is
+that complaint again, bigger.
+
+**The ruling.**
+
+- **Order off Home: figure, tiles, list.** Each of the five rooms (Wallet,
+  Frames, Hegotá, the Privacy devnet, Vibenet) mounts its scope chrome after the
+  section's figure. On Home the figure section is not emitted, so the chrome
+  still leads there and Home is unchanged.
+- **`DSScopeTiles`** (Design/DSScopeTiles.swift): four equal columns, a short
+  last row left-aligned. Each tile is the dock's category tile: a frozen 20pt
+  glyph over the `dockCaption10` word, 52pt tall, the tint fill on the pick, the
+  attention dot at its corner. No room has more than eight sections (Wallet 8,
+  Hegotá 7, Privacy devnet 7, Frames 6, Vibenet 5), so the grid is never more
+  than two rows.
+- **Home is a tile; the back chevron is deleted.** On a grid that shows every
+  section, going back and going sideways are one act.
+- **`DSScopeHeader` is deleted** (§723). The account line (faces, name) moves
+  under the tiles.
+- **Glyphs belong to the NAME, not the room** (`ScopeTileGlyph` in
+  Screens/ScopeTileGlyphs.swift), so Activity looks the same in all five rooms.
+  The user picked each from three rendered SF Symbols: Home
+  `chart.xyaxis.line`, Activity `clock.arrow.circlepath`, Holdings `chart.pie`,
+  Accounts `person.2` (also the People seat's glyph, flagged and kept),
+  Permissions `key`, Positions `building.columns`, NFTs
+  `photo.on.rectangle.angled`, Risk `exclamationmark.triangle`, Frames
+  `square.stack.3d.down.right`, UTXOs `circle.grid.3x3`, Snapshots
+  `camera.viewfinder` (the user was torn between this and
+  `arrow.triangle.branch`; the camera says "snapshot" and the branch reads as
+  routing).
+- `DSTileScope` refines `DSSectionScope` rather than adding `glyph` to it: the
+  directory screens and the person room use that protocol for word-only
+  switchers.
+
+**Known cost, accepted.** The tiles scroll away with the page. From deep in a long
+list (Activity), switching sections means flicking back up. §495 showed a plain
+`List` header does not pin a section with no rows.
+
+**What enforces it.** `wallet-section-selftest.sh` guards the chrome for
+`DSScopeTiles(`, denies `DSScopeHeader(`, denies a `DragGesture` in the tiles,
+and requires the wallet's figure call to come before its chrome call in
+FeedScreen.
+
+**UNSEEN on a device.** Built for the iOS simulator; the wallet-section,
+category-fold and vibenet self-tests and the template, ramp, chassis,
+harness-exists and dead-closure audits pass. Not built for Mac Catalyst.

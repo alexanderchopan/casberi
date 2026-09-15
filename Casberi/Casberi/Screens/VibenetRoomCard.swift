@@ -614,10 +614,12 @@ struct VibenetRoomCard: View {
                 // the account card inside `scopeChrome`, which is what gives
                 // an account's name the card's whole width. Off Home the
                 // figure draws exactly where it did.
-                scopeChrome
                 if (section ?? .home) != .home {
                     scopeVisualDissolving
                 }
+                // Off Home the figure leads and the tiles sit UNDER it (prd §752): nothing
+                // that scopes the room is drawn at the top of the screen.
+                scopeChrome
             }
             // Everything the chassis scopes, in one child so the gap above it is
             // the outer stack's `contentGap` and the gaps BETWEEN these cards

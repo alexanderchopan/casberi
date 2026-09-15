@@ -35,8 +35,13 @@ import SwiftUI
 ///
 /// Every room in the family (Wallet, Vibenet, Hegotá, Frames, the Privacy
 /// devnet) passes the same arguments it passed §747's chrome; only this file
-/// decides where they are drawn. The pushed-scope header is untouched.
-struct DSRoomScopeChrome<Scope: DSSectionScope, Crown: View, Acts: View>: View {
+/// decides where they are drawn.
+///
+/// **Off Home it draws the scopes as TILES, and each room mounts it UNDER the
+/// scope's figure** (prd §752, user: "i don't want the app to have controls at
+/// the top of the screen anywhere"). `DSScopeHeader` — a back chevron and a
+/// scrolling strip of words at the top — is deleted; Home is a tile.
+struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Acts: View>: View {
     @Environment(ShellChrome.self) private var chrome
 
     /// The room this chrome stands in — the key the published rail carries.
@@ -122,10 +127,12 @@ struct DSRoomScopeChrome<Scope: DSSectionScope, Crown: View, Acts: View>: View {
                 }
             }
         } else {
-            DSScopeHeader(sections: rest, active: active, attention: attention,
-                          onBack: { onPick(home) }, onPick: onPick) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                DSScopeTiles(sections: sections, active: active,
+                             attention: attention, onPick: onPick)
                 accountLine
             }
+            .padding(.horizontal, DSRoomChassis.inset)
         }
     }
 

@@ -33,7 +33,7 @@ SWITCH="Casberi/Casberi/Design/DSSectionSwitcher.swift"
 # these files DOCUMENT the ruling by naming what they replaced.
 CHROMEVIEW="Casberi/Casberi/Design/DSRoomScopeChrome.swift"
 SCOPEROWS="Casberi/Casberi/Design/DSScopeRows.swift"
-SCOPEHEAD="Casberi/Casberi/Design/DSScopeHeader.swift"
+SCOPEHEAD="Casberi/Casberi/Design/DSScopeTiles.swift"
 CHASSIS="Casberi/Casberi/Design/DSRoomChassis.swift"
 ACTIVITY="Casberi/Casberi/Screens/RoomActivityChart.swift"
 CHIPS="Casberi/Casberi/Design/DSChip.swift"   # DSRangeChips lives beside Chip since prd §746
@@ -241,8 +241,13 @@ guard FeedScreen.swift "DSRoomScopeChrome(" \
 # a header; without both this passes on a room that lost what it scopes by.
 guard DSRoomScopeChrome.swift "DSScopeRows(" \
   "the chrome no longer draws the scope rows — Home's list IS the readings (§747)"
-guard DSRoomScopeChrome.swift "DSScopeHeader(" \
-  "the chrome no longer draws the scope header — a pushed scope must name itself (§747)"
+# **THE HEADER BECAME TILES, UNDER THE FIGURE** (prd §752, user: "i don't want
+# the app to have controls at the top of the screen anywhere"). The chrome draws
+# the scopes as a grid, and nothing brings the strip back.
+guard DSRoomScopeChrome.swift "DSScopeTiles(" \
+  "the chrome no longer draws the scope tiles — a pushed scope must offer the rest (§752)"
+deny DSRoomScopeChrome.swift "DSScopeHeader(" \
+  "the scope header is back — a control at the top of the screen (§752)"
 # **THE ACCOUNTS ARE THE SHELL'S FACE RAIL, NOT A DECK** (prd §750, user: "put
 # the wallets row of accounts on a third row above the tab bar like we do for
 # socials"). The deck is deleted; the chrome publishes its accounts and the
@@ -258,8 +263,14 @@ deny DSRoomScopeChrome.swift "DSAccountDeck(" \
 # THE SWIPE IS THE ROOM'S, NOT THE SCOPES' (user ruling, prd §747: "inside can't
 # be swipe bc swipe is for rooms but can be a scroll header"). A header that
 # grew a DragGesture would make one gesture mean two things by depth.
-deny DSScopeHeader.swift "DragGesture" \
-  "the scope header takes a swipe — travel here is the strip's scroll and the pick is a tap (§747)"
+deny DSScopeTiles.swift "DragGesture" \
+  "the scope tiles take a swipe — the swipe is the room's and the pick is a tap (§747)"
+# Off Home the figure leads and the chrome follows it (§752). In FeedScreen the
+# wallet's figure call must come BEFORE the chrome's, or the tiles sit at the top.
+fig_at=$(grep -n "walletScopeVisualSection(section)" "$work/FeedScreen.swift.bare" | head -1 | cut -d: -f1 || true)
+chr_at=$(grep -n "walletScopeChromeSection(section, visible:" "$work/FeedScreen.swift.bare" | head -1 | cut -d: -f1 || true)
+[[ -n "$fig_at" && -n "$chr_at" ]] && (( fig_at < chr_at )) \
+  || fail "drift: the wallet's scope tiles are drawn above its figure — controls at the top (§752)"
 # A ROOM WITH ONE READING DRAWS NO ROWS (\u00a783). The gate used to sit in the
 # room, beside the switcher it suppressed; under \u00a7744 the chrome must draw on
 # Home either way (it carries the crown and the acts), so the gate moved into

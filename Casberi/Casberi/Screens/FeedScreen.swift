@@ -5038,7 +5038,6 @@ struct FeedScreen: View {
             // readings are door rows under it. Off Home the chrome is the
             // scope header and the figure section below draws exactly as it
             // did.
-            framesScopeChromeSection(framesScope, head: head)
             if framesScope != .home {
                 Section {
                     FramesRoomFigure(head: head,
@@ -5051,6 +5050,9 @@ struct FeedScreen: View {
                         .listRowSeparator(.hidden)
                 }
             }
+            // Off Home the figure leads and the tiles sit UNDER it (prd §752): nothing
+            // that scopes the room is drawn at the top of the screen.
+            framesScopeChromeSection(framesScope, head: head)
             Group {
                 FramesRoomList(head: head,
                                accounts: framesAccounts,
@@ -5095,7 +5097,6 @@ struct FeedScreen: View {
             // accounts are the deck's cards, each carrying this room's own
             // card pinned to `.home` as its crown and the send console as its
             // acts, and the readings are door rows under it.
-            privacyDevnetScopeChromeSection(privacyScope, head: head)
             if privacyScope != .home {
             Section {
                 PrivacyDevnetRoomCard(
@@ -5119,6 +5120,9 @@ struct FeedScreen: View {
                                       bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
             .task { await PrivacyDevnetLiveState.shared.refreshIfStale() }
             }
+            // Off Home the figure leads and the tiles sit UNDER it (prd §752): nothing
+            // that scopes the room is drawn at the top of the screen.
+            privacyDevnetScopeChromeSection(privacyScope, head: head)
             // **THE ROWS AND THE ACTS, OUTSIDE THE CLIPPED SLOT (prd §593d).**
             // `DSRoomSlot` is a hard 300pt box, so drawing the list inside it
             // cut every row past the third off the bottom with no scroll and no
@@ -5229,8 +5233,10 @@ struct FeedScreen: View {
             // `ShellChrome` is `@Observable` and the reads below are in this
             // same pass, that was a body which invalidated itself continuously.
             hegotaChainNoticeSection
-            hegotaScopeChromeSection
             hegotaVisualSection
+            // Off Home the figure leads and the tiles sit UNDER it (prd §752): nothing
+            // that scopes the room is drawn at the top of the screen.
+            hegotaScopeChromeSection
             Group {
                 HegotaRoomList(head: head,
                                accounts: HegotaRoomSource.accounts(),
@@ -6619,7 +6625,6 @@ struct FeedScreen: View {
             // is what gives a watched wallet's name the card's full width
             // instead of a 66pt rail slot's leftovers. Off Home this emits the
             // scope header only, and the figure section below is untouched.
-            walletScopeChromeSection(section, visible: visible, streamTotal: all.count)
             // THE TOGGLE SITS BELOW THE SPARKLINE, IN THE CONTENT (user ruling,
             // 2026-08-26: *"we need to have those toggles be below the
             // sparkline"*, and *"we cannot have four rows of chips"*).
@@ -6703,6 +6708,9 @@ struct FeedScreen: View {
                     .listRowInsets(WalletCardStyle.rowInsets)
                 }
             }
+            // Off Home the figure leads and the tiles sit UNDER it (prd §752): nothing
+            // that scopes the room is drawn at the top of the screen.
+            walletScopeChromeSection(section, visible: visible, streamTotal: all.count)
             // THE FOUR `walletGroupHeader` GROUPS BECOME SCOPES (prd §483).
             // Renamed to short nouns and split twice — NFTs out of "What you
             // hold", and "What it's doing" into Positions and Risk — so the
