@@ -164,14 +164,14 @@ enum PrivacyCover {
     /// greeting stands as a complete sentence, the same rule the masthead
     /// greeting follows, and it never asks for the name it lacks. `heading24`,
     /// not `heading40`: the mark is the moment and the words sign it. The
-    /// name is read off the store's stored property, never `UserDefaults`, so
-    /// nothing here fetches in a body (prd §628).
+    /// name and the photo are read off the store's stored properties, never
+    /// `UserDefaults`, so nothing here fetches in a body (prd §628).
     private struct CoverContent: View {
         var body: some View {
             ZStack {
                 DSPageBackground()
                 VStack(spacing: DS.Space.s3) {
-                    CasberiMark(size: 96)
+                    face
                         .accessibilityHidden(true)
                     greeting
                         .dsText(.heading24)
@@ -182,6 +182,22 @@ enum PrivacyCover {
                 }
             }
             .ignoresSafeArea()
+        }
+
+        /// The person's own photo where the mark stood (user, 2026-09-15:
+        /// "instead of the octopus could we use their avatar?"), at the mark's
+        /// 96 so the page changes nothing but the face. No photo, the octopus
+        /// — the brand greets whoever has not yet put themselves here. The
+        /// same circle `AvatarDoor` draws in the bar, four times the size.
+        @ViewBuilder private var face: some View {
+            if let avatar = ProfileStore.shared.avatar {
+                Image(uiImage: avatar)
+                    .resizable().scaledToFill()
+                    .frame(width: 96, height: 96)
+                    .clipShape(Circle())
+            } else {
+                CasberiMark(size: 96)
+            }
         }
 
         private var greeting: Text {
