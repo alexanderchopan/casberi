@@ -7615,8 +7615,13 @@ struct FeedScreen: View {
     /// Never applied under increased contrast: dimming is exactly what that
     /// setting exists to refuse, and the feed's structure must not be the one
     /// thing it costs you.
+    ///
+    /// Never applied to TODAY either (prd §773): nothing from today steps back,
+    /// ambient or read. A bundle's date is its newest member, so a fold that
+    /// reaches today stays lit.
     private func isQuiet(_ row: FeedRow) -> Bool {
         guard contrast != .increased else { return false }
+        guard !Self.groupingCalendar.isDateInToday(row.date) else { return false }
         if row.ambient { return true }
         guard let newSince else { return false }
         return row.date <= newSince
