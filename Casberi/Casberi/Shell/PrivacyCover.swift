@@ -154,13 +154,39 @@ enum PrivacyCover {
     /// glyph rather than the brand. 96 is the size at which a lone mark
     /// carries a page without becoming a poster. The two covers deliberately
     /// do NOT share a size — different jobs.
+    ///
+    /// **And a hello (user, 2026-09-15: "when the app is loading you briefly
+    /// see the octopus symbol — could we also make it so you see a Hello,
+    /// name").** The name is `ProfileStore.name`, the one string the person
+    /// gave the app to call them by, and this cover is the only screen that
+    /// is ever ALL brand and no corpus — so it is where a hello reads as a
+    /// welcome rather than a masthead. No name says "Hello" alone: the
+    /// greeting stands as a complete sentence, the same rule the masthead
+    /// greeting follows, and it never asks for the name it lacks. `heading24`,
+    /// not `heading40`: the mark is the moment and the words sign it. The
+    /// name is read off the store's stored property, never `UserDefaults`, so
+    /// nothing here fetches in a body (prd §628).
     private struct CoverContent: View {
         var body: some View {
             ZStack {
                 DSPageBackground()
-                CasberiMark(size: 96)
+                VStack(spacing: DS.Space.s3) {
+                    CasberiMark(size: 96)
+                        .accessibilityHidden(true)
+                    greeting
+                        .dsText(.heading24)
+                        .foregroundStyle(DS.textPrimary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, DS.Space.s6)
+                }
             }
             .ignoresSafeArea()
+        }
+
+        private var greeting: Text {
+            if let name = ProfileStore.shared.name { Text("Hello, \(name)") }
+            else { Text("Hello") }
         }
     }
 }

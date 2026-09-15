@@ -56812,3 +56812,13 @@ tiles.
 - **One title size for every cover face.** §734 set the picture face at `heading24` on the user's own complaint that the cover took half the screen, and kept `heading40` for a statement with no picture. That is a ruling on sight, not drift.
 
 **UNSEEN on a device.** Verified by an iOS simulator build, every static audit (template, ramp, sentence case, footnote, plate, row skeleton, chassis, Mac parity, row cost, dead closure, defaults lock, SwiftData liveness, query read, setup copy) and the dock, category fold, account page, calendar, wallet section, Altana, room heads, feed fold, feed walk, feed reading, wallet rooms and social room self-tests. Nothing was driven on the simulator. **The edge swipe back is the one behaviour here no build can prove**, and it is the first thing to try on the next TestFlight build, along with the tile's width at a Pro Max and an SE.
+
+## §768 — The load screen says hello (user: "when the app is loading you briefly see the octopus symbol — could we also make it so you see a Hello, name", 2026-09-15)
+
+The octopus the person sees "while the app is loading" is the app-switcher cover (`Shell/PrivacyCover.swift`, the `UIWindow` of 2026-09-05), which crossfades away on activation. It now draws the mark at 96 with **"Hello, Alex"** beneath it, at `heading24` in `DS.textPrimary`. The name is `ProfileStore.name` — the one string the person gave the app to call them by — and with no name set the cover says **"Hello"** alone, a complete sentence, the same rule the masthead greeting follows; it never asks for the name it lacks. This cover is the one screen that is all brand and no corpus, so a hello reads as a welcome there rather than a masthead. The name is read off the store's stored property, never `UserDefaults` in a body (§628). The mark is `accessibilityHidden`; the greeting is what VoiceOver reads.
+
+**Not touched.** The launch storyboard stays a plain `LaunchBackground` colour — it cannot read a name, and putting the mark there would draw two octopi in a row on a cold launch. The intro cover (§620) keeps its own 56pt mark and its sentence.
+
+"Hello" and "Hello, %@" are in the catalog in all four languages.
+
+**UNSEEN on a device.** Verified by an iOS simulator build and the privacy-cover, design-ramp and footnote audits; nothing was driven on the simulator.
