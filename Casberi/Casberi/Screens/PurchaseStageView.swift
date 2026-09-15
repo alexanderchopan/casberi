@@ -193,10 +193,7 @@ struct PurchaseStageView: View {
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text("Nutri-Score \(grade) of A to E"))
-            Text("Open Food Facts' grade, not ours.")
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+            DSFootnote("Open Food Facts' grade, not ours.")
         }
     }
 

@@ -46,8 +46,7 @@ struct ApprovalPrepareCard: View {
                         copy(json)
                     }
                 }
-                Text("A transaction you sign there — never here.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                DSFootnote("A transaction you sign there — never here.")
             } else {
                 // The closed loop, from reads alone: the person revoked in
                 // their wallet or on Revoke.cash, and the chain now says so.

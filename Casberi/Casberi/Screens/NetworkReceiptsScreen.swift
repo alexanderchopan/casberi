@@ -95,7 +95,7 @@ struct NetworkReceiptsScreen: View {
                 } header: {
                     Text("Reached").dsText(.label12).foregroundStyle(DS.textTertiary)
                 } footer: {
-                    Text(ceiling).dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    DSFootnote(Text(ceiling), scale: .page)
                 }
             }
 
@@ -110,8 +110,7 @@ struct NetworkReceiptsScreen: View {
                     }
                     .dsListCardRow()
                 } footer: {
-                    Text("Forgetting them changes nothing about what's reached.")
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    DSFootnote("Forgetting them changes nothing about what's reached.", scale: .page)
                 }
             }
         }

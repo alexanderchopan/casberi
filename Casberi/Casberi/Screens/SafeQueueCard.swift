@@ -50,8 +50,7 @@ struct SafeQueueCard: View {
                 DSDoorRow(icon: "arrow.up.right", label: "Open in Safe") { openURL(url) }
             }
             if !signable {
-                Text("Signatures happen in your Safe app — never here.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                DSFootnote("Signatures happen in your Safe app — never here.")
             }
         }
         .padding(DS.Space.s4)
@@ -442,8 +441,7 @@ struct SafeSignBlock: View {
                       busy: signing) {
                 Task { await sign(ready) }
             }
-            Text("Casberi signs; it can't execute. Another owner sends it.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            DSFootnote("Casberi signs; it can't execute. Another owner sends it.")
         }
     }
 

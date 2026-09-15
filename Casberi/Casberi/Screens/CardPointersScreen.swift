@@ -91,7 +91,7 @@ struct CardPointersScreen: View {
             // A real answer with a real door, not a failure. This account
             // signed in fine; it simply cannot read anything.
             DSEmptyState(headline: Text("This account doesn't have CardPointers+"),
-                         words: Text("Their offer tools need the subscription. Nothing was connected."))
+                         words: Text("Nothing was connected."))
             if let upgradeURL {
                 DSSlabButton(title: "See CardPointers+",
                              systemImage: "arrow.up.forward",

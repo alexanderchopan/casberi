@@ -858,10 +858,7 @@ struct DevnetAdvancedSheet: View {
                     // ONE sentence for the whole sheet, not one per field —
                     // it is the same fact three times over and §554's budget
                     // is spent on saying it well once.
-                    Text(String(localized: "All three are signed with the transaction. The chain enforces the window; the note is public and permanent."))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    DSFootnote(Text(String(localized: "All three are signed with the transaction. The chain enforces the window; the note is public and permanent.")))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, DS.Space.s4)
@@ -878,9 +875,6 @@ struct DevnetAdvancedSheet: View {
             caption(String(localized: "Nonce channel"))
             DSSlabField(placeholder: "0", text: $channelText, actionLabel: "",
                         keyboard: .numberPad, size: .compact) {}
-            Text(String(localized: "Sends in different channels don't queue behind each other."))
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -1215,11 +1209,6 @@ struct DevnetSendSheet: View {
                 .padding(.top, DS.Space.s1)
             }
             .scrollIndicators(.hidden)
-
-            Text(String(localized: "\(venue) addresses from your book."))
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, DS.Space.s4)
     }
@@ -1611,12 +1600,9 @@ struct DevnetSendSheet: View {
                 Text(String(localized: "Who pays the fee"))
                     .dsText(.callout15).fontWeight(.semibold)
                     .foregroundStyle(DS.textPrimary)
-                Text(payer == nil
+                DSFootnote(Text(payer == nil
                      ? String(localized: "You do, from this account.")
-                     : String(localized: "They sign it too. Nothing sends until they do."))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                     : String(localized: "They sign it too. Nothing sends until they do.")))
             }
             Spacer(minLength: DS.Space.s2)
             Menu {
@@ -1679,10 +1665,7 @@ struct DevnetSendSheet: View {
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             if let expires {
-                Text(String(localized: "It sends when they pay, and stops working at \(expires.formatted(date: .omitted, time: .shortened))."))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                DSFootnote(Text(String(localized: "It sends when they pay, and stops working at \(expires.formatted(date: .omitted, time: .shortened)).")))
             }
             ShareLink(item: link,
                       message: Text(String(localized: "Can you pay the fee for this on \(venue)?"))) {

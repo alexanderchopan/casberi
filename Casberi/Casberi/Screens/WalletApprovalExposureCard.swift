@@ -89,10 +89,8 @@ struct WalletApprovalExposureCard: View {
                 //
                 // `WalletApprovalExposure.headline` stays: the tray's walk row
                 // still quotes it, and the harness still pins it.
-                Text(String(localized: "Revoking is free apart from gas. Start at the top."))
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                // "Start at the top" restated the list's own order (prd §747).
+                DSFootnote(Text(String(localized: "Revoking is free apart from gas.")))
                     .padding(.top, DS.Space.s2)
 
                 // Enumerated for the entrance stagger only (2026-08-03, prd

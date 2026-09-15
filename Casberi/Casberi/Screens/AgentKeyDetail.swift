@@ -46,15 +46,8 @@ struct AgentModelRow: View {
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1).truncationMode(.middle)
                 }
-                if AgentModelStore.chosen(provider, task: task) == nil {
-                    // "Same as your questions" names the ask; with it off the
-                    // librarian's default is simply the provider's (prd §718).
-                    Text(task == .librarian && AskSurface.enabled
-                         ? String(localized: "Same model as your questions — a cheaper one usually names a screenshot just as well.")
-                         : String(localized: "The default for \(provider.agent)."))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                // No caption under the model (prd §747): the menu's own first
+                // row already says "Default (…)" / "Same as questions".
                 if loading {
                     HStack(spacing: DS.Space.s2) {
                         DSSpinner()
@@ -210,9 +203,7 @@ struct AgentSpendRow: View {
                 } else {
                     // The honest blank. A "0 in · 0 out" here would claim the
                     // requests were free.
-                    Text("\(provider.company) doesn't report token counts to us.")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    DSFootnote("\(provider.company) doesn't report token counts to us.")
                 }
                 // What THIS APP spent, above what the key has spent — the
                 // narrower and more useful of the two, so it leads (2026-08-23,
@@ -236,9 +227,7 @@ struct AgentSpendRow: View {
                 // false. The sibling line 44 rows down already said
                 // "there's no on-device model here" correctly, so one file
                 // held both the fixed and the unfixed spelling.
-                Text("Counted on \(DS.device). Your bill is \(provider.company)'s — see \(provider.console).")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                DSFootnote("Counted on \(DS.device). Your bill is \(provider.company)'s — see \(provider.console).")
             }
             .dsListCardRow()
         }
@@ -340,9 +329,7 @@ struct AgentLibrarianRow: View {
                     // itself shows, and a digest goes into a retrieval-only
                     // field. Said plainly, because "an AI renamed my things"
                     // is a fair thing to be wary of.
-                    Text("Only words your things already contain — a chat summary is never shown.")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    DSFootnote("Only words your things already contain — a chat summary is never shown.")
                     AgentBudgetControl(tick: $tick)
                     if working {
                         HStack(spacing: DS.Space.s2) {
@@ -448,23 +435,17 @@ struct AgentBudgetControl: View {
                 // otherwise assume wrongly, in the expensive direction: a cap
                 // stops the app spending on its own, and never stops YOU.
                 if AskSurface.enabled {
-                    Text("Your own questions are never blocked.")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    DSFootnote("Your own questions are never blocked.")
                 }
                 // Only where it is true. A ceiling governs spend, and a free
                 // model spends nothing — so it keeps working past the cap, and
                 // saying so is what stops that reading as the cap being broken.
                 if AgentModelFacts.isFree(AgentBudget.measurableProvider, task: .librarian) {
-                    Text("Your organizing model is free, so it keeps going.")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    DSFootnote("Your organizing model is free, so it keeps going.")
                 }
             }
         } else if let provider = AgentKey.active {
-            Text("\(provider.company) doesn't report spend, so there's no limit to set here.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+            DSFootnote("\(provider.company) doesn't report spend, so there's no limit to set here.")
         }
     }
 }
@@ -496,15 +477,6 @@ struct MCPServerRow: View {
                 error = MCPServer.shared.lastError
             }
             if enabled {
-                // Measured 2026-08-08 (prd §340): the standard MCP inspector
-                // connects to this over HTTP and both lists and calls the
-                // tools. What is NOT claimed is any particular product — the
-                // sentence says which client was checked rather than implying
-                // all of them, and keeps the invitation to report a failure,
-                // because that is still how a specific one gets found.
-                Text("Checked with the standard MCP tools — tell us if yours can't connect.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: running ? "checkmark.circle.fill" : "circle.dotted")
                         .dsSymbolSwap(running)
@@ -530,9 +502,13 @@ struct MCPServerRow: View {
                         DSPasteboard.copySensitive(MCPPairing.token())
                         copied = true
                     }
-                    Text("Paste it as `Authorization: Bearer …`.")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    // ONE sentence for the row (prd §747), where there were
+                    // two. Measured 2026-08-08 (prd §340): the standard MCP
+                    // inspector connects over HTTP and both lists and calls
+                    // the tools — the sentence names what was checked rather
+                    // than implying every client. Drawn only while listening:
+                    // the claim is about a server that is running.
+                    DSFootnote("Paste it as `Authorization: Bearer …` — checked with the standard MCP tools.")
                 }
             }
         }

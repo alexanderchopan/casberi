@@ -1600,9 +1600,7 @@ private struct MailContentView: View {
             // it always was. Gated on there being no body, so a demo/sample
             // mail thing that DOES carry text never claims otherwise.
             if isFromLine || thing.content.isEmpty {
-                Text("The header only — the message is still in Mail.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                DSFootnote("The header only — the message is still in Mail.")
             }
         }
         .padding(.horizontal, DS.Space.s4)
@@ -2023,9 +2021,7 @@ private struct AccessoryCard: View {
             }
             // The ceiling, said out loud. Reachability is about the
             // connection; nothing here reads a lock's bolt.
-            Text("Read-only — the Home app controls it.")
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textTertiary)
+            DSFootnote("Read-only — the Home app controls it.")
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)

@@ -55620,3 +55620,51 @@ the same. No guard was deleted.
 **None of this has been seen on a device or a simulator.** The evidence is an
 iOS simulator build, a Mac Catalyst build, every `*-audit.py`, and the harnesses
 that name a changed file.
+
+## §747 — An explaining sentence has one view and one screen gets one of them: `DSFootnote`, counted by `footnote-audit.py` (user: "one explaining sentence per screen at most, and only if it says something the controls don't", 2026-09-15)
+
+**The report was a feeling, and the feeling had a cause.** The user named part of why the app reads as "vibecoded": copy that explains itself — state lines, meta lines, captions under marks, footers under rows, empty-state sentences, prose next to every control. §708 took the boxes off the account page and §729 cut its copy until each thing was said once, and `setup-copy-audit.py` check 8 holds the 56 connect screens to that. Everywhere else the rule lived in memory. This ledger has already watched that fail: §218b ruled "one gray sentence per screen", and by §314 the import screens carried five.
+
+**The rule, so a sentence has something to fail against: a screen draws at most ONE explaining sentence, and only if it says something the door, the field, the label or the row above it cannot.** Data is not explanation. A date, a count, a name, an amount, or a status ("Couldn't read this pack just now", "Waiting for your approval…") stays where it is. When a screen has two sentences that are both genuinely needed, they become one.
+
+**One view, so the rule can be counted.** `Design/DSFootnote.swift` is the only way to draw an explaining sentence. It uses tertiary ink at the meta rung (`subhead13`), or `.page` (`callout15`) for a list section's footer. Inside an account page's act it is always `callout15`, which is §729's rule moved into the one place that draws it. It has two sizes, like `DSEmptyState.Scale`, and no more. `DSSlabNote` now draws through it, so the 47 setup notes that remain are footnotes too, and the audit counts them as footnotes.
+
+**Counts, over the 210 files the audit reads** (Screens/, Shell/ and GenUI/, minus the feed rows and room heads other sessions are rewriting):
+- **Before:** 106 explaining sentences in footnote position: 52 `DSSlabNote`s, 48 sentences hand-drawn in tertiary ink at a footnote rung, and 6 hand-drawn section footers. Eight files drew more than one with no ruling saying why.
+- **After:** 94 call sites: 47 `DSSlabNote`s and 47 `DSFootnote`s. No hand-drawn sentences and no hand-drawn footers. Fourteen files have a reasoned allowance. The site count overstates what is on screen: allowances for exclusive states count both branches, and ternaries count once.
+- **Deleted: 25.** 18 whole sentences, plus 7 halves or clauses cut from sentences that stayed. Each one restated a control, a label, or something the screen already showed:
+  - "Same model as your questions — a cheaper one usually names a screenshot just as well." / "The default for …" — the model menu's first row already reads "Default (…)" or "Same as questions".
+  - "From the agent's own console. It stays in Keychain and goes only to that provider." — the key card's one disclosure already says the words go straight to the provider. It was also §729's banned Keychain reassurance.
+  - "Its balance and keys are in the sections above." — the sections are above.
+  - "New things from X land here." — under "That's everything from X so far".
+  - "A hand-picked set of people worth reading — follow all of them in one tap." and "Follow all of them in one tap." — above a button that says Follow all.
+  - "The always-on essentials, plus the apps you've connected." / "These reach nothing until you connect them." — under the headers "Reaching now" and "Only if you connect them". The `footer:` parameter they rode on is deleted with them (§723).
+  - "A Bitcoin address is read too, from its own public API." — under a Bitcoin row reading "When you watch one". Where the app reaches is stated once, in Settings (§702).
+  - "Watching puts it in this room with your other accounts." — the pinned Watch verb.
+  - "Sends in different channels don't queue behind each other." and "… addresses from your book." — devnet console captions under a field and a face grid.
+  - "A name like meta-llama, or any Hugging Face link." / "An id like rad:z3gqcJ…, or any Radicle link." — under placeholders naming the value.
+  - "Saves arrive as bare links. This asks TikTok what each one is. No rush — the videos don't expire." and X's "Your archive names the post, not the person… This asks X for both." — under buttons reading "Name 12 videos" and the context fetch.
+  - "All of it lands under GitHub." — on GitHub's own page.
+  - Halves: "Copy or share it below and send it back" (Diagnostics), "Paste an address, or pick one that was just created below" (vibenet watch), "Exit whenever you're ready" (demo tray), "Start at the top" (approvals), "Their offer tools need the subscription" (CardPointers, under a headline that says so), "— tap to watch one" (a list of tappable rows). The MCP row's two sentences became one: "Paste it as `Authorization: Bearer …` — checked with the standard MCP tools."
+
+**What is kept regardless of the cap, and why an allowance may exceed one.** Every allowance in `ALLOWANCE` names its category:
+- **(a) Honesty and overclaim guards, §83 said out loud.** "Encrypted, but Apple holds the keys. Advanced Data Protection … makes it yours alone." "… doesn't report token counts to us." "Open Food Facts' grade, not ours." "The header only — the message is still in Mail." "L2BEAT … nothing flagged is nothing they flagged, not a clean bill." "Forgetting them changes nothing about what's reached."
+- **(b) Consent, money and signing disclosures — the lines App Review read under 3.1.1 and 3.1.5.** "Test ETH has no value, and the network may be reset without notice." "A transaction you sign there — never here." "Casberi signs; it can't execute. Another owner sends it." "A key that can move money is refused." "Only the fee leaves your account." The Safe co-signer's "There is no recovery phrase…". "Revoking is free apart from gas." "They bill you directly."
+- **(c) Privacy and permission explanations.** "Going straight means each service sees your IP… iCloud Private Relay covers Safari browsing, not an app's own requests." "Passwords and recovery phrases are kept out of search, Siri, and anything sent with your key." "The librarian sends things to … on its own." GitHub's "Private to this iPhone — nobody is followed or notified."
+- **(d) Error copy that tells the person how to fix something.** "No mic access — allow Casberi in Settings", and "Couldn't reach vibenet … paste an address above, or open the explorer". This is status copy. The audit neither counts it nor moves it.
+
+**The audit: `scripts/footnote-audit.py`, four checks, `--self-test` first.** It is wired into verify.sh directly after the setup copy audit, and CI's static-checks job and `verify-mac.sh` discover it by its `*-audit.py` name.
+- **Check 0.** `DSFootnote` draws in `DS.textTertiary`, and `DSSlabNote` draws through it. Counting a slab note as a footnote is only true while it is one.
+- **Check 1.** A screen file draws at most one `DSFootnote(` or `DSSlabNote(`, unless `ALLOWANCE` gives an exact count and a reason. A stale allowance, where the file now draws fewer, is also a finding, so the list cannot quietly go slack.
+- **Check 2.** A `footer:` closure with a `Text` in tertiary or secondary ink is a footer drawn by hand. Error ink is exempt.
+- **Check 3.** A `Text` whose literal is a sentence (four or more words, ending in a full stop) at `subhead13`/`label12`/`label11`/`callout15` in `DS.textTertiary` is a footnote drawn by hand. Status lines match `STATUS_RE` and pass.
+- **Twelve self-test cases.** They cover a second footnote, a `DSSlabNote` beside a `DSFootnote`, a hand-drawn footnote (both as a plain literal and through `String(localized:)`), a hand-drawn footer, an allowance admitting exactly its count, an allowance not leaking to another file, a stale allowance, and check 0's two mutations.
+- **Deliberate non-checks.** It does not follow `Text(someVariable)`: a computed coverage note is data with a clause attached, and guessing by name flags data rows. It does not count `DSEmptyState` (§611: an empty place's sentence is its only content). It does not read toggle subtitles. And it does not judge whether a sentence restates a control — that judgement is this ruling, and the audit enforces the count and the single drawing.
+
+**What this is not.** No control moved and no kept sentence was reworded, except the MCP merge and the trims listed above. `setup-copy-audit.py` is unchanged: its `DSSlabNote` count and step caps still stand, and this audit sits beside it. The String Catalog is untouched. Deleted keys go stale until the pre-ship sync, and the new shortened keys ("None of it is yours.", "Watching is free and reads only.", "Revoking is free apart from gas.", "Every line is a real result from this device.", "Nothing was connected.", the MCP merge, "… accounts by that name") are untranslated until then.
+
+**Pending, on purpose.** The feed rows (`ShapedRows`, `CursorRow`, `WalletbeatRow`, `L2beatRow`, `WalletRow`), every `*RoomCard.swift` and the source strip are outside the audit while other sessions rewrite them. They come under it when that work lands.
+
+**Visible changes a reviewer should look for.** Kept sentences that were hand-drawn in `textSecondary`, `label12` or `label11` are now `textTertiary` at `subhead13`. The biggest shifts: the wallet connection page's read-only promise and the approvals card's gas line, both secondary → tertiary. The directory attributions and the vibenet sheets' captions, label11/label12 → subhead13. The key card's provider disclosure, secondary → tertiary. Sizes are unchanged everywhere, because every one of those rungs is 12pt.
+
+**Verified:** the iOS build and the Mac Catalyst build, `footnote-audit.py` (clean, self-test green), every `scripts/*-audit.py`, and every harness that greps a changed file. None of them pinned a deleted sentence. **UNSEEN on a device or simulator** — every change here is pixels and words.

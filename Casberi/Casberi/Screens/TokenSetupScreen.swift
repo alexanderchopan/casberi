@@ -543,7 +543,6 @@ struct TokenSetupScreen: View {
                                     Task { await sync() }
                                 }))
             }
-            DSSlabNote(text: "All of it lands under GitHub.")
         }
     }
 

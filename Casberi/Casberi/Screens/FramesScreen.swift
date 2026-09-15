@@ -193,9 +193,7 @@ struct FramesPasskeyRow: View {
                     }
                     .accessibilityLabel(Text(String(localized: "Passkey account options")))
                 }
-                Text(String(localized: "Pick it on the room's face rail and Send signs with Face ID. Its code goes on-chain with its first send."))
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                DSFootnote(Text(String(localized: "Pick it on the room's face rail and Send signs with Face ID. Its code goes on-chain with its first send.")))
             } else {
                 Button {
                     DSHaptic.selection()
@@ -213,11 +211,9 @@ struct FramesPasskeyRow: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(!FramesPasskey.enclaveAvailable)
-                Text(FramesPasskey.enclaveAvailable
+                DSFootnote(Text(FramesPasskey.enclaveAvailable
                      ? String(localized: "Signed by a key in this phone's Secure Enclave, which never leaves it.")
-                     : String(localized: "Needs a device with a Secure Enclave. This one has none."))
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                     : String(localized: "Needs a device with a Secure Enclave. This one has none.")))
             }
             if let errorText {
                 Text(errorText)

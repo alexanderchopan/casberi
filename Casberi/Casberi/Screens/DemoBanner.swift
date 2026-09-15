@@ -166,7 +166,9 @@ private struct DemoExplainSheet: View {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 // ONE LINE (user, 2026-09-05: "this wording is long"). What
                 // happens on exit is said by the verb below it.
-                Text("None of it is yours. Exit whenever you're ready.")
+                // "Exit whenever you're ready" restated the verb under it
+                // (prd §747).
+                Text("None of it is yours.")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

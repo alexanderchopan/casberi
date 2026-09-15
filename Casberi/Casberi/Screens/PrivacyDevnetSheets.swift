@@ -295,9 +295,7 @@ struct PrivacyDevnetMoveSheet: View {
                         DSStamp(word: String(localized: "used once"))
                     }
                 }
-                Text(String(localized: "Spent once, never again — it doesn't hide who sent it."))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                DSFootnote(Text(String(localized: "Spent once, never again — it doesn't hide who sent it.")))
             }
         }
     }

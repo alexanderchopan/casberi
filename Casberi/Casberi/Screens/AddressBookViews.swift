@@ -1111,8 +1111,7 @@ struct AddressCard: View {
                 // The one consequence a field cannot state by its shape. It
                 // sat in the alert's message; without a container to carry it
                 // the field has to, and only while the field is open.
-                Text("A blank name removes it from your book.")
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                DSFootnote("A blank name removes it from your book.")
             }
             .onAppear {
                 // One turn later: a `@FocusState` set in the same turn the
@@ -1863,11 +1862,9 @@ struct AddressCard: View {
         // profile will never have a transfer, so promising one is a §83
         // claim about a thing that cannot happen.
         if things.isEmpty, !current.kind.isMonogram {
-            Text(unnamed
+            DSFootnote(Text(unnamed
                  ? String(localized: "Transfers with this address land here as they arrive.")
-                 : String(localized: "Transfers with \(current.name) land here as they arrive."))
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+                 : String(localized: "Transfers with \(current.name) land here as they arrive.")))
                 // THE ONE THING NAMING CHANGES ON A YOUNG CARD (prd §599).
                 // §441 built the retitle cascade so you can watch a name sweep
                 // down every landed transfer — and §462 says the common card
@@ -2168,9 +2165,8 @@ struct AddressCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Give them a name")
                     .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                Text("It rewrites every transaction you have with this address, everywhere in the app.")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                DSFootnote("It rewrites every transaction you have with this address, everywhere in the app.",
+                           scale: .page)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DS.Space.s4)

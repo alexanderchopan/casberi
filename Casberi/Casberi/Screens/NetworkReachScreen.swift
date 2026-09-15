@@ -89,23 +89,22 @@ struct NetworkReachScreen: View {
                 // fake status this app refuses everywhere else — and the more
                 // careful the rest of the screen is, the more it would be
                 // trusted.
-                Text("Going straight means each service sees your IP, as any app or website does. iCloud Private Relay covers Safari browsing, not an app's own requests.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                DSFootnote("Going straight means each service sees your IP, as any app or website does. iCloud Private Relay covers Safari browsing, not an app's own requests.")
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
 
-            group(String(localized: "Reaching now"), reachingNow,
-                  footer: String(localized: "The always-on essentials, plus the apps you've connected."))
+            // No section footers (prd §747): "The always-on essentials, plus
+            // the apps you've connected" and "These reach nothing until you
+            // connect them" each restated the header directly above them.
+            group(String(localized: "Reaching now"), reachingNow)
 
             if !onTap.isEmpty {
-                group(String(localized: "Only when you tap"), onTap, footer: nil)
+                group(String(localized: "Only when you tap"), onTap)
             }
 
             if !available.isEmpty {
-                group(String(localized: "Only if you connect them"), available,
-                      footer: String(localized: "These reach nothing until you connect them."))
+                group(String(localized: "Only if you connect them"), available)
             }
         }
         .listStyle(.insetGrouped)
@@ -124,18 +123,13 @@ struct NetworkReachScreen: View {
         .dsSheetDismiss { dismiss() }
     }
 
-    private func group(_ title: String, _ endpoints: [NetworkReach.Endpoint],
-                       footer: String?) -> some View {
+    private func group(_ title: String, _ endpoints: [NetworkReach.Endpoint]) -> some View {
         Section {
             ForEach(endpoints) { endpoint in
                 row(endpoint).dsListCardRow()
             }
         } header: {
             Text(title).dsText(.label12).foregroundStyle(DS.textTertiary)
-        } footer: {
-            if let footer {
-                Text(footer).dsText(.callout15).foregroundStyle(DS.textTertiary)
-            }
         }
     }
 

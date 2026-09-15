@@ -754,9 +754,7 @@ struct FramesFrameSheet: View {
                         .dsText(.subhead13).foregroundStyle(DS.destructive)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
-                    Text(String(localized: "Spent inside this transaction — nothing to revoke."))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    DSFootnote(Text(String(localized: "Spent inside this transaction — nothing to revoke.")))
                 }
             }
         }

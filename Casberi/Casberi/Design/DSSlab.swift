@@ -859,13 +859,10 @@ struct DSSlabNote: View {
     private var left: Bool { plain || accountAct }
 
     var body: some View {
-        Text(LocalizedStringKey(text))
-            // 15pt inside an act (prd §729): the page's words were set at the
-            // meta size, on a page whose content is the words.
-            .dsText(accountAct ? .callout15 : .subhead13).foregroundStyle(DS.textTertiary)
-            .multilineTextAlignment(left ? .leading : .center)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: left ? .leading : .center)
+        // Drawn by `DSFootnote` (prd §747), the one view an explaining
+        // sentence has, so `footnote-audit.py` counts this note with the rest.
+        // 15pt inside an act (prd §729) is the footnote's own rule now.
+        DSFootnote(Text(LocalizedStringKey(text)), centered: !left)
             .padding(.leading, accountAct ? DSActRow.inset : 0)
             .padding(.vertical, left ? DS.Space.s2 : 0)
             .padding(.top, left ? 0 : DS.Space.s1)

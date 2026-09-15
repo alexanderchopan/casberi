@@ -63,8 +63,9 @@ struct DiagnosticsScreen: View {
                     .dsListCardRow()
                 }
             } footer: {
-                Text("Every line is a real result from this device. Copy or share it below and send it back.")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                // "Copy or share it below and send it back" restated the two
+                // controls below it (prd §747).
+                DSFootnote("Every line is a real result from this device.", scale: .page)
             }
             // — The reading leaves the phone (prd §670, 2026-09-10) —
             //

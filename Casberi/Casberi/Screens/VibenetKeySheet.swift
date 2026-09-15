@@ -385,11 +385,7 @@ struct VibenetKeySheet: View {
                 // repaired — `SafeSigner`'s N-of-N ruling (§427) on a chain
                 // with no recovery module at all. A greyed control says "not
                 // now"; this says "not ever, and here is why".
-                Text(String(localized: "This is the only key that can administer this account. Revoking it would leave the account unusable for good, so it can't be revoked from here — authorize another admin key first."))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                DSFootnote(Text(String(localized: "This is the only key that can administer this account. Revoking it would leave the account unusable for good, so it can't be revoked from here — authorize another admin key first.")))
             }
         }
     }

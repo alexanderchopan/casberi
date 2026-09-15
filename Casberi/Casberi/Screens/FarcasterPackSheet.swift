@@ -51,9 +51,6 @@ struct FarcasterPackSheet: View {
     var body: some View {
         DSTray(title: "Follow a starter pack", height: 620) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text("A hand-picked set of people worth reading — follow all of them in one tap.")
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
                 if loading {
                     HStack(spacing: DS.Space.s2) {
                         DSSpinner()

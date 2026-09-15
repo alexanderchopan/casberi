@@ -47,15 +47,11 @@ struct VibenetWatchSheet: View {
                             onWatched()
                             dismiss()
                         })
-                        // ONE sentence, at one size, and it is here rather
-                        // than on the book for a reason worth keeping: it
-                        // answers a question you asked by opening this. On
-                        // the book it was fine print nobody had asked for,
-                        // competing with the roster.
-                        Text("Paste an address, or pick one that was just created below. Watching is free and reads only.")
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        // ONE sentence, and only its second half (prd §747):
+                        // the field and the list below already say "paste an
+                        // address, or pick one". What neither can say is the
+                        // cost and the ceiling.
+                        DSFootnote("Watching is free and reads only.")
                     }
 
                     VibenetDiscoverySection(onWatched: {

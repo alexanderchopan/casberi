@@ -1633,10 +1633,6 @@ struct FeedScreen: View {
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(String(localized: "Its balance and keys are in the sections above."))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, DS.Space.s6)
@@ -10490,12 +10486,11 @@ struct FeedScreen: View {
                 BridgeIcon(name: source, size: DS.Mark.row)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
+                    // "New things from X land here." is gone (prd §747): the
+                    // line above already says this is everything SO FAR.
                     Text("That's everything from \(source) so far · \(countLabel(rows))")
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textSecondary)
-                    Text("New things from \(source) land here.")
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textTertiary)
                 }
                 .multilineTextAlignment(.leading)
                 Spacer(minLength: 0)

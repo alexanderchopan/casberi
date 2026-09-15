@@ -90,7 +90,6 @@ struct HuggingFaceScreen: View {
                                  proof: lastResult)
             // Names the accepted shapes, because pasting a model page is
             // how most people will arrive (`normalize` takes the owner).
-            DSSlabNote(text: "A name like meta-llama, or any Hugging Face link.", plain: true)
         }
     }
 

@@ -210,11 +210,9 @@ struct VibenetAuthorizeSheet: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .dsWell(cornerRadius: DS.Radius.control, recessed: true)
                 if let parsedActor {
-                    Text(parsedActor.isDelegate
+                    DSFootnote(Text(parsedActor.isDelegate
                          ? String(localized: "Reads as an account address — that account becomes a delegate.")
-                         : String(localized: "Reads as a P-256 public key — another phone's own key."))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.textTertiary)
+                         : String(localized: "Reads as a P-256 public key — another phone's own key.")))
                 } else if !pasted.isEmpty {
                     Text(String(localized: "That's neither a 64-byte public key nor a 20-byte address."))
                         .dsText(.label11)

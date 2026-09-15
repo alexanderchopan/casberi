@@ -752,7 +752,8 @@ struct SocialProfileCard: View {
                     Text("No \(other) account by that name.")
                         .dsText(.callout15).foregroundStyle(DS.textTertiary)
                 } else {
-                    Text("\(other) accounts by that name — tap to watch one.")
+                    // "— tap to watch one" restated the rows under it (prd §747).
+                    Text("\(other) accounts by that name")
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                     ForEach(elsewhere) { hit in
                         BridgeSearchResultRow(

@@ -772,6 +772,19 @@ step "Setup copy audit"
 "$ROOT/scripts/setup-copy-audit.py" || fail "a connect page drifted past its copy budget — see the output above"
 print -P "%F{green}✓ setup copy audit%f"
 
+# The same rule for every OTHER screen (prd §747, user: "one explaining
+# sentence per screen at most, and only if it says something the controls
+# don't"). The audit above holds the connect pages; everywhere else the rule
+# lived in memory, which is how §218b's "one gray sentence" grew back to five.
+# An explaining sentence has one view, `DSFootnote`, and this counts it: one
+# per screen file unless a reasoned allowance names the file, and no footer or
+# footnote-rung sentence drawn by hand in tertiary ink.
+step "Footnote audit"
+"$ROOT/scripts/footnote-audit.py" --self-test >/dev/null \
+  || fail "the footnote audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/footnote-audit.py" || fail "a screen grew a second explaining sentence, or drew one by hand — see the output above"
+print -P "%F{green}✓ footnote audit%f"
+
 # The setup screen's SHAPE, where the copy audit above governs its words
 # (prd §608). Static, no build. Mechanical for the reason the copy audit is:
 # the vocabulary was standard and the ANATOMY was not — sixty-two screens

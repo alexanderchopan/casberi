@@ -64,8 +64,7 @@ struct ENSRenewCard: View {
                 }
             }
 
-            Text("A transaction you sign there — never here.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            DSFootnote("A transaction you sign there — never here.")
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -129,9 +128,7 @@ struct ENSRenewCard: View {
                     DSSpecRow(label: Text("Network fee"), value: Text(verbatim: fee))
                 }
             }
-            Text("Priced in dollars and paid in ETH, so the exact amount moves. Your wallet sends a little over and ENS refunds the difference.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+            DSFootnote("Priced in dollars and paid in ETH, so the exact amount moves. Your wallet sends a little over and ENS refunds the difference.")
         }
     }
 

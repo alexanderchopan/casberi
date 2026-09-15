@@ -188,7 +188,6 @@ struct XArchiveImportScreen: View {
             // outside the footer — it is the sole explanation of verbs
             // that cost network, so it stays beside them rather than
             // moving to the bottom with the fine print.
-            DSSlabNote(text: "Your archive names the post, not the person, and your reply, not the one it answered. This asks X for both.", plain: true)
         }
     }
 

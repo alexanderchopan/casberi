@@ -267,10 +267,7 @@ struct ImportUpkeepSection: View {
         if held > 0 || staleness != nil {
             if plain {
                 if held > 0 { removeLine }
-                Text(footerText)
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                footnote
                     .padding(.vertical, DS.Space.s2)
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
@@ -281,11 +278,15 @@ struct ImportUpkeepSection: View {
                     // The staleness line leads when there is one — it is the
                     // fact worth reading — and the removal's own promise
                     // follows it.
-                    Text(footerText)
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    footnote
                 }
             }
         }
+    }
+
+    /// The one sentence, drawn once for both layouts (prd §747).
+    private var footnote: some View {
+        DSFootnote(Text(footerText), scale: plain ? .meta : .page)
     }
 
     private var removeLine: some View {

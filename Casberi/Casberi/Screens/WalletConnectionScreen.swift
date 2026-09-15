@@ -76,17 +76,14 @@ struct WalletConnectionScreen: View {
             }
             .frame(minHeight: AccountFactRow.height)
             .plainAccountRow()
-            Text("A Bitcoin address is read too, from its own public API.")
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s2)
-                .plainAccountRow()
+            // "A Bitcoin address is read too, from its own public API." is
+            // gone (prd §747): the row above says Bitcoin is read when you
+            // watch one, and where the app reaches is stated once, in
+            // Settings (§702).
             // The promise, and the only thing left on this page that is not a
             // chain — the Disconnect that used to sit under it belongs to the
             // account page's exits (see this file's doc).
-            Text("Read-only — watching can never trade or move funds. Activity is public, read across chains directly on \(DS.device).")
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            DSFootnote("Read-only — watching can never trade or move funds. Activity is public, read across chains directly on \(DS.device).")
                 .padding(.top, DS.Space.s3)
                 .padding(.bottom, ShellMetrics.bottomInset)
                 .plainAccountRow()

@@ -417,16 +417,12 @@ struct AccountDetailSheet: View {
                     // baseline is the librarian; without it there is none to
                     // state (prd §718).
                     if librarianOn {
-                        Text("The librarian sends things to \(keyedAgent.company) on its own to name and summarize them.")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        DSFootnote("The librarian sends things to \(keyedAgent.company) on its own to name and summarize them.")
                     }
                 } else if let keyedAgent {
-                    Text(librarianOn
+                    DSFootnote(Text(librarianOn
                          ? "Your \(keyedAgent.agent) key answers when you tap, and the librarian sends things to \(keyedAgent.company) on its own to name and summarize them."
-                         : "Your \(keyedAgent.agent) key answers when you tap — that question and its matched things go to \(keyedAgent.company), per answer.")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
+                         : "Your \(keyedAgent.agent) key answers when you tap — that question and its matched things go to \(keyedAgent.company), per answer."))
                 }
             }
             // iCloud sync. The container binds at launch, so a fresh flip says
@@ -485,9 +481,7 @@ struct AccountDetailSheet: View {
             // that an end-to-end claim requires ADP, and the honest way to
             // keep it is to say what today is.
             if icloudSync {
-                Text("Encrypted, but Apple holds the keys. Advanced Data Protection (\(DS.settingsAppName) › your name › iCloud) makes it yours alone.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                DSFootnote("Encrypted, but Apple holds the keys. Advanced Data Protection (\(DS.settingsAppName) › your name › iCloud) makes it yours alone.")
             }
             toggleRow("Hide previews", "…in the app switcher",
                       isOn: Binding(get: { hidePreviews }, set: { hidePreviews = $0; DSHaptic.tap() }))
@@ -526,9 +520,7 @@ struct AccountDetailSheet: View {
             // because the on-device model is deliberately NOT redacted — it
             // never leaves, and "what's my wifi password?" is a fair question
             // to ask your own corpus.
-            Text("Passwords and recovery phrases are kept out of search, Siri, and anything sent with your key.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+            DSFootnote("Passwords and recovery phrases are kept out of search, Siri, and anything sent with your key.")
         }
     }
 
@@ -614,11 +606,9 @@ struct AccountDetailSheet: View {
                         // summary states only whose key is saved.
                         : (AgentKey.active.map { String(localized: "\($0.agent) key saved") }
                             ?? String(localized: "No key saved")))
-            (AskSurface.enabled
+            DSFootnote(AskSurface.enabled
                 ? Text("The question and its matched things go straight to the provider. They bill you directly.")
                 : Text("What you send goes straight to the provider. They bill you directly."))
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
             // What THIS agent adds beyond a plain text answer — changes with
             // the picker below it, so the choice is informed before a key is
             // even saved (honesty rule: capability copy per agent, not one
@@ -707,13 +697,11 @@ struct AccountDetailSheet: View {
                     .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
                     .settleIn()
             }
-            // Derived from the providers themselves (2026-07-31) rather than
-            // hand-listed: the old sentence named six consoles and silently
-            // went stale the moment a seventh provider landed. `console` is
-            // already a property on every case, so this can't drift again.
-            Text("From the agent's own console. It stays in \(DS.device)'s Keychain and goes only to that provider.")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+            // No sentence under the key field (prd §747). "From the agent's
+            // own console. It stays in Keychain and goes only to that
+            // provider." said where the card's one disclosure above already
+            // says it goes straight to the provider, in §729's banned
+            // Keychain-reassurance shape.
         }
     }
 
@@ -795,9 +783,7 @@ struct AccountDetailSheet: View {
                                     set: { notifySettings.quiet.enabled = $0; saveNotify() }))
             // The ceiling, stated rather than hidden. There is no server, so
             // there is no push: the app looks when iOS lets it look.
-            Text("No server, so nothing is pushed — the app looks when the system lets it. Each says when the thing happened, not when it arrived.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+            DSFootnote("No server, so nothing is pushed — the app looks when the system lets it. Each says when the thing happened, not when it arrived.")
         }
         .task { notifyAuthorized = await Notifications.authorized() }
     }

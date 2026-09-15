@@ -353,10 +353,8 @@ struct VibenetCreateSheet: View {
                     .foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text(String(localized: "Test money on an experimental network."))
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-                    .frame(maxWidth: .infinity)
+                DSFootnote(Text(String(localized: "Test money on an experimental network.")),
+                           centered: true)
             }
         }
     }
@@ -416,11 +414,8 @@ struct VibenetCreateSheet: View {
                 .accessibilityLabel(copied ? String(localized: "Address copied")
                                            : String(localized: "Copy address"))
             }
-            // The act is in `pinnedAction`; what is left is what it will mean.
-            Text(String(localized: "Watching puts it in this room with your other accounts."))
-                .dsText(.label11)
-                .foregroundStyle(DS.textTertiary)
-                .frame(maxWidth: .infinity)
+            // The act is in `pinnedAction`, and it says what it will do
+            // (prd §747 deleted the sentence restating it).
         }
     }
 

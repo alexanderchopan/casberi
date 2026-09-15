@@ -118,7 +118,6 @@ struct RadicleScreen: View {
                                     ? String(localized: "Asking the seed…")
                                     : String(localized: "Reading the seed…"),
                                  proof: lastResult)
-            DSSlabNote(text: "An id like rad:z3gqcJ…, or any Radicle link.", plain: true)
         }
     }
 
