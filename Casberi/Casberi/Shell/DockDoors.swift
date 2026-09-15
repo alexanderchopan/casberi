@@ -27,6 +27,8 @@ struct DockDoors: View {
     /// The zoom anchor the door grows out of, shared with the iPad rail's own
     /// avatar under the same id.
     var zoomNS: Namespace.ID? = nil
+    /// Pops one frame; set while anything is pushed (prd §767).
+    var onBack: (() -> Void)? = nil
 
     private var markSize: CGFloat { DSDock.agentSize(fold: chrome.fold) }
 
@@ -35,6 +37,7 @@ struct DockDoors: View {
                    refreshSpin: chrome.refreshPulse,
                    pullTension: chrome.pullTension,
                    zoomNS: zoomNS,
-                   size: markSize)
+                   size: markSize,
+                   onBack: onBack)
     }
 }

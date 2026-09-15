@@ -93,6 +93,12 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
 /// family's rows share the feed row's leading column.
 struct DSGlyphLead: View {
     let glyph: String
+    /// Ink for a glyph that states a STATE (prd §767) — Settings' on-device
+    /// lock, a saved key. Everything else stays primary.
+    var tint: Color = DS.textPrimary
+    /// Bump for one bounce (a milestone the row just crossed).
+    var bounce = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -101,7 +107,11 @@ struct DSGlyphLead: View {
             Image(systemName: glyph)
                 .accessibilityHidden(true)
                 .dsGlyph(.caption, weight: .semibold)
-                .foregroundStyle(DS.textPrimary)
+                .foregroundStyle(tint)
+                // A row that flips in place (Theme) swaps its glyph; a glyph
+                // that never changes never transitions.
+                .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace.downUp))
+                .symbolEffect(.bounce, value: bounce)
         }
     }
 }

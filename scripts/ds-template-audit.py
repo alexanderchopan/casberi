@@ -91,8 +91,6 @@ EXEMPT = {
     "Screens/DevnetSendConsole.swift": (1, "the join bar between two legs, a drawing carried by an overlay"),
     "Screens/PrivacyDevnetFigures.swift": (2, "the figure's own encodings: an aged proof's outlined tick and the sponsor mark its legend names"),
     # ── A real pill, kept on a stated reason and OWED.
-    "Screens/AppsScreen.swift": (2, "the Accounts door's Yours | All segment — a user-ruled design §715 declined to migrate; "
-                                    "a choice, owed to Chip only on a new ruling"),
     "Screens/WalletFeedTiles.swift": (1, "the wallet crown's face chips — a choice, but each carries a face, a value and a delta "
                                          "Chip cannot; owed with the room-head migration"),
     "GenUI/GenRenderer.swift": (5, "a distribution bar's clip and an eyebrow over artwork are drawings; the Suggest element's "

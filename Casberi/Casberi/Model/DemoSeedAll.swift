@@ -4717,7 +4717,7 @@ enum DemoSeedAll {
             }
         }
         out += (0..<2).map { i in
-            row(.event, ["Intro call — 30 min", "Design pairing — 60 min"][i],
+            row(.event, ["Intro call", "Design pairing"][i],
                 source: ["Cal.com", "Calendly"][i], ref: "demo:booking:\(i)",
                 days: Double(-2 - i * 2), hour: 15, content: "Booked by a guest") { t in
                 t.endAt = t.capturedAt.addingTimeInterval(Double(i == 0 ? 30 : 60) * 60)

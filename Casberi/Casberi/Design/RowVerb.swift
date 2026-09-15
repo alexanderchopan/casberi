@@ -30,7 +30,7 @@ import SwiftUI
 /// secondary for automatic, tertiary for Soon — which is the one verb that
 /// opens nothing, so it is the one row with no chevron (§83).
 enum RowVerb {
-    case connect, watch, automatic, fix, open, soon
+    case connect, watch, automatic, fix, soon
     case allow, signIn, addKey, importFile
 
     var label: String {
@@ -43,7 +43,6 @@ enum RowVerb {
         case .watch:   "Watch"
         case .automatic: "Automatic"
         case .fix:     "Fix"
-        case .open:    "Open"
         case .soon:    "Soon"
         }
     }
@@ -53,7 +52,6 @@ enum RowVerb {
         case .connect, .watch, .allow, .signIn, .addKey, .importFile: DS.tint
         case .automatic: DS.textSecondary
         case .fix:       DS.attention
-        case .open:      DS.confirm
         case .soon:      DS.textTertiary
         }
     }

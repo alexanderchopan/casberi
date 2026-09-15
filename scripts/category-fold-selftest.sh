@@ -299,8 +299,10 @@ if re.search(r"Circle\(\)\s*\.strokeBorder", chip):
 # it is the tile — so the hit region is whatever the chip is, drawn by the
 # same call as its rings. A `Capsule` here would be a stadium 61 wide and 56
 # tall under a tile whose corners are 21: pressable past its own corners.
-if "contentShape(chipShape(tile: isCategory, outer: true))" not in chip:
-    sys.exit("✗ the chip's hit region is no longer chipShape(tile: isCategory) — the shape every\n"
+# `isWord` since prd §767: "All" is a tile too, and `isWord` is exactly the
+# categories plus "All".
+if "contentShape(chipShape(tile: isWord, outer: true))" not in chip:
+    sys.exit("✗ the chip's hit region is no longer chipShape(tile: isWord) — the shape every\n"
              "  ring is drawn from — so a tile and its pressable region can disagree.")
 if "Capsule(" in chip:
     sys.exit("✗ a Capsule is back in chip(_:) — every chip outline goes through chipShape (prd §662).")

@@ -132,6 +132,9 @@ enum CategoryFold {
         "Reading":  "book",
         "Shopping": "cart",
         "Notes":    "note.text",
+        // "All" is a tile since prd §767: the inbox, since the room is
+        // every account's newest in one place.
+        "All":      "tray.full",
     ]
 
     /// Fold ONE category over an ordered chip list. The folded chip takes the

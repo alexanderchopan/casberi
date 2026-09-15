@@ -171,7 +171,10 @@ struct SourceChips: View {
         let count = categoryCount
         guard count > 0 else { return Self.tileFloorCell }
         guard count >= Self.restingTiles else { return Self.tileFloorCell }
-        let cells = CGFloat(min(count, Self.restingTiles)) + (count > Self.restingTiles ? 0.5 : 0)
+        // "All" is a tile since prd §767, so it takes a cell rather than a mark.
+        let allTile: CGFloat = labels.contains("All") ? 1 : 0
+        let cells = CGFloat(min(count, Self.restingTiles)) + allTile
+            + (count > Self.restingTiles ? 0.5 : 0)
         // What is left past "All": the strip minus its resting inset and
         // every non-category chip laid out ahead of the tiles (All, and the
         // pinned room when present).
@@ -179,7 +182,7 @@ struct SourceChips: View {
         // It is not in `labels`, and a tail nobody counted is a tail the
         // three spread tiles cover — the door a new person needs most would
         // rest one scroll past the edge.
-        let marks = CGFloat(labels.count - count) + 1
+        let marks = CGFloat(labels.count - count) - allTile + 1
         let available = stripWidth - stripInset - marks * (chipSize + Self.chipGap)
         return max(Self.tileFloorCell, (available / cells).rounded(.down))
     }
@@ -988,7 +991,7 @@ struct SourceChips: View {
         let isOn = label == active
         VStack(spacing: 2) {
             CategoryGlyph(name: CategoryFold.glyph(for: label), size: glyphSize, isActive: isOn)
-            Text(label)
+            Text(label == "All" ? String(localized: "All") : label)
                 .dsText(.dockCaption10)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -1061,35 +1064,14 @@ struct SourceChips: View {
             ZStack {
                 switch label {
                 case "All":
-                    // The one WORD in a strip of fixed 46pt icon chips, so it
-                    // has to live inside that circle at every text size —
-                    // at accessibility sizes it grew past the glass and
-                    // collided with the catalogue door beside it (measured at
-                    // accessibility-extra-large, 2026-07-21). It still scales;
-                    // it just stops at the circle instead of spilling over the
-                    // door. The neighbouring chips are app icons, which don't
-                    // scale at all, so the strip's rhythm is fixed by design.
-                    // Tint, with the category words beside it (2026-08-11):
-                    // "All" is a navigation word in a strip of navigation
-                    // words, and leaving it ink while every other word went
-                    // tint would read as one chip singled out for no reason.
-                    // Its circle-not-capsule shape is the documented exception
-                    // above; its COLOUR is not one.
-                    // Semibold with the category words, never apart from them —
-                    // see `categoryCapsule`. These two are the strip's only
-                    // words, so a weight on one alone makes the other read as
-                    // an inert label rather than a door.
-                    Text("All").dsText(.label12)
-                        .fontWeight(.semibold)
-                        // The same ink rule as `categoryCapsule` — one
-                        // convention across the strip's two word shapes.
-                        .foregroundStyle(isActive ? .white : DS.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.55)
-                        .frame(width: iconSize, height: iconSize)
-                        .clipShape(Circle())
-                        .wordChipFill(active: isActive, ns: selectionNS,
-                                      shape: chipShape(tile: false, outer: false))
+                    // A TILE, like every category (prd §767). "All" was the
+                    // strip's one word in a 46pt circle, so the selection
+                    // changed shape as it travelled — a blue disc on All, a
+                    // blue tile everywhere else — and All was the one chip
+                    // with no glyph. §662 kept the circle as the strip's
+                    // anchor; position already anchors it (first after the
+                    // face), and the pick is the one shape everywhere now.
+                    categoryTile(label)
                 case Pinboard.room:
                     // The pinned room (2026-08-10) — see `PinnedChipMark`.
                     PinnedChipMark(size: iconSize)
@@ -1126,7 +1108,7 @@ struct SourceChips: View {
             }
             // A capsule takes its width from its own word (or, on the rail,
             // from the rail) — height alone is shared with the circles.
-            .frame(width: isCategory ? nil : iconSize, height: iconSize)
+            .frame(width: isWord ? nil : iconSize, height: iconSize)
             // The identity flip (2026-07-14, user): the chip is where
             // switching sources actually happens, so it's the one true flip
             // moment — the Feed source header dropped its own animated icon
@@ -1225,7 +1207,7 @@ struct SourceChips: View {
                 // "you have not filtered anything", competing with the chip you
                 // just pressed.
                 if !isActive, standing != "All", !standing.isEmpty, label == standing {
-                    chipShape(tile: isCategory, outer: true)
+                    chipShape(tile: isWord, outer: true)
                         .strokeBorder(DS.tint.opacity(0.55), lineWidth: 2)
                 }
                 if isActive, !isWord {
@@ -1252,13 +1234,13 @@ struct SourceChips: View {
             // used to be). A leaf, so the bridge store is read there (§670).
             .overlay {
                 ChipAttentionRing(seats: attentionSeats,
-                                  shape: chipShape(tile: isCategory, outer: true),
+                                  shape: chipShape(tile: isWord, outer: true),
                                   enabled: !(isActive && !isWord))
             }
             // A category's outer frame is its CELL (§662e) — the tile sits
             // centred in it, and the cell is what spreads across the strip.
             // On the rail the tile sizes to the rail and the cell is moot.
-            .frame(width: isCategory ? (axis == .horizontal ? categoryCell : nil) : chipSize,
+            .frame(width: isWord ? (axis == .horizontal ? categoryCell : nil) : chipSize,
                    height: chipSize)
             // THE LIFT: the chip grows from its foot, so it rises out of the
             // slab the way a Mac dock icon does, and the tallest draws over
@@ -1296,7 +1278,7 @@ struct SourceChips: View {
             // `chipShape` since §662 — the same one call as every ring, so
             // the tile's hit region is the tile and the circle's is the
             // circle, with nothing to keep in step.
-            .contentShape(chipShape(tile: isCategory, outer: true))
+            .contentShape(chipShape(tile: isWord, outer: true))
             .dsHover()
         }
         .buttonStyle(.plain)

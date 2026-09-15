@@ -7437,25 +7437,10 @@ struct FeedScreen: View {
                 // the last surface still counting. "Monday, Jun 15 · 1" was the
                 // clearest case against it — a number that can only ever say
                 // "one", under a header already carrying the date.
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(label)
-                        .dsText(.heading24)
-                        // The tail cools (prd §254, 2026-07-31). §218 already
-                        // folds everything past a week into week/month groups;
-                        // the type never followed, so a month from last spring
-                        // shouted in the same 22pt bold as Today. One weight
-                        // step down — size and weight are the only hierarchy
-                        // this app has (no kerning, no caps, design law), and
-                        // dropping a SIZE step instead would land the header at
-                        // 18pt, which is the row titles beneath it.
-                        .fontWeight(coarse.contains(label) ? .semibold : .bold)
-                        // THE DAY WEARS THE BRAND HUE (prd §740, user: "pink
-                        // for all the days is good. it breaks up the content
-                        // of the day and the rows"). Every label this builder
-                        // draws is a day or a folded week/month — the All
-                        // feed groups by nothing else — so there is no
-                        // `dated` question to ask here.
-                        .foregroundStyle(DS.brandInk)
+                // THE CLAUSE RIDES THE NAME'S BASELINE when it fits (prd §767),
+                // the shape a room's divider already had with its count.
+                FeedDayDivider(label: label,
+                               weight: coarse.contains(label) ? .semibold : .bold) {
                     // What the group was mostly about (prd §379) — coarse
                     // groups only, and only when a term actually recurs, so
                     // the recent days keep their bare date and nothing is

@@ -2264,7 +2264,11 @@ struct RootShell: View {
                     // cannot see — and the octopus standing here had none
                     // either, so nothing on the phone loses a transition it
                     // used to have. The iPad rail's own pair keeps theirs.
-                    DockDoors(onSettings: { sceneState.route.toggle(.settings) })
+                    // On a pushed screen the seat is the way back (prd §767),
+                    // so no screen needs a back chevron at its top edge.
+                    DockDoors(onSettings: { sceneState.route.toggle(.settings) },
+                              onBack: sceneState.route.path.isEmpty
+                                  ? nil : { sceneState.route.goBack() })
                 }
                 }
                 // Pinned to the trailing edge (2026-08-07). The iPad cap the

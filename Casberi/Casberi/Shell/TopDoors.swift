@@ -33,6 +33,12 @@ struct AvatarChip: View {
     /// frame could not do — a door standing at 46 in a row of 40s reads as a
     /// slightly grown one, the near-miss `DSDock.agentSize` exists to prevent.
     var size: CGFloat = 46
+    /// Set on a pushed screen, and the seat becomes the BACK door (prd §767).
+    /// §752 put every back control in the content or the bottom band, and the
+    /// system's chevron still stood at the top of every pushed screen. This
+    /// seat already survives into every one of them and already meant "put it
+    /// back" on Settings (the 2026-09-12 toggle), so it says so everywhere.
+    var onBack: (() -> Void)? = nil
     /// Taps bounce the door (Telegram grammar, same as the tab icons).
     @State private var avatarBounce = 0
     /// Last time the door actually opened — see `openSettings()` below.
@@ -51,7 +57,11 @@ struct AvatarChip: View {
                 // "the doors" since 2026-07-20 and only the catalogue door ever
                 // had. An opaque 46pt disc over the glass would also leave the
                 // union merging two shapes nobody can see through.
-                if let zoomNS {
+                if onBack != nil {
+                    BackDoorGlyph()
+                        .modifier(DoorBounce(trigger: avatarBounce))
+                        .transition(.opacity)
+                } else if let zoomNS {
                     AvatarDoor()
                         .modifier(DoorBounce(trigger: avatarBounce))
                         .modifier(DoorSpin(trigger: refreshSpin, tension: pullTension))
@@ -80,8 +90,8 @@ struct AvatarChip: View {
             .dsHover()
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Settings")
-        .dsTooltip(String(localized: "Settings"))
+        .accessibilityLabel(onBack == nil ? Text("Settings") : Text("Back"))
+        .dsTooltip(onBack == nil ? String(localized: "Settings") : String(localized: "Back"))
         // See `SourceChips.catalogueChip`'s comment: a plain Button here
         // competes with the paged feed TabView's pan recognizer for the
         // first touch (Apple forums thread 725366) and can need several
@@ -97,7 +107,7 @@ struct AvatarChip: View {
         guard now - lastOpen > 0.4 else { return }
         lastOpen = now
         avatarBounce += 1
-        onSettings()
+        if let onBack { onBack() } else { onSettings() }
     }
 }
 
@@ -160,6 +170,17 @@ struct AvatarDoor: View {
                 .dsGlyph(.feature, weight: .regular)
                 .foregroundStyle(DS.textSecondary)
         }
+    }
+}
+
+/// The seat's glyph on a pushed screen (prd §767): the way back, in the circle
+/// the face stands in, at the face's own presence.
+struct BackDoorGlyph: View {
+    var body: some View {
+        Image(systemName: "chevron.backward")
+            .dsGlyph(.title, weight: .semibold)
+            .foregroundStyle(DS.textPrimary)
+            .accessibilityHidden(true)
     }
 }
 

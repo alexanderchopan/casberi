@@ -468,10 +468,16 @@ struct BandRow: View {
     /// says it — printing it twice was the first thing that looked wrong on
     /// screen. Display only: `thing.title` is untouched, so search, Spotlight,
     /// and the sheet all still read the full sentence.
+    /// An event's start, which rides the LINE since prd §767. It was glued to
+    /// the title ("Joiner site visit · 11:07 AM"), so the one fact the row's
+    /// mark cannot say sat in the name while the line under it said the name
+    /// of the calendar the mark had already said.
+    private var eventClock: String? {
+        thing.kind == .event
+            ? thing.capturedAt.formatted(date: .omitted, time: .shortened) : nil
+    }
+
     private var titleText: String {
-        if thing.kind == .event {
-            return "\(thing.title) · \(thing.capturedAt.formatted(date: .omitted, time: .shortened))"
-        }
         if moneyAmount != nil, let amount = thing.transferAmount,
            let range = thing.title.range(of: " \(amount)") {
             return thing.title.replacingCharacters(in: range, with: "")
@@ -633,6 +639,7 @@ struct BandRow: View {
         // Bound once: `project` reaches a store per call, and both the line and
         // the spoken label read it (the row-cost discipline, prd §626).
         let project = self.project
+        let leader = self.leader
         // ONE ANATOMY (prd §744). The title leads; the line says who and
         // where. `sourceBadge` still means "this room mixes sources" — what it
         // used to draw as a 17pt badge over the lead is now the line's first
@@ -641,7 +648,7 @@ struct BandRow: View {
         DSFeedRow(name: imageOnly ? thing.source : titleText,
                   nameLines: imageOnly ? 1 : (thing.source == "Kalshi" ? 3 : 2),
                   emphasized: emphasized, done: done, ripple: rippleIndex,
-                  line: imageOnly ? nil : line(project: project)) {
+                  line: imageOnly ? nil : line(project: project, leader: leader)) {
             leaderView
                 .overlay(alignment: .bottomTrailing) {
                     if thing.isFlagged {
@@ -707,7 +714,8 @@ struct BandRow: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(ThingVoice.rowLabel(for: thing, title: titleText,
+        .accessibilityLabel(ThingVoice.rowLabel(for: thing,
+                                                title: eventClock.map { "\(titleText), \($0)" } ?? titleText,
                                                 project: project, live: live,
                                                 countdown: countdown,
                                                 isNew: newSinceLastSeen,
@@ -742,20 +750,24 @@ struct BandRow: View {
     /// Who and where, as ONE `Text` (prd §744): the source's name first when
     /// the room mixes sources, then the project label in its source's legible
     /// hue — the hue the trailing label wore since §240, kept on the same words.
-    private func line(project: String?) -> Text? {
-        let named: String? = sourceBadge ? thing.source : nil
+    /// THE LINE SAYS WHAT THE LEAD CANNOT (prd §767): an event's start, then
+    /// the source's name only where the lead is not already the source's own
+    /// mark, then the project. A calendar row led by the Calendar mark and
+    /// lined "Calendar" said one fact twice and dropped the clock into the
+    /// title to make room. A face, a publisher's icon or a link's picture does
+    /// not name the network, so those rows keep the name.
+    private func line(project: String?, leader: Leader) -> Text? {
+        let named: String? = sourceBadge && leader != .glyph ? thing.source : nil
         let hue = labelHue
         let labelled: Text? = project.map { p in
             Text(p)
                 .foregroundStyle(hue ?? DS.textSecondary)
                 .fontWeight(hue != nil ? .semibold : .regular)
         }
-        switch (named, labelled) {
-        case (nil, nil):          return nil
-        case (let s?, nil):       return Text(s)
-        case (nil, let p?):       return p
-        case (let s?, let p?):    return Text(s) + Text(verbatim: " · ") + p
-        }
+        let parts = [eventClock.map { Text($0) }, named.map { Text($0) }, labelled]
+            .compactMap { $0 }
+        guard let first = parts.first else { return nil }
+        return parts.dropFirst().reduce(first) { $0 + Text(verbatim: " · ") + $1 }
     }
 }
 

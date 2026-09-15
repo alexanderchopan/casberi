@@ -359,7 +359,9 @@ if cm < fe:
 if strip.count("ChipMelt(") < 2:
     sys.exit("✗ the tail mark no longer melts under the face like a chip — it would show a\n"
              "  hard edge sliding under the avatar's glass (2026-07-19).")
-if "let marks = CGFloat(labels.count - count) + 1" not in src:
+# "All" is a tile since prd §767, so it leaves the mark count and takes a cell;
+# the tail mark is still the "+ 1".
+if "let marks = CGFloat(labels.count - count) - allTile + 1" not in src:
     sys.exit("✗ categoryCell no longer counts the tail mark — at three categories the spread\n"
              "  tiles cover it and the catalogue rests one scroll past the edge.")
 mark = src[src.find("private var catalogueMark"):src.find("private func openApps")]

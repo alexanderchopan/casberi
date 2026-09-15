@@ -3023,6 +3023,12 @@ struct MainSurface: View {
                 // reason the feed did — `dsAdaptiveContentWidth` centres them
                 // — and collide at the same widths.
                 pushedRoom(node).dsRailColumn(showsRail)
+                    // NO BACK CHEVRON AT THE TOP (prd §767, §752's rule). The
+                    // dock's leading seat is the back door on every pushed
+                    // screen; hiding the system button also switches off
+                    // UIKit's edge swipe, which `DSSwipeBack` turns back on.
+                    .navigationBarBackButtonHidden(true)
+                    .background(DSSwipeBack())
             }
         }
         // The connect form, raised over wherever the person is (prd §218) —

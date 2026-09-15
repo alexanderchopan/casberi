@@ -50,6 +50,9 @@ struct SettingsScreen: View {
                     // field. (A big avatar hero lived here for an hour on
                     // 2026-07-10 and was rejected: personalization paints your
                     // SPACE — it never builds a profile of you.)
+                    DSScreenHead(title: Text("Settings"))
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.bottom, DS.Space.s2)
                     rowList(allRows)
                     colophon
                 }
@@ -61,7 +64,9 @@ struct SettingsScreen: View {
         .dsSoftScrollEdges()
             .dsAdaptiveContentWidth()
             .dsPageBackground()
-            .dsScreenTitle("Settings")
+            // Name in the content, the way back in the dock's seat (prd §767).
+            .navigationTitle(Text("Settings"))
+            .toolbar(.hidden, for: .navigationBar)
             .onAppear { readCounts(); markMilestone() }
             // The count is re-read when the app comes back to this screen —
             // a sweep may have landed things while it was away — and never
@@ -150,7 +155,8 @@ struct SettingsScreen: View {
     private struct RowSpec {
         let title: String
         let value: String
-        var valueColor: Color = DS.textTertiary
+        /// What the row's end promises (prd §767).
+        var trail: AccountRow.Trail = .opens
         var avatar: UIImage? = nil
         /// The Avatar row always shows the photo seat — the photo once set,
         /// the Casberi mark before (it marks where the photo lands).
@@ -239,7 +245,7 @@ struct SettingsScreen: View {
             // complete state, not a gap ("Good afternoon" is a whole sentence).
             RowSpec(title: "Name",
                     value: ProfileStore.shared.name ?? String(localized: "Add your name"),
-                    badge: ("signature", DS.textSecondary),
+                    badge: ("signature", DS.textPrimary),
                     action: {
                         // The draft opens on what's stored, so Save on an
                         // untouched field is a no-op rather than a wipe.
@@ -285,14 +291,15 @@ struct SettingsScreen: View {
             // be named after what it governs.
             RowSpec(title: "Dock order",
                     value: CategoryOrder.current.prefix(3).joined(separator: ", "),
-                    badge: ("arrow.up.arrow.down", DS.textSecondary),
+                    badge: ("arrow.up.arrow.down", DS.textPrimary),
                     action: { chipOrderOpen = true }),
             // A binary choice earns a tap, not a tray with one empty screen's
             // worth of nothing below two chips (report 2026-07-09) — the row
             // itself flips, and the icon states which way.
             RowSpec(title: "Theme",
                     value: ThemeStore.shared.summary,
-                    badge: (ThemeStore.shared.isLight ? "sun.max.fill" : "moon.fill", DS.textSecondary),
+                    trail: .flips,
+                    badge: (ThemeStore.shared.isLight ? "sun.max.fill" : "moon.fill", DS.textPrimary),
                     action: {
                         DSHaptic.tap()
                         withAnimation(DS.Motion.standard) { ThemeStore.shared.isLight.toggle() }
@@ -310,14 +317,14 @@ struct SettingsScreen: View {
                     // A fixed accent regardless of what's actually on — the
                     // badge previews no state here, so it takes the neutral
                     // tone (2026-08-10, was DS.tint).
-                    badge: ("bell.badge.fill", DS.neutralBadge),
+                    badge: ("bell.badge.fill", DS.textPrimary),
                     action: { detail = .notifications }),
             // The app's own language — an override that switches Casberi live,
             // on top of the device language (LanguageStore). One tap opens the
             // tray; the trailing fact states the language in force.
             RowSpec(title: "Language",
                     value: LanguageStore.shared.summary,
-                    badge: ("globe", DS.textSecondary),
+                    badge: ("globe", DS.textPrimary),
                     action: { languageOpen = true }),
             // Your key (prd §67) — the BYO escape hatch: on-device by default,
             // your own agent key adds a per-answer "Try with your key".
@@ -340,8 +347,7 @@ struct SettingsScreen: View {
                                String(localized: "%@ answers on tap"), $0.agent)
                            : $0.agent
                     } ?? String(localized: "Bring your own agent"),
-                    valueColor: keyed ? DS.confirm : DS.textTertiary,
-                    badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
+                    badge: ("key.fill", keyed ? DS.confirm : DS.textPrimary),
                     action: { detail = .key }),
             // "What you can do" (2026-07-11 as "How it works") sat here until
             // 2026-09-10 — a sheet holding one sentence, reached from a row
@@ -355,7 +361,7 @@ struct SettingsScreen: View {
                     value: String(localized: "Test and report"),
                     // The instrument, not the trace — the ECG line is the
                     // Feed tab's glyph (ruled 2026-07-10: Feed keeps it).
-                    badge: ("stethoscope", DS.textSecondary),
+                    badge: ("stethoscope", DS.textPrimary),
                     action: { diagnosticsOpen = true }),
             // Support returns (2026-07-28) now that a real channel exists
             // behind it — privacy@casberi.app is a monitored inbox, not the
@@ -364,7 +370,8 @@ struct SettingsScreen: View {
             // no version restated — that's Updates' job).
             RowSpec(title: "Support",
                     value: String(localized: "Email us"),
-                    badge: ("envelope", DS.textSecondary),
+                    trail: .leaves,
+                    badge: ("envelope", DS.textPrimary),
                     action: {
                         DSHaptic.tap()
                         if let url = URL(string: "mailto:privacy@casberi.app?subject=Casberi%20feedback") {
@@ -426,7 +433,7 @@ struct SettingsScreen: View {
         return [RowSpec(
             title: "See the demo",
             value: String(localized: "Sample data from every source"),
-            badge: ("sparkles", .orange),
+            badge: ("eye", DS.textPrimary),
             action: {
                 DSHaptic.tap()
                 DemoMode.begin(store: bridgeStore)
@@ -504,7 +511,7 @@ struct SettingsScreen: View {
             ForEach(rows, id: \.title) { row in
                 Button(action: row.action) {
                     AccountRow(title: row.title, value: row.value,
-                               valueColor: row.valueColor,
+                               trail: row.trail,
                                avatar: row.avatar,
                                avatarSeat: row.avatarSeat,
                                badge: row.badge,
@@ -522,9 +529,14 @@ struct SettingsScreen: View {
 /// A Settings row in the feed's grammar: glyph seat leading, title, the live
 /// fact trailing. The avatar row seats the photo — identity earns the image.
 struct AccountRow: View {
+    /// What the tap does, said at the row's end (prd §767): a door takes the
+    /// chevron, a trip out of the app takes the arrow, a flip in place takes
+    /// nothing — the glyph swapping is the answer.
+    enum Trail { case opens, flips, leaves }
+
     let title: String
     let value: String
-    var valueColor: Color = DS.textTertiary
+    var trail: Trail = .opens
     var avatar: UIImage? = nil
     var avatarSeat = false
     var badge: (symbol: String, color: Color)? = nil
@@ -533,56 +545,57 @@ struct AccountRow: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// THE PUSH ROW'S ANATOMY (prd §764, §767): a 26pt lead, a regular 17pt
+    /// title, the fact at 12pt in the tertiary tier, then the trail. It was a
+    /// 34pt tinted squircle, an 18pt title and a 17pt fact — the only rows in
+    /// the app on those three numbers — with three lead species (a seal, a
+    /// green lock, gray squares) and a green fact for a saved key.
     var body: some View {
         HStack(spacing: DS.Space.s3) {
-            if avatarSeat {
-                AvatarSeat(avatar: avatar, size: 34)
-            } else if let avatar {
-                Image(uiImage: avatar)
-                    .resizable().scaledToFill()
-                    .frame(width: 34, height: 34)
-                    .clipShape(Circle())
-            } else if let badge {
-                // The row's trust mark: the same colored-glyph-in-a-squircle
-                // the Apps page speaks — `IconChip`'s `.wash` style since
-                // 2026-08-10.
-                IconChip(tone: badge.color, size: 34, style: .wash) {
-                    Image(systemName: badge.symbol)
-                        .accessibilityHidden(true)
-                        .dsGlyph(.subhead)
-                        // Two rows genuinely SWAP their glyph rather than
-                        // opening anything — Theme's sun/moon and
-                        // Privacy's lock/cloud — and for a setting that
-                        // flips in place the swap IS the feedback. A row
-                        // whose symbol never changes never transitions,
-                        // so this costs the others nothing.
-                        .contentTransition(reduceMotion ? .identity
-                                           : .symbolEffect(.replace.downUp))
-                        .symbolEffect(.bounce, value: bounce)
-                }
-            }
-            // The title doubles as its own catalog key — localized at
-            // render so the stored English still drives sort/id.
+            lead
+                .frame(width: DS.Mark.row, height: DS.Mark.row)
+            // The title doubles as its own catalog key — localized at render
+            // so the stored English still drives sort/id.
             Text(LocalizedStringKey(title))
-                .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
             Spacer(minLength: DS.Space.s2)
             if !value.isEmpty {
                 // A fact that leads with a live number arrives by counting to
-                // it (CountUpText renders any other shape plainly, including
-                // a translation that doesn't lead with the digits).
+                // it (CountUpText renders any other shape plainly).
                 Group {
                     if countsUp, !reduceMotion { CountUpText(text: value) }
                     else { Text(value) }
                 }
-                .dsText(.body17).foregroundStyle(valueColor)
+                .dsText(.subhead12)
+                .foregroundStyle(DS.textTertiary)
                 .multilineTextAlignment(.trailing)
                 .lineLimit(2)
             }
+            switch trail {
+            case .opens:  DSPushRowTrail()
+            case .leaves: DSPushRowTrail(glyph: "arrow.up.right")
+            case .flips:  EmptyView()
+            }
         }
-        .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
         .contentShape(Rectangle())
+    }
+
+    /// The avatar row seats the photo — identity earns the image. Every other
+    /// row leads with the glyph disc the head rows and Readings rows wear.
+    @ViewBuilder private var lead: some View {
+        if avatarSeat {
+            AvatarSeat(avatar: avatar, size: DS.Mark.row)
+        } else if let avatar {
+            Image(uiImage: avatar)
+                .resizable().scaledToFill()
+                .frame(width: DS.Mark.row, height: DS.Mark.row)
+                .clipShape(Circle())
+        } else if let badge {
+            DSGlyphLead(glyph: badge.symbol, tint: badge.color, bounce: bounce)
+        }
     }
 }
 

@@ -159,6 +159,8 @@ struct AppsScreen: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Space.s6) {
+                        // The screen's name, in the content (prd §767).
+                        DSScreenHead(title: Text("Accounts"))
                         // The search field leads the page (user ruling,
                         // 2026-07-23: "make sure the search bar is at the
                         // top") — a visible slab, not the nav bar's
@@ -264,7 +266,10 @@ struct AppsScreen: View {
         .dsAdaptiveContentWidth(.reading)
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .dsScreenTitle("Accounts")
+        // The name is in the content and the way back is the dock's seat, so
+        // nothing stands at the top edge (prd §767).
+        .navigationTitle(Text("Accounts"))
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $pairing) { PairClientSheet() }
         #if DEBUG
         .navigationDestination(item: $probe) { p in
@@ -569,43 +574,29 @@ struct AppsScreen: View {
     /// may have no rows under the other, and a selected chip over an empty
     /// list reads as a broken screen.
     private var scopeSegment: some View {
-        HStack(spacing: 2) {
-            scopeSegmentHalf(String(localized: "Yours"), on: yoursOnly) { yoursOnly = true }
-            scopeSegmentHalf(String(localized: "All"), on: !yoursOnly) { yoursOnly = false }
+        // THE CATEGORY STRIP'S OWN CHIPS (prd §767). The pair was a solid-blue
+        // pill in a faint track beside a glass strip whose pick is `tintDim`:
+        // two selection styles for one kind of choice, one row apart. Same two
+        // words, both always visible, the chosen one filled.
+        DSSectionSwitcher(sections: AccountsHeld.allCases,
+                          active: yoursOnly ? .yours : .all,
+                          scrolls: false) { picked in
+            withAnimation(DS.Motion.standard) {
+                yoursOnly = picked == .yours
+                scope = CatalogScope(name: nil)
+            }
         }
-        .padding(.horizontal, 2)
-        // The TRACK is drawn at its own 36pt (a 32pt half plus 2pt each side)
-        // while each half is TARGETED at 44 — a `background` is proposed the
-        // floored box, so the pinned height centres the track where it always
-        // sat. The row it shares with the 56pt search slab does not grow.
-        .background {
-            Capsule(style: .continuous)
-                .fill(DS.fillFaint)
-                .frame(height: 36)
-        }
+        .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("Which accounts"))
     }
 
-    private func scopeSegmentHalf(_ word: String, on: Bool, act: @escaping () -> Void) -> some View {
-        Button {
-            guard !on else { return }
-            DSHaptic.tap()
-            withAnimation(DS.Motion.standard) {
-                act()
-                scope = CatalogScope(name: nil)
-            }
-        } label: {
-            Text(word)
-                .dsText(.label12)
-                .foregroundStyle(on ? Color.white : DS.textSecondary)
-                .padding(.horizontal, DS.Space.s3)
-                .frame(minHeight: 32)
-                .background(on ? DS.tint : Color.clear, in: Capsule(style: .continuous))
-                .dsTapTarget(Capsule(style: .continuous))
+    private enum AccountsHeld: String, CaseIterable, DSSectionScope {
+        case yours, all
+        var id: String { rawValue }
+        var label: String {
+            self == .yours ? String(localized: "Yours") : String(localized: "All")
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(on ? .isSelected : [])
     }
 
     // MARK: - Search field (prd §200 — leads the page, not a nav-bar pull-down)
@@ -946,8 +937,9 @@ struct AppsScreen: View {
                             }
                         }
                     VStack(alignment: .leading, spacing: 2) {
+                        // Regular, as every row title is (prd §764).
                         Text(entry.offer.name)
-                            .dsText(.body17).fontWeight(.semibold)
+                            .dsText(.body17)
                             .foregroundStyle(soon ? DS.textSecondary : DS.textPrimary)
                             .lineLimit(1)
                         // The qualifier badge died here (user, 2026-07-16:
@@ -979,6 +971,10 @@ struct AppsScreen: View {
                     // `rowAction`, so it was one act drawn twice.
                     if let rowVerb = verb(entry) {
                         DSPushRowTrail(verb: rowVerb)
+                    } else if entry.tier == 2, entry.bridge != nil {
+                        // A connected account is a door, and the chevron says
+                        // so; "Open" in green on every one said nothing (§767).
+                        DSPushRowTrail()
                     }
                 }
                 .contentShape(Rectangle())
@@ -1034,7 +1030,9 @@ struct AppsScreen: View {
             // Broken connection — Fix opens management, where Reconnect lives.
             return entry.bridge == nil ? nil : .fix
         case 2:
-            return entry.bridge == nil ? nil : .open
+            // No word (prd §767): the row's chevron is the door, and a word on
+            // every connected row carries nothing. The trail draws it.
+            return nil
         case 1:
             if entry.offer.needsSetup {
                 // Setup bridges collect input first — Connect raises their

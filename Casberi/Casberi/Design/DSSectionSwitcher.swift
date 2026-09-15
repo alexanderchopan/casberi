@@ -70,6 +70,10 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
     /// optional so the caller is never forced to decide which one "the" alarm
     /// belongs to — several can want you at once, and each says so for itself.
     var attention: Set<Scope> = []
+    /// `false` for a pair that always fits (prd §767): the same chips in the
+    /// same glass, hugging their words, with no scroll view to fight a
+    /// neighbour for width.
+    var scrolls = true
     // **`embedded` IS DELETED (prd §747, 2026-09-15).** It was §547's flag for
     // drawing this switcher as the lower deck of `DSRoomRailSlab` — no glass of
     // its own, no outer padding, no rest fill, and a concentric rounded-rect
@@ -128,6 +132,23 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
     }
 
     var body: some View {
+        if scrolls { scrolling } else { fitted }
+    }
+
+    private var fitted: some View {
+        DSGlassContainer(spacing: 2) {
+            HStack(spacing: 2) {
+                ForEach(sections) { section in
+                    chip(section)
+                }
+            }
+        }
+        .padding(4)
+        .clipShape(Capsule(style: .continuous))
+        .dsGlass(cornerRadius: 999)
+    }
+
+    private var scrolling: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 DSGlassContainer(spacing: 2) {
