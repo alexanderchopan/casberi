@@ -56092,3 +56092,39 @@ ellipsis.
 **Not done.** A press-and-slide label over a face (the Mac dock's hover name) was
 considered for long names and left out: the room already names the pick, and a
 floating label is a fourth object in the band.
+
+## §752b — The section tiles are on every page, flat, and the Readings rows lead with the same glyphs (user, on build 590: "none of the wallet buttons w glyphs showed", then "i think they should always show shouldn't they it's weird if they don't", then "the list items for the sections should also share the glyph so indentation is the same. i thought the readings row below was useful … and also look how it looks all messed up", 2026-09-15)
+
+**What 590 did.** §752 drew the tiles only inside a section. Wallet Home kept the
+Readings rows, so opening the room showed no tiles at all, and the user took the
+feature for missing. Inside Activity the tiles rendered as dark smeared columns:
+each tile wore `dsWidgetSurface` (the sheet fill, a 150pt pour gradient and an
+18pt shadow), a surface built for large cards and not for eight 52pt controls in
+a grid.
+
+**The ruling.**
+
+- **The grid is on every page.** Home is head, tiles, Actions, Readings; a
+  section is figure, tiles, list. The head and every figure share the 300pt
+  slot, so the grid lands at the same height on each page. Home is the lit tile.
+- **The Readings rows stay** (user: "i thought the readings row below was
+  useful"). The tiles move you; the rows preview what is behind each section
+  ("4 live approvals") before the tap.
+- **Every row under the tiles leads with a 26pt glyph disc.** The Readings rows
+  wear their section's tile glyph, the same disc `DevnetVerbRow` and Follow
+  address wear, so Actions and Readings share one leading column. The attention
+  dot moves to the disc's corner.
+- **Actions stay on Home only** (the user's question: "where the buttons would go
+  for create account etc."). Create account, Send, Top up and Follow address sit
+  under the tiles on Home, where §750 put them.
+- **A tile is flat**: one `surfaceRaised` fill, the tint on the pick, no shadow,
+  no pour.
+- **One scope draws no grid** (§83).
+
+**Not this ruling.** In the same screenshot the account faces (§753) float over
+the list above the dock. That is §753's placement and is left to it.
+
+**What enforces it.** `wallet-section-selftest.sh` requires the tiles between the
+head and Actions in the chrome, and `section.glyph` in the Readings rows.
+
+**UNSEEN on a device.**

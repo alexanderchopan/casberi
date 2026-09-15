@@ -11,7 +11,8 @@ protocol DSTileScope: DSSectionScope {
     var glyph: String { get }
 }
 
-/// THE SCOPES AS TILES — what a pushed scope wears under its figure (prd §752,
+/// THE SCOPES AS TILES — under the head on Home and under the figure in every
+/// section, so the grid is one control in one place on every page (prd §752,
 /// 2026-09-15, user: "i don't want the app to have controls at the top of the
 /// screen anywhere", then, between a strip and buttons, "the buttons seem more
 /// utile").
@@ -35,6 +36,15 @@ protocol DSTileScope: DSSectionScope {
 /// as the same kind of thing as the folder that opened the room. A short last
 /// row is left-aligned, and every column is the same width in every room.
 ///
+/// **Flat, never raised** (§752b). The first build gave each tile
+/// `dsWidgetSurface` — the big cards' sheet fill, a 150pt pour and an 18pt
+/// shadow — and eight of them side by side smeared into dark columns on the
+/// device. A tile is a control on the page, like the dock's, so it takes one
+/// flat `surfaceRaised` fill and nothing else.
+///
+/// **A room with one scope draws no grid** (§83): a single tile is a control
+/// that offers nothing.
+///
 /// **It scrolls away with the page.** Pinning was tried in §495 and a plain
 /// `List` section header does not hold a row-less section on screen; a scope
 /// list is short in most rooms, so the cost is a flick back up.
@@ -57,12 +67,14 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     }
 
     var body: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2),
-                                 count: Self.columns),
-                  alignment: .leading,
-                  spacing: DS.Space.s2) {
-            ForEach(sections) { section in
-                tile(section)
+        if sections.count > 1 {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2),
+                                     count: Self.columns),
+                      alignment: .leading,
+                      spacing: DS.Space.s2) {
+                ForEach(sections) { section in
+                    tile(section)
+                }
             }
         }
     }
@@ -87,10 +99,7 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
             }
             .foregroundStyle(isOn ? Color.white : DS.textPrimary)
             .frame(maxWidth: .infinity, minHeight: Self.tileHeight)
-            .background {
-                if isOn { shape.fill(DS.tint) }
-            }
-            .dsWidgetSurface(cornerRadius: DS.Radius.sheet)
+            .background { shape.fill(isOn ? DS.tint : DS.surfaceRaised) }
             // The dot the strip and the rows carry, at the tile's corner: the
             // same 6pt mark saying the same thing.
             .overlay(alignment: .topTrailing) {

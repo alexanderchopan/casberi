@@ -5031,13 +5031,11 @@ struct FeedScreen: View {
             // a body that writes its own observed state costs.
             let framesScope = FramesSection.resolve(chrome.framesSection,
                                                     present: chrome.framesSections)
-            // **THE CHROME LEADS, AND ON HOME IT IS THE WHOLE ROOM** (prd
-            // §747). Was figure-then-slab. The slab is gone: on Home the
-            // accounts are the deck's cards, each carrying this room's crown
-            // (`FramesRoomFigure` on its `.home` arm) and its acts, and the
-            // readings are door rows under it. Off Home the chrome is the
-            // scope header and the figure section below draws exactly as it
-            // did.
+            // **ON HOME THE CHROME IS THE WHOLE ROOM; OFF HOME IT FOLLOWS THE
+            // FIGURE** (prd §750, §752). On Home the figure section is not
+            // emitted and the chrome draws the head (`FramesRoomFigure` on its
+            // `.home` arm), Actions and the Readings rows. Off Home the scope's
+            // figure draws first and the chrome under it is the section tiles.
             if framesScope != .home {
                 Section {
                     FramesRoomFigure(head: head,
@@ -5092,11 +5090,12 @@ struct FeedScreen: View {
             // writing its own observed state costs.
             let privacyScope = PrivacyDevnetSection.resolve(
                 chrome.privacyDevnetSection, present: chrome.privacyDevnetSections)
-            // **THE CHROME LEADS, AND ON HOME IT IS THE WHOLE ROOM** (prd
-            // §747). Was figure-then-slab. The slab is gone: on Home the
-            // accounts are the deck's cards, each carrying this room's own
-            // card pinned to `.home` as its crown and the send console as its
-            // acts, and the readings are door rows under it.
+            // **ON HOME THE CHROME IS THE WHOLE ROOM; OFF HOME IT FOLLOWS THE
+            // FIGURE** (prd §750, §752). On Home the figure section is not
+            // emitted and the chrome draws the head (this room's card pinned
+            // to `.home`), the send console as Actions, and the Readings rows.
+            // Off Home the scope's figure draws first and the chrome under it
+            // is the section tiles.
             if privacyScope != .home {
             Section {
                 PrivacyDevnetRoomCard(
@@ -6619,12 +6618,12 @@ struct FeedScreen: View {
             // "never say one thing twice"; in every other scope the room is
             // answering a different question entirely.
 
-            // **THE CHROME LEADS, AND ON HOME IT IS THE WHOLE ROOM** (prd
-            // §747). The crown no longer stands in a section of its own: it
-            // rides the account card inside `walletScopeChromeSection`, which
-            // is what gives a watched wallet's name the card's full width
-            // instead of a 66pt rail slot's leftovers. Off Home this emits the
-            // scope header only, and the figure section below is untouched.
+            // **ON HOME THE CHROME IS THE WHOLE ROOM; OFF HOME IT FOLLOWS THE
+            // FIGURE** (prd §750, §752). The crown no longer stands in a
+            // section of its own: on Home it is the chrome's head, over Actions
+            // and the Readings rows. Off Home the figure section below draws
+            // first and `walletScopeChromeSection` follows it as the section
+            // tiles.
             // THE TOGGLE SITS BELOW THE SPARKLINE, IN THE CONTENT (user ruling,
             // 2026-08-26: *"we need to have those toggles be below the
             // sparkline"*, and *"we cannot have four rows of chips"*).
