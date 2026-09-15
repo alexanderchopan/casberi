@@ -141,6 +141,15 @@ KNOWN_NON_REACH=(
   # Mail app-password pages, and the Google Takeout page you download your
   # own Gemini export from — all opened in the browser, none read by us.
   appleid.apple.com myaccount.google.com takeout.google.com
+  # Gmail's own message permalink (prd §735, 2026-09-15) — kind (1) exactly:
+  # the URL a mail row's "From — in your inbox" HANDS OUT on tap, resolved by
+  # the Gmail app if it is installed and by the person's browser if it isn't.
+  # Casberi never fetches it; the Gmail bridge's read is `imap.gmail.com`, a
+  # DIFFERENT host, and it IS in the registry — so this door can never stand
+  # in for an undisclosed call. The day anything here starts fetching a
+  # `mail.google.com` URL instead of opening it, this entry is wrong (the
+  # faucet lesson above, word for word).
+  mail.google.com
   # The wallet picker's universal links (2026-08-01). Each is a DOOR the person
   # taps to hand the pairing URI to their own wallet app — iOS routes it to the
   # installed app, or to that wallet's web page if it isn't installed. Casberi

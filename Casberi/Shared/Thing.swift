@@ -1084,6 +1084,26 @@ final class Thing {
     /// nil when the row carries neither.
     var externalLink: String? = nil
 
+    // MARK: - Mail (2026-09-15, prd §735)
+
+    /// The RFC 5322 `Message-ID` of a mail thing, bare (no angle brackets) —
+    /// what the sheet's "From — in your inbox" row presses through to.
+    ///
+    /// The IMAP `UID` in `sourceRef` is a number local to one mailbox on one
+    /// server: it dedupes, it reconciles, and it means nothing to Mail or to
+    /// Gmail. The `Message-ID` is the message's identity everywhere, it rides
+    /// the same `ENVELOPE` the subject does (RFC 3501 §7.4.2, field 10), and
+    /// `IMAPClient` has parsed it since 2026-08-06 and thrown it away. This is
+    /// where it stops being thrown away.
+    ///
+    /// Stored NORMALIZED (`MailLocation.normalizedID`), so a row either holds
+    /// something that can build a door or holds nil — never a `NIL` atom or a
+    /// truncated envelope wearing the shape of an address. nil for every
+    /// non-mail thing, and for mail landed before this existed until the next
+    /// refresh sees its UID again (`MailIngest.refresh` backfills the window
+    /// it already fetched, at no extra request).
+    var mailMessageID: String? = nil
+
     // MARK: - Notes delight (2026-07-28, NoteLinks.swift)
 
     /// An Obsidian note's own `[[wikilink]]` targets, captured at ingest

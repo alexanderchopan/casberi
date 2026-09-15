@@ -99,25 +99,43 @@ grep -q 'case .showInFiles:' "$SHEET" \
 grep -q 'case .showInFiles:' "$FEED" \
   || { echo "✗ the feed no longer performs .showInFiles"; exit 1; }
 
-# The row the feedback pointed at. `specRow` is a label; `fromRow` is the one
-# that can become a door.
-grep -q 'fromRow(PlaceWords.line(for: thing))' "$SHEET" \
-  || { echo "✗ the sheet's From row is a plain label again — the press that was"; \
-       echo "  asked for goes nowhere"; exit 1; }
-# …and it must still stand down when there is nowhere to go. The gate is the
-# CHEAP one (no bookmark resolve in a view body), so a stale bookmark reaches
-# the tap and its sentence — but an unparseable ref, an unconnected folder and
-# an unclaimed scheme never draw a chevron at all.
-grep -q 'FilesLocation.components(ref: thing.sourceRef) != nil' "$SHEET" \
-  || { echo "✗ the From row is a button unconditionally — a row that shrugs is"; \
-       echo "  the dead control §83 bans"; exit 1; }
-grep -q 'thing.source == "Files", FilesStore.shared.connected' "$SHEET" \
-  || { echo "✗ the From row's door no longer requires a connected folder"; exit 1; }
+# NEGATIVE (prd §736): the "From" row is DELETED and must not come back. It
+# said "in your folder" for every file in the corpus, then "in Receipts" for
+# one, then became a door — and the door was always in the dial too. Wiring a
+# label a third time is the move this guard exists to catch.
+# Read from COMMENT-STRIPPED copies, because both files carry a tombstone
+# saying what was deleted and why (the Obsidian/Cursor lesson this harness
+# already pays below): a guard grepping raw source fires on the prose
+# explaining the rule.
+python3 - "$SHEET" "$VERBS" <<'ROWGONE' || exit 1
+import sys
+def code(path):
+    return "\n".join(l for l in open(path).read().splitlines()
+                     if not l.strip().startswith("//"))
+sheet, verbs = code(sys.argv[1]), code(sys.argv[2])
+if "fromRow" in sheet:
+    print("✗ the sheet's From row is back (prd §736 deleted it) — the folder is the")
+    print("  DISC's word now, and a label column above it is the same fact twice")
+    sys.exit(1)
+if "PlaceWords" in verbs:
+    print("✗ PlaceWords is back — prd §736 deleted it from the MODEL, not just the")
+    print("  surface (§723), so nothing composes a place phrase anywhere")
+    sys.exit(1)
+ROWGONE
 
-# The From row's words come from the folder, not from six fixed words.
-grep -q 'FilesLocation.folderName(ref: thing.sourceRef' "$VERBS" \
-  || { echo "✗ PlaceWords no longer names the folder — every file in the corpus"; \
-       echo "  reads 'in your folder' again"; exit 1; }
+# The DISC's words come from the folder, not from the app's name (prd §736).
+# This guard used to be about the "From" row; that row is deleted and its one
+# surviving fact moved here, so the guard moved with it.
+grep -q 'FilesLocation.folderName(' "$VERBS" \
+  || { echo "✗ the Files verb no longer names the folder — every file in the corpus"; \
+       echo "  reads 'Show in Files' again, and the fact §408 added is gone"; exit 1; }
+grep -q 'Show in \\(\$0)' "$VERBS" \
+  || { echo "✗ the Files verb's label no longer interpolates the folder name"; exit 1; }
+# …and `dialLabel` must strip "Show in ", or a 16-character label falls past
+# the 12-char gate to `shortLabel` and the disc reads "Files" again.
+grep -q '"Show in "' Casberi/Casberi/Screens/ThingStage.swift \
+  || { echo "✗ dialLabel does not strip 'Show in ' — 'Show in Receipts' is 16 chars,"; \
+       echo "  falls through to shortLabel, and the disc silently says 'Files'"; exit 1; }
 
 # NEGATIVE, and read from a COMMENT-STRIPPED copy: this file's own doc explains
 # the rule by naming what it must not do, so a guard grepping raw source fires

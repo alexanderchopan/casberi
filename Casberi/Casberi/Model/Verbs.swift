@@ -18,6 +18,12 @@ struct Verb: Identifiable {
         case translate                // read: system Translation sheet over the thing's own text
         case viewImage                // read: the picture itself, full screen and zoomable
         case showInFiles              // read hand-off: the Files app, at the folder this file is in
+        /// The address card for one of YOUR watched wallets (prd §736) — the
+        /// only destination in this enum that never leaves the app, and the
+        /// reason it is a case rather than a `.openURL`: the place a wallet
+        /// row comes from is a screen Casberi draws, not a page anyone
+        /// publishes.
+        case openAddress(String)
     }
     let label: String
     let icon: String
@@ -41,6 +47,7 @@ struct Verb: Identifiable {
         case .translate:      return "Translate"
         case .viewImage:      return "Zoom"
         case .showInFiles:    return "Files"
+        case .openAddress:    return "Wallet"
         }
     }
     var id: String { label }
@@ -228,6 +235,44 @@ enum VerbDerivation {
                                 icon: isExplorer || isRevoke || isHegota ? "arrow.up.right" : "safari",
                                 action: .openURL(url)))
             }
+            // WHICH WALLET THIS CAME OUT OF, as a door (2026-09-15, prd §736).
+            //
+            // It replaces the spec table's "From — in Main". That row was the
+            // last one in the table still saying something true about THIS
+            // thing rather than about the app, and it was a label: a person
+            // watching several wallets could read which one a card spend or a
+            // DeFi move belonged to and had no way to go there. The stage
+            // sheets have had that door since §369 (the receipt's subject face
+            // opens the address card); a mint, a spend or a DeFi move gets no
+            // stage, so it had the fact and no door — which is the §408 shape
+            // exactly, one kind over.
+            //
+            // The WORD is the wallet's own name, following `walletVerbs`'
+            // "Explorer" ruling (2026-08-04): the glyph says it opens
+            // something, the word's job is to say where you land. So the
+            // sentence the deleted row made — "this came from Main" — is now
+            // the button that goes to Main.
+            //
+            // `displayName(forStored:)` is the gate as well as the word: it
+            // carries the ENS/SNS-vs-hex matching (a name-watched wallet lands
+            // its things stamped with the resolved hex, so a raw compare
+            // misses every one) and answers nil for an address that is not a
+            // watched wallet or a row from before `walletAddress` existed —
+            // so an unnamed stranger's transaction grows no disc rather than
+            // one onto a card about nobody.
+            //
+            // A store read inside this function, which runs off the main actor
+            // in GenUI composition: the `ObsidianStore.shared.vaultName`
+            // precedent below, and the same grade — an in-memory scan of a
+            // watch list capped in the single digits, never the disk read the
+            // Files arm's own comment refuses.
+            if let stored = thing.walletAddress,
+               let name = WalletStore.shared.displayName(forStored: stored) {
+                out.append(Verb(label: WalletStore.isAutoName(name, for: stored)
+                                    ? "Wallet \(name)" : name,
+                                icon: "wallet.bifold",
+                                action: .openAddress(stored)))
+            }
         case .screenshot:
             // The picture itself, full screen and zoomable, IN the app
             // (2026-08-02 — user: tapping Photos "doesn't go to the Photos app
@@ -309,11 +354,28 @@ enum VerbDerivation {
             // the feed's context-menu builder (prd §260), while resolving the
             // bookmark is a `FilesStore` read. The gate is three string tests
             // and a set lookup, which is what that context can afford.
+            //
+            // THE WORD IS THE FOLDER since 2026-09-15 (prd §736): "Show in
+            // Receipts", not "Show in Files". `walletVerbs`' "Explorer" ruling
+            // (2026-08-04) one step more specific — the glyph says it opens
+            // something, the word says where you land — and it is what lets
+            // the spec table's "From — in Receipts" row be deleted rather than
+            // merely wired up: the fact that row carried is the only thing it
+            // had, and the button now carries it.
+            //
+            // `FilesStore.shared.folderName` is an in-memory string (the
+            // `ObsidianStore.shared.vaultName` read below is the precedent),
+            // never `folderURL()` — resolving the bookmark is the disk read
+            // this function's own comment above refuses. It falls back to the
+            // app's name when the folder has none, so the disc always says a
+            // real destination.
             if thing.source == "Files",
                FilesLocation.components(ref: thing.sourceRef) != nil,
                HandOffState.installedSchemes.contains(FilesLocation.revealScheme) {
-                out.append(Verb(label: "Show in Files", icon: "folder",
-                                action: .showInFiles))
+                let folder = FilesLocation.folderName(
+                    ref: thing.sourceRef, connectedFolder: FilesStore.shared.folderName)
+                out.append(Verb(label: folder.map { "Show in \($0)" } ?? "Show in Files",
+                                icon: "folder", action: .showInFiles))
             }
         case .note:
             // A note's next action: it becomes a reminder (S4 — captures
@@ -428,19 +490,44 @@ enum VerbDerivation {
         // address or a display name (`mailtoURL`) — a coin flip, not a
         // ruling.
         //
-        // Still only the app, never the message: no iOS URL opens a specific
-        // email (`message://<Message-ID>` is macOS Mail's, undocumented here,
-        // and mail things key on the IMAP UID anyway). "Open in Gmail" is the
-        // whole promise, the same one "Open in Calendar" makes. iCloud Mail
-        // gets nothing because Apple publishes no scheme that opens Mail's
-        // inbox — `mailto:` is a composer, and a disc that opens a blank
-        // draft while claiming to open your mail is the dead control §83
-        // bans. The verb drops instead, which is why this reads through
-        // `sourceURL` rather than special-casing the kind.
+        // 2a — THE MESSAGE, not the app (2026-09-15, prd §735).
+        //
+        // This block used to be a paragraph explaining why it could not exist:
+        // "no iOS URL opens a specific email (`message://<Message-ID>` is
+        // macOS Mail's, undocumented here, and mail things key on the IMAP UID
+        // anyway)", and iCloud Mail therefore got no hand-off at all. Only the
+        // last clause was true, and it was the work rather than the obstacle —
+        // the UID is mailbox-local, so the door needed the `Message-ID`, which
+        // `Thing.mailMessageID` now keeps. `MailLocation` carries the rest and
+        // states what each half is measured to.
+        //
+        // Placed BEFORE `handsOffAlready` is read, so a mail that has this
+        // door doesn't also get the front-door one below: two discs a
+        // millimetre apart, one landing on the message and one on the inbox,
+        // is the menu brief §12 bans — and the Gmail exception exists to
+        // guarantee a door, which this already is.
+        let mailDoor: URL? = thing.kind == .mail
+            ? MailLocation.messageURL(source: thing.source,
+                                      messageID: thing.mailMessageID,
+                                      schemes: HandOffState.installedSchemes)
+            : nil
+        if let mailDoor, let app = MailLocation.appName(source: thing.source) {
+            out.append(Verb(label: "Open in \(app)", icon: "envelope.open",
+                            action: .openURL(mailDoor)))
+        }
+
+        // The front door, for everything else — and for a mail whose envelope
+        // never carried a usable `Message-ID`. "Open in Gmail" is the whole
+        // promise there, the same one "Open in Calendar" makes. iCloud Mail
+        // still gets nothing on that path, because Apple publishes no scheme
+        // that opens Mail's INBOX — `message:` opens a message or nothing, and
+        // `mailto:` is a composer, so a disc that opens a blank draft while
+        // claiming to open your mail would be the dead control §83 bans.
         let handsOffAlready = out.contains(where: {
             if case .openURL = $0.action { return true } else { return false }
         })
-        if let url = sourceURL(thing.source), !handsOffAlready || thing.source == "Gmail" {
+        if let url = sourceURL(thing.source),
+           !handsOffAlready || (thing.source == "Gmail" && mailDoor == nil) {
             out.append(Verb(label: "Open in \(thing.source)", icon: "arrow.up.right",
                             action: .openURL(url)))
         }
@@ -738,11 +825,17 @@ enum HandOffState {
     /// device — and on Mac Catalyst nothing claims the scheme at all, which is
     /// the platform that turned the Calendar miss above into an App Store
     /// rejection.
+    /// `message` joined 2026-09-15 with the mail door (prd §735), and is the
+    /// `shareddocuments` case exactly: connecting a mailbox over IMAP says the
+    /// person has an ADDRESS, which says nothing about whether Apple Mail is
+    /// set up on this device — reading iCloud Mail entirely on the web is an
+    /// ordinary way to live — and an unclaimed scheme is refused
+    /// asynchronously while reporting success.
     private static let candidates = ["todoist", "googlegmail", "photos-redirect",
                                      "youtube", "obsidian",
                                      "calshow", "x-apple-reminderkit",
                                      "chatgpt", "music", "spotify", "mobilenotes",
-                                     "shareddocuments"]
+                                     "shareddocuments", "message"]
 
     #if DEBUG
     /// The same list, for `-photoVerbProbe`'s census. Exposed rather than
@@ -886,115 +979,29 @@ enum HandOff {
     }
 }
 
-/// The verb line in the sheet header — place words, not system activity.
-enum PlaceWords {
-    static func line(for thing: Thing) -> String {
-        // A public post names its network, not "your session" — the chat-kind
-        // default is for actual chat sessions (ChatGPT/Claude imports), and a
-        // cast or skeet pulled from a feed is neither yours nor a session.
-        if thing.kind == .chat, ["Bluesky", "Farcaster"].contains(thing.source) {
-            return "on \(thing.source)"
-        }
-        // A folder-picked file didn't arrive by mail — "in your inbox" was
-        // written for that case; a Files thing names the folder it lives in.
-        //
-        // And it names it BY NAME since 2026-08-19 (prd §408). "in your
-        // folder" was true of every file in the corpus and told you nothing
-        // about this one — the row a person pointed at when they asked for a
-        // way through to where the file actually is. The immediate parent, so
-        // it reads as a place inside a sentence: "in Receipts", not "in
-        // Documents/2026/Q3/Receipts", which is a field value wearing a
-        // preposition.
-        //
-        // Interpolated rather than localized, the `walletPlace` precedent
-        // below: the folder is a name the person gave a folder, and it is the
-        // same name in every language.
-        if thing.kind == .file, thing.source == "Files" {
-            if let folder = FilesLocation.folderName(ref: thing.sourceRef,
-                                                     connectedFolder: FilesStore.shared.folderName) {
-                return "in \(folder)"
-            }
-            return "in your folder"
-        }
-        // Privacy.com became a `.transaction` on 2026-08-06, and the kind's
-        // default was written for onchain money: its cards are virtual cards
-        // on a bank account, nothing onchain, so "in your wallet" would name a
-        // place this purchase never was. The two onchain card seats keep the
-        // default — a Gnosis Pay or ether.fi spend really does settle from the
-        // wallet the row is about.
-        if thing.kind == .transaction, thing.source == "Privacy" {
-            return "on your card"
-        }
-        // A key authorized or revoked on a watched devnet address is a
-        // `.event` (2026-08-23) — "a moment with a clock" — but the kind's
-        // default was written for a real EventKit calendar, and this
-        // account has never been anywhere near one. Shipped as exactly
-        // that: "From — on your calendar" under a key-authorization
-        // sheet, reported as "it's fucked up".
-        if thing.kind == .event, thing.source == VibenetIdentity.source {
-            return "on vibenet"
-        }
-        // **THE RULE THE `default` BELOW ALREADY STATED, APPLIED TO THE WHOLE
-        // TABLE (2026-09-06, prd §634).** "A kind with no place of its own
-        // says NOTHING rather than 'in your things', which is true of every
-        // row in the corpus and therefore tells you nothing about this one" —
-        // and four of the cases above it were exactly that sentence with a
-        // different verb. `saved by you`, `written by you`, `recorded by you`
-        // and `banked by you` are true of every row a person ever put in this
-        // app; they spent a labelled row, inside its own card, to say "this is
-        // yours", under a title that is already theirs.
-        //
-        // §363 had already made this ruling for ONE kind: `SocialReceptionCard`
-        // replaced the spec table on a social post because "the spec table's
-        // whole contribution was one row reading `From — saved by you`, in its
-        // own card, behind an 80pt label column". It never reached the others.
-        //
-        // What SURVIVES names a real place — an app you could go to, a folder,
-        // a card, a chain. That is a fact about THIS thing; "you saved it" is
-        // a fact about the app.
-        switch thing.kind {
-        case .mail, .file: return "in your inbox"
-        case .event:       return "on your calendar"
-        case .chat:        return "from your session"
-        case .screenshot:  return "in your photos"
-        case .reminder:    return "on your list"
-        case .approval:    return "awaiting your call"
-        case .job, .run, .output: return "from your machines"
-        case .transaction: return walletPlace(for: thing)
-        case .contact:     return "in your contacts"
-        case .product:     return "from a store you follow"
-        case .accessory:   return "in your home"
-        // `.link`, `.note`, `.voice`, `.skill` — see the note above: a link is
-        // saved by you, a note written by you, a voice note recorded by you
-        // and a skill banked by you, every one of them, always.
-        // A kind with no place of its own says NOTHING rather than "in your
-        // things", which is true of every row in the corpus and therefore
-        // tells you nothing about this one — a label column spent on a fact
-        // the eyebrow above already carries. The caller drops the row on "".
-        default:           return ""
-        }
-    }
+// `PlaceWords` was HERE and is DELETED (2026-09-15, prd §736).
+//
+// It composed the thing sheet's "From — in your inbox" row: one place phrase
+// per kind, behind an 80pt label column. §634 had already deleted four of its
+// arms for saying something true of every row in the corpus ("saved by you",
+// "written by you", "recorded by you", "banked by you"), and kept the rest on
+// the test that they "name a real place". Applied to the survivors, that test
+// takes almost all of them too: "in your photos" is true of every screenshot,
+// "in your contacts" of every contact, "in your home" of every accessory,
+// "from your machines" of every run; "awaiting your call" is a state wearing
+// the label "From"; and `.mail` and `.file` shared one arm, so every Dropbox
+// file in the corpus said it arrived in your inbox.
+//
+// Two arms passed — "in Receipts" and "in Main", the only two that said WHICH
+// one — and both are now the word on a button that goes there (`Show in
+// Receipts`, and the wallet's own name on `.openAddress`), following
+// `walletVerbs`' 2026-08-04 ruling that a disc's word names its destination.
+// Everything else the row could say, the dial already said with a door under
+// it, so the row was the same fact twice with the weaker half on top.
+//
+// Deleted from the model, not just the surface (prd §723): nothing composes a
+// place phrase anywhere now. `WalletStore.isAutoName`'s doc names this file's
+// "wallet-place clause" as a caller — that is the `.transaction` arm of
+// `VerbDerivation.verbs(for:)` now, which still needs to tell a name the
+// person typed from a placeholder this app generated.
 
-    /// "in your wallet" → "in Main" / "in your wallet …4f4f" (2026-08-12).
-    ///
-    /// Every Wallet-riding bridge stamps `Thing.walletAddress` with the watched
-    /// address the row belongs to, and a person watching several wallets had no
-    /// way to tell from the sheet WHICH one a card spend or a DeFi move came
-    /// from — "in your wallet" was true and useless. `displayName(forStored:)`
-    /// carries the ENS/SNS-vs-hex matching (a name-watched wallet lands its
-    /// things stamped with the resolved hex, so a raw compare misses every one)
-    /// and returns nil rather than guessing, so an address that isn't a watched
-    /// wallet — or a row from before this field existed — keeps the plain noun.
-    ///
-    /// Two shapes, because a person-given name reads as a place and a hex
-    /// doesn't: a named wallet stands alone ("in Main"), an unnamed one keeps
-    /// the noun it needs to make sense of the hex ("in your wallet …4f4f").
-    private static func walletPlace(for thing: Thing) -> String {
-        guard let stored = thing.walletAddress,
-              let name = WalletStore.shared.displayName(forStored: stored)
-        else { return "in your wallet" }
-        return WalletStore.isAutoName(name, for: stored)
-            ? "in your wallet \(name)"
-            : "in \(name)"
-    }
-}

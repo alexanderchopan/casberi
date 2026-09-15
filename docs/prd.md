@@ -54981,6 +54981,58 @@ host, and §726's door is itself unmeasured).
 
 Not built or run here (no Xcode in this checkout) — the rung change is layout-only; the simulator pass is owed.
 
+## §735 — "From — in your inbox" is a door: a mail row goes to THE MESSAGE, not to the mail app (user: "see how this says from your inbox? Can we make it so that if you tap it, it takes the user to the email in the inbox", 2026-09-15)
+
+**The second time the same row has been pressed by somebody expecting it to be one.** §408 was the first, on a file: "would be great to be able to press here and it takes you to folder where the file is saved". A row that STATES a place is a row people press, and the sheet's spec table had exactly one such row with nothing behind it left.
+
+**The ruling this reverses, and the fact that reverses it.** `VerbDerivation` carried a paragraph explaining why the door could not exist: "no iOS URL opens a specific email (`message://<Message-ID>` is macOS Mail's, undocumented here, and mail things key on the IMAP UID anyway)" — and iCloud Mail therefore got no hand-off at all, while Gmail got one onto the app's front page. Two of those three clauses are wrong.
+
+- `message:` has been **MobileMail's since iPhone OS 1** — it predates the Mac's copy of it. Its one real limit is that the message must already be downloaded and in the **inbox**, which is exactly and only what this bridge lands (`IMAPClient.fetchRecent` reads recent inbox messages). The limit that would have made it useless is the limit the bridge already satisfies by construction.
+- Gmail's is not a scheme at all. `rfc822msgid:` is a documented Gmail search operator, so `https://mail.google.com/mail/u/0/#search/rfc822msgid:<id>` lands on the one message — and the Gmail app claims that host as a universal link, so it opens there when installed and in the browser when it isn't.
+- The third clause was true, and it was the **work** rather than the obstacle: a UID is a number local to one mailbox on one server and means nothing to another app.
+
+**So the fact had to be kept.** `Thing.mailMessageID` — the bare RFC 5322 `Message-ID`, normalized on the way in. It costs no request and never did: it rides the same `ENVELOPE` the subject does (RFC 3501 §7.4.2, field 10), and `IMAPClient` has parsed it since 2026-08-06 and thrown it away ("CARRIED, NOT USED").
+
+**And the mail already landed had to get it too**, or the ruling would ship a door that exists on nothing the person can currently see. `MailIngest.refresh` fetches the twenty newest UIDs with their full envelope on every foreground and discards every one it has already landed — so the fact is in hand and dropped on the floor, twenty rows at a time, forever. It now patches them (`IngestSupport.mailIDlessThings`, newest-first and capped at 100, because the only rows this can ever reach are ones still inside the server's recent window). No extra request, ever.
+
+**Where it is drawn.** `fromRow` in the thing sheet, `FilesLocation`'s shape exactly: a button where there is somewhere to go, the plain row it always was otherwise. The same verb the dial carries, through the same `runVerb`, so the two doors can never behave differently or report differently. The dial's front door stands down where the message door exists — two discs a millimetre apart, one landing on the message and one on the inbox, is the menu brief §12 bans, and the Gmail exception existed to guarantee a door, which this already is.
+
+**What is gated and what deliberately is not.** `message` joins `LSApplicationQueriesSchemes` and `HandOffState.candidates`, and the Apple arm is offered only when something claims it: an unclaimed scheme is refused asynchronously and reports success, which is §83's dead control. Gmail's arm is **ungated on purpose** — an `https` URL always opens something, so it is the one door here that cannot silently do nothing, and gating it on the Gmail APP would delete the door for everyone reading Gmail over IMAP without that app, which is most of this bridge's users since it signs in with an app-specific password. `mail.google.com` joins the network-reach denylist as kind (1), a permalink the person's own browser resolves; the bridge's read is `imap.gmail.com`, a different host, already in the registry.
+
+**What still has no door, stated rather than faked.** A mail whose envelope carried no usable `Message-ID`, and iCloud Mail on a device with no Mail account. Both keep the plain row. `mailto:` is not a fallback for either: it is a composer, and a disc that opens a blank draft under a row reading "in your inbox" is the dead control the old ruling was right to refuse.
+
+**Measured and unmeasured, named.** Gmail's arm is an ordinary URL and a documented operator. Apple's `message:` is documented only in an archived URL-scheme reference, so it is unmeasured at the same grade `shareddocuments://` gets one file over — gated, and measured with `-mailOpenProbe`. `scripts/mail-location-selftest.sh` compiles the shipped `MailLocation.swift` whole and proves the rest: the fence (a `NIL` atom, a truncated envelope, a folded header), the encoding (an unencoded `/` turns Gmail's one search into a PATH — a door onto the *wrong* page, the only failure here worse than none), and the drift guards (the column is in the deployed CloudKit schema, the ingest fills and backfills it, the envelope parser still reads field 10, the front door stands down).
+
+**CloudKit.** `CD_mailMessageID` is additive, so SwiftData needs no version stage — but Production never auto-creates a field, and a TestFlight build mirrors to Production. It is in `docs/cloudkit-schema.ckdb`; the deploy (`docs/cloudkit-deploy.md`) is owed before the next TestFlight, or the door exists on the device that landed the mail and on no other.
+
+Not built or run here (no Xcode in this checkout) — the pure logic is mirrored and green, the simulator pass and `-mailOpenProbe` are owed.
+
+## §736 — The "From" row is DELETED: the dial was already the open button, and the two facts the row alone held are now words on it (user: "can we apply that same principle to all the things that say from something / why even have them say from, why not just have an open button", 2026-09-15)
+
+**Asked the day after §735 made the mail row a door, and it is the right question about that ruling.** The answer is not a third wiring of the same row.
+
+**The finding: the open button already exists, on every kind that named a place.** `VerbDerivation` gives a `.event` "Open in Calendar", a Files `.file` "Show in Files", a social `.chat` "Open thread", a `.transaction` "Explorer", a `.product` "Open in store", a `.screenshot` "Zoom" and "Open in Photos", a Reminders row the `x-apple-reminderkit` hand-off, an Obsidian `.note` "Open in Obsidian" — and, since §735, a `.mail` "Open in Mail" / "Open in Gmail". So the row was not a door waiting to be wired. It was the same fact a second time, stated weaker, above the disc that already did it.
+
+**And §634 set a test the survivors fail.** That ruling deleted four arms of `PlaceWords` for saying something true of every row in the corpus — "saved by you", "written by you", "recorded by you", "banked by you" — and kept the rest on the grounds that they "name a real place". Applied honestly to what was left:
+
+- **"in your photos"** is true of every screenshot, **"in your contacts"** of every contact, **"in your home"** of every accessory, **"from your machines"** of every run. Same sentence, different preposition.
+- **"awaiting your call"** is a state wearing the label "From". Not a place, not a sentence.
+- **`.mail` and `.file` shared one arm**, so every Dropbox file in the corpus read **"in your inbox"** — a fact that is not merely thin but false. The Files carve-out for §408 went in above it and nobody re-read the arm underneath.
+
+**Two arms passed: "in Receipts" and "in Main"** — the only two that said WHICH one. Both are now the word on a button that goes there, following `walletVerbs`' 2026-08-04 ruling that a disc's glyph says it opens something and its word says where you land:
+
+- **"Show in Receipts"**, not "Show in Files" — `FilesLocation.folderName` off the ref the verb already parses, and `FilesStore.shared.folderName` (an in-memory string, the `ObsidianStore.shared.vaultName` precedent; never `folderURL()`, which is the disk read that arm's own comment refuses).
+- **The wallet's own name on a new `Verb.Action.openAddress`** — the only destination in that enum that never leaves the app, because the place a wallet row comes from is a screen Casberi draws. `WalletStore.displayName(forStored:)` is the word and the gate both: it carries the ENS-vs-hex matching and answers nil for an address that is not a watched wallet, so a stranger's transaction grows no disc. The stage sheets have had this door since §369 (the receipt's subject face); a mint, a card spend or a DeFi move gets no stage, so it held the fact and had nowhere to go — §408's shape, one kind over.
+
+**`dialLabel` gains `"Show in "`.** Without it "Show in Receipts" is 16 characters, falls past the 12-char gate to `shortLabel`, and reads "Files" — this whole ruling undone by a length check.
+
+**Deleted from the model, not just the surface (§723).** `PlaceWords` is gone, `walletPlace` with it, `hasFrom` and `fromRow` with them. Nothing composes a place phrase anywhere now. `WalletStore.isAutoName` keeps its caller — it tells a name the person typed from a placeholder this app generated, which is what decides between "Main" and "Wallet …4f4f" on the new disc.
+
+**What the spec table holds now**: Landed, Site, Also saved from, By, Who. Every one a fact about this thing.
+
+**§408 and §735 are not reversed, they are absorbed.** Both were right that people press that row — twice, two different moments, which is evidence and not coincidence. They press it because it makes a claim about a place. The claim now lives on the control that honours it.
+
+Not built or run here (no Xcode in this checkout) — the simulator pass is owed, and the two doors' probes (`-filesRevealProbe`, `-mailOpenProbe`) now read the destination out of `discs=` rather than a From line.
 ## §737 — The day divider wears the brand pink (user: "i think pink for all the days is good. it breaks up the content of the day and the rows", 2026-09-15)
 
 **Where this started, and where it landed.** The ask was the cover card's title in `#FF2D87` — the octopus mark's pink, which until now the mark had entirely to itself. Mocked up, the title fails twice. On a `deckFill` ground (a source with an honest brand hue) the pink measures ~1.8:1, under the 3:1 large-text bar, and the ground changes with every source, so no single pink clears them all. On the money and clock faces the lead is a figure, and colour on a figure in this app means direction (§363). Narrowing it — pink only on the plain card, or only on the pictureless faces — fixed the contrast and bought a worse problem: the hue would appear on roughly one cover in five, gated on whether the thing happened to arrive with a picture or a price, which is not a rule a person can learn by scrolling.

@@ -432,39 +432,31 @@ grep -qE '\(was \\\(' "$ROOT/Casberi/Casberi/Model/ShopifyBridge.swift" \
 # the §311/§340 shape: the reading composes, and no screen shows it.
 grep -qE 'PurchaseStageView\(thing:' "$ROOT/Casberi/Casberi/Screens/ThingSheetView.swift" \
   || { print -u2 "purchase-stage-selftest: drift — the sheet stopped drawing the purchase card"; exit 1; }
-# …and the spec table's `From` row must stand down where the card's own
-# sentence says it better, or the sheet says where this came from twice and
-# differs (the row said "from a store you follow" over a barcode scan).
-# **THE GUARD READS THE EXPRESSION, NOT ONE LINE OF IT (prd §573a).** It used to
-# grep the whole conjunction as a single line, and on 2026-09-02 it went red over
-# code that was still correct: `hasFrom` had gained a leading
-# `!PlaceWords.line(for: thing).isEmpty` and wrapped, so the stand-down was
-# intact on the SECOND line and the pattern matched nothing. A guard that fails
-# on a reformat teaches people to delete guards. It now asserts the CONJUNCT
-# inside whatever shape the expression has taken.
+# …and the spec table's `From` row is DELETED (prd §736), so the stand-down
+# this guard protected has nothing left to protect.
+#
+# The history is worth keeping, because it is why §736 was right: the row said
+# "from a store you follow" over a deal that came from a feed publisher and
+# over a barcode a person scanned with their own hand, so §364 made it stand
+# down here. §573a then had to rewrite THIS guard when a sibling pass wrapped
+# the expression. Four passes each added a conjunct saying "not on my sheet
+# either"; §736 read that as the answer — the dial already carried the door on
+# every one of those sheets — and deleted the row instead of the fifth
+# conjunct.
+#
+# Inverted, and comment-stripped: the view carries a tombstone naming
+# `hasFrom` and `fromRow`, so a raw search fires on the prose explaining the
+# deletion.
 python3 - "$ROOT/Casberi/Casberi/Screens/ThingSheetView.swift" <<'FROMROW' || exit 1
-import re, sys
-src = open(sys.argv[1], encoding="utf-8").read()
-i = src.find("let hasFrom =")
-if i < 0:
-    print("purchase-stage-selftest: drift — `hasFrom` is gone from the spec table")
-    sys.exit(1)
-# The expression runs to the first line that neither continues it (`&&`) nor is
-# its opening line. Comments between conjuncts are skipped, since this file
-# explains each one.
-expr, started = [], False
-for line in src[i:].splitlines():
-    body = re.sub(r"//.*$", "", line).strip()
-    if not started:
-        expr.append(body); started = True; continue
-    if body.startswith("&&") or body == "":
-        expr.append(body); continue
-    break
-joined = " ".join(expr)
-if "purchaseReading == nil" not in joined:
-    print("purchase-stage-selftest: drift — the From row no longer stands down")
-    print("  A purchase sheet would say where this came from TWICE and differ —")
-    print('  the row said "from a store you follow" over a barcode scan.')
+import sys
+code = "\n".join(l for l in open(sys.argv[1], encoding="utf-8").read().splitlines()
+                 if not l.strip().startswith("//"))
+back = [n for n in ("hasFrom", "fromRow", "PlaceWords") if n in code]
+if back:
+    print("purchase-stage-selftest: drift — the From row is back (%s)" % ", ".join(back))
+    print("  prd §736 deleted it from every sheet. A purchase sheet would say where")
+    print('  this came from TWICE and differ — the row said "from a store you follow"')
+    print("  over a barcode scan.")
     sys.exit(1)
 FROMROW
 

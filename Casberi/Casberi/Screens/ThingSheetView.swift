@@ -1722,51 +1722,23 @@ struct ThingSheetView: View {
         let hasLanded = isWork
         let hasEcho = crossSourceEcho != nil
         let hasAgent = thing.provenance.agent != nil
-        // "From" stands down where the reception block's own sentence already
-        // says where this came from (prd §363) — and it says it better, in
-        // words rather than behind an 80pt label column. Gated on the block
-        // having actually composed a sentence, never on the shape alone: a
-        // social thing whose reception is nil (nothing honest to say) keeps
-        // the row it always had rather than losing the fact entirely.
-        // …and "From: in your things", the row that says nothing, on every
-        // Work sheet in the app. The eyebrow already names the source.
-        // …and "From: written by you", which was the ENTIRE spec table on
-        // every note in the corpus (prd §366) — one row, behind an 80pt label
-        // column, saying less than the eyebrow directly above it. Same gate as
-        // the social one and for the same reason: the note reception block has
-        // to have actually composed a sentence, or the fact is lost rather
-        // than moved.
-        // …and on every purchase and watched product (prd §364), where the
-        // card above ends on a sentence saying exactly where this came from —
-        // and saying the TRUE one per seat, which this row could not: it read
-        // "from a store you follow" over a deal (which comes from a feed
-        // publisher) and over a barcode scan (which came from your own hand).
-        // …and on an agent sheet (prd §367): a conversation's receipt ends on
-        // "From your ChatGPT export", and a grant's own card says which vault
-        // it is in. "From — from your session" was this table's whole
-        // contribution to a chat, and it is the phrase the user called a
-        // database field.
-        // …and wherever the EYEBROW is the sentence (prd §451). A live social
-        // sheet whose eyebrow leads with the person has no `provenance` any
-        // more — it would have restated that line word for word — so without
-        // this conjunct the row §363 deleted would come straight back on every
-        // one of those sheets, which is the opposite of the cut.
-        let hasFrom = !PlaceWords.line(for: thing).isEmpty
-            && showsWho && !isWork && purchaseReading == nil
-            && agentShape == nil
-            && !SocialSheetSource.eyebrowLeadsWithPerson(thing, shape: socialShape)
-            && reception?.provenance == nil
-            && noteReception?.provenance == nil
-            // …and never on a vibenet event, which has its own card above
-            // (prd §467). "From — on vibenet" is the title's own last two
-            // words wearing a field label — the "one-row table saying
-            // nothing" this block's own §363 note already stood down for
-            // elsewhere. The card states the account, its live key count and
-            // the expiry, which is what the row was standing in for.
-            && vibenetEventFacts == nil
+        // "From" WAS COMPUTED HERE and is DELETED (2026-09-15, prd §736).
+        //
+        // It had stood down on seven separate conditions already — a social
+        // reception's own sentence (§363), a purchase's (§364), a note's
+        // (§366), an agent sheet's (§367), a Work receipt, an eyebrow that
+        // leads with the person (§451), a vibenet event's card (§467) — every
+        // one of them a place where something else said it better, in words
+        // rather than behind an 80pt label column. §634 then deleted four of
+        // the phrases themselves. What was left failed the same test on the
+        // same grounds, so the row goes with `PlaceWords`: the dial already
+        // carries a door for every kind that named a place, and the two facts
+        // the row alone still held — WHICH folder, WHICH wallet — are the
+        // words on those doors now ("Show in Receipts", and the wallet's own
+        // name).
         let hasCounterparty = showsWho && thing.source == "Wallet"
             && !(thing.counterpartyAddress ?? "").isEmpty
-        let anyRow = hasSite || hasEcho || hasAgent || hasFrom
+        let anyRow = hasSite || hasEcho || hasAgent
             || hasCounterparty || hasLanded
 
         if anyRow {
@@ -1805,12 +1777,6 @@ struct ThingSheetView: View {
                 if hasAgent, let agent = thing.provenance.agent {
                     specRow("By", "\(agent)\(thing.provenance.machine.map { " on \($0)" } ?? "")")
                 }
-                // "From" (2026-07-23): only off a stage layout now — a stage
-                // already depicts both parties, so "in your wallet" here was
-                // the redundant row (user: "one-row table saying nothing").
-                if hasFrom {
-                    fromRow(PlaceWords.line(for: thing))
-                }
                 // A wallet transfer's counterparty — the other side of the
                 // trade, nameable ("this is Mom"). Only when the hex was
                 // captured (native sends have none) (2026-07-15).
@@ -1827,44 +1793,16 @@ struct ThingSheetView: View {
         }
     }
 
-    /// "From — in Receipts", and a way through to it (2026-08-19, prd §408).
-    ///
-    /// This is the row the feedback pointed at: "would be great to be able to
-    /// press here and it takes you to folder where the file is saved". It is a
-    /// button for exactly the one case where there is somewhere to go — a
-    /// folder-picked file whose folder the Files app will really open — and
-    /// stays the plain row it always was otherwise, rather than becoming a
-    /// control that shrugs (§83's first corollary, on the row somebody
-    /// actually tried to press).
-    ///
-    /// It carries the same verb the dial does, through the same `runVerb`, so
-    /// the two doors can never behave differently or report differently. The
-    /// dial is where the verb is DISCOVERABLE; this is where it was looked
-    /// for.
-    ///
-    /// The gate is deliberately CHEAP — a set lookup, a UserDefaults read and
-    /// a string parse — because this runs on every evaluation of the sheet's
-    /// body. Building the URL here would resolve the security-scoped bookmark
-    /// each pass, i.e. touch the disk to decide whether to draw a chevron. A
-    /// bookmark that has since gone stale (the folder moved, was renamed or
-    /// was unshared) therefore reaches the TAP rather than the gate, and the
-    /// tap has a sentence for exactly that — which is a hand-off reporting a
-    /// real failure, not a control that does nothing.
-    @ViewBuilder
-    private func fromRow(_ value: String) -> some View {
-        if thing.source == "Files", FilesStore.shared.connected,
-           HandOffState.installedSchemes.contains(FilesLocation.revealScheme),
-           FilesLocation.components(ref: thing.sourceRef) != nil {
-            // The hand-off mark every leaving verb in this app wears — the row
-            // says where you land, the arrow says that you leave.
-            DSSpecRow(label: Text("From"), value: Text(LocalizedStringKey(value)),
-                      glyph: "arrow.up.right") {
-                runVerb(Verb(label: "Show in Files", icon: "folder", action: .showInFiles))
-            }
-        } else {
-            specRow("From", value)
-        }
-    }
+    // `fromRow` was HERE and is DELETED with the row it drew (2026-09-15,
+    // prd §736). It had become a door twice — the folder on 2026-08-19 (§408:
+    // "would be great to be able to press here and it takes you to folder
+    // where the file is saved") and the message on 2026-09-15 (§735: "can we
+    // make it so that if you tap it, it takes the user to the email in the
+    // inbox") — which is two people pressing a label, and the answer to the
+    // second time is not a third wiring. Both doors survive in the dial, where
+    // they also were; what goes is the label column that made a row look like
+    // a control.
+
 
     private func specRow(_ label: String, _ value: String) -> some View {
         // Callout, not body — the values were the loudest type on the sheet
@@ -2855,6 +2793,15 @@ struct ThingSheetView: View {
                 verbResult = error.localizedDescription
                 verbResultIsError = true
             }
+        case .openAddress(let address):
+            // In-app, so there is nothing to report and no way to fail: the
+            // card is either on screen or the address was not a watched
+            // wallet, and in that second case no disc was ever drawn
+            // (`displayName(forStored:)` is the verb's gate). Same silence the
+            // `.showInFiles` arm keeps on success, for the same reason — the
+            // destination is now in front of the person.
+            verbResult = nil
+            openAddressCard(address)
         case .approve:
             // Demo bridge: the decision lands locally; the gateway wire is M5.
             thing.mark = .done

@@ -115,10 +115,31 @@ enum MailIngest {
         }
 
         let existing = IngestSupport.existingSourceRefs(context, source: provider.source)
+        // Mail already landed that has no `Message-ID` — every one of these
+        // rows is a "From — in your inbox" with no door (prd §735). The
+        // envelope this pass already fetched carries the fact, so the rows
+        // inside the server's recent window get it here at no extra request;
+        // nothing else in the bridge ever re-reads an envelope it has seen.
+        var idless = IngestSupport.mailIDlessThings(context, source: provider.source)
         var added = 0
+        var backfilled = 0
         for m in messages {
             let ref = "mail:\(provider.bridgeID):\(m.uid)"
-            guard !existing.contains(ref) else { continue }
+            guard !existing.contains(ref) else {
+                // `isLive` is belt-and-braces rather than load-bearing —
+                // this map is built AFTER the fetch's awaits and this loop
+                // has none, so nothing can delete a row mid-pass. It stays
+                // because the rule that made it necessary (build 256: a row
+                // read across a suspension can already be gone) is one an
+                // added `await` in here would reintroduce silently.
+                if let landed = idless[ref], landed.isLive,
+                   let id = MailLocation.normalizedID(m.messageID) {
+                    landed.mailMessageID = id
+                    idless[ref] = nil
+                    backfilled += 1
+                }
+                continue
+            }
             let thing = Thing(
                 kind: .mail,
                 title: m.subject,
@@ -155,6 +176,13 @@ enum MailIngest {
             // `thingsByRef` fetch on every foreground that `heal` already pays
             // hourly, which is a cost this sweep shouldn't take on unasked.
             thing.enrichedText = recipientText(m)
+            // WHERE IT LIVES (2026-09-15, prd §735). The `UID` in `sourceRef`
+            // is a number local to this mailbox and means nothing to Mail or
+            // to Gmail; the `Message-ID` is the message's identity everywhere,
+            // and it rides the same ENVELOPE the subject does. Normalized on
+            // the way in, so a row either holds something that can build a
+            // door or holds nil — see `MailLocation.normalizedID`.
+            thing.mailMessageID = MailLocation.normalizedID(m.messageID)
             // WHAT CAME WITH IT (2026-08-14). `MailMIME` walked every
             // attachment part to find the readable text and discarded their
             // names along with their bytes, so "the mail with the contract"
@@ -176,7 +204,7 @@ enum MailIngest {
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 { context.saveHonestly() }
+        if added > 0 || backfilled > 0 { context.saveHonestly() }
         return added
     }
 

@@ -76,10 +76,30 @@ guard "a note never falls through to the generic content view" \
 guard "a voice note keeps its player" \
   'noteShape == \.entry, thing\.kind == \.voice' "$VIEW"
 
-# The From row must stand down where the sentence speaks, or the sheet says the
-# same fact twice in two voices — which is what this pass set out to end.
-guard "the From spec row stands down for a composed note sentence" \
-  'noteReception\?\.provenance == nil' "$VIEW"
+# THE FROM ROW IS DELETED (prd §736), so this guard inverts.
+#
+# §366 made it stand down here, because "From — written by you" was the ENTIRE
+# spec table on every note in the corpus — one row, behind an 80pt label
+# column, saying less than the eyebrow directly above it. That was the right
+# guard while the row still existed on other sheets. §736 found the same thing
+# was true of almost all of them, and that the dial already carried a door for
+# every kind the row named a place for, so the row went everywhere rather than
+# gaining a fifth stand-down conjunct.
+#
+# There is no stand-down left to assert, only a row that must not come back.
+# Read from a COMMENT-STRIPPED copy: the view carries a tombstone naming
+# `hasFrom` and `fromRow` and saying why they went, so a raw grep fires on the
+# prose explaining the deletion.
+python3 - "$VIEW" <<'FROMGONE' || fail=1
+import sys
+code = "\n".join(l for l in open(sys.argv[1]).read().splitlines()
+                 if not l.strip().startswith("//"))
+back = [n for n in ("hasFrom", "fromRow", "PlaceWords") if n in code]
+if back:
+    print("  \u2717 the From spec row is back (%s) \u2014 prd \u00a7736 deleted it" % ", ".join(back))
+    sys.exit(1)
+print("  \u2713 the From spec row stays deleted (prd \u00a7736)")
+FROMGONE
 
 # The prose tier. This is the fix, spelled as a test: reading tier, primary
 # ink. A `callout15`/`textSecondary` body here is the defect returning.
