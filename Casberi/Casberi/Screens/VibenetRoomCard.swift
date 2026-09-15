@@ -847,7 +847,7 @@ struct VibenetRoomCard: View {
                 onPickAccount: { picked in onScope?(picked ?? "") },
                 reading: { readings[$0] },
                 crown: { slot in
-                    DSRoomSlot(headline: nil, reservesHeadline: false, reservesBox: false) {
+                    DSRoomSlot(headline: nil, reservesHeadline: false) {
                         if slot.isShowing(scopedAddress) {
                             // **THE SHARED ROOM CROWN (prd §683)** — caption,
                             // number, change, line, range chips — over

@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §757 (Home reserves no box) | the five Home crowns pass `reservesBox: false` and drop the slot's 300pt floor | amended by §760 (Home keeps the box; `reservesBox` and `SlotBox` are deleted, because every room's lead is held to that height) |
 | §751 (heads cap at three rows) | `headRowCap` is 3 and every chart head's model spells `rowCap = 3` | amended by §760 (the cap is 8 and the lead's fixed box decides how many draw, dropping whole rows and counting them) |
 | §745 (the fixed slot does not apply to heads) | a head's honest height is what it has to say, so no head is held to `visualSlot` | amended by §760 (every room's lead is `leadHeight`; the reason stands — a head that runs long drops whole rows and counts them, never clips one silently) |
 | §708 | The only filled element on an account page is the input field — and the act drew its entry rows with no fill, its footers at 13pt, and its steps ticking green as they were done | amended by §729 (an entry row is a 44pt well holding out Paste; the act's words are 15pt; the step ticks are deleted) |
@@ -56526,6 +56527,16 @@ six lines").** Four mockups were drawn and all four were built.
   `ShareBar` on the largest segment's scale.
 - **The words cover reads up to six lines.** `ViewThatFits` over excerpts of six,
   four and two lines.
+
+**Home keeps the box (the same day, after rebasing onto §757, user: "give home
+fixed height back").** This amends §757's drop of the box on Home. §757 let the five
+Home crowns (Wallet, Vibenet, Hegotá, Frames, the Privacy devnet) drop the slot's
+floor, so they shrank to what they held. Every other room's lead is now held to
+`leadHeight`, which is taken from exactly that box, so Home was the one room that
+didn't match. `reservesBox` and `SlotBox` are deleted rather than left switched
+on: an option nothing passes is a dead control one layer down (§723).
+`wallet-section-selftest.sh` now denies `reservesBox` and requires the slot's
+`visualSlot` floor. §757's plate removal stands.
 
 **UNSEEN on a device.** iOS simulator build, `room-chassis-audit.py`,
 `ds-template-audit.py`, `footnote-audit.py`, `design-ramp-audit.py`,
