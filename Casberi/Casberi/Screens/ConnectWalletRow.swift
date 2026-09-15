@@ -45,7 +45,7 @@ struct ConnectWalletRow: View {
                 if connecting { cancelConnect() } else { connectWallet() }
             } label: {
                 DSPushRowLabel(title: Text(connecting ? "Waiting — tap to cancel" : "Connect a wallet app"),
-                               prominent: true, busy: connecting) {
+                               busy: connecting) {
                     Image(systemName: "wallet.pass.fill")
                         .dsGlyph(.subhead, weight: .medium)
                         .foregroundStyle(DS.tint)

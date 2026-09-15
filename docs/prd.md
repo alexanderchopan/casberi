@@ -56735,3 +56735,29 @@ that read the changed files were run. First to look at on a phone: a Safe row's
 signature disc at 26pt (it carried a fraction at 34), an Altana key row, X's year
 rows with the calendar disc, the Privacy Pools tiles, and a Photos grid's narrower
 tiles.
+
+## §764 — One row anatomy in every room: regular titles, a 12pt line, 24pt sections (user: "are we using the same size fonts for rows and texts in each room b/c i want them cohesive", then "i want uniformity. you design which is best and be consistent. use the design skill to decide", 2026-09-15)
+
+**What a census of every room found.** Sizes mostly agreed (titles 17, lines 12) and weights did not. Row titles were 17 regular in `DSFeedRow`, the head's `Row`/`MarkedRow` and `DSPushRow`, and 17 semibold in `WalletRow`, `DeadlineRow`, `DSPushRow(prominent:)` and a dozen hand-drawn rows — so Wallet and Hegotá read bold and most rooms did not, and Stripe, Polar and Dodo mixed both inside one head. `DSFeedRow`'s second line was 17, a 15pt rung §532's collapse had raised, while every other template's is 12. Section names were 24 bold in Vibenet and the chassis and 12 semibold gray in the wallet family (`WalletSectionLabel`). Altana's key row title was 12; four money figures were 17 regular and one was 12; a Hegotá roster NAME wore the money rung.
+
+**The ruling, decided by mock (a before/after canvas, "Casberi Row Anatomy"):**
+
+| Slot | Rung |
+|---|---|
+| Section name | `heading24`, primary |
+| Row title | `body17` regular, primary |
+| Row line | `subhead12` regular |
+| Money, trailing the title | `price17` |
+| Time or a count, on the title's baseline | `subhead12` |
+| Stamp or tag | `label12` (medium): a name, never a sentence |
+
+- **Regular titles**, because most templates already drew them and a bold title on every row leaves the money nothing to stand out with. Weight that carries a FACT stays: the calendar's next event (`DSFeedRow.emphasized`), Safe's state word.
+- **A 12pt line everywhere.** The line is metadata, so the feed joins every other row.
+- **24pt sections.** The cards are gone (§749, §757–§759), so a section's name takes the card-name rung; the 12pt gray label was an eyebrow by another name.
+- `DSPushRow`'s `prominent` flag is DELETED with its four callers (§723: a look deleted from the surface is deleted from the model). `heading17`'s doc no longer calls it the row title, and `label12`'s no longer lists the timestamp.
+
+**What changed:** `DSFeedRow` (line), `DSRoomChassis.DeadlineRow` (title, kind), `WalletRow` (title, value caption), `WalletSectionLabel` (24 primary), `DSPushRow`, Altana's key row, Vibenet's account, holding, party and lead rows and its Holdings title and headline, `VibenetThisPhoneRow`, `WalletActingPartiesRows`, the deposit/position/holdings money (`price17`), Hegotá's roster name (`body17`) and frame figure (`price17`), and the wallet and Frames pending lines (`subhead12`). `feed-row-skeleton-audit.py` now pins the line at `subhead12`.
+
+**Left alone, deliberately:** `heading17` inside running text and sheets (it is emphasis there, not a row), the "+N" overlay on a picture grid, Vibenet's key-count headline, and the chart legends that set 12pt names beside bars. Ink is untouched: the tiers still carry news against no news.
+
+**UNSEEN on a device.** iOS simulator build, `design-ramp-audit.py`, `feed-row-skeleton-audit.py`, `ds-template-audit.py`, `footnote-audit.py`, `accessibility-audit.py`, `room-chassis-audit.py`, `sheet-title-audit.py`, `connect-shape-audit.py`, `dead-closure-audit.py` and the room selftests were run. First to look at: the wallet room's Home (three 24pt section names where there were gray labels), and a busy feed at 12pt lines.

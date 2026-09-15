@@ -15,7 +15,7 @@ import SwiftUI
 ///
 ///     lead      26pt (`DS.Mark.row`): a source mark, or a person's face
 ///     name      17pt primary, up to `nameLines` · trailing slot on its baseline
-///     line      15pt secondary — who, where, the count, the excerpt
+///     line      12pt secondary — who, where, the count, the excerpt
 ///     below     tiles at 44pt (`DS.Mark.tile`), a post's words and media,
 ///               a reading's bars — anything that is the row's CONTENT
 ///
@@ -75,7 +75,7 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                 }
                 if let line {
                     line
-                        .dsText(.body17)
+                        .dsText(.subhead12)
                         .foregroundStyle(done ? DS.textTertiary : DS.textSecondary)
                         .lineLimit(lineLines)
                 }

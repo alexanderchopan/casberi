@@ -24,9 +24,6 @@ struct DSPushRowLabel<Leading: View>: View {
     /// fact IS the row's verb (prd §746).
     var factTone: Color = DS.textTertiary
     var subtitleTone: Color = DS.textTertiary
-    /// `heading17` instead of `body17` — the room-card door, which is the
-    /// one act on its card.
-    var prominent = false
     var tint: Color = DS.textPrimary
     /// A spinner stands where the chevron would.
     var busy = false
@@ -40,7 +37,7 @@ struct DSPushRowLabel<Leading: View>: View {
             leading()
             VStack(alignment: .leading, spacing: 1) {
                 title
-                    .dsText(prominent ? .heading17 : .body17)
+                    .dsText(.body17)
                     .foregroundStyle(tint)
                     .lineLimit(2)
                 if let subtitle {
@@ -61,10 +58,10 @@ struct DSPushRowLabel<Leading: View>: View {
 extension DSPushRowLabel where Leading == EmptyView {
     init(title: Text, subtitle: Text? = nil, fact: Text? = nil,
          factTone: Color = DS.textTertiary,
-         subtitleTone: Color = DS.textTertiary, prominent: Bool = false,
+         subtitleTone: Color = DS.textTertiary,
          tint: Color = DS.textPrimary, busy: Bool = false, opens: Bool = true) {
         self.init(title: title, subtitle: subtitle, fact: fact, factTone: factTone,
-                  subtitleTone: subtitleTone, prominent: prominent, tint: tint,
+                  subtitleTone: subtitleTone, tint: tint,
                   busy: busy, opens: opens) { EmptyView() }
     }
 }
@@ -123,7 +120,6 @@ struct DSPushRow<Leading: View>: View {
     var fact: Text? = nil
     var factTone: Color = DS.textTertiary
     var subtitleTone: Color = DS.textTertiary
-    var prominent = false
     var tint: Color = DS.textPrimary
     var busy = false
     var opens = true
@@ -132,7 +128,7 @@ struct DSPushRow<Leading: View>: View {
 
     init(title: Text, subtitle: Text? = nil, fact: Text? = nil,
          factTone: Color = DS.textTertiary,
-         subtitleTone: Color = DS.textTertiary, prominent: Bool = false,
+         subtitleTone: Color = DS.textTertiary,
          tint: Color = DS.textPrimary, busy: Bool = false, opens: Bool = true,
          action: @escaping () -> Void, @ViewBuilder leading: @escaping () -> Leading) {
         self.title = title
@@ -140,7 +136,6 @@ struct DSPushRow<Leading: View>: View {
         self.fact = fact
         self.factTone = factTone
         self.subtitleTone = subtitleTone
-        self.prominent = prominent
         self.tint = tint
         self.busy = busy
         self.opens = opens
@@ -154,7 +149,7 @@ struct DSPushRow<Leading: View>: View {
             action()
         } label: {
             DSPushRowLabel(title: title, subtitle: subtitle, fact: fact, factTone: factTone,
-                           subtitleTone: subtitleTone, prominent: prominent,
+                           subtitleTone: subtitleTone,
                            tint: tint, busy: busy, opens: opens, leading: leading)
         }
         .buttonStyle(.plain)
@@ -165,11 +160,11 @@ struct DSPushRow<Leading: View>: View {
 extension DSPushRow where Leading == EmptyView {
     init(title: Text, subtitle: Text? = nil, fact: Text? = nil,
          factTone: Color = DS.textTertiary,
-         subtitleTone: Color = DS.textTertiary, prominent: Bool = false,
+         subtitleTone: Color = DS.textTertiary,
          tint: Color = DS.textPrimary, busy: Bool = false, opens: Bool = true,
          action: @escaping () -> Void) {
         self.init(title: title, subtitle: subtitle, fact: fact, factTone: factTone,
-                  subtitleTone: subtitleTone, prominent: prominent, tint: tint,
+                  subtitleTone: subtitleTone, tint: tint,
                   busy: busy, opens: opens, action: action) { EmptyView() }
     }
 }

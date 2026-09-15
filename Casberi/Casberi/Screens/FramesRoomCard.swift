@@ -652,7 +652,7 @@ struct FramesRoomList: View {
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                     Text(FramesChainWatch.pendingLine(state: item.state, deadline: item.deadline,
                                                       now: tick.date))
-                        .dsText(.label12)
+                        .dsText(.subhead12)
                         .foregroundStyle(item.state.isFinal ? DS.destructive : DS.textTertiary)
                 }
                 Spacer(minLength: 0)

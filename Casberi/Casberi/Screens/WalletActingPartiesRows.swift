@@ -70,7 +70,7 @@ struct WalletActingPartiesRows: View {
                 .padding(.top, 1)
             VStack(alignment: .leading, spacing: 3) {
                 Text(holder.name)
-                    .dsText(.heading17)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 // The rung's own sentence, so a row and the count above it can

@@ -238,8 +238,9 @@ extension DSTextStyle {
     static let stat24 = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2)
 
     // ============================================================== 17 · BODY
-    /// A row's title — a heading for the line it leads. Says "tappable" by
-    /// WEIGHT (semibold against the subline's regular), never by a second face.
+    /// Emphasis at the body size — a heading inside running text, a sheet's
+    /// field name. NOT a row's title: every row title is `body17` regular
+    /// (prd §764), so the one heavy thing in a row is its money (`price17`).
     static let heading17 = DSTextStyle(size: 17, weight: .semibold, tracking: 0, lineHeight: 24, relative: .headline)
     /// Running text. `callout15` was this rung under a second name (it had
     /// been 16, two points under body, which read as inconsistency rather
@@ -262,8 +263,9 @@ extension DSTextStyle {
     /// Running metadata — a sentence that is not the subject of its surface.
     /// The streaming "still writing" dot takes it too (was `indicator9`).
     static let subhead12 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 17, relative: .caption1)
-    /// A label, chip, tag or timestamp — medium, because a caption that is a
-    /// NAME rather than a sentence needs the weight to hold at this size.
+    /// A label, chip, tag or stamp — medium, because a caption that is a NAME
+    /// rather than a sentence needs the weight to hold at this size. A row's
+    /// second line, its time and its count are `subhead12` (prd §764).
     /// `label11` and `tab10` were this rung under two more names, anchored to
     /// `.caption2` — identical at the default size and LARGER than `label12`
     /// at accessibility sizes, so a row drew two caption sizes exactly where

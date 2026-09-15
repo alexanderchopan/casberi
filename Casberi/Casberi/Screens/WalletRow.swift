@@ -108,7 +108,7 @@ struct WalletRow<Trailing: View>: View {
             markView
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
-                    .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(titleWraps ? nil : 1)
                     .fixedSize(horizontal: false, vertical: titleWraps)
                 if let subtitleText {
@@ -224,7 +224,7 @@ struct WalletRowValue: View {
                 .lineLimit(1)
             if let caption {
                 Text(caption)
-                    .dsText(.label12)
+                    .dsText(.subhead12)
                     .foregroundStyle(change.map { TokenChartStyle.accent(change: $0, scheme: scheme) }
                                      ?? DS.textTertiary)
                     .monospacedDigit()
@@ -355,8 +355,10 @@ struct WalletRunwayRail: View {
     }
 }
 
-/// A section's name — the small gray label that does the ranking now that the
-/// cards are gone, with an optional count-link on its trailing edge. The
+/// A section's name, with an optional count-link on its trailing edge. At the
+/// title rung (prd §764): the cards are gone, so a section's name takes the
+/// card-name size, the same `heading24` every other room's sections wear; the
+/// small gray label it was read as an eyebrow by another name. The
 /// label IS the door: "Activity · 128 total ›" replaces a centered "See all"
 /// row sitting below the content it opens.
 struct WalletSectionLabel: View {
@@ -367,8 +369,9 @@ struct WalletSectionLabel: View {
     var body: some View {
         HStack(spacing: DS.Space.s2) {
             Text(title)
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(DS.textSecondary)
+                .dsText(.heading24)
+                .foregroundStyle(DS.textPrimary)
+                .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
             if let trailingTitle, let onTapTrailing {
                 DSMoreLink(title: Text(trailingTitle), action: onTapTrailing)

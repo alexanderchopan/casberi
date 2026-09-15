@@ -157,7 +157,7 @@ def check_template(src: str) -> list[str]:
         ("DS.Mark.row", "the lead is not the 26pt row mark — the column loses its one edge"),
         (".frame(width: Self.leadSize, height: Self.leadSize)",
          "the lead is not framed — a 28pt face or a 38pt mark would push the column right"),
-        (".dsText(.body17)", "the line is not at body17"),
+        (".dsText(.subhead12)", "the line is not at subhead12 — every row's second line is 12 (prd §764)"),
     ]:
         if needle not in b:
             bad.append(f"DSFeedRow: {why}")
@@ -290,7 +290,7 @@ def self_test() -> None:
             print(f"  ✗ self-test: {label}"); sys.exit(1)
         print(f"  ok   {label}")
     tmpl = ("struct DSFeedRow { .dsText(.body17) DS.Space.s2 DS.Mark.row "
-            ".frame(width: Self.leadSize, height: Self.leadSize) .dsText(.body17) }")
+            ".frame(width: Self.leadSize, height: Self.leadSize) .dsText(.subhead12) }")
     for label, src, should_fail in [
         ("the template's facts pass", tmpl, False),
         ("a template whose lead is unframed is flagged",

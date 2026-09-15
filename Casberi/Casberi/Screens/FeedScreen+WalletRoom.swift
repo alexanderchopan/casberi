@@ -132,7 +132,7 @@ extension FeedScreen {
                             Spacer(minLength: DS.Space.s2)
                             VStack(alignment: .trailing, spacing: 1) {
                                 Text(WalletValue.money(position.usd))
-                                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                    .dsText(.price17).foregroundStyle(DS.textPrimary)
                                     .monospacedDigit()
                                 // Its share of everything — the one fact the
                                 // board states that a bare amount does not, and

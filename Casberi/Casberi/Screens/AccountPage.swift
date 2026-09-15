@@ -677,7 +677,7 @@ struct AccountFactRow: View {
 
     private var line: some View {
         DSPushRowLabel(title: Text(title), fact: Text(fact),
-                       prominent: true, opens: opens) {
+                       opens: opens) {
             Self.disc(glyph)
         }
         .frame(minHeight: Self.height)

@@ -470,7 +470,7 @@ extension DSRoomChassis {
                 // The feed row's anatomy (prd §763): a clock on the lead disc,
                 // the name, the days in the trailing slot, the stamp and the
                 // kind under it.
-                DSFeedRow(name: name, nameLines: 1, emphasized: true,
+                DSFeedRow(name: name, nameLines: 1,
                           lead: { DSGlyphLead(glyph: "clock") },
                           trailing: {
                               Text(verbatim: value)
@@ -489,7 +489,7 @@ extension DSRoomChassis {
                                           .background(fill, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
                                   }
                                   Text(verbatim: kind)
-                                      .dsText(.label12)
+                                      .dsText(.subhead12)
                                       .foregroundStyle(DS.textSecondary)
                                       .lineLimit(1)
                               }

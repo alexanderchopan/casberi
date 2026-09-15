@@ -949,7 +949,7 @@ struct WalletCompositionStrip: View {
                     // WHERE it is, in the quietest ink — the same job the
                     // headline's mover line does for the number above.
                     Text(places.joined(separator: " · "))
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
             }
@@ -1032,7 +1032,7 @@ struct WalletDepositsTray: View {
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 Text(WalletValue.money(deposit.usd))
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .dsText(.price17).foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
                 if total > 0 {
                     Text("\(Int((share * 100).rounded()))%")
@@ -1554,7 +1554,7 @@ struct WalletAllocationTray: View {
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 Text(WalletValue.money(position.usd))
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .dsText(.price17).foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
                 if portfolio.totalUSD > 0 {
                     Text("\(Int((position.usd / portfolio.totalUSD * 100).rounded()))%")

@@ -55,7 +55,7 @@ struct VibenetThisPhoneRow: View {
                 icon
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .dsText(.heading17)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Text(standing)

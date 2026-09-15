@@ -117,7 +117,7 @@ struct AltanaRoomCard: View {
                           HStack(spacing: DS.Space.s2) {
                               if showsFaces(row) { faces(row) }
                               Text(row.countdown(now: now))
-                                  .dsText(.label12)
+                                  .dsText(.subhead12)
                                   .fontWeight(urgent ? .semibold : .regular)
                                   .foregroundStyle(urgent ? Self.mark : DS.textTertiary)
                                   .monospacedDigit()

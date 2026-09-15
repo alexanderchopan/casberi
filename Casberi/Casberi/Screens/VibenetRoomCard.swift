@@ -1159,7 +1159,7 @@ struct VibenetRoomCard: View {
                 // room.
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     Text(VibenetRoom.headline(room, now: .now))
-                        .dsText(.heading17)
+                        .dsText(.heading24)
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     VibenetDiscoverySection(onWatched: onWatched)
@@ -1524,7 +1524,7 @@ struct VibenetRoomCard: View {
                         HStack(spacing: DS.Space.s3) {
                             AssetMark(name: cell.symbol, size: DS.Face.list)
                             Text(cell.symbol)
-                                .dsText(.heading17)
+                                .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
                             Spacer(minLength: DS.Space.s2)
@@ -1569,7 +1569,7 @@ struct VibenetRoomCard: View {
                         WalletFace(address: party.address, size: DS.Face.list, circular: true)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(Self.displayName(party.address))
-                                .dsText(.heading17)
+                                .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
                             Text(party.line)
@@ -2158,7 +2158,7 @@ struct VibenetRoomCard: View {
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 Text(VibenetKeyIdentity.short(key.actor.actorId))
-                    .dsText(.label12).monospaced()
+                    .dsText(.mono12)
                     .foregroundStyle(DS.textTertiary)
                 Spacer(minLength: DS.Space.s2)
                 if let clock = key.actor.expiryClock(now: .now) {
@@ -2775,7 +2775,7 @@ struct VibenetRoomCard: View {
             // picks between them.
             DSPushRowLabel(title: Text(String(localized: "Watch an account")),
                            subtitle: Text(String(localized: "Paste an address, or pick a new one")),
-                           prominent: true, tint: Self.mark) {
+                           tint: Self.mark) {
                 ZStack {
                     Circle().fill(Self.mark.opacity(0.18))
                         .frame(width: DS.Face.rowCircle, height: DS.Face.rowCircle)
@@ -2949,12 +2949,12 @@ struct VibenetRoomCard: View {
                 WalletFace(address: item.address, size: DS.Face.rowCircle, circular: true)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(Self.displayName(item.address))
-                        .dsText(.heading17)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     // The room's OWN state sentence, never a second wording.
                     Text(VibenetRoom.rowLine(item))
-                        .dsText(.label12)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
@@ -3020,8 +3020,9 @@ struct VibenetRoomCard: View {
             if cells.count > 1, !promoted(.holdings) {
                 card {
                     Text(String(localized: "Holdings"))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
+                        .dsText(.heading24)
+                        .foregroundStyle(DS.textPrimary)
+                        .accessibilityAddTraits(.isHeader)
                     VibenetHoldingsBlock(cells: cells, reduceMotion: reduceMotion)
                         .padding(.top, DS.Space.s3)
                 }
@@ -3386,16 +3387,16 @@ struct VibenetRoomCard: View {
                     // unchanged: the address alone, exactly as before.
                     if let name = VibenetWatch.shared.name(for: item.address) {
                         Text(name)
-                            .dsText(isLead ? .heading24 : .heading17)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
                         Text(VibenetRoom.shortAddress(item.address))
-                            .dsText(.label12).monospaced()
+                            .dsText(.mono12)
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     } else {
                         Text(VibenetRoom.shortAddress(item.address))
-                            .dsText(isLead ? .heading24 : .heading17)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                             .monospaced()
                             .lineLimit(1)

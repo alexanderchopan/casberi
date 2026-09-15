@@ -799,7 +799,7 @@ struct HegotaRoomFigure: View {
                 .opacity(row.reached ? 1 : 0.45)
             Text(HegotaWatch.shared.name(for: row.address)
                  ?? WalletStore.shortAddress(row.address))
-                .dsText(.price17)
+                .dsText(.body17)
                 .foregroundStyle(row.reached ? DS.textPrimary : DS.textTertiary)
                 .lineLimit(1).minimumScaleFactor(0.75)
             Spacer(minLength: DS.Space.s2)
@@ -1819,7 +1819,6 @@ struct HegotaRoomList: View {
                   subtitle: Text(present
                                  ? String(localized: "The one account here you control")
                                  : String(localized: "This phone becomes its key")),
-                  prominent: true,
                   tint: HegotaModeStyle.room,
                   action: onOpenKeySheet) {
             ZStack {
@@ -2643,7 +2642,7 @@ struct HegotaMoveSheet: View {
             VStack(alignment: .trailing, spacing: 1) {
                 if frame.wei > 0 {
                     Text(HegotaFormat.eth(frame.wei))
-                        .dsText(.subhead12).foregroundStyle(DS.textSecondary).monospacedDigit()
+                        .dsText(.price17).foregroundStyle(DS.textPrimary).monospacedDigit()
                 }
                 // BOTH dimensions: this chain prices execution and state
                 // separately, and a frame that only moves value runs no code —
