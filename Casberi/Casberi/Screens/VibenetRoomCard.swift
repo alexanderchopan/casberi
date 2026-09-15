@@ -1671,22 +1671,12 @@ struct VibenetRoomCard: View {
     /// Scoped it speaks about ONE account; unscoped about the set.
     @ViewBuilder
     private func holdingsEmptyFigure(_ aggregate: VibenetBalanceAggregate) -> some View {
-        scopeFigure(headline: holdingsEmptyHeadline(aggregate)) {
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                // The treemap that is not there, drawn as its own outline —
-                // the dashed circle `accountsEmptyFigure` uses for a missing
-                // counterpart, in the shape this scope would have drawn.
-                RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
-                    .strokeBorder(DS.fillLine,
-                                  style: StrokeStyle(lineWidth: 1.4, dash: [3, 3]))
-                    .frame(height: 76)
-                    .opacity(0.6)
-                Text(holdingsEmptyLine(aggregate))
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxHeight: .infinity, alignment: .top)
+        // The treemap that is not there, as its skeleton (prd §770); the
+        // cause stays the headline and its sentence is spoken.
+        DSRoomSlot(headline: nil, reservesHeadline: false) {
+            DSEmptyState(headline: Text(holdingsEmptyHeadline(aggregate)),
+                         words: Text(holdingsEmptyLine(aggregate)),
+                         scale: .room(.treemap), clearance: DSRoomChassis.gearColumn)
         }
     }
 
@@ -1842,36 +1832,13 @@ struct VibenetRoomCard: View {
     /// your accounts (§83).
     @ViewBuilder
     private var activityEmptyFigure: some View {
-        let subject = scopedAddress ?? room.items.first?.address
-        scopeFigure(headline: activityEmptyHeadline) {
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                // The band that is not there, drawn as its own outline — the
-                // grammar `holdingsEmptyFigure` states ("the treemap that is
-                // not there") in the shape THIS scope would have drawn: one
-                // flow row, its account's real face and the ribbon's outline
-                // with nothing running through it.
-                //
-                // The ribbon is dashed and EMPTY rather than absent, and it
-                // carries no kind: a ribbon in `authorized`'s colour would
-                // draw a change that never happened, which on this screen is
-                // the §83 failure `accountsEmptyFigure` refuses a connector
-                // for.
-                HStack(spacing: DS.Space.s3) {
-                    if let subject {
-                        WalletFace(address: subject, size: DS.Face.rowCircle, circular: true)
-                    }
-                    Capsule(style: .continuous)
-                        .strokeBorder(DS.fillLine,
-                                      style: StrokeStyle(lineWidth: 1.4, dash: [3, 3]))
-                        .frame(height: 22)
-                        .opacity(0.6)
-                }
-                Text(activityEmptyLine)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxHeight: .infinity, alignment: .top)
+        // The flow that is not there, as its skeleton (prd §770). No ribbon in
+        // any kind's colour is drawn, for the reason it never was: that would
+        // draw a change that did not happen.
+        DSRoomSlot(headline: nil, reservesHeadline: false) {
+            DSEmptyState(headline: Text(activityEmptyHeadline),
+                         words: Text(activityEmptyLine),
+                         scale: .room(.bars), clearance: DSRoomChassis.gearColumn)
         }
     }
 
@@ -2029,28 +1996,12 @@ struct VibenetRoomCard: View {
     /// sub-accounts" is a fact about the roster and not about Base.
     @ViewBuilder
     private var accountsEmptyFigure: some View {
-        let subject = scopedAddress
-            ?? room.items.first?.address
-        scopeFigure(headline: String(localized: "Nothing is shared")) {
-            HStack(spacing: DS.Space.s4) {
-                if let subject {
-                    WalletFace(address: subject, size: DS.Face.profile, circular: true)
-                }
-                Circle()
-                    .strokeBorder(DS.fillLine,
-                                  style: StrokeStyle(lineWidth: 1.4, dash: [3, 3]))
-                    .frame(width: DS.Face.profile, height: DS.Face.profile)
-                    .opacity(0.6)
-                Spacer(minLength: 0)
-            }
-            // `.leading` is `Alignment(horizontal: .leading, vertical:
-            // .center)`, which is the whole point: the pair is the only
-            // content, so it sits where a lone figure sits everywhere else in
-            // this card — centred in what the headline left, never pinned to
-            // the top with the air pooled below it.
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .accessibilityElement()
-            .accessibilityLabel(emptyAccountsLine)
+        // The connections map, empty (prd §770). No connector is drawn between
+        // two real accounts; the skeleton's discs are nobody's.
+        DSRoomSlot(headline: nil, reservesHeadline: false) {
+            DSEmptyState(headline: Text(String(localized: "Nothing is shared")),
+                         words: Text(emptyAccountsLine),
+                         scale: .room(.graph), clearance: DSRoomChassis.gearColumn)
         }
     }
 

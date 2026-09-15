@@ -6782,9 +6782,15 @@ struct FeedScreen: View {
                 // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** Each
                 // arm's test is the gate its own sections draw on, so the
                 // skeleton stands only where nothing else would.
-                if all.isEmpty { walletSkeletonRowsSection }
+                if all.isEmpty {
+                    walletSkeletonRowsSection
+                    walletFollowDoorSection
+                }
             case .holdings:
-                if portfolio?.isEmpty ?? true { walletSkeletonRowsSection }
+                if portfolio?.isEmpty ?? true {
+                    walletSkeletonRowsSection
+                    walletFollowDoorSection
+                }
                 walletTokenListSection
             case .accounts:
                 walletAccountsListSection
@@ -6797,7 +6803,10 @@ struct FeedScreen: View {
                 // The QUAD is the drawing above; these are the collections
                 // behind it, named (prd §483, user: *"below the toggle bar is
                 // those four in a list w/ collection name and so on"*).
-                if nftShelfEntry == nil { walletSkeletonRowsSection }
+                if nftShelfEntry == nil {
+                    walletSkeletonRowsSection
+                    walletNFTDoorSection
+                }
                 walletNFTListSection
             case .risk:
                 // The bars moved up into the slot, so the list is the door

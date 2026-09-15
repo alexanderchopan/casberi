@@ -5190,12 +5190,13 @@ for figure in activity holdings accounts permissions; do
          echo "  visualSlot leaves the stack and the account rail, the scope strip and every"
          echo "  row below jump a third of a screen when that chip is picked."; exit 1; }
 done
-# …and the empty counterparts must go through `scopeFigure`, which is the one
-# call that applies the slot. An empty figure drawing bare would satisfy the
-# guard above and move the bar exactly as far.
+# …and the empty counterparts must draw inside the slot: `scopeFigure`, or
+# `DSRoomSlot` itself where the empty state takes the whole box with no
+# reserved headline row (prd §770). An empty figure drawing bare would satisfy
+# the guard above and move the bar exactly as far.
 for figure in activityEmptyFigure holdingsEmptyFigure accountsEmptyFigure permissionsEmptyFigure; do
   body=$(sed -nE "/private (var|func) $figure/,/^    }$/p" "$TMP/card.nc.swift")
-  [[ "$body" == *"scopeFigure("* ]] \
+  [[ "$body" == *"scopeFigure("* || "$body" == *"DSRoomSlot("* ]] \
     || { echo "✗ $figure does not draw through scopeFigure — prd §495: scopeFigure IS the"
          echo "  slot, so an empty figure outside it collapses the reserved height it exists"
          echo "  to hold."; exit 1; }

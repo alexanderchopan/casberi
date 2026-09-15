@@ -72,7 +72,8 @@ struct WalletHistoryScreen: View {
         List {
             if visible.isEmpty {
                 Section {
-                    DSEmptyState(words: Text("Nothing here yet. Transactions land as they settle on chain."))
+                    DSEmptyState(headline: Text("Nothing here yet."),
+                                 words: Text("Nothing here yet. Transactions land as they settle on chain."))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                 }

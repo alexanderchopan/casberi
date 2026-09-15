@@ -68,7 +68,8 @@ struct NetworkReceiptsScreen: View {
                 }
             } else {
                 Section {
-                    DSEmptyState(words: Text("Nothing yet. Every service reached shows up here."))
+                    DSEmptyState(headline: Text("Nothing yet"),
+                                 words: Text("Nothing yet. Every service reached shows up here."))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                 }

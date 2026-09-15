@@ -707,38 +707,25 @@ struct WalletFlowBand: View {
 /// this only words it (§83: an honest answer is drawn, never left as air).
 struct WalletFlowEmptyFigure: View {
     let decline: WalletFlow.Decline
-    let windowLabel: String
-    let spineAddress: String?
 
+    /// **THE BARS, EMPTY (prd §770).** The window label, the dashed ribbon and
+    /// a sentence at the top of the slot were §769's weak state in this
+    /// scope's own clothes. The cause still leads — a quiet window, an unpriced
+    /// one and too few prices are different answers (§589) — as a short
+    /// headline centred on the skeleton, and the full sentence is spoken.
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            // The same first line the band wears, at the same rung, so the
-            // slot's first pixel lands where it does when the band draws.
-            Text(windowLabel)
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .lineLimit(1)
-                .padding(.top, DS.Space.s3)
-            HStack(spacing: DS.Space.s3) {
-                if let spineAddress {
-                    WalletFace(address: spineAddress, size: DS.Face.rowCircle, circular: true)
-                }
-                // Dashed and EMPTY rather than absent, and in no side's colour:
-                // a green ribbon here would draw money that never arrived.
-                Capsule(style: .continuous)
-                    .strokeBorder(DS.fillLine,
-                                  style: StrokeStyle(lineWidth: 1.4, dash: [3, 3]))
-                    .frame(height: 22)
-                    .opacity(0.6)
-            }
-            Text(line)
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+        DSEmptyState(headline: Text(headline), words: Text(line), scale: .room(.bars))
+            .padding(.horizontal, WalletCardStyle.pad)
+    }
+
+    /// The cause, short enough to stand on the drawing.
+    private var headline: String {
+        switch decline {
+        case .noLegs:        return String(localized: "Nothing yet")
+        case .nothingPriced: return String(localized: "No prices to draw")
+        case .belowFloor:    return String(localized: "Too few prices to draw")
+        case .oneLane:       return String(localized: "Only one address so far")
         }
-        .padding(.horizontal, WalletCardStyle.pad)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .accessibilityElement(children: .combine)
     }
 
     /// One sentence per cause. Counts go through `String(_:)` — a `\(n)` in a

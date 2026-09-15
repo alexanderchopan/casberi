@@ -576,6 +576,58 @@ extension FeedScreen {
         }
     }
 
+    /// **THE DOOR AN EMPTY LIST CARRIES, where it is the remedy (prd §770).**
+    /// Holdings and Activity fill by following an address; the same row
+    /// Home's Actions draw, so it is one verb in one look.
+    var walletFollowDoorSection: some View {
+        Section {
+            DSPushRow(title: Text("Follow address"), tint: DS.tint,
+                      action: { route.pushBridge(.wallet) }) {
+                walletDoorLead("eye")
+            }
+            .modifier(WalletDoorRow())
+        }
+    }
+
+    /// NFTs fill by choosing collections for the wallet in scope.
+    @ViewBuilder
+    var walletNFTDoorSection: some View {
+        if let entry = nftShelfWallet {
+            Section {
+                DSPushRow(title: Text("Choose collections"), tint: DS.tint,
+                          action: {
+                              feedSheet = .nftPicks(address: entry.address,
+                                                    label: entry.label.isEmpty ? entry.short : entry.label)
+                          }) {
+                    walletDoorLead("square.grid.2x2")
+                }
+                .modifier(WalletDoorRow())
+            }
+        }
+    }
+
+    /// The 26pt disc every verb row in this room leads with.
+    func walletDoorLead(_ glyph: String) -> some View {
+        ZStack {
+            Circle().fill(DS.fillFaint)
+                .frame(width: DS.Face.row, height: DS.Face.row)
+            Image(systemName: glyph)
+                .accessibilityHidden(true)
+                .dsGlyph(.caption, weight: .semibold)
+                .foregroundStyle(DS.tint)
+        }
+    }
+
+    struct WalletDoorRow: ViewModifier {
+        func body(content: Content) -> some View {
+            content
+                .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+        }
+    }
+
     struct WalletSectionPublication: Equatable {
         var sections: [WalletSection]
         var attention: Set<WalletSection>
@@ -804,8 +856,7 @@ extension FeedScreen {
             WalletFlowRows(home: home, windowLabel: balanceRange.flowLabel)
                     .modifier(rowEntrance(1))
         } else if let decline = verdict.decline {
-            WalletFlowEmptyFigure(decline: decline, windowLabel: balanceRange.flowLabel,
-                                  spineAddress: spineWalletAddress)
+            WalletFlowEmptyFigure(decline: decline)
                 .modifier(rowEntrance(1))
         }
     }
@@ -816,24 +867,14 @@ extension FeedScreen {
         balanceRange.span.map { Date.now.addingTimeInterval(-$0) }
     }
 
-    /// Whose face rides the flow band's spine: the scoped wallet, or the sole
-    /// watched one. nil when several wallets are merged — the band is then
-    /// about all of them, and a face belonging to one would claim the flows
-    /// were that wallet's (the honesty rule, applied to a portrait).
-    var spineWalletAddress: String? {
-        if let selectedWallet { return selectedWallet }
-        let watched = wallet.addresses
-        return watched.count == 1 ? watched.first?.address : nil
-    }
-
     /// Whose NFT shelf this room draws (2026-08-15, prd §387) — the scoped
     /// wallet, or the sole watched one.
     ///
     /// nil when several wallets are merged, and the shelf then draws nothing:
     /// a pick is made PER WALLET, so a merged shelf would have to say whose
     /// each piece is, and this room already declines to speak for merged
-    /// wallets rather than invent an attribution (`spineWalletAddress`, same
-    /// reasoning applied to a portrait). The wallet switcher is pinned above
+    /// wallets rather than invent an attribution (the flow band's portrait
+    /// used the same reasoning until §770 drew its empty state as a skeleton). The wallet switcher is pinned above
     /// the room, so narrowing to one is a tap away.
     var nftShelfWallet: WalletStore.WatchedAddress? {
         let watched = wallet.addresses

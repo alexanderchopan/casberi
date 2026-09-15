@@ -183,7 +183,8 @@ struct WalletbeatReportCard: View {
 				: String(localized: "Walletbeat has barely started on this wallet")),
 			words: Text(counts.judged == 0
 				? String(localized: "It's listed, and none of its \(counts.applicable) checks has been judged. That's an absence of information, not a clean bill of health.")
-				: String(localized: "Only \(counts.judged) of \(counts.applicable) checks are judged, which is too few to compare against another wallet.")))
+				: String(localized: "Only \(counts.judged) of \(counts.applicable) checks are judged, which is too few to compare against another wallet.")),
+			scale: .list(rows: 3))
 		.padding(DS.Space.s4)
 	}
 

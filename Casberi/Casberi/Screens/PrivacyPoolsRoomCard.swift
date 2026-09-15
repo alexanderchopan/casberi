@@ -163,7 +163,7 @@ struct PrivacyPoolsRoomCard: View {
     @ViewBuilder private func emptyBody(_ scope: PrivacyPoolsSection) -> some View {
         if let words = scope.emptyBody {
             DSEmptyState(headline: scope.emptyHeadline.map { Text($0) },
-                         words: Text(words))
+                         words: Text(words), scale: .list(rows: 3))
         }
     }
 

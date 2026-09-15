@@ -197,7 +197,11 @@ struct L2beatDirectoryScreen: View {
 				? String(localized: "They assess \(L2beatDirectory.projects.count) chains so far.")
 				: elsewhere == 1
 					? String(localized: "One match under \(other.label).")
-					: String(localized: "\(elsewhere) matches under \(other.label).")))
+					: String(localized: "\(elsewhere) matches under \(other.label).")),
+			// The other tab's matches are the way out, so they stay on screen.
+			note: elsewhere == 0 ? nil : Text(elsewhere == 1
+				? String(localized: "One match under \(other.label).")
+				: String(localized: "\(elsewhere) matches under \(other.label).")))
 		.padding(.vertical, DS.Space.s3)
 	}
 

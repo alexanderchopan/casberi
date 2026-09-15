@@ -771,7 +771,8 @@ struct AppsScreen: View {
                 // Reachable only by choosing Yours with nothing connected —
                 // the seed opens a first run on All. One sentence, and the
                 // way out is the control the person just used.
-                DSEmptyState(words: Text("Nothing connected yet. Everything you can add is under All."))
+                DSEmptyState(headline: Text("Nothing connected yet"),
+                             words: Text("Nothing connected yet. Everything you can add is under All."))
                     .padding(.vertical, DS.Space.s4)
             } else if scope.name == nil {
                 flatCatalogList
