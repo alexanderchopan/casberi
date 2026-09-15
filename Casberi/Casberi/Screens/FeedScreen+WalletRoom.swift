@@ -301,6 +301,13 @@ extension FeedScreen {
                         }
                     }
                 },
+                figure: { scope in
+                    // `reservesHeadline: false` (prd §495): Wallet's figures
+                    // name themselves inside their own drawing.
+                    DSRoomSlot(headline: nil, reservesHeadline: false) {
+                        walletScopeVisualSection(scope)
+                    }
+                },
                 acts: { slot in
                     // A ROW, not a slab (prd §750): the verb in the room's
                     // tint, its glyph at the row's 26pt lead, the same insets

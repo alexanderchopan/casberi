@@ -51,7 +51,7 @@ import SwiftUI
 /// think they should always show"). On Home they sit under the head, above
 /// Actions and the Readings rows; in a section each room mounts this chrome
 /// UNDER the section's figure and it draws the tiles alone. Home is a tile.
-struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Acts: View>: View {
+struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: View>: View {
     @Environment(ShellChrome.self) private var chrome
 
     /// The room this chrome stands in — the key the published rail carries.
@@ -68,6 +68,9 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Acts: View>: View {
 
     let reading: (Scope) -> String?
     @ViewBuilder let crown: (DSAccountSlot) -> Crown
+    /// The section's own drawing, off Home. Drawn HERE, in the box the crown
+    /// takes on Home, never as a sibling `Section` above the chrome (prd §765).
+    @ViewBuilder let figure: (Scope) -> Figure
     @ViewBuilder let acts: (DSAccountSlot) -> Acts
 
     private var rest: [Scope] { sections.filter { $0 != home } }
@@ -104,18 +107,23 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Acts: View>: View {
         if chrome.accountRail != rail { chrome.accountRail = rail }
     }
 
+    /// **THE TILES LAND AT ONE HEIGHT ON EVERY PAGE, BY CONSTRUCTION (prd §765,
+    /// user: "when you click the buttons home activity etc they don't maintain
+    /// their position … the bar moves up or down").** §752b claimed it from
+    /// "the head and every figure share the 300pt slot", which was true of the
+    /// boxes and false of the tiles: Home drew its crown INSIDE this row
+    /// (padding, then `contentGap`), while every section drew its figure as a
+    /// separate `Section` ABOVE it with its own row insets — 0 in Frames and
+    /// Hegotá, `s3` on top in Wallet, `s4` below in the Privacy devnet, `railGap`
+    /// in Vibenet — plus whatever spacing the `List` gives a section. Five rooms,
+    /// five offsets, and none of them Home's. So the lead is ONE box in ONE place
+    /// for both arms: the crown on Home, the section's figure everywhere else,
+    /// the same frame, padding and gap before the tiles.
     @ViewBuilder
     private var content: some View {
-        if active == home {
-            VStack(alignment: .leading, spacing: DSRoomChassis.contentGap) {
-                if let showing {
-                    // NO PLATE (prd §758) — the head is content, like the rows
-                    // under it. The paddings stay so nothing moves sideways.
-                    crown(showing)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, DS.Space.s2)
-                        .padding(.horizontal, DSRoomChassis.inset)
-                }
+        VStack(alignment: .leading, spacing: DSRoomChassis.contentGap) {
+            lead
+            if active == home {
                 DSScopeTiles(sections: sections, active: active,
                              attention: attention, onPick: onPick)
                     .padding(.horizontal, DSRoomChassis.inset)
@@ -142,15 +150,35 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Acts: View>: View {
                     }
                     .padding(.horizontal, DSRoomChassis.inset)
                 }
+            } else {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    DSScopeTiles(sections: sections, active: active,
+                                 attention: attention, onPick: onPick)
+                    accountLine
+                }
+                .padding(.horizontal, DSRoomChassis.inset)
             }
-        } else {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSScopeTiles(sections: sections, active: active,
-                             attention: attention, onPick: onPick)
-                accountLine
-            }
-            .padding(.horizontal, DSRoomChassis.inset)
         }
+    }
+
+    /// The crown on Home, the section's figure off it — one fixed box either
+    /// way. The `Color.clear` holds the box open when neither draws: a frame on
+    /// a builder that produced nothing has no layout presence (Vibenet's
+    /// measured 575 → 355pt jump), and the tiles would ride up by the slot.
+    /// NO PLATE (prd §758) — the head is content, like the rows under it.
+    private var lead: some View {
+        ZStack(alignment: .topLeading) {
+            Color.clear
+            if active == home {
+                if let showing { crown(showing) }
+            } else {
+                figure(active)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(height: DSRoomChassis.visualSlot, alignment: .top)
+        .padding(.vertical, DS.Space.s2)
+        .padding(.horizontal, DSRoomChassis.inset)
     }
 
     @ViewBuilder

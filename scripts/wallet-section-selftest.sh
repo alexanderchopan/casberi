@@ -287,12 +287,25 @@ deny DSRoomScopeChrome.swift "DSAccountDeck(" \
 # grew a DragGesture would make one gesture mean two things by depth.
 deny DSScopeTiles.swift "DragGesture" \
   "the scope tiles take a swipe — the swipe is the room's and the pick is a tap (§747)"
-# Off Home the figure leads and the chrome follows it (§752). In FeedScreen the
-# wallet's figure call must come BEFORE the chrome's, or the tiles sit at the top.
-fig_at=$(grep -n "walletScopeVisualSection(section)" "$work/FeedScreen.swift.bare" | head -1 | cut -d: -f1 || true)
-chr_at=$(grep -n "walletScopeChromeSection(section, visible:" "$work/FeedScreen.swift.bare" | head -1 | cut -d: -f1 || true)
-[[ -n "$fig_at" && -n "$chr_at" ]] && (( fig_at < chr_at )) \
-  || fail "drift: the wallet's scope tiles are drawn above its figure — controls at the top (§752)"
+# Off Home the figure leads and the tiles follow it (§752), and since §765 the
+# CHROME draws that figure, in the same lead box Home's crown takes — so the
+# tiles land at one height on every page. A figure drawn as a sibling Section
+# above the chrome takes its own insets and the List's section spacing, and the
+# tiles walk up and down as you pick (user, 2026-09-15).
+chrome_bare=$(sed -e 's://.*$::' Casberi/Casberi/Design/DSRoomScopeChrome.swift)
+lead_at=$(print -r -- "$chrome_bare" | grep -n "^            lead$" | head -1 | cut -d: -f1 || true)
+tiles_at=$(print -r -- "$chrome_bare" | grep -n "DSScopeTiles(" | head -1 | cut -d: -f1 || true)
+[[ -n "$lead_at" && -n "$tiles_at" ]] && (( lead_at < tiles_at )) \
+  || fail "drift: the chrome's lead box is not drawn before its tiles — controls at the top, or a moving bar (§752, §765)"
+[[ "$chrome_bare" == *"figure(active)"* && "$chrome_bare" == *"height: DSRoomChassis.visualSlot"* ]] \
+  || fail "drift: the chrome no longer draws the section figure in the fixed lead box — the tiles move between pages (§765)"
+wallet_fn=$(sed -n '/func walletScopeChromeSection(/,/^    }$/p' "$work/FeedScreen.swift.bare")
+[[ "$wallet_fn" == *"figure: { scope in"* && "$wallet_fn" == *"walletScopeVisualSection(scope)"* ]] \
+  || fail "drift: the wallet no longer hands its section figure to the chrome (§765)"
+for sibling in "FramesRoomFigure(head: head," "HegotaRoomFigure(head: head,"; do
+  (( $(grep -c "$sibling" "$work/FeedScreen.swift.bare") == 2 )) \
+    || fail "drift: a devnet figure is drawn outside the chrome again — its tiles move between pages (§765): $sibling"
+done
 # A ROOM WITH ONE READING DRAWS NO ROWS (\u00a783). The gate used to sit in the
 # room, beside the switcher it suppressed; under \u00a7744 the chrome must draw on
 # Home either way (it carries the crown and the acts), so the gate moved into
@@ -331,7 +344,11 @@ chrome_fn=$(sed -n '/func walletScopeChromeSection(/,/^    }$/p' "$work/FeedScre
 # **One surface, in reading order** (prd §750): the head, then Actions, then
 # Readings. Read in the chrome, where the order is the source order.
 CHROME="Casberi/Casberi/Design/DSRoomScopeChrome.swift"
-head_at=$(grep -n "crown(showing)" "$CHROME" | head -1 | cut -d: -f1 || true)
+# Since §765 the crown is drawn by `lead`, the one box both arms share, so the
+# head's place in the order is the `lead` call and `lead` must draw the crown.
+grep -q "if let showing { crown(showing) }" "$CHROME" \
+  || fail "drift: the chrome's lead box no longer draws the crown on Home (§765)"
+head_at=$(grep -n "^            lead$" "$CHROME" | head -1 | cut -d: -f1 || true)
 acts_at=$(grep -n 'String(localized: "Actions")' "$CHROME" | head -1 | cut -d: -f1 || true)
 rows_at=$(grep -n "DSScopeRows(sections:" "$CHROME" | head -1 | cut -d: -f1 || true)
 [[ -n "$head_at" && -n "$acts_at" && -n "$rows_at" ]] \

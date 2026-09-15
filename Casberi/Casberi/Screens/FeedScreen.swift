@@ -3917,36 +3917,6 @@ struct FeedScreen: View {
         }
     }
 
-    @ViewBuilder private var hegotaVisualSection: some View {
-        // **OFF HOME ONLY (prd §747).** On Home this room's figure is its
-        // crown, and the crown rides the account card inside
-        // `hegotaScopeChromeSection`. Drawing it here as well would state the
-        // balance twice on one screen, which is §683's own rule.
-        if let head = HegotaRoomSource.compose(),
-           HegotaSection.resolve(chrome.hegotaSection,
-                                 present: chrome.hegotaSections) != .home {
-            Section {
-                HegotaRoomFigure(head: head,
-                                 accounts: HegotaRoomSource.accounts(),
-                                 scoped: chrome.hegotaScope,
-                                 section: HegotaSection.resolve(chrome.hegotaSection,
-                                                                present: chrome.hegotaSections))
-                    // **The chassis inset, NOT full bleed.** `DSRoomSlot` adds
-                    // its own `contentInset` (12pt) and nothing else, so a
-                    // full-bleed row put every figure at 12pt while the toggle
-                    // bar below it sits at 20 — the drawing was wider than the
-                    // control that scopes it, which is the one thing Wallet's
-                    // room never does. Matching the switcher's inset lands the
-                    // figure INSIDE the bar, the way Wallet's chart sits inside
-                    // its own.
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: 0, trailing: DSRoomChassis.inset))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
-        }
-    }
-
     /// THE HEGOTÁ ROOM'S CHROME, WITH NO BAR IN IT (prd §747, 2026-09-15).
     ///
     /// Was `hegotaRailSection`, the fused slab (§547) this room copied from
@@ -4013,6 +3983,12 @@ struct FeedScreen: View {
                                              onOpenAccount: { feedSheet = .framesAccount($0) })
                         }
                     }
+                },
+                figure: { scope in
+                    FramesRoomFigure(head: head,
+                                     accounts: framesAccounts,
+                                     section: scope,
+                                     onOpenAccount: { feedSheet = .framesAccount($0) })
                 },
                 acts: { slot in
                     if slot.id.isEmpty {
@@ -4154,6 +4130,19 @@ struct FeedScreen: View {
                         }
                     }
                 },
+                figure: { scope in
+                    PrivacyDevnetRoomCard(
+                        head: head,
+                        section: scope,
+                        accounts: scoped,
+                        headSlot: PrivacyDevnetLiveState.shared.headSlot,
+                        walkCut: PrivacyDevnetLiveState.shared.walkCut,
+                        shielded: PrivacyDevnetLiveState.shared.shielded,
+                        mine: PrivacyDevnetLiveState.shared.mine,
+                        onOpenMove: { move, owner in
+                            feedSheet = .privacyDevnetMove(move, owner)
+                        })
+                },
                 acts: { slot in
                     // The ALL card only: this device holds ONE key, so Send
                     // and Shield act for that key whichever card is showing.
@@ -4208,6 +4197,12 @@ struct FeedScreen: View {
                                                  section: .home)
                             }
                         }
+                    },
+                    figure: { scope in
+                        HegotaRoomFigure(head: head,
+                                         accounts: roster,
+                                         scoped: chrome.hegotaScope,
+                                         section: scope)
                     },
                     acts: { slot in
                         // The ALL card only: this device holds ONE key, so
@@ -5085,18 +5080,6 @@ struct FeedScreen: View {
             // emitted and the chrome draws the head (`FramesRoomFigure` on its
             // `.home` arm), Actions and the Readings rows. Off Home the scope's
             // figure draws first and the chrome under it is the section tiles.
-            if framesScope != .home {
-                Section {
-                    FramesRoomFigure(head: head,
-                                     accounts: framesAccounts,
-                                     section: framesScope,
-                                     onOpenAccount: { feedSheet = .framesAccount($0) })
-                        .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                                  bottom: 0, trailing: DSRoomChassis.inset))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
-            }
             // Off Home the figure leads and the tiles sit UNDER it (prd §752): nothing
             // that scopes the room is drawn at the top of the screen.
             framesScopeChromeSection(framesScope, head: head)
@@ -5145,29 +5128,6 @@ struct FeedScreen: View {
             // to `.home`), the send console as Actions, and the Readings rows.
             // Off Home the scope's figure draws first and the chrome under it
             // is the section tiles.
-            if privacyScope != .home {
-            Section {
-                PrivacyDevnetRoomCard(
-                    head: head,
-                    section: privacyScope,
-                    accounts: PrivacyDevnetRoomSource.accounts(scope: chrome.privacyDevnetScope),
-                    headSlot: PrivacyDevnetLiveState.shared.headSlot,
-                    walkCut: PrivacyDevnetLiveState.shared.walkCut,
-                    shielded: PrivacyDevnetLiveState.shared.shielded,
-                    mine: PrivacyDevnetLiveState.shared.mine,
-                    // Home's own newest moves are rows too, and rows open
-                    // sheets (prd §596) — the closure the card's list half
-                    // gets below, on the one scope whose rows draw in the slot.
-                    onOpenMove: { move, owner in
-                        feedSheet = .privacyDevnetMove(move, owner)
-                    })
-            }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                      bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
-            .task { await PrivacyDevnetLiveState.shared.refreshIfStale() }
-            }
             // Off Home the figure leads and the tiles sit UNDER it (prd §752): nothing
             // that scopes the room is drawn at the top of the screen.
             privacyDevnetScopeChromeSection(privacyScope, head: head)
@@ -5281,7 +5241,6 @@ struct FeedScreen: View {
             // `ShellChrome` is `@Observable` and the reads below are in this
             // same pass, that was a body which invalidated itself continuously.
             hegotaChainNoticeSection
-            hegotaVisualSection
             // Off Home the figure leads and the tiles sit UNDER it (prd §752): nothing
             // that scopes the room is drawn at the top of the screen.
             hegotaScopeChromeSection
@@ -6737,46 +6696,11 @@ struct FeedScreen: View {
             // every other scope — its crown plus an empty visual — and the bar
             // sat that spacing higher there. Two zero-height boxes, each
             // invisible, and the difference between them was the bug.
-            if section != .home {
-                // **ONE TEMPLATE, AND WALLET IS IN IT NOW** (prd §495, user:
-                // "Wallet and Vibenet should use same template" → "one
-                // template" → "we need to finish the other half").
-                //
-                // The seven scope builders used to be List SECTIONS, each
-                // carrying its own `Section { … }` and its own row modifiers —
-                // which is what stopped Wallet reaching `DSRoomSlot` on the
-                // first attempt, because wrapping a Section in a plain view
-                // collapses it and drops its hidden separator (a HAIRLINE, §8
-                // bans them). They are bare views now, the Section is here and
-                // written once, and the box is the same `DSRoomSlot` every
-                // vibenet scope draws into.
-                //
-                // `headline: nil`: Wallet's figures name themselves today. The
-                // ROW is still reserved, which is what makes each drawing
-                // start at the same y and what clears the settings gear.
-                Section {
-                    // `reservesHeadline: false`, like Home above (prd §495).
-                    //
-                    // **The rule is: reserve the row only when the CHASSIS
-                    // draws the headline.** Vibenet's figures pass theirs to
-                    // `scopeFigure`, so the chassis owns that line and must
-                    // keep room for it. Wallet's figures name themselves
-                    // INSIDE their own drawing, so reserving a row above them
-                    // both leaves a blank band and — the part that was
-                    // visible — steals 42pt from drawings sized for the whole
-                    // slot: the holdings treemap and the NFT quad were both
-                    // clipped along their bottom edge, since the quad derives
-                    // its cell size from `visualSlot` directly.
-                    DSRoomSlot(headline: nil, reservesHeadline: false) {
-                        walletScopeVisualSection(section)
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-                }
-            }
-            // Off Home the figure leads and the tiles sit UNDER it (prd §752): nothing
-            // that scopes the room is drawn at the top of the screen.
+            // Off Home the chrome draws the scope's figure in the box Home's crown
+            // takes, then the tiles under it (prd §752, §765). The figure is not
+            // a Section of its own here any more: as a sibling it took its own
+            // row insets and the List's section spacing, and the tiles landed
+            // at a different height than on Home.
             walletScopeChromeSection(section, visible: visible, streamTotal: all.count)
             // THE FOUR `walletGroupHeader` GROUPS BECOME SCOPES (prd §483).
             // Renamed to short nouns and split twice — NFTs out of "What you

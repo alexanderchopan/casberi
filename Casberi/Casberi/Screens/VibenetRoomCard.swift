@@ -613,11 +613,8 @@ struct VibenetRoomCard: View {
                 // THE FIGURE** (prd §750, §752). Home's crown is not drawn
                 // here: it is `scopeChrome`'s head. Off Home the scope's figure
                 // draws first and the chrome under it is the section tiles.
-                if (section ?? .home) != .home {
-                    scopeVisualDissolving
-                }
-                // Off Home the figure leads and the tiles sit UNDER it (prd §752): nothing
-                // that scopes the room is drawn at the top of the screen.
+                // Off Home the chrome draws the figure in the box Home's crown
+                // takes, then the tiles under it (prd §752, §765).
                 scopeChrome
             }
             // Everything the chassis scopes, in one child so the gap above it is
@@ -864,6 +861,7 @@ struct VibenetRoomCard: View {
                         }
                     }
                 },
+                figure: { _ in scopeVisualDissolving },
                 acts: { slot in
                     // The ALL card only: this device holds ONE key, so Send,
                     // Top up, Create and Authorize act for that key whichever
@@ -873,6 +871,9 @@ struct VibenetRoomCard: View {
                     }
                 }
             )
+        } else if (section ?? .home) != .home {
+            // No tiles to hold level, so the figure draws on its own.
+            scopeVisualDissolving
         }
     }
 
