@@ -91,7 +91,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Dead-closure audit (scripts/dead-closure-audit.py, 2026-09-10) — a control calling a closure property nothing ever supplies** → docs/verify.md · prd §669
 - **Defaults-lock audit (scripts/defaults-lock-audit.py, 2026-09-14) — a lock held across a `UserDefaults` write deadlocks with every view body (build 570)** → docs/verify.md · prd §721
 - **ShareLink style audit (scripts/sharelink-style-audit.py, 2026-09-11) — an unstyled share control in a `List` row becomes the row's action; give it `.buttonStyle(.plain)`** → docs/verify.md · prd §693
-- **Day-divider audit (scripts/day-divider-audit.py, 2026-09-15) — the day header wears `DS.brandInk` (the mark's pink); a group named by something other than time passes `dated: false` and keeps the primary ramp** → docs/verify.md · prd §740
+- **Day-divider audit (scripts/day-divider-audit.py, 2026-09-15) — the day header wears `DS.brandInk` (the mark's hue, one notch softer, prd §742); a group named by something other than time passes `dated: false` and keeps the primary ramp** → docs/verify.md · prd §740
 - **Design-template audit (scripts/ds-template-audit.py, 2026-09-13) — reach for `DSSpinner`, `dsReadSheet`, `DSPushRow`/`DSChevron`/`DSMoreLink`, `DSToggleRow`, `DSEmptyState`, `DSCopyCapsule` and `Chip` before drawing one by hand** → prd §715
 - **Secret-scan self-test (scripts/secret-scan-selftest.py, 2026-08-02)** → docs/verify.md · prd §277
 - **On-device self-test (scripts/ondevice-selftest.sh, 2026-08-02)** → docs/verify.md · prd §282
@@ -359,7 +359,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 - Liquid Glass on the floating layer only (composer/FAB/toasts) — never on content. There is no tab bar (prd §100); older rulings that narrate one are historical → docs/hooks/design.md
 - No letter-spacing, no ALL-CAPS eyebrows — headers are words in sentence case ("Getting started", never "G E T T I N G  S T A R T E D" or "GETTING STARTED"). `.kerning()` is banned; the type ramp carries hierarchy by size/weight alone (ruling 2026-07-08).
 - No hairlines — zero exceptions; nothing draws a line. Widget/tile radius = `DS.Radius.widget`. **The catalog is rows (what you could add) and the sources tray is tiles (what you have); keep that split** → docs/hooks/design.md · prd §518
-- **The day divider is the one line of type in the brand pink (`DS.brandInk`), and the cover card is not.** The hue is the app's own voice, so it never lands on a thing's title, a figure, or a `deckFill` ground (~1.8:1) → docs/hooks/design.md · prd §740
+- **The day divider is the one line of type in the brand pink (`DS.brandInk`), and the cover card is not.** The hue is the app's own voice, so it never lands on a thing's title, a figure, or a `deckFill` ground (~1.8:1); ink is one notch softer than the mark → docs/hooks/design.md · prd §740 · §742
 - **Every feed row stands on ONE plate, `DS.surfaceListRow`, per row and unshadowed (prd §743, supersedes §493 for the feed).** `runBackground` returns `rowPlate` and reads neither `bare` nor `position`; `standsAlone` still decides the cover and the run break → prd §743
 - **Every pour is ink — `DS.pourInk`, one token.** Colour that says what is happening stays; colour that says where it came from goes → docs/hooks/design.md · prd §524
 - Apps Browse categories follow prd §59 (X under Social, Slack under Work, Notes its own category); the taxonomy is `Model/BridgeCatalog.swift`, mirrored on the website.

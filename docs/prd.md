@@ -55207,6 +55207,23 @@ rule, plus drift guards over `XLiveNotifications` (comment-stripped) that the
 new-notice stamp is the entry's time, that `capturedAt: .now` never returns,
 and that a landed notice is still rewritten. Wired in `verify.sh`.
 
+## §742 — The day divider's pink is one notch softer than the mark's (user: "i think the pink we gave the day headers is a tiny bit too bold can we soften it a little bit but still keep it hot pink?", 2026-09-14)
+
+**The ruling.** `DS.brandInk` no longer takes `DS.brand` straight. The mark is a
+drawing and takes `#FF2D87` at full chroma; a 24pt bold run of type in the same
+value shouted over the rows it divides. Ink now holds the hue angle (334°) and
+drops saturation one notch: dark `#f5458f` (S 72, B 96; 6.1:1 on the dark
+page, was 6.0:1), light `#b8306b` (S 74, B 72; 5.7:1 on white, was 5.5:1). The
+Increase Contrast registers (`#ff579f`, `#9c1b52`) already sat softer and are
+unchanged, as is the vivid-page fallback to `textPrimary`.
+
+**What it is not.** Not a second hue — the same angle, so the divider still
+reads as the mark's colour beside the mark — and not a change to WHERE the hue
+lands: §740's boundary (never a title, a figure, or a `deckFill` ground) holds.
+`DS.brand` stays the one spelling of the mark's hex; `brandInk` is a register
+of it, deliberately not equal to it, so `day-divider-audit.py` check 4 (one
+spelling of `#FF2D87`) is untouched and still passes.
+
 ## §743 — Every feed row stands on a plate, at the darkest step the app has (user: "i think the cards would make it look more purposeful. so i guess we should do E?", after "i don't want gray" and "i'd want it almost indistinguishable", 2026-09-15)
 
 **Supersedes §493's "no cards in a scope's list, anywhere" and the 2026-07-22

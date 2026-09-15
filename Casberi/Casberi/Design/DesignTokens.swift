@@ -340,7 +340,7 @@ enum DS {
     static let brand = Color.fixed("#FF2D87")
 
     /// **The brand hue as INK** — the day dividers, and nothing else yet
-    /// (prd §740).
+    /// (prd §740), one notch softer than the mark (prd §742).
     ///
     /// Why a colour rule that bans decoration admits this one. §8 allows
     /// identity, state or magnitude; a day header is the app's OWN voice —
@@ -351,21 +351,32 @@ enum DS {
     /// anything drawn on a `deckFill` ground, where the brand hue measures
     /// ~1.8:1 and the ground changes per source.
     ///
+    /// **Softer than the mark, on purpose (prd §742, user: "a tiny bit too
+    /// bold … soften it a little bit but still keep it hot pink").** The mark
+    /// is a drawing and takes the hue at full chroma; a run of 24pt bold type
+    /// in the same value shouted over the rows it was meant to divide. Ink
+    /// takes the same hue angle (334°) with saturation down one notch and,
+    /// on dark, brightness a hair off white-point: dark `#f5458f` (S 72,
+    /// B 96 against the mark's 82/100), light `#b8306b` (S 74, B 72). Still
+    /// unmistakably the brand pink beside the mark — a second REGISTER of one
+    /// hue, not a second hue — and `DS.brand` stays the only spelling of the
+    /// mark's own value.
+    ///
     /// **Contrast, measured — and the light page does NOT take the brand hue
-    /// straight.** `#FF2D87` is 6.0:1 on the dark page, which is where it
-    /// ships. On the light one it measures 3.1:1: legal, because `heading22`
-    /// is 24pt bold and the bar for that rung is 3:1, and WRONG, because the
-    /// count sitting beside it in the same header is `textTertiary` at 4.5:1.
-    /// The largest word on the page would have been the least legible thing
-    /// on it, which is a hierarchy upside down, not a tight pass. Light takes
-    /// `#b82061` — the same hue angle and saturation, brightness down — at
-    /// 5.5:1, which clears the secondary tier it heads.
+    /// straight.** `#f5458f` is 6.1:1 on the dark page, which is where it
+    /// ships. The brand hue on the light page measures 3.1:1: legal, because
+    /// `heading22` is 24pt bold and the bar for that rung is 3:1, and WRONG,
+    /// because the count sitting beside it in the same header is
+    /// `textTertiary` at 4.5:1. The largest word on the page would have been
+    /// the least legible thing on it, which is a hierarchy upside down, not a
+    /// tight pass. Light takes `#b8306b` — the hue angle held, brightness
+    /// down — at 5.7:1, which clears the secondary tier it heads.
     ///
     /// Under Increase Contrast each climbs rather than staying put, because a
     /// setting that does not reach a header is the half-answered kind §83
-    /// bans: dark to 7.1:1 by dropping saturation, light to 7.0:1 by dropping
-    /// brightness further. Every value holds the hue angle, so none of them
-    /// reads as a second pink.
+    /// bans: dark to 7.1:1 by dropping saturation further, light to 7.0:1 by
+    /// dropping brightness further. Every value holds the hue angle, so none
+    /// of them reads as a second pink.
     ///
     /// **On a vivid page there is no hue to take.** One of the eight
     /// backgrounds IS pink (`#ff2d78` dark, `#ffa5c4` light) — a hair off the
@@ -377,11 +388,10 @@ enum DS {
     /// argument with the user's own choice is the correct outcome.
     static var brandInk: Color {
         if vividBackground { return textPrimary }
-        // Spelled against `brand` rather than re-hexed, so the dark register
-        // and the mark cannot drift: `Color.adaptive` takes hex strings, and
-        // a second "#FF2D87" in this file is the thing `brand` exists to stop.
-        let darkInk = moreContrast ? Color.fixed("#ff579f") : brand
-        let lightInk = Color.fixed(moreContrast ? "#9c1b52" : "#b82061")
+        // Neither register re-spells the mark's hex: `brand` is the one
+        // spelling of `#FF2D87`, and these are deliberately NOT it (§742).
+        let darkInk = Color.fixed(moreContrast ? "#ff579f" : "#f5458f")
+        let lightInk = Color.fixed(moreContrast ? "#9c1b52" : "#b8306b")
         return Color(uiColor: UIColor { traits in
             UIColor(traits.userInterfaceStyle == .light ? lightInk : darkInk)
         })
