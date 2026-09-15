@@ -73812,6 +73812,34 @@
         }
       }
     },
+    "Last %lld weeks" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Últimas %lld semanas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "過去%lld週間"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최근 %lld주"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最近 %lld 周"
+          }
+        }
+      }
+    },
     "Last block %@" : {
       "localizations" : {
         "es" : {
@@ -81674,6 +81702,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无自动续费"
+          }
+        }
+      }
+    },
+    "No balance yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay saldo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "残高はまだありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 잔액이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "暂无余额"
           }
         }
       }
@@ -111617,6 +111673,34 @@
         }
       }
     },
+    "Shows the other sources in this category" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Muestra las demás fuentes de esta categoría"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このカテゴリのほかのソースを表示します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 카테고리의 다른 소스를 표시합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "显示此类别中的其他来源"
+          }
+        }
+      }
+    },
     "Shows the vault's unspent pieces" : {
       "localizations" : {
         "es" : {
@@ -134317,6 +134401,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "是什么阻止这条链报告一个并不真实的余额？"
+          }
+        }
+      }
+    },
+    "What the accounts you follow are worth, and the line that worth traces. Nothing priced was found for them." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuánto valen las cuentas que sigues y la línea que traza ese valor. No se encontró nada con precio para ellas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローしているアカウントの価値と、その推移を示すライン。価格の付いたものは見つかりませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 계정의 가치와 그 가치가 그리는 선. 가격이 매겨진 항목을 찾지 못했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的账户价值多少，以及该价值的走势线。未找到任何有价格的资产。"
           }
         }
       }
