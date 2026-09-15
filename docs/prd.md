@@ -56927,3 +56927,31 @@ The octopus the person sees "while the app is loading" is the app-switcher cover
 **The ruling.** Today is never quiet. `isQuiet` returns false for a row `FeedScreen.groupingCalendar.isDateInToday` accepts, after the increased-contrast guard and before either §378 reason is asked, so one guard reaches all three call sites (single rows, bundles, strips). A bundle's date is its newest member, so a fold that reaches today stays lit. Yesterday and older recede exactly as §378 ruled.
 
 **Deliberately untouched.** §219's art desaturation already spares the first 48 hours. §386d's Today brief dims a module whose content is unchanged since the last brief, which is a statement about the content rather than its day, and it stays.
+
+## §774 — The feed's first two seconds were one bad layout, not a slow load (user: "ios loads like this for about two seconds", screenshot, 2026-09-15)
+
+**The report was a picture, and the picture is a measurement.** 1320×2868 at 3× — a 440pt screen. Read against the tokens rather than looked at:
+
+| | drawn | should be |
+|---|---|---|
+| dock slab | 18pt → 421.7pt | correct, `DS.Space.s4` both sides |
+| the cover's well | 11.7pt → 95.3pt (**83.7pt wide**) | ~404pt |
+| its text column | **55.6pt wide** | ~376pt |
+| "Live" | 42.7pt wide, 17.7pt cap → a 24pt face | `heading24`, correct |
+| the eyebrow's disc | 35.7pt | correct |
+
+**Type and disc are full size; only the WIDTHS collapsed.** That rules out every explanation with an animation in it — a scale, an entrance, a matched-geometry frame — because each of those would carry the type down with the box. 55.6pt is the width of "Store" at `heading24`, the longest word in the title "Live on the App Store". `FeedDayDivider` says the same thing from the other end: its `ViewThatFits(in: .horizontal)` had fallen to the stacked branch and the clause truncated at 71pt, which is the width of the single token `terricola.eth`.
+
+**So every row was drawn at its MINIMUM INTRINSIC WIDTH** — what a self-sizing cell returns when it is measured under `UIView.layoutFittingCompressedSize`. Nothing was waiting on SwiftData; the rows that arrive two seconds later are the same rows. The feed was not loading, it was laid out wrong and stuck.
+
+**Where the zero width comes from.** The shell's root lays out once before the scene's window is sized. This is not a new discovery here — `FirstPaintMarker.layoutSubviews` has guarded on `bounds.width > 0` since the day it was written, for exactly that pass. Every view in the tree re-lays-out correctly on the next one. **A `List`'s cells do not**: UIKit caches the size each self-sizing cell was measured at, and nothing in a static feed invalidates it.
+
+**And the two seconds is a number this repo already owns.** What eventually invalidates those cells is the launch row budget lifting: `MainSurface.releaseSwipeBudget` waits `FirstPaint.painted()` plus 360ms plus stillness, then clears `swipeRowBudget`, which is a parameter change, which re-runs `FeedScreen.init` and rebuilds the List. §628 measured first paint on a phone at ~1.3s. 1.3 + 0.36 + a settle is the reported "about two seconds", and it is why the frame corrects itself with nobody touching anything — the one detail that makes this unmistakably a stuck measurement rather than a slow one.
+
+**The ruling: the shell is not built before the window has a width.** `shellBase`'s gate takes a second clause, `shellWidth > 0` — the width `shellPhaseAware` already measures on that very view. The closed branch is what reports it: `DSPageBackground` is greedy, so it takes whatever the window proposes and the gate opens on the first pass that proposes anything. There is no path where it stays shut on a window that exists, which is the failure §642b shipped once and the reason this reuses an existing measurement rather than inventing a signal. Cost: the shell mounts one layout pass later.
+
+**It is §642's gate answering a second question, and that is the right place for it.** §642 withholds the shell from a scene nobody is looking at; this withholds it from a scene that cannot yet say how wide it is. Both are "do not build this tree yet, for a reason the tree cannot see", and a second gate beside the first would be two flags that must agree.
+
+**Measured from now on, because a layout pass leaves no trace.** `launchTimer shellWidth <w> at <n>ms` is logged on the first geometry the shell is handed, under `LaunchClock.reports` — DEBUG always, Release under `-launchTimer YES`, so a TestFlight build can be asked too. A `shellWidth 0` line is this defect; a first line that is already 440 is not, and then the compressed pass is somewhere below `MainSurface` and this fix is inert.
+
+**UNSEEN.** Written on a Linux host with no Swift toolchain (§772's own footing): nothing here has been compiled or driven. `background-launch-audit.py` is green with its 17 self-tests — check D's `if\s+shellMounted\b` still matches the widened gate — as is `prd-index-audit.py`. On a Mac, `scripts/verify.sh` is the gate. On a phone, the question is one launch: the `shellWidth` line, and whether the first painted frame is now the feed at 440pt.

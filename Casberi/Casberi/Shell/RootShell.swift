@@ -1591,7 +1591,20 @@ struct RootShell: View {
     private var shellPhaseAware: some View {
         shellBase
         .animation(DS.Motion.standard, value: composerOpen)
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { shellWidth = $0 }
+        // …and the gate's own signal (prd §774). The zero-width pass this
+        // withholds the shell through is invisible from a screenshot and from
+        // every check here — it is one layout, and everything except a
+        // `List`'s cached cell sizes survives it — so the width the shell was
+        // FIRST laid out at is reported rather than assumed. Under
+        // `LaunchClock.reports`, the same gate `launchTimer` uses, so a
+        // TestFlight build can be asked the question too.
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
+            if LaunchClock.reports, shellWidth == 0 {
+                NSLog("[Casberi] launchTimer shellWidth %.0f at %dms", width,
+                      Int(Date().timeIntervalSince(LaunchClock.start) * 1000))
+            }
+            shellWidth = width
+        }
         // The bar rides RootShell's OWN ZStack now (2026-07-19 — it replaced
         // the FAB, which used to live on MainSurface's root content
         // specifically so pushed rooms could slide over it; the bar
@@ -2093,9 +2106,30 @@ struct RootShell: View {
     /// the app is awake without a window can be dropped by the gate. What is
     /// withheld is only the drawing: `MainSurface` and its whole-corpus
     /// `@Query`, the navigation stack, the dock, the agent cluster.
+    ///
+    /// **AND NOT BEFORE THE WINDOW HAS A WIDTH (prd §774).** The shell's root
+    /// lays out once at zero width before the scene's window is sized —
+    /// `FirstPaintMarker` has guarded on `bounds.width > 0` since the day it
+    /// was written for exactly that pass. Every view here re-lays-out correctly
+    /// on the next one; a `List`'s self-sizing cells do not. They cache the
+    /// size they were measured at, so the feed's rows kept the width a
+    /// collection view returns under `layoutFittingCompressedSize` — their
+    /// MINIMUM intrinsic width — and held it until something invalidated them.
+    /// The thing that eventually does is the launch row budget lifting
+    /// (`MainSurface.releaseSwipeBudget`: `FirstPaint.painted()` plus 360ms
+    /// plus stillness), which is why the garbled frame lasted about two
+    /// seconds and then corrected itself with no user action.
+    ///
+    /// `shellWidth` is the width already measured on THIS view by
+    /// `shellPhaseAware`'s `.onGeometryChange`, so the closed branch is what
+    /// reports it: `DSPageBackground` is greedy, it takes whatever the window
+    /// proposes, and the gate opens on the first pass that proposes anything.
+    /// There is no path where it can stay shut on a window that exists — which
+    /// is the failure mode §642b shipped once and the reason this reuses a
+    /// measurement rather than adding a signal of its own.
     @ViewBuilder
     private var shellBase: some View {
-        if shellMounted {
+        if shellMounted, shellWidth > 0 {
             shellContent
         } else {
             DSPageBackground()
