@@ -60,7 +60,7 @@ struct FeedLedeCard: View {
     /// row's height when the picture lands, which in a `List` reflows every
     /// row below it. 16:9 at a phone's content width is ~178pt; this is that,
     /// rounded to the space scale.
-    private static let artHeight: CGFloat = 176
+    private static let artHeight = DSRoomChassis.leadArtHeight
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
     /// re-evaluates a LEAF view's body on the model's own observation,
@@ -93,20 +93,23 @@ struct FeedLedeCard: View {
             cover(face, receipt: receipt, excerptLines: 4)
             cover(face, receipt: receipt, excerptLines: 2)
         }
-        // Every room's lead is one height (prd §760) — the wallet head's box.
-        // The cover has no surface, so the rest of the box is the page's; the
-        // clip sits before the selection so the wash can still bleed past it.
+        // Every room's lead is one height (prd §760), and since §766 the cover
+        // draws it the way a head does: `dsRoomHeadBlock` — the inset, the air
+        // and the well — around a box `2 × s4` shorter than the lead. It was
+        // the one lead with no inner padding, so its words started 15pt higher
+        // than a head's in the room next door.
         .frame(maxWidth: .infinity,
-               minHeight: DSRoomChassis.leadHeight, maxHeight: DSRoomChassis.leadHeight,
+               minHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4,
+               maxHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4,
                alignment: .topLeading)
         .clipped()
-        // The Mac walk's selection — the one surface the cover may wear, bled
-        // past the content so the words do not touch its edge.
+        .dsRoomHeadBlock()
+        // The Mac walk's selection washes the well (prd §766). The well is the
+        // cover's edge now, so the wash no longer bleeds past the content.
         .background {
             if selected {
-                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
                     .fill(DS.tintDim)
-                    .padding(-DS.Space.s3)
             }
         }
     }
@@ -114,12 +117,13 @@ struct FeedLedeCard: View {
     /// One spelling of the cover at an excerpt length (prd §760).
     private func cover(_ face: FeedLedeFace.Kind, receipt: MoneyReceipt?,
                        excerptLines: Int) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
+        VStack(alignment: .leading, spacing: 0) {
             if face == .picture {
                 art
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                    .padding(.bottom, DS.Space.s3)
             }
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
+            VStack(alignment: .leading, spacing: 0) {
                 // **THE MARK LEADS AS A DISC (prd §567) — UNLESS THE THING IS
                 // A POST, AND THEN THE PERSON DOES (prd §756).** A post's own
                 // row leads with the author's face and name (§744), so a cover
@@ -128,23 +132,33 @@ struct FeedLedeCard: View {
                 // rather than to whoever wrote it. Same picture, same fallback
                 // as `PostCard`'s lead: the avatar when there is one, the seat's
                 // mark when there is not.
-                postDisc
-                    .padding(.bottom, DS.Space.s1)
-                switch face {
-                case .picture:         titleBlock(underArt: true, excerptLines: excerptLines)
-                case .words:           titleBlock(underArt: false, excerptLines: excerptLines)
-                case .money:           moneyBlock(receipt)
-                case .clock:           clockBlock
-                }
+                //
+                // **Who and when LEAD, on one line with the disc (prd §766).**
+                // The disc sat alone above the title and the source and time
+                // sat under it, so a post, an article and a receipt each put
+                // their statement at a different y. The eyebrow first makes it
+                // one y in every room.
                 eyebrow
+                Group {
+                    switch face {
+                    case .picture:         titleBlock(underArt: true, excerptLines: excerptLines)
+                    case .words:           titleBlock(underArt: false, excerptLines: excerptLines)
+                    case .money:           moneyBlock(receipt)
+                    case .clock:           clockBlock
+                    }
+                }
+                .padding(.top, DS.Space.s2)
                 if let note {
                     Text(note)
                         .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, DS.Space.s1)
+                        .padding(.top, DS.Space.s2)
                 }
+                // The foot, pinned to the well's bottom (prd §766).
+                Spacer(minLength: 0)
+                DSRoomChassis.LeadFooter()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -169,7 +183,13 @@ struct FeedLedeCard: View {
     /// **The picture face left this rule on 2026-09-14 (§734, below).** The
     /// length threshold now decides only the faces that have no picture, which
     /// is where it was always doing the work it claims to.
-    private static let statementLimit = 56
+    ///
+    /// **WITHDRAWN (prd §766).** Words take `heading24` and a number takes
+    /// `price40`, in every lead. A head's sentence was 24 and the cover's was 40
+    /// or 24 by the length of a string, so two rooms side by side set the same
+    /// kind of line two sizes apart — and a room's statement changed size when
+    /// its newest post got longer. The sheet keeps its own length rule; a lead
+    /// is one box with one grammar.
 
     /// **UNDER A PICTURE THE TITLE IS A CAPTION, NOT A HEAD (prd §734, user:
     /// "the header card seems too large with the font so big. It basically
@@ -191,14 +211,12 @@ struct FeedLedeCard: View {
     /// is its filename, so display type is the app shouting a string it
     /// assembled.
     private func titleBlock(underArt: Bool, excerptLines: Int) -> some View {
-        let short = words.count <= Self.statementLimit
-        return VStack(alignment: .leading, spacing: DS.Space.s1) {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
             Text(words)
-                .dsText(underArt ? .heading24 : (short ? .heading40 : .heading24))
+                .dsText(.heading24)
                 .foregroundStyle(DS.textPrimary)
                 .multilineTextAlignment(.leading)
-                .lineLimit(underArt ? 2 : (short ? 4 : 3))
-                .minimumScaleFactor(!underArt && short ? 0.8 : 1)
+                .lineLimit(underArt ? 2 : 3)
                 .fixedSize(horizontal: false, vertical: true)
             if let note = excerpt, !underArt {
                 Text(note)
@@ -363,6 +381,7 @@ struct FeedLedeCard: View {
     /// which is a real regression to buy a tidier line.
     private var eyebrow: some View {
         HStack(spacing: DS.Space.s2) {
+            postDisc
             // The person leads on a post (prd §756), in the primary tier, and
             // the network follows in the quiet one — the order the row itself
             // uses, and the order that makes "who" the first thing read.
@@ -376,9 +395,9 @@ struct FeedLedeCard: View {
             Text(thing.source)
                 .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
             LiveTimeText(date: thing.capturedAt)
         }
-        .padding(.top, DS.Space.s1)
     }
 
     /// The remote art URL, when the row has one worth enlarging.

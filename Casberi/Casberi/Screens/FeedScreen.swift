@@ -2530,6 +2530,8 @@ struct FeedScreen: View {
         /// A head that had only its sentence (prd §760). Held as the head rather
         /// than as the string so the balance mask is read when it is drawn.
         var quietHead: SourceHead? = nil
+        /// The lead's foot (prd §766): `leadFooter` over the whole room.
+        var footer: String? = nil
     }
 
     /// The last head computed for each room, kept ACROSS the mount.
@@ -2827,6 +2829,19 @@ struct FeedScreen: View {
     /// where `liveStream` and `anniversary` live because they hold `Thing`s and
     /// can never be cached — is worth far more than a short-circuit that saves
     /// four switch statements.
+    /// **THE FACT AT THE FOOT OF EVERY LEAD (prd §766).** How many things the
+    /// room holds and since when — true of every room, stated nowhere else,
+    /// and computed over the WHOLE room with the head (`fullRoomRows`), so it
+    /// never counts the bounded list. It says nothing about freshness: no seat
+    /// records a last successful sync, and a "updated 2m ago" read off
+    /// `capturedAt` would be §83's fake status. All has no foot.
+    @MainActor
+    private static func leadFooter(source: String, rows: [Thing]) -> String? {
+        guard source != "All", let oldest = rows.lazy.map(\.capturedAt).min() else { return nil }
+        let since = oldest.formatted(.dateTime.month(.abbreviated).year())
+        return String(localized: "^[\(rows.count) thing](inflect: true) since \(since)")
+    }
+
     @MainActor
     private func recomputeHeads() {
         // `.live` at the read, inside the task: `visible` is re-read here rather
@@ -2853,7 +2868,8 @@ struct FeedScreen: View {
             // whole point is a feed that has stopped producing rows, so a
             // verdict derived from the room's contents could not see it.
             feedHealth: FeedRoomHealthSource.standing(for: source),
-            quietHead: quiet ? head : nil)
+            quietHead: quiet ? head : nil,
+            footer: Self.leadFooter(source: source, rows: rows))
         Self.headMemo[headIdentity] = computed
         heads = computed
         SwipeClock.mark("heads", detail: "rows=\(rows.count)")
@@ -5810,6 +5826,8 @@ struct FeedScreen: View {
         // the materialisation its first content build needed has been paid.
         .onAppear { SwipeClock.finish() }
         .environment(\.defaultMinListHeaderHeight, 0)
+        // Every lead in the room reads its foot from here (prd §766).
+        .environment(\.dsLeadFooter, heads?.footer)
         .scrollIndicators(.hidden)
         .minimizesChrome(chrome, active: isActive)
         // The pull's WIND-UP feed (2026-08-04): raw top overscroll, which
@@ -7797,10 +7815,12 @@ struct FeedScreen: View {
         // A wider gap below than above: the cover is its own object, and the
         // day's run begins under it rather than continuing from it. The
         // chassis's own numbers (prd §763), which every other lead now wears.
+        // Since §766 the card draws its own `s3` inside a well, so the row
+        // stands at `inset`, where `dsRoomHeadPlacement` puts every head.
         .listRowInsets(.init(top: DS.Space.s2,
-                             leading: DSRoomChassis.leadInset,
+                             leading: DSRoomChassis.inset,
                              bottom: DSRoomChassis.leadGap,
-                             trailing: DSRoomChassis.leadInset))
+                             trailing: DSRoomChassis.inset))
         .listRowSeparator(.hidden)
     }
 

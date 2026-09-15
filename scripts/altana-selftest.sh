@@ -109,6 +109,10 @@ grep -q 'padding(.horizontal, DS.Space.s4)' "$TEMPLATE" \
   || { echo "✗ the room head template lost its outer margin — prd §488/§474/§745"; exit 1; }
 # The inset half of the block stays: with no fill to define an edge it looks
 # purposeless, and its job is that the head's words keep the left edge they had.
+# THE WELL IS THE TEMPLATE'S (prd §766). Every lead's box is drawn by this one
+# modifier; a lead that drops it is a line and 200pt of air again.
+perl -0pe 's{//[^\n]*}{}g' "$TEMPLATE" | grep -A5 'func dsRoomHeadBlock() -> some View' | grep -q 'dsWell(' \
+  || { echo "✗ the room head block no longer draws the lead's well — prd §766"; exit 1; }
 grep -q 'func dsRoomHeadBlock() -> some View' "$TEMPLATE" \
   || { echo "✗ the room head block is gone or renamed — every head's layout is one"
        echo "  definition (prd §745/§758)"; exit 1; }

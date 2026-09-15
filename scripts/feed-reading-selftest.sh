@@ -236,6 +236,15 @@ esac
 grep -q 'Text(words)' "$TMP/lede.nocomment" \
   || { echo "✗ the cover's title block no longer draws \`words\` (prd §756) — the post"; \
        echo "  branch would be computed and thrown away."; exit 1; }
+# THE COVER IS A LEAD LIKE ANY OTHER (prd §766): the head's block and well, the
+# pinned foot, and words at `heading24` — never a length-picked `heading40`.
+grep -q '\.dsRoomHeadBlock()' "$TMP/lede.nocomment" \
+  || { echo "✗ the cover no longer draws the head template's block and well (prd §766)"; exit 1; }
+grep -q 'LeadFooter()' "$TMP/lede.nocomment" \
+  || { echo "✗ the cover lost the lead's pinned foot (prd §766)"; exit 1; }
+grep -q 'heading40' "$TMP/lede.nocomment" \
+  && { echo "✗ the cover sets its statement at heading40 again — a lead's words are"; \
+       echo "  heading24 in every room (prd §766)"; exit 1; }
 # ONE COPY OF THE POST'S TWO FACTS (prd §756, the §396a class). Three readers
 # now — the cover and the two post cards — and the two that existed before
 # carried the same lines under a comment saying they were the same lines.

@@ -177,7 +177,14 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .frame(height: DSRoomChassis.visualSlot, alignment: .top)
+        // THE WELL (prd §766), the head template's own. The box is still
+        // `leadHeight` — the slot and its `s2` — so no figure loses a point of
+        // height; the drawing stands `s3` inside the well's edge, at the rows'
+        // column, and gives up that width instead. The tiles below keep
+        // `inset`, which is now the well's edge.
+        .padding(.horizontal, DS.Space.s3)
         .padding(.vertical, DS.Space.s2)
+        .dsWell(cornerRadius: DS.Radius.widget)
         .padding(.horizontal, DSRoomChassis.inset)
     }
 

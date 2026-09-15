@@ -1176,9 +1176,16 @@ private struct InsightCard<Content: View>: View {
     var fillsLead: Bool = true
     @ViewBuilder var content: Content
     /// The box inside the card's vertical padding (prd §760).
-    static var inner: CGFloat { DSRoomChassis.leadHeight - 2 * DS.Space.s3 }
+    static var inner: CGFloat { DSRoomChassis.leadHeight - 2 * DS.Space.s4 }
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) { content }
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) { content }
+            // The foot, pinned (prd §766) — only where the card is the lead.
+            if fillsLead {
+                Spacer(minLength: 0)
+                DSRoomChassis.LeadFooter()
+            }
+        }
             // Every room's lead is one height (prd §760): the card's outer
             // edge is `leadHeight`, and what it holds sits at the top.
             .frame(maxWidth: .infinity,
@@ -1186,11 +1193,10 @@ private struct InsightCard<Content: View>: View {
                    maxHeight: fillsLead ? Self.inner : nil,
                    alignment: .topLeading)
             .clipped()
-            // The rows' column and the lead's air (prd §763): the head
-            // template's own placement, with `s3` inside it.
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s3)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // The head template's block and placement (prd §763, §766): the
+            // rows' column, the head's `s4` of air — it padded `s3`, so a
+            // chart's first line sat 3pt higher than a head's — and the well.
+            .dsRoomHeadBlock()
             .dsRoomHeadPlacement()
     }
 }
@@ -1199,9 +1205,13 @@ private struct InsightHeader: View {
     let title: String
     let subtitle: String
     var body: some View {
+        // Words in a lead take `heading24` (prd §766); a hero's title was the
+        // row rung, the one lead that stated itself at a row's size.
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
+            Text(title).dsText(.heading24).foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
             Text(subtitle).dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                .lineLimit(1)
         }
     }
 }
@@ -1278,9 +1288,8 @@ struct OnThisDayHero: View {
                                                style: .continuous))
         }
         .buttonStyle(DSTileButtonStyle())
-        // The photograph's edge sits where the cover's art does (prd §763):
-        // it was flush to the screen, the one lead that was.
-        .padding(.horizontal, DS.Space.s3)
+        // The photograph IS the well (prd §766): its edge is `inset` from the
+        // screen, where every other lead's box stands, at the well's radius.
         .dsRoomHeadPlacement()
     }
 
@@ -1320,6 +1329,8 @@ struct OnThisDayHero: View {
                         .multilineTextAlignment(.leading)
                         .padding(.top, DS.Space.s1)
                 }
+                Spacer(minLength: 0)
+                DSRoomChassis.LeadFooter()
             }
             // The lead's one height (prd §760), inside the card's padding.
             .frame(maxWidth: .infinity,
@@ -1773,8 +1784,8 @@ struct LiveStreamHero: View {
                 .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
         }
         .buttonStyle(.plain)
-        // The frame's edge sits where the cover's art does (prd §763).
-        .padding(.horizontal, DS.Space.s3)
+        // The frame IS the well (prd §766): its edge stands where every other
+        // lead's box does.
         .dsRoomHeadPlacement()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Live now, \(thing.title)"))

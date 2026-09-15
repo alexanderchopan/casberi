@@ -162,6 +162,14 @@ enum DSRoomChassis {
     /// rest.
     static let leadGap: CGFloat = DS.Space.s4
 
+    /// **THE ONE PICTURE HEIGHT INSIDE A LEAD (prd §766).** The cover's art was
+    /// 176pt, which left a two-line title and nothing else once the box had a
+    /// footer to hold. At 120 the eyebrow, the title and the foot all fit, and
+    /// the words under a picture start where a pictureless lead's body starts.
+    /// A lead that IS a picture (the anniversary photo, a live stream) fills
+    /// the whole well instead and takes no part of this.
+    static let leadArtHeight: CGFloat = 120
+
     // MARK: - The fused rail (prd §547, 2026-09-01)
 
     /// **THE RAIL AND THE SWITCHER ARE ONE OBJECT NOW** (user, 2026-09-01:
