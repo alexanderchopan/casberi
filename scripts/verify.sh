@@ -1391,6 +1391,11 @@ harness "Telegram pure-logic self-test" "Telegram pure-logic self-test" "scripts
 # session is a 200 whose body says "Login expired", and the notices' prefix must
 # sit inside `tiktok:` and in Corpus.liveRefPrefixes.
 harness "TikTok live self-test" "TikTok live self-test" "scripts/tiktok-live-selftest.sh" "the TikTok live self-test failed — run scripts/tiktok-live-selftest.sh"
+# X's notices carry their own time and a landed aggregate is rewritten when its
+# sentence grows (prd §741): every magnitude a time can arrive in, and the rule
+# for when a stored notice moves. A notice stamped with the sweep's clock reads
+# "minutes ago" for a like from hours ago, and nothing on screen can tell.
+harness "X live self-test" "X live self-test" "scripts/x-live-selftest.sh" "the X live self-test failed — run scripts/x-live-selftest.sh"
 
 # The export half's own harness (prd §456) — `TelegramExport.swift`, compiled
 # whole. UNMEASURED against a real Telegram archive more strongly than any

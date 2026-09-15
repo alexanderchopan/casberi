@@ -55163,3 +55163,45 @@ Under Increase Contrast each climbs rather than staying put, because a setting t
 **On a vivid page there is no hue to take.** One of the eight backgrounds IS pink — `#ff2d78` dark, `#ffa5c4` light, a hair off the brand hue — so a pink divider on it is a divider you cannot see (3.3:1, and pink on pink), and a photo background is worse. `vividBackground` falls the whole token back to `textPrimary`, which is the answer `textSecondary` and `textTertiary` already give one tier down. The hue is the app's voice; a page the person coloured themselves is louder, and losing that argument is the correct outcome.
 
 **Not built or run here** (no Xcode in this checkout) — the change is a foreground style plus a threaded flag. Every Python audit passes. The simulator pass and the Mac leg are owed.
+
+## §741 — An X notice carries X's time, and a landed aggregate is rewritten when it grows (user: "the twitter updates we did they refreshed but don't show the newest likes and stuff. they show some from hours ago and say they were from minutes ago", 2026-09-14)
+
+**Two defects, one sentence each.** (1) `XLiveNotifications.thing(from:)` stamped
+every notice `capturedAt: .now`, the moment the sweep read it — and the row's
+"ago" and the room's order both read `capturedAt`. Since §737 put the read on
+every foreground, a like from four hours ago that first landed on this minute's
+sweep read "2 min ago". The Instagram (§726) and TikTok (§731) doors both stamp
+the payload's own time; X was the only door that never did. (2) X AGGREGATES:
+"Ana and 4 others liked your post" is one timeline entry whose id holds while
+the sentence grows and the entry climbs back to the top. The ref dedupe saw the
+id, backfilled a missing face (§707) or preview (§704), and left the first
+sentence and the first time in place, so the newest likes never showed.
+
+**The fix.** `Model/XLiveNotice.swift`, Foundation-only: `XLiveNoticeTime.date`
+reads `itemContent.timestamp_ms`, then `content.timestamp_ms`, then the entry's
+`sortIndex`, as seconds, milliseconds or a snowflake by magnitude, and believes
+a value only between X's first post (2006-03-21) and a day from now — so a
+field that is not a time lands the notice at the read's time, the old
+behaviour, never at a wrong hour. `XLiveNoticeTime.changes` decides what a
+landed notice rewrites: a new sentence retitles it and brings the new lead face
+and the post's current counts; a time more than a minute off in EITHER
+direction restamps it — later is an aggregate that climbed, earlier is a row the
+old code stamped with the sweep's clock, which heals the rows still inside the
+40-entry window. Rows older than the window keep their wrong time; nothing can
+reach them without a second read.
+
+**UNMEASURED.** No X session reaches a build host, so neither field is known to
+be the one X fills. `-xLiveProbe YES` now prints `xLiveTime| timestamp_ms=…
+sortIndex=… → <date>` for the first five entries: a nil beside a value is a
+field that is not a time, a date hours off is one read at the wrong magnitude.
+One launch on the phone with a session measures it.
+
+**Not touched.** An updated aggregate is not counted as "added", so it rains no
+tile and notifies nothing (§644 left arrivals off); the Instagram and TikTok
+doors have the same freeze on a grown aggregate and are not changed here.
+
+**Mechanical.** `scripts/x-live-selftest.sh` compiles `XLiveNotice.swift` whole:
+every magnitude, the plausibility bounds, the field precedence, and the rewrite
+rule, plus drift guards over `XLiveNotifications` (comment-stripped) that the
+new-notice stamp is the entry's time, that `capturedAt: .now` never returns,
+and that a landed notice is still rewritten. Wired in `verify.sh`.

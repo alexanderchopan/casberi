@@ -103,11 +103,14 @@ enum XLiveNotifications {
         guard status == 200, let entries = notificationEntries(json) else { return nil }
 
         let landed = landedNotices(context: context)
+        let now = Date.now
         var added = 0
         var healed = 0
         for entry in entries {
             guard let id = entry["entryId"] as? String, !id.isEmpty else { continue }
             let ref = sourceRefPrefix + id
+            // THE NOTICE'S OWN TIME (prd §741), not the sweep's clock.
+            let at = XLiveNoticeTime.date(entry: entry, now: now)
             // ALREADY HERE — but maybe without its preview (prd §704). Every
             // notice landed before this pass carries no post at all, and the
             // ref dedupe would leave them that way forever: a notification is
@@ -124,6 +127,30 @@ enum XLiveNotifications {
                 // and a follow (which never has a post) would never be asked
                 // at all.
                 var touched = false
+                // AN AGGREGATE THAT MOVED ON (prd §741). X keeps one entry id
+                // for "Ana and 4 others liked your post" while the sentence
+                // grows and the entry climbs back to the top, so the ref
+                // dedupe alone froze the first sentence at its first time and
+                // the newest likes never showed. A new sentence brings the new
+                // lead face and the post's current counts with it; a time that
+                // moved restamps the row either way, which also heals notices
+                // the old code stamped with the sweep's clock.
+                if let text = notificationText(entry) {
+                    let title = IngestSupport.titleLine(IngestSupport.decodeHTMLEntities(text))
+                    let change = XLiveNoticeTime.changes(
+                        storedTitle: existing.title, storedAt: existing.capturedAt,
+                        title: title, at: at)
+                    if change.title {
+                        existing.title = title
+                        if let actor = actor(from: entry) { fillActor(existing, with: actor) }
+                        if let subject = subject(from: entry) { fill(existing, with: subject) }
+                        touched = true
+                    }
+                    if change.at, let at {
+                        existing.capturedAt = at
+                        touched = true
+                    }
+                }
                 if existing.authorAvatarURL == nil, let actor = actor(from: entry) {
                     fillActor(existing, with: actor)
                     touched = true
@@ -135,7 +162,7 @@ enum XLiveNotifications {
                 if touched { healed += 1 }
                 continue
             }
-            guard let thing = thing(from: entry, ref: ref) else { continue }
+            guard let thing = thing(from: entry, ref: ref, at: at ?? now) else { continue }
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
@@ -244,6 +271,20 @@ enum XLiveNotifications {
             } else {
                 NSLog("[Casberi] xLiveActor| none — no person behind this notice")
             }
+        }
+        // WHEN (prd §741). The time is read from two unmeasured fields, so the
+        // probe prints both raw values beside the date chosen: a nil here with
+        // a value beside it is a field that is not a time, and a date hours
+        // off is one read at the wrong magnitude.
+        let now = Date.now
+        for entry in entries.prefix(5) {
+            let item = (entry["content"] as? [String: Any])?["itemContent"] as? [String: Any]
+            NSLog("[Casberi] xLiveTime| id=%@ timestamp_ms=%@ sortIndex=%@ → %@",
+                  (entry["entryId"] as? String) ?? "MISSING",
+                  item?["timestamp_ms"].map { "\($0)" } ?? "—",
+                  entry["sortIndex"].map { "\($0)" } ?? "—",
+                  XLiveNoticeTime.date(entry: entry, now: now).map { ISO8601DateFormatter().string(from: $0) }
+                    ?? "nil (lands at the read time)")
         }
         // The raw shape of ONE entry, truncated. This file is UNMEASURED by
         // construction and two of its paths were authored against a guess and
@@ -584,7 +625,9 @@ enum XLiveNotifications {
                 ?? "https://x.com/i/web/status/\(restID)")
     }
 
-    private static func thing(from entry: [String: Any], ref: String) -> Thing? {
+    /// `at` is the notice's own time where X sent one (prd §741) and the
+    /// moment of the read only where it did not.
+    private static func thing(from entry: [String: Any], ref: String, at: Date) -> Thing? {
         guard let text = notificationText(entry) else { return nil }
         let subject = subject(from: entry)
         let permalink = subject?.permalink
@@ -594,7 +637,7 @@ enum XLiveNotifications {
             title: IngestSupport.titleLine(IngestSupport.decodeHTMLEntities(text)),
             content: permalink,
             source: "X",
-            capturedAt: .now,
+            capturedAt: at,
             sourceRef: ref)
         // The FACE, before the subject guard (prd §707): a follow or a list add
         // has no post hanging off it and would take the early return below, and
