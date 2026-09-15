@@ -301,6 +301,23 @@ enum BridgeRefresh {
                 _ = await sweepTimed("tiktok.live") { await TikTokLive.refresh(context: context) }
             }
         }
+        // X's live door (prd §701), swept like the two above since prd §737.
+        // §701 shipped the read with ONE caller, the account page's own sync
+        // button, so notifications updated only while the person was looking
+        // at the X account page — "my notifications aren't updating" was the
+        // exact report. Same ten-minute throttle as Instagram and TikTok (X
+        // throttles a busy session and the cost lands on the real account),
+        // same by-name pause, since this gate reads the Keychain and not the
+        // store. A refusal stays with `BridgeHealth` ("Needs reconnecting"
+        // on the page); nothing here clears the cookies.
+        let xPaused = store.bridges.contains { $0.id == "x" && $0.status == .paused }
+        if XLiveAuth.connected, !xPaused,
+           force || BridgeRefresh.dueForHeal("x.live") {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await sweepTimed("x.live") { await XLiveNotifications.refresh(context: context) }
+            }
+        }
         if !RSSStore.shared.feeds.isEmpty {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)

@@ -55033,3 +55033,40 @@ Not built or run here (no Xcode in this checkout) — the pure logic is mirrored
 **§408 and §735 are not reversed, they are absorbed.** Both were right that people press that row — twice, two different moments, which is evidence and not coincidence. They press it because it makes a claim about a place. The claim now lives on the control that honours it.
 
 Not built or run here (no Xcode in this checkout) — the simulator pass is owed, and the two doors' probes (`-filesRevealProbe`, `-mailOpenProbe`) now read the destination out of `discs=` rather than a From line.
+
+## §737 — X's live notifications are swept from the foreground, not only from the account page's button (user: "I don't think my Twitter notifications are updating", 2026-09-15)
+
+**The miss.** §701 shipped `XLiveNotifications.refresh` with ONE caller:
+`XArchiveImportScreen.syncLive`, run when the sign-in lands and when the page
+appears with cookies stored. Nothing in `BridgeRefresh.refreshAllConnected`
+named it. So the X room filled the moment the person connected, and then only
+again when they opened the X account page — a foreground, a pull-to-refresh
+and the background sweep all walked past it. §726 (Instagram) and §731 (TikTok)
+each wired their live door into the sweep on the day they shipped; X's door,
+two days older, never was, and the room read as "not updating" because it was
+not.
+
+**The fix is the block the two younger doors already have.** `BridgeRefresh`
+gains an `x.live` sweep beside `instagram.live` and `tiktok.live`: gated on
+`XLiveAuth.connected` (the Keychain pair, not the store, since a live-only
+connection registers its seat only after its first sync), on the seat not
+being PAUSED by name (the Keychain gate cannot read the store's pause, so the
+pause is asked for explicitly, §726's move), and on `dueForHeal("x.live")`'s
+ten-minute throttle — a pull-to-refresh (`force`) reads regardless, the
+gesture's own contract. Ten minutes, not every foreground, for the reason the
+setup screen states before the tap: X throttles a busy session and the cost
+lands on the person's real account.
+
+**What is deliberately unchanged.** A 401/403 still flows through
+`IngestSupport` to `BridgeHealth` under "X", so the page still says "Needs
+reconnecting"; the sweep never clears the cookies, since only the person's own
+disconnect does (§701's two-verbs ruling). `syncLive` on the page stays — it is
+the one read that reports its outcome in words, and the page's `registerConnected`
+proof still comes from it. The `running` guard in `refresh` already makes a
+sweep and a page sync that overlap cost one request, not two.
+
+**Guards run:** `scripts/prd-index-audit.py` (this entry's number), the
+`swiftdata-liveness-audit.py` and `defaults-lock-audit.py` static passes over
+the touched file. No build host here can run the simulator leg; the block is a
+copy of `tiktok.live`'s with the seat renamed, and `-xLiveProbe YES` remains the
+measure tool for the read itself.
