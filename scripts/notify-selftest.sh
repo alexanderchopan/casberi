@@ -275,6 +275,35 @@ else
   printf '  ✓ the gathering half holds no thresholds of its own\n'
 fi
 
+# ── the digest's wiring (prd §770) ──────────────────────────────────────────
+# The compiled half proves the queue and the words; these guard the one door
+# that decides which plans go where, and the promise the settings page makes.
+guard "submit sends alone only the kinds that stand alone" \
+      'eligible\.filter \{ \$0\.kind\.standsAlone \}' "$NOTIFY"
+guard "…and everything else goes through the digest's one step" \
+      'NotifyDigest\.advance\(previous' "$NOTIFY"
+guard "a category switched off filters the digest's queue too" \
+      'allowed: \{ s\.allows\(category: \$0\.category\) \}' "$NOTIFY"
+guard "the settings footnote names the four kinds that stand alone" \
+      'A dispute, a deadline, a liquidation or a Safe signature comes at once' "$SETTINGS"
+# `hasOwnApp` only orders the names, so a misspelt seat fails at nothing: that
+# app is simply named first as if it had no lock screen of its own.
+CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
+own=$(perl -0ne 'print $1 if /static let hasOwnApp: Set<String> = \[(.*?)\n    \]/s' "$PLAN" | grep -oE '"[^"]+"' | tr -d '"' || true)
+if [[ -z "$own" ]]; then
+  printf '  ✗ DRIFT: NotifyDigest.hasOwnApp could not be read\n'; fail=1
+else
+  missing=()
+  for n in ${(f)own}; do
+    grep -qF "name: \"$n\"" "$CATALOG" || missing+=("$n")
+  done
+  if (( ${#missing} == 0 )); then
+    printf '  ✓ every app named as having its own lock screen is a catalog seat\n'
+  else
+    printf '  ✗ DRIFT: NotifyDigest.hasOwnApp names seats the catalog lacks: %s\n' "${missing[*]}"; fail=1
+  fi
+fi
+
 echo "── compiling the shipped file whole ──"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -409,37 +438,16 @@ ok(collapsed[0].body.contains("2 more"), "the other two are counted, never dropp
 let two = [plan(.poolCleared, id: "a"), plan(.disputeOpened, id: "b")]
 ok(NotifyRules.collapse(two)[0].body.contains("1 more"), "singular reads '1 more'")
 ok(!NotifyRules.collapse(two)[0].body.contains("1 more need "), "…and agrees with its verb")
-// Arrivals ride alongside — they collapse per-post by id, not here.
+// Arrivals ride alongside. Since prd §770 they never reach `collapse` in the
+// app (the digest takes them), and the rule still leaves them untouched.
 let mixed = [plan(.poolCleared, id: "a"), plan(.disputeOpened, id: "b"),
              plan(.moneyIn, id: "m"), plan(.likesReceived, id: "l")]
 let mixedOut = NotifyRules.collapse(mixed)
 ok(mixedOut.count == 3, "one alarm plus both arrivals survive")
 ok(mixedOut.filter { $0.cls == .arrival }.count == 2, "no arrival is ever collapsed away")
-// Money arrivals collapse too — four dust transfers in one window is four
-// buzzes otherwise, which is the alarm failure wearing better news. Found by
-// `-notifyProbe` on a real corpus, not by reasoning.
-let coins = [plan(.moneyIn, id: "m1", at: at(9)), plan(.moneyIn, id: "m2", at: at(10)),
-             plan(.moneyIn, id: "m3", at: at(11))]
-let coined = NotifyRules.collapse(coins)
-ok(coined.count == 1, "three transfers collapse to one")
-ok(coined[0].body.contains("2 more transfers"), "…and the rest are counted, in money's own noun")
-ok(NotifyRules.collapse([plan(.moneyIn, id: "m1")]).count == 1, "a lone transfer is untouched")
-ok(NotifyRules.collapse([plan(.moneyIn, id: "m1")])[0].body == "b", "…and keeps its own body")
-// Attention never collapses here: two likers of two different posts are two
-// events, and each already replaces itself by id.
-let attention = [plan(.likesReceived, id: "p1"), plan(.likesReceived, id: "p2"),
-                 plan(.followersGained, id: "f1")]
-ok(NotifyRules.collapse(attention).count == 3, "likes and followers are never batched together")
-// The two groups collapse INDEPENDENTLY — an alarm must never absorb a
-// transfer's count, or the body would claim money needed a response.
-let both = [plan(.disputeOpened, id: "d"), plan(.approvalGranted, id: "a"),
-            plan(.moneyIn, id: "m1", at: at(9)), plan(.moneyIn, id: "m2", at: at(10))]
-let bothOut = NotifyRules.collapse(both)
-ok(bothOut.count == 2, "one alarm and one arrival survive")
-ok(bothOut.contains { $0.cls == .alarm && $0.body.contains("1 more needs you") },
-   "the alarm counts only alarms")
-ok(bothOut.contains { $0.kind == .moneyIn && $0.body.contains("1 more transfer") },
-   "the transfer counts only transfers")
+let coins = [plan(.moneyIn, id: "m1", at: at(9)), plan(.moneyIn, id: "m2", at: at(10))]
+ok(NotifyRules.collapse(coins).count == 2,
+   "money no longer collapses here: the digest counts it (prd §770)")
 
 // Determinism: same input, same choice, every run.
 let tie = [plan(.approvalGranted, id: "z", at: at(9)), plan(.approvalGranted, id: "a", at: at(9))]
@@ -566,6 +574,99 @@ ok(NotifyRules.datelinePhrase(occurredAt: utc(1, 10, 0), deliveredAt: utc(5, 10,
 ok(NotifyRules.datelinePhrase(occurredAt: utc(5, 9, 0), deliveredAt: utc(5, 8, 0), calendar: gmt) == nil,
    "an event stamped after delivery never draws a dateline")
 
+// ── the digest (prd §770) ───────────────────────────────────────────────────
+// Everything that does not stand alone becomes ONE notification at a slot. Each
+// failure here renders as an ordinary notification: the same things told twice,
+// a digest at 03:00, a category switched off that still speaks, or a third
+// delivery in a day the settings footnote promised would not come.
+ok(Set(NotifyKind.allCases.filter(\.standsAlone)) ==
+   [.disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded],
+   "exactly four kinds stand alone; everything else waits for the digest")
+ok(Set(ts).isSubset(of: Set(NotifyKind.allCases.filter(\.standsAlone))),
+   "a kind that pierces a Focus never waits for the evening slot")
+ok(NotifyKind.digest.cls == .arrival && !NotifyKind.digest.standsAlone,
+   "the digest's own kind is an arrival and never stands alone")
+ok(NotifyDigest.slots.count == 2, "two slots a day, and no third")
+
+func tomorrow(_ d: Date) -> Date { cal.date(byAdding: .day, value: 1, to: d)! }
+ok(NotifyDigest.nextSlot(after: at(7), quiet: night, calendar: cal) == at(9),
+   "07:00 waits for the morning slot")
+ok(NotifyDigest.nextSlot(after: at(9), quiet: night, calendar: cal) == at(18),
+   "a slot that is now has passed, so the evening is next")
+ok(NotifyDigest.nextSlot(after: at(10), quiet: night, calendar: cal) == at(18),
+   "mid-morning waits for the evening, never a slot in between")
+ok(NotifyDigest.nextSlot(after: at(19), quiet: night, calendar: cal) == tomorrow(at(9)),
+   "after the evening slot, tomorrow morning")
+ok(NotifyDigest.nextSlot(after: at(7), quiet: day, calendar: cal) == at(18),
+   "a slot inside quiet hours is skipped")
+let wide = NotifyRules.Quiet(startMinute: 17 * 60, endMinute: 10 * 60, enabled: true)
+ok(NotifyDigest.nextSlot(after: at(12), quiet: wide, calendar: cal) == tomorrow(at(10)),
+   "quiet hours covering both slots wait for the window's own end")
+ok(NotifyDigest.nextSlot(after: at(3), quiet: wide, calendar: cal) == at(10),
+   "…today's end, when it is still ahead")
+
+func item(_ id: String, _ seat: String, at when: Date, category: String = "Work") -> NotifyDigest.Item {
+    NotifyDigest.Item(id: id, seat: seat, name: seat, category: category,
+                      kind: NotifyKind.moneyIn.rawValue, title: "t-\(id)", body: "b-\(id)",
+                      link: "casberi://thing/\(id)", occurredAt: when, source: seat)
+}
+let everything: (NotifyDigest.Item) -> Bool = { _ in true }
+let s0 = NotifyDigest.State()
+let s1 = NotifyDigest.advance(s0, adding: [item("a", "Stripe", at: at(10))], allowed: everything,
+                              now: at(10), quiet: night, calendar: cal)
+ok(s1.queue.count == 1 && s1.slot == at(18), "the first arrival queues for the evening slot")
+let s2 = NotifyDigest.advance(s1, adding: [item("b", "GitHub", at: at(12))], allowed: everything,
+                              now: at(12), quiet: night, calendar: cal)
+ok(s2.queue.count == 2 && s2.slot == at(18), "a second arrival joins the same slot")
+var grown = item("a", "Stripe", at: at(13)); grown.title = "grown"
+let s2b = NotifyDigest.advance(s2, adding: [grown], allowed: everything,
+                               now: at(13), quiet: night, calendar: cal)
+ok(s2b.queue.count == 2 && s2b.queue.contains { $0.title == "grown" },
+   "the same id REPLACES its queued item, so a growing like is one line")
+let s3 = NotifyDigest.advance(s2, adding: [], allowed: everything,
+                              now: at(19), quiet: night, calendar: cal)
+ok(s3.queue.isEmpty && s3.slot == nil, "after its slot, a delivered digest is never announced again")
+let s4 = NotifyDigest.advance(s2, adding: [item("c", "X", at: at(19))], allowed: everything,
+                              now: at(19), quiet: night, calendar: cal)
+ok(s4.queue.map(\.id) == ["c"] && s4.slot == tomorrow(at(9)),
+   "an arrival after the evening slot starts tomorrow's digest on its own")
+let s5 = NotifyDigest.advance(s2, adding: [], allowed: { $0.category != "Work" },
+                              now: at(12), quiet: night, calendar: cal)
+ok(s5.queue.isEmpty && s5.slot == nil, "switching a category off takes its queued items with it")
+let s6 = NotifyDigest.advance(NotifyDigest.State(queue: [item("a", "Stripe", at: at(9))], slot: at(23)),
+                              adding: [], allowed: everything, now: at(12), quiet: night, calendar: cal)
+ok(s6.slot == at(18), "a pending slot that quiet hours now cover is chosen again")
+let big = (0..<(NotifyDigest.cap + 5)).map { item("n\($0)", "RSS", at: at(10)) }
+let s7 = NotifyDigest.advance(s0, adding: big, allowed: everything, now: at(10), quiet: night, calendar: cal)
+ok(s7.queue.count == NotifyDigest.cap && s7.queue.first?.id == "n5",
+   "the queue is bounded, oldest dropped first")
+
+ok(NotifyDigest.plan([]) == nil, "an empty queue sends nothing")
+let lone = NotifyDigest.plan([item("a", "Stripe", at: at(10))])!
+ok(lone.title == "t-a" && lone.body == "b-a" && lone.link == "casberi://thing/a",
+   "one item is simply that item: its own words and its own door")
+ok(lone.place == "Stripe", "…and it says where it came from")
+let oneApp = NotifyDigest.plan([item("a", "Stripe", at: at(10)), item("b", "Stripe", at: at(11))])!
+ok(oneApp.kind == .digest && oneApp.title.contains("Stripe") && oneApp.body.contains("2"),
+   "one app with several things says its name and the count")
+ok(oneApp.link == "casberi://feed/source/Stripe", "…and opens that app's room")
+let four = NotifyDigest.plan([item("s", "Stripe", at: at(10)), item("g", "GitHub", at: at(11)),
+                              item("w", "Wallet", at: at(9)), item("x", "X", at: at(12))])!
+ok(four.title.contains("4"), "several apps say how many")
+ok(four.link == "casberi://feed", "…and open All")
+func pos(_ text: String, _ needle: String) -> Int {
+    text.range(of: needle).map { text.distance(from: text.startIndex, to: $0.lowerBound) } ?? -1
+}
+ok(pos(four.body, "Wallet") >= 0 && pos(four.body, "Wallet") < pos(four.body, "X"),
+   "an app with no lock screen of its own is named first, however old its news")
+ok(pos(four.body, "X") < pos(four.body, "GitHub") && pos(four.body, "GitHub") < pos(four.body, "Stripe"),
+   "…then the apps with the newest news")
+let six = NotifyDigest.plan(["A", "B", "C", "D", "E", "F"].enumerated().map {
+    item("i\($0.offset)", $0.element, at: at(8 + $0.offset))
+})!
+ok(six.body.contains("3 more") && !six.body.contains("A"),
+   "past four apps, three are named and the rest are counted")
+
 // ── the ledger: fires once, ever ────────────────────────────────────────────
 let suite = "casberi.notify.selftest"
 UserDefaults.standard.removePersistentDomain(forName: suite)
@@ -656,8 +757,6 @@ mutate "money arriving claims the time-sensitive level" \
        's/self == \.disputeOpened \|\| self == \.deadlineNear/self != .likesReceived/'
 mutate "a held notification waits a full day too long" \
        's/return today > now \? today : cal/return cal/'
-mutate "money arrivals stop collapsing (four dust transfers, four buzzes)" \
-       's/matching: \{ \$0\.kind == \.moneyIn \}/matching: { _ in false }/'
 # The two boundaries of §422's rank, each mutated on its own — moving it to the
 # top of the ladder is as wrong as burying it, and one fixture cannot say both.
 mutate "a wallet incident sinks below a revocable approval" \
@@ -667,8 +766,6 @@ mutate "a wallet incident outranks a live liquidation" \
 mutate "a wallet incident claims the Focus-breaking level" \
        's/self == \.disputeOpened \|\| self == \.deadlineNear/self == .disputeOpened || self == .deadlineNear || self == .walletIncident/'
 
-mutate "the two groups share one count, so an alarm absorbs transfers" \
-       's/matching: \{ \$0\.kind == \.moneyIn \}/matching: { _ in true }/'
 
 # ── the two devnets (prd §522) ──────────────────────────────────────────────
 # Every one of these renders as a perfectly ordinary notification — or as
@@ -695,6 +792,26 @@ mutate "last night and yesterday collapse into one phrase" \
        's/return hour >= 21\n                \? String\(localized: "last night at/return hour >= 99\n                ? String(localized: "last night at/'
 mutate "a kind loses its headline, so a notification arrives with an empty title" \
        's/case \.chainReset:       return String\(localized: "A devnet was reset"\)/case .chainReset:       return ""/'
+
+# ── the digest (prd §770) ───────────────────────────────────────────────────
+mutate "money arriving stands alone again, one buzz per transfer" \
+       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded:/case .disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded, .moneyIn:/'
+mutate "a Safe signature waits for the evening digest" \
+       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded:/case .disputeOpened, .deadlineNear, .positionAtRisk:/'
+mutate "a third digest a day" \
+       's/static let slots = \[9 \* 60, 18 \* 60\]/static let slots = [9 * 60, 12 * 60, 18 * 60]/'
+mutate "a digest lands inside quiet hours" \
+       's/for minute in slots\.sorted\(\) where !quiet\.contains\(minute: minute\)/for minute in slots.sorted()/'
+mutate "a delivered digest is announced again at the next slot" \
+       's/if let slot = state\.slot, slot <= now \{ queue = \[\] \}//'
+mutate "a growing like queues a second line instead of replacing its own" \
+       's/if let i = queue\.firstIndex\(where: \{ \$0\.id == item\.id \}\) \{ queue\[i\] = item \} else \{ queue\.append\(item\) \}/queue.append(item)/'
+mutate "a category switched off still speaks through what it already queued" \
+       's/queue = queue\.filter\(allowed\)//'
+mutate "apps with their own lock screen are named first" \
+       's/if aOwn != bOwn \{ return !aOwn \}/if aOwn != bOwn { return aOwn }/'
+mutate "the digest names every app however many there are" \
+       's/if names\.count <= 4 \{/if names.count <= 400 {/'
 
 # ── NotifySweep.classify() — the actual bridge-specific dispatch ───────────
 #

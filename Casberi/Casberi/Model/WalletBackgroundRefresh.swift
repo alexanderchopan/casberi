@@ -95,8 +95,8 @@ enum WalletBackgroundRefresh {
         // and vibenet's two chain-wide clocks — a timelock ending, the chain
         // being wiped — belong to no row. Merged into the SAME submit rather
         // than sent on their own, so a devnet alarm competes in one batch with
-        // every other alarm (`NotifyRules.collapse` keeps the worst and counts
-        // the rest) instead of arriving as a second buzz beside a dispute — and
+        // every other alarm (since prd §770 neither devnet kind stands alone, so
+        // both wait for the digest as one line among the rest) instead of arriving as a second buzz beside a dispute — and
         // so `notify-selftest.sh`'s "only one file submits" guard stays true.
         let devnet = DevnetNotify.plans()
         await Notifications.submit(plans + devnet, photos: photos)

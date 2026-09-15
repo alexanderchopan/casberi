@@ -20,45 +20,39 @@ enum Notifications {
 
     // MARK: - Settings
 
-    /// Per-class switches and quiet hours. Stored in the app group so the
-    /// background task reads the same values the settings screen writes.
+    /// One switch per CATEGORY, and quiet hours (prd §770). Stored in the app
+    /// group so the background task reads the same values the settings screen
+    /// writes.
     ///
-    /// The daily whisper (a third switch and its hour) was cut in prd §706
-    /// (2026-09-12): its tap had opened onto nothing since the ask went dark
-    /// (§697b), and its line summarised a day the person had already read.
-    /// `notify.whisper` / `notify.whisperMinute` are left in the store unread,
-    /// and any `whisper.next` an older build scheduled is pulled at launch
-    /// (`cancelRetiredWhisper`).
+    /// **On means the digest, for every category, Wallet included.** Nothing a
+    /// category holds is delivered on its own except the four kinds in
+    /// `NotifyKind.standsAlone`, so a switch has two states and no third. Off
+    /// means off for those four too: a switch that still let some things
+    /// through would be a switch that lies (§83).
     ///
-    /// **ONLY THE CLASS THE GRANT WAS ASKED FOR IS ON BY DEFAULT (prd §644,
-    /// 2026-09-08).** All three shipped `true`, and `askIfNeeded` presents the
-    /// system prompt at the first real ALARM — so the permission was earned by
-    /// a dispute and then spent on ordinary arrivals and a 07:30 push nobody
-    /// chose. Two of the three classes were riding in on a grant given for the
-    /// third. Arrivals are opt-IN now; the row says plainly what it does
-    /// (`AccountDetailSheet.notifyCard`), so turning it on is one tap by
-    /// somebody who wants it.
+    /// Every category defaults ON. §644 kept arrivals off because each one was
+    /// its own notification riding a grant given for a dispute; one digest
+    /// twice a day is not that, and a person who wants less turns a category
+    /// off where it is named.
     ///
-    /// `alarms` stays `true` because it IS what the prompt asks for: a person
-    /// who granted permission at a dispute and then heard nothing about the
-    /// next one would have a switch that silently did nothing (§83).
+    /// Stored as the set that is OFF, so a category the catalog adds later
+    /// arrives switched on like every other. The two class switches
+    /// (`notify.alarms`, `notify.arrivals`) are read once, only to carry an
+    /// install that had BOTH off into all-off; nothing writes them now. The
+    /// daily whisper's keys (§706) stay unread as before.
     struct Settings: Sendable, Equatable {
-        var alarms = true
-        var arrivals = false
+        var off: Set<String> = []
         var quiet = NotifyRules.Quiet.default
 
+        static var categories: [String] { BridgeCatalog.categories.map(\.name) }
+
         /// Whether anything at all could fire — the gate on asking iOS for
-        /// background time. Both off means the task has no work, and
+        /// background time. Everything off means the task has no work, and
         /// asking for a run we would do nothing with is how an app earns a
         /// throttle it then can't spend when it matters.
-        var anyOn: Bool { alarms || arrivals }
+        var anyOn: Bool { !Set(Self.categories).isSubset(of: off) }
 
-        func allows(_ cls: NotifyClass) -> Bool {
-            switch cls {
-            case .alarm:   return alarms
-            case .arrival: return arrivals
-            }
-        }
+        func allows(category: String) -> Bool { !off.contains(category) }
     }
 
     private static var store: UserDefaults {
@@ -69,8 +63,14 @@ enum Notifications {
         get {
             var s = Settings()
             let d = store
-            if d.object(forKey: "notify.alarms") != nil { s.alarms = d.bool(forKey: "notify.alarms") }
-            if d.object(forKey: "notify.arrivals") != nil { s.arrivals = d.bool(forKey: "notify.arrivals") }
+            if let off = d.stringArray(forKey: "notify.offCategories") {
+                s.off = Set(off)
+            } else if d.object(forKey: "notify.alarms") != nil,
+                      !d.bool(forKey: "notify.alarms"), !d.bool(forKey: "notify.arrivals") {
+                // Both classes switched off under the old sheet: the person
+                // said "nothing", and a new layout must not overrule that.
+                s.off = Set(Settings.categories)
+            }
             if d.object(forKey: "notify.quietOn") != nil { s.quiet.enabled = d.bool(forKey: "notify.quietOn") }
             if d.object(forKey: "notify.quietStart") != nil { s.quiet.startMinute = d.integer(forKey: "notify.quietStart") }
             if d.object(forKey: "notify.quietEnd") != nil { s.quiet.endMinute = d.integer(forKey: "notify.quietEnd") }
@@ -78,12 +78,19 @@ enum Notifications {
         }
         set {
             let d = store
-            d.set(newValue.alarms, forKey: "notify.alarms")
-            d.set(newValue.arrivals, forKey: "notify.arrivals")
+            d.set(newValue.off.sorted(), forKey: "notify.offCategories")
             d.set(newValue.quiet.enabled, forKey: "notify.quietOn")
             d.set(newValue.quiet.startMinute, forKey: "notify.quietStart")
             d.set(newValue.quiet.endMinute, forKey: "notify.quietEnd")
         }
+    }
+
+    /// The category a plan belongs to, through the catalog's own join. A
+    /// source the catalog has never heard of (a thing you made yourself, with
+    /// a date on it) falls to Life, the default `BridgeCatalog.category(of:)`
+    /// already uses, so every plan answers to exactly one switch.
+    static func category(of plan: NotifyPlan) -> String {
+        plan.source.flatMap { BridgeCatalog.category(forSource: $0) } ?? "Life"
     }
 
     static var ledger: NotifyLedger { NotifyLedger(defaults: store) }
@@ -100,11 +107,12 @@ enum Notifications {
         set { store.set(newValue, forKey: "notify.asked") }
     }
 
-    /// The ask happens the first time an alarm-class event ACTUALLY EXISTS —
-    /// never at launch (§306). An ask at launch arrives before the person has
-    /// seen anything worth being told about, gets declined, and the decline is
-    /// permanent short of a trip to Settings. Asking at the first real dispute
-    /// means the prompt carries its own reason.
+    /// The ask happens the first time something ACTUALLY ARRIVES for a switch
+    /// that is on — never at launch (§306). An ask at launch arrives before the
+    /// person has seen anything worth being told about, gets declined, and the
+    /// decline is permanent short of a trip to Settings. Widened from "the
+    /// first alarm" in §770: a category whose only news is a digest would
+    /// otherwise be a switch that silently did nothing.
     @discardableResult
     static func askIfNeeded() async -> Bool {
         let center = UNUserNotificationCenter.current()
@@ -145,15 +153,16 @@ enum Notifications {
 
     // MARK: - Submitting
 
-    /// The one door. Filters by settings, drops anything already fired, batches
-    /// what is left, then schedules.
+    /// The one door. Filters by category, drops anything already fired, sends
+    /// the few that stand alone, and folds everything else into the digest.
     ///
     /// `photos` carries real bytes for `.thing(id)` art — the caller has the
     /// `Thing` in hand at the fire site, and passing the data avoids this file
     /// needing a `ModelContext` it would otherwise have to build in a
     /// background task.
     ///
-    /// Returns the plans it really scheduled, which is what the probe prints.
+    /// Returns what it really scheduled: the plans that stand alone, then the
+    /// digest as it now reads. That is what the probe prints.
     @discardableResult
     static func submit(_ plans: [NotifyPlan],
                        photos: [String: Data] = [:],
@@ -168,16 +177,20 @@ enum Notifications {
         // furnished corpus.
         if !dryRun, DemoMode.isActive { return [] }
         let s = settings
-        var eligible = plans.filter { s.allows($0.cls) }
-        guard !eligible.isEmpty else { return [] }
+        let previous = digestState
+        var eligible = plans.filter { s.allows(category: category(of: $0)) }
+        // Nothing new and nothing queued: no work, and no reason to ask iOS
+        // anything. A queue that is not empty still has to be walked, because
+        // its slot may have passed or its category may have been switched off.
+        guard !eligible.isEmpty || !previous.queue.isEmpty else { return [] }
 
-        // Ask only when an alarm is genuinely in hand — and NEVER on a dry run.
+        // Ask only when something is genuinely in hand — and NEVER on a dry run.
         // A probe that prompts is a probe that changes the state it reports on:
         // it burns the one-and-only system prompt, flips `hasAsked` forever, and
         // `requestAuthorization` then BLOCKS on a dialog no headless run will
         // ever tap, so the probe hangs and prints nothing. Caught by
         // `-notifyProbe` logging a valid plan and then falling silent.
-        if !dryRun, eligible.contains(where: { $0.cls == .alarm }) {
+        if !dryRun, !eligible.isEmpty {
             _ = await askIfNeeded()
         }
         if !dryRun {
@@ -185,22 +198,109 @@ enum Notifications {
         }
 
         // Fires once, ever. Claim BEFORE batching so the count in "and N more"
-        // never includes an alarm we already told them about.
+        // never includes an alarm we already told them about, and so an item
+        // already delivered in a digest never queues again.
         if !dryRun {
             let fresh = Set(ledger.claim(eligible.map(\.id)))
             eligible = eligible.filter { fresh.contains($0.id) }
         } else {
             eligible = eligible.filter { !ledger.hasFired($0.id) }
         }
-        guard !eligible.isEmpty else { return [] }
 
-        let batched = NotifyRules.collapse(eligible)
-        guard !dryRun else { return batched }
+        let alone = NotifyRules.collapse(eligible.filter { $0.kind.standsAlone })
+        let next = NotifyDigest.advance(previous,
+                                        adding: eligible.filter { !$0.kind.standsAlone }.map(digestItem),
+                                        allowed: { s.allows(category: $0.category) },
+                                        now: now, quiet: s.quiet, calendar: .current)
+        let digest = NotifyDigest.plan(next.queue)
+        guard !dryRun else { return alone + (digest.map { [$0] } ?? []) }
 
-        for plan in batched {
+        for plan in alone {
             await schedule(plan, photo: photos[plan.id], now: now, quiet: s.quiet)
         }
-        return batched
+        await scheduleDigest(next, previous: previous, now: now)
+        return alone + (digest.map { [$0] } ?? [])
+    }
+
+    // MARK: - The digest (prd §770)
+
+    /// The queue and its slot, kept between sweeps in the app group so the
+    /// background task and a foreground sweep extend the same digest.
+    static var digestState: NotifyDigest.State {
+        get {
+            guard let data = store.data(forKey: "notify.digest"),
+                  let state = try? JSONDecoder().decode(NotifyDigest.State.self, from: data)
+            else { return NotifyDigest.State() }
+            return state
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                store.set(data, forKey: "notify.digest")
+            }
+        }
+    }
+
+    private static func digestItem(_ plan: NotifyPlan) -> NotifyDigest.Item {
+        let source = plan.source ?? "Casberi"
+        return NotifyDigest.Item(id: plan.id,
+                                 seat: BridgeCatalog.seatName(forSource: source),
+                                 name: source,
+                                 category: category(of: plan),
+                                 kind: plan.kind.rawValue,
+                                 title: plan.title,
+                                 body: plan.body,
+                                 link: plan.link,
+                                 occurredAt: plan.occurredAt,
+                                 source: plan.source)
+    }
+
+    private static func digestRequestID(_ slot: Date) -> String {
+        NotifyDigest.requestPrefix + String(Int(slot.timeIntervalSince1970))
+    }
+
+    /// Rewrites the pending request for the slot with the queue as it stands.
+    /// Unchanged state schedules nothing, so a sweep with no news does not
+    /// churn a request or re-fetch its picture.
+    private static func scheduleDigest(_ next: NotifyDigest.State,
+                                       previous: NotifyDigest.State,
+                                       now: Date) async {
+        guard next != previous else { return }
+        digestState = next
+        // "Last sent" is said only once a slot has PASSED. Recording a digest
+        // when it is scheduled would put a time still to come on the settings
+        // sheet under the word "sent" (§83).
+        if let old = previous.slot, old <= now, let sent = NotifyDigest.plan(previous.queue) {
+            rememberSent(sent, at: old)
+        }
+        let center = UNUserNotificationCenter.current()
+        // A pending slot that moved or emptied is pulled. One that has passed
+        // is already delivered, and pulling a PENDING id cannot touch it.
+        if let old = previous.slot, old > now, old != next.slot {
+            center.removePendingNotificationRequests(withIdentifiers: [digestRequestID(old)])
+        }
+        guard let slot = next.slot, let plan = NotifyDigest.plan(next.queue) else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = plan.title
+        content.body = plan.body
+        if next.queue.count == 1 {
+            let dateline = NotifyRules.datelinePhrase(
+                occurredAt: plan.occurredAt, deliveredAt: slot, calendar: .current)
+            content.subtitle = [plan.place, dateline].compactMap { $0 }.joined(separator: " · ")
+        }
+        // Lights the screen and makes no sound: the one notification a person
+        // chose, twice a day at most, neither hidden nor loud.
+        content.sound = nil
+        content.interruptionLevel = .active
+        content.threadIdentifier = "digest"
+        if let link = plan.link { content.userInfo = ["link": link] }
+        if next.queue.count == 1, let art = await attachment(for: plan, photo: nil) {
+            content.attachments = [art]
+        }
+        let trigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: max(1, slot.timeIntervalSince(now)), repeats: false)
+        try? await center.add(UNNotificationRequest(identifier: digestRequestID(slot),
+                                                    content: content, trigger: trigger))
     }
 
     private static func schedule(_ plan: NotifyPlan,

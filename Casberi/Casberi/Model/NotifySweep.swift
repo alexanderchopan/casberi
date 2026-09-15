@@ -118,7 +118,7 @@ enum NotifySweep {
     /// at least four causes: nothing landed inside the news window, nothing
     /// classified, every candidate was dust, or the deadline scan found no row
     /// with a clock. Only one of those is a bug, and a bare zero cannot tell
-    /// them apart — the same reason `-kalshiBookProbe` and `-cursorProbe` exist.
+    /// them apart — the same reason `-cursorProbe` exists.
     static func skipCensus(things: [Thing], now: Date = Date()) -> [String] {
         let live = things.filter(\.isLive)
         let fresh = live.filter { $0.capturedAt > now.addingTimeInterval(-newsWindow) }

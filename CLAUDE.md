@@ -233,7 +233,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **A mutation that changed nothing is not a passing mutation — it is one that did not run (scripts/mutation-liveness-audit.py, 2026-09-06)** → docs/verify.md · prd §627
 - **A fetch or a Keychain read belongs in `onAppear`/`.task`, never in a body or a computed property a body reads (build 525)** → docs/verify.md · prd §628
 - `-notifyProbe` — what would notify, WITHOUT notifying (prd §306, 2026-08-05, Model/NotifySweep.swift + Model/NotifyPlan.swift) → docs/hooks/system.md · prd §306
-- **Notifications: `arrivals` defaults off and `alarms` on; the daily whisper is cut** → docs/hooks/system.md · prd §644 · §706
+- **Notifications are one digest, at most twice a day, one switch per category; only a dispute, a deadline, a liquidation or a Safe signature stands alone (`NotifyKind.standsAlone`)** → docs/hooks/system.md · prd §770 · §706
 - `-vibenetCreateProbe` `-signerProbe` — what making a vibenet account WOULD do, without doing it (prd §530, 2026-08-30) → docs/hooks/devnets.md · prd §530
 - **The vibenet top up claims IN THE APP** (`-vibenetFaucetProbe`) → docs/hooks/devnets.md · prd §553b
 - **L2BEAT — the rails your money sits on, reviewed by somebody independent** → docs/hooks/bridges.md · prd §428
@@ -275,7 +275,6 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **Telegram, through the two doors §57 never weighed** → docs/hooks/bridges.md · prd §456
 - `-rssFeed` `-chatgptImport` `-claudeImport` — follow a feed and sync headlessly; -chatgptImport <path> → docs/hooks/imports.md
 - `-trelloKey` `-trelloProbe` `-tokenBridge` — Trello (2026-08-03, prd §291, Model/TokenBridges.swift's TrelloAuth + trello(); seat id trello, group Work) → docs/hooks/bridges.md · prd §291
-- `-kalshiBookProbe` — the Kalshi browse room's read, PHASE BY PHASE (prd §287, 2026-08-03, KalshiWatch.diagnose) → docs/hooks/bridges.md · prd §287
 - Dropbox (2026-07-27, Model/DropboxBridge.swift, Screens/DropboxScreen.swift) — a first-class → docs/hooks/bridges.md
 - PostHog (2026-07-27, prd §223, Model/PostHogBridge.swift, Screens/PostHogScreen.swift) → docs/hooks/bridges.md · prd §223
 - `-for` — Stripe (2026-07-31, prd §250, Model/StripeBridge.swift, Screens/StripeScreen.swift) → docs/hooks/bridges.md · prd §250

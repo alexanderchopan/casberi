@@ -27,15 +27,16 @@ struct SettingsScreen: View {
     @State private var chipOrderOpen = false
     @State private var detail: AccountDetail?
 
-    /// What the Notifications row says without being opened. Names the classes
-    /// that are ON rather than a count — "2 of 3" tells you nothing about
-    /// whether a dispute would reach you.
+    /// What the Notifications row says without being opened (prd §770): the
+    /// digest's cadence, and the categories switched off by name, because
+    /// "3 of 9" tells you nothing about whether your wallet reaches you.
     private var notifySummary: String {
         let s = Notifications.settings
-        var on: [String] = []
-        if s.alarms { on.append(String(localized: "Alarms")) }
-        if s.arrivals { on.append(String(localized: "Arrivals")) }
-        return on.isEmpty ? String(localized: "Off") : on.joined(separator: ", ")
+        guard s.anyOn else { return String(localized: "Off") }
+        let off = Notifications.Settings.categories.filter { s.off.contains($0) }
+        return off.isEmpty
+            ? String(localized: "Twice a day")
+            : String(localized: "Twice a day, not \(ListFormatter.localizedString(byJoining: off))")
     }
     @State private var avatarPickerOpen = false
     @State private var avatarDialogOpen = false

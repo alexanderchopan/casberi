@@ -751,41 +751,52 @@ struct AccountDetailSheet: View {
 
     // MARK: - Notifications (prd §306)
 
-    /// One switch per CLASS — never one per bridge. A per-source list would be
-    /// a settings screen that grows every time the catalog does, and it would
-    /// ask the wrong question: nobody wants "notify me about Stripe", they want
-    /// "tell me when money is challenged". The classes are the answer to that,
-    /// and there are only two (the daily whisper was the third until prd §706).
+    /// One switch per CATEGORY, only for the categories you have an account
+    /// in (prd §770). Never one per bridge: a per-source list grows every time
+    /// the catalog does. Never a level per category either: on means the
+    /// digest, for all of them, and the settings page stays a column of
+    /// switches.
     private var notifyCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             // A fixed accent regardless of what's actually on — the badge
             // previews no state here, so it takes the neutral tone
             // (2026-08-10, was DS.tint).
             aliveRow("bell.badge.fill", DS.neutralBadge, "Notifications", notifyStatusLine)
-            // Each class says how it INTERRUPTS (prd §713), so the two read as
-            // two weights rather than two of the same switch.
-            toggleRow("Alarms", "A dispute, a new approval on your wallet, a deadline inside three days. Lights the screen and sounds.",
-                      isOn: Binding(get: { notifySettings.alarms },
-                                    set: { notifySettings.alarms = $0; saveNotify() }))
-            toggleRow("Arrivals", "Money in, and likes or replies on your own posts. Silent — waits in Notification Center until you look.",
-                      isOn: Binding(get: { notifySettings.arrivals },
-                                    set: { notifySettings.arrivals = $0; saveNotify() }))
+            // Each row names the accounts it covers, which is the one fact the
+            // category's name cannot say.
+            ForEach(notifyCategories, id: \.name) { category in
+                toggleRow(category.name, category.seats,
+                          isOn: Binding(get: { notifySettings.allows(category: category.name) },
+                                        set: { on in
+                                            if on { notifySettings.off.remove(category.name) }
+                                            else { notifySettings.off.insert(category.name) }
+                                            saveNotify()
+                                        }))
+            }
             // Restored 2026-08-14 with the time-sensitive entitlement (prd
-            // §306 amendment's "to finish it"). It read "Anything that arrives
-            // at night waits until morning" for nine days, which was the
-            // honest line while iOS was silently capping the level to
-            // `.active`. It names the two kinds rather than saying "a
-            // deadline", because `NotifyKind.isTimeSensitive` is exactly
-            // `disputeOpened || deadlineNear` — and a person reading this row
-            // is deciding whether to trust the switch, not skimming it.
+            // §306 amendment's "to finish it"). It names the two kinds rather
+            // than saying "a deadline", because `NotifyKind.isTimeSensitive`
+            // is exactly `disputeOpened || deadlineNear` — and a person
+            // reading this row is deciding whether to trust the switch, not
+            // skimming it.
             toggleRow("Quiet hours", "Waits until morning — except a dispute or a deadline.",
                       isOn: Binding(get: { notifySettings.quiet.enabled },
                                     set: { notifySettings.quiet.enabled = $0; saveNotify() }))
-            // The ceiling, stated rather than hidden. There is no server, so
-            // there is no push: the app looks when iOS lets it look.
-            DSFootnote("No server, so nothing is pushed — the app looks when the system lets it. Each says when the thing happened, not when it arrived.")
+            // The pitch and the exceptions, which no switch can say (§748).
+            // The four named are `NotifyKind.standsAlone`, word for word.
+            DSFootnote("What arrives comes as one notification, twice a day at most, so the apps Casberi reads can stay quiet. A dispute, a deadline, a liquidation or a Safe signature comes at once.")
         }
         .task { notifyAuthorized = await Notifications.authorized() }
+    }
+
+    /// The categories this person has an account in, each with the accounts
+    /// it covers. An in-memory walk of the bridge list, never a fetch.
+    private var notifyCategories: [(name: String, seats: String)] {
+        let seats = store.bridges.filter { $0.status != .paused }.map(\.name)
+        return BridgeCatalog.categories.compactMap { category in
+            let mine = seats.filter { BridgeCatalog.category(forSource: $0) == category.name }
+            return mine.isEmpty ? nil : (category.name, ListFormatter.localizedString(byJoining: mine))
+        }
     }
 
     private var notifyStatusLine: String {
@@ -800,7 +811,7 @@ struct AccountDetailSheet: View {
         }
         return Notifications.hasAsked
             ? "Turned off in \(DS.settingsAppName), and only \(DS.settingsAppName) can turn it back on."
-            : "We'll ask the first time something actually needs you."
+            : "We'll ask the first time something arrives."
     }
 
     /// Written straight through on every change — the sheet can be dismissed by

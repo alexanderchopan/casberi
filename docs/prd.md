@@ -79,6 +79,9 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §644 (only alarms default on) | `arrivals` defaults off and `alarms` on, so a grant earned by a dispute is not spent on likes | superseded by §770 (the class switches are deleted; one switch per category, every category on, and on means one digest at most twice a day) |
+| §306 (two classes, and the batch keeps the worst alarm and counts money arrivals) | every alarm and arrival is its own notification, collapsed per sweep | amended by §770 (only `NotifyKind.standsAlone` is sent on its own; everything else waits for `NotifyDigest`, and the money collapse is deleted with the path that fed it) |
+| §713 (arrivals are passive) | an arrival lands silently in Notification Center without lighting the screen | amended by §770 (arrivals reach the lock screen only inside the digest, which lights the screen and makes no sound) |
 | §758 (the padding stays, both halves) | `dsRoomHeadBlock` keeps `s4` on every side so removing the plate moves nothing sideways | amended by §763 (the horizontal half is `s3`, so a head's words stand in the rows' column with every other lead) |
 | §486 (Privacy Pools' scoped head) | a bare lead, a `DSSectionSwitcher` strip and a block per scope, at `scopedHeadGap` | superseded by §763 (it is a `DSRoomChassis.Head` with `DSScopeTiles` under the lead; the strip and `scopedHeadGap` are deleted) |
 | §757 (Home reserves no box) | the five Home crowns pass `reservesBox: false` and drop the slot's 300pt floor | amended by §760 (Home keeps the box; `reservesBox` and `SlotBox` are deleted, because every room's lead is held to that height) |
@@ -56838,3 +56841,23 @@ The octopus the person sees "while the app is loading" is the app-switcher cover
 **Not done.** No door on an empty list (§611's "no door" stands; Follow address is Home's act). The seven inline empty states (Accounts, Wallet history, Receipts, the NFT shelf and picker, CardPointers, L2BEAT/Walletbeat) keep `.inline`.
 
 **Guarded** in `privacy-selftest.sh` (the chassis guard reads the new slot line). **UNSEEN on a device**: an iOS simulator build, the footnote, ds-template, design-ramp, design-motion, plate, row-cost, query-read, dead-closure, room-chassis and swiftdata-liveness audits and the wallet-section, vibenet, privacy and altana selftests ran; nothing was driven on the simulator.
+
+## §770 — Notifications are one digest, twice a day at most, with one switch per category (user: "i got a comment from our users that we have too many notifications … those apps likely are notifying too", then "they should just be off or on and on can be digest for all of them including wallet. we aren't trying to be someone's notification app we are for them reading the app, and their notifications are really the problem for users today", then "ok time sensitive can be exceptions", 2026-09-15)
+
+**The ruling.** Casberi is not a notification app. The apps it reads already push, and their notifications are the problem people bring to it. So everything Casberi would have told someone arrives as ONE notification at a fixed slot, at most twice a day, and the page that controls it is a column of on/off switches, one per category. This supersedes §644 and amends §306 and §713.
+
+**What stands alone.** Four kinds, `NotifyKind.standsAlone`: a dispute, a deadline inside three days, a position close to liquidation, and a Safe waiting on this person's signature. The user's words: "time sensitive can be exceptions". The set is wider than `isTimeSensitive` on purpose. That property still decides whether a Focus is pierced, and only a stated clock earns it; this one decides only whether the news may wait until the evening. Several standing alone in one sweep still collapse to the worst with a count (§306's alarm batch, unchanged).
+
+**What the digest is** (`NotifyDigest`, pure, in `NotifyPlan.swift`):
+- **Two slots, 09:00 and 18:00**, each skipped when quiet hours cover it. A local notification's content is frozen when scheduled and the background task runs when iOS decides, so every sweep rewrites the pending request for the next slot with the queue as it stands. Once a slot has passed, iOS delivered it, so the next sweep starts an empty queue. The app need not run at 18:00.
+- **Counts and app names, never a summary.** One thing is just that thing, with its own door. One app says "From Stripe" and a count, and opens that room. Several apps say "From 4 apps" and name them, up to four, and open All. This is what separates it from the whisper §706 cut: nothing is summarised, so nothing can be wrong.
+- **Apps with no lock screen of their own are named first.** A watched wallet, a feed or a devnet is news nobody else sends. `NotifyDigest.hasOwnApp` is the list of seats whose own app already pushes, ordering only, held to real catalog seat names by `notify-selftest.sh`.
+- **Each slot has its own request id**, so the evening digest never replaces the morning one still in Notification Center. It lights the screen and makes no sound.
+
+**The settings page.** One switch per category the person has an account in, each naming its accounts, then quiet hours, then one footnote that makes the pitch and names the four exceptions. Off means off, the four exceptions included (§83). Every category defaults on: §644 kept arrivals off because each was its own buzz riding a grant earned by a dispute, and one digest twice a day is not that. An install that had BOTH old class switches off reads as all categories off. The permission ask moved from the first alarm to the first thing that arrives for a switch that is on, because otherwise a category whose only news is a digest would be a switch that silently did nothing.
+
+**Proposed and declined, same session.** A level per category (Off, Digest, Each): "a very complicated looking settings page". Wallet defaulting to its own notifications: the user put Wallet in the digest like the rest.
+
+**Deleted.** The Alarms and Arrivals switches and their stored keys' writers; the money-arrival collapse, which nothing could reach once arrivals queue (§723). `NotifyClass` and `severity` stay, because the feed's attention mark and the Today brief read `cls == .alarm`.
+
+**Guarded** in `notify-selftest.sh`: the four exceptions exactly, the slots, quiet-hours skipping, the queue's lifecycle (a delivered digest never repeats, a growing like replaces itself, a category switched off takes its queue, the bound), the words and their order, nine new mutations, and drift guards on the one door, the footnote and the seat names. **UNSEEN on a device**: nothing was delivered or driven on the simulator, and the simulator never runs a background task. The new strings are not yet in the String Catalog.

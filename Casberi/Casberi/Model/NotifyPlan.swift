@@ -115,6 +115,11 @@ enum NotifyKind: String, Sendable, CaseIterable {
     case likesReceived
     case repliesReceived
     case followersGained
+    /// The one notification everything else becomes (prd §770): what arrived
+    /// from every category that is switched on, delivered at most twice a day.
+    /// `NotifySweep.classify` never returns it; only `NotifyDigest.plan`
+    /// composes it, and only when the queue holds more than one thing.
+    case digest
 
     var cls: NotifyClass {
         switch self {
@@ -123,7 +128,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
              .appRejected, .agentRunFailed, .runningLow, .safeSignatureNeeded,
              .walletIncident, .chainReset, .unlockReady:
             return .alarm
-        case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained:
+        case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained, .digest:
             return .arrival
         }
     }
@@ -201,6 +206,26 @@ enum NotifyKind: String, Sendable, CaseIterable {
         self == .disputeOpened || self == .deadlineNear
     }
 
+    /// The exceptions to the digest (user ruling, prd §770: "time sensitive
+    /// can be exceptions"). Everything else waits for the next digest slot, so
+    /// these are the four kinds where hours of waiting can cost something the
+    /// person cannot get back: money challenged with an evidence clock, a
+    /// window closing, collateral close to being sold, and a co-signer blocked
+    /// on this person's signature.
+    ///
+    /// WIDER than `isTimeSensitive` on purpose. That property decides whether
+    /// a Focus is pierced, and only a stated clock earns it; this one decides
+    /// only whether the news may wait until the evening. A liquidation and a
+    /// Safe signature have no clock, but neither keeps until then.
+    var standsAlone: Bool {
+        switch self {
+        case .disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded:
+            return true
+        default:
+            return false
+        }
+    }
+
     /// The title line — deliberately a small closed set of plain sentences, so
     /// the lock screen reads as one voice rather than eight bridges each
     /// shouting their own noun. The row's own title is the body.
@@ -248,6 +273,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .likesReceived:    return String(localized: "Liked your post")
         case .repliesReceived:  return String(localized: "Someone replied")
         case .followersGained:  return String(localized: "New follower")
+        case .digest:           return String(localized: "From your apps")
         }
     }
 }
@@ -377,18 +403,16 @@ enum NotifyRules {
 
     /// The batching rule (§306), and the reason the feature stays likeable.
     ///
-    /// Two groups collapse, for two different reasons. **Alarms** are ranked and
-    /// only the worst is sent, with the rest COUNTED into its body: eleven
-    /// separate alarms is the thing that makes a person switch notifications
-    /// off, and the eleventh is never the one that mattered. **Money arrivals**
-    /// collapse too — a wallet can receive several transfers in one window, and
-    /// four buzzes for four transfers is the same failure wearing better news.
-    /// (Money is also the one place the module doctrine allows a count, because
-    /// there the count IS the event.)
+    /// **Alarms** are ranked and only the worst is sent, with the rest COUNTED
+    /// into its body: eleven separate alarms is the thing that makes a person
+    /// switch notifications off, and the eleventh is never the one that
+    /// mattered.
     ///
-    /// Likes, replies and followers pass through: each already carries a
-    /// per-post or per-person id, so a second liker REPLACES that request rather
-    /// than joining a queue, and two different people are two different events.
+    /// Since prd §770 only the plans that STAND ALONE reach this (the four
+    /// kinds in `NotifyKind.standsAlone`); everything else goes to
+    /// `NotifyDigest`. Money arrivals used to collapse here as a second group,
+    /// and that group is deleted with the path that fed it, rather than kept
+    /// as a rule nothing can reach (§723).
     ///
     /// Ties break on `occurredAt` (newer first) and then on `id`, so the same
     /// sweep always yields the same choice — a sweep that picked differently on
@@ -396,8 +420,6 @@ enum NotifyRules {
     static func collapse(_ plans: [NotifyPlan]) -> [NotifyPlan] {
         collapseGroup(plans, matching: { $0.cls == .alarm },
                       more: { $0 == 1 ? " And 1 more needs you." : " And \($0) more need you." })
-            .pipe { collapseGroup($0, matching: { $0.kind == .moneyIn },
-                                  more: { $0 == 1 ? " And 1 more transfer." : " And \($0) more transfers." }) }
     }
 
     private static func collapseGroup(_ plans: [NotifyPlan],
@@ -738,10 +760,9 @@ enum NotifyDevnet {
 
     /// Everything the two devnets have to say, given what their last read left
     /// behind. Order is stable (resets, then unlocks) so a sweep that has to
-    /// collapse always collapses the same way; `NotifyRules
-    /// .collapse` then keeps the worst alarm and counts the rest, which is what
-    /// stops a chain reset that touched four watched addresses being four
-    /// buzzes.
+    /// collapse always collapses the same way. Neither kind stands alone
+    /// (prd §770), so both wait for the digest, which is what stops a chain
+    /// reset that touched four watched addresses being four buzzes.
     static func plans(resets: [Reset] = [], unlocks: [Unlock] = [],
                       now: Date = Date()) -> [NotifyPlan] {
         resets.compactMap { plan(reset: $0, now: now) }
@@ -750,8 +771,192 @@ enum NotifyDevnet {
 }
 
 
-private extension Array {
-    /// Left-to-right chaining, so `collapse` reads as the two passes it is
-    /// rather than a nested call that has to be read inside-out.
-    func pipe<T>(_ transform: (Self) -> T) -> T { transform(self) }
+// MARK: - The digest (prd §770)
+
+/// Everything that does not stand alone arrives as ONE notification, at most
+/// twice a day (user ruling, prd §770: "we aren't trying to be someone's
+/// notification app, we are for them reading the app, and their notifications
+/// are really the problem for users today").
+///
+/// **Counts and app names, never a summary.** The daily whisper (§706) was cut
+/// because its line summarised a day and said nothing; this says only which
+/// apps have something and how much, which nothing can get wrong.
+///
+/// **Fixed slots, not a timer.** A local notification's content is frozen when
+/// it is scheduled and the background task runs when iOS decides, so the
+/// digest is one pending request per slot that every sweep REWRITES with the
+/// queue as it stands. Whatever reached the queue before the last sweep ahead
+/// of a slot is in that slot's notification. Once the slot has passed, iOS has
+/// delivered it, so the next sweep starts an empty queue. Nothing here needs
+/// the app to be running at 18:00.
+///
+/// Pure, like the rest of this file, so `notify-selftest.sh` drives the slot
+/// choice, the queue's lifecycle and the words.
+enum NotifyDigest {
+
+    /// One thing waiting for the next slot. Carries strings only, the way
+    /// `NotifyPlan` does, because it is stored between sweeps.
+    struct Item: Codable, Sendable, Equatable {
+        /// The plan's own id, so a like that grows REPLACES its queued item.
+        var id: String
+        /// The catalog seat, resolved by the caller through
+        /// `BridgeCatalog.seatName(forSource:)`: what groups items into apps
+        /// and what `hasOwnApp` is keyed on.
+        var seat: String
+        /// The words a person reads for that app, the landed source.
+        var name: String
+        /// The catalog category, for the per-category switch.
+        var category: String
+        /// `NotifyKind.rawValue`, so a lone item keeps its own kind.
+        var kind: String
+        var title: String
+        var body: String
+        var link: String?
+        var occurredAt: Date
+        var source: String?
+    }
+
+    /// What survives between sweeps: the queue, and the slot it is scheduled
+    /// for. A nil slot means nothing is pending.
+    struct State: Codable, Sendable, Equatable {
+        var queue: [Item] = []
+        var slot: Date?
+    }
+
+    /// Minutes from midnight. Two, and the count is the ruling ("at most twice
+    /// a day"): a morning read and an evening read. Both sit outside the
+    /// default quiet window (22:00 to 08:00).
+    static let slots = [9 * 60, 18 * 60]
+
+    /// A bound on the queue, oldest dropped first. Two slots a day and a
+    /// ledger that fires each id once keep it far below this; it exists so a
+    /// week without a sweep cannot grow a stored array without limit.
+    static let cap = 200
+
+    /// Seats whose own iOS app already pushes the person about what Casberi
+    /// reads from them. They are named AFTER the seats that have no lock
+    /// screen of their own (a watched wallet, a feed, a devnet), because that
+    /// is news the person cannot get anywhere else. Ordering only: nothing is
+    /// dropped for being here. Every name must be a catalog seat, which
+    /// `notify-selftest.sh` checks against `BridgeCatalog.swift`.
+    static let hasOwnApp: Set<String> = [
+        "Gmail", "iCloud Mail", "Calendar", "Reminders",
+        "ChatGPT", "Claude", "Gemini", "Grok",
+        "Coinbase", "Kraken", "Binance", "Gemini Exchange", "Gnosis Pay",
+        "Apple Wallet", "Safe", "ether.fi",
+        "GitHub", "GitLab", "Linear", "Notion", "Slack", "Trello", "Jira",
+        "Sentry", "Vercel", "PagerDuty", "Cloudflare", "App Store Connect", "Stripe",
+        "Shopify", "Reddit", "YouTube", "Spotify", "Strava", "Garmin",
+        "Todoist", "Pinterest", "Day One",
+        "Farcaster", "Telegram", "Bluesky", "Instagram", "Snapchat", "TikTok", "X",
+        "Steam", "Dropbox", "Twitch", "Substack", "Stocktwits",
+    ]
+
+    /// The id every slot's request shares a prefix with. The slot's own
+    /// instant is appended by the scheduler, so the evening digest never
+    /// replaces the morning one still sitting in Notification Center.
+    static let requestPrefix = "digest:"
+
+    /// The next slot strictly after `now` that quiet hours do not cover.
+    ///
+    /// A custom quiet window can cover both slots, and then the digest waits
+    /// for the window's own end, the same place `NotifyRules.holdUntil` would
+    /// have put it.
+    static func nextSlot(after now: Date, quiet: NotifyRules.Quiet, calendar: Calendar) -> Date {
+        let today = calendar.startOfDay(for: now)
+        for offset in 0...2 {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
+            for minute in slots.sorted() where !quiet.contains(minute: minute) {
+                guard let when = calendar.date(bySettingHour: minute / 60, minute: minute % 60,
+                                               second: 0, of: day), when > now else { continue }
+                return when
+            }
+        }
+        let end = calendar.date(bySettingHour: quiet.endMinute / 60, minute: quiet.endMinute % 60,
+                                second: 0, of: now) ?? now
+        if end > now { return end }
+        return calendar.date(byAdding: .day, value: 1, to: end) ?? end
+    }
+
+    /// One sweep's step: forget what a passed slot delivered, fold the new
+    /// items in, drop whatever a switch now excludes, and choose the slot.
+    ///
+    /// The order is the rule. Clearing FIRST is what makes a delivered item
+    /// impossible to announce twice; upserting by id is what lets a growing
+    /// like count replace itself; filtering LAST is what makes a category
+    /// switched off take its queued items with it on the very next sweep.
+    static func advance(_ state: State, adding new: [Item], allowed: (Item) -> Bool,
+                        now: Date, quiet: NotifyRules.Quiet, calendar: Calendar) -> State {
+        var queue = state.queue
+        if let slot = state.slot, slot <= now { queue = [] }
+        for item in new {
+            if let i = queue.firstIndex(where: { $0.id == item.id }) { queue[i] = item } else { queue.append(item) }
+        }
+        queue = queue.filter(allowed)
+        if queue.count > cap { queue.removeFirst(queue.count - cap) }
+        guard !queue.isEmpty else { return State(queue: [], slot: nil) }
+        // Keep a slot still ahead of us, unless quiet hours now cover it (the
+        // window was changed since it was chosen).
+        if let slot = state.slot, slot > now {
+            let parts = calendar.dateComponents([.hour, .minute], from: slot)
+            if !quiet.contains(minute: (parts.hour ?? 0) * 60 + (parts.minute ?? 0)) {
+                return State(queue: queue, slot: slot)
+            }
+        }
+        return State(queue: queue, slot: nextSlot(after: now, quiet: quiet, calendar: calendar))
+    }
+
+    /// The apps in the order the body names them: seats with no lock screen of
+    /// their own first, then the app with the newest item, then by name so the
+    /// order never depends on a dictionary. Each app is named by its newest
+    /// item's source.
+    static func apps(_ queue: [Item]) -> [String] {
+        var newest: [String: Item] = [:]
+        for item in queue where (newest[item.seat]?.occurredAt ?? .distantPast) <= item.occurredAt {
+            newest[item.seat] = item
+        }
+        return newest.values.sorted { a, b in
+            let aOwn = hasOwnApp.contains(a.seat), bOwn = hasOwnApp.contains(b.seat)
+            if aOwn != bOwn { return !aOwn }
+            if a.occurredAt != b.occurredAt { return a.occurredAt > b.occurredAt }
+            return a.seat < b.seat
+        }.map(\.name)
+    }
+
+    /// The notification a queue becomes. Nil for an empty queue.
+    ///
+    /// One item is simply that item: its own headline, words and door, so a
+    /// quiet day with one arrival reads like any notification. One app with
+    /// several items says the app and the count. Several apps say how many and
+    /// name them, up to four, then "and N more".
+    static func plan(_ queue: [Item]) -> NotifyPlan? {
+        guard let newest = queue.max(by: { $0.occurredAt < $1.occurredAt }) else { return nil }
+        if queue.count == 1 {
+            return NotifyPlan(id: requestPrefix + newest.id,
+                              kind: NotifyKind(rawValue: newest.kind) ?? .digest,
+                              title: newest.title, body: newest.body, link: newest.link,
+                              occurredAt: newest.occurredAt, source: newest.source,
+                              place: newest.name)
+        }
+        let names = apps(queue)
+        if names.count == 1 {
+            let path = newest.name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? newest.name
+            return NotifyPlan(id: requestPrefix + "app", kind: .digest,
+                              title: String(localized: "From \(names[0])"),
+                              body: String(localized: "\(queue.count) new things"),
+                              link: "casberi://feed/source/" + path,
+                              occurredAt: newest.occurredAt, source: newest.source)
+        }
+        let listed: String
+        if names.count <= 4 {
+            listed = ListFormatter.localizedString(byJoining: names)
+        } else {
+            listed = String(localized: "\(names.prefix(3).joined(separator: ", ")) and \(names.count - 3) more")
+        }
+        return NotifyPlan(id: requestPrefix + "apps", kind: .digest,
+                          title: String(localized: "From \(names.count) apps"),
+                          body: listed,
+                          link: "casberi://feed",
+                          occurredAt: newest.occurredAt)
+    }
 }
