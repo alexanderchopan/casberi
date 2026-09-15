@@ -56095,6 +56095,41 @@ ellipsis.
 considered for long names and left out: the room already names the pick, and a
 floating label is a fourth object in the band.
 
+## §752b — The section tiles are on every page, flat, and the Readings rows lead with the same glyphs (user, on build 590: "none of the wallet buttons w glyphs showed", then "i think they should always show shouldn't they it's weird if they don't", then "the list items for the sections should also share the glyph so indentation is the same. i thought the readings row below was useful … and also look how it looks all messed up", 2026-09-15)
+
+**What 590 did.** §752 drew the tiles only inside a section. Wallet Home kept the
+Readings rows, so opening the room showed no tiles at all, and the user took the
+feature for missing. Inside Activity the tiles rendered as dark smeared columns:
+each tile wore `dsWidgetSurface` (the sheet fill, a 150pt pour gradient and an
+18pt shadow), a surface built for large cards and not for eight 52pt controls in
+a grid.
+
+**The ruling.**
+
+- **The grid is on every page.** Home is head, tiles, Actions, Readings; a
+  section is figure, tiles, list. The head and every figure share the 300pt
+  slot, so the grid lands at the same height on each page. Home is the lit tile.
+- **The Readings rows stay** (user: "i thought the readings row below was
+  useful"). The tiles move you; the rows preview what is behind each section
+  ("4 live approvals") before the tap.
+- **Every row under the tiles leads with a 26pt glyph disc.** The Readings rows
+  wear their section's tile glyph, the same disc `DevnetVerbRow` and Follow
+  address wear, so Actions and Readings share one leading column. The attention
+  dot moves to the disc's corner.
+- **Actions stay on Home only** (the user's question: "where the buttons would go
+  for create account etc."). Create account, Send, Top up and Follow address sit
+  under the tiles on Home, where §750 put them.
+- **A tile is flat**: one `surfaceRaised` fill, the tint on the pick, no shadow,
+  no pour.
+- **One scope draws no grid** (§83).
+
+**Not this ruling.** In the same screenshot the account faces (§753) float over
+the list above the dock. That is §753's placement and is left to it.
+
+**What enforces it.** `wallet-section-selftest.sh` requires the tiles between the
+head and Actions in the chrome, and `section.glyph` in the Readings rows.
+
+**UNSEEN on a device.**
 ## §754 — The dock capsule always leads with the room you are standing in (user: "this isn't how we designed the dock, how a user know they're on forecastor", then on three shapes "mark only, no word" and "only where the row already is", 2026-09-15)
 
 **The report, with a screenshot.** A Farcaster room: a capsule of eight avatars
@@ -56387,9 +56422,14 @@ moves sideways in any of them — the same property §757 and §758 kept, for th
 same reason: a plate removal that also re-inset its content is two changes
 reported as one, and only one of them was asked for.
 
-**The one caller left is `DSScopeTiles`, and it is a CONTROL.** A tile you press
-needs an edge to be pressable, which is the reason §746 lets a chip carry a fill
-while a fact carries none. The elevated surface finally says exactly one thing.
+**The one caller left was going to be `DSScopeTiles`, and there is none.** The
+exception was written for a control — a tile you press needs an edge, the reason
+§746 lets a chip carry a fill while a fact carries none — and it was empty before
+it was written: §752b, from another session the same day, had already made the
+tiles a flat `surfaceRaised` fill with the tint on the pick, because at this
+modifier's pour and 18pt shadow a row of them "smeared into dark columns". A tile
+does need an edge. It does not need this one, and `plate-audit.py` now allows the
+definitions' own file and nothing else.
 
 **`plate-audit.py`** (new, in `verify.sh`) fails any other caller, and it pins
 all three spellings of the same lift — `dsWidgetSurface`, `dsCard`,

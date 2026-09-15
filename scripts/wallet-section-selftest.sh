@@ -316,6 +316,13 @@ rows_at=$(grep -n "DSScopeRows(sections:" "$CHROME" | head -1 | cut -d: -f1 || t
   || fail "drift: cannot locate the head, Actions or the Readings in DSRoomScopeChrome"
 (( head_at < acts_at && acts_at < rows_at )) \
   || fail "drift: Home is out of order — the head, then Actions, then Readings (§750)"
+# ...and the section tiles sit between the head and Actions on Home too (§752b,
+# user: "i think they should always show"). The first match is Home's.
+tiles_at=$(grep -n "DSScopeTiles(sections:" "$CHROME" | head -1 | cut -d: -f1 || true)
+[[ -n "$tiles_at" ]] && (( head_at < tiles_at && tiles_at < acts_at )) \
+  || fail "drift: Home's section tiles are missing or out of order — the head, then the tiles, then Actions (§752b)"
+guard DSScopeRows.swift "section.glyph" \
+  "the Readings rows lost their glyph — they must lead with the tile's symbol (§752b)"
 
 # ── §757: the rows stand on nothing, and Home reserves no box ────────────────
 # **THE PLATES** (user, 2026-09-15: "they should not have cards"). Actions and

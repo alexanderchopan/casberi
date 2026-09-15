@@ -27,13 +27,15 @@ and it renders as a perfectly tidy card in every screenshot, every screen sweep
 and every build. The only thing that can catch it is a grep that runs on every
 verify.
 
-WHAT IS ALLOWED, and it is a short list:
+WHAT IS ALLOWED: `Design/Glass.swift` — the definition itself, and
+`dsCard`/`dsElevatedSurface` beside it. Nothing else, anywhere.
 
-  • `Design/Glass.swift` — the definition itself, and `dsCard`/`dsElevatedSurface`
-    beside it.
-  • `Design/DSScopeTiles.swift` — a CONTROL. A tile you press needs an edge to
-    be pressable, the same reason §746 lets a chip carry a fill. This is the
-    one place the elevated surface still says something.
+§759 reserved one exception for `DSScopeTiles`, on the grounds that a tile you
+press needs an edge. It does; it just does not need THIS edge. §752b, landed the
+same day from another session, had already made the tiles a flat `surfaceRaised`
+fill with the tint on the pick, because at the big cards' pour and 18pt shadow a
+row of them "smeared into dark columns". So the exception was empty when it was
+written, and it is gone: the elevated card has no callers at all.
 
 WHAT THIS DOES NOT CHECK, stated so it is not mistaken for a general
 no-backgrounds rule: `dsWell` (the RECESSED rung — a block sunk into the page)
@@ -60,7 +62,6 @@ PLATE = re.compile(r"\.(dsWidgetSurface|dsCard|dsElevatedSurface)\(")
 # file name → why it may still draw one. An entry is a RULING, not a snooze.
 ALLOWED = {
     "Glass.swift": "the definitions themselves (prd §759)",
-    "DSScopeTiles.swift": "a control: a tile you press needs an edge (prd §746/§759)",
 }
 
 
@@ -124,9 +125,9 @@ def self_test() -> int:
             "struct TalksAboutIt: View {\n"
             "    /// It used to wear `.dsWidgetSurface()` and no longer does.\n"
             "    var body: some View { Text(\"hi\") }\n}\n")
-        (design / "DSScopeTiles.swift").write_text(
-            "struct DSScopeTiles: View {\n"
-            "    var body: some View { Text(\"tile\").dsWidgetSurface() }\n}\n")
+        (design / "Glass.swift").write_text(
+            "extension View {\n"
+            "    func dsWidgetSurface() -> some View { dsElevatedSurface() }\n}\n")
 
         found = {rel for rel, _, _ in scan(root)}
         cases = [
@@ -136,8 +137,8 @@ def self_test() -> int:
             ("a clean card passes", f"{TREE}/Screens/CleanCard.swift" not in found),
             ("a file that only TALKS about the modifier passes",
              f"{TREE}/Screens/TalksAboutIt.swift" not in found),
-            ("the allowed control is not flagged",
-             f"{TREE}/Design/DSScopeTiles.swift" not in found),
+            ("the definitions' own file is not flagged",
+             f"{TREE}/Design/Glass.swift" not in found),
         ]
         for what, passed in cases:
             print(f"  {'ok  ' if passed else '✗   '} {what}")

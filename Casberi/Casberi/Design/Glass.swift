@@ -275,9 +275,13 @@ extension View {
     /// the wallet family's Actions and Readings (§757) and every room head
     /// (§758). What separates two blocks now is air.
     ///
-    /// The ONE caller left is `DSScopeTiles`, and it is a CONTROL: a tile you
-    /// press, which needs an edge to be pressable, the same reason a chip has a
-    /// fill (§746). `plate-audit.py` fails any other caller, so a plate coming
+    /// **It has NO callers at all.** §759 reserved one exception for
+    /// `DSScopeTiles` — a tile you press needs an edge — and that turned out to
+    /// be empty: §752b, landed the same day, had already made the tiles a flat
+    /// `surfaceRaised` fill with the tint on the pick, because at this
+    /// modifier's pour and 18pt shadow a row of them "smeared into dark
+    /// columns". A tile does need an edge; it does not need THIS one.
+    /// `plate-audit.py` fails every caller outside this file, so a plate coming
     /// back is a ruling somebody takes deliberately rather than a modifier that
     /// crept into a paste.
     func dsWidgetSurface(cornerRadius: CGFloat = DS.Radius.widget,

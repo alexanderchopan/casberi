@@ -609,11 +609,10 @@ struct VibenetRoomCard: View {
                 // passes no headline; the row is still RESERVED, which is what
                 // keeps its first pixel level with every other scope's and what
                 // clears the settings gear.
-                // **THE CHROME LEADS, AND ON HOME IT IS THE WHOLE HEAD**
-                // (prd §747). Home's crown is no longer drawn here: it rides
-                // the account card inside `scopeChrome`, which is what gives
-                // an account's name the card's whole width. Off Home the
-                // figure draws exactly where it did.
+                // **ON HOME THE CHROME IS THE WHOLE HEAD; OFF HOME IT FOLLOWS
+                // THE FIGURE** (prd §750, §752). Home's crown is not drawn
+                // here: it is `scopeChrome`'s head. Off Home the scope's figure
+                // draws first and the chrome under it is the section tiles.
                 if (section ?? .home) != .home {
                     scopeVisualDissolving
                 }

@@ -32,7 +32,7 @@ import SwiftUI
 /// minus its own home case. Filtering here would mean this component knowing
 /// which of eight enums calls its first case `home`, which is a fact about
 /// rooms and not about rows.
-struct DSScopeRows<Scope: DSSectionScope>: View {
+struct DSScopeRows<Scope: DSTileScope>: View {
 
     let sections: [Scope]
     /// Scopes with something that wants answering — the dot the strip carried,
@@ -78,15 +78,27 @@ struct DSScopeRows<Scope: DSSectionScope>: View {
         DSPushRow(title: Text(section.label),
                   fact: reading(section).map { Text($0) },
                   action: { onPick(section) }) {
-            // The dot LEADS the word rather than trailing it, because a
-            // column of dots down the left edge is scannable and a dot after
-            // a word of any length is not. It keeps its 6pt and its
-            // `DS.attention` from the strip: this is the same mark saying the
-            // same thing, moved.
-            if wants {
-                Circle()
-                    .fill(DS.attention)
-                    .frame(width: DS.Space.s2 - 4, height: DS.Space.s2 - 4)
+            // **THE TILE'S GLYPH LEADS THE ROW** (prd §752b, user: "the list
+            // items for the sections should also share the glyph so
+            // indentation is the same"). The same 26pt disc `DevnetVerbRow`
+            // and the Follow address row wear, so Actions and Readings share
+            // one leading column, and the same symbol the section's tile
+            // wears above them. The attention dot rides the disc's corner.
+            ZStack(alignment: .topTrailing) {
+                ZStack {
+                    Circle().fill(DS.fillFaint)
+                        .frame(width: DS.Face.row, height: DS.Face.row)
+                    Image(systemName: section.glyph)
+                        .accessibilityHidden(true)
+                        .dsGlyph(13, weight: .semibold)
+                        .foregroundStyle(DS.textPrimary)
+                }
+                if wants {
+                    Circle()
+                        .fill(DS.attention)
+                        .frame(width: DS.Space.s2 - 2, height: DS.Space.s2 - 2)
+                        .offset(x: 1, y: -1)
+                }
             }
         }
         .dsScopeRow()

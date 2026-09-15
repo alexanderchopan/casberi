@@ -316,10 +316,17 @@ extension FeedScreen {
                         DSPushRow(title: Text("Follow address"),
                                   tint: DS.tint,
                                   action: { route.pushBridge(.wallet) }) {
-                            Image(systemName: "eye")
-                                .dsGlyph(DS.Space.s4, weight: .semibold)
-                                .foregroundStyle(DS.tint)
-                                .frame(width: DS.Face.row, height: DS.Face.row)
+                            // The same 26pt disc as the devnet verbs and the
+                            // Readings rows under it (§752b), so all three share
+                            // one leading column and one look.
+                            ZStack {
+                                Circle().fill(DS.fillFaint)
+                                    .frame(width: DS.Face.row, height: DS.Face.row)
+                                Image(systemName: "eye")
+                                    .accessibilityHidden(true)
+                                    .dsGlyph(13, weight: .semibold)
+                                    .foregroundStyle(DS.tint)
+                            }
                         }
                         .dsScopeRow()
                     }

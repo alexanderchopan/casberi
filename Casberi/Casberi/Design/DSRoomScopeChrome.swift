@@ -46,10 +46,11 @@ import SwiftUI
 /// devnet) passes the same arguments it passed §747's chrome; only this file
 /// decides where they are drawn.
 ///
-/// **Off Home it draws the scopes as TILES, and each room mounts it UNDER the
-/// scope's figure** (prd §752, user: "i don't want the app to have controls at
-/// the top of the screen anywhere"). `DSScopeHeader` — a back chevron and a
-/// scrolling strip of words at the top — is deleted; Home is a tile.
+/// **The section TILES are on every page** (prd §752, §752b, user: "i don't
+/// want the app to have controls at the top of the screen anywhere", then "i
+/// think they should always show"). On Home they sit under the head, above
+/// Actions and the Readings rows; in a section each room mounts this chrome
+/// UNDER the section's figure and it draws the tiles alone. Home is a tile.
 struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Acts: View>: View {
     @Environment(ShellChrome.self) private var chrome
 
@@ -115,6 +116,9 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Acts: View>: View {
                         .padding(.vertical, DS.Space.s2)
                         .padding(.horizontal, DSRoomChassis.inset)
                 }
+                DSScopeTiles(sections: sections, active: active,
+                             attention: attention, onPick: onPick)
+                    .padding(.horizontal, DSRoomChassis.inset)
                 if let actsSlot {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                         WalletSectionLabel(title: String(localized: "Actions"))
