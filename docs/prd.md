@@ -223,6 +223,8 @@ at all.
 | §392 | The grouping is drawn by proximity, the packer stops churning, | item 1 (the whitespace cluster layout) overturned by §392a; its diagnosis, the packing-order change, the scroll-to-active and the glass step all still stand |
 | §393 | Use what Apple uses, and keep the recipe because iOS 18 exists | default reversed by §393a — `glassEffect` does not sample a sheet's backdrop on hardware, so the material is the default again and the system path stays behind `-trayGlass system`; §393's reasoning about a BAR is untouched; the glass tray itself, its flag and its three tokens deleted by §712 — no tray passed `glass: true` once the sources tray became the dock |
 | §394 | The tray stops being a sheet, and four boundary treatments are rejected | amended by §394a — the overlay shipped with three runtime-only failures (missing environment, ScrollView eating the drag, `.local` coordinate space) and the drag-to-expand detent §394 declared gone is rebuilt |
+| §769 | An empty scope draws its figure as a skeleton; no door on an empty list; the inline empty states keep `.inline` | amended by §771 (every empty state is a skeleton, `.inline` is deleted, and Holdings, Activity and NFTs carry their remedy as a door) |
+| §611 (no door) | An empty scope states a fact and stops — no door | amended by §771 (an empty wallet Holdings or Activity list carries `Follow address`, and NFTs `Choose collections`; Risk and Permissions still carry none) |
 
 ### Known stale, by hand
 
@@ -56861,3 +56863,19 @@ The octopus the person sees "while the app is loading" is the app-switcher cover
 **Deleted.** The Alarms and Arrivals switches and their stored keys' writers; the money-arrival collapse, which nothing could reach once arrivals queue (§723). `NotifyClass` and `severity` stay, because the feed's attention mark and the Today brief read `cls == .alarm`.
 
 **Guarded** in `notify-selftest.sh`: the four exceptions exactly, the slots, quiet-hours skipping, the queue's lifecycle (a delivered digest never repeats, a growing like replaces itself, a category switched off takes its queue, the bound), the words and their order, nine new mutations, and drift guards on the one door, the footnote and the seat names. **UNSEEN on a device**: nothing was delivered or driven on the simulator, and the simulator never runs a background task. The new strings are not yet in the String Catalog.
+
+## §771 — Every empty state in the app draws its skeleton, and an empty wallet list carries its remedy (user: "you must finish the ones that are not done!", 2026-09-15)
+
+**What §769 left.** It redrew the six wallet-family rooms' leads and lists and named what it did not do: the one-line empty states elsewhere, and doors on empty lists. Three more rooms' own empty figures were still text in the slot: Wallet's Activity (`WalletFlowEmptyFigure`, a window label, a dashed ribbon and a sentence) and Vibenet's Holdings, Activity and Accounts.
+
+**The ruling.**
+- **`DSEmptyState` has two forms and both are skeletons.** `.room(figure)` (§769) and `.list(rows:)` — `DSSkeletonRows` with the short state centred on them. `.inline`, the lone grey sentence, is deleted with its last caller. Every caller moved: Accounts' Yours ("Nothing connected yet"), Receipts, Wallet history, CardPointers without Plus, Walletbeat's unexamined wallet, L2BEAT's search miss, the NFT picker, Privacy Pools' empty scopes, and the NFT shelf's empty slot (`.room(.quad)`).
+- **`note`, for a fact the drawing cannot say.** One short line under the headline, kept only where the person acts on it or would otherwise be misled (§748's fix-it and honesty lines): L2BEAT's "One match under Layer 3", and the NFT picker's "Solana and HyperEVM NFTs can't be read yet" — an empty picker must not read as "you hold none" for chains nothing reads. Everything else is VoiceOver's (`words`).
+- **The causes stay the headline.** Wallet Activity's four declines (§589) are four short headlines on the bars skeleton — "Nothing yet", "No prices to draw", "Too few prices to draw", "Only one address so far" — with the full sentence spoken; Vibenet's "Couldn't be read" / "Nothing deployed yet" / "Holds nothing" / "Nothing has changed" / "Nothing is shared" likewise. They draw through `DSRoomSlot` with no reserved row, which `vibenet-selftest.sh`'s §495 slot guard now accepts beside `scopeFigure`. `spineWalletAddress` is deleted: the empty figure was its last reader (§723).
+- **A door where it is the remedy.** An empty wallet list for Holdings or Activity carries `Follow address` (Home's own act row, pushing the watch field), and NFTs carries `Choose collections` (the picker for the wallet in scope). Risk and Permissions carry none: an empty one is good news, not a task. The devnets' Top up lives on the account card and is not repeated. This amends §611 and §769's "no door" for exactly these three lists.
+
+**Not changed.** Vibenet's Permissions "Not read yet" keeps its attention glyph and sentence: it is a failed read, not an empty scope, and a skeleton under "nothing can act for you" is the reassuring wrong answer §551 refused. Loading and unreached notes ("Reading the chain…") are not empty states.
+
+**Owed.** The String Catalog sync: five new strings ("Nothing connected yet", "No prices to draw", "Too few prices to draw", "Only one address so far", "Solana and HyperEVM NFTs can't be read yet.").
+
+**UNSEEN on a device**: an iOS simulator build, the footnote, ds-template, design-ramp, design-motion, dead-closure, room-chassis, row-cost, query-read, accessibility, setup-copy and plate audits and the vibenet, wallet-section, wallet-viz, privacy and altana selftests ran; nothing was driven on the simulator.

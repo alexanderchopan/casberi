@@ -708,7 +708,7 @@ struct WalletFlowBand: View {
 struct WalletFlowEmptyFigure: View {
     let decline: WalletFlow.Decline
 
-    /// **THE BARS, EMPTY (prd §770).** The window label, the dashed ribbon and
+    /// **THE BARS, EMPTY (prd §771).** The window label, the dashed ribbon and
     /// a sentence at the top of the slot were §769's weak state in this
     /// scope's own clothes. The cause still leads — a quiet window, an unpriced
     /// one and too few prices are different answers (§589) — as a short

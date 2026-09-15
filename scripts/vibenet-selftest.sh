@@ -5192,7 +5192,7 @@ for figure in activity holdings accounts permissions; do
 done
 # …and the empty counterparts must draw inside the slot: `scopeFigure`, or
 # `DSRoomSlot` itself where the empty state takes the whole box with no
-# reserved headline row (prd §770). An empty figure drawing bare would satisfy
+# reserved headline row (prd §771). An empty figure drawing bare would satisfy
 # the guard above and move the bar exactly as far.
 for figure in activityEmptyFigure holdingsEmptyFigure accountsEmptyFigure permissionsEmptyFigure; do
   body=$(sed -nE "/private (var|func) $figure/,/^    }$/p" "$TMP/card.nc.swift")

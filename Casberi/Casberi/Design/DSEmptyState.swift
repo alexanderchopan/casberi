@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// **A PLACE WITH NOTHING IN IT SAYS WHAT IT WOULD HOLD (prd §611, drawn
-/// once by §715, 2026-09-13; redrawn as skeletons by §769 and §770).**
+/// once by §715, 2026-09-13; redrawn as skeletons by §769 and §771).**
 ///
 /// Two forms, and both draw what would fill the place, empty:
 ///

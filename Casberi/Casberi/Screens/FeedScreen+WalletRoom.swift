@@ -576,7 +576,7 @@ extension FeedScreen {
         }
     }
 
-    /// **THE DOOR AN EMPTY LIST CARRIES, where it is the remedy (prd §770).**
+    /// **THE DOOR AN EMPTY LIST CARRIES, where it is the remedy (prd §771).**
     /// Holdings and Activity fill by following an address; the same row
     /// Home's Actions draw, so it is one verb in one look.
     var walletFollowDoorSection: some View {
@@ -874,7 +874,7 @@ extension FeedScreen {
     /// a pick is made PER WALLET, so a merged shelf would have to say whose
     /// each piece is, and this room already declines to speak for merged
     /// wallets rather than invent an attribution (the flow band's portrait
-    /// used the same reasoning until §770 drew its empty state as a skeleton). The wallet switcher is pinned above
+    /// used the same reasoning until §771 drew its empty state as a skeleton). The wallet switcher is pinned above
     /// the room, so narrowing to one is a tap away.
     var nftShelfWallet: WalletStore.WatchedAddress? {
         let watched = wallet.addresses

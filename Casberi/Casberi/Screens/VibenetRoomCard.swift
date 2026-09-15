@@ -1671,7 +1671,7 @@ struct VibenetRoomCard: View {
     /// Scoped it speaks about ONE account; unscoped about the set.
     @ViewBuilder
     private func holdingsEmptyFigure(_ aggregate: VibenetBalanceAggregate) -> some View {
-        // The treemap that is not there, as its skeleton (prd §770); the
+        // The treemap that is not there, as its skeleton (prd §771); the
         // cause stays the headline and its sentence is spoken.
         DSRoomSlot(headline: nil, reservesHeadline: false) {
             DSEmptyState(headline: Text(holdingsEmptyHeadline(aggregate)),
@@ -1832,7 +1832,7 @@ struct VibenetRoomCard: View {
     /// your accounts (§83).
     @ViewBuilder
     private var activityEmptyFigure: some View {
-        // The flow that is not there, as its skeleton (prd §770). No ribbon in
+        // The flow that is not there, as its skeleton (prd §771). No ribbon in
         // any kind's colour is drawn, for the reason it never was: that would
         // draw a change that did not happen.
         DSRoomSlot(headline: nil, reservesHeadline: false) {
@@ -1996,7 +1996,7 @@ struct VibenetRoomCard: View {
     /// sub-accounts" is a fact about the roster and not about Base.
     @ViewBuilder
     private var accountsEmptyFigure: some View {
-        // The connections map, empty (prd §770). No connector is drawn between
+        // The connections map, empty (prd §771). No connector is drawn between
         // two real accounts; the skeleton's discs are nobody's.
         DSRoomSlot(headline: nil, reservesHeadline: false) {
             DSEmptyState(headline: Text(String(localized: "Nothing is shared")),
