@@ -258,7 +258,13 @@ final class BridgeStore {
             let n = seat.count(watched)
             guard n > 0 else { remove(seat.id); continue }
             let proof: String = switch seat.noun {
-            case "wallet": String(localized: "Watching \(n) wallet")
+            // **THE NOUN IS `address`, NOT `wallet` (prd §744, user: "it
+            // should always say watching addresses").** The model has always
+            // called it that — `WalletStore.WatchedAddress` — and the door
+            // that fills this list says `Follow address`. The seat key stays
+            // "wallet" because that is the seat's own noun; only the words a
+            // person reads change.
+            case "wallet": String(localized: "Watching \(n) address")
             case "card":   String(localized: "Watching \(n) card")
             case "Safe":   String(localized: "Watching \(n) Safe")
             default:       String(localized: "Watching \(n) \(seat.noun)")

@@ -2149,58 +2149,58 @@
         }
       }
     },
-    "Watch a wallet in Casberi": {
+    "Follow an address in Casberi": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Sigue una cartera en Casberi"
+            "value": "Sigue una dirección en Casberi"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Casberi でウォレットを追加"
+            "value": "Casberi でアドレスを追加"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Casberi에서 지갑 추가"
+            "value": "Casberi에서 주소 추가"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "在 Casberi 中关注一个钱包"
+            "value": "在 Casberi 中关注一个地址"
           }
         }
       }
     },
-    "What your watched wallets are worth.": {
+    "What your watched addresses are worth.": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Cuánto valen las carteras que sigues."
+            "value": "Cuánto valen las direcciones que sigues."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "追跡中のウォレットの価値。"
+            "value": "追跡中のアドレスの価値。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "지켜보는 지갑의 가치."
+            "value": "지켜보는 주소의 가치."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "你关注的钱包价值。"
+            "value": "你关注的地址价值。"
           }
         }
       }

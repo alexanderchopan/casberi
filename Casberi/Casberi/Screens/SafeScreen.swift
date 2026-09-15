@@ -130,7 +130,7 @@ struct SafeScreen: View {
     @ViewBuilder private var connectBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if hasWallets {
-                DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet"),
+                DSSlabDoor(title: String(localized: "Watching \(walletCount) address"),
                            detail: String(localized: "Manage"),
                            systemImage: "eye") {
                     route.pushBridge(.wallet)

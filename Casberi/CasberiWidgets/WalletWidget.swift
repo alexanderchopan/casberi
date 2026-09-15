@@ -32,7 +32,7 @@ struct WalletWidget: Widget {
                 .containerBackground(for: .widget) { WidgetField() }
         }
         .configurationDisplayName("Wallet")
-        .description("What your watched wallets are worth.")
+        .description("What your watched addresses are worth.")
         // No large family: a curve and one figure cannot fill it, and the
         // composition strip that COULD is a live protocol read the extension
         // can neither afford nor make.
@@ -219,7 +219,7 @@ struct WalletWidgetView: View {
     private var declined: some View {
         VStack(alignment: .leading, spacing: 4) {
             WidgetLabel(text: String(localized: "Wallet"))
-            Text("Watch a wallet in Casberi")
+            Text("Follow an address in Casberi")
                 .dsText(.widgetSubline12)
                 .foregroundStyle(.white.opacity(0.65))
                 .lineLimit(3)

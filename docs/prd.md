@@ -55353,13 +55353,29 @@ all say it. `WalletWatchField`'s own armed verb becomes **Follow** in the same
 pass: a door reading `Follow address` onto a button reading `Watch` is one act
 under two words, one tap apart, which is the drift the ruling closes.
 
-**What deliberately does NOT change.** `BridgeStore`'s `Watching N wallet` is
-the shared seat subtitle, and its siblings are `Watching N card`, `Watching N
-Safe` and a generic noun — rewording the wallet arm alone would trade one
-inconsistency for another across every seat. `AddressCard`'s `Watch` / `Stop
-watching` menu and the Farcaster profile's `Watch their wallet` act on an
-address the app already holds rather than opening this field. Those are STATE
-and a different act; this ruling is about the doors.
+**AND THE NOUN IS `address` WHEREVER THE LIST IS COUNTED** (user: *"it should
+always say watching addresses"*, then *"except for farcaster"*). The first cut
+left the state copy alone on the reasoning that `Watching N wallet` is shared
+with `Watching N card` and `Watching N Safe`; the ruling overrides it, and it is
+the better vocabulary anyway — the model has always called the thing a
+`WalletStore.WatchedAddress`, and the door that fills the list says `Follow
+address`. Changed: `BridgeStore`'s wallet arm, the four setup screens'
+`Watching N wallet` doors, the WalletConnect picker's `Watching N more wallets`,
+and the widget's gallery line and empty state. The `card` / `Safe` / generic
+arms are untouched — they count different things.
+
+**The Farcaster profile is the named exception.** `Watch their wallet`, and the
+cap flash beside it, stay as they are by ruling.
+
+**Also unchanged, and not covered by it.** `AddressCard`'s `Watch` / `Stop
+watching` menu acts on an address the app already holds rather than opening
+this field, and `WalletConnectBridge`'s pairing description is text this app
+sends TO a wallet app, where `wallet` is the accurate word.
+
+**Five string-catalog keys moved with their translations.** `Watching %lld
+wallet` carries plural rules in five languages, so the rename is a key move
+rather than an edit; the four non-English values are a mechanical noun swap and
+drop to `needs_review` for a translator.
 
 **What went with the bar.** Wallet Home's flow band (§690/§692) is rehomed to
 Activity — §723 leaves no third option, since an unmounted `walletFlowSection`

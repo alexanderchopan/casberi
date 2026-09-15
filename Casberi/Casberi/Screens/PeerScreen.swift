@@ -70,7 +70,7 @@ struct PeerScreen: View {
     /// would put the same list on two pages with one Remove between them.
     @ViewBuilder private var actBlock: some View {
         if hasWallets {
-            DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet"),
+            DSSlabDoor(title: String(localized: "Watching \(walletCount) address"),
                        detail: String(localized: "Manage"),
                        systemImage: "eye") {
                 route.pushBridge(.wallet)
