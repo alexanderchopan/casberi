@@ -21,6 +21,21 @@ enum ScopeTileGlyph {
     static let frames      = "square.stack.3d.down.right"
     static let utxos       = "circle.grid.3x3"
     static let snapshots   = "camera.viewfinder"
+    static let shielded    = "lock.shield"
+    static let review      = "checkmark.shield"
+}
+
+/// Privacy Pools' three scopes as tiles (prd §763). Conformed here for the
+/// reason `DSSectionScope` is conformed in `MainSurface`: the enum stays
+/// Foundation-only so the harness compiles it whole.
+extension PrivacyPoolsSection: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .activity: return ScopeTileGlyph.activity
+        case .shielded: return ScopeTileGlyph.shielded
+        case .review:   return ScopeTileGlyph.review
+        }
+    }
 }
 
 extension WalletSection: DSTileScope {

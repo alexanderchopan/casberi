@@ -59,6 +59,7 @@ struct RailgunRoomCard: View {
                         // is already the token's name.
                         DSRoomChassis.Row(
                             title: token.symbol,
+                            glyph: "hexagon",
                             line: RailgunRoom.tokenLine(token, mask: mask),
                             spoken: "\(token.symbol), \(RailgunRoom.tokenLine(token, symbol: token.symbol, mask: mask))",
                             index: index,

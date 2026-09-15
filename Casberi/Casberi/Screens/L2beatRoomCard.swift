@@ -25,10 +25,9 @@ struct L2beatRoomCard: View {
 							name: item.name,
 							flag: flag(item),
 							line: L2beatRoom.leadLine(item),
-							concerning: item.lead.isConcerning,
 							index: index,
 							action: { onOpen(item.id) }) {
-							L2beatMark(name: item.name, chainID: item.chainID)
+							L2beatMark(name: item.name, chainID: item.chainID, size: DS.Mark.row)
 						} trailing: {
 							assessment(item)
 						}

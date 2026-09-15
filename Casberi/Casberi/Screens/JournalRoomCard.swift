@@ -52,6 +52,7 @@ struct JournalRoomCard: View {
                 DSRoomChassis.Rows(items: JournalRoom.rows(room)) { index, year in
                     DSRoomChassis.Row(
                         title: String(year.year),
+                        glyph: "calendar",
                         line: JournalRoom.yearLine(year),
                         index: index,
                         action: { onOpen(year) }) {

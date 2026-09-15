@@ -174,25 +174,21 @@ struct CloudflareRunwayCard: View {
             DSHaptic.selection()
             onOpen(item)
         } label: {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(item.name)
-                        .dsText(.heading17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    metaLine(item)
-                }
-                Spacer(minLength: DS.Space.s2)
-                Text(CloudflareRunway.value(days: item.days))
-                    .dsText(.price17)
-                    .foregroundStyle(CloudflareRunway.isQuiet(item) ? DS.textTertiary : DS.textPrimary)
-                    .monospacedDigit()
-            }
+            // The feed row's anatomy (prd §763) — `DeadlineRow`'s slots, with
+            // this room's own meta line under the name.
+            DSFeedRow(name: item.name, nameLines: 1, emphasized: true,
+                      lead: { DSGlyphLead(glyph: "clock") },
+                      trailing: {
+                          Text(CloudflareRunway.value(days: item.days))
+                              .dsText(.price17)
+                              .foregroundStyle(CloudflareRunway.isQuiet(item) ? DS.textTertiary : DS.textPrimary)
+                              .monospacedDigit()
+                      },
+                      below: { metaLine(item).padding(.top, 1) })
+            .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.vertical, DS.Space.s2)
     }
 
     @ViewBuilder

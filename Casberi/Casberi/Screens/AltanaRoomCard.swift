@@ -54,7 +54,7 @@ struct AltanaRoomCard: View {
     private static let mark = DS.brandHue(for: "Altana") ?? Color.fixed("#3565e3")
     /// The credential seat. EVERY row is this size — the one rule §408a's
     /// tokens broke and the reason they are gone: weight says root, never size.
-    private static let seat: CGFloat = 28
+    private static let seat: CGFloat = DS.Mark.row
     /// The countdown column. Fixed, so the numbers line up down the card
     /// rather than floating at the end of titles of different lengths — and
     /// wide enough for the longest word it draws ("no expiry").
@@ -107,41 +107,37 @@ struct AltanaRoomCard: View {
             DSHaptic.selection()
             onPickKey(row)
         } label: {
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                seatMark(row)
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    HStack(spacing: DS.Space.s2) {
-                        Text(row.title)
-                            .dsText(.subhead12).fontWeight(.medium)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        if showsFaces(row) { faces(row) }
-                        Spacer(minLength: DS.Space.s2)
-                        Text(row.countdown(now: now))
-                            .dsText(.label12)
-                            .fontWeight(urgent ? .semibold : .regular)
-                            .foregroundStyle(urgent ? Self.mark : DS.textTertiary)
-                            .monospacedDigit()
-                            .lineLimit(1)
-                            .frame(width: Self.clockWidth, alignment: .trailing)
-                    }
-                    if let fraction = row.shelfFraction(now: now) {
-                        // Blue is spent on urgency and only on urgency (§471),
-                        // so the one key you might have to act on today is the
-                        // one coloured bar on the card.
-                        ShareBar(fraction: fraction,
-                                 index: index,
-                                 fill: urgent ? Self.mark : DS.fillStrong,
-                                 reduceMotion: reduceMotion)
-                    }
-                    if let detail = row.detail {
-                        Text(detail)
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                }
-            }
+            // The feed row's anatomy (prd §763): the seat mark on the 26pt
+            // lead, the key's title as the name, the faces and the countdown
+            // in the trailing slot, the detail as the line, the bar below.
+            DSFeedRow(name: row.title, nameLines: 1,
+                      line: row.detail.map { Text($0) },
+                      lead: { seatMark(row) },
+                      trailing: {
+                          HStack(spacing: DS.Space.s2) {
+                              if showsFaces(row) { faces(row) }
+                              Text(row.countdown(now: now))
+                                  .dsText(.label12)
+                                  .fontWeight(urgent ? .semibold : .regular)
+                                  .foregroundStyle(urgent ? Self.mark : DS.textTertiary)
+                                  .monospacedDigit()
+                                  .lineLimit(1)
+                                  .frame(width: Self.clockWidth, alignment: .trailing)
+                          }
+                      },
+                      below: {
+                          if let fraction = row.shelfFraction(now: now) {
+                              // Blue is spent on urgency and only on urgency
+                              // (§471), so the one key you might have to act
+                              // on today is the one coloured bar on the card.
+                              ShareBar(fraction: fraction,
+                                       index: index,
+                                       fill: urgent ? Self.mark : DS.fillStrong,
+                                       reduceMotion: reduceMotion)
+                                  .padding(.top, DS.Space.s1)
+                          }
+                      })
+            .frame(maxWidth: .infinity, alignment: .leading)
             .opacity(finished ? 0.45 : 1)
             .contentShape(Rectangle())
         }

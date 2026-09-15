@@ -64,6 +64,7 @@ struct AgentRoomCard: View {
                 DSRoomChassis.Rows(items: AgentRoom.rows(room)) { index, month in
                     DSRoomChassis.Row(
                         title: AgentRoom.monthLabel(month.month),
+                        glyph: "calendar",
                         line: AgentRoom.monthLine(month),
                         index: index,
                         action: { onOpen(month) }) {

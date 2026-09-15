@@ -87,6 +87,25 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
 
 }
 
+/// THE LEAD FOR A ROW THAT COUNTS A KIND OF THING rather than showing one
+/// (prd §763): a glyph on a faint 26pt disc — the disc the Readings rows and
+/// `DevnetVerbRow` wear (§752b) — so a head's ranked rows and the wallet
+/// family's rows share the feed row's leading column.
+struct DSGlyphLead: View {
+    let glyph: String
+
+    var body: some View {
+        ZStack {
+            Circle().fill(DS.fillFaint)
+                .frame(width: DS.Mark.row, height: DS.Mark.row)
+            Image(systemName: glyph)
+                .accessibilityHidden(true)
+                .dsGlyph(.caption, weight: .semibold)
+                .foregroundStyle(DS.textPrimary)
+        }
+    }
+}
+
 /// The feed row's plain helpers, outside the generic so a call site names no
 /// type parameters.
 enum DSFeed {

@@ -54,6 +54,7 @@ struct XRoomCard: View {
                 DSRoomChassis.Rows(items: XRoom.rows(room)) { index, year in
                     DSRoomChassis.Row(
                         title: String(year.year),
+                        glyph: "calendar",
                         line: XRoom.yearLine(year),
                         index: index,
                         action: { onOpen(year) }) {

@@ -27,10 +27,9 @@ struct WalletbeatRoomCard: View {
 							// rating, so it is said in words on the row.
 							flag: item.openIncidents > 0 ? String(localized: "Unresolved") : nil,
 							line: WalletbeatRoom.leadLine(item),
-							concerning: item.lead.isConcerning,
 							index: index,
 							action: { onOpen(item.id) }) {
-							WalletbeatMark(name: item.name, walletID: item.walletID)
+							WalletbeatMark(name: item.name, walletID: item.walletID, size: DS.Mark.row)
 						} trailing: {
 							WalletbeatShape(counts: item.counts)
 						}

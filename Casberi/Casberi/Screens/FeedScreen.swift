@@ -3618,7 +3618,13 @@ struct FeedScreen: View {
             // later one is too.
             guard isRoom || Date.now.timeIntervalSince(thing.capturedAt) <= Self.ledeMaxAge
             else { return nil }
-            return coverDeclines(thing) ? nil : thing.id
+            // **A ROOM COVERS ITS NEWEST COVERABLE THING (prd §763).** A newest
+            // row that declines — a consent card, a token pulse, a takeaway —
+            // used to leave the room with no lead at all, the one top in the
+            // app that started with a row. It is skipped, and the next row of
+            // the same day is the cover; the eyebrow says when it landed.
+            if coverDeclines(thing) { continue }
+            return thing.id
         }
         return nil
     }
@@ -7858,11 +7864,12 @@ struct FeedScreen: View {
         .id(thing.id.uuidString)
         .listRowBackground(Color.clear)
         // A wider gap below than above: the cover is its own object, and the
-        // day's run begins under it rather than continuing from it.
+        // day's run begins under it rather than continuing from it. The
+        // chassis's own numbers (prd §763), which every other lead now wears.
         .listRowInsets(.init(top: DS.Space.s2,
-                             leading: DS.Space.s4 + DS.Space.s3,
-                             bottom: DS.Space.s4,
-                             trailing: DS.Space.s4 + DS.Space.s3))
+                             leading: DSRoomChassis.leadInset,
+                             bottom: DSRoomChassis.leadGap,
+                             trailing: DSRoomChassis.leadInset))
         .listRowSeparator(.hidden)
     }
 
@@ -9282,9 +9289,12 @@ struct FeedScreen: View {
             // The grid rides the same content gutter as every other feed row —
             // tiles no longer bleed to the screen edge (which clipped the day
             // pills), and the page background reads clearly between them so a
-            // run of light screenshots stops merging into one slab.
-            .listRowInsets(.init(top: DS.Space.s3, leading: DS.Space.s4,
-                                 bottom: DS.Space.s3, trailing: DS.Space.s4))
+            // run of light screenshots stops merging into one slab. **The
+            // gutter is the lead's (prd §763)**: in the five rooms where the
+            // grid is the head it stands in the rows' column with the lead's
+            // air above and below, like every other room's lead.
+            .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.leadInset,
+                                 bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.leadInset))
         }
     }
 

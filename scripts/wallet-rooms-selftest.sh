@@ -229,8 +229,8 @@ grep -q 'respondURL = URL(string: "https://app.0xbow.io")' "$CARD_POOLS" \
 # one), so these are the only checks that the control exists at all.
 CARD_STRIPPED="$TMP/poolscard.swift"
 strip_comments "$CARD_POOLS" > "$CARD_STRIPPED"
-grep -q 'DSSectionSwitcher(' "$CARD_STRIPPED" \
-  || { echo "✗ the Privacy Pools card no longer draws its scope strip — the room goes back to seven blocks in one slab"; exit 1; }
+grep -q 'DSScopeTiles(' "$CARD_STRIPPED" \
+  || { echo "✗ the Privacy Pools card no longer draws its scope tiles (§763; was the switcher, §486) — the room goes back to seven blocks in one slab"; exit 1; }
 grep -q 'PrivacyPoolsSection.shows(present: scopes)' "$CARD_STRIPPED" \
   || { echo "✗ the strip is no longer gated on there being more than one scope — one chip is a label, not a control (§83)"; exit 1; }
 # PRESENCE AND RENDERING ARE ONE QUESTION, spelled the same way in both files.
@@ -246,14 +246,14 @@ grep -q 'PrivacyPoolsSection.present()' "$FEED" \
   || { echo "✗ the strip is deriving its scopes from evidence again — a chip vanishes on exactly the room that most needs to learn what it is (§611)"; exit 1; }
 grep -q 'PrivacyPoolsSection.present(shielded:' "$FEED" \
   && { echo "✗ present() is being handed evidence again — the gate §611 removed"; exit 1; }
-grep -q 'else if section == .shielded { card { emptyBody(.shielded) } }' "$CARD_STRIPPED" \
+grep -q 'else if section == .shielded { DSRoomChassis.Block { emptyBody(.shielded) } }' "$CARD_STRIPPED" \
   || { echo "✗ a scoped-to empty Shielded scope draws nothing again — the chip is always offered now, so it must say what it would hold (§611)"; exit 1; }
-grep -q 'else if section == .review { card { emptyBody(.review) } }' "$CARD_STRIPPED" \
+grep -q 'else if section == .review { DSRoomChassis.Block { emptyBody(.review) } }' "$CARD_STRIPPED" \
   || { echo "✗ a scoped-to empty Review scope draws nothing again (§611)"; exit 1; }
 # THE HEADLINE BELONGS TO NO SCOPE. Scoped away, the room could be opened
 # without being told the one thing §349 exists to say.
-grep -q 'headline$' "$CARD_STRIPPED" \
-  || { echo "✗ the headline is no longer drawn above the strip — a scope could hide the room's own standing"; exit 1; }
+grep -q 'lead: .sentence(PrivacyPoolsRoom.headline(room))' "$CARD_STRIPPED" \
+  || { echo "✗ the headline is no longer the head's lead, above the tiles — a scope could hide the room's own standing (§763)"; exit 1; }
 # THE GAP IN THE BAR AND ITS LEGEND DOT ARE THE SAME COLOUR, which is the whole
 # of that row's correctness: the untagged deposits ARE the track showing
 # through. `mark.opacity(0.35)` there would file them with the resolved states,
@@ -262,7 +262,7 @@ grep -q 'case .unknown:          return DS.fillFaint' "$CARD_STRIPPED" \
   || { echo "✗ the unknown legend dot no longer takes the bar's own track colour — the gap stops being self-explaining"; exit 1; }
 grep -q 'Capsule(style: .continuous).fill(DS.fillFaint)' "$CARD_STRIPPED" \
   || { echo "✗ the split bar's track is no longer DS.fillFaint — it and the unknown legend dot must be one colour"; exit 1; }
-grep -q 'ForEach(PrivacyPoolsRoom.legendRows(room))' "$CARD_STRIPPED" \
+grep -q 'DSRoomChassis.Rows(items: PrivacyPoolsRoom.legendRows(room))' "$CARD_STRIPPED" \
   || { echo "✗ the legend iterates segments again — the untagged deposits would lose the row that explains the bar's gap"; exit 1; }
 # The note is the SPLIT'S caption now, not a second sentence under the
 # headline. Drawn in the review body or it is a fact with no home. Re-pointed
@@ -550,7 +550,7 @@ fi
 # so a sighted reader got strictly less than a VoiceOver one. Both readers go
 # through the same function now, and this is what keeps them from drifting
 # apart again.
-grep -q 'Text(verbatim: SafeRoom.subject(entry))' "$TMP/safecard.swift" \
+grep -q 'DSFeedRow(name: SafeRoom.subject(entry)' "$TMP/safecard.swift" \
   || { echo "✗ the Safe card no longer draws the transaction's subject — the row would say 2/3 and a wait and never what it is about"; exit 1; }
 grep -q 'var parts = \[SafeRoom.subject(entry)\]' "$TMP/safecard.swift" \
   || { echo "✗ the Safe card's VoiceOver label no longer shares the row's own subject — the spoken card and the drawn one can drift"; exit 1; }

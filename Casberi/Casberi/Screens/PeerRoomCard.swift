@@ -61,6 +61,7 @@ struct PeerRoomCard: View {
                     DSRoomChassis.Rows(items: Array(drawn.dropFirst())) { index, rail in
                         DSRoomChassis.Row(
                             title: rail.name,
+                            glyph: "arrow.left.arrow.right",
                             line: PeerRoom.railLine(rail),
                             index: index,
                             action: { onOpen(rail) }) {

@@ -77,12 +77,6 @@ extension DSRoomChassis {
     /// SwiftUI), and `room-heads-selftest.sh` holds each one to this.
     static let headRowCap = 8
 
-    /// The gap in a SCOPED head (Privacy Pools, §486): lead, scope switcher,
-    /// the scope's card. `s4` rather than `headBlockGap` because those are
-    /// three objects standing on the page, not three parts of one card — §471's
-    /// finding that at 14pt they read as one stack of seams.
-    static let scopedHeadGap: CGFloat = DS.Space.s4
-
     // MARK: - Facts
 
     /// What the card leads with.
@@ -313,10 +307,8 @@ extension DSRoomChassis {
 
     // MARK: - Pieces
 
-    /// The lead, drawn. Public because a scoped head (Privacy Pools) stands its
-    /// lead bare on the page above a switcher rather than inside a card; that
-    /// head passes its `door` here and has no face-wide gesture, while `Head`
-    /// applies both halves of its own door itself.
+    /// The lead, drawn. `Head` applies both halves of its own door itself; a
+    /// caller with no face-wide gesture passes its `door` here.
     struct LeadView: View {
         let lead: Lead
         var door: Door? = nil
@@ -386,12 +378,20 @@ extension DSRoomChassis {
     /// Cursor, Peer, Gnosis Pay, Dodo Payments, Railgun, Radicle, App Store
     /// Connect), at two paddings and with a 44pt target in one of them.
     ///
+    /// **It is a `DSFeedRow` (prd §763).** A head's rows sat in a different
+    /// column from the feed rows under them — no 26pt lead, the line on the
+    /// right at 13pt, `s1` of padding — so a room's top and its list were two
+    /// anatomies. The lead is a glyph for the KIND of thing the row counts (a
+    /// calendar for a year, a banknote for a currency), on the disc the
+    /// Readings rows wear (§752b); the count keeps the trailing slot.
+    ///
     /// A row is a door with ONE gesture (ruling 2026-07-16) and carries no
     /// presentation of its own (the half-open-then-close lesson). It lands as
     /// the `index`-th of its set, so the entrance narrates the model's order.
     struct Row<Measure: View>: View {
         let title: String
-        var truncation: Text.TruncationMode = .tail
+        /// The lead's SF Symbol — what kind of thing this row counts.
+        let glyph: String
         let line: String
         var detail: String?
         var spoken: String?
@@ -402,7 +402,7 @@ extension DSRoomChassis {
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
         init(title: String,
-             truncation: Text.TruncationMode = .tail,
+             glyph: String,
              line: String,
              detail: String? = nil,
              spoken: String? = nil,
@@ -410,7 +410,7 @@ extension DSRoomChassis {
              action: @escaping () -> Void,
              @ViewBuilder measure: () -> Measure) {
             self.title = title
-            self.truncation = truncation
+            self.glyph = glyph
             self.line = line
             self.detail = detail
             self.spoken = spoken
@@ -424,33 +424,18 @@ extension DSRoomChassis {
                 DSHaptic.selection()
                 action()
             } label: {
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text(verbatim: title)
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                            .truncationMode(truncation)
-                        Spacer(minLength: DS.Space.s2)
-                        Text(verbatim: line)
-                            .dsText(.subhead12)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                    }
-                    if let detail {
-                        Text(verbatim: detail)
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                    measure
-                }
-                .padding(.vertical, DS.Space.s1)
+                DSFeedRow(name: title, nameLines: 1,
+                          line: detail.map { Text(verbatim: $0) },
+                          lead: { DSGlyphLead(glyph: glyph) },
+                          trailing: {
+                              Text(verbatim: line)
+                                  .dsText(.subhead12)
+                                  .foregroundStyle(DS.textSecondary)
+                                  .lineLimit(1)
+                          },
+                          below: { measure })
                 .frame(maxWidth: .infinity, alignment: .leading)
-                // A row is a door, so it is a 44pt target: a label, a line and a
-                // 6pt bar measure shorter than a finger.
-                .dsTapTarget()
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text(verbatim: spoken ?? "\(title), \(line)"))
@@ -482,35 +467,35 @@ extension DSRoomChassis {
                 DSHaptic.selection()
                 action()
             } label: {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(verbatim: name)
-                            .dsText(.heading17)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        HStack(spacing: DS.Space.s1 + 2) {
-                            if let stamp {
-                                Text(verbatim: stamp)
-                                    .dsText(.label12).fontWeight(.bold)
-                                    .foregroundStyle(Color.fixed("#ffffff"))
-                                    .padding(.horizontal, 5)
-                                    .padding(.vertical, 1)
-                                    .background(fill, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
-                            }
-                            Text(verbatim: kind)
-                                .dsText(.label12)
-                                .foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                        }
-                    }
-                    Spacer(minLength: DS.Space.s2)
-                    Text(verbatim: value)
-                        .dsText(.price17)
-                        .foregroundStyle(overdue ? DS.textPrimary : DS.textSecondary)
-                        .monospacedDigit()
-                }
-                .padding(.vertical, DS.Space.s2)
+                // The feed row's anatomy (prd §763): a clock on the lead disc,
+                // the name, the days in the trailing slot, the stamp and the
+                // kind under it.
+                DSFeedRow(name: name, nameLines: 1, emphasized: true,
+                          lead: { DSGlyphLead(glyph: "clock") },
+                          trailing: {
+                              Text(verbatim: value)
+                                  .dsText(.price17)
+                                  .foregroundStyle(overdue ? DS.textPrimary : DS.textSecondary)
+                                  .monospacedDigit()
+                          },
+                          below: {
+                              HStack(spacing: DS.Space.s1 + 2) {
+                                  if let stamp {
+                                      Text(verbatim: stamp)
+                                          .dsText(.label12).fontWeight(.bold)
+                                          .foregroundStyle(Color.fixed("#ffffff"))
+                                          .padding(.horizontal, 5)
+                                          .padding(.vertical, 1)
+                                          .background(fill, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+                                  }
+                                  Text(verbatim: kind)
+                                      .dsText(.label12)
+                                      .foregroundStyle(DS.textSecondary)
+                                      .lineLimit(1)
+                              }
+                              .padding(.top, 1)
+                          })
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -526,8 +511,6 @@ extension DSRoomChassis {
         /// on the row in attention ink rather than left to a colour.
         let flag: String?
         let line: String
-        /// Whether `line` is news: secondary ink when it is, tertiary when not.
-        let concerning: Bool
         let index: Int
         let action: () -> Void
         let mark: Mark
@@ -535,45 +518,39 @@ extension DSRoomChassis {
 
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-        init(name: String, flag: String?, line: String, concerning: Bool,
+        init(name: String, flag: String?, line: String,
              index: Int, action: @escaping () -> Void,
              @ViewBuilder mark: () -> Mark,
              @ViewBuilder trailing: () -> Trailing) {
             self.name = name
             self.flag = flag
             self.line = line
-            self.concerning = concerning
             self.index = index
             self.action = action
             self.mark = mark()
             self.trailing = trailing()
         }
 
+        /// The feed row's anatomy (prd §763): the mark on the 26pt lead, the
+        /// name, the flag and the assessment in the trailing slot, the line
+        /// under. The line's ink no longer says whether it is news — a row
+        /// varies what it puts in the slots, never the slots (§744); the flag
+        /// is the one word that outranks the rating, and it is still said.
         var body: some View {
-            HStack(alignment: .center, spacing: DS.Space.s3) {
-                mark
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: DS.Space.s2) {
-                        Text(verbatim: name)
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        if let flag {
-                            Text(verbatim: flag)
-                                .dsText(.label12).fontWeight(.bold)
-                                .foregroundStyle(DS.attention)
-                        }
-                    }
-                    Text(verbatim: line)
-                        .dsText(.subhead12)
-                        .foregroundStyle(concerning ? DS.textSecondary : DS.textTertiary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: DS.Space.s2)
-                trailing
-            }
-            .padding(.vertical, DS.Space.s2)
+            DSFeedRow(name: name, nameLines: 1,
+                      line: Text(verbatim: line), lineLines: 2,
+                      lead: { mark },
+                      trailing: {
+                          HStack(spacing: DS.Space.s2) {
+                              if let flag {
+                                  Text(verbatim: flag)
+                                      .dsText(.label12).fontWeight(.bold)
+                                      .foregroundStyle(DS.attention)
+                              }
+                              trailing
+                          }
+                      })
+            .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture { DSHaptic.tap(); action() }
             .dsTapCard()
@@ -682,13 +659,13 @@ extension DSRoomChassis.Head where Content == EmptyView {
 
 extension DSRoomChassis.Row where Measure == EmptyView {
     init(title: String,
-         truncation: Text.TruncationMode = .tail,
+         glyph: String,
          line: String,
          detail: String? = nil,
          spoken: String? = nil,
          index: Int,
          action: @escaping () -> Void) {
-        self.init(title: title, truncation: truncation, line: line, detail: detail,
+        self.init(title: title, glyph: glyph, line: line, detail: detail,
                   spoken: spoken, index: index, action: action) { EmptyView() }
     }
 }
@@ -721,13 +698,15 @@ extension View {
     /// warning and three rows, so the plate was a card the height of half a
     /// screen.
     ///
-    /// **The padding stays, both halves.** With no fill to define an edge the
-    /// inset looks like it has nothing to do, and it has one job: the head's
-    /// words land on the same left edge they landed on yesterday
-    /// (`dsRoomHeadPlacement`'s `s4` plus this one), so removing the plate
-    /// moves nothing sideways.
+    /// **The words stand in the rows' column (prd §763).** §758 kept both halves
+    /// of the `s4` padding so removing the plate moved nothing sideways; that
+    /// left a head's words 3pt further in than every feed row under it. The
+    /// horizontal half is `s3` now — `dsRoomHeadPlacement`'s `s4` plus this is
+    /// `DSRoomChassis.leadInset`, the rows' own edge. The vertical half stays,
+    /// and `LeadFit`'s box is spelled against it.
     func dsRoomHeadBlock() -> some View {
-        padding(DS.Space.s4)
+        padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -735,8 +714,13 @@ extension View {
     /// every head edge-to-edge on purpose, so the margin is the head's — the
     /// Altana head that ran flush to both screen edges (§488) is what happens
     /// when a card forgets it.
+    ///
+    /// **And the air under it is the lead's (prd §763).** Every lead — a head,
+    /// a hero, the cover — ends `leadGap` above the first day, so the divider
+    /// lands at one y in every room.
     func dsRoomHeadPlacement() -> some View {
         padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s2)
+            .padding(.bottom, DSRoomChassis.leadGap)
     }
 }

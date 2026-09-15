@@ -1186,11 +1186,12 @@ private struct InsightCard<Content: View>: View {
                    maxHeight: fillsLead ? Self.inner : nil,
                    alignment: .topLeading)
             .clipped()
-            .padding(.horizontal, DS.Space.s4)
+            // The rows' column and the lead's air (prd §763): the head
+            // template's own placement, with `s3` inside it.
+            .padding(.horizontal, DS.Space.s3)
             .padding(.vertical, DS.Space.s3)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s2)
+            .dsRoomHeadPlacement()
     }
 }
 
@@ -1277,6 +1278,10 @@ struct OnThisDayHero: View {
                                                style: .continuous))
         }
         .buttonStyle(DSTileButtonStyle())
+        // The photograph's edge sits where the cover's art does (prd §763):
+        // it was flush to the screen, the one lead that was.
+        .padding(.horizontal, DS.Space.s3)
+        .dsRoomHeadPlacement()
     }
 
     /// The entry itself — what you wrote on this day, in the room where that is
@@ -1322,11 +1327,11 @@ struct OnThisDayHero: View {
                    maxHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4,
                    alignment: .topLeading)
             .clipped()
-            .padding(DS.Space.s4)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .dsRoomHeadBlock()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .dsRoomHeadPlacement()
         .accessibilityLabel(Text("\(echo.label). \(echo.thing.title)"))
     }
 }
@@ -1768,8 +1773,9 @@ struct LiveStreamHero: View {
                 .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s2)
+        // The frame's edge sits where the cover's art does (prd §763).
+        .padding(.horizontal, DS.Space.s3)
+        .dsRoomHeadPlacement()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Live now, \(thing.title)"))
         .accessibilityAddTraits(.isButton)

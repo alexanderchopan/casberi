@@ -85,14 +85,7 @@ struct DSScopeRows<Scope: DSTileScope>: View {
             // one leading column, and the same symbol the section's tile
             // wears above them. The attention dot rides the disc's corner.
             ZStack(alignment: .topTrailing) {
-                ZStack {
-                    Circle().fill(DS.fillFaint)
-                        .frame(width: DS.Face.row, height: DS.Face.row)
-                    Image(systemName: section.glyph)
-                        .accessibilityHidden(true)
-                        .dsGlyph(.caption, weight: .semibold)
-                        .foregroundStyle(DS.textPrimary)
-                }
+                DSGlyphLead(glyph: section.glyph)
                 if wants {
                     Circle()
                         .fill(DS.attention)

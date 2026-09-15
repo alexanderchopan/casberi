@@ -22,12 +22,11 @@ import SwiftUI
 ///
 /// ## The only scoped head, and what the template owns of it (prd §745)
 ///
-/// Every other source room's head is one `DSRoomChassis.Head` card. This one is
-/// a lead standing bare on the page, a switcher, then AT MOST one card — so it
-/// composes the template's PARTS rather than its card: `LeadView` for the lead,
-/// `dsRoomHeadBlock()` for each scope's block, `LineText` for every line and
-/// `HeadLink` for the door, spaced by `scopedHeadGap`. The words, the box and the
-/// door are therefore the same objects every other head draws.
+/// Every source room's head is one `DSRoomChassis.Head`, and since prd §763 so
+/// is this one: the sentence leads, the scopes are `DSScopeTiles` under it, the
+/// scope's reading is a block and the activity note a footnote. It was a lead
+/// standing bare on the page, a chip strip and a block per scope, composed from
+/// the template's PARTS rather than the template.
 ///
 /// ## The headline belongs to no scope
 ///
@@ -94,69 +93,40 @@ struct PrivacyPoolsRoomCard: View {
         section == nil || section == candidate
     }
 
+    /// **ONE HEAD, LIKE EVERY OTHER ROOM'S (prd §763).** This was a bare lead,
+    /// a chip strip and a block per scope, three objects on the page at
+    /// `scopedHeadGap` — the one room whose top was not `DSRoomChassis.Head`.
+    /// It is the template now: the sentence leads, the scopes are TILES under
+    /// it (the wallet family's own control, §752, and no strip of chips sits
+    /// near the top of a screen), the scope's reading is a block, and the
+    /// activity note is a footnote. The rows below are individually tappable,
+    /// so the lead's own sentence carries its door and there is no face-wide
+    /// gesture. Each scope draws at most one block, and a scope with nothing
+    /// to put in one draws none — **a scoped-to empty scope says what it
+    /// would hold (prd §611).**
     var body: some View {
-        VStack(alignment: .leading, spacing: DSRoomChassis.scopedHeadGap) {
-            headline
-            scopeStrip
-            // Each scope draws AT MOST one card, and a scope with nothing to
-            // put in one draws none rather than an empty box — Activity's
-            // content is the rows below it, so on most rooms this head is a
-            // sentence and a control and nothing else. That is the point.
-            // **A SCOPED-TO EMPTY SCOPE SAYS WHAT IT WOULD HOLD (prd §611).**
-            if shows(.shielded), shieldedHasContent { card { shieldedBody } }
-            else if section == .shielded { card { emptyBody(.shielded) } }
-            if shows(.review), reviewHasContent { card { reviewBody } }
-            else if section == .review { card { emptyBody(.review) } }
-            if shows(.activity), let note = PrivacyPoolsRoom.activityNote(room) {
-                DSRoomChassis.LineText(line: DSRoomChassis.Line(text: note, tone: .quiet))
-            }
-        }
-        .dsRoomHeadPlacement()
-    }
-
-    // MARK: - The headline, which belongs to no scope
-
-    private var headline: some View {
-        // The readings below are individually tappable rows inside their own
-        // cards, so there is no face-wide gesture; the lead's own sentence
-        // carries its door.
-        DSRoomChassis.LeadView(
+        DSRoomChassis.Head(
             lead: .sentence(PrivacyPoolsRoom.headline(room)),
             door: room.lead.map { lead in
                 DSRoomChassis.Door(hint: Text("Opens these deposits"), wholeCard: false) {
                     onOpen(.state(lead.state))
                 }
-            })
-    }
-
-    /// The scope strip, below the headline and above every reading it scopes.
-    ///
-    /// STATED COST, inherited from `VibenetRoomCard.scopeStrip`: a control
-    /// inside the scroll scrolls away. The answer is a pinned `Section` header,
-    /// deliberately not done here, for the same reason it is not done there.
-    @ViewBuilder
-    private var scopeStrip: some View {
-        if onPickScope != nil, PrivacyPoolsSection.shows(present: scopes) {
-            DSSectionSwitcher(
-                sections: scopes,
-                active: section ?? .activity,
-                attention: scopeAttention) { picked in
-                    onPickScope?(picked)
+            },
+            footnotes: [shows(.activity) ? .quiet(PrivacyPoolsRoom.activityNote(room)) : nil]) {
+            if onPickScope != nil, PrivacyPoolsSection.shows(present: scopes) {
+                DSRoomChassis.Block {
+                    DSScopeTiles(sections: scopes,
+                                 active: section ?? .activity,
+                                 attention: scopeAttention) { picked in
+                        onPickScope?(picked)
+                    }
                 }
+            }
+            if shows(.shielded), shieldedHasContent { DSRoomChassis.Block { shieldedBody } }
+            else if section == .shielded { DSRoomChassis.Block { emptyBody(.shielded) } }
+            if shows(.review), reviewHasContent { DSRoomChassis.Block { reviewBody } }
+            else if section == .review { DSRoomChassis.Block { emptyBody(.review) } }
         }
-    }
-
-    /// The block every scope wears — the head template's own layout, so a scope
-    /// and every other room's head cannot drift apart.
-    ///
-    /// It is not a card any more (prd §758): the template draws no plate, and
-    /// this reaches through it rather than around it, so these scopes lost
-    /// theirs in the same edit. The name stays `card` at the four call sites
-    /// only because it names the CALLER's block, not a surface.
-    @ViewBuilder
-    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 0) { content() }
-            .dsRoomHeadBlock()
     }
 
     // MARK: - Shielded
@@ -272,34 +242,33 @@ struct PrivacyPoolsRoomCard: View {
 
     // MARK: - Legend
 
+    /// Feed rows (prd §763): the state's dot on the 26pt lead, the name, the
+    /// count in the trailing slot. Through `Rows`, so a legend longer than the
+    /// lead's box gives up whole rows and counts them.
     private var legend: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            ForEach(PrivacyPoolsRoom.legendRows(room)) { row in
-                Button {
-                    DSHaptic.selection()
-                    onOpen(row.slice)
-                } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Circle()
-                            .fill(fill(row.slice))
-                            .frame(width: 7, height: 7)
-                            .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1 }
-                        Text(PrivacyPoolsRoom.name(row.slice))
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Spacer(minLength: DS.Space.s2)
-                        Text(PrivacyPoolsRoom.legendLine(row))
-                            .dsText(.subhead12)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("\(PrivacyPoolsRoom.name(row.slice)), \(PrivacyPoolsRoom.legendLine(row))"))
+        DSRoomChassis.Rows(items: PrivacyPoolsRoom.legendRows(room)) { _, row in
+            Button {
+                DSHaptic.selection()
+                onOpen(row.slice)
+            } label: {
+                DSFeedRow(name: PrivacyPoolsRoom.name(row.slice), nameLines: 1,
+                          lead: {
+                              Circle()
+                                  .fill(fill(row.slice))
+                                  .frame(width: 7, height: 7)
+                          },
+                          trailing: {
+                              Text(PrivacyPoolsRoom.legendLine(row))
+                                  .dsText(.subhead12)
+                                  .foregroundStyle(DS.textSecondary)
+                                  .lineLimit(1)
+                                  .minimumScaleFactor(0.8)
+                          })
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("\(PrivacyPoolsRoom.name(row.slice)), \(PrivacyPoolsRoom.legendLine(row))"))
         }
     }
 

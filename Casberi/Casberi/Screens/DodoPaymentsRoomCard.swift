@@ -78,6 +78,7 @@ struct DodoPaymentsRoomCard: View {
                     DSRoomChassis.Rows(items: room.currencies) { index, currency in
                         DSRoomChassis.Row(
                             title: currency.code,
+                            glyph: "banknote",
                             line: DodoPaymentsRoom.currencyLine(currency, mask: mask),
                             index: index,
                             action: { onOpenCurrency(currency) }) {

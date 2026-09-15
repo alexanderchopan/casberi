@@ -79,6 +79,7 @@ struct GnosisPayRoomCard: View {
                         let line = GnosisPayRoom.currencyLine(currency, mask: mask)
                         DSRoomChassis.Row(
                             title: currency.code,
+                            glyph: "banknote",
                             line: line,
                             index: index,
                             action: { onOpen(currency) }) {

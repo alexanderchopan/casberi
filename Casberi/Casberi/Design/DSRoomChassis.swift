@@ -149,6 +149,19 @@ enum DSRoomChassis {
     /// The page inset the chassis and its figures share.
     static let inset: CGFloat = DS.Space.s4
 
+    /// **THE ROWS' COLUMN, AND EVERY LEAD STANDS IN IT (prd §763).** A feed row
+    /// sits at `s4 + s3` from the screen edge, and so did the cover and the
+    /// wallet crown; a head and an insight hero sat 3pt further in. One
+    /// spelling, so the left edge is the same from the top of a room to the
+    /// bottom.
+    static let leadInset: CGFloat = DS.Space.s4 + DS.Space.s3
+
+    /// The air under every lead, before the first day (prd §763). The cover
+    /// carried `s4` and a head carried nothing, so the first divider landed
+    /// at a different y per room. The lead owns this and the list owns the
+    /// rest.
+    static let leadGap: CGFloat = DS.Space.s4
+
     // MARK: - The fused rail (prd §547, 2026-09-01)
 
     /// **THE RAIL AND THE SWITCHER ARE ONE OBJECT NOW** (user, 2026-09-01:

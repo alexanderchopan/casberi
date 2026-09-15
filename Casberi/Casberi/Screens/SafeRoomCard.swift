@@ -113,23 +113,21 @@ struct SafeRoomCard: View {
             DSHaptic.selection()
             onOpen(entry.ref)
         } label: {
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                SafeSignatureDisc(have: entry.have, required: entry.required,
-                                  size: 34)
-                    .padding(.top, 1)
-                VStack(alignment: .leading, spacing: 1) {
-                    // Two lines and then it wraps — never a fixed width, which
-                    // is what the caption box was and what clipped.
-                    Text(verbatim: SafeRoom.subject(entry))
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                    metadata(entry, contested: contested)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 0)
-            }
+            // The feed row's anatomy (prd §763): the signature disc on the
+            // 26pt lead, the subject as the name (two lines and then it wraps
+            // — never a fixed width, which is what the caption box was and
+            // what clipped), the state line under it.
+            DSFeedRow(name: SafeRoom.subject(entry), nameLines: 2,
+                      lead: {
+                          SafeSignatureDisc(have: entry.have, required: entry.required,
+                                            size: DS.Mark.row)
+                      },
+                      trailing: { EmptyView() },
+                      below: {
+                          metadata(entry, contested: contested)
+                              .fixedSize(horizontal: false, vertical: true)
+                      })
+            .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

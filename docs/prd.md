@@ -79,6 +79,8 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §758 (the padding stays, both halves) | `dsRoomHeadBlock` keeps `s4` on every side so removing the plate moves nothing sideways | amended by §763 (the horizontal half is `s3`, so a head's words stand in the rows' column with every other lead) |
+| §486 (Privacy Pools' scoped head) | a bare lead, a `DSSectionSwitcher` strip and a block per scope, at `scopedHeadGap` | superseded by §763 (it is a `DSRoomChassis.Head` with `DSScopeTiles` under the lead; the strip and `scopedHeadGap` are deleted) |
 | §757 (Home reserves no box) | the five Home crowns pass `reservesBox: false` and drop the slot's 300pt floor | amended by §760 (Home keeps the box; `reservesBox` and `SlotBox` are deleted, because every room's lead is held to that height) |
 | §751 (heads cap at three rows) | `headRowCap` is 3 and every chart head's model spells `rowCap = 3` | amended by §760 (the cap is 8 and the lead's fixed box decides how many draw, dropping whole rows and counting them) |
 | §745 (the fixed slot does not apply to heads) | a head's honest height is what it has to say, so no head is held to `visualSlot` | amended by §760 (every room's lead is `leadHeight`; the reason stands — a head that runs long drops whole rows and counts them, never clips one silently) |
@@ -56672,3 +56674,64 @@ it. `docs/prd.md` is the ledger and is not rewritten — every rung name above
 `connect-shape-audit.py`, `ds-template-audit.py` and the eleven selftests that
 pin a rung name were run. First to look at: a row with a 9pt tick (now 10), a
 lock-screen widget's 11pt clock (now 12), and `AgentTerminal`'s compact glyph.
+
+## §763 — The room's lead stands in the rows' column, ends at one gap, draws its rows as feed rows, and every room has one (user: "what else do we need to do to make the rooms cohesive across the app", then "please fix all", 2026-09-15)
+
+**What §760 left.** Every lead was one height, and read side by side the tops
+still differed four ways that are not type (the type rungs are a concurrent
+session's sweep and are not touched here):
+
+1. **The left edge.** A feed row's words sit at `s4 + s3` from the screen, and so
+   did the cover and the wallet crown; a `Head` and an insight hero sat 3pt further
+   in (`s4` placement plus `s4` block), the On this day photograph was flush to the
+   screen edge, and the live stream frame sat at `s4`.
+2. **The gap under the lead.** The cover carried `s4` below; a head and a hero
+   carried nothing, so the first day divider landed at a different y per room.
+3. **The rows inside a head** were three anatomies of their own (`Row`,
+   `DeadlineRow`, `MarkedRow`) plus four hand-drawn ones (Cloudflare, Safe, Altana,
+   the Privacy Pools legend): no 26pt lead, the count on the right at 13pt, `s1`
+   of padding. A room's head and its list were two row shapes.
+4. **Two kinds of room took no lead at all**: the five picture-grid rooms
+   (Photos, Snapchat, Telegram, X, Instagram) whose grid sat at `s4` with `s3` of
+   air, and Privacy Pools, a bare lead over a chip strip over a block. And a room
+   whose newest row declines the cover (a consent card, a token pulse) had no lead
+   and started with a row.
+
+**The ruling.**
+
+- **`DSRoomChassis.leadInset` (`s4 + s3`) and `leadGap` (`s4`).** `dsRoomHeadBlock`
+  pads `s3` sideways (was `s4`), `dsRoomHeadPlacement` adds `leadGap` below, and
+  the insight card, the On this day photograph and words, the live stream frame,
+  the cover and the picture grid all go through them. This amends §758's "the
+  padding stays, both halves": the vertical half stays, the horizontal one is now
+  the rows' column.
+- **A head's rows are `DSFeedRow` (§744).** `Row` takes a `glyph` for the KIND of
+  thing it counts (a calendar for a year, a banknote for a currency, a hexagon for a
+  token, two arrows for a rail) on `DSGlyphLead` — the 26pt faint disc the
+  Readings rows wear (§752b), now one view in `DSFeedRow.swift`. `DeadlineRow`
+  and Cloudflare's row lead with a clock; `MarkedRow` puts its mark on the lead at
+  `DS.Mark.row` and drops `concerning` (a row varies what it puts in the slots,
+  never the slots); Safe's row puts its signature disc on the lead; Altana's key row
+  its seat mark; the Privacy Pools legend its state dot.
+- **Privacy Pools is a `Head`**: the sentence, `DSScopeTiles` under it (the
+  wallet family's control, §752; the chip strip is deleted), the scope's reading as
+  a block, the activity note as a footnote. `PrivacyPoolsSection` conforms to
+  `DSTileScope`; `scopedHeadGap` is deleted.
+- **The picture grid wears the lead's insets** in the five rooms where it is the
+  head. The tiles are narrower by 24pt.
+- **A room covers its newest coverable thing.** `ledeThingID` skips a row that
+  declines and takes the next of the same day; the eyebrow says when it landed.
+
+**Not changed.** The type rungs at the lead (item 1 of the same conversation),
+left to the font sweep. The wallet family's rows (`DSScopeRows`, `DevnetVerbRow`)
+already lead with the same disc.
+
+**What enforces it.** `wallet-rooms-selftest.sh` requires `DSScopeTiles(` in the
+Privacy Pools card (was `DSSectionSwitcher(`) and `DSRoomChassis.Rows(items:
+PrivacyPoolsRoom.legendRows(room))`.
+
+**UNSEEN on a device.** iOS simulator build in a worktree; the self-tests and audits
+that read the changed files were run. First to look at on a phone: a Safe row's
+signature disc at 26pt (it carried a fraction at 34), an Altana key row, X's year
+rows with the calendar disc, the Privacy Pools tiles, and a Photos grid's narrower
+tiles.
