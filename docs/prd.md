@@ -54980,3 +54980,21 @@ host, and §726's door is itself unmeasured).
 **Why this landed now rather than in August.** §732 had just put this card at the head of every ROOM as well as the All feed, so a 44% cover stopped being one screen's cost and became the first thing on a dozen.
 
 Not built or run here (no Xcode in this checkout) — the rung change is layout-only; the simulator pass is owed.
+
+## §735 — The day divider wears the brand pink (user: "i think pink for all the days is good. it breaks up the content of the day and the rows", 2026-09-15)
+
+**Where this started, and where it landed.** The ask was the cover card's title in `#FF2D87` — the octopus mark's pink, which until now the mark had entirely to itself. Mocked up, the title fails twice. On a `deckFill` ground (a source with an honest brand hue) the pink measures ~1.8:1, under the 3:1 large-text bar, and the ground changes with every source, so no single pink clears them all. On the money and clock faces the lead is a figure, and colour on a figure in this app means direction (§363). Narrowing it — pink only on the plain card, or only on the pictureless faces — fixed the contrast and bought a worse problem: the hue would appear on roughly one cover in five, gated on whether the thing happened to arrive with a picture or a price, which is not a rule a person can learn by scrolling.
+
+**The ruling.** The hue moves off the card and onto the DAY DIVIDER. `bundledSections`' header and `daySection`'s take `DS.brandInk`; the cover card is untouched — title, figure, deck, pour, art height all exactly as §734 left them.
+
+**Why a colour rule that bans decoration admits this.** §8 allows identity, state or magnitude. A day header is the one line in a feed the app writes rather than a source, so the hue is the app identifying itself, not painting somebody else's words. It also does the job the user named: it breaks the day off from the rows beneath it, which spacing alone was carrying (no hairlines, zero exceptions). And it cannot collide — a divider sits on the page, never on a card, so there is no deck and no figure underneath it.
+
+**A time label, not every label.** `groupedSections` and `daySection` take `dated: Bool = true`, and the nine callers whose groups are named by something other than time pass `false` and keep the primary ramp: CardPointers ("Coming up", "No end date", "Not active"), Walletbeat's "Your wallets", L2BEAT's "Your chains", Cursor's repositories (§340), the pinned room, the kind-filtered All room's filter name, Gmail's "Waiting on you", and Reminders' "Doing" and "Done". Spelled at the call site rather than sniffed from the label: the labels are localized, so any string test would be a bug in every language but one, and a new room's author should have to answer the question. The default is true because the chronological rooms outnumber the rest four to one.
+
+**§254 still holds underneath it.** The folded tail keeps its one weight step down (semibold against today's bold). Weight says how far back, hue says "this is a day" — they answer different questions, and both labels stay above the 3:1 bar because the rung is the same 24pt either way.
+
+**One hex, one place.** `CasberiMark.pink` was the only spelling of `#FF2D87`; a second copy in the token layer would have been a second value waiting to diverge. The hex is now `DS.brand` (fixed across themes, like `ThemeStore.accentHex` — a logo that changes colour between themes is two logos) and the mark reads it. `DS.brandInk` is the same hue with the contrast setting answered.
+
+**Contrast, measured.** 6.0:1 on the dark page, 3.1:1 on the light one. Both clear the 3:1 bar that applies to `heading22` at 24pt bold. Under Increase Contrast neither stays put, because a setting that does not reach a header is the half-answered kind §83 bans: dark lightens to 7.1:1 by dropping saturation (`#ff579f`), light deepens to 4.5:1 by dropping brightness (`#d0256e`). Both hold the hue angle, so neither reads as a second pink.
+
+**Not built or run here** (no Xcode in this checkout) — the change is a foreground style plus a threaded flag. Every Python audit passes. The simulator pass and the Mac leg are owed.

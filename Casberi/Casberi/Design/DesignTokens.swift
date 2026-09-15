@@ -325,6 +325,44 @@ enum DS {
                 alpha: 1)
     }
 
+    // MARK: - Brand  — the mark's pink, and the one line of type that shares it
+
+    /// **The brand hue, and the only one.** `#FF2D87` — the octopus mark's
+    /// pink, hoisted out of `CasberiMark` so the drawing and the one run of
+    /// type that shares it cannot drift to two pinks (§8: components hold zero
+    /// raw hex, and a second copy of a hex IS a second value waiting to
+    /// diverge). `CasberiMark.pink` reads this; nothing else may spell it.
+    ///
+    /// FIXED across themes on purpose, like `ThemeStore.accentHex`: a logo
+    /// that changes colour between themes is two logos. Type wanting this hue
+    /// takes `brandInk` below, which is the same hue with the contrast
+    /// setting answered.
+    static let brand = Color.fixed("#FF2D87")
+
+    /// **The brand hue as INK** — the day dividers, and nothing else yet
+    /// (prd §735).
+    ///
+    /// Why a colour rule that bans decoration admits this one. §8 allows
+    /// identity, state or magnitude; a day header is the app's OWN voice —
+    /// the one line in a feed the app writes rather than a source — so the
+    /// hue is the app identifying itself, not decorating somebody else's
+    /// words. That is also the whole boundary: this is never ink for a
+    /// thing's title, a figure (colour on a number means direction, §363) or
+    /// anything drawn on a `deckFill` ground, where the brand hue measures
+    /// ~1.8:1 and the ground changes per source.
+    ///
+    /// **Contrast, measured.** The brand hue is 6.0:1 on the dark page and
+    /// 3.1:1 on the light one — both clear the 3:1 large-text bar, which is
+    /// the bar that applies (`heading22` is 24pt bold, and the folded tail's
+    /// semibold is the same size). Under Increase Contrast each moves to a
+    /// measured variant rather than staying put, because a setting that does
+    /// not reach a header is the half-answered kind §83 bans: dark lightens
+    /// to 7.1:1 by dropping saturation, light deepens to 4.5:1 by dropping
+    /// brightness. Both keep the hue angle, so neither reads as a second pink.
+    static var brandInk: Color {
+        moreContrast ? Color.adaptive(dark: "#ff579f", light: "#d0256e") : brand
+    }
+
     // MARK: - Semantic state  — orange attention, red destructive, green confirm
 
     /// The three keep Apple's system values by default — they read as native,

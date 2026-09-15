@@ -766,3 +766,23 @@ Verbatim. CLAUDE.md now carries a one-line index entry for each, pointing here.
 - **Build 525 on a phone: a SQL COUNT in a settings BODY burned 90s of CPU, the crash screen cut off the leaf, and the first real launch number is 1.3s (2026-09-06). A fetch or a Keychain read belongs in `onAppear`/`.task`, never in a body or a computed property a body reads** → docs/verify.md · prd §628
 - `-rainPulse <s>` (**was `-berryPulse`; `BerryRain` is now `TileRain` — it rains no berries and the app's mark is an OCTOPUS, user 2026-09-08**) — bumps `ShellChrome.refreshPulse` after a delay: the pull delight without a gesture. NSLogs "rainPulse: dealt N tiles". Tiles with NO exception; deal one ONLY via `ShellChrome.rain(sources:)` (`refreshRoster` is `private(set)`, `refreshHue` deleted) → docs/verify.md · prd §655
 - **RULE (user, 2026-07-31): a new bridge is not done until its API hosts are in the "What this app reaches" registry** (`Model/NetworkReach.swift`, prd §205) — the privacy screen that makes "no server, nothing routes through us" checkable rather than merely claimed. Enforced by `scripts/network-reach-audit.sh` (runs in `verify.sh`, static, no build): every host literal in the app must appear EITHER in that registry OR in the audit's explicit non-reach denylist (permalink/display hosts the person's own browser opens on tap, setup doors a connect screen opens, demo placeholders). An entry names the SERVICE, its `reach` (`.always` / `.whenConnected(bridge:)` / `.onTap`), a plain-words `purpose` saying what the request carries, and the hosts. **This is a ship gate, not a nicety**: a bridge whose host nobody disclosed makes the app's own privacy screen quietly wrong, and a TestFlight build is on testers' devices before anyone notices. Shipped as exactly that failure on 2026-07-31 — the Stripe pass ran `catalog-sync.sh` and the liveness audit BY HAND, both green, and never invoked the reach audit, so `api.stripe.com` went out in build 214 undisclosed. **The lesson is mechanical, not moral: run `scripts/verify.sh`, not the audits you happen to remember** (`LAUNCH_CYCLES=0` skips only the slow relaunch loop, never the static head). **A host BUILT at runtime is not a host literal (prd §289, 2026-08-03)** — the audit's regex matched nothing at all in `"https://\(chain.network)…"`, so five per-chain Alchemy RPC hosts reached on every wallet sweep went undisclosed for the wallet's whole life, and the RECEIPTS screen found them, not the audit. Two checks now cover it: interpolated forms must name a declared family (coarse — it could not have caught this alone, since `api.g.alchemy.com` shares the tail), and every `Chain(network:)` in `WalletIngest`'s own table must have its `<network>.g.alchemy.com` in the registry. The other half of the class can never be declared: a host that comes from the PERSON's input (a followed feed, a Shopify store, a self-hosted PostHog, a saved link). Those call sites name their service to `NetworkLedger.record(host:as:)` instead — do that for any new bridge whose host is typed rather than fixed, or its rows read as undisclosed reaches on the receipts screen. See docs/testflight-handoff.md step 3.
+
+## Day-divider audit (scripts/day-divider-audit.py, 2026-09-15)
+
+Pins prd §735: the feed's day headers take `DS.brandInk`, and only labels that
+name a time do. Four checks — both header sites reach the brand ink, both
+section builders still declare `dated: Bool = true`, at least nine call sites
+still pass `dated: false` (a FLOOR, so a tenth non-dated room does not fail the
+build), and `#FF2D87` is spelled once, in `DesignTokens.swift`.
+
+Comments are stripped before every shape assertion, because a drift guard that
+a doc comment can satisfy stops guarding the day somebody quotes the rule in
+prose — its own self-test carries that case.
+
+**What it deliberately does not check.** Colour: `brandInk` resolving to the
+wrong pink, or the Increase Contrast variants being off, is invisible here and
+is a device check against the numbers in the token's own doc. Whether a given
+room *should* have opted out: check 3 counts opt-outs, it does not classify
+labels, so a room grouped by repository that forgets the flag passes this and
+is wrong on screen. And it pins the hex, not `brandInk`'s call sites, so a
+future surface can take the ink — deliberately, with a ruling.
