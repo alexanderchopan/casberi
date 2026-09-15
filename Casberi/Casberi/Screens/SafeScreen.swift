@@ -136,7 +136,7 @@ struct SafeScreen: View {
                     route.pushBridge(.wallet)
                 }
             } else {
-                DSSlabDoor(title: "Watch a wallet", systemImage: "eye") {
+                DSSlabDoor(title: "Follow address", systemImage: "eye") {
                     route.pushBridge(.wallet)
                 }
             }

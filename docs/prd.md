@@ -55341,9 +55341,25 @@ found** (user: *"the wallets follow button is missing and that's a fail"*).
 Traced: the only way to watch a wallet is `WalletWatchField` on `WalletScreen`,
 reached through the room gear — the room itself had no add affordance at all,
 and `FaceScopeRail`'s add slot has been passed `addTitle: nil` since §466. The
-All card carries it now. **§466 is intact**: the tile is a DOOR to that one
-field, not a second field, and it wears the word the four bridge setup screens
-already use (`Watch a wallet`) rather than inventing one.
+All card carries it now. **§466 is intact**: the row is a DOOR to that one
+field, not a second field.
+
+**It says `Follow address`, and so does every other door to that field.** The
+first cut wore the word the four bridge setup screens already used
+(`Watch a wallet`). The user ruled otherwise on sight — *"as for watch a wallet
+i would say follow address"*, then *"change all to follow address"* — so the
+wallet room's row and the Peer, Privacy Pools, Railgun and Safe setup screens
+all say it. `WalletWatchField`'s own armed verb becomes **Follow** in the same
+pass: a door reading `Follow address` onto a button reading `Watch` is one act
+under two words, one tap apart, which is the drift the ruling closes.
+
+**What deliberately does NOT change.** `BridgeStore`'s `Watching N wallet` is
+the shared seat subtitle, and its siblings are `Watching N card`, `Watching N
+Safe` and a generic noun — rewording the wallet arm alone would trade one
+inconsistency for another across every seat. `AddressCard`'s `Watch` / `Stop
+watching` menu and the Farcaster profile's `Watch their wallet` act on an
+address the app already holds rather than opening this field. Those are STATE
+and a different act; this ruling is about the doors.
 
 **What went with the bar.** Wallet Home's flow band (§690/§692) is rehomed to
 Activity — §723 leaves no third option, since an unmounted `walletFlowSection`

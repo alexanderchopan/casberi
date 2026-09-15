@@ -68,7 +68,14 @@ struct WalletWatchField: View {
             // Bitcoin has no name service here and so no other way in.
             DSSlabField(placeholder: String(localized: "Paste an address — 0x, Bitcoin, or a name"),
                         text: $newAddress,
-                        actionLabel: String(localized: "Watch"),
+                        // **"Follow", to match the door that reaches this
+                        // field** (user ruling, 2026-09-15: *"change all to
+                        // follow address"*). The room's row and the four
+                        // bridge setup screens all say `Follow address`; a
+                        // verb that said `Watch` one tap later would be the
+                        // same act under two words, which is the drift the
+                        // ruling closes.
+                        actionLabel: String(localized: "Follow"),
                         focus: $addressFieldFocused,
                         isArmed: book.looksLikeAddress(draft)
                                  || NameResolve.looksLikeName(draft),
