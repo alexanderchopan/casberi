@@ -390,7 +390,9 @@ grep -q 'walletActingSection' "$FEED" \
 # Since the Frames restore (1610c0ad) a second `case .permissions:` at the same
 # indent — Frames' reading headline — sits EARLIER in the file, so the first
 # match is no longer the room's rows. Take the block that draws the acting list.
-order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 2 '^            case .permissions:$' \
+# The empty scope's skeleton gate (prd §769/§771) sits between the case and the
+# lists, so the window is wide enough to reach past it.
+order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 8 '^            case .permissions:$' \
         | grep -B 1 -A 1 'walletActingSection' | head -3)
 print -r -- "$order" | sed -n '2p' | grep -q 'walletActingSection' \
   || fail "the acting list no longer leads the Permissions scope's rows"
