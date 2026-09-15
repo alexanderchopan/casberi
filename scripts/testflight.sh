@@ -83,6 +83,11 @@ fi
 echo "▶ Staging a local copy (iCloud xattrs break codesign)"
 rm -rf "$WORK"; mkdir -p "$WORK"
 rsync -a --exclude '.git' --exclude 'build' "$SRC/" "$WORK/project/" >/dev/null
+# The project references the vendored curve library as ../Vendor/swift-secp256k1
+# (prd §738), which sits beside the .xcodeproj folder rather than inside it, so
+# it is staged beside project/ too. Without it the archive fails to resolve
+# packages; verify.sh never sees that, because it builds the whole checkout.
+rsync -a "$SRC/../Vendor/" "$WORK/Vendor/" >/dev/null
 xattr -rc "$WORK/project" 2>/dev/null || true
 
 # Archive SIGNED (2026-08-01). The old unsigned-archive-then-sign-at-export
