@@ -291,15 +291,10 @@ extension FeedScreen {
                 },
                 reading: { readings[$0] },
                 crown: { slot in
-                    // **NO BOX ON HOME (prd §757).** The 300pt slot was
-                    // reserved so paging the account DECK never changed its
-                    // height — and there is no deck: §750 moved the accounts to
-                    // the shell's rail, §753 into the dock's capsule, and Home
-                    // draws one crown that nothing pages. All it reserved was
-                    // 200pt of black under a balance whose line has not landed.
-                    // A SCOPE figure still takes the box (below), where the
-                    // reservation is about scopes aligning with each other.
-                    DSRoomSlot(headline: nil, reservesHeadline: false, reservesBox: false) {
+                    // **THE BOX IS BACK ON HOME (prd §760, reversing §757's
+                    // drop).** Every room's lead is held to this height now, and
+                    // Home is where it was taken from, so Home keeps it.
+                    DSRoomSlot(headline: nil, reservesHeadline: false) {
                         if slot.isShowing(chrome.walletScope) {
                             walletTilesSection(visible, streamTotal: streamTotal,
                                                drawsChart: true)

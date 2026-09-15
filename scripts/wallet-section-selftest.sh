@@ -347,22 +347,14 @@ deny DSRoomScopeChrome.swift "dsWidgetSurface" \
 # reason — the account deck paged sideways — and §750/§753 deleted the deck. All
 # it reserved afterwards was 200pt of black under a balance whose second reading
 # has not landed yet.
-guard DSRoomChassis.swift "var reservesBox: Bool = true" \
-  "DSRoomSlot lost its box switch — a Home crown is pinned to 300pt again (§757)"
-guard DSRoomChassis.swift "struct SlotBox: ViewModifier" \
-  "the box is an if in the slot's body again — the figure inside gets two identities and a chart redraws from zero (§757)"
-# The unreserved slot is a CEILING, not an open stack: only the floor goes, so a
-# drawing that overflows is cut where it has always been cut and nothing that
-# fits changes by a point. Both branches of the modifier clip.
-slot_clips=$(sed -n '/struct SlotBox: ViewModifier/,/^}/p' "$work/DSRoomChassis.swift.bare" | grep -c "clipped()" || true)
-[[ "$slot_clips" -eq 2 ]] \
-  || fail "drift: SlotBox clips in $slot_clips of its 2 branches — an unreserved slot must still cap at visualSlot, or a figure sized against that constant pushes the room down on the frame its data lands (§757)"
-# Every Home crown drops it; the wallet's OFF-Home figure keeps it, and that one
-# is not a nicety: its own comment records the treemap and the NFT quad clipped
-# along the bottom the first time they were given less than the whole slot.
-home_boxes=$(grep -c "reservesHeadline: false, reservesBox: false" "$work/FeedScreen.swift.bare" || true)
-[[ "$home_boxes" -eq 4 ]] \
-  || fail "drift: $home_boxes of the 4 Home crowns in FeedScreen drop the fixed box (§757)"
+# §760 REVERSED THE DROP: every room's lead is held to this height, and Home is
+# where it was taken from, so no slot may opt out of the box again.
+deny DSRoomChassis.swift "reservesBox" \
+  "a slot can opt out of the fixed box again — every room's lead is held to Home's height (§760, reversing §757)"
+deny FeedScreen.swift "reservesBox" \
+  "a Home crown drops the fixed box again — the height every other room's lead copies (§760)"
+guard DSRoomChassis.swift "minHeight: DSRoomChassis.visualSlot" \
+  "DSRoomSlot no longer pins its floor to visualSlot — the Home crown shrinks below every other room's lead (§760)"
 grep -q "DSRoomSlot(headline: nil, reservesHeadline: false) {" "$work/FeedScreen.swift.bare" \
   || fail "drift: the wallet's OFF-Home figure lost the fixed slot — a drawing sized for the whole box is clipped along its bottom (§757/§495)"
 
