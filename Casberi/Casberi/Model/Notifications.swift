@@ -32,7 +32,7 @@ enum Notifications {
     ///
     /// Every category defaults ON. §644 kept arrivals off because each one was
     /// its own notification riding a grant given for a dispute; one digest
-    /// twice a day is not that, and a person who wants less turns a category
+    /// a category, once a day, is not that, and a person who wants less turns a category
     /// off where it is named.
     ///
     /// Stored as the set that is OFF, so a category the catalog adds later
@@ -212,14 +212,14 @@ enum Notifications {
                                         adding: eligible.filter { !$0.kind.standsAlone }.map(digestItem),
                                         allowed: { s.allows(category: $0.category) },
                                         now: now, quiet: s.quiet, calendar: .current)
-        let digest = NotifyDigest.plan(next.queue)
-        guard !dryRun else { return alone + (digest.map { [$0] } ?? []) }
+        let digest = NotifyDigest.plans(next.queue)
+        guard !dryRun else { return alone + digest }
 
         for plan in alone {
             await schedule(plan, photo: photos[plan.id], now: now, quiet: s.quiet)
         }
         await scheduleDigest(next, previous: previous, now: now)
-        return alone + (digest.map { [$0] } ?? [])
+        return alone + digest
     }
 
     // MARK: - The digest (prd §770)
@@ -242,6 +242,8 @@ enum Notifications {
 
     private static func digestItem(_ plan: NotifyPlan) -> NotifyDigest.Item {
         let source = plan.source ?? "Casberi"
+        var picture: String?
+        if case .remote(let url) = plan.art { picture = url }
         return NotifyDigest.Item(id: plan.id,
                                  seat: BridgeCatalog.seatName(forSource: source),
                                  name: source,
@@ -251,11 +253,13 @@ enum Notifications {
                                  body: plan.body,
                                  link: plan.link,
                                  occurredAt: plan.occurredAt,
-                                 source: plan.source)
+                                 source: plan.source,
+                                 picture: picture,
+                                 mark: plan.mark)
     }
 
-    private static func digestRequestID(_ slot: Date) -> String {
-        NotifyDigest.requestPrefix + String(Int(slot.timeIntervalSince1970))
+    private static func digestRequestID(_ slot: Date, _ category: String) -> String {
+        NotifyDigest.requestPrefix + category + ":" + String(Int(slot.timeIntervalSince1970))
     }
 
     /// Rewrites the pending request for the slot with the queue as it stands.
@@ -269,38 +273,51 @@ enum Notifications {
         // "Last sent" is said only once a slot has PASSED. Recording a digest
         // when it is scheduled would put a time still to come on the settings
         // sheet under the word "sent" (§83).
-        if let old = previous.slot, old <= now, let sent = NotifyDigest.plan(previous.queue) {
+        if let old = previous.slot, old <= now, let sent = NotifyDigest.plans(previous.queue).first {
             rememberSent(sent, at: old)
         }
         let center = UNUserNotificationCenter.current()
-        // A pending slot that moved or emptied is pulled. One that has passed
-        // is already delivered, and pulling a PENDING id cannot touch it.
-        if let old = previous.slot, old > now, old != next.slot {
-            center.removePendingNotificationRequests(withIdentifiers: [digestRequestID(old)])
+        // A pending slot that moved is pulled whole; one that stayed loses only
+        // the categories that emptied or were switched off, because re-adding
+        // an id replaces it. One that has passed is already delivered, and
+        // pulling a PENDING id cannot touch it. The bare slot id is the
+        // single-digest request an install scheduled before the split.
+        if let old = previous.slot, old > now {
+            let kept: Set<String> = old == next.slot ? Set(next.queue.map(\.category)) : []
+            let gone = Set(previous.queue.map(\.category)).subtracting(kept)
+            center.removePendingNotificationRequests(
+                withIdentifiers: gone.map { digestRequestID(old, $0) }
+                    + [NotifyDigest.requestPrefix + String(Int(old.timeIntervalSince1970))])
         }
-        guard let slot = next.slot, let plan = NotifyDigest.plan(next.queue) else { return }
+        guard let slot = next.slot else { return }
 
-        let content = UNMutableNotificationContent()
-        content.title = plan.title
-        content.body = plan.body
-        if next.queue.count == 1 {
-            let dateline = NotifyRules.datelinePhrase(
-                occurredAt: plan.occurredAt, deliveredAt: slot, calendar: .current)
-            content.subtitle = [plan.place, dateline].compactMap { $0 }.joined(separator: " · ")
+        for group in NotifyDigest.groups(next.queue) {
+            guard let plan = NotifyDigest.plan(group), let category = group.first?.category else { continue }
+            let content = UNMutableNotificationContent()
+            content.title = plan.title
+            content.body = plan.body
+            if group.count == 1 {
+                let dateline = NotifyRules.datelinePhrase(
+                    occurredAt: plan.occurredAt, deliveredAt: slot, calendar: .current)
+                content.subtitle = [plan.place, dateline].compactMap { $0 }.joined(separator: " · ")
+            }
+            // Lights the screen and makes no sound: one a category, once a
+            // day, neither hidden nor loud. One thread, so the categories
+            // arriving together read as one stack.
+            content.sound = nil
+            content.interruptionLevel = .active
+            content.threadIdentifier = "digest"
+            if let link = plan.link { content.userInfo = ["link": link] }
+            if group.count == 1, let art = await attachment(for: plan, photo: nil) {
+                content.attachments = [art]
+            } else if group.count > 1, let sheet = await tileSheet(for: group, id: plan.id) {
+                content.attachments = [sheet]
+            }
+            let trigger = UNTimeIntervalNotificationTrigger(
+                timeInterval: max(1, slot.timeIntervalSince(now)), repeats: false)
+            try? await center.add(UNNotificationRequest(identifier: digestRequestID(slot, category),
+                                                        content: content, trigger: trigger))
         }
-        // Lights the screen and makes no sound: the one notification a person
-        // chose, twice a day at most, neither hidden nor loud.
-        content.sound = nil
-        content.interruptionLevel = .active
-        content.threadIdentifier = "digest"
-        if let link = plan.link { content.userInfo = ["link": link] }
-        if next.queue.count == 1, let art = await attachment(for: plan, photo: nil) {
-            content.attachments = [art]
-        }
-        let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: max(1, slot.timeIntervalSince(now)), repeats: false)
-        try? await center.add(UNNotificationRequest(identifier: digestRequestID(slot),
-                                                    content: content, trigger: trigger))
     }
 
     private static func schedule(_ plan: NotifyPlan,
@@ -409,6 +426,91 @@ enum Notifications {
             return made
         }
         return nil
+    }
+
+    // MARK: - The digest's thumbnail (prd §770)
+
+    private enum LoadedTile: Sendable {
+        case picture(Data)
+        case mark(UIImage)
+    }
+
+    /// Several things in one category draw their people and their apps
+    /// together as one square, up to four: a picture is a circle, a mark a
+    /// rounded tile (user, 2026-09-15: "mixed together is fine avatars and
+    /// faces"). The pictures are fetched at once, each on rung 1's short
+    /// budget; one that misses falls to its app's mark, and a tile with
+    /// nothing to draw is left out. Nothing at all draws no thumbnail.
+    private static func tileSheet(for group: [NotifyDigest.Item], id: String) async -> UNNotificationAttachment? {
+        let tiles = NotifyDigest.tiles(group)
+        let loaded = await withTaskGroup(of: (Int, LoadedTile?).self) { tasks in
+            for (index, tile) in tiles.enumerated() {
+                tasks.addTask { @MainActor in
+                    switch tile {
+                    case .picture(let url, let source):
+                        if let data = await rungOne(.remote(url), photo: nil, service: source ?? "Casberi") {
+                            return (index, .picture(data))
+                        }
+                        return (index, source.flatMap(brandAsset).map(LoadedTile.mark))
+                    case .mark(let name):
+                        return (index, (BrandMark.image(for: name) ?? brandAsset(name)).map(LoadedTile.mark))
+                    }
+                }
+            }
+            var out: [(Int, LoadedTile?)] = []
+            for await result in tasks { out.append(result) }
+            return out.sorted { $0.0 < $1.0 }.compactMap(\.1)
+        }
+        guard !loaded.isEmpty,
+              let png = await Task.detached(priority: .utility, operation: { composeTiles(loaded) }).value
+        else { return nil }
+        return write(png, id: id + ".tiles")
+    }
+
+    /// Draws the tiles into one 240px square, off the main thread, at scale 1
+    /// (iOS shows it at about 40pt, and the renderer defaults to 3×). One tile
+    /// fills it, two overlap on the diagonal, three or four sit in a grid.
+    nonisolated private static func composeTiles(_ tiles: [LoadedTile]) -> Data? {
+        let images: [(image: UIImage, round: Bool)] = tiles.compactMap { tile in
+            switch tile {
+            case .picture(let data): return UIImage(data: data).map { ($0, true) }
+            case .mark(let image): return (image, false)
+            }
+        }
+        guard !images.isEmpty else { return nil }
+        let side: CGFloat = 240
+        let rects: [CGRect]
+        switch images.count {
+        case 1:
+            rects = [CGRect(x: 0, y: 0, width: side, height: side)]
+        case 2:
+            rects = [CGRect(x: 0, y: 0, width: 150, height: 150),
+                     CGRect(x: 90, y: 90, width: 150, height: 150)]
+        default:
+            let cell: CGFloat = 112, gap: CGFloat = 16
+            rects = images.indices.map { i in
+                CGRect(x: CGFloat(i % 2) * (cell + gap), y: CGFloat(i / 2) * (cell + gap),
+                       width: cell, height: cell)
+            }
+        }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).pngData { context in
+            for (tile, rect) in zip(images, rects) {
+                context.cgContext.saveGState()
+                let clip = tile.round
+                    ? UIBezierPath(ovalIn: rect)
+                    : UIBezierPath(roundedRect: rect, cornerRadius: rect.width * 0.22)
+                clip.addClip()
+                let size = tile.image.size
+                let scale = max(rect.width / max(size.width, 1), rect.height / max(size.height, 1))
+                let drawn = CGSize(width: size.width * scale, height: size.height * scale)
+                tile.image.draw(in: CGRect(x: rect.midX - drawn.width / 2, y: rect.midY - drawn.height / 2,
+                                           width: drawn.width, height: drawn.height))
+                context.cgContext.restoreGState()
+            }
+        }
     }
 
     private static func rungOne(_ art: NotifyArt, photo: Data?, service: String) async -> Data? {

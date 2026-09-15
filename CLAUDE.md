@@ -234,7 +234,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **A mutation that changed nothing is not a passing mutation — it is one that did not run (scripts/mutation-liveness-audit.py, 2026-09-06)** → docs/verify.md · prd §627
 - **A fetch or a Keychain read belongs in `onAppear`/`.task`, never in a body or a computed property a body reads (build 525)** → docs/verify.md · prd §628
 - `-notifyProbe` — what would notify, WITHOUT notifying (prd §306, 2026-08-05, Model/NotifySweep.swift + Model/NotifyPlan.swift) → docs/hooks/system.md · prd §306
-- **Notifications are one digest, at most twice a day, one switch per category; only a dispute, a deadline, a liquidation or a Safe signature stands alone (`NotifyKind.standsAlone`)** → docs/hooks/system.md · prd §770 · §706
+- **Notifications are one digest per category, once a day at 18:00, one switch per category; only a dispute, a deadline, a liquidation or a Safe signature stands alone (`NotifyKind.standsAlone`)** → docs/hooks/system.md · prd §770 · §706
 - `-vibenetCreateProbe` `-signerProbe` — what making a vibenet account WOULD do, without doing it (prd §530, 2026-08-30) → docs/hooks/devnets.md · prd §530
 - **The vibenet top up claims IN THE APP** (`-vibenetFaucetProbe`) → docs/hooks/devnets.md · prd §553b
 - **L2BEAT — the rails your money sits on, reviewed by somebody independent** → docs/hooks/bridges.md · prd §428

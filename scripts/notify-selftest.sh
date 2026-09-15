@@ -575,10 +575,11 @@ ok(NotifyRules.datelinePhrase(occurredAt: utc(5, 9, 0), deliveredAt: utc(5, 8, 0
    "an event stamped after delivery never draws a dateline")
 
 // ── the digest (prd §770) ───────────────────────────────────────────────────
-// Everything that does not stand alone becomes ONE notification at a slot. Each
-// failure here renders as an ordinary notification: the same things told twice,
-// a digest at 03:00, a category switched off that still speaks, or a third
-// delivery in a day the settings footnote promised would not come.
+// Everything that does not stand alone becomes ONE notification per category,
+// all at one slot a day. Each failure here renders as an ordinary notification:
+// the same things told twice, a digest at 03:00, a category switched off that
+// still speaks, two categories folded into one, or a second delivery in a day
+// the settings footnote promised would not come.
 ok(Set(NotifyKind.allCases.filter(\.standsAlone)) ==
    [.disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded],
    "exactly four kinds stand alone; everything else waits for the digest")
@@ -586,22 +587,21 @@ ok(Set(ts).isSubset(of: Set(NotifyKind.allCases.filter(\.standsAlone))),
    "a kind that pierces a Focus never waits for the evening slot")
 ok(NotifyKind.digest.cls == .arrival && !NotifyKind.digest.standsAlone,
    "the digest's own kind is an arrival and never stands alone")
-ok(NotifyDigest.slots.count == 2, "two slots a day, and no third")
+ok(NotifyDigest.slots.count == 1, "one slot a day, and no second")
 
 func tomorrow(_ d: Date) -> Date { cal.date(byAdding: .day, value: 1, to: d)! }
-ok(NotifyDigest.nextSlot(after: at(7), quiet: night, calendar: cal) == at(9),
-   "07:00 waits for the morning slot")
-ok(NotifyDigest.nextSlot(after: at(9), quiet: night, calendar: cal) == at(18),
-   "a slot that is now has passed, so the evening is next")
-ok(NotifyDigest.nextSlot(after: at(10), quiet: night, calendar: cal) == at(18),
-   "mid-morning waits for the evening, never a slot in between")
-ok(NotifyDigest.nextSlot(after: at(19), quiet: night, calendar: cal) == tomorrow(at(9)),
-   "after the evening slot, tomorrow morning")
-ok(NotifyDigest.nextSlot(after: at(7), quiet: day, calendar: cal) == at(18),
-   "a slot inside quiet hours is skipped")
+ok(NotifyDigest.nextSlot(after: at(7), quiet: night, calendar: cal) == at(18),
+   "the morning waits for the evening slot")
+ok(NotifyDigest.nextSlot(after: at(18), quiet: night, calendar: cal) == tomorrow(at(18)),
+   "a slot that is now has passed, so tomorrow evening is next")
+ok(NotifyDigest.nextSlot(after: at(19), quiet: night, calendar: cal) == tomorrow(at(18)),
+   "after the evening slot, tomorrow evening")
+let evening = NotifyRules.Quiet(startMinute: 17 * 60, endMinute: 20 * 60, enabled: true)
+ok(NotifyDigest.nextSlot(after: at(12), quiet: evening, calendar: cal) == at(20),
+   "a slot inside quiet hours waits for the window's own end, never inside it")
 let wide = NotifyRules.Quiet(startMinute: 17 * 60, endMinute: 10 * 60, enabled: true)
 ok(NotifyDigest.nextSlot(after: at(12), quiet: wide, calendar: cal) == tomorrow(at(10)),
-   "quiet hours covering both slots wait for the window's own end")
+   "a window covering the slot every day waits for its own end")
 ok(NotifyDigest.nextSlot(after: at(3), quiet: wide, calendar: cal) == at(10),
    "…today's end, when it is still ahead")
 
@@ -628,7 +628,7 @@ let s3 = NotifyDigest.advance(s2, adding: [], allowed: everything,
 ok(s3.queue.isEmpty && s3.slot == nil, "after its slot, a delivered digest is never announced again")
 let s4 = NotifyDigest.advance(s2, adding: [item("c", "X", at: at(19))], allowed: everything,
                               now: at(19), quiet: night, calendar: cal)
-ok(s4.queue.map(\.id) == ["c"] && s4.slot == tomorrow(at(9)),
+ok(s4.queue.map(\.id) == ["c"] && s4.slot == tomorrow(at(18)),
    "an arrival after the evening slot starts tomorrow's digest on its own")
 let s5 = NotifyDigest.advance(s2, adding: [], allowed: { $0.category != "Work" },
                               now: at(12), quiet: night, calendar: cal)
@@ -652,7 +652,8 @@ ok(oneApp.kind == .digest && oneApp.title.contains("Stripe") && oneApp.body.cont
 ok(oneApp.link == "casberi://feed/source/Stripe", "…and opens that app's room")
 let four = NotifyDigest.plan([item("s", "Stripe", at: at(10)), item("g", "GitHub", at: at(11)),
                               item("w", "Wallet", at: at(9)), item("x", "X", at: at(12))])!
-ok(four.title.contains("4"), "several apps say how many")
+ok(four.title == "Work" && four.body.hasPrefix("4 from"),
+   "several apps say their category and how many")
 ok(four.link == "casberi://feed", "…and open All")
 func pos(_ text: String, _ needle: String) -> Int {
     text.range(of: needle).map { text.distance(from: text.startIndex, to: $0.lowerBound) } ?? -1
@@ -666,6 +667,44 @@ let six = NotifyDigest.plan(["A", "B", "C", "D", "E", "F"].enumerated().map {
 })!
 ok(six.body.contains("3 more") && !six.body.contains("A"),
    "past four apps, three are named and the rest are counted")
+
+ok(NotifyDigest.plans([]).isEmpty, "no category queued, no notification")
+let split = NotifyDigest.plans([item("s", "Stripe", at: at(10), category: "Money"),
+                                item("g", "GitHub", at: at(11)), item("l", "Linear", at: at(12))])
+ok(split.map(\.title) == ["t-s", "Work"],
+   "one notification per category, in name order, never one for all of them")
+let twoRooms = NotifyDigest.plans([item("a", "Stripe", at: at(10), category: "Money"),
+                                   item("b", "Stripe", at: at(11), category: "Money"),
+                                   item("c", "GitHub", at: at(10)), item("d", "GitHub", at: at(11))])
+ok(twoRooms.count == 2 && Set(twoRooms.map(\.id)).count == 2,
+   "two categories' digests never share an id, so neither replaces the other")
+
+let headlined = NotifyDigest.plan((0..<5).map { item("h\($0)", "Bluesky", at: at(8 + $0)) })!
+let lines = headlined.body.components(separatedBy: "\n")
+ok(lines.count == 1 + NotifyDigest.headlineCap && lines[1] == "t-h4" && !headlined.body.contains("t-h1"),
+   "under the count, the newest headlines, newest first, and no more than the cap")
+
+func pictured(_ id: String, _ seat: String, at when: Date,
+              picture: String? = nil, mark: String? = nil) -> NotifyDigest.Item {
+    var i = item(id, seat, at: when); i.picture = picture; i.mark = mark; return i
+}
+let thumb: [NotifyDigest.Tile] = NotifyDigest.tiles([
+    pictured("p1", "Stripe", at: at(10)), pictured("p2", "Stripe", at: at(11)),
+    pictured("f1", "Bluesky", at: at(12), picture: "https://a/1.jpg"),
+    pictured("f2", "Bluesky", at: at(13), picture: "https://a/1.jpg"),
+    pictured("u", "Wallet", at: at(9), mark: "USDC"),
+    pictured("f3", "X", at: at(14), picture: "https://b/2.jpg"),
+    pictured("g", "GitHub", at: at(8)),
+])
+ok(thumb.count == NotifyDigest.tileCap && !thumb.contains(.mark("GitHub")),
+   "the thumbnail holds four tiles, and the oldest is left out")
+ok(thumb.first == .picture(url: "https://b/2.jpg", source: "X"),
+   "a face leads when the newest thing has one, mixed with the marks")
+ok(thumb.filter { $0 == .picture(url: "https://a/1.jpg", source: "Bluesky") }.count == 1
+   && thumb.filter { $0 == .mark("Stripe") }.count == 1,
+   "the same face or the same mark is drawn once")
+ok(thumb.contains(.mark("USDC")) && !thumb.contains(.mark("Wallet")),
+   "an item's own mark wins over its app's")
 
 // ── the ledger: fires once, ever ────────────────────────────────────────────
 let suite = "casberi.notify.selftest"
@@ -798,8 +837,12 @@ mutate "money arriving stands alone again, one buzz per transfer" \
        's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded:/case .disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded, .moneyIn:/'
 mutate "a Safe signature waits for the evening digest" \
        's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded:/case .disputeOpened, .deadlineNear, .positionAtRisk:/'
-mutate "a third digest a day" \
-       's/static let slots = \[9 \* 60, 18 \* 60\]/static let slots = [9 * 60, 12 * 60, 18 * 60]/'
+mutate "a second digest a day" \
+       's/static let slots = \[18 \* 60\]/static let slots = [9 * 60, 18 * 60]/'
+mutate "every category folds into one digest again" \
+       's/Dictionary\(grouping: queue, by: \\\.category\)/Dictionary(grouping: queue, by: { _ in "" })/'
+mutate "two categories' app digests share one id and replace each other" \
+       's/requestPrefix \+ newest\.category \+ ":app"/requestPrefix + ":app"/'
 mutate "a digest lands inside quiet hours" \
        's/for minute in slots\.sorted\(\) where !quiet\.contains\(minute: minute\)/for minute in slots.sorted()/'
 mutate "a delivered digest is announced again at the next slot" \
@@ -810,6 +853,16 @@ mutate "a category switched off still speaks through what it already queued" \
        's/queue = queue\.filter\(allowed\)//'
 mutate "apps with their own lock screen are named first" \
        's/if aOwn != bOwn \{ return !aOwn \}/if aOwn != bOwn { return aOwn }/'
+mutate "the thumbnail draws the same Stripe mark once per payout" \
+       's/guard seen\.insert\(key\)\.inserted else \{ continue \}/_ = seen.insert(key)/'
+mutate "the thumbnail draws every tile, too small to read" \
+       's/if out\.count == tileCap \{ break \}//'
+mutate "a face never makes the thumbnail" \
+       's/if let picture = item\.picture, !picture\.isEmpty \{/if let picture = item.picture, picture.isEmpty {/'
+mutate "an item's own mark loses to its app's" \
+       's/let mark = item\.mark \?\? item\.seat/let mark = item.seat/'
+mutate "the body lists every headline in the queue" \
+       's/\.prefix\(headlineCap\)/.prefix(99)/'
 mutate "the digest names every app however many there are" \
        's/if names\.count <= 4 \{/if names.count <= 400 {/'
 

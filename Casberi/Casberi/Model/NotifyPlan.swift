@@ -115,8 +115,8 @@ enum NotifyKind: String, Sendable, CaseIterable {
     case likesReceived
     case repliesReceived
     case followersGained
-    /// The one notification everything else becomes (prd §770): what arrived
-    /// from every category that is switched on, delivered at most twice a day.
+    /// The one notification a category's news becomes (prd §770): what arrived
+    /// for a category that is switched on, delivered once a day.
     /// `NotifySweep.classify` never returns it; only `NotifyDigest.plan`
     /// composes it, and only when the queue holds more than one thing.
     case digest
@@ -773,10 +773,12 @@ enum NotifyDevnet {
 
 // MARK: - The digest (prd §770)
 
-/// Everything that does not stand alone arrives as ONE notification, at most
-/// twice a day (user ruling, prd §770: "we aren't trying to be someone's
-/// notification app, we are for them reading the app, and their notifications
-/// are really the problem for users today").
+/// Everything that does not stand alone arrives as ONE notification per
+/// category, once a day, all at the same slot (user ruling, prd §770: "we
+/// aren't trying to be someone's notification app, we are for them reading the
+/// app, and their notifications are really the problem for users today";
+/// amended the same day to "one per category a day"). Arriving together, they
+/// are one moment and one stack in Notification Center.
 ///
 /// **Counts and app names, never a summary.** The daily whisper (§706) was cut
 /// because its line summarised a day and said nothing; this says only which
@@ -814,6 +816,62 @@ enum NotifyDigest {
         var link: String?
         var occurredAt: Date
         var source: String?
+        /// The picture the plan carried (`NotifyArt.remote`): a person's face
+        /// on a reply or a like, a cover on a link. Optional with a default,
+        /// so a queue stored before it decodes unchanged.
+        var picture: String? = nil
+        /// The plan's own bundled mark (`NotifyPlan.mark`): USDC on a
+        /// transfer, Morpho on a position.
+        var mark: String? = nil
+    }
+
+    /// One square in a category digest's thumbnail: a picture (usually a
+    /// face), or a bundled mark. They mix (user, 2026-09-15: "mixed together
+    /// is fine avatars and faces").
+    enum Tile: Sendable, Equatable {
+        case picture(url: String, source: String?)
+        case mark(String)
+    }
+
+    /// Four tiles fill the thumbnail's 2×2 grid; a fifth would be too small to
+    /// read at the size iOS draws it.
+    static let tileCap = 4
+
+    /// How many headlines a digest's body lists under its count.
+    static let headlineCap = 3
+
+    /// What a category's digest draws, newest first: each item's picture when
+    /// it has one, otherwise its own mark, otherwise its app's. The same
+    /// picture or mark is drawn once, so three Stripe payouts are ONE Stripe
+    /// tile and leave room for the rest.
+    static func tiles(_ group: [Item]) -> [Tile] {
+        var seen = Set<String>(), out: [Tile] = []
+        for item in newestFirst(group) {
+            let tile: Tile, key: String
+            if let picture = item.picture, !picture.isEmpty {
+                tile = .picture(url: picture, source: item.source); key = picture
+            } else {
+                let mark = item.mark ?? item.seat
+                tile = .mark(mark); key = "mark:" + mark
+            }
+            guard seen.insert(key).inserted else { continue }
+            out.append(tile)
+            if out.count == tileCap { break }
+        }
+        return out
+    }
+
+    /// The newest headlines, one per line. Each is the item's own title, which
+    /// the plan that queued it already wrote, so the digest names what
+    /// happened without summarising it.
+    static func headlines(_ queue: [Item]) -> String {
+        newestFirst(queue).prefix(headlineCap).map(\.title).joined(separator: "\n")
+    }
+
+    /// Newest first, ties by id, so neither the tiles nor the lines depend on
+    /// the queue's stored order.
+    private static func newestFirst(_ items: [Item]) -> [Item] {
+        items.sorted { $0.occurredAt != $1.occurredAt ? $0.occurredAt > $1.occurredAt : $0.id < $1.id }
     }
 
     /// What survives between sweeps: the queue, and the slot it is scheduled
@@ -823,12 +881,12 @@ enum NotifyDigest {
         var slot: Date?
     }
 
-    /// Minutes from midnight. Two, and the count is the ruling ("at most twice
-    /// a day"): a morning read and an evening read. Both sit outside the
-    /// default quiet window (22:00 to 08:00).
-    static let slots = [9 * 60, 18 * 60]
+    /// Minutes from midnight. One, and the count is the ruling ("one per
+    /// category a day"): an evening read, once the day's news is in, outside
+    /// the default quiet window (22:00 to 08:00).
+    static let slots = [18 * 60]
 
-    /// A bound on the queue, oldest dropped first. Two slots a day and a
+    /// A bound on the queue, oldest dropped first. One slot a day and a
     /// ledger that fires each id once keep it far below this; it exists so a
     /// week without a sweep cannot grow a stored array without limit.
     static let cap = 200
@@ -852,9 +910,9 @@ enum NotifyDigest {
         "Steam", "Dropbox", "Twitch", "Substack", "Stocktwits",
     ]
 
-    /// The id every slot's request shares a prefix with. The slot's own
-    /// instant is appended by the scheduler, so the evening digest never
-    /// replaces the morning one still sitting in Notification Center.
+    /// The id every slot's requests share a prefix with. The category and the
+    /// slot's own instant are appended by the scheduler, so no category's
+    /// digest replaces another's, nor yesterday's still in Notification Center.
     static let requestPrefix = "digest:"
 
     /// The next slot strictly after `now` that quiet hours do not cover.
@@ -923,12 +981,25 @@ enum NotifyDigest {
         }.map(\.name)
     }
 
-    /// The notification a queue becomes. Nil for an empty queue.
+    /// The queue split by category, in a fixed order (by name) so the stack
+    /// never depends on a dictionary's.
+    static func groups(_ queue: [Item]) -> [[Item]] {
+        Dictionary(grouping: queue, by: \.category)
+            .sorted { $0.key < $1.key }.map(\.value)
+    }
+
+    /// The notifications a queue becomes: one per category with something in it.
+    static func plans(_ queue: [Item]) -> [NotifyPlan] {
+        groups(queue).compactMap(plan)
+    }
+
+    /// The notification ONE category's queue becomes. Nil for an empty queue.
     ///
     /// One item is simply that item: its own headline, words and door, so a
     /// quiet day with one arrival reads like any notification. One app with
-    /// several items says the app and the count. Several apps say how many and
-    /// name them, up to four, then "and N more".
+    /// several items says the app and the count. Several apps say the
+    /// category, the count, and name the apps, up to four, then "and N more".
+    /// Either way the newest headlines follow, one per line.
     static func plan(_ queue: [Item]) -> NotifyPlan? {
         guard let newest = queue.max(by: { $0.occurredAt < $1.occurredAt }) else { return nil }
         if queue.count == 1 {
@@ -941,9 +1012,9 @@ enum NotifyDigest {
         let names = apps(queue)
         if names.count == 1 {
             let path = newest.name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? newest.name
-            return NotifyPlan(id: requestPrefix + "app", kind: .digest,
+            return NotifyPlan(id: requestPrefix + newest.category + ":app", kind: .digest,
                               title: String(localized: "From \(names[0])"),
-                              body: String(localized: "\(queue.count) new things"),
+                              body: String(localized: "\(queue.count) new things") + "\n" + headlines(queue),
                               link: "casberi://feed/source/" + path,
                               occurredAt: newest.occurredAt, source: newest.source)
         }
@@ -953,9 +1024,9 @@ enum NotifyDigest {
         } else {
             listed = String(localized: "\(names.prefix(3).joined(separator: ", ")) and \(names.count - 3) more")
         }
-        return NotifyPlan(id: requestPrefix + "apps", kind: .digest,
-                          title: String(localized: "From \(names.count) apps"),
-                          body: listed,
+        return NotifyPlan(id: requestPrefix + newest.category + ":apps", kind: .digest,
+                          title: newest.category,
+                          body: String(localized: "\(queue.count) from \(listed)") + "\n" + headlines(queue),
                           link: "casberi://feed",
                           occurredAt: newest.occurredAt)
     }

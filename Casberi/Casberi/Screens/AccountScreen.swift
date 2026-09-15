@@ -35,8 +35,8 @@ struct SettingsScreen: View {
         guard s.anyOn else { return String(localized: "Off") }
         let off = Notifications.Settings.categories.filter { s.off.contains($0) }
         return off.isEmpty
-            ? String(localized: "Twice a day")
-            : String(localized: "Twice a day, not \(ListFormatter.localizedString(byJoining: off))")
+            ? String(localized: "Each evening")
+            : String(localized: "Each evening, not \(ListFormatter.localizedString(byJoining: off))")
     }
     @State private var avatarPickerOpen = false
     @State private var avatarDialogOpen = false

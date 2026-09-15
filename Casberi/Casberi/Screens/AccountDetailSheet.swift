@@ -762,41 +762,35 @@ struct AccountDetailSheet: View {
             // previews no state here, so it takes the neutral tone
             // (2026-08-10, was DS.tint).
             aliveRow("bell.badge.fill", DS.neutralBadge, "Notifications", notifyStatusLine)
-            // Each row names the accounts it covers, which is the one fact the
-            // category's name cannot say.
-            ForEach(notifyCategories, id: \.name) { category in
-                toggleRow(category.name, category.seats,
-                          isOn: Binding(get: { notifySettings.allows(category: category.name) },
-                                        set: { on in
-                                            if on { notifySettings.off.remove(category.name) }
-                                            else { notifySettings.off.insert(category.name) }
-                                            saveNotify()
-                                        }))
+            // A category is its name alone (user, 2026-09-15: "just list the
+            // categories") — the accounts under it are not repeated here.
+            ForEach(notifyCategories, id: \.self) { category in
+                DSToggleRow(title: Text(category),
+                            isOn: Binding(get: { notifySettings.allows(category: category) },
+                                          set: { on in
+                                              if on { notifySettings.off.remove(category) }
+                                              else { notifySettings.off.insert(category) }
+                                              saveNotify()
+                                          }))
             }
             // Restored 2026-08-14 with the time-sensitive entitlement (prd
-            // §306 amendment's "to finish it"). It names the two kinds rather
-            // than saying "a deadline", because `NotifyKind.isTimeSensitive`
-            // is exactly `disputeOpened || deadlineNear` — and a person
-            // reading this row is deciding whether to trust the switch, not
-            // skimming it.
-            toggleRow("Quiet hours", "Waits until morning — except a dispute or a deadline.",
-                      isOn: Binding(get: { notifySettings.quiet.enabled },
-                                    set: { notifySettings.quiet.enabled = $0; saveNotify() }))
-            // The pitch and the exceptions, which no switch can say (§748).
+            // §306 amendment's "to finish it").
+            DSToggleRow(title: Text("Quiet hours"),
+                        isOn: Binding(get: { notifySettings.quiet.enabled },
+                                      set: { notifySettings.quiet.enabled = $0; saveNotify() }))
+            // The cadence and the exceptions, which no switch can say (§748).
             // The four named are `NotifyKind.standsAlone`, word for word.
-            DSFootnote("What arrives comes as one notification, twice a day at most, so the apps Casberi reads can stay quiet. A dispute, a deadline, a liquidation or a Safe signature comes at once.")
+            DSFootnote("One digest per category each evening, not a ping for every event. A dispute, a deadline, a liquidation or a Safe signature comes at once.")
         }
         .task { notifyAuthorized = await Notifications.authorized() }
     }
 
-    /// The categories this person has an account in, each with the accounts
-    /// it covers. An in-memory walk of the bridge list, never a fetch.
-    private var notifyCategories: [(name: String, seats: String)] {
-        let seats = store.bridges.filter { $0.status != .paused }.map(\.name)
-        return BridgeCatalog.categories.compactMap { category in
-            let mine = seats.filter { BridgeCatalog.category(forSource: $0) == category.name }
-            return mine.isEmpty ? nil : (category.name, ListFormatter.localizedString(byJoining: mine))
-        }
+    /// The categories this person has an account in. An in-memory walk of
+    /// the bridge list, never a fetch.
+    private var notifyCategories: [String] {
+        let mine = Set(store.bridges.filter { $0.status != .paused }
+            .compactMap { BridgeCatalog.category(forSource: $0.name) })
+        return BridgeCatalog.categories.map(\.name).filter { mine.contains($0) }
     }
 
     private var notifyStatusLine: String {
@@ -805,13 +799,13 @@ struct AccountDetailSheet: View {
             // that answers "does this work at all" without a lane.
             if let last = Notifications.lastSent {
                 let when = last.at.formatted(.dateTime.weekday(.wide).hour().minute())
-                return String(localized: "On for this \(DS.device). Last sent \(when) — \(last.title).")
+                return String(localized: "Last sent \(when)")
             }
-            return "On for this \(DS.device)."
+            return "On"
         }
         return Notifications.hasAsked
-            ? "Turned off in \(DS.settingsAppName), and only \(DS.settingsAppName) can turn it back on."
-            : "We'll ask the first time something arrives."
+            ? "Off in \(DS.settingsAppName)"
+            : "Asks when something arrives"
     }
 
     /// Written straight through on every change — the sheet can be dismissed by
