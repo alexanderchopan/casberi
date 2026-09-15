@@ -2122,22 +2122,12 @@ private struct TokenChartContent: View {
     /// other quiet cards rather than as a full sheet row.
     @ViewBuilder private var watchRow: some View {
         if let watchedTitle {
-            // The settled state wears the same full-width capsule the verb
-            // did — quiet fill, confirm check — so watching doesn't snap the
-            // layout, and it stays a label, not a control.
-            HStack(spacing: DS.Space.s2) {
-                Image(systemName: "checkmark")
-                    .accessibilityHidden(true)
-                    .dsGlyph(15, weight: .bold)
-                    .foregroundStyle(DS.confirm)
-                Text("Watching \(watchedTitle)")
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(DS.fillFaint, in: Capsule(style: .continuous))
+            // The settled state is a FACT, so a stamp (prd §746) — it wore a
+            // full-width faint capsule. It keeps the slab's height, so watching
+            // doesn't snap the layout, and it stays a label, not a control.
+            DSStamp(word: String(localized: "Watching \(watchedTitle)"),
+                    weight: .good, glyph: "checkmark")
+                .frame(maxWidth: .infinity, minHeight: DSSlab.height)
         } else if let resolved {
             // **THE COMPONENT, NOT A HAND-ROLLED CAPSULE (prd §613, 2026-09-05;
             // supersedes the 2026-07-17 "Big money" capsule this drew.)** It

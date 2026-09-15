@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// WHAT A WALLET-FAMILY ROOM WEARS INSTEAD OF A BAR (prd §744, 2026-09-15).
+/// WHAT A WALLET-FAMILY ROOM WEARS INSTEAD OF A BAR (prd §747, 2026-09-15).
 ///
 /// One type, five rooms, and deliberately shaped as a DROP-IN for
 /// `DSRoomRailSlab`: the same `sections` / `active` / `attention` / `onPick`

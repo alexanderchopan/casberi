@@ -595,8 +595,8 @@ struct SocialProfileCard: View {
         }
     }
 
-    /// A lit-or-quiet chip: on wears the tint, off is the neutral gray chip —
-    /// the same anatomy the setup screen's row used to wear directly.
+    /// A CHOICE (prd §746): which of their activity you watch, each one on or
+    /// off — `Chip`'s selected state, the one selection every chip wears.
     private func watchChipButton(_ watch: SocialWatch) -> some View {
         Button {
             guard let bridge else { return }
@@ -606,8 +606,9 @@ struct SocialProfileCard: View {
             if !watch.on { Task { await SocialPeople.sync(source: profile.source, context: modelContext) } }
         } label: {
             Chip(text: String(localized: String.LocalizationValue(watch.label)),
-                 style: watch.on ? .tint : .neutral)
+                 selected: watch.on)
         }
+        .accessibilityAddTraits(watch.on ? .isSelected : [])
         .buttonStyle(PressSpring())
     }
 

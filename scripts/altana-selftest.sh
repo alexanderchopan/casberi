@@ -84,12 +84,19 @@ CARDVIEW=$(sed 's://.*::' "$CARD" | sed '/^[[:space:]]*\/\/\//d')
 # THE CARD RECIPE. This head was the only one in the Wallet group with neither,
 # so its content ran flush to both screen edges while every sibling sat 18pt in
 # — §474's reported bug, and the largest single part of "the room looks messy".
-print -r -- "$CARDVIEW" | grep -q 'dsWidgetSurface()' \
-  || { echo "✗ the Altana head lost its card surface — prd §488: every sibling room head"
-       echo "  ends .dsWidgetSurface() + .padding(.horizontal, DS.Space.s4), and"
-       echo "  insightSection presents them all edge-to-edge on purpose"; exit 1; }
-print -r -- "$CARDVIEW" | grep -q 'padding(.horizontal, DS.Space.s4)' \
-  || { echo "✗ the Altana head lost its outer margin — prd §488/§474"; exit 1; }
+#
+# Re-pointed for prd §745: the surface and the margin are the template's now
+# (`dsRoomHeadCard()` + `dsRoomHeadPlacement()`, applied by every
+# `DSRoomChassis.Head`), so the guard asserts the card composes the template and
+# the template still carries both halves of the recipe.
+print -r -- "$CARDVIEW" | grep -q 'DSRoomChassis.Head(' \
+  || { echo "✗ the Altana head no longer composes DSRoomChassis.Head — prd §488/§745: the"
+       echo "  card surface and outer margin every room head wears live in that template"; exit 1; }
+TEMPLATE="Casberi/Casberi/Design/DSRoomHead.swift"
+grep -q '\.dsWidgetSurface()' "$TEMPLATE" \
+  || { echo "✗ the room head template lost its card surface — prd §488/§745"; exit 1; }
+grep -q 'padding(.horizontal, DS.Space.s4)' "$TEMPLATE" \
+  || { echo "✗ the room head template lost its outer margin — prd §488/§474/§745"; exit 1; }
 
 # ONE BAR OBJECT. The room next door rolled its own capsule pair for two
 # months; two keystore rooms drawing one figure two ways is what

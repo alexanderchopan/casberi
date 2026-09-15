@@ -1120,13 +1120,11 @@ struct VibenetAccountDetail: View {
             // row it sits on is the one place in this app where the answer to
             // that fact is one tap away.
             //
-            // Inert here: the whole row is the button (`subAccountRow`), so a
-            // capsule with its own action would nest one control in another.
-            if !sub.watched {
-                VerbCapsule(verb: .watch)
-            } else {
-                DSChevron()
-            }
+            // Inert here: the whole row is the button (`subAccountRow`), so the
+            // verb is the row's trailing WORD (prd §746), never a control of
+            // its own nested inside it — "Watch ›" unwatched, "›" watched.
+            DSPushRowTrail(fact: sub.watched ? nil : Text(LocalizedStringKey(RowVerb.watch.label)),
+                           factTone: RowVerb.watch.ink)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         // Flat for `spokeRow`'s reason (§478) — the card is the container.

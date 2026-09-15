@@ -8,25 +8,17 @@ import SwiftUI
 /// twelve months. Three things differ, and each is the corpus talking:
 ///
 /// **The strip is MONTHS.** A year strip over ChatGPT's short life draws three
-/// columns (see `AgentRoom`'s note). Silent months are still drawn, at the
-/// floor height, in a fainter fill — the fortnight you stopped is the reading.
+/// columns (see `AgentRoom`'s note).
 ///
 /// **The lead is DEPTH.** `AgentRoom.headline` names the longest conversation,
 /// which is the one fact in this room no part of this drawing states: the
 /// strip counts conversations, and a 300-turn afternoon is a single tick in it.
 ///
 /// **There is a comparison line.** It is the only place in this card that
-/// speaks about another room, and it is the reading none of these products can
-/// make about themselves. It says CONVERSATIONS and never turns — see
-/// `AgentRoom.comparison` for why that is a correctness rule rather than a
-/// stylistic one.
-///
-/// ## No colour for "more" or "less"
-///
-/// One hue, one scale. Talking to Claude more in March than in June is not a
-/// win and not a failure, and the app has no idea which the person wanted. The
-/// comparison line is the one place a second seat is named at all, and it
-/// states a count rather than a verdict.
+/// speaks about another room. It says CONVERSATIONS and never turns — see
+/// `AgentRoom.comparison` for why that is a correctness rule. It sits UNDER the
+/// rows: this card is about this room, and a comparison promoted over its own
+/// subject would make the head about somebody else's seat.
 ///
 /// ## Four rooms, one card
 ///
@@ -34,7 +26,8 @@ import SwiftUI
 /// only in the strip's hue. The source is passed in rather than read from a
 /// `Thing`, so this view still stores no model.
 ///
-/// FLAT BY LAW: a plain VStack, no generic `Widget`/`Row` mount.
+/// Composed through `DSRoomChassis.Head`, its `SpanStrip` and its ranked `Row`
+/// (prd §745).
 struct AgentRoomCard: View {
     let room: AgentRoom
     /// Which agent room this is — the strip's hue, and nothing else.
@@ -55,72 +48,41 @@ struct AgentRoomCard: View {
     /// the strip and the rows below it are on ONE scale and can't disagree.
     private var top: Int { room.busiest.conversations }
 
-    /// The month strip's full column height — the bar scale and the strip's
-    /// frame are one number, so a column can never outgrow its row.
-    private static let stripHeight: CGFloat = 38
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // No source-name eyebrow (prd §452): a room head renders only
-            // inside its own source's room, under a chip strip where that
-            // source's chip is the lit one.
-            //
+        DSRoomChassis.Head(
             // ONE LEAD (prd §451). The headline is the longest conversation or
             // nil, and on a room with nothing deep enough to name the note is
-            // promoted into the empty slot rather than the card leading with a
-            // sentence that reads the drawing out loud. The note is NOT drawn
-            // twice — it appears once, at whichever tier it is standing in.
-            Text(AgentRoom.headline(room) ?? AgentRoom.note(room))
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .dsCardLead(leadAction) { openLead() }
+            // promoted into the empty slot.
+            lead: .sentence(AgentRoom.headline(room) ?? AgentRoom.note(room)),
+            door: DSRoomChassis.Door(hint: leadAction) { openLead() },
+            notes: notes,
+            footnotes: [.note(AgentRoom.comparison(room)),
+                        .quiet(AgentRoom.footnote(room))]) {
+            DSRoomChassis.Block { monthStrip }
 
-            if AgentRoom.headline(room) != nil {
-                Text(AgentRoom.note(room))
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s1)
-            }
-
-            monthStrip
-                .padding(.top, DS.Space.s3)
-
-            ForEach(Array(AgentRoom.rows(room).enumerated()), id: \.element.id) { index, month in
-                row(month, index: index)
-                    .chartArrival(index: index, reduceMotion: reduceMotion)
-            }
-            .padding(.top, DS.Space.s3)
-
-            // The cross-assistant line sits UNDER the rows, not above them:
-            // this card is about this room, and a comparison promoted over its
-            // own subject would make the head about somebody else's seat.
-            if let comparison = AgentRoom.comparison(room) {
-                Text(comparison)
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s3)
-            }
-
-            if let footnote = AgentRoom.footnote(room) {
-                Text(footnote)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.top, DS.Space.s3)
+            DSRoomChassis.Block {
+                ForEach(Array(AgentRoom.rows(room).enumerated()), id: \.element.id) { index, month in
+                    DSRoomChassis.Row(
+                        title: AgentRoom.monthLabel(month.month),
+                        line: AgentRoom.monthLine(month),
+                        index: index,
+                        action: { onOpen(month) }) {
+                        ShareBar(fraction: AgentRoom.share(conversations: month.conversations, of: top),
+                                 index: index,
+                                 reduceMotion: reduceMotion)
+                    }
+                }
             }
         }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWidgetSurface()
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s2)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            DSHaptic.selection()
-            openLead()
+    }
+
+    /// The note is NOT drawn twice — it appears once, at whichever tier it is
+    /// standing in.
+    private var notes: [DSRoomChassis.Line?] {
+        if AgentRoom.headline(room) != nil {
+            return [.note(AgentRoom.note(room))]
         }
+        return []
     }
 
     /// The lead's destination follows the lead's WORDS. When the headline
@@ -141,82 +103,21 @@ struct AgentRoomCard: View {
         }
     }
 
-    // MARK: - The span
-
     /// A column per MONTH, oldest at the left, ends labelled.
-    ///
-    /// Only the first and last months are labelled: thirty ticks at label size
-    /// is a row of noise, and the two ends are what make the middle readable
-    /// (`XRoomCard.yearStrip`'s ruling, inherited whole).
     private var monthStrip: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            HStack(alignment: .bottom, spacing: 2) {
-                ForEach(room.months) { month in
-                    Capsule(style: .continuous)
-                        // A silent month is drawn FAINT rather than absent — it
-                        // is part of the span and its emptiness is the reading.
-                        .fill(mark.opacity(month.conversations == 0 ? 0.18 : 0.85))
-                        // Floored so a month with a single conversation is
-                        // still a visible column rather than a sub-pixel
-                        // nothing: a month you used it must never draw as one
-                        // you didn't.
-                        .frame(height: max(4, Self.stripHeight * AgentRoom.share(
-                            conversations: month.conversations, of: top)))
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .frame(height: Self.stripHeight, alignment: .bottom)
-            .chartWipe(reduceMotion: reduceMotion)
-            if let first = room.months.first, let last = room.months.last,
-               room.months.count > 1 {
-                HStack {
-                    Text(AgentRoom.monthLabel(first.month))
-                    Spacer(minLength: DS.Space.s2)
-                    Text(AgentRoom.monthLabel(last.month))
-                }
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-            }
-        }
-        .accessibilityElement()
-        // The span, not `AgentRoom.note` — on a room with no headline that
-        // sentence is the card's LEAD, and a strip repeating it makes
-        // VoiceOver say it twice.
-        .accessibilityLabel(Text("A column per month, \(AgentRoom.monthLabel(room.months.first?.month ?? 0)) to \(AgentRoom.monthLabel(room.months.last?.month ?? 0))"))
-    }
-
-    // MARK: - Rows
-
-    /// The busiest months, each with what it was about — the half that meets
-    /// §349's "a head must never draw less than what it displaces", since this
-    /// card takes the slot the topic treemap held.
-    private func row(_ month: AgentRoom.Month, index: Int) -> some View {
-        Button {
-            DSHaptic.selection()
-            onOpen(month)
-        } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(AgentRoom.monthLabel(month.month))
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Spacer(minLength: DS.Space.s2)
-                    Text(AgentRoom.monthLine(month))
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-                ShareBar(fraction: AgentRoom.share(conversations: month.conversations, of: top),
-                         index: index,
-                         reduceMotion: reduceMotion)
-            }
-            .padding(.vertical, DS.Space.s1)
-            // A month is a door, so it is a 44pt target: the label, the line
-            // and the share bar measure shorter than a finger.
-            .dsTapTarget()
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("\(AgentRoom.monthLabel(month.month)), \(AgentRoom.monthLine(month))"))
+        DSRoomChassis.SpanStrip(
+            columns: room.months.map { month in
+                DSRoomChassis.SpanStrip.Column(
+                    id: month.month,
+                    share: AgentRoom.share(conversations: month.conversations, of: top),
+                    silent: month.conversations == 0)
+            },
+            fill: mark,
+            first: room.months.first.map { AgentRoom.monthLabel($0.month) },
+            last: room.months.last.map { AgentRoom.monthLabel($0.month) },
+            // The span, not `AgentRoom.note` — on a room with no headline that
+            // sentence is the card's LEAD, and a strip repeating it makes
+            // VoiceOver say it twice.
+            spoken: String(localized: "A column per month, \(AgentRoom.monthLabel(room.months.first?.month ?? 0)) to \(AgentRoom.monthLabel(room.months.last?.month ?? 0))"))
     }
 }

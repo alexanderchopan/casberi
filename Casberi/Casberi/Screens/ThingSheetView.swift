@@ -2279,23 +2279,13 @@ struct ThingSheetView: View {
                     tracking = MoneyActivityDriver.isTracking(id)
                 }
             } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: tracking ? "bell.badge.slash" : "bell.badge")
-                        .dsSymbolSwap(tracking)
-                        .accessibilityHidden(true)
-                        .dsGlyph(14, weight: .regular)
-                    Text(tracking
-                         ? "Stop watching it"
-                         : "Watch it from the lock screen")
-                        .dsText(.label12)
-                }
-                .foregroundStyle(tracking ? DS.textTertiary : DS.textPrimary)
-                .padding(.horizontal, DS.Space.s3)
-                .frame(minHeight: 32)
-                .background(DS.fillFaint, in: Capsule(style: .continuous))
-                .dsTapTarget(Capsule(style: .continuous))
+                // A verb, so the door row's face (prd §746) — it was a faint
+                // capsule, the one pill on the receipt.
+                DSDoorRowLabel(icon: tracking ? "bell.badge.slash" : "bell.badge",
+                               title: tracking ? Text("Stop watching it")
+                                               : Text("Watch it from the lock screen"))
             }
-            .buttonStyle(PressSpring())
+            .buttonStyle(.plain)
             .dsHover()
             .frame(maxWidth: .infinity)
             .onAppear { tracking = MoneyActivityDriver.isTracking(id) }
@@ -2475,12 +2465,14 @@ struct ThingSheetView: View {
                         seedSystem: AgentSheet.continuationInstructions(
                             source: thing.source, cut: reading.cut))
                 } label: {
-                    Chip(text: AgentKey.active.map {
-                            String(localized: "Carry on with \($0.agent)")
-                         } ?? String(localized: "Carry on"),
-                         style: .tint, glyph: "arrow.turn.down.right")
+                    // A verb, so the door row's face (prd §746).
+                    DSDoorRowLabel(icon: "arrow.turn.down.right",
+                                   title: Text(AgentKey.active.map {
+                                       String(localized: "Carry on with \($0.agent)")
+                                   } ?? String(localized: "Carry on")))
                 }
                 .buttonStyle(.plain)
+                .dsHover()
             }
         }
     }

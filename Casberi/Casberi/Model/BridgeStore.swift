@@ -258,7 +258,7 @@ final class BridgeStore {
             let n = seat.count(watched)
             guard n > 0 else { remove(seat.id); continue }
             let proof: String = switch seat.noun {
-            // **THE NOUN IS `address`, NOT `wallet` (prd §744, user: "it
+            // **THE NOUN IS `address`, NOT `wallet` (prd §747, user: "it
             // should always say watching addresses").** The model has always
             // called it that — `WalletStore.WatchedAddress` — and the door
             // that fills this list says `Follow address`. The seat key stays

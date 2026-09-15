@@ -1704,7 +1704,8 @@ struct Composer: View {
                 HStack(spacing: DS.Space.s2) {
                     ForEach(tagMatches, id: \.self) { tag in
                         Button { completeTag(tag) } label: {
-                            Chip(text: tag, style: .tint, glyph: "tag")
+                            // A CHOICE among completions (prd §746).
+                            Chip(text: tag, glyph: "tag")
                         }
                         .buttonStyle(.plain)
                     }
@@ -2357,7 +2358,8 @@ struct Composer: View {
     /// answer, under the answer they belong to rather than in the chrome.
     @ViewBuilder
     private var keepVerbs: some View {
-        FlowRow(spacing: DS.Space.s2) {
+        // VERBS, so rows (prd §746) — they were a flow of chips.
+        VStack(alignment: .leading, spacing: 0) {
             if let kind = keepableAskKind {
                 let askedOften = AskMemory.askedOften(kind)
                 Button {
@@ -2376,28 +2378,23 @@ struct Composer: View {
                         keepJustLanded = false
                     }
                 } label: {
-                    Chip(text: keepJustLanded ? String(localized: "Kept")
-                            : (askedOften ? String(localized: "Asked often — keep it?")
-                               : (kind == "today" ? String(localized: "Keep this view")
-                                  : String(localized: "Keep"))),
-                         style: (keepJustLanded || askedOften) ? .tint : .neutral,
-                         glyph: keepJustLanded ? "checkmark"
-                            : (askedOften ? "sparkles" : "pin.fill"))
+                    DSDoorRowLabel(icon: keepJustLanded ? "checkmark"
+                                        : (askedOften ? "sparkles" : "pin.fill"),
+                                   title: Text(keepJustLanded ? String(localized: "Kept")
+                                        : (askedOften ? String(localized: "Asked often — keep it?")
+                                           : (kind == "today" ? String(localized: "Keep this view")
+                                              : String(localized: "Keep")))))
                 }
                 .buttonStyle(.plain)
-                .scaleEffect(keepJustLanded ? 1.08 : 1)
+                .dsHover()
                 .disabled(keepJustLanded)
             }
             if !keptCurrent, currentStreamed, let text = keepableText(answerStream.els) {
-                Button {
+                DSDoorRow(icon: "tray.and.arrow.down", label: "Save as a note") {
                     DSHaptic.tap()
                     keptCurrent = true
                     onKeepAnswer(text)
-                } label: {
-                    Chip(text: String(localized: "Save as a note"), style: .neutral,
-                         glyph: "tray.and.arrow.down")
                 }
-                .buttonStyle(.plain)
             }
         }
     }

@@ -70,7 +70,7 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
     /// optional so the caller is never forced to decide which one "the" alarm
     /// belongs to — several can want you at once, and each says so for itself.
     var attention: Set<Scope> = []
-    // **`embedded` IS DELETED (prd §744, 2026-09-15).** It was §547's flag for
+    // **`embedded` IS DELETED (prd §747, 2026-09-15).** It was §547's flag for
     // drawing this switcher as the lower deck of `DSRoomRailSlab` — no glass of
     // its own, no outer padding, no rest fill, and a concentric rounded-rect
     // pick instead of a capsule — so that a pill inside a pill did not double.

@@ -266,7 +266,7 @@ struct VibenetRoomCard: View {
     var scopes: [VibenetSection] = []
     var scopeAttention: Set<VibenetSection> = []
     var onPickScope: ((VibenetSection) -> Void)? = nil
-    /// **THE ROOM'S ACTS, HANDED IN (prd §744).** They were `FeedScreen`'s own
+    /// **THE ROOM'S ACTS, HANDED IN (prd §747).** They were `FeedScreen`'s own
     /// `vibenetSendRow`, a `Section` mounted BELOW this card — which put the
     /// verbs under the list on any Home with history, the exact complaint §682
     /// fixed one seat over. They ride the account card now, so the order is
@@ -610,7 +610,7 @@ struct VibenetRoomCard: View {
                 // keeps its first pixel level with every other scope's and what
                 // clears the settings gear.
                 // **THE CHROME LEADS, AND ON HOME IT IS THE WHOLE HEAD**
-                // (prd §744). Home's crown is no longer drawn here: it rides
+                // (prd §747). Home's crown is no longer drawn here: it rides
                 // the account card inside `scopeChrome`, which is what gives
                 // an account's name the card's whole width. Off Home the
                 // figure draws exactly where it did.
@@ -817,7 +817,7 @@ struct VibenetRoomCard: View {
     /// scope control you cannot reach while deep in the rows it scopes. Fusing
     /// does not fix that; it makes the eventual fix cheaper, since there is one
     /// view to pin instead of two.
-    /// THE VIBENET ROOM'S CHROME, WITH NO BAR IN IT (prd §744, 2026-09-15).
+    /// THE VIBENET ROOM'S CHROME, WITH NO BAR IN IT (prd §747, 2026-09-15).
     ///
     /// Was `railSlab`, the fused slab (§547). It follows the Wallet, Frames,
     /// Hegotá and the Privacy devnet out of the bar, so all five rooms in this
@@ -898,7 +898,7 @@ struct VibenetRoomCard: View {
         }
     }
 
-    /// WHAT EACH SCOPE HOLDS, BEFORE YOU OPEN IT (prd §744).
+    /// WHAT EACH SCOPE HOLDS, BEFORE YOU OPEN IT (prd §747).
     ///
     /// Built once per body pass, read once per row. An empty scope answers
     /// with the same `emptyHeadline` its slot would have drawn, so the row and
@@ -3659,31 +3659,12 @@ struct VibenetEventRow: View {
 
     var body: some View {
         if thing.isLive {
-            // **ONE ANATOMY WITH THE OTHER THREE ROOMS (prd §588).** This was
-            // a hand-rolled `HStack`, and it differed from `WalletRow` in
-            // three ways, NONE of them a type size — which is why these four
-            // lists read as four different fonts while a grep of the ramp
-            // found nothing wrong. The mark was a rounded SQUARE where every
-            // other room's is a circle; the second line was `label12` (12
-            // MEDIUM, secondary) against the shared row's `subhead13` (12
-            // regular, tertiary); and the title was `lineLimit(2)` against a
-            // clamped one, so this room's rows stood at two heights.
-            //
-            // **THE CLOCK'S GRAMMAR IS KEPT WHOLE** (prd §495, user: *"would
-            // it be better if the alert went the whole way across and the
-            // timestamp was on line two?"* — neither, as it turned out: the
-            // layout was fine and the FORMAT was the outlier). This row said
-            // "23 hours ago", ~110pt of a 402pt screen, where every `BandRow`
-            // says "23h" through `LiveTimeText`. Same component, still
-            // ticking on the minute.
-            //
-            // Its `.dsText(.label11)` is GONE rather than moved: it was dead
-            // code, since `LiveTimeText` carries its own `subhead13` and the
-            // innermost font wins. Both resolve to 12pt, so the drift was
-            // invisible — and now it is one rung, said once.
-            WalletRow(mark: mark,
-                      title: thing.summary ?? thing.title,
-                      subtitle: accountLabel) {
+            // ONE ANATOMY (prd §744): the event's glyph at the 26pt lead, not
+            // `WalletRow`'s 36, so this room's column matches every other.
+            DSFeedRow(name: thing.summary ?? thing.title, nameLines: 2,
+                      line: Text(accountLabel)) {
+                WalletMarkView(mark: mark, size: DS.Mark.row)
+            } trailing: {
                 LiveTimeText(date: thing.capturedAt, color: DS.textTertiary)
                     .lineLimit(1).fixedSize()
             }

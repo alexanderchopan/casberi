@@ -224,14 +224,17 @@ struct AgentActiveStatusRow: View {
                          ?? "\(provider.agent) is saved but not active.")
                         .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     Spacer(minLength: DS.Space.s2)
+                    // The row's trailing verb, not a capsule (prd §746).
                     Button {
                         DSHaptic.selection()
                         AgentKey.activate(provider)
                         tick += 1
                     } label: {
-                        Chip(text: "Make active", style: .tint, glyph: "checkmark")
+                        DSPushRowTrail(fact: Text("Make active"), factTone: DS.tint, opens: false)
+                            .dsTapTarget()
                     }
                     .buttonStyle(.plain)
+                    .dsHover()
                 }
             }
             // `tick` is otherwise unread — mutating it is enough to trigger

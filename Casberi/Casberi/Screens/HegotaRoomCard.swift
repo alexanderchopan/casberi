@@ -1706,7 +1706,7 @@ struct HegotaRoomList: View {
             // the one write action this room has, in the one slot with room
             // for it. `HegotaSendCard` gates itself on this phone holding a
             // key, so a room with no key draws no form rather than a dead one.
-            // **HOME HAS NO LIST (prd §744).** §594's "Top up and Send are
+            // **HOME HAS NO LIST (prd §747).** §594's "Top up and Send are
             // Home's" still stands — the tiles moved onto the account card,
             // where they sit beside the crown and are WIRED at last. This arm
             // called `HegotaSendCard()` with NO arguments, so the card kept
@@ -1800,7 +1800,7 @@ struct HegotaRoomList: View {
     /// sheet — the half-open-then-close bug, paid for three times before
     /// today and almost a fourth and fifth in the same afternoon).
     var onOpenKeySheet: () -> Void = {}
-    // `onOpenSend` is deleted (prd §744/§723). It was declared here, passed
+    // `onOpenSend` is deleted (prd §747/§723). It was declared here, passed
     // from `FeedScreen`, and never read — the `.home` arm built its card
     // without it — so the send sheet it names was unreachable from this view.
     // The card is on the account card now and takes its closure there.
@@ -3740,7 +3740,7 @@ enum HegotaConnections {
     }
 }
 
-/// WHAT EACH HEGOTÁ SCOPE HOLDS, BEFORE YOU OPEN IT (prd §744, 2026-09-15).
+/// WHAT EACH HEGOTÁ SCOPE HOLDS, BEFORE YOU OPEN IT (prd §747, 2026-09-15).
 ///
 /// The door rows' right-hand fact, computed once per body pass rather than
 /// once per row: four of these answers walk every account

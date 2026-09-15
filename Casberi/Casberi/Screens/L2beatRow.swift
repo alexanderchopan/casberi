@@ -21,39 +21,28 @@ struct L2beatChainRow: View {
 
 	@ViewBuilder private var liveBody: some View {
 		let chainID = L2beatWatch.chainID(from: thing)
-		// The live read where the sweep has run, the bundled snapshot otherwise — so a chain
-		// watched a moment ago already draws L2BEAT's real shape instead of an empty row
-		// waiting on a request that may be hours away.
 		let project = chainID.flatMap { L2beatState.best($0) }
 
-		VStack(alignment: .leading, spacing: DS.Space.s2) {
-			HStack(alignment: .center, spacing: DS.Space.s3) {
-				L2beatMark(name: project?.name ?? thing.title, chainID: chainID, size: 38)
-				VStack(alignment: .leading, spacing: 2) {
-					Text(project?.name ?? thing.title)
-						.dsText(.body17)
-						.foregroundStyle(DS.textPrimary)
-						.lineLimit(1)
-					Text(subtitle(project))
-						.dsText(.label11)
-						.foregroundStyle(DS.textTertiary)
-						.lineLimit(1)
+		// ONE ANATOMY (prd §744): the 38pt mark is the 26pt lead, the stage
+		// takes the trailing slot, the risks and the summary are the content.
+		DSFeedRow(name: project?.name ?? thing.title, nameLines: 1,
+				  line: Text(subtitle(project))) {
+			L2beatMark(name: project?.name ?? thing.title, chainID: chainID, size: DS.Mark.row)
+		} trailing: {
+			L2beatStageChip(stage: project?.stage)
+		} below: {
+			VStack(alignment: .leading, spacing: DS.Space.s2) {
+				if let project, !project.risks.isEmpty {
+					riskLines(project)
 				}
-				Spacer(minLength: DS.Space.s2)
-				L2beatStageChip(stage: project?.stage)
+				if let summary = thing.summary, !summary.isEmpty {
+					Text(summary)
+						.dsText(.subhead13)
+						.foregroundStyle(DS.textSecondary)
+						.fixedSize(horizontal: false, vertical: true)
+				}
 			}
-
-			if let project, !project.risks.isEmpty {
-				riskLines(project)
-			}
-
-			// L2BEAT's own sentence about the sharpest finding, where there is one.
-			if let summary = thing.summary, !summary.isEmpty {
-				Text(summary)
-					.dsText(.subhead13)
-					.foregroundStyle(DS.textSecondary)
-					.fixedSize(horizontal: false, vertical: true)
-			}
+			.padding(.top, DS.Space.s1)
 		}
 	}
 
@@ -112,59 +101,38 @@ struct L2beatNewsRow: View {
 		let chainID = thing.authorHandle
 		let project = chainID.flatMap { L2beatState.best($0) }
 		let mine = chainID.map { watchedChains.contains($0) } ?? false
+		let tags = thing.tags.filter { $0 != L2beatNewsParse.incidentTag }
 
-		HStack(alignment: .top, spacing: DS.Space.s3) {
-			// Every other room's rows lead with a disc. The chain's own mark where the
-			// milestone names one, and a neutral glyph where it does not.
+		// ONE ANATOMY (prd §744): as `WalletbeatNewsRow`.
+		DSFeedRow(name: thing.title, nameLines: 3,
+				  line: DSFeed.line(thing.summary), lineLines: 3) {
 			ZStack(alignment: .bottomTrailing) {
 				if let project {
-					L2beatMark(name: project.name, chainID: project.id, size: 38)
+					L2beatMark(name: project.name, chainID: project.id, size: DS.Mark.row)
 				} else {
-					RoundedRectangle(cornerRadius: 38 * 0.28, style: .continuous)
+					RoundedRectangle(cornerRadius: DS.Mark.row * 0.28, style: .continuous)
 						.fill(DS.surfaceWell)
-						.frame(width: 38, height: 38)
+						.frame(width: DS.Mark.row, height: DS.Mark.row)
 						.overlay(
 							Image(systemName: "square.stack.3d.up")
-								.dsGlyph(15)
+								.dsGlyph(11)
 								.foregroundStyle(DS.textTertiary)
 						)
 				}
-				// Only an INCIDENT earns a state dot. A launch or an upgrade wearing one would
-				// make every row in a mostly-good timeline look like an alert.
 				if isIncident {
 					Circle()
 						.fill(DS.attention)
-						.frame(width: 11, height: 11)
-						.overlay(Circle().strokeBorder(DS.page, lineWidth: 2.5))
+						.frame(width: 9, height: 9)
+						.overlay(Circle().strokeBorder(DS.surfaceListRow, lineWidth: 2))
 						.offset(x: 3, y: 3)
 				}
 			}
 			.accessibilityHidden(true)
-
-			VStack(alignment: .leading, spacing: DS.Space.s2) {
-				HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-					Text(thing.title)
-						.dsText(.body17)
-						.foregroundStyle(DS.textPrimary)
-						.fixedSize(horizontal: false, vertical: true)
-					Spacer(minLength: DS.Space.s2)
-					LiveTimeText(date: thing.capturedAt)
-				}
-
-				if let summary = thing.summary, !summary.isEmpty {
-					Text(summary)
-						.dsText(.subhead13)
-						.foregroundStyle(DS.textSecondary)
-						.lineLimit(3)
-						.fixedSize(horizontal: false, vertical: true)
-				}
-
+		} trailing: {
+			LiveTimeText(date: thing.capturedAt)
+		} below: {
+			if mine || isIncident || !tags.isEmpty {
 				HStack(spacing: DS.Space.s2) {
-					// LEADS the strip, because it is the fact that decides whether this row is
-					// about you at all — an incident on Base reads identically to one on a
-					// chain you have never touched, and the tag saying "Base" cannot tell them
-					// apart. In the tint rather than `DS.attention`, which in this row means
-					// "L2BEAT calls this an incident" and must keep meaning only that.
 					if mine {
 						Text(String(localized: "You watch this"))
 							.dsText(.label11).fontWeight(.bold)
@@ -175,12 +143,13 @@ struct L2beatNewsRow: View {
 							.dsText(.label11).fontWeight(.bold)
 							.foregroundStyle(DS.attention)
 					}
-					ForEach(thing.tags.filter { $0 != L2beatNewsParse.incidentTag }, id: \.self) { tag in
+					ForEach(tags, id: \.self) { tag in
 						Text(tag)
 							.dsText(.label11)
 							.foregroundStyle(DS.textTertiary)
 					}
 				}
+				.padding(.top, DS.Space.s1)
 			}
 		}
 	}

@@ -1203,7 +1203,7 @@ grep -q 'return .home' "Casberi/Casberi/Model/VibenetSection.swift" \
 # from the room feeding it.
 # The gate lives in the CARD now, not the shell — see the placement note
 # below. Still gated entirely on what the room published, never a source name.
-# **THE GUARD FOLLOWED ITS SUBJECT, TWICE** (§547 → prd §744, 2026-09-15).
+# **THE GUARD FOLLOWED ITS SUBJECT, TWICE** (§547 → prd §747, 2026-09-15).
 # `scopeStrip` went when the switcher became the slab's lower deck; the slab
 # went when the bar was deleted. `scopeChrome` is what composes the room's head
 # here now, and the gate it must still hold is the same one, spelled the same
@@ -1217,14 +1217,14 @@ stripFn=$(sed -n '/private var scopeChrome: some View {/,/^    }$/p' "$TMP/card.
 # card carries. Without this the gate above passes on a head that lost them.
 for half in 'accounts:' 'reading:' 'crown:' 'acts:'; do
   [[ "$stripFn" == *"$half"* ]] \
-    || { echo "✗ vibenet's scopeChrome no longer passes $half — prd §744: the account is a"
+    || { echo "✗ vibenet's scopeChrome no longer passes $half — prd §747: the account is a"
          echo "  card carrying the crown and the acts, and the readings are door rows."; exit 1; }
 done
-# **THE ACTS ARE ON THE CARD, NOT A SECTION BELOW IT** (prd §744, keeping §682's
+# **THE ACTS ARE ON THE CARD, NOT A SECTION BELOW IT** (prd §747, keeping §682's
 # ruling by construction). `vibenetSendRow` mounted under the card until today,
 # which put the verbs below the list on any Home with history.
 grep -q 'acts: { AnyView(vibenetSendRow) }' "$TMP/feed.nc.swift" \
-  || { echo "✗ vibenet's verbs are not handed to the card — prd §744/§682: they ride the"
+  || { echo "✗ vibenet's verbs are not handed to the card — prd §747/§682: they ride the"
        echo "  account card beside the crown, never a Section under the room's list."; exit 1; }
 # **AND NOTHING MAY DRAW BELOW THE FIGURE SLOT EITHER** (2026-09-02, reported
 # in the same breath, on the Permissions scope: the census grid's second row of

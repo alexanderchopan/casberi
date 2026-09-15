@@ -166,7 +166,7 @@ enum DSRoomChassis {
     /// first row is a different question and stays open.
     static let slabPadding: CGFloat = DS.Space.s1
 
-    // `slabDeckGap` is deleted with `DSRoomRailSlab` (prd §744): it spaced
+    // `slabDeckGap` is deleted with `DSRoomRailSlab` (prd §747): it spaced
     // that slab's two decks and nothing else. `slabPadding` survives because
     // `slabInnerRadius` derives from it, and `slabRadius` because the shell
     // and the face rail still draw glass at it.

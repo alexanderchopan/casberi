@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// THE SCOPES AS DOOR ROWS — what the room's Home holds instead of a chip
-/// strip (prd §744, 2026-09-15).
+/// strip (prd §747, 2026-09-15).
 ///
 /// **The complaint this answers, in the words it was made in** (user,
 /// 2026-09-15): *"the sections like holdings accounts, et cetera, don't really

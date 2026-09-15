@@ -2653,7 +2653,9 @@ private struct GenSuggest: View {
     }
 }
 
-/// Chip(source, label) — shelf unit.
+/// Chip(source, label) — shelf unit. A fact (a source and what it holds), so
+/// the mark and the word with no capsule behind them (prd §746); the element
+/// kind keeps its name because a model may emit it (§717).
 private struct GenChip: View {
     let el: GenEl
     var body: some View {
@@ -2661,9 +2663,7 @@ private struct GenChip: View {
             TagGlyph(tag: el.str(0), size: 20)
             Text(el.str(1)).dsText(.subhead13).foregroundStyle(DS.textSecondary)
         }
-        .padding(.horizontal, DS.Space.s3)
         .padding(.vertical, DS.Space.s2)
-        .background(DS.gray100, in: Capsule(style: .continuous))
     }
 }
 

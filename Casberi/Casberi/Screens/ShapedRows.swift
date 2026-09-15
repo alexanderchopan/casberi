@@ -618,17 +618,6 @@ struct BandRow: View {
         return isAlarmClass ? DS.destructive : DS.tint
     }
 
-    /// The badge itself — a 12pt brand mark (`BridgeIcon`, no new asset or
-    /// color table: brand color is identity, not decoration) on a `DS.page`
-    /// plate sized to leave a 2.5pt ring showing on every side. Page-colored
-    /// rather than surface-colored: feed rows sit directly on the page, not
-    /// a card.
-    private var sourceBadgeView: some View {
-        RoundedRectangle(cornerRadius: DS.Radius.appIcon(17), style: .continuous)
-            .fill(DS.page)
-            .frame(width: 17, height: 17)
-            .overlay(BridgeIcon(name: thing.source, size: 12))
-    }
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
     /// re-evaluates a LEAF view's body on the model's own observation,
@@ -641,179 +630,30 @@ struct BandRow: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        // Top-aligned so a wrapping title grows DOWNWARD from the first
-        // line — the icon and the time/project stack stay pinned beside
-        // that line, not floated to the row's vertical center (ruling
-        // 2026-07-09: two lines, never one, never unbounded).
-        HStack(alignment: .top, spacing: DS.Space.s3) {
-            // A thing with its own image leads with the image, not a glyph —
-            // it IS the point of the row (a pin's photo, a screenshot's
-            // capture). Same 26pt leading slot, so the row keeps its height
-            // and rhythm (shaped-feeds rule 2). Remote pins load from a URL;
-            // screenshots from their local PHAsset via PhotoWell. Twitch
-            // frames are perishable — they render only while the source's
-            // live set says the stream is on (honesty at render: the model
-            // may still hold a frame a failed or disconnected sync never
-            // saw end).
-            // The CIRCLE cases draw at `DS.Face.rowCircle` (28) inside the
-            // 26pt seat — optical compensation, see the token's own doc: a
-            // circle at 26 reads lighter than the squircles sharing this
-            // column. The `.frame` back to the seat is what keeps every
-            // row's layout rhythm identical to the squircle cases.
-            Group {
-                switch leader {
-                case .avatar(let avatar):
-                    RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
-                                fallback: thing.source, circular: true)
-                        .frame(width: DS.Face.row, height: DS.Face.row)
-                case .blockie(let addr):
-                    WalletBlockie(address: addr, size: DS.Face.rowCircle)
-                        .frame(width: DS.Face.row, height: DS.Face.row)
-                case .initial(let sender):
-                    SenderInitial(sender: sender, size: DS.Face.rowCircle)
-                        .frame(width: DS.Face.row, height: DS.Face.row)
-                case .publisher(let publisher):
-                    RemoteThumb(urlString: publisher, size: DS.Mark.row, fallback: thing.source)
-                case .thumb(let image, let perishable, let circular):
-                    RemoteThumb(urlString: image,
-                                size: circular ? DS.Face.rowCircle : DS.Mark.row,
-                                fallback: thing.source,
-                                perishable: perishable, circular: circular)
-                        .frame(width: DS.Mark.row, height: DS.Mark.row)
-                case .screenshot, .photoData:
-                    PhotoWell(thing: thing, size: DS.Mark.row)
-                case .glyph:
-                    BridgeIcon(name: thing.source, size: DS.Mark.row)
-                }
-            }
-            // Wallet safety warning (2026-07-20; any flag since prd §160,
-            // 2026-07-21) — the scam works at exactly this glance (a
-            // familiar-looking row, casually trusted), so the flag rides the
-            // icon itself, not just the opened sheet (ThingSheetView's
-            // `securityWarning`, same glyph and color at a bigger scale). A
-            // spoofed symbol earns the badge for the same reason a poisoned
-            // address does: the row is where the lie is read.
-            //
-            // The source badge (2026-08-09) shares this corner and loses to
-            // the flag on purpose — safety outranks provenance. Suppressed
-            // on `imageOnly` rows: the badge there rides the 104×58 photo
-            // instead (below), not this redundant 26pt echo of it.
-            .overlay(alignment: .bottomTrailing) {
-                if thing.isFlagged {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .dsGlyph(9, weight: .regular)
-                        .foregroundStyle(DS.destructive)
-                        .padding(3)
-                        .background(Circle().fill(.black.opacity(0.55)))
-                } else if sourceBadge, !imageOnly, !leaderIsGlyph {
-                    sourceBadgeView
-                        .offset(x: 3, y: 3)
-                }
-            }
-            if imageOnly {
-                // No title at all — deliberately not an empty Text, so nothing
-                // reserves a line for words that don't exist. 104×58: double a
-                // thumbnail's height, enough to actually read the shot, short
-                // of the tile that would dominate the scroll.
-                PhotoWell(thing: thing)
-                    .frame(width: 104, height: 58)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.control,
-                                                style: .continuous))
-                    // The picture notices the cursor (Mac delight, 2026-08-03).
-                    .macHoverBloom()
-                    // The badge rides the picture itself here, inset rather
-                    // than overhanging — at 104×58 an overhanging badge reads
-                    // detached from what it's marking (2026-08-09).
-                    .overlay(alignment: .bottomTrailing) {
-                        if thing.isFlagged {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .dsGlyph(9, weight: .regular)
-                                .foregroundStyle(DS.destructive)
-                                .padding(3)
-                                .background(Circle().fill(.black.opacity(0.55)))
-                        } else if sourceBadge, !leaderIsGlyph {
-                            sourceBadgeView
-                                .padding(4)
-                        }
+        // Bound once: `project` reaches a store per call, and both the line and
+        // the spoken label read it (the row-cost discipline, prd §626).
+        let project = self.project
+        // ONE ANATOMY (prd §744). The title leads; the line says who and
+        // where. `sourceBadge` still means "this room mixes sources" — what it
+        // used to draw as a 17pt badge over the lead is now the line's first
+        // clause, because a badge over a face was the only row in the app that
+        // put two marks in the lead.
+        DSFeedRow(name: imageOnly ? thing.source : titleText,
+                  nameLines: imageOnly ? 1 : (thing.source == "Kalshi" ? 3 : 2),
+                  emphasized: emphasized, done: done, ripple: rippleIndex,
+                  line: imageOnly ? nil : line(project: project)) {
+            leaderView
+                .overlay(alignment: .bottomTrailing) {
+                    if thing.isFlagged {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .dsGlyph(9, weight: .regular)
+                            .foregroundStyle(DS.destructive)
+                            .padding(3)
+                            .background(Circle().fill(.black.opacity(0.55)))
                     }
-                Spacer(minLength: 0)
-            } else {
-            Text(titleText)
-                .dsText(.body17)
-                // The ripple (prd §171): the title dissolves into its new
-                // wording rather than swapping. Keyed on the string, so this
-                // fires ONLY on a real retitle — never on scroll, never on a
-                // first appearance.
-                .contentTransition(.opacity)
-                .animation(DS.Motion.standard.delay(Double(rippleIndex % 8) * 0.045),
-                           value: titleText)
-                .fontWeight(emphasized ? .semibold : .regular)
-                .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
-                .strikethrough(done, color: DS.textTertiary)
-                // Two lines everywhere (ruling 2026-07-09) — except Kalshi,
-                // whose title IS the full market question ("Will the Chiefs
-                // win the Super Bowl?"), not a headline, and was clipping
-                // mid-word at 2 lines (user, 2026-07-13).
-                .lineLimit(thing.source == "Kalshi" ? 3 : 2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            // A post with a photo shows BOTH (ruling 2026-07-10: "keep faces
-            // always but show pictures too"): the avatar keeps the leading
-            // slot — who — and the attached image rides here before the
-            // time — what. An RSS row does the same: publisher mark leads, the
-            // story's own image rides here. 26pt keeps the band's rhythm,
-            // except on the day's one promoted row (`wideArt`).
-            if Self.artRidesBesideIdentity(thing), let art = thing.previewImageURL {
-                if wideArt {
-                    // The day's one picture at reading size (prd §254) — the
-                    // media rooms' own art dimensions (§219), so the app has
-                    // ONE size for "a picture worth looking at in a row"
-                    // rather than a second one invented here. `.still` because
-                    // the shape is unknowable: unlike a Steam header or album
-                    // art, whatever a publisher or a poster attached has no
-                    // inherent ratio, and 16:9 is the honest general crop.
-                    RemoteArt(urlString: art,
-                              width: MediaShape.rowArtWidth(.still),
-                              height: MediaShape.rowArtHeight,
-                              fallback: thing.source,
-                              perishable: thing.source == "Twitch")
-                        // A video's poster says so here too (2026-08-06): this
-                        // is the day's one picture promoted TO reading size, so
-                        // it is the row in All most likely to be looked at and
-                        // tapped, which is exactly where a still masquerading
-                        // as a photograph misleads.
-                        .overlay(alignment: .bottomLeading) {
-                            if PosterFrame.isVideo(art) {
-                                VideoMark(size: 16).padding(DS.Space.s1)
-                            }
-                        }
-                } else {
-                    // NOT marked at 26pt, deliberately. A disc large enough to
-                    // read is most of a 26pt thumb, and this slot already
-                    // carries the flag badge's corner — two marks fighting over
-                    // one speck says less than either alone. Nothing is
-                    // promised at this size either: a 26pt thumb invites no tap
-                    // of its own (the row's tap owns the whole band), so the
-                    // affordance this mark exists to correct isn't offered here.
-                    // Perishable for Twitch, where this slot holds a live
-                    // frame rather than a fixed picture: the bytes change
-                    // behind the URL, so caching them would pin one moment of
-                    // the stream for the life of the row.
-                    RemoteThumb(urlString: art, size: DS.Mark.row, fallback: thing.source,
-                                perishable: thing.source == "Twitch")
                 }
-            }
+        } trailing: {
             VStack(alignment: .trailing, spacing: 1) {
-                // The ledger figure leads the trailing stack (prd §158) —
-                // rounded and tabular so a run of rows lines up on the decimal.
-                // Green only on a receive: money arriving is the one state
-                // worth coloring, and a send in red would read as an error.
-                // A spoofed symbol (prd §160) keeps its figure — the app never
-                // hides what landed — but loses the green. The confirm color
-                // is this row's loudest claim, and "money arrived" is exactly
-                // the claim a fake USDC is making; celebrating it would make
-                // the design a party to the lie. Same corollary as a flat
-                // change having no direction: unearned status isn't painted.
                 if let money = moneyAmount {
                     Text(money.text)
                         .dsText(.price16)
@@ -823,10 +663,7 @@ struct BandRow: View {
                         .lineLimit(1)
                 }
                 if live {
-                    HStack(spacing: 4) {
-                        Circle().fill(DS.confirm).frame(width: 6, height: 6)
-                        Text("Live").dsText(.label12).foregroundStyle(DS.confirm)
-                    }
+                    DSFeedLive()
                 } else if let countdown {
                     Text(countdown).dsText(.label12).foregroundStyle(DS.tint)
                 } else {
@@ -834,41 +671,91 @@ struct BandRow: View {
                         .fontWeight(newSinceLastSeen ? .semibold : .regular)
                         .animation(DS.Motion.standard, value: newSinceLastSeen)
                 }
-                if let project {
-                    let hue = labelHue
-                    Text(project)
-                        .dsText(.label11)
-                        // Capped so a long value can't eat the title (2026-08-14).
-                        // Every value this slot held before today was short by
-                        // nature — "Main", "Cash App", "★234 · Swift" — and
-                        // nothing bounded it. A Kindle row's label is a WORK
-                        // ("Seeing Like a State — James C. Scott"), which is a
-                        // different order of length, and the trailing stack
-                        // takes its width from content: unbounded, it compresses
-                        // the sentence the row exists to show. Truncating the
-                        // label costs the tail of a book title; not truncating
-                        // costs the row.
-                        .frame(maxWidth: 132, alignment: .trailing)
-                        .truncationMode(.tail)
-                        // Weight tracks the tint: at `label11` a hue needs the
-                        // extra stroke to read as chosen rather than as a
-                        // rendering artifact, and a row with nothing honest to
-                        // say stays quiet in both channels rather than one.
-                        .fontWeight(hue != nil ? .semibold : .medium)
-                        .foregroundStyle(hue ?? DS.textTertiary)
-                        .lineLimit(1)
+            }
+        } below: {
+            if imageOnly {
+                // A wordless screenshot (prd §218): the picture IS the row, so
+                // it takes the content slot and the name says only where from.
+                PhotoWell(thing: thing)
+                    .frame(width: 104, height: 58)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                style: .continuous))
+                    .macHoverBloom()
+                    .padding(.top, DS.Space.s1)
+            } else if Self.artRidesBesideIdentity(thing), let art = thing.previewImageURL {
+                // The art that rode BESIDE the identity (right of the title)
+                // moves under the name, at the tile size every strip uses
+                // (prd §730). The day's anchor (§254) keeps its wide frame.
+                DSFeedTiles {
+                    if wideArt {
+                        RemoteArt(urlString: art,
+                                  width: MediaShape.rowArtWidth(.still),
+                                  height: MediaShape.rowArtHeight,
+                                  fallback: thing.source,
+                                  perishable: thing.source == "Twitch")
+                            .overlay(alignment: .bottomLeading) {
+                                if PosterFrame.isVideo(art) {
+                                    VideoMark(size: 16).padding(DS.Space.s1)
+                                }
+                            }
+                    } else {
+                        RemoteThumb(urlString: art, size: DS.Mark.tile,
+                                    fallback: thing.source,
+                                    perishable: thing.source == "Twitch")
+                    }
                 }
             }
         }
-        .padding(.vertical, DS.Space.s2)
-        // One row, one element, one sentence — see `ThingVoice`. Without this
-        // a single row is five stops: icon, title, thumbnail, time, tag.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(ThingVoice.rowLabel(for: thing, title: titleText,
                                                 project: project, live: live,
                                                 countdown: countdown,
                                                 isNew: newSinceLastSeen,
                                                 isAlarm: isAlarmClass))
+    }
+
+    /// The lead, in the ladder `leader` resolves. Always inside the anatomy's
+    /// 26pt frame; a circle draws at `Face.rowCircle`, as it always did.
+    @ViewBuilder private var leaderView: some View {
+        switch leader {
+        case .avatar(let avatar):
+            RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
+                        fallback: thing.source, circular: true)
+        case .blockie(let addr):
+            WalletBlockie(address: addr, size: DS.Face.rowCircle)
+        case .initial(let sender):
+            SenderInitial(sender: sender, size: DS.Face.rowCircle)
+        case .publisher(let publisher):
+            RemoteThumb(urlString: publisher, size: DS.Mark.row, fallback: thing.source)
+        case .thumb(let image, let perishable, let circular):
+            RemoteThumb(urlString: image,
+                        size: circular ? DS.Face.rowCircle : DS.Mark.row,
+                        fallback: thing.source,
+                        perishable: perishable, circular: circular)
+        case .screenshot, .photoData:
+            PhotoWell(thing: thing, size: DS.Mark.row)
+        case .glyph:
+            BridgeIcon(name: thing.source, size: DS.Mark.row)
+        }
+    }
+
+    /// Who and where, as ONE `Text` (prd §744): the source's name first when
+    /// the room mixes sources, then the project label in its source's legible
+    /// hue — the hue the trailing label wore since §240, kept on the same words.
+    private func line(project: String?) -> Text? {
+        let named: String? = sourceBadge ? thing.source : nil
+        let hue = labelHue
+        let labelled: Text? = project.map { p in
+            Text(p)
+                .foregroundStyle(hue ?? DS.textSecondary)
+                .fontWeight(hue != nil ? .semibold : .regular)
+        }
+        switch (named, labelled) {
+        case (nil, nil):          return nil
+        case (let s?, nil):       return Text(s)
+        case (nil, let p?):       return p
+        case (let s?, let p?):    return Text(s) + Text(verbatim: " · ") + p
+        }
     }
 }
 
@@ -1053,27 +940,18 @@ struct TokenRow: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        HStack(spacing: DS.Space.s3) {
+        // ONE ANATOMY (prd §744): a 36pt disc and a semibold name made the
+        // token the loudest row in any room it landed in. It keeps the one
+        // thing that is its content — the price where the time would be.
+        DSFeedRow(name: tokenName, nameLines: 1, line: DSFeed.line(vitals)) {
             if let image = thing.previewImageURL, !image.isEmpty {
-                RemoteThumb(urlString: image, size: DS.Face.list, fallback: thing.source,
+                RemoteThumb(urlString: image, size: DS.Face.rowCircle, fallback: thing.source,
                             circular: true)
             } else {
-                BridgeIcon(name: thing.source, size: DS.Mark.list)
+                BridgeIcon(name: thing.source, size: DS.Mark.row)
             }
-            VStack(alignment: .leading, spacing: 1) {
-                Text(tokenName)
-                    .dsText(.body17).fontWeight(.semibold)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                if let vitals {
-                    Text(vitals)
-                        .dsText(.label12).foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: DS.Space.s2)
-            VStack(alignment: .trailing, spacing: 3) {
+        } trailing: {
+            VStack(alignment: .trailing, spacing: 1) {
                 Text(TokenChartStyle.priceText(pulse.price))
                     .dsText(.price16)
                     .foregroundStyle(DS.textPrimary)
@@ -1084,8 +962,6 @@ struct TokenRow: View {
                                compact: true, solid: true)
             }
         }
-        .padding(.vertical, DS.Space.s2)
-        // One row, one sentence — name, price, and which way it moved.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("\(tokenName), \(TokenChartStyle.priceText(pulse.price)), \(TokenChartStyle.changeText(pulse.change24h))"))
     }
@@ -1609,55 +1485,28 @@ struct MediaRow: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        HStack(alignment: .top, spacing: DS.Space.s3) {
-            Group {
-                if let url = thing.previewImageURL, !url.isEmpty,
-                   // A Twitch frame is perishable: it renders only while the
-                   // live set says the stream is on, or a dead frame would
-                   // claim a broadcast that ended (the same rule BandRow
-                   // applies to its 26pt slot).
-                   thing.source != "Twitch" || live {
+        let byline = self.byline
+        // ONE ANATOMY (prd §744): the mark leads, the art moves under the name
+        // at tile height and keeps its shape's aspect — a video frame cropped
+        // square would lose the frame.
+        DSFeedRow(name: thing.title, done: done, line: DSFeed.line(byline)) {
+            BridgeIcon(name: thing.source, size: DS.Mark.row)
+        } trailing: {
+            if live { DSFeedLive() } else { LiveTimeText(date: thing.capturedAt) }
+        } below: {
+            if let url = thing.previewImageURL, !url.isEmpty,
+               thing.source != "Twitch" || live {
+                DSFeedTiles {
                     RemoteArt(urlString: url,
-                              width: MediaShape.rowArtWidth(art),
-                              height: MediaShape.rowArtHeight,
+                              width: (MediaShape.rowArtWidth(art) * DS.Mark.tile
+                                      / MediaShape.rowArtHeight).rounded(),
+                              height: DS.Mark.tile,
                               fallback: thing.source,
                               perishable: thing.source == "Twitch",
                               freshness: freshness)
-                } else {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
-                            .fill(DS.fillFaint)
-                        BridgeIcon(name: thing.source, size: DS.Mark.row)
-                    }
-                    .frame(width: MediaShape.rowArtWidth(art), height: MediaShape.rowArtHeight)
-                }
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(thing.title)
-                    .dsText(.body17)
-                    .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
-                    .strikethrough(done, color: DS.textTertiary)
-                    .lineLimit(2)
-                if let byline {
-                    Text(byline)
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            VStack(alignment: .trailing, spacing: 1) {
-                if live {
-                    HStack(spacing: 4) {
-                        Circle().fill(DS.confirm).frame(width: 6, height: 6)
-                        Text("Live").dsText(.label12).foregroundStyle(DS.confirm)
-                    }
-                } else {
-                    LiveTimeText(date: thing.capturedAt)
                 }
             }
         }
-        .padding(.vertical, DS.Space.s2)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(ThingVoice.rowLabel(for: thing, title: thing.title,
                                                 project: byline, live: live))
@@ -1699,32 +1548,21 @@ struct MusicRow: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        let parts = self.parts   // one split per render, read twice below
-        HStack(spacing: DS.Space.s3) {
+        let parts = self.parts   // one split per render
+        // ONE ANATOMY (prd §744): the album art was the 44pt lead; it is a
+        // tile under the name now, and the source's mark leads like every row.
+        DSFeedRow(name: parts.title, nameLines: 1, done: done,
+                  line: DSFeed.line(parts.artist)) {
+            BridgeIcon(name: thing.source, size: DS.Mark.row)
+        } trailing: {
+            LiveTimeText(date: thing.capturedAt)
+        } below: {
             if let art = thing.previewImageURL, !art.isEmpty {
-                RemoteThumb(urlString: art, size: DS.Mark.tile, fallback: thing.source)
-            } else {
-                BridgeIcon(name: thing.source, size: DS.Mark.tile)
-            }
-            VStack(alignment: .leading, spacing: 1) {
-                Text(parts.title)
-                    .dsText(.body17)
-                    .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
-                    .strikethrough(done, color: DS.textTertiary)
-                    .lineLimit(1)
-                if let artist = parts.artist {
-                    Text(artist)
-                        .dsText(.subhead13)
-                        .foregroundStyle(done ? DS.textTertiary : DS.textSecondary)
-                        .lineLimit(1)
+                DSFeedTiles {
+                    RemoteThumb(urlString: art, size: DS.Mark.tile, fallback: thing.source)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            // The project tag trailed here until 2026-07-23 (dropped across
-            // every shaped row — see BandRow.project's doc for why).
-            LiveTimeText(date: thing.capturedAt)
         }
-        .padding(.vertical, DS.Space.s2)
     }
 }
 
@@ -1854,80 +1692,24 @@ struct BundleRow: View {
     var art: [String] = []
 
     var body: some View {
-        HStack(spacing: DS.Space.s3) {
-            if art.isEmpty {
-                // The deck (prd §254, 2026-07-31): a pictureless bundle used to
-                // wear the plain single glyph every ordinary row wears, so the
-                // only thing saying "this is several things" was the number in
-                // the trailing slot — a fact you read, not a shape you see. Two
-                // cards peek from behind the icon, which is what a stack looks
-                // like everywhere else. It is a FILL, never a stroke: nothing in
-                // this app draws a line (design law).
-                // OPAQUE tones, not one translucent fill (2026-08-12). Both
-                // cards were `fillFaint`, and two alpha fills that overlap
-                // DOUBLE where they cross — so the deck painted 3% black over
-                // the light page in its outer sliver and ~6% in the inner one,
-                // a hard-edged step reading as a grey smudge behind the icon
-                // rather than as cards. Reported as "square shadows", and
-                // invisible in dark, where the same fills are 4% white on
-                // black. This is `surfaceRaised`'s own documented lesson —
-                // reach for an opaque tone when a fill is drawn in pieces.
-                //
-                // The two tones also do the work the offsets alone could not:
-                // opaque cards of ONE colour merge into a single sliver, so
-                // the nearer card is the card tone and the farther one is
-                // recessed, which is what depth means.
-                ZStack(alignment: .leading) {
-                    ForEach([2, 1], id: \.self) { step in
-                        RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.row),
-                                         style: .continuous)
-                            .fill(step == 1 ? DS.surfaceSheet : DS.surfaceWell)
-                            .frame(width: DS.Mark.row, height: DS.Mark.row)
-                            .offset(x: CGFloat(step) * 4)
-                            .accessibilityHidden(true)
-                    }
-                    BridgeIcon(name: source, size: DS.Mark.row)
-                }
-                // The SEAT stays `Mark.row` and the peek cards OVERHANG it
-                // (2026-08-14, user report with screenshot: "the Wallet entry
-                // has an extra space indented and is not even with the rest").
-                // The old `Mark.row + 8` frame billed the cards' peek to the
-                // layout, so every deck bundle's title started 8pt right of
-                // the column every other row keeps. A ZStack doesn't clip, so
-                // the cards still draw — into the leading gap, where 8pt of
-                // the s3 leaves clear air — and the text column holds.
-                .frame(width: DS.Mark.row, alignment: .leading)
-            } else {
-                // The fan: newest on top, each a step behind — the same 26pt
-                // leading seat every band row keeps, grown only by the
-                // overlap, so the row's rhythm holds.
-                ZStack(alignment: .leading) {
-                    ForEach(Array(art.enumerated().reversed()), id: \.offset) { i, url in
-                        RemoteThumb(urlString: url, size: DS.Mark.row, fallback: source)
-                            .offset(x: CGFloat(i) * 10)
+        // ONE ANATOMY (prd §744): the count leaves its trailing figure for the
+        // line, the time takes the trailing slot every row gives it, and the
+        // stacked art in the lead becomes tiles under the name.
+        DSFeedRow(name: source, nameLines: 1,
+                  line: Text(verbatim: "\(count) \(word)")) {
+            BridgeIcon(name: source, size: DS.Mark.row)
+        } trailing: {
+            LiveTimeText(date: newest)
+        } below: {
+            if !art.isEmpty {
+                DSFeedTiles {
+                    ForEach(Array(art.prefix(3).enumerated()), id: \.offset) { _, url in
+                        RemoteThumb(urlString: url, size: DS.Mark.tile, fallback: source)
                     }
                 }
-                .frame(width: DS.Mark.row + CGFloat(art.count - 1) * 10, alignment: .leading)
-            }
-            VStack(alignment: .leading, spacing: 1) {
-                Text(source)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                LiveTimeText(date: newest)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            VStack(alignment: .trailing, spacing: 0) {
-                Text("\(count)")
-                    .dsText(.price16)
-                    .foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
-                Text(word)
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
+                .accessibilityHidden(true)
             }
         }
-        .padding(.vertical, DS.Space.s2)
     }
 }
 
@@ -2008,58 +1790,30 @@ struct StripRow: View {
     private static let tile: CGFloat = DS.Mark.tile
 
     var body: some View {
-        HStack(spacing: DS.Space.s3) {
-            // The SEAT is `BundleRow`'s, byte for byte: the source's mark at
-            // `Mark.row`, so this row's name starts where every other row's
-            // does.
+        // ONE ANATOMY (prd §744): the count moves into the line and the time
+        // into the trailing slot; the tiles already sat under the name (§719).
+        DSFeedRow(name: source, nameLines: 1,
+                  line: Text(verbatim: "\(count) \(word)")) {
             BridgeIcon(name: source, size: DS.Mark.row)
-                .frame(width: DS.Mark.row, alignment: .leading)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(source)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                LiveTimeText(date: newest)
-                HStack(spacing: Self.gap) {
-                    ForEach(tiles) { tile in
-                        if let remote = tile.remote {
-                            // A remote image (a face, a cover, an article's
-                            // art): no model read at all, so nothing here can
-                            // touch a tombstone.
-                            RemoteThumb(urlString: remote, size: Self.tile,
-                                        fallback: source, circular: tile.circular)
-                        } else if let thing = tile.item.live {
-                            // `.live` INSIDE the closure before the first
-                            // stored read (corollary 3, build 176 — see
-                            // `ThingRowKeying`): this closure is re-evaluated
-                            // against the array it already holds when a
-                            // heal's delete lands, ahead of any guard
-                            // `PhotoWell` does for itself.
-                            PhotoWell(thing: thing, size: Self.tile)
-                                .frame(width: Self.tile, height: Self.tile)
-                                .clipShape(RoundedRectangle(
-                                    cornerRadius: DS.Radius.appIcon(Self.tile),
-                                    style: .continuous))
-                        }
+        } trailing: {
+            LiveTimeText(date: newest)
+        } below: {
+            DSFeedTiles {
+                ForEach(tiles) { tile in
+                    if let remote = tile.remote {
+                        RemoteThumb(urlString: remote, size: Self.tile,
+                                    fallback: source, circular: tile.circular)
+                    } else if let thing = tile.item.live {
+                        PhotoWell(thing: thing, size: Self.tile)
+                            .frame(width: Self.tile, height: Self.tile)
+                            .clipShape(RoundedRectangle(
+                                cornerRadius: DS.Radius.appIcon(Self.tile),
+                                style: .continuous))
                     }
                 }
-                .padding(.top, DS.Space.s1)
-                // The tiles already say "several"; a screen reader gets that
-                // from the count and unit, in words.
-                .accessibilityHidden(true)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            VStack(alignment: .trailing, spacing: 0) {
-                Text("\(count)")
-                    .dsText(.price16)
-                    .foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
-                Text(word)
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-            }
+            .accessibilityHidden(true)
         }
-        .padding(.vertical, DS.Space.s2)
     }
 }
 
@@ -2353,24 +2107,14 @@ struct TakeawayCard: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(spacing: DS.Space.s2) {
-                Text(thing.source)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                Spacer()
-                LiveTimeText(date: thing.capturedAt)
-            }
-            Text(thing.title)
-                .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            if !thing.content.isEmpty {
-                Text(thing.content)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    .lineLimit(3)
-            }
+        // ONE ANATOMY (prd §744): the source's name was a 12pt eyebrow over a
+        // heading; the mark says the source, the title is the name.
+        DSFeedRow(name: thing.title, nameLines: 3,
+                  line: DSFeed.line(thing.content), lineLines: 3) {
+            BridgeIcon(name: thing.source, size: DS.Mark.row)
+        } trailing: {
+            LiveTimeText(date: thing.capturedAt)
         }
-        .padding(.vertical, DS.Space.s2)
     }
 }
 
@@ -2425,57 +2169,25 @@ struct ExcerptRow: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        HStack(alignment: .top, spacing: DS.Space.s3) {
+        // ONE ANATOMY (prd §744): the excerpt is the line, clamped at `lines`.
+        DSFeedRow(name: thing.title, line: DSFeed.line(excerpt), lineLines: lines) {
             BridgeIcon(name: thing.source, size: DS.Mark.row)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(thing.title)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .lineLimit(2)
-                if let excerpt {
-                    Text(excerpt)
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        .lineLimit(lines)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            // THE ENTRY'S PICTURE (prd §399, 2026-08-17). §398 landed both
-            // journal exports' photographs and no row drew them, so a journal
-            // room full of pictures read as a wall of text.
-            //
-            // A TRAILING THUMB, not a grid tile: every mixed room in this app
-            // (Snapchat, Files, X) promotes a WORDLESS picture into a grid and
-            // keeps a captioned one as a row, and a journal entry always has
-            // words — the photograph accompanies what you wrote rather than
-            // being it, so splitting them would separate an entry from its own
-            // picture.
-            if thing.previewImageData != nil {
-                PhotoWell(thing: thing, size: 40)
-            }
-            // HOW LONG THE CONVERSATION WAS (2026-08-20). §367 made the sheet
-            // draw a chat as a chat, and the ROW still gave a 61-turn session
-            // and a 3-turn one the same chrome — title, excerpt, time — so the
-            // one fact that separates a real working session from a one-line
-            // question was stored on every row and drawn on none.
-            //
-            // It rides `messageCount`, which is in `FeedScreen`'s prefetch
-            // list, so this costs no fault. The row deliberately says nothing
-            // about the CLAMP: knowing how much was cut needs the parsed turn
-            // count, which means reading `enrichedText` — a heavy column left
-            // out of that prefetch on purpose — for every row on every scroll.
-            // The sheet already carries that clause ("Stored to here…"), which
-            // is where somebody reading the conversation actually needs it.
-            if let count = thing.messageCount, count > 1 {
-                VStack(alignment: .trailing, spacing: 2) {
-                    LiveTimeText(date: thing.capturedAt)
+        } trailing: {
+            VStack(alignment: .trailing, spacing: 2) {
+                LiveTimeText(date: thing.capturedAt)
+                if let count = thing.messageCount, count > 1 {
                     Text(Self.lengthLabel(count: count, source: thing.source))
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                 }
-            } else {
-                LiveTimeText(date: thing.capturedAt)
+            }
+        } below: {
+            if thing.previewImageData != nil {
+                DSFeedTiles {
+                    PhotoWell(thing: thing, size: DS.Mark.tile)
+                }
             }
         }
-        .padding(.vertical, DS.Space.s2)
     }
 
     /// "24 turns" for a conversation with an agent, "24 messages" for one with
@@ -2585,152 +2297,70 @@ struct PostCard: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(spacing: DS.Space.s2) {
-                if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
-                    // 28-in-a-26-seat — the optical circle bump BandRow's
-                    // leader documents; this header mixes circle avatars
-                    // with the squircle fallback below, the exact case
-                    // `DS.Face.rowCircle` exists for.
-                    RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
-                                fallback: thing.source, circular: true)
-                        .frame(width: DS.Face.row, height: DS.Face.row)
-                } else {
-                    BridgeIcon(name: thing.source, size: DS.Mark.row)
-                }
-                Text(author)
-                    .dsText(.subhead13).fontWeight(.medium)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-                // WHY it's here (2026-07-27) — the same `contextLabel` the
-                // All feed's `BandRow` already wears in its trailing slot,
-                // finally reaching the post's own room: "Liked", "/design",
-                // "Mentions you". Tinted the network's own `brandHue` — color
-                // lives in the tag, same place V3b already put a project's
-                // hue, never in the card itself.
+        // ONE ANATOMY (prd §744): the person is the name, at the same 17pt and
+        // the same 26pt lead as every row, so the words sit on the column's one
+        // left edge. The words, the quote and the media are the row's content.
+        DSFeedRow(name: author, nameLines: 1) {
+            if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
+                RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
+                            fallback: thing.source, circular: true)
+            } else {
+                BridgeIcon(name: thing.source, size: DS.Mark.row)
+            }
+        } trailing: {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 if let why = SocialThread.contextLabel(for: thing) {
                     Text(why)
                         .dsText(.label12).fontWeight(.semibold)
-                        // A source with no honest brand color labels itself
-                        // neutral, not blue (2026-08-10) — and the hue it does
-                        // show is now held to the text ramp's contrast bar
-                        // (2026-08-14). This was `washHue`, which is built for
-                        // a field BEHIND content and floors brightness at 0.60:
-                        // as ink on the light page it cleared 4.5:1 for 29 of
-                        // the 85 hues that have one. A post card paints no
-                        // background of its own, so the page is the right thing
-                        // to measure against here, exactly as in `BandRow`.
                         .foregroundStyle(DS.legibleInk(for: thing.source) ?? DS.textTertiary)
                         .lineLimit(1)
                 }
-                Spacer()
-                // Rows carry status (principle 6): the mark survived the
-                // .chat → .social split as a header label — the takeaway
-                // card's content slot would show a post's permalink, so the
-                // card keeps its anatomy and wears the state instead.
                 if thing.mark == .doing {
                     Text("Doing").dsText(.label12).foregroundStyle(DS.tint)
                 }
                 LiveTimeText(date: thing.capturedAt)
             }
-            // The post this one answers, above the words, where every client
-            // puts it (2026-07-27) — `ThingSheetView`'s own `replyingToRow`
-            // already earned this line in the sheet; the room never had it,
-            // so a reply to someone else read as a contextless non sequitur.
-            if let parent = thing.parent {
-                ReplyingToRow(parent: parent)
-            }
-            Text(words)
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                // A row still has a floor: six lines reads as prose, not a
-                // wall — the tap already opens the sheet for the rest, the
-                // same convention `ExcerptRow`'s clamp keeps. `whole` lifts it
-                // for a room whose rows ARE the words; see the ladder below.
-                .lineLimit(clamp)
-                .fixedSize(horizontal: false, vertical: true)
-            // The post this one QUOTES (2026-07-27) — `SocialQuoteCard`
-            // already rendered in the sheet since 2026-07-16; a quote-post in
-            // the room itself read as a bare, contextless line until now.
-            if let quote = thing.quote {
-                // Context in a row, a door in the sheet — see
-                // `SocialQuoteCard.walkable`. A row must not carry a
-                // presentation of its own.
-                SocialQuoteCard(card: quote, source: thing.source, walkable: false)
-            }
-            // Every attached image shows, not just the first (item 7 of the
-            // 2026-07-27 social pass) — `imageURLs` has held all of them
-            // since 2026-07-16, but this row used to draw the row thumbnail
-            // (`previewImageURL`) alone. A single image keeps `PostMedia`'s
-            // dead-URL collapse; two or more switch to the grid.
-            if thing.imageURLs.count > 1 {
-                PostImageGrid(urls: thing.imageURLs)
-            } else if let media = thing.previewImageURL, !media.isEmpty {
-                PostMedia(urlString: media)
-            } else if let stored = StoredPixels.probe(thing) {
-                // Through `StoredPixels` since prd §626: this is a FEED ROW's
-                // body, and SwiftUI re-evaluates a leaf's body on the model's
-                // own observation (liveness corollary 5) — so the bare
-                // `previewImageData` read plus `UIImage(data:)` that stood here
-                // faulted an external file and built a fresh, undecoded image
-                // on every one of those passes, which during a foreground
-                // sweep is many. Same nil-ness, same picture, decoded once —
-                // and since 2026-09-08 decoded OFF the main thread: the probe
-                // answers the branch from the image header, `StoredPicture`
-                // draws the bitmap when it is ready, at this exact frame.
-                //
-                // A picture the app already HOLDS rather than fetches
-                // (2026-08-06). Every source this card served until now was a
-                // live network bridge whose media is a URL; an IMPORT has no
-                // URL to give — `ImportMedia` decodes the archive's own file
-                // to a thumbnail inside the folder grant, because there is no
-                // second chance at a folder somebody has stopped granting. So
-                // an X post's picture is bytes on the row, and without this
-                // branch the card would have shown none of them: the §283
-                // failure exactly (pixels stored, never drawn), which is what
-                // a connected folder of screenshots looked like as a wall of
-                // text.
-                //
-                // Pinned inside a GeometryReader for the reason `PostMedia`
-                // states above it — a bare `scaledToFill` inflates the row to
-                // the image's intrinsic size.
-                GeometryReader { geo in
-                    StoredPicture(thing, size: stored) { image in
-                        Image(uiImage: image)
-                            .resizable().scaledToFill()
-                    }
-                    .frame(width: geo.size.width, height: geo.size.height)
+        } below: {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if let parent = thing.parent {
+                    ReplyingToRow(parent: parent)
                 }
-                .frame(height: 160)
-                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                // A CAPTIONED video's poster says so (2026-08-18, prd §396).
-                // The wordless ones are tiles in the room's grid and wear the
-                // mark there; this is the other half — a video with a caption
-                // stays a post card, so without this its frame is a still with
-                // nothing to say it is one.
-                .overlay(alignment: .bottomLeading) {
-                    if thing.tags.contains("Video") {
-                        VideoMark(size: 26).padding(DS.Space.s2)
+                Text(words)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(clamp)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let quote = thing.quote {
+                    SocialQuoteCard(card: quote, source: thing.source, walkable: false)
+                }
+                if thing.imageURLs.count > 1 {
+                    PostImageGrid(urls: thing.imageURLs)
+                } else if let media = thing.previewImageURL, !media.isEmpty {
+                    PostMedia(urlString: media)
+                } else if let stored = StoredPixels.probe(thing) {
+                    GeometryReader { geo in
+                        StoredPicture(thing, size: stored) { image in
+                            Image(uiImage: image)
+                                .resizable().scaledToFill()
+                        }
+                        .frame(width: geo.size.width, height: geo.size.height)
+                    }
+                    .frame(height: 160)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                    .overlay(alignment: .bottomLeading) {
+                        if thing.tags.contains("Video") {
+                            VideoMark(size: 26).padding(DS.Space.s2)
+                        }
                     }
                 }
+                if let line = SocialLikers.shared.roll(for: thing.sourceRef)?.line {
+                    Text(line)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
             }
-            // WHO liked it (2026-08-07, prd §330). Under the post, where every
-            // client puts it — and only ever on YOUR OWN posts, because
-            // `SocialLikers` is written by the inbound read alone and that read
-            // only ever asks about your own recent casts. So no "is this mine?"
-            // test is needed here, and none is made: the presence of a roll IS
-            // the answer.
-            //
-            // Names, never a bare number (§239) — `line` returns nil when not
-            // one liker could be named, so a row can never degrade into the
-            // tally the sheet's engagement line already shows.
-            if let line = SocialLikers.shared.roll(for: thing.sourceRef)?.line {
-                Text(line)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-            }
+            .padding(.top, 2)
         }
-        .padding(.vertical, DS.Space.s2)
     }
 }
 
@@ -2865,66 +2495,53 @@ struct SocialThreadCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(spacing: DS.Space.s2) {
-                if let avatar = head.authorAvatarURL, !avatar.isEmpty {
-                    // Same optical circle bump as PostCard's header — one
-                    // slot, two possible shapes, equal visual weight.
-                    RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
-                                fallback: head.source, circular: true)
-                        .frame(width: DS.Face.row, height: DS.Face.row)
-                } else {
-                    BridgeIcon(name: head.source, size: DS.Mark.row)
-                }
-                Text(author)
-                    .dsText(.subhead13).fontWeight(.medium)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
+        // ONE ANATOMY (prd §744), as `PostCard`. The 2pt rule that ran down the
+        // replies is gone with it: it was a line, and nothing in this app draws
+        // a line (§8). The replies are paragraphs of the same post, spaced.
+        DSFeedRow(name: author, nameLines: 1) {
+            if let avatar = head.authorAvatarURL, !avatar.isEmpty {
+                RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
+                            fallback: head.source, circular: true)
+            } else {
+                BridgeIcon(name: head.source, size: DS.Mark.row)
+            }
+        } trailing: {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 if let why = SocialThread.contextLabel(for: head) {
                     Text(why)
                         .dsText(.label12).fontWeight(.semibold)
-                        // Held to the contrast bar, `PostCard`'s reasoning
-                        // (2026-08-14) — the two draw the same label and must
-                        // not disagree about how it is inked.
                         .foregroundStyle(DS.legibleInk(for: head.source) ?? DS.textTertiary)
                         .lineLimit(1)
                 }
-                Spacer()
                 LiveTimeText(date: head.capturedAt)
             }
-            if let parent = head.parent {
-                ReplyingToRow(parent: parent)
-            }
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                Rectangle()
-                    .fill(DS.fillFaint)
-                    .frame(width: 2)
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    let headWords = words(head)
-                    Text(headWords)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(clamp(headWords))
-                        .fixedSize(horizontal: false, vertical: true)
-                    ForEach(replies.keyed) { item in
-                        if item.thing.isLive {
-                            let part = words(item.thing)
-                            Text(part)
-                                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                                .lineLimit(clamp(part))
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+        } below: {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if let parent = head.parent {
+                    ReplyingToRow(parent: parent)
+                }
+                let headWords = words(head)
+                Text(headWords)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(clamp(headWords))
+                    .fixedSize(horizontal: false, vertical: true)
+                ForEach(replies.keyed) { item in
+                    if item.thing.isLive {
+                        let part = words(item.thing)
+                        Text(part)
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            .lineLimit(clamp(part))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+                if head.imageURLs.count > 1 {
+                    PostImageGrid(urls: head.imageURLs)
+                } else if let media = head.previewImageURL, !media.isEmpty {
+                    PostMedia(urlString: media)
+                }
             }
-            // The root's own images only — folding every reply's pictures
-            // into the same grid would misattribute whose picture is whose.
-            if head.imageURLs.count > 1 {
-                PostImageGrid(urls: head.imageURLs)
-            } else if let media = head.previewImageURL, !media.isEmpty {
-                PostMedia(urlString: media)
-            }
+            .padding(.top, 2)
         }
-        .padding(.vertical, DS.Space.s2)
     }
 }
 
@@ -3098,26 +2715,18 @@ struct ReadingRow: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        HStack(alignment: .top, spacing: DS.Space.s3) {
+        // ONE ANATOMY (prd §744): the 56pt art on the left becomes a tile.
+        DSFeedRow(name: thing.title, line: DSFeed.line(domain)) {
+            BridgeIcon(name: thing.source, size: DS.Mark.row)
+        } trailing: {
+            LiveTimeText(date: thing.capturedAt)
+        } below: {
             if let art = thing.previewImageURL, !art.isEmpty {
-                RemoteThumb(urlString: art, size: 56, fallback: thing.source)
-            } else {
-                BridgeIcon(name: thing.source, size: DS.Mark.row)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(thing.title)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .lineLimit(2)
-                if let domain {
-                    Text(domain)
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
+                DSFeedTiles {
+                    RemoteThumb(urlString: art, size: DS.Mark.tile, fallback: thing.source)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            LiveTimeText(date: thing.capturedAt)
         }
-        .padding(.vertical, DS.Space.s2)
     }
 }
 
@@ -3243,29 +2852,17 @@ struct AppReviewRow: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(thing.title)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: DS.Space.s2)
-                LiveTimeText(date: thing.capturedAt)
-            }
-            if let bodyText {
-                Text(bodyText)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    // Six lines, then the sheet. A review long enough to
-                    // overflow this is rare, and an unclamped card would let
-                    // one furious paragraph own the whole room.
-                    .lineLimit(6)
-            }
+        // ONE ANATOMY (prd §744): it had no lead at all.
+        DSFeedRow(name: thing.title, line: DSFeed.line(bodyText), lineLines: 6) {
+            BridgeIcon(name: thing.source, size: DS.Mark.row)
+        } trailing: {
+            LiveTimeText(date: thing.capturedAt)
+        } below: {
             if let handle = thing.authorHandle, !handle.isEmpty {
                 Text(handle)
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
             }
         }
-        .padding(.vertical, DS.Space.s2)
     }
 }
 

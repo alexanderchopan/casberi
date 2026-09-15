@@ -11,49 +11,36 @@ import SwiftUI
 /// deadlines. Reported as messy, and the reasons measured rather than argued:
 ///
 /// 1. **It had no card.** This was the only room head in the Wallet group
-///    with neither `dsWidgetSurface()` nor an outer `.padding(.horizontal)` —
-///    Gnosis Pay, Stripe, Safe and Privacy Pools all end with both — so its
-///    content sat naked on the page, flush to the screen edge. That is §474's
-///    reported vibenet bug, unfixed here, and it was most of the complaint.
+///    with no widget surface and no outer margin, so its content sat naked on
+///    the page, flush to the screen edge. Since prd §745 that chrome belongs to
+///    `DSRoomChassis.Head`, so no head can forget it.
 /// 2. **The layout was absolutely positioned and could overflow.** Width came
-///    out of `AltanaRoom.placement` as `88 + 62·N`, against a card content
-///    width of ~321pt on a 393pt phone: a fifth exclusive key drew past the
-///    edge with no scroll to catch it, and at a 62pt step under 62pt labels,
-///    adjacent captions abutted with zero gap. Three accounts spent ~314pt of
-///    screen before the rail.
-/// 3. **A 44pt circle carried six variables** — fill, border colour, border
-///    dash, opacity, glyph, plus its ties' own colour and dash. That is the
-///    decode load §478 removed one room over: *"the keys stop being a census
-///    you decode and become a list you scan."*
-/// 4. **The rail had `VibenetKeyShelf`'s defect, unfixed.** See
-///    `AltanaRoom.shelfWindow` — the now-marker was a constant and the axis
-///    was elastic.
+///    out of a placement function as `88 + 62·N`, against a card content width
+///    of ~321pt on a 393pt phone.
+/// 3. **A 44pt circle carried six variables** — the decode load §478 removed
+///    one room over: *"the keys stop being a census you decode and become a
+///    list you scan."*
+/// 4. **The rail had `VibenetKeyShelf`'s defect** — see
+///    `AltanaRoom.shelfWindow`.
 /// 5. **Two clocks.** Every token said "3h left" and the rail dot beneath it
 ///    said "9h · Passkey" about the same deadline.
 ///
 /// One row per credential now, one clock per row, one bar shape shared with
 /// every other card in the app (`ShareBar`). The rare fact the ties existed
 /// for — one credential signing for two of your accounts — is drawn as the
-/// FACES on that credential's own row, which is where somebody asking about
-/// that key would look for it.
+/// FACES on that credential's own row.
 ///
 /// ## The faces stand down when the room is scoped
 ///
 /// Altana is in the Wallet category, so `WalletScopeRail` draws your wallet
 /// faces above this room whenever more than one is watched, and since §488 the
 /// head obeys that pick. In a scoped room every row belongs to the same
-/// account, so a face on each one is a column of the same picture repeated —
-/// they draw only where they distinguish something, which is an unscoped room,
-/// or a credential that signs for more than one account (where it is the whole
-/// point, scoped or not).
+/// account, so the faces draw only where they distinguish something.
 ///
 /// ## Liveness
 ///
 /// Stores no `Thing` — value types out of `AltanaRoom`, composed from a
 /// UserDefaults snapshot. Corollary 5 has nothing to guard here.
-///
-/// FLAT BY LAW like its neighbours: a plain VStack, no generic `Widget`/`Row`
-/// mount (the render-depth lesson, paid three times).
 struct AltanaRoomCard: View {
     let card: AltanaRoom.Card
     /// Opens Altana's own explorer — the only place a key can actually be
@@ -77,63 +64,28 @@ struct AltanaRoomCard: View {
     private var namesAccounts: Bool { card.accounts.count > 1 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
-            // head renders only inside its own source's room, under a chip strip
-            // where that source's chip is the lit one — so the card introduced
-            // itself with a word already on screen, one row up.
-            Text(card.headline)
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .dsCardLead(Text("Opens this account on Altana")) {
-                    DSHaptic.selection()
-                    onOpen()
+        DSRoomChassis.Head(
+            lead: .sentence(card.headline),
+            // The lead leaves the app; the rows below open sheets. A face-wide
+            // gesture would make every gap between rows a trip to the explorer.
+            door: DSRoomChassis.Door(hint: Text("Opens this account on Altana"),
+                                     wholeCard: false,
+                                     action: onOpen),
+            notes: [.note(card.subline)],
+            // What the cap left off — counted, never silently dropped — then ONE
+            // line (§488) for what the rows cannot carry.
+            footnotes: [.quiet(card.moreLine), .quiet(card.note)]) {
+            if !card.drawn.isEmpty {
+                DSRoomChassis.Block {
+                    VStack(alignment: .leading, spacing: DS.Space.s3) {
+                        ForEach(Array(card.drawn.enumerated()), id: \.element.id) { index, row in
+                            keyRow(row, index: index)
+                                .chartArrival(index: index, reduceMotion: reduceMotion)
+                        }
+                    }
                 }
-
-            if let subline = card.subline {
-                Text(subline)
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
-                    .padding(.top, DS.Space.s1)
-            }
-
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                ForEach(Array(card.drawn.enumerated()), id: \.element.id) { index, row in
-                    keyRow(row, index: index)
-                        .chartArrival(index: index, reduceMotion: reduceMotion)
-                }
-            }
-            .padding(.top, DS.Space.s4)
-
-            // What the cap left off — counted, never silently dropped.
-            if let more = card.moreLine {
-                Text(more)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.top, DS.Space.s3)
-            }
-
-            // ONE line (§488): both sentences this replaced were summaries of
-            // rows now drawn above, and what survives is the part the rows
-            // cannot carry — see `AltanaRoom.Card.note`.
-            if let note = card.note {
-                Text(note)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s3)
             }
         }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        // THE CARD RECIPE, which this head never had (prd §488). Every sibling
-        // room head applies exactly this pair after its own padding, and
-        // `insightSection` presents them all edge-to-edge on purpose ("the card
-        // owns its own padding"), so without it this one's content ran to both
-        // screen edges while every neighbouring room sat 18pt in from them.
-        .dsWidgetSurface()
-        .padding(.horizontal, DS.Space.s4)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(accessibilitySummary))
     }
@@ -230,9 +182,7 @@ struct AltanaRoomCard: View {
                 WalletFace(address: address, size: DS.Face.badge, circular: true)
                     // The card under these faces is `dsWidgetSurface()`,
                     // i.e. `DS.surfaceSheet` — so that is what the ring must
-                    // punch out. It was `surfaceRaised`, which drew a gray
-                    // halo on a card that was never that colour (found in
-                    // §542's sweep, predating it).
+                    // punch out (§542's sweep).
                     .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 1.5))
             }
         }

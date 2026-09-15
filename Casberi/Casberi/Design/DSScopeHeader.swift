@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// THE SCOPE HEADER — where you are inside a room, and the way to the rest
-/// (prd §744, 2026-09-15).
+/// (prd §747, 2026-09-15).
 ///
 /// Once the scopes are door rows on Home (`DSScopeRows`), reaching one is a
 /// PUSH. This is what a pushed scope wears: its own name at the room's title

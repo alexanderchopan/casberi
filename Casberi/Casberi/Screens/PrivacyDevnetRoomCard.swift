@@ -1445,7 +1445,7 @@ enum PrivacyConnections {
     }
 }
 
-/// WHAT EACH PRIVACY-DEVNET SCOPE HOLDS, BEFORE YOU OPEN IT (prd §744,
+/// WHAT EACH PRIVACY-DEVNET SCOPE HOLDS, BEFORE YOU OPEN IT (prd §747,
 /// 2026-09-15).
 ///
 /// The door rows' right-hand fact. Written as an extension ON the card rather

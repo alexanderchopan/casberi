@@ -66,13 +66,11 @@ struct AgentModelRow: View {
                         .dsText(.subhead13).foregroundStyle(DS.attention)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if models.isEmpty {
-                    Button {
+                    // A verb, so a row (prd §746).
+                    DSDoorRow(icon: "slider.horizontal.3", label: "Choose a model") {
                         DSHaptic.tap()
                         load()
-                    } label: {
-                        Chip(text: "Choose a model", style: .neutral, glyph: "slider.horizontal.3")
                     }
-                    .buttonStyle(.plain)
                 } else {
                     // A Menu rather than a list of rows: OpenRouter answers
                     // with several hundred, and any layout that draws them all
@@ -120,8 +118,10 @@ struct AgentModelRow: View {
                             }
                         }
                     } label: {
-                        Chip(text: "\(models.count) available", style: .tint,
-                             glyph: "slider.horizontal.3")
+                        // A CHOICE — the picker's current answer (prd §746).
+                        Chip(text: String(localized: "\(models.count) available"),
+                             glyph: "slider.horizontal.3",
+                             selected: AgentModelStore.chosen(provider, task: task) != nil)
                     }
                 }
             }
@@ -351,13 +351,10 @@ struct AgentLibrarianRow: View {
                                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
                         }
                     } else {
-                        Button {
+                        DSDoorRow(icon: "wand.and.stars", label: "Catch up now") {
                             DSHaptic.tap()
                             catchUp()
-                        } label: {
-                            Chip(text: "Catch up now", style: .tint, glyph: "wand.and.stars")
                         }
-                        .buttonStyle(.plain)
                     }
                     if let result {
                         Text(result)
@@ -435,10 +432,11 @@ struct AgentBudgetControl: View {
                             }
                         }
                     } label: {
+                        // A CHOICE — the menu's current answer (prd §746).
                         Chip(text: AgentBudget.monthlyCap.map { AgentBudget.usd($0) + " a month" }
                                 ?? String(localized: "No limit"),
-                             style: AgentBudget.monthlyCap == nil ? .neutral : .tint,
-                             glyph: "gauge.with.dots.needle.33percent")
+                             glyph: "gauge.with.dots.needle.33percent",
+                             selected: AgentBudget.monthlyCap != nil)
                     }
                 }
                 if let line = AgentBudget.line(for: AgentBudget.measurableProvider) {
@@ -523,17 +521,15 @@ struct MCPServerRow: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if running {
-                    Button {
+                    // A verb, so a row (prd §746).
+                    DSDoorRow(icon: copied ? "checkmark" : "key.fill",
+                              label: copied ? "Key copied" : "Copy the key") {
                         DSHaptic.tap()
                         // Sensitive: this IS the credential. Short clipboard
                         // life, local only — `DSPasteboard`'s own split.
                         DSPasteboard.copySensitive(MCPPairing.token())
                         copied = true
-                    } label: {
-                        Chip(text: copied ? "Key copied" : "Copy the key",
-                             style: .tint, glyph: "key.fill")
                     }
-                    .buttonStyle(.plain)
                     Text("Paste it as `Authorization: Bearer …`.")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)

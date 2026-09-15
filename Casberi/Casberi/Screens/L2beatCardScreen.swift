@@ -285,20 +285,17 @@ struct L2beatRiskCard: View {
 			// dark"): this chip raised the composer onto a question, which is the
 			// ask itself, not the capture surface or a connected seat's own door.
 			if AskSurface.enabled, let onDismissForAsk {
-				Button {
+				// A verb, so a row (prd §746).
+				DSDoorRow(icon: "sparkles",
+						  title: Text(AgentKey.active.map { String(localized: "Ask \($0.agent) about this") }
+									  ?? String(localized: "Ask about this"))) {
 					DSHaptic.tap()
 					// Dismiss first: the composer rises over the shell, and a sheet still up
 					// would sit between them.
 					onDismissForAsk()
 					chrome.ask(String(localized: "What does L2BEAT say about \(name)?"),
 							   withKey: AgentKey.isConfigured)
-				} label: {
-					Chip(text: AgentKey.active.map { String(localized: "Ask \($0.agent) about this") }
-						?? String(localized: "Ask about this"),
-						 style: .neutral, glyph: "sparkles")
 				}
-				.buttonStyle(.plain)
-				.dsHover()
 			}
 			if let url = project?.pageURL {
 				Link(destination: url) {

@@ -240,15 +240,12 @@ struct WalletWatchField: View {
     // MARK: - Watching
 
     private var peekChip: some View {
-        Button {
+        // A verb, so a row (prd §746).
+        DSDoorRow(icon: "sparkles", label: "Peek at vitalik.eth") {
             DSHaptic.tap()
             newAddress = "vitalik.eth"
             watch()
-        } label: {
-            Chip(text: String(localized: "Peek at vitalik.eth"), style: .tint, glyph: "sparkles")
-                .contentShape(Capsule(style: .continuous))
         }
-        .buttonStyle(PressSpring())
     }
 
     private func watch() {

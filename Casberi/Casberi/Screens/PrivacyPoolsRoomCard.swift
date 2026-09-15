@@ -6,17 +6,13 @@ import SwiftUI
 /// ## What §486 changed, and what it did not
 ///
 /// Reported as *"the 0xbow room looks messy"*. It was: SEVEN blocks in one
-/// slab — headline, note, holdings, split bar, legend, respond door, cover
-/// line, footnote — three of them grey sentences in three different type tiers
-/// at three different positions (§315's setup-copy failure, in a room head),
-/// with the counts stated three times over and a closing run-on of up to six
-/// `·`-joined clauses.
+/// slab, three of them grey sentences in three different type tiers at three
+/// different positions, with the counts stated three times over.
 ///
 /// **Every drawing survived; the arrangement is what changed.** The three
-/// readings became three scopes behind `DSSectionSwitcher` — Wallet's own
-/// control (§483), Vibenet's a day later (§482), this a day after that — and
-/// the mapping from block to scope is IDENTITY, which is what makes content
-/// loss structurally impossible rather than merely unlikely:
+/// readings became three scopes behind `DSSectionSwitcher`, and the mapping
+/// from block to scope is IDENTITY, which is what makes content loss
+/// structurally impossible rather than merely unlikely:
 ///
 ///  - **Activity** — the deposits and reclaims themselves, as rows below, plus
 ///    the one line about what has happened here (`activityNote`).
@@ -24,50 +20,40 @@ import SwiftUI
 ///    that belong to a money line.
 ///  - **Review** — the split, its legend, and the one door.
 ///
-/// The `note` is no longer a second sentence under the headline competing with
-/// it; it is the split bar's own caption, in the scope whose subject it is. The
-/// footnote is not deleted but distributed — its clauses now sit under the
-/// reading each one qualifies.
+/// ## The only scoped head, and what the template owns of it (prd §745)
+///
+/// Every other source room's head is one `DSRoomChassis.Head` card. This one is
+/// a lead standing bare on the page, a switcher, then AT MOST one card — so it
+/// composes the template's PARTS rather than its card: `LeadView` for the lead,
+/// `dsRoomHeadCard()` for each scope's box, `LineText` for every line and
+/// `HeadLink` for the door, spaced by `scopedHeadGap`. The words, the box and the
+/// door are therefore the same objects every other head draws.
 ///
 /// ## The headline belongs to no scope
 ///
 /// It stays ABOVE the control, bare on the page, the way Wallet's crown does:
 /// it is the room's identity, and §349's trouble-leads ranking means it is
-/// where "a deposit needs your proof" is said. A strip that could scope that
-/// away would let you open the room and not be told the one thing it exists to
-/// tell you. Bare rather than in a card for `VibenetRoomCard.balanceHero`'s
-/// reason (§475): a container around the room's lead is the app claiming an
-/// emphasis the content already has.
+/// where "a deposit needs your proof" is said.
 ///
 /// ## Two weights, one hue, and no red
 ///
 /// The split encodes exactly one thing: **is this still in play.** Open states
-/// (in review, needs your proof) take the card's hue at full strength;
-/// resolved ones (cleared, declined) take the faint fill. A declined deposit is
-/// NOT painted red — the design law's honesty rule is that state is stated in
-/// words, never in a colour that does the arguing (the Stripe dispute
-/// precedent), and here it would be actively wrong: a decline costs nothing but
-/// a reclaim, while a cleared deposit is the outcome you wanted. Both are over.
+/// take the card's hue at full strength; resolved ones take the faint fill. A
+/// declined deposit is NOT painted red — a decline costs nothing but a reclaim,
+/// while a cleared deposit is the outcome you wanted. Both are over.
 ///
-/// ## The gap in the bar is the unknown, and it says so now
+/// ## The gap in the bar is the unknown, and it says so
 ///
 /// The denominator is every deposit including the ones carrying no state tag,
-/// so a room with unknown deposits draws a bar that does not reach the end.
-/// That gap was explained only by a footnote clause several blocks below it —
-/// the one unlabelled part of the drawing, decodable only by reading tertiary
-/// text somewhere else. It has a legend row of its own now, drawn in exactly
-/// the colour the bar's TRACK is drawn in, so the mapping is visible rather
-/// than described. Filling the bar by dividing through the tagged count alone
-/// would still be presenting partial knowledge as complete, and is still not
-/// done.
+/// so a room with unknown deposits draws a bar that does not reach the end. It
+/// has a legend row of its own, drawn in exactly the colour the bar's TRACK is
+/// drawn in, so the mapping is visible rather than described.
 ///
 /// ## Liveness
 ///
 /// Stores no `Thing` — only value types out of `PrivacyPoolsRoom`, filtered at
 /// the boundary by `PrivacyPoolsRoomSource`. The tap hands back a `Slice` and
 /// the section that owns the sheet does the lookup (corollary 5).
-///
-/// FLAT BY LAW: plain VStacks, no generic `Widget`/`Row` mount.
 struct PrivacyPoolsRoomCard: View {
     let room: PrivacyPoolsRoom
     /// Hands back the SLICE, not a `Thing`. A slice owns many deposits, so the
@@ -92,9 +78,7 @@ struct PrivacyPoolsRoomCard: View {
 
     /// Where a proof is actually supplied. 0xBow's own app, the same
     /// destination the `poi_required` alert row already links to — one place
-    /// this URL means one thing, and a door that opens anywhere else on the
-    /// screen telling you to respond would be the sharpest dead door in the
-    /// app.
+    /// this URL means one thing.
     private static let respondURL = URL(string: "https://app.0xbow.io")
 
     /// §374, passed down rather than read inside `PrivacyPoolsRoom` — that
@@ -111,13 +95,7 @@ struct PrivacyPoolsRoomCard: View {
     }
 
     var body: some View {
-        // s4, not s3. §471's lesson one room over: at 14pt a headline, a glass
-        // control and a card read as one stack of seams rather than three
-        // objects with air between them — and the whole complaint here was
-        // that the room read as a slab. Not s6, which is that entry's answer
-        // for several stacked CARDS: at most one card draws here, so the wider
-        // gap would just push the reading down the page.
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
+        VStack(alignment: .leading, spacing: DSRoomChassis.scopedHeadGap) {
             headline
             scopeStrip
             // Each scope draws AT MOST one card, and a scope with nothing to
@@ -125,56 +103,37 @@ struct PrivacyPoolsRoomCard: View {
             // content is the rows below it, so on most rooms this head is a
             // sentence and a control and nothing else. That is the point.
             // **A SCOPED-TO EMPTY SCOPE SAYS WHAT IT WOULD HOLD (prd §611).**
-            // The chip is always offered now; a scope somebody actually picked
-            // and that has nothing gets one card of words. Unscoped (`section`
-            // nil) an empty reading still draws nothing, as before — there the
-            // room is a stack, and a card explaining an absence in it is noise.
             if shows(.shielded), shieldedHasContent { card { shieldedBody } }
             else if section == .shielded { card { emptyBody(.shielded) } }
             if shows(.review), reviewHasContent { card { reviewBody } }
             else if section == .review { card { emptyBody(.review) } }
             if shows(.activity), let note = PrivacyPoolsRoom.activityNote(room) {
-                Text(note)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                DSRoomChassis.LineText(line: DSRoomChassis.Line(text: note, tone: .quiet))
             }
         }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s2)
+        .dsRoomHeadPlacement()
     }
 
     // MARK: - The headline, which belongs to no scope
 
     private var headline: some View {
-        // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
-        // head renders only inside its own source's room, under a chip strip
-        // where that source's chip is the lit one — so the card introduced
-        // itself with a word already on screen, one row up.
-        Text(PrivacyPoolsRoom.headline(room))
-            .dsText(.heading22)
-            .foregroundStyle(DS.textPrimary)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            // The card-wide tap gesture retired with §486: the readings below
-            // are now individually tappable rows inside their own cards, and a
-            // whole-card target over them is a second answer to the same
-            // gesture. The lead's own sentence carries it instead, which is
-            // also the one line that names where it goes.
-            .dsCardLead(Text("Opens these deposits")) {
-                guard let lead = room.lead else { return }
-                DSHaptic.selection()
-                onOpen(.state(lead.state))
-            }
+        // The readings below are individually tappable rows inside their own
+        // cards, so there is no face-wide gesture; the lead's own sentence
+        // carries its door.
+        DSRoomChassis.LeadView(
+            lead: .sentence(PrivacyPoolsRoom.headline(room)),
+            door: room.lead.map { lead in
+                DSRoomChassis.Door(hint: Text("Opens these deposits"), wholeCard: false) {
+                    onOpen(.state(lead.state))
+                }
+            })
     }
 
     /// The scope strip, below the headline and above every reading it scopes.
     ///
-    /// STATED COST, inherited from `VibenetRoomCard.scopeStrip` rather than
-    /// rediscovered: a control inside the scroll scrolls away, which is §357's
-    /// complaint one level down. The answer is a pinned `Section` header, not a
-    /// return to `safeAreaInset` — deliberately not done here, for the same
-    /// reason it is not done there.
+    /// STATED COST, inherited from `VibenetRoomCard.scopeStrip`: a control
+    /// inside the scroll scrolls away. The answer is a pinned `Section` header,
+    /// deliberately not done here, for the same reason it is not done there.
     @ViewBuilder
     private var scopeStrip: some View {
         if onPickScope != nil, PrivacyPoolsSection.shows(present: scopes) {
@@ -187,14 +146,13 @@ struct PrivacyPoolsRoomCard: View {
         }
     }
 
-    /// The surface every scope's card wears — one definition, so two cards
-    /// cannot drift into two slightly different boxes.
+    /// The surface every scope's card wears — the head template's own box, so
+    /// a scope card and every other room's head cannot drift into two slightly
+    /// different boxes.
     @ViewBuilder
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 0) { content() }
-            .padding(DS.Space.s4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWidgetSurface()
+            .dsRoomHeadCard()
     }
 
     // MARK: - Shielded
@@ -222,21 +180,15 @@ struct PrivacyPoolsRoomCard: View {
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        // The one unambiguously good reading this seat has, and it now sits
-        // beside the money it is about instead of below a footnote.
+        // The one unambiguously good reading this seat has, beside the money it
+        // is about.
         if let cover = PrivacyPoolsRoom.coverLine(room.cover) {
-            Text(cover)
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s2)
+            DSRoomChassis.LineText(line: DSRoomChassis.Line(text: cover, tone: .note))
+                .padding(.top, DSRoomChassis.headNoteGap)
         }
         if let note = PrivacyPoolsRoom.shieldedNote(room) {
-            Text(note)
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s2)
+            DSRoomChassis.LineText(line: DSRoomChassis.Line(text: note, tone: .quiet))
+                .padding(.top, DSRoomChassis.headBlockGap)
         }
     }
 
@@ -251,25 +203,21 @@ struct PrivacyPoolsRoomCard: View {
 
     @ViewBuilder
     private var reviewBody: some View {
-        // THE BAR'S OWN CAPTION. §349 drew this directly under the headline,
-        // where it read as a second sentence about the same fact; it is the
-        // shape of the split and belongs against the split.
-        Text(PrivacyPoolsRoom.note(room))
-            .dsText(.subhead13)
-            .foregroundStyle(DS.textSecondary)
-            .fixedSize(horizontal: false, vertical: true)
+        // THE BAR'S OWN CAPTION. It is the shape of the split and belongs
+        // against the split.
+        DSRoomChassis.LineText(line: DSRoomChassis.Line(text: PrivacyPoolsRoom.note(room), tone: .note))
         if !room.segments.isEmpty {
             splitBar
-                .padding(.top, DS.Space.s3)
+                .padding(.top, DSRoomChassis.headBlockGap)
         }
         legend
-            .padding(.top, DS.Space.s3)
+            .padding(.top, DSRoomChassis.headBlockGap)
         // Only for the state that needs a person — a standing "Open 0xBow"
         // link would be chrome on every other room state, where there is
         // nothing to respond to.
         if room.needsYou != nil {
             respondRow
-                .padding(.top, DS.Space.s2)
+                .padding(.top, DSRoomChassis.headBlockGap)
         }
     }
 
@@ -288,8 +236,7 @@ struct PrivacyPoolsRoomCard: View {
                         fill(.state(segment.state))
                             // Floored at 3pt so a single deposit among forty is
                             // still visible rather than a sub-pixel sliver —
-                            // the `UnitTreemap` rule: rank can never hide a
-                            // state that needs you.
+                            // rank can never hide a state that needs you.
                             .frame(width: max((geo.size.width - gaps)
                                               * CGFloat(PrivacyPoolsRoom.share(count: segment.count,
                                                                                of: room.deposits)), 3))
@@ -311,9 +258,7 @@ struct PrivacyPoolsRoomCard: View {
     ///
     /// **`.unknown` takes the BAR'S OWN TRACK COLOUR**, and that is the whole
     /// of its correctness: the untagged deposits are the gap, so the legend's
-    /// dot beside them has to be the colour of the gap. `mark.opacity(0.35)`
-    /// would file them with the resolved states, which is a claim — an
-    /// untagged deposit's review is not over, it is unrecorded.
+    /// dot beside them has to be the colour of the gap.
     private func fill(_ slice: PrivacyPoolsRoom.Slice) -> Color {
         switch slice {
         case .state(let state): return state.resolved ? Self.mark.opacity(0.35) : Self.mark
@@ -359,30 +304,13 @@ struct PrivacyPoolsRoomCard: View {
     /// The one action this card can offer, on the one state that needs it.
     ///
     /// Proof is supplied in 0xBow's own app and nowhere else — this app is
-    /// capture-only by ruling (§162), so there is no version of this that
-    /// responds on the person's behalf, and the honest affordance is a door
-    /// rather than a form. It is the same hand-off shape `ApprovalPrepareCard`
-    /// uses for Revoke.cash, down to the arrow.
+    /// capture-only by ruling (§162), so the honest affordance is a door
+    /// rather than a form: the template's `HeadLink`, marked as leaving the app.
     @ViewBuilder private var respondRow: some View {
         if let url = Self.respondURL {
-            Button {
-                DSHaptic.selection()
+            DSRoomChassis.HeadLink(title: String(localized: "Respond on 0xBow"), external: true) {
                 openURL(url)
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "arrow.up.right")
-                        .dsGlyph(13, weight: .regular)
-                        .foregroundStyle(DS.textSecondary)
-                        .frame(width: 18, alignment: .center)
-                    Text("Respond on 0xBow")
-                        .dsText(.callout15)
-                        .foregroundStyle(DS.textPrimary)
-                    Spacer(minLength: 0)
-                }
-                .padding(.vertical, DS.Space.s1)
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
         }
     }
 }

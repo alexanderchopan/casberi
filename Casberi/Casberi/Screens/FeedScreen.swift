@@ -787,7 +787,7 @@ struct FeedScreen: View {
     /// last saved read the same way `VibenetThisPhoneRow` already checks its
     /// own presence, and answers nil rather than guessing when there is
     /// none, same as every refusal `VibenetSigner` states rather than hides.
-    /// **THE ROOM'S ACTS, HANDED TO THE CARD (prd §744).** It was a `Section`
+    /// **THE ROOM'S ACTS, HANDED TO THE CARD (prd §747).** It was a `Section`
     /// mounted below `VibenetRoomCard`, which put the verbs under the list on
     /// any Home with history — §682's complaint, one seat over. It is passed
     /// in as `VibenetRoomCard.acts` now and draws on the account card beside
@@ -824,7 +824,7 @@ struct FeedScreen: View {
                                         editing: nil)
                                 })
             // The 2026-09-04 row chrome is gone with the Section it belonged
-            // to: this draws on the account card now (prd §744), and the card
+            // to: this draws on the account card now (prd §747), and the card
             // owns its own padding. Nothing here may add List row insets — a
             // card is not a List, and the separator this was suppressing
             // cannot exist inside one.
@@ -3873,7 +3873,7 @@ struct FeedScreen: View {
     }
 
     @ViewBuilder private var hegotaVisualSection: some View {
-        // **OFF HOME ONLY (prd §744).** On Home this room's figure is its
+        // **OFF HOME ONLY (prd §747).** On Home this room's figure is its
         // crown, and the crown rides the account card inside
         // `hegotaScopeChromeSection`. Drawing it here as well would state the
         // balance twice on one screen, which is §683's own rule.
@@ -3902,7 +3902,7 @@ struct FeedScreen: View {
         }
     }
 
-    /// THE HEGOTÁ ROOM'S CHROME, WITH NO BAR IN IT (prd §744, 2026-09-15).
+    /// THE HEGOTÁ ROOM'S CHROME, WITH NO BAR IN IT (prd §747, 2026-09-15).
     ///
     /// Was `hegotaRailSection`, the fused slab (§547) this room copied from
     /// Wallet byte for byte. It follows Wallet out of the bar for the same
@@ -3914,7 +3914,7 @@ struct FeedScreen: View {
     /// card kept its `= {}` default. A tile that highlights and does nothing
     /// is §83's dead control. The card mounts here now, wired.
 
-    /// THE FRAMES ROOM'S CHROME, WITH NO BAR IN IT (prd §744, 2026-09-15).
+    /// THE FRAMES ROOM'S CHROME, WITH NO BAR IN IT (prd §747, 2026-09-15).
     ///
     /// The wallet's own conversion one chain over, and the parts that differ
     /// are facts about this seat rather than style:
@@ -4008,7 +4008,7 @@ struct FeedScreen: View {
         }
     }
 
-    /// What each Frames scope holds, before you open it (prd §744).
+    /// What each Frames scope holds, before you open it (prd §747).
     ///
     /// Built once per pass rather than once per row: `FramesHoldings.tokens`
     /// and `FramesConnections.map` both walk every account, and the emptiness
@@ -4047,7 +4047,7 @@ struct FeedScreen: View {
         return out
     }
 
-    /// THE PRIVACY DEVNET'S CHROME, WITH NO BAR IN IT (prd §744, 2026-09-15).
+    /// THE PRIVACY DEVNET'S CHROME, WITH NO BAR IN IT (prd §747, 2026-09-15).
     ///
     /// The crown is this room's own card pinned to `.home` — `home` is where
     /// `PrivacyDevnetRoomCard` already draws the `RoomHomeCrown`, the ring and
@@ -4318,19 +4318,14 @@ struct FeedScreen: View {
     /// where adding is a frequent verb the wallet face rail already carries it
     /// (§357).
     private func sourceComposeRow(_ action: SourceAction) -> some View {
-        HStack(spacing: DS.Space.s2) {
-            Button {
-                DSHaptic.selection()
-                if case .openURL(let url) = action.run { openExternal(url) }
-            } label: {
-                Chip(text: String(localized: String.LocalizationValue(action.label)),
-                     style: .tint, glyph: "plus")
-            }
-            .buttonStyle(PressSpring())
-            Spacer(minLength: 0)
+        // A verb, so a row (prd §746).
+        DSDoorRow(icon: "plus",
+                  title: Text(String(localized: String.LocalizationValue(action.label)))) {
+            DSHaptic.selection()
+            if case .openURL(let url) = action.run { openExternal(url) }
         }
         .padding(.horizontal, DS.Space.s4)
-        // The capsule's own generous top gap (2026-07-14: s3 read as still
+        // The old capsule's generous top gap (2026-07-14: s3 read as still
         // touching the chip row), kept — this row sits in the same place under
         // the same strip.
         .padding(.top, DS.Space.s8)
@@ -5038,7 +5033,7 @@ struct FeedScreen: View {
             let framesScope = FramesSection.resolve(chrome.framesSection,
                                                     present: chrome.framesSections)
             // **THE CHROME LEADS, AND ON HOME IT IS THE WHOLE ROOM** (prd
-            // §744). Was figure-then-slab. The slab is gone: on Home the
+            // §747). Was figure-then-slab. The slab is gone: on Home the
             // accounts are the deck's cards, each carrying this room's crown
             // (`FramesRoomFigure` on its `.home` arm) and its acts, and the
             // readings are door rows under it. Off Home the chrome is the
@@ -5097,7 +5092,7 @@ struct FeedScreen: View {
             let privacyScope = PrivacyDevnetSection.resolve(
                 chrome.privacyDevnetSection, present: chrome.privacyDevnetSections)
             // **THE CHROME LEADS, AND ON HOME IT IS THE WHOLE ROOM** (prd
-            // §744). Was figure-then-slab. The slab is gone: on Home the
+            // §747). Was figure-then-slab. The slab is gone: on Home the
             // accounts are the deck's cards, each carrying this room's own
             // card pinned to `.home` as its crown and the send console as its
             // acts, and the readings are door rows under it.
@@ -5141,7 +5136,7 @@ struct FeedScreen: View {
             // with its verbs. So does this one now; the last few moves follow
             // them.
             if privacyScope == .home {
-                // **THE VERBS MOVED ONTO THE ACCOUNT CARD (prd §744).** §682's
+                // **THE VERBS MOVED ONTO THE ACCOUNT CARD (prd §747).** §682's
                 // ruling — the verbs sit under the rail, never under the list —
                 // is kept by construction now rather than by ordering two
                 // sections carefully: they are ON the card, beside the crown,
@@ -6163,13 +6158,10 @@ struct FeedScreen: View {
                         openBySourceRef(PostHogWatch.metricRef(event), in: visible)
                     }
                 case .appleWallet(let room):
-                    // Opens by MERCHANT rather than by `sourceRef`: the card
-                    // ranks a merchant across many charges, so there is no one
-                    // row it names — the honest tap is "show me this merchant",
-                    // which is the tag filter the room already supports.
-                    AppleWalletRoomCard(room: room) { merchant in
-                        openMerchant(merchant, in: visible)
-                    }
+                    // No door since prd §745: the merchant board was the only
+                    // thing on this head that named a merchant to open, and it
+                    // is deleted. Every charge is its own row below.
+                    AppleWalletRoomCard(room: room)
                 case .appStoreConnect(let room):
                     AppStoreConnectRoomCard(room: room) { app in
                         openNewest(source: ASCShape.source, in: visible) { thing in
@@ -6401,7 +6393,7 @@ struct FeedScreen: View {
                                         // not one answer moving.
                                         chrome.vibenetSection = picked
                                     },
-                                    // **THE ROOM'S ACTS (prd §744)** — what
+                                    // **THE ROOM'S ACTS (prd §747)** — what
                                     // `vibenetSendRow` was, handed to the card
                                     // so the verbs ride the account card
                                     // rather than a Section below the list.
@@ -6693,7 +6685,7 @@ struct FeedScreen: View {
             // answering a different question entirely.
 
             // **THE CHROME LEADS, AND ON HOME IT IS THE WHOLE ROOM** (prd
-            // §744). The crown no longer stands in a section of its own: it
+            // §747). The crown no longer stands in a section of its own: it
             // rides the account card inside `walletScopeChromeSection`, which
             // is what gives a watched wallet's name the card's full width
             // instead of a 66pt rail slot's leftovers. Off Home this emits the
@@ -6790,13 +6782,13 @@ struct FeedScreen: View {
             //
             // The headers themselves are gone rather than kept inside their
             // scopes, because the chrome says the same words in the same place
-            // — the scope's own row on Home, its own title inside it (§744) —
+            // — the scope's own row on Home, its own title inside it (§747) —
             // and two of them would be §208's rule broken by the very pass
             // that cites it. They come back the day a scope holds two unlike
             // kinds of thing.
             switch section {
             case .home:
-                // **HOME HAS NO LIST OF ITS OWN (prd §744).** It held the flow
+                // **HOME HAS NO LIST OF ITS OWN (prd §747).** It held the flow
                 // band (§690), which was the right answer while the scopes
                 // were a 12pt chip strip: the room needed something below the
                 // bar and the band was the one reading only the Wallet has.
@@ -6831,7 +6823,7 @@ struct FeedScreen: View {
                 // and nothing is lost; they simply draw nowhere until a scope
                 // earns them. Risk is the likely home (a deadline is a hazard
                 // with a clock) but that is a ruling, not a default.
-                // **THE FLOW BAND, REHOMED FROM HOME (prd §744).** It led
+                // **THE FLOW BAND, REHOMED FROM HOME (prd §747).** It led
                 // Home until the scopes became rows; the total decomposed
                 // belongs with the moves it decomposes, which is here.
                 Section {
@@ -6944,7 +6936,7 @@ struct FeedScreen: View {
                                                 present: vibenetSectionPublication.sections)
             let vScoped = VibenetSection.shows(present: vibenetSectionPublication.sections)
             if vScoped && vScope == .home {
-                // **HOME HAS NO LIST (prd §744).** Its half was the verb tiles
+                // **HOME HAS NO LIST (prd §747).** Its half was the verb tiles
                 // (`vibenetSendRow`), which now ride the account card inside
                 // the room's own chrome — so §682's "the verbs sit under the
                 // rail, never under the list" holds by construction. Home's
@@ -7689,14 +7681,10 @@ struct FeedScreen: View {
     }
 
     var newSinceDivider: some View {
-        // A quiet capsule, not tint-colored prose (which reads as a tappable
-        // link). The fill gives the boundary its line without drawing one.
-        Text(newSinceText)
-            .dsText(.label12)
-            .foregroundStyle(DS.textSecondary)
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s1)
-            .background(DS.fillFaint, in: Capsule(style: .continuous))
+        // A FACT, so a stamp (prd §746) — it was a quiet capsule. Still not
+        // tint-coloured prose, which reads as a tappable link; the air around
+        // a centred word is the boundary.
+        DSStamp(word: newSinceText)
             .settleIn()   // see `caughtUpSeam`
             .frame(maxWidth: .infinity)
             .padding(.vertical, DS.Space.s1)
@@ -8426,18 +8414,6 @@ struct FeedScreen: View {
         }
     }
 
-    /// Open a merchant's newest charge. The Apple Wallet head ranks a merchant
-    /// across many rows, so it can't name a `sourceRef` — the honest landing is
-    /// the most recent charge from that merchant, matched on the stored
-    /// counterparty rather than by parsing the title back apart.
-    private func openMerchant(_ merchant: String, in visible: [Thing]) {
-        let match = visible.live
-            .filter { $0.source == AppleWalletBridge.sourceName
-                      && $0.transferCounterparty == merchant }
-            .max { $0.capturedAt < $1.capturedAt }
-        if let match { openThing(match) }
-    }
-
     /// Open the row a head card named, by its `sourceRef`. The cards hold no
     /// `Thing` (corollary 5), so every one of them hands back a value and the
     /// lookup lands here, against the live corpus.
@@ -8522,8 +8498,8 @@ struct FeedScreen: View {
         openThing(match)
     }
 
-    /// Open the newest row of a source that a predicate accepts — `openMerchant`
-    /// generalised, for a head that ranks something owning MANY rows and so
+    /// Open the newest row of a source that a predicate accepts — for a head
+    /// that ranks something owning MANY rows and so
     /// cannot name a single `sourceRef`. Liveness is checked inside the filter,
     /// before any stored property is read (corollary 3).
     private func openNewest(source: String, in visible: [Thing],
@@ -8640,7 +8616,7 @@ struct FeedScreen: View {
     ///     and a shadowed name here would be a silent wrong figure.
     ///   - streamTotal: how many rows the stream holds in all, for the card's
     ///     own door.
-    // **NOT `private` (prd §744).** The crown rides the account card now, and
+    // **NOT `private` (prd §747).** The crown rides the account card now, and
     // that card is built in `FeedScreen+WalletRoom.swift` — `private` is
     // file-scoped in Swift, so an extension in another file cannot see it.
     @ViewBuilder
@@ -9940,16 +9916,21 @@ struct FeedScreen: View {
             // row in the single Button that opens the sheet, and a second one
             // here would be a button inside a button.
             case .cardPointers:
-                WalletRow(mark: CardPointers.initials(card: thing.authorHandle).isEmpty
-                            ? .kind(thing.kind)
-                            : .monogram(CardPointers.initials(card: thing.authorHandle),
-                                        tint: DS.textSecondary),
-                          title: CardPointers.merchant(title: thing.title,
-                                                       card: thing.authorHandle),
+                // ONE ANATOMY (prd §744): the card's initials at the 26pt lead,
+                // not `WalletRow`'s 36, so this room's column matches every other.
+                DSFeedRow(name: CardPointers.merchant(title: thing.title,
+                                                      card: thing.authorHandle),
+                          nameLines: 1,
                           // Their words for what the offer gives, never a
                           // number we made (§420's no-total refusal, on the row
                           // this time).
-                          subtitle: thing.summary) {
+                          line: DSFeed.line(thing.summary)) {
+                    WalletMarkView(mark: CardPointers.initials(card: thing.authorHandle).isEmpty
+                                     ? .kind(thing.kind)
+                                     : .monogram(CardPointers.initials(card: thing.authorHandle),
+                                                 tint: DS.textSecondary),
+                                   size: DS.Mark.row)
+                } trailing: {
                     if let due = thing.dueAt {
                         Text(FeedLedeFace.dueLine(due))
                             .dsText(.subhead13)
@@ -10282,16 +10263,15 @@ struct FeedScreen: View {
                 .dsText(.body17)
                 .foregroundStyle(DS.textSecondary)
                 .multilineTextAlignment(.center)
-            Button {
+            // The one way back, as a row sized to its words (prd §746).
+            DSDoorRow(icon: "line.3.horizontal.decrease.circle", label: "Show everything") {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.standard) {
                     filter.source = "All"
                     filter.tag = "All"
                 }
-            } label: {
-                Chip(text: String(localized: "Show everything"), style: .tint)
             }
-            .buttonStyle(PressSpring())
+            .fixedSize(horizontal: true, vertical: false)
             tryItChip
             // The empty room previews its own shape (2026-07-13) — the
             // all-feed empty state already does this with skeleton rows;
@@ -10339,16 +10319,15 @@ struct FeedScreen: View {
         }
     }
 
-    /// One chip anatomy for every try-it — the tint `Chip`, reused instead of
-    /// re-spelled per source.
+    /// One anatomy for every try-it — a door row (prd §746; it was a tint
+    /// `Chip`, a verb wearing a choice's shape). Sized to its words, because it
+    /// stands in a centred empty state rather than a list.
     private func tryItButton(label: String, action: @escaping () async -> Void) -> some View {
-        Button {
+        DSDoorRow(icon: "sparkles", title: Text(LocalizedStringKey(label))) {
             DSHaptic.tap()
             Task { await action() }
-        } label: {
-            Chip(text: label, style: .tint, glyph: "sparkles")
         }
-        .buttonStyle(PressSpring())
+        .fixedSize(horizontal: true, vertical: false)
         .padding(.top, DS.Space.s2)
     }
 

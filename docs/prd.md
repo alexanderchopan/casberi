@@ -109,11 +109,11 @@ at all.
 | §566 | The sponsor scope's figure is a split bar of whose gas paid | superseded by §692 (the share leads the shared grid; the bar is deleted) |
 | §606 | The spend-key scope draws one bar per address; Holdings and Accounts draw no figure | superseded in part by §692 (the spend-key bar goes with the scope; the no-figure rulings stand) |
 | §690 | Wallet Home is the crown and the flow BAND; Activity is the family's chart | amended by §692 (Home's list half draws the flow as rows — the band stays in the brief) |
-| §547 | The account rail and the scope switcher are ONE fused glass slab | superseded by §744 (the slab is deleted — the accounts become paged cards, the readings become door rows; a name in a 66pt slot cut at ten characters) |
-| §483 | The wallet room's readings are a chip strip above the content | amended by §744 (the readings are door rows on Home and a scroll header inside one; the scopes, their order and their empty states are untouched) |
-| §611 | Every scope is present always, and an empty one says what it would hold | amended by §744 (it says so BEFORE the tap now — the row states the reading, and an empty scope's row reads its own `emptyHeadline`) |
-| §690 | Wallet Home's second half is the flow band | amended by §744 (the band moves to Activity, where the moves it decomposes are; Home's list is the scope rows) |
-| §466 | Watching a wallet and seeing the roster are the same screen, so the rail has no add slot | amended by §744 (the room gets a DOOR to that screen on the All card — still one watch field, and the rail it applied to no longer exists) |
+| §547 | The account rail and the scope switcher are ONE fused glass slab | superseded by §747 (the slab is deleted — the accounts become paged cards, the readings become door rows; a name in a 66pt slot cut at ten characters) |
+| §483 | The wallet room's readings are a chip strip above the content | amended by §747 (the readings are door rows on Home and a scroll header inside one; the scopes, their order and their empty states are untouched) |
+| §611 | Every scope is present always, and an empty one says what it would hold | amended by §747 (it says so BEFORE the tap now — the row states the reading, and an empty scope's row reads its own `emptyHeadline`) |
+| §690 | Wallet Home's second half is the flow band | amended by §747 (the band moves to Activity, where the moves it decomposes are; Home's list is the scope rows) |
+| §466 | Watching a wallet and seeing the roster are the same screen, so the rail has no add slot | amended by §747 (the room gets a DOOR to that screen on the All card — still one watch field, and the rail it applied to no longer exists) |
 | §498 | `DSReceiptPaper` is the shared silhouette, so two rooms cannot drift into two papers | amended by §583 (the reasoning is why a modifier SURVIVES the deletion: strip the ground, the pour, the clip and the shadow and what is left is spacing, and five heads composing their own insets is how they drift apart with every check still green. `DSSheetHeadBlock` is that modifier) |
 | §583 | A capsule is a small card, so the state stamp loses its fill | extended by §584 to the three hand-rolled news pills the `DSStamp` sweep could not reach — and BOUNDED there: measured over all 145 capsules in the app, most are progress tracks or controls, and a capsule that GROUPS (a glyph with its word, one token among several) is earning its place |
 | §584 | A room head's headline cannot take the head rung, because a composed sentence measures 141pt on a 250pt card | answered by §585 — the rung was never the problem, the CONTENT was. A room that opens on a FIGURE puts the figure at `price40` and demotes its sentence; a room that opens on a statement keeps `heading22`, exactly as §584 measured |
@@ -55278,7 +55278,355 @@ lead on every row) is a separate ruling and is not taken here. **UNSEEN on a
 device**: the build compiles; the 3% step was chosen from a browser mock on a
 Mac LCD, and the user is to look at it on the phone before it ships.
 
-## §744 — The wallet family's bar is deleted: the account is a card you page, the readings are door rows (user: "I think this bar that we made is the right idea, but doesn't really get where we need and feels vibe coded", then "WOW D is cool", then "inside can't be swipe bc swipe is for rooms but can be a scroll header", 2026-09-15)
+## §744 — Every feed row is one anatomy: a 26pt lead, the name and the time, one line, and whatever is its content below (user: "what parts of the app make it feel vibecoded?", then on the spec "one shape every row uses: picture on the left, name and time, one line, maybe some tiles": "awesome do it all", 2026-09-15)
+
+**The template is `Design/DSFeedRow.swift`, and eighteen row species compose it.**
+`BandRow`, `ReadingRow`, `ExcerptRow`, `MediaRow`, `MusicRow`, `TokenRow`,
+`BundleRow`, `StripRow`, `PostCard`, `SocialThreadCard`, `AppReviewRow`,
+`TakeawayCard`, `CursorRow`, both Walletbeat rows, both L2BEAT rows, and
+`VibenetEventRow`; the card-offers room's row in `FeedScreen` too. Only their
+BODIES changed — every derivation, clamp, ladder and liveness guard above them is
+untouched. `ApprovalCard` stays its own shape, because two buttons that sign or
+refuse are not a row's single tap.
+
+**What was wrong, measured before touching anything.** §586 had found five rows
+agreeing on a skeleton and made an audit of the agreement; nobody had looked at the
+other thirteen, because the audit's list was the five that agreed. Across the
+eighteen: the lead was 26, 36, 38, 44 or 56pt, or absent (`AppReviewRow`,
+`CursorRow`, `TakeawayCard`); the name was 12, 13 or 17pt, regular, medium or
+semibold; the picture sat left of the name, right of it or under it; a bundle's
+count was a trailing figure where every other row put the time. Scanned down All
+that is nine apps. The user had approved the mock of the alternative (frame C of
+`design/row-grammar/row-grammar-mocks.html`) and caught its one flaw before code
+existed — a post's text column 10pt right of every other.
+
+**The anatomy.**
+
+| slot | what | rung |
+|---|---|---|
+| lead | a source's mark, or a person's face at `Face.rowCircle`, always framed at `Mark.row` | 26pt |
+| name | the title; a person on a post; the source on a bundle | `body17`, regular |
+| trailing | the time; a signed amount over the time; a token's price; a watched rating's stage | on the name's baseline |
+| line | who and where, the count, the excerpt | `callout15`, secondary |
+| below | tiles at `Mark.tile` (§730), a post's words and media, a rating's bars | — |
+
+**One judgement taken against the mock, and why.** Frame C put the SOURCE on the
+name line and the title on the line under it. For a single thing the title leads
+here and the source is the line's first clause in rooms that mix sources. The
+feed is for reading (the core loop is capture then read), and a headline at 15pt
+secondary under the word "YouTube" is the reading the app exists for, demoted.
+A post keeps the person on top, as the mock had it, because a post's words are
+its content and sit below. If the mock's order is wanted instead it is one
+argument in `BandRow`'s call.
+
+**What each row gave up in the row, all of it still in the sheet.**
+
+- **The 17pt source badge over a face** (`sourceBadgeView`) is deleted. It was
+  the only row that put two marks in the lead; in a mixed room the line names
+  the source now. Its `design-ramp-audit` exemption went with it.
+- **A bundle's and a strip's trailing count** is the line ("6 screenshots").
+- **Right-hand art** (the art that rode beside an identity, a video still, a
+  reading thumb, an album cover in the lead) is a tile under the name. A
+  video still keeps its aspect at tile height rather than cropping to a square.
+  The day's anchor (§254) keeps its wide frame, under the name.
+- **The token's 36pt disc and semibold name.** Price and move stay trailing.
+- **The thread's 2pt rule down the replies** is deleted. It was a line, and
+  nothing in this app draws one (§8).
+- **L2BEAT's and Walletbeat's 38pt marks** are 26pt, their status dots 9pt with
+  a ring in the plate's fill (§743), not the page's.
+- **Cursor's outcome word before the title** moves to a quiet line under the
+  report, in its attention ink.
+
+**What enforces it.** `feed-row-skeleton-audit.py` now checks the template once
+(the name at `body17`, the rhythm, the 26pt framed lead, the line at
+`callout15`, no `AnyView`) and each row for composing it and saying when; three
+rows trail something other than a time, each with a reason. **The list is proven
+complete now**: the audit reads every species `shapedRow` and `socialRow`
+construct and fails on one that is neither a listed row nor a reasoned non-row,
+which is exactly how thirteen rows went unaudited under §586.
+
+`WalletRow`'s mark became `WalletMarkView(mark:size:)` so a feed row can draw it
+at 26pt; `WalletRow` itself is unchanged and still owns the wallet room's lists.
+
+**UNSEEN on a device.** iOS and Mac Catalyst build; the row audit and the row
+harnesses pass. No screenshot was taken, by the standing rule that visual work is
+checked by mock and build rather than the simulator. The first thing to look at
+on a phone is a post with a quote and media in the Social room, and a Notes row
+whose three-line excerpt is now 15pt rather than 13pt.
+
+## §745 — Every source room's head composes `DSRoomChassis`; the twenty-two hand-drawn heads are one template, and what they drew that the template has no place for is cut (user: "move the other 22 onto the shared template, so every room's top looks like it came from the same hand, and anything a card draws that the template has no place for is either added to the template or cut", 2026-09-15)
+
+**The report, and the count behind it.** The app reads "vibecoded" partly because
+each of the twenty-six source rooms has a head card in `Screens/*RoomCard.swift`
+made the day that source landed. Four — vibenet, Hegotá, Frames, the Privacy
+devnet — compose `DSRoomChassis` (§491, §495, §683). The other twenty-two never
+touched it. Read side by side they were ONE anatomy — a `heading22` sentence or a
+§585 lede, a secondary line, a drawing, a few rows, tertiary small print, inside
+`dsWidgetSurface()` — spelled twenty-two ways: the gap above a drawing was `s2`,
+`s3` or `s4` depending on the file; footnotes were `label11` in seven heads and
+`label12` in the rest; the whole card was a tap target in eleven and a dead face in
+the others; the ranked row (a name, a line, a `ShareBar`) existed as ten copies at
+two paddings, one of them with a 44pt target; the deadline row three copies, each
+with its own spelling of the stamp; the year/month span four copies at 34 and 38pt;
+and Altana alone had no top margin. §495 already named the failure and it applies
+unchanged: shared COMPONENTS (`ShareBar`, `RoomLedeView`, `DSRunwayRail`) are not a
+shared TEMPLATE, and the composition around them had twenty-two owners.
+
+**The ruling.** `DSRoomChassis.Head` (`Design/DSRoomHead.swift`) owns the
+composition, in reading order, and a room supplies facts:
+
+1. **lead** — `Lead.sentence` or `Lead.lede` (`Lead.figure(_:otherwise:)` is §585's
+   rule, which every room had spelled by hand);
+2. **door** — `Door(hint:wholeCard:action:)`: `dsCardLead` on the lead for
+   VoiceOver and, where `wholeCard`, the face-wide gesture for touch and pointer,
+   both applied by the template in one struct so the two halves cannot drift. No
+   door is a legitimate door (§83, the Safe module-only card);
+3. **notes** — `Line`s under the lead, `headNoteGap` (`s1`) apart;
+4. **blocks** — `Block { … }`, each owning `headBlockGap` (`s3`) above itself, so a
+   block a room declines to draw takes no air with it;
+5. **footnotes** — quiet `Line`s, `headBlockGap` below the last block and 2pt apart.
+
+The surface and the margin are `dsRoomHeadCard()` and `dsRoomHeadPlacement()`, one
+definition each. The Privacy Pools head is the only SCOPED head (§486 — a lead bare
+on the page, a switcher, at most one card) and composes the parts rather than the
+card: `LeadView`, `dsRoomHeadCard()` per scope, `LineText`, `HeadLink`, spaced by
+`scopedHeadGap` (`s4`, §471's reason).
+
+**Why not `visualSlot`.** The slot is a fixed, clipped 300pt box sized for a figure
+that scopes change under. These heads have no scopes, and their honest height is
+what they have to say — a quiet AWS account is one sentence, a Safe queue is three
+rows. Clipping a Safe queue to 300pt is §665's silent lost row, in the room where
+a lost row is a transaction. So the chassis gained a head family beside the slot,
+not a second use of it.
+
+**What the chassis gained, and the rule it was held to.** A slot was added only
+where several heads drew the same thing:
+
+| Addition | Drawn by |
+|---|---|
+| `Row` (title · line · optional detail · measure) | X, Journal, Agent, Cursor, Peer, Gnosis Pay, Dodo Payments, Railgun, Radicle, App Store Connect |
+| `DeadlineRow` (name · stamp · kind · value) | Stripe, Polar, Dodo Payments |
+| `MarkedRow` (mark · name · flag · line · trailing) | Walletbeat, L2BEAT |
+| `SpanStrip` (a column per period, silent faint, ends labelled) | X, Journal, Agent, Gnosis Pay |
+| `HeadLink` | Walletbeat, L2BEAT, Privacy Pools |
+| `Line` tones `note` / `quiet` / `alert` | every head; `alert` is Safe's module warning alone |
+
+`alert` is the one tone only one room uses, and it is a TONE of a line every head
+already has, not a slot: the module warning is the highest-stakes sentence the app
+states and cutting it was never on the table. Room-specific drawings that restate
+nothing — PostHog's metric discs, the runway rails, Altana's key rows, Safe's
+signature discs, Railgun's in/back pair, App Store Connect's build runway — stay in
+their rooms, inside a `Block` or a `Row`'s measure.
+
+**What was cut, and why each is §723's class or §83's.**
+
+- **The Instagram account board.** Its own doc said it carried
+  `FeedInsight.leaderboard`'s "Who you save most" forward whole, on §349's rule that
+  a head may not draw less than it displaces. §723 then deleted that board from every
+  room as visualization for its own sake; this copy survived only by being drawn by
+  hand. Deleted with it: `InstagramRoom.share(kept:of:)`, `InstagramRoom.top(_:)`, the
+  probe's `share=` column, the harness's three bar checks and its "zero-leader guard"
+  mutation (its anchor is gone, so it could only report a pass it never ran). The head
+  keeps the three facts the board could not state, and its door (the lead account's
+  newest post).
+- **The Apple Wallet merchant board** — "Who you actually pay", ranked by amount under
+  ten-point bars: the card-spend board §723 names, surviving the same way. Deleted
+  with it: `Card.moreMerchants`, the probe's "folded" line, `FeedScreen.openMerchant`
+  (its only caller was the board), the harness's fold guard, fold check and fold
+  mutation. `merchants` stays — it names the lede's top merchant and feeds the Today
+  brief. **The head has no door now**: nothing on it names a single row, and every
+  charge is its own row below.
+- **Three always-full bars.** Cursor's and Peer's lead bar and Gnosis Pay's
+  single-currency bar were each a share of `top`, and `top` IS the lead's own count,
+  so each drew full on every card that ever rendered. `accessibility-audit.py` had
+  already filed them as "scale anchors carrying no information at all". A bar with
+  one possible length encodes nothing. Cursor keeps the lead's line as its note.
+- **Safe's `CardTap` modifier and every head's private copy of the card recipe** —
+  moved into the template, not lost.
+
+**Not cut, and named so it is a decision rather than an oversight.** The ranked rows
+in X, Journal, Agent, Cursor and Peer are the nearest thing left to §723's board: a
+count per year, month, repository or rail under a share bar. They stay because each
+row carries what its strip or headline cannot — X/Journal/Agent a "mostly …" subject
+per period, Cursor the runs that didn't finish, Peer the in/out split — and each row
+is a door. If the user reads them as the board, deleting them is one `Block` per room
+and the `rows`/`share` functions behind it.
+
+**What changes on screen, UNSEEN.** Normalising the gaps moves pixels in most heads:
+Stripe, Polar and Dodo's rail sits `s3` below the note (was `s4`), and their rows
+follow the rail directly; Apple Wallet's rail, PostHog's roster and Altana's rows move
+up one rung; AWS's region line drops to the footnote gap; footnotes go 11pt → 12pt in
+Stripe, Polar, Dodo Payments, PostHog, Walletbeat, L2BEAT and Apple Wallet; Altana
+gains the `s2` top margin every sibling had; every ranked row takes a 44pt minimum
+(Agent's alone had it), which can add height to a one-line row; Dodo's currency rows
+now arrive with the entrance their siblings had; Gnosis Pay's month span grows 34 →
+38pt; agent-room spans shorter than 25 months get 3pt column gaps (were 2);
+Privacy Pools' scope cards tighten their inner gaps to the template's and its
+"Respond on 0xBow" door becomes a `HeadLink` (tinted `subhead13` with a trailing
+arrow, was a primary `callout15` with a leading one); App Store Connect's build
+runway gains a left-to-right wipe. **None of this has been seen on a device or a
+simulator.** The evidence is a build for the iOS simulator and for Mac Catalyst, the
+static audits, and the room harnesses listed below.
+
+**Guards.** `scripts/room-chassis-audit.py` (in `verify.sh`, `--self-test`) fails a
+`*RoomCard` whose own body — plus the view members it names, one hop — reaches neither
+`DSRoomChassis` nor `DSRoomSlot`, or that paints its own `dsWidgetSurface()`; a file
+declaring no `RoomCard` struct is read through `<Stem>RoomFigure` (Frames, Hegotá). It
+reads shapes, not layouts: a hand-drawn stack wrapped in one `Block` passes it.
+`accessibility-audit.py`'s struct scoping learned generic structs — `struct
+Head<Content: View>: View` was invisible to it, so the template's own `dsCardLead` could
+not answer for its gesture — with a clean and a dirty fixture. Guards that followed code
+into the template were AMENDED, not deleted: the X lead (`support/x-head-lead.py`) and
+the journal lead now pin the card's `.sentence(note)` AND the template's `heading22`;
+the journal's faint silent year pins the card's `silent:` and the template's
+`0.18 : 0.85`; Altana's card recipe pins `DSRoomChassis.Head(` and the template's
+surface and margin; the Privacy Pools note guard follows the call into `LineText`.
+Guards removed with what they guarded: listed under the Instagram and Apple Wallet
+deletions above. `prd-index-audit.py` carries a `KNOWN_DANGLING` entry for §745 while
+this entry is a draft — delete it when this lands in the ledger.
+
+## §746 — A pill is a choice or a fact, and every verb is a row (user: "most people only need two: a pill you tap to choose something, and a pill that just shows a fact", 2026-09-15)
+
+**The ruling, and its reason.** Asked why the app still reads as vibecoded,
+the user named the capsule: *"when every choice is a capsule, the screen reads
+as generated."* The count bore it out. `Design/` held eight components with
+chip or capsule in their story, and roughly sixty call sites reached for them
+to mean three different things: a choice (a window, a filter, a sort), a fact
+(a tag, a permission, a state), and a verb (Connect, Copy, Make active, Listen,
+Ask about this). They all looked the same, so none of them said which it was.
+The approved plan, in the user's words: *"There are eight different pill shapes
+in the app for tapping. Most people only need two: a pill you tap to choose
+something, and a pill that just shows a fact. Everything else becomes a row."*
+
+**What each one is now.**
+- **`Chip` is the CHOICE.** It has alternatives and a `selected` state, and
+  nothing else. Its `tint`, `primary` and `neutral` styles are deleted, and so
+  is `interactive:`. A filled blue chip was a button wearing a chip's name, and
+  an inert chip was a fact wearing a control's. Selection is a NEUTRAL fill,
+  `fillStrong` over `fillFaint`. That is what the range strip and the vibenet
+  filter strip already used, and §715 kept it because blue means urgency in
+  the vibenet room. The target stays 44pt (§717). The one exception is the
+  range strip inside a crown, which is budgeted at `crownRangeChips` (42), so
+  it keeps the 32pt hit its segmented box had.
+- **`DSStamp` is the FACT.** It is never tappable, and it stays a word with no
+  capsule, as §583 drew it.
+- **A verb is a ROW.** A verb that stands alone is `DSDoorRow`. It is 44pt tall
+  now, and it takes `role: .destructive` for the one colour that is a meaning.
+  A slot that owns its own control (a `ShareLink`, a `Menu`, a custom press)
+  uses the new `DSDoorRowLabel` instead. A verb that copies is `DSCopyRow`. A
+  verb that belongs to a row is that row's last word, through
+  `DSPushRowTrail`: the word in its own ink, then the chevron or a named glyph.
+
+**Components, 8 → 2 pill shapes.**
+
+| Was | Now |
+|---|---|
+| `Chip` | the choice; styles and `interactive:` deleted, `selected`/`count`/`hit` added |
+| `DSRangeChips` | a thin wrapper that composes `Chip`, moved into `DSChip.swift`; **`DSRangeChips.swift` deleted**. Call signature unchanged, so the crown, `RoomActivityChart` and the vibenet account compile untouched. |
+| `VerbCapsule` | **deleted**; `CapsuleVerb` became `RowVerb` (`Design/RowVerb.swift`, the same ten words, an `ink` instead of a fill) |
+| `DSCopyCapsule` | **deleted**; `DSCopyRow` in `DSDoorRow.swift` |
+| `DSStamp` | the fact, unchanged |
+| `IconChip` | **not a pill**: a squircle glyph mark that leads a settings row. Left as it is. |
+| `DSCount` | **not a pill, not a view**: the grouped-number formatter. Left as it is. |
+| `DSAccountAct` | **not a pill**: the account page's act flag, which draws discs and one entry well. Left as it is. |
+
+`CopyAddressButton`'s `.pill` style is deleted too; its one caller, the
+address card, uses `DSCopyRow`.
+
+**Where the call sites went.**
+- **Choice → `Chip` (9):** the composer's tag completions; the model picker and
+  the monthly-cap picker in `AgentKeyDetail`; a person's watch toggles
+  (`SocialPostViews`); the vibenet key filter strip and the NFT picker's
+  A–Z / Recent sort, which were both hand-drawn capsules; and, through
+  `DSRangeChips`, the wallet crown, the Activity chart and the vibenet account's
+  window.
+- **Fact → `DSStamp` (9):** the roster's "You"; a note's tags; an agent key's
+  permissions; the vibenet permission list and scope list (hand-drawn); the
+  settings privacy line; a watched token's "Watching …" (hand-drawn); the
+  feed's new-since divider (hand-drawn); a work item's labels (hand-drawn, with
+  the label's colour kept as its dot). **Three facts lost the capsule without
+  going through `DSStamp`**, each because a stamp's weights are states and these
+  are not: the price card's move (its direction ink stays), L2BEAT's stage (the
+  stage ink ramp stays, and forcing Stage 2 into "good" would be this app
+  grading the chain), and GenUI's `Chip` shelf unit.
+- **Verb → row (33):** the catalogue's Fix / Open / Connect / Allow / Sign in /
+  Add key / Import / Watch / Automatic / Soon (five `VerbCapsule` sites, now one
+  trailing word; §641 already ran the whole row through `rowAction`, so the
+  capsule was one act drawn twice); the vibenet sub-account's Watch; Make
+  active in `AgentKeyPicker` and `BridgeSetupComponents`; the wallet sheet's
+  action-row doors (the ↗/↑ arrow survives as the trail's glyph, so "am I
+  leaving?" is still answered); the three device-code Copy buttons and the
+  address card's copy; Choose a model, Catch up now and Copy the key; Listen /
+  Stop; Name it / Not now; Peek at vitalik.eth; Altana's also-signs-for
+  wallets; Ask about this (Walletbeat, L2BEAT); Carry on; Watch it from the
+  lock screen; Keep / Save as a note; the vibenet key sheet's five copy doors
+  and Revoke this key (destructive); the feed's compose row, Show everything
+  and the try-its; and the data tray's Export, Import, Remove key and the key
+  form's Save.
+- **Verb → a word (1):** the send console's Max. It sits inside the amount
+  field's own line, where a row has nowhere to stand.
+
+**SUPERSEDED, named so nobody re-litigates from the old entry.** §653's
+`VerbCapsule` drawing (the words and the price they say survive as `RowVerb`).
+§715's `DSCopyCapsule` and `Chip(interactive:)`, and two of its "deliberately
+NOT migrated" items: the devnet console's Max capsule, and the vibenet filter
+chips, which now go through `Chip` and keep their neutral selection. §686 and
+the 2026-08-16 Stocks redraw's segmented box. The 2026-08-28 `Chip.primary`
+and `NameAddressPrompt`'s small primary. §446's address-card copy pill. §480's
+"one row of quiet capsules" on the key sheet. §463's permission chips as
+capsules; the ruling against a grid stands. The 2026-08-03 Statement pass's
+54pt action capsules on the data tray. §613's full-width "Watching" capsule.
+**§583 is NOT superseded:** the user said "a pill that just shows a fact", and
+`DSStamp` has been a word with no capsule since §583. No wash was put back. If
+the user meant a literal pill, that is a new ruling to ask for.
+
+**The guard.** `scripts/ds-template-audit.py` check C fails a capsule drawn as
+the ground of other content outside `Design/`. That means the shape argument of
+`.background`, `.overlay` or `.clipShape`, in either spelling, through
+`if`/`else` branches, and `.capsule` as a shape style. A capsule standing alone
+in a stack is a drawing (a progress track, a waveform bar, a tick, a caret, a
+skeleton) and is not matched. Neither are `contentShape` and `dsTapTarget`.
+`--self-test` plants seven spellings that must fire and one file of tracks,
+bars, hit shapes, comments and a `Design/` chip that must not. The exemptions
+are a RATCHET keyed by file: over the allowance fails, an allowance with nothing
+left fails as stale, and under it passes with a note.
+
+Twelve files hold exemptions. **Owned by other sessions today:** `ShapedRows`
+(feed rows), `HegotaRoomCard`, `PrivacyPoolsRoomCard`, `VibenetRoomCard` (room
+heads), and `DockFolderRow` (the dock, user-protected). **Not pills, measured:**
+the A–Z scrub track, a cluster label's plate over a map, the devnet join bar,
+and two privacy-figure encodings. **Real pills, OWED:**
+- The Accounts door's Yours | All segment. It was user-ruled and declined by
+  §715; it is a choice, and it moves to `Chip` only on a new ruling.
+- The wallet crown's face chips. Each carries a face, a value and a delta that
+  `Chip` cannot, and they wait for the room-head migration.
+- GenUI's Suggest "Review" and the approval card's Approve / Deny. These are
+  model-emitted display forms with no action. Whether an inert verb shape may
+  render at all is a §83 question, not a shape swap.
+
+**Guards that moved.** `wallet-section-selftest.sh` read the range chips' draw
+gate from `DSRangeChips.swift`; it reads `DSChip.swift` now, and the assertion is
+the same. No guard was deleted.
+
+**What changes on screen, UNSEEN.**
+- **The catalogue:** rows lose their filled pills and end in a coloured word
+  and a chevron. Soon has no chevron.
+- **Range pickers:** they are separate chips now, not a segmented well.
+- **Door rows are 44pt tall.** Every `DSDoorRow` grows by up to 16pt, including
+  the pre-existing ones on `ENSRenewCard`, `SafeQueueCard`,
+  `ApprovalPrepareCard`, Diagnostics and a link's "Read on …".
+- **Taller stacks:** the key sheet's copy doors stack vertically instead of
+  flowing, and the data tray's Export / Import / Remove key become rows instead
+  of 54pt capsules, so both are taller.
+- **Lost emphasis:** the vibenet admin scope loses its inverted fill and wears a
+  key mark in confirm ink. L2BEAT's stage and the price move lose their fills.
+  "You" on the roster is confirm ink, not tint.
+
+**None of this has been seen on a device or a simulator.** The evidence is an
+iOS simulator build, a Mac Catalyst build, every `*-audit.py`, and the harnesses
+that name a changed file.
+
+## §747 — The wallet family's bar is deleted: the account is a card you page, the readings are door rows (user: "I think this bar that we made is the right idea, but doesn't really get where we need and feels vibe coded", then "WOW D is cool", then "inside can't be swipe bc swipe is for rooms but can be a scroll header", 2026-09-15)
 
 **The complaint, and both halves are measurable rather than matters of taste.**
 From a screenshot of build 588's wallet room: *"one the name gets truncated, so

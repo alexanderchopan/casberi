@@ -3,21 +3,19 @@ import SwiftUI
 /// THE APP STORE CONNECT ROOM'S HEAD (2026-08-06, prd §324) — where every app
 /// stands right now.
 ///
-/// The anatomy is `StripeRoomCard`'s, which took it from `CloudflareRunwayCard`
-/// and `WalletApprovalExposureCard`, where these rulings were made: a kicker in
-/// the card's one hue, a heavy headline stating the whole finding as a sentence,
-/// ranked rows, and no decoration that isn't a reading. What was ruled out there
+/// A heavy headline stating the whole finding as a sentence, the other apps as
+/// rows, and no decoration that isn't a reading. What was ruled out for Stripe
 /// is out here — no coloured rail down the side of a row, and **no green/red**:
 /// a rejection is stated in words, not painted, exactly as a Stripe dispute is.
 ///
 /// ## What replaces the rail
 ///
-/// Stripe and Cloudflare both draw one time axis, because both rooms are about
-/// deadlines converging on you. This room has ONE clock — a TestFlight build's
-/// 90-day death — and it belongs to a single app rather than to the card, so a
-/// shared axis would place two apps' unrelated builds on one scale and imply a
-/// comparison nobody made. Each app gets its own thin runway instead, drawn only
-/// when there is a build with an expiry to draw.
+/// Stripe draws one time axis, because that room is about deadlines converging
+/// on you. This room has ONE clock — a TestFlight build's 90-day death — and it
+/// belongs to a single app rather than to the card, so a shared axis would place
+/// two apps' unrelated builds on one scale and imply a comparison nobody made.
+/// Each app gets its own thin runway instead, drawn only when there is a build
+/// with an expiry to draw.
 ///
 /// ## The duration is drawn only when it is real
 ///
@@ -28,12 +26,10 @@ import SwiftUI
 ///
 /// ## Liveness
 ///
-/// Stores no `Thing` — only value types out of `ASCRoom`. Corollary 5 has
-/// nothing to guard here; the lookup happens at the tap, in the section that
-/// owns the sheet.
+/// Stores no `Thing` — only value types out of `ASCRoom`. The lookup happens at
+/// the tap, in the section that owns the sheet.
 ///
-/// FLAT BY LAW like its neighbours: a plain VStack, no generic `Widget`/`Row`
-/// mount (the render-depth lesson, paid three times).
+/// Composed through `DSRoomChassis.Head` and its ranked `Row` (prd §745).
 struct AppStoreConnectRoomCard: View {
     let room: ASCRoom
     /// Hands back the APP, not a `Thing` — the card never holds one.
@@ -51,89 +47,38 @@ struct AppStoreConnectRoomCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
-            // head renders only inside its own source's room, under a chip strip
-            // where that source's chip is the lit one — so the card introduced
-            // itself with a word already on screen, one row up.
-            Text(ASCRoom.headline(room))
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                // The lead has no row of its own (see below), so this headline
-                // is the only place its destination can be reached.
-                .dsCardLead(Text("Opens this app")) {
-                    guard let lead = room.lead else { return }
-                    DSHaptic.selection()
-                    onOpen(lead)
-                }
-
+        let leadRunway = room.lead.flatMap { runwayLabel($0) }
+        DSRoomChassis.Head(
+            lead: .sentence(ASCRoom.headline(room)),
+            // The lead has no row of its own (see below), so the headline is
+            // the only place its destination can be reached.
+            door: room.lead.map { lead in
+                DSRoomChassis.Door(hint: Text("Opens this app")) { onOpen(lead) }
+            },
+            notes: [.note(leadRunway)],
+            footnotes: [.quiet(ASCRoom.note(room, drawn: drawn.count))]) {
             // Only the apps BEYOND the lead get a row — the lead is the
             // headline, and repeating it directly underneath is the card
             // arguing with itself. Its build runway still draws, because that
             // is a fact the headline doesn't carry.
-            if let lead = room.lead, let runway = runwayLabel(lead) {
-                Text(runway)
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
-                    .padding(.top, DS.Space.s1)
-                runwayBar(lead)
-                    .padding(.top, DS.Space.s2)
+            if let lead = room.lead, leadRunway != nil {
+                DSRoomChassis.Block { runwayBar(lead) }
             }
 
             if drawn.count > 1 {
-                ForEach(Array(drawn.dropFirst().enumerated()), id: \.element.id) { index, app in
-                    row(app)
-                        .chartArrival(index: index, reduceMotion: reduceMotion)
+                DSRoomChassis.Block {
+                    ForEach(Array(drawn.dropFirst().enumerated()), id: \.element.id) { index, app in
+                        DSRoomChassis.Row(
+                            title: app.name,
+                            line: standingLine(app),
+                            index: index,
+                            action: { onOpen(app) }) {
+                            if runwayLabel(app) != nil { runwayBar(app) }
+                        }
+                    }
                 }
-                .padding(.top, DS.Space.s3)
-            }
-
-            if let note = ASCRoom.note(room, drawn: drawn.count) {
-                Text(note)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.top, DS.Space.s3)
             }
         }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWidgetSurface()
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s2)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard let lead = room.lead else { return }
-            DSHaptic.selection()
-            onOpen(lead)
-        }
-    }
-
-    // MARK: - Rows
-
-    private func row(_ app: ASCRoom.App) -> some View {
-        Button {
-            DSHaptic.selection()
-            onOpen(app)
-        } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(app.name)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Spacer(minLength: DS.Space.s2)
-                    Text(standingLine(app))
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-                if runwayLabel(app) != nil { runwayBar(app) }
-            }
-            .padding(.vertical, DS.Space.s1)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     /// "In review · 2 days", or just the state when we never watched it arrive.
@@ -173,6 +118,10 @@ struct AppStoreConnectRoomCard: View {
             }
         }
         .frame(height: Self.runwayHeight)
+        // The runway states a length, so it reveals along that length — the
+        // entrance the rows' own arrival used to stand in for before the rows
+        // moved into the template (prd §745, design-motion-audit check 2).
+        .chartWipe(reduceMotion: reduceMotion)
         .accessibilityLabel(ASCRoom.buildLabel(app) ?? "")
     }
 

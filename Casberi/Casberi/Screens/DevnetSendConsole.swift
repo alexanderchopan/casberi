@@ -1306,12 +1306,13 @@ struct DevnetSendSheet: View {
                         DSHaptic.selection()
                         amount = DevnetAmountInput.sanitize(maxAmount, previous: amount)
                     } label: {
+                        // A WORD in the venue's ink, not a washed capsule
+                        // (prd §746): it sits inside the amount field's own
+                        // line, where a row would have nowhere to stand.
                         Text(String(localized: "Max"))
                             .dsText(.label12).fontWeight(.semibold)
                             .foregroundStyle(tint)
-                            .padding(.horizontal, DS.Space.s2)
-                            .padding(.vertical, 3)
-                            .background(tint.opacity(0.14), in: Capsule())
+                            .dsTapTarget()
                     }
                     .buttonStyle(PressSpring())
                     .dsHover()

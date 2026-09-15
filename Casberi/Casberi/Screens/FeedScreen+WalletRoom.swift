@@ -224,7 +224,7 @@ extension FeedScreen {
     /// slower.
     static var walletVisualSlot: CGFloat { DSRoomChassis.visualSlot }
 
-    /// THE ROOM'S CHROME, AND THERE IS NO BAR IN IT (prd §744, 2026-09-15).
+    /// THE ROOM'S CHROME, AND THERE IS NO BAR IN IT (prd §747, 2026-09-15).
     ///
     /// Was `walletScopeRailSection` — the fused rail slab (§547), one deck of
     /// faces over one deck of chips. Two complaints killed it and both were
@@ -350,7 +350,7 @@ extension FeedScreen {
         }
     }
 
-    /// WHAT EACH SCOPE HOLDS, BEFORE YOU OPEN IT (prd §744).
+    /// WHAT EACH SCOPE HOLDS, BEFORE YOU OPEN IT (prd §747).
     ///
     /// The row's right-hand fact. §611 put every scope on every wallet on the
     /// rule that a chip onto a sentence teaching the scope beats a chip onto

@@ -249,17 +249,7 @@ struct InstagramRoom: Equatable {
         return String(localized: "\(room.gone.formatted()) of these are gone from Instagram. Your record of them isn't.")
     }
 
-    /// A bar's share of the biggest account's. Zero-safe: a room whose leader is
-    /// somehow empty draws flat bars rather than dividing by nothing — the NaN
-    /// a SwiftUI frame draws as no bar at all.
-    static func share(kept: Int, of top: Int) -> Double {
-        guard top > 0 else { return 0 }
-        return min(1, Double(kept) / Double(top))
-    }
-
-    /// The biggest account's count — every bar's full width, so the card is on
-    /// ONE scale.
-    static func top(_ room: InstagramRoom) -> Int {
-        room.accounts.map(\.kept).max() ?? 0
-    }
+    // `share(kept:of:)` and `top(_:)` are deleted with the account board they
+    // scaled (prd §745): a feature deleted from the surface is deleted from
+    // the model. `accounts` stays — its first entry is the head's door.
 }

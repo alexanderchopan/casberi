@@ -216,17 +216,14 @@ struct AltanaKeyCard: View {
             Text(String(localized: "Also signs for"))
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(DS.textSecondary)
-            HStack(spacing: DS.Space.s2) {
-                ForEach(model.alsoSignsFor, id: \.self) { address in
-                    Button {
-                        DSHaptic.selection()
-                        onWallet(address)
-                    } label: {
-                        Chip(text: WalletStore.shortAddress(address))
-                    }
-                    .buttonStyle(PressSpring())
+            // Each wallet is a door, so a row (prd §746) — they were chips,
+            // which read as a choice among them rather than a way to each.
+            ForEach(model.alsoSignsFor, id: \.self) { address in
+                DSDoorRow(icon: "wallet.pass",
+                          title: Text(verbatim: WalletStore.shortAddress(address))) {
+                    DSHaptic.selection()
+                    onWallet(address)
                 }
-                Spacer(minLength: 0)
             }
         }
     }

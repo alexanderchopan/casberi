@@ -1938,9 +1938,6 @@ enum ProbeHooks {
                           m.name, AppleWalletRoom.money(m.total, m.currency),
                           m.count, m.share * 100)
                 }
-                if card.moreMerchants > 0 {
-                    NSLog("[Casberi] appleWalletMerchant| (+%d folded)", card.moreMerchants)
-                }
                 if let c = card.creep {
                     NSLog("[Casberi] appleWalletCreep| %@ %@ → %@ (%+.0f%%)", c.merchant,
                           AppleWalletRoom.money(c.was, c.currency),

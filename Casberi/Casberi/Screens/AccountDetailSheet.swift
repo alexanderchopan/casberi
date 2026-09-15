@@ -195,10 +195,10 @@ struct AccountDetailSheet: View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             exportControl
             Button { importing = true } label: {
-                actionLabel("Import", icon: "square.and.arrow.down",
-                            fg: DS.textPrimary, bg: DS.gray100)
+                actionLabel("Import", icon: "square.and.arrow.down")
             }
             .buttonStyle(.plain)
+            .dsHover()
             HStack(spacing: DS.Space.s8) {
                 Button { confirmDelete = true } label: {
                     dangerLabel("Delete things")
@@ -260,13 +260,11 @@ struct AccountDetailSheet: View {
                               systemImage: "person.text.rectangle")
                     }
                 } label: {
-                    actionLabel("Export", icon: "square.and.arrow.up",
-                                fg: .white, bg: DS.tint)
+                    actionLabel("Export", icon: "square.and.arrow.up")
                 }
             } else {
                 ShareLink(item: exportURL) {
-                    actionLabel("Export", icon: "square.and.arrow.up",
-                                fg: .white, bg: DS.tint)
+                    actionLabel("Export", icon: "square.and.arrow.up")
                 }
                 .buttonStyle(.plain)
                 .simultaneousGesture(TapGesture().onEnded { DSHaptic.tap() })
@@ -274,20 +272,15 @@ struct AccountDetailSheet: View {
         }
     }
 
-    /// One action button face — full-height capsule, icon + word. 54pt since
-    /// the Statement pass: with only two capsules left on the tray they carry
-    /// the whole action band, and the chunkier height is the modern read.
-    private func actionLabel(_ title: String, icon: String,
-                             fg: Color, bg: Color) -> some View {
-        HStack(spacing: DS.Space.s2) {
-            Image(systemName: icon).dsGlyph(15)
-            Text(title).dsText(.callout15).fontWeight(.semibold)
-        }
-        .foregroundStyle(fg)
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: 54)
-        .background(bg, in: Capsule(style: .continuous))
-        .contentShape(Capsule(style: .continuous))
+    /// One action's face — a DOOR ROW since prd §746. It was a 54pt
+    /// full-width capsule (the Statement pass, 2026-08-03: Export filled tint,
+    /// Import and Remove key gray), which made a tray of verbs a stack of
+    /// pills. The row keeps the icon and the word; `destructive` keeps the one
+    /// colour that is a meaning.
+    private func actionLabel(_ title: LocalizedStringKey, icon: String,
+                             destructive: Bool = false) -> some View {
+        DSDoorRowLabel(icon: icon, title: Text(title),
+                       role: destructive ? .destructive : nil)
     }
 
     /// A destructive verb as red words — full 44pt hit target, no slab. The
@@ -404,21 +397,14 @@ struct AccountDetailSheet: View {
             // keyed ask is still a per-answer tap on a device whose default
             // answer never left.
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "sparkles")
-                        .dsGlyph(13)
-                    // prd §718: "answers" named the deprecated ask. The app's
-                    // own claim without it is the one NetworkReach makes
-                    // checkable.
-                    (AskSurface.enabled
-                        ? Text("Private — answers run on \(DS.device)")
-                        : Text("Private — nothing routes through us"))
-                        .dsText(.subhead13).fontWeight(.semibold)
-                }
-                .foregroundStyle(DS.confirm)
-                .padding(.horizontal, DS.Space.s4)
-                .frame(minHeight: 34)
-                .background(DS.confirm.opacity(0.13), in: Capsule(style: .continuous))
+                // A FACT, so a stamp (prd §746) — it was a confirm-washed
+                // capsule. prd §718: "answers" named the deprecated ask. The
+                // app's own claim without it is the one NetworkReach makes
+                // checkable.
+                DSStamp(word: AskSurface.enabled
+                            ? String(localized: "Private — answers run on \(DS.device)")
+                            : String(localized: "Private — nothing routes through us"),
+                        weight: .good, glyph: "sparkles")
                 // Only with a key configured — an unkeyed install reads
                 // exactly as it did before. The sentence names the AGENT (who
                 // answers) and the COMPANY (who receives it), because those
@@ -674,36 +660,28 @@ struct AccountDetailSheet: View {
             // this Mac ask Casberi.
             MCPServerRow()
             #endif
-            HStack(spacing: DS.Space.s3) {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                // The entry well is a box you put something in — the one
+                // thing here that may be boxed (§729's grammar), and a rounded
+                // well rather than a capsule since prd §746.
                 SecureField(LocalizedStringKey(keyProvider.placeholder), text: $keyDraft)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .dsText(.callout15)
                     .padding(.horizontal, DS.Space.s3)
                     .frame(minHeight: 44)
-                    .background(DS.fillFaint, in: Capsule(style: .continuous))
-                // The §83 corollary: `.disabled` dims a PLAIN-style button's
-                // label, never a background you painted yourself — so a
-                // hand-rolled fill must swap its own fill and label, or it
-                // reads live while inert. This one stayed full-tint and
-                // white-labelled on an empty field and mid-check (audit,
-                // 2026-07-31), the exact defect `DSSlabButton` and
-                // `FollowImportSheet` both carry comments about avoiding.
+                    .background(DS.fillFaint,
+                                in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+                // Save is a VERB, so a row under the field (prd §746) — it was
+                // a filled capsule beside it. The §83 corollary still holds and
+                // is simpler now: `.disabled` dims a plain-style button's label,
+                // and there is no hand-painted fill left to swap.
                 let keySaveOff = keyChecking
                     || keyDraft.trimmingCharacters(in: .whitespaces).isEmpty
-                Button { saveKey() } label: {
-                    Text(keyChecking ? "Checking…" : "Save")
-                        .dsText(.callout15).fontWeight(.semibold)
-                        .foregroundStyle(keySaveOff ? DS.textTertiary : .white)
-                        .padding(.horizontal, DS.Space.s4)
-                        .frame(minHeight: 44)
-                        .background(keySaveOff ? AnyShapeStyle(DS.gray200) : AnyShapeStyle(DS.tint),
-                                    in: Capsule(style: .continuous))
-                        .animation(DS.Motion.standard, value: keySaveOff)
-                }
-                .buttonStyle(PressSpring())
-                .armedPop(!keySaveOff)
-                .disabled(keySaveOff)
+                DSDoorRow(icon: keyChecking ? "hourglass" : "checkmark",
+                          label: keyChecking ? "Checking…" : "Save") { saveKey() }
+                    .armedPop(!keySaveOff)
+                    .disabled(keySaveOff)
             }
             if keyConfigured {
                 Button {
@@ -718,10 +696,10 @@ struct AccountDetailSheet: View {
                         ? "Removed — answers run on \(AgentKey.active?.agent ?? "") now."
                         : "Removed — answers stay on \(DS.device)."
                 } label: {
-                    actionLabel("Remove key", icon: "trash",
-                                fg: DS.destructive, bg: DS.gray100)
+                    actionLabel("Remove key", icon: "trash", destructive: true)
                 }
                 .buttonStyle(.plain)
+                .dsHover()
             }
             if let keyResult {
                 Text(keyResult)

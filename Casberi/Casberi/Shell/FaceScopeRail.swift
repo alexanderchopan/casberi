@@ -622,7 +622,7 @@ enum VibenetScopeRail {
 }
 
 // **`HegotaScopeRail`, `FramesScopeRail` AND `PrivacyDevnetScopeRail`
-// ARE DELETED (prd §744, 2026-09-15).** Those three rooms draw no
+// ARE DELETED (prd §747, 2026-09-15).** Those three rooms draw no
 // `FaceScopeRail` any more — their accounts are the cards of
 // `DSAccountDeck`, built by each room's own `slots(_:)` — so the
 // adapters that existed only to feed a rail went with it, per §723.
@@ -634,7 +634,7 @@ enum VibenetScopeRail {
 
 enum WalletScopeRail {
     /// Whether this room has a roster worth scoping at all. It outlived the
-    /// rail it was named for (§744): the shell reads it to decide whether the
+    /// rail it was named for (§747): the shell reads it to decide whether the
     /// room takes an account scope, and the crown card reads it to decide
     /// whether to name the pick. One rule with two readers on two different
     /// screens, so it is spelled once here, and a copy of this
@@ -653,7 +653,7 @@ enum WalletScopeRail {
             && watched > 1
     }
 
-    // **`items` AND `matches` ARE DELETED (prd §744, 2026-09-15).** The wallet
+    // **`items` AND `matches` ARE DELETED (prd §747, 2026-09-15).** The wallet
     // room draws no `FaceScopeRail` any more — its accounts are the cards of
     // `DSAccountDeck`, built by `FeedScreen.walletAccountSlots` — so the two
     // members that existed only to feed that rail went with it, per §723: a
@@ -793,7 +793,7 @@ enum GitHubScopeRail {
 }
 
 
-/// THE ONE DRAWER FOR A RAIL ITEM'S FACE (2026-09-15, prd §744).
+/// THE ONE DRAWER FOR A RAIL ITEM'S FACE (2026-09-15, prd §747).
 ///
 /// It was `FaceScopeRail.face(_:)` and stayed private for as long as the rail
 /// was the only thing that drew one. `DSAccountDeck` draws the same faces at

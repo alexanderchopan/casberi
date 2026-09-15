@@ -131,21 +131,16 @@ struct PriceObjectCard<Evidence: View>: View {
         let flat = move.isFlat
         let ink = flat ? DS.textSecondary
                        : TokenChartStyle.accent(up: move.change > 0, scheme: scheme)
+        // A FACT, so a word and not a pill (prd §746). The ink still carries
+        // the direction; the emphasis the solid capsule gave a live reading is
+        // its weight now — bold only while the reading is current AND has a
+        // direction, because emphasis on a number we have just said we cannot
+        // vouch for is the overclaim wearing a different hat.
         return Text(verbatim: "\(PriceObject.percent(move.change)) · \(move.window)")
             .dsText(.subhead13)
-            .fontWeight(.bold)
+            .fontWeight(object.freshness.isLive && !flat ? .bold : .regular)
             .monospacedDigit()
-            .foregroundStyle(object.freshness.isLive && !flat ? .white : ink)
-            .padding(.horizontal, DS.Space.s2 + 2)
-            .padding(.vertical, 3)
-            .background(
-                // Loud only while the reading is current AND has a direction:
-                // a solid capsule is emphasis, and emphasis on a number we
-                // have just said we cannot vouch for is the overclaim wearing
-                // a different hat.
-                object.freshness.isLive && !flat ? AnyShapeStyle(ink)
-                                                 : AnyShapeStyle(DS.fillStrong),
-                in: Capsule(style: .continuous))
+            .foregroundStyle(ink)
     }
 
 }

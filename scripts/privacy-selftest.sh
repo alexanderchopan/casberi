@@ -1414,7 +1414,7 @@ grep -qF 'nonisolated static func observedRelaunch()'   "Casberi/Casberi/Model/P
 # in that direction is that restoring the caption would look like an ordinary
 # improvement — "the rail could say what each address holds" is exactly the
 # sentence the removed doc comment used to make.
-# **THE SUBJECT MOVED (prd §744, 2026-09-15).** `PrivacyDevnetScopeRail` is
+# **THE SUBJECT MOVED (prd §747, 2026-09-15).** `PrivacyDevnetScopeRail` is
 # deleted with the bar it fed: the accounts are `DSAccountDeck` cards now,
 # built by `PrivacyDevnetRoomCard.slots`. The RULE is unchanged and is the only
 # thing this ever meant — a face names WHO, never how much — so the guard
@@ -1430,7 +1430,7 @@ grep -qE 'PrivacyDevnetMoney|balanceWei' "$work/privacyslots.swift"   && fail "t
 grep -qF 'PrivacyDevnetName.of($0.address)' "$work/privacyslots.swift"   || fail "the Privacy deck stopped naming its accounts through the seat's one naming, so this phone's own account reads as a stranger's hex"
 # AND THE RAIL ITSELF IS GONE, not merely unused: an adapter with no caller is
 # the dead control one layer down that §723 forbids and no screen sweep sees.
-grep -qF 'enum PrivacyDevnetScopeRail' "Casberi/Casberi/Shell/FaceScopeRail.swift"   && fail "PrivacyDevnetScopeRail is back — this room draws no face rail since §744, so an adapter for one is dead code by construction"
+grep -qF 'enum PrivacyDevnetScopeRail' "Casberi/Casberi/Shell/FaceScopeRail.swift"   && fail "PrivacyDevnetScopeRail is back — this room draws no face rail since §747, so an adapter for one is dead code by construction"
 
 
 # **THE WALK SAYS WHAT IT DID NOT READ (§307, §309).** A truncated room and a

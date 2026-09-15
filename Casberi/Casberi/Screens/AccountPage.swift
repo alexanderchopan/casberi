@@ -733,7 +733,9 @@ struct AccountRosterRow: View {
                         .dsText(.heading17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     if row.isYou {
-                        Chip(text: String(localized: "You"), style: .tint, interactive: false)
+                        // A fact beside a name (prd §746) — the stamp, not an
+                        // inert chip.
+                        DSStamp(word: String(localized: "You"), weight: .good)
                     }
                 }
                 Text(subline)

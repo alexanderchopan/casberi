@@ -442,10 +442,8 @@ struct CopyAddressButton: View {
         /// a filled container (`WalletScreen.manualPairingCard`), where a
         /// second fill would nest two grounds.
         case inline
-        /// Glyph and word in a capsule — the address card's own copy pill
-        /// (prd §446), which stands alone under the address with nothing
-        /// behind it to borrow a shape from.
-        case pill
+        // `pill` (glyph and word in a capsule, prd §446) is GONE with prd
+        // §746: the address card's copy is `DSCopyRow` now, a row.
     }
 
     let address: String
@@ -475,20 +473,6 @@ struct CopyAddressButton: View {
                         .foregroundStyle(copied ? DS.confirm : tint)
                         // A bare word is as tall as its text — floored.
                         .dsTapTarget()
-                case .pill:
-                    HStack(spacing: DS.Space.s2) {
-                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                            .dsSymbolSwap(copied)
-                            .dsGlyph(12, weight: .semibold)
-                        Text(copied ? "Copied" : "Copy")
-                            .dsText(.subhead13).fontWeight(.semibold)
-                    }
-                    .foregroundStyle(copied ? DS.confirm : tint)
-                    .padding(.leading, DS.Space.s3)
-                    .padding(.trailing, DS.Space.s3 + 2)
-                    .padding(.vertical, 7)
-                    .background(DS.fillFaint, in: Capsule(style: .continuous))
-                    .dsTapTarget(Capsule(style: .continuous))
                 case .compact:
                     Image(systemName: copied ? "checkmark" : "doc.on.doc")
                         .dsSymbolSwap(copied)
@@ -1556,16 +1540,16 @@ struct AddressCard: View {
         .accessibilityLabel(Text(current.address))
     }
 
-    /// Copy — the pill under the address, in the app tint.
+    /// Copy — a ROW under the address (prd §746; it was `CopyAddressButton`'s
+    /// `.pill`, a glyph and word in a faint capsule, prd §446).
     ///
     /// It used to take this address's own hue, along with `See all` and the
     /// verb bar, so the whole card read as one identity. That went with the
     /// pour (2026-08-22, user ruling): a control in a per-address colour is a
-    /// control whose colour means nothing you can act on, and the same purple
-    /// on a CTA read as a brand nobody chose. The identity colour stays where
-    /// it IS the identity — the face and its ring.
+    /// control whose colour means nothing you can act on. The identity colour
+    /// stays where it IS the identity — the face and its ring.
     private var copyPill: some View {
-        CopyAddressButton(address: current.address, style: .pill, tint: DS.tint)
+        DSCopyRow(value: current.address, label: "Copy address")
     }
 
 

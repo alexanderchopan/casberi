@@ -265,8 +265,10 @@ grep -q 'Capsule(style: .continuous).fill(DS.fillFaint)' "$CARD_STRIPPED" \
 grep -q 'ForEach(PrivacyPoolsRoom.legendRows(room))' "$CARD_STRIPPED" \
   || { echo "✗ the legend iterates segments again — the untagged deposits would lose the row that explains the bar's gap"; exit 1; }
 # The note is the SPLIT'S caption now, not a second sentence under the
-# headline. Drawn in the review body or it is a fact with no home.
-grep -q 'Text(PrivacyPoolsRoom.note(room))' "$CARD_STRIPPED" \
+# headline. Drawn in the review body or it is a fact with no home. Re-pointed
+# for prd §745: the line is drawn by the head template's `LineText` now, so the
+# guard follows the call rather than the `Text(` it used to be wrapped in.
+grep -q 'text: PrivacyPoolsRoom.note(room)' "$CARD_STRIPPED" \
   || { echo "✗ the card no longer draws the note — the split bar loses the sentence that says what it shows"; exit 1; }
 grep -q 'PrivacyPoolsRoom.shieldedNote(room)' "$CARD_STRIPPED" \
   || { echo "✗ the money line lost its caveats — deposits it could not price would be silently missing from the figure"; exit 1; }

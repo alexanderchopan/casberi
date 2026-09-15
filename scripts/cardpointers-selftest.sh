@@ -340,7 +340,8 @@ guard "the dateless group is named, not hidden" "$FEED" '"No end date"'
 guard "finished offers get their own group" "$FEED" '"Not active"'
 # The row's three facts. `summary` is the one that was stored and drawn nowhere
 # for the life of the seat, so it is the guard worth having.
-guard "the row draws the terms" "$FEED" 'subtitle: thing.summary'
+# Since §744 the terms are the anatomy's line, not `WalletRow`'s subtitle.
+guard "the row draws the terms" "$FEED" 'line: DSFeed.line(thing.summary)'
 guard "the row draws the deadline" "$FEED" 'FeedLedeFace.dueLine(due)'
 guard "the row leads with the merchant, not the landed title" "$FEED" 'CardPointers.merchant(title: thing.title'
 

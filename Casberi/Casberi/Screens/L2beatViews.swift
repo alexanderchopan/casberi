@@ -117,26 +117,28 @@ struct L2beatStripKey: View {
 	}
 }
 
-/// L2BEAT's own stage, as a pill.
+/// L2BEAT's own stage, as a word.
 ///
 /// THEIR COMPOSITE, CITED AND NEVER COMPUTED — and the reason §419's "invent no composite"
 /// rule costs nothing here. The rung's own word leads; a chain L2BEAT does not place on the
 /// ladder says so rather than being shown as a zero, because "not staged" and "Stage 0" are
 /// different claims and only one of them is a rung.
+///
+/// A FACT, so no capsule (prd §746) — the stage's ink ramp (primary for 1 and 2, secondary for
+/// 0, tertiary for none) is what said which rung, and the ink stays. It does not go through
+/// `DSStamp` because a stamp's weights are states (good, waiting, urgent) and a stage is a rung
+/// on someone else's ladder; forcing Stage 2 into "good" would be this app grading the chain.
+/// `compact` is kept so the call sites in the feed rows and the room head compile unchanged.
 struct L2beatStageChip: View {
 	let stage: L2beatStage?
 	var compact: Bool = false
 
 	var body: some View {
 		Text(stage?.label ?? String(localized: "Not staged"))
-			.dsText(.label11)
+			.dsText(compact ? .label11 : .label12)
 			.fontWeight(.semibold)
 			.foregroundStyle(L2beatCopy.stageInk(stage))
-			.padding(.horizontal, compact ? DS.Space.s1 + 2 : DS.Space.s2)
-			.padding(.vertical, compact ? 2 : 3)
-			.background(
-				Capsule(style: .continuous).fill(L2beatCopy.stageFill(stage))
-			)
+			.lineLimit(1)
 			.accessibilityLabel(Text(L2beatCopy.stageReadout(stage)))
 	}
 }

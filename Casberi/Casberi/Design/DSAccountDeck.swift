@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// THE ACCOUNT DECK — the fused rail slab's replacement, and the reason the
-/// wallet family has no bar any more (prd §744, 2026-09-15).
+/// wallet family has no bar any more (prd §747, 2026-09-15).
 ///
 /// **The diagnosis.** `DSRoomRailSlab` (§547) fused two strips that disagreed
 /// on bleed, shape and selection grammar, and the fusion fixed all three. What

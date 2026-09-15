@@ -20,6 +20,9 @@ struct DSPushRowLabel<Leading: View>: View {
     let title: Text
     var subtitle: Text? = nil
     var fact: Text? = nil
+    /// The fact's ink — tertiary for a fact, the verb's own ink when the
+    /// fact IS the row's verb (prd §746).
+    var factTone: Color = DS.textTertiary
     var subtitleTone: Color = DS.textTertiary
     /// `heading17` instead of `body17` — the room-card door, which is the
     /// one act on its card.
@@ -49,18 +52,7 @@ struct DSPushRowLabel<Leading: View>: View {
             }
             .layoutPriority(1)
             Spacer(minLength: DS.Space.s2)
-            if let fact {
-                fact
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            if busy {
-                DSSpinner()
-            } else if opens {
-                DSChevron()
-            }
+            DSPushRowTrail(fact: fact, factTone: factTone, busy: busy, opens: opens)
         }
         .contentShape(Rectangle())
     }
@@ -68,11 +60,58 @@ struct DSPushRowLabel<Leading: View>: View {
 
 extension DSPushRowLabel where Leading == EmptyView {
     init(title: Text, subtitle: Text? = nil, fact: Text? = nil,
+         factTone: Color = DS.textTertiary,
          subtitleTone: Color = DS.textTertiary, prominent: Bool = false,
          tint: Color = DS.textPrimary, busy: Bool = false, opens: Bool = true) {
-        self.init(title: title, subtitle: subtitle, fact: fact,
+        self.init(title: title, subtitle: subtitle, fact: fact, factTone: factTone,
                   subtitleTone: subtitleTone, prominent: prominent, tint: tint,
                   busy: busy, opens: opens) { EmptyView() }
+    }
+}
+
+/// **The trailing end of a row: its fact, then the chevron (or a spinner).**
+///
+/// Public since prd §746, so a row with its own leading anatomy (the
+/// catalogue's app row, a vibenet sub-account) ends exactly the way every push
+/// row does. `init(verb:)` is where a verb that used to be a capsule lands:
+/// the word in its own ink, then the chevron when it goes somewhere.
+struct DSPushRowTrail: View {
+    var fact: Text? = nil
+    var factTone: Color = DS.textTertiary
+    var busy = false
+    var opens = true
+    /// A mark in place of the chevron, for a row whose destination is worth
+    /// naming — `arrow.up.right` for a door out of the app (prd §449's
+    /// "am I leaving?"). Drawn in the fact's ink.
+    var glyph: String? = nil
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            if let fact {
+                fact
+                    .dsText(.subhead13)
+                    .foregroundStyle(factTone)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            if busy {
+                DSSpinner()
+            } else if let glyph {
+                Image(systemName: glyph)
+                    .dsGlyph(12)
+                    .foregroundStyle(factTone)
+                    .accessibilityHidden(true)
+            } else if opens {
+                DSChevron()
+            }
+        }
+    }
+}
+
+extension DSPushRowTrail {
+    init(verb: RowVerb, busy: Bool = false) {
+        self.init(fact: Text(LocalizedStringKey(verb.label)), factTone: verb.ink,
+                  busy: busy, opens: verb.opens)
     }
 }
 
@@ -82,6 +121,7 @@ struct DSPushRow<Leading: View>: View {
     let title: Text
     var subtitle: Text? = nil
     var fact: Text? = nil
+    var factTone: Color = DS.textTertiary
     var subtitleTone: Color = DS.textTertiary
     var prominent = false
     var tint: Color = DS.textPrimary
@@ -91,12 +131,14 @@ struct DSPushRow<Leading: View>: View {
     @ViewBuilder let leading: () -> Leading
 
     init(title: Text, subtitle: Text? = nil, fact: Text? = nil,
+         factTone: Color = DS.textTertiary,
          subtitleTone: Color = DS.textTertiary, prominent: Bool = false,
          tint: Color = DS.textPrimary, busy: Bool = false, opens: Bool = true,
          action: @escaping () -> Void, @ViewBuilder leading: @escaping () -> Leading) {
         self.title = title
         self.subtitle = subtitle
         self.fact = fact
+        self.factTone = factTone
         self.subtitleTone = subtitleTone
         self.prominent = prominent
         self.tint = tint
@@ -111,7 +153,7 @@ struct DSPushRow<Leading: View>: View {
             DSHaptic.tap()
             action()
         } label: {
-            DSPushRowLabel(title: title, subtitle: subtitle, fact: fact,
+            DSPushRowLabel(title: title, subtitle: subtitle, fact: fact, factTone: factTone,
                            subtitleTone: subtitleTone, prominent: prominent,
                            tint: tint, busy: busy, opens: opens, leading: leading)
         }
@@ -122,10 +164,11 @@ struct DSPushRow<Leading: View>: View {
 
 extension DSPushRow where Leading == EmptyView {
     init(title: Text, subtitle: Text? = nil, fact: Text? = nil,
+         factTone: Color = DS.textTertiary,
          subtitleTone: Color = DS.textTertiary, prominent: Bool = false,
          tint: Color = DS.textPrimary, busy: Bool = false, opens: Bool = true,
          action: @escaping () -> Void) {
-        self.init(title: title, subtitle: subtitle, fact: fact,
+        self.init(title: title, subtitle: subtitle, fact: fact, factTone: factTone,
                   subtitleTone: subtitleTone, prominent: prominent, tint: tint,
                   busy: busy, opens: opens, action: action) { EmptyView() }
     }

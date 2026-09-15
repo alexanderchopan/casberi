@@ -28,7 +28,7 @@ FEED="$FEED_DIR/FeedScreen.swift"
 cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
 SWITCH="Casberi/Casberi/Design/DSSectionSwitcher.swift"
-# The one template all five wallet-family rooms wear (prd §744), and the three
+# The one template all five wallet-family rooms wear (prd §747), and the three
 # views it composes. Every guard below reads them comment-stripped, because
 # these files DOCUMENT the ruling by naming what they replaced.
 CHROMEVIEW="Casberi/Casberi/Design/DSRoomScopeChrome.swift"
@@ -36,7 +36,7 @@ SCOPEROWS="Casberi/Casberi/Design/DSScopeRows.swift"
 SCOPEHEAD="Casberi/Casberi/Design/DSScopeHeader.swift"
 CHASSIS="Casberi/Casberi/Design/DSRoomChassis.swift"
 ACTIVITY="Casberi/Casberi/Screens/RoomActivityChart.swift"
-CHIPS="Casberi/Casberi/Design/DSRangeChips.swift"
+CHIPS="Casberi/Casberi/Design/DSChip.swift"   # DSRangeChips lives beside Chip since prd §746
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -228,7 +228,7 @@ guard MainSurface.swift "extension WalletSection: DSSectionScope" \
 # and pushed the crown to about 45% down the screen.
 deny MainSurface.swift "walletSectionSwitcher" \
   "the switcher is back in roomControls — it belongs in the room's content, under the crown"
-# THE GUARD FOLLOWED ITS SUBJECT, TWICE (§547 → prd §744, 2026-09-15). It asked
+# THE GUARD FOLLOWED ITS SUBJECT, TWICE (§547 → prd §747, 2026-09-15). It asked
 # for `DSSectionSwitcher(` in FeedScreen until the switcher became the slab's
 # lower deck, then for `DSRoomRailSlab(` until the slab was deleted outright.
 # The RULE is unchanged and is the only thing this ever meant — the control that
@@ -240,16 +240,16 @@ guard FeedScreen.swift "DSRoomScopeChrome(" \
 # with the readings quietly dropped. Home draws them as rows, a pushed scope as
 # a header; without both this passes on a room that lost what it scopes by.
 guard DSRoomScopeChrome.swift "DSScopeRows(" \
-  "the chrome no longer draws the scope rows — Home's list IS the readings (§744)"
+  "the chrome no longer draws the scope rows — Home's list IS the readings (§747)"
 guard DSRoomScopeChrome.swift "DSScopeHeader(" \
-  "the chrome no longer draws the scope header — a pushed scope must name itself (§744)"
+  "the chrome no longer draws the scope header — a pushed scope must name itself (§747)"
 guard DSRoomScopeChrome.swift "DSAccountDeck(" \
-  "the chrome no longer draws the account deck — a name needs the card's width (§744)"
-# THE SWIPE IS THE ROOM'S, NOT THE SCOPES' (user ruling, prd §744: "inside can't
+  "the chrome no longer draws the account deck — a name needs the card's width (§747)"
+# THE SWIPE IS THE ROOM'S, NOT THE SCOPES' (user ruling, prd §747: "inside can't
 # be swipe bc swipe is for rooms but can be a scroll header"). A header that
 # grew a DragGesture would make one gesture mean two things by depth.
 deny DSScopeHeader.swift "DragGesture" \
-  "the scope header takes a swipe — travel here is the strip's scroll and the pick is a tap (§744)"
+  "the scope header takes a swipe — travel here is the strip's scroll and the pick is a tap (§747)"
 # A ROOM WITH ONE READING DRAWS NO ROWS (\u00a783). The gate used to sit in the
 # room, beside the switcher it suppressed; under \u00a7744 the chrome must draw on
 # Home either way (it carries the crown and the acts), so the gate moved into
@@ -350,7 +350,7 @@ guard RoomActivityChart.swift "DSRoomChassis.crownChart(box: box, chips: chips)"
 # question than the drawing does is the same clip wearing a second answer.
 guard RoomActivityChart.swift "chartHeight(chips: offered.count > 1)" \
   "the activity chart's budget no longer reads the offered windows — it can reserve the track on a record that draws none, or none on one that does"
-guard DSRangeChips.swift "if ranges.count > 1" \
+guard DSChip.swift "if ranges.count > 1" \
   "the chips' own draw gate moved — every budget above spells this predicate and would now be asking the wrong question"
 
 echo "  ok   drift guards: mount, gate, publication, clear, dot, scopes, generic control, crown chip budget"

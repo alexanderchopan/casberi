@@ -397,18 +397,17 @@ struct TokenSetupScreen: View {
                 // own hyphen, sitting in a well with an explicit Copy button
                 // so it plainly reads as "copy this and paste it on GitHub"
                 // (the bare tap-to-copy went unnoticed; user, 2026-07-15).
-                HStack(spacing: DS.Space.s3) {
-                    Text(code.userCode)
-                        .dsText(.monoCode34)
-                        .foregroundStyle(DS.textPrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .minimumScaleFactor(0.6)
-                        .lineLimit(1)
-                    DSCopyCapsule(value: code.userCode)
-                }
+                Text(code.userCode)
+                    .dsText(.monoCode34)
+                    .foregroundStyle(DS.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
                 .padding(DS.Space.s3)
                 .frame(maxWidth: .infinity)
                 .background(DS.surfaceWell, in: DSSlab.shape)
+                // A row under the well, not a capsule inside it (prd §746).
+                DSCopyRow(value: code.userCode)
                 Text("Enter this code on GitHub — approval lands the token here by itself.")
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

@@ -128,26 +128,38 @@ struct WalletRow<Trailing: View>: View {
         .contentShape(Rectangle())
     }
 
-    @ViewBuilder
     private var markView: some View {
+        WalletMarkView(mark: mark, size: Self.markSize)
+    }
+}
+
+/// `WalletRow`'s mark, at any size (prd §744). Lifted out so a feed row can
+/// draw the same mark at the anatomy's 26pt lead: the card-offers room and the
+/// vibenet activity drew their rows through `WalletRow` at 36pt, the only two
+/// rooms whose text column started 10pt right of every other.
+struct WalletMarkView: View {
+    let mark: WalletRowMark
+    var size: CGFloat = DS.Face.list
+
+    var body: some View {
         switch mark {
         case .symbol(let name, let tint):
             Image(systemName: name)
                 .dsGlyph(14)
                 .foregroundStyle(tint)
-                .frame(width: Self.markSize, height: Self.markSize)
+                .frame(width: size, height: size)
                 .background(Circle().fill(tint.opacity(0.16)))
                 .accessibilityHidden(true)
         case .face(let address):
-            WalletFace(address: address, size: Self.markSize, circular: true)
+            WalletFace(address: address, size: size, circular: true)
         case .monogram(let text, let tint):
             Text(text)
                 .dsText(.badgeInitial11).foregroundStyle(tint)
-                .frame(width: Self.markSize, height: Self.markSize)
+                .frame(width: size, height: size)
                 .background(Circle().fill(tint.opacity(0.16)))
                 .accessibilityHidden(true)
         case .asset(let name, let tint, let atRisk):
-            AssetMark(name: name, size: Self.markSize, tint: tint,
+            AssetMark(name: name, size: size, tint: tint,
                       badge: atRisk ? DS.attention : nil)
         case .pair(let first, let second):
             // A liquidity position is TWO assets, so its mark is two — real
@@ -155,10 +167,10 @@ struct WalletRow<Trailing: View>: View {
             // a literal "UN" monogram on every Uniswap row, which named the
             // protocol the card's own header already names and said nothing
             // about which pool you were looking at.
-            AssetPairMark(first: first, second: second, size: Self.markSize * 0.78)
-                .frame(width: Self.markSize, height: Self.markSize)
+            AssetPairMark(first: first, second: second, size: size * 0.78)
+                .frame(width: size, height: size)
         case .kind(let kind, let flagged, let symbol, let tint):
-            KindGlyph(kind: kind, size: Self.markSize, tint: tint, symbol: symbol)
+            KindGlyph(kind: kind, size: size, tint: tint, symbol: symbol)
                 .overlay(alignment: .bottomTrailing) {
                     if flagged {
                         Image(systemName: "exclamationmark.triangle.fill")

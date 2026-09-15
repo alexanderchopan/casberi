@@ -32,35 +32,31 @@ struct CursorRow: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                if let outcome {
-                    Text(outcome)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.attention)
-                        .accessibilityLabel(Text("Outcome: \(outcome)"))
-                }
-                Text(CursorFetch.displayTitle(thing.title))
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: DS.Space.s2)
-                LiveTimeText(date: thing.capturedAt)
-            }
-            if let report {
-                Text(report)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    // Six lines then the sheet, matching `AppReviewRow`. An
-                    // agent that worked for an hour can write a great deal,
-                    // and one verbose run must not own the whole room.
-                    .lineLimit(6)
-            }
-            if let pullRequest {
-                Text(pullRequest)
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+        // ONE ANATOMY (prd §744): it had no lead, and its outcome word sat
+        // BEFORE the title. The outcome and the pull request are one quiet
+        // line under the report.
+        DSFeedRow(name: CursorFetch.displayTitle(thing.title), nameLines: 3,
+                  line: DSFeed.line(report), lineLines: 6) {
+            BridgeIcon(name: thing.source, size: DS.Mark.row)
+        } trailing: {
+            LiveTimeText(date: thing.capturedAt)
+        } below: {
+            if let quiet = quietLine {
+                quiet
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .accessibilityLabel(Text(outcome.map { "Outcome: \($0)" } ?? ""))
             }
         }
-        .padding(.vertical, DS.Space.s2)
+    }
+
+    /// The outcome in its attention ink, then the pull request, as one `Text`.
+    private var quietLine: Text? {
+        var parts: [Text] = []
+        if let outcome { parts.append(Text(outcome).foregroundStyle(DS.attention)) }
+        if let pullRequest { parts.append(Text(pullRequest)) }
+        guard let first = parts.first else { return nil }
+        return parts.dropFirst().reduce(first) { $0 + Text(verbatim: " · ") + $1 }
     }
 
     /// The outcome word, or nil for a run that simply succeeded. Read from the

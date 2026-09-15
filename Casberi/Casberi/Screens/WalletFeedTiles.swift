@@ -2087,14 +2087,18 @@ struct WalletWorthALookTray: View {
             }
             Spacer(minLength: DS.Space.s2)
             if let door {
+                // The row's trailing VERB, not a capsule on it (prd §746) —
+                // the word in tint, and the arrow still says whether it leaves.
                 Button {
                     DSHaptic.selection()
                     door.act()
                 } label: {
-                    Chip(text: door.label, style: .tint,
-                         glyph: door.leaves ? "arrow.up.right" : "arrow.up")
+                    DSPushRowTrail(fact: Text(door.label), factTone: DS.tint,
+                                   glyph: door.leaves ? "arrow.up.right" : "arrow.up")
+                        .dsTapTarget()
                 }
-                .buttonStyle(PressSpring())
+                .buttonStyle(.plain)
+                .dsHover()
             }
         }
         // A REAL SURFACE per row (2026-07-31, prd §241 variant A). These were
