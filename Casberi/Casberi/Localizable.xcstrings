@@ -20957,6 +20957,34 @@
         }
       }
     },
+    "%lld new things" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld cosas nuevas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新着 %lld 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 항목 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 条新内容"
+          }
+        }
+      }
+    },
     "%lld not on the list" : {
       "localizations" : {
         "es" : {
@@ -65114,6 +65142,34 @@
         }
       }
     },
+    "From %lld apps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "De %lld apps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 個のアプリから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱 %lld개에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "来自 %lld 个应用"
+          }
+        }
+      }
+    },
     "From the Farcaster team's own public node. Channels and mentions of you can be followed too." : {
       "localizations" : {
         "es" : {
@@ -65374,6 +65430,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "来自你的 %@ 历史记录。会话会不断增长 — 重新导入会就地更新这一条。"
+          }
+        }
+      }
+    },
+    "From your apps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "De tus apps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアプリから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 앱에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "来自你的应用"
           }
         }
       }
@@ -83292,6 +83376,34 @@
         }
       }
     },
+    "No prices to draw" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay precios para dibujar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "描画する価格がありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "표시할 가격이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有可绘制的价格"
+          }
+        }
+      }
+    },
     "No proofs" : {
       "localizations" : {
         "es" : {
@@ -85866,6 +85978,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "没有任何已连接的内容会访问 %@。"
+          }
+        }
+      }
+    },
+    "Nothing connected yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay nada conectado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ何も接続されていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 연결된 항목이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未连接任何内容"
           }
         }
       }
@@ -91164,6 +91304,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "只有一条 EIP-8130 链可供比较 — 暂时没有需要同步的内容"
+          }
+        }
+      }
+    },
+    "Only one address so far" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo una dirección por ahora"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだアドレスは1つだけです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 주소가 하나뿐입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目前只有一个地址"
           }
         }
       }
@@ -113621,6 +113789,34 @@
         }
       }
     },
+    "Solana and HyperEVM NFTs can't be read yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los NFT de Solana e HyperEVM aún no se pueden leer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solana と HyperEVM の NFT はまだ読み取れません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solana 및 HyperEVM NFT는 아직 읽을 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "暂时无法读取 Solana 和 HyperEVM 的 NFT。"
+          }
+        }
+      }
+    },
     "Sold %@ on Peer" : {
       "localizations" : {
         "es" : {
@@ -125988,6 +126184,34 @@
         }
       }
     },
+    "Too few prices to draw" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Muy pocos precios para dibujar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "描画するには価格が少なすぎます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "표시할 가격이 너무 적습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "价格太少，无法绘制"
+          }
+        }
+      }
+    },
     "Top up" : {
       "localizations" : {
         "es" : {
@@ -127057,6 +127281,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "开启某个来源后，其最新优惠（每条标题已标明价格）会作为商品出现在你的订阅流中。"
+          }
+        }
+      }
+    },
+    "Twice a day" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dos veces al día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1日2回"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루 두 번"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每天两次"
+          }
+        }
+      }
+    },
+    "Twice a day, not %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dos veces al día, excepto %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1日2回（%@ を除く）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루 두 번, %@ 제외"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每天两次，%@ 除外"
           }
         }
       }
@@ -133573,6 +133853,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Walletbeat 对 %@ 的评价"
+          }
+        }
+      }
+    },
+    "What arrives comes as one notification, twice a day at most, so the apps Casberi reads can stay quiet. A dispute, a deadline, a liquidation or a Safe signature comes at once." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que llega viene en una sola notificación, dos veces al día como máximo, para que las apps que lee Casberi puedan quedarse en silencio. Una disputa, un plazo, una liquidación o una firma de Safe llega al instante."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "届いたものは1日最大2回、1件の通知にまとめて届くため、Casberi が読むアプリは静かなままにできます。紛争、期限、清算、Safe の署名はすぐに届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "도착한 항목은 하루 최대 두 번 하나의 알림으로 전달되므로 Casberi가 읽는 앱은 조용히 둘 수 있습니다. 분쟁, 마감, 청산 또는 Safe 서명은 즉시 전달됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新到的内容会合并为一条通知，每天最多两次，这样 Casberi 读取的应用可以保持安静。争议、截止日期、清算或 Safe 签名会立即送达。"
           }
         }
       }
