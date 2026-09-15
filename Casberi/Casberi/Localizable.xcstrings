@@ -17639,6 +17639,34 @@
         }
       }
     },
+    "%lld from %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld de %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ から %1$lld 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@에서 %1$lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "来自 %2$@ 的 %1$lld 条"
+          }
+        }
+      }
+    },
     "%lld from %@ to %@." : {
       "localizations" : {
         "en" : {
@@ -43243,6 +43271,34 @@
         }
       }
     },
+    "Asks when something arrives" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pregunta cuando llegue algo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "何か届いたときに確認します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 항목이 도착하면 묻습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有新内容到达时询问"
+          }
+        }
+      }
+    },
     "Assessment" : {
       "localizations" : {
         "es" : {
@@ -59180,6 +59236,62 @@
         }
       }
     },
+    "Each evening" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada tarde"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "毎晩"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "매일 저녁"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每晚"
+          }
+        }
+      }
+    },
+    "Each evening, not %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada tarde, excepto %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "毎晩（%@ を除く）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "매일 저녁, %@ 제외"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每晚，%@ 除外"
+          }
+        }
+      }
+    },
     "Each has transacted with more than one of your wallets." : {
       "localizations" : {
         "es" : {
@@ -74212,6 +74324,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "最后修订"
+          }
+        }
+      }
+    },
+    "Last sent %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Último envío: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最終送信：%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "마지막 전송: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "上次发送：%@"
           }
         }
       }
@@ -89528,6 +89668,34 @@
         }
       }
     },
+    "Off in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desactivado en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ でオフ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 꺼짐"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在%@中关闭"
+          }
+        }
+      }
+    },
     "Off, every question is prefixed answer only. On, a second button appears in the conversation and each instruction asks you first. Bankr decides what it does — Casberi can't check it beforehand or undo it. A read-only key can't act whatever this says." : {
       "localizations" : {
         "es" : {
@@ -90321,6 +90489,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "一个凭证可为你的多个账户签名"
+          }
+        }
+      }
+    },
+    "One digest per category each evening, not a ping for every event. A dispute, a deadline, a liquidation or a Safe signature comes at once." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un resumen por categoría cada tarde, no un aviso por cada evento. Una disputa, un plazo, una liquidación o una firma de Safe llega al instante."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "イベントごとの通知ではなく、カテゴリごとに毎晩1件のまとめ。紛争、期限、清算、Safe の署名はすぐに届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이벤트마다 알리지 않고 카테고리별로 매일 저녁 요약 하나를 보냅니다. 분쟁, 마감, 청산 또는 Safe 서명은 즉시 전달됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每个类别每晚一条摘要，而不是每个事件都提醒。争议、截止日期、清算或 Safe 签名会立即送达。"
           }
         }
       }
@@ -99233,6 +99429,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "快速查看"
+          }
+        }
+      }
+    },
+    "Quiet hours" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Horas de silencio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "おやすみ時間"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "방해 금지 시간"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "免打扰时段"
           }
         }
       }
