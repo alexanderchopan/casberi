@@ -10,7 +10,7 @@ enum WalletbeatRoomSource {
 
 	/// Rows the head draws before folding. Four wallets is what a person watches; a fifth
 	/// is named in the coverage note rather than drawn.
-	static let rowCap = 4
+	static let rowCap = 3   // DSRoomChassis.headRowCap (prd §751)
 
 	/// How long an incident counts as recent. Thirty days, because these are disclosures
 	/// rather than alerts — a breach three weeks old is still the most important thing

@@ -90,11 +90,10 @@ grep -qF 'isInstagramPhotoTile' "$TMP/feed.nc" \
 grep -qF 'thing.tags.contains("Photo")' "$TMP/feed.nc" \
   || { echo "✗ the Instagram/X grid no longer keys on the Photo tag"; exit 1; }
 
-# THE HEAD is reached, and reached for the right source.
-grep -qF 'InstagramRoomSource.compose(things: visible).map { .instagram($0) }' "$TMP/feed.nc" \
-  || { echo "✗ sourceHead no longer resolves the Instagram head"; exit 1; }
-grep -qF 'InstagramRoomCard(room: room)' "$TMP/feed.nc" \
-  || { echo "✗ the Instagram head composes and nothing draws it"; exit 1; }
+# NO HEAD CARD (prd §751): the head was a figure and nothing else, so the room
+# leads with its grid or its newest row. The model stays for the probe.
+grep -qF 'InstagramRoomCard(' "$TMP/feed.nc" \
+  && { echo "✗ the Instagram head card is drawn again (§751)"; exit 1; }
 
 # §349's RULE AS A TEST. This card displaces `FeedInsight.leaderboard`'s "Who
 # you save most", so it may not draw fewer accounts than that board would. The

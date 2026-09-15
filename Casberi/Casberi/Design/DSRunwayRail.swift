@@ -84,13 +84,16 @@ struct DSRunwayRail: View {
                 }
             }
             .frame(height: Self.leadDot)
+            // The track sits at the middle of the head's one figure box
+            // (prd §751), so a rail room's drawing is as tall as a strip's.
+            .frame(height: DSRoomChassis.figureHeight)
             .overlay(alignment: .bottomLeading) { tick(String(localized: "Today")) }
             .overlay(alignment: .bottomTrailing) { tick(spanLabel) }
             .modifier(RailPick(marks: marks, travel: travel,
                                leadDot: Self.leadDot, reach: Self.reach,
                                onPick: onPick))
         }
-        .frame(height: Self.leadDot + Self.tickRoom)
+        .frame(height: DSRoomChassis.figureHeight + Self.tickRoom)
         .chartWipe(reduceMotion: reduceMotion)
         .accessibilityHidden(true)
     }

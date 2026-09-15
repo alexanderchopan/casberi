@@ -153,22 +153,13 @@ grep -q 'isSettled: !thing.tags.contains("Pending")' "$SRC" \
 grep -q 'isRefund: thing.tags.contains("Refund")' "$SRC" \
   || { echo "✗ refunds no longer reach the model as refunds — they would rank as purchases"; exit 1; }
 
-# Rendered at all.
+# NO HEAD (prd §751). The room covers its newest charge like every room without
+# a chart; a head card coming back is the text head the user rejected.
 grep -q 'case .appleWallet(let room)' "$FEED" \
-  || { echo "✗ the Apple Wallet head is no longer rendered from the sourceHead chain"; exit 1; }
-grep -q 'case AppleWalletBridge.sourceName' "$FEED" \
-  || { echo "✗ the sourceHead switch no longer claims the Apple Wallet room"; exit 1; }
-# (The "tail is folded" guard is removed with the merchant board it guarded,
-# prd §745. The NEGATIVE half keeps it deleted: §723 cut the card-spend board
-# from every room, and this head was the copy that survived by being hand-drawn.)
-grep -q 'room.merchants' "$CARD" \
-  && { echo "✗ the Apple Wallet head draws the merchant board again — prd §745/§723 deleted it"; exit 1; }
-# The head is the shared template, not a hand-drawn card (prd §745).
-grep -q 'DSRoomChassis.Head(' "$CARD" \
-  || { echo "✗ the Apple Wallet head no longer composes DSRoomChassis.Head — prd §745"; exit 1; }
-# A guess must not look like the bank's fact.
-grep -q 'item.kind == .payment' "$CARD" \
-  || { echo "✗ the rail no longer distinguishes a real payment deadline from an inferred recurring date"; exit 1; }
+  && { echo "✗ the Apple Wallet head card is rendered again — the room covers its newest row (§751)"; exit 1; }
+[[ ! -f "$CARD" ]] \
+  || { echo "✗ AppleWalletRoomCard.swift is back (§751)"; exit 1; }
+
 # The outcome LEADS an abnormal title, or titleLine's 80-char clamp eats it.
 grep -q 'Refunded · \\(merchant)' "$BRIDGE" \
   || { echo "✗ a refund no longer LEADS its title — the 80-char clamp would eat a trailing marker and a refund would read as a purchase (§83)"; exit 1; }

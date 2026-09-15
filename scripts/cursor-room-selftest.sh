@@ -41,7 +41,6 @@ cd "$(dirname "$0")/.."
 ROOM="Casberi/Casberi/Model/CursorRoom.swift"
 LEDE="Casberi/Casberi/Model/RoomLede.swift"   # prd §585 — the shared lede type these rooms now return
 SOURCE="Casberi/Casberi/Model/CursorRoomSource.swift"
-CARD="Casberi/Casberi/Screens/CursorRoomCard.swift"
 BRIDGE="Casberi/Casberi/Model/CursorBridge.swift"
 BRIDGES="Casberi/Casberi/Model/TokenBridges.swift"
 # FeedScreen is split across files (prd §718). Checks read the room as ONE text,
@@ -50,7 +49,7 @@ FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
 cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
-for f in "$ROOM" "$SOURCE" "$CARD" "$BRIDGE" "$BRIDGES" "$FEED" "$PROBES"; do
+for f in "$ROOM" "$SOURCE" "$BRIDGE" "$BRIDGES" "$FEED" "$PROBES"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -71,7 +70,6 @@ src = re.sub(r'//.*$', '', src, flags=re.M)          # trailing comments
 sys.stdout.write(src)
 PY
 }
-strip_comments "$CARD" > "$TMP/card-bare.swift"
 strip_comments "$ROOM" > "$TMP/room-bare.swift"
 
 # --- drift guards -----------------------------------------------------------
@@ -106,16 +104,6 @@ grep -q 'things.live' "$SOURCE" \
   || { echo "✗ CursorRoomSource no longer filters live at the boundary (corollary 4)"; exit 1; }
 grep -q 'compose(things: things, now: now)' "$SOURCE" \
   || { echo "✗ probeLines no longer calls the REAL compose — a probe that reimplements the card can disagree with it"; exit 1; }
-grep -q 'CursorRoomSource.rowCap' "$CARD" \
-  || { echo "✗ the card no longer honours the row cap — the note would count repositories that are drawn"; exit 1; }
-grep -q 'CursorRoom.share(runs:' "$CARD" \
-  || { echo "✗ the card no longer sizes its bars through the shipped share() — a NaN width draws as nothing"; exit 1; }
-grep -q 'accessibilityReduceMotion' "$CARD" \
-  || { echo "✗ the card's entrance no longer honours Reduce Motion (design-motion-audit check 1)"; exit 1; }
-# Corollary 5: a card that stores a `Thing` must guard its own body, and this
-# family's answer is never to store one at all.
-grep -qE '(let|var) [A-Za-z]+ *: *Thing\b' "$TMP/card-bare.swift" \
-  && { echo "✗ CursorRoomCard now stores a Thing — the room-head family holds value types only (corollary 5)"; exit 1; }
 # The refusal that keeps every number on this card true: a run with no
 # repository is COUNTED, never given a bucket.
 grep -qE '"Unknown"|"unknown"' "$TMP/room-bare.swift" \
@@ -127,15 +115,15 @@ grep -qE '"Unknown"|"unknown"' "$TMP/room-bare.swift" \
 # mentions the room AT ALL, the exact anchors become required — which means the
 # wiring can never be half-done silently, and the guard arms itself without
 # anybody remembering to come back.
-if grep -q 'CursorRoom' "$FEED"; then
-  grep -q 'CursorRoomCard(room:' "$FEED" \
-    || { echo "✗ FeedScreen names CursorRoom but never draws CursorRoomCard — the head would compose and render nothing"; exit 1; }
-  grep -q 'CursorRoomSource.compose' "$FEED" \
-    || { echo "✗ FeedScreen draws the Cursor head without composing it through CursorRoomSource"; exit 1; }
-  echo "  ✓ wiring: FeedScreen renders the head"
-else
-  echo "  · wiring: FeedScreen has no Cursor head yet — guard is dormant and arms itself the moment it does"
-fi
+# NO HEAD CARD (prd §751). The room's newest run leads as the cover, above the
+# repositories; the ranked head is deleted and must stay deleted.
+grep -q 'CursorRoomCard(' "$FEED" \
+  && { echo "✗ FeedScreen draws CursorRoomCard again — the room leads with its newest run (§751)"; exit 1; }
+[[ ! -f Casberi/Casberi/Screens/CursorRoomCard.swift ]] \
+  || { echo "✗ CursorRoomCard.swift is back (§751)"; exit 1; }
+grep -q 'ledeThingID(in: chronoGroups(visible))' "$FEED" \
+  || { echo "✗ the Cursor room no longer covers its newest run (§751)"; exit 1; }
+
 if grep -q 'CursorRoomSource' "$PROBES"; then
   grep -q 'CursorRoomSource.probeLines' "$PROBES" \
     || { echo "✗ ProbeHooks names CursorRoomSource but not probeLines — the probe would reimplement the card"; exit 1; }

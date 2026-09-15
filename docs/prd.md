@@ -55945,3 +55945,36 @@ read the changed files were run. The first things to look at on a phone: the
 Wallet room with two or more watched accounts and the folder closed (the rail
 should be there), a devnet with no key (one Create row), and the Privacy devnet's
 shielded line above its rows.
+
+## §751 — Every chart head draws at one height and caps at one row count, and three more text heads take the cover (user: "for the rooms that remain with a header, are we using a template? eg so things are same size? … should all the charts be the same size on the chart rooms", then "yes do both", 2026-09-15)
+
+**The template owned the composition, never the size.** §745 put fifteen heads on
+`DSRoomChassis.Head`, which fixes the rungs and the gaps and deliberately leaves
+the height to the content. Measured, the drawings were a 33pt runway rail
+(Cloudflare, Stripe, Polar, Dodo Payments), a 20pt date rail (CardPointers), a
+38pt span strip (X, the journals, the agent rooms, Gnosis Pay) and a 56pt metric
+disc (PostHog), and the rows under them capped at three in some rooms and four in
+others.
+
+**The ruling.** `DSRoomChassis.figureHeight` is 56pt, the disc's own size, and
+every head drawing takes that box with its axis words under it. A strip's columns
+grow to fill it; a rail's track sits at its middle, because a rail is a line and
+stretching it would draw nothing new. `DSRoomChassis.headRowCap` is 3: Stripe,
+Polar, Walletbeat and L2BEAT drop from four rows to three, and the models spell
+the literal because they compile without SwiftUI. `room-heads-selftest.sh` holds
+the strip, both rails, the disc size and all nine caps to it.
+
+**Three more heads were text by §749's own rule, and are deleted.** Instagram's
+head was a figure and nothing else. Apple Wallet's was a "Coming up" list with a
+9pt dot. Cursor's was ranked repository rows with a thin share bar. Their cards
+and `SourceHead` cases are gone. Instagram and Apple Wallet fall to the generic
+cover, or to a registry chart when one qualifies (Instagram's captions can still
+earn the topic map). Cursor groups by repository, so a cover under its own
+header would sit halfway down the room; its newest run is lifted out and leads
+above the repositories. The three standing models stay for the probes.
+
+**Not changed.** The wallet and devnet rooms keep `visualSlot`. Cloudflare's head
+is still drawn by hand and its item list is uncapped; its rail takes the new
+height through `DSRunwayRail`. PostHog's discs keep their cap of four, because
+they sit in one row across. **UNSEEN on a device**: built for the iOS simulator
+only.

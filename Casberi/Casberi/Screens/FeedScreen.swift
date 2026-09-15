@@ -6156,22 +6156,6 @@ struct FeedScreen: View {
                     PostHogRoomCard(room: room) { event in
                         openBySourceRef(PostHogWatch.metricRef(event), in: visible)
                     }
-                case .appleWallet(let room):
-                    // No door since prd §745: the merchant board was the only
-                    // thing on this head that named a merchant to open, and it
-                    // is deleted. Every charge is its own row below.
-                    AppleWalletRoomCard(room: room)
-                case .cursor(let room):
-                    CursorRoomCard(room: room) { repo in
-                        // The card ranks a REPOSITORY, which owns many rows, so
-                        // it can't name a `sourceRef` — the honest landing is
-                        // that repo's most recent run, matched on the stored
-                        // `authorHandle` (the App Store Connect app rule, one
-                        // field over).
-                        openNewest(source: CursorRoomSource.source, in: visible) { thing in
-                            thing.authorHandle == repo.name
-                        }
-                    }
                 case .cardPointers(let room):
                     // No callback since §487: the head stopped naming a single
                     // offer, so it has nothing to open — every offer is its own
@@ -6474,17 +6458,6 @@ struct FeedScreen: View {
                             openBySourceRef(ref, in: visible)
                         } else {
                             openAgentMonth(room.busiest, source: name, in: visible)
-                        }
-                    }
-                case .instagram(let room):
-                    InstagramRoomCard(room: room) { account in
-                        // An account owns many kept posts, so the card names
-                        // its newest as the landing (the Cursor repo rule).
-                        // Matched on `authorHandle` and on the ACT, or a tap on
-                        // a saves board could open a like from the same person.
-                        let tag = room.act == .saved ? "Saved" : "Liked"
-                        openNewest(source: InstagramRoomSource.source, in: visible) { thing in
-                            thing.authorHandle == account.handle && thing.tags.contains(tag)
                         }
                     }
                 }
@@ -6945,7 +6918,21 @@ struct FeedScreen: View {
             // Repositories, not days — see `cursorRepos`. Keeps `boundary:`,
             // unlike x402: these rows carry the run's REAL start, so they span
             // real time and the new-since divider means something.
-            let repos = cursorRepos(visible)
+            //
+            // THE NEWEST RUN LEADS, above the repositories (prd §751). The head
+            // that ranked repositories is deleted, and a repository grouping
+            // cannot hold the cover itself: the newest run is often not in the
+            // first group, so a cover drawn under its own header would sit
+            // halfway down the room. It is lifted out of its repository instead.
+            let cover = heroShown ? nil : ledeThingID(in: chronoGroups(visible))
+            let coverThing: Thing? = cover.flatMap { id in
+                visible.first(where: { (thing: Thing) -> Bool in thing.isLive && thing.id == id })
+            }
+            if let coverThing {
+                Section { ledeListRow(coverThing) }
+            }
+            let repos = cursorRepos(coverThing == nil ? visible
+                                    : visible.filter({ (thing: Thing) -> Bool in thing.id != coverThing?.id }))
             groupedSections(repos, nextEventID: nextEventID,
                             boundary: boundaryThingID(in: repos), dated: false)
         case .tokens:
@@ -8166,8 +8153,6 @@ struct FeedScreen: View {
         // still stands.
         case dodoPayments(DodoPaymentsRoom)
         case posthog(PostHogRoom)
-        case appleWallet(AppleWalletRoom.Card)
-        case cursor(CursorRoom)
         // Walletbeat (prd §419) — the only head here whose subject is not the
         // person's own data at all, but somebody else's review of the software
         // they use. It reads stored ratings beside the landed rows.
@@ -8214,12 +8199,6 @@ struct FeedScreen: View {
         // a shallow archive keeps the treemap; see that type's own note for
         // why the year rows carry each year's subject.
         case x(XRoom)
-        // Instagram (2026-08-18, prd §389) — the second head over an import,
-        // and the second that displaces a card the room already drew. It
-        // carried `FeedInsight.leaderboard`'s board forward whole (§349's rule
-        // rather than a courtesy) until §723 deleted that board; see
-        // `InstagramRoom`'s type note.
-        case instagram(InstagramRoom)
         // The two journal rooms (2026-08-17, prd §398) — the first head serving
         // MORE THAN ONE source, and the only place in this enum where that is
         // right: Day One and Apple Journal hold the same object under two app
@@ -8280,10 +8259,6 @@ struct FeedScreen: View {
             return DodoPaymentsRoomSource.compose(things: visible).map { .dodoPayments($0) }
         case "PostHog":
             return PostHogRoomSource.compose(things: visible).map { .posthog($0) }
-        case AppleWalletBridge.sourceName:
-            return AppleWalletRoomSource.compose(things: visible).map { .appleWallet($0) }
-        case CursorRoomSource.source:
-            return CursorRoomSource.compose(things: visible).map { .cursor($0) }
         case WalletbeatRoomSource.source:
             return WalletbeatRoomSource.compose(things: visible).map { .walletbeat($0) }
         case L2beatRoomSource.source:
@@ -8329,8 +8304,6 @@ struct FeedScreen: View {
             return SafeRoomSource.compose(things: visible).map { .safe($0) }
         case XRoomSource.source:
             return XRoomSource.compose(things: visible).map { .x($0) }
-        case InstagramRoomSource.source:
-            return InstagramRoomSource.compose(things: visible).map { .instagram($0) }
         case let name where JournalRoomSource.sources.contains(name):
             return JournalRoomSource.compose(things: visible).map { .journal($0, source: name) }
         case let name where AgentRoomSource.sources.contains(name):

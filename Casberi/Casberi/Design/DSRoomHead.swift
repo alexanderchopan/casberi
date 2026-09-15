@@ -56,6 +56,23 @@ extension DSRoomChassis {
     /// breaks it.
     static let headFootnoteGap: CGFloat = 2
 
+    /// THE HEIGHT OF EVERY HEAD'S DRAWING (prd §751, user: "it would be nice if
+    /// they are all the same size … should all the charts be the same size on
+    /// the chart rooms"). A runway rail, a span strip and a metric disc drew at
+    /// 33, 38 and 56pt, so two chart rooms side by side never read as siblings.
+    /// Each now draws into this box, and its axis words sit under it.
+    ///
+    /// 56 is the metric disc's own size (`AssetRosterSlot.markSize`), the one
+    /// drawing that could not shrink without losing its curve. A strip's
+    /// columns grow to fill it; a rail's track sits at its middle. The wallet
+    /// and devnet rooms draw into `visualSlot` and are not governed by this.
+    static let figureHeight: CGFloat = 56
+
+    /// The most rows a head draws (prd §751). Heads capped at three or four;
+    /// they cap at three. The models spell the literal (they compile without
+    /// SwiftUI), and `room-heads-selftest.sh` holds each one to this.
+    static let headRowCap = 3
+
     /// The gap in a SCOPED head (Privacy Pools, §486): lead, scope switcher,
     /// the scope's card. `s4` rather than `headBlockGap` because those are
     /// three objects standing on the page, not three parts of one card — §471's
@@ -544,7 +561,8 @@ extension DSRoomChassis {
 
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-        static let height: CGFloat = 38
+        /// The columns fill the head's one figure box (prd §751).
+        static let height: CGFloat = DSRoomChassis.figureHeight
 
         var body: some View {
             VStack(alignment: .leading, spacing: DS.Space.s1) {

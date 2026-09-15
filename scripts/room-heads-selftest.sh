@@ -71,6 +71,23 @@ grep -q 'case .stripe(let room)' "$FEED" \
   || { echo "✗ the Stripe head is no longer rendered from the sourceHead chain"; exit 1; }
 grep -q 'case .posthog(let room)' "$FEED" \
   || { echo "✗ the PostHog head is no longer rendered from the sourceHead chain"; exit 1; }
+# ONE FIGURE HEIGHT AND ONE ROW CAP FOR EVERY CHART HEAD (prd §751).
+HEADDS="Casberi/Casberi/Design/DSRoomHead.swift"
+grep -q 'static let figureHeight: CGFloat = 56' "$HEADDS" \
+  || { echo "✗ DSRoomChassis.figureHeight moved from the metric disc's 56pt (§751)"; exit 1; }
+grep -q 'static let height: CGFloat = DSRoomChassis.figureHeight' "$HEADDS" \
+  || { echo "✗ SpanStrip no longer fills the head's figure box (§751)"; exit 1; }
+[[ "$(grep -c 'DSRoomChassis.figureHeight' Casberi/Casberi/Design/DSRunwayRail.swift)" -ge 2 ]] \
+  || { echo "✗ DSRunwayRail no longer draws into the head's figure box (§751)"; exit 1; }
+grep -q 'frame(height: DSRoomChassis.figureHeight)' Casberi/Casberi/Screens/CardPointersRoomCard.swift \
+  || { echo "✗ the CardPointers rail no longer draws into the head's figure box (§751)"; exit 1; }
+grep -q 'static var markSize: CGFloat { 56 }' Casberi/Casberi/Screens/AssetRoster.swift \
+  || { echo "✗ the metric disc's size moved — DSRoomChassis.figureHeight was taken from it (§751)"; exit 1; }
+for f in StripeRoomSource PolarRoomSource WalletbeatRoomSource L2beatRoomSource DodoPaymentsRoom XRoom AgentRoom JournalRoom GnosisPayRoomSource; do
+  grep -qE 'static let rowCap = 3\b' "Casberi/Casberi/Model/$f.swift" \
+    || { echo "✗ $f.rowCap is not DSRoomChassis.headRowCap (3) — a chart head draws a different number of rows (§751)"; exit 1; }
+done
+
 # The §219 failure inverted — see the probe's own comment.
 grep -q 'note("stripeHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the Stripe head; it would report 'leads with NOTHING'"; exit 1; }

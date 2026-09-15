@@ -32,6 +32,8 @@ struct CardPointersRoomCard: View {
             if !room.deadlines.isEmpty {
                 DSRoomChassis.Block {
                     WalletRunwayRail(dates: room.deadlines)
+                        // The head's one figure box (prd §751).
+                        .frame(height: DSRoomChassis.figureHeight)
                 }
             }
         }

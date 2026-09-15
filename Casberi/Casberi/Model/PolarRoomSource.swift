@@ -9,7 +9,7 @@ enum PolarRoomSource {
 
     static let horizonDays = 90
     static let overdueGraceDays = 14
-    static let rowCap = 4
+    static let rowCap = 3   // DSRoomChassis.headRowCap (prd §751)
 
     @MainActor
     static func compose(things: [Thing], now: Date = .now) -> PolarRoom? {
