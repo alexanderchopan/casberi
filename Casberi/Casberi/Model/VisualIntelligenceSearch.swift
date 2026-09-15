@@ -41,7 +41,12 @@ enum VisualCorpusMatch {
     }
 }
 
-#if canImport(VisualIntelligence)
+// Not on Mac Catalyst. Until Xcode 27 the Catalyst SDK had no
+// VisualIntelligence module, so this block never compiled there and the Mac
+// has never offered the query; the 27 SDK adds the module but marks
+// `SemanticContentDescriptor` Mac Catalyst 27.0+, which broke the Catalyst
+// build. Excluding it keeps the Mac exactly as shipped.
+#if canImport(VisualIntelligence) && !targetEnvironment(macCatalyst)
 /// The system entry point. Labels only, pixel buffer unused on purpose — the
 /// corpus has no image-similarity index, and matching the system's own words
 /// for the scene is honest; pretending to match pixels would not be.
