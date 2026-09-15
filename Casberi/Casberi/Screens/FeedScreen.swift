@@ -787,10 +787,15 @@ struct FeedScreen: View {
     /// last saved read the same way `VibenetThisPhoneRow` already checks its
     /// own presence, and answers nil rather than guessing when there is
     /// none, same as every refusal `VibenetSigner` states rather than hides.
+    /// **THE ROOM'S ACTS, HANDED TO THE CARD (prd §744).** It was a `Section`
+    /// mounted below `VibenetRoomCard`, which put the verbs under the list on
+    /// any Home with history — §682's complaint, one seat over. It is passed
+    /// in as `VibenetRoomCard.acts` now and draws on the account card beside
+    /// the crown. The `Section`s inside are gone with the move: a card is not
+    /// a List.
     @ViewBuilder
     private var vibenetSendRow: some View {
         if let account = Self.signableVibenetAccount() {
-            Section {
                 VibenetSendCard(account: account,
                                 onSend: { feedSheet = .vibenetSend(account) },
                                 // **CREATE IS A PEER NOW, NOT THE FALLBACK
@@ -818,25 +823,11 @@ struct FeedScreen: View {
                                         localSequence: seq?.localSequence ?? 0,
                                         editing: nil)
                                 })
-                // **THE ROW CHROME EVERY OTHER DEVNET'S CONTENT ALREADY WEARS
-                // (2026-09-04, reported: the tiles touched the rail and drew a
-                // hairline).** This card mounts as its own List section under
-                // the room head, and a bare Section in a `.plain` List gets the
-                // default row separator — a hairline, which nothing in this app
-                // may draw — and no gap from the slab above. Hegotá, Frames and
-                // the Privacy devnet all wrap their scope content in exactly
-                // this set; the top inset is `contentGap` because that is the
-                // chassis's own switcher→content distance, which the vibenet
-                // card pays internally for every scope but this one (the head's
-                // `insightSection` mounts at `EdgeInsets()`, so nothing above
-                // pays it here).
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: DSRoomChassis.contentGap,
-                                          leading: DSRoomChassis.inset,
-                                          bottom: DS.Space.s4,
-                                          trailing: DSRoomChassis.inset))
-            }
+            // The 2026-09-04 row chrome is gone with the Section it belonged
+            // to: this draws on the account card now (prd §744), and the card
+            // owns its own padding. Nothing here may add List row insets — a
+            // card is not a List, and the separator this was suppressing
+            // cannot exist inside one.
         } else {
             // **A SCOPE NEVER DRAWS NOTHING (prd §552d), NOW IN THE ROOM'S OWN
             // LANGUAGE (§553).** §538 gated the console on an account this
@@ -852,7 +843,6 @@ struct FeedScreen: View {
             // The door is the EXISTING create sheet, not a one-tap mint like
             // Hegotá's: a vibenet account is deployed by a sponsor, so it has a
             // real flow with a payer check behind it and cannot be a keystroke.
-            Section {
                 // **A PHONE WITH A KEY IS NEVER OFFERED A SECOND ACCOUNT (prd
                 // §681).** This scope draws when no WATCHED account lists this
                 // device's key as an actor — which is true both for a phone
@@ -875,15 +865,6 @@ struct FeedScreen: View {
                                           feedSheet = .vibenetCreate
                                       }
                                   })
-                // Same row chrome as the signable branch above — this state is
-                // the same section wearing one tile instead of four.
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: DSRoomChassis.contentGap,
-                                          leading: DSRoomChassis.inset,
-                                          bottom: DS.Space.s4,
-                                          trailing: DSRoomChassis.inset))
-            }
         }
     }
 
@@ -3892,7 +3873,13 @@ struct FeedScreen: View {
     }
 
     @ViewBuilder private var hegotaVisualSection: some View {
-        if let head = HegotaRoomSource.compose() {
+        // **OFF HOME ONLY (prd §744).** On Home this room's figure is its
+        // crown, and the crown rides the account card inside
+        // `hegotaScopeChromeSection`. Drawing it here as well would state the
+        // balance twice on one screen, which is §683's own rule.
+        if let head = HegotaRoomSource.compose(),
+           HegotaSection.resolve(chrome.hegotaSection,
+                                 present: chrome.hegotaSections) != .home {
             Section {
                 HegotaRoomFigure(head: head,
                                  accounts: HegotaRoomSource.accounts(),
@@ -3915,75 +3902,84 @@ struct FeedScreen: View {
         }
     }
 
-    /// **THE FUSED RAIL** (prd §547, 2026-09-01) — the same slab Wallet wears,
-    /// one chain over, and for the same reason: this room copied Wallet's two
-    /// sibling sections byte for byte, so it inherited the disagreement too
-    /// (full-bleed faces at `leading: 0` under an inset capsule, circles under
-    /// pills, a recession under a travelling tint).
+    /// THE HEGOTÁ ROOM'S CHROME, WITH NO BAR IN IT (prd §744, 2026-09-15).
     ///
-    /// The rail gives up its full bleed to share the switcher's inset. What
-    /// that note used to say — "it scrolls horizontally, so an inset would stop
-    /// the faces reaching the edge" — was true and is now outranked: reaching
-    /// the edge is what made the two strips read as unrelated, and a rail of
-    /// 66pt slots scrolls at either inset regardless.
-
-    /// THE FRAMES ROOM'S CHROME, WITH NO BAR IN IT (prd §744, 2026-09-15).
+    /// Was `hegotaRailSection`, the fused slab (§547) this room copied from
+    /// Wallet byte for byte. It follows Wallet out of the bar for the same
+    /// reason, and the conversion fixes a defect it was hiding:
     ///
-    /// The wallet's own conversion one chain over, and the parts that differ
-    /// are facts about this seat rather than style:
+    /// **The Send tile has been inert since the room shipped.**
+    /// `HegotaRoomList` declares `onOpenSend` and `FeedScreen` passes it, but
+    /// the `.home` arm called `HegotaSendCard()` with no arguments, so the
+    /// card kept its `= {}` default. A tile that highlights and does nothing
+    /// is §83's dead control. The card mounts here now, wired.
+    /// THE PRIVACY DEVNET'S CHROME, WITH NO BAR IN IT (prd §744, 2026-09-15).
     ///
-    /// **The crown is this room's `.home` figure.** `FramesRoomFigure` already
-    /// switches on the scope and already draws the crown for `.home`
-    /// (`sponsorship`), so the card mounts that view pinned to `.home` rather
-    /// than growing a second crown. Off Home the same view draws where it
-    /// always did.
+    /// The crown is this room's own card pinned to `.home` — `home` is where
+    /// `PrivacyDevnetRoomCard` already draws the `RoomHomeCrown`, the ring and
+    /// the activity fallback, so the deck mounts that rather than growing a
+    /// second crown. §682's ruling (the verbs sit under the rail, never under
+    /// the list) is now kept by construction: they are ON the card.
     ///
-    /// **The acts ride the ALL card only, and that is not the mockup's
-    /// arrangement.** The drawing put Send and Top up on every account card;
-    /// the truth is that this device holds ONE key, so those verbs act for the
-    /// key's account no matter which card is showing. Per-card tiles would
-    /// promise that paging changes what Send sends from, which it does not.
-    /// The room's card is where a room's act belongs — the same place the
-    /// Wallet's `Watch a wallet` sits. (Asking `FramesKey.address()` per card
-    /// was the other candidate and is barred outright: a Keychain read in a
-    /// body is the build-525 class.)
+    /// The readings come from a card built for the purpose, which is this
+    /// room's own idiom — `PrivacyDevnetRoomList` builds one to reach
+    /// `scopeList` for exactly the same reason: every input is already derived
+    /// there, and a second derivation is free to disagree with `isEmpty`.
     @ViewBuilder
-    private func framesScopeChromeSection(_ active: FramesSection,
-                                          head: FramesRoom.Head) -> some View {
+    private func privacyDevnetScopeChromeSection(_ active: PrivacyDevnetSection,
+                                                 head: PrivacyDevnetRoom.Head) -> some View {
         // Every account, never the scoped list: this is the control that SETS
-        // the scope, so feeding it the narrowed set would leave one card on
-        // screen and no way back.
-        let roster = FramesRoomSource.accounts()
-        // ONE pass, read once per row.
-        let readings = framesScopeReadings(head: head)
+        // the scope, so the narrowed set would leave one card and no way back.
+        let roster = PrivacyDevnetRoomSource.accounts(scope: nil)
+        let scoped = PrivacyDevnetRoomSource.accounts(scope: chrome.privacyDevnetScope)
+        let readings = PrivacyDevnetRoomCard(
+            head: head,
+            section: active,
+            accounts: scoped,
+            headSlot: PrivacyDevnetLiveState.shared.headSlot,
+            walkCut: PrivacyDevnetLiveState.shared.walkCut,
+            shielded: PrivacyDevnetLiveState.shared.shielded,
+            mine: PrivacyDevnetLiveState.shared.mine)
+            .readings(chrome.privacyDevnetSections)
         Section {
             DSRoomScopeChrome(
-                sections: chrome.framesSections,
+                sections: chrome.privacyDevnetSections,
                 active: active,
                 home: .home,
-                attention: FramesSection.attention(),
-                onPick: { chrome.framesSection = $0 },
-                accounts: framesAccountSlots(roster),
-                scope: chrome.framesScope,
+                attention: PrivacyDevnetSection.attention(),
+                onPick: { chrome.privacyDevnetSection = $0 },
+                accounts: PrivacyDevnetRoomCard.slots(roster),
+                scope: chrome.privacyDevnetScope,
                 onPickAccount: { picked in
                     withAnimation(DS.Motion.standard) {
-                        chrome.framesScope = (picked?.isEmpty ?? true) ? nil : picked
+                        chrome.privacyDevnetScope = (picked?.isEmpty ?? true) ? nil : picked
                     }
                 },
                 reading: { readings[$0] },
                 crown: { slot in
                     DSRoomSlot(headline: nil, reservesHeadline: false) {
-                        if slot.isShowing(chrome.framesScope) {
-                            FramesRoomFigure(head: head,
-                                             accounts: framesAccounts,
-                                             section: .home,
-                                             onOpenAccount: { feedSheet = .framesAccount($0) })
+                        if slot.isShowing(chrome.privacyDevnetScope) {
+                            PrivacyDevnetRoomCard(
+                                head: head,
+                                section: .home,
+                                accounts: scoped,
+                                headSlot: PrivacyDevnetLiveState.shared.headSlot,
+                                walkCut: PrivacyDevnetLiveState.shared.walkCut,
+                                shielded: PrivacyDevnetLiveState.shared.shielded,
+                                mine: PrivacyDevnetLiveState.shared.mine,
+                                onOpenMove: { move, owner in
+                                    feedSheet = .privacyDevnetMove(move, owner)
+                                })
                         }
                     }
                 },
                 acts: { slot in
+                    // The ALL card only: this device holds ONE key, so Send
+                    // and Shield act for that key whichever card is showing.
                     if slot.id.isEmpty {
-                        FramesSendCard(onSend: { feedSheet = .framesSend })
+                        PrivacyDevnetSendCard(
+                            onSend: { feedSheet = .privacyDevnetSend },
+                            onShield: { feedSheet = .privacyDevnetShield })
                     }
                 }
             )
@@ -3992,112 +3988,56 @@ struct FeedScreen: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
         }
+        .task { await PrivacyDevnetLiveState.shared.refreshIfStale() }
     }
 
-    /// The Frames accounts as deck cards, "All" first.
-    ///
-    /// The deleted `FramesScopeRail.items` captioned with the BALANCE when an
-    /// account had no name, which was a rail's compromise: 66pt fits a number
-    /// or a name, not both. A card fits both, so the name leads and the
-    /// balance goes to the sub line where it belongs.
-    private func framesAccountSlots(_ roster: [FramesAccount]) -> [DSAccountSlot] {
-        let all = DSAccountSlot(
-            id: "",
-            name: String(localized: "All accounts"),
-            sub: roster.isEmpty
-                ? String(localized: "Nothing watched on this chain yet")
-                : ListFormatter.localizedString(
-                    byJoining: roster.map { FramesWatch.shared.name(for: $0.address)
-                        ?? WalletStore.shortAddress($0.address) }),
-            faces: roster.prefix(2).map { .wallet(address: $0.address) })
-        return [all] + roster.map { account in
-            DSAccountSlot(
-                id: account.address,
-                name: FramesWatch.shared.name(for: account.address)
-                    ?? WalletStore.shortAddress(account.address),
-                sub: FramesMoney.eth(fromWeiHex: account.balanceWeiHex ?? "")
-                    .map { String(localized: "\($0) test ETH") },
-                faces: [.wallet(address: account.address)])
-        }
-    }
-
-    /// What each Frames scope holds, before you open it (prd §744).
-    ///
-    /// Built once per pass rather than once per row: `FramesHoldings.tokens`
-    /// and `FramesConnections.map` both walk every account, and the emptiness
-    /// switch inside `FramesRoomFigure` calls them too. An empty scope answers
-    /// with the same `emptyHeadline` the slot would have drawn.
-    private func framesScopeReadings(head: FramesRoom.Head) -> [FramesSection: String] {
-        var out: [FramesSection: String] = [:]
-        for section in chrome.framesSections where section != .home {
-            switch section {
-            case .home:
-                break
-            case .activity:
-                out[section] = head.moveCount == 0
-                    ? section.emptyHeadline
-                    : String(localized: "\(head.moveCount) moves")
-            case .holdings:
-                let tokens = FramesHoldings.tokens(framesAccounts)
-                out[section] = tokens.isEmpty
-                    ? section.emptyHeadline
-                    : String(localized: "\(tokens.count) tokens")
-            case .accounts:
-                let nodes = FramesConnections.map(framesAccounts)?.nodes.count ?? 0
-                out[section] = nodes == 0
-                    ? section.emptyHeadline
-                    : String(localized: "\(nodes) connected")
-            case .frames:
-                out[section] = head.frameCount == 0
-                    ? section.emptyHeadline
-                    : String(localized: "\(head.frameCount) steps")
-            case .permissions:
-                out[section] = head.sponsoredCount == 0
-                    ? section.emptyHeadline
-                    : String(localized: "\(head.sponsoredCount) paid by somebody else")
-            }
-        }
-        return out
-    }
-
-    @ViewBuilder private var hegotaRailSection: some View {
-        let showsRail = HegotaScopeRail.shows(source: source,
-                                              watched: HegotaRoomSource.accounts().count)
-        let showsSwitcher = HegotaSection.shows(present: chrome.hegotaSections)
-        if showsRail || showsSwitcher {
+    @ViewBuilder private var hegotaScopeChromeSection: some View {
+        let active = HegotaSection.resolve(chrome.hegotaSection,
+                                           present: chrome.hegotaSections)
+        // Every account, never the scoped list: this is the control that SETS
+        // the scope, so the narrowed set would leave one card and no way back.
+        let roster = HegotaRoomSource.accounts()
+        // ONE pass, read once per row — see `HegotaRoomReadings`.
+        let readings = HegotaRoomReadings.of(accounts: roster,
+                                             scoped: chrome.hegotaScope,
+                                             sections: chrome.hegotaSections)
+        if let head = HegotaRoomSource.compose() {
             Section {
-                DSRoomRailSlab(
-                    showsRail: showsRail,
-                    showsSwitcher: showsSwitcher,
+                DSRoomScopeChrome(
                     sections: chrome.hegotaSections,
-                    active: HegotaSection.resolve(chrome.hegotaSection,
-                                                  present: chrome.hegotaSections),
+                    active: active,
+                    home: .home,
                     attention: HegotaSection.attention(),
-                    onPick: { picked in chrome.hegotaSection = picked }
-                ) {
-                    FaceScopeRail(
-                        items: HegotaScopeRail.items(HegotaRoomSource.accounts().map(\.address)),
-                        scope: chrome.hegotaScope,
-                        compact: false,
-                        // A deck of the slab, not a strip of its own (prd §547).
-                        embedded: true,
-                        matches: HegotaScopeRail.matches,
-                        onPick: { picked in
-                            withAnimation(DS.Motion.standard) {
-                                chrome.hegotaScope = (picked?.isEmpty ?? true) ? nil : picked
+                    onPick: { picked in chrome.hegotaSection = picked },
+                    accounts: HegotaRoomReadings.slots(roster),
+                    scope: chrome.hegotaScope,
+                    onPickAccount: { picked in
+                        withAnimation(DS.Motion.standard) {
+                            chrome.hegotaScope = (picked?.isEmpty ?? true) ? nil : picked
+                        }
+                    },
+                    reading: { readings[$0] },
+                    crown: { slot in
+                        DSRoomSlot(headline: nil, reservesHeadline: false) {
+                            if slot.isShowing(chrome.hegotaScope) {
+                                HegotaRoomFigure(head: head,
+                                                 accounts: roster,
+                                                 scoped: chrome.hegotaScope,
+                                                 section: .home)
                             }
-                        },
-                        onReTap: nil,
-                        addTitle: nil,
-                        onAdd: nil)
-                        // The book door §570 put in every address rail is GONE
-                        // (user ruling 2026-09-06): addresses live in the
-                        // catalog entry now, and a room's one trailing door
-                        // (`RoomGear`) leads there wearing the catalog's mark.
-                }
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                          bottom: DSRoomChassis.contentGap,
-                                          trailing: DSRoomChassis.inset))
+                        }
+                    },
+                    acts: { slot in
+                        // The ALL card only: this device holds ONE key, so
+                        // Send and Top up act for that key whichever card is
+                        // showing (Frames' own rule, same reason).
+                        if slot.id.isEmpty {
+                            HegotaSendCard(onSend: { feedSheet = .hegotaSend })
+                        }
+                    }
+                )
+                .listRowInsets(EdgeInsets(top: 0, leading: 0,
+                                          bottom: DSRoomChassis.contentGap, trailing: 0))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
@@ -5022,10 +4962,13 @@ struct FeedScreen: View {
             // writing its own observed state costs.
             let privacyScope = PrivacyDevnetSection.resolve(
                 chrome.privacyDevnetSection, present: chrome.privacyDevnetSections)
-            // **FIGURE FIRST, THEN THE SLAB** — Wallet's order. The Frames room
-            // shipped the switcher above its figure once and it was reported
-            // from a screenshot: it puts the control that scopes the room above
-            // the drawing it scopes.
+            // **THE CHROME LEADS, AND ON HOME IT IS THE WHOLE ROOM** (prd
+            // §744). Was figure-then-slab. The slab is gone: on Home the
+            // accounts are the deck's cards, each carrying this room's own
+            // card pinned to `.home` as its crown and the send console as its
+            // acts, and the readings are door rows under it.
+            privacyDevnetScopeChromeSection(privacyScope, head: head)
+            if privacyScope != .home {
             Section {
                 PrivacyDevnetRoomCard(
                     head: head,
@@ -5047,41 +4990,6 @@ struct FeedScreen: View {
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
             .task { await PrivacyDevnetLiveState.shared.refreshIfStale() }
-            let privacyAccounts = PrivacyDevnetRoomSource.accounts(scope: nil)
-            let showsPrivacyRail = PrivacyDevnetScopeRail.shows(
-                source: source, watched: privacyAccounts.count)
-            if showsPrivacyRail || PrivacyDevnetSection.shows(present: chrome.privacyDevnetSections) {
-                Section {
-                    DSRoomRailSlab(
-                        showsRail: showsPrivacyRail,
-                        showsSwitcher: PrivacyDevnetSection.shows(present: chrome.privacyDevnetSections),
-                        sections: chrome.privacyDevnetSections,
-                        active: privacyScope,
-                        attention: PrivacyDevnetSection.attention(),
-                        onPick: { chrome.privacyDevnetSection = $0 }
-                    ) {
-                        // **THE SILHOUETTES**, fused with the switcher rather
-                        // than drawn as a second strip (§547). Passing
-                        // `EmptyView` here is what the first cut did, and it
-                        // draws half of a fused control.
-                        FaceScopeRail(
-                            items: PrivacyDevnetScopeRail.items(privacyAccounts),
-                            scope: chrome.privacyDevnetScope,
-                            compact: false,
-                            // A deck of the slab, not a strip of its own (§547).
-                            embedded: true,
-                            matches: PrivacyDevnetScopeRail.matches,
-                            onPick: { picked in
-                                withAnimation(DS.Motion.standard) {
-                                    chrome.privacyDevnetScope = (picked?.isEmpty ?? true) ? nil : picked
-                                }
-                            })
-                    }
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                }
             }
             // **THE ROWS AND THE ACTS, OUTSIDE THE CLIPPED SLOT (prd §593d).**
             // `DSRoomSlot` is a hard 300pt box, so drawing the list inside it
@@ -5099,14 +5007,11 @@ struct FeedScreen: View {
             // with its verbs. So does this one now; the last few moves follow
             // them.
             if privacyScope == .home {
-                Section {
-                    PrivacyDevnetSendCard(onSend: { feedSheet = .privacyDevnetSend },
-                                          onShield: { feedSheet = .privacyDevnetShield })
-                }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                          bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
+                // **THE VERBS MOVED ONTO THE ACCOUNT CARD (prd §744).** §682's
+                // ruling — the verbs sit under the rail, never under the list —
+                // is kept by construction now rather than by ordering two
+                // sections carefully: they are ON the card, beside the crown,
+                // above the scope rows. The example doors stay here, after it.
                 // The example doors AFTER the verbs, in their own row (prd
                 // §680, user: "showing buttons on top of a list which
                 // shouldn't happen"). §664 gave the tiles their own row and
@@ -5196,8 +5101,8 @@ struct FeedScreen: View {
             // `ShellChrome` is `@Observable` and the reads below are in this
             // same pass, that was a body which invalidated itself continuously.
             hegotaChainNoticeSection
+            hegotaScopeChromeSection
             hegotaVisualSection
-            hegotaRailSection
             Group {
                 HegotaRoomList(head: head,
                                accounts: HegotaRoomSource.accounts(),
@@ -5210,8 +5115,7 @@ struct FeedScreen: View {
                     feedSheet = .hegotaAccount(account)
                 }, onOpenCoin: { coin, all, unspent in
                     feedSheet = .hegotaCoin(coin, all, unspent)
-                }, onOpenKeySheet: { feedSheet = .hegotaKeySheet },
-                   onOpenSend: { feedSheet = .hegotaSend })
+                }, onOpenKeySheet: { feedSheet = .hegotaKeySheet })
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -6363,6 +6267,11 @@ struct FeedScreen: View {
                                         // not one answer moving.
                                         chrome.vibenetSection = picked
                                     },
+                                    // **THE ROOM'S ACTS (prd §744)** — what
+                                    // `vibenetSendRow` was, handed to the card
+                                    // so the verbs ride the account card
+                                    // rather than a Section below the list.
+                                    acts: { AnyView(vibenetSendRow) },
                                     // The face rail's two halves, now the
                                     // crown's (prd §482 amendment).
                                     scopedAddress: chrome.vibenetScope)
@@ -6901,7 +6810,12 @@ struct FeedScreen: View {
                                                 present: vibenetSectionPublication.sections)
             let vScoped = VibenetSection.shows(present: vibenetSectionPublication.sections)
             if vScoped && vScope == .home {
-                vibenetSendRow
+                // **HOME HAS NO LIST (prd §744).** Its half was the verb tiles
+                // (`vibenetSendRow`), which now ride the account card inside
+                // the room's own chrome — so §682's "the verbs sit under the
+                // rail, never under the list" holds by construction. Home's
+                // list is the scope door rows the chrome draws.
+                EmptyView()
             } else if vibenetShowsRows {
                 if visible.isEmpty {
                     // NOTHING IN THIS SCOPE, said under the rails that got you

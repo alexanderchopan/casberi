@@ -1706,7 +1706,15 @@ struct HegotaRoomList: View {
             // the one write action this room has, in the one slot with room
             // for it. `HegotaSendCard` gates itself on this phone holding a
             // key, so a room with no key draws no form rather than a dead one.
-            case .home:     HegotaSendCard()
+            // **HOME HAS NO LIST (prd §744).** §594's "Top up and Send are
+            // Home's" still stands — the tiles moved onto the account card,
+            // where they sit beside the crown and are WIRED at last. This arm
+            // called `HegotaSendCard()` with NO arguments, so the card kept
+            // its `onSend = {}` default and its Send tile had done nothing
+            // since the room shipped, while `onOpenSend` was declared here and
+            // passed from `FeedScreen` and read by nobody. Home's list is the
+            // scope door rows the chrome draws above this view.
+            case .home:     EmptyView()
             case .activity: movesList(moves)
             case .holdings: holdingsList
             case .accounts: accountsList
@@ -1792,9 +1800,10 @@ struct HegotaRoomList: View {
     /// sheet — the half-open-then-close bug, paid for three times before
     /// today and almost a fourth and fifth in the same afternoon).
     var onOpenKeySheet: () -> Void = {}
-    /// Raise the send sheet — owned by `FeedScreen`, for the reason
-    /// `HegotaSendCard`'s own header gives (prd §553).
-    var onOpenSend: () -> Void = {}
+    // `onOpenSend` is deleted (prd §744/§723). It was declared here, passed
+    // from `FeedScreen`, and never read — the `.home` arm built its card
+    // without it — so the send sheet it names was unreachable from this view.
+    // The card is on the account card now and takes its closure there.
 
     @ViewBuilder private var thisPhoneRow: some View {
         let present = HegotaKey.presence() == .present
@@ -3728,5 +3737,98 @@ enum HegotaConnections {
         }
         return followed + RoomAccountsRows.tied(
             drawn, watchedKeys: Set(accounts.map { $0.address.lowercased() }))
+    }
+}
+
+/// WHAT EACH HEGOTÁ SCOPE HOLDS, BEFORE YOU OPEN IT (prd §744, 2026-09-15).
+///
+/// The door rows' right-hand fact, computed once per body pass rather than
+/// once per row: four of these answers walk every account
+/// (`HegotaHoldings.tokens`, `HegotaConnections.map`, the coin folds, the
+/// permission kinds), which is the cost class `row-cost-audit.py` exists to
+/// catch.
+///
+/// **It lives here, beside `HegotaRoomFigure.isEmpty`, and mirrors it arm for
+/// arm.** The two answer the same question — has this scope got anything —
+/// and derived apart they are free to disagree, which would show as a row
+/// saying "3 tokens" onto a slot drawing the empty state. An empty scope reads
+/// its own `emptyHeadline` here, so the row and the slot say the same words.
+enum HegotaRoomReadings {
+
+    static func of(accounts: [HegotaAccount],
+                   scoped: String?,
+                   sections: [HegotaSection]) -> [HegotaSection: String] {
+        let shown: [HegotaAccount] = {
+            guard let scoped else { return accounts }
+            return accounts.filter { $0.address.caseInsensitiveCompare(scoped) == .orderedSame }
+        }()
+        let moves = shown.flatMap(\.moves)
+        var out: [HegotaSection: String] = [:]
+        for section in sections where section != .home {
+            switch section {
+            case .home:
+                break
+            case .activity:
+                out[section] = moves.isEmpty
+                    ? section.emptyHeadline
+                    : String(localized: "\(moves.count) moves")
+            case .holdings:
+                let tokens = HegotaHoldings.tokens(shown)
+                out[section] = tokens.isEmpty
+                    ? section.emptyHeadline
+                    : String(localized: "\(tokens.count) tokens")
+            case .accounts:
+                let nodes = HegotaConnections.map(shown)?.nodes.count ?? 0
+                out[section] = nodes == 0
+                    ? section.emptyHeadline
+                    : String(localized: "\(nodes) connected")
+            case .frames:
+                // Folded by hash across accounts, exactly as the figure folds
+                // them: watching both sides of a transfer puts one transaction
+                // in two accounts' moves, and the scope's subject is the
+                // transaction.
+                var seen = Set<String>()
+                let framed = moves.filter { move in
+                    guard let f = move.frames, !f.isEmpty else { return false }
+                    return seen.insert(move.hash.lowercased()).inserted
+                }
+                out[section] = framed.isEmpty
+                    ? section.emptyHeadline
+                    : String(localized: "\(framed.count) steps")
+            case .coins:
+                let unspent = shown.filter(\.hasCoins).flatMap { $0.unspent ?? [] }
+                let spent = HegotaCoins.spent(of: shown)
+                out[section] = HegotaCoins.scopeHeadline(unspent: unspent.count,
+                                                         spent: spent.count)
+                    ?? section.emptyHeadline
+            case .permissions:
+                let kinds = HegotaPermissions.kinds(shown)
+                out[section] = kinds.isEmpty
+                    ? section.emptyHeadline
+                    : RoomPermissions.headline(kinds) ?? section.emptyHeadline
+            }
+        }
+        return out
+    }
+
+    /// The watched accounts as deck cards, "All" first.
+    static func slots(_ accounts: [HegotaAccount]) -> [DSAccountSlot] {
+        let named = accounts.map { account in
+            HegotaWatch.shared.name(for: account.address)
+                ?? WalletStore.shortAddress(account.address)
+        }
+        let all = DSAccountSlot(
+            id: "",
+            name: String(localized: "All accounts"),
+            sub: named.isEmpty
+                ? String(localized: "Nothing watched on this chain yet")
+                : ListFormatter.localizedString(byJoining: named),
+            faces: accounts.prefix(2).map { .wallet(address: $0.address) })
+        return [all] + zip(accounts, named).map { account, name in
+            DSAccountSlot(id: account.address,
+                          name: name,
+                          sub: WalletStore.shortAddress(account.address),
+                          faces: [.wallet(address: account.address)])
+        }
     }
 }

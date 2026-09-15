@@ -1444,3 +1444,71 @@ enum PrivacyConnections {
             drawn, watchedKeys: Set(accounts.map { $0.address.lowercased() }))
     }
 }
+
+/// WHAT EACH PRIVACY-DEVNET SCOPE HOLDS, BEFORE YOU OPEN IT (prd §744,
+/// 2026-09-15).
+///
+/// The door rows' right-hand fact. Written as an extension ON the card rather
+/// than as a free function, for the reason `PrivacyDevnetRoomList` already
+/// builds a card to reach `scopeList`: every input these answers need
+/// (`pairs`, `frameRuns`, `permissionKinds`, `keyRows`) is already derived
+/// here, and a second derivation is free to disagree with `isEmpty` — which
+/// would show as a row saying "3 steps" onto a slot drawing the empty state.
+///
+/// Built once per body pass, not once per row: `PrivacyHoldings.cells` and
+/// `PrivacyConnections.map` both walk every account.
+extension PrivacyDevnetRoomCard {
+
+    func readings(_ sections: [PrivacyDevnetSection]) -> [PrivacyDevnetSection: String] {
+        var out: [PrivacyDevnetSection: String] = [:]
+        for scope in sections where scope != .home {
+            if isEmpty(scope) {
+                out[scope] = scope.emptyHeadline
+                continue
+            }
+            switch scope {
+            case .home:
+                break
+            case .activity:
+                out[scope] = String(localized: "\(pairs.count) moves")
+            case .holdings:
+                let cells = PrivacyHoldings.cells(accounts: accounts, shielded: shielded)
+                out[scope] = String(localized: "\(cells.count) split")
+            case .accounts:
+                let nodes = PrivacyConnections.map(accounts)?.nodes.count ?? 0
+                out[scope] = String(localized: "\(nodes) connected")
+            case .frames:
+                out[scope] = String(localized: "\(frameRuns.count) steps")
+            case .permissions:
+                out[scope] = RoomPermissions.headline(permissionKinds) ?? scope.emptyHeadline
+            case .roots:
+                let roots = accounts.reduce(0) { $0 + $1.roots.count }
+                out[scope] = String(localized: "\(roots) snapshots")
+            }
+        }
+        return out
+    }
+
+    /// The watched accounts as deck cards, "All" first.
+    ///
+    /// The deleted `PrivacyDevnetScopeRail.items` captioned with the NAME only
+    /// (user ruling 2026-09-04, never a balance); a card keeps that and gains
+    /// the address on the line under it, which a 66pt slot had no room for.
+    @MainActor
+    static func slots(_ accounts: [PrivacyDevnetAccount]) -> [DSAccountSlot] {
+        let named = accounts.map { PrivacyDevnetName.of($0.address) }
+        let all = DSAccountSlot(
+            id: "",
+            name: String(localized: "All accounts"),
+            sub: named.isEmpty
+                ? String(localized: "Nothing watched on this chain yet")
+                : ListFormatter.localizedString(byJoining: named),
+            faces: accounts.prefix(2).map { .wallet(address: $0.address) })
+        return [all] + zip(accounts, named).map { account, name in
+            DSAccountSlot(id: account.address,
+                          name: name,
+                          sub: WalletStore.shortAddress(account.address),
+                          faces: [.wallet(address: account.address)])
+        }
+    }
+}

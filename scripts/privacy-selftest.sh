@@ -1414,16 +1414,24 @@ grep -qF 'nonisolated static func observedRelaunch()'   "Casberi/Casberi/Model/P
 # in that direction is that restoring the caption would look like an ordinary
 # improvement — "the rail could say what each address holds" is exactly the
 # sentence the removed doc comment used to make.
-# Scoped to THIS seat's enum — the file holds six rails and Frames' still
-# captions with its balance by its own ruling; a file-wide grep fired on that
-# and the first cut of this guard was committed red (the tail-exit trap).
-# …and read from a COMMENT-STRIPPED copy, because the rail's own doc comment
-# names `PrivacyDevnetMoney` while explaining that it no longer calls it (the
-# Obsidian/Cursor lesson, which this guard tripped on its second run).
-sed -n '/^enum PrivacyDevnetScopeRail/,/^enum /p' "Casberi/Casberi/Shell/FaceScopeRail.swift" > "$work/privacyrail.raw"
-strip_comments "$work/privacyrail.raw" > "$work/privacyrail.swift"
-grep -qE 'PrivacyDevnetMoney|balanceWei' "$work/privacyrail.swift"   && fail "the Privacy face rail is stating balances again — a strip of faces says WHO, and this chain's accounts range from 0.44 to a million test ETH, so the captions compared quantities with no market against each other"
-grep -qF 'caption: PrivacyDevnetName.of(account.address)' "Casberi/Casberi/Shell/FaceScopeRail.swift"   || fail "the Privacy rail stopped naming its faces through the seat's one naming, so this phone's own account reads as a stranger's hex"
+# **THE SUBJECT MOVED (prd §744, 2026-09-15).** `PrivacyDevnetScopeRail` is
+# deleted with the bar it fed: the accounts are `DSAccountDeck` cards now,
+# built by `PrivacyDevnetRoomCard.slots`. The RULE is unchanged and is the only
+# thing this ever meant — a face names WHO, never how much — so the guard
+# follows it to the slots, in both directions, and reads a comment-stripped
+# copy because that builder's own doc names `PrivacyDevnetScopeRail` while
+# explaining that it replaced it (the Obsidian/Cursor lesson).
+sed -n '/static func slots(_ accounts: \[PrivacyDevnetAccount\])/,/^    }$/p' \
+  "Casberi/Casberi/Screens/PrivacyDevnetRoomCard.swift" > "$work/privacyslots.raw"
+[[ -s "$work/privacyslots.raw" ]] \
+  || fail "the Privacy deck's slot builder is gone — this guard cannot fire, which certifies nothing"
+strip_comments "$work/privacyslots.raw" > "$work/privacyslots.swift"
+grep -qE 'PrivacyDevnetMoney|balanceWei' "$work/privacyslots.swift"   && fail "the Privacy account cards are stating balances again — a face says WHO, and this chain's accounts range from 0.44 to a million test ETH, so the captions compared quantities with no market against each other"
+grep -qF 'PrivacyDevnetName.of($0.address)' "$work/privacyslots.swift"   || fail "the Privacy deck stopped naming its accounts through the seat's one naming, so this phone's own account reads as a stranger's hex"
+# AND THE RAIL ITSELF IS GONE, not merely unused: an adapter with no caller is
+# the dead control one layer down that §723 forbids and no screen sweep sees.
+grep -qF 'enum PrivacyDevnetScopeRail' "Casberi/Casberi/Shell/FaceScopeRail.swift"   && fail "PrivacyDevnetScopeRail is back — this room draws no face rail since §744, so an adapter for one is dead code by construction"
+
 
 # **THE WALK SAYS WHAT IT DID NOT READ (§307, §309).** A truncated room and a
 # complete one look identical from outside.

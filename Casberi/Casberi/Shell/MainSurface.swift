@@ -436,7 +436,7 @@ struct MainSurface: View {
                     // job is to stop content colliding with the chips — it
                     // blocks, it does not CONTAIN, so the strip read as chips
                     // floating at the bottom of the feed rather than as one
-                    // control. `DSRoomRailSlab` answered the identical question
+                    // control. The room chrome answers the identical question
                     // for the wallet's fused rail (§547, "what if we made the
                     // silhouette row and the scope rail seem like more of a
                     // component together") and its answer is this modifier: the

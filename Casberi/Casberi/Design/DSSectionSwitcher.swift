@@ -70,7 +70,12 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
     /// optional so the caller is never forced to decide which one "the" alarm
     /// belongs to — several can want you at once, and each says so for itself.
     var attention: Set<Scope> = []
-    /// **Drawn as the lower deck of `DSRoomRailSlab` rather than standing on
+    /// **Was the lower deck of `DSRoomRailSlab`, which is deleted (prd §744).**
+    /// The flag survives with no caller setting it true; it is the next thing
+    /// to retire here, and left standing only because collapsing it touches
+    /// five screens that still draw this switcher un-embedded.
+    ///
+    /// **Drawn as the lower deck of a slab rather than standing on
     /// its own** (prd §547, 2026-09-01).
     ///
     /// It gives up exactly three things, each of which becomes a DOUBLE inside

@@ -55365,7 +55365,31 @@ NOT what the mockup drew: this device holds one key, so Send and Top up act for
 that key whichever card is showing, and per-card tiles would promise that paging
 changes what Send sends from.
 
+**ALL FIVE ROOMS ARE ON IT, and `DSRoomRailSlab` IS DELETED** (user: *"and we
+will have one template for the wallet and all the dev nets, right"*). Wallet,
+Hegotá Frames, Hegotá UTXO, Ethrex Privacy and Base Vibenet. The slab file, and
+the three rail adapters that existed only to feed it
+(`HegotaScopeRail`, `FramesScopeRail`, `PrivacyDevnetScopeRail`), go with it per
+§723. `VibenetScopeRail` survives — vibenet still draws a rail in its
+single-account branch — as does `WalletScopeRail.shows`, which the shell and the
+crown card read.
+
+**Two dead wires the conversion surfaced, both §83.** Hegotá's Send tile has
+been inert since the room shipped: `HegotaRoomList` declared `onOpenSend` and
+`FeedScreen` passed it, but the `.home` arm called `HegotaSendCard()` with no
+arguments, so the card kept its `= {}` default. It is wired now. And vibenet's
+verbs (`vibenetSendRow`) mounted as a `Section` BELOW the card, which put them
+under the list on any Home with history — §682's complaint one seat over, now
+structurally impossible because they are on the card.
+
+**What is left behind, named rather than hidden.** `DSSectionSwitcher.embedded`
+has no caller setting it true: it was the slab's doing. It is a defaulted
+parameter rather than a control on a screen, and collapsing it touches the five
+screens that still draw that switcher un-embedded, so it is the next cleanup
+here and not this pass's.
+
 **UNBUILT.** Written in a Linux container with no Swift toolchain — nothing here
 has been compiled, installed, or seen on a screen. `scripts/verify.sh` is the
-gate, and the three devnets still on `DSRoomRailSlab` (Vibenet, Hegotá, Ethrex
-Privacy) are the next tranche.
+gate. The three structural self-tests that guarded the old shape
+(`wallet-section`, `vibenet`, `privacy`) follow their subject rather than being
+deleted, and every rewritten guard was dry-run by hand against the new tree.

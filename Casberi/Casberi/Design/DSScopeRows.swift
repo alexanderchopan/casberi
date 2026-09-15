@@ -45,12 +45,21 @@ struct DSScopeRows<Scope: DSSectionScope>: View {
     let onPick: (Scope) -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            ForEach(sections) { section in
-                row(section)
+        // **A ROOM WITH ONE READING DRAWS NO ROWS (§83).** `DSSectionSwitcher`
+        // was gated by each room's own `shows(present:)`, on the rule that a
+        // control offering a single choice is not a control. The rule is
+        // unchanged and the gate moved HERE, because the chrome around these
+        // rows must still draw on Home either way — it carries the crown and
+        // the acts now. An empty `VStack` on a widget surface is a plate with
+        // nothing in it, which is the same dead control wearing a background.
+        if !sections.isEmpty {
+            VStack(spacing: 0) {
+                ForEach(sections) { section in
+                    row(section)
+                }
             }
+            .dsWidgetSurface()
         }
-        .dsWidgetSurface()
     }
 
     @ViewBuilder

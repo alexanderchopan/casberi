@@ -266,6 +266,17 @@ struct VibenetRoomCard: View {
     var scopes: [VibenetSection] = []
     var scopeAttention: Set<VibenetSection> = []
     var onPickScope: ((VibenetSection) -> Void)? = nil
+    /// **THE ROOM'S ACTS, HANDED IN (prd §744).** They were `FeedScreen`'s own
+    /// `vibenetSendRow`, a `Section` mounted BELOW this card — which put the
+    /// verbs under the list on any Home with history, the exact complaint §682
+    /// fixed one seat over. They ride the account card now, so the order is
+    /// structural rather than a matter of which section is emitted first.
+    ///
+    /// A closure returning `AnyView` rather than a generic parameter: this
+    /// card has one call site, the acts draw once per render on Home only, and
+    /// a generic here would spread through 3,600 lines to save an allocation
+    /// nothing measures.
+    var acts: (() -> AnyView)? = nil
 
     /// Which account the room is scoped to, and the door to the book — the
     /// two halves of the face rail this card ABSORBED (prd §482 amendment,
@@ -598,36 +609,15 @@ struct VibenetRoomCard: View {
                 // passes no headline; the row is still RESERVED, which is what
                 // keeps its first pixel level with every other scope's and what
                 // clears the settings gear.
-                Group {
-                    if (section ?? .home) == .home {
-                        // The crown IS the headline here too — see Wallet's
-                        // own Home slot and `reservesHeadline`.
-                        // **THE SHARED ROOM CROWN (prd §683).** Same Home as
-                        // the Wallet and the other devnets — caption, number,
-                        // change, line, range chips — over vibenet's own
-                        // per-account samples, which it has kept since §530
-                        // and which carry dates, so the chips are offered
-                        // here. Only the spelling is ours.
-                        DSRoomSlot(headline: nil, reservesHeadline: false) {
-                            if homeSamples.count >= 2 {
-                                RoomHomeCrown(samples: homeSamples,
-                                              caption: crownCaption,
-                                              format: { "\(VibenetBalanceFormat.line($0)) ETH" },
-                                              exactFormat: { "\(VibenetBalanceFormat.line($0)) ETH" })
-                            } else {
-                                balanceHero
-                            }
-                        }
-                    } else {
-                        scopeVisualDissolving
-                    }
+                // **THE CHROME LEADS, AND ON HOME IT IS THE WHOLE HEAD**
+                // (prd §744). Home's crown is no longer drawn here: it rides
+                // the account card inside `scopeChrome`, which is what gives
+                // an account's name the card's whole width. Off Home the
+                // figure draws exactly where it did.
+                scopeChrome
+                if (section ?? .home) != .home {
+                    scopeVisualDissolving
                 }
-                // **ONE SLAB, WHERE THERE WERE TWO STRIPS** (prd §547) — and the
-                // `switcherGap` correction between them goes with the pair it
-                // separated. `DSRoomRailSlab` owns the distance now, and it is the
-                // same distance in all three rooms rather than a negative padding
-                // against this card's own `s6` stack spacing.
-                railSlab
             }
             // Everything the chassis scopes, in one child so the gap above it is
             // the outer stack's `contentGap` and the gaps BETWEEN these cards
@@ -815,7 +805,7 @@ struct VibenetRoomCard: View {
     /// **THE FUSED RAIL** (prd §547, 2026-09-01) — what `accountChips` and
     /// `scopeStrip` were, as one slab.
     ///
-    /// `scopeStrip` is gone as a property: `DSRoomRailSlab` owns the switcher
+    /// `scopeStrip` is gone as a property: the room chrome owns the switcher
     /// for all three rooms, so a per-room copy of it could only be a place for
     /// the three to drift apart again. Its two live rulings moved here intact —
     /// the `.home` default below, and its "no top padding of its own", which
@@ -827,27 +817,125 @@ struct VibenetRoomCard: View {
     /// scope control you cannot reach while deep in the rows it scopes. Fusing
     /// does not fix that; it makes the eventual fix cheaper, since there is one
     /// view to pin instead of two.
+    /// THE VIBENET ROOM'S CHROME, WITH NO BAR IN IT (prd §744, 2026-09-15).
+    ///
+    /// Was `railSlab`, the fused slab (§547). It follows the Wallet, Frames,
+    /// Hegotá and the Privacy devnet out of the bar, so all five rooms in this
+    /// family now wear ONE template.
+    ///
+    /// **The acts are handed in rather than built here**, because the sheet
+    /// route and the signable account both live in `FeedScreen` — that is what
+    /// `vibenetSendRow` was, and it mounted BELOW this card until today. §682's
+    /// ruling (the verbs sit under the rail, never under the list) is kept by
+    /// construction now: they are on the account card, beside the crown.
     @ViewBuilder
-    private var railSlab: some View {
+    private var scopeChrome: some View {
         let strip = Self.fullItems(fallback: room)
-        let showsSwitcher = onPickScope != nil && VibenetSection.shows(present: scopes)
-        if showsRailDeck(strip) || showsSwitcher {
-            DSRoomRailSlab(
-                showsRail: showsRailDeck(strip),
-                showsSwitcher: showsSwitcher,
+        if showsRailDeck(strip) || (onPickScope != nil && VibenetSection.shows(present: scopes)) {
+            DSRoomScopeChrome(
                 sections: scopes,
                 // `.home`, not `.holdings` — §491's amendment, and the same
-                // default `resolve` has always fallen back to. Left at
-                // `.holdings` this lights the wrong chip on the room's own
-                // opening screen, which is a control disagreeing with what is
-                // drawn above it.
+                // default `resolve` has always fallen back to.
                 active: section ?? .home,
+                home: .home,
                 attention: scopeAttention,
-                onPick: { picked in onPickScope?(picked) }
-            ) {
-                accountChips
+                onPick: { picked in onPickScope?(picked) },
+                accounts: Self.slots(strip),
+                scope: scopedAddress,
+                onPickAccount: { picked in onScope?(picked ?? "") },
+                reading: { readings[$0] },
+                crown: { slot in
+                    DSRoomSlot(headline: nil, reservesHeadline: false) {
+                        if slot.isShowing(scopedAddress) {
+                            // **THE SHARED ROOM CROWN (prd §683)** — caption,
+                            // number, change, line, range chips — over
+                            // vibenet's own per-account samples. Only the
+                            // spelling is ours.
+                            if homeSamples.count >= 2 {
+                                RoomHomeCrown(samples: homeSamples,
+                                              caption: crownCaption,
+                                              format: { "\(VibenetBalanceFormat.line($0)) ETH" },
+                                              exactFormat: { "\(VibenetBalanceFormat.line($0)) ETH" })
+                            } else {
+                                balanceHero
+                            }
+                        }
+                    }
+                },
+                acts: { slot in
+                    // The ALL card only: this device holds ONE key, so Send,
+                    // Top up, Create and Authorize act for that key whichever
+                    // card is showing.
+                    if slot.id.isEmpty, let acts {
+                        acts()
+                    }
+                }
+            )
+        }
+    }
+
+    /// The room's accounts as deck cards, "All" first.
+    ///
+    /// The deleted `VibenetScopeRail.items` captioned with the given name or
+    /// the short address; a card keeps that and gains the address on the line
+    /// under it, which a 66pt slot had no room for.
+    @MainActor
+    private static func slots(_ strip: [VibenetAccountItem]) -> [DSAccountSlot] {
+        let named = strip.map { item in
+            VibenetWatch.shared.name(for: item.address)
+                ?? VibenetRoom.shortAddress(item.address)
+        }
+        let all = DSAccountSlot(
+            id: "",
+            name: String(localized: "All accounts"),
+            sub: named.isEmpty ? nil : ListFormatter.localizedString(byJoining: named),
+            faces: strip.prefix(2).map { .wallet(address: $0.address) })
+        return [all] + zip(strip, named).map { item, name in
+            DSAccountSlot(id: item.address,
+                          name: name,
+                          sub: VibenetRoom.shortAddress(item.address),
+                          faces: [.wallet(address: item.address)])
+        }
+    }
+
+    /// WHAT EACH SCOPE HOLDS, BEFORE YOU OPEN IT (prd §744).
+    ///
+    /// Built once per body pass, read once per row. An empty scope answers
+    /// with the same `emptyHeadline` its slot would have drawn, so the row and
+    /// the figure behind it say the same words.
+    private var readings: [VibenetSection: String] {
+        var out: [VibenetSection: String] = [:]
+        let items = room.items
+        for scope in scopes where scope != .home {
+            switch scope {
+            case .home:
+                break
+            case .activity:
+                let changes = items.flatMap(\.history).count
+                out[scope] = changes == 0
+                    ? scope.emptyHeadline
+                    : String(localized: "\(changes) key changes")
+            case .holdings:
+                let cells = VibenetBalanceAggregation.compose(items)
+                    .map { VibenetBalanceTreemap.cells($0) } ?? []
+                out[scope] = cells.isEmpty
+                    ? scope.emptyHeadline
+                    : String(localized: "\(cells.count) accounts hold it")
+            case .accounts:
+                out[scope] = items.isEmpty
+                    ? scope.emptyHeadline
+                    : String(localized: "\(items.count) watched")
+            case .permissions:
+                // The figure's own count, spelled the same way: a key holding
+                // Send AND Receive is in two census cells, so the cells added
+                // up are not the number of permissions granted — `total` is.
+                let keys = VibenetKeyAggregation.compose(items, now: .now)?.total ?? 0
+                out[scope] = keys == 0
+                    ? scope.emptyHeadline
+                    : RoomPermissions.headline(count: keys) ?? scope.emptyHeadline
             }
         }
+        return out
     }
 
     /// The rail deck's gate, spelled once so `railSlab` cannot ask it and
