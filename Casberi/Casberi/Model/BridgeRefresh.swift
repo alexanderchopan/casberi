@@ -56,7 +56,7 @@ enum BridgeRefresh {
     /// ~25 bridges every time (2026-07-21: no cooldown existed at all). The
     /// per-bridge `running` guards only stop a bridge overlapping ITSELF;
     /// they never stopped back-to-back sweeps. Mirrors the min-interval gate
-    /// `GitHubGraphStore.refreshIfStale`/`KalshiWatch` already use per-store.
+    /// `GitHubGraphStore.refreshIfStale` already uses per-store.
     private static var lastSweep: Date?
     private static let minSweepInterval: TimeInterval = 45
 
@@ -646,7 +646,7 @@ enum BridgeRefresh {
         // connected, and `reconcile` re-checks the token itself so a
         // disconnect between the two reads can't fire a keyless request.
         //
-        // Behind `dueForHeal` like x402's faces and Instagram's captions — a
+        // Behind `dueForHeal` like Instagram's captions — a
         // PR merges on human time, not on foreground time, so asking on every
         // activation would spend a request per open PR to learn nothing.
         if TokenVault.get(TokenBridge.cursor.tokenKey)?.isEmpty == false,
@@ -657,8 +657,8 @@ enum BridgeRefresh {
                 _ = await CursorPullRequests.reconcile(context: context)
             }
         }
-        // npm and PyPI are keyless watch lists, so — like Hugging Face and
-        // GeckoTerminal above — they need their own line here rather than
+        // npm and PyPI are keyless watch lists, so — like Hugging Face
+        // above — they need their own line here rather than
         // riding `TokenBridge.allCases`. One slot each: they are separate
         // seats a person connects independently, and the steady-state cost of
         // each is one small request per watched package.

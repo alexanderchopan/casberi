@@ -11,7 +11,7 @@ import SwiftData
 ///
 /// It reuses the RSS bridge's fetch-and-parse whole (`FeedParser`); the only
 /// differences are a curated source list (not a pasted URL — these are a
-/// handful of known aggregators, toggled like OpenSea's chains) and that a
+/// handful of known aggregators, each toggled on or off) and that a
 /// deal lands as a `.product`, not a `.link`, so it joins the Products pile.
 
 // MARK: - Sources

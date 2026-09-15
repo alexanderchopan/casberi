@@ -4802,9 +4802,9 @@ enum DemoSeedAll {
         }
     }
 
-    /// Three heads compose from stored bridge state rather than corpus rows, so
-    /// no amount of seeded things can make them draw: PostHog's metric curve,
-    /// x402's seller treemap, and the wallet's balance curve. This plants
+    /// Some heads compose from stored bridge state rather than corpus rows, so
+    /// no amount of seeded things can make them draw — PostHog's metric curve
+    /// and the wallet's balance curve among them. This plants
     /// exactly what each reads — no request, no key, no network.
     @MainActor
     private static func seedBridgeState() {

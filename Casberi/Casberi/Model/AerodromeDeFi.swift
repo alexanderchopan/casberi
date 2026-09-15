@@ -15,7 +15,7 @@ import SwiftData
 /// that shape are genuinely news, and nothing in Aerodrome's own UI pushes
 /// either to you:
 /// (1) THE WEEKLY VOTE DEADLINE — `syncEvents` lands a dated thing (`dueAt`,
-///     the `ENSExpiry`/`KalshiWatch` shape) the moment a held lock hasn't
+///     the `ENSExpiry` shape) the moment a held lock hasn't
 ///     voted in the CURRENT epoch and the window is still open, so it rides
 ///     "Coming up" next to a real calendar event. Measured live: one sampled
 ///     lock holding 2,690 AERO (worth real votes) last voted April 2024 —

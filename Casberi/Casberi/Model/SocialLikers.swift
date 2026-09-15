@@ -23,7 +23,7 @@ import Observation
 /// `docs/cloudkit-deploy.md`), which is a real ship cost for a fact that is
 /// re-read from the network on every foreground pass anyway. This is bridge
 /// state, so it lives where every other bridge reading lives: `UserDefaults`,
-/// the `ASCState`/`X402State` shape.
+/// the `ASCState` shape.
 ///
 /// **Bounded on both axes.** `nameCap` bounds what a pass has to RESOLVE —
 /// Bluesky hydrates a liker's handle inline (free), but Snapchain's

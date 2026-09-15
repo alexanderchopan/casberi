@@ -22,7 +22,7 @@ enum ProbeHooks {
     /// This is a denylist, so it FAILS OPEN: a new keyed probe leaks until its
     /// flag lands here. Add the flag in the same commit as the probe.
     private static let secretArgKeys: Set<String> = [
-        "-byokKey", "-openSeaKey", "-tokenBridge", "-wcProjectID", "-ghClientID",
+        "-byokKey", "-tokenBridge", "-wcProjectID", "-ghClientID",
         // Public by design (it names a Power-Up, not a person) — redacted for
         // the same reason `-wcProjectID` is: anything credential-shaped stays
         // out of the log, so nobody has to remember which ones are safe.
@@ -66,7 +66,7 @@ enum ProbeHooks {
     /// A prefix survives ONLY when it's a name we can VERIFY isn't a secret —
     /// a real `AgentProvider` case, a real `BridgeCatalog` offer. Trusting the
     /// first colon instead would leak: `-byokKey` also takes a bare key (bare =
-    /// anthropic), `-openSeaKey` and `-wcProjectID` have no prefix grammar at
+    /// anthropic), `-wcProjectID` has no prefix grammar at
     /// all, and any of those values containing a colon would print everything
     /// before it — half the credential this function exists to hide.
     private static func redactedValue(for flag: String, _ value: String) -> String {
@@ -5949,7 +5949,7 @@ enum ProbeHooks {
         // real bridges need keys/accounts the sim has none of — the same job
         // `-ghGraphDemo` does for the contribution graph. Reddit exercises the
         // ranked-bars leaderboard (grouped by subreddit via authorHandle);
-        // OpenSea exercises the image mosaic (real remote images). Deduped by
+        // Pinterest exercises the image mosaic (real remote images). Deduped by
         // sourceRef, so a re-run is a no-op.
         Hook(key: "seedInsightDemo") { _, context in
             let existing = IngestSupport.existingSourceRefs(context)

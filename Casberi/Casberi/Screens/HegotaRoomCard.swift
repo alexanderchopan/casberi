@@ -31,7 +31,7 @@ struct HegotaRoomFigure: View {
     let section: HegotaSection
 
     /// The pressed lane, and the task that lets it go. `@State`, so it dies
-    /// with the room the way `x402Lane` does — a press is a question about
+    /// with the room — a press is a question about
     /// right now, not a scope worth keeping.
     @State private var pickedLane: HegotaFlow.Lane?
     @State private var laneRevert: Task<Void, Never>?

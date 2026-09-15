@@ -259,9 +259,9 @@ struct ThingSheetView: View {
             // the one still we happened to poster it with.
             || FilesIngest.isVideoRef(thing.sourceRef)
             || !(thing.previewImageURL ?? "").isEmpty
-            // Any charted link — token, Kalshi, stock, PostHog metric. This
-            // read Token and Stock only, so a KALSHI market has been opening
-            // half-height with its verbs below the fold (found 2026-07-27 when
+            // Any charted link — token, stock, PostHog metric. This read
+            // Token and Stock only, so a Kalshi market (a seat since deleted)
+            // opened half-height with its verbs below the fold (found 2026-07-27 when
             // the three copies of this chain were folded into ThingChart).
             || ThingChart.kind(for: thing) != nil
             // A quoted post is a card the height of a small paragraph — the

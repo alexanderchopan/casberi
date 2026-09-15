@@ -5,7 +5,7 @@ import Foundation
 /// The head must cost NOTHING per open — a card that fired five `eth_call`s
 /// every time the room re-drew would spend a person's battery on a scroll.
 /// So the sweep writes what it read, and the card composes from that. It is
-/// the `ASCState`/`X402State` shape: a small Codable snapshot in UserDefaults,
+/// the `ASCState` shape: a small Codable snapshot in UserDefaults,
 /// never a new `Thing` field, so there is **no CloudKit Production deploy**.
 ///
 /// The snapshot is a CACHE OF A PUBLIC FACT, not a record of anything private:

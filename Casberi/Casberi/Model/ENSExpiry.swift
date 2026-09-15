@@ -68,7 +68,7 @@ enum ENSExpiry {
             let ref = ENSName.walletRef(for: name)
             // Reconcile before landing: a renewal MOVES the date, and the row
             // has to follow it rather than keep claiming the old one (the
-            // lesson `OneClawBridge` records for grants).
+            // lesson the 1Claw bridge recorded for grants).
             if existing.contains(ref) {
                 let fresh = ENSName.title(name: name, expiry: expiry)
                 if let landed = try? context.fetch(

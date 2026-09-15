@@ -32,10 +32,10 @@ import Foundation
 /// at this nonce"), so it is not a new register for this app. The two
 /// alternatives both cost more than they bought: "Lanes" collides twice in
 /// wallet-adjacent copy — `WalletFlowBand` speaks its ribbons as lanes and the
-/// x402 screen offers "Watch every lane" — and "Queues" reads as *things
+/// x402 screen offered "Watch every lane" — and "Queues" reads as *things
 /// pending* when what the scope lists is settled history. "Orders" was never in
 /// the running: `TokenWatchOrder`, the exchange screens and `MoneyReceiptCard`
-/// all spend that word on trades, in a room one chip away from Markets.
+/// all spend that word on trades.
 ///
 /// **EVERY SCOPE IS PRESENT, ALWAYS (prd §611, generalising §610).** The gate
 /// used to drop `frames`, `coins`, `nonces` and `sponsors` for an address that

@@ -36,8 +36,7 @@ import SwiftData
 /// itself is a stable endpoint, not a contract.
 ///
 /// Watching is a plain UserDefaults list of address strings (`VibenetWatch`)
-/// rather than a `Thing` per address — the `TrendingStore` shape, not
-/// `L2beatWatch`'s: a devnet address has no product page, no news to arrive
+/// rather than a `Thing` per address — not `L2beatWatch`'s shape: a devnet address has no product page, no news to arrive
 /// under it, nothing to search for. What lives here reads the way
 /// `AerodromeDeFi`/`WalletApprovals` read a public chain: keyless
 /// `eth_call`/`eth_getLogs` against a measured RPC host.
@@ -485,7 +484,7 @@ enum VibenetConfig {
 // MARK: - The watch list
 
 /// Which vibenet addresses this device has named — a plain `Codable`
-/// `[String]` in UserDefaults, `TrendingStore`'s exact shape, not a `Thing`
+/// `[String]` in UserDefaults, not a `Thing`
 /// per address: see the file's header doc for why. Watching is naming, not
 /// consent to anything beyond a read — there is no account, no key, and no
 /// write this bridge could make even if it wanted to.
@@ -2179,7 +2178,7 @@ enum VibenetRoomSource {
 
 /// The last composed room, kept so the feed's head can draw without
 /// reaching the chain (R4.1). Flat `Codable` in UserDefaults — the
-/// `AltanaState`/`X402State` shape, not a `Thing`: this is a snapshot of
+/// `AltanaState` shape, not a `Thing`: this is a snapshot of
 /// state that changes constantly, exactly what this file's own header
 /// says must never become a corpus row.
 enum VibenetState {

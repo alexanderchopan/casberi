@@ -8,7 +8,7 @@ import SwiftData
 /// things, no algorithm in between. Read-only public catalog data — tapping a
 /// product opens the store's own page; Casberi never checks out or pays.
 ///
-/// Why this shape (RSS's, not OpenSea's): the person follows a LIST of stores
+/// Why this shape (RSS's): the person follows a LIST of stores
 /// they paste, not a fixed set of toggles. Two keyless endpoints every Shopify
 /// store serves without a key or account carry the whole bridge:
 ///   • `/<store>/meta.json` — the store's real name and currency (and the

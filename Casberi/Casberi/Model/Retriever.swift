@@ -148,7 +148,7 @@ enum Retriever {
         // ("someone.bsky.social", "vitalik.eth"), a domain ("allium.so") or a
         // filename could NEVER match, because the engine looked for one token
         // with dots in a set that held three without. Precisely the values a
-        // person is most likely to search a social or x402 room by.
+        // person is most likely to search a social room by.
         //
         // Single characters are dropped: splitting this way turns "what's" into
         // "what" + "s", and a bare "s" scored as a search term matches most of

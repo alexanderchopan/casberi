@@ -774,7 +774,7 @@ struct TokenSetupScreen: View {
         // A feed toggled (or a paste) while a sync is mid-flight requeues rather
         // than being dropped — the running pass loops once more, re-reading the
         // selection, so a newly-chosen GitHub feed lands now, not next
-        // foreground (the OpenSea pattern).
+        // foreground.
         if syncing { syncPending = true; return }
         syncing = true
         defer { syncing = false }

@@ -11,7 +11,7 @@ import Foundation
 /// sizes, which cannot be presented as one current figure.
 ///
 /// This keeps the integer instead. Two things, both flat `UserDefaults` (the
-/// `X402State`/`ASCState` shape — **no new `Thing` property, so no CloudKit
+/// `ASCState` shape — **no new `Thing` property, so no CloudKit
 /// Production deploy**, which for one re-readable number would be a schema
 /// migration to store a fact that changes daily):
 ///

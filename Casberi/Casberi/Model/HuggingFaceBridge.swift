@@ -206,9 +206,8 @@ enum HuggingFaceIngest {
     /// Low on purpose: it's proof the watch works, not a history import.
     private static let firstSightCap = 3
     /// The newest-N window each pass reads per author per kind. An author who
-    /// publishes more than this between two opens loses the tail — accepted,
-    /// the same bound OpenSea and GeckoTerminal take ("the corpus doesn't need
-    /// the tail"), and the alternative is paging a firehose forever.
+    /// publishes more than this between two opens loses the tail — accepted
+    /// ("the corpus doesn't need the tail"), and the alternative is paging a firehose forever.
     private static let pageSize = 10
     /// Daily Papers lands about ten a day; twenty covers a weekend away.
     private static let paperPage = 20
@@ -516,8 +515,7 @@ enum HuggingFaceIngest {
                 let thing = Thing(
                     kind: .link,
                     // Repo ids are author-controlled and can carry anything;
-                    // the one-line-title invariant is enforced at the door,
-                    // same as OpenSea and GeckoTerminal.
+                    // the one-line-title invariant is enforced at the door.
                     title: IngestSupport.titleLine("\(release.id) · \(repo.noun)"),
                     content: "https://huggingface.co/\(pathPrefix(repo))\(release.id)",
                     source: "Hugging Face",

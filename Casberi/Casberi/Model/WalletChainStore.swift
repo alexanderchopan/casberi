@@ -1,9 +1,8 @@
 import Foundation
 import Observation
 
-/// Which chains the wallet reads (2026-07-15) — the same follow-a-list-of-chains
-/// idiom GeckoTerminal and OpenSea already wear, pointed at the wallet's Alchemy
-/// reads. Every watched wallet is read across the SELECTED chains only; turning
+/// Which chains the wallet reads (2026-07-15) — a follow-a-list-of-chains
+/// idiom, pointed at the wallet's Alchemy reads. Every watched wallet is read across the SELECTED chains only; turning
 /// one off drops it from the transfer sync, the holdings treemap, and the value
 /// samples, and cuts the requests each refresh spends on it. Defaults to ALL
 /// chains on, so a wallet connected before this ruling reads exactly as it did.

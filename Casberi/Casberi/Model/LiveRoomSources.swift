@@ -5,17 +5,15 @@ import Foundation
 ///
 /// Every other bridge in this app is corpus-shaped: connecting it lands
 /// things, and its chip exists in `MainSurface.chipLabels` precisely because
-/// things with that source exist. The prediction markets aren't — Kalshi and
-/// Polymarket have no account and no sync; their whole book is public and
-/// live, and "following" one market is a CHOICE made against that book, not
-/// something a sync hands you. Modelled the corpus way, connecting them
-/// meant nothing at all (the setup screen conflated connect with watching
-/// your first market, which is why it grew into a browse screen it had no
-/// business being) and a connected exchange with nothing followed yet had no
-/// chip and therefore no room to browse FROM.
+/// things with that source exist. The devnet rooms aren't — Hegotá, Frames and
+/// the privacy devnet land no `Thing` ever; their content is live chain state.
+/// Modelled the corpus way, a connected seat with nothing landed had no chip
+/// and therefore no room. (The founding members were the prediction markets,
+/// Kalshi and Polymarket, whose whole book was public and live; both were
+/// deleted on 2026-09-06, prd §638.)
 ///
 /// So: these sources get a chip the moment they're connected, and their room
-/// renders the live book above whatever the corpus holds. Deliberately a
+/// renders its live content above whatever the corpus holds. Deliberately a
 /// short explicit list rather than "every connected bridge" — a bridge whose
 /// room would be empty without landed things must NOT get a chip that opens
 /// onto nothing, which is exactly what a blanket rule would do to Gmail,
@@ -28,7 +26,7 @@ enum LiveRoomSources {
     /// venues' (prd §548): it lands no `Thing` ever, so without membership its
     /// room draws the corpus-shaped empty state over live chain content — and
     /// `FeedScreen`'s two arms both fall through, which is a BLACK SCREEN.
-    /// It is deliberately absent from `venues` below: that narrower set draws
+    /// It is deliberately absent from `venues` below: that narrower set drew
     /// `PredictionRoomBook`, and adding Hegotá to the wrong one is why a device
     /// report read "when i click on hegota it is showing me prediction
     /// markets".
@@ -36,7 +34,7 @@ enum LiveRoomSources {
     /// reason, and it is the same ruling rather than a third one: it lands no
     /// `Thing` ever. **NOT in `venues` below**, which is the mistake that
     /// produced "when i click on hegota it is showing me prediction markets" —
-    /// that narrower set draws `PredictionRoomBook`.
+    /// that narrower set drew `PredictionRoomBook`.
     /// Kalshi and Polymarket were the founding members and left on 2026-09-06
     /// with their code (prd §638's third amendment). Their rows persist in a
     /// corpus that has them, but `Corpus.retiredSources` refuses those rows a
@@ -68,15 +66,10 @@ enum LiveRoomSources {
     ///
     /// A registry whose membership means several unrelated things is one that
     /// hands every new member all of them. Jobs 3 and 4 read this narrower set,
-    /// so the next landless seat inherits a chip and nothing else — which is
-    /// the property that makes this a fix rather than a patch.
+    /// so the next landless seat inherited a chip and nothing else — which is
+    /// the property that made this a fix rather than a patch. Both jobs went
+    /// with the venues' code, so nothing reads the set now.
     static let predictionVenues: Set<String> = []
 
     static func has(_ source: String) -> Bool { all.contains(source) }
-
-    /// Is this room one of the prediction venues? Read by the browse book and
-    /// by the pull-to-refresh cache invalidation, never by the chip.
-    static func isPredictionVenue(_ source: String) -> Bool {
-        predictionVenues.contains(source)
-    }
 }

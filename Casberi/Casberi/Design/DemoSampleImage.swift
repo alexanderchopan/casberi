@@ -25,8 +25,9 @@ extension UIImage {
             let symbol = ref.replacingOccurrences(of: "sample:token-", with: "")
             return UIImage(named: "brand-\(symbol.lowercased())")
         }
-        // Trending tokens resolve to the app's OWN shipped `brand-*` marks
-        // first (2026-08-26). They were generated MONOGRAMS until then, on the
+        // `sample:coin-` marks resolve to the app's OWN shipped `brand-*` marks
+        // first (2026-08-26; written for GeckoTerminal's trending rows, retired
+        // 2026-09-06 — the watched stocks read it now). They were generated MONOGRAMS until then, on the
         // reasoning that a trending row is somebody else's token whose logo we
         // have no right to reproduce — which is true of a token we don't
         // bundle and simply false of one we do: AERO and JUP wear their real

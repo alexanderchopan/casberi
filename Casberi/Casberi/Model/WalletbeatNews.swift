@@ -117,7 +117,7 @@ struct WalletbeatIncident: Sendable, Equatable {
 /// citations are four more facts than a `.link` row can carry, and every one of them would
 /// be a new stored property — which is a CloudKit Production deploy each (docs/
 /// cloudkit-deploy.md) for data that is re-read from a public document every few hours.
-/// The `X402State`/`ASCState` shape instead: a reading in UserDefaults, keyed by slug.
+/// The `ASCState` shape instead: a reading in UserDefaults, keyed by slug.
 ///
 /// The first cut put the citations on `enrichedText`, which is retrieval-only by the
 /// 2026-07-15 ruling — so the sheet could not draw them and the sources Walletbeat cites

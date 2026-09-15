@@ -792,8 +792,8 @@ struct DSSlabDoor: View {
 }
 
 /// A switch slab — the shape for a control that STARTS something, on the
-/// pages where flipping it is the whole act (a chain on OpenSea or
-/// GeckoTerminal, a seat on Peer or Privacy Pools). Those rows aren't settings
+/// pages where flipping it is the whole act (a seat on Peer or Privacy
+/// Pools). Those rows aren't settings
 /// hiding in a card; each one is that screen's connect verb for one lane, so
 /// it gets a full block rather than a line in a stacked toggle list.
 ///

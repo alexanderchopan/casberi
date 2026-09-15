@@ -57,7 +57,7 @@ enum L2beatWatch {
 	/// L2BEAT changes one of its own readings.
 	///
 	/// A flag rather than a `Thing`, because there is no entity to be: a watch names a chain
-	/// and this names nothing. The `X402State`/`ASCState` shape.
+	/// and this names nothing. The `ASCState` shape.
 	private static let followingKey = "l2beat.following"
 
 	static var following: Bool {
@@ -162,7 +162,7 @@ enum L2beatWatch {
 // MARK: - Stored readings
 
 /// L2BEAT's assessments as last read, per chain, plus the stamps that keep the windows
-/// honest. A reading, not a thing — the PostHog/X402 shape.
+/// honest. A reading, not a thing — the PostHog shape.
 enum L2beatState {
 	private static let projectsKey = "l2beat.projects"
 	private static let summaryKey = "l2beat.summary.readAt"

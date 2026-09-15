@@ -35,7 +35,7 @@ enum AgentPanel {
     // MARK: - Figures
 
     /// One weighted cell of a treemap — the shape `UnitTreemap` already draws
-    /// for receipts and x402, reused here at tile scale.
+    /// for receipts, reused here at tile scale.
     struct Cell: Equatable {
         var label: String
         var weight: Int

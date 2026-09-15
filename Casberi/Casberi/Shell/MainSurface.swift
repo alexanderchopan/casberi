@@ -74,9 +74,9 @@ struct MainSurface: View {
         return d
     }
     @Environment(ShellChrome.self) private var chrome
-    /// Read for the LIVE-room chips only (prd §234) — a connected Kalshi or
-    /// Polymarket earns a chip with nothing landed yet, since its room's
-    /// content is the live book rather than the corpus.
+    /// Read for the LIVE-room chips only (prd §234) — a connected devnet seat
+    /// (Hegotá, Frames) earns a chip with nothing landed yet, since its room's
+    /// content is live chain state rather than the corpus.
     @Environment(BridgeStore.self) private var store
     // Per-WINDOW, not per-process (see `SceneState`): `RootShell` owns one of
     // each and injects them, so a second window routes and filters on its own.
@@ -1018,7 +1018,7 @@ struct MainSurface: View {
     /// tap changes only the ORDER, which is frozen until foreground anyway.
     @State private var liveChips: [String]?
 
-    /// Connected live-room bridges (Kalshi, Polymarket) earn a chip with nothing
+    /// Connected live-room bridges (Hegotá, Frames) earn a chip with nothing
     /// landed, so connecting one changes the label set without changing the
     /// corpus count. Cheap enough to read per body pass — it walks the ~25
     /// bridges, not the corpus — and it's what lets a chip appear the moment you
@@ -1408,10 +1408,10 @@ struct MainSurface: View {
         var ordered = walked
         var seen = Set(ordered)
         // A LIVE-room source earns its chip by being CONNECTED, not by having
-        // landed anything (prd §234, `LiveRoomSources`): Kalshi and Polymarket
-        // have no sync, so a corpus-only rule left a connected exchange with
-        // no chip — and therefore no room to browse the book from, which is
-        // the entire point of connecting one. Appended after the corpus
+        // landed anything (prd §234, `LiveRoomSources`): the devnet seats
+        // land no `Thing`, so a corpus-only rule left a connected one with
+        // no chip — and therefore no room, which is the entire point of
+        // connecting one. Appended after the corpus
         // sources so the learned sort below still decides real order.
         // …and through the SAME `earnsRoom` gate the corpus walk uses: a
         // retired seat (`Corpus.retiredSources`, prd §638) that is still
@@ -1629,7 +1629,7 @@ struct MainSurface: View {
                     refreshSpin: chrome.refreshPulse,
                     zoomNS: doorNS) { label in
             // Compared against the CHIP, not the source: re-tapping the folded
-            // Markets chip while standing in Kalshi is a re-tap of the chip
+            // Social chip while standing in Bluesky is a re-tap of the chip
             // you're on, and comparing raw sources would read it as a switch
             // and silently do nothing (the guard in `go(to:)` catches it).
             // **A FOLDER OPENS; IT DOES NOT MOVE THE FEED (§591 amendment,
@@ -2037,7 +2037,7 @@ struct MainSurface: View {
         // Keyed off `filter.source` itself rather than written inside
         // `go(to:)`, so EVERY route into a category room counts: a chip tap, a
         // swipe, a room's own switcher, and a deep link
-        // (casberi://feed/source/Kalshi), which writes the filter directly and
+        // (casberi://feed/source/Bluesky), which writes the filter directly and
         // never passes through `go`. `CategoryFold.remember` is a no-op for a
         // source that belongs to no catalog category, so this costs a
         // dictionary lookup on every source switch and nothing else.
@@ -2105,12 +2105,12 @@ struct MainSurface: View {
             for: UIApplication.didBecomeActiveNotification)) { _ in
             if ProcessInfo.processInfo.isMacCatalystApp { freezeChips() }
         }
-        // Connecting a live-room bridge (Kalshi, Polymarket) earns a chip with
+        // Connecting a live-room bridge (Hegotá, Frames) earns a chip with
         // nothing landed, so it changes the label set without changing the
         // corpus count the watcher above keys on. Without this the new chip
         // would wait for the next arrival or foreground — i.e. you'd come back
-        // from connecting an exchange and find no room to browse its book from,
-        // which is the whole point of connecting one (prd §234).
+        // from connecting one and find no room to open, which is the whole
+        // point of connecting it (prd §234).
         .onChange(of: liveRoomChipCount) { _, _ in refreshLiveChips() }
         // A pin changes no corpus count, so it needs its own signal (see
         // `ShellChrome.pinPulse`). `refreshLiveChips`, never `freezeChips`:

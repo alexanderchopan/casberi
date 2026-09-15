@@ -69,7 +69,6 @@ enum SourceActions {
             let phrases: [String: String] = [
                 "wallet":      "Watch another wallet",
                 "tokens":      "Watch another token",
-                "kalshi":      "Watch another market",
                 "bluesky":     "Track another account",
                 "farcaster":   "Track another account",
                 "twitch":      "Follow another channel",

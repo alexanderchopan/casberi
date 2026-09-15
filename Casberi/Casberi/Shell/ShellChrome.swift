@@ -246,7 +246,7 @@ final class ShellChrome {
         /// A category's own sources, by category name. The row shows THAT
         /// category's venues whether or not you are standing in it, which is
         /// what makes a folder a folder: you can look inside Social from
-        /// Kalshi without leaving Kalshi.
+        /// GitHub without leaving GitHub.
         case category(String)
         // `.doors` — the octopus's folder — is DELETED (prd §697,
         // 2026-09-11). With the ask deprecated it held Settings and
@@ -319,7 +319,7 @@ final class ShellChrome {
     ///
     /// **It is NOT persisted across launches, unlike `CategoryFold.landing`.**
     /// That room remembers because its venues are separate watchlists and
-    /// reopening on Tokens for somebody who lives in Kalshi costs a tap on the
+    /// reopening on Tokens for somebody who lives in Stocktwits costs a tap on the
     /// very first tap. These are facets of ONE subject and `activity` is the
     /// room's front door — every other room in this app opens on its feed, and
     /// a wallet that reopened on Permissions three days after you last looked

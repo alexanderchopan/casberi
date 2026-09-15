@@ -55,7 +55,7 @@ enum WalletbeatWatch {
 	/// a decision anyone took; it fell out of the watch list doubling as the connect act.
 	///
 	/// A flag rather than a `Thing`, because there is no entity to be: a watch names a
-	/// wallet and this names nothing. The `X402State`/`ASCState` shape.
+	/// wallet and this names nothing. The `ASCState` shape.
 	private static let followingKey = "walletbeat.following"
 
 	static var following: Bool {
@@ -199,7 +199,7 @@ enum WalletbeatWatch {
 // MARK: - Stored readings
 
 /// Walletbeat's ratings as last read, per wallet, plus the read stamps that keep the
-/// windows honest. A reading, not a thing — the PostHog/X402 shape.
+/// windows honest. A reading, not a thing — the PostHog shape.
 enum WalletbeatState {
 	private static let cardsKey = "walletbeat.cards"
 	private static let newsKey = "walletbeat.news.readAt"

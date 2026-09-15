@@ -300,8 +300,8 @@ enum DS {
     /// brightest cell visibly lifts off the card without the board asserting
     /// itself the way the tint wash did. Because the result is always fully
     /// opaque, a caller no longer needs a `surfaceWell` base under it to keep
-    /// a low-magnitude cell from vanishing into the card (`X402RoomCard`'s
-    /// and the receipts map's old workaround) — harmless to keep, since ink
+    /// a low-magnitude cell from vanishing into the card (the
+    /// receipts map's old workaround) — harmless to keep, since ink
     /// paints over it either way.
     static func ink(magnitude t: Double) -> Color {
         let clamped = CGFloat(min(max(t, 0), 1))

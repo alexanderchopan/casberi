@@ -531,8 +531,9 @@ enum KeptAskComposers {
     /// up" card did, and it died with the Home board (prd §131) as a renderer
     /// with no surviving emitter; since then `dueAt` has only ever been read
     /// looking BACKWARD, by `overdue`. That left a real gap rather than a
-    /// cosmetic one: 1Claw already lands grant expiries as a structured
-    /// `dueAt`, and they were invisible until the day they expired.
+    /// cosmetic one: 1Claw landed grant expiries as a structured `dueAt`
+    /// (until its seat was deleted, prd §638), and they were invisible until
+    /// the day they expired.
     ///
     /// Scoped to DEADLINES, never to calendar events. An event's start rides
     /// `capturedAt`, and folding those in here would rebuild the lane §101 cut
@@ -1677,7 +1678,8 @@ enum KeptAskComposers {
 
     /// Strips what would break the one-line gen-UI grammar — the same
     /// treatment `HomeComposition.q`/`RootShell.genSafe` each already give
-    /// their own doc lines. Shared with `MarketsAsk` since 2026-07-28 — a
+    /// their own doc lines. Shared with `MarketsAsk` from 2026-07-28 until that
+    /// composer was deleted (2026-09-06, prd §638) — a
     /// fourth private copy would have been the point where the convention
     /// stopped paying for itself.
     static func genSafe(_ s: String) -> String {

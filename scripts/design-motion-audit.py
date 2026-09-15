@@ -128,7 +128,6 @@ ENTRANCE_TOKENS = (
     "MetricDisc(",        # ditto
     "TokenChartPlot(",    # ditto (its caller owns the reveal)
     "breathing()",
-    "PredictionOddsBar(",
 )
 
 REDUCE_MOTION = "educeMotion"   # matches accessibilityReduceMotion / reduceMotion

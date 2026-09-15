@@ -11,8 +11,8 @@ import SwiftData
 /// future edit can't quietly erase it: Privacy's API key is NOT scoped
 /// read-only. The same key that lists transactions can also issue and close
 /// cards and move money on the account. Every other keyed bridge here holds a
-/// credential that CANNOT execute (Bitrefill/Bankr mint read-only keys, 1Claw
-/// hands out grants, the wallet reads are keyless). Here the "can't spend"
+/// credential that CANNOT execute (Bitrefill/Bankr mint read-only keys, the
+/// wallet reads are keyless). Here the "can't spend"
 /// promise is kept by CONDUCT, not by the credential: this file only ever
 /// issues `GET /v1/transactions`, and the catalog/setup copy says so plainly.
 /// Do not add a call to any write endpoint (`POST /v1/card`, `.../simulate/…`,

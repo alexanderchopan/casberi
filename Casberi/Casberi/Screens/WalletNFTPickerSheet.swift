@@ -43,7 +43,7 @@ struct WalletNFTPickerSheet: View {
     @State private var loaded = false
     /// A–Z by default (user's ruling, 2026-08-15). `@State`, so it resets when
     /// the sheet closes: this is how you are looking right now, not a setting
-    /// you configured — the same lifetime rule the x402 lane filter follows.
+    /// you configured.
     @State private var sort: NFTSort = .name
 
     private var ordered: [NFTCollection] {

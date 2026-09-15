@@ -121,7 +121,7 @@ struct ThingContentView: View {
     /// True when the `.link` branch below resolves to the LinkPreviewCard,
     /// whose footer already names the host — ThingSheetView's Site row keys
     /// off this exact fact (not a lookalike condition) so the two views
-    /// can't drift: a token/Kalshi link renders a chart with no host line,
+    /// can't drift: a token/stock link renders a chart with no host line,
     /// and its Site row must stay.
     static func showsLinkPreview(_ thing: Thing) -> Bool {
         // A product previews its page the same way a link does, so it dedups
@@ -522,10 +522,6 @@ struct ThingContentView: View {
             // sentence is the fact a reader most needs and would otherwise get
             // wrong, which is exactly the bar this exception was written for.
             // Only unshields set it; shields leave it nil.
-            // Circle x402 is NOT in this list, deliberately: its rows are
-            // `.link`, which never reaches this `default:` branch, so naming it
-            // here was dead code for a whole pass. Its catalog is drawn by
-            // `X402SellerContent` on the `.link` route above.
             if (thing.source == "Privacy Pools" || thing.source == "Peer"
                 || thing.source == "Railgun"),
                let cover = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines),

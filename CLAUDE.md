@@ -310,9 +310,6 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **ONE ACTIVITY, ONE ROW — and Strava never wins (RULE, `Model/HealthRiders.swift`).** Records from different writers that start and run within 120s are one activity, and the survivor is whoever measured it (Garmin 2, other recorders 1, Strava 0). `health-riders-selftest.sh` drives it → docs/hooks/system.md
 - `-hideDemoBanner YES` — leave the demo banner unmounted for App Store stills (DEBUG only; pair with `-demoEnter YES`).
 - `-rainPulse <s>` — bump `ShellChrome.refreshPulse` after a delay (NSLogs `rainPulse: dealt N tiles`); deal rain only through `ShellChrome.rain(sources:)` → docs/verify.md · prd §655
-- `-openSeaFeed` `-openSeaKey` — connects OpenSea (a comma-separated chain list like ethereum,base,optimism, or YES/empty for the defaults → docs/hooks/bridges.md
-- `-geckoTrending` — connects GeckoTerminal (a comma-separated chain list like ethereum,base,solana, or YES/empty for the defaults → docs/hooks/bridges.md
-- `-x402Lane` `-x402Probe` — the Circle x402 bridge (2026-08-06, prd §319, Model/CircleX402Bridge.swift; screen → docs/hooks/bridges.md · prd §319
 - `-hfWatch` `-hfPapers` `-hfProbe` — the Hugging Face bridge (2026-08-03, prd §290, Model/HuggingFaceBridge.swift; screen → docs/hooks/bridges.md · prd §290
 - `-spotifySession "<sp_dc>"` `-spotifyProbe` — the Spotify seat's session, and its chain link by link (prd §703, 2026-09-12) → docs/hooks/bridges.md · prd §703
 - **A 200 from `open.spotify.com/api/token` is not a signed-in session (`isAnonymous`); only `.refused` clears the credential, and a 429 is `.throttled`** → docs/hooks/bridges.md · prd §711 · §711b

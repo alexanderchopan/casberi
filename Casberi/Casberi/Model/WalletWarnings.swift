@@ -122,8 +122,7 @@ struct WalletWarning: Identifiable, Equatable {
     ///
     /// The protocol's own app ROOT, deliberately, not a per-position deep
     /// link: none of the three documents a stable per-position web URL, and
-    /// the honest destination is the page that definitely exists (the same
-    /// call `OneClawFetch.dashboard` makes for the same reason).
+    /// the honest destination is the page that definitely exists.
     static func appURL(forProtocol name: String) -> String? {
         switch name {
         case "Aave":   "https://app.aave.com/"

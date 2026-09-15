@@ -224,7 +224,7 @@ enum BridgeCatalog {
         // A validator can't be FOUND from a wallet address the way a Solana
         // stake account can (see EthValidatorWatch.swift) — the only free
         // path is asking for the index directly, which is why this is a
-        // named watch-list like Tokens/Kalshi rather than something that
+        // named watch-list like Tokens rather than something that
         // rides a watched wallet automatically.
         Offer(name: "ETH Validators", tagline: "Your validator balance, in your total", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 7, 27)),
@@ -246,11 +246,9 @@ enum BridgeCatalog {
         // Polymarket, GeckoTerminal, Circle x402, 1Claw and Open Food Facts
         // — and the ones that read as a lens on money you hold (Tokens,
         // L2BEAT) moved to Wallet. OpenSea moved with them and was retired
-        // the same day by the ruling's second amendment. Their bridge files
-        // stay in the
-        // tree for one release so a connected seat is not stranded, but
-        // nothing here offers them, and nothing in the strip draws them
-        // (`Corpus.retiredSources`).
+        // the same day by the ruling's second amendment. Their code was
+        // deleted by its third; their rows stay, and nothing in the strip
+        // draws them (`Corpus.retiredSources`).
         Offer(name: "Tokens",      tagline: "Track any token",                       group: "Wallet",    connectable: true,
               needsSetup: true),
         // STOCKTWITS CAME BACK THE SAME DAY, under WALLET (user ruling
@@ -336,8 +334,8 @@ enum BridgeCatalog {
         // HOLD — `WalletNFTShelf`/`WalletNFTPicks` (prd §387) read Alchemy on
         // the wallet's own sweep and are a different feature entirely; what
         // goes is following a chain for other people's new drops.
-        // `OpenSeaBridge`/`OpenSeaScreen` stay one release like the other
-        // retired seats, so a connected person is not stranded.
+        // Its code was deleted with the other retired seats' (§638's third
+        // amendment).
         // Shopping, not Markets (2026-07-17): Bitrefill is your own commerce
         // account — orders and receipts — not a market you watch.
         Offer(name: "Bitrefill",   tagline: "Your gift cards, in reach",             group: "Shopping",  connectable: true,

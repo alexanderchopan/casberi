@@ -9,7 +9,7 @@ import Foundation
 /// died with it, and Walletbeat's seat went on asking people to type a name the handshake
 /// had already told us.
 ///
-/// A READING, NOT A THING (the `X402State`/`ASCState` shape). Nothing here is an entity in
+/// A READING, NOT A THING (the `ASCState` shape). Nothing here is an entity in
 /// the corpus: it is a note about this device's own history, it never leaves it, no host is
 /// reached for it, and no `Thing` property is added — so no CloudKit deploy.
 ///

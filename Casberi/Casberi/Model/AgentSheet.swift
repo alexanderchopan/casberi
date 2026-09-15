@@ -432,7 +432,7 @@ enum AgentSheet {
         /// `Thing.title` — the fallback path only, for a row landed before the
         /// bridge stamped its parts. Never parsed apart.
         var title: String
-        /// `Thing.summary`, stamped by `OneClawBridge.policyThing`.
+        /// `Thing.summary`, stamped by the 1Claw bridge (deleted 2026-09-06).
         var path: String?
         /// `Thing.authorHandle`.
         var vault: String?

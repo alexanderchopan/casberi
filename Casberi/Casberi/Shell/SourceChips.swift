@@ -1184,7 +1184,7 @@ struct SourceChips: View {
                 // active state whatsoever.
                 // **THE ROOM YOU ARE STANDING IN, when it is not the lit chip**
                 // (§591c). `isActive` is the OPEN FOLDER now, so opening Social
-                // while reading Kalshi lights Social and would leave nothing at
+                // while reading GitHub lights Social and would leave nothing at
                 // all saying where the feed actually is — §357's rule, one
                 // surface over. A tint ring on the standing chip says it
                 // without competing with the fill: the filled chip is what you

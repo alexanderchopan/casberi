@@ -279,7 +279,7 @@ enum BridgeGlyph {
         //
         // A MONOGRAM, chosen over a pictogram (user: "why not use some version
         // of an A") — which is also the convention half this catalog already
-        // follows, since Privacy, Bitrefill and Kalshi all wear a letter.
+        // follows, since Privacy and Bitrefill both wear a letter.
         // `character` is named for typography UI but RENDERS a plain capital
         // A, verified by rendering it; that is the whole reason it is here, so
         // don't "fix" it to a more semantically-named symbol without looking

@@ -2076,9 +2076,9 @@ struct FeedScreen: View {
             // fetched one. Sharing the case would also hand this room X's head.
             // The LITERAL, like `case "X"` and `case "Snapchat"` beside it —
             // `demo-selftest.py`'s check F reads this switch to prove every
-            // shape has a seeded source, and it resolves exactly three
-            // indirections by name (x402, App Store Connect, the media
-            // predicate). A fourth would make this room's shape unverifiable
+            // shape has a seeded source, and it resolves exactly two
+            // indirections by name (App Store Connect, the media
+            // predicate). A third would make this room's shape unverifiable
             // rather than verified, which is the worse half of both options.
             case "Instagram":           self = .instagram
             // TikTok, 2026-08-26 (prd §489) — the SECOND room with no case
@@ -6885,8 +6885,8 @@ struct FeedScreen: View {
             // (`present` returned fewer than two, so there is no control and
             // the room is one scroll again).
             //
-            // Days, like most rooms: unlike x402 (where every row shares
-            // one sync timestamp) these are real events at real block
+            // Days, like most rooms: unlike CardPointers (where every row
+            // shares one sync timestamp) these are real events at real block
             // times, so a chronological grouping is honest here.
             // **HOME IS THE ONE DO; ACTIVITY IS THE STREAM (2026-08-31,
             // amending the §482 ruling below).** Home used to repeat a
@@ -6922,7 +6922,7 @@ struct FeedScreen: View {
             }
         case .cardPointers:
             // Deadlines, not days — see `cardPointersGroups`. No `boundary:`,
-            // for x402's reason one room over: every offer carries the
+            // because every offer carries the
             // `capturedAt` of the sync that first saw it, so a new-since
             // divider in this room marks nothing.
             groupedSections(cardPointersGroups(visible), nextEventID: nextEventID, dated: false)
@@ -6954,7 +6954,7 @@ struct FeedScreen: View {
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .cursor:
             // Repositories, not days — see `cursorRepos`. Keeps `boundary:`,
-            // unlike x402: these rows carry the run's REAL start, so they span
+            // unlike CardPointers: these rows carry the run's REAL start, so they span
             // real time and the new-since divider means something.
             //
             // THE NEWEST RUN LEADS, above the repositories (prd §751). The head
@@ -7108,8 +7108,6 @@ struct FeedScreen: View {
             ledeSection(BitrefillLede(balance: balance, monthCount: month))
         }
     }
-
-    /// 1Claw's lede: the key's reach at a glance — the vault count its API
 
     /// The watchlist's OWN order, not chronology (2026-07-15) — day headers
     /// answer "when did I watch this", a question that stops mattering once
@@ -8059,8 +8057,7 @@ struct FeedScreen: View {
         }
     }
 
-    /// The CardPointers room grouped by DEADLINE rather than by day (prd §487)
-    /// — the `x402Lanes` shape, for a sharper version of the same reason.
+    /// The CardPointers room grouped by DEADLINE rather than by day (prd §487).
     ///
     /// A day is not merely the wrong axis here, it is a constant: every offer
     /// lands with `capturedAt: .now`, so day-grouping produced ONE "Today"
@@ -8128,7 +8125,7 @@ struct FeedScreen: View {
     }
 
     /// The Cursor room grouped by REPOSITORY rather than by day (2026-08-08,
-    /// prd §340) — the `x402Lanes` shape, for the same reason.
+    /// prd §340).
     ///
     /// A day is the wrong axis for agent runs. You launch several against one
     /// repository in an afternoon and then nothing for a week, so day-grouping
@@ -8150,9 +8147,8 @@ struct FeedScreen: View {
         for thing in visible.live {
             // The repo is stored on `authorHandle` at landing. A row that
             // predates that, or a run whose source carried no usable
-            // repository, gets a shelf rather than vanishing — the same
-            // refusal the x402 room makes, and the §307 rule that a row we
-            // can't file is never silently dropped.
+            // repository, gets a shelf rather than vanishing — the §307 rule
+            // that a row we can't file is never silently dropped.
             let repo = thing.authorHandle?.trimmingCharacters(in: .whitespacesAndNewlines)
             let label = (repo?.isEmpty == false ? repo! : String(localized: "Somewhere else"))
             repos[label, default: []].append(thing)
@@ -9987,7 +9983,7 @@ struct FeedScreen: View {
                 }
             case .cursor:
                 // Our own note about the sync keeps its plain band, the way
-                // the x402 and X rooms treat theirs — it is not a run.
+                // the X room treats its own — it is not a run.
                 if Corpus.isImportReceipt(thing) {
                     BandRow(thing: thing,
                             emphasized: thing.id == nextEventID,
@@ -10951,17 +10947,6 @@ struct FeedScreen: View {
             ? BridgeRefresh.roster(store: bridges)
             : CategoryFold.isCategory(source) ? BridgeRefresh.roster(store: bridges, category: source)
             : [source]
-        // BEFORE the pulse, not after (2026-08-05). The pulse is what re-fires
-        // `PredictionBrowseSection`'s `.task(id:)`, i.e. it STARTS the room's
-        // reload — so clearing the book cache from inside `refreshFeed()`
-        // below landed after that reload had already begun its discovery walk,
-        // and `KalshiWatch.Cache` correctly refuses to commit a walk a pull
-        // has superseded. On a cold cache the reload therefore came back with
-        // nothing and the room rendered "Couldn't reach the market book just
-        // now." — on a pull that reached it fine. Worse, it was
-        // self-reinforcing: the error's obvious remedy is another pull, and
-        // another pull reproduced it exactly. Invalidating first makes the
-        // reload a genuinely fresh read with nothing to race.
         chrome.rain(sources: roster)   // spins the avatar door, deals the shower
         await refreshFeed()
     }

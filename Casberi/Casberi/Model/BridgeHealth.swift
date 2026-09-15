@@ -201,7 +201,7 @@ enum BridgeHealth {
 
     // MARK: - Storage
 
-    // UserDefaults, the `FeedFreshness`/`X402State` shape — NOT a field on the
+    // UserDefaults, the `FeedFreshness` shape — NOT a field on the
     // `Codable` bridge entry. Those decode with `try?` falling back to an EMPTY
     // list, and Swift's synthesized decoder does not apply defaults for a
     // missing key, so adding a field there silently unfollows every seat on

@@ -49,7 +49,7 @@ enum IngestSupport {
     }
 
     /// A single already-landed? check, scoped to one source — for a one-off
-    /// "is this already watched" gate (TokenWatch/KalshiWatch's Watch button)
+    /// "is this already watched" gate (TokenWatch's Watch button)
     /// where building a whole dedupe Set for one membership test was pure
     /// waste. `fetchLimit = 1` short-circuits at the first match.
     static func hasSourceRef(_ context: ModelContext, source: String, ref: String) -> Bool {
@@ -224,7 +224,7 @@ enum IngestSupport {
     /// "no logo here" sentinels — the flow serves a literal "missing" or a
     /// shared `dexscreener-icon.png` placeholder for a token with no real face,
     /// and a wrong mark is worse than none. Normalizes the survivor to https.
-    /// Shared by GeckoTrending's trending feed and TokenWatch's logo fallback.
+    /// Read by TokenWatch's logo fallback.
     static func tokenLogoURL(_ raw: Any?) -> String? {
         guard let s = raw as? String, !s.isEmpty, s != "missing",
               !s.contains("dexscreener-icon.png") else { return nil }

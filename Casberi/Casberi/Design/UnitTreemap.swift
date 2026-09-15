@@ -21,8 +21,10 @@ import SwiftUI
 /// two maps disagreed about rank 3 exactly as the paragraph above forbids.
 /// `MiniTreemap` needs no table — one big cell beside up to three equal ones
 /// can't invert a rank — but it draws `items[0]` largest for the same reason.
-/// Guarded in `scripts/x402-selftest.sh`, which checks this table's areas at
-/// every cell count AND fails on a second table appearing anywhere in the app.
+/// UNGUARDED since 2026-09-06: `scripts/x402-selftest.sh` checked this table's
+/// areas at every cell count AND failed on a second table appearing anywhere in
+/// the app, and it was deleted with the Circle x402 seat (prd §638). Nothing
+/// checks either property now.
 ///
 /// Six is the ceiling because the table ends there. A caller with more must
 /// FOLD its tail into a final cell that says so ("9 more") rather than passing
@@ -153,8 +155,8 @@ struct UnitTreemap<Cell: View>: View {
         // area-proportional, because true squarified cells arrive as slivers
         // too thin to label). A layout that inverts two ranks breaks the one
         // thing it promises. Areas now run 4·2·2·2·1·1, non-increasing, and
-        // still tile all twelve units with no holes — guarded in
-        // `scripts/x402-selftest.sh`, which checks every cell count.
+        // still tile all twelve units with no holes (unguarded since
+        // `x402-selftest.sh` was deleted — see the type's doc).
         default:   return [(0, 0, 2, 2), (2, 0, 2, 1), (2, 1, 2, 1), (0, 2, 2, 1), (2, 2, 1, 1), (3, 2, 1, 1)]
         }
     }

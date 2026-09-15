@@ -213,7 +213,7 @@ enum ENSWatch {
 
 // MARK: - What we read last time
 
-/// One reading per followed name, in UserDefaults (the `ASCState`/`X402State`
+/// One reading per followed name, in UserDefaults (the `ASCState`
 /// shape). NOT a `Thing` field, deliberately: a name's expiry is re-read every
 /// sweep, and a stored property would be a CloudKit Production deploy for a
 /// fact that is never stale for long.
