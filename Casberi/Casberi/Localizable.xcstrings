@@ -143297,6 +143297,34 @@
         }
       }
     },
+    "^[%lld thing](inflect: true) since %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "^[%1$lld elemento](inflect: true) desde %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 以降 %1$lld 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 이후 항목 %1$lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自 %2$@ 起 %1$lld 条内容"
+          }
+        }
+      }
+    },
     "^[%lld transaction](inflect: true)" : {
       "localizations" : {
         "es" : {
