@@ -83,6 +83,7 @@ at all.
 | §36 (Fileverse clause) | Fileverse declined as "E2EE by design; revisit if they ship a hosted API" | amended by §669 (the DECLINE stands and the REASON does not — the reopening clause was met. `@fileverse/api` has been on npm since 2026-02-11: the key is a seed the UCAN, ECIES and ERC-4337 keys all derive from, gas is sponsored by a Pimlico paymaster, and a Swift client could skip their self-hosted Node satellite entirely. It is declined on POSITIONING instead — an editor, a doc list and a conflict story serve authoring, and §26 already ruled that Casberi collects and connects while Apple Notes authors. §36's other declines are untouched) |
 | §629 | The two ethrex seats are renamed, and migration v9 — a one-time pass gated on the `migrations.version` stamp — rewrites the rows already landed under the old names | amended by §647 (the rename stands; the repair could not. The store mirrors to CloudKit, so rows arrive after a one-shot has run and it never runs again — every one of those kept the old name, resolved to no seat, and reached a device as an unfoldable chip with a blank mark. `Corpus.renamedSources` makes RESOLUTION tolerant and `SourceRename.sweep` converges the corpus at every launch; v9 is deleted so there is one mechanism, not two) |
 | §647 | `Corpus.renamedSources` is a source→source table, and `SourceRename.sweep` converges the corpus off it at every launch | amended by §650 (the mechanism stands whole; the table's SHAPE widens. Migration v3 — the same one-shot, one seat over — also moved the rows' ref namespace (`dexscreener:` → `tokens:`), which a source→source entry cannot express, so an entry now carries an optional `refPrefix` pair and the sweep rewrites both strings. That half matters more than the name: the ref failure RENDERS PERFECTLY, and `TokenWatch.add`'s already-watching guard misses the row, so the same coin lands twice. §647's "two entries today" is three) |
+| §611 (the home exemption) | Every scope that can be empty says what it would hold — and `.home` carries no empty copy, "because it can never be empty: its crown IS its content" | amended by §760 — `walletTilesSection`'s own gate draws nothing when there is no total, no line, no warning, no composition and no recent row, so home CAN be empty and was rendering as a card of black. It carries `emptyHeadline`/`emptyBody` like every other scope; the obligation §611 wrote is unchanged, only the exemption from it |
 | §745 (the "one surface" clause) | Every room head composes one template AND draws it on the elevated card | superseded by §758 as the SURFACE only — `dsRoomHeadCard()` becomes `dsRoomHeadBlock()` and paints no plate, the fourth report in a week about that card (§749, §708, §757). §745's composition rule — a lead, notes, blocks, footnotes, one door — is untouched |
 | §757 (the head keeps its card) | The wallet family's Actions and Readings lose their plates and the HEAD keeps its, because a head card is what every room draws | superseded by §758 — "every room draws one" is a reason the change is big, not a reason it is wrong. The head's plate goes too, here and in the template for every other room; everything else in §757 stands |
 | §675 (the selection's animation set to nil) | `SelectionTravel`'s transaction stops animating, measured as a one-frame switch | superseded by §676 — that measurement ran on a COLD snapshot cache; warm it is 8 frames, because `matchedGeometryEffect` is a travel mechanism rather than an animation you can switch off. The effect is removed outright. |
@@ -56451,3 +56452,54 @@ deletions across thirteen files is a wide change that cannot be seen from a
 static pass: the simulator sweep and the demo census are owed, and the gen-UI
 modules — 23 of the 44, and the surface the answer path is made of — are the
 design checkpoint.
+
+## §760 — Home is a scope that can be empty, and it says what it would hold (user: "re empty wallet head pls fix", 2026-09-15)
+
+**The report, from a screenshot.** The Wallet room opening on a card with nothing
+in it — no balance, no line, no words — above Actions and Readings.
+
+**Two rulings met at a premise neither of them checked.** §611 obliged every
+scope that can be empty to say what it would hold (`WalletSection.emptyHeadline`
+/ `emptyBody`), and exempted `.home`: "home carries no empty copy, because it can
+never be empty — its crown IS its content". `walletTilesSection`'s own gate says
+otherwise, and always did: with no total, no chart, no warnings, no composition
+and no recent rows it draws NOTHING. For as long as the crown sat inside
+`DSRoomSlot`'s reserved 300pt box, "nothing" rendered as a card of black, which
+is the screenshot. §757 dropped that floor an hour earlier, which did not fix it
+— it changed it into a room that opens on `Actions` and never says why there is
+no balance.
+
+**The ruling, which amends §611's own exemption.** Home is a scope like the
+other seven. `.home` carries
+`emptyHeadline` ("No balance yet") and `emptyBody` ("What the accounts you follow
+are worth, and the line that worth traces. Nothing priced was found for them."),
+and the crown's else-branch draws them through `WalletScopeEmptyFigure` — the one
+figure every other scope's empty state already goes through, so there is one
+register and one place the words live.
+
+**It may not say WHY, and that is the §83 line this branch walks.** `total` is
+nil both before the holdings read lands and when nothing priced was found, and
+no code at this call site can tell those apart — `portfolio.totalUSD` is
+filtered `> 0`, so an empty wallet and an unlanded read are the same value. So
+the copy says what was FOUND, which is true either way, and borrows `holdings`'
+own phrasing one scope over. A sentence promising the balance "once the read
+lands" would be the true-sounding claim §83 bans.
+
+**`inSlot: false`.** `WalletScopeEmptyFigure` carried the scope slot's horizontal
+pad and the expansion that pins words to the top of a 300pt box. Home's crown has
+neither — it draws no pad of its own, and §757 took its floor — so the slot form
+would set these words 16pt right of the balance they replace and hand back the box
+§757 removed with a sentence inside it. One parameter, both modifiers, documented
+on itself.
+
+**Guarded** in `wallet-section-selftest.sh`, which compiles `WalletSection.swift`
+whole: `.home` joins the loop that requires every scope to name and explain its
+empty state (the file's own `where s != .home` is deleted), the assertion that it
+carries NO copy is replaced by its opposite, and a new check fails any load-state
+promise in that copy. Two mutations prove both halves — `.home` returning nil
+again, and the copy rewritten to promise the balance once the read lands. Two
+drift guards pin the call site and the `inSlot` switch.
+
+Not built or run here (no Swift toolchain in this checkout); the simulator pass
+is owed. The state itself is reachable on device by opening the room before the
+holdings read lands, which is how it was reported.

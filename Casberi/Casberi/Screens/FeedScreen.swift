@@ -8862,6 +8862,29 @@ struct FeedScreen: View {
                 // appear as they land, they just no longer each stage a
                 // separate surface into the room.
                 .modifier(rowEntrance(0))
+        } else {
+            // **A ROOM WITH NOTHING TO READ SAYS WHAT IT WOULD HOLD (prd §760,
+            // user: "re empty wallet head pls fix").** The gate above is an
+            // honesty floor — no balance, no line, no warning, no composition,
+            // no recent row, so nothing is drawn rather than a card with
+            // nothing in it — and for as long as the crown sat inside
+            // `DSRoomSlot`'s reserved 300pt box, "nothing" rendered as 300pt of
+            // black at the top of the room. §757 dropped that floor, which
+            // turned the defect into a different one: the room now opens on
+            // `Actions` and never says why there is no balance.
+            //
+            // §611's mechanism is the answer and it already had a hole where
+            // `.home` should be: every OTHER scope states what it would hold
+            // through `WalletSection.emptyHeadline`/`emptyBody`, and Home
+            // returned nil for both on the premise that the room always has a
+            // crown. The words live there now, so the room explains itself in
+            // the one register §611 wrote and a harness can mutation-test them.
+            //
+            // `inSlot: false` because this crown is not a scope's figure slot:
+            // it carries no horizontal pad of its own, and §757 dropped its
+            // floor — see the parameter's own note.
+            WalletScopeEmptyFigure(section: .home, inSlot: false)
+                .modifier(rowEntrance(0))
         }
     }
 

@@ -139,7 +139,13 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// §611).** Nil for `home`, which is never empty: the crown is its content.
     var emptyHeadline: String? {
         switch self {
-        case .home:        return nil
+        // **HOME HAS WORDS SINCE prd §760** (user: "re empty wallet head pls
+        // fix"). It returned nil on the premise that the room always has a
+        // crown, and the crown's own gate disproves it: no total, no line, no
+        // warning, no composition and no recent row draws NOTHING — which the
+        // reserved 300pt box rendered as a card of black, and §757's collapse
+        // rendered as a room that opens on `Actions` and never says why.
+        case .home:        return String(localized: "No balance yet")
         case .activity:    return String(localized: "Nothing yet")
         case .holdings:    return String(localized: "Nothing held")
         case .positions:   return String(localized: "Nothing deployed")
@@ -158,7 +164,13 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     var emptyBody: String? {
         switch self {
         case .home:
-            return nil
+            // Two sentences in this property's own register: what the scope
+            // holds, then why this wallet has none. It may not say WHY it is
+            // missing (§83): `total` is nil both before the holdings read lands
+            // and when nothing priced was found, and nothing here can tell
+            // those apart — so it says what was found, which is true either way
+            // and is `holdings`' own phrasing one scope over.
+            return String(localized: "What the accounts you follow are worth, and the line that worth traces. Nothing priced was found for them.")
         case .activity:
             return String(localized: "Transfers, approvals and what's ahead, as the chain reports them. Nothing from these wallets has been read yet.")
         case .holdings:

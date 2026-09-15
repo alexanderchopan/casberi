@@ -21,15 +21,29 @@ import SwiftUI
 /// fact and stops.
 struct WalletScopeEmptyFigure: View {
     let section: WalletSection
+    /// Whether this is filling a SCOPE's figure slot, which is what the two
+    /// modifiers below are for: the slot's own horizontal pad, and the
+    /// expansion that puts the words at the top of a 300pt box rather than
+    /// floating in the middle of it.
+    ///
+    /// **False on Home's crown (prd §760).** That crown is not in a slot —
+    /// §757 dropped `DSRoomSlot`'s floor there, and it never carried the
+    /// scope's pad, so keeping either would put these words 16pt right of the
+    /// balance they replace and hand back the 300pt box §757 removed, with a
+    /// sentence in it.
+    var inSlot: Bool = true
 
     var body: some View {
-        // Every scope that draws this has both a headline and a body; `.home`
-        // has neither and never reaches here.
+        // `.home` returned nil for both until §760 and never reached here; it
+        // has words now, and this is still the one place they are drawn.
         if let words = section.emptyBody {
             DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
                          words: Text(words), scale: .room)
-                .padding(.horizontal, WalletCardStyle.pad)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(.horizontal, inSlot ? WalletCardStyle.pad : 0)
+                .frame(maxWidth: .infinity,
+                       maxHeight: inSlot ? .infinity : nil,
+                       alignment: .topLeading)
+                .fixedSize(horizontal: false, vertical: !inSlot)
         }
     }
 }
