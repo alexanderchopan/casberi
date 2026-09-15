@@ -55070,3 +55070,37 @@ sweep and a page sync that overlap cost one request, not two.
 the touched file. No build host here can run the simulator leg; the block is a
 copy of `tiktok.live`'s with the seat renamed, and `-xLiveProbe YES` remains the
 measure tool for the read itself.
+
+## §738 — The curve library is VENDORED at 0.21.1 with one line patched, because Xcode 27 stopped compiling it (2026-09-14)
+
+**What broke.** Xcode 27.0 (27A266a) replaced Xcode 26 on the build Mac. Its
+standard library makes `for word in words` in `UInt256.trailingZeroBitCount`
+(`swift-secp256k1` 0.21.1, `Sources/ZKP/UInt256.swift:215`) an "ambiguous use of
+'words'", so the package — and with it every iOS and Catalyst build — failed.
+It was the ONLY error: with that line patched in a private DerivedData checkout,
+the whole app (every package, the widgets, the share extension, both slices)
+built with zero errors on the 27 SDK, measured before this entry was written.
+
+**Why vendoring and not an upgrade.** Upstream has no fix: 0.23.2 (2026-05) is the
+newest release, and §425's reasons against 0.22.0+ still hold — a build-tool
+plug-in that forces `-skipPackagePluginValidation` onto eight `xcodebuild` sites,
+and a `signature(for:)` that calls `fatalError` where 0.21.1 throws. A fork would
+put a new public repository in the signing path. So the same revision (`8c62aba8`)
+now lives in `Vendor/swift-secp256k1`: only the `P256K` Swift module and the
+`libsecp256k1` C target, symlinks resolved (3.8 MB, 119 files), the ZKP targets,
+the swift-crypto submodule and the upstream dev-only plug-ins dropped, MIT licence
+kept. The cSettings are copied verbatim from upstream's `baseSettings`. The
+project references it as an `XCLocalSwiftPackageReference` under the same object
+id, so the `P256K` product dependency is untouched, and its pin is gone from
+`Package.resolved`.
+
+**The one change** is `words as SIMDWrapper<Vector>`, which names the type's own
+`words` and nothing else, marked `§738` in the vendored `UInt256.swift`. The
+signing code in `SignerKey`, `HegotaKey`, `PrivacyDevnetKey` and `FramesKey` is
+unchanged.
+
+**Trap worth keeping.** Most files in the upstream checkout's `Sources/P256K` are
+symlinks into `Sources/ZKP` and `Submodules/`, so `sed -i` on the path the
+compiler reports fails with "in-place editing only works for regular files" and
+the build fails again with the same error. Patch the target, or copy with
+`cp -RL`.
