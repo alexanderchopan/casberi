@@ -369,13 +369,14 @@ deny DSRoomScopeChrome.swift "dsWidgetSurface" \
 # rendered as a card of black; §757 dropped the floor and it renders as a room
 # that opens on `Actions` with no explanation. Home is a scope like the other
 # seven now: its words live in `WalletSection` and are drawn by the one figure.
-guard FeedScreen.swift "WalletScopeEmptyFigure(section: .home, inSlot: false)" \
+guard FeedScreen.swift "WalletScopeEmptyFigure(section: .home, padded: false)" \
   "the wallet crown's empty branch draws nothing again, or hand-rolls its own copy instead of \`WalletSection\`'s (§611/§761)"
-# `inSlot: false` is not decoration: the crown carries no horizontal pad of its
-# own and has no slot to fill since §757, so the slot form would put these words
-# 16pt right of the balance they replace, inside the box §757 removed.
-guard WalletScopeEmptyFigure.swift "var inSlot: Bool = true" \
-  "the empty figure lost its slot switch — Home's crown would take the scope slot's pad and its 300pt expansion (§761)"
+# `padded: false` is not decoration: Home's crown sets no horizontal padding of
+# its own, so the scope slot's pad would set these words 16pt right of the
+# balance they stand in for. The HEIGHT is not switched — §760 put the 300pt box
+# back on Home, and this empty state fills it like every other scope's.
+guard WalletScopeEmptyFigure.swift "var padded: Bool = true" \
+  "the empty figure lost its pad switch — Home's crown would take the scope slot's 16pt and sit off the balance's edge (§761)"
 
 # **THE 300pt BOX ON HOME, AND THE DECK THAT IS NOT THERE.** `DSRoomSlot` pins
 # every scope figure to `visualSlot` so the scopes align and the drawings sized

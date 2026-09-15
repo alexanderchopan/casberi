@@ -56548,18 +56548,20 @@ line), a journal's heatmap, and a cover with a long words-only title.
 ## §761 — Home is a scope that can be empty, and it says what it would hold (user: "re empty wallet head pls fix", 2026-09-15)
 
 **The report, from a screenshot.** The Wallet room opening on a card with nothing
-in it — no balance, no line, no words — above Actions and Readings.
+in it — no balance, no line, no words — above Actions and Readings. The card is
+`DSRoomSlot`'s 300pt box, which §760 has since ruled Home keeps: a lead at one
+height in every room. The box was never the defect. The silence inside it was.
 
 **Two rulings met at a premise neither of them checked.** §611 obliged every
 scope that can be empty to say what it would hold (`WalletSection.emptyHeadline`
 / `emptyBody`), and exempted `.home`: "home carries no empty copy, because it can
 never be empty — its crown IS its content". `walletTilesSection`'s own gate says
 otherwise, and always did: with no total, no chart, no warnings, no composition
-and no recent rows it draws NOTHING. For as long as the crown sat inside
-`DSRoomSlot`'s reserved 300pt box, "nothing" rendered as a card of black, which
-is the screenshot. §757 dropped that floor an hour earlier, which did not fix it
-— it changed it into a room that opens on `Actions` and never says why there is
-no balance.
+and no recent rows it draws NOTHING. The crown sits inside `DSRoomSlot`'s
+reserved 300pt box, so "nothing" renders as a card of black, which is the
+screenshot. §757 dropped that floor for an hour and that did not fix it either —
+it changed the defect into a room that opens on `Actions` and never says why
+there is no balance — and §760 has since put the box back for its own reason.
 
 **The ruling, which amends §611's own exemption.** Home is a scope like the
 other seven. `.home` carries
@@ -56577,12 +56579,16 @@ the copy says what was FOUND, which is true either way, and borrows `holdings`'
 own phrasing one scope over. A sentence promising the balance "once the read
 lands" would be the true-sounding claim §83 bans.
 
-**`inSlot: false`.** `WalletScopeEmptyFigure` carried the scope slot's horizontal
-pad and the expansion that pins words to the top of a 300pt box. Home's crown has
-neither — it draws no pad of its own, and §757 took its floor — so the slot form
-would set these words 16pt right of the balance they replace and hand back the box
-§757 removed with a sentence inside it. One parameter, both modifiers, documented
-on itself.
+**`padded: false`, and the height is NOT switched.** `WalletScopeEmptyFigure`
+carried the scope slot's horizontal pad, which Home's crown does not use — it
+sets no padding of its own and inherits the chassis's inset — so the slot form
+would set these words 16pt right of the balance they stand in for. The 300pt box
+is a different question and it is settled the other way: §760, landed from
+another session minutes before this, put `DSRoomSlot`'s box back on all five Home
+crowns (reversing §757's drop) so that every room's lead is one height. This
+empty state fills that box like every other scope's — top-aligned, same rung.
+An earlier cut of this entry switched both, on §757's premise; the premise is
+gone and the pad is the whole of it.
 
 **Guarded** in `wallet-section-selftest.sh`, which compiles `WalletSection.swift`
 whole: `.home` joins the loop that requires every scope to name and explain its
@@ -56590,7 +56596,7 @@ empty state (the file's own `where s != .home` is deleted), the assertion that i
 carries NO copy is replaced by its opposite, and a new check fails any load-state
 promise in that copy. Two mutations prove both halves — `.home` returning nil
 again, and the copy rewritten to promise the balance once the read lands. Two
-drift guards pin the call site and the `inSlot` switch.
+drift guards pin the call site and the `padded` switch.
 
 Not built or run here (no Swift toolchain in this checkout); the simulator pass
 is owed. The state itself is reachable on device by opening the room before the

@@ -21,17 +21,18 @@ import SwiftUI
 /// fact and stops.
 struct WalletScopeEmptyFigure: View {
     let section: WalletSection
-    /// Whether this is filling a SCOPE's figure slot, which is what the two
-    /// modifiers below are for: the slot's own horizontal pad, and the
-    /// expansion that puts the words at the top of a 300pt box rather than
-    /// floating in the middle of it.
+    /// Whether to take the SCOPE SLOT's own horizontal pad.
     ///
-    /// **False on Home's crown (prd §761).** That crown is not in a slot —
-    /// §757 dropped `DSRoomSlot`'s floor there, and it never carried the
-    /// scope's pad, so keeping either would put these words 16pt right of the
-    /// balance they replace and hand back the 300pt box §757 removed, with a
-    /// sentence in it.
-    var inSlot: Bool = true
+    /// **False on Home's crown (prd §761).** Every scope's figure draws inside
+    /// `WalletCardStyle.pad`; Home's crown does not — it sets no horizontal
+    /// padding of its own and inherits the chassis's inset — so the slot form
+    /// would set these words 16pt right of the balance they stand in for.
+    ///
+    /// It does NOT switch the height. `DSRoomSlot`'s 300pt box is back on Home
+    /// (§760, reversing §757's drop) so that every room's lead is one height,
+    /// and this fills it like any other scope's empty state: top-aligned, in
+    /// the box, at the same rung.
+    var padded: Bool = true
 
     var body: some View {
         // `.home` returned nil for both until §761 and never reached here; it
@@ -39,11 +40,9 @@ struct WalletScopeEmptyFigure: View {
         if let words = section.emptyBody {
             DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
                          words: Text(words), scale: .room)
-                .padding(.horizontal, inSlot ? WalletCardStyle.pad : 0)
-                .frame(maxWidth: .infinity,
-                       maxHeight: inSlot ? .infinity : nil,
-                       alignment: .topLeading)
-                .fixedSize(horizontal: false, vertical: !inSlot)
+                .padding(.horizontal, padded ? WalletCardStyle.pad : 0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
 }
+

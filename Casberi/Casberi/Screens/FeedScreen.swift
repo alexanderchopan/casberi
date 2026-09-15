@@ -8919,9 +8919,9 @@ struct FeedScreen: View {
             // no recent row, so nothing is drawn rather than a card with
             // nothing in it — and for as long as the crown sat inside
             // `DSRoomSlot`'s reserved 300pt box, "nothing" rendered as 300pt of
-            // black at the top of the room. §757 dropped that floor, which
-            // turned the defect into a different one: the room now opens on
-            // `Actions` and never says why there is no balance.
+            // black at the top of the room — and it still is, because §760
+            // put that box back so every room's lead is one height. What was
+            // missing was never the box; it was the words inside it.
             //
             // §611's mechanism is the answer and it already had a hole where
             // `.home` should be: every OTHER scope states what it would hold
@@ -8930,10 +8930,11 @@ struct FeedScreen: View {
             // crown. The words live there now, so the room explains itself in
             // the one register §611 wrote and a harness can mutation-test them.
             //
-            // `inSlot: false` because this crown is not a scope's figure slot:
-            // it carries no horizontal pad of its own, and §757 dropped its
-            // floor — see the parameter's own note.
-            WalletScopeEmptyFigure(section: .home, inSlot: false)
+            // `padded: false` because this crown sets no horizontal padding of
+            // its own, so the scope slot's pad would put these words 16pt right
+            // of the balance they stand in for. The HEIGHT is not switched: the
+            // 300pt box is Home's again (§760) and this fills it.
+            WalletScopeEmptyFigure(section: .home, padded: false)
                 .modifier(rowEntrance(0))
         }
     }
