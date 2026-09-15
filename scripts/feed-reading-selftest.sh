@@ -193,10 +193,14 @@ grep -q 'if memo.lede != nil, source == "All",' "$FEED" \
 # …and the anatomy veto is NOT freshness, so it still applies in both. It is
 # `coverDeclines` since prd §756 — `standsAlone` minus the posts — and it must
 # stay a separate question from `standsAlone`, which the run layout still asks
-# for every row.
-grep -q 'return coverDeclines(thing) ? nil : thing.id' "$FEED" \
+# for every row. Since prd §763 a ROOM skips a declining row and covers the next
+# one; the All feed still declines outright.
+grep -q 'if coverDeclines(thing) {' "$FEED" \
   || { echo "✗ the cover no longer asks coverDeclines — a consent card or a token"; \
        echo "  pulse would draw twice, in two anatomies (prd §723/§756)"; exit 1; }
+grep -A1 'if coverDeclines(thing) {' "$FEED" | grep -q 'guard isRoom else { return nil }' \
+  || { echo "✗ the All feed's cover reaches past a declining row (prd §763 ruled for"; \
+       echo "  rooms) — an older card would sit above a newer consent card"; exit 1; }
 _veto=$(awk '/private func coverDeclines\(/{f=1} f{print} f&&/^    }$/{exit}' "$TMP/feed.nocomment")
 case "$_veto" in
   *"guard standsAlone(thing) else { return false }"*) ;;

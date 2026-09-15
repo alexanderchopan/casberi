@@ -3589,7 +3589,8 @@ struct FeedScreen: View {
     ///   rhythm-breakers stacked (for `ApprovalCard` it would bury the verbs).
     ///   A POST yields its card to the cover, which is the one thing that
     ///   changed: it does not draw twice, because the covered row is lifted out
-    ///   of its run. NOTE it declines rather than reaching PAST it: a
+    ///   of its run. NOTE in the ALL FEED it declines rather than reaching PAST
+    ///   it (a room reaches past, prd §763): a
     ///   stands-alone row keeps its own position at the top of the rows, so
     ///   covering something older would put a newer row underneath an older
     ///   card — the very thing this rewrite exists to make impossible.
@@ -3622,8 +3623,14 @@ struct FeedScreen: View {
             // row that declines — a consent card, a token pulse, a takeaway —
             // used to leave the room with no lead at all, the one top in the
             // app that started with a row. It is skipped, and the next row of
-            // the same day is the cover; the eyebrow says when it landed.
-            if coverDeclines(thing) { continue }
+            // the same day is the cover; the eyebrow says when it landed. The
+            // All feed still DECLINES rather than reaching past it (the NOTE
+            // above): §763 ruled for rooms, and the river's cover is a claim
+            // about recency that an older card under a newer row would break.
+            if coverDeclines(thing) {
+                guard isRoom else { return nil }
+                continue
+            }
             return thing.id
         }
         return nil
