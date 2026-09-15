@@ -178,7 +178,7 @@ struct SafeScreen: View {
                 // point: the previous behaviour was a Sign button that
                 // failed with the same words a cancelled prompt gives.
                 Text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Have another owner swap the old address out of the Safe.")
-                    .dsText(.subhead13).foregroundStyle(DS.destructive)
+                    .dsText(.subhead12).foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
                 DSSlabDoor(title: String(localized: "Make a new key"),
                            systemImage: "signature") {
@@ -192,9 +192,9 @@ struct SafeScreen: View {
                     WalletFace(address: address, size: DS.Face.row, circular: true)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("This phone")
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
                         Text(verbatim: WalletStore.shortAddress(address))
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     }
                     Spacer(minLength: 0)
                 }
@@ -217,7 +217,7 @@ struct SafeScreen: View {
                 Text(needsASafe
                      ? "You'll need a Safe to add it to. Make one with your other wallet as the first owner, then add this address as the second."
                      : "Add this address as an owner from your other wallet and set the threshold to 2. Casberi will notice when you have.")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if needsASafe {
                     DSSlabDoor(title: String(localized: "Set up a Safe"),
@@ -227,7 +227,7 @@ struct SafeScreen: View {
                 standingLines
                 Button { confirmDeleteSigner = true } label: {
                     Text("Delete this phone's key")
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.destructive)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .contentShape(Rectangle())
@@ -247,7 +247,7 @@ struct SafeScreen: View {
             }
             if let signerError {
                 Text(verbatim: signerError)
-                    .dsText(.subhead13).foregroundStyle(DS.destructive)
+                    .dsText(.subhead12).foregroundStyle(DS.destructive)
                     .frame(maxWidth: .infinity)
                     .settleIn()
             }
@@ -282,16 +282,16 @@ struct SafeScreen: View {
         if let report = signerStanding, report.reachable {
             ForEach(report.needingASpareOwner, id: \.safeAddress) { safe in
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Image(systemName: "exclamationmark.triangle.fill").dsGlyph(13)
+                    Image(systemName: "exclamationmark.triangle.fill").dsGlyph(.caption)
                         .foregroundStyle(DS.destructive)
                     Text(verbatim: String(localized: "\(WalletStore.shortAddress(safe.safeAddress)) needs all \(safe.ownerCount) of its owners. Lose this phone and it can never be signed for again — or repaired, since that takes a signature too. Add one more owner."))
-                        .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                        .dsText(.subhead12).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
             if report.needingASpareOwner.isEmpty, !report.safes.isEmpty {
                 Text(verbatim: signsForLine(report))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             }
         }
     }

@@ -47,7 +47,7 @@ struct ConnectWalletRow: View {
                 DSPushRowLabel(title: Text(connecting ? "Waiting — tap to cancel" : "Connect a wallet app"),
                                prominent: true, busy: connecting) {
                     Image(systemName: "wallet.pass.fill")
-                        .dsGlyph(15, weight: .medium)
+                        .dsGlyph(.subhead, weight: .medium)
                         .foregroundStyle(DS.tint)
                         .frame(width: 34, height: 34)
                         .background(DS.tintDim, in: RoundedRectangle(
@@ -81,7 +81,7 @@ struct ConnectWalletRow: View {
     private func manualPairingCard(_ uri: URL) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text("Not listed? Copy the link into your wallet's scan screen — it's still waiting.")
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: DS.Space.s2) {
                 Text(uri.absoluteString)

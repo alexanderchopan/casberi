@@ -57,11 +57,11 @@ struct WalletbeatReportCard: View {
 					}
 				} else if loading {
 					Text(String(localized: "Reading Walletbeat…"))
-						.dsText(.subhead13)
+						.dsText(.subhead12)
 						.foregroundStyle(DS.textTertiary)
 				} else if failed {
 					Text(String(localized: "Couldn't reach Walletbeat. The counts above are from when this app was last updated."))
-						.dsText(.subhead13)
+						.dsText(.subhead12)
 						.foregroundStyle(DS.textTertiary)
 						.fixedSize(horizontal: false, vertical: true)
 				}
@@ -83,10 +83,10 @@ struct WalletbeatReportCard: View {
 				WalletbeatMark(name: name, walletID: walletID, size: 48)
 				VStack(alignment: .leading, spacing: 3) {
 					Text(name)
-						.dsText(.heading22)
+						.dsText(.heading24)
 						.foregroundStyle(DS.textPrimary)
 					Text(subtitleLine)
-						.dsText(.label11)
+						.dsText(.label12)
 						.foregroundStyle(DS.textTertiary)
 				}
 				Spacer(minLength: DS.Space.s2)
@@ -102,7 +102,7 @@ struct WalletbeatReportCard: View {
 			Text(watching
 				? String(localized: "Watching — tap to stop")
 				: String(localized: "Watch this wallet"))
-				.dsText(.subhead13).fontWeight(.semibold)
+				.dsText(.subhead12).fontWeight(.semibold)
 				.foregroundStyle(watching ? DS.textTertiary : DS.tint)
 		}
 		.buttonStyle(.plain)
@@ -141,12 +141,12 @@ struct WalletbeatReportCard: View {
 				} label: {
 					HStack(spacing: DS.Space.s2) {
 						Text(dimension.label)
-							.dsText(.subhead13)
+							.dsText(.subhead12)
 							.foregroundStyle(DS.textSecondary)
 							.frame(width: 112, alignment: .leading)
 						WalletbeatBar(counts: counts)
 						Text("\(counts.judged)/\(counts.applicable)")
-							.dsText(.label11)
+							.dsText(.label12)
 							.foregroundStyle(DS.textTertiary)
 							.monospacedDigit()
 							.frame(width: 40, alignment: .trailing)
@@ -194,7 +194,7 @@ struct WalletbeatReportCard: View {
 	private var incidentCrossLink: some View {
 		VStack(alignment: .leading, spacing: DS.Space.s2) {
 			Text(String(localized: "On record"))
-				.dsText(.label11).fontWeight(.semibold)
+				.dsText(.label12).fontWeight(.semibold)
 				.foregroundStyle(DS.textTertiary)
 			ForEach(incidents) { row in
 				if let thing = row.live {
@@ -205,7 +205,7 @@ struct WalletbeatReportCard: View {
 							.frame(width: 8, height: 8)
 							.padding(.top, 6)
 						Text(thing.title)
-							.dsText(.subhead13)
+							.dsText(.subhead12)
 							.foregroundStyle(DS.textSecondary)
 							.lineLimit(2)
 							.fixedSize(horizontal: false, vertical: true)
@@ -294,12 +294,12 @@ struct WalletbeatReportCard: View {
 			if let url = entry?.pageURL ?? URL(string: "https://\(WalletbeatHost.site)/\(walletID)/") {
 				Link(destination: url) {
 					Text(String(localized: "Full review on Walletbeat"))
-						.dsText(.subhead13).fontWeight(.semibold)
+						.dsText(.subhead12).fontWeight(.semibold)
 						.foregroundStyle(DS.tint)
 				}
 			}
 			Text(WalletbeatCopy.attribution)
-				.dsText(.label11)
+				.dsText(.label12)
 				.foregroundStyle(DS.textTertiary)
 				.fixedSize(horizontal: false, vertical: true)
 		}
@@ -374,12 +374,12 @@ struct WalletbeatAttributeRow: View {
 			// says what was being asked rather than going blank.
 			if !attribute.explanation.isEmpty {
 				Text(attribute.explanation)
-					.dsText(.subhead13)
+					.dsText(.subhead12)
 					.foregroundStyle(DS.textSecondary)
 					.fixedSize(horizontal: false, vertical: true)
 			} else if !attribute.question.isEmpty {
 				Text(attribute.question)
-					.dsText(.subhead13)
+					.dsText(.subhead12)
 					.foregroundStyle(DS.textTertiary)
 					.fixedSize(horizontal: false, vertical: true)
 			}
@@ -394,7 +394,7 @@ struct WalletbeatAttributeRow: View {
 			// that would be a different moment's verdict wearing this one's date.
 			if let revision {
 				Text(Self.revisedLine(revision))
-					.dsText(.label11)
+					.dsText(.label12)
 					.foregroundStyle(DS.textTertiary)
 					.fixedSize(horizontal: false, vertical: true)
 					.padding(.top, DS.Space.s1)
@@ -406,7 +406,7 @@ struct WalletbeatAttributeRow: View {
 					// than printed with its own punctuation showing — §399's ruling, one
 					// room over. An unparseable string falls back to itself.
 					Text(WalletbeatProse.attributed(why))
-						.dsText(.subhead13)
+						.dsText(.subhead12)
 						.foregroundStyle(DS.textSecondary)
 						.fixedSize(horizontal: false, vertical: true)
 						.padding(.top, DS.Space.s1)
@@ -417,7 +417,7 @@ struct WalletbeatAttributeRow: View {
 						// Says HOW MUCH, never a bare "more" — the disclosure convention
 						// this app already keeps for a folded note.
 						Text(String(localized: "Why this matters — \(WalletbeatProse.words(why)) words"))
-							.dsText(.label11)
+							.dsText(.label12)
 							.foregroundStyle(DS.tint)
 					}
 					.buttonStyle(.plain)

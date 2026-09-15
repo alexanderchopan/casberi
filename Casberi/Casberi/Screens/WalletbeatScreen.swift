@@ -225,7 +225,7 @@ struct WalletbeatScreen: View {
 						VStack(alignment: .leading, spacing: 0) {
 							Text(entry.name).dsText(.body17)
 								.foregroundStyle(DS.textPrimary).lineLimit(1)
-							Text(subtitle(entry)).dsText(.subhead13)
+							Text(subtitle(entry)).dsText(.subhead12)
 								.foregroundStyle(DS.textTertiary).lineLimit(1)
 						}
 						Spacer()
@@ -235,7 +235,7 @@ struct WalletbeatScreen: View {
 						// spelled two ways across two screens is the drift `WalletbeatCopy`
 						// exists to stop.
 						Text(String(localized: "Watch"))
-							.dsText(.label11).fontWeight(.bold)
+							.dsText(.label12).fontWeight(.bold)
 							.foregroundStyle(DS.tint)
 					}
 					.frame(minHeight: AccountFactRow.height)

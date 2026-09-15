@@ -55,12 +55,12 @@ struct FarcasterPackSheet: View {
                     HStack(spacing: DS.Space.s2) {
                         DSSpinner()
                         Text("Reading the pack…")
-                            .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                            .dsText(.body17).foregroundStyle(DS.textTertiary)
                     }
                     .padding(.vertical, DS.Space.s3)
                 } else if members.isEmpty {
                     Text("Couldn't read this pack just now.")
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                        .dsText(.body17).foregroundStyle(DS.textTertiary)
                 } else {
                     faceGrid
                     followButton

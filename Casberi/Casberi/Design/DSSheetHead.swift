@@ -46,15 +46,15 @@ struct DSSheetHead<Disc: View>: View {
     var stampWeight: DSStamp.Weight = .quiet
     /// When it happened, above the title — the receipt's own `lead`.
     var lead: String?
-    /// The thing's own words, at `heading34` — the HEAD rung (prd §532).
+    /// The thing's own words, at `heading40` — the HEAD rung (prd §532).
     ///
-    /// **This doc said `heading22`, "the receipt's `party` tier", and had said
+    /// **This doc said `heading24`, "the receipt's `party` tier", and had said
     /// it since §532 raised the code without it (prd §560, 2026-09-01).** A
     /// stale doc on a shared component is worse than none: it points at the
     /// loser of a settled question, so the next reader either "fixes" the code
     /// down to it or copies the wrong number into a fourth sheet.
     ///
-    /// **And the receipt's `party` really is `heading22`, correctly** — which
+    /// **And the receipt's `party` really is `heading24`, correctly** — which
     /// is what made the contradiction look like drift rather than staleness.
     /// `MoneyReceiptCard` has `amountBlock` at `price40` directly beneath, so
     /// the head rung there belongs to the FIGURE and the party is the line
@@ -63,17 +63,17 @@ struct DSSheetHead<Disc: View>: View {
     /// the head rung goes to whatever the sheet is actually about — reading
     /// out as two numbers because the two sheets are about different things.
     ///
-    /// **INSIDE A `DSTray` IT IS `heading22`, and that is the same rule rather
+    /// **INSIDE A `DSTray` IT IS `heading24`, and that is the same rule rather
     /// than an exception to it** (2026-09-02). "Its title is the largest thing
     /// on the paper" is the premise the whole paragraph above rests on, and in
-    /// a tray it is false: `DSTray` draws its own title at `heading34` four
+    /// a tray it is false: `DSTray` draws its own title at `heading40` four
     /// points higher (§532 — a tray is a place). §560 raised this line without
     /// noticing, so **five of the six heads in the app began drawing a second
     /// head under the first** — 120pt of headline before the first fact, which
     /// on `VibenetCreateSheet` pushed the new account's address under the
     /// pinned action and sliced it through the middle. Both rulings are intact:
     /// the tray title says WHERE YOU ARE, this says WHAT IT IS, and one surface
-    /// spends the head rung once (`heading34`'s own doc, and §506's rule for
+    /// spends the head rung once (`heading40`'s own doc, and §506's rule for
     /// the crown one rung up).
     ///
     /// It reads that from the environment rather than a parameter, so no caller
@@ -142,7 +142,7 @@ struct DSSheetHead<Disc: View>: View {
                     // the sheet, so it takes the largest words in the app…
                     // **unless the surface already spent that rung** (see
                     // `title`), in which case it takes the next one down.
-                    .dsText(surfaceHasHead ? .heading22 : .heading34)
+                    .dsText(surfaceHasHead ? .heading24 : .heading40)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
@@ -150,14 +150,14 @@ struct DSSheetHead<Disc: View>: View {
             .padding(.top, DS.Space.s3)
             if let secondary {
                 Text(secondary)
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
             }
             if let sentence {
                 Text(sentence)
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s4)

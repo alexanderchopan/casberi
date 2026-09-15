@@ -11,7 +11,7 @@ import SwiftData
 /// here is what let that page stop looking like a settings page.
 ///
 /// **ON THE ACCOUNT PAGE'S GRAMMAR SINCE §639c (2026-09-06)** — plain rows on
-/// the page's own ground, a `subhead13` tertiary caption, the same ink top.
+/// the page's own ground, a `subhead12` tertiary caption, the same ink top.
 /// It is one tap below a catalogue page and was the last thing in that journey
 /// still drawn as `insetGrouped` cards with `label12` headers, which is the
 /// settings-page look the ruling above says this door exists to avoid.
@@ -35,7 +35,7 @@ struct WalletConnectionScreen: View {
     var body: some View {
         List {
             Text("Chains")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 .padding(.top, DS.Space.s3)
                 .plainAccountRow()
             ForEach(WalletChainStore.selectable, id: \.id) { chain in
@@ -48,7 +48,7 @@ struct WalletConnectionScreen: View {
                         Spacer()
                         if chainStore.isSelected(chain.id) {
                             Image(systemName: "checkmark")
-                                .dsGlyph(17).foregroundStyle(DS.tint)
+                                .dsGlyph(.body).foregroundStyle(DS.tint)
                         }
                     }
                     .frame(minHeight: AccountFactRow.height)
@@ -72,7 +72,7 @@ struct WalletConnectionScreen: View {
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                 Spacer()
                 Text("When you watch one")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
             }
             .frame(minHeight: AccountFactRow.height)
             .plainAccountRow()

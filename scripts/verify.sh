@@ -1680,7 +1680,7 @@ harness "Answer-figure self-test" "answer-figure self-test" "scripts/answer-figu
 # Whether the All feed's source tint is READABLE (2026-08-14). A `BandRow`'s
 # trailing label wears its source's own brand hue, and this is the second time
 # that slot has been colored: the first ink was pulled on 2026-07-30 having
-# measured ~3.4:1 at `label11`, under the 4.5:1 bar `DS.textTertiary` was raised
+# measured ~3.4:1 at `label12`, under the 4.5:1 bar `DS.textTertiary` was raised
 # to meet. Nothing caught it, because nothing here CAN — a contrast failure
 # compiles, launches, screenshots and ships looking exactly like a success, and
 # the type ramp's own audits check size, not legibility. So the arithmetic is
@@ -1900,7 +1900,7 @@ harness "Reading-draw self-test" "reading-draw self-test" "scripts/reading-draw-
 # `private` inside `LinkTitle.swift` — a file that imports SwiftData and
 # reaches `Thing`, `OEmbed` and `ProductMeta` — so NOTHING could compile it and
 # every claim about what the app extracts from a page was a claim. Since pass 1
-# its output is drawn on the sheet at `reading20` rather than merely indexed,
+# its output is drawn on the sheet at `reading17` rather than merely indexed,
 # and pass 5 moved the two constants that bound it. What this catches renders
 # as an ordinary sheet holding the wrong words: the cap back at a lede's
 # length, so every article ends mid-sentence in an ellipsis; the paragraph
@@ -2520,8 +2520,8 @@ print -P "%F{green}✓ design-motion audit%f"
 # products: VibenetKeySheet and VibenetAuthorizeSheet each passed the
 # byte-identical expression to `DSTray(title:)` and `DSSheetHead(title:)`,
 # VibenetCreateSheet said its noun in three tiers, and HegotaKeySheet said it
-# reordered. The cost is never cosmetic — the head is `heading22` under a
-# `heading34` saying the same thing, so whatever the sheet exists to show is
+# reordered. The cost is never cosmetic — the head is `heading24` under a
+# `heading40` saying the same thing, so whatever the sheet exists to show is
 # pushed down, and in two of the four it was pushed below the fold.
 #
 # Two objective checks (one expression used twice; one literal reachable from
@@ -2530,7 +2530,7 @@ print -P "%F{green}✓ design-motion audit%f"
 # against the real tree: restoring either shipped fault turns it red.
 #
 # **THREE since 2026-09-02**, and the third exists because the paragraph above
-# went stale: "the head is `heading22` under a `heading34`" was the shape §538
+# went stale: "the head is `heading24` under a `heading40`" was the shape §538
 # described and §560 ended, raising the head to the tray's own rung on
 # reasoning that is right for a head standing alone and false inside a tray.
 # Five of the six heads in the app are inside one, so five sheets drew two

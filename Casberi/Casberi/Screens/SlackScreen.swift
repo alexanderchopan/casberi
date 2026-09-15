@@ -63,7 +63,7 @@ struct SlackScreen: View {
             HStack(spacing: DS.Space.s2) {
                 DSSpinner()
                 Text("Waiting for Slack…")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
             }
             .padding(.vertical, DS.Space.s1)
         } else {
@@ -75,7 +75,7 @@ struct SlackScreen: View {
                          action: connect)
             if cancelled {
                 Text("Sign-in cancelled — nothing was connected.")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }

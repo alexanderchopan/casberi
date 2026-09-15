@@ -107,7 +107,7 @@ struct VibenetAccountDetail: View {
         // become cards for the surface to be worth removing.
         //
         // Bare hero, bare balance, then a card per reading under Wallet's own
-        // `heading22` headers. Exactly `stackedRoom`'s shape, so narrowing the
+        // `heading24` headers. Exactly `stackedRoom`'s shape, so narrowing the
         // room to one account is the same screen with fewer accounts in it.
         VStack(alignment: .leading, spacing: DS.Space.s6) {
             // The hero and the balance belong to the CHASSIS when a scope is
@@ -120,7 +120,7 @@ struct VibenetAccountDetail: View {
             }
             if wants(.permissions), !item.actors.isEmpty {
                 // No header under a scope: the chip one row up already says
-                // Permissions, and a `heading22` repeating it is §447's two
+                // Permissions, and a `heading24` repeating it is §447's two
                 // stacked display lines.
                 if section == nil { sectionHeader(String(localized: "Keys")) }
                 keysSection
@@ -181,7 +181,7 @@ struct VibenetAccountDetail: View {
     /// `walletGroupHeader`'s recipe, matching the room's own `sectionHeader`.
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
-            .dsText(.heading22)
+            .dsText(.heading24)
             .foregroundStyle(DS.textPrimary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
@@ -297,12 +297,12 @@ struct VibenetAccountDetail: View {
                         HStack(spacing: 5) {
                             Image(systemName: change >= 0
                                   ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
-                                .dsGlyph(9)
+                                .dsGlyph(.tick)
                             Text("\(VibenetBalanceFormat.line(abs(move))) ETH (\(VibenetBalanceFormat.percent(change)))")
-                                .dsText(.callout15).fontWeight(.semibold)
+                                .dsText(.body17).fontWeight(.semibold)
                                 .monospacedDigit()
                             Text(range.sinceLine)
-                                .dsText(.callout15)
+                                .dsText(.body17)
                                 .foregroundStyle(DS.textTertiary)
                         }
                         .foregroundStyle(TokenChartStyle.accent(change: change, scheme: scheme))
@@ -380,7 +380,7 @@ struct VibenetAccountDetail: View {
                     WalletFace(address: item.address, size: DS.Face.shelf, circular: true)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(VibenetWatch.shared.name(for: item.address) ?? VibenetRoom.shortAddress(item.address))
-                        .dsText(.heading22)
+                        .dsText(.heading24)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     // The FULL address, always — this is the one place it
@@ -389,7 +389,7 @@ struct VibenetAccountDetail: View {
                     // survive if it doesn't fit; the doors below hand over
                     // the exact string regardless.
                     Text(item.address)
-                        .dsText(.label11).monospaced()
+                        .dsText(.label12).monospaced()
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                         .truncationMode(.middle)
@@ -531,7 +531,7 @@ struct VibenetAccountDetail: View {
                 // no explanation for how it got there.
                 if let why = VibenetRoom.undeployedExplainer(item) {
                     Text(why)
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -561,7 +561,7 @@ struct VibenetAccountDetail: View {
         // as two groups.
         // NO HEADER OF ITS OWN (prd §477) — `body` draws the section header
         // above this now, exactly as the room does above its keys card, so a
-        // second `heading22` here would be the same landmark twice. The COUNT
+        // second `heading24` here would be the same landmark twice. The COUNT
         // stays: it is a reading, not a title.
         VStack(alignment: .leading, spacing: DS.Space.s6) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -621,7 +621,7 @@ struct VibenetAccountDetail: View {
                         // What membership MEANS, so the group name is never
                         // something to infer from the keys inside it.
                         Text(section.group.caption)
-                            .dsText(.label11)
+                            .dsText(.label12)
                             .foregroundStyle(DS.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                         // WHAT WE CANNOT SAY, ONCE PER GROUP AND NOT ONCE PER
@@ -637,7 +637,7 @@ struct VibenetAccountDetail: View {
                         // unchanged: it is still said, in full, on the screen.
                         if section.group == .session {
                             Text(VibenetPolicyReadability.note)
-                                .dsText(.label11)
+                                .dsText(.label12)
                                 .foregroundStyle(DS.textTertiary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -839,7 +839,7 @@ struct VibenetAccountDetail: View {
                     // actorId is an address and a passkey's is a hash, so any
                     // label would be a fabrication on half the rows.
                     Text(VibenetKeyIdentity.short(actor.actorId))
-                        .dsText(.label11).monospaced()
+                        .dsText(.label12).monospaced()
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                         .fixedSize()
@@ -847,14 +847,14 @@ struct VibenetAccountDetail: View {
                         // A word, not a pill (prd §584) — see
                         // `VibenetRoomCard`'s own note. Same badge, third file.
                         Text(String(localized: "New"))
-                            .dsText(.label11).fontWeight(.semibold)
+                            .dsText(.label12).fontWeight(.semibold)
                             .foregroundStyle(Self.mark)
                             .fixedSize()
                     }
                 }
                 if let detail = actor.kind.plainDetail {
                     Text(detail)
-                        .dsText(.label11)
+                        .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
@@ -867,7 +867,7 @@ struct VibenetAccountDetail: View {
             Spacer(minLength: DS.Space.s2)
             let standing = actor.expiryStanding(now: .now)
             Text(actor.expiryLabel(now: .now))
-                .dsText(.label11)
+                .dsText(.label12)
                 .fontWeight(standing == .soon ? .semibold : .regular)
                 .foregroundStyle(standing == .soon ? DS.tint : DS.textTertiary)
                 .multilineTextAlignment(.trailing)
@@ -1013,7 +1013,7 @@ struct VibenetAccountDetail: View {
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 Text(spoke.label)
-                    .dsText(.label11)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }
@@ -1052,7 +1052,7 @@ struct VibenetAccountDetail: View {
             // removed from the spine one section up.
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text(line)
-                    .dsText(.label11)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     ForEach(item.subAccounts) { sub in
@@ -1109,7 +1109,7 @@ struct VibenetAccountDetail: View {
                 // read knows one thing about it and says only that.
                 if let at = sub.authorizedAt {
                     Text(String(localized: "Authorized you \(at.formatted(.relative(presentation: .named)))"))
-                        .dsText(.label11)
+                        .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
@@ -1165,7 +1165,7 @@ struct VibenetAccountDetail: View {
                         HStack(spacing: 8) {
                             if item.history.count > VibenetKeyHistory.cap {
                                 Text(String(localized: "+\(item.history.count - VibenetKeyHistory.cap) earlier"))
-                                    .dsText(.label11)
+                                    .dsText(.label12)
                                     .foregroundStyle(DS.textTertiary)
                                     .lineLimit(1)
                             }
@@ -1179,12 +1179,12 @@ struct VibenetAccountDetail: View {
                         .padding(.top, 2)
                         HStack {
                             if let oldest = labels.oldest {
-                                Text(oldest).dsText(.label11).foregroundStyle(DS.textTertiary)
+                                Text(oldest).dsText(.label12).foregroundStyle(DS.textTertiary)
                                     .lineLimit(1).fixedSize()
                             }
                             Spacer(minLength: DS.Space.s2)
                             if let newest = labels.newest {
-                                Text(newest).dsText(.label11).foregroundStyle(DS.textTertiary)
+                                Text(newest).dsText(.label12).foregroundStyle(DS.textTertiary)
                                     .lineLimit(1).fixedSize()
                             }
                         }
@@ -1357,11 +1357,11 @@ struct VibenetAccountDetail: View {
         .padding(.top, DS.Space.s2)
     }
 
-    /// One verb. `callout15` — the app's ordinary row rung — rather than the
+    /// One verb. `body17` — the app's ordinary row rung — rather than the
     /// chips' `label12`, because a row that has the width of the card has no
     /// reason to whisper, and the run's smallness was half of why it read as
     /// stray text rather than as a list of things you can do.
-    /// One verb. `callout15` — the app's ordinary row rung — rather than the
+    /// One verb. `body17` — the app's ordinary row rung — rather than the
     /// chips' `label12`, because a row that has the width of the card has no
     /// reason to whisper.
     ///
@@ -1387,18 +1387,18 @@ struct VibenetAccountDetail: View {
                     .frame(width: Self.verbDisc, height: Self.verbDisc)
                 Image(systemName: glyph)
                     .accessibilityHidden(true)
-                    .dsGlyph(12, weight: .semibold)
+                    .dsGlyph(.caption, weight: .semibold)
                     .foregroundStyle(tint ?? DS.textSecondary)
             }
             Text(title)
-                .dsText(.callout15)
+                .dsText(.body17)
                 .foregroundStyle(tint ?? DS.textPrimary)
                 .lineLimit(1)
             Spacer(minLength: DS.Space.s2)
             if door {
                 Image(systemName: "arrow.up.right")
                     .accessibilityHidden(true)
-                    .dsGlyph(11, weight: .semibold)
+                    .dsGlyph(.caption, weight: .semibold)
                     .foregroundStyle(DS.textTertiary.opacity(0.6))
             }
         }

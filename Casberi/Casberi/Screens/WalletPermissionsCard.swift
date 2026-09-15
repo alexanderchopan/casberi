@@ -16,7 +16,7 @@ import SwiftUI
 /// (§483: *"we don't do cards"*).
 ///
 /// **The one visible change §692 makes here**: a cell is a well rather than a
-/// bare numeral, and the numeral is `price16` rather than `price40` — vibenet's
+/// bare numeral, and the numeral is `price17` rather than `price40` — vibenet's
 /// census grammar, which is what lets a class with nothing in it draw a dash
 /// instead of a "0" that reads as a measurement.
 struct WalletPermissionsCard: View {

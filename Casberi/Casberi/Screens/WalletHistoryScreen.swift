@@ -173,12 +173,12 @@ private struct WalletHistoryRow: View {
                 // One room, one pushed screen, two grammars for one fact.
                 if let money = moneyAmount {
                     Text(money.text)
-                        .dsText(.price16)
+                        .dsText(.price17)
                         .foregroundStyle(money.received ? DS.confirm : DS.textPrimary)
                         .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
                 }
                 Text(shortTime(thing.capturedAt))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .monospacedDigit()
             }
         }

@@ -149,7 +149,7 @@ enum DS {
     /// Tertiary text — row metadata (timestamps, source names), placeholders,
     /// disabled glyphs. Contrast pass 2026-07-21: raised HARD, dark 30% → 49%
     /// and light 30% → 74%. At 30% this measured 2.3:1 dark and 1.7:1 light —
-    /// the worst failure in the app, and it was reading `subhead13` metadata in
+    /// the worst failure in the app, and it was reading `subhead12` metadata in
     /// every feed row, so it was informational text wearing a hint's tone.
     /// The tier stays visibly quieter than secondary; it is no longer unreadable.
     static var textTertiary: Color {
@@ -365,7 +365,7 @@ enum DS {
     /// **Contrast, measured — and the light page does NOT take the brand hue
     /// straight.** `#f5458f` is 6.1:1 on the dark page, which is where it
     /// ships. The brand hue on the light page measures 3.1:1: legal, because
-    /// `heading22` is 24pt bold and the bar for that rung is 3:1, and WRONG,
+    /// `heading24` is 24pt bold and the bar for that rung is 3:1, and WRONG,
     /// because the count sitting beside it in the same header is
     /// `textTertiary` at 4.5:1. The largest word on the page would have been
     /// the least legible thing on it, which is a hierarchy upside down, not a
@@ -577,7 +577,7 @@ enum DS {
     /// cohesive"), the answer is no for one concrete reason — see `shelf`.
     ///
     /// **Cohesion comes from a small shared ramp, not from one value.** This is
-    /// the type ramp's own method (`label12`/`subhead13` are not one size
+    /// the type ramp's own method (`label12`/`subhead12` are not one size
     /// either), applied to the other thing this app draws constantly.
     ///
     /// Deliberately NOT in this ramp: the source strip's chip metrics

@@ -335,7 +335,7 @@ struct ThingSheetView: View {
                     if let onBack {
                         Button(action: onBack) {
                             Image(systemName: "chevron.left")
-                                .dsGlyph(13)
+                                .dsGlyph(.caption)
                                 .foregroundStyle(DS.textPrimary)
                                 .frame(width: 30, height: 30)
                                 .background(Circle().fill(DS.fillLine))
@@ -475,7 +475,7 @@ struct ThingSheetView: View {
                         .dsTooltip(String(localized: "Opens the photo full screen"))
                         .settleIn(delay: 0.06)
                     Text(thing.title)
-                        .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                        .dsText(.heading24).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                         .textSelection(.enabled)
                         .padding(.horizontal, DS.Space.s4)
@@ -576,7 +576,7 @@ struct ThingSheetView: View {
                     // A CHARTED row draws no title (prd §369 amendment). The
                     // price object below states the asset's name and symbol, so
                     // leaving this on printed "Aerodrome · $AERO" at
-                    // `heading34` immediately above a card saying the same two
+                    // `heading40` immediately above a card saying the same two
                     // words — the label-for-a-label failure the object exists
                     // to end, and the same stand-down the note and Work
                     // anatomies above already make.
@@ -668,8 +668,8 @@ struct ThingSheetView: View {
                 //
                 // A note draws NOTHING here (prd §366) and that is the point:
                 // the generic content view is where a journal entry's prose was
-                // set at `callout15` in `textSecondary` and cut at twelve
-                // lines. `noteHead` above sets the same words at `reading20` in
+                // set at `body17` in `textSecondary` and cut at twelve
+                // lines. `noteHead` above sets the same words at `reading17` in
                 // primary ink with a real disclosure, so leaving this on would
                 // print every entry twice, the second time worse.
                 //
@@ -1205,10 +1205,10 @@ struct ThingSheetView: View {
     /// THREE steps since 2026-08-02, not two. A one-liner gets the full
     /// display size and the drama that comes with it; a tweet-length post gets
     /// the pull-quote rung; and past `readingLength` the words leave the
-    /// display tier altogether for `reading20` — SF Pro Text, REGULAR weight,
+    /// display tier altogether for `reading17` — SF Pro Text, REGULAR weight,
     /// open leading.
     ///
-    /// That third step is the fix. `heading22` had no upper bound, so a
+    /// That third step is the fix. `heading24` had no upper bound, so a
     /// 900-character cast was set end to end in bold SF Rounded — a title face
     /// doing a paragraph's job, which flattens word shapes and reads as a wall
     /// rather than as writing. Dropping the weight and the rounded face at
@@ -1242,7 +1242,7 @@ struct ThingSheetView: View {
     /// THE HEAD RUNG IS FOR A NAME (2026-09-06, prd §630 amendment — the
     /// head-consistency half of the type-ramp item).
     ///
-    /// The ramp's own definition of `heading34`: "a head is one or two words
+    /// The ramp's own definition of `heading40`: "a head is one or two words
     /// and tight leading is what makes two lines read as one object". Every
     /// non-social thing was set at that rung regardless of length, so a
     /// stream's title ("nova live — Software and Game Development") opened
@@ -1251,7 +1251,7 @@ struct ThingSheetView: View {
     /// length went through a length rule of its own and a vault note through
     /// a third. One ladder now, by SHAPE rather than by kind: a name is a
     /// head, a sentence is a title, a paragraph reads. The framed photo keeps
-    /// `heading22` outright because there the picture is the head.
+    /// `heading24` outright because there the picture is the head.
     ///
     /// 32 characters is two lines at the head rung on a phone — the most a
     /// head is allowed to be by its own definition. `readingLength` is the
@@ -1260,9 +1260,9 @@ struct ThingSheetView: View {
         case head, title, reading
         var style: DSTextStyle {
             switch self {
-            case .head: return .heading34
-            case .title: return .heading22
-            case .reading: return .reading20
+            case .head: return .heading40
+            case .title: return .heading24
+            case .reading: return .reading17
             }
         }
     }
@@ -1275,7 +1275,7 @@ struct ThingSheetView: View {
     }
 
     /// Past this many characters a post is a paragraph, not a statement, and
-    /// is set in `reading20` instead of the display tier. 280 is deliberate:
+    /// is set in `reading17` instead of the display tier. 280 is deliberate:
     /// it's the same length `init` uses to decide the sheet opens full-height,
     /// so a post tall enough to need the whole sheet is exactly the post that
     /// gets read-type — one threshold, two consequences that agree.
@@ -1869,10 +1869,10 @@ struct ThingSheetView: View {
         HStack(alignment: .top, spacing: DS.Space.s2) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .accessibilityHidden(true)
-                .dsGlyph(15)
+                .dsGlyph(.subhead)
                 .foregroundStyle(DS.destructive)
             Text(text)
-                .dsText(.callout15).foregroundStyle(DS.destructive)
+                .dsText(.body17).foregroundStyle(DS.destructive)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -2391,7 +2391,7 @@ struct ThingSheetView: View {
     @ViewBuilder private var verbOutcome: some View {
         if let verbResult {
             Text(verbResult)
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(verbResultIsError ? DS.attention : DS.confirm)
         }
     }
@@ -2511,11 +2511,11 @@ struct ThingSheetView: View {
                     HStack(spacing: DS.Space.s2) {
                         Image(systemName: "arrow.down.left")
                             .accessibilityHidden(true)
-                            .dsGlyph(11)
+                            .dsGlyph(.caption)
                             .foregroundStyle(DS.textTertiary)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(tie.title)
-                                .dsText(.callout15)
+                                .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
                             Text(tie.detail)
@@ -2562,10 +2562,10 @@ struct ThingSheetView: View {
                         HStack(spacing: DS.Space.s2) {
                             Image(systemName: icon)
                                 .accessibilityHidden(true)
-                                .dsGlyph(11)
+                                .dsGlyph(.caption)
                                 .foregroundStyle(DS.textTertiary)
                             Text(linked.title)
-                                .dsText(.callout15)
+                                .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
                             Spacer(minLength: 0)
@@ -2624,10 +2624,10 @@ struct ThingSheetView: View {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "calendar.badge.plus")
                         .accessibilityHidden(true)
-                        .dsGlyph(11)
+                        .dsGlyph(.caption)
                         .foregroundStyle(DS.textTertiary)
                     Text("\(fact.label) · \(fact.date.formatted(date: .abbreviated, time: .shortened))")
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                     Spacer(minLength: 0)
@@ -2661,10 +2661,10 @@ struct ThingSheetView: View {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "arrow.triangle.2.circlepath")
                         .accessibilityHidden(true)
-                        .dsGlyph(11)
+                        .dsGlyph(.caption)
                         .foregroundStyle(DS.textTertiary)
                     Text("You kept this \(copy.capturedAt.formatted(.relative(presentation: .named))) · \(copy.source)")
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                     Spacer(minLength: 0)

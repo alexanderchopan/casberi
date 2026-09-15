@@ -10,8 +10,8 @@ import Foundation
 /// from the shipped code rather than guessed:
 ///
 /// - An **X post** (`.note`) drew `Text(thing.title)` — `titleLine`'s
-///   80-character clamp — at `heading34`, then repeated `content` in full at
-///   `callout15`, while `postText`, `authorHandle`, `likeCount`, `repostCount`,
+///   80-character clamp — at `heading40`, then repeated `content` in full at
+///   `body17`, while `postText`, `authorHandle`, `likeCount`, `repostCount`,
 ///   `previewImageData` and a whole thread on `enrichedText` sat unread. The
 ///   room's own `PostCard` draws five of those six. **The sheet you opened to
 ///   read a post showed less of it than the row you tapped.**

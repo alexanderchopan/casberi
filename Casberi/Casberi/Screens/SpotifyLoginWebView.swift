@@ -83,7 +83,7 @@ struct SpotifyLoginWebView: View {
                     stateBlock {
                         DSSpinner(size: .regular)
                         Text("Opening Spotify's sign-in…")
-                            .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                            .dsText(.body17).foregroundStyle(DS.textTertiary)
                     }
                 }
             }

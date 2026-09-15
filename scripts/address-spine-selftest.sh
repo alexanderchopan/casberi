@@ -455,7 +455,7 @@ check("caption with no grant date",
       AddressSpine.standingCaption([("Manages all Doodles", nil, true)],
                                    now: now, calendar: cal),
       "Manages all Doodles.")
-// Past the cap it counts rather than writing a paragraph at callout15.
+// Past the cap it counts rather than writing a paragraph at body17.
 // The overflow clause is asserted as its RAW inflection markup: this harness
 // runs outside an app bundle, so `String(localized:)` has no catalog to
 // resolve `^[…](inflect: true)` against and hands the markup straight back.

@@ -135,7 +135,7 @@ struct VibenetHoldingsBlock: View {
                     HStack(spacing: DS.Space.s1 + 2) {
                         AssetMark(name: cell.symbol, size: 16)
                         Text(cell.symbol)
-                            .dsText(.callout15)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)

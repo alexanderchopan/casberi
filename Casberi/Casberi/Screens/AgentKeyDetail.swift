@@ -36,13 +36,13 @@ struct AgentModelRow: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 HStack(spacing: DS.Space.s2) {
                     Text(task == .librarian ? "Model for organizing" : "Model")
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
                     Spacer(minLength: DS.Space.s2)
                     // The id, not a prettied label: the id is what actually
                     // goes on the wire, and it is what a provider's own
                     // pricing page is keyed by.
                     Text(provider.model(for: task))
-                        .dsText(.callout15).monospaced()
+                        .dsText(.body17).monospaced()
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1).truncationMode(.middle)
                 }
@@ -52,11 +52,11 @@ struct AgentModelRow: View {
                     HStack(spacing: DS.Space.s2) {
                         DSSpinner()
                         Text("Asking \(provider.company) what it offers…")
-                            .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                            .dsText(.body17).foregroundStyle(DS.textTertiary)
                     }
                 } else if readable == false {
                     Text("Couldn't read \(provider.company)'s model list — keeping \(provider.defaultModel).")
-                        .dsText(.subhead13).foregroundStyle(DS.attention)
+                        .dsText(.subhead12).foregroundStyle(DS.attention)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if models.isEmpty {
                     // A verb, so a row (prd §746).
@@ -186,18 +186,18 @@ struct AgentSpendRow: View {
                          // so none of them is "an ask" (prd §718).
                          : entry.requests == 1 ? String(localized: "1 request")
                          : String(localized: "\(entry.requests) requests"))
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
                 }
                 if let tokens = entry.tokenLine {
                     Text(tokens)
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     // Only when there is a hit to report. A "0 served from
                     // cache" would read as a thing that went wrong, when for a
                     // short exchange it just means the prompt never reached the
                     // model's minimum cacheable length.
                     if let cache = entry.cacheLine {
                         Text(cache)
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 } else {
@@ -214,12 +214,12 @@ struct AgentSpendRow: View {
                 // number for other apps.
                 if let line = entry.appCostLine {
                     Text(line)
-                        .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                        .dsText(.subhead12).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let usd = entry.reportedUSD {
                     Text("\(provider.company) reports \(String(format: "$%.2f", usd)) used on this key, across everything it's used for.")
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 // `DS.device`, not "this iPhone" — this line is a claim about
@@ -335,7 +335,7 @@ struct AgentLibrarianRow: View {
                         HStack(spacing: DS.Space.s2) {
                             DSSpinner()
                             Text("Working through the backlog…")
-                                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                                .dsText(.body17).foregroundStyle(DS.textTertiary)
                         }
                     } else {
                         DSDoorRow(icon: "wand.and.stars", label: "Catch up now") {
@@ -345,7 +345,7 @@ struct AgentLibrarianRow: View {
                     }
                     if let result {
                         Text(result)
-                            .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                             .settleIn()
                     }
@@ -398,7 +398,7 @@ struct AgentBudgetControl: View {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 HStack(spacing: DS.Space.s2) {
                     Text("Monthly limit")
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
                     Spacer(minLength: DS.Space.s2)
                     Menu {
                         Button {
@@ -428,7 +428,7 @@ struct AgentBudgetControl: View {
                 }
                 if let line = AgentBudget.line(for: AgentBudget.measurableProvider) {
                     Text(line)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 // Said out loud because it is the one thing somebody would
@@ -483,13 +483,13 @@ struct MCPServerRow: View {
                         .foregroundStyle(running ? DS.confirm : DS.textTertiary)
                         .accessibilityHidden(true)
                     Text(running ? MCPServer.endpoint : String(localized: "Not listening"))
-                        .dsText(.callout15).monospaced()
+                        .dsText(.body17).monospaced()
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1).truncationMode(.middle)
                 }
                 if let error {
                     Text(error)
-                        .dsText(.subhead13).foregroundStyle(DS.attention)
+                        .dsText(.subhead12).foregroundStyle(DS.attention)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if running {

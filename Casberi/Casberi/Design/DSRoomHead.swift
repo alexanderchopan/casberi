@@ -9,11 +9,11 @@ import SwiftUI
 /// Four rooms — vibenet, Hegotá, Frames and the Privacy devnet — compose the
 /// chassis above: a fixed `visualSlot`, a rail, a switcher. The other
 /// twenty-two drew their heads by hand the day their source landed, and read
-/// side by side they were one anatomy spelled twenty-two ways: a `heading22`
+/// side by side they were one anatomy spelled twenty-two ways: a `heading24`
 /// sentence (or a §585 lede), a secondary line under it, a drawing, a few rows,
 /// and tertiary footnotes, inside the same widget surface. The gaps between
 /// those five pieces were `s1`, `s2`, `s3` or `s4` depending on the file, the
-/// footnotes were `label11` in one room and `label12` in the next, the whole
+/// footnotes were `label12` in one room and `label12` in the next, the whole
 /// card was a tap target in eleven rooms and a dead face in the rest, and the
 /// row a ranked room draws existed as ten copies.
 ///
@@ -87,7 +87,7 @@ extension DSRoomChassis {
 
     /// What the card leads with.
     enum Lead {
-        /// A finding stated as a sentence, at `heading22`.
+        /// A finding stated as a sentence, at `heading24`.
         case sentence(String)
         /// A figure with its words demoted underneath (§585), spoken as the
         /// sentence it stands in for.
@@ -117,7 +117,7 @@ extension DSRoomChassis {
     /// One line of words under the lead or under the blocks.
     struct Line {
         enum Tone {
-            /// The lead's second sentence — `subhead13`, secondary ink.
+            /// The lead's second sentence — `subhead12`, secondary ink.
             case note
             /// Small print: coverage, staleness, what a cap left off —
             /// `label12`, tertiary ink.
@@ -337,7 +337,7 @@ extension DSRoomChassis {
             switch lead {
             case .sentence(let sentence):
                 Text(verbatim: sentence)
-                    .dsText(.heading22)
+                    .dsText(.heading24)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -358,7 +358,7 @@ extension DSRoomChassis {
                 } icon: {
                     Image(systemName: glyph)
                         .foregroundStyle(line.tone == .alert ? DS.attention : DS.textTertiary)
-                        .dsGlyph(11, weight: .regular)
+                        .dsGlyph(.caption, weight: .regular)
                 }
             } else {
                 words
@@ -367,7 +367,7 @@ extension DSRoomChassis {
 
         private var words: some View {
             Text(verbatim: line.text)
-                .dsText(line.tone == .quiet ? .label12 : .subhead13)
+                .dsText(line.tone == .quiet ? .label12 : .subhead12)
                 .foregroundStyle(ink)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -433,7 +433,7 @@ extension DSRoomChassis {
                             .truncationMode(truncation)
                         Spacer(minLength: DS.Space.s2)
                         Text(verbatim: line)
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
                     }
@@ -492,7 +492,7 @@ extension DSRoomChassis {
                         HStack(spacing: DS.Space.s1 + 2) {
                             if let stamp {
                                 Text(verbatim: stamp)
-                                    .dsText(.label11).fontWeight(.bold)
+                                    .dsText(.label12).fontWeight(.bold)
                                     .foregroundStyle(Color.fixed("#ffffff"))
                                     .padding(.horizontal, 5)
                                     .padding(.vertical, 1)
@@ -506,7 +506,7 @@ extension DSRoomChassis {
                     }
                     Spacer(minLength: DS.Space.s2)
                     Text(verbatim: value)
-                        .dsText(.price16)
+                        .dsText(.price17)
                         .foregroundStyle(overdue ? DS.textPrimary : DS.textSecondary)
                         .monospacedDigit()
                 }
@@ -560,12 +560,12 @@ extension DSRoomChassis {
                             .lineLimit(1)
                         if let flag {
                             Text(verbatim: flag)
-                                .dsText(.label11).fontWeight(.bold)
+                                .dsText(.label12).fontWeight(.bold)
                                 .foregroundStyle(DS.attention)
                         }
                     }
                     Text(verbatim: line)
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(concerning ? DS.textSecondary : DS.textTertiary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -597,10 +597,10 @@ extension DSRoomChassis {
             } label: {
                 HStack(spacing: DS.Space.s1) {
                     Text(verbatim: title)
-                        .dsText(.subhead13).fontWeight(.semibold)
+                        .dsText(.subhead12).fontWeight(.semibold)
                     if external {
                         Image(systemName: "arrow.up.right")
-                            .dsGlyph(11, weight: .semibold)
+                            .dsGlyph(.caption, weight: .semibold)
                             .accessibilityHidden(true)
                     }
                 }

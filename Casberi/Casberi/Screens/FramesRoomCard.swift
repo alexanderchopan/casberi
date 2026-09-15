@@ -362,7 +362,7 @@ struct FramesRoomFigure: View {
     /// **FRAMES: EVERY TRANSACTION AS ITS PARTS.** The reading this seat
     /// exists for, and one no other room in this app can draw.
     /// **THE STRIP IS THE FIGURE, AND THE SENTENCES BECOME A LEGEND
-    /// (prd §566).** The drawing sat at 20pt a row under two `subhead13`
+    /// (prd §566).** The drawing sat at 20pt a row under two `subhead12`
     /// sentences, so the thing this seat exists to show was the smallest thing
     /// in the box while the prose about it was the largest.
     ///
@@ -459,11 +459,11 @@ struct FramesRoomFigure: View {
                 .dsText(.stat24).foregroundStyle(DS.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.7)
             Text(FramesChainWatch.consequence(alert))
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             if let held = Self.heldETH(head) {
                 Text(String(localized: "Holds \(FramesMoney.eth(held)) test ETH"))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .monospacedDigit()
             }
         }
@@ -471,7 +471,7 @@ struct FramesRoomFigure: View {
 
     @ViewBuilder private func note(_ text: String) -> some View {
         Text(text)
-            .dsText(.subhead13)
+            .dsText(.subhead12)
             .foregroundStyle(DS.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -649,7 +649,7 @@ struct FramesRoomList: View {
                     Text(item.legs == 1
                          ? String(localized: "1 frame")
                          : String(localized: "\(String(item.legs)) frames"))
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
                     Text(FramesChainWatch.pendingLine(state: item.state, deadline: item.deadline,
                                                       now: tick.date))
                         .dsText(.label12)
@@ -685,7 +685,7 @@ struct FramesRoomList: View {
         }
         if list.isEmpty, inFlight.isEmpty {
             Text(String(localized: "Nothing here yet."))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textTertiary)
                 .padding(.vertical, DS.Space.s3)
         } else {
@@ -848,9 +848,9 @@ struct FramesMoveRow: View {
 
     var body: some View {
         // **ONE ANATOMY WITH THE OTHER THREE ROOMS (prd §588).** This was a
-        // hand-rolled `HStack`: no mark, a `callout15` title (17 REGULAR) and
+        // hand-rolled `HStack`: no mark, a `body17` title (17 REGULAR) and
         // a `label12` metadata line, against `WalletRow`'s 36pt mark,
-        // `heading17` title and `subhead13` line — which Hegotá's own move row
+        // `heading17` title and `subhead12` line — which Hegotá's own move row
         // has used since it shipped. Same two type SIZES either way, which is
         // why a grep found nothing wrong and the lists still read as four
         // different fonts: what differed was weight, mark and rhythm.
@@ -875,16 +875,16 @@ struct FramesMoveRow: View {
             // the fee and who paid it. Nil draws nothing rather than a zero.
             if let token = move.leadToken {
                 Text(token.signedLine)
-                    .dsText(.price16)
+                    .dsText(.price17)
                     .foregroundStyle(token.raw > 0 ? DS.confirm : DS.textPrimary)
                     .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
             } else if let delta = move.deltaWei {
                 // One rung for a signed amount in a row (prd §587) — see
-                // `HegotaMoveRow` for the measurement. `callout15` is 17pt
+                // `HegotaMoveRow` for the measurement. `body17` is 17pt
                 // REGULAR, so this figure was the same size as the sentence
-                // beside it and lost to it; `price16` is 17 bold.
+                // beside it and lost to it; `price17` is 17 bold.
                 Text(FramesMoney.signedETH(wei: delta, compact: true))
-                    .dsText(.price16)
+                    .dsText(.price17)
                     .foregroundStyle(delta > 0 ? DS.confirm : DS.textPrimary)
                     .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
             }

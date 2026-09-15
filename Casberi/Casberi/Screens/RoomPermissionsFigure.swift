@@ -55,7 +55,7 @@ struct RoomPermissionsFigure: View {
                         .fixedSize()
                     if let caption = lead.caption {
                         Text(caption)
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     }
                 }
                 .padding(.bottom, DS.Space.s2)
@@ -83,13 +83,13 @@ struct RoomPermissionsFigure: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text(held ? "\(kind.count)" : "—")
-                    .dsText(.price16)
+                    .dsText(.price17)
                     .foregroundStyle(held ? (kind.unbounded ? DS.attention : DS.textPrimary)
                                           : DS.textTertiary)
                     .monospacedDigit()
                 if held, let aside = kind.aside {
                     Text(aside)
-                        .dsText(.label11).foregroundStyle(DS.textTertiary)
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1).minimumScaleFactor(0.85)
                 }
             }

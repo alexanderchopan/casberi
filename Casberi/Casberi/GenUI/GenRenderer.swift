@@ -367,7 +367,7 @@ struct GenRender: View {
             if UserDefaults.standard.bool(forKey: "homeTitles"),
                el.str(0).hasPrefix("@pin "), el.str(3) == "token" {
                 Text("Holdings")
-                    .dsText(.heading22)
+                    .dsText(.heading24)
                     .foregroundStyle(DS.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, DS.Space.s2)
@@ -552,13 +552,13 @@ private struct GenHero: View {
                 .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
             Text(el.str(1))
-                .dsText(.heading34)
+                .dsText(.heading40)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s2)
                 .padding(.bottom, DS.Space.s1)
             Text(el.str(2))
-                .dsText(.callout15)
+                .dsText(.body17)
                 .foregroundStyle(DS.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -623,15 +623,15 @@ private struct GenInsight: View {
                     let phase = (sin(t * 2 * .pi) + 1) / 2
                     (Text(el.str(0))
                      + Text(" ●")
-                        .font(DSTextStyle.indicator9.scaledFont)
+                        .font(DSTextStyle.subhead12.scaledFont)
                         .foregroundStyle(DS.tint.opacity(0.3 + 0.7 * phase)))
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else if inAgentAnswer {
                 Text(el.str(0))
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     // Press the claim, see the evidence (prd §384): inside an
@@ -658,7 +658,7 @@ private struct GenInsight: View {
                     }
             } else {
                 Text(el.str(0))
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -728,11 +728,11 @@ private struct GenWidget: View {
                 // it supports and the question that was asked. Everywhere
                 // else (Home board, store previews) it stays a card title.
                 Text(LocalizedStringKey(el.str(0)))
-                    .dsText(inAgentAnswer ? .subhead13 : .heading22)
+                    .dsText(inAgentAnswer ? .subhead12 : .heading24)
                     .foregroundStyle(inAgentAnswer ? DS.textSecondary : DS.textPrimary)
                 if !el.str(1).isEmpty {
                     Text(el.str(1))
-                        .dsText(inAgentAnswer ? .subhead13 : .callout15)
+                        .dsText(inAgentAnswer ? .subhead12 : .body17)
                         .foregroundStyle(DS.textTertiary)
                         // Tabular, because it rolls — see `LiveTimeText` (prd §586).
                         .monospacedDigit()
@@ -855,7 +855,7 @@ private struct SoloRowTile: View {
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
             if !sub.isEmpty {
-                Text(sub).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                Text(sub).dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1).minimumScaleFactor(0.7)
             }
         }
@@ -883,11 +883,11 @@ private struct SoloMailTile: View {
             Text(el.str(0)).dsText(.body17).foregroundStyle(DS.textPrimary)
                 .lineLimit(2).fixedSize(horizontal: false, vertical: true)
             if !el.str(1).isEmpty {
-                Text(el.str(1)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                Text(el.str(1)).dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .lineLimit(2).fixedSize(horizontal: false, vertical: true)
             }
             if !el.str(2).isEmpty {
-                Text(el.str(2)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                Text(el.str(2)).dsText(.subhead12).foregroundStyle(DS.textTertiary)
             }
         }
         .soloTileChrome()
@@ -910,7 +910,7 @@ private struct SoloPostTile: View {
             HStack(spacing: 7) {
                 RemoteThumb(urlString: el.str(2), size: 26, fallback: el.str(0), circular: true)
                 if !el.str(0).isEmpty {
-                    Text(el.str(0)).dsText(.subhead13).foregroundStyle(DS.textSecondary).lineLimit(1)
+                    Text(el.str(0)).dsText(.subhead12).foregroundStyle(DS.textSecondary).lineLimit(1)
                 }
                 Spacer(minLength: 0)
             }
@@ -947,7 +947,7 @@ private struct SoloTokenTile: View {
     var body: some View {
         let content = VStack(alignment: .leading, spacing: DS.Space.s1) {
             HStack(alignment: .top, spacing: DS.Space.s2) {
-                Text(symbol).dsText(.callout15).foregroundStyle(DS.textPrimary)
+                Text(symbol).dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1).minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -956,7 +956,7 @@ private struct SoloTokenTile: View {
             if let chart {
                 HStack(spacing: DS.Space.s2) {
                     Text(TokenChartStyle.priceText(chart.price))
-                        .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                        .dsText(.subhead12).foregroundStyle(DS.textPrimary)
                         // Tabular, because it rolls — see `LiveTimeText` (prd §586).
                         .monospacedDigit()
                         .contentTransition(.numericText())
@@ -1200,7 +1200,7 @@ private struct InsightHeader: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
-            Text(subtitle).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            Text(subtitle).dsText(.subhead12).foregroundStyle(DS.textTertiary)
         }
     }
 }
@@ -1302,14 +1302,14 @@ struct OnThisDayHero: View {
                     .dsText(.label12).fontWeight(.semibold)
                     .foregroundStyle(DS.legibleCardFill(for: echo.thing.source))
                 Text(echo.thing.title)
-                    .dsText(.heading22)
+                    .dsText(.heading24)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .multilineTextAlignment(.leading)
                 if let body = IngestSupport.bodyBelowTitle(echo.thing.content,
                                                            title: echo.thing.title) {
                     Text(body)
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(5)
                         .multilineTextAlignment(.leading)
@@ -1415,7 +1415,7 @@ struct CalendarHeatmapHero: View {
                 // rendered image, just what the card already says.
                 ShareLink(item: "\(title) — \(subtitle) 🍇", subject: Text(title)) {
                     Image(systemName: "square.and.arrow.up")
-                        .dsGlyph(13)
+                        .dsGlyph(.caption)
                         .foregroundStyle(DS.textTertiary)
                 }
                 // `.plain` for §693's reason, one card over: this hero is drawn
@@ -1515,7 +1515,7 @@ struct DistributionHero: View {
                                 .lineLimit(1)
                             Spacer(minLength: DS.Space.s2)
                             Text("\(seg.count)")
-                                .dsText(.subhead13)
+                                .dsText(.subhead12)
                                 .foregroundStyle(DS.textSecondary)
                                 .monospacedDigit()
                         }
@@ -1645,11 +1645,11 @@ struct TopicMapHero: View {
                     let cell = cells[i]
                     VStack(alignment: .leading, spacing: 2) {
                         Text(cell.label)
-                            .dsText(.callout15).fontWeight(.semibold)
+                            .dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(2).minimumScaleFactor(0.82)
                         Text("\(cell.count)")
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                             .monospacedDigit()
                         Spacer(minLength: 0)
                     }
@@ -1809,14 +1809,14 @@ private struct GenMediaShelf: View {
                 // the type ramp carries the hierarchy — a bigger, primary-ink
                 // header so cards read as separate objects, not one soft field.
                 Text(el.str(0))
-                    .dsText(.callout15).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
                 Spacer(minLength: DS.Space.s2)
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, el.str(1).isEmpty ? DS.Space.s3 : 0)
             if !el.str(1).isEmpty {
                 Text(el.str(1))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .padding(.leading, DS.Space.s4)
                     .padding(.top, DS.Space.s1)
                     .padding(.bottom, DS.Space.s3)
@@ -2011,7 +2011,7 @@ private struct GenMediaTile: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(parts.title).dsText(.heading17).foregroundStyle(.white).lineLimit(1)
                     if let artist = parts.artist {
-                        Text(artist).dsText(.subhead13).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
+                        Text(artist).dsText(.subhead12).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
                     }
                 }
                 .padding(DS.Space.s3)
@@ -2063,7 +2063,7 @@ private struct GenFlexThumb: View {
                     DS.gray200
                     Image(systemName: "photo")
                         .accessibilityHidden(true)
-                        .dsGlyph(24, weight: .medium)
+                        .dsGlyph(.title, weight: .medium)
                         .foregroundStyle(DS.textTertiary)
                 }
             } else {
@@ -2169,20 +2169,20 @@ struct GenSection: View {
         let header = VStack(alignment: .leading, spacing: 1) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 // BIGGER, and the size is the point (prd §386l). At
-                // `callout15` a heading and the card title under it were the
+                // `body17` a heading and the card title under it were the
                 // same weight in nearly the same size, so the page read as a
                 // list of cards rather than as a document with movements.
-                // `heading22` is the ramp's own section voice — the day
+                // `heading24` is the ramp's own section voice — the day
                 // headers in the feed already use it, so the brief now
                 // matches the surface it summarises.
                 Text(el.str(0))
-                    .dsText(.heading22)
+                    .dsText(.heading24)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 if !room.isEmpty {
                     Image(systemName: "chevron.right")
-                        .dsGlyph(13)
+                        .dsGlyph(.caption)
                         .foregroundStyle(DS.textTertiary)
                         .accessibilityHidden(true)
                 }
@@ -2194,7 +2194,7 @@ struct GenSection: View {
             // together, so it earns the line.
             if !el.str(1).isEmpty {
                 Text(el.str(1))
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }
@@ -2295,12 +2295,12 @@ private struct GenClusterMap: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
                         Text(el.str(0))
-                            .dsText(.callout15).fontWeight(.semibold)
+                            .dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                     }
                     if let subtitle = pickedLine ?? (el.str(1).isEmpty ? nil : el.str(1)) {
                         Text(subtitle)
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(picked == nil ? DS.textTertiary : DS.textPrimary)
                             .lineLimit(2)
                     }
@@ -2449,7 +2449,7 @@ private struct GenDayFold: View {
                     }
                     if !el.str(3).isEmpty {
                         Text(el.str(3))
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(2)
                     }
@@ -2487,7 +2487,7 @@ private struct PersonBadge: View {
                         // punctuation is the network's.
                         Text(String(handle.first(where: { $0.isLetter || $0.isNumber })
                                     ?? handle.first ?? " ").uppercased())
-                            .dsText(.label11).fontWeight(.bold)
+                            .dsText(.label12).fontWeight(.bold)
                             .foregroundStyle(DS.textSecondary))
                     .frame(width: size, height: size)
             }
@@ -2506,7 +2506,7 @@ private struct GenCoach: View {
     let el: GenEl
     var body: some View {
         Text(el.str(0))
-            .dsText(.subhead13)
+            .dsText(.subhead12)
             .foregroundStyle(DS.textSecondary)
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s4)
@@ -2559,14 +2559,14 @@ private struct GenRow: View {
                     .lineLimit(1)
                 if !snippet.isEmpty {
                     Text(snippet)
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            Text(el.str(3)).dsText(.subhead12).foregroundStyle(DS.textTertiary)
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
@@ -2670,7 +2670,7 @@ private struct GenTokenChip: View {
             if let chart {
                 VStack(alignment: .trailing, spacing: 1) {
                     Text(TokenChartStyle.priceText(chart.price))
-                        .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                        .dsText(.subhead12).foregroundStyle(DS.textPrimary)
                         // Tabular, because it rolls — see `LiveTimeText` (prd §586).
                         .monospacedDigit()
                         .contentTransition(.numericText())
@@ -2713,7 +2713,7 @@ private struct GenSuggest: View {
     var body: some View {
         HStack(spacing: DS.Space.s3) {
             Text("2 tasks found in mail")
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text("Review")
                 .dsText(.label12).foregroundStyle(DS.tint)
@@ -2734,7 +2734,7 @@ private struct GenChip: View {
     var body: some View {
         HStack(spacing: DS.Space.s2) {
             TagGlyph(tag: el.str(0), size: 20)
-            Text(el.str(1)).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+            Text(el.str(1)).dsText(.subhead12).foregroundStyle(DS.textSecondary)
         }
         .padding(.vertical, DS.Space.s2)
     }
@@ -2748,7 +2748,7 @@ private struct GenTile: View {
             TagGlyph(tag: el.str(1), size: 24)
             Spacer(minLength: 0)
             Text(el.str(2)).dsText(.heading17).foregroundStyle(DS.textPrimary).lineLimit(1)
-            Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textSecondary).lineLimit(1)
+            Text(el.str(3)).dsText(.subhead12).foregroundStyle(DS.textSecondary).lineLimit(1)
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
@@ -2772,7 +2772,7 @@ private struct GenProjectTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             if !count.isEmpty {
-                Text(count).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                Text(count).dsText(.subhead12).foregroundStyle(DS.textTertiary)
             }
             Spacer(minLength: 0)
             Text(el.str(1)).dsText(.heading17).foregroundStyle(DS.textPrimary)
@@ -2805,7 +2805,7 @@ private struct GenPhotoTile: View {
                 }
             }
             Text(el.str(1)).dsText(.heading17).foregroundStyle(DS.textPrimary)
-            Text(el.str(2)).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+            Text(el.str(2)).dsText(.subhead12).foregroundStyle(DS.textSecondary)
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -2829,7 +2829,7 @@ private struct GenVoiceTile: View {
             .frame(height: 24)
             Spacer(minLength: 0)
             Text(el.str(1)).dsText(.heading17).foregroundStyle(DS.textPrimary)
-            Text(el.str(2)).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+            Text(el.str(2)).dsText(.subhead12).foregroundStyle(DS.textSecondary)
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
@@ -2999,7 +2999,7 @@ private struct GenTagMap: View {
                     // corner like every other module's pin (ruling 2026-07-12).
                     if !preview, pinBorn {
                         Image(systemName: "pin.fill")
-                            .dsGlyph(11)
+                            .dsGlyph(.caption)
                             .foregroundStyle(DS.textSecondary)
                             .rotationEffect(.degrees(-35), anchor: .bottomLeading)
                             .accessibilityLabel("Pinned")
@@ -3007,7 +3007,7 @@ private struct GenTagMap: View {
                     // A real, readable card title (ruling 2026-07-12): bigger,
                     // primary ink, so the type ramp carries the separation.
                     Text(eyebrow)
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                     Spacer()
                 }
@@ -3020,7 +3020,7 @@ private struct GenTagMap: View {
             // no room, and the eyebrow already names the wallet.
             if !el.str(1).isEmpty, span != .small {
                 Text(el.str(1))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .padding(.leading, DS.Space.s4)
                     .padding(.top, DS.Space.s1)
                     .padding(.bottom, DS.Space.s3)
@@ -3214,7 +3214,7 @@ private struct GenTagMap: View {
                     Spacer(minLength: 0)
                     if !preview, let value = item.value {
                         Text(value)
-                            .dsText(.subhead13).fontWeight(.semibold)
+                            .dsText(.subhead12).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                             .monospacedDigit()
                             .lineLimit(1)
@@ -3225,7 +3225,7 @@ private struct GenTagMap: View {
                 HStack(spacing: DS.Space.s2) {
                     TokenIcon(symbol: item.tag, size: 16)
                     Text(item.tag)
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
                         .lineLimit(1)
                         // See the note on the 4-unit cell above — 0.4 floored
@@ -3235,7 +3235,7 @@ private struct GenTagMap: View {
                     if !preview, f.2 >= 2, let value = item.value {
                         Spacer(minLength: 0)
                         Text(value)
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textSecondary)
                             .monospacedDigit()
                             .lineLimit(1)
@@ -3275,7 +3275,7 @@ private struct GenTagMap: View {
                 // still arrives on the ref; it just sizes the cell now.
                 if !preview, f.3 >= 2, iconMode != "plain" {
                     Text(item.n == 1 ? "1 thing" : "\(item.n) things")
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }
@@ -3463,7 +3463,7 @@ private struct GenTxRow: View {
                     ZStack {
                         coin
                         Text(String(ticker.prefix(1)))
-                            .dsText(.badgeInitial11)
+                            .dsText(.badgeInitial12)
                             .foregroundStyle(.white)
                     }
                 }
@@ -3477,13 +3477,13 @@ private struct GenTxRow: View {
         HStack(spacing: DS.Space.s3) {
             tokenMark
             Text(el.str(0))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(el.str(0) == "Received" ? DS.confirm : DS.textSecondary)
                 .frame(width: 70, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
                 Text(el.str(1)).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
                 if !el.str(2).isEmpty {
-                    Text(el.str(2)).dsText(.subhead13).foregroundStyle(DS.textTertiary).lineLimit(1)
+                    Text(el.str(2)).dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
                 }
             }
             Spacer()
@@ -3500,7 +3500,7 @@ private struct GenAgendaRow: View {
         let next = el.str(3) == "next"
         HStack(spacing: DS.Space.s3) {
             Text(el.str(0))
-                .dsText(.subhead13).monospacedDigit()
+                .dsText(.subhead12).monospacedDigit()
                 .fontWeight(next ? .bold : .regular)
                 .foregroundStyle(DS.textPrimary)
                 .frame(width: 58, alignment: .trailing)
@@ -3512,7 +3512,7 @@ private struct GenAgendaRow: View {
                     .dsText(.body17).fontWeight(next ? .semibold : .regular)
                     .foregroundStyle(DS.textPrimary).lineLimit(1)
                 if !el.str(2).isEmpty {
-                    Text(el.str(2)).dsText(.subhead13).foregroundStyle(DS.textTertiary).lineLimit(1)
+                    Text(el.str(2)).dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
                 }
             }
             Spacer()
@@ -3537,11 +3537,11 @@ private struct GenMailRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(el.str(0)).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
                 if !el.str(1).isEmpty {
-                    Text(el.str(1)).dsText(.subhead13).foregroundStyle(DS.textTertiary).lineLimit(1)
+                    Text(el.str(1)).dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
                 }
             }
             Spacer()
-            Text(el.str(2)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            Text(el.str(2)).dsText(.subhead12).foregroundStyle(DS.textTertiary)
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s1)
@@ -3564,7 +3564,7 @@ private struct GenPostRow: View {
             RemoteThumb(urlString: el.str(2), size: 28, fallback: el.str(0), circular: true)
             VStack(alignment: .leading, spacing: 2) {
                 if !el.str(0).isEmpty {
-                    Text(el.str(0)).dsText(.subhead13).foregroundStyle(DS.textSecondary).lineLimit(1)
+                    Text(el.str(0)).dsText(.subhead12).foregroundStyle(DS.textSecondary).lineLimit(1)
                 }
                 Text(el.str(1)).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(2)
             }
@@ -3589,7 +3589,7 @@ private struct GenTakeawayCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             if !el.str(2).isEmpty {
                 Text(el.str(2))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -3647,12 +3647,12 @@ private struct GenFaces: View {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     if !el.str(0).isEmpty {
                         Text(el.str(0))
-                            .dsText(.callout15).fontWeight(.semibold)
+                            .dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                     }
                     if !el.str(1).isEmpty {
                         Text(el.str(1))
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     }
                     // A horizontal roster rather than a wrapping cluster: the
                     // faces are different SIZES, and a wrap packs unequal
@@ -3758,12 +3758,12 @@ private struct GenContactSheet: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
                         Text(el.str(0))
-                            .dsText(.callout15).fontWeight(.semibold)
+                            .dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                     }
                     if !el.str(1).isEmpty {
                         Text(el.str(1))
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     }
                     LazyVGrid(columns: columns, spacing: 6) {
                         ForEach(Array(shots.enumerated()), id: \.offset) { i, shot in
@@ -3881,7 +3881,7 @@ private struct GenRunway: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
                         Text(el.str(0))
-                            .dsText(.callout15).fontWeight(.semibold)
+                            .dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                     }
                     GeometryReader { geo in
@@ -4023,11 +4023,11 @@ private struct GenAlerts: View {
                     if !el.str(0).isEmpty {
                         HStack(spacing: DS.Space.s2) {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .dsGlyph(13)
+                                .dsGlyph(.caption)
                                 .foregroundStyle(DS.attention)
                                 .accessibilityHidden(true)
                             Text(el.str(0))
-                                .dsText(.callout15).fontWeight(.semibold)
+                                .dsText(.body17).fontWeight(.semibold)
                                 .foregroundStyle(DS.textPrimary)
                         }
                     }
@@ -4046,7 +4046,7 @@ private struct GenAlerts: View {
                                     }
                                     if !item.meta.isEmpty {
                                         Text(item.meta)
-                                            .dsText(.subhead13)
+                                            .dsText(.subhead12)
                                             .foregroundStyle(DS.textSecondary)
                                             .lineLimit(1)
                                     }
@@ -4086,7 +4086,7 @@ private struct GenApprovalCard: View {
                 .dsText(.heading17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             if !el.str(2).isEmpty {
-                Text(el.str(2)).dsText(.subhead13).foregroundStyle(DS.textSecondary).lineLimit(2)
+                Text(el.str(2)).dsText(.subhead12).foregroundStyle(DS.textSecondary).lineLimit(2)
             }
             HStack(spacing: DS.Space.s2) {
                 Text("Approve").dsText(.label12).foregroundStyle(.black)
@@ -4376,13 +4376,13 @@ struct GenFrontPage: View {
                         // card itself stays ink and colour annotates rather
                         // than contains.
                         Image(systemName: GenSection.symbol(header.str(2)))
-                            .dsGlyph(11)
+                            .dsGlyph(.caption)
                             .foregroundStyle(GenSection.hue(header.str(2)))
                             .frame(width: 22, height: 22)
                             .background(GenSection.hue(header.str(2)).opacity(0.14),
                                         in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                         Text(title)
-                            .dsText(.subhead13).fontWeight(.semibold)
+                            .dsText(.subhead12).fontWeight(.semibold)
                             .foregroundStyle(DS.textSecondary)
                         Spacer(minLength: 0)
                         // Points RIGHT — it navigates. No chevron at all when
@@ -4410,14 +4410,14 @@ struct GenFrontPage: View {
                             // nothing.
                             HStack(alignment: .firstTextBaseline, spacing: 6) {
                                 Text(parts.value)
-                                    .dsText(.heading28)
+                                    .dsText(.heading40)
                                     .foregroundStyle(!qualifier.isEmpty && header.str(2) == "attention"
                                                      ? DS.attention : DS.textPrimary)
                                     .monospacedDigit()
                                     .lineLimit(1).minimumScaleFactor(0.7)
                                 if !parts.unit.isEmpty {
                                     Text(parts.unit)
-                                        .dsText(.subhead13).fontWeight(.semibold)
+                                        .dsText(.subhead12).fontWeight(.semibold)
                                         .foregroundStyle(DS.textTertiary)
                                         .lineLimit(1)
                                 }
@@ -4442,7 +4442,7 @@ struct GenFrontPage: View {
                     // twice (§386g's own leads-vs-observations rule).
                     if !sub.isEmpty, hasDoor {
                         Text(sub)
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
@@ -4718,14 +4718,14 @@ private struct GenValueSpark: View {
                 let chart = TokenChart(closes: series, price: series.last ?? 0, change: change)
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     HStack(spacing: DS.Space.s2) {
-                        Text(el.str(0)).dsText(.callout15).fontWeight(.semibold)
+                        Text(el.str(0)).dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                         Spacer(minLength: DS.Space.s2)
                         if let scrubIndex, series.indices.contains(scrubIndex) {
                             // One claim at a time: mid-scrub the slot states
                             // the sample, not the range's delta.
                             Text(TokenChartStyle.priceText(series[scrubIndex]))
-                                .dsText(.callout15).fontWeight(.semibold)
+                                .dsText(.body17).fontWeight(.semibold)
                                 .foregroundStyle(DS.textPrimary)
                                 // Tabular, because it rolls — see `LiveTimeText` (prd §586).
                                 .monospacedDigit()
@@ -4745,7 +4745,7 @@ private struct GenValueSpark: View {
                             }
                         }
                     if !el.str(1).isEmpty {
-                        Text(el.str(1)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        Text(el.str(1)).dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -4800,11 +4800,11 @@ private struct GenBars: View {
                 let order = risingOrder
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
-                        Text(el.str(0)).dsText(.callout15).fontWeight(.semibold)
+                        Text(el.str(0)).dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                     }
                     if !el.str(1).isEmpty {
-                        Text(el.str(1)).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        Text(el.str(1)).dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     }
                     HStack(alignment: .bottom, spacing: DS.Space.s2) {
                         ForEach(Array(counts.enumerated()), id: \.offset) { i, c in
@@ -4874,12 +4874,12 @@ private struct GenChartCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if !el.str(0).isEmpty {
-                Text(el.str(0)).dsText(.callout15).fontWeight(.semibold)
+                Text(el.str(0)).dsText(.body17).fontWeight(.semibold)
                     .foregroundStyle(DS.textPrimary)
             }
             TokenChartView(chain: el.str(1), address: el.str(2)) {
                 Text("Couldn't load this chart.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -4908,9 +4908,9 @@ private struct GenStatRow: View {
                 HStack(spacing: DS.Space.s2) {
                     ForEach(Array(tiles.enumerated()), id: \.offset) { _, t in
                         VStack(alignment: .leading, spacing: DS.Space.s1) {
-                            Text(t.value).dsText(.heading22).foregroundStyle(DS.textPrimary)
+                            Text(t.value).dsText(.heading24).foregroundStyle(DS.textPrimary)
                                 .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
-                            Text(t.label).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            Text(t.label).dsText(.subhead12).foregroundStyle(DS.textSecondary)
                                 .lineLimit(1)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -4949,7 +4949,7 @@ private struct GenAllocBar: View {
             if segs.count >= 2, total > 0 {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
-                        Text(el.str(0)).dsText(.callout15).fontWeight(.semibold)
+                        Text(el.str(0)).dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                     }
                     GeometryReader { geo in
@@ -4968,7 +4968,7 @@ private struct GenAllocBar: View {
                     .chartWipe(reduceMotion: reduceMotion)
                     Text(segs.map { "\($0.label) \(Int(($0.usd / total * 100).rounded()))%" }
                         .joined(separator: " · "))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary).lineLimit(1)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.Space.s4)
@@ -5036,13 +5036,13 @@ private struct GenDayNoteLine: View {
         let id = el.str(2)
         let line = HStack(alignment: .top, spacing: DS.Space.s3) {
             Image(systemName: el.str(0).isEmpty ? "sparkles" : el.str(0))
-                .dsGlyph(14)
+                .dsGlyph(.subhead)
                 .foregroundStyle(DS.textSecondary)
                 .frame(width: 20)
                 .padding(.top, 2)
                 .accessibilityHidden(true)
             GenSignedText(el.str(1), scheme: scheme)
-                .dsText(.callout15)
+                .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
@@ -5190,7 +5190,7 @@ private extension View {
 ///
 ///   • The DATELINE above it. The whisper capsule that opens this screen says
 ///     "Your Wednesday"; the screen itself named the day nowhere.
-///   • `heading28` instead of `heading22`. See that rung's own note in
+///   • `heading40` instead of `heading24`. See that rung's own note in
 ///     Typography: 22 is what every card title and tray header in the app
 ///     wears, so the sentence and the hero's `price40` under it — same rounded
 ///     bold face, eight points apart — read as one label-over-value unit.
@@ -5248,7 +5248,7 @@ private struct GenDayLede: View {
         // semantic ink, and the sentence demoted to the quiet line beneath.
         // Blue returns to being chrome only (chips, berry, send) so the
         // monument owns the screen. args 4/5/6 are composed by TodayBrief's
-        // clock; when they're empty the sentence stands alone at heading28 —
+        // clock; when they're empty the sentence stands alone at heading40 —
         // never a padded figure.
         //
         // The raw `.font(.system(size:))` on TEXT is deliberate and lawful —
@@ -5271,19 +5271,19 @@ private struct GenDayLede: View {
                     }
                 }
                 sentence
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 4)
             } else {
                 if !el.str(1).isEmpty {
                     Text(el.str(1))
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
                 sentence
-                    .dsText(.heading28)
+                    .dsText(.heading40)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -5391,7 +5391,7 @@ private struct GenMoneyHero: View {
                         // claims a span it never states.
                         if !el.str(5).isEmpty {
                             Text(el.str(5))
-                                .dsText(.label11)
+                                .dsText(.label12)
                                 .foregroundStyle(DS.textTertiary)
                                 .lineLimit(1)
                         }
@@ -5405,7 +5405,7 @@ private struct GenMoneyHero: View {
             // honesty marker (§83) must never depend on the curve being there.
             if series.count < 2, !el.str(5).isEmpty {
                 Text(el.str(5))
-                    .dsText(.label11)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }
@@ -5425,7 +5425,7 @@ private struct GenMoneyHero: View {
                 .disabled(el.str(8).isEmpty)
             } else if !el.str(3).isEmpty {
                 Text(el.str(3))
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -5490,7 +5490,7 @@ private struct GenMoneyHero: View {
                 .minimumScaleFactor(0.7)
             if let value = item.value, !value.isEmpty {
                 Text(value)
-                    .dsText(.label11)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
@@ -5566,7 +5566,7 @@ private struct GenLeadRow: View {
                     .frame(height: bannerHeight)
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    // `heading17` (the app's headline rung), not `callout15`
+                    // `heading17` (the app's headline rung), not `body17`
                     // semibold: with the art carrying the module's weight, a
                     // title at row size read as a caption under its own
                     // picture. Three lines rather than two — the two-line
@@ -5595,7 +5595,7 @@ private struct GenLeadRow: View {
                             }
                             if !el.str(1).isEmpty {
                                 Text(el.str(1))
-                                    .dsText(.subhead13)
+                                    .dsText(.subhead12)
                                     .foregroundStyle(DS.textTertiary)
                                     .lineLimit(1)
                             }
@@ -5634,14 +5634,14 @@ private struct GenLeadPost: View {
                     RemoteThumb(urlString: el.str(2), size: 36, fallback: el.str(0), circular: true)
                     if !el.str(0).isEmpty {
                         Text(el.str(0))
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
                     }
                     Spacer(minLength: 0)
                 }
                 // `body17` — the app's READING rung (Typography's 2026-07-25
-                // reading-band pass), not `callout15`. These are a person's
+                // reading-band pass), not `body17`. These are a person's
                 // actual words quoted in full; every other quotation of real
                 // prose in the app reads at this size, and the composer
                 // already clamps the post to 200 characters upstream, so the
@@ -5654,7 +5654,7 @@ private struct GenLeadPost: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if !el.str(3).isEmpty {
                     Text(el.str(3))
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
@@ -5685,11 +5685,11 @@ private struct GenAskMore: View {
                 Button { askRequest(el.str(1)) } label: {
                     HStack(spacing: DS.Space.s1) {
                         Text(el.str(0))
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.tint)
                             .multilineTextAlignment(.leading)
                         Image(systemName: "chevron.right")
-                            .dsGlyph(11)
+                            .dsGlyph(.caption)
                             .foregroundStyle(DS.tint)
                             .accessibilityHidden(true)
                     }
@@ -5792,7 +5792,7 @@ private struct GenMoversTile: View {
     private func row(_ m: Move, curve: Bool) -> some View {
         HStack(spacing: DS.Space.s2) {
             Text(m.symbol)
-                .dsText(.callout15)
+                .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -5815,7 +5815,7 @@ private struct GenMoversTile: View {
             }
             Spacer(minLength: DS.Space.s2)
             Text(m.value)
-                .dsText(.callout15).fontWeight(.semibold)
+                .dsText(.body17).fontWeight(.semibold)
                 .foregroundStyle(ink(m.value))
                 .monospacedDigit()
                 .lineLimit(1)
@@ -5829,7 +5829,7 @@ private struct GenMoversTile: View {
             if !moves.isEmpty {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     Text(el.str(0))
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)
                     ForEach(Array(moves.enumerated()), id: \.offset) { _, m in
                         // A row opens its own watched token (§225) — the one
@@ -5915,7 +5915,7 @@ private struct GenDial: View {
             if !figure.isEmpty {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
-                        Text(el.str(0)).dsText(.callout15).fontWeight(.semibold)
+                        Text(el.str(0)).dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                     }
                     FigureView(figure: figure, slot: .band, hue: DS.tint,
@@ -5985,21 +5985,21 @@ private struct GenNextTile: View {
         let id = el.str(4)
         let card = VStack(alignment: .leading, spacing: DS.Space.s1) {
             Text(el.str(0))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textTertiary)
             Text(el.str(1))
-                .dsText(.callout15).fontWeight(.semibold)
+                .dsText(.body17).fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s1)
             Text(el.str(2))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textSecondary)
                 .lineLimit(1)
             if !el.str(3).isEmpty {
                 Text(el.str(3))
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(TokenChartStyle.accent(change: -1, scheme: scheme))
                     .lineLimit(1)
                     .padding(.top, DS.Space.s1)
@@ -6063,7 +6063,7 @@ private struct GenSourceMix: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
                         Text(el.str(0))
-                            .dsText(.callout15).fontWeight(.semibold)
+                            .dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                     }
                     MiniTreemap(items: items) { item, index in cell(item, index: index) }
@@ -6077,7 +6077,7 @@ private struct GenSourceMix: View {
                         .clipped()
                     if !el.str(1).isEmpty {
                         Text(el.str(1))
-                            .dsText(.label11)
+                            .dsText(.label12)
                             .foregroundStyle(DS.textTertiary)
                     }
                 }
@@ -6108,7 +6108,7 @@ private struct GenSourceMix: View {
                     .minimumScaleFactor(0.7)
             }
             Text(item.n == 1 ? String(localized: "1 thing") : String(localized: "\(item.n) things"))
-                .dsText(.label11)
+                .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)

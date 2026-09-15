@@ -286,9 +286,9 @@ grep -q 'AgentReply.split(text)' "$WORK/terminal.nc" \
 # alone. What must survive is the STEP — a lead that is heavier and a rest that
 # is a rung down and secondary — because that is the hierarchy `split` exists
 # to produce, and without it the split is arithmetic nothing draws.
-grep -q 'dsText(.heading22)' "$WORK/terminal.nc" \
+grep -q 'dsText(.heading24)' "$WORK/terminal.nc" \
   || { echo "  ✗ drift: the lead lost its rung"; exit 1; }
-grep -q 'dsText(.reading20)' "$WORK/terminal.nc" \
+grep -q 'dsText(.reading17)' "$WORK/terminal.nc" \
   || { echo "  ✗ drift: the rest no longer steps down from the lead"; exit 1; }
 # AND IT IS IN A BUBBLE, LEADING, where the question's trails. That mirror is
 # what makes authorship legible before a word is read.

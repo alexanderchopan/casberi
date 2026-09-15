@@ -110,7 +110,7 @@ struct WalletApprovalExposureCard: View {
 
                 if let note = exposure.unpricedNote {
                     Text(note)
-                        .dsText(.label11)
+                        .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, DS.Space.s2)
@@ -163,7 +163,7 @@ struct WalletApprovalExposureCard: View {
                         // An unpriceable grant states a dash, never "$0" — the
                         // whole reason it sits outside the total (see the model).
                         Text(grant.usd.map(WalletValue.exactMoney) ?? "—")
-                            .dsText(.price16)
+                            .dsText(.price17)
                             .foregroundStyle(grant.usd == nil ? DS.textTertiary : DS.textPrimary)
                             .monospacedDigit()
                     }
@@ -223,7 +223,7 @@ struct WalletApprovalExposureCard: View {
 
     private func chipLabel(_ text: String, fill: Color, ink: Color) -> some View {
         Text(text)
-            .dsText(.label11).fontWeight(.bold)
+            .dsText(.label12).fontWeight(.bold)
             .foregroundStyle(ink)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
@@ -247,7 +247,7 @@ struct WalletApprovalExposureCard: View {
             onOpen(target)
         } label: {
             Text(String(localized: "Review the oldest grant"))
-                .dsText(.callout15).fontWeight(.semibold)
+                .dsText(.body17).fontWeight(.semibold)
                 // Inverted against the card, and inverted correctly in BOTH
                 // themes: white-on-black in dark, black-on-white in light.
                 .foregroundStyle(DS.page)

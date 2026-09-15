@@ -101,11 +101,11 @@ struct WalletNFTShelfCard: View {
         Button(action: onEdit) {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "square.grid.2x2")
-                    .dsGlyph(15, weight: .medium)
+                    .dsGlyph(.subhead, weight: .medium)
                     .foregroundStyle(DS.textTertiary)
                     .accessibilityHidden(true)
                 Text(String(localized: "Show NFTs from \(label)"))
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textSecondary)
                 Spacer(minLength: 0)
             }
@@ -139,7 +139,7 @@ struct WalletNFTShelfCard: View {
                     .dsText(.label12).fontWeight(.semibold)
                     .foregroundStyle(DS.textTertiary)
                 Text(headline)
-                    .dsText(.callout15).fontWeight(.semibold)
+                    .dsText(.body17).fontWeight(.semibold)
                     .foregroundStyle(DS.textPrimary)
             }
             Spacer(minLength: 0)
@@ -149,7 +149,7 @@ struct WalletNFTShelfCard: View {
             if !demo {
                 Button(action: onEdit) {
                     Text(String(localized: "Edit"))
-                        .dsText(.subhead13).fontWeight(.medium)
+                        .dsText(.subhead12).fontWeight(.medium)
                         .foregroundStyle(DS.tint)
                 }
                 .buttonStyle(PressSpring())
@@ -407,7 +407,7 @@ struct WalletNFTCollectionRows: View {
             if !demo {
                 Button(action: onEdit) {
                     Text(String(localized: "Choose collections"))
-                        .dsText(.subhead13).fontWeight(.medium)
+                        .dsText(.subhead12).fontWeight(.medium)
                         .foregroundStyle(DS.tint)
                         .padding(.vertical, DS.Space.s3)
                         .contentShape(Rectangle())
@@ -442,7 +442,7 @@ struct WalletNFTCollectionRows: View {
                     .dsText(.heading17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 Text(piece.collection)
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .lineLimit(1)
                 Text(WalletNFTShelfCard.chainWord(piece))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)

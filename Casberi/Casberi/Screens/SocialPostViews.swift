@@ -130,7 +130,7 @@ struct SocialThreadRest: View {
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
             ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
                 Text(ProseLinks.rendered(part))
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -211,7 +211,7 @@ struct SocialQuoteCard: View {
                     BridgeIcon(name: source, size: DS.Face.badge, circular: true)
                 }
                 Text("@\(SocialThread.shortHandle(card.handle))")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 Spacer(minLength: 0)
             }
             // A WORDLESS post is a real card, not a broken one (prd §704): a
@@ -221,7 +221,7 @@ struct SocialQuoteCard: View {
             // `SocialPostContent`, so the card is complete without it.
             if !card.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Text(card.text)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     // A quote is context, not the point — it shows enough to
                     // know what's being answered and stops. The tap has the rest.
                     .lineLimit(6)
@@ -331,7 +331,7 @@ struct SocialPostThread: View {
                 if let url = post.url.flatMap(URL.init) {
                     Button { openURL(url) } label: {
                         Text("Open on \(source)")
-                            .dsText(.callout15).foregroundStyle(DS.tint)
+                            .dsText(.body17).foregroundStyle(DS.tint)
                     }
                     .buttonStyle(.plain)
                 }
@@ -370,7 +370,7 @@ struct SocialPostThread: View {
                 BridgeIcon(name: source, size: DS.Face.row, circular: true)
             }
             Text("@\(SocialThread.shortHandle(post.handle))")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             Spacer(minLength: 0)
         }
         .contentShape(Rectangle())
@@ -461,9 +461,9 @@ struct SocialRepliesSection: View {
     private func words(_ reply: SocialReply) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text("@\(SocialThread.shortHandle(reply.handle))")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             Text(reply.text)
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -539,7 +539,7 @@ struct SocialProfileCard: View {
                 header
                 if let bio = shown.bio, !bio.isEmpty {
                     Text(bio)
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 watchRow
@@ -620,10 +620,10 @@ struct SocialProfileCard: View {
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "person.2")
-                    .dsGlyph(14)
+                    .dsGlyph(.subhead)
                     .foregroundStyle(DS.textSecondary)
                 Text("Who they follow")
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                 Spacer(minLength: 0)
             }
             .padding(DS.Space.s3)
@@ -666,10 +666,10 @@ struct SocialProfileCard: View {
         if watched {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "checkmark")
-                    .dsGlyph(14)
+                    .dsGlyph(.subhead)
                     .foregroundStyle(DS.confirm)
                 Text("Watching @\(shown.shortHandle)")
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                 Spacer(minLength: 0)
             }
             .padding(DS.Space.s3)
@@ -678,7 +678,7 @@ struct SocialProfileCard: View {
             // **THE ONE ACT, AT THE HEAD RUNG (prd §569).** This card exists
             // to answer "who is this, and do I want their posts" — everything
             // above is information and this is the point, which is §559's own
-            // definition of the case. It was a `callout15` row in a well,
+            // definition of the case. It was a `body17` row in a well,
             // quieter than the bio above it.
             //
             // The verb is "Watch", not "Watch @handle": at 40pt the handle is
@@ -710,10 +710,10 @@ struct SocialProfileCard: View {
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "wallet.pass")
-                    .dsGlyph(14)
+                    .dsGlyph(.subhead)
                     .foregroundStyle(DS.textSecondary)
                 Text("Watch their wallet")
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                 Spacer(minLength: 0)
             }
             .padding(DS.Space.s3)
@@ -737,10 +737,10 @@ struct SocialProfileCard: View {
                     } label: {
                         HStack(spacing: DS.Space.s2) {
                             Image(systemName: "magnifyingglass")
-                                .dsGlyph(14)
+                                .dsGlyph(.subhead)
                                 .foregroundStyle(DS.textSecondary)
                             Text("Look for them on \(other)")
-                                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
                             Spacer(minLength: 0)
                         }
                         .padding(DS.Space.s3)
@@ -750,7 +750,7 @@ struct SocialProfileCard: View {
                     .buttonStyle(PressSpring())
                 } else if elsewhere.isEmpty {
                     Text("No \(other) account by that name.")
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                        .dsText(.body17).foregroundStyle(DS.textTertiary)
                 } else {
                     // "— tap to watch one" restated the rows under it (prd §748).
                     Text("\(other) accounts by that name")

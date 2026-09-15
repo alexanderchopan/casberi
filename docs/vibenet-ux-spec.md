@@ -67,7 +67,7 @@ addresses, which is the correct fallthrough — do not touch that file).
 - API: `name(for:)`, `setName(_:for:)` (empty string clears), pruned when an
   address is unwatched.
 - Row title = nickname if set (in the current `.heading17`, NOT monospaced),
-  with the short address dropping to a `label11` `textTertiary` monospaced
+  with the short address dropping to a `label12` `textTertiary` monospaced
   line beneath. Unnamed rows unchanged.
 - Context menu grows: "Name this account…" (alert with a text field),
   "Copy address" (`UIPasteboard.general.string = item.address` — a devnet
@@ -124,7 +124,7 @@ Exact mapping (do not embellish — each line is the whole permissible claim):
 
 Where drawn:
 - `singleKeyLine`: title becomes `plainTitle` (semibold, as now), and
-  `plainDetail` becomes a `label11` `textTertiary` line beneath it (above
+  `plainDetail` becomes a `label12` `textTertiary` line beneath it (above
   the scope sentence). Nil detail draws nothing.
 - Matrix row name cells: keep `shortLabel` (width-constrained — do not
   change), EXCEPT `.secp256k1` may read "Wallet key" there if it measures
@@ -148,7 +148,7 @@ static func recentAccounts(keystore: String, limit: Int = 5) async -> [VibenetDi
 - Resolve each row's `createdAt` via the existing `VibenetChain.blockTime`
   (≤5 lookups, already bounded by the cap; sequential is fine on a devnet).
 - Screen row becomes: face (24) + short address + created-ago line
-  ("Created 4m ago", `.relative(presentation: .named)`) in `label11`
+  ("Created 4m ago", `.relative(presentation: .named)`) in `label12`
   `textTertiary` — omitted entirely when `createdAt` is nil. "Watch" action
   unchanged.
 - Update `VibenetScreen.discovered` state type + `loadDiscovery` to match.
@@ -263,9 +263,9 @@ carry the actual clock.
   semibold `textPrimary`, then the strip — 10pt dots, `Self.mark` filled
   for added, a 2.5pt `Self.mark` ring (clear center) for revoked, 8pt
   spacing, left-aligned with a `Spacer` (the matrix's own intrinsic-width
-  rule). Endpoint labels in `.label11` `textTertiary` under the strip's
+  rule). Endpoint labels in `.label12` `textTertiary` under the strip's
   first and last dots. More than `historyCap` events: a leading
-  "+N earlier" in `.label11` `textTertiary` before the first dot.
+  "+N earlier" in `.label12` `textTertiary` before the first dot.
   ≤1 moment total: don't draw the strip (one dot is not a story) — the
   summary line alone may still show.
 - **Demo**: give `rich` a 4-moment history (two adds, a revoke, an add —
@@ -333,7 +333,7 @@ real reading of its config churn — show them as numbers.
   single-chain `VibenetMultichainSync.summary` text with the two chips —
   capsules, `Self.mark.opacity(0.12)` fill, `.padding(.horizontal, 8)
   .padding(.vertical, 3)`; inside each, the value `.label12` semibold
-  `textPrimary` then the label `.label11` `textTertiary`, one line, no
+  `textPrimary` then the label `.label12` `textTertiary`, one line, no
   wrapping (`.fixedSize()`). Explorer link unchanged on the trailing edge.
   `changeSequences == nil` → no chips, exactly as the sentence today.
 - **Ready-to-extend, NOT built**: when `VibenetChainStanding`s ≥ 2 exist
@@ -421,9 +421,9 @@ adaptive fork is DELETED, not extended.
   the unknown tail — must go red.
 - **The key row** (`VibenetRoomCard.swift`, new `keyRow(_ actor:)`):
   - Title line: `plainTitle` (`.label12` semibold) + `plainDetail`
-    (`.label11` tertiary) beneath, exactly as `singleKeyLine` draws today.
+    (`.label12` tertiary) beneath, exactly as `singleKeyLine` draws today.
   - Under it: the granted permissions as CHIPS — R2.3's exact capsule
-    grammar (`Self.mark.opacity(0.12)` fill, `.label11`, `.lineLimit(1)
+    grammar (`Self.mark.opacity(0.12)` fill, `.label12`, `.lineLimit(1)
     .fixedSize()` per chip), laid out in the existing `FlowLayout`
     (`ThingSheetView.swift:2709`) so whole capsules wrap to the next line
     and text inside a capsule never does. "No scope" (empty grant) draws
@@ -457,7 +457,7 @@ one-gesture rule holds (tap → sheet), the chevron flips from up/down to
   discipline without the SwiftData half.
 - **Anatomy, top to bottom (Cash App: hero first, whisper labels)**:
   1. `WalletFace` at 56pt + nickname (or short address) as the hero title
-     (`.heading22`); beneath it the FULL address, monospaced `.label11`
+     (`.heading24`); beneath it the FULL address, monospaced `.label12`
      tertiary, `.lineLimit(1)` middle-truncation is fine here (it's the
      one place the whole address appears; Copy handles precision).
   2. The state, as one sentence — reuse the row's own precedence verbatim:

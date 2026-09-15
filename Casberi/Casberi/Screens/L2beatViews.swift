@@ -95,7 +95,7 @@ struct L2beatStripKey: View {
 				.fill(L2beatCopy.color(sentiment))
 				.frame(height: Self.cellHeight)
 			Text(axis.shortLabel)
-				.dsText(.label11)
+				.dsText(.label12)
 				.fontWeight(focused == axis ? .semibold : .regular)
 				.foregroundStyle(focused == axis ? DS.textPrimary : DS.textTertiary)
 				.lineLimit(1)
@@ -135,7 +135,7 @@ struct L2beatStageChip: View {
 
 	var body: some View {
 		Text(stage?.label ?? String(localized: "Not staged"))
-			.dsText(compact ? .label11 : .label12)
+			.dsText(compact ? .label12 : .label12)
 			.fontWeight(.semibold)
 			.foregroundStyle(L2beatCopy.stageInk(stage))
 			.lineLimit(1)
@@ -157,7 +157,7 @@ struct L2beatSentimentTag: View {
 				.fill(L2beatCopy.color(sentiment))
 				.frame(width: 7, height: 7)
 			Text(L2beatCopy.label(sentiment))
-				.dsText(.label11)
+				.dsText(.label12)
 				.fontWeight(.semibold)
 				.foregroundStyle(sentiment == .unknown ? DS.textTertiary : DS.textSecondary)
 		}
@@ -209,7 +209,7 @@ struct L2beatMark: View {
 						.padding(size * 0.14)
 				} else {
 					Text(initial)
-						.dsText(.badgeInitial11)
+						.dsText(.badgeInitial12)
 						.foregroundStyle(DS.textSecondary)
 				}
 			}

@@ -6,7 +6,7 @@ import Foundation
 /// **What it replaces.** A watched token or stock had no hero at all: it fell
 /// through every branch of `ThingSheetView`'s cascade to the plain title block,
 /// so the price rendered as BODY CONTENT, third on the sheet, under a
-/// `heading34` string that had already said the name. Seven independently
+/// `heading40` string that had already said the name. Seven independently
 /// padded blocks with no container, no subject and nothing the app says —
 /// while the sheet title said "Aerodrome · $AERO", the eyebrow said "3h ago",
 /// the delta pill said "· 1D", the chips said "1D" and the spec table said

@@ -101,15 +101,15 @@ import re, sys
 src = open(sys.argv[1]).read()
 # the note must be the LEAD SENTENCE in the branch the lede declines to. Since
 # prd §745 the card hands the template a `Lead` and `DSRoomChassis.LeadView`
-# draws `.sentence` at `heading22` for every room head — pinned below — so the
+# draws `.sentence` at `heading24` for every room head — pinned below — so the
 # promotion is asserted here and the rung once, at the template.
 m = re.search(r'return\s+\.sentence\(JournalRoom\.note\(room\)\)', re.sub(r'//.*', '', src))
 sys.exit(0 if m else 1)
 PYCHK
-python3 - Casberi/Casberi/Design/DSRoomHead.swift <<'PYCHK' || { echo "✗ DSRoomChassis.LeadView no longer draws a sentence lead at heading22 — every room head's lead drops a rung (prd §451/§745)"; exit 1; }
+python3 - Casberi/Casberi/Design/DSRoomHead.swift <<'PYCHK' || { echo "✗ DSRoomChassis.LeadView no longer draws a sentence lead at heading24 — every room head's lead drops a rung (prd §451/§745)"; exit 1; }
 import re, sys
 src = re.sub(r'//.*', '', open(sys.argv[1]).read())
-sys.exit(0 if re.search(r'case \.sentence\(let sentence\):\s*\n\s*Text\(verbatim: sentence\)\s*\n\s*\.dsText\(\.heading22\)', src) else 1)
+sys.exit(0 if re.search(r'case \.sentence\(let sentence\):\s*\n\s*Text\(verbatim: sentence\)\s*\n\s*\.dsText\(\.heading24\)', src) else 1)
 PYCHK
 # …and the lede must decline on the same condition the headline does, or the
 # promotion fires on a room that has a run.

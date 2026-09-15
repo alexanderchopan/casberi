@@ -71,7 +71,7 @@ struct StarterPackImportSheet: View {
         if let packs {
             if packs.isEmpty {
                 Text("Nobody's built a pack matching “\(query)” yet.")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
             } else {
                 ScrollView {
                     LazyVStack(spacing: DS.Space.s2) {
@@ -104,11 +104,11 @@ struct StarterPackImportSheet: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(pack.name).dsText(.heading17).foregroundStyle(DS.textPrimary).lineLimit(1)
                     Text(pack.creatorHandle.isEmpty ? "Bluesky" : "by @\(pack.creatorHandle)")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary).lineLimit(1)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
-                    .dsGlyph(13)
+                    .dsGlyph(.caption)
                     .foregroundStyle(DS.textTertiary)
             }
             .padding(DS.Space.s3)
@@ -129,29 +129,29 @@ struct StarterPackImportSheet: View {
                 followed = nil
             } label: {
                 Image(systemName: "chevron.left")
-                    .dsGlyph(15)
+                    .dsGlyph(.subhead)
                     .foregroundStyle(DS.textSecondary)
                     .dsTapTarget()
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("Back to the pack list"))
             Text(pack.creatorHandle.isEmpty ? "Bluesky" : "by @\(pack.creatorHandle)")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
         }
         if let description = pack.description {
-            Text(description).dsText(.callout15).foregroundStyle(DS.textSecondary)
+            Text(description).dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         if loadingMembers {
             HStack(spacing: DS.Space.s2) {
                 DSSpinner()
                 Text("Reading who's in this pack…")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
             }
             .padding(.vertical, DS.Space.s3)
         } else if members.isEmpty {
             Text("Couldn't read this pack just now.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                .dsText(.body17).foregroundStyle(DS.textTertiary)
         } else {
             faceGrid
             followButton(pack)

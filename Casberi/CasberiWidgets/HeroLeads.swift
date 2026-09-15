@@ -93,7 +93,7 @@ struct HeroContactSheet: View {
                 .frame(width: side, height: side)
                 .overlay(
                     Text("+\(overflow)")
-                        .dsText(.widgetRecentTitle12)
+                        .dsText(.widgetLabel12)
                         .foregroundStyle(.white.opacity(0.75))
                 )
         } else {
@@ -131,7 +131,7 @@ struct HeroPostsLead: View {
             // On the ramp since 2026-08-28. These were the file's only raw
             // sizes — 17 semibold ROUNDED over 12 medium — while every other
             // lead beside them (`widgetFigure24`, `widgetSubline12`,
-            // `widgetTreemapTerm12`, `widgetRecentTitle12`) went through
+            // `widgetLabel12`, `widgetLabel12`) went through
             // `dsText`. Two costs, neither visible in a screenshot of the
             // default size: they were FROZEN, so at an accessibility size this
             // lead alone stayed put while the tiles around it grew, and the
@@ -194,7 +194,7 @@ struct HeroSourceMix: View {
             Spacer(minLength: 0)
             monogram(cell.name, side: 26, corner: 8, style: .widgetTimer13)
             Text(cell.name)
-                .dsText(.widgetTreemapTerm12)
+                .dsText(.widgetLabel12)
                 .foregroundStyle(.white)
                 .lineLimit(1)
         }
@@ -207,7 +207,7 @@ struct HeroSourceMix: View {
         HStack(spacing: 6) {
             monogram(cell.name, side: 20, corner: 6, style: .widgetEyebrow11)
             Text(cell.name)
-                .dsText(.widgetTreemapTerm12)
+                .dsText(.widgetLabel12)
                 .foregroundStyle(.white)
                 .lineLimit(1)
             Spacer(minLength: 0)

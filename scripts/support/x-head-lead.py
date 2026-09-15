@@ -7,13 +7,13 @@ same sort, same tie rule) and the year strip draws as its only full-height
 capsule. It was cut; the note took its tier.
 
 A `grep` for the absence of `headline` is only half a guard: a card that
-dropped the headline and left the note at `subhead13` compiles, passes that
+dropped the headline and left the note at `subhead12` compiles, passes that
 half, and renders a room head with no lead at all. This asserts the promotion
 itself. Comments are stripped first, because the card documents the cut by
 naming the tier it moved FROM (the Obsidian/Cursor lesson).
 
 Re-pointed for prd §745: the card hands `DSRoomChassis.Head` a `Lead`, and the
-template's `LeadView` draws every `.sentence` lead at `heading22`. So both halves
+template's `LeadView` draws every `.sentence` lead at `heading24`. So both halves
 are asserted — the card passes the note as the lead, and the template still
 draws a sentence lead at the head rung.
 """
@@ -27,7 +27,7 @@ template = Path(__file__).resolve().parents[2] / "Casberi/Casberi/Design/DSRoomH
 tsrc = re.sub(r'//.*', '', template.read_text()) if template.exists() else ""
 
 card_ok = re.search(r'lead:\s*\.sentence\(XRoom\.note\(room\)\)', src)
-rung_ok = re.search(r'case \.sentence\(let sentence\):\s*\n\s*Text\(verbatim: sentence\)\s*\n\s*\.dsText\(\.heading22\)', tsrc)
+rung_ok = re.search(r'case \.sentence\(let sentence\):\s*\n\s*Text\(verbatim: sentence\)\s*\n\s*\.dsText\(\.heading24\)', tsrc)
 ok = bool(card_ok and rung_ok)
 print("  ✓ the X room head leads with the note"
       if ok else "  ✗ the X room head no longer leads with the note at the head rung (§451/§745)")

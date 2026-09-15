@@ -172,7 +172,7 @@ struct FramesPasskeyRow: View {
                     WalletFace(address: address, size: DS.Face.list, circular: true)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(String(localized: "Passkey account"))
-                            .dsText(.callout15).fontWeight(.semibold)
+                            .dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                         Text(WalletStore.shortAddress(address))
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -186,7 +186,7 @@ struct FramesPasskeyRow: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis")
-                            .dsGlyph(15, weight: .semibold)
+                            .dsGlyph(.subhead, weight: .semibold)
                             .foregroundStyle(DS.textSecondary)
                             .frame(width: DS.Hit.min, height: DS.Hit.min)
                             .contentShape(Rectangle())
@@ -201,11 +201,11 @@ struct FramesPasskeyRow: View {
                 } label: {
                     HStack(spacing: DS.Space.s2) {
                         Image(systemName: "person.badge.key")
-                            .dsGlyph(15, weight: .semibold)
+                            .dsGlyph(.subhead, weight: .semibold)
                             .accessibilityHidden(true)
                         Text(String(localized: "Create a passkey account"))
                     }
-                    .dsText(.callout15).fontWeight(.semibold)
+                    .dsText(.body17).fontWeight(.semibold)
                     .foregroundStyle(FramesPasskey.enclaveAvailable ? DS.tint : DS.textTertiary)
                     .contentShape(Rectangle())
                 }

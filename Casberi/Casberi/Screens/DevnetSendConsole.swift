@@ -226,7 +226,7 @@ struct DevnetVerbRow: View {
                     .frame(width: DS.Face.row, height: DS.Face.row)
                 Image(systemName: glyph)
                     .accessibilityHidden(true)
-                    .dsGlyph(13, weight: .semibold)
+                    .dsGlyph(.caption, weight: .semibold)
                     .foregroundStyle(tint)
             }
         }
@@ -299,7 +299,7 @@ struct DevnetKeypad: View {
                 if isDelete {
                     Image(systemName: "delete.backward")
                         .accessibilityHidden(true)
-                        .dsGlyph(24, weight: .regular)
+                        .dsGlyph(.title, weight: .regular)
                         .foregroundStyle(DS.textPrimary)
                 } else {
                     Text(label)
@@ -396,7 +396,7 @@ struct DevnetSendPlanStrip: View {
                 if index < steps.count - 1 {
                     Image(systemName: "arrow.right")
                         .accessibilityHidden(true)
-                        .dsGlyph(10, weight: .semibold)
+                        .dsGlyph(.tick, weight: .semibold)
                         .foregroundStyle(DS.textTertiary)
                 }
             }
@@ -629,15 +629,15 @@ struct DevnetAdvancedSheet: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Toggle(isOn: $hasWindow) {
                 Text(String(localized: "Only valid for a window"))
-                    .dsText(.callout15).fontWeight(.semibold)
+                    .dsText(.body17).fontWeight(.semibold)
                     .foregroundStyle(DS.textPrimary)
             }
             .tint(tint)
             if hasWindow {
                 DatePicker(String(localized: "From"), selection: $opensAt)
-                    .dsText(.callout15)
+                    .dsText(.body17)
                 DatePicker(String(localized: "Until"), selection: $closesAt)
-                    .dsText(.callout15)
+                    .dsText(.body17)
                 // The refusal the chain would make, said HERE rather than after
                 // a Face ID — the sheet's whole reason for validating early.
                 if let why = draft.refusal(now: UInt64(Date().timeIntervalSince1970)) {
@@ -905,7 +905,7 @@ struct DevnetSendSheet: View {
                 } label: {
                     Image(systemName: "chevron.left")
                         .accessibilityHidden(true)
-                        .dsGlyph(18, weight: .semibold)
+                        .dsGlyph(.body, weight: .semibold)
                         .foregroundStyle(DS.textPrimary)
                         .frame(width: DS.Hit.min, height: DS.Hit.min, alignment: .leading)
                         .contentShape(Rectangle())
@@ -935,7 +935,7 @@ struct DevnetSendSheet: View {
                         Spacer(minLength: DS.Space.s2)
                         Image(systemName: "arrow.right")
                             .accessibilityHidden(true)
-                            .dsGlyph(14, weight: .semibold)
+                            .dsGlyph(.subhead, weight: .semibold)
                             .foregroundStyle(tint)
                     }
                     .frame(height: DS.Hit.min)
@@ -1002,7 +1002,7 @@ struct DevnetSendSheet: View {
                 } label: {
                     Image(systemName: "chevron.left")
                         .accessibilityHidden(true)
-                        .dsGlyph(18, weight: .semibold)
+                        .dsGlyph(.body, weight: .semibold)
                         .foregroundStyle(DS.textPrimary)
                         .frame(width: DS.Hit.min, height: DS.Hit.min, alignment: .leading)
                         .contentShape(Rectangle())
@@ -1173,9 +1173,9 @@ struct DevnetSendSheet: View {
                 }
             } label: {
                 HStack(spacing: 4) {
-                    Text(shownUnit).dsText(.price16)
+                    Text(shownUnit).dsText(.price17)
                     Image(systemName: "chevron.up.chevron.down")
-                        .dsGlyph(11, weight: .semibold)
+                        .dsGlyph(.caption, weight: .semibold)
                         .accessibilityHidden(true)
                 }
                 .foregroundStyle(tint)
@@ -1184,7 +1184,7 @@ struct DevnetSendSheet: View {
             .accessibilityLabel(Text(String(localized: "What to send: \(shownUnit)")))
         } else {
             Text(unit)
-                .dsText(.price16)
+                .dsText(.price17)
                 .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
         }
     }
@@ -1199,7 +1199,7 @@ struct DevnetSendSheet: View {
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: stitch == nil ? "arrow.up.right" : "plus")
-                    .dsGlyph(15, weight: .semibold)
+                    .dsGlyph(.subhead, weight: .semibold)
                 // **THE BUTTON NAMES WHAT IT DOES, and in a builder that is
                 // not sending.** "Send" on a screen that appends a leg is the
                 // §83 fake status in the one place it would cost money: you
@@ -1211,7 +1211,7 @@ struct DevnetSendSheet: View {
                               : String(localized: "Add")))
                 if busy { DSSpinner(size: .mini, onFill: true) }
             }
-            .dsText(.callout15).fontWeight(.semibold)
+            .dsText(.body17).fontWeight(.semibold)
             .foregroundStyle(armed ? .white : DS.textTertiary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, DS.Space.s4)
@@ -1345,7 +1345,7 @@ struct DevnetSendSheet: View {
         HStack(spacing: DS.Space.s3) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(String(localized: "Who pays the fee"))
-                    .dsText(.callout15).fontWeight(.semibold)
+                    .dsText(.body17).fontWeight(.semibold)
                     .foregroundStyle(DS.textPrimary)
                 DSFootnote(Text(payer == nil
                      ? String(localized: "You do, from this account.")
@@ -1370,10 +1370,10 @@ struct DevnetSendSheet: View {
             } label: {
                 HStack(spacing: 4) {
                     Text(payer.map(payerName) ?? String(localized: "You"))
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .lineLimit(1)
                     Image(systemName: "chevron.up.chevron.down")
-                        .dsGlyph(11, weight: .semibold)
+                        .dsGlyph(.caption, weight: .semibold)
                         .accessibilityHidden(true)
                 }
                 .foregroundStyle(tint)
@@ -1408,7 +1408,7 @@ struct DevnetSendSheet: View {
     @ViewBuilder private func askShare(_ link: URL, expires: Date?) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(String(localized: "Signed. Now send it to \(payer.map(payerName) ?? "")."))
-                .dsText(.callout15).fontWeight(.semibold)
+                .dsText(.body17).fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             if let expires {
@@ -1418,11 +1418,11 @@ struct DevnetSendSheet: View {
                       message: Text(String(localized: "Can you pay the fee for this on \(venue)?"))) {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "square.and.arrow.up")
-                        .dsGlyph(15, weight: .semibold)
+                        .dsGlyph(.subhead, weight: .semibold)
                         .accessibilityHidden(true)
                     Text(String(localized: "Share the request"))
                 }
-                .dsText(.callout15).fontWeight(.semibold)
+                .dsText(.body17).fontWeight(.semibold)
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, DS.Space.s4)
@@ -1475,12 +1475,12 @@ struct DevnetSendSheet: View {
             HStack(spacing: DS.Space.s3) {
                 Image(systemName: "checkmark.seal")
                     .accessibilityHidden(true)
-                    .dsGlyph(22, weight: .semibold)
+                    .dsGlyph(.title, weight: .semibold)
                     .foregroundStyle(DS.textTertiary)
                     .frame(width: DevnetConsole.legFace, height: DevnetConsole.legFace)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(name)
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.textSecondary)
                     Text(detail)
                         .dsText(.label12)
@@ -1495,7 +1495,7 @@ struct DevnetSendSheet: View {
     /// **THE FIGURE IS THE ROW'S CROWN** (prd §571), and the name is its
     /// label — the two-tier rule at row scale, and the reverse of what shipped.
     /// This is the list somebody reads to check what is about to leave, and on
-    /// it the AMOUNT was `callout15` in `textSecondary` while the NAME — very
+    /// it the AMOUNT was `body17` in `textSecondary` while the NAME — very
     /// often an address-book label somebody typed, or a shortened hex stub —
     /// was bold and primary. That is §563's inversion one surface down: the
     /// thing you are here to check was the quietest thing in the row.
@@ -1508,7 +1508,7 @@ struct DevnetSendSheet: View {
             HStack(spacing: DS.Space.s3) {
                 WalletFace(address: leg.address, size: DevnetConsole.legFace, circular: true)
                 Text(name(for: leg.address))
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(1)
                 Spacer(minLength: DS.Space.s2)
@@ -1550,7 +1550,7 @@ struct DevnetSendSheet: View {
                     // came to use.
                     Image(systemName: "minus.circle")
                         .accessibilityHidden(true)
-                        .dsGlyph(20, weight: .regular)
+                        .dsGlyph(.title, weight: .regular)
                         .foregroundStyle(DS.textTertiary)
                         .frame(width: DS.Hit.min, height: DS.Hit.min)
                         .contentShape(Rectangle())
@@ -1598,11 +1598,11 @@ struct DevnetSendSheet: View {
                 HStack(spacing: DS.Space.s3) {
                     Image(systemName: "plus")
                         .accessibilityHidden(true)
-                        .dsGlyph(22, weight: .semibold)
+                        .dsGlyph(.title, weight: .semibold)
                         .foregroundStyle(tint)
                         .frame(width: DevnetConsole.legFace, height: DevnetConsole.legFace)
                     Text(String(localized: "Add a frame"))
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(tint)
                     Spacer(minLength: 0)
                 }
@@ -1615,7 +1615,7 @@ struct DevnetSendSheet: View {
     /// The venue's own two-state choice, above the keypad.
     ///
     /// **Compact on purpose.** `atomicRow` is the same control one screen over
-    /// and can afford `callout15` over `label12` with `s3` padding, because the
+    /// and can afford `body17` over `label12` with `s3` padding, because the
     /// leg list scrolls; this screen does not, and its own budget note records
     /// that it has negative slack on a 736pt phone before anything optional
     /// exists. So this is one line and a toggle, and the plan strip below it is
@@ -1624,7 +1624,7 @@ struct DevnetSendSheet: View {
         HStack(spacing: DS.Space.s3) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(choice.title)
-                    .dsText(.callout15).fontWeight(.semibold)
+                    .dsText(.body17).fontWeight(.semibold)
                     .foregroundStyle(DS.textPrimary)
                 Text(choiceOn ? choice.on : choice.off)
                     .dsText(.label12)
@@ -1659,7 +1659,7 @@ struct DevnetSendSheet: View {
             } label: {
                 HStack(spacing: DS.Space.s2) {
                     Text(String(localized: "Advanced"))
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.textSecondary)
                     Spacer(minLength: DS.Space.s2)
                     Text(advancedSummary)
@@ -1699,7 +1699,7 @@ struct DevnetSendSheet: View {
             HStack(spacing: DS.Space.s3) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                     Text(atomicChoice ? on : off)
                         .dsText(.label12)
@@ -1749,7 +1749,7 @@ struct DevnetSendSheet: View {
 
     /// **THE COMMIT IS THE HERO TILE** (prd §571, §559's grammar).
     ///
-    /// It was a 50pt capsule with its verb at `callout15` — smaller than the
+    /// It was a 50pt capsule with its verb at `body17` — smaller than the
     /// figures in the list above it — on a sheet whose whole reason is this one
     /// act. `DSActVerb` puts the verb at `price40` hard against the bottom-left
     /// with the disc above it, which is the same tile the room's Home panel
@@ -1759,7 +1759,7 @@ struct DevnetSendSheet: View {
     /// **NAMES THE TOTAL, NOT THE COUNT** — §538's ruling on the one-act send,
     /// unchanged: the tile moves money, so it says how much, and the count is
     /// the one thing already visible in the list above it. The unit rides the
-    /// `price16` slot beside the verb's baseline rather than inside it, which
+    /// `price17` slot beside the verb's baseline rather than inside it, which
     /// is the amount screen's own lockup.
     ///
     /// `disabled` is `legs.isEmpty` and NOT `!armedAll`: a busy tile keeps its

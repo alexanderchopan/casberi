@@ -732,7 +732,7 @@ struct HandleSetupScreen: View {
                     actionLabel: omniButtonLabel, action: omniSubmit)
         if !omniHits.isEmpty {
             Text(AccountPageShape.onLabel(bridge.rawValue))
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 .padding(.top, DS.Space.s2)
         }
         ForEach(omniHits) { hit in
@@ -768,7 +768,7 @@ struct HandleSetupScreen: View {
         if let exportURL {
             ShareLink(item: exportURL) {
                 Text("Export as OPML")
-                    .dsText(.subhead13).foregroundStyle(DS.tint)
+                    .dsText(.subhead12).foregroundStyle(DS.tint)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)

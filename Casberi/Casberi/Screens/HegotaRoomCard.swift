@@ -235,13 +235,13 @@ struct HegotaRoomFigure: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if !head.hasRead {
                 Text(String(localized: "Reading the chain…"))
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
             } else if head.everythingUnreached {
                 Text(String(localized: "Couldn't reach the chain — nothing below is current."))
-                    .dsText(.subhead13).foregroundStyle(DS.attention)
+                    .dsText(.subhead12).foregroundStyle(DS.attention)
             } else if head.partial {
                 Text(String(localized: "\(String(head.watched - head.reached)) of \(String(head.watched)) couldn't be read"))
-                    .dsText(.subhead13).foregroundStyle(DS.attention)
+                    .dsText(.subhead12).foregroundStyle(DS.attention)
             }
             if let account = primary, case let series = HegotaRoom.valueSamples(account),
                series.count >= 2 {
@@ -297,7 +297,7 @@ struct HegotaRoomFigure: View {
     /// numbers this scope is actually about — what came in, what went out —
     /// were a 12pt sentence in the quietest tier on the card, under a second
     /// 12pt sentence apologising for the scale. They are the two column heads
-    /// at `price16` instead, sitting over the stacks they total, and the
+    /// at `price17` instead, sitting over the stacks they total, and the
     /// sentence that said them is deleted rather than moved.
     ///
     /// **The log disclaimer is an AXIS TAG, not a sentence.** It labels the
@@ -362,7 +362,7 @@ struct HegotaRoomFigure: View {
     /// clearance, spelled here because this row is not a caption.
     /// **THE TWO TOTALS ARE THE FIGURE (prd §566).**
     ///
-    /// §555 moved them out of a 12pt caption into `price16` column heads and
+    /// §555 moved them out of a 12pt caption into `price17` column heads and
     /// deleted the sentences around them. This finishes that move: what the
     /// scope is ABOUT is how much came in and how much went out, so they take
     /// the head rung and everything else on the card drops to `label12`. The
@@ -370,7 +370,7 @@ struct HegotaRoomFigure: View {
     ///
     /// **THE QUALIFIER IS INLINE, AND THAT IS A BUDGET DECISION.** §555's sum
     /// leaves 8pt of slack in the 166pt box and `price40` costs 18 more than
-    /// `price16`, so a separate sub-line row would overflow — which is §552's
+    /// `price17`, so a separate sub-line row would overflow — which is §552's
     /// failure, a card that renders perfectly and continues past the fold. The
     /// caption sits beside each baseline instead, and the head stays ONE row:
     ///
@@ -657,7 +657,7 @@ struct HegotaRoomFigure: View {
         if lane.isOther {
             Circle().fill(DS.fillFaint).frame(width: 15, height: 15)
         } else if lane.address.caseInsensitiveCompare(HegotaChain.vault) == .orderedSame {
-            Image(systemName: "tray.full").dsGlyph(9)
+            Image(systemName: "tray.full").dsGlyph(.tick)
                 .foregroundStyle(DS.tint)
                 .frame(width: DS.Face.badge, height: DS.Face.badge)
         } else {
@@ -746,7 +746,7 @@ struct HegotaRoomFigure: View {
         let share = total > 0 ? (account.balanceWei ?? 0) / total : 0
         VStack(alignment: .leading, spacing: 2) {
             Text(HegotaFormat.crown(account.balanceWei ?? 0))
-                .dsText(tall ? .callout15 : .label12)
+                .dsText(tall ? .body17 : .label12)
                 .fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.6)
@@ -784,7 +784,7 @@ struct HegotaRoomFigure: View {
     /// roster row, even one that says the chain could not be reached, which is
     /// itself the answer" — and then drew every word of it at `label12`, the
     /// quiet tier, on the one scope whose subject is these addresses. The name
-    /// steps to `price16` and gains the face §555 asked for in its own words
+    /// steps to `price17` and gains the face §555 asked for in its own words
     /// ("i don't like seeing so many different sizes of silhouette avatars"):
     /// ONE size, `DS.Face.list`, the same 36pt disc the hero lockup uses.
     ///
@@ -799,7 +799,7 @@ struct HegotaRoomFigure: View {
                 .opacity(row.reached ? 1 : 0.45)
             Text(HegotaWatch.shared.name(for: row.address)
                  ?? WalletStore.shortAddress(row.address))
-                .dsText(.price16)
+                .dsText(.price17)
                 .foregroundStyle(row.reached ? DS.textPrimary : DS.textTertiary)
                 .lineLimit(1).minimumScaleFactor(0.75)
             Spacer(minLength: DS.Space.s2)
@@ -835,7 +835,7 @@ struct HegotaRoomFigure: View {
                     glyph: "exclamationmark.triangle")
         } else if badge.mark.counted {
             HStack(spacing: 4) {
-                Image(systemName: rosterGlyph(badge.mark)).dsGlyph(10, weight: .semibold)
+                Image(systemName: rosterGlyph(badge.mark)).dsGlyph(.tick, weight: .semibold)
                 Text(String(badge.count)).dsText(.label12).monospacedDigit()
             }
             .foregroundStyle(tint)
@@ -844,7 +844,7 @@ struct HegotaRoomFigure: View {
             .accessibilityElement()
             .accessibilityLabel(rosterReadout(badge))
         } else {
-            Image(systemName: rosterGlyph(badge.mark)).dsGlyph(10, weight: .semibold)
+            Image(systemName: rosterGlyph(badge.mark)).dsGlyph(.tick, weight: .semibold)
                 .foregroundStyle(tint)
                 .frame(width: DS.Face.badge, height: DS.Face.badge)
                 .background(Circle().fill(tint.opacity(0.15)))
@@ -1048,7 +1048,7 @@ struct HegotaRoomFigure: View {
     /// **FOUR, NOT SIX, AND THAT IS ARITHMETIC (prd §555).** The six-cell table
     /// ends `(2,2,1,1), (3,2,1,1)` — two cells one unit wide. At the slot's
     /// width a unit is 79pt, so 63pt of content, and this room's figures are
-    /// `HegotaFormat.eth` strings like "0.000737 ETH" at `callout15`: they do
+    /// `HegotaFormat.eth` strings like "0.000737 ETH" at `body17`: they do
     /// not fit, and `minimumScaleFactor` shrinks them out of the ramp instead.
     /// The FOUR-cell table is two square heroes over two full-width rows —
     /// every cell at least two units wide, so nothing shrinks and nothing
@@ -1091,7 +1091,7 @@ struct HegotaRoomFigure: View {
     ///
     /// `rank` is the treemap slot. **Slots 0 and 1 are two units tall and
     /// everything after is one** (`UnitTreemap.frames(4)`), and one unit is
-    /// 36pt — enough for a single `callout15` line and not for two, so the
+    /// 36pt — enough for a single `body17` line and not for two, so the
     /// short cells set their amount and share on ONE line rather than clipping
     /// the second. Coupling the cell to the table is the same coupling the
     /// fold above already makes, and it is stated rather than discovered.
@@ -1116,7 +1116,7 @@ struct HegotaRoomFigure: View {
         return VStack(alignment: .leading, spacing: 2) {
             if tall {
                 Text(amount)
-                    .dsText(.callout15).fontWeight(.semibold)
+                    .dsText(.body17).fontWeight(.semibold)
                     .foregroundStyle(dim ? DS.textSecondary : DS.textPrimary)
                     .lineLimit(1).minimumScaleFactor(0.6)
                 Text(sub)
@@ -1142,7 +1142,7 @@ struct HegotaRoomFigure: View {
             } else {
                 HStack(spacing: DS.Space.s2) {
                     Text(amount)
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(dim ? DS.textSecondary : DS.textPrimary)
                         .lineLimit(1).minimumScaleFactor(0.6)
                     Spacer(minLength: 0)
@@ -1157,7 +1157,7 @@ struct HegotaRoomFigure: View {
         .padding(.horizontal, DS.Space.s2)
         // **A SHORT CELL CANNOT AFFORD `s2` TOP AND BOTTOM, AND NEVER COULD.**
         // One unit is `(height - 2 × gap) / 3` = 36pt at the height above (it
-        // was 41 at 144), while a one-unit cell's content is 10 + a `callout15`
+        // was 41 at 144), while a one-unit cell's content is 10 + a `body17`
         // line of 25 + 10 = 45. So the row overran its own frame at BOTH
         // heights — the amount sat hard against the cell's bottom edge and the
         // fill stopped short of the text. `s1` takes it to 4 + 25 + 4 = 33,
@@ -1587,7 +1587,7 @@ struct HegotaChainNotice: View {
         if verdict == .restarted || verdict == .differentChain {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 Text(headline)
-                    .dsText(.subhead13).foregroundStyle(DS.attention)
+                    .dsText(.subhead12).foregroundStyle(DS.attention)
                 Text(detail)
                     .dsText(.label12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1600,7 +1600,7 @@ struct HegotaChainNotice: View {
                         HegotaLiveState.shared.acceptRestart()
                     } label: {
                         Text(String(localized: "Start again from the new chain"))
-                            .dsText(.subhead13).foregroundStyle(DS.tint)
+                            .dsText(.subhead12).foregroundStyle(DS.tint)
                     }
                     .buttonStyle(.plain)
                 }
@@ -1830,7 +1830,7 @@ struct HegotaRoomList: View {
                 // rather than `key.fill` implying a credential already
                 // exists to manage.
                 Image(systemName: present ? "key.fill" : "plus")
-                    .dsGlyph(12, weight: .semibold)
+                    .dsGlyph(.caption, weight: .semibold)
                     .foregroundStyle(HegotaModeStyle.room)
             }
         }
@@ -1915,7 +1915,7 @@ struct HegotaRoomList: View {
                         Text(census)
                     }
                 }
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .opacity(balanced || reduceMotion ? 1 : 0)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.4).delay(0.45),
@@ -1951,7 +1951,7 @@ struct HegotaRoomList: View {
                 // An ORDINAL, which is why the age beside it in the subtitle is
                 // worth having: #45 says nothing about when.
                 Text(String(localized: "#\(String(coin.index))"))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary).monospacedDigit()
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary).monospacedDigit()
             }
             .opacity(spent ? 0.72 : 1)
             .contentShape(Rectangle())
@@ -2010,7 +2010,7 @@ struct HegotaRoomList: View {
                     // said "at least" before the counter could be read.
                     Text(lane.sendCount == 1 ? String(localized: "1 send")
                                              : String(localized: "\(String(lane.sendCount)) sends"))
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(lane.countIsExact ? DS.textSecondary : DS.textTertiary)
                 }
             }
@@ -2061,7 +2061,7 @@ struct HegotaRoomList: View {
                         // somebody gave you and does it silently.
                         if let fee = sponsor.feeWei {
                             Text(HegotaFormat.eth(fee))
-                                .dsText(.subhead13).foregroundStyle(DS.tint)
+                                .dsText(.subhead12).foregroundStyle(DS.tint)
                                 .monospacedDigit().lineLimit(1)
                         }
                     }
@@ -2154,14 +2154,14 @@ struct HegotaMoveRow: View {
                 // is a far weaker signal than a sign every other money row in
                 // this app carries.
                 // ONE RUNG FOR A SIGNED AMOUNT IN A ROW (prd §587). This was
-                // `subhead13` — 12pt — while the Wallet room's own activity
-                // rows draw the same fact at `price16` and Frames drew it at
-                // `callout15`. Four activity surfaces, three sizes, for one
-                // kind of figure. `price16` is the app's row-money rung and
+                // `subhead12` — 12pt — while the Wallet room's own activity
+                // rows draw the same fact at `price17` and Frames drew it at
+                // `body17`. Four activity surfaces, three sizes, for one
+                // kind of figure. `price17` is the app's row-money rung and
                 // the one the most-drawn surface already uses, so the other
                 // two come to it.
                 Text(HegotaFormat.signed(move.wei, incoming: move.incoming))
-                    .dsText(.price16)
+                    .dsText(.price17)
                     .foregroundStyle(move.incoming ? DS.confirm : DS.textSecondary)
                     .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
                 // The frame anatomy as texture. A legacy transaction draws
@@ -2316,7 +2316,7 @@ struct HegotaMoveSheet: View {
                 }
             } label: {
                 Text(String(localized: "Watch \(WalletStore.shortAddress(address))"))
-                    .dsText(.callout15).foregroundStyle(DS.tint)
+                    .dsText(.body17).foregroundStyle(DS.tint)
             }
             .buttonStyle(.plain)
         }
@@ -2366,7 +2366,7 @@ struct HegotaMoveSheet: View {
     ///
     /// **`dsSheetHeadBlock` directly rather than `DSSheetHead`, and §498 is the
     /// reason it exists to be composed this way**: that component's title slot
-    /// is `heading22`, and a money sheet leads with its FIGURE. What is shared
+    /// is `heading24`, and a money sheet leads with its FIGURE. What is shared
     /// is the head's METRICS — the inset and the room above and below — so this
     /// room and Wallet's cannot drift into two sets of margins. It was the
     /// paper that was shared until §583 deleted it.
@@ -2378,7 +2378,7 @@ struct HegotaMoveSheet: View {
             HStack(alignment: .top, spacing: DS.Space.s3) {
                 Text(HegotaFormat.stamp(move.timestamp, block: move.block,
                                         estimated: move.estimatedAt))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 if let outcome {
@@ -2389,7 +2389,7 @@ struct HegotaMoveSheet: View {
             crossing.padding(.top, DS.Space.s4)
             if let sponsorship {
                 Text(sponsorship)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s4)
             }
@@ -2428,7 +2428,7 @@ struct HegotaMoveSheet: View {
     /// **The facts as a TABLE, not as four sentences** (`DSSpecTable`).
     ///
     /// Gas, who paid it and which queue it was sent on are label/value pairs,
-    /// and setting them as prose at `subhead13` is most of what made this sheet
+    /// and setting them as prose at `subhead12` is most of what made this sheet
     /// read as a wall. The date is not here — it is the head's dateline.
     @ViewBuilder private var facts: some View {
         if hasFacts {
@@ -2460,7 +2460,7 @@ struct HegotaMoveSheet: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(HegotaFormat.signed(move.wei, incoming: move.incoming))
                 // `price40`, the app's own money-receipt hero (§363).
-                // It was picked because `price48` was the WALLET CROWN and this
+                // It was picked because `price64` was the WALLET CROWN and this
                 // is the same object one room over — a devnet receipt must not
                 // outsize the wallet's. §551 brought that crown down to this
                 // same rung, so the two now MATCH rather than merely not
@@ -2499,7 +2499,7 @@ struct HegotaMoveSheet: View {
 
     private var arrow: some View {
         Image(systemName: "arrow.right")
-            .dsGlyph(13).foregroundStyle(DS.textTertiary)
+            .dsGlyph(.caption).foregroundStyle(DS.textTertiary)
     }
 
     /// One side of the crossing.
@@ -2517,7 +2517,7 @@ struct HegotaMoveSheet: View {
                     ZStack {
                         Circle().fill(DS.surfaceWell)
                         Image(systemName: party == .vault ? "tray.full" : "number")
-                            .dsGlyph(15).foregroundStyle(DS.tint)
+                            .dsGlyph(.subhead).foregroundStyle(DS.tint)
                     }
                 default:
                     // An identicon is a function of an ADDRESS, so an empty one
@@ -2559,7 +2559,7 @@ struct HegotaMoveSheet: View {
                     ForEach(minted.sorted { $0.wei > $1.wei }.prefix(3), id: \.index) { coin in
                         VStack(alignment: .leading, spacing: 1) {
                             Text(HegotaFormat.eth(coin.wei))
-                                .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                                .dsText(.subhead12).foregroundStyle(DS.textPrimary)
                                 .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                             Text(coin.isChange ? String(localized: "change")
                                                : String(localized: "sent"))
@@ -2616,7 +2616,7 @@ struct HegotaMoveSheet: View {
         if let url = URL(string: "\(HegotaIdentity.explorer)/tx/\(move.hash)") {
             Link(destination: url) {
                 Text(String(localized: "Open in the explorer"))
-                    .dsText(.callout15).foregroundStyle(DS.tint)
+                    .dsText(.body17).foregroundStyle(DS.tint)
             }
         }
     }
@@ -2633,7 +2633,7 @@ struct HegotaMoveSheet: View {
                 .frame(width: 7, height: 7).padding(.top, 6)
             VStack(alignment: .leading, spacing: 1) {
                 Text(String(localized: "\(String(index + 1)). \(frame.mode.label)"))
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                 if let target = frame.target {
                     Text(HegotaName.of(target, watched: watched))
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -2643,7 +2643,7 @@ struct HegotaMoveSheet: View {
             VStack(alignment: .trailing, spacing: 1) {
                 if frame.wei > 0 {
                     Text(HegotaFormat.eth(frame.wei))
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary).monospacedDigit()
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary).monospacedDigit()
                 }
                 // BOTH dimensions: this chain prices execution and state
                 // separately, and a frame that only moves value runs no code —
@@ -2720,12 +2720,12 @@ struct HegotaFrameSheet: View {
     /// (prd §495, and §583 for why there is no paper under it), composed
     /// through `dsSheetHeadBlock` for that sheet's stated reason: a step that
     /// moved value leads with its FIGURE, and `DSSheetHead`'s title slot is
-    /// `heading22`.
+    /// `heading24`.
     ///
-    /// **The old `heading28` is gone and that was a real inversion**: it set
+    /// **The old `heading40` is gone and that was a real inversion**: it set
     /// the mode label one rung ABOVE the tray title sitting directly on top of
     /// it, so the sheet's own name read smaller than a line inside it. A
-    /// valueless step now leads with what it DID, at `reading20` — running
+    /// valueless step now leads with what it DID, at `reading17` — running
     /// prose that is the whole point of the surface it sits on, which is that
     /// rung's own definition — and the mode name is not repeated, because the
     /// tray title above already carries it.
@@ -2740,7 +2740,7 @@ struct HegotaFrameSheet: View {
                 ZStack {
                     Circle().fill(tone.opacity(0.16))
                     Image(systemName: HegotaModeStyle.glyph(frame.mode))
-                        .dsGlyph(24).foregroundStyle(tone)
+                        .dsGlyph(.title).foregroundStyle(tone)
                 }
                 .frame(width: DS.Face.shelf, height: DS.Face.shelf)
                 Spacer(minLength: 0)
@@ -2752,7 +2752,7 @@ struct HegotaFrameSheet: View {
                 DSStamp(word: outcomeWord(frame), weight: outcomeWeight(frame))
             }
             Text(lead)
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s3)
             if frame.wei > 0 {
                 Text(HegotaFormat.eth(frame.wei))
@@ -2762,12 +2762,12 @@ struct HegotaFrameSheet: View {
                     .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                     .padding(.top, 2)
                 Text(HegotaModeStyle.meaning(frame.mode))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s4)
             } else {
                 Text(HegotaModeStyle.meaning(frame.mode))
-                    .dsText(.reading20).foregroundStyle(DS.textPrimary)
+                    .dsText(.reading17).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
             }
@@ -2862,18 +2862,18 @@ struct HegotaFrameSheet: View {
         } label: {
             HStack(spacing: DS.Space.s2) {
                 if back {
-                    Image(systemName: "chevron.left").dsGlyph(11)
+                    Image(systemName: "chevron.left").dsGlyph(.caption)
                         .foregroundStyle(DS.textTertiary)
                 }
                 VStack(alignment: back ? .leading : .trailing, spacing: 1) {
                     Text(String(localized: "Step \(String(target + 1))"))
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                     Text(frame.mode.label)
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(HegotaModeStyle.hue(frame.mode))
                 }
                 if !back {
-                    Image(systemName: "chevron.right").dsGlyph(11)
+                    Image(systemName: "chevron.right").dsGlyph(.caption)
                         .foregroundStyle(DS.textTertiary)
                 }
             }
@@ -3264,7 +3264,7 @@ struct HegotaAccountSheet: View {
             addressLine.padding(.top, DS.Space.s3)
             if !account.reached {
                 Text(String(localized: "Nothing below is current."))
-                    .dsText(.callout15).foregroundStyle(DS.attention)
+                    .dsText(.body17).foregroundStyle(DS.attention)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
             }
@@ -3276,9 +3276,9 @@ struct HegotaAccountSheet: View {
             // when every header sampled agreed.
             if account.producesBlocks {
                 HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "cube").dsGlyph(13).foregroundStyle(DS.tint)
+                    Image(systemName: "cube").dsGlyph(.caption).foregroundStyle(DS.tint)
                     Text(String(localized: "Produces this chain's blocks"))
-                        .dsText(.callout15).foregroundStyle(DS.tint)
+                        .dsText(.body17).foregroundStyle(DS.tint)
                 }
                 .padding(.top, 2)
             }
@@ -3290,7 +3290,7 @@ struct HegotaAccountSheet: View {
                 .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                 .padding(.top, DS.Space.s4)
             Text(String(localized: "in the account"))
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
             splitBar
         }
         .dsSheetHeadBlock()
@@ -3307,11 +3307,11 @@ struct HegotaAccountSheet: View {
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Text(account.address)
-                    .dsText(.mono13).foregroundStyle(DS.textSecondary)
+                    .dsText(.mono17).foregroundStyle(DS.textSecondary)
                     .lineLimit(2).minimumScaleFactor(0.7)
                     .multilineTextAlignment(.leading)
                 Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                    .dsGlyph(12)
+                    .dsGlyph(.caption)
                     .foregroundStyle(copied ? DS.confirm : DS.textTertiary)
             }
             .contentShape(Rectangle())
@@ -3335,12 +3335,12 @@ struct HegotaAccountSheet: View {
                 HStack(spacing: DS.Space.s2) {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(HegotaFormat.eth(HegotaCoins.total(held)))
-                            .dsText(.heading22).foregroundStyle(DS.tint)
+                            .dsText(.heading24).foregroundStyle(DS.tint)
                             .monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
                         Text(held.count == 1
                              ? String(localized: "1 UTXO in the vault")
                              : String(localized: "\(String(held.count)) UTXOs in the vault"))
-                            .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
                     }
                     DSChevron()
                 }
@@ -3384,7 +3384,7 @@ struct HegotaAccountSheet: View {
         if let url = URL(string: "\(HegotaIdentity.explorer)/address/\(account.address)") {
             Link(destination: url) {
                 Text(String(localized: "Open in the explorer"))
-                    .dsText(.callout15).foregroundStyle(DS.tint)
+                    .dsText(.body17).foregroundStyle(DS.tint)
             }
         }
     }
@@ -3486,7 +3486,7 @@ struct HegotaCoinSheet: View {
                 ZStack {
                     Circle().fill(HegotaModeStyle.room.opacity(0.16))
                     Image(systemName: "tray.full")
-                        .dsGlyph(24).foregroundStyle(HegotaModeStyle.room)
+                        .dsGlyph(.title).foregroundStyle(HegotaModeStyle.room)
                 }
                 .frame(width: DS.Face.shelf, height: DS.Face.shelf)
                 Spacer(minLength: 0)
@@ -3496,7 +3496,7 @@ struct HegotaCoinSheet: View {
             }
             Text(HegotaFormat.stamp(coin.timestamp, block: coin.block,
                                     estimated: coin.estimatedAt))
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s3)
             Text(HegotaFormat.eth(coin.wei))
                 // `price40` — see the move sheet's `amount`.
@@ -3506,7 +3506,7 @@ struct HegotaCoinSheet: View {
             Text(coin.isChange
                  ? String(localized: "change from your own spend")
                  : String(localized: "sent to you by \(WalletStore.shortAddress(coin.source))"))
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
             fate
         }
         .dsSheetHeadBlock()
@@ -3539,7 +3539,7 @@ struct HegotaCoinSheet: View {
     @ViewBuilder private var fate: some View {
         if !unspent.isEmpty, !unspent.contains(coin.index) {
             Text(String(localized: "Spent. The vault records that it was, not which transaction spent it."))
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s2)
         }
@@ -3647,7 +3647,7 @@ struct HegotaCoinSheet: View {
                 .frame(width: 8, height: 8)
             VStack(alignment: .leading, spacing: 1) {
                 Text(HegotaFormat.eth(sibling.wei))
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(isThis ? DS.textPrimary
                                      : spent ? DS.textTertiary : DS.textSecondary)
                     .monospacedDigit()

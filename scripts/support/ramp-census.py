@@ -3,15 +3,15 @@
 
 The house style is TWO TIERS: one thing enormous, everything else quiet. The
 ramp today is three — 29 sites at the head rungs, ~114 in the middle
-(`heading22`/`stat24`/`price16`), ~1,300 small — and the middle is where the
+(`heading24`/`stat24`/`price17`), ~1,300 small — and the middle is where the
 style stops being itself.
 
 This is the CHEAP INSTRUMENT, not a fix and not a gate. It prints every
 middle-tier site with the text it sets and the shape of the file it sits in, so
 a sweep can be judged site by site instead of run blind. Several of these rungs
 are SETTLED — §551 measured `stat24` for the room chassis, §451 made a head
-card's lead a note at `heading22`, §560 settled `DSSheetHead` at `heading34`
-and the receipt's party at `heading22` — so a blanket edit would reverse
+card's lead a note at `heading24`, §560 settled `DSSheetHead` at `heading40`
+and the receipt's party at `heading24` — so a blanket edit would reverse
 rulings that have measurements behind them. The census exists to tell those
 apart from the sites nobody ever ruled on.
 
@@ -21,12 +21,12 @@ Usage:
     scripts/support/ramp-census.py --flat     # surfaces with NO rung above body17
 
 **`--flat` is the mode that found something.** The middle tier turned out to be
-mostly SETTLED — 26 of the 114 are a room head card's lead at `heading22`,
+mostly SETTLED — 26 of the 114 are a room head card's lead at `heading24`,
 which §451 ruled deliberately — so "delete the middle tier" would have reversed
 rulings rather than found faults. What is a real fault is a surface with no
 crown AT ALL: everything in the bottom two tiers, so nothing on it is the
 subject. `NetworkReachScreen` was the sharpest case (prd §564) — the app's
-central privacy claim set at `subhead13`, above a list of sixty services each
+central privacy claim set at `subhead12`, above a list of sixty services each
 of whose NAME was drawn larger than the claim.
 
 Most flat surfaces are correctly flat and the tool does not pretend otherwise:
@@ -38,8 +38,8 @@ import sys
 import pathlib
 import collections
 
-MIDDLE = ("heading22", "stat24", "price16")
-HEAD = ("price48", "price40", "heading34")
+MIDDLE = ("heading24", "stat24", "price17")
+HEAD = ("price64", "price40", "heading40")
 SOURCES = ["Casberi/Casberi/Screens", "Casberi/Casberi/Design",
            "Casberi/Casberi/Shell", "Casberi/CasberiWidgets"]
 
@@ -91,9 +91,9 @@ def census(root):
     return rows
 
 
-ORDER = ["price48", "heading34", "price40", "stat24", "heading22",
-         "reading20", "price16", "body17", "callout15", "subhead13",
-         "label12", "label11"]
+ORDER = ["price64", "heading40", "price40", "stat24", "heading24",
+         "reading17", "price17", "body17", "subhead12",
+         "label12"]
 RANK = {r: i for i, r in enumerate(ORDER)}
 BIG = set(HEAD) | set(MIDDLE)
 

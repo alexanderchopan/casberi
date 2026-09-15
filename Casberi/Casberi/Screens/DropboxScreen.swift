@@ -64,7 +64,7 @@ struct DropboxScreen: View {
             HStack(spacing: DS.Space.s2) {
                 DSSpinner()
                 Text("Waiting for Dropbox…")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
             }
             .padding(.vertical, DS.Space.s1)
         } else {
@@ -76,7 +76,7 @@ struct DropboxScreen: View {
                          action: connect)
             if cancelled {
                 Text("Sign-in cancelled — nothing was connected.")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -89,7 +89,7 @@ struct DropboxScreen: View {
         // `BridgeConnectedState` used to carry in a card.
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "folder")
-                .dsGlyph(17, weight: .medium)
+                .dsGlyph(.body, weight: .medium)
                 .foregroundStyle(DS.tint)
             Text(folderIdentity)
                 .dsText(.body17).foregroundStyle(DS.textPrimary)

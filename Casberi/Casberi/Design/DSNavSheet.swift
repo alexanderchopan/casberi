@@ -4,7 +4,7 @@ import SwiftUI
 /// 2026-09-01).**
 ///
 /// This app presents sheets in three shapes and only two of them had a
-/// component. `DSTray` owns the tray — the grabber, the `heading34` title, a
+/// component. `DSTray` owns the tray — the grabber, the `heading40` title, a
 /// stated height, the surface, the detent. The three READING sheets
 /// (`ThingSheetView`, `TokenQuickSheet`, `SocialPostSheet`) share
 /// `[.medium, .large]` + `dsInk` + `dsSheetCorner` + `dsPageSheet`, and there
@@ -80,7 +80,7 @@ extension View {
                     // in this app that should read as the system's, because it
                     // sits in the system's own bar beside the system's own
                     // title — three call sites had three different type
-                    // treatments here (`body17`, `callout15`, untouched) and
+                    // treatments here (`body17`, `body17`, untouched) and
                     // all three were answering a question nobody had asked.
                     Button(String(localized: "Done"), action: dismiss)
                         .tint(DS.tint)

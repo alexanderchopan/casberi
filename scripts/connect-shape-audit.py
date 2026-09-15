@@ -297,7 +297,7 @@ struct X: View {
             VStack {
                 Button(action: { browsing = true }) {
                     Text(String(localized: "Browse all 105"))
-                        .dsText(.subhead13).foregroundStyle(DS.tint)
+                        .dsText(.subhead12).foregroundStyle(DS.tint)
                 }
                 .buttonStyle(.plain)
             }
@@ -318,7 +318,7 @@ struct X: View {
         Section {
             Button(action: expand) {
                 Text("Show all 12 turns")
-                    .dsText(.subhead13).foregroundStyle(DS.tint)
+                    .dsText(.subhead12).foregroundStyle(DS.tint)
             }
             .buttonStyle(.plain)
         }

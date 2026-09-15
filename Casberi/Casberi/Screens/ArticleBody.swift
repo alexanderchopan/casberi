@@ -60,7 +60,7 @@ struct ArticleBody: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 ArticleListenButton(id: thing.id.uuidString, text: body)
                 // Defaults, unlike the generic branch: on an article the body
-                // IS the thing (§366's own test), so it is set at `reading20`
+                // IS the thing (§366's own test), so it is set at `reading17`
                 // in primary ink rather than as a footnote under a fact.
                 // `markdown: false` — this is scraped prose, and nobody wrote
                 // it as markdown. `paragraphed` breaks a body that arrived as
@@ -97,7 +97,7 @@ struct ArticleBody: View {
             }
             if fetching {
                 Text("Reading the article…")
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)

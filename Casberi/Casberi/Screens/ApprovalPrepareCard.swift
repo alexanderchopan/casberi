@@ -27,7 +27,7 @@ struct ApprovalPrepareCard: View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if check.active {
                 Text(verbatim: statusLine)
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let fee = check.feeLine {
                     feeRow(fee)
@@ -52,10 +52,10 @@ struct ApprovalPrepareCard: View {
                 // their wallet or on Revoke.cash, and the chain now says so.
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "checkmark.circle")
-                        .dsGlyph(15, weight: .regular)
+                        .dsGlyph(.subhead, weight: .regular)
                         .foregroundStyle(DS.confirm)
                     Text("No longer active — this approval has been revoked.")
-                        .dsText(.callout15).foregroundStyle(DS.confirm)
+                        .dsText(.body17).foregroundStyle(DS.confirm)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -94,7 +94,7 @@ struct ApprovalPrepareCard: View {
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .frame(width: 110, alignment: .leading)
             Text(verbatim: fee)
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
             Spacer(minLength: 0)
         }
     }

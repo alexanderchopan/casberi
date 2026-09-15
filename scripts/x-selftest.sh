@@ -533,7 +533,7 @@ grep -q 'mostly \\(subject)' Casberi/Casberi/Model/XRoom.swift \
 # full-height capsule — so it is gone and the note leads at the same tier.
 # BOTH halves are guarded, because either alone passes over a broken card: the
 # function must not return under its old name, and the card must really promote
-# the note. One that dropped the headline and left the note at `subhead13`
+# the note. One that dropped the headline and left the note at `subhead12`
 # would render as a head with no lead at all.
 grep -q 'static func headline(_ room: XRoom)' Casberi/Casberi/Model/XRoom.swift \
   && { echo "✗ XRoom.headline is back — it restates row one and the strip's tallest bar (§451)"; exit 1; }

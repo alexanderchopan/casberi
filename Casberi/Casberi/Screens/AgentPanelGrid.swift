@@ -154,7 +154,7 @@ struct FigureView: View {
                             RoundedRectangle(cornerRadius: 4, style: .continuous)
                                 .fill(hue.opacity(0.32 - 0.07 * Double(i)))
                             Text(cell.label)
-                                .dsText(i == 0 ? .callout15 : .subhead13)
+                                .dsText(i == 0 ? .body17 : .subhead12)
                                 .fontWeight(i == 0 ? .semibold : .regular)
                                 .foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
@@ -166,7 +166,7 @@ struct FigureView: View {
                         // inside, "Orthogonal 310" read as one token and a
                         // tail row with no count looked countless.
                         Text("\(cell.weight)")
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textTertiary)
                             .monospacedDigit()
                         Spacer(minLength: 0)
@@ -187,13 +187,13 @@ struct FigureView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: DS.Space.s1) {
                             Text(bar.label)
-                                .dsText(.subhead13)
+                                .dsText(.subhead12)
                                 .fontWeight(i == 0 ? .semibold : .regular)
                                 .foregroundStyle(i == 0 ? DS.textPrimary : DS.textSecondary)
                                 .lineLimit(1)
                             Spacer(minLength: 2)
                             Text(bar.detail)
-                                .dsText(.subhead13)
+                                .dsText(.subhead12)
                                 .foregroundStyle(DS.textTertiary)
                                 .monospacedDigit()
                                 // The FIRST row sits under the corner badge —
@@ -242,13 +242,13 @@ struct FigureView: View {
                     HStack(spacing: DS.Space.s1) {
                         Circle().fill(tone(seg.tone)).frame(width: 6, height: 6)
                         Text(seg.label)
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
                         // The word alone hid the number (spec item 5):
                         // "• Pending" with no count beside it.
                         Text("\(seg.count)")
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textTertiary)
                             .monospacedDigit()
                     }
@@ -436,7 +436,7 @@ private struct WallTileImage: View {
                     .overlay {
                         if !tile.label.isEmpty {
                             Text(tile.label)
-                                .dsText(.subhead13)
+                                .dsText(.subhead12)
                                 .foregroundStyle(DS.textSecondary)
                                 .multilineTextAlignment(.center)
                                 .lineLimit(2)
@@ -500,7 +500,7 @@ private struct DialFigure: View {
                     ForEach([0, 6, 12, 18], id: \.self) { h in
                         let a = Self.angle(Double(h))
                         Text(Self.hourLabel(h))
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textTertiary)
                             .opacity(ring)
                             .position(x: cx + cos(a) * (rMax + 10),
@@ -620,7 +620,7 @@ private struct RiverFigure: View {
                                     .fill(Self.palette[i % Self.palette.count])
                                     .frame(width: 6, height: 6)
                                 Text(band.label)
-                                    .dsText(.subhead13)
+                                    .dsText(.subhead12)
                                     .foregroundStyle(DS.textSecondary)
                                     .lineLimit(1)
                             }
@@ -730,7 +730,7 @@ struct ScatterFigure: View {
                 ForEach(Array(Self.placed(clusters, height: h, py: py).enumerated()),
                         id: \.offset) { _, placement in
                     Text(placement.cluster.label)
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
@@ -757,7 +757,7 @@ struct ScatterFigure: View {
                                     .fill(AgentPanelGrid.panelHue(for: entry.source))
                                     .frame(width: 5, height: 5)
                                 Text(entry.source)
-                                    .dsText(.label11)
+                                    .dsText(.label12)
                                     .foregroundStyle(DS.textTertiary)
                                     .lineLimit(1)
                             }
@@ -828,7 +828,7 @@ private struct RunwayFigure: View {
                 }
                 if slot != .small {
                     Text(span)
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)
                         .position(x: w - 22, y: axisY + 20)
                         .opacity(words)
@@ -972,7 +972,7 @@ private struct FlowFigure: View {
                 // is a glance, the room one tap away is where detail lives —
                 // so this is a duplicate paying rent in the worst spot.
                 Text(lane.name)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .fontWeight(i == 0 ? .semibold : .regular)
                     .foregroundStyle(i == 0 ? DS.textPrimary : DS.textSecondary)
                     .lineLimit(1)

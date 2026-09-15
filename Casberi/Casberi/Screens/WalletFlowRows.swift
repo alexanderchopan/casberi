@@ -72,7 +72,7 @@ struct WalletFlowRows: View {
             }
             if let note = unpricedNote {
                 Text(note)
-                    .dsText(.label11).foregroundStyle(DS.textTertiary)
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -99,13 +99,13 @@ struct WalletFlowRows: View {
         let net = band.netUSD
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Text("in \(WalletValue.money(band.inUSD)) · out \(WalletValue.money(band.outUSD))")
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 .monospacedDigit()
             if abs(net) >= 1 {
                 Text(net > 0
                      ? String(localized: "Kept +\(WalletValue.money(net))")
                      : String(localized: "Down −\(WalletValue.money(-net))"))
-                    .dsText(.subhead13).fontWeight(.bold)
+                    .dsText(.subhead12).fontWeight(.bold)
                     .foregroundStyle(net > 0 ? DS.confirm : DS.textSecondary)
                     .monospacedDigit()
             }

@@ -76,7 +76,7 @@ struct BridgeDetailScreen: View {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 ForEach(Array(bridge.can.enumerated()), id: \.element) { i, sentence in
                     Text(sentence)
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .staggerIn(index: i)
                 }
@@ -90,7 +90,7 @@ struct BridgeDetailScreen: View {
     private var photosLimitedRemedy: some View {
         VStack(spacing: DS.Space.s2) {
             Text("Only the photos you picked are visible, so new screenshots don't arrive on their own.")
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             // The remedy is one verb and one door, so it is one slab and one
             // door slab (prd §613) — the pair the rest of this screen already

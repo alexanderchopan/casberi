@@ -39,7 +39,7 @@ struct DiagnosticsScreen: View {
             Section {
                 ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                     Text(line)
-                        .dsText(.mono13)
+                        .dsText(.mono17)
                         .foregroundStyle(line.hasPrefix("FAIL") ? DS.attention
                                          : line.hasPrefix("OK") ? DS.confirm : DS.textPrimary)
                         .dsListCardRow()
@@ -55,10 +55,10 @@ struct DiagnosticsScreen: View {
                     HStack(spacing: DS.Space.s2) {
                         Image(systemName: "stethoscope")
                             .accessibilityHidden(true)
-                            .dsGlyph(15)
+                            .dsGlyph(.subhead)
                             .foregroundStyle(DS.textSecondary)
                             .symbolEffect(.pulse, options: .repeating, isActive: running)
-                        Text("Running…").dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        Text("Running…").dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     }
                     .dsListCardRow()
                 }
@@ -90,11 +90,11 @@ struct DiagnosticsScreen: View {
                     ShareLink(item: transcript, subject: Text("Casberi diagnostics")) {
                         HStack(spacing: DS.Space.s2) {
                             Image(systemName: "square.and.arrow.up")
-                                .dsGlyph(13, weight: .regular)
+                                .dsGlyph(.caption, weight: .regular)
                                 .foregroundStyle(DS.textSecondary)
                                 .frame(width: 18, alignment: .center)
                             Text("Share readings")
-                                .dsText(.callout15)
+                                .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)
                             Spacer(minLength: 0)
                         }

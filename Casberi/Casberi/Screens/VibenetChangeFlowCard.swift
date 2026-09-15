@@ -105,7 +105,7 @@ struct VibenetChangeFlowCard: View {
             ForEach(Array(kinds.enumerated()), id: \.element) { index, kind in
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text(kind.label)
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: 0)

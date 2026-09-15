@@ -225,7 +225,7 @@ enum AddressSpine {
 
     /// How many grants the sentence names before it starts counting. A spender
     /// holding nine approvals would otherwise write a paragraph at
-    /// `callout15` under the figure it is explaining.
+    /// `body17` under the figure it is explaining.
     static let captionCap = 3
 
     // MARK: - The fold

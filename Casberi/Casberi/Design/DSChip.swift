@@ -36,7 +36,7 @@ struct Chip: View {
         HStack(spacing: DS.Space.s1) {
             if let glyph {
                 Image(systemName: glyph)
-                    .dsGlyph(12, weight: selected ? .semibold : .regular)
+                    .dsGlyph(.caption, weight: selected ? .semibold : .regular)
                     .accessibilityHidden(true)
             }
             // A chip is a capsule — its label never breaks across lines

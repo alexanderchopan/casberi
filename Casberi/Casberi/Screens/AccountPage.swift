@@ -276,14 +276,14 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             BridgeIcon(name: name, size: DS.Mark.account)
                 .settleIn()
             Text(name)
-                .dsText(.heading34).foregroundStyle(DS.textPrimary)
+                .dsText(.heading40).foregroundStyle(DS.textPrimary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
             HStack(spacing: DS.Space.s2) {
                 Circle().fill(stateTone).frame(width: 8, height: 8)
                 Text(AccountPageShape.stateLine(state))
-                    .dsText(.subhead13).fontWeight(.medium)
+                    .dsText(.subhead12).fontWeight(.medium)
                     .foregroundStyle(stateTone)
             }
             .accessibilityElement(children: .combine)
@@ -294,7 +294,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             }
             if !state.connected, let mode {
                 HStack(spacing: DS.Space.s2) {
-                    Image(systemName: mode.glyph).dsGlyph(12)
+                    Image(systemName: mode.glyph).dsGlyph(.caption)
                     Text(mode.label).dsText(.label12)
                 }
                 .foregroundStyle(DS.textTertiary)
@@ -450,7 +450,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             // so; a count that shrank to the window would hide the 282.
             Text(searching ? AccountPageShape.yoursLabel(shown.count)
                            : AccountPageShape.watchingLabel(rows.filter(\.watched).count))
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 .padding(.top, DS.Space.s3)
                 .plainAccountRow()
             ForEach(drawnActive) { row in rosterRow(row) }
@@ -458,7 +458,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 if !active.isEmpty || tiered {
                     Text(tiered ? AccountPageShape.namedLabel(quiet.count)
                                 : AccountPageShape.quietLabel(quiet.count))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .padding(.top, DS.Space.s2)
                         .plainAccountRow()
                 }
@@ -477,7 +477,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             withAnimation(DS.Motion.standard) { windowSteps += 1 }
         } label: {
             Text("Show more")
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.tint)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, DS.Space.s4)
@@ -651,7 +651,7 @@ extension View {
     func plainAccountRow() -> some View { modifier(PlainAccountRow()) }
 }
 
-/// disc glyph · heading17 title · trailing subhead13 fact · chevron only if
+/// disc glyph · heading17 title · trailing subhead12 fact · chevron only if
 /// it opens a screen. 56pt, no background. A row with no action is a READ,
 /// drawn without a button so nothing on it can be mistaken for a control.
 struct AccountFactRow: View {
@@ -739,7 +739,7 @@ struct AccountRosterRow: View {
                     }
                 }
                 Text(subline)
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }
             Spacer(minLength: 0)

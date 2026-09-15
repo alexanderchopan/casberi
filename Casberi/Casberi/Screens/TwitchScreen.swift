@@ -58,7 +58,7 @@ struct TwitchScreen: View {
                 // (user, 2026-07-15), and this screen never got the fix
                 // (audit 2026-07-31).
                 Text(code.userCode)
-                    .dsText(.monoCode34)
+                    .dsText(.monoCode40)
                     .foregroundStyle(DS.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .minimumScaleFactor(0.6)
@@ -88,7 +88,7 @@ struct TwitchScreen: View {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner()
                     Text("Waiting for your approval…")
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                        .dsText(.body17).foregroundStyle(DS.textTertiary)
                 }
             }
             .padding(.vertical, DS.Space.s2)
@@ -96,7 +96,7 @@ struct TwitchScreen: View {
             HStack(spacing: DS.Space.s2) {
                 DSSpinner()
                 Text("Getting your code…")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
             }
             .padding(.vertical, DS.Space.s1)
         } else {

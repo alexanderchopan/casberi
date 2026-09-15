@@ -504,7 +504,7 @@ struct BandRow: View {
     ///
     /// The other half of that ruling was CONTRAST, and it is the reason the ink
     /// is not simply `DS.washHue`: the old `ProjectHue` measured ~3.4:1 at
-    /// `label11`, under the 4.5:1 bar `DS.textTertiary` was raised to meet on
+    /// `label12`, under the 4.5:1 bar `DS.textTertiary` was raised to meet on
     /// 2026-07-21, on the smallest text in the row. `legibleInk` moves each hue
     /// until it clears that bar (7.0:1 under Increase Contrast) and returns nil
     /// rather than show one that can't — so this slot cannot regress to the
@@ -646,7 +646,7 @@ struct BandRow: View {
                 .overlay(alignment: .bottomTrailing) {
                     if thing.isFlagged {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .dsGlyph(9, weight: .regular)
+                            .dsGlyph(.tick, weight: .regular)
                             .foregroundStyle(DS.destructive)
                             .padding(3)
                             .background(Circle().fill(.black.opacity(0.55)))
@@ -656,7 +656,7 @@ struct BandRow: View {
             VStack(alignment: .trailing, spacing: 1) {
                 if let money = moneyAmount {
                     Text(money.text)
-                        .dsText(.price16)
+                        .dsText(.price17)
                         .monospacedDigit()
                         .foregroundStyle(money.received && !thing.hasSecurityFlag("symbol")
                                          ? DS.confirm : DS.textPrimary)
@@ -813,7 +813,7 @@ struct LiveTimeText: View {
         // "2h" → "3h" rolls its digit (the Clock app's grammar) instead
         // of swapping — the change is the moment (motion pass 2026-07-11).
         Text(label)
-            .dsText(.subhead13)
+            .dsText(.subhead12)
             .foregroundStyle(color)
             // TABULAR, because it ROLLS (prd §586). `.numericText()` morphs
             // one digit into the next, and on proportional digits each frame
@@ -953,7 +953,7 @@ struct TokenRow: View {
         } trailing: {
             VStack(alignment: .trailing, spacing: 1) {
                 Text(TokenChartStyle.priceText(pulse.price))
-                    .dsText(.price16)
+                    .dsText(.price17)
                     .foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
                     .lineLimit(1)
@@ -1865,7 +1865,7 @@ struct ApprovalCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             if !thing.content.isEmpty {
                 Text(thing.content)
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .lineLimit(2)
             }
             HStack(spacing: DS.Space.s2) {
@@ -1939,7 +1939,7 @@ struct PhotoCell: View {
                         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                         .allowsHitTesting(false)
                     Text(caption)
-                        .dsText(.subhead13).foregroundStyle(.white)
+                        .dsText(.subhead12).foregroundStyle(.white)
                         .lineLimit(1)
                         .padding(DS.Space.s2)
                 }
@@ -2729,7 +2729,7 @@ struct BitrefillLede: View {
             Spacer(minLength: 0)
             if monthCount > 0 {
                 Text(monthCount == 1 ? "1 order this month" : "\(monthCount) orders this month")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             }
             Text(balance)
                 .dsText(.body17).fontWeight(.semibold)
@@ -2753,7 +2753,7 @@ struct OneClawLede: View {
             Spacer(minLength: 0)
             if grantCount > 0 {
                 Text(grantCount == 1 ? "1 grant" : "\(grantCount) grants")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             }
             Text(vaults)
                 .dsText(.body17).fontWeight(.semibold)
@@ -2778,16 +2778,16 @@ struct WatchlistLede: View {
             Spacer(minLength: 0)
             if up > 0 {
                 Text("\(up) up")
-                    .dsText(.subhead13).fontWeight(.semibold)
+                    .dsText(.subhead12).fontWeight(.semibold)
                     .foregroundStyle(DS.confirm)
             }
             if down > 0 {
                 Text("\(down) down")
-                    .dsText(.subhead13).fontWeight(.semibold)
+                    .dsText(.subhead12).fontWeight(.semibold)
                     .foregroundStyle(DS.destructive)
             }
             Text("24h")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
         }
         .padding(.vertical, DS.Space.s2)
     }
@@ -2924,7 +2924,7 @@ struct RowPeek: View {
             // title and the excerpt below is saying the same thing twice.
             if !thing.title.isEmpty {
                 Text(thing.title)
-                    .dsText(.reading20)
+                    .dsText(.reading17)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .lineLimit(4)
@@ -2938,7 +2938,7 @@ struct RowPeek: View {
             // retrieval-only by the 2026-07-15 ruling and draws on no screen.
             if let excerpt {
                 Text(excerpt)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .lineLimit(4)

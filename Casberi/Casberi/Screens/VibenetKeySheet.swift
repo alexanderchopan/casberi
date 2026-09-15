@@ -125,7 +125,7 @@ struct VibenetKeySheet: View {
     /// do").** 300 was meant to cover subject + permissions + identity + doors,
     /// and the subject alone is close to that: a `DS.Face.shelf` disc, a title,
     /// a secondary line and the receipt's own paddings and torn edge, inside a
-    /// tray that has already spent `s6 + heading34 + s4` on its own head. So
+    /// tray that has already spent `s6 + heading40 + s4` on its own head. So
     /// "What it can do" — the block this sheet exists to show, and the reason
     /// §480 promoted it to second — opened at or below the fold on every key.
     ///
@@ -186,8 +186,8 @@ struct VibenetKeySheet: View {
                     // key twice which makes no sense").** This passed
                     // `actor.kind.plainTitle` — the SAME expression the tray
                     // title is built from, twenty lines up — so the sheet
-                    // opened on "P-256 key" in `heading34` with "P-256 key" in
-                    // `heading22` directly beneath it, and the only new
+                    // opened on "P-256 key" in `heading40` with "P-256 key" in
+                    // `heading24` directly beneath it, and the only new
                     // information was a scroll away.
                     //
                     // The title is WHOSE key it is now. That is the fact the

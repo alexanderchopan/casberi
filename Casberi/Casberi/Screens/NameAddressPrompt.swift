@@ -98,7 +98,7 @@ struct NameAddressPrompt: View {
                 .dsText(.body17).fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)
             Text(reason)
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             VStack(alignment: .leading, spacing: 0) {
                 DSDoorRow(icon: "character.cursor.ibeam", label: "Name it") {

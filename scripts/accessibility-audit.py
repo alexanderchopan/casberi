@@ -762,7 +762,7 @@ struct A: View {
     var body: some View {
         Button { close() } label: {
             Image(systemName: "xmark")
-                .dsGlyph(15)
+                .dsGlyph(.subhead)
                 .frame(width: 44, height: 44)
         }
     }
@@ -901,23 +901,23 @@ struct F: View {
                 .dsCardLead(Text("Opens this rail")) { open() }
 
             Text(Room.note(room))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s1)
             Text(Room.second(room))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s1)
             Text(Room.third(room))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s1)
             Text(Room.fourth(room))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s1)
             Text(Room.fifth(room))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s1)
             rows

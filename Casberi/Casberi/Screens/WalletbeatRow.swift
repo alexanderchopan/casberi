@@ -33,7 +33,7 @@ struct WalletbeatWalletRow: View {
 		} trailing: {
 			if let stage = card?.stage ?? entry?.stage {
 				Text(stage)
-					.dsText(.label11).fontWeight(.semibold)
+					.dsText(.label12).fontWeight(.semibold)
 					.foregroundStyle(DS.textSecondary)
 			}
 		} below: {
@@ -43,7 +43,7 @@ struct WalletbeatWalletRow: View {
 				}
 				if let summary = thing.summary, !summary.isEmpty {
 					Text(summary)
-						.dsText(.subhead13)
+						.dsText(.subhead12)
 						.foregroundStyle(DS.textSecondary)
 						.fixedSize(horizontal: false, vertical: true)
 				}
@@ -62,12 +62,12 @@ struct WalletbeatWalletRow: View {
 				let counts = card?.counts(in: dimension) ?? entry?.counts[dimension] ?? .zero
 				HStack(spacing: DS.Space.s2) {
 					Text(dimension.label)
-						.dsText(.label11)
+						.dsText(.label12)
 						.foregroundStyle(DS.textTertiary)
 						.frame(width: 96, alignment: .leading)
 					WalletbeatBar(counts: counts, height: 6)
 					Text("\(counts.judged)/\(counts.applicable)")
-						.dsText(.label11)
+						.dsText(.label12)
 						.foregroundStyle(DS.textTertiary)
 						.monospacedDigit()
 						.frame(width: 38, alignment: .trailing)
@@ -112,7 +112,7 @@ struct WalletbeatNewsRow: View {
 						.frame(width: DS.Mark.row, height: DS.Mark.row)
 						.overlay(
 							Image(systemName: "shield")
-								.dsGlyph(11)
+								.dsGlyph(.caption)
 								.foregroundStyle(DS.textTertiary)
 						)
 				}
@@ -130,17 +130,17 @@ struct WalletbeatNewsRow: View {
 				HStack(spacing: DS.Space.s2) {
 					if mine {
 						Text(String(localized: "You use this"))
-							.dsText(.label11).fontWeight(.bold)
+							.dsText(.label12).fontWeight(.bold)
 							.foregroundStyle(DS.tint)
 					}
 					if open {
 						Text(String(localized: "Unresolved"))
-							.dsText(.label11).fontWeight(.bold)
+							.dsText(.label12).fontWeight(.bold)
 							.foregroundStyle(DS.attention)
 					}
 					ForEach(tags, id: \.self) { tag in
 						Text(tag)
-							.dsText(.label11)
+							.dsText(.label12)
 							.foregroundStyle(DS.textTertiary)
 					}
 				}

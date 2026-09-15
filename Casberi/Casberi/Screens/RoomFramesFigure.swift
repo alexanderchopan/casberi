@@ -78,7 +78,7 @@ struct RoomFramesFigure: View {
                 legend(mix)
                 if let note = RoomFrames.censusNote(drawn: drawn.count, of: framed.count) {
                     Text(note)
-                        .dsText(.label11).foregroundStyle(DS.textTertiary)
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1).minimumScaleFactor(0.85)
                 }
             }

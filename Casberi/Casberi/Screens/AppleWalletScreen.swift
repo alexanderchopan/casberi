@@ -62,7 +62,7 @@ struct AppleWalletScreen: View {
                 }
                 if let result {
                     Text(result)
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(resultIsError ? DS.textPrimary : DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -113,7 +113,7 @@ struct AppleWalletScreen: View {
     /// rule (§83).
     @ViewBuilder private var unavailableBlock: some View {
         Text("This \(DS.device) can't share financial data. It's US-only, and needs iOS 17.4.")
-            .dsText(.subhead13)
+            .dsText(.subhead12)
             .foregroundStyle(DS.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -133,14 +133,14 @@ struct AppleWalletScreen: View {
                     .foregroundStyle(DS.textPrimary)
                 Spacer()
                 Text(balances[name] ?? "")
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textSecondary)
                     .monospacedDigit()
             }
             .frame(minHeight: AccountFactRow.height)
         }
         Text("Never added together.")
-            .dsText(.subhead13)
+            .dsText(.subhead12)
             .foregroundStyle(DS.textTertiary)
     }
 

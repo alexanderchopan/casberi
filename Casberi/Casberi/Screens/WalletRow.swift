@@ -113,11 +113,11 @@ struct WalletRow<Trailing: View>: View {
                     .fixedSize(horizontal: false, vertical: titleWraps)
                 if let subtitleText {
                     subtitleText
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 } else if let subtitle {
                     Text(subtitle)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
             }
@@ -145,7 +145,7 @@ struct WalletMarkView: View {
         switch mark {
         case .symbol(let name, let tint):
             Image(systemName: name)
-                .dsGlyph(14)
+                .dsGlyph(.subhead)
                 .foregroundStyle(tint)
                 .frame(width: size, height: size)
                 .background(Circle().fill(tint.opacity(0.16)))
@@ -154,7 +154,7 @@ struct WalletMarkView: View {
             WalletFace(address: address, size: size, circular: true)
         case .monogram(let text, let tint):
             Text(text)
-                .dsText(.badgeInitial11).foregroundStyle(tint)
+                .dsText(.badgeInitial12).foregroundStyle(tint)
                 .frame(width: size, height: size)
                 .background(Circle().fill(tint.opacity(0.16)))
                 .accessibilityHidden(true)
@@ -174,7 +174,7 @@ struct WalletMarkView: View {
                 .overlay(alignment: .bottomTrailing) {
                     if flagged {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .dsGlyph(9, weight: .regular)
+                            .dsGlyph(.tick, weight: .regular)
                             .foregroundStyle(DS.destructive)
                             .padding(3)
                             .background(Circle().fill(.black.opacity(0.55)))
@@ -218,7 +218,7 @@ struct WalletRowValue: View {
     var body: some View {
         VStack(alignment: .trailing, spacing: 1) {
             Text(value)
-                .dsText(.price16).foregroundStyle(DS.textPrimary)
+                .dsText(.price17).foregroundStyle(DS.textPrimary)
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .lineLimit(1)

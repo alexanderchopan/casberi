@@ -7484,7 +7484,7 @@ struct FeedScreen: View {
                 // "one", under a header already carrying the date.
                 VStack(alignment: .leading, spacing: 1) {
                     Text(label)
-                        .dsText(.heading22)
+                        .dsText(.heading24)
                         // The tail cools (prd §254, 2026-07-31). §218 already
                         // folds everything past a week into week/month groups;
                         // the type never followed, so a month from last spring
@@ -7507,7 +7507,7 @@ struct FeedScreen: View {
                     // invented for a month with no topic terms in it.
                     if let subject = subjects[label] {
                         Text(String(localized: "mostly \(subject)"))
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     }
@@ -7528,7 +7528,7 @@ struct FeedScreen: View {
                     if label == (split.moment ? Self.momentLabel : String(localized: "Today")),
                        let whisper = dayLine {
                         whisper.detailText(scheme: colorScheme)
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .lineLimit(1)
                     } else if label == Self.momentLabel {
                         // No count here, by §218's own ruling on this header —
@@ -7537,7 +7537,7 @@ struct FeedScreen: View {
                         // "since you left" a measurable claim rather than a
                         // mood.
                         Text(String(localized: "Last here \(sinceLabel)"))
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     }
@@ -7623,7 +7623,7 @@ struct FeedScreen: View {
            Date.now.timeIntervalSince(oldest) > 7 * 86_400 {
             Section {
                 Text("This is where it starts · \(oldest.formatted(.dateTime.month(.abbreviated).day()))")
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, DS.Space.s6)
@@ -7671,7 +7671,7 @@ struct FeedScreen: View {
     /// treatment, which does the same job for the whole feed).
     private var caughtUpSeam: some View {
         Text("You're caught up — everything below, you've seen")
-            .dsText(.subhead13)
+            .dsText(.subhead12)
             .foregroundStyle(DS.textTertiary)
             // Arrives like the rows above it (2026-09-05): the two seams were
             // the only things in the feed that appeared cold, and the moment
@@ -8076,7 +8076,7 @@ struct FeedScreen: View {
                 } label: {
                     HStack(spacing: DS.Space.s2) {
                         Text(standing.line)
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -9384,10 +9384,10 @@ struct FeedScreen: View {
                          ? String(localized: "Hide past events")
                          : (count == 1 ? String(localized: "Show 1 past event")
                                        : String(localized: "Show \(count) past events")))
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .monospacedDigit()
                     Image(systemName: pastEventsExpanded ? "chevron.up" : "chevron.down")
-                        .dsGlyph(11)
+                        .dsGlyph(.caption)
                         .accessibilityHidden(true)
                 }
                 .foregroundStyle(DS.tint)
@@ -9501,11 +9501,11 @@ struct FeedScreen: View {
                     } else {
                         HStack {
                             Text("Older").dsText(.body17).foregroundStyle(DS.textSecondary)
-                            Text("\(stale.count)").dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            Text("\(stale.count)").dsText(.subhead12).foregroundStyle(DS.textTertiary)
                             Spacer()
                             Image(systemName: "chevron.down")
                                 .accessibilityHidden(true)
-                                .dsGlyph(12)
+                                .dsGlyph(.caption)
                                 .foregroundStyle(DS.textTertiary)
                         }
                         .padding(.vertical, DS.Space.s1)
@@ -9956,7 +9956,7 @@ struct FeedScreen: View {
                 } trailing: {
                     if let due = thing.dueAt {
                         Text(FeedLedeFace.dueLine(due))
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(FeedLedeFace.isOverdue(due)
                                              ? DS.attention : DS.textTertiary)
                     }
@@ -10182,7 +10182,7 @@ struct FeedScreen: View {
     private func quietState(_ words: RoomQuiet.Words) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(words.headline)
-                .dsText(.heading34)
+                .dsText(.heading40)
                 .foregroundStyle(DS.textPrimary)
                 .settleIn()
             Text(words.detail)
@@ -10201,7 +10201,7 @@ struct FeedScreen: View {
     /// The one act an empty room offers, at the head rung (prd §563).
     ///
     /// **Both empty states shared one shape: a control set SMALLER than the
-    /// prose above it** — `heading34`, then `body17`, then a `callout15`
+    /// prose above it** — `heading40`, then `body17`, then a `body17`
     /// capsule — so the only thing a person could DO on the screen was the
     /// quietest thing on it. §559 made a verb at `price40` the house treatment
     /// for a surface that exists to do one thing, and an empty room is exactly
@@ -10233,7 +10233,7 @@ struct FeedScreen: View {
             // The headline says what the empty screen BECOMES, in the app's
             // own noun, rather than naming the container it already is.
             Text("One inbox for all your accounts.")
-                .dsText(.heading34)
+                .dsText(.heading40)
                 .foregroundStyle(DS.textPrimary)
                 .settleIn()
             // THE SENTENCE STANDS DOWN (prd §563). It read "Connect an app and
@@ -10542,7 +10542,7 @@ struct FeedScreen: View {
                 // on what the system hands a header slot.
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text(label)
-                        .dsText(.heading22)
+                        .dsText(.heading24)
                         // The folded tail weighs less than today (prd §254) —
                         // see the twin in `bundledSections` for the reasoning.
                         .fontWeight(coarse ? .semibold : .bold)
@@ -10553,7 +10553,7 @@ struct FeedScreen: View {
                     // In a source's own room the count speaks the source's unit —
                     // "3 events", "5 screenshots" (2026-07-13). All keeps the
                     // bare number: mixed kinds have no one unit worth naming.
-                    Text(countLabel(rows)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    Text(countLabel(rows)).dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         // Tabular, because it rolls — see `LiveTimeText` (prd §586).
                         .monospacedDigit()
                         .contentTransition(.numericText())
@@ -10648,7 +10648,7 @@ struct FeedScreen: View {
                     // "New things from X land here." is gone (prd §748): the
                     // line above already says this is everything SO FAR.
                     Text("That's everything from \(source) so far · \(countLabel(rows))")
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                 }
                 .multilineTextAlignment(.leading)
@@ -10695,7 +10695,7 @@ struct FeedScreen: View {
              : Pinboard.isPinnedRoom(source)
              ? "That's everything you've pinned · \(countLabel(rows))"
              : "That's everything from \(source) · \(countLabel(rows))")
-            .dsText(.subhead13)
+            .dsText(.subhead12)
             .foregroundStyle(DS.textTertiary)
             .frame(maxWidth: .infinity)
             .padding(.top, DS.Space.s6)
@@ -10851,7 +10851,7 @@ struct FeedScreen: View {
             withAnimation(DS.Motion.standard) { windowSteps += 1 }
         } label: {
             Text("Show older")
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.tint)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, DS.Space.s4)
@@ -11381,7 +11381,7 @@ private struct EmptyFeedPile: View {
             // whole screen-height above this settled pile, easy to miss once
             // your eye has landed on the tiles. Named again, right here.
             Text("Tap any app to add it")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 .opacity(fell ? 1 : 0)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.3).delay(1.5),
                            value: fell)

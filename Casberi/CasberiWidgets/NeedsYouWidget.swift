@@ -121,7 +121,7 @@ struct NeedsYouWidgetView: View {
                 // in both numerator and denominator: it is open, and it is
                 // pressing by definition (see `NeedsYouEntry.relevance`).
                 Gauge(value: openCount == 0 ? 0 : Double(pressingCount) / Double(openCount)) {
-                    Image(systemName: "clock").dsGlyph(11)
+                    Image(systemName: "clock").dsGlyph(.caption)
                 } currentValueLabel: {
                     Text("\(openCount)").monospacedDigit()
                 }
@@ -160,7 +160,7 @@ struct NeedsYouWidgetView: View {
                         Spacer(minLength: 0)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(call.subject)
-                                .dsText(.widgetRecentTitle12)
+                                .dsText(.widgetLabel12)
                                 .foregroundStyle(.white)
                                 .lineLimit(2)
                             Text(waitLine(call))
@@ -179,7 +179,7 @@ struct NeedsYouWidgetView: View {
                         // than one whole one.
                         VStack(alignment: .leading, spacing: 1) {
                             Text(first.title)
-                                .dsText(.widgetRecentTitle12)
+                                .dsText(.widgetLabel12)
                                 .foregroundStyle(.white)
                                 .lineLimit(2)
                             Text(first.due, style: .relative)
@@ -259,13 +259,13 @@ struct NeedsYouWidgetView: View {
     private func signatureCall(_ call: WidgetSafeCall) -> some View {
         let content = HStack(alignment: .top, spacing: 6) {
             Image(systemName: "signature")
-                .dsGlyph(11, weight: .semibold)
+                .dsGlyph(.caption, weight: .semibold)
                 .foregroundStyle(accent)
             VStack(alignment: .leading, spacing: 1) {
                 Text(call.awaitsYou == 1
                      ? String(localized: "Your signature is needed")
                      : String(localized: "Your signature is needed on \(call.awaitsYou)"))
-                    .dsText(.widgetRecentTitle12)
+                    .dsText(.widgetLabel12)
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 Text(call.subject)

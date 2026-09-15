@@ -477,7 +477,7 @@ struct WalletFlowBand: View {
         // mirrored they zig-zag.
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             Text(seg.lane.name)
-                .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                .dsText(.subhead12).foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Spacer(minLength: DS.Space.s2)
@@ -732,7 +732,7 @@ struct WalletFlowEmptyFigure: View {
                     .opacity(0.6)
             }
             Text(line)
-                .dsText(.callout15)
+                .dsText(.body17)
                 .foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

@@ -139,7 +139,7 @@ struct BridgeStepLines: View {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                     if numbered {
                         Text("\(i + startingAt)")
-                            .dsText(.callout15).fontWeight(.bold)
+                            .dsText(.body17).fontWeight(.bold)
                             .foregroundStyle(DS.textTertiary)
                             .frame(width: 13, alignment: .trailing)
                     }
@@ -148,7 +148,7 @@ struct BridgeStepLines: View {
                     // three steps out-weighed the rows they explained; the
                     // answer to that was fewer words, not smaller ones.
                     Text(LocalizedStringKey(text))
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
@@ -218,11 +218,11 @@ struct AgentActiveStatusRow: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(DS.confirm)
                     Text("\(provider.agent) is your active agent for \"Try with your key.\"")
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
                 } else {
                     Text(active.map { "\($0.agent) is currently answering \"Try with your key.\"" }
                          ?? "\(provider.agent) is saved but not active.")
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
                     Spacer(minLength: DS.Space.s2)
                     // The row's trailing verb, not a capsule (prd §746).
                     Button {
@@ -280,7 +280,7 @@ struct BridgeSyncStatusRows: View {
             HStack(spacing: DS.Space.s2) {
                 DSSpinner()
                 Text(syncingLine)
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textTertiary)
             }
             .padding(.leading, accountAct ? DSActRow.inset : 0)
@@ -303,7 +303,7 @@ struct BridgeSyncStatusRows: View {
                         CountUpText(text: proof.line)
                     }
                 }
-                .dsText(.callout15)
+                .dsText(.body17)
                 .foregroundStyle(failed ? DS.attention : DS.confirm)
             }
             .padding(.leading, accountAct ? DSActRow.inset : 0)
@@ -370,7 +370,7 @@ struct BridgeSearchResultRow: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
-                    Text(subtitle).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    Text(subtitle).dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
                 Spacer()

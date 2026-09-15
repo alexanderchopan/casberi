@@ -57,15 +57,15 @@ struct CardPointersScreen: View {
             // to survive that trip.
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text("Your code")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                // `monoCode34` is the ramp's own device-flow rung, and the
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                // `monoCode40` is the ramp's own device-flow rung, and the
                 // explicit Copy button is a lesson already paid for twice:
                 // GitHub's identical step shipped as bare tap-to-copy and
                 // went unnoticed (user, 2026-07-15), and Twitch's screen
                 // repeated it until the 2026-07-31 audit. Third time, on
                 // purpose, rather than a fourth report.
                 Text(pending.userCode)
-                    .dsText(.monoCode34)
+                    .dsText(.monoCode40)
                     .foregroundStyle(DS.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .minimumScaleFactor(0.6)
@@ -75,7 +75,7 @@ struct CardPointersScreen: View {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner()
                     Text("Waiting for you to approve…")
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                        .dsText(.body17).foregroundStyle(DS.textTertiary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

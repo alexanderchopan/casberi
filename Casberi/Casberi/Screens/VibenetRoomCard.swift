@@ -1263,7 +1263,7 @@ struct VibenetRoomCard: View {
                 // count was chrome.
                 if let nativeTotal = aggregate.nativeTotal {
                     // **`stat24` — the rung every scope headline in this room
-                    // takes (prd §551).** It was `price48` to match Wallet's
+                    // takes (prd §551).** It was `price64` to match Wallet's
                     // crown, and Wallet's has come down here with it: the two
                     // rooms still state the same kind of reading at the same
                     // size, which was the whole point of pinning them
@@ -1342,9 +1342,9 @@ struct VibenetRoomCard: View {
                     let change = scrubbed.1
                     HStack(spacing: 5) {
                         Image(systemName: change >= 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
-                            .dsGlyph(9)
+                            .dsGlyph(.tick)
                         Text("\(VibenetBalanceFormat.line(abs(move))) ETH (\(VibenetBalanceFormat.percent(change)))")
-                            .dsText(.callout15).fontWeight(.semibold)
+                            .dsText(.body17).fontWeight(.semibold)
                             .monospacedDigit()
                         // **NO WINDOW NAME BESIDE THE MOVE (prd §482
                         // amendment, user: "we don't have… 'since watching'").**
@@ -1529,7 +1529,7 @@ struct VibenetRoomCard: View {
                                 .lineLimit(1)
                             Spacer(minLength: DS.Space.s2)
                             Text(cell.amount)
-                                .dsText(.callout15)
+                                .dsText(.body17)
                                 .foregroundStyle(DS.textSecondary)
                                 .monospacedDigit()
                                 .lineLimit(1)
@@ -1676,7 +1676,7 @@ struct VibenetRoomCard: View {
                     .frame(height: 76)
                     .opacity(0.6)
                 Text(holdingsEmptyLine(aggregate))
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1861,7 +1861,7 @@ struct VibenetRoomCard: View {
                         .opacity(0.6)
                 }
                 Text(activityEmptyLine)
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -2108,13 +2108,13 @@ struct VibenetRoomCard: View {
                         HStack(spacing: DS.Space.s2) {
                             WalletFace(address: item.address, size: DS.Face.rowCircle, circular: true)
                             Text(Self.displayName(item.address))
-                                .dsText(.subhead13)
+                                .dsText(.subhead12)
                                 .foregroundStyle(DS.textSecondary)
                                 .lineLimit(1)
                             Text(item.actors.count == 1
                                  ? String(localized: "1 key")
                                  : String(localized: "\(item.actors.count) keys"))
-                                .dsText(.subhead13)
+                                .dsText(.subhead12)
                                 .foregroundStyle(DS.textTertiary)
                             Spacer(minLength: 0)
                         }
@@ -2154,11 +2154,11 @@ struct VibenetRoomCard: View {
         let body = VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text(key.actor.kind.shortLabel)
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 Text(VibenetKeyIdentity.short(key.actor.actorId))
-                    .dsText(.label11).monospaced()
+                    .dsText(.label12).monospaced()
                     .foregroundStyle(DS.textTertiary)
                 Spacer(minLength: DS.Space.s2)
                 if let clock = key.actor.expiryClock(now: .now) {
@@ -2187,7 +2187,7 @@ struct VibenetRoomCard: View {
                 ForEach(key.actor.scope.grantedPlainLabels, id: \.self) { label in
                     let admin = key.actor.scope.isAdmin
                     Text(label)
-                        .dsText(.label11)
+                        .dsText(.label12)
                         .fontWeight(admin ? .semibold : .regular)
                         .foregroundStyle(admin ? DS.attention : DS.tint)
                         .padding(.horizontal, DS.Space.s2)
@@ -2328,10 +2328,10 @@ struct VibenetRoomCard: View {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 Image(systemName: "antenna.radiowaves.left.and.right.slash")
                     .accessibilityHidden(true)
-                    .dsGlyph(30, weight: .regular)
+                    .dsGlyph(.feature, weight: .regular)
                     .foregroundStyle(DS.attention)
                 Text(String(localized: "The chain did not answer, so this room cannot say what can act for you."))
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
@@ -2402,7 +2402,7 @@ struct VibenetRoomCard: View {
                     }
                     if let tail = shelf.tailLine {
                         Text(tail)
-                            .dsText(.label11)
+                            .dsText(.label12)
                             .foregroundStyle(DS.textTertiary)
                     }
                 }
@@ -2513,7 +2513,7 @@ struct VibenetRoomCard: View {
             onScope?("")
         } label: {
             Text(String(localized: "All"))
-                .dsText(.subhead13).fontWeight(.semibold)
+                .dsText(.subhead12).fontWeight(.semibold)
                 .foregroundStyle(on ? DS.textPrimary : DS.textSecondary)
                 .padding(.horizontal, DS.Space.s3)
                 // ONE HEIGHT FOR THE WHOLE STRIP, and it is `DS.Hit.min`
@@ -2540,7 +2540,7 @@ struct VibenetRoomCard: View {
         } label: {
             Image(systemName: "person.text.rectangle")
                 .accessibilityHidden(true)
-                .dsGlyph(13, weight: .semibold)
+                .dsGlyph(.caption, weight: .semibold)
                 .foregroundStyle(DS.textSecondary)
                 .padding(.horizontal, DS.Space.s3)
                 // 27pt before this — the smallest thing in the strip and the
@@ -2589,12 +2589,12 @@ struct VibenetRoomCard: View {
                 // read" is a fact this strip can state in one word.
                 if let native {
                     Text("\(VibenetBalanceFormat.line(native)) ETH")
-                        .dsText(.subhead13).fontWeight(.semibold)
+                        .dsText(.subhead12).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                 } else {
                     Text(Self.displayName(item.address))
-                        .dsText(.subhead13).fontWeight(.semibold)
+                        .dsText(.subhead12).fontWeight(.semibold)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }
@@ -2617,7 +2617,7 @@ struct VibenetRoomCard: View {
     }
 
     /// A room-level section title — `walletGroupHeader`'s recipe (prd §475):
-    /// `heading22` in PRIMARY ink, outside the card it introduces, on the
+    /// `heading24` in PRIMARY ink, outside the card it introduces, on the
     /// same margin as the bare hero.
     ///
     /// `s8` above and `s1` below is Wallet's own measured spacing, and its
@@ -2626,7 +2626,7 @@ struct VibenetRoomCard: View {
     /// `s6` spacing is cancelled above to make room for it.
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
-            .dsText(.heading22)
+            .dsText(.heading24)
             .foregroundStyle(DS.textPrimary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
@@ -2780,7 +2780,7 @@ struct VibenetRoomCard: View {
                     Circle().fill(Self.mark.opacity(0.18))
                         .frame(width: DS.Face.rowCircle, height: DS.Face.rowCircle)
                     Image(systemName: "magnifyingglass")
-                        .dsGlyph(12, weight: .semibold)
+                        .dsGlyph(.caption, weight: .semibold)
                         .foregroundStyle(Self.mark)
                 }
             }
@@ -2849,7 +2849,7 @@ struct VibenetRoomCard: View {
                 // the whole direction from 60pt below, in tertiary ink, and
                 // was the reason the drawing read backwards.
                 Text(String(localized: "Read from the keystore."))
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s2)
@@ -2869,13 +2869,13 @@ struct VibenetRoomCard: View {
     /// Reported as *"the list items are not consistent design"*, and measured
     /// across the room's seven row builders before anything was changed: the same
     /// KIND of row — a thing with a face, a name and one clause under it — was
-    /// drawn at `body17`, `heading17`, `callout15` and `label11` depending on
+    /// drawn at `body17`, `heading17`, `body17` and `label12` depending on
     /// which file it lived in, with faces at both `rowCircle` and `list`.
     ///
     /// The settled shape, and the axis is what a row IS rather than where it sits:
     /// an OBJECT row (an account, a linked account, a sub-account, a key) leads
     /// with a face or mark at `DS.Face.rowCircle`, names itself at `heading17`,
-    /// and carries one clause at `label11`. A CENSUS rung (a permission count) is
+    /// and carries one clause at `label12`. A CENSUS rung (a permission count) is
     /// not an object and keeps its own shape — it is a number and a label, and
     /// giving it a row's type would make eight keys look like eight things.
     /// **THE ROW CARRIES THE VERBS NOW (prd §545, 2026-08-31).**
@@ -2954,7 +2954,7 @@ struct VibenetRoomCard: View {
                         .lineLimit(1)
                     // The room's OWN state sentence, never a second wording.
                     Text(VibenetRoom.rowLine(item))
-                        .dsText(.label11)
+                        .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
@@ -2970,7 +2970,7 @@ struct VibenetRoomCard: View {
             // silent on a healthy row rather than gated by hand.
             if let why = VibenetRoom.undeployedExplainer(item) {
                 Text(why)
-                    .dsText(.label11)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s2)
@@ -3089,7 +3089,7 @@ struct VibenetRoomCard: View {
                 // same-weight ruling still holds: a key added and a key
                 // revoked are both merely news and neither is graded.
                 Text(moved)
-                    .dsText(.label11).fontWeight(.semibold)
+                    .dsText(.label12).fontWeight(.semibold)
                     .foregroundStyle(Self.mark)
                     .fixedSize()
             }
@@ -3138,7 +3138,7 @@ struct VibenetRoomCard: View {
         // up to less than the headline and nothing says why.
         if let unnamed = aggregate.unnamedLine {
             Text(unnamed)
-                .dsText(.label11)
+                .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s2)
@@ -3211,7 +3211,7 @@ struct VibenetRoomCard: View {
                 .lineLimit(1)
             Spacer(minLength: DS.Space.s2)
             Text("\(entry.count)")
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textSecondary)
                 .monospacedDigit()
         }
@@ -3265,7 +3265,7 @@ struct VibenetRoomCard: View {
                 .padding(.top, DS.Space.s3)
                 if let tail = shelf.tailLine {
                     Text(tail)
-                        .dsText(.label11)
+                        .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, DS.Space.s2)
@@ -3293,7 +3293,7 @@ struct VibenetRoomCard: View {
         let urgent = row.isUrgent(now: .now)
         return HStack(spacing: DS.Space.s3) {
             Text("\(row.actor.kind.plainTitle) · \(Self.displayName(row.address))")
-                .dsText(.label11)
+                .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
                 .lineLimit(1)
                 .frame(width: 104, alignment: .leading)
@@ -3308,7 +3308,7 @@ struct VibenetRoomCard: View {
                      fill: urgent ? Self.mark : DS.fillStrong,
                      reduceMotion: reduceMotion)
             Text(row.countdown(now: .now))
-                .dsText(.label11)
+                .dsText(.label12)
                 .fontWeight(urgent ? .semibold : .regular)
                 .foregroundStyle(urgent ? Self.mark : DS.textTertiary)
                 .monospacedDigit()
@@ -3386,16 +3386,16 @@ struct VibenetRoomCard: View {
                     // unchanged: the address alone, exactly as before.
                     if let name = VibenetWatch.shared.name(for: item.address) {
                         Text(name)
-                            .dsText(isLead ? .heading22 : .heading17)
+                            .dsText(isLead ? .heading24 : .heading17)
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
                         Text(VibenetRoom.shortAddress(item.address))
-                            .dsText(.label11).monospaced()
+                            .dsText(.label12).monospaced()
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     } else {
                         Text(VibenetRoom.shortAddress(item.address))
-                            .dsText(isLead ? .heading22 : .heading17)
+                            .dsText(isLead ? .heading24 : .heading17)
                             .foregroundStyle(DS.textPrimary)
                             .monospaced()
                             .lineLimit(1)

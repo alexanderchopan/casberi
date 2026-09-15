@@ -24,7 +24,7 @@ import Foundation
 /// 20 rooms with a headline, roughly half open on a figure ("312 posts", "£1,240
 /// this month", "14 days straight") and half on a statement with no figure at
 /// all ("Payments have stopped", "Evidence was due yesterday", "Nothing to
-/// report"). A statement keeps `heading22` and is CORRECT there — §584's
+/// report"). A statement keeps `heading24` and is CORRECT there — §584's
 /// measurement is the reason, and forcing a figure out of a room that has none
 /// would be inventing one, which on a money surface is §83.
 struct RoomLede: Equatable {

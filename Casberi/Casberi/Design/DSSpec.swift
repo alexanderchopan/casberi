@@ -6,7 +6,7 @@ import SwiftUI
 /// **It was hand-rolled three times at three label widths.**
 /// `ThingSheetView.specRow` sized its column 80, `ThingContent`'s fact row 72
 /// and `VibenetKeySheet.factRow` 84 — the same anatomy (`label12` tertiary,
-/// `callout15` primary, optional trailing glyph) in three sheets a person
+/// `body17` primary, optional trailing glyph) in three sheets a person
 /// moves between in two taps. `ThingSheetView` spelled the layout a further
 /// two times INSIDE itself, in `fromRow` and `counterpartyRow`, only to add a
 /// trailing mark its own `specRow` had no parameter for.
@@ -75,9 +75,9 @@ struct DSSpecRow: View {
                 .gridColumnAlignment(.leading)
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 value
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     // Applied only when a caller really wants a DIFFERENT
-                    // weight — `weight ?? .regular` would restate `callout15`'s
+                    // weight — `weight ?? .regular` would restate `body17`'s
                     // own rung, which `design-ramp-audit` fails the build on.
                     .fontWeight(weight)
                     .foregroundStyle(tint)
@@ -87,7 +87,7 @@ struct DSSpecRow: View {
                 if let glyph {
                     Image(systemName: glyph)
                         .accessibilityHidden(true)
-                        .dsGlyph(12, weight: .regular)
+                        .dsGlyph(.caption, weight: .regular)
                         .foregroundStyle(DS.textTertiary)
                 }
                 // The value cell takes the rest of the width, so the label

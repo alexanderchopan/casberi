@@ -1862,7 +1862,7 @@ struct MainSurface: View {
                 CasberiMark(size: 44)
                     .opacity(0.32)
                 Text("Pick something to open.")
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
                     .multilineTextAlignment(.center)
             }
@@ -1889,10 +1889,10 @@ struct MainSurface: View {
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Text(brief.title)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textPrimary)
                 brief.detailText(scheme: .dark)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                 Spacer(minLength: 0)
                 DSChevron()
             }
@@ -3272,11 +3272,11 @@ private struct PagerCover: View {
                     VStack(alignment: side >= 0 ? .leading : .trailing,
                            spacing: DS.Space.s3) {
                         if label == "All" {
-                            Text("All").dsText(.heading34).foregroundStyle(DS.textPrimary)
+                            Text("All").dsText(.heading40).foregroundStyle(DS.textPrimary)
                         } else {
                             BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
                             Text(label)
-                                .dsText(.heading22)
+                                .dsText(.heading24)
                                 .foregroundStyle(DS.textPrimary)
                         }
                     }

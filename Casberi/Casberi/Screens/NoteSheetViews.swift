@@ -30,7 +30,7 @@ struct NoteDateline: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(dateline.headline)
-                .dsText(.heading28)
+                .dsText(.heading40)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
@@ -49,13 +49,13 @@ struct NoteDateline: View {
 
 /// A note's own words, at the tier writing is read in.
 ///
-/// Every body in this category drew at `callout15` in `textSecondary` — the
+/// Every body in this category drew at `body17` in `textSecondary` — the
 /// tier the design system uses for a footnote UNDER a fact — and four of six
 /// sources clamped it at twelve lines with no "more" and nothing to scroll.
 /// On these sources the body is not an annotation of the thing, it IS the
 /// thing.
 ///
-/// So: `reading20`, primary ink, and **no line limit at all past the fold**.
+/// So: `reading17`, primary ink, and **no line limit at all past the fold**.
 /// The clamp is replaced by a real disclosure — a long entry shows its opening
 /// and says how much more there is, which is a promise the twelve-line cut
 /// never made and never kept.
@@ -80,21 +80,21 @@ struct NoteProse: View {
     var onWikilink: ((String) -> Void)?
     /// The tier the body is set in (2026-08-20).
     ///
-    /// `reading20` is this view's own ruling and stays the default: on a note
+    /// `reading17` is this view's own ruling and stays the default: on a note
     /// the body is not an annotation of the thing, it IS the thing. An agent
     /// TURN is the exception — it sits inside a bubble beside a speaker label,
     /// where the sheet's hero is the conversation rather than any one message,
-    /// so it is set at `callout15` like the bubble it lives in.
+    /// so it is set at `body17` like the bubble it lives in.
     ///
     /// Parameterised rather than forked: the alternative was a second block
     /// renderer beside this one, and two renderers over one splitter is how a
     /// code fence starts drawing correctly in one room and as prose in the
     /// other.
-    var tier: DSTextStyle = .reading20
+    var tier: DSTextStyle = .reading17
     /// The ink the prose is set in (2026-08-21).
     ///
     /// `textPrimary` is this view's own ruling and stays the default, for the
-    /// same reason `reading20` is: on a note the body IS the thing. The generic
+    /// same reason `reading17` is: on a note the body IS the thing. The generic
     /// thing sheet is the exception — there the body really is an annotation
     /// under a fact (a reminder's note, a contact's detail), which is why that
     /// branch has always drawn it secondary, and borrowing the fold must not
@@ -129,7 +129,7 @@ struct NoteProse: View {
                     // this replaces was a silent cut, and a disclosure that
                     // won't say what it is hiding repeats it politely.
                     Text("Read the rest — \(NoteSheet.words(in: text).formatted(.number)) words")
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(DS.tint)
                 }
                 .buttonStyle(.plain)
@@ -203,7 +203,7 @@ struct NoteProse: View {
                 // the page itself must never scroll sideways.
                 ScrollView(.horizontal, showsIndicators: false) {
                     Text(verbatim: text)
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .monospaced()
                         .foregroundStyle(DS.textPrimary)
                         .textSelection(.enabled)
@@ -355,7 +355,7 @@ struct NoteSiblingList: View {
                     Button { onOpen(thing) } label: {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(NoteSheetSource.passage(for: thing))
-                                .dsText(.callout15)
+                                .dsText(.body17)
                                 .foregroundStyle(DS.textSecondary)
                                 .lineLimit(2)
                                 .multilineTextAlignment(.leading)
@@ -412,7 +412,7 @@ struct NoteGraphCounts: View {
     private func cell(_ value: Int, _ noun: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(value.formatted(.number))
-                .dsText(.heading22)
+                .dsText(.heading24)
                 .foregroundStyle(DS.textPrimary)
                 .monospacedDigit()
             Text(noun)
@@ -527,7 +527,7 @@ struct NoteReceptionCard: View {
                     ForEach(reception.readings, id: \.noun) { reading in
                         VStack(alignment: .leading, spacing: 1) {
                             Text(reading.text)
-                                .dsText(.heading22)
+                                .dsText(.heading24)
                                 .foregroundStyle(DS.textPrimary)
                                 .monospacedDigit()
                             Text(reading.noun)
@@ -543,7 +543,7 @@ struct NoteReceptionCard: View {
             }
             if let ceiling = reception.ceiling {
                 Text(ceiling)
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -643,7 +643,7 @@ struct NoteOtherYearsList: View {
                                 .foregroundStyle(DS.textPrimary)
                                 .monospacedDigit()
                             Text(thing.title)
-                                .dsText(.callout15)
+                                .dsText(.body17)
                                 .foregroundStyle(DS.textSecondary)
                                 .lineLimit(2)
                                 .multilineTextAlignment(.leading)
@@ -707,7 +707,7 @@ struct WalkDoors: View {
                     if !trailing { chevron(systemImage) }
                     VStack(alignment: trailing ? .trailing : .leading, spacing: 1) {
                         Text(thing.capturedAt.formatted(.dateTime.day().month(.abbreviated)))
-                            .dsText(.callout15)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                         Text(thing.title)
                             .dsText(.label12)
@@ -737,7 +737,7 @@ struct WalkDoors: View {
 
     private func chevron(_ systemImage: String) -> some View {
         Image(systemName: systemImage)
-            .dsGlyph(13, weight: .semibold)
+            .dsGlyph(.caption, weight: .semibold)
             .foregroundStyle(DS.textTertiary)
     }
 }

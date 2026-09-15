@@ -11,7 +11,7 @@ import Foundation
 /// - **Kindle destroys the passage at import.** `title = titleLine(body)` cuts
 ///   at 80 characters and appends an ellipsis, and `content` holds `"Book —
 ///   Author"` instead. The rest of the highlight is stored NOWHERE. So the
-///   sheet drew a truncated quotation at `heading34` as though it were a
+///   sheet drew a truncated quotation at `heading40` as though it were a
 ///   headline, and the book's name in gray underneath as though it were the
 ///   body — exactly inverted, over a record that had already lost the thing
 ///   you opened it to read.
@@ -20,7 +20,7 @@ import Foundation
 ///   and shared notes never did. The app will index a 900-word journal entry,
 ///   answer questions about it and surface it in search — then refuse to show
 ///   you more than a dozen lines of it, with no "more" and nothing to scroll.
-/// - **Prose is set as a caption.** Every body here draws at `callout15` in
+/// - **Prose is set as a caption.** Every body here draws at `body17` in
 ///   `textSecondary`, the tier the design system uses for footnotes UNDER a
 ///   fact. On these sources the body is not an annotation of the thing, it IS
 ///   the thing, and it was the quietest text on the screen.
@@ -412,7 +412,7 @@ enum NoteSheet {
     }
 
     /// Past this many characters the body folds. Roughly a screenful at
-    /// `reading20` on a phone: short enough that a fold is rare on an ordinary
+    /// `reading17` on a phone: short enough that a fold is rare on an ordinary
     /// entry, long enough that the fold means something when it happens.
     static let foldLength = 900
 

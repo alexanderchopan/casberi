@@ -288,7 +288,7 @@ struct NotesShareScreen: View {
                     // The chip previews no state, so it's neutral
                     // (`IconChip`, 2026-08-10, was tint).
                     IconChip(tone: DS.neutralBadge, size: 28, style: .wash) {
-                        Image(systemName: "arrow.up.right").dsGlyph(15, weight: .regular)
+                        Image(systemName: "arrow.up.right").dsGlyph(.subhead, weight: .regular)
                     }
                     Text("Open Notes")
                         .dsText(.body17).foregroundStyle(DS.tint)

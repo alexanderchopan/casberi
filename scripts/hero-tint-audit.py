@@ -24,7 +24,7 @@ each, so this fires zero times today and cannot cry wolf. A file wanting two
 mutually exclusive tiles (an empty room's two states, say) factors them to one
 call site, which is the better code anyway and is what `FeedScreen` does.
 
-**(2) The component is the only hero verb.** A `price40`/`price48` set INSIDE
+**(2) The component is the only hero verb.** A `price40`/`price64` set INSIDE
 a `Button` is a hand-rolled tile, and a hand-rolled one silently loses §559's
 honesty contract: `.disabled` dims a LABEL, not a fill, so an inert hand-rolled
 tile reads live. Measured over the real tree this matches exactly one line —
@@ -77,7 +77,7 @@ KNOWN_PAIR = {
 
 CALL = re.compile(r"\bDSActVerb\s*\(")
 BUTTON = re.compile(r"\bButton\s*[({]")
-HERO_TYPE = re.compile(r"dsText\(\.(price40|price48)\)")
+HERO_TYPE = re.compile(r"dsText\(\.(price40|price64)\)")
 STRING = re.compile(r'"(?:\\.|[^"\\])*"')
 
 
@@ -253,7 +253,7 @@ struct A: View {
         } label: {
             VStack {
                 HStack {
-                    Text("Send").dsText(.price48)
+                    Text("Send").dsText(.price64)
                 }
             }
         }

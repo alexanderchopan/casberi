@@ -180,7 +180,7 @@ struct PrivacyDevnetMoveSheet: View {
             }
             if let sponsorship {
                 Text(sponsorship)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -225,7 +225,7 @@ struct PrivacyDevnetMoveSheet: View {
                 .frame(width: 7, height: 7).padding(.top, 6)
             VStack(alignment: .leading, spacing: 1) {
                 Text(stepTitle(index: index, frame: frame))
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                 if let target = frame.target, !target.isEmpty {
                     Text(PrivacyDevnetName.of(target))
                         .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
@@ -236,7 +236,7 @@ struct PrivacyDevnetMoveSheet: View {
                 if let hex = frame.valueWeiHex,
                    let wei = PrivacyDevnetRPC.hexWei(hex), wei > 0 {
                     Text(PrivacyDevnetMoney.line(wei: wei))
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                 }
                 if let budget = budgetLine(frame) {
@@ -382,7 +382,7 @@ struct PrivacyDevnetMoveSheet: View {
                 }
             } label: {
                 Text(String(localized: "Watch \(WalletStore.shortAddress(address))"))
-                    .dsText(.callout15).foregroundStyle(DS.tint)
+                    .dsText(.body17).foregroundStyle(DS.tint)
             }
             .buttonStyle(.plain)
         }
@@ -396,7 +396,7 @@ struct PrivacyDevnetMoveSheet: View {
         if let url = URL(string: "\(PrivacyDevnetIdentity.explorer)/tx/\(move.hash)") {
             Link(destination: url) {
                 Text(String(localized: "Open in the explorer"))
-                    .dsText(.callout15).foregroundStyle(DS.tint)
+                    .dsText(.body17).foregroundStyle(DS.tint)
             }
         }
     }
@@ -464,7 +464,7 @@ struct PrivacyDevnetAccountSheet: View {
                         Text(WalletStore.shortAddress(account.address))
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
                         Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                            .dsGlyph(13)
+                            .dsGlyph(.caption)
                             .foregroundStyle(copied ? DS.confirm : DS.textTertiary)
                     }
                     .contentShape(Rectangle())
@@ -482,12 +482,12 @@ struct PrivacyDevnetAccountSheet: View {
                 Text(account.reached
                      ? String(localized: "Balance unread")
                      : String(localized: "The chain didn't answer"))
-                    .dsText(.reading20).foregroundStyle(DS.textSecondary)
+                    .dsText(.reading17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s3)
             }
             Text(sendLine)
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s4)
         }
         .dsSheetHeadBlock()

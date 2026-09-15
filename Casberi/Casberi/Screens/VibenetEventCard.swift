@@ -140,7 +140,7 @@ struct VibenetEventCard: View {
                             .overlay {
                                 Image(systemName: "arrow.up.forward")
                                     .accessibilityHidden(true)
-                                    .dsGlyph(11, weight: .semibold)
+                                    .dsGlyph(.caption, weight: .semibold)
                                     .foregroundStyle(DS.textTertiary)
                             }
                     },

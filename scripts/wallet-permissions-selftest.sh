@@ -463,10 +463,10 @@ strip "$CARD" | grep -qE '\.names|rung\.names' \
 # ...and the numerals must stay at figure size: the count IS the drawing now,
 # so demoting it back to a row-sized stat is the old list wearing a new doc.
 # §692 both moved this onto `RoomPermissionsFigure` AND shrank the token to
-# `.price16` (a well, not a bare numeral — the card's own doc comment says
+# `.price17` (a well, not a bare numeral — the card's own doc comment says
 # so); check both files and both tokens, since either move could reverse.
-{ grep -qE 'dsText\(\.price(40|16)\)' "$CARD" ||
-  grep -qE 'dsText\(\.price(40|16)\)' "$FIGURE"; } \
+{ grep -qE 'dsText\(\.price(40|17)\)' "$CARD" ||
+  grep -qE 'dsText\(\.price(40|17)\)' "$FIGURE"; } \
   || fail "the slot's counts are no longer drawn as figures (§546)"
 
 print "  ok   18 mutations, 25 drift guards"

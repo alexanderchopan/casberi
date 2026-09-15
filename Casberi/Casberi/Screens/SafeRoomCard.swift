@@ -121,7 +121,7 @@ struct SafeRoomCard: View {
                     // Two lines and then it wraps — never a fixed width, which
                     // is what the caption box was and what clipped.
                     Text(verbatim: SafeRoom.subject(entry))
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -145,7 +145,7 @@ struct SafeRoomCard: View {
     /// has stopped drawing it (`SafeSignatureDisc.drawsCount`).
     private func metadata(_ entry: SafeRoom.Entry, contested: Bool) -> Text {
         var line = Text(verbatim: SafeRoom.stateLabel(entry))
-            .font(DSTextStyle.subhead13.scaledFont)
+            .font(DSTextStyle.subhead12.scaledFont)
             .fontWeight(.semibold)
             .foregroundStyle(stateTint(entry))
         if sizeCategory.isAccessibilityCategory, entry.required > 0 {
@@ -163,7 +163,7 @@ struct SafeRoomCard: View {
 
     private func trailing(_ text: String) -> Text {
         Text(verbatim: " · " + text)
-            .font(DSTextStyle.subhead13.scaledFont)
+            .font(DSTextStyle.subhead12.scaledFont)
             .foregroundStyle(DS.textSecondary)
     }
 

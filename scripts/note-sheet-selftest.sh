@@ -67,7 +67,7 @@ guard "the reception block is drawn by the sheet" \
   'NoteReceptionCard\(reception: noteReception\)' "$VIEW"
 
 # THE HEADLINE FIX. The generic content view is where a journal entry's prose
-# was set at `callout15` in `textSecondary` and cut at twelve lines. If a note
+# was set at `body17` in `textSecondary` and cut at twelve lines. If a note
 # reaches it again, every entry prints twice — the second time worse — and
 # nothing on screen says so.
 guard "a note never falls through to the generic content view" \
@@ -102,7 +102,7 @@ print("  \u2713 the From spec row stays deleted (prd \u00a7736)")
 FROMGONE
 
 # The prose tier. This is the fix, spelled as a test: reading tier, primary
-# ink. A `callout15`/`textSecondary` body here is the defect returning.
+# ink. A `body17`/`textSecondary` body here is the defect returning.
 #
 # The tier became a PARAMETER on 2026-08-20 so an agent turn could reuse this
 # renderer at bubble size, and the §366 ruling moved with it: it is now the
@@ -112,7 +112,7 @@ FROMGONE
 # sheet must not start passing a smaller one, which is the only way the defect
 # could come back now.
 guard "the note body's tier defaults to the reading tier" \
-  'var tier: DSTextStyle = \.reading20' "$VIEWS"
+  'var tier: DSTextStyle = \.reading17' "$VIEWS"
 if grep -qE 'NoteProse\([^)]*tier:' "$VIEW"; then
   echo "  ✗ the note sheet passes an explicit tier — §366's reading tier is the"
   echo "    default for a reason: on these sources the body IS the thing."

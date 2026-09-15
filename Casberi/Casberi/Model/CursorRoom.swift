@@ -377,7 +377,7 @@ struct CursorRoom: Equatable {
 
     /// THE LEDE (prd §585) — the runs that did not finish, or the runs there
     /// were. Nil on a room with no lead: "Nothing to report" is a statement,
-    /// and §584 measured that a statement belongs at `heading22`.
+    /// and §584 measured that a statement belongs at `heading24`.
     static func lede(_ room: CursorRoom) -> RoomLede? {
         guard let name = room.lead?.name else { return nil }
         switch lead(of: room) {

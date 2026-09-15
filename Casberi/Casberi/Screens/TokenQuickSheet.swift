@@ -73,9 +73,9 @@ struct TokenQuickSheet: View {
                         Link(destination: url) {
                             HStack(spacing: DS.Space.s2) {
                                 Text("No live price for this token — view on Dexscreener")
-                                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                                 Image(systemName: "arrow.up.right")
-                                    .dsGlyph(12, weight: .medium)
+                                    .dsGlyph(.caption, weight: .medium)
                                     .foregroundStyle(DS.textTertiary)
                             }
                             .padding(DS.Space.s3)
@@ -157,7 +157,7 @@ struct TokenQuickSheet: View {
         if let watchedTitle {
             HStack(spacing: DS.Space.s4) {
                 Image(systemName: "checkmark")
-                    .dsGlyph(18, weight: .regular)
+                    .dsGlyph(.body, weight: .regular)
                     .foregroundStyle(DS.confirm)
                     .frame(width: 26, alignment: .center)
                 Text("Watching \(watchedTitle)")
@@ -179,7 +179,7 @@ struct TokenQuickSheet: View {
             } label: {
                 HStack(spacing: DS.Space.s4) {
                     Image(systemName: "eye")
-                        .dsGlyph(18, weight: .regular)
+                        .dsGlyph(.body, weight: .regular)
                         .foregroundStyle(DS.textSecondary)
                         .frame(width: 26, alignment: .center)
                     Text("Watch this token")

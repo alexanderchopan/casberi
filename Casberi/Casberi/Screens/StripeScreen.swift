@@ -125,7 +125,7 @@ struct StripeScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if available == nil && pending == nil {
                 Text("Reading your balance…")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
             } else {
                 // Values are verbatim — a formatted amount, never a catalog key.
                 DSSpecTable {

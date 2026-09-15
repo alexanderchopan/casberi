@@ -30,7 +30,7 @@ import SwiftUI
 /// `DevnetCreatePanel` shape — the verb is the object and does not wobble.
 struct DSActVerb: View {
     let title: String
-    /// A unit set at `price16` on the verb's own baseline, for a tile whose
+    /// A unit set at `price17` on the verb's own baseline, for a tile whose
     /// verb carries a FIGURE ("Send 1.1" · "test ETH"). Nil everywhere else.
     ///
     /// It is a second parameter rather than part of `title` for the reason
@@ -76,7 +76,7 @@ struct DSActVerb: View {
                         .fixedSize(horizontal: false, vertical: true)
                     if let unit {
                         Text(unit)
-                            .dsText(.price16)
+                            .dsText(.price17)
                             .foregroundStyle(disabled ? DS.textTertiary
                                                       : Color.white.opacity(0.78))
                             .lineLimit(1)
@@ -107,7 +107,7 @@ struct DSActVerb: View {
             } else {
                 Image(systemName: glyph)
                     .accessibilityHidden(true)
-                    .dsGlyph(20, weight: .semibold)
+                    .dsGlyph(.title, weight: .semibold)
                     .foregroundStyle(disabled ? DS.textTertiary : .white)
             }
         }

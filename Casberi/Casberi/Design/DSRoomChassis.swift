@@ -393,7 +393,7 @@ struct DSRoomSlot<Figure: View>: View {
     ///
     /// Since §551 the crown draws at the SAME RUNG as the headline it stands
     /// in for, which is what makes "stands in the row" true optically as well
-    /// as structurally — at `price48` it stood in the row and was still 40pt
+    /// as structurally — at `price64` it stood in the row and was still 40pt
     /// taller than every scope it aligned with.
     ///
     /// The guarantee the row exists to give is that every scope's FIRST PIXEL
@@ -442,7 +442,7 @@ struct DSRoomSlot<Figure: View>: View {
                         // smaller. we should be consistent").**
                         //
                         // A scope headline was `stat24` while Home's crown was
-                        // `price48` — TWO rungs apart on one control, so using
+                        // `price64` — TWO rungs apart on one control, so using
                         // the strip changed the type scale of the screen. The
                         // crowns come DOWN to this rung rather than this rung
                         // going up to meet them, and that direction was

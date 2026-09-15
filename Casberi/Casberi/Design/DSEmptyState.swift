@@ -10,7 +10,7 @@ import SwiftUI
 /// - `.room` — a room card's figure slot: `stat24` headline in the chassis's
 ///   reserved row, `body17` words. With no headline the words sit centred in
 ///   the slot; with one, both sit at the top.
-/// - `.inline` — under a list or in a sheet: `callout15` semibold, `subhead13`.
+/// - `.inline` — under a list or in a sheet: `body17` semibold, `subhead12`.
 ///
 /// No door. A way out is the caller's, and most empty states have none.
 struct DSEmptyState: View {
@@ -43,11 +43,11 @@ struct DSEmptyState: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let headline {
                     headline
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                 }
                 words
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }

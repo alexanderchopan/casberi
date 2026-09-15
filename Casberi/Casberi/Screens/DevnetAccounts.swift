@@ -251,14 +251,14 @@ struct DevnetAccountRow: View {
                 face
                 VStack(alignment: .leading, spacing: 1) {
                     Text(LocalizedStringKey(title))
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     // Both facts on one line: what it shows, then which
                     // address it is. Two lines of tertiary text under a
                     // 15pt title is the wall §315 keeps deleting.
                     Text(subtitle)
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
@@ -283,7 +283,7 @@ struct DevnetAccountRow: View {
             ZStack {
                 Circle().fill(DS.gray100)
                 Image(systemName: "iphone")
-                    .dsGlyph(15, weight: .medium)
+                    .dsGlyph(.subhead, weight: .medium)
                     .foregroundStyle(DS.textSecondary)
             }
             .frame(width: DS.Face.list, height: DS.Face.list)
@@ -509,12 +509,12 @@ struct DevnetAccountsAct<W: DevnetWatchList>: View {
                 WalletFace(address: address, size: DS.Face.list, circular: true)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(watch.name(for: address) ?? WalletStore.shortAddress(address))
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Text(watch.isWatching(address) ? String(localized: "Already watching")
                                                    : (fact(for: address) ?? String(localized: "New address")))
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
@@ -700,7 +700,7 @@ struct DevnetExplorerRow: View {
                         .dsText(.body17)
                         .foregroundStyle(DS.tint)
                     Text(host)
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)
                 }
                 .frame(maxWidth: .infinity, alignment: plain ? .leading : .center)

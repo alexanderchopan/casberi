@@ -27,9 +27,9 @@ struct WalletbeatIncidentHead: View {
 		VStack(alignment: .leading, spacing: DS.Space.s4) {
 			// THE CONTAINER'S OWN TITLE RULE (prd §560) — see
 			// `L2beatSheetViews.liveBody`; the two registry heads shared the
-			// stray `heading28` and are swept together.
+			// stray `heading40` and are swept together.
 			Text(thing.title)
-				.dsText(thing.title.count > 100 ? .heading22 : .heading34)
+				.dsText(thing.title.count > 100 ? .heading24 : .heading40)
 				.foregroundStyle(DS.textPrimary)
 				.fixedSize(horizontal: false, vertical: true)
 				.textSelection(.enabled)
@@ -38,7 +38,7 @@ struct WalletbeatIncidentHead: View {
 
 			if let summary = thing.summary, !summary.isEmpty {
 				Text(summary)
-					.dsText(.reading20)
+					.dsText(.reading17)
 					.foregroundStyle(DS.textSecondary)
 					.fixedSize(horizontal: false, vertical: true)
 					.textSelection(.enabled)
@@ -79,7 +79,7 @@ struct WalletbeatIncidentHead: View {
 					// "Walletbeat rates it …", never a bare severity word: the judgment is
 					// theirs and every surface in this feature says so.
 					Text(String(localized: "Walletbeat rates it \(severity.label)"))
-						.dsText(.label11)
+						.dsText(.label12)
 						.foregroundStyle(DS.textTertiary)
 				}
 			}
@@ -154,7 +154,7 @@ struct WalletbeatIncidentHead: View {
 	private func sources(_ sources: [WalletbeatSource]) -> some View {
 		VStack(alignment: .leading, spacing: DS.Space.s2) {
 			Text(String(localized: "Sources"))
-				.dsText(.label11).fontWeight(.semibold)
+				.dsText(.label12).fontWeight(.semibold)
 				.foregroundStyle(DS.textTertiary)
 			ForEach(sources, id: \.url) { source in
 				Button {
@@ -164,17 +164,17 @@ struct WalletbeatIncidentHead: View {
 					HStack(alignment: .top, spacing: DS.Space.s3) {
 						VStack(alignment: .leading, spacing: 2) {
 							Text(source.label)
-								.dsText(.subhead13).fontWeight(.semibold)
+								.dsText(.subhead12).fontWeight(.semibold)
 								.foregroundStyle(DS.textPrimary)
 								.multilineTextAlignment(.leading)
 								.fixedSize(horizontal: false, vertical: true)
 							Text(WalletbeatNewsParse.host(of: source.url))
-								.dsText(.label11)
+								.dsText(.label12)
 								.foregroundStyle(DS.textTertiary)
 						}
 						Spacer(minLength: DS.Space.s2)
 						Image(systemName: "arrow.up.right")
-							.dsGlyph(11)
+							.dsGlyph(.caption)
 							.foregroundStyle(DS.textTertiary)
 					}
 					.padding(DS.Space.s3)
@@ -191,7 +191,7 @@ struct WalletbeatIncidentHead: View {
 	@ViewBuilder
 	private func stamp(_ facts: WalletbeatIncidentFacts?) -> some View {
 		Text(String(localized: "Published \(Self.day.string(from: facts?.publishedAt ?? thing.capturedAt)) · From Walletbeat, an open registry of wallet practices"))
-			.dsText(.label11)
+			.dsText(.label12)
 			.foregroundStyle(DS.textTertiary)
 			.fixedSize(horizontal: false, vertical: true)
 	}
@@ -220,14 +220,14 @@ struct WalletbeatRevisionHead: View {
 		VStack(alignment: .leading, spacing: DS.Space.s4) {
 			VStack(alignment: .leading, spacing: DS.Space.s2) {
 				Text(String(localized: "Walletbeat revised its review"))
-					.dsText(.label11).fontWeight(.semibold)
+					.dsText(.label12).fontWeight(.semibold)
 					.foregroundStyle(DS.brandHue(for: "walletbeat") ?? DS.tint)
 				Text(attribute?.name ?? thing.title)
-					.dsText(.heading28)
+					.dsText(.heading40)
 					.foregroundStyle(DS.textPrimary)
 					.fixedSize(horizontal: false, vertical: true)
 				Text(String(localized: "\(name) · \(revision.after.isJudged ? String(localized: "now rated") : String(localized: "no longer rated"))"))
-					.dsText(.label11)
+					.dsText(.label12)
 					.foregroundStyle(DS.textTertiary)
 			}
 
@@ -245,7 +245,7 @@ struct WalletbeatRevisionHead: View {
 				if let before = revision.before {
 					WalletbeatVerdictTag(verdict: before)
 					Image(systemName: "arrow.right")
-						.dsGlyph(11)
+						.dsGlyph(.caption)
 						.foregroundStyle(DS.textTertiary)
 						.accessibilityHidden(true)
 				}
@@ -261,7 +261,7 @@ struct WalletbeatRevisionHead: View {
 
 			if let summary = thing.summary, !summary.isEmpty {
 				Text(summary)
-					.dsText(.reading20)
+					.dsText(.reading17)
 					.foregroundStyle(DS.textSecondary)
 					.fixedSize(horizontal: false, vertical: true)
 					.textSelection(.enabled)
@@ -270,7 +270,7 @@ struct WalletbeatRevisionHead: View {
 			Text(revision.day.map {
 				String(localized: "Walletbeat's entry was revised \($0) · their judgment, not ours")
 			} ?? String(localized: "Walletbeat's own judgment, not ours"))
-				.dsText(.label11)
+				.dsText(.label12)
 				.foregroundStyle(DS.textTertiary)
 				.fixedSize(horizontal: false, vertical: true)
 		}

@@ -19,7 +19,7 @@ struct VibenetUnlockActivity: Widget {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     Image(systemName: "lock.open.trianglebadge.exclamationmark")
-                        .dsGlyph(17)
+                        .dsGlyph(.body)
                         .foregroundStyle(WidgetChrome.accent)
                     Text(context.attributes.accountName)
                         .dsText(.widgetChrome15)
@@ -46,7 +46,7 @@ struct VibenetUnlockActivity: Widget {
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     Image(systemName: "lock.open.trianglebadge.exclamationmark")
-                        .dsGlyph(20)
+                        .dsGlyph(.title)
                         .foregroundStyle(WidgetChrome.accent)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
@@ -60,13 +60,13 @@ struct VibenetUnlockActivity: Widget {
                 }
             } compactLeading: {
                 Image(systemName: "lock.open.trianglebadge.exclamationmark")
-                    .dsGlyph(14)
+                    .dsGlyph(.subhead)
                     .foregroundStyle(WidgetChrome.accent)
             } compactTrailing: {
                 countdown(context.state, style: .widgetTimer13)
             } minimal: {
                 Image(systemName: "lock.open.trianglebadge.exclamationmark")
-                    .dsGlyph(14)
+                    .dsGlyph(.subhead)
                     .foregroundStyle(WidgetChrome.accent)
             }
         }

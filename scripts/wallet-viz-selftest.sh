@@ -160,7 +160,7 @@ grep -q 'TagMap(\\(q(g.label))' <<< "$INGEST_CODE" \
        echo "  several maps stacked it is the only thing telling them apart"; exit 1; }
 #
 # (2) Nothing sits above the map inside the card. §417 promoted the
-# concentration sentence to `heading22` here, which put two 22pt lines on top
+# concentration sentence to `heading24` here, which put two 22pt lines on top
 # of each other once the group headers landed in the same pass.
 FEED_CODE=$(sed 's://.*::' "$FEED" | sed '/^[[:space:]]*\/\/\//d')
 if grep -q 'concentrationLead' <<< "$FEED_CODE"; then

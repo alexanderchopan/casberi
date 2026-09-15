@@ -157,7 +157,7 @@ struct AvatarDoor: View {
                 .clipShape(Circle())
         } else {
             Image(systemName: "person.crop.circle")
-                .dsGlyph(26, weight: .regular)
+                .dsGlyph(.feature, weight: .regular)
                 .foregroundStyle(DS.textSecondary)
         }
     }
@@ -193,7 +193,7 @@ struct AppsDoor: View {
     var body: some View {
         Image(systemName: needsAttention ? "square.grid.2x2.fill" : "square.grid.2x2")
             .dsSymbolSwap(needsAttention)
-            .dsGlyph(21)
+            .dsGlyph(.title)
             .foregroundStyle(needsAttention ? DS.attention : DS.tint)
             .symbolEffect(.pulse, options: .repeating, isActive: needsAttention)
             // `value:` fires on CHANGE, so the counter only advances on a real

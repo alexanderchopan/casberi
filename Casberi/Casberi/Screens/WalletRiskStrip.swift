@@ -130,7 +130,7 @@ struct WalletRiskStrip: View {
                     // restated in a unit the protocol does not use, which is
                     // `Entry.detail`'s whole reason for existing.
                     Text(entry.detail)
-                        .dsText(.label11).fontWeight(.semibold)
+                        .dsText(.label12).fontWeight(.semibold)
                         .foregroundStyle(entry.atRisk ? DS.attention : DS.confirm)
                         .lineLimit(1).minimumScaleFactor(0.7)
                         .frame(width: barWidth, alignment: .leading)
@@ -154,12 +154,12 @@ struct WalletRiskStrip: View {
                 .frame(height: 1.5)
                 .offset(y: Self.floorY)
             Text(String(localized: "liquidation"))
-                .dsText(.label11).foregroundStyle(DS.destructive)
+                .dsText(.label12).foregroundStyle(DS.destructive)
                 .padding(.top, Self.floorY + 4)
             HStack(alignment: .top, spacing: 0) {
                 ForEach(Array(shown.enumerated()), id: \.element.id) { _, entry in
                     Text(entry.label)
-                        .dsText(.label11).foregroundStyle(DS.textSecondary)
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
                         .lineLimit(1).minimumScaleFactor(0.7)
                         .frame(width: barWidth, alignment: .leading)
                         .frame(width: step, alignment: .leading)

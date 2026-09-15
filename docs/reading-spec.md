@@ -138,7 +138,7 @@ Under the picture, one row in the sheet's existing row grammar:
 Text in this picture                          212 words  ⌄
 ```
 
-Tapping it discloses the transcript at `reading20` in `textSelection(.enabled)`.
+Tapping it discloses the transcript at `reading17` in `textSelection(.enabled)`.
 
 ### Rules — these are what keep it off the §632 shelf
 
@@ -289,7 +289,7 @@ extractor**:
 Its own doc says so: *"Capped so it stays a lede, not a mirror of the page."*
 That was the right bound when the text existed to be searched.
 
-`ArticleBody` draws that output at `reading20`, under a comment reading *"on an
+`ArticleBody` draws that output at `reading17`, under a comment reading *"on an
 article the body IS the thing."* **The app has never drawn an article.**
 
 Beside it, `FeedArticleText.thinSummary = 400`: an article whose publisher
@@ -314,7 +314,7 @@ draw text that already exists; this one changes what the app goes and gets.
   decides whether paragraphs are prose or nav. Raising the paragraph limit
   makes a MISS worse, not better — a page with no marker returns the whole body
   and paragraph 40 is the footer. Measure the miss rate before raising the
-  limit, or the cap's removal ships nav scraps at `reading20`.
+  limit, or the cap's removal ships nav scraps at `reading17`.
 
 ### 5.2 `thinSummary`
 
@@ -493,8 +493,8 @@ Pure by contract so `scripts/screenshot-text-selftest.sh` can compile it whole.
 **The view.** `ScreenshotContent` takes `assetID` and `stored` today; it needs
 the transcript, so pass `thing.content` at the call site rather than reaching
 for the model inside a leaf. Under the image, a `DisclosureGroup`-shaped row in
-the sheet's existing grammar — title `heading17`, trailing `subhead13` count —
-**collapsed by default**, drawing at `reading20` with `textSelection(.enabled)`
+the sheet's existing grammar — title `heading17`, trailing `subhead12` count —
+**collapsed by default**, drawing at `reading17` with `textSelection(.enabled)`
 when open.
 
 **Harness:** `scripts/screenshot-text-selftest.sh`. Fixtures: a recipe (clears),

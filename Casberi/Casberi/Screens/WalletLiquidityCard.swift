@@ -40,11 +40,11 @@ struct WalletLiquidityCard: View {
                 // 11pt label straight to rows, so "is it working" — the
                 // question its own doc says it exists to answer — had to be
                 // derived by reading every pill. Lending and Approvals have led
-                // with a spoken `heading22` since they shipped; this is that
+                // with a spoken `heading24` since they shipped; this is that
                 // anatomy finished. The rows are unchanged: the reading says
                 // the verdict, the pills say which position.
                 Text(reading.text)
-                    .dsText(.heading22)
+                    .dsText(.heading24)
                     .foregroundStyle(reading.idle ? DS.attention : DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 // `Position` is a plain value type (never a `Thing`), keyed
@@ -134,7 +134,7 @@ struct WalletLiquidityCard: View {
                 VStack(alignment: .trailing, spacing: 3) {
                     if let value = position.valueUSD, value > 0 {
                         Text(WalletValue.money(value))
-                            .dsText(.price16).foregroundStyle(DS.textPrimary)
+                            .dsText(.price17).foregroundStyle(DS.textPrimary)
                             .monospacedDigit().lineLimit(1)
                     }
                     outcomePill(position)

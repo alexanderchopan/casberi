@@ -24,7 +24,7 @@ enum ReadableParse {
     /// WRONG WAY ROUND.** They were written when this text existed only to be
     /// searched — the old doc said so: *"Capped so it stays a lede, not a
     /// mirror of the page."* §645 pass 1 put that same text on the sheet at
-    /// `reading20`, and fifteen real pages through this exact code said the
+    /// `reading17`, and fifteen real pages through this exact code said the
     /// lede bound was not merely too small but actively harmful:
     ///
     /// **Leading chrome sits in exactly the slots a six-paragraph limit

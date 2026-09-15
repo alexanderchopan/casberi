@@ -67,8 +67,8 @@ struct VibenetAuthorizeSheet: View {
                                     // This passed the byte-identical expression
                                     // the tray title is built from twenty lines
                                     // up, so the sheet opened on "Authorize a
-                                    // key" in `heading34` with "Authorize a key"
-                                    // in `heading22` directly beneath it — the
+                                    // key" in `heading40` with "Authorize a key"
+                                    // in `heading24` directly beneath it — the
                                     // fault §538 took out of the key sheet and
                                     // the create sheet, third instance.
                                     //
@@ -121,7 +121,7 @@ struct VibenetAuthorizeSheet: View {
         ZStack {
             Circle().fill(Self.mark.opacity(0.18)).frame(width: DS.Face.list, height: DS.Face.list)
             Image(systemName: phase == .done ? "checkmark" : "key.fill")
-                .dsGlyph(16, weight: .semibold)
+                .dsGlyph(.subhead, weight: .semibold)
                 .foregroundStyle(Self.mark)
         }
         .accessibilityHidden(true)
@@ -215,7 +215,7 @@ struct VibenetAuthorizeSheet: View {
                          : String(localized: "Reads as a P-256 public key — another phone's own key.")))
                 } else if !pasted.isEmpty {
                     Text(String(localized: "That's neither a 64-byte public key nor a 20-byte address."))
-                        .dsText(.label11)
+                        .dsText(.label12)
                         .foregroundStyle(DS.destructive)
                 }
             }
@@ -242,7 +242,7 @@ struct VibenetAuthorizeSheet: View {
                             .foregroundStyle(DS.textPrimary)
                         Spacer()
                         Image(systemName: "chevron.up.chevron.down")
-                            .dsGlyph(12)
+                            .dsGlyph(.caption)
                             .foregroundStyle(DS.textTertiary)
                     }
                     .padding(.horizontal, DS.Space.s3)
@@ -258,7 +258,7 @@ struct VibenetAuthorizeSheet: View {
             // beside the fields it is about.
             if let errorText {
                 Text(errorText)
-                    .dsText(.label11)
+                    .dsText(.label12)
                     .foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -278,11 +278,11 @@ struct VibenetAuthorizeSheet: View {
                 authorize()
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "key.fill").dsGlyph(13, weight: .semibold)
+                    Image(systemName: "key.fill").dsGlyph(.caption, weight: .semibold)
                     Text(editing == nil ? String(localized: "Authorize") : String(localized: "Save"))
                     if busy { DSSpinner(size: .mini) }
                 }
-                .dsText(.callout15).fontWeight(.semibold)
+                .dsText(.body17).fontWeight(.semibold)
                 .foregroundStyle(canSubmit ? .white : DS.textTertiary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, DS.Space.s3)

@@ -44,7 +44,7 @@ struct RoomConnectionsFigure: View {
         if let map, !map.nodes.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 Text(headline(map))
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(2)
                 ConnectionSpine(map: map)
@@ -221,7 +221,7 @@ struct RoomAccountsRows: View {
             // not — and here there is no amount, because Holdings owns it.
             if row.connections > 0 {
                 Text(String(row.connections))
-                    .dsText(.price16)
+                    .dsText(.price17)
                     .foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
             }

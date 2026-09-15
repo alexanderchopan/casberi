@@ -54,14 +54,14 @@ struct AltanaKeyCard: View {
             }
             if let tidy = AltanaKeySheet.tidyNote(model) {
                 Text(tidy)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s3)
             }
             if let ceiling = AltanaKeySheet.scopeCeiling(model) {
                 Text(ceiling)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s2)
@@ -97,18 +97,18 @@ struct AltanaKeyCard: View {
                 .frame(width: 46, height: 46)
                 .overlay(
                     Image(systemName: "key.horizontal.fill")
-                        .dsGlyph(20)
+                        .dsGlyph(.title)
                         .foregroundStyle(.white)
                 )
             VStack(alignment: .leading, spacing: 2) {
                 Text(AltanaKeySheet.title(model))
-                    .dsText(.heading22)
+                    .dsText(.heading24)
                     .foregroundStyle(DS.textPrimary)
                 // Empty when neither the curve nor the chain could be read —
                 // skipped rather than drawn as a blank line.
                 if !AltanaKeySheet.subtitle(model).isEmpty {
                     Text(AltanaKeySheet.subtitle(model))
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                 }
             }
@@ -126,7 +126,7 @@ struct AltanaKeyCard: View {
                 .frame(width: 7, height: 7)
                 .opacity(model.live == .checking ? 0.45 : 1)
             Text(AltanaKeySheet.liveLine(model))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textSecondary)
         }
         .animation(reduceMotion ? nil : DS.Motion.standard, value: model.live)
@@ -159,7 +159,7 @@ struct AltanaKeyCard: View {
             .frame(height: Self.windowHeight)
             if let line = AltanaKeySheet.windowLine(model) {
                 Text(line)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
@@ -174,7 +174,7 @@ struct AltanaKeyCard: View {
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)
             Text(date.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "—")
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textSecondary)
         }
     }
@@ -191,10 +191,10 @@ struct AltanaKeyCard: View {
 
     private func fact(_ k: String, _ v: String, quiet: Bool = false) -> some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(k).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+            Text(k).dsText(.subhead12).foregroundStyle(DS.textSecondary)
             Spacer(minLength: DS.Space.s3)
             Text(v)
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .fontWeight(quiet ? .regular : .semibold)
                 .foregroundStyle(quiet ? DS.textSecondary : DS.textPrimary)
                 .monospacedDigit()

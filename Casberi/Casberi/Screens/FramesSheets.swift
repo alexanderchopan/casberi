@@ -190,7 +190,7 @@ struct FramesMoveSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: DS.Space.s3) {
                 Text(FramesFormat.stamp(move.timestamp, block: move.blockNumber))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 DSStamp(word: move.verdict.word, weight: stampWeight)
@@ -199,7 +199,7 @@ struct FramesMoveSheet: View {
             crossing.padding(.top, DS.Space.s4)
             if let sponsorship {
                 Text(sponsorship)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s4)
             }
@@ -242,7 +242,7 @@ struct FramesMoveSheet: View {
             // nothing must not look alike (§515a), and this is the largest
             // type on the sheet.
             Text(String(localized: "What it moved couldn't be read"))
-                .dsText(.reading20).foregroundStyle(DS.textSecondary)
+                .dsText(.reading17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -258,7 +258,7 @@ struct FramesMoveSheet: View {
         HStack(spacing: DS.Space.s2) {
             endpoint(sender)
             Image(systemName: "arrow.right")
-                .dsGlyph(13).foregroundStyle(DS.textTertiary)
+                .dsGlyph(.caption).foregroundStyle(DS.textTertiary)
             if move.recipients.isEmpty {
                 // A batch of pure calls, or a transaction this room read off
                 // the chain that paid nobody. Said rather than drawn as an
@@ -267,7 +267,7 @@ struct FramesMoveSheet: View {
                     ZStack {
                         Circle().fill(DS.surfaceWell)
                         Image(systemName: "circle.dashed")
-                            .dsGlyph(15).foregroundStyle(DS.textTertiary)
+                            .dsGlyph(.subhead).foregroundStyle(DS.textTertiary)
                     }
                     .frame(width: DS.Face.list, height: DS.Face.list)
                     Text(String(localized: "nobody paid"))
@@ -392,7 +392,7 @@ struct FramesMoveSheet: View {
                 .frame(width: 7, height: 7).padding(.top, 6)
             VStack(alignment: .leading, spacing: 1) {
                 Text(String(localized: "\(String(index + 1)). \(row.frame.stepName)"))
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                 if let target = row.frame.target, !target.isEmpty {
                     Text(FramesName.of(target, mine: mine, watched: watched))
                         .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
@@ -402,7 +402,7 @@ struct FramesMoveSheet: View {
             VStack(alignment: .trailing, spacing: 1) {
                 if let hex = row.valueWeiHex, let value = FramesMoney.eth(fromWeiHex: hex, places: 6) {
                     Text(String(localized: "\(value) ETH"))
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                 }
                 if let gas = row.outcome?.gasUsed {
@@ -540,7 +540,7 @@ struct FramesMoveSheet: View {
                 }
             } label: {
                 Text(String(localized: "Watch \(WalletStore.shortAddress(address))"))
-                    .dsText(.callout15).foregroundStyle(DS.tint)
+                    .dsText(.body17).foregroundStyle(DS.tint)
             }
             .buttonStyle(.plain)
         }
@@ -553,7 +553,7 @@ struct FramesMoveSheet: View {
         if let url = URL(string: "\(FramesIdentity.explorer)/tx/\(move.hash)") {
             Link(destination: url) {
                 Text(String(localized: "Open in the explorer"))
-                    .dsText(.callout15).foregroundStyle(DS.tint)
+                    .dsText(.body17).foregroundStyle(DS.tint)
             }
         }
     }
@@ -652,14 +652,14 @@ struct FramesFrameSheet: View {
                 ZStack {
                     Circle().fill(tone.opacity(0.16))
                     Image(systemName: FramesModeStyle.glyph(row.frame.mode))
-                        .dsGlyph(24).foregroundStyle(tone)
+                        .dsGlyph(.title).foregroundStyle(tone)
                 }
                 .frame(width: DS.Face.shelf, height: DS.Face.shelf)
                 Spacer(minLength: 0)
                 DSStamp(word: outcomeWord(row), weight: outcomeWeight(row))
             }
             Text(position)
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s3)
             if let hex = row.valueWeiHex, let value = FramesMoney.eth(fromWeiHex: hex, places: 6) {
                 Text(String(localized: "\(value) test ETH"))
@@ -667,16 +667,16 @@ struct FramesFrameSheet: View {
                     .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                     .padding(.top, 2)
                 Text(meaning(row))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s4)
             } else {
                 // A step that moves nothing leads with what it DOES, at
-                // `reading20` — running prose that is the whole point of the
+                // `reading17` — running prose that is the whole point of the
                 // surface it sits on, which is that rung's own definition. The
                 // mode name is not repeated: the tray title already carries it.
                 Text(meaning(row))
-                    .dsText(.reading20).foregroundStyle(DS.textPrimary)
+                    .dsText(.reading17).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
             }
@@ -751,7 +751,7 @@ struct FramesFrameSheet: View {
                 // already says a VERIFY frame authorises.
                 if !execution && !payment {
                     Text(String(localized: "Approves neither, so the transaction has no payer."))
-                        .dsText(.subhead13).foregroundStyle(DS.destructive)
+                        .dsText(.subhead12).foregroundStyle(DS.destructive)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
                     DSFootnote(Text(String(localized: "Spent inside this transaction — nothing to revoke.")))
@@ -763,9 +763,9 @@ struct FramesFrameSheet: View {
     @ViewBuilder private func approval(_ word: String, granted: Bool) -> some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: granted ? "checkmark.circle.fill" : "xmark.circle")
-                .dsGlyph(14)
+                .dsGlyph(.subhead)
                 .foregroundStyle(granted ? DS.confirm : DS.textTertiary)
-            Text(word).dsText(.callout15)
+            Text(word).dsText(.body17)
                 .foregroundStyle(granted ? DS.textPrimary : DS.textTertiary)
         }
         .padding(.horizontal, DS.Space.s3)
@@ -833,7 +833,7 @@ struct FramesFrameSheet: View {
                  // its full length while everything around it loses a clause.
                  ? String(localized: "It ran out of STATE budget, not execution — raising the execution limit will not help.")
                  : String(localized: "It used its whole execution budget and reverted."))
-                .dsText(.subhead13).foregroundStyle(DS.destructive)
+                .dsText(.subhead12).foregroundStyle(DS.destructive)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -887,8 +887,8 @@ struct FramesFrameSheet: View {
                 return String(localized: "Roped to step \(String(index)) — all or nothing.")
             }()
             HStack(spacing: DS.Space.s2) {
-                Image(systemName: "link").dsGlyph(13).foregroundStyle(DS.tint)
-                Text(word).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                Image(systemName: "link").dsGlyph(.caption).foregroundStyle(DS.tint)
+                Text(word).dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -976,9 +976,9 @@ struct FramesFrameSheet: View {
             onOpenFrame?(target)
         } label: {
             HStack(spacing: DS.Space.s2) {
-                if back { Image(systemName: "chevron.left").dsGlyph(12) }
-                Text(move.rows[target].frame.stepName).dsText(.callout15)
-                if !back { Image(systemName: "chevron.right").dsGlyph(12) }
+                if back { Image(systemName: "chevron.left").dsGlyph(.caption) }
+                Text(move.rows[target].frame.stepName).dsText(.body17)
+                if !back { Image(systemName: "chevron.right").dsGlyph(.caption) }
             }
             .foregroundStyle(DS.tint)
             .contentShape(Rectangle())
@@ -987,7 +987,7 @@ struct FramesFrameSheet: View {
     }
 
     @ViewBuilder private func note(_ text: String, tone: Color) -> some View {
-        Text(text).dsText(.callout15).foregroundStyle(tone)
+        Text(text).dsText(.body17).foregroundStyle(tone)
             .fixedSize(horizontal: false, vertical: true)
     }
 }
@@ -1110,14 +1110,14 @@ struct FramesPayerSheet: View {
                 // sponsor who paid nothing — `FramesPayer.gasWei`'s
                 // all-or-nothing rule, and this is the line it exists for.
                 Text(String(localized: "The total couldn't be read"))
-                    .dsText(.reading20).foregroundStyle(DS.textSecondary)
+                    .dsText(.reading17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s3)
             }
             Text(payer.count == 1
                  ? String(localized: "Paid for 1 transaction")
                  : String(localized: "Paid for \(String(payer.count)) transactions"))
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s4)
         }
@@ -1200,7 +1200,7 @@ struct FramesPayerSheet: View {
                 }
             } label: {
                 Text(String(localized: "Watch \(WalletStore.shortAddress(payer.address))"))
-                    .dsText(.callout15).foregroundStyle(DS.tint)
+                    .dsText(.body17).foregroundStyle(DS.tint)
             }
             .buttonStyle(.plain)
         }
@@ -1210,7 +1210,7 @@ struct FramesPayerSheet: View {
         if let url = URL(string: "\(FramesIdentity.explorer)/address/\(payer.address)") {
             Link(destination: url) {
                 Text(String(localized: "Open in the explorer"))
-                    .dsText(.callout15).foregroundStyle(DS.tint)
+                    .dsText(.body17).foregroundStyle(DS.tint)
             }
         }
     }
@@ -1284,7 +1284,7 @@ struct FramesAccountSheet: View {
                         Text(WalletStore.shortAddress(account.address))
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
                         Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                            .dsGlyph(13)
+                            .dsGlyph(.caption)
                             .foregroundStyle(copied ? DS.confirm : DS.textTertiary)
                     }
                     .contentShape(Rectangle())
@@ -1301,12 +1301,12 @@ struct FramesAccountSheet: View {
                 // account, which on a devnet that may have been reset is the
                 // likeliest reading of all (§515a).
                 Text(String(localized: "The chain didn't answer"))
-                    .dsText(.reading20).foregroundStyle(DS.textSecondary)
+                    .dsText(.reading17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s3)
             }
             Text(sendLine)
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s4)
         }
         .dsSheetHeadBlock()
@@ -1382,7 +1382,7 @@ struct FramesAccountSheet: View {
                     Task { await FramesLiveState.shared.refresh() }
                 } label: {
                     Text(String(localized: "Stop watching"))
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                        .dsText(.body17).foregroundStyle(DS.textTertiary)
                 }
                 .buttonStyle(.plain)
             } else {
@@ -1394,7 +1394,7 @@ struct FramesAccountSheet: View {
                     }
                 } label: {
                     Text(String(localized: "Watch this address"))
-                        .dsText(.callout15).foregroundStyle(DS.tint)
+                        .dsText(.body17).foregroundStyle(DS.tint)
                 }
                 .buttonStyle(.plain)
             }
@@ -1405,7 +1405,7 @@ struct FramesAccountSheet: View {
         if let url = URL(string: "\(FramesIdentity.explorer)/address/\(account.address)") {
             Link(destination: url) {
                 Text(String(localized: "Open in the explorer"))
-                    .dsText(.callout15).foregroundStyle(DS.tint)
+                    .dsText(.body17).foregroundStyle(DS.tint)
             }
         }
     }

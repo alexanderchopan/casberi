@@ -110,7 +110,7 @@ struct RoomHoldingsFigure: View {
     @ViewBuilder private func tile(_ cell: RoomHoldings.Cell, rank: Int) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(cell.name)
-                .dsText(.callout15)
+                .dsText(.body17)
                 .fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.7)
@@ -141,7 +141,7 @@ struct RoomHoldingsRows: View {
                       title: cell.name,
                       subtitleText: nil) {
                 Text(cell.amount)
-                    .dsText(.price16)
+                    .dsText(.price17)
                     .foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
                     .lineLimit(1)

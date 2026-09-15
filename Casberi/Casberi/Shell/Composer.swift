@@ -1731,7 +1731,7 @@ struct Composer: View {
                     close()
                 } label: {
                     Image(systemName: "chevron.down")
-                        .dsGlyph(18, weight: .semibold)
+                        .dsGlyph(.body, weight: .semibold)
                         .foregroundStyle(DS.textSecondary)
                         .frame(width: 44, height: 44)
                         .background(DS.fillFaint, in: Circle())
@@ -1765,7 +1765,7 @@ struct Composer: View {
             if isRecording { recordingBand }
             if voice.phase == .denied {
                 Text("No mic access — allow Casberi in \(DS.settingsAppName)")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s2)
             }
@@ -2262,7 +2262,7 @@ struct Composer: View {
             action()
         } label: {
             Image(systemName: glyph)
-                .dsGlyph(15, weight: .semibold)
+                .dsGlyph(.subhead, weight: .semibold)
                 .foregroundStyle(enabled ? DS.textSecondary : DS.textTertiary.opacity(0.4))
                 .frame(width: 34, height: 34)
                 .background(DS.fillFaint, in: Circle())
@@ -2416,7 +2416,7 @@ struct Composer: View {
             }
             if !voice.transcript.isEmpty {
                 Text(voice.transcript)
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(4)
             }
         }
@@ -3110,7 +3110,7 @@ struct Composer: View {
                     .accessibilityHidden(true)
             } else {
                 Image(systemName: glyph)
-                    .dsGlyph(10, weight: .regular)
+                    .dsGlyph(.tick, weight: .regular)
                     .accessibilityHidden(true)
             }
             Text(words)
@@ -3600,7 +3600,7 @@ struct Composer: View {
                 // corpus-derived specifics, and they're tappable, which a
                 // placeholder never was.
                 // THE INVITATION IS THE CROWN AT REST (prd §575) — see
-                // `restingPanel`. `heading34` is the head rung, and this is
+                // `restingPanel`. `heading40` is the head rung, and this is
                 // the one place on the surface that earns it: §506 allows one
                 // crown per surface and at rest there is nothing else here,
                 // the greeting having stepped down to the body rung in the
@@ -3620,7 +3620,7 @@ struct Composer: View {
                 // 17pt caret reads as the field failing to match its own
                 // placeholder." The premise was that the TYPED TEXT is
                 // body-sized. On the ask surface it is not — placeholder,
-                // caret and typed words are all at `heading34` — so there is
+                // caret and typed words are all at `heading40` — so there is
                 // nothing left to mismatch, and the sentence you are writing is
                 // the subject of the screen for as long as you are writing it.
                 //
@@ -3645,13 +3645,13 @@ struct Composer: View {
                     let answered = answering || !turns.isEmpty
                     Text(answered ? String(localized: "Ask about this…")
                                   : AskSubject.invitation(ground: askGround))
-                        .dsText(answered ? .heading22 : (embedded ? .price48 : .body17))
+                        .dsText(answered ? .heading24 : (embedded ? .price64 : .body17))
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.45)
                         .contentTransition(.opacity)
                 }
-                .dsText(embedded ? .heading22 : .body17)
+                .dsText(embedded ? .heading24 : .body17)
                 .foregroundStyle(DS.textPrimary)
                 .tint(DS.tint)
                 .focused($fieldFocused)

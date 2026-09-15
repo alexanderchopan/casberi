@@ -98,12 +98,12 @@ struct VibenetWatchField: View {
                 WalletFace(address: address, size: DS.Face.list, circular: true)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(watch.name(for: address) ?? VibenetRoom.shortAddress(address))
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Text(watch.isWatching(address) ? String(localized: "Already watching")
                                                    : String(localized: "New address"))
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
@@ -180,7 +180,7 @@ struct VibenetDiscoverySection: View {
             } else if discovered.isEmpty {
                 if discoveryAttempted {
                     Text("Couldn't reach vibenet to find an account to suggest — paste an address above, or open the explorer to find one.")
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)
                 }
             } else {

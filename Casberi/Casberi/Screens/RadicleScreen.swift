@@ -125,7 +125,7 @@ struct RadicleScreen: View {
     /// one is a decision about a real project rather than a hash.
     @ViewBuilder private var resultsBlock: some View {
         Text(AccountPageShape.onLabel("Radicle"))
-            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             .padding(.top, DS.Space.s2)
         ForEach(found, id: \.rid) { repo in
             Button { watch(repo.rid) } label: {

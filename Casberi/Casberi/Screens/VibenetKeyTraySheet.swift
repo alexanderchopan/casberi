@@ -143,7 +143,7 @@ struct VibenetKeyTraySheet: View {
                     // about keys this build cannot describe.
                     if let note = VibenetKeyTray.footnote(items) {
                         Text(note)
-                            .dsText(.label11)
+                            .dsText(.label12)
                             .foregroundStyle(DS.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -257,9 +257,9 @@ struct VibenetKeyTraySheet: View {
     /// indentations").**
     ///
     /// The complaint is exact and it was arithmetic, not taste. One row carried
-    /// SIX text treatments — `body17` kind, `label11` monospaced key tail, a
-    /// semibold `label11` New badge on a filled capsule, `label11` account
-    /// name, a `FlowLayout` of permission chips in three fills, and a `label11`
+    /// SIX text treatments — `body17` kind, `label12` monospaced key tail, a
+    /// semibold `label12` New badge on a filled capsule, `label12` account
+    /// name, a `FlowLayout` of permission chips in three fills, and a `label12`
     /// clock — in three columns at two vertical rhythms. Down a list of three
     /// keys that is eighteen typographic decisions where a list needs two, and
     /// the chips are the part that breaks the EDGE: a `FlowLayout` wraps, so
@@ -307,13 +307,13 @@ struct VibenetKeyTraySheet: View {
                         // A word, not a pill (prd §584) — see
                         // `VibenetRoomCard`'s own note. Same badge, second file.
                         Text(String(localized: "New"))
-                            .dsText(.label11).fontWeight(.semibold)
+                            .dsText(.label12).fontWeight(.semibold)
                             .foregroundStyle(Self.mark)
                             .fixedSize()
                     }
                 }
                 Text(Self.subline(key))
-                    .dsText(.label11)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -324,7 +324,7 @@ struct VibenetKeyTraySheet: View {
             // place would leave a reader unable to tell it from unknown.
             let urgent = key.actor.expiryStanding(now: .now) == .soon
             Text(key.actor.expiryLabel(now: .now))
-                .dsText(.label11)
+                .dsText(.label12)
                 .fontWeight(urgent ? .semibold : .regular)
                 .foregroundStyle(urgent ? Self.mark : DS.textTertiary)
                 .multilineTextAlignment(.trailing)

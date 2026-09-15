@@ -480,7 +480,7 @@ extension DS {
     /// and 51 on the dark one. Snapchat's yellow lands at 1.1:1. Painting the
     /// row's smallest text in it would re-commit the exact failure that took
     /// the color OUT of this slot on 2026-07-30 (`BandRow.labelInk` records it:
-    /// the old `ProjectHue` ink measured ~3.4:1 at `label11`).
+    /// the old `ProjectHue` ink measured ~3.4:1 at `label12`).
     ///
     /// THE ONE RULE: move away from the page until the ratio is met, and show
     /// nothing if it can't be. On a dark page the ink brightens and lets

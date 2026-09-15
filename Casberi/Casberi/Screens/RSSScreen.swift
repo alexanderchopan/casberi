@@ -183,14 +183,14 @@ struct RSSScreen: View {
                 importingOPML = true
             } label: {
                 Text("Import an OPML file")
-                    .dsText(.subhead13).foregroundStyle(DS.tint)
+                    .dsText(.subhead12).foregroundStyle(DS.tint)
             }
             .buttonStyle(.plain)
             if !rss.feeds.isEmpty, let exportURL {
-                Text("·").dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                Text("·").dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 ShareLink(item: exportURL) {
                     Text("Export as OPML")
-                        .dsText(.subhead13).foregroundStyle(DS.tint)
+                        .dsText(.subhead12).foregroundStyle(DS.tint)
                 }
                 // **`.plain`, OR THIS LINK EATS THE WHOLE ROW (prd §693).**
                 // A `ShareLink` is a Button, and a Button left on the
@@ -236,7 +236,7 @@ struct RSSScreen: View {
                 opmlParsed = nil
             } label: {
                 Text("Cancel")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)

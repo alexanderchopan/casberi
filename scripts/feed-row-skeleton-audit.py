@@ -15,7 +15,7 @@ skeleton, and nothing enforced it:
 
     HStack(alignment: .top, spacing: DS.Space.s3)
       mark            BridgeIcon at DS.Mark.row, or a thumb standing in for it
-      VStack          title at body17, supporting line at subhead13/label12
+      VStack          title at body17, supporting line at subhead12/label12
       trailing        LiveTimeText — the same fact, in the same corner
     .padding(.vertical, DS.Space.s2)
 
@@ -71,7 +71,7 @@ NOT_ROWS = {
 
 # A row that trails something other than a time, and why.
 KNOWN_NO_TIME = {
-    "TokenRow": "trails the live price (price16) — a watched token's row is "
+    "TokenRow": "trails the live price (price17) — a watched token's row is "
                 "about what it costs now, and a timestamp would report when we "
                 "last fetched",
     "WalletbeatWalletRow": "a watched wallet's standing rating trails its stage — "
@@ -157,7 +157,7 @@ def check_template(src: str) -> list[str]:
         ("DS.Mark.row", "the lead is not the 26pt row mark — the column loses its one edge"),
         (".frame(width: Self.leadSize, height: Self.leadSize)",
          "the lead is not framed — a 28pt face or a 38pt mark would push the column right"),
-        (".dsText(.callout15)", "the line is not at callout15"),
+        (".dsText(.body17)", "the line is not at body17"),
     ]:
         if needle not in b:
             bad.append(f"DSFeedRow: {why}")
@@ -212,12 +212,12 @@ def check_money(files: "dict[str, str]") -> "list[str]":
     """ONE RUNG FOR A SIGNED AMOUNT IN A ROW (prd §587).
 
     Measured when this landed: four activity surfaces drew the same fact three
-    ways — `price16` in the Wallet room, `subhead13` on Hegota, `callout15` on
+    ways — `price17` in the Wallet room, `subhead12` on Hegota, `body17` on
     Frames, and buried INSIDE the title sentence on Wallet's own pushed history
     screen. A reader crossing from a room to its "See activity" screen met the
     same transaction in a different grammar.
 
-    `price16` is the app's row-money rung and the one the most-drawn surface
+    `price17` is the app's row-money rung and the one the most-drawn surface
     already used, so the others came to it.
     """
     bad = []
@@ -232,8 +232,8 @@ def check_money(files: "dict[str, str]") -> "list[str]":
             bad.append(f"{name}: not found in {path} — the money-row list is stale")
             continue
         b = strip_comments(b)
-        if ".dsText(.price16)" not in b:
-            bad.append(f"{name}: a signed amount is not at price16 — four activity "
+        if ".dsText(.price17)" not in b:
+            bad.append(f"{name}: a signed amount is not at price17 — four activity "
                        f"surfaces state this fact and they share one rung")
         if "monospacedDigit" not in b:
             bad.append(f"{name}: the amount is not tabular")
@@ -290,12 +290,12 @@ def self_test() -> None:
             print(f"  ✗ self-test: {label}"); sys.exit(1)
         print(f"  ok   {label}")
     tmpl = ("struct DSFeedRow { .dsText(.body17) DS.Space.s2 DS.Mark.row "
-            ".frame(width: Self.leadSize, height: Self.leadSize) .dsText(.callout15) }")
+            ".frame(width: Self.leadSize, height: Self.leadSize) .dsText(.body17) }")
     for label, src, should_fail in [
         ("the template's facts pass", tmpl, False),
         ("a template whose lead is unframed is flagged",
          tmpl.replace(".frame(width: Self.leadSize, height: Self.leadSize)", ""), True),
-        ("a template off the reading rung is flagged", tmpl.replace("body17", "heading22"), True),
+        ("a template off the reading rung is flagged", tmpl.replace("body17", "heading24"), True),
         ("a template erasing through AnyView is flagged", tmpl + " AnyView(", True),
     ]:
         if bool(check_template(src)) != should_fail:
@@ -330,15 +330,15 @@ def self_test() -> None:
     import tempfile, os
     money = [
         ("a signed amount at the shared rung passes",
-         "struct BandRow: View {\n .dsText(.price16)\n .monospacedDigit()\n}\n", False),
+         "struct BandRow: View {\n .dsText(.price17)\n .monospacedDigit()\n}\n", False),
         ("an amount off the shared rung is flagged",
-         "struct BandRow: View {\n .dsText(.subhead13)\n .monospacedDigit()\n}\n", True),
+         "struct BandRow: View {\n .dsText(.subhead12)\n .monospacedDigit()\n}\n", True),
         ("a non-tabular amount is flagged",
-         "struct BandRow: View {\n .dsText(.price16)\n}\n", True),
+         "struct BandRow: View {\n .dsText(.price17)\n}\n", True),
         ("a COMMENTED rung does not satisfy it",
-         "struct BandRow: View {\n // .dsText(.price16)\n .monospacedDigit()\n}\n", True),
+         "struct BandRow: View {\n // .dsText(.price17)\n .monospacedDigit()\n}\n", True),
         ("a renamed money row is flagged, not skipped",
-         "struct BandRowX: View {\n .dsText(.price16)\n .monospacedDigit()\n}\n", True),
+         "struct BandRowX: View {\n .dsText(.price17)\n .monospacedDigit()\n}\n", True),
     ]
     with tempfile.TemporaryDirectory() as td:
         for label, src, should_fail in money:

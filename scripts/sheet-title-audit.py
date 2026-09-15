@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """A SHEET'S HEAD MUST NOT REPEAT ITS TRAY'S TITLE (prd §538/§539, 2026-08-31).
 
-`DSTray(title:)` renders the sheet's name at `heading34`. `DSSheetHead(title:)`
-renders a title at `heading22` directly beneath it. When both are handed the
+`DSTray(title:)` renders the sheet's name at `heading40`. `DSSheetHead(title:)`
+renders a title at `heading24` directly beneath it. When both are handed the
 same words the sheet opens on its own name, twice, in two sizes — and whatever
 the sheet actually has to say is pushed below it, sometimes below the fold.
 
-**That "at `heading22`" was true when this was written, FALSE for a day, and is
+**That "at `heading24`" was true when this was written, FALSE for a day, and is
 true again by construction (check C, 2026-09-02).** §560 raised the head to
-`heading34` — right for a head standing alone, and inside a tray it made the
+`heading40` — right for a head standing alone, and inside a tray it made the
 sentence above describe a pair that no longer existed: two heads at one rung,
 120pt of headline before the first fact, on five of the six sheets that draw
 both. A file whose own premise has gone stale is how the next reader is misled,
@@ -42,7 +42,7 @@ within a week (this file's own §299 lesson):
      from BOTH. A phase word shared between the tray and the head is the same
      fault wearing a switch statement.
 
-  C. THE RUNG, not the words — one `heading34` per surface. A COMPONENT check,
+  C. THE RUNG, not the words — one `heading40` per surface. A COMPONENT check,
      run once rather than per file: `DSTray` declares that it has spent the head
      rung and `DSSheetHead` steps down when it reads that, so no caller can get
      it wrong and there is no per-sheet shape to scan. See `rung_findings`.
@@ -305,10 +305,10 @@ def rung_findings(tray_src: str, head_src: str) -> list[str]:
 
     Checks A and B are about the WORDS. This is the same relationship's other
     half, and it went wrong the day after they were written: §560 raised
-    `DSSheetHead.title` from `heading22` to `heading34` on the reasoning that
+    `DSSheetHead.title` from `heading24` to `heading40` on the reasoning that
     "a `DSSheetHead` has no amount, so its title is the largest thing on the
     paper" — true of a head standing alone, false inside a `DSTray`, which
-    draws its own `heading34` four points above. **Five of the six heads in the
+    draws its own `heading40` four points above. **Five of the six heads in the
     app are inside a tray**, so that raise gave five sheets two heads: 120pt of
     headline before the first fact, which on `VibenetCreateSheet` pushed the
     new account's address under the pinned action and sliced it through the
@@ -328,18 +328,18 @@ def rung_findings(tray_src: str, head_src: str) -> list[str]:
         out.append(
             "DSTray no longer tells its content it has spent the head rung "
             "(environment(\\.dsSurfaceHasHead, true)) — without it every "
-            "DSSheetHead inside a tray draws a second heading34 under the first."
+            "DSSheetHead inside a tray draws a second heading40 under the first."
         )
     if "dsSurfaceHasHead" not in head:
         out.append(
             "DSSheetHead no longer reads dsSurfaceHasHead — its title is "
-            "heading34 unconditionally again, which is a second head on every "
+            "heading40 unconditionally again, which is a second head on every "
             "sheet that is inside a tray."
         )
-    elif "surfaceHasHead ? .heading22 : .heading34" not in head:
+    elif "surfaceHasHead ? .heading24 : .heading40" not in head:
         out.append(
             "DSSheetHead reads dsSurfaceHasHead but no longer steps its title "
-            "rung by it — the flag is set, the head is still heading34."
+            "rung by it — the flag is set, the head is still heading40."
         )
     return out
 
@@ -531,22 +531,22 @@ def self_test() -> int:
     # missing-read arm and every case below passes for the wrong reason — which
     # is exactly what the first cut of these fixtures did.
     HEAD_READ = '@Environment(\\.dsSurfaceHasHead) private var surfaceHasHead'
-    HEAD_OK = HEAD_READ + "\n.dsText(surfaceHasHead ? .heading22 : .heading34)"
+    HEAD_OK = HEAD_READ + "\n.dsText(surfaceHasHead ? .heading24 : .heading40)"
     rung_cases = [
         ("the mechanism intact passes", TRAY_OK, HEAD_OK, 0),
         ("a tray that stops declaring the rung is caught",
          "content()", HEAD_OK, 1),
         ("a head that stops reading the flag is caught",
-         TRAY_OK, ".dsText(.heading34)", 1),
+         TRAY_OK, ".dsText(.heading40)", 1),
         ("a head that reads the flag and ignores it is caught",
-         TRAY_OK, HEAD_READ + "\n.dsText(.heading34)", 1),
+         TRAY_OK, HEAD_READ + "\n.dsText(.heading40)", 1),
         ("both halves gone is caught, not silently halved",
-         "content()", ".dsText(.heading34)", 2),
+         "content()", ".dsText(.heading40)", 2),
         # Both files explain the rule by naming the symbols that carry it, so a
         # raw grep would score prose as compliance (the Obsidian/Cursor lesson).
         ("the rule described in a COMMENT is not compliance",
          "// content().environment(\\.dsSurfaceHasHead, true)\ncontent()",
-         "// " + HEAD_READ + "\n.dsText(.heading34)", 2),
+         "// " + HEAD_READ + "\n.dsText(.heading40)", 2),
     ]
     for label, tray, head, want in rung_cases:
         got = len(rung_findings(tray, head))

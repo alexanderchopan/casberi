@@ -23,7 +23,7 @@ extension PrivacyDevnetSection: DSSectionScope {}
 /// something the chain does not.
 ///
 /// **THE SCOPE HEADLINE IS A COUNT, NEVER A SENTENCE (prd §596).** Every
-/// non-home scope drew `section.summary` at `heading22` INSIDE the slot, above
+/// non-home scope drew `section.summary` at `heading24` INSIDE the slot, above
 /// its figure — a sentence standing on the chart, which no sibling room does.
 /// The chassis-reserved `stat24` row now carries a count the way Frames,
 /// Hegotá and vibenet's scopes do, and the summary survives where it always
@@ -97,7 +97,7 @@ struct PrivacyDevnetRoomCard: View {
         // this reason — prose standing on a drawing — and exempted Home on the
         // grounds that its sentence IS the crown. Seen on a device, that
         // exemption fails in the one state the room is usually in: three lines
-        // of `heading22` saying "Proofs here name 2 snapshots the chain still
+        // of `heading24` saying "Proofs here name 2 snapshots the chain still
         // remembers" directly above a ring drawing two numbered sets and their
         // remaining life. The sentence was the drawing, in words, on top of it.
         //
@@ -200,7 +200,7 @@ struct PrivacyDevnetRoomCard: View {
             // the drawing restated in three lines of heading type above it.
             if marks.isEmpty {
                 Text(PrivacyDevnetRoom.sentence(head))
-                    .dsText(.heading22)
+                    .dsText(.heading24)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -473,7 +473,7 @@ extension PrivacyDevnetRoomCard {
                          : String(localized: "\(walkCut.unread) older transactions on this chain weren't read."))
                 }
             }
-            .dsText(.subhead13)
+            .dsText(.subhead12)
             .foregroundStyle(DS.textTertiary)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -487,7 +487,7 @@ extension PrivacyDevnetRoomCard {
     /// count in every scope is a floor rather than a total.
     @ViewBuilder var walkFloor: some View {
         Text(String(localized: "Found by following the chain's logs, so a transaction that emitted none isn't here."))
-            .dsText(.subhead13)
+            .dsText(.subhead12)
             .foregroundStyle(DS.textTertiary)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -568,7 +568,7 @@ extension PrivacyDevnetRoomCard {
     /// alone.
     @ViewBuilder static func when(_ move: PrivacyDevnetLiveState.Move) -> some View {
         if let when = RoomWhen.age(move.date) {
-            Text(when).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            Text(when).dsText(.subhead12).foregroundStyle(DS.textTertiary)
         }
     }
 
@@ -738,7 +738,7 @@ extension PrivacyDevnetRoomCard {
                 .frame(height: 64)
                 .opacity(0.6)
             Text(line)
-                .dsText(.callout15)
+                .dsText(.body17)
                 .foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -802,7 +802,7 @@ extension PrivacyDevnetRoomCard {
         VStack(alignment: .leading, spacing: 0) {
             Spacer(minLength: 0)
             Text(PrivacyDevnetName.of(account.address))
-                .dsText(.callout15).fontWeight(.semibold)
+                .dsText(.body17).fontWeight(.semibold)
                 .foregroundStyle(mine ? DS.attention : DS.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.7)
         }
@@ -970,7 +970,7 @@ extension PrivacyDevnetRoomCard {
                     }
                 }
                 Text(Self.windowNote)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s1)
@@ -1174,7 +1174,7 @@ struct PrivacyDevnetExampleDoors: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(String(localized: "Or watch one that has something to show"))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textTertiary)
             ForEach(PrivacyDevnetExample.all) { example in
                 Button { onWatch(example.address) } label: {
@@ -1184,7 +1184,7 @@ struct PrivacyDevnetExampleDoors: View {
                                 .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)
                             Text(example.detail)
-                                .dsText(.subhead13)
+                                .dsText(.subhead12)
                                 .foregroundStyle(DS.textTertiary)
                         }
                         Spacer(minLength: DS.Space.s3)

@@ -38,11 +38,11 @@ struct LanguagePickerSheet: View {
                     // endonyms/glosses aren't catalog keys so they fall through
                     // verbatim; only "System" / "Match your device" localize.
                     Text(LocalizedStringKey(endonym)).dsText(.heading17).foregroundStyle(DS.textPrimary)
-                    Text(LocalizedStringKey(gloss)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    Text(LocalizedStringKey(gloss)).dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "checkmark")
-                    .dsGlyph(16, weight: .bold)
+                    .dsGlyph(.subhead, weight: .bold)
                     .foregroundStyle(DS.tint)
                     .opacity(selected ? 1 : 0)
             }

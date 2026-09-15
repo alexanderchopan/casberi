@@ -91,7 +91,7 @@ struct RoomActivityChart: View {
                 // An empty window states the fact and draws no bars, rather
                 // than a row of nothing that reads as a rendering fault.
                 Text("Nothing in this window.")
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
                     .frame(height: height, alignment: .top)
             }
@@ -149,12 +149,12 @@ struct RoomActivityChart: View {
         HStack(spacing: 5) {
             if !flat {
                 Image(systemName: delta > 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
-                    .dsGlyph(9)
+                    .dsGlyph(.tick)
                     .foregroundStyle(ink)
             }
             Text(flat ? String(localized: "Same as the window before")
                       : String(localized: "\(String(abs(delta))) vs the window before"))
-                .dsText(.callout15).fontWeight(.semibold)
+                .dsText(.body17).fontWeight(.semibold)
                 .foregroundStyle(flat ? DS.textSecondary : ink)
                 .monospacedDigit()
             Spacer(minLength: 0)

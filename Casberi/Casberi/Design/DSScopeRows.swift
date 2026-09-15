@@ -90,7 +90,7 @@ struct DSScopeRows<Scope: DSTileScope>: View {
                         .frame(width: DS.Face.row, height: DS.Face.row)
                     Image(systemName: section.glyph)
                         .accessibilityHidden(true)
-                        .dsGlyph(13, weight: .semibold)
+                        .dsGlyph(.caption, weight: .semibold)
                         .foregroundStyle(DS.textPrimary)
                 }
                 if wants {

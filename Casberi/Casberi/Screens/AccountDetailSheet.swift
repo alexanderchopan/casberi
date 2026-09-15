@@ -225,12 +225,12 @@ struct AccountDetailSheet: View {
             // Outcome lines arrive with the settle beat — a result, not a flicker.
             if let importResult {
                 Text(importResult)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .settleIn()
             }
             if let deleteResult {
                 Text(deleteResult)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .settleIn()
             }
         }
@@ -288,7 +288,7 @@ struct AccountDetailSheet: View {
     /// confirm beneath it will offer, it just no longer outranks Export.
     private func dangerLabel(_ title: String) -> some View {
         Text(title)
-            .dsText(.callout15).fontWeight(.semibold)
+            .dsText(.body17).fontWeight(.semibold)
             .foregroundStyle(DS.destructive)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
@@ -311,7 +311,7 @@ struct AccountDetailSheet: View {
         // Status row + two class toggles + quiet hours + the ceiling footnote
         // (prd §306; −110 with the whisper row and its time picker gone, §706).
         // §713: +34 for the two class subtitles that now say how each
-        // interrupts (one more subhead13 line apiece), and +17 more when
+        // interrupts (one more subhead12 line apiece), and +17 more when
         // authorized for the "Last sent …" clause. UNSEEN on a device.
         case .notifications: notifyAuthorized ? 600 : 525
         }
@@ -323,7 +323,7 @@ struct AccountDetailSheet: View {
     /// librarian is on — and a four-way ternary is where a tray quietly starts
     /// clipping its last row.
     ///
-    /// Each addend is one wrapped `subhead13` paragraph at this width plus the
+    /// Each addend is one wrapped `subhead12` paragraph at this width plus the
     /// stack's own gap, measured against the two paragraphs already here (the
     /// ADP nudge is the same shape and cost 60 when it landed).
     private var privacyHeight: CGFloat {
@@ -383,7 +383,7 @@ struct AccountDetailSheet: View {
                 // the hero's subline on a fact already made.
                 (Text("things · ")
                     + Text(storeSize).fontWeight(.semibold))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
             }
             // The whole on-device story, worn as one quiet capsule — the
             // guarantee still reads at a glance without a badge painting it.
@@ -463,12 +463,12 @@ struct AccountDetailSheet: View {
             // the toggle's own POSITION, which is the first thing read here.
             if !icloudSync, SharedStore.syncDisabledByGuard {
                 Text(CloudSyncReading.guardNotice(deviceName: DS.device))
-                    .dsText(.subhead13).foregroundStyle(DS.destructive)
+                    .dsText(.subhead12).foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if icloudSync, syncHasLiveError, let detail = CloudSyncStatus.lastError {
                 Text(detail)
-                    .dsText(.subhead13).foregroundStyle(DS.destructive)
+                    .dsText(.subhead12).foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
             }
             // ADP nudge — only meaningful while sync is ON (with sync off
@@ -617,7 +617,7 @@ struct AccountDetailSheet: View {
             // search), so it goes dark with the ask (prd §718).
             if AskSurface.enabled, let capability = keyProvider.capabilityLine {
                 Text(capability)
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             // A list, not a segmented control (prd §243) — see
@@ -657,7 +657,7 @@ struct AccountDetailSheet: View {
                 SecureField(LocalizedStringKey(keyProvider.placeholder), text: $keyDraft)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .padding(.horizontal, DS.Space.s3)
                     .frame(minHeight: 44)
                     .background(DS.fillFaint,
@@ -693,7 +693,7 @@ struct AccountDetailSheet: View {
             }
             if let keyResult {
                 Text(keyResult)
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
                     .settleIn()
             }
@@ -742,7 +742,7 @@ struct AccountDetailSheet: View {
     /// pass (2026-08-03).
     private func badge(_ glyph: String, _ tone: Color) -> some View {
         IconChip(tone: tone, size: 38) {
-            Image(systemName: glyph).dsGlyph(16)
+            Image(systemName: glyph).dsGlyph(.subhead)
         }
     }
 
@@ -815,7 +815,7 @@ struct AccountDetailSheet: View {
             badge(glyph, tone)
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
-                Text(value).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                Text(value).dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)

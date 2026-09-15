@@ -396,7 +396,7 @@ struct PrivacyDevnetAnatomy: View {
                 .chartArrival(index: index, reduceMotion: reduceMotion)
         case .sponsor:
             Text(String(localized: "paid for"))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.tint)
                 .padding(.horizontal, 6)
                 .overlay(Capsule().strokeBorder(DS.tint, lineWidth: 1.5))
@@ -501,7 +501,7 @@ struct PrivacyDevnetLegend: View {
         HStack(spacing: 5) {
             mark()
             Text(label())
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textTertiary)
         }
     }
@@ -540,7 +540,7 @@ struct PrivacyDevnetMore: View {
     var body: some View {
         if count > 0 {
             Text(String(localized: "and \(String(count)) \(noun)"))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textTertiary)
         }
     }
@@ -594,7 +594,7 @@ struct PrivacyDevnetKindMix: View {
                             .fill(DS.tint.opacity(Self.weight(index)))
                             .frame(width: 14, height: 8)
                         Text(Self.words(part.kind, count: part.count))
-                            .dsText(.callout15)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
                         Spacer(minLength: 0)

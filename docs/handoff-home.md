@@ -44,7 +44,7 @@ the title.
 Content: the day's newest image thing (kind .screenshot or an image .file).
 - Eyebrow: "JUST LANDED · <SOURCE>" (label12 kerning 1, white 70%).
 - Title: the thing's title, 26pt weight .heavy, lineLimit(2), minimumScaleFactor(0.7).
-- Subline: project · shortTime (subhead13, white 85%).
+- Subline: project · shortTime (subhead12, white 85%).
 - Tap → the thing sheet. The image fills the header under the gradient.
 - NO fixed content heights inside — the 250pt is the image canvas (minHeight),
   text is bottom-anchored with padding; test at accessibility type sizes.

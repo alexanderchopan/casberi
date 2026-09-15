@@ -67,7 +67,7 @@ struct PolarScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if mrr == nil && activeSubs == nil {
                 Text("Reading your revenue…")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
             } else {
                 // Values are verbatim — a formatted figure, never a catalog key.
                 DSSpecTable {

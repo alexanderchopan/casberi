@@ -1080,7 +1080,7 @@ enum ASCIngest {
         // useful to search and noise in a title — both still true, and the
         // field it was parked in stopped being invisible: since §645 pass 1
         // the sheet DRAWS a `.link` row's `enrichedText`, so a review's whole
-        // body was one word set full-width at `reading20`. A tag is what this
+        // body was one word set full-width at `reading17`. A tag is what this
         // always was — a filter dimension — and it is searched the same way.
         //
         // OWED, and stated rather than hidden: the API's `territory` is a

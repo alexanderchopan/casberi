@@ -31,8 +31,8 @@ FOUR CHECKS, all static — no build, no simulator:
      sentence drawn by hand. (Error copy in `DS.attention`/`DS.destructive`
      is not a footnote and is not flagged.)
   3. NO HAND-DRAWN FOOTNOTE. A `Text` whose literal is a SENTENCE (four words
-     or more, ending in a full stop) set at a footnote rung (`subhead13`,
-     `label12`, `label11`, `callout15`) in `DS.textTertiary` is an explaining
+     or more, ending in a full stop) set at a footnote rung (`subhead12`,
+     `label12`, `label12`, `body17`) in `DS.textTertiary` is an explaining
      sentence drawn by hand. A STATUS is not an explanation: a line that
      reports what happened or is happening ("Couldn't …", "Nothing …",
      "Waiting …", "Sign-in cancelled …") matches `STATUS_RE` and passes.
@@ -76,7 +76,7 @@ FOOTNOTE_SRC = os.path.join(APP, "Design", "DSFootnote.swift")
 SLAB_SRC = os.path.join(APP, "Design", "DSSlab.swift")
 
 FOOTNOTE_RE = re.compile(r"\b(?:DSFootnote|DSSlabNote)\(")
-RUNGS = ("subhead13", "label12", "label11", "callout15")
+RUNGS = ("subhead12", "label12", "body17")
 STATUS_RE = re.compile(
     r"^(Couldn't|Can't|No |Nothing|Nobody|Not |Sign-in cancelled|Waiting|"
     r"Reading|Asking|Working|Checking|Loading|Pick something)")
@@ -291,16 +291,16 @@ struct S: View {
             // DSFootnote("a comment is not a footnote.") DSFootnote(
             DSFootnote("Test ETH has no value, and the network may be reset.")
             Text("Couldn't read this pack just now.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                .dsText(.body17).foregroundStyle(DS.textTertiary)
             Text("\\(count) things · \\(apps) apps")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             Text("Waiting for your approval…")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             Text("A title in primary ink says a lot of words here.")
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
             Section { row } footer: {
                 Text("A bug in the list, not a hidden service.")
-                    .dsText(.callout15).foregroundStyle(DS.attention)
+                    .dsText(.body17).foregroundStyle(DS.attention)
             }
         }
     }
@@ -321,7 +321,7 @@ VStack {
 DIRTY_HAND = '''
 VStack {
     Text("Watching puts it in this room with your other accounts.")
-        .dsText(.label11)
+        .dsText(.label12)
         .foregroundStyle(DS.textTertiary)
 }
 '''
@@ -332,7 +332,7 @@ Text(String(localized: "Sends in different channels don't queue behind each othe
 '''
 DIRTY_FOOTER = '''
 Section { rows } footer: {
-    Text(ceiling).dsText(.callout15).foregroundStyle(DS.textTertiary)
+    Text(ceiling).dsText(.body17).foregroundStyle(DS.textTertiary)
 }
 '''
 FOOTNOTE_OK = 'struct DSFootnote: View { var body: some View { text.foregroundStyle(DS.textTertiary) } }'

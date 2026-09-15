@@ -7,7 +7,7 @@ import SwiftUI
 /// devnet heads and the chat composer had each arrived at the same
 /// arrangement independently — a `price40` figure, its unit a rung down, the
 /// words demoted underneath — and the other twenty-odd room heads opened on a
-/// `heading22` sentence instead. This is that arrangement extracted rather
+/// `heading24` sentence instead. This is that arrangement extracted rather
 /// than re-drawn, so a room joining it cannot drift into a fifth version of
 /// it (§498's rule, and the reason §583 kept a modifier when it deleted the
 /// paper).
@@ -30,7 +30,7 @@ struct RoomLedeView: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2 - 2) {
                 Text(verbatim: lede.figure)
-                    // The hero rung. `price40` and never `price48`: §506's
+                    // The hero rung. `price40` and never `price64`: §506's
                     // crown is one per surface, and a room head sits under
                     // the chip strip that already spends it.
                     .dsText(.price40)

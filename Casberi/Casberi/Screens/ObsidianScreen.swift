@@ -44,7 +44,7 @@ struct ObsidianScreen: View {
         if obsidian.connected {
             HStack(spacing: DS.Space.s3) {
                 Image(systemName: "folder")
-                    .dsGlyph(17, weight: .medium)
+                    .dsGlyph(.body, weight: .medium)
                     .foregroundStyle(DS.tint)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(obsidian.vaultName.isEmpty ? "Vault" : obsidian.vaultName)
@@ -52,11 +52,11 @@ struct ObsidianScreen: View {
                     // NOT "Connected —": the state line under the name says
                     // that once, in the page's own voice (§639).
                     Text("Notes sync when you visit or open the app.")
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 }
                 Spacer()
                 Button("Change") { picking = true }
-                    .dsText(.callout15).fontWeight(.semibold)
+                    .dsText(.body17).fontWeight(.semibold)
                     .foregroundStyle(DS.tint)
                     .buttonStyle(.plain)
             }

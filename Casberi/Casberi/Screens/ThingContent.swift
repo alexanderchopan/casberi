@@ -384,7 +384,7 @@ struct ThingContentView: View {
                 // here at all. The record's own words are the honest fallback,
                 // same as every other kind's default case.
                 Text(ProseLinks.rendered(thing.content))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .lineLimit(6)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s3)
@@ -501,7 +501,7 @@ struct ThingContentView: View {
                 // with none set) — the same bare-text fallback every kind
                 // without a dedicated anatomy gets.
                 Text(ProseLinks.rendered(thing.content))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .lineLimit(12)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s3)
@@ -531,7 +531,7 @@ struct ThingContentView: View {
                let cover = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines),
                !cover.isEmpty {
                 Text(cover)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)
@@ -554,7 +554,7 @@ struct ThingContentView: View {
                let body = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines),
                !body.isEmpty {
                 Text(ProseLinks.rendered(body))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)
@@ -581,7 +581,7 @@ struct ThingContentView: View {
                 // case §366 carved the note sources OUT of.
                 NoteProse(text: thing.content,
                           markdown: false,
-                          tier: .callout15,
+                          tier: .body17,
                           ink: DS.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)
@@ -621,10 +621,10 @@ private struct ScreenshotContent: View {
                         VStack(spacing: DS.Space.s1) {
                             Image(systemName: "photo")
                                 .accessibilityHidden(true)
-                                .dsGlyph(22, weight: .regular)
+                                .dsGlyph(.title, weight: .regular)
                                 .foregroundStyle(DS.textTertiary)
                             Text(Self.absenceLine())
-                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, DS.Space.s3)
                         }
@@ -897,7 +897,7 @@ private struct LinkPreviewCard: View {
                             .multilineTextAlignment(.leading)
                     }
                     Text(url.host() ?? url.absoluteString)
-                        .dsText(.subhead13).foregroundStyle(DS.tint)
+                        .dsText(.subhead12).foregroundStyle(DS.tint)
                         .lineLimit(1)
                 }
                 .padding(DS.Space.s3)
@@ -989,7 +989,7 @@ struct ThingSummaryText: View {
 
     var body: some View {
         Text(ProseLinks.rendered(text))
-            .dsText(.callout15)
+            .dsText(.body17)
             .foregroundStyle(DS.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1022,7 +1022,7 @@ private struct StoredArtContent: View {
                     .overlay(
                         Image(systemName: "music.note")
                             .accessibilityHidden(true)
-                            .dsGlyph(22, weight: .regular)
+                            .dsGlyph(.title, weight: .regular)
                             .foregroundStyle(DS.textTertiary)
                     )
             }
@@ -1091,7 +1091,7 @@ private struct ChatBubbles: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ForEach(Array(shown.enumerated()), id: \.offset) { _, line in
                 Text(ProseLinks.rendered(String(line)))
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .padding(.horizontal, DS.Space.s3)
                     .padding(.vertical, DS.Space.s2)
                     .dsWell(cornerRadius: 14)
@@ -1101,7 +1101,7 @@ private struct ChatBubbles: View {
                     withAnimation(DS.Motion.standard) { expanded = true }
                 } label: {
                     Text("Show \(hiddenCount) more")
-                        .dsText(.subhead13).foregroundStyle(DS.tint)
+                        .dsText(.subhead12).foregroundStyle(DS.tint)
                 }
                 .buttonStyle(.plain)
                 .dsHover()
@@ -1161,7 +1161,7 @@ private struct VoiceContent: View {
                     } label: {
                         Image(systemName: playing ? "pause.circle.fill" : "play.circle.fill")
                             .dsSymbolSwap(playing)
-                            .dsGlyph(28, weight: .regular)
+                            .dsGlyph(.feature, weight: .regular)
                             .foregroundStyle(DS.tint)
                             .dsTapTarget(Circle())
                     }
@@ -1183,7 +1183,7 @@ private struct VoiceContent: View {
             }
             if !transcript.isEmpty {
                 Text(ProseLinks.rendered(transcript))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .lineLimit(8)
             }
         }
@@ -1347,7 +1347,7 @@ private struct FileVideoContent: View {
 
             if let line {
                 Text(line)
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s3)
             }
@@ -1431,7 +1431,7 @@ private struct FileAudioContent: View {
             }
             if let line {
                 Text(line)
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s3)
             }
@@ -1492,12 +1492,12 @@ private struct FileChip: View {
                 if !compact {
                     Image(systemName: "doc")
                         .accessibilityHidden(true)
-                        .dsGlyph(17, weight: .medium)
+                        .dsGlyph(.body, weight: .medium)
                         .foregroundStyle(DS.tint)
                 }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(name)
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1).truncationMode(.middle)
                     // Under a picture the note is the quiet metadata line
                     // (size, folder) rather than the payload, so it sits with
@@ -1508,7 +1508,7 @@ private struct FileChip: View {
                     // exact stutter this chip moved under the picture to stop.
                     if compact, let metadata {
                         Text(metadata)
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                             .lineLimit(1).truncationMode(.middle)
                     }
                 }
@@ -1521,7 +1521,7 @@ private struct FileChip: View {
             .dsWell()
             if !compact, !note.isEmpty {
                 Text(ProseLinks.rendered(note))
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .lineLimit(3)
             }
         }
@@ -1579,7 +1579,7 @@ private struct MailContentView: View {
                         // the address is what tells you it's really them.
                         if sender != SenderInitial.displayName(of: sender) {
                             Text(sender)
-                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                                 .lineLimit(1).truncationMode(.middle)
                         }
                     }
@@ -1588,7 +1588,7 @@ private struct MailContentView: View {
             }
             if !isFromLine, !thing.content.isEmpty {
                 Text(ProseLinks.rendered(thing.content))
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(10)
             }
             // WHY THE SHEET STOPS HERE (prd §365). `MailBridge` stores no body
@@ -1615,7 +1615,7 @@ private struct CommandCard: View {
 
     var body: some View {
         Text(text)
-            .dsText(.mono13)
+            .dsText(.mono17)
             .foregroundStyle(DS.textPrimary)
             .lineLimit(6)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1725,7 +1725,7 @@ private struct MomentStub: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 Text(relativeLine)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(overdue ? DS.destructive : DS.textSecondary)
                     .lineLimit(1)
             }
@@ -1739,13 +1739,13 @@ private struct MomentStub: View {
     private var dayBlock: some View {
         VStack(spacing: 0) {
             Text(start.formatted(.dateTime.weekday(.abbreviated)))
-                .dsText(.label11)
+                .dsText(.label12)
                 .foregroundStyle(overdue ? DS.destructive : DS.tint)
             Text(start.formatted(.dateTime.day()))
                 .dsText(.stat24)
                 .foregroundStyle(overdue ? DS.destructive : DS.textPrimary)
             Text(start.formatted(.dateTime.month(.abbreviated)))
-                .dsText(.label11)
+                .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
         .frame(width: 56)
@@ -1848,7 +1848,7 @@ private struct MetricBand: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                     Text(metric.label)
-                        .dsText(.label11)
+                        .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                         .multilineTextAlignment(.center)
@@ -1937,18 +1937,18 @@ private struct PersonCard: View {
                     .accessibilityLabel(name)
             } else {
                 Text(initials)
-                    .dsText(.heading22)
+                    .dsText(.heading24)
                     .foregroundStyle(DS.textPrimary)
                     .frame(width: 76, height: 76)
                     .background(DS.gray100, in: Circle())
             }
             Text(name)
-                .dsText(.heading22)
+                .dsText(.heading24)
                 .foregroundStyle(DS.textPrimary)
                 .multilineTextAlignment(.center)
             if let subtitle {
                 Text(subtitle)
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .multilineTextAlignment(.center)
             }
@@ -2002,7 +2002,7 @@ private struct AccessoryCard: View {
                             .dsText(.heading17)
                             .foregroundStyle(DS.textPrimary)
                         Text(state.label)
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textTertiary)
                     }
                     Spacer(minLength: 0)
@@ -2190,14 +2190,14 @@ private struct TokenChartContent: View {
 
     /// One card anatomy for every stat — the tile radius, a full s4 pad, the
     /// value in the rounded money voice. Lead wears stat24; the rest demote
-    /// to price16 in the same seat.
+    /// to price17 in the same seat.
     private func statCard(label: String, value: Double, lead: Bool) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(LocalizedStringKey(label))
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .lineLimit(1)
             Text(TokenStats.compact(value))
-                .dsText(lead ? .stat24 : .price16)
+                .dsText(lead ? .stat24 : .price17)
                 .foregroundStyle(DS.textPrimary)
                 .monospacedDigit()
                 .lineLimit(1)
@@ -2390,7 +2390,7 @@ private struct PostHogMetricContent: View {
             }
             if let tappedMark {
                 Text(tappedMark)
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
             }
             milestoneLine
         }
@@ -2407,7 +2407,7 @@ private struct PostHogMetricContent: View {
                 .dsText(.stat24).monospacedDigit()
                 .foregroundStyle(DS.textPrimary)
             Text("\(event) · last 7 days")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
         }
     }
 
@@ -2506,7 +2506,7 @@ struct GitHubStarContent: View {
                         Circle().fill(Self.languageColor(language))
                             .frame(width: 9, height: 9)
                         Text(language)
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     }
                 }
                 Spacer(minLength: 0)
@@ -2524,14 +2524,14 @@ struct GitHubStarContent: View {
                 if let now = currentStars, now != since.stars {
                     let delta = now - since.stars
                     Text("\(Self.compact(since.stars)) → \(Self.compact(now))")
-                        .dsText(.subhead13).foregroundStyle(DS.textPrimary).monospacedDigit()
+                        .dsText(.subhead12).foregroundStyle(DS.textPrimary).monospacedDigit()
                     Text(delta > 0 ? "+\(Self.compact(delta)) since you starred"
                                    : "since you starred")
                         .dsText(.label12)
                         .foregroundStyle(delta > 0 ? DS.confirm : DS.textTertiary)
                 } else {
                     Text("\(Self.compact(since.stars)) when you starred")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary).monospacedDigit()
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary).monospacedDigit()
                 }
             }
         }
@@ -2598,7 +2598,7 @@ private struct GitHubReleaseContent: View {
             }
             if let notes {
                 Text(ProseLinks.rendered(notes))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .lineLimit(10)
                     .fixedSize(horizontal: false, vertical: true)
             }

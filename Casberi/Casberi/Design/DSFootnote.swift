@@ -17,8 +17,8 @@ import SwiftUI
 /// field, the label or the row above already say this? Then it goes.
 ///
 /// Two sizes and no more, the house pattern (`DSEmptyState.Scale`):
-/// - `.meta` — `subhead13`, the meta rung, under a row or inside a card.
-/// - `.page` — `callout15`, a list section's footer, where a page's words sit.
+/// - `.meta` — `subhead12`, the meta rung, under a row or inside a card.
+/// - `.page` — `body17`, a list section's footer, where a page's words sit.
 ///
 /// Inside an account page's act it is always `.page` (prd §729: the page's
 /// words were set at the meta size on a page whose content is the words).
@@ -45,7 +45,7 @@ struct DSFootnote: View {
 
     var body: some View {
         text
-            .dsText(accountAct || scale == .page ? .callout15 : .subhead13)
+            .dsText(accountAct || scale == .page ? .body17 : .subhead12)
             .foregroundStyle(DS.textTertiary)
             .multilineTextAlignment(centered ? .center : .leading)
             .fixedSize(horizontal: false, vertical: true)

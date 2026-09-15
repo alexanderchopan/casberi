@@ -70,7 +70,7 @@ struct WorkStageView: View {
             // together — that duration is the most specific true thing this
             // row knows and it earns the slot outright.
             Text(verbatim: detail ?? reading.statusWord ?? "")
-                .dsText(.callout15)
+                .dsText(.body17)
                 .fontWeight(.semibold)
                 .foregroundStyle(tint)
                 .fixedSize(horizontal: false, vertical: true)
@@ -96,7 +96,7 @@ struct WorkStageView: View {
         case .money:  moneyHeadline
         // A star rating arrives as five glyphs that are already the verdict,
         // so the words beside them are a caption, not a claim — one rung down.
-        case .stars:  wordsHeadline(.heading22)
+        case .stars:  wordsHeadline(.heading24)
         case .code:   codeHeadline
         case .words:  wordsHeadline(.stat24)
         }
@@ -170,7 +170,7 @@ struct WorkStageView: View {
 
     private func projectLine(_ project: String) -> some View {
         Text(verbatim: project)
-            .dsText(.callout15)
+            .dsText(.body17)
             .foregroundStyle(DS.textSecondary)
             .lineLimit(1)
             .truncationMode(.middle)
@@ -181,11 +181,11 @@ struct WorkStageView: View {
     private func deadlineStrip(_ due: Date) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Image(systemName: "clock")
-                .dsGlyph(15)
+                .dsGlyph(.subhead)
                 .foregroundStyle(DS.attention)
                 .accessibilityHidden(true)
             Text(verbatim: dueSentence(due))
-                .dsText(.callout15)
+                .dsText(.body17)
                 .foregroundStyle(DS.attention)
                 .fixedSize(horizontal: false, vertical: true)
         }

@@ -2372,7 +2372,7 @@ struct RootShell: View {
                 }
                 .transition(.opacity)
                 // THE PROXY TITLE IS DELETED (prd §550). It was §167 item 1's
-                // scaffolding: a `heading22` copy of the whisper's own words,
+                // scaffolding: a `heading24` copy of the whisper's own words,
                 // mounted in this same `composerOpen` transaction so the
                 // capsule's title had a live `matchedGeometryEffect` pair to
                 // fly into while the real masthead was still 400ms away. The
@@ -4535,7 +4535,7 @@ private struct CaptureFlight: View {
             HStack(spacing: DS.Space.s2) {
                 KindGlyph(kind: flight.kind, size: 24)
                 Text(flight.title)
-                    .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                    .dsText(.subhead12).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
             }
             .padding(.horizontal, DS.Space.s3)

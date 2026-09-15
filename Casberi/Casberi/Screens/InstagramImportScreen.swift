@@ -127,7 +127,7 @@ struct InstagramImportScreen: View {
             if liveConnected {
                 HStack(spacing: DS.Space.s3) {
                     Image(systemName: "bell.fill")
-                        .dsGlyph(17, weight: .medium)
+                        .dsGlyph(.body, weight: .medium)
                         .foregroundStyle(DS.tint)
                     Text(InstagramLiveAuth.username.map { "Signed in as @\($0)" }
                          ?? String(localized: "Live — your own account, signed in"))

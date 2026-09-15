@@ -13,7 +13,7 @@ struct ImportActivity: Widget {
                 HStack(spacing: 8) {
                     Image(systemName: context.state.finished
                           ? "checkmark.circle.fill" : "tray.and.arrow.down.fill")
-                        .dsGlyph(17)
+                        .dsGlyph(.body)
                         .foregroundStyle(WidgetChrome.accent)
                     Text(headline(context.attributes.source, context.state))
                         .dsText(.widgetChrome15)
@@ -35,7 +35,7 @@ struct ImportActivity: Widget {
                 DynamicIslandExpandedRegion(.leading) {
                     Image(systemName: context.state.finished
                           ? "checkmark.circle.fill" : "tray.and.arrow.down.fill")
-                        .dsGlyph(20)
+                        .dsGlyph(.title)
                         .foregroundStyle(WidgetChrome.accent)
                 }
                 DynamicIslandExpandedRegion(.trailing) {

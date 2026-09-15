@@ -40,7 +40,7 @@ enum ReadableBody {
     /// joined its `<p>`s with a space and the share extension's script
     /// collapsed `innerText`'s newlines the same way. That was harmless while
     /// the text was retrieval-only and became the "giant wall of text" the
-    /// moment §645 drew it — 8,000 characters at `reading20` with no break
+    /// moment §645 drew it — 8,000 characters at `reading17` with no break
     /// anywhere. User: *"could we format it somewhat w/ rules, like every three
     /// or four sentences enter a line break"*. The parse now keeps the page's
     /// own paragraphs; `paragraphed` is that rule, for a body that arrived

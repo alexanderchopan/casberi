@@ -124,13 +124,13 @@ struct AWSScreen: View {
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                 if let resources = AWSRoom.resourceLine(standing) {
                     Text(resources)
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 }
                 Text(standing.region)
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
             } else {
                 Text("Reading your account…")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
             }
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading AWS…"),

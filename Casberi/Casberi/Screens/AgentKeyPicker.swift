@@ -77,7 +77,7 @@ struct AgentKeyPicker: View {
                 .opacity(isConfigured ? 1 : 0.45)
             VStack(alignment: .leading, spacing: 1) {
                 Text(provider.agent)
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 // The state a segment could never show: the stored key's own
                 // tail, or the honest absence.

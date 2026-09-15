@@ -36,7 +36,7 @@ struct ENSRenewCard: View {
     @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             Text(verbatim: standingLine)
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
             termPicker
@@ -50,7 +50,7 @@ struct ENSRenewCard: View {
             // after signing.
             if let note = ENSRenew.ownershipNote(isYours: isYours) {
                 Text(note)
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -98,7 +98,7 @@ struct ENSRenewCard: View {
                     onPickTerm(option)
                 } label: {
                     Text(option.label)
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .fontWeight(option == term ? .semibold : .regular)
                         .foregroundStyle(option == term ? DS.textPrimary : DS.textSecondary)
                         .padding(.horizontal, DS.Space.s3)

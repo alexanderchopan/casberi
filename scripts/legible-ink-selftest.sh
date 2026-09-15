@@ -4,7 +4,7 @@
 # WHY THIS EXISTS. `BandRow`'s trailing label wears its SOURCE's brand hue.
 # That slot was colored once before and the color was PULLED on 2026-07-30 for
 # two reasons, and only one of them was about taste: the old `ProjectHue` ink
-# measured ~3.4:1 at `label11`, under the 4.5:1 bar `DS.textTertiary` was raised
+# measured ~3.4:1 at `label12`, under the 4.5:1 bar `DS.textTertiary` was raised
 # to meet on 2026-07-21. Nothing caught that — a contrast failure compiles, runs,
 # screenshots and ships, and is invisible to every other check in this repo.
 #

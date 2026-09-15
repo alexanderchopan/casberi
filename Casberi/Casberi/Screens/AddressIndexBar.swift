@@ -45,7 +45,7 @@ struct AddressIndexBar: View {
             VStack(spacing: 0) {
                 ForEach(letters, id: \.self) { letter in
                     Text(letter)
-                        .dsText(.tab10).fontWeight(.semibold)
+                        .dsText(.label12).fontWeight(.semibold)
                         .foregroundStyle(active == letter ? DS.tint : DS.textTertiary)
                         .frame(height: Self.rowHeight)
                         .frame(maxWidth: .infinity)
@@ -76,7 +76,7 @@ struct AddressIndexBar: View {
             .overlay(alignment: .topLeading) {
                 if let active {
                     Text(active)
-                        .dsText(.heading22)
+                        .dsText(.heading24)
                         .foregroundStyle(DS.textPrimary)
                         .frame(width: 46, height: 46)
                         // Through the token, not a raw material (2026-09-06):

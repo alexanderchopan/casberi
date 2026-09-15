@@ -900,7 +900,7 @@ grep -q 'AddressBook\.shared\.setName' "$TMP/bridge.nc.swift" \
 #
 # Reported: the balance+sparkline sat in a card where Wallet's hero is bare,
 # the per-account readings were never drawn, the section titles were tertiary
-# eyebrows inside their cards rather than Wallet's `heading22` outside them,
+# eyebrows inside their cards rather than Wallet's `heading24` outside them,
 # and the account sheet drew the same crown two sizes smaller.
 #
 # THE HERO IS BARE. A card here would add a SECOND s4 on top of §474's outer
@@ -927,8 +927,8 @@ fi
 [[ "$heroFn" == *'.dsText(.stat24)'* ]] \
   || { echo "✗ the aggregate crown is no longer stat24 — prd §551: every scope headline"
        echo "  in this room takes one rung, and the crown IS Home's headline"; exit 1; }
-[[ "$heroFn" != *'.dsText(.price48)'* ]] \
-  || { echo "✗ the aggregate crown went back to price48 — prd §551: it was two rungs above"
+[[ "$heroFn" != *'.dsText(.price64)'* ]] \
+  || { echo "✗ the aggregate crown went back to price64 — prd §551: it was two rungs above"
        echo "  every other scope's headline, so the strip changed the type scale of the screen"; exit 1; }
 # **THE 120pt RULE IS AMENDED, NOT DROPPED (prd §588).** §475 gave this
 # sparkline Wallet's own height, and the POINT of that ruling was the word

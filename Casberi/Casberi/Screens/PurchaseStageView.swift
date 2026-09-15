@@ -65,7 +65,7 @@ struct PurchaseStageView: View {
                 .padding(.top, 2)
         }
         Text(verbatim: reading.subject)
-            .dsText(.heading22)
+            .dsText(.heading24)
             .foregroundStyle(DS.textPrimary)
             .fixedSize(horizontal: false, vertical: true)
             .textSelection(.enabled)
@@ -88,7 +88,7 @@ struct PurchaseStageView: View {
         }
         if let recurrence, let sentence = recurrenceSentence(recurrence) {
             Text(verbatim: sentence)
-                .dsText(.callout15)
+                .dsText(.body17)
                 .foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -112,7 +112,7 @@ struct PurchaseStageView: View {
                 .padding(.bottom, DS.Space.s4)
         }
         Text(verbatim: reading.subject)
-            .dsText(.heading22)
+            .dsText(.heading24)
             .foregroundStyle(DS.textPrimary)
             .fixedSize(horizontal: false, vertical: true)
             .textSelection(.enabled)
@@ -150,7 +150,7 @@ struct PurchaseStageView: View {
                 .foregroundStyle(DS.textPrimary)
             if let move = reading.history {
                 Text(verbatim: PurchaseStage.money(move.was, move.currency))
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .monospacedDigit()
                     .strikethrough()
                     .foregroundStyle(DS.textTertiary)
@@ -223,7 +223,7 @@ struct PurchaseStageView: View {
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
             Text(verbatim: party.role)
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textTertiary)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -253,7 +253,7 @@ struct PurchaseStageView: View {
                         .foregroundStyle(DS.textTertiary)
                     Spacer(minLength: DS.Space.s3)
                     Text(verbatim: rung.value)
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .monospacedDigit()
                         .foregroundStyle(rung.dim ? DS.textSecondary : DS.textPrimary)
                         .multilineTextAlignment(.trailing)
@@ -268,7 +268,7 @@ struct PurchaseStageView: View {
     @ViewBuilder private var provenanceLine: some View {
         if let sentence = reading.provenance {
             Text(verbatim: sentence)
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)

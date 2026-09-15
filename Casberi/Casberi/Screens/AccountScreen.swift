@@ -480,7 +480,7 @@ struct SettingsScreen: View {
                 .dsText(.heading17)
                 .foregroundStyle(CasberiMark.pink)
             Text(buildLine)
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textTertiary)
         }
         .frame(maxWidth: .infinity)
@@ -549,7 +549,7 @@ struct AccountRow: View {
                 IconChip(tone: badge.color, size: 34, style: .wash) {
                     Image(systemName: badge.symbol)
                         .accessibilityHidden(true)
-                        .dsGlyph(16)
+                        .dsGlyph(.subhead)
                         // Two rows genuinely SWAP their glyph rather than
                         // opening anything — Theme's sun/moon and
                         // Privacy's lock/cloud — and for a setting that
@@ -575,7 +575,7 @@ struct AccountRow: View {
                     if countsUp, !reduceMotion { CountUpText(text: value) }
                     else { Text(value) }
                 }
-                .dsText(.callout15).foregroundStyle(valueColor)
+                .dsText(.body17).foregroundStyle(valueColor)
                 .multilineTextAlignment(.trailing)
                 .lineLimit(2)
             }

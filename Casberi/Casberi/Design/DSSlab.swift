@@ -63,8 +63,8 @@ enum DSSlab {
             self == .slab ? DSSlab.shape
                 : RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
         }
-        /// Off the mark ramp's own reasoning: the glyph tracks the box.
-        var glyphSize: CGFloat { self == .slab ? 15 : 14 }
+        /// One glyph rung for both boxes (prd §762): 15 and 14 were a point apart.
+        var glyphSize: DSGlyph { .subhead }
     }
 
     /// **THE GLYPH DISC — the devnet verb's identity, at slab scale (prd §613,
@@ -381,7 +381,7 @@ struct DSSlabField: View {
             if let secondaryLabel, secondaryArmed {
                 Button(action: secondaryAction) {
                     Text(secondaryLabel)
-                        .dsText(.subhead13).fontWeight(.bold)
+                        .dsText(.subhead12).fontWeight(.bold)
                         .foregroundStyle(DS.textSecondary)
                 }
                 .buttonStyle(.plain)
@@ -395,7 +395,7 @@ struct DSSlabField: View {
             if !actionLabel.isEmpty {
                 Button(action: action) {
                     Text(actionLabel)
-                        .dsText(.subhead13).fontWeight(.bold)
+                        .dsText(.subhead12).fontWeight(.bold)
                         .foregroundStyle(armed ? DS.tint : DS.textTertiary)
                         .animation(DS.Motion.standard, value: armed)
                 }
@@ -594,7 +594,7 @@ struct DSSlabButton: View {
                 if busy { ProgressView().controlSize(.small) }
                 if !detail.isEmpty {
                     Text(detail)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
@@ -738,12 +738,12 @@ struct DSSlabDoor: View {
                 Spacer(minLength: DS.Space.s2)
                 if !detail.isEmpty {
                     Text(detail)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
                 Image(systemName: "chevron.right")
-                    .dsGlyph(12)
+                    .dsGlyph(.caption)
                     .foregroundStyle(DS.textTertiary)
             }
             .dsActRowFrame(glyphless: systemImage == nil)
@@ -772,11 +772,11 @@ struct DSSlabDoor: View {
                 Spacer(minLength: 0)
                 if !detail.isEmpty {
                     Text(detail)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
                 Image(systemName: "chevron.right")
-                    .dsGlyph(12)
+                    .dsGlyph(.caption)
                     .foregroundStyle(DS.textTertiary)
             }
             .padding(.horizontal, DS.Space.s4)
@@ -889,7 +889,7 @@ struct DSSlabNote: View {
 struct DSCheckList: View {
     let lines: [String]
     /// Quieter and inset inside an act (prd §640): the claim is the same, but
-    /// at `callout15` secondary a six-line list out-weighs every row it sits
+    /// at `body17` secondary a six-line list out-weighs every row it sits
     /// between.
     @Environment(\.accountAct) private var accountAct
     /// The leading mark. Defaults to the granted-capability checkmark.
@@ -907,11 +907,11 @@ struct DSCheckList: View {
                     // list of scopes to tick on the provider's site.
                     if !accountAct {
                         Image(systemName: systemImage)
-                            .dsGlyph(11, weight: .bold)
+                            .dsGlyph(.caption, weight: .bold)
                             .foregroundStyle(tint ?? DS.confirm)
                     }
                     Text(LocalizedStringKey(line))
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

@@ -46,13 +46,13 @@ struct XPersonCard: View {
                 .foregroundStyle(Self.mark)
 
             Text(XPerson.headline(person, handle: SocialThread.shortHandle(handle)))
-                .dsText(.heading22)
+                .dsText(.heading24)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s2)
 
             Text(XPerson.note(person))
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s1)
 
@@ -128,7 +128,7 @@ struct XPersonCard: View {
                     .lineLimit(1)
                 Spacer(minLength: DS.Space.s2)
                 Text(count.formatted())
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textSecondary)
                     .monospacedDigit()
             }

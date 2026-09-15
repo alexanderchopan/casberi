@@ -98,7 +98,7 @@ struct HegotaKeySheet: View {
     /// own height and the tray fits it.
     ///
     /// The chrome constant is `DSTray`'s own documented model — top pad,
-    /// `heading34` title (line 40), gap, content, bottom pad — the same
+    /// `heading40` title (line 40), gap, content, bottom pad — the same
     /// arithmetic `SourcesTray.chromeHeight` spells. The cap keeps a tall
     /// phase a TRAY rather than a takeover; past it the `.large` detent is
     /// the escape, and the guessed fallbacks last only until the first layout
@@ -119,7 +119,7 @@ struct HegotaKeySheet: View {
                 .fill(presence == .destroyed ? DS.destructive.opacity(0.16) : Self.mark.opacity(0.18))
                 .frame(width: DS.Face.list, height: DS.Face.list)
             Image(systemName: presence == .destroyed ? "exclamationmark.triangle.fill" : "key.fill")
-                .dsGlyph(presence == .destroyed ? 14 : 16, weight: .semibold)
+                .dsGlyph(presence == .destroyed ? .caption : .subhead, weight: .semibold)
                 .foregroundStyle(presence == .destroyed ? DS.destructive : Self.mark)
         }
         .accessibilityHidden(true)
@@ -127,8 +127,8 @@ struct HegotaKeySheet: View {
 
     /// **THE HEAD DOES NOT RESTATE THE TRAY (prd §539, 2026-08-31).** The tray
     /// is titled "This phone's account" and this said "Your account on this
-    /// phone" — the same sentence with its words reordered, in `heading22`
-    /// directly under the `heading34` it was echoing. It is the mildest form
+    /// phone" — the same sentence with its words reordered, in `heading24`
+    /// directly under the `heading40` it was echoing. It is the mildest form
     /// of the fault §538 took out of three vibenet sheets, and the mildest
     /// form is the one that survives longest, because nothing about it reads
     /// as a bug.
@@ -208,7 +208,7 @@ struct HegotaKeySheet: View {
             }
             if let keyFailure {
                 Text(keyFailure)
-                    .dsText(.label11)
+                    .dsText(.label12)
                     .foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -252,7 +252,7 @@ struct HegotaKeySheet: View {
                             Spacer(minLength: 0)
                             Image(systemName: "doc.on.doc")
                                 .accessibilityHidden(true)
-                                .dsGlyph(12, weight: .semibold)
+                                .dsGlyph(.caption, weight: .semibold)
                                 .foregroundStyle(Self.mark)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -298,7 +298,7 @@ struct HegotaKeySheet: View {
                     DSHaptic.tap()
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "trash").dsGlyph(12, weight: .semibold)
+                        Image(systemName: "trash").dsGlyph(.caption, weight: .semibold)
                         Text(String(localized: "Remove this key"))
                     }
                     .dsText(.label12).fontWeight(.semibold)

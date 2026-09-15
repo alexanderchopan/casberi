@@ -104,11 +104,11 @@ struct ProjectDetailScreen: View {
         let members = self.members
         return VStack(alignment: .leading, spacing: DS.Space.s1) {
             Text(projectName)
-                .dsText(.heading34).foregroundStyle(DS.textPrimary)
+                .dsText(.heading40).foregroundStyle(DS.textPrimary)
             Text(kindLine(members))
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
             Text("\(members.count) things · \(sourceCount(members)) apps")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)

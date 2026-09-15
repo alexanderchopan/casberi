@@ -218,7 +218,7 @@ struct AddressBookRow: View {
                         .animation(DS.Motion.standard, value: shownName)
                     if colliding {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .dsGlyph(11)
+                            .dsGlyph(.caption)
                             .foregroundStyle(DS.destructive)
                     }
                 }
@@ -227,7 +227,7 @@ struct AddressBookRow: View {
                 HStack(spacing: 5) {
                     if let line = entry.subline(activity: activity, standingIn: standingIn) {
                         Text(line)
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     }
                     // A NOTE YOU WROTE (prd §498). The note itself stays off
@@ -239,7 +239,7 @@ struct AddressBookRow: View {
                     // beside it off the line.
                     if entry.note?.isEmpty == false {
                         Image(systemName: "note.text")
-                            .dsGlyph(11)
+                            .dsGlyph(.caption)
                             .foregroundStyle(DS.textTertiary)
                             .accessibilityLabel(Text("Has a note"))
                     }
@@ -262,7 +262,7 @@ struct AddressBookRow: View {
                     // one thing worth finding.
                     if watched {
                         Image(systemName: "eye.fill")
-                            .dsGlyph(11)
+                            .dsGlyph(.caption)
                             .foregroundStyle(DS.tint)
                             .accessibilityLabel(Text("Watching"))
                     }
@@ -273,7 +273,7 @@ struct AddressBookRow: View {
                 Button(action: onToggleWatch) {
                     Image(systemName: watched ? "star.fill" : "star")
                         .dsSymbolSwap(watched)
-                        .dsGlyph(17, weight: .medium)
+                        .dsGlyph(.body, weight: .medium)
                         .foregroundStyle(watched ? DS.tint : DS.textTertiary)
                         .frame(width: 32, height: 32)
                         .dsTapTarget()
@@ -288,7 +288,7 @@ struct AddressBookRow: View {
                 // no history keeps an empty edge rather than a dash: an em-dash
                 // there is a reading of nothing (§83).
                 Text(when)
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }
         }
@@ -469,14 +469,14 @@ struct CopyAddressButton: View {
                 switch style {
                 case .inline:
                     Text(copied ? "Copied" : "Copy")
-                        .dsText(.subhead13).fontWeight(.semibold)
+                        .dsText(.subhead12).fontWeight(.semibold)
                         .foregroundStyle(copied ? DS.confirm : tint)
                         // A bare word is as tall as its text — floored.
                         .dsTapTarget()
                 case .compact:
                     Image(systemName: copied ? "checkmark" : "doc.on.doc")
                         .dsSymbolSwap(copied)
-                        .dsGlyph(12)
+                        .dsGlyph(.caption)
                         .foregroundStyle(copied ? DS.confirm : DS.textSecondary)
                         .frame(width: 28, height: 28)
                         .dsWell(cornerRadius: 9)
@@ -881,7 +881,7 @@ struct AddressCard: View {
                 .padding(.top, DS.Space.s3)
             // The quiet tier (prd §569). With the name at the head rung this
             // is the fact BENEATH it — what kind of thing this is and its
-            // short form — and at `callout15` the head read as three tiers of
+            // short form — and at `body17` the head read as three tiers of
             // text under a face rather than a name with a caption.
             Text(kindLine)
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -924,23 +924,23 @@ struct AddressCard: View {
     /// **THE NAME TAKES THE HEAD RUNG, BY LENGTH (prd §569).**
     ///
     /// §499 gave this sheet a 96pt face and then set the person's name under
-    /// it at `heading28` — the rung §506 rules "sets a sentence, never a
+    /// it at `heading40` — the rung §506 rules "sets a sentence, never a
     /// figure", sitting between `stat24` and `price40` and matching neither.
     /// Under a hero face, on a sheet about one person, the name was the middle
     /// tier.
     ///
     /// **It also fixes a real drift: the two states disagreed.** The editing
-    /// `TextField` was `heading28` and the resting `Text` was `heading22`, so
+    /// `TextField` was `heading40` and the resting `Text` was `heading24`, so
     /// tapping the name to rename it changed its size. One rule now serves
     /// both, which is what makes the in-place rename (§444) read as editing
     /// the thing rather than replacing it with a control.
     ///
     /// A paragraph never takes it (§559). The threshold is smaller than the
     /// feed lede's 56 because this name is CENTRED on a narrower column, so
-    /// what fits is fewer characters — a long ENS subdomain keeps `heading22`
+    /// what fits is fewer characters — a long ENS subdomain keeps `heading24`
     /// rather than wrapping to four centred lines.
     static func nameRung(_ name: String) -> DSTextStyle {
-        name.count <= 32 ? .heading34 : .heading22
+        name.count <= 32 ? .heading40 : .heading24
     }
 
     static let identityFace: CGFloat = 96
@@ -1061,7 +1061,7 @@ struct AddressCard: View {
             }
         } label: {
             Image(systemName: "ellipsis")
-                .dsGlyph(15)
+                .dsGlyph(.subhead)
                 .foregroundStyle(DS.textPrimary)
                 .frame(width: 32, height: 32)
                 .background(DS.fillStrong, in: Circle())
@@ -1155,7 +1155,7 @@ struct AddressCard: View {
                         // and the kind turn-over leave: as an object, not as a
                         // value snapping.
                         Image(systemName: "pencil")
-                            .dsGlyph(13)
+                            .dsGlyph(.caption)
                             .foregroundStyle(DS.textTertiary)
                             .transition(.scale(scale: 0.6).combined(with: .opacity))
                     }
@@ -1296,19 +1296,19 @@ struct AddressCard: View {
                     } label: {
                         HStack(spacing: DS.Space.s3) {
                             Image(systemName: line.glyph)
-                                .dsGlyph(16)
+                                .dsGlyph(.subhead)
                                 .foregroundStyle(DS.textSecondary)
                                 .frame(width: 38, height: 38)
                                 .background(DS.fillFaint, in: Circle())
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(line.label)
-                                    .dsText(.subhead13)
+                                    .dsText(.subhead12)
                                     .foregroundStyle(DS.textTertiary)
                                     .lineLimit(1)
                                 // The value at READING size and semibold —
                                 // this is the fact the row exists for.
                                 Text(line.value)
-                                    .dsText(line.monospaced ? .mono13 : .callout15)
+                                    .dsText(line.monospaced ? .mono17 : .body17)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(DS.textPrimary)
                                     .textSelection(.enabled)
@@ -1321,7 +1321,7 @@ struct AddressCard: View {
                             }
                             Spacer(minLength: DS.Space.s2)
                             Image(systemName: "doc.on.doc")
-                                .dsGlyph(13)
+                                .dsGlyph(.caption)
                                 .foregroundStyle(DS.textTertiary)
                         }
                         .padding(.vertical, DS.Space.s2)
@@ -1500,7 +1500,7 @@ struct AddressCard: View {
         Button(action: act) {
             VStack(spacing: DS.Space.s1 + 2) {
                 Image(systemName: glyph)
-                    .dsGlyph(19, weight: .medium)
+                    .dsGlyph(.body, weight: .medium)
                     .foregroundStyle(DS.tint)
                 Text(title)
                     .dsText(.label12).fontWeight(.semibold)
@@ -1521,7 +1521,7 @@ struct AddressCard: View {
         return AddressChunkFlow(columnSpacing: DS.Space.s2, rowSpacing: 1) {
             ForEach(Array(chunks.enumerated()), id: \.offset) { index, chunk in
                 Text(verbatim: chunk)
-                    .dsText(.mono13)
+                    .dsText(.mono17)
                     .foregroundStyle(index == 0 || index == chunks.count - 1
                                      ? DS.textSecondary : DS.textTertiary)
                     // Ends first, middle after — `AddressEndsFirst`'s reading,
@@ -1600,12 +1600,12 @@ struct AddressCard: View {
             let amount = BalancePrivacy.shared.value(BitcoinBridge.formatAmount(sats: sats))
             if let since = BitcoinBridge.vintage(for: current.address) {
                 Text("\(amount) · oldest piece from \(since.formatted(.dateTime.month(.wide).year()))")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, DS.Space.s4)
             } else {
                 Text(verbatim: amount)
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
             }
         }
     }
@@ -1701,14 +1701,14 @@ struct AddressCard: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .dsGlyph(14)
+                        .dsGlyph(.subhead)
                         .foregroundStyle(DS.destructive)
                     Text("Another address looks just like this one")
                         .dsText(.heading17)
                         .foregroundStyle(DS.textPrimary)
                 }
                 Text(partingLine(mine, twins: twins.count))
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     diffRow(String(localized: "This one"), current.address, mine)
@@ -1744,7 +1744,7 @@ struct AddressCard: View {
                 .reduce(Text(verbatim: "")) { acc, segment in
                     acc + inked(segment)
                 }
-                .dsText(.mono13)
+                .dsText(.mono17)
                 .fixedSize(horizontal: false, vertical: true)
                 // The whole address, read out as one string. Splitting it into
                 // runs for VoiceOver would read the marker as a pause in the
@@ -1837,7 +1837,7 @@ struct AddressCard: View {
             // sections read as one run of rows.
             HStack {
                 Text("Activity")
-                    .dsText(.heading22)
+                    .dsText(.heading24)
                     .foregroundStyle(DS.textPrimary)
                 Spacer(minLength: 0)
             }
@@ -1977,7 +1977,7 @@ struct AddressCard: View {
                     .padding(.top, DS.Space.s1)
             }
             Text(standing.caption)
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                .dsText(.body17).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s1)
         }
@@ -2002,12 +2002,12 @@ struct AddressCard: View {
                     .animation(DS.Motion.standard.delay(Double(transfer.cascadeStep) * 0.06),
                                value: renameCascade)
                 Text(AddressSpine.meta(transfer.date, walletName: transfer.walletName))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             }
             Spacer(minLength: DS.Space.s2)
             if let amount = transfer.amount {
                 Text(amount)
-                    .dsText(.mono13).foregroundStyle(DS.textPrimary)
+                    .dsText(.mono17).foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
                     .lineLimit(1)
             }
@@ -2019,13 +2019,13 @@ struct AddressCard: View {
     private func foldContent(line: String, total: Int) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Text(line)
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             Spacer(minLength: DS.Space.s2)
             NavigationLink {
                 AddressHistoryScreen(entry: current)
             } label: {
                 Text("See all \(total)")
-                    .dsText(.subhead13).fontWeight(.semibold)
+                    .dsText(.subhead12).fontWeight(.semibold)
                     .foregroundStyle(DS.tint)
                     .contentShape(Rectangle())
                     .dsTapTarget()
@@ -2041,7 +2041,7 @@ struct AddressCard: View {
             Text(eyebrow)
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
             Text(sentence)
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)
@@ -2214,7 +2214,7 @@ struct AddressCard: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("Notes")
-                        .dsText(.heading22)
+                        .dsText(.heading24)
                         .foregroundStyle(DS.textPrimary)
                     Spacer(minLength: DS.Space.s2)
                     // The header's own verb — present only once there is
@@ -2226,7 +2226,7 @@ struct AddressCard: View {
                             noteFocused = true
                         } label: {
                             Text("Edit")
-                                .dsText(.subhead13).fontWeight(.semibold)
+                                .dsText(.subhead12).fontWeight(.semibold)
                                 .foregroundStyle(DS.tint)
                         }
                         .buttonStyle(.plain)
@@ -2234,7 +2234,7 @@ struct AddressCard: View {
                     }
                 }
                 TextField("Add a note…", text: $noteDraft, axis: .vertical)
-                    .dsText(.reading20)
+                    .dsText(.reading17)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1...8)
                     .focused($noteFocused)
@@ -2496,7 +2496,7 @@ struct AddressHistoryScreen: View {
                                 // all — unlike the card, this screen is not
                                 // itself the counterparty, and it is where
                                 // §441's rename cascade keeps a stage.
-                                Text(WalletValue.title(thing)).dsText(.subhead13)
+                                Text(WalletValue.title(thing)).dsText(.subhead12)
                                     .foregroundStyle(DS.textPrimary).lineLimit(2)
                                 Spacer(minLength: DS.Space.s2)
                                 Text(thing.capturedAt.formatted(.dateTime.month(.abbreviated).day()))

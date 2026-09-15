@@ -6,7 +6,7 @@ import UIKit
 /// RULE (brief §8): trays are not hand-rolled. A tray is `DSTray(title:height:)`
 /// wrapping its content. It owns:
 ///   • the grabber (drag indicator),
-///   • a left-aligned `heading22` title with top clearance so it never crowds
+///   • a left-aligned `heading24` title with top clearance so it never crowds
 ///     the grabber or "flows over" the top edge,
 ///   • uniform horizontal + bottom padding,
 ///   • the sheet surface, the height detent, and the color scheme.
@@ -31,7 +31,7 @@ struct DSTray<Content: View>: View {
     /// **A TITLE WRAPS, IT DOES NOT TRUNCATE** (2026-09-02, user: "in hegota we
     /// have sheets w/ titles that are clipped now that we use bigger font").
     ///
-    /// `heading34` is 40pt heavy, so a perfectly ordinary tray title — "Into the
+    /// `heading40` is 40pt heavy, so a perfectly ordinary tray title — "Into the
     /// UTXO vault", "This phone's account", "Keys and permissions" — no longer
     /// fits one phone line, and the head rung is exactly where a lost word costs
     /// most: "Into the UTXO va…" is the sheet failing to say what it is about.
@@ -46,7 +46,7 @@ struct DSTray<Content: View>: View {
     /// term for a wrap they cannot see from where they sit.
     @State private var titleHeight: CGFloat = 0
 
-    /// One line of `heading34` (its own `lineHeight`), scaled the way `dsText`
+    /// One line of `heading40` (its own `lineHeight`), scaled the way `dsText`
     /// scales it — `@ScaledMetric(relativeTo:)` and `UIFontMetrics` are the same
     /// table, so the two can't drift apart at an accessibility size.
     @ScaledMetric(relativeTo: .largeTitle) private var titleLine: CGFloat = 40
@@ -63,7 +63,7 @@ struct DSTray<Content: View>: View {
                 // THE HEAD RUNG (prd §532) — a tray is a place, and at the
                 // card-title rung it read as a taller card. 40 against the
                 // 12pt caption inside it is 3.3×.
-                .dsText(.heading34)
+                .dsText(.heading40)
                 .foregroundStyle(DS.textPrimary)
                 .multilineTextAlignment(.leading)
                 // …and therefore it WRAPS. See `titleHeight` above.
@@ -73,7 +73,7 @@ struct DSTray<Content: View>: View {
                 }
             // **THE TRAY HAS SPENT THE HEAD RUNG, AND SAYS SO** (2026-09-02).
             // Read by `DSSheetHead`, which takes the next rung down rather than
-            // drawing a second `heading34` four points under this one — see its
+            // drawing a second `heading40` four points under this one — see its
             // `title` for why that stopped being a fair reading of §560.
             //
             // Declared HERE rather than passed by every caller: five of the six
@@ -305,7 +305,7 @@ extension View {
 
 /// **HAS THIS SURFACE ALREADY SPENT THE HEAD RUNG?** (2026-09-02)
 ///
-/// One `heading34` per surface, which is `heading34`'s own doc ("the head of a
+/// One `heading40` per surface, which is `heading40`'s own doc ("the head of a
 /// tray, a sheet or a room — the rung that says WHERE YOU ARE") read for what
 /// it says: you are only in one place. `DSTray` sets this on its content;
 /// `DSSheetHead` reads it and takes the next rung down.

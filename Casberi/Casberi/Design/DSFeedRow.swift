@@ -75,7 +75,7 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                 }
                 if let line {
                     line
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(done ? DS.textTertiary : DS.textSecondary)
                         .lineLimit(lineLines)
                 }

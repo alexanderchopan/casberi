@@ -62,7 +62,7 @@ struct WalletNFTPickerSheet: View {
                detents: [.height(520), .large]) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text(intro)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -94,7 +94,7 @@ struct WalletNFTPickerSheet: View {
         HStack(spacing: DS.Space.s2) {
             DSSpinner(size: .regular)
             Text(String(localized: "Reading \(label)…"))
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, DS.Space.s4)
@@ -173,7 +173,7 @@ struct WalletNFTPickerSheet: View {
                 // draws no lines (brief §8, no hairlines, zero exceptions).
                 if on {
                     Image(systemName: "checkmark.circle.fill")
-                        .dsGlyph(22)
+                        .dsGlyph(.title)
                         .symbolRenderingMode(.palette)
                         .foregroundStyle(.white, DS.tint)
                         .padding(DS.Space.s1)
@@ -184,7 +184,7 @@ struct WalletNFTPickerSheet: View {
             .animation(reduceMotion ? nil : DS.Motion.standard, value: on)
 
             Text(collection.name)
-                .dsText(.subhead13)
+                .dsText(.subhead12)
                 .fontWeight(on ? .semibold : .regular)
                 .foregroundStyle(on ? DS.textPrimary : DS.textSecondary)
                 .lineLimit(1)

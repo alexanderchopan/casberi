@@ -60,13 +60,13 @@ struct CategoryOrderSheet: View {
                 // The grabbers are permanently visible, so "drag to reorder" was the
                 // affordance restated. Only the rule the grabbers cannot show.
                 Text("All and Pinned always lead.")
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .textCase(nil)
             } footer: {
                 if CategoryOrder.isCustom {
                     Button("Reset to the default order") { reset() }
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(DS.tint)
                         .frame(minHeight: 44)
                 }
@@ -98,7 +98,7 @@ struct CategoryOrderSheet: View {
                 // is the unremarkable one.
                 if !present.contains(name) {
                     Text("Nothing here yet")
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)
                 }
             }

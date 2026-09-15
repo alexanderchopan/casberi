@@ -48,7 +48,7 @@ struct NetworkReachScreen: View {
             Section {
                 // THE CLAIM TAKES THE HEAD RUNG (prd §564). This screen exists
                 // to make ONE promise checkable, and the promise was drawn at
-                // `subhead13` — the second-smallest rung on the ramp — above a
+                // `subhead12` — the second-smallest rung on the ramp — above a
                 // list of sixty services each of whose NAME was set larger than
                 // it. That is §563's inversion, on the screen carrying the
                 // app's central claim: the most important thing on it was the
@@ -66,12 +66,12 @@ struct NetworkReachScreen: View {
                 // No colour and no tile: this screen has no act. The style here
                 // is the proportion alone.
                 Text("There is no server.")
-                    .dsText(.heading34).foregroundStyle(DS.textPrimary)
+                    .dsText(.heading40).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 Text("Every request below goes straight from \(DS.device) to the service named.")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -140,7 +140,7 @@ struct NetworkReachScreen: View {
                 Text(endpoint.service)
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                 Text(endpoint.purpose)
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(endpoint.hosts.joined(separator: " · "))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -164,7 +164,7 @@ struct NetworkReachScreen: View {
                 .frame(width: DS.Mark.list, height: DS.Mark.list)
                 .overlay(
                     Image(systemName: infraSymbol(endpoint))
-                        .dsGlyph(16)
+                        .dsGlyph(.subhead)
                         .foregroundStyle(DS.textSecondary)
                 )
         }

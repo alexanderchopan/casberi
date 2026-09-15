@@ -232,7 +232,7 @@ struct VibenetCreateSheet: View {
                 .fill(headIsFault ? DS.destructive.opacity(0.16) : Self.mark.opacity(0.18))
                 .frame(width: DS.Face.list, height: DS.Face.list)
             Image(systemName: headIsFault ? "exclamationmark.triangle.fill" : "faceid")
-                .dsGlyph(headIsFault ? 14 : 17, weight: .semibold)
+                .dsGlyph(headIsFault ? .subhead : .body, weight: .semibold)
                 .foregroundStyle(headIsFault ? DS.destructive : Self.mark)
         }
         .accessibilityHidden(true)
@@ -253,7 +253,7 @@ struct VibenetCreateSheet: View {
     }
 
     /// The full address is NOT this line (user, 2026-09-09: "there is
-    /// clipping"): 42 hex characters have no break point, so at `callout15` it
+    /// clipping"): 42 hex characters have no break point, so at `body17` it
     /// wrapped mid-string onto a second line and pushed the head's sentence
     /// under the pinned action. The created state draws it in the body instead,
     /// monospaced and copyable — see `doneBody`.
@@ -349,7 +349,7 @@ struct VibenetCreateSheet: View {
             // loop; this is what breaks it.
             if let createFailure {
                 Text(createFailure)
-                    .dsText(.label11)
+                    .dsText(.label12)
                     .foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
@@ -369,7 +369,7 @@ struct VibenetCreateSheet: View {
         // than under a button that is no longer in this block.
         if refusal == .noKey, let keyFailure {
             Text(keyFailure)
-                .dsText(.label11)
+                .dsText(.label12)
                 .foregroundStyle(DS.destructive)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -382,7 +382,7 @@ struct VibenetCreateSheet: View {
             // THE ADDRESS, AS A ROW YOU CAN TAKE (user, 2026-09-09: "after you
             // create an account should have a copy button"). `HegotaKeySheet`'s
             // own row: the full value at `mono12`, which fits 42 characters on
-            // one line where `callout15` in the head could not, and a copy
+            // one line where `body17` in the head could not, and a copy
             // glyph that turns into a tick — the tick because `chrome.flash`
             // is invisible behind this sheet. `copySensitive`, the vault's
             // verb: an address is not a secret, but the pasteboard is shared
@@ -403,7 +403,7 @@ struct VibenetCreateSheet: View {
                         Spacer(minLength: 0)
                         Image(systemName: copied ? "checkmark" : "doc.on.doc")
                             .accessibilityHidden(true)
-                            .dsGlyph(12, weight: .semibold)
+                            .dsGlyph(.caption, weight: .semibold)
                             .foregroundStyle(copied ? DS.confirm : Self.mark)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)

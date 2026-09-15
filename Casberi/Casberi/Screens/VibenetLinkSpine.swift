@@ -117,7 +117,7 @@ struct VibenetLinkSpine: View {
             let leftX = width * Self.leftColumn
             let rightX = width * 0.58
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                // THE ROLES, NAMED ONCE (prd §482). `label11` tertiary, the
+                // THE ROLES, NAMED ONCE (prd §482). `label12` tertiary, the
                 // quietest rung on the ramp: these are what the columns ARE,
                 // not a reading of their own, and a heading that competes
                 // with the names beneath it would be a third thing to read.
@@ -127,7 +127,7 @@ struct VibenetLinkSpine: View {
                     Text(String(localized: "Can act for it"))
                     Spacer(minLength: 0)
                 }
-                .dsText(.label11)
+                .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
                 ZStack(alignment: .topLeading) {
                     ribbons(leftX: leftX, rightX: rightX)
@@ -266,7 +266,7 @@ struct VibenetLinkSpine: View {
         HStack(spacing: 7) {
             WalletFace(address: address, size: Self.faceSize, circular: true)
             Text(name(address))
-                .dsText(.callout15)
+                .dsText(.body17)
                 .fontWeight(emphasised ? .semibold : .regular)
                 .foregroundStyle(emphasised ? DS.textPrimary : DS.textSecondary)
                 .lineLimit(1)

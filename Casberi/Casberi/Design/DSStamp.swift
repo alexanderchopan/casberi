@@ -48,7 +48,7 @@ struct DSStamp: View {
         HStack(spacing: 3) {
             if let glyph {
                 Image(systemName: glyph)
-                    .dsGlyph(10, weight: .semibold)
+                    .dsGlyph(.tick, weight: .semibold)
                     .accessibilityHidden(true)
             }
             Text(verbatim: word)

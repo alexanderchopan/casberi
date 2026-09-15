@@ -142,7 +142,7 @@ struct SearchCasberiIntent: AppIntent {
 /// (Typography.swift) — so the app's own answer rendered a point denser in
 /// Siri than in the composer, and none of it scaled with Dynamic Type. Exactly
 /// the "frozen while its neighbours grew" drift that ramp's own comments name.
-/// The row is the feed's own idiom (`body17` title over `subhead13` meta), so
+/// The row is the feed's own idiom (`body17` title over `subhead12` meta), so
 /// what Siri shows and what the feed shows are now one shape.
 struct IntentRowsSnippet: View {
     struct Row: Identifiable {
@@ -175,7 +175,7 @@ struct IntentRowsSnippet: View {
             ForEach(rows) { row in
                 HStack(spacing: 10) {
                     Image(systemName: row.symbol)
-                        .dsGlyph(13)
+                        .dsGlyph(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: 18)
                     VStack(alignment: .leading, spacing: 1) {
@@ -183,7 +183,7 @@ struct IntentRowsSnippet: View {
                             .dsText(.body17)
                             .lineLimit(1)
                         Text(row.subtitle)
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }

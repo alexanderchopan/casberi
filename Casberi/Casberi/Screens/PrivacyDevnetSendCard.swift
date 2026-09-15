@@ -81,7 +81,7 @@ struct PrivacyDevnetSendCard: View {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "shield.lefthalf.filled")
                     .accessibilityHidden(true)
-                    .dsGlyph(13, weight: .semibold)
+                    .dsGlyph(.caption, weight: .semibold)
                     .foregroundStyle(Self.mark)
                 Text(String(localized: "\(PrivacyDevnetMoney.line(wei: wei)) shielded"))
                     .dsText(.label12).fontWeight(.semibold)

@@ -117,7 +117,7 @@ struct ENSScreen: View {
                 // show the ONE thing the person can't see — that `vitalik`
                 // and a pasted link both resolve to the same name.
                 Text(candidate)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
             }
             BridgeSyncStatusRows(syncing: working || syncing,
                                  syncingLine: working
@@ -136,7 +136,7 @@ struct ENSScreen: View {
     /// own (§515a: a seat must not light up for work nobody asked for).
     @ViewBuilder private var suggestionsBlock: some View {
         Text("From your wallets")
-            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             .padding(.top, DS.Space.s2)
         ForEach(suggestions, id: \.self) { name in
             BridgeSearchResultRow(

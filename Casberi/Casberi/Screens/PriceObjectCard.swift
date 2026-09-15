@@ -37,11 +37,11 @@ struct PriceObjectCard<Evidence: View>: View {
             VStack(alignment: .leading, spacing: 0) {
                 if let name = object.name, !name.isEmpty {
                     Text(verbatim: name)
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }
                 Text(verbatim: object.symbol)
-                    .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                    .dsText(.heading24).foregroundStyle(DS.textPrimary)
                     .lineLimit(1).truncationMode(.tail)
 
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
@@ -57,7 +57,7 @@ struct PriceObjectCard<Evidence: View>: View {
 
                 if let sentence = object.sentence {
                     Text(verbatim: sentence)
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, DS.Space.s4)
                 }
@@ -137,7 +137,7 @@ struct PriceObjectCard<Evidence: View>: View {
         // direction, because emphasis on a number we have just said we cannot
         // vouch for is the overclaim wearing a different hat.
         return Text(verbatim: "\(PriceObject.percent(move.change)) · \(move.window)")
-            .dsText(.subhead13)
+            .dsText(.subhead12)
             .fontWeight(object.freshness.isLive && !flat ? .bold : .regular)
             .monospacedDigit()
             .foregroundStyle(ink)

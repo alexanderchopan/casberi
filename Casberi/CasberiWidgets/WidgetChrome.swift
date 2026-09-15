@@ -161,7 +161,7 @@ struct WidgetDueRow: View {
                 .alignmentGuide(.firstTextBaseline) { $0[.bottom] + 1 }
             VStack(alignment: .leading, spacing: 0) {
                 Text(row.title)
-                    .dsText(.widgetRecentTitle12)
+                    .dsText(.widgetLabel12)
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 if showsSource {

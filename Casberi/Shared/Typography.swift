@@ -213,27 +213,26 @@ extension DSTextStyle {
     /// is WITHIN a surface, and you never see two crowns at once, so a second
     /// room having its own flattens nothing while a second on the SAME surface
     /// is the real defect.
-    static let price48 = DSTextStyle(size: 64, weight: .heavy, tracking: 0, lineHeight: 64, relative: .largeTitle)
+    static let price64 = DSTextStyle(size: 64, weight: .heavy, tracking: 0, lineHeight: 64, relative: .largeTitle)
 
     // ============================================================== 40 · HEAD
     /// The head of a tray, a sheet or a room — the rung that says WHERE YOU
     /// ARE. Line height is 1.0: a head is one or two words and tight leading is
     /// what makes two lines read as one object rather than as a paragraph.
-    static let heading34 = DSTextStyle(size: 40, weight: .heavy, tracking: 0, lineHeight: 40, relative: .largeTitle)
-    /// The day brief's opening sentence. Same rung as the head — a lede IS the
-    /// head of the document it opens, and §506 already ruled it "sets a
-    /// SENTENCE, never a figure".
-    static let heading28 = DSTextStyle(size: 40, weight: .heavy, tracking: 0, lineHeight: 40, relative: .largeTitle)
+    /// The day brief's opening sentence takes it too: a lede IS the head of
+    /// the document it opens (it was `heading28`, an identical rung under a
+    /// second name, until prd §762).
+    static let heading40 = DSTextStyle(size: 40, weight: .heavy, tracking: 0, lineHeight: 40, relative: .largeTitle)
     /// Money at head size — a figure that leads a card without being its crown.
     static let price40 = DSTextStyle(size: 40, weight: .heavy, tracking: 0, lineHeight: 40, relative: .largeTitle)
     /// A device-flow user code: the one string on its screen, read aloud off
     /// the glass and typed into another device. Monospaced so the character
     /// groups stay even, and head-sized because it IS the screen.
-    static let monoCode34 = DSTextStyle(size: 40, weight: .bold, tracking: 0, lineHeight: 44, relative: .largeTitle, monospaced: true)
+    static let monoCode40 = DSTextStyle(size: 40, weight: .bold, tracking: 0, lineHeight: 44, relative: .largeTitle, monospaced: true)
 
     // ============================================================= 24 · TITLE
     /// A card's name.
-    static let heading22 = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2)
+    static let heading24 = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2)
     /// A stat card's figure — the same rung, because a card's number and a
     /// card's name are peers.
     static let stat24 = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2)
@@ -242,32 +241,34 @@ extension DSTextStyle {
     /// A row's title — a heading for the line it leads. Says "tappable" by
     /// WEIGHT (semibold against the subline's regular), never by a second face.
     static let heading17 = DSTextStyle(size: 17, weight: .semibold, tracking: 0, lineHeight: 24, relative: .headline)
-    /// Running text.
+    /// Running text. `callout15` was this rung under a second name (it had
+    /// been 16, two points under body, which read as inconsistency rather
+    /// than rank) until prd §762 folded the name in.
     static let body17 = DSTextStyle(size: 17, weight: .regular, tracking: 0, lineHeight: 25, relative: .body)
-    /// Was a rung of its own at 16 — two points under `body17`, which reads as
-    /// inconsistency rather than as rank. Kept as a NAME (the ~300 call sites
-    /// are unchanged and the intent still reads) at the body size.
-    static let callout15 = DSTextStyle(size: 17, weight: .regular, tracking: 0, lineHeight: 25, relative: .body)
     /// Long-form prose that is the whole point of its surface — a note body, a
     /// post's own words, a sheet's lead summary. Regular weight with the band's
     /// most open leading; what separates it from `body17` is air and ink, not a
     /// size nobody could see.
-    static let reading20 = DSTextStyle(size: 17, weight: .regular, tracking: 0, lineHeight: 27, relative: .body)
+    static let reading17 = DSTextStyle(size: 17, weight: .regular, tracking: 0, lineHeight: 27, relative: .body)
     /// A row's figure. Bold at the body size — the face and the weight carry
-    /// it, so a row is TWO sizes rather than four.
-    static let price16 = DSTextStyle(size: 17, weight: .bold, tracking: 0, lineHeight: 22, relative: .callout)
+    /// it, so a row is TWO sizes rather than four. Anchored to `.body` like
+    /// every other 17 (prd §762): on `.callout` it grew slower than the title
+    /// beside it at accessibility sizes, so a row became three sizes there.
+    static let price17 = DSTextStyle(size: 17, weight: .bold, tracking: 0, lineHeight: 22, relative: .body)
     /// Monospaced body — command cards, diagnostic log lines.
-    static let mono13 = DSTextStyle(size: 17, weight: .regular, tracking: 0, lineHeight: 24, relative: .body, monospaced: true)
+    static let mono17 = DSTextStyle(size: 17, weight: .regular, tracking: 0, lineHeight: 24, relative: .body, monospaced: true)
 
     // =========================================================== 12 · CAPTION
     /// Running metadata — a sentence that is not the subject of its surface.
-    static let subhead13 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 17, relative: .caption1)
+    /// The streaming "still writing" dot takes it too (was `indicator9`).
+    static let subhead12 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 17, relative: .caption1)
     /// A label, chip, tag or timestamp — medium, because a caption that is a
     /// NAME rather than a sentence needs the weight to hold at this size.
+    /// `label11` and `tab10` were this rung under two more names, anchored to
+    /// `.caption2` — identical at the default size and LARGER than `label12`
+    /// at accessibility sizes, so a row drew two caption sizes exactly where
+    /// the tier exists to prevent it (prd §762).
     static let label12 = DSTextStyle(size: 12, weight: .medium, tracking: 0, lineHeight: 16, relative: .caption1)
-    /// Was 11 — one point under `label12`, in the same rows, for months.
-    static let label11 = DSTextStyle(size: 12, weight: .medium, tracking: 0, lineHeight: 16, relative: .caption2)
-    static let tab10 = DSTextStyle(size: 12, weight: .medium, tracking: 0, lineHeight: 16, relative: .caption2)
     /// The dock tile's caption — the ONE rung under the 12pt caption tier
     /// (prd §662, 2026-09-09), and it is sized by the tile, not the reader.
     /// A category chip is a fixed 56pt tile with a glyph over its word, the
@@ -282,10 +283,8 @@ extension DSTextStyle {
     static let dockCaption10 = DSTextStyle(size: 10, weight: .semibold, tracking: 0, lineHeight: 12, relative: .caption2)
     /// Monospaced caption.
     static let mono12 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 16, relative: .caption1, monospaced: true)
-    /// The streaming-response "still writing" dot (GenRenderer).
-    static let indicator9 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 16, relative: .caption2)
     /// A token's fallback avatar initial when no logo art exists (GenRenderer).
-    static let badgeInitial11 = DSTextStyle(size: 12, weight: .bold, tracking: 0, lineHeight: 16, relative: .caption2)
+    static let badgeInitial12 = DSTextStyle(size: 12, weight: .bold, tracking: 0, lineHeight: 16, relative: .caption1)
 
     // ======================================================== OUTSIDE THE FIVE
     // `flourish148` WAS HERE and is deleted (prd §585, 2026-09-03). Its own
@@ -324,11 +323,10 @@ extension DSTextStyle {
     static let widgetTitle17   = DSTextStyle(size: 17, weight: .bold, tracking: 0, lineHeight: 22, relative: .callout, macScales: false)
     /// The default-family hero widget's subline.
     static let widgetSubline12 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 16, relative: .caption1, macScales: false)
-    /// The medium widget's treemap cell terms — semibold so a one-word theme
-    /// reads against its own cell's fill at a glance.
-    static let widgetTreemapTerm12 = DSTextStyle(size: 12, weight: .semibold, tracking: 0, lineHeight: 15, relative: .caption1, macScales: false)
-    /// The medium widget's recent-item row title, under the treemap.
-    static let widgetRecentTitle12 = DSTextStyle(size: 12, weight: .semibold, tracking: 0, lineHeight: 16, relative: .caption1, macScales: false)
+    /// A medium widget's semibold 12 — the treemap cell terms (semibold so a
+    /// one-word theme reads against its own cell's fill at a glance) and the
+    /// recent-item row title under them. Two names for one rung until prd §762.
+    static let widgetLabel12 = DSTextStyle(size: 12, weight: .semibold, tracking: 0, lineHeight: 16, relative: .caption1, macScales: false)
     /// The LARGE family's headline — the brief's sentence gets the room the
     /// medium tile never had.
     static let widgetHeadline20 = DSTextStyle(size: 20, weight: .bold, tracking: 0, lineHeight: 25, relative: .title3, macScales: false)
@@ -379,27 +377,55 @@ extension View {
     /// brand family has no symbol set, so this is the one place two families
     /// deliberately sit side by side. It is also the thing to re-eyeball first
     /// on a device: SF's optical metrics no longer match the text beside them.
-    func dsGlyph(_ size: CGFloat, weight: Font.Weight = .semibold) -> some View {
-        modifier(DSGlyphModifier(size: size, weight: weight))
+    ///
+    /// **It takes a rung, never a number (prd §762).** Text went to five sizes
+    /// in §532 and glyphs were left spelling their own: twenty literal sizes
+    /// from 9 to 38 across 85 files, the drift `DS.Face` and `DS.Mark` were
+    /// each cut to stop. A `CGFloat` parameter is what let it happen, so the
+    /// parameter is the ramp and the compiler holds it.
+    func dsGlyph(_ rung: DSGlyph, weight: Font.Weight = .semibold) -> some View {
+        modifier(DSGlyphModifier(size: rung.rawValue, anchor: rung.anchor, weight: weight))
+    }
+}
+
+/// The glyph ramp (prd §762) — an SF Symbol's size, named for the text it
+/// stands beside. Seven rungs where there were twenty literals; each old size
+/// went to the nearest rung (9–10 tick, 11–13 caption, 14–16 subhead, 17–19
+/// body, 20–24 title, 26–30 feature, 34–38 hero), so nothing moved more than
+/// two points.
+enum DSGlyph: CGFloat {
+    /// A status mark inside a caption line — a disclosure tick, a dot's glyph.
+    case tick = 10
+    /// Beside 12pt caption text: a meta line's clock, a chip's symbol.
+    case caption = 12
+    /// A row's secondary glyph — a chevron, a trailing state mark beside a
+    /// 17pt title, one step under it so the words lead.
+    case subhead = 15
+    /// Beside 17pt body text, at its size: a row's leading symbol.
+    case body = 17
+    /// Beside a 24pt title, or a tile's glyph standing on its own.
+    case title = 22
+    /// A card or sheet's featured symbol — a control's big glyph, a state.
+    case feature = 28
+    /// The one symbol that IS the surface: an empty or finished state.
+    case hero = 36
+
+    /// Which text style a glyph of this rung sits beside, for Dynamic Type.
+    var anchor: UIFont.TextStyle {
+        switch self {
+        case .tick:    return .caption2
+        case .caption: return .caption1
+        case .subhead: return .subheadline
+        default:       return .body
+        }
     }
 }
 
 private struct DSGlyphModifier: ViewModifier {
     let size: CGFloat
+    let anchor: UIFont.TextStyle
     let weight: Font.Weight
     @Environment(\.sizeCategory) private var sizeCategory
-
-    /// The ramp's own rungs, read backwards: which text style does a glyph of
-    /// this size sit beside?
-    private var anchor: UIFont.TextStyle {
-        switch size {
-        case ..<12:   return .caption2
-        case ..<13:   return .caption1
-        case ..<15:   return .footnote
-        case ..<17:   return .subheadline
-        default:      return .body
-        }
-    }
 
     /// The Mac takes the ramp's own point scale (prd §631). A glyph that held
     /// its size while every label beside it shrank would break the icon↔label

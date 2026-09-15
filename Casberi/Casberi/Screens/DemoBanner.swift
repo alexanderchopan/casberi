@@ -73,7 +73,7 @@ struct DemoBanner: View {
                         .fill(RadialGradient(colors: [DS.attention.opacity(0.55), DS.attention.opacity(0)],
                                              center: .center, startRadius: 0, endRadius: 10))
                     Image(systemName: "circle.fill")
-                        .dsGlyph(10)
+                        .dsGlyph(.tick)
                         .foregroundStyle(DS.attention)
                         .symbolEffect(.pulse, options: reduceMotion ? .nonRepeating : .repeating)
                 }
@@ -179,7 +179,7 @@ private struct DemoExplainSheet: View {
                     dismiss()
                 } label: {
                     Text("Keep looking")
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: DS.Hit.min)

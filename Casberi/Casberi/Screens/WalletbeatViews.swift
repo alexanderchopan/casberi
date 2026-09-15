@@ -78,7 +78,7 @@ struct WalletbeatShape: View {
 			// Not a bar, not a dash, not an empty track: a word. A greyed-out bar in this
 			// slot reads as "rated, and all grey", which is the exact wrong reading.
 			Text(WalletbeatCopy.unratedShort(counts))
-				.dsText(.label11)
+				.dsText(.label12)
 				.foregroundStyle(DS.textTertiary)
 				.frame(width: width, alignment: .trailing)
 				.accessibilityLabel(Text(WalletbeatCopy.coverage(counts)))
@@ -100,7 +100,7 @@ struct WalletbeatVerdictTag: View {
 				.fill(WalletbeatCopy.color(verdict))
 				.frame(width: 7, height: 7)
 			Text(WalletbeatCopy.label(verdict))
-				.dsText(.label11)
+				.dsText(.label12)
 				.fontWeight(.semibold)
 				.foregroundStyle(verdict.isJudged ? DS.textSecondary : DS.textTertiary)
 		}
@@ -155,7 +155,7 @@ struct WalletbeatMark: View {
 						.padding(size * 0.14)
 				} else {
 					Text(initial)
-						.dsText(.badgeInitial11)
+						.dsText(.badgeInitial12)
 						.foregroundStyle(DS.textSecondary)
 				}
 			}

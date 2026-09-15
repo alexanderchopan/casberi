@@ -147,7 +147,7 @@ enum DayBrief {
         detail(things: things, now: now).map { "\(title(now: now)) · \($0)" }
     }
 
-    /// Roughly what fits the capsule's detail line at `subhead13` on the
+    /// Roughly what fits the capsule's detail line at `subhead12` on the
     /// narrowest phone — a character budget, not a measurement, which is why
     /// the clamp leaves margin rather than filling to the pixel. Bigger than
     /// the one-line version's was: naming the brief moved the weekday out of

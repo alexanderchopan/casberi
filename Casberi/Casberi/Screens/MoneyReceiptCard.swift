@@ -76,10 +76,10 @@ struct MoneyReceiptCard: View {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: receipt.lead)
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
                     if let party = receipt.party, !party.isEmpty {
                         Text(verbatim: party)
-                            .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                            .dsText(.heading24).foregroundStyle(DS.textPrimary)
                             .lineLimit(1).truncationMode(.middle)
                     }
                 }
@@ -90,13 +90,13 @@ struct MoneyReceiptCard: View {
 
                 if let secondary = receipt.secondary {
                     Text(verbatim: secondary)
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 2)
                 }
 
                 Text(verbatim: receipt.sentence)
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s4)
             }
@@ -172,13 +172,13 @@ struct MoneyReceiptCard: View {
                     .lineLimit(1).minimumScaleFactor(0.6).truncationMode(.tail)
                 if let unit = amount.unit {
                     Text(verbatim: unit)
-                        .dsText(.heading22).foregroundStyle(DS.textSecondary)
+                        .dsText(.heading24).foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }
             }
         } else if let title = receipt.titleFallback {
             Text(verbatim: title)
-                .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                .dsText(.heading24).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -329,7 +329,7 @@ struct MoneyCommentaryCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let sub = subline {
                 Text(verbatim: sub)
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             evidence
@@ -624,11 +624,11 @@ struct ReceiptLadder: View {
                     .frame(width: 20)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(verbatim: step.1)
-                            .dsText(.callout15)
+                            .dsText(.body17)
                             .foregroundStyle(mark == 0 ? DS.textTertiary : DS.textPrimary)
                         if let detail = step.2 {
                             Text(verbatim: detail)
-                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         }
                     }
                     .padding(.bottom, index < steps.count - 1 ? DS.Space.s3 : 0)

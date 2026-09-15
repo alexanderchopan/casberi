@@ -64,7 +64,7 @@ struct SpotifyScreen: View {
             HStack(spacing: DS.Space.s2) {
                 DSSpinner()
                 Text("Reading your Spotify…")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
             }
             .padding(.vertical, DS.Space.s1)
         } else {
@@ -74,7 +74,7 @@ struct SpotifyScreen: View {
                                    harvestedThisCover = false; showLogin = true })
             if cancelled {
                 Text("Sign-in cancelled — nothing was connected.")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -86,7 +86,7 @@ struct SpotifyScreen: View {
     @ViewBuilder private var connectedBlock: some View {
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "music.note")
-                .dsGlyph(17, weight: .medium)
+                .dsGlyph(.body, weight: .medium)
                 .foregroundStyle(DS.tint)
             Text(SpotifyAuth.load()?.username.map { String(localized: "Signed in as \($0)") }
                  ?? String(localized: "Signed in"))

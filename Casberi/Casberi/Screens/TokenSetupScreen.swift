@@ -390,7 +390,7 @@ struct TokenSetupScreen: View {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner(size: .regular)
                     Text("Asking GitHub for a code…")
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
             case .waiting(let code):
                 // The code is the whole moment — big, spaced by GitHub's
@@ -398,7 +398,7 @@ struct TokenSetupScreen: View {
                 // so it plainly reads as "copy this and paste it on GitHub"
                 // (the bare tap-to-copy went unnoticed; user, 2026-07-15).
                 Text(code.userCode)
-                    .dsText(.monoCode34)
+                    .dsText(.monoCode40)
                     .foregroundStyle(DS.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .minimumScaleFactor(0.6)
@@ -409,7 +409,7 @@ struct TokenSetupScreen: View {
                 // A row under the well, not a capsule inside it (prd §746).
                 DSCopyRow(value: code.userCode)
                 Text("Enter this code on GitHub — approval lands the token here by itself.")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 // Verb over address, the 2026-08-14 anatomy.
                 // In-app (§653) — the code to type sits on the page behind,
@@ -421,10 +421,10 @@ struct TokenSetupScreen: View {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner(size: .regular)
                     Text("Waiting for your approval…")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     Spacer()
                     Button("Cancel") { cancelDeviceFlow() }
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .buttonStyle(.plain)
                 }
             }
@@ -505,9 +505,9 @@ struct TokenSetupScreen: View {
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Text("Prefer a token by hand?")
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
                 Image(systemName: "chevron.down")
-                    .dsGlyph(11)
+                    .dsGlyph(.caption)
                     .foregroundStyle(DS.textTertiary)
                     .rotationEffect(.degrees(manualPathOpen ? 180 : 0))
                 Spacer(minLength: 0)

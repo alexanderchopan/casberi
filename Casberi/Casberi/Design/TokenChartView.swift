@@ -146,7 +146,7 @@ struct TokenDeltaPill: View {
             ? "\(TokenChartStyle.directionGlyph(up: change > 0)) \(number)" : number
         let text = label.isEmpty ? value : "\(value) · \(label)"
         Text(text)
-            .dsText(compact ? .label12 : .subhead13)
+            .dsText(compact ? .label12 : .subhead12)
             .fontWeight(solid ? .bold : .regular)
             .monospacedDigit()
             // A delta that updates ROLLS its digits instead of blinking
@@ -671,7 +671,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                     readLine(chart)
                     if let note {
                         Text(note)
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     }
                 }
             }
@@ -692,7 +692,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                 readLine(chart)
                 if let note {
                     Text(note)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 }
             }
         } else {
@@ -738,7 +738,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                 TokenDeltaPill(change: change,
                                label: "since \(since.date.formatted(.dateTime.month(.abbreviated).day()))")
                 Text("you watched at \(TokenChartStyle.priceText(since.price))")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }
             // Hero centers everything — a left-hung line under a centered
@@ -818,7 +818,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     private func header(_ chart: TokenChart) -> some View {
         HStack(spacing: DS.Space.s2) {
             Text(TokenChartStyle.priceText(displayPrice))
-                .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                .dsText(.heading24).foregroundStyle(DS.textPrimary)
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .animation(DS.Motion.standard, value: displayPrice)

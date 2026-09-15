@@ -14,7 +14,7 @@
 # `private` inside `LinkTitle.swift`, which imports SwiftData and reaches
 # `Thing`, `OEmbed` and `ProductMeta` — so nothing on this machine could
 # compile them, and every claim about what the app extracts was a claim.
-# §645 pass 1 put their output on the thing sheet at `reading20`, and pass 5
+# §645 pass 1 put their output on the thing sheet at `reading17`, and pass 5
 # moved the two constants that bound it. Extracting the parse was the price of
 # being able to check either.
 #
@@ -33,7 +33,7 @@
 #   • the prose test dropped, so menu `<p>`s ("About · Search · Log in") join
 #     the body;
 #   • `<script>` stripping dropped, so a page's inline JavaScript is drawn as
-#     an article at `reading20`.
+#     an article at `reading17`.
 #
 # WHAT THIS CANNOT PROVE, stated rather than implied. Whether a REAL page's
 # markup yields prose — the fixtures below are shaped from real pages measured
@@ -439,7 +439,7 @@ mutate "the prose test dropped" ReadableParse.swift \
   'let isProse = text.contains(". ") || text.hasSuffix(".")' \
   'let isProse = true'
 
-# 5. Script stripping dropped: a page's JavaScript drawn at reading20.
+# 5. Script stripping dropped: a page's JavaScript drawn at reading17.
 mutate "script stripping dropped" ReadableParse.swift \
   '.replacingOccurrences(of: "<script[^>]*>.*?</script>", with: " ",' \
   '.replacingOccurrences(of: "<script[^>]*></script>", with: " ",'

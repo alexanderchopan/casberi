@@ -413,7 +413,7 @@ struct FaceScopeRail: View {
         } label: {
             VStack(spacing: DS.Space.s1) {
                 Text("All")
-                    .dsText(.label11).fontWeight(.semibold)
+                    .dsText(.label12).fontWeight(.semibold)
                     .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
                     .frame(width: faceSize, height: faceSize)
                     // Embedded, the SLOT behind this circle carries the tint
@@ -549,7 +549,7 @@ struct FaceScopeRail: View {
     private func face(_ item: Item) -> some View {
         if inFolder, let characters = Self.characters(for: item) {
             Text(characters)
-                .dsText(.label11).fontWeight(.semibold)
+                .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
@@ -617,7 +617,7 @@ struct FaceScopeRail: View {
                 // technicality: the audit matches a LITERAL size, and a ternary
                 // is not one.
                 Image(systemName: "plus")
-                    .dsGlyph(compact ? 11 : 13)
+                    .dsGlyph(compact ? .tick : .caption)
                     .foregroundStyle(DS.tint)
                     .frame(width: faceSize, height: faceSize)
                     .background(Circle().fill(DS.tintDim))

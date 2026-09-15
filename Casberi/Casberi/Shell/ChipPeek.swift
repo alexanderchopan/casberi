@@ -80,7 +80,7 @@ private struct ChipPeek: View {
                 BridgeIcon(name: landing, size: DS.Face.row, circular: true)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(landing)
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                     // A folded chip names both halves — the word you pressed
                     // and the seat it opens — so the peek explains the fold
@@ -96,7 +96,7 @@ private struct ChipPeek: View {
             if let card {
                 if !card.title.isEmpty {
                     Text(card.title)
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }
@@ -116,7 +116,7 @@ private struct ChipPeek: View {
                 .allowsHitTesting(false)
                 if let reading = card.reading {
                     Text(reading)
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                 }
@@ -125,7 +125,7 @@ private struct ChipPeek: View {
                     ForEach(recent, id: \.id) { row in
                         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                             Text(row.title.isEmpty ? String(localized: "Untitled") : row.title)
-                                .dsText(.subhead13)
+                                .dsText(.subhead12)
                                 .foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
                             Spacer(minLength: 0)
@@ -139,7 +139,7 @@ private struct ChipPeek: View {
                 // A room with nothing landed yet is a true state, not a broken
                 // peek — say so rather than showing an empty frame.
                 Text(String(localized: "Nothing here yet."))
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
             }
         }

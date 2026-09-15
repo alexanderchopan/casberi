@@ -68,11 +68,11 @@ struct SafeQueueCard: View {
             SafeSignatureDisc(have: have, required: required)
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: headline(have: have, required: required))
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let sub = subline(have: have, required: required) {
                     Text(verbatim: sub)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -130,7 +130,7 @@ struct SafeQueueCard: View {
                         .overlay(alignment: .bottomTrailing) {
                             if signer.signed {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .dsGlyph(10, weight: .bold)
+                                    .dsGlyph(.tick, weight: .bold)
                                     .foregroundStyle(DS.confirm)
                                     .background(Circle().fill(DS.page).padding(1))
                                     .offset(x: 2, y: 2)
@@ -139,7 +139,7 @@ struct SafeQueueCard: View {
                     Text(verbatim: signer.isYou
                          ? String(localized: "\(signer.displayName) (you)")
                          : signer.displayName)
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(signer.signed ? DS.textPrimary : DS.textTertiary)
                         .lineLimit(1)
                     Spacer(minLength: 0)
@@ -172,13 +172,13 @@ struct SafeQueueCard: View {
     private var conflictNote: some View {
         HStack(alignment: .top, spacing: DS.Space.s2) {
             Image(systemName: "arrow.triangle.branch")
-                .dsGlyph(13, weight: .regular)
+                .dsGlyph(.caption, weight: .regular)
                 .foregroundStyle(DS.textSecondary)
                 .frame(width: 18)
             Text(check.conflicts == 1
                  ? "Another transaction is queued at the same position — only one of the two can execute."
                  : "\(check.conflicts) other transactions are queued at the same position — only one of them can execute.")
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -188,10 +188,10 @@ struct SafeQueueCard: View {
     private func statusLine(icon: String, tone: Color, text: LocalizedStringKey) -> some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: icon)
-                .dsGlyph(15, weight: .regular)
+                .dsGlyph(.subhead, weight: .regular)
                 .foregroundStyle(tone)
             Text(text)
-                .dsText(.callout15).foregroundStyle(tone)
+                .dsText(.body17).foregroundStyle(tone)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -365,7 +365,7 @@ struct SafeSignBlock: View {
                 if let sentence = sentence(for: refusal) {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                         Text(verbatim: sentence)
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                         // The one refusal that is the NETWORK's, not the
                         // transaction's — a mismatch, a missing owner or a
@@ -381,14 +381,14 @@ struct SafeSignBlock: View {
                 }
             case .keyDestroyed:
                 Text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Make a new one in the Safe screen.")
-                    .dsText(.subhead13).foregroundStyle(DS.destructive)
+                    .dsText(.subhead12).foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
             case .done:
                 HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "checkmark.circle.fill").dsGlyph(15)
+                    Image(systemName: "checkmark.circle.fill").dsGlyph(.subhead)
                         .foregroundStyle(DS.confirm)
                     Text("Signed from this phone.")
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 }
                 .settleIn()
             }
@@ -411,7 +411,7 @@ struct SafeSignBlock: View {
     @ViewBuilder private func readyBody(_ ready: SafeSigner.Ready) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(verbatim: reading(ready))
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             // THE BATCH, ITEMISED (2026-09-07). §238 measured 96 of a real
             // Safe's last 100 transactions as `multiSend`, so this is not a
@@ -427,7 +427,7 @@ struct SafeSignBlock: View {
                 Text(verbatim: ready.addsASpareOwner
                      ? String(localized: "This is the fix — the Safe gets an owner to spare.")
                      : String(localized: "This Safe needs every owner it has. If this phone goes, it can't be signed for again — or repaired."))
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(ready.addsASpareOwner ? DS.confirm : DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -507,7 +507,7 @@ struct SafeSignBlock: View {
                     Text(verbatim: hidden == 1
                          ? String(localized: "1 more call isn't shown here. Open it in your Safe app before signing.")
                          : String(localized: "\(hidden) more calls aren't shown here. Open them in your Safe app before signing."))
-                        .dsText(.subhead13).foregroundStyle(DS.attention)
+                        .dsText(.subhead12).foregroundStyle(DS.attention)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -532,12 +532,12 @@ struct SafeSignBlock: View {
                     // it can rewrite owners and threshold whatever else the
                     // batch appears to do.
                     Text("Runs code as the Safe itself — it can change the owners.")
-                        .dsText(.subhead13).foregroundStyle(DS.destructive)
+                        .dsText(.subhead12).foregroundStyle(DS.destructive)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(verbatim: sentence(for: call.reading, to: call.to,
                                         value: call.value, hash: ready.safeTxHash))
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(call.reading.isFullyReadable ? DS.textSecondary : DS.attention)
                     .fixedSize(horizontal: false, vertical: true)
             }

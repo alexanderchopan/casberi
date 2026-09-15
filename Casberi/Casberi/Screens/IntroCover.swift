@@ -366,7 +366,7 @@ struct IntroCover: View {
                     // Both strings were already in the catalog, so the swap
                     // carried no translation debt.
                     Text("One inbox for all your accounts.")
-                        .dsText(.heading34)
+                        .dsText(.heading40)
                         .foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                     // The ask is off behind one flag (prd §697b), so the first

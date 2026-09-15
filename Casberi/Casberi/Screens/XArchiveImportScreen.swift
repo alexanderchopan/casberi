@@ -109,7 +109,7 @@ struct XArchiveImportScreen: View {
             if liveConnected {
                 HStack(spacing: DS.Space.s3) {
                     Image(systemName: "bell.fill")
-                        .dsGlyph(17, weight: .medium)
+                        .dsGlyph(.body, weight: .medium)
                         .foregroundStyle(DS.tint)
                     Text("Live notifications — your own account, signed in")
                         .dsText(.body17).foregroundStyle(DS.textPrimary)

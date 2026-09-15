@@ -66,7 +66,7 @@ struct L2beatRoomCard: View {
 				// this slot read as "assessed, and all unknown", which is the exact wrong
 				// reading of a chain nothing has been read for yet.
 				Text(String(localized: "Not read"))
-					.dsText(.label11)
+					.dsText(.label12)
 					.foregroundStyle(DS.textTertiary)
 					.frame(width: 74, alignment: .trailing)
 			} else {

@@ -23,15 +23,15 @@ struct L2beatMilestoneHead: View {
 		let facts = L2beatMilestoneBook.facts(ref: thing.sourceRef)
 		VStack(alignment: .leading, spacing: DS.Space.s4) {
 			// THE CONTAINER'S OWN TITLE RULE (prd §560, 2026-09-01). This was a
-			// flat `heading28` — a rung the sheet system uses nowhere else,
+			// flat `heading40` — a rung the sheet system uses nowhere else,
 			// with no comment saying why — sitting in the slot where
 			// `ThingSheetView`'s sibling branches set a title. That screen
-			// already decides this by LENGTH (`words.count > 100 ? .heading22
-			// : .heading34`): a statement takes the head rung, a paragraph
+			// already decides this by LENGTH (`words.count > 100 ? .heading24
+			// : .heading40`): a statement takes the head rung, a paragraph
 			// steps down so it does not become a wall. One rule, reused, so a
 			// registry head and a post read as the same sheet.
 			Text(thing.title)
-				.dsText(thing.title.count > 100 ? .heading22 : .heading34)
+				.dsText(thing.title.count > 100 ? .heading24 : .heading40)
 				.foregroundStyle(DS.textPrimary)
 				.fixedSize(horizontal: false, vertical: true)
 				.textSelection(.enabled)
@@ -40,7 +40,7 @@ struct L2beatMilestoneHead: View {
 
 			if let summary = thing.summary, !summary.isEmpty {
 				Text(summary)
-					.dsText(.reading20)
+					.dsText(.reading17)
 					.foregroundStyle(DS.textSecondary)
 					.fixedSize(horizontal: false, vertical: true)
 					.textSelection(.enabled)
@@ -66,7 +66,7 @@ struct L2beatMilestoneHead: View {
 		HStack(spacing: DS.Space.s2) {
 			if let facts {
 				// THE SHARED STAMP (prd §560, 2026-09-01). This was a
-				// hand-rolled `Capsule` at `label11`/bold, 0.13 wash, 10/4
+				// hand-rolled `Capsule` at `label12`/bold, 0.13 wash, 10/4
 				// padding — against `DSStamp`'s `label12`, 0.16 wash, `s2` and
 				// a 24pt floor. That component's own doc records this exact
 				// drift class being fixed once already for `MoneyReceiptCard`
@@ -80,7 +80,7 @@ struct L2beatMilestoneHead: View {
 				DSStamp(word: facts.kind.label, weight: isIncident ? .urgent : .quiet)
 				if let name = facts.projectName {
 					Text(name)
-						.dsText(.label11)
+						.dsText(.label12)
 						.foregroundStyle(DS.textTertiary)
 				}
 			}
@@ -120,7 +120,7 @@ struct L2beatMilestoneHead: View {
 	private func source(_ url: String) -> some View {
 		VStack(alignment: .leading, spacing: DS.Space.s2) {
 			Text(String(localized: "Source"))
-				.dsText(.label11).fontWeight(.semibold)
+				.dsText(.label12).fontWeight(.semibold)
 				.foregroundStyle(DS.textTertiary)
 			Button {
 				DSHaptic.tap()
@@ -128,13 +128,13 @@ struct L2beatMilestoneHead: View {
 			} label: {
 				HStack(alignment: .top, spacing: DS.Space.s3) {
 					Text(L2beatSheetCopy.host(of: url))
-						.dsText(.subhead13).fontWeight(.semibold)
+						.dsText(.subhead12).fontWeight(.semibold)
 						.foregroundStyle(DS.textPrimary)
 						.multilineTextAlignment(.leading)
 						.fixedSize(horizontal: false, vertical: true)
 					Spacer(minLength: DS.Space.s2)
 					Image(systemName: "arrow.up.right")
-						.dsGlyph(11)
+						.dsGlyph(.caption)
 						.foregroundStyle(DS.textTertiary)
 				}
 				.padding(DS.Space.s3)
@@ -152,7 +152,7 @@ struct L2beatMilestoneHead: View {
 		// `L2beatCopy.day` rather than a formatter of this file's own: the risk card lists
 		// these same milestones under "On record" and two formatters spell one day two ways.
 		Text(String(localized: "Recorded \(L2beatCopy.day(thing.capturedAt)) · From L2BEAT, an open registry of layer-2 risk"))
-			.dsText(.label11)
+			.dsText(.label12)
 			.foregroundStyle(DS.textTertiary)
 			.fixedSize(horizontal: false, vertical: true)
 	}
@@ -176,14 +176,14 @@ struct L2beatRevisionHead: View {
 				Text(revision.isStageMove
 					? String(localized: "L2BEAT moved this chain's stage")
 					: String(localized: "L2BEAT revised its assessment"))
-					.dsText(.label11).fontWeight(.semibold)
+					.dsText(.label12).fontWeight(.semibold)
 					.foregroundStyle(DS.brandHue(for: "l2beat") ?? DS.tint)
 				Text(headline)
-					.dsText(.heading28)
+					.dsText(.heading40)
 					.foregroundStyle(DS.textPrimary)
 					.fixedSize(horizontal: false, vertical: true)
 				Text(name)
-					.dsText(.label11)
+					.dsText(.label12)
 					.foregroundStyle(DS.textTertiary)
 			}
 
@@ -198,7 +198,7 @@ struct L2beatRevisionHead: View {
 				}
 				if let risk {
 					Text(risk.value)
-						.dsText(.subhead13).fontWeight(.semibold)
+						.dsText(.subhead12).fontWeight(.semibold)
 						.foregroundStyle(DS.textSecondary)
 				}
 				Spacer(minLength: 0)
@@ -208,7 +208,7 @@ struct L2beatRevisionHead: View {
 
 			if let summary = thing.summary, !summary.isEmpty {
 				Text(summary)
-					.dsText(.reading20)
+					.dsText(.reading17)
 					.foregroundStyle(DS.textSecondary)
 					.fixedSize(horizontal: false, vertical: true)
 					.textSelection(.enabled)
@@ -221,7 +221,7 @@ struct L2beatRevisionHead: View {
 			Text(revision.day.map {
 				String(localized: "Noticed \($0) · L2BEAT's reading, not ours")
 			} ?? String(localized: "L2BEAT's own reading, not ours"))
-				.dsText(.label11)
+				.dsText(.label12)
 				.foregroundStyle(DS.textTertiary)
 				.fixedSize(horizontal: false, vertical: true)
 		}

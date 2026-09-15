@@ -22,7 +22,7 @@ Top to bottom, one scroll:
    render at 50% opacity with "Paused" as the label. This strip is the
    management door; it never merchandises.
    Below it, a `fillLine` hairline divider and a "Discover" heading
-   (heading22, with a quiet "N to connect" count trailing) — management above
+   (heading24, with a quiet "N to connect" count trailing) — management above
    the line, store below it. The strip and the stories must never read as one
    section.
 3. **Story carousel** — swipeable full-width editorial cards (page dots below).
@@ -51,8 +51,8 @@ Top to bottom, one scroll:
    - The Pair-a-client story REPLACES today's pairEntryRow (one door, richer).
 4. **Browse shelf** — horizontally scrolling category pills: 44pt height,
    radius `DS.Radius.control`, `surfaceSheet` fill, leading glyph in the
-   category's exemplar brand color, name (callout15 medium), count
-   (subhead13 tertiary). Tap → the For-you chart filtered to that category
+   category's exemplar brand color, name (body17 medium), count
+   (subhead12 tertiary). Tap → the For-you chart filtered to that category
    (same list, scrolled/filtered — not a new screen).
    - Categories are a MERGE MAP over `BridgeCatalog.Offer.group` (add
      `category` or a static map): Your life = photos+schedule+wallet ·

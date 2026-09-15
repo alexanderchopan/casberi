@@ -12,7 +12,7 @@ import Foundation
 /// The ruling (2026-09-03) is that **the answer is the screen**. The question
 /// folds to a one-line caption behind a stamp — you wrote it, you know what it
 /// says — and the reply's FIRST SENTENCE takes the display rung alone, with
-/// whatever follows stepping down to `heading22` in secondary ink. That is a
+/// whatever follows stepping down to `heading24` in secondary ink. That is a
 /// real hierarchy rather than a size ladder: one sentence in white at 40, a
 /// paragraph in grey at 24, and nothing else on the paper.
 ///
@@ -35,7 +35,7 @@ enum AgentReply {
     /// screen roughly 110 characters is four lines, which is already the whole
     /// upper half of the paper. A first sentence longer than that is not a
     /// headline, it IS the answer — so past this the split is abandoned and
-    /// the entire reply is set at `heading22`, which is the honest fallback
+    /// the entire reply is set at `heading24`, which is the honest fallback
     /// rather than a wall of display type.
     static let leadCap = 110
 

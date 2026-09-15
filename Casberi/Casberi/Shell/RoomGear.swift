@@ -127,7 +127,7 @@ struct RoomGear: View {
                 // reason it stays an outline: a filled glyph at this size beside
                 // a strip full of saturated brand marks reads as a sixth chip.
                 Image(systemName: "square.grid.2x2")
-                    .dsGlyph(20)
+                    .dsGlyph(.title)
                     .foregroundStyle(needsYou ? DS.destructive : DS.textSecondary)
                     .frame(width: 42, height: 42)
                     .dsGlass(cornerRadius: 21)

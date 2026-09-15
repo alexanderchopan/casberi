@@ -35,7 +35,7 @@ struct AgentConversationHead: View {
                 // the headline — `WorkStageView`'s line, and drawn only because
                 // a stored tag carries it.
                 Text("in \(project)")
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .padding(.top, DS.Space.s1 + 2)
             }
@@ -109,7 +109,7 @@ struct AgentTurnsView: View {
                     withAnimation(DS.Motion.standard) { expanded = true }
                 } label: {
                     Text("Show all \(turns.count) turns")
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.tint)
                 }
                 .buttonStyle(.plain)
@@ -163,7 +163,7 @@ struct AgentTurnsView: View {
             NoteProse(text: turn.text,
                       foldable: false,
                       markdown: turn.voice == .assistant,
-                      tier: .callout15)
+                      tier: .body17)
                 .fixedSize(horizontal: false, vertical: true)
                 .multilineTextAlignment(.leading)
                 // A bubble is capped, or the two voices stop being two
@@ -213,7 +213,7 @@ struct AgentReceiptCard: View {
                     ForEach(readings, id: \.noun) { r in
                         VStack(alignment: .leading, spacing: 1) {
                             Text(verbatim: r.text)
-                                .dsText(.heading22)
+                                .dsText(.heading24)
                                 .foregroundStyle(DS.textPrimary)
                                 .monospacedDigit()
                             Text(verbatim: r.noun)
@@ -275,7 +275,7 @@ struct AgentGrantView: View {
                         .frame(width: 7, height: 7)
                         .accessibilityHidden(true)
                     Text(verbatim: status)
-                        .dsText(.callout15)
+                        .dsText(.body17)
                         .fontWeight(.semibold)
                         .foregroundStyle(grant.urgent ? DS.attention : DS.textSecondary)
                 }
@@ -285,14 +285,14 @@ struct AgentGrantView: View {
             // sentence — the `WorkStage.Face.code` reasoning: setting it in the
             // prose face makes it read as something somebody wrote.
             Text(verbatim: grant.path)
-                .dsText(.heading22)
+                .dsText(.heading24)
                 .monospaced()
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
             if let vault = grant.vault {
                 Text("in \(vault)")
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .padding(.top, DS.Space.s1 + 2)
             }

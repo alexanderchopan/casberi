@@ -176,7 +176,7 @@ button), and the count renders inside the pill on the leader only, so
   `DS.textTertiary` + `.monospacedDigit()` just past the pill's trailing
   edge. The pill's width already says the proportion; the number beside it
   says it precisely, and they can no longer fuse into "Orthogonal 310".
-- Leader stays `.callout15` semibold, tail `.subhead13` regular — unchanged.
+- Leader stays `.body17` semibold, tail `.subhead12` regular — unchanged.
 
 ---
 
@@ -191,7 +191,7 @@ blank boxes that read as broken.
   (~line 1191, `wall.tiles.prefix(4).map(...)`) passes each tile's title
   through too (the mosaic tiles carry one — check `FeedInsight`'s mosaic
   struct and use its title field; empty string if it truly has none).
-- **Render**: the placeholder shows the tile's label — `.subhead13`,
+- **Render**: the placeholder shows the tile's label — `.subhead12`,
   `DS.textSecondary`, centered, `lineLimit(2)`, padding 4 — so the loading
   state is content, not absence. The image replaces it on arrival.
 - **Gate** (pure, in `isEmpty`): a wall qualifies only if ≥2 tiles have a

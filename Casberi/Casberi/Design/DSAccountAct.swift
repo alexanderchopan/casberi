@@ -75,7 +75,7 @@ enum DSActRow {
     /// the well tone with `DS.pourInk` over it, clipped to the circle.
     static func disc(_ glyph: String, tinted: Bool = false) -> some View {
         Image(systemName: glyph)
-            .dsGlyph(14, weight: .medium)
+            .dsGlyph(.subhead, weight: .medium)
             .foregroundStyle(tinted ? DS.tint : DS.textSecondary)
             .frame(width: discSize, height: discSize)
             .background {

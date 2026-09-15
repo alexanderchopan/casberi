@@ -74,12 +74,12 @@ struct CloudflareRunwayCard: View {
                 // where that source's chip is the lit one — so the card introduced
                 // itself with a word already on screen, one row up.
                 Text(words.headline)
-                    .dsText(.heading22)
+                    .dsText(.heading24)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(words.note)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s1)
@@ -105,7 +105,7 @@ struct CloudflareRunwayCard: View {
                 if let note = CloudflareRunway.coverageNote(uncovered: runway.uncovered,
                                                             zonesSeen: runway.zonesSeen) {
                     Text(note)
-                        .dsText(.label11)
+                        .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, DS.Space.s3)
@@ -185,7 +185,7 @@ struct CloudflareRunwayCard: View {
                 }
                 Spacer(minLength: DS.Space.s2)
                 Text(CloudflareRunway.value(days: item.days))
-                    .dsText(.price16)
+                    .dsText(.price17)
                     .foregroundStyle(CloudflareRunway.isQuiet(item) ? DS.textTertiary : DS.textPrimary)
                     .monospacedDigit()
             }
@@ -200,7 +200,7 @@ struct CloudflareRunwayCard: View {
         HStack(spacing: DS.Space.s1 + 2) {
             if let chip = CloudflareRunway.chip(item) {
                 Text(chip)
-                    .dsText(.label11).fontWeight(.bold)
+                    .dsText(.label12).fontWeight(.bold)
                     .foregroundStyle(Color.fixed("#000000"))
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)

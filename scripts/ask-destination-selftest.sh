@@ -502,9 +502,9 @@ guard "the reply sits in a bubble of its own" "$WORK/terminal.nc" \
 guard "the question's bubble trails" "$WORK/terminal.nc" \
       'Spacer\(minLength: DS.Space.s6\)'
 guard "the lead leads inside the bubble" "$WORK/terminal.nc" \
-      'dsText\(.heading22\)'
+      'dsText\(.heading24\)'
 guard "the rest steps down beneath it" "$WORK/terminal.nc" \
-      'dsText\(.reading20\)'
+      'dsText\(.reading17\)'
 # A DOCUMENT KEEPS ITS ROWS. `AgentReply.prose` recognises one shape and
 # returns nil for everything else; a false positive would delete content.
 guard "a document still renders through GenRender" "$WORK/composer.nc" \

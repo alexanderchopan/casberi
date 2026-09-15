@@ -72,7 +72,7 @@ struct WalletbeatDirectoryScreen: View {
 						ForEach(Order.allCases) { option in
 							Button(action: { DSHaptic.tap(); order = option }) {
 								Text(option.label)
-									.dsText(.subhead13)
+									.dsText(.subhead12)
 									.fontWeight(order == option ? .semibold : .regular)
 									.foregroundStyle(order == option ? DS.textPrimary : DS.textTertiary)
 							}
@@ -128,7 +128,7 @@ struct WalletbeatDirectoryScreen: View {
 				// ruling below is left exactly as it was.
 				if connected.contains(entry.id) {
 					Text(WalletbeatCopy.connectedMarker)
-						.dsText(.label11).fontWeight(.semibold)
+						.dsText(.label12).fontWeight(.semibold)
 						.foregroundStyle(DS.tint)
 				}
 				HStack(spacing: DS.Space.s2) {
@@ -137,18 +137,18 @@ struct WalletbeatDirectoryScreen: View {
 					// describes what they found and have not seen fixed.
 					if openIncidents.contains(entry.id) {
 						Text(String(localized: "Unresolved incident"))
-							.dsText(.label11).fontWeight(.bold)
+							.dsText(.label12).fontWeight(.bold)
 							.foregroundStyle(DS.attention)
 					}
 					Text(WalletbeatCopy.coverage(counts))
-						.dsText(.label11)
+						.dsText(.label12)
 						.foregroundStyle(DS.textTertiary)
 					// Walletbeat's own maturity stage, where they publish one. Hardware
 					// wallets have none in their schema, so this is absent rather than
 					// showing a dash — an empty slot on two-thirds of the list.
 					if let stage = entry.stage {
 						Text(stage)
-							.dsText(.label11).fontWeight(.semibold)
+							.dsText(.label12).fontWeight(.semibold)
 							.foregroundStyle(DS.textSecondary)
 					}
 				}
@@ -159,13 +159,13 @@ struct WalletbeatDirectoryScreen: View {
 			// offering a control that would do nothing.
 			if watching {
 				Text(String(localized: "Watching"))
-					.dsText(.label11).fontWeight(.semibold)
+					.dsText(.label12).fontWeight(.semibold)
 					.foregroundStyle(DS.textTertiary)
 					.frame(width: 58, alignment: .trailing)
 			} else {
 				Button(action: { watch(entry) }) {
 					Text(String(localized: "Watch"))
-						.dsText(.label11).fontWeight(.bold)
+						.dsText(.label12).fontWeight(.bold)
 						.foregroundStyle(DS.tint)
 						.frame(width: 58, alignment: .trailing)
 				}

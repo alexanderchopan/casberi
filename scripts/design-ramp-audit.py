@@ -45,7 +45,7 @@ Two checks, both static, neither needing a build:
      `.fontWeight(.y)` is the app's own idiom and correct — size from the ramp,
      weight as emphasis (`heading17`'s doc rules it, and 250-odd call sites use
      it). What is not correct is restating the rung's OWN weight:
-     `.dsText(.price16).fontWeight(.bold)` when `price16` is already bold. It
+     `.dsText(.price17).fontWeight(.bold)` when `price17` is already bold. It
      renders identically, so nothing can see it, and each one is an author who
      did not know what the rung carried — the exact reading-drift a named ramp
      exists to prevent. The rung→weight table is parsed out of
@@ -65,12 +65,12 @@ Four deliberate NON-checks, so this can't become a lint that cries wolf:
   * Neither ramp check judges WHICH rung was picked. `DS.Mark.hero` on a row
     would look absurd and this would pass it; that is a design review's job,
     not a grep's. **Nor is a rung's CALLER BUDGET checkable, and that was
-    measured rather than assumed** (2026-08-28): `price48` documents itself as
-    "one per surface" and `heading28` as "a sentence, never a figure", and both
+    measured rather than assumed** (2026-08-28): `price64` documents itself as
+    "one per surface" and `heading40` as "a sentence, never a figure", and both
     rules were re-derived that day from thirteen and seven call sites that had
     quietly outgrown a prose "one caller, deliberately". A count per FILE is the
     only thing a grep could enforce and it is wrong in both directions —
-    `HegotaRoomCard` correctly takes `price48` four times because it holds four
+    `HegotaRoomCard` correctly takes `price64` four times because it holds four
     cards, while two crowns on ONE card is the real defect and lives in the same
     file either way. Better to say so than to ship an exemption list that is a
     snooze wearing a registry's clothes.
@@ -394,7 +394,7 @@ DIRTY_WEIGHT_INLINE = """
 import SwiftUI
 struct A: View {
     var body: some View {
-        Text("Hi").dsText(.price16).fontWeight(.bold)
+        Text("Hi").dsText(.price17).fontWeight(.bold)
     }
 }
 """
@@ -417,22 +417,22 @@ struct A: View {
     // A glyph used to read .font(.system(size: 13, weight: .semibold)) here,
     // the mark used to be BridgeIcon(name: n, size: 38), the colophon used to
     // be .font(.system(size: 17, weight: .semibold)) over .font(.footnote),
-    // and this line used to read .dsText(.price16).fontWeight(.bold).
+    // and this line used to read .dsText(.price17).fontWeight(.bold).
     var body: some View {
         HStack {
-            Image(systemName: "chevron.right").dsGlyph(13)
+            Image(systemName: "chevron.right").dsGlyph(.caption)
             BridgeIcon(name: "Stripe", size: DS.Mark.list)
             /* BridgeIcon(name: "Stripe", size: 38) — the old spelling. */
             BridgeIcon(name: "Stripe", size: markSize)
             Image(systemName: "x").font(.system(size: size * 0.5, weight: .bold))
-            Text("Hi").dsText(.price16)
+            Text("Hi").dsText(.price17)
             Text("Emphasis").dsText(.label12).fontWeight(.semibold)
-            Text("Conditional").dsText(.price16).fontWeight(on ? .bold : .regular)
+            Text("Conditional").dsText(.price17).fontWeight(on ? .bold : .regular)
             Text("Derived").font(.system(size: side * 0.4, weight: .bold))
             Text("Ramp").font(DSTextStyle.body17.scaledFont)
         }
         VStack {
-            Text("Chain ended").dsText(.price16)
+            Text("Chain ended").dsText(.price17)
         }
         .fontWeight(.bold)
     }
@@ -505,7 +505,7 @@ def _self_test():
     # that silently passes everything — the failure mode this repo calls a false
     # green. So the parse is asserted against the real ramp, not trusted.
     w = ramp_weights()
-    for rung, weight in (("price16", "bold"), ("label12", "medium"),
+    for rung, weight in (("price17", "bold"), ("label12", "medium"),
                          ("body17", "regular"), ("heading17", "semibold")):
         got = w.get(rung)
         mark = "✓" if got == weight else "✗"

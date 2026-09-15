@@ -56601,3 +56601,74 @@ drift guards pin the call site and the `padded` switch.
 Not built or run here (no Swift toolchain in this checkout); the simulator pass
 is owed. The state itself is reachable on device by opening the room before the
 holdings read lands, which is how it was reported.
+
+## §762 — Glyphs take a rung, and every text rung is named for its size (user: "do a sweep on font sizes are we drifting or staying consistent", then "do both" and "do all", 2026-09-15)
+
+**The sweep.** Text was holding: 1,430 `dsText` calls, no raw sizes on text, no
+SwiftUI semantic styles, and `design-ramp-audit.py` green. Two things had
+drifted underneath it.
+
+**1 · Glyphs had twenty sizes.** `dsGlyph` took a `CGFloat`, and 85 files
+spelled their own: 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 24,
+26, 28, 30, 34, 38. That is the drift `DS.Face` (§355b, sixteen literals) and
+`DS.Mark` were each cut to stop, and the audit could not see it because it
+checked that a glyph *scales*, never *which size* it takes. The parameter is
+now `DSGlyph` (`Shared/Typography.swift`), seven rungs named for the text
+they stand beside:
+
+| Rung | pt | Took | Calls |
+|---|---|---|---|
+| `tick` | 10 | 9, 10 | 18 |
+| `caption` | 12 | 11–13 | 79 |
+| `subhead` | 15 | 14–16 | 43 |
+| `body` | 17 | 17–19 | 20 |
+| `title` | 22 | 20–24 | 21 |
+| `feature` | 28 | 26–30 | 5 |
+| `hero` | 36 | 34, 38 | 2 |
+
+Nothing moved more than two points. **The compiler holds it**, not a grep: a
+literal no longer type-checks. A ternary keeps its two rungs where the two
+sizes meant something (`presence == .destroyed ? .caption : .subhead`); where
+they did not it collapsed (`AgentTerminal`'s `compact ? 30 : 26` is
+`.feature`, `DSSlab`'s 15/14 is `.subhead`). The Dynamic Type anchor is the
+rung's own (`DSGlyph.anchor`) rather than derived from a number.
+
+**2 · Text rung names lied.** §532 took the ramp to five sizes and kept the
+old names so ~700 call sites would not churn; `callout15` rendered at 17,
+`subhead13` at 12, `heading34` at 40, `price48` at 64. Renamed to the size
+they draw, and identical rungs under two names folded into one:
+
+- `price48` → `price64` · `heading34`, `heading28` → `heading40` ·
+  `monoCode34` → `monoCode40` · `heading22` → `heading24`
+- `callout15` → `body17` · `reading20` → `reading17` · `price16` → `price17`
+  · `mono13` → `mono17`
+- `subhead13`, `indicator9` → `subhead12` · `label11`, `tab10` → `label12` ·
+  `badgeInitial11` → `badgeInitial12`
+- widgets: `widgetTreemapTerm12`, `widgetRecentTitle12` → `widgetLabel12`
+
+**The fold was not only cosmetic, and that is the finding.** The merged
+names differed in their Dynamic Type anchor: `label11`/`tab10` scaled as
+`caption2`, `label12` as `caption1`, and `price16` as `callout` beside a
+`body` title. Identical at the default size, they came apart at accessibility
+sizes, so a row drew two caption sizes (and a figure one size off its title)
+exactly where the tier exists to prevent it. Every 12 now anchors to
+`caption1` and every 17 to `body` (`heading17` keeps `headline`, which is
+also 17). **The only visible change at the default text size is the glyph
+snapping above.**
+
+**Widget sizes were NOT consolidated.** Each widget rung is sized by a
+different WidgetKit family (accessory-rectangular 11/14, hero 12/17, large
+20, Live Activity 13/15); merging across families risks overflow no build can
+see. Only the two identical 12s folded.
+
+**Historical prose.** Comments and living docs were renamed with the code; the
+few that narrate an old name as history (`Typography.swift`'s own notes) keep
+it. `docs/prd.md` is the ledger and is not rewritten — every rung name above
+§762 is the old spelling.
+
+**UNSEEN on a device.** iOS simulator build, `design-ramp-audit.py`,
+`face-ramp-audit.py`, `footnote-audit.py`, `hero-tint-audit.py`,
+`feed-row-skeleton-audit.py`, `sheet-title-audit.py`, `accessibility-audit.py`,
+`connect-shape-audit.py`, `ds-template-audit.py` and the eleven selftests that
+pin a rung name were run. First to look at: a row with a 9pt tick (now 10), a
+lock-screen widget's 11pt clock (now 12), and `AgentTerminal`'s compact glyph.

@@ -111,7 +111,7 @@ struct DSRunwayRail: View {
 
     private func tick(_ text: String) -> some View {
         Text(text)
-            .dsText(.label11)
+            .dsText(.label12)
             .foregroundStyle(DS.textTertiary)
             .monospacedDigit()
             .offset(y: Self.tickRoom)

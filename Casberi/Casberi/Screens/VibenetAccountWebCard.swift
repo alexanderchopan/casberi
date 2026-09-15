@@ -60,11 +60,11 @@ struct VibenetAccountWebCard: View {
                 // asymmetry states which side is the subject without a label
                 // saying so.
                 // **THE OWNER'S NAME WAS THE SMALLEST TEXT ON THE CARD
-                // (prd §566).** It sat at `label11`/tertiary under a 56pt face
+                // (prd §566).** It sat at `label12`/tertiary under a 56pt face
                 // while every sub-account hanging off it was drawn at
-                // `subhead13`/primary — so the subject of the figure was
+                // `subhead12`/primary — so the subject of the figure was
                 // quieter than its dependents, which is the inversion §563 and
-                // §564 both fix elsewhere. It takes `price16`, the rung the
+                // §564 both fix elsewhere. It takes `price17`, the rung the
                 // roster rows next door use for the same job.
                 //
                 // The face ASYMMETRY is deliberate and stays: shelf against
@@ -74,7 +74,7 @@ struct VibenetAccountWebCard: View {
                 VStack(spacing: DS.Space.s1) {
                     WalletFace(address: web.owner, size: DS.Face.shelf, circular: true)
                     Text(name(web.owner))
-                        .dsText(.price16)
+                        .dsText(.price17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -152,7 +152,7 @@ struct VibenetAccountWebCard: View {
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(name(node.address))
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 // **"Watching" is what the SOLID face already says** — the
@@ -164,10 +164,10 @@ struct VibenetAccountWebCard: View {
                     EmptyView()
                 } else if onWatch != nil {
                     Text(String(localized: "Not watched · Watch it"))
-                        .dsText(.label11).foregroundStyle(DS.tint)
+                        .dsText(.label12).foregroundStyle(DS.tint)
                 } else {
                     Text(String(localized: "Not watched"))
-                        .dsText(.label11).foregroundStyle(DS.textTertiary)
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
                 }
             }
             Spacer(minLength: 0)

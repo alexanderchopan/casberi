@@ -187,7 +187,7 @@ struct VerbDial: View {
                 .frame(width: tight ? 48 : 52, height: tight ? 48 : 52)
                 .overlay {
                     Image(systemName: icon)
-                        .dsGlyph(19, weight: .regular)
+                        .dsGlyph(.body, weight: .regular)
                         .foregroundStyle(DS.textPrimary)
                 }
             Text(LocalizedStringKey(label))

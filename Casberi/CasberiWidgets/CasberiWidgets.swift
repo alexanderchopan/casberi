@@ -53,7 +53,7 @@ struct VoiceRecordingActivity: Widget {
             // Lock screen band.
             HStack(spacing: 10) {
                 Image(systemName: "waveform")
-                    .dsGlyph(20, weight: .medium)
+                    .dsGlyph(.title, weight: .medium)
                     .foregroundStyle(.red)
                 Text("Recording")
                     .dsText(.widgetChrome15)
@@ -64,7 +64,7 @@ struct VoiceRecordingActivity: Widget {
                     .monospacedDigit()
                     .frame(maxWidth: 56)
                 Image(systemName: "stop.circle.fill")
-                    .dsGlyph(24)
+                    .dsGlyph(.title)
                     .foregroundStyle(.red)
             }
             .padding(14)
@@ -74,7 +74,7 @@ struct VoiceRecordingActivity: Widget {
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     Image(systemName: "waveform")
-                        .dsGlyph(22, weight: .medium)
+                        .dsGlyph(.title, weight: .medium)
                         .foregroundStyle(.red)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
@@ -614,7 +614,7 @@ private struct LargeHeroBody: View {
             Button(intent: OpenComposerIntent()) {
                 HStack(spacing: 5) {
                     Image(systemName: "plus")
-                        .dsGlyph(11)
+                        .dsGlyph(.caption)
                     Text("Save a thing")
                         .dsText(.widgetSubline12)
                 }
@@ -671,7 +671,7 @@ private struct ThemesTreemap: View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer(minLength: 0)
             Text(c.name)
-                .dsText(.widgetTreemapTerm12)
+                .dsText(.widgetLabel12)
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .padding(.horizontal, 9)
@@ -692,7 +692,7 @@ private struct RecentItemRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(title)
-                .dsText(.widgetRecentTitle12)
+                .dsText(.widgetLabel12)
                 .foregroundStyle(.white)
                 .lineLimit(1)
             Text(source)

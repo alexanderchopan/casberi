@@ -7,7 +7,7 @@ import Foundation
 ///
 /// Every row in `AddressCard.historySection` drew `WalletValue.title(thing)` —
 /// "Sent 0.25 ETH to Mom" — six times, on Mom's own profile, under a 76pt
-/// portrait of Mom with her name at `heading28` above it. The counterparty
+/// portrait of Mom with her name at `heading40` above it. The counterparty
 /// clause is the screen restating its own subject on every line, and it is
 /// also the widest part of the string, so the DATE (the only per-row fact the
 /// eye is actually scanning for) was pushed to a second line under a title

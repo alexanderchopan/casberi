@@ -107,7 +107,7 @@ struct PersonRoomScreen: View {
                 header
                 if let bio = shown.bio, !bio.isEmpty {
                     Text(bio)
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let xPerson {
@@ -165,7 +165,7 @@ struct PersonRoomScreen: View {
                     withAnimation(DS.Motion.standard) { windowSteps += 1 }
                 } label: {
                     Text("Show older")
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.tint)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, DS.Space.s4)
@@ -178,7 +178,7 @@ struct PersonRoomScreen: View {
 
             if !loading && window.shown.isEmpty {
                 Text("Nothing here yet.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
@@ -205,7 +205,7 @@ struct PersonRoomScreen: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(shown.title).dsText(.heading17).foregroundStyle(DS.textPrimary)
                 Text("@\(shown.shortHandle) · \(profile.source)")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             }
             Spacer(minLength: 0)
         }

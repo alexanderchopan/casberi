@@ -13,7 +13,7 @@ struct MoneyActivity: Widget {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     Image(systemName: glyph(context.state))
-                        .dsGlyph(17)
+                        .dsGlyph(.body)
                         .foregroundStyle(WidgetChrome.accent)
                     Text(context.attributes.title)
                         .dsText(.widgetChrome15)
@@ -36,7 +36,7 @@ struct MoneyActivity: Widget {
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     Image(systemName: glyph(context.state))
-                        .dsGlyph(20)
+                        .dsGlyph(.title)
                         .foregroundStyle(WidgetChrome.accent)
                 }
                 DynamicIslandExpandedRegion(.trailing) {

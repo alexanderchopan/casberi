@@ -90,10 +90,10 @@ struct WalletWatchField: View {
             if let result {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Image(systemName: resultIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-                        .dsGlyph(12)
+                        .dsGlyph(.caption)
                         .foregroundStyle(resultIsError ? DS.destructive : DS.confirm)
                     Text(result)
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                 }
@@ -164,10 +164,10 @@ struct WalletWatchField: View {
     private func noticeLine(_ glyph: String, _ tone: Color, _ text: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Image(systemName: glyph)
-                .dsGlyph(12)
+                .dsGlyph(.caption)
                 .foregroundStyle(tone)
             Text(text)
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
@@ -184,11 +184,11 @@ struct WalletWatchField: View {
                     WalletFace(address: address, size: DS.Face.list, circular: true)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(known?.name ?? draft)
-                            .dsText(.callout15).fontWeight(.semibold)
+                            .dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
                         Text(previewFact(address: address, known: known))
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     }
                     Spacer(minLength: 0)
@@ -201,7 +201,7 @@ struct WalletWatchField: View {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner(size: .mini)
                     Text("Looking up \(draft)…")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, DS.Space.s1)

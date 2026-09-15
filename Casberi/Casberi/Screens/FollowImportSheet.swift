@@ -60,7 +60,7 @@ struct FollowImportSheet: View {
     var body: some View {
         DSTray(title: "Who they follow", height: 660) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text(blurb).dsText(.callout15).foregroundStyle(DS.textSecondary)
+                Text(blurb).dsText(.body17).foregroundStyle(DS.textSecondary)
                 if rows == nil {
                     loading
                 } else if !reachable {
@@ -98,7 +98,7 @@ struct FollowImportSheet: View {
     }
 
     private func note(_ text: String) -> some View {
-        Text(text).dsText(.callout15).foregroundStyle(DS.textTertiary)
+        Text(text).dsText(.body17).foregroundStyle(DS.textTertiary)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -109,7 +109,7 @@ struct FollowImportSheet: View {
             DSSpinner()
             Text(read == 0 ? String(localized: "Reading the follow list…")
                            : String(localized: "Reading the follow list… \(read) so far"))
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                .dsText(.body17).foregroundStyle(DS.textTertiary)
                 // Tabular, because it rolls — see `LiveTimeText` (prd §586).
                 .monospacedDigit()
                 .contentTransition(.numericText())
@@ -165,7 +165,7 @@ struct FollowImportSheet: View {
                     Text(person.hit.displayName).dsText(.heading17)
                         .foregroundStyle(DS.textPrimary).lineLimit(1)
                     Text("@\(SocialThread.shortHandle(person.hit.handle))")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary).lineLimit(1)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
                 }
                 Spacer(minLength: 0)
                 if person.watched {
@@ -175,7 +175,7 @@ struct FollowImportSheet: View {
                     Text("Watching").dsText(.label12).foregroundStyle(DS.textTertiary)
                 } else {
                     Image(systemName: "checkmark")
-                        .dsGlyph(16, weight: .bold)
+                        .dsGlyph(.subhead, weight: .bold)
                         .foregroundStyle(DS.tint)
                         .opacity(on ? 1 : 0)
                 }

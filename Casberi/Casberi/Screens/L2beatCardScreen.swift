@@ -57,11 +57,11 @@ struct L2beatRiskCard: View {
 				riskSection(project)
 			} else if loading {
 				Text(String(localized: "Reading L2BEAT…"))
-					.dsText(.subhead13)
+					.dsText(.subhead12)
 					.foregroundStyle(DS.textTertiary)
 			} else if failed {
 				Text(String(localized: "Couldn't reach L2BEAT, and this chain isn't in the copy bundled with the app."))
-					.dsText(.subhead13)
+					.dsText(.subhead12)
 					.foregroundStyle(DS.textTertiary)
 					.fixedSize(horizontal: false, vertical: true)
 			}
@@ -78,10 +78,10 @@ struct L2beatRiskCard: View {
 				L2beatMark(name: name, chainID: chainID, size: 48)
 				VStack(alignment: .leading, spacing: 3) {
 					Text(name)
-						.dsText(.heading22)
+						.dsText(.heading24)
 						.foregroundStyle(DS.textPrimary)
 					Text(subtitleLine)
-						.dsText(.label11)
+						.dsText(.label12)
 						.foregroundStyle(DS.textTertiary)
 				}
 				Spacer(minLength: DS.Space.s2)
@@ -97,7 +97,7 @@ struct L2beatRiskCard: View {
 			Text(watching
 				? String(localized: "Watching — tap to stop")
 				: String(localized: "Watch this chain"))
-				.dsText(.subhead13).fontWeight(.semibold)
+				.dsText(.subhead12).fontWeight(.semibold)
 				.foregroundStyle(watching ? DS.textTertiary : DS.tint)
 		}
 		.buttonStyle(.plain)
@@ -130,7 +130,7 @@ struct L2beatRiskCard: View {
 				L2beatStageChip(stage: project.stage)
 				if project.underReview {
 					Text(String(localized: "Under review"))
-						.dsText(.label11).fontWeight(.bold)
+						.dsText(.label12).fontWeight(.bold)
 						.foregroundStyle(DS.attention)
 				}
 				Spacer(minLength: 0)
@@ -142,7 +142,7 @@ struct L2beatRiskCard: View {
 				.fixedSize(horizontal: false, vertical: true)
 			if project.underReview {
 				Text(String(localized: "L2BEAT is re-examining this chain, so these readings may change."))
-					.dsText(.subhead13)
+					.dsText(.subhead12)
 					.foregroundStyle(DS.textSecondary)
 					.fixedSize(horizontal: false, vertical: true)
 			}
@@ -193,7 +193,7 @@ struct L2beatRiskCard: View {
 	private var milestoneCrossLink: some View {
 		VStack(alignment: .leading, spacing: DS.Space.s2) {
 			Text(String(localized: "On record"))
-				.dsText(.label11).fontWeight(.semibold)
+				.dsText(.label12).fontWeight(.semibold)
 				.foregroundStyle(DS.textTertiary)
 			ForEach(milestones) { row in
 				if let thing = row.live {
@@ -205,12 +205,12 @@ struct L2beatRiskCard: View {
 							.padding(.top, 6)
 						VStack(alignment: .leading, spacing: 1) {
 							Text(thing.title)
-								.dsText(.subhead13)
+								.dsText(.subhead12)
 								.foregroundStyle(DS.textSecondary)
 								.lineLimit(2)
 								.fixedSize(horizontal: false, vertical: true)
 							Text(L2beatCopy.day(thing.capturedAt))
-								.dsText(.label11)
+								.dsText(.label12)
 								.foregroundStyle(DS.textTertiary)
 						}
 						Spacer(minLength: 0)
@@ -250,7 +250,7 @@ struct L2beatRiskCard: View {
 						Text(showsAsks
 							? String(localized: "Hide what these ask")
 							: String(localized: "What these ask"))
-							.dsText(.label11)
+							.dsText(.label12)
 							.foregroundStyle(DS.tint)
 					}
 					.buttonStyle(.plain)
@@ -297,12 +297,12 @@ struct L2beatRiskCard: View {
 			if let url = project?.pageURL {
 				Link(destination: url) {
 					Text(String(localized: "Full assessment on L2BEAT"))
-						.dsText(.subhead13).fontWeight(.semibold)
+						.dsText(.subhead12).fontWeight(.semibold)
 						.foregroundStyle(DS.tint)
 				}
 			}
 			Text(freshnessLine)
-				.dsText(.label11)
+				.dsText(.label12)
 				.foregroundStyle(DS.textTertiary)
 				.fixedSize(horizontal: false, vertical: true)
 		}
@@ -394,12 +394,12 @@ struct L2beatRiskRow: View {
 			// It leads the sentence because it is the answer, and the sentence is the
 			// reasoning behind it.
 			Text(risk.value)
-				.dsText(.subhead13).fontWeight(.semibold)
+				.dsText(.subhead12).fontWeight(.semibold)
 				.foregroundStyle(DS.textSecondary)
 
 			if !risk.explanation.isEmpty {
 				Text(risk.explanation)
-					.dsText(.subhead13)
+					.dsText(.subhead12)
 					.foregroundStyle(DS.textSecondary)
 					.fixedSize(horizontal: false, vertical: true)
 			}
@@ -416,11 +416,11 @@ struct L2beatRiskRow: View {
 						.padding(.top, 6)
 					VStack(alignment: .leading, spacing: 1) {
 						Text(second.value)
-							.dsText(.label11).fontWeight(.semibold)
+							.dsText(.label12).fontWeight(.semibold)
 							.foregroundStyle(DS.textSecondary)
 						if let text = second.explanation, !text.isEmpty {
 							Text(text)
-								.dsText(.label11)
+								.dsText(.label12)
 								.foregroundStyle(DS.textTertiary)
 								.fixedSize(horizontal: false, vertical: true)
 						}
@@ -434,7 +434,7 @@ struct L2beatRiskRow: View {
 			// toggle rather than by a link repeated five times down the card.
 			if showsAsks {
 				Text(risk.axis.asks)
-					.dsText(.label11)
+					.dsText(.label12)
 					.foregroundStyle(DS.textTertiary)
 					.fixedSize(horizontal: false, vertical: true)
 					.padding(.top, DS.Space.s1)

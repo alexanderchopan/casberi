@@ -38,7 +38,7 @@ struct SocialReceptionCard: View {
                     ForEach(reception.readings, id: \.noun) { reading in
                         VStack(alignment: .leading, spacing: 1) {
                             Text(reading.text)
-                                .dsText(.heading22)
+                                .dsText(.heading24)
                                 .foregroundStyle(DS.textPrimary)
                                 .monospacedDigit()
                             Text(reading.noun)
@@ -57,13 +57,13 @@ struct SocialReceptionCard: View {
             // the counts are ABOUT.
             if let likers = reception.likers {
                 Text(likers)
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if let ceiling = reception.ceiling {
                 Text(ceiling)
-                    .dsText(.callout15)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -135,7 +135,7 @@ struct ReplyingToCard: View {
                     }
                     if !words.isEmpty {
                         Text(words)
-                            .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
@@ -155,7 +155,7 @@ struct ReplyingToCard: View {
 ///
 /// A new follower landed as a `.link` whose title was a sentence and whose
 /// content was their profile URL, so the sheet drew that sentence at
-/// `heading34` and then a `LinkPreviewCard` fetching a profile page. Both
+/// `heading40` and then a `LinkPreviewCard` fetching a profile page. Both
 /// halves of what it needed were already stamped on the row —
 /// `authorAvatarURL` and `authorHandle` — and the app has had a real person
 /// surface since §169.
@@ -190,10 +190,10 @@ struct SocialPersonContent: View {
                     VStack(alignment: .leading, spacing: 2) {
                         if let displayName, !displayName.isEmpty {
                             Text(displayName)
-                                .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                                .dsText(.heading24).foregroundStyle(DS.textPrimary)
                         }
                         Text("@\(SocialThread.shortHandle(handle))")
-                            .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                            .dsText(.body17).foregroundStyle(DS.textTertiary)
                     }
                     Spacer(minLength: 0)
                 }
@@ -231,7 +231,7 @@ struct SocialPersonContent: View {
             VStack(alignment: .leading, spacing: 2) {
                 LiveTimeText(date: thing.capturedAt)
                 Text(SocialSheetSource.words(for: thing))
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)

@@ -73,10 +73,10 @@ struct FramesSponsorSheet: View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             WalletFace(address: request.sender, size: DS.Face.shelf, circular: true)
             Text(String(localized: "\(FramesName.of(request.sender, mine: mine, watched: watched)) asks you to pay the fee"))
-                .dsText(.reading20).foregroundStyle(DS.textPrimary)
+                .dsText(.reading17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             Text(String(localized: "Only the fee leaves your account. What it sends comes from theirs."))
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .dsSheetHeadBlock()
@@ -92,11 +92,11 @@ struct FramesSponsorSheet: View {
                     HStack(spacing: DS.Space.s3) {
                         WalletFace(address: paid, size: DS.Face.list, circular: true)
                         Text(FramesName.of(paid, mine: mine, watched: watched))
-                            .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
                         Spacer(minLength: DS.Space.s2)
                         Text(amount(leg))
-                            .dsText(.price16).foregroundStyle(DS.textPrimary)
+                            .dsText(.price17).foregroundStyle(DS.textPrimary)
                             .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                             .layoutPriority(1)
                     }
@@ -157,7 +157,7 @@ struct FramesSponsorSheet: View {
     @ViewBuilder private var verb: some View {
         if let refusal {
             Text(FramesSponsor.sentence(refusal))
-                .dsText(.callout15).foregroundStyle(DS.destructive)
+                .dsText(.body17).foregroundStyle(DS.destructive)
                 .fixedSize(horizontal: false, vertical: true)
         } else {
             VStack(alignment: .leading, spacing: DS.Space.s2) {

@@ -59,7 +59,7 @@ struct VibenetThisPhoneRow: View {
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Text(standing)
-                        .dsText(.label11)
+                        .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                     // THE COST, on the line where it is paid. It is a third
@@ -67,13 +67,13 @@ struct VibenetThisPhoneRow: View {
                     // under the row, so nothing sits beneath the disc.
                     if let cost {
                         Text(cost)
-                            .dsText(.label11)
+                            .dsText(.label12)
                             .foregroundStyle(DS.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     if let failure {
                         Text(failure)
-                            .dsText(.label11)
+                            .dsText(.label12)
                             .foregroundStyle(DS.destructive)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -113,7 +113,7 @@ struct VibenetThisPhoneRow: View {
                 .fill(presence == .present ? Self.mark : DS.fillFaint)
                 .frame(width: DS.Face.rowCircle, height: DS.Face.rowCircle)
             Image(systemName: presence == .destroyed ? "exclamationmark.triangle.fill" : "faceid")
-                .dsGlyph(presence == .destroyed ? 11 : 13, weight: .semibold)
+                .dsGlyph(presence == .destroyed ? .tick : .caption, weight: .semibold)
                 .foregroundStyle(presence == .present ? Color.white
                                  : (presence == .destroyed ? DS.destructive : DS.textTertiary))
         }

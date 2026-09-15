@@ -240,7 +240,7 @@ struct AltanaScreen: View {
                         .lineLimit(1)
                     if let subtitle {
                         Text(subtitle)
-                            .dsText(.label11)
+                            .dsText(.label12)
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     }

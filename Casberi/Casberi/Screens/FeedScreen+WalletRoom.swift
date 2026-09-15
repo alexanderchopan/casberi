@@ -125,7 +125,7 @@ extension FeedScreen {
                                 if position.holders.count > 1 {
                                     Text(position.holders.prefix(2)
                                             .map(\.label).joined(separator: " · "))
-                                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                                         .lineLimit(1)
                                 }
                             }
@@ -143,7 +143,7 @@ extension FeedScreen {
                                     // beside "55.7%" is precision nobody asked
                                     // for on a figure that moves hourly.
                                     Text("\(Int((position.usd / portfolio.totalUSD * 100).rounded()))%")
-                                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                                         .monospacedDigit()
                                 }
                             }
@@ -319,7 +319,7 @@ extension FeedScreen {
                                     .frame(width: DS.Face.row, height: DS.Face.row)
                                 Image(systemName: "eye")
                                     .accessibilityHidden(true)
-                                    .dsGlyph(13, weight: .semibold)
+                                    .dsGlyph(.caption, weight: .semibold)
                                     .foregroundStyle(DS.tint)
                             }
                         }
@@ -580,12 +580,12 @@ extension FeedScreen {
     /// that goes is `walletComingUpSection`'s, which said exactly what its
     /// header now says (§208: never say one thing twice).
     ///
-    /// **The grammar is the stream's own day header**, verbatim — `heading22`
+    /// **The grammar is the stream's own day header**, verbatim — `heading24`
     /// in primary ink at the same insets. That is deliberate on two counts:
     /// this room already had a group-header tier and it was the day names, so
     /// "What you hold" and "Today" are peers because they ARE peers (both are
     /// top-level blocks of one room); and a second, smaller tier would mean
-    /// inventing a rung the ramp doesn't carry between `heading22` and
+    /// inventing a rung the ramp doesn't carry between `heading24` and
     /// `label12`, for one screen.
     ///
     /// **Never rendered over nothing.** Every card here self-gates, so a
@@ -602,7 +602,7 @@ extension FeedScreen {
     func walletGroupHeader(_ title: String) -> some View {
         Section {
             Text(title)
-                .dsText(.heading22)
+                .dsText(.heading24)
                 .foregroundStyle(DS.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
@@ -684,7 +684,7 @@ extension FeedScreen {
     /// prd §447).
     ///
     /// **This is what a four-line block reduced to.** §417 promoted the
-    /// concentration sentence to a `heading22` lead above the map, on the
+    /// concentration sentence to a `heading24` lead above the map, on the
     /// reasoning that Lending and Approvals lead with their reading; that was
     /// right for those cards and wrong here, because the §417 group headers
     /// landed a 22pt "What you hold" in the same pass — so the card opened
@@ -712,7 +712,7 @@ extension FeedScreen {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 if let shape = portfolio.shapeLine {
                     Text(shape)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
                 }
@@ -1376,7 +1376,7 @@ extension FeedScreen {
                 // and every pad is spelled out, so the row lands where the header
                 // did.
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(label).dsText(.heading22).foregroundStyle(DS.textPrimary)
+                    Text(label).dsText(.heading24).foregroundStyle(DS.textPrimary)
                 }
                 .textCase(nil)
                 .padding(.leading, DS.Space.s4)
@@ -1504,7 +1504,7 @@ extension FeedScreen {
                             VStack(alignment: .leading, spacing: DS.Space.s2) {
                     // THE DRAWING LEADS (2026-08-22, prd §447) — nothing above
                     // the map at all. §417 put the concentration sentence here
-                    // at `heading22` on Lending's and Approvals' anatomy, and
+                    // at `heading24` on Lending's and Approvals' anatomy, and
                     // the same pass put a 22pt "What you hold" header directly
                     // above this card: two display lines stacked, then the
                     // map's own eyebrow saying the header's words again. The

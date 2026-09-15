@@ -83,7 +83,7 @@ struct NetworkReceiptsScreen: View {
                     Text("Not on the list").dsText(.label12).foregroundStyle(DS.textTertiary)
                 } footer: {
                     Text("A bug in the list, not a hidden service — please report it.")
-                        .dsText(.callout15).foregroundStyle(DS.attention)
+                        .dsText(.body17).foregroundStyle(DS.attention)
                 }
             }
 
@@ -150,7 +150,7 @@ struct NetworkReceiptsScreen: View {
                 Text(receipt.service ?? receipt.entry.host)
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                 Text(receipt.entry.host)
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 Text(summary(receipt.entry))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
             }
@@ -169,7 +169,7 @@ struct NetworkReceiptsScreen: View {
                 .frame(width: DS.Mark.list, height: DS.Mark.list)
                 .overlay {
                     Image(systemName: service == nil ? "questionmark" : "network")
-                        .dsGlyph(16)
+                        .dsGlyph(.subhead)
                         .foregroundStyle(service == nil ? DS.attention : DS.textSecondary)
                 }
         }
@@ -196,7 +196,7 @@ private struct ReachCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                // `stat24`, not `heading28` (2026-08-28). `heading28` is the
+                // `stat24`, not `heading40` (2026-08-28). `heading40` is the
                 // LEDE rung — a sentence — and a figure borrowing it put this
                 // count between the two money rungs either side of it,
                 // matching neither. `stat24` is the ramp's own stat-card rung
@@ -204,7 +204,7 @@ private struct ReachCard: View {
                 Text(reach.requests.formatted())
                     .dsText(.stat24).monospacedDigit()
                     .foregroundStyle(DS.textPrimary)
-                Text(unit).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                Text(unit).dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 Spacer(minLength: DS.Space.s2)
                 verdict
             }
@@ -296,14 +296,14 @@ private struct ReachCard: View {
                 DSTreemapLeader(figure: cell.count.formatted(), name: cell.label)
             } else {
                 Text(cell.label)
-                    .dsText(.callout15).fontWeight(.semibold)
+                    .dsText(.body17).fontWeight(.semibold)
                     .foregroundStyle(cell.isTail ? DS.textSecondary : DS.textPrimary)
                     .lineLimit(2).minimumScaleFactor(0.8)
                 // The tail is a sum, not a service — printing its count beside a
                 // name would read as one thing that made that many requests.
                 if !cell.isTail {
                     Text("\(cell.count)")
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .monospacedDigit()
                 }
                 Spacer(minLength: 0)

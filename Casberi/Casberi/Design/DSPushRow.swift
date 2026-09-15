@@ -45,7 +45,7 @@ struct DSPushRowLabel<Leading: View>: View {
                     .lineLimit(2)
                 if let subtitle {
                     subtitle
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(subtitleTone)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -89,7 +89,7 @@ struct DSPushRowTrail: View {
         HStack(spacing: DS.Space.s3) {
             if let fact {
                 fact
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(factTone)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -98,7 +98,7 @@ struct DSPushRowTrail: View {
                 DSSpinner()
             } else if let glyph {
                 Image(systemName: glyph)
-                    .dsGlyph(12)
+                    .dsGlyph(.caption)
                     .foregroundStyle(factTone)
                     .accessibilityHidden(true)
             } else if opens {
@@ -181,7 +181,7 @@ struct DSChevron: View {
 
     var body: some View {
         Image(systemName: "chevron.right")
-            .dsGlyph(12)
+            .dsGlyph(.caption)
             .foregroundStyle(tint)
             .accessibilityHidden(true)
     }
@@ -205,7 +205,7 @@ struct DSMoreLink: View {
                     .monospacedDigit()
                     .lineLimit(1)
                 Image(systemName: "chevron.right")
-                    .dsGlyph(9, weight: .bold)
+                    .dsGlyph(.tick, weight: .bold)
                     .accessibilityHidden(true)
             }
             .foregroundStyle(tint)

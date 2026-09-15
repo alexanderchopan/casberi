@@ -58,11 +58,11 @@ struct DealsScreen: View {
             HStack(spacing: DS.Space.s2) {
                 DSSpinner()
                 Text("Reading the deals…")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
             }
         } else if let lastResult {
             Text(lastResult)
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
         }
         // "Read-only." left the end of this line (audit, 2026-07-31) — the
         // sentence below spends a whole clause on it, and says what it means.

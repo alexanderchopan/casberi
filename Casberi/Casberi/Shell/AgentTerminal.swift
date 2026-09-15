@@ -78,7 +78,7 @@ struct AgentDestinationKeys: View {
             HStack(spacing: DS.Space.s2) {
                 key(chosen: active == nil, action: onDevice) {
                     Image(systemName: deviceGlyph)
-                        .dsGlyph(38, weight: .regular)
+                        .dsGlyph(.hero, weight: .regular)
                         .foregroundStyle(active == nil ? Color.white : DS.textTertiary)
                         .agentBreath(thinking && active == nil)
                 }
@@ -108,7 +108,7 @@ struct AgentDestinationKeys: View {
                 if providers.isEmpty, let onAddAgent {
                     key(chosen: false, action: onAddAgent) {
                         Image(systemName: "plus")
-                            .dsGlyph(34, weight: .regular)
+                            .dsGlyph(.hero, weight: .regular)
                             .foregroundStyle(DS.textTertiary)
                     }
                     .accessibilityLabel("Set up an agent")
@@ -246,11 +246,11 @@ struct AgentWideKey: View {
             HStack(spacing: DS.Space.s2) {
                 if let glyph {
                     Image(systemName: glyph)
-                        .dsGlyph(compact ? 30 : 26, weight: .regular)
+                        .dsGlyph(.feature, weight: .regular)
                 }
                 if let title {
                     Text(title)
-                        .dsText(.heading22)
+                        .dsText(.heading24)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
@@ -318,7 +318,7 @@ struct AgentAskedCaption: View {
         HStack {
             Spacer(minLength: DS.Space.s6)
             Text(question)
-                .dsText(.callout15)
+                .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
@@ -363,13 +363,13 @@ struct AgentProseAnswer: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if !parts.lead.isEmpty {
                     Text(parts.lead)
-                        .dsText(.heading22)
+                        .dsText(.heading24)
                         .foregroundStyle(attention ? DS.attention : DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if !parts.rest.isEmpty {
                     Text(parts.rest)
-                        .dsText(.reading20)
+                        .dsText(.reading17)
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

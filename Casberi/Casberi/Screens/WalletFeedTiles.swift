@@ -389,7 +389,7 @@ struct WalletBalanceHeadline: View {
                         // the tap.
                         if onOpen != nil {
                             Image(systemName: "chevron.right")
-                                .dsGlyph(10)
+                                .dsGlyph(.tick)
                                 .foregroundStyle(DS.textTertiary)
                         }
                     }
@@ -407,7 +407,7 @@ struct WalletBalanceHeadline: View {
                     // **`stat24` since prd §551** (user: "on Wallet, Home,
                     // the balance is in such a large font, but on all the
                     // other screens … the title is smaller. we should be
-                    // consistent"). It was `price48` while every OTHER scope
+                    // consistent"). It was `price64` while every OTHER scope
                     // of this same room drew its headline at `stat24`, so the
                     // scope strip — one control, one screen — moved the type
                     // two rungs each time it was used.
@@ -445,7 +445,7 @@ struct WalletBalanceHeadline: View {
                         // WHY it moved, in the quietest ink on the screen: the
                         // headline states the reading, this states its cause.
                         Text(mover)
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     }
                 }
@@ -530,7 +530,7 @@ struct WalletBalanceHeadline: View {
             if !flat {
                 Image(systemName: (ratioless ? delta : change) >= 0 ? "arrowtriangle.up.fill"
                                                                    : "arrowtriangle.down.fill")
-                    .dsGlyph(9)
+                    .dsGlyph(.tick)
                     .foregroundStyle(ink)
             }
             Text(flat
@@ -538,7 +538,7 @@ struct WalletBalanceHeadline: View {
                  : (ratioless
                     ? exactFormat(abs(delta))
                     : "\(exactFormat(abs(delta))) (\(TokenChartStyle.changeText(change)))"))
-                .dsText(.callout15).fontWeight(.semibold)
+                .dsText(.body17).fontWeight(.semibold)
                 .foregroundStyle(ink)
                 .monospacedDigit()
             // THE WINDOW WORD IS GONE (user ruling, prd §483: *"remove
@@ -750,7 +750,7 @@ struct WalletCompositionStrip: View {
                         .dsText(.stat24).foregroundStyle(DS.textPrimary)
                         .monospacedDigit().lineLimit(1).fixedSize()
                     Text(subtitle)
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .lineLimit(1).minimumScaleFactor(0.8)
                     Spacer(minLength: 0)
                 }
@@ -868,14 +868,14 @@ struct WalletCompositionStrip: View {
             HStack(alignment: .top, spacing: 0) {
                 ForEach(Array(places.enumerated()), id: \.element.id) { _, deposit in
                     Text(deposit.place)
-                        .dsText(.label11).foregroundStyle(DS.textSecondary)
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
                         .lineLimit(1).minimumScaleFactor(0.7)
                         .frame(width: barWidth, alignment: .leading)
                         .frame(width: step, alignment: .leading)
                 }
                 if hasLocks {
                     Text(String(localized: "Locked"))
-                        .dsText(.label11).foregroundStyle(DS.textTertiary)
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                         .frame(width: step, alignment: .leading)
                 }
@@ -908,7 +908,7 @@ struct WalletCompositionStrip: View {
             .joined(separator: " · ")
     }
 
-    /// `callout15`, not `WalletRow`'s `heading17`: these sit INSIDE the
+    /// `body17`, not `WalletRow`'s `heading17`: these sit INSIDE the
     /// balance card under a 48pt number, and a row-weight title here would
     /// argue with the crown instead of supporting it. Same reasoning that
     /// stepped the headline's own caption back (prd §157).
@@ -937,11 +937,11 @@ struct WalletCompositionStrip: View {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 4) {
                     Text(title)
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     if door {
                         Image(systemName: "chevron.right")
-                            .dsGlyph(9)
+                            .dsGlyph(.tick)
                             .foregroundStyle(DS.textTertiary)
                     }
                 }
@@ -959,7 +959,7 @@ struct WalletCompositionStrip: View {
             // zero more times.
             if !value.isEmpty {
                 Text(value)
-                    .dsText(.price16).foregroundStyle(DS.textPrimary)
+                    .dsText(.price17).foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -995,8 +995,8 @@ struct WalletDepositsTray: View {
                     // reading before rows). The rows then explain a number
                     // already stated instead of asking the reader to sum.
                     //
-                    // `stat24`, not `heading28` (2026-08-28) — the same
-                    // correction the locked tray below takes. `heading28` is
+                    // `stat24`, not `heading40` (2026-08-28) — the same
+                    // correction the locked tray below takes. `heading40` is
                     // the LEDE rung, sized for a SENTENCE, and a tray figure
                     // wearing it sat between `stat24` and `price40` matching
                     // neither, two taps from the crown (`stat24` since §551). The
@@ -1036,7 +1036,7 @@ struct WalletDepositsTray: View {
                     .monospacedDigit()
                 if total > 0 {
                     Text("\(Int((share * 100).rounded()))%")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .monospacedDigit()
                 }
             }
@@ -1107,7 +1107,7 @@ struct WalletLocksTray: View {
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 Text(lock.place)
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }
             if let remaining = lock.remaining {
@@ -1342,7 +1342,7 @@ struct WalletLendingCard: View {
                 WalletSectionLabel(title: String(localized: "Lending"))
                 let r = reading
                 Text(r.text)
-                    .dsText(.heading22)
+                    .dsText(.heading24)
                     .foregroundStyle(r.risk ? DS.attention : DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 2)
@@ -1558,7 +1558,7 @@ struct WalletAllocationTray: View {
                     .monospacedDigit()
                 if portfolio.totalUSD > 0 {
                     Text("\(Int((position.usd / portfolio.totalUSD * 100).rounded()))%")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .monospacedDigit()
                 }
             }
@@ -1994,18 +1994,18 @@ struct WalletWorthALookTray: View {
                 } label: {
                     HStack(spacing: DS.Space.s3) {
                         Image(systemName: "photo.badge.exclamationmark.fill")
-                            .dsGlyph(13)
+                            .dsGlyph(.caption)
                             .foregroundStyle(DS.textSecondary)
                             .frame(width: 28, height: 28)
                             .background(Circle().fill(DS.fillLine))
                         VStack(alignment: .leading, spacing: 1) {
                             Text(awareTitle)
-                                .dsText(.callout15).fontWeight(.medium)
+                                .dsText(.body17).fontWeight(.medium)
                                 .foregroundStyle(DS.textPrimary)
                                 .multilineTextAlignment(.leading)
                             Text(muted ? String(localized: "Muted — won't badge your feed")
                                        : String(localized: "Nothing to do"))
-                                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                                 .lineLimit(1)
                         }
                         Spacer(minLength: 0)
@@ -2024,13 +2024,13 @@ struct WalletWorthALookTray: View {
                     WalletAwareness.isMuted = muted
                 } label: {
                     Text(muted ? String(localized: "Unmute") : String(localized: "Mute"))
-                        .dsText(.subhead13).fontWeight(.semibold)
+                        .dsText(.subhead12).fontWeight(.semibold)
                         .foregroundStyle(DS.tint)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressSpring())
                 Image(systemName: awareExpanded ? "chevron.up" : "chevron.down")
-                    .dsGlyph(11)
+                    .dsGlyph(.caption)
                     .foregroundStyle(DS.textTertiary)
             }
             .padding(.horizontal, DS.Space.s3).padding(.vertical, DS.Space.s3)
@@ -2077,7 +2077,7 @@ struct WalletWorthALookTray: View {
                            door: (label: String, leaves: Bool, act: () -> Void)?) -> some View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
             Image(systemName: icon)
-                .dsGlyph(13)
+                .dsGlyph(.caption)
                 .foregroundStyle(hot ? DS.destructive : DS.attention)
                 .frame(width: 28, height: 28)
                 .background(
@@ -2087,7 +2087,7 @@ struct WalletWorthALookTray: View {
                 Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let subtitle {
-                    Text(subtitle).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    Text(subtitle).dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }
             }
@@ -2290,7 +2290,7 @@ struct WalletWorthALookTray: View {
                     .lineLimit(1).truncationMode(.tail)
                     .layoutPriority(1)
                 Text(LiveTimeText.short(thing.capturedAt))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
                 Spacer(minLength: DS.Space.s2)
                 DSChevron()

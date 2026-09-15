@@ -58,7 +58,7 @@ struct WalletConnectPickerSheet: View {
         DSTray(title: mode == .watch ? String(localized: "Choose what to watch")
                                      : String(localized: "Choose what to save"), height: 660) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text(blurb).dsText(.callout15).foregroundStyle(DS.textSecondary)
+                Text(blurb).dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 // Above the list, never below it, and never silent: the cap is
                 // the fact this whole sheet exists to stop swallowing.
@@ -115,7 +115,7 @@ struct WalletConnectPickerSheet: View {
     }
 
     private func note(_ text: String) -> some View {
-        Text(text).dsText(.callout15).foregroundStyle(DS.textTertiary)
+        Text(text).dsText(.body17).foregroundStyle(DS.textTertiary)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -184,7 +184,7 @@ struct WalletConnectPickerSheet: View {
                     Text(title(for: row)).dsText(.heading17)
                         .foregroundStyle(DS.textPrimary).lineLimit(1)
                     Text(subtitle(for: row))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary).lineLimit(1)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
                 }
                 Spacer(minLength: 0)
                 if row.alreadyWatching {
@@ -195,7 +195,7 @@ struct WalletConnectPickerSheet: View {
                     Text("No room").dsText(.label12).foregroundStyle(DS.textTertiary)
                 } else {
                     Image(systemName: "checkmark")
-                        .dsGlyph(16, weight: .bold)
+                        .dsGlyph(.subhead, weight: .bold)
                         .foregroundStyle(DS.tint)
                         .opacity(on ? 1 : 0)
                 }

@@ -139,7 +139,7 @@ struct FeedLedeCard: View {
                 eyebrow
                 if let note {
                     Text(note)
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -155,9 +155,9 @@ struct FeedLedeCard: View {
     /// **THE TITLE TAKES THE HEAD RUNG, BY LENGTH (prd §567).**
     ///
     /// This card is §389's "first object" — the newest thing, promoted out of
-    /// the run — and it wore `heading22`, the same rung as the day divider
-    /// directly above it. It takes `heading34` when it is a STATEMENT, which
-    /// is `ThingSheetView`'s own rule (`> 100 ? .heading22 : .heading34`) at
+    /// the run — and it wore `heading24`, the same rung as the day divider
+    /// directly above it. It takes `heading40` when it is a STATEMENT, which
+    /// is `ThingSheetView`'s own rule (`> 100 ? .heading24 : .heading40`) at
     /// this card's width: at 40pt heavy on a 354pt card a line holds roughly
     /// fourteen characters, so the threshold is what fits four lines rather
     /// than the sheet's number.
@@ -180,7 +180,7 @@ struct FeedLedeCard: View {
     /// every ROOM as well as the All feed, so that height is now the first
     /// thing on a dozen screens rather than one.
     ///
-    /// The picture face alone drops to `heading22` at two lines, and gives up
+    /// The picture face alone drops to `heading24` at two lines, and gives up
     /// its excerpt: the picture, the title and the eyebrow say it three ways
     /// already, and a fourth block is what the words face exists for. The
     /// wordless faces keep the head rung untouched — a note IS its words
@@ -194,7 +194,7 @@ struct FeedLedeCard: View {
         let short = words.count <= Self.statementLimit
         return VStack(alignment: .leading, spacing: DS.Space.s1) {
             Text(words)
-                .dsText(underArt ? .heading22 : (short ? .heading34 : .heading22))
+                .dsText(underArt ? .heading24 : (short ? .heading40 : .heading24))
                 .foregroundStyle(DS.textPrimary)
                 .multilineTextAlignment(.leading)
                 .lineLimit(underArt ? 2 : (short ? 4 : 3))
@@ -202,7 +202,7 @@ struct FeedLedeCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let note = excerpt, !underArt {
                 Text(note)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(excerptLines)
                     .fixedSize(horizontal: false, vertical: true)
@@ -222,7 +222,7 @@ struct FeedLedeCard: View {
                     // string is already locale-formatted or the bridge's own
                     // stamp, and must not be re-interpolated.
                     // The receipt's own hero rung (prd §567). `price40`, not
-                    // `price48`: §506's crown is one per surface and this
+                    // `price64`: §506's crown is one per surface and this
                     // card sits under the day divider that holds it.
                     Text(verbatim: amount.number)
                         .dsText(.price40)
@@ -254,7 +254,7 @@ struct FeedLedeCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let sentence = receipt?.sentence, !sentence.isEmpty {
                 Text(sentence)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -292,7 +292,7 @@ struct FeedLedeCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let when = dueDetail {
                 Text(when)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(1)
             }

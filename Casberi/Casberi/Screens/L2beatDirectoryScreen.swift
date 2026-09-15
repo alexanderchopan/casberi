@@ -115,7 +115,7 @@ struct L2beatDirectoryScreen: View {
 							ForEach(Order.allCases) { option in
 								Button(action: { DSHaptic.tap(); order = option }) {
 									Text(option.label)
-										.dsText(.subhead13)
+										.dsText(.subhead12)
 										.fontWeight(order == option ? .semibold : .regular)
 										.foregroundStyle(order == option ? DS.textPrimary : DS.textTertiary)
 								}
@@ -211,7 +211,7 @@ struct L2beatDirectoryScreen: View {
 				Text(head.count == 1
 					? String(localized: "1 chain")
 					: String(localized: "\(head.count) chains"))
-					.dsText(.label11)
+					.dsText(.label12)
 					.foregroundStyle(DS.textTertiary)
 				Spacer(minLength: 0)
 			}
@@ -221,7 +221,7 @@ struct L2beatDirectoryScreen: View {
 			// comparing them.
 			Text(head.stage?.meaning
 				?? String(localized: "L2BEAT doesn't place these chains on its stage ladder."))
-				.dsText(.subhead13)
+				.dsText(.subhead12)
 				.foregroundStyle(DS.textSecondary)
 				.fixedSize(horizontal: false, vertical: true)
 		}
@@ -249,12 +249,12 @@ struct L2beatDirectoryScreen: View {
 					// window, because an event with no date is half an event.
 					if let incident {
 						Text(incident.text)
-							.dsText(.label11).fontWeight(.bold)
+							.dsText(.label12).fontWeight(.bold)
 							.foregroundStyle(incident.recent ? DS.attention : DS.textTertiary)
 					}
 					if project.underReview {
 						Text(String(localized: "Under review"))
-							.dsText(.label11).fontWeight(.bold)
+							.dsText(.label12).fontWeight(.bold)
 							.foregroundStyle(DS.attention)
 					}
 					L2beatStageChip(stage: project.stage, compact: true)
@@ -264,7 +264,7 @@ struct L2beatDirectoryScreen: View {
 					// the same word and L2BEAT is telling you not to lean on the readings.
 					if !project.underReview {
 						Text(project.lead.shortLabel)
-							.dsText(.label11)
+							.dsText(.label12)
 							.foregroundStyle(DS.textTertiary)
 							.lineLimit(1)
 					}
@@ -277,13 +277,13 @@ struct L2beatDirectoryScreen: View {
 			// offering a control that would do nothing.
 			if watching {
 				Text(String(localized: "Watching"))
-					.dsText(.label11).fontWeight(.semibold)
+					.dsText(.label12).fontWeight(.semibold)
 					.foregroundStyle(DS.textTertiary)
 					.frame(width: 58, alignment: .trailing)
 			} else {
 				Button(action: { watch(project) }) {
 					Text(String(localized: "Watch"))
-						.dsText(.label11).fontWeight(.bold)
+						.dsText(.label12).fontWeight(.bold)
 						.foregroundStyle(DS.tint)
 						.frame(width: 58, alignment: .trailing)
 				}

@@ -290,7 +290,7 @@ struct PrivacyPoolsRoomCard: View {
                             .lineLimit(1)
                         Spacer(minLength: DS.Space.s2)
                         Text(PrivacyPoolsRoom.legendLine(row))
-                            .dsText(.subhead13)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)

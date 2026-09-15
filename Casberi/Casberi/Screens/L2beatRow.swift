@@ -37,7 +37,7 @@ struct L2beatChainRow: View {
 				}
 				if let summary = thing.summary, !summary.isEmpty {
 					Text(summary)
-						.dsText(.subhead13)
+						.dsText(.subhead12)
 						.foregroundStyle(DS.textSecondary)
 						.fixedSize(horizontal: false, vertical: true)
 				}
@@ -65,11 +65,11 @@ struct L2beatChainRow: View {
 			ForEach(project.orderedRisks) { risk in
 				HStack(spacing: DS.Space.s2) {
 					Text(risk.axis.label)
-						.dsText(.label11)
+						.dsText(.label12)
 						.foregroundStyle(DS.textTertiary)
 						.frame(width: 104, alignment: .leading)
 					Text(risk.value)
-						.dsText(.label11)
+						.dsText(.label12)
 						.foregroundStyle(DS.textSecondary)
 						.lineLimit(1)
 					Spacer(minLength: DS.Space.s2)
@@ -115,7 +115,7 @@ struct L2beatNewsRow: View {
 						.frame(width: DS.Mark.row, height: DS.Mark.row)
 						.overlay(
 							Image(systemName: "square.stack.3d.up")
-								.dsGlyph(11)
+								.dsGlyph(.caption)
 								.foregroundStyle(DS.textTertiary)
 						)
 				}
@@ -135,17 +135,17 @@ struct L2beatNewsRow: View {
 				HStack(spacing: DS.Space.s2) {
 					if mine {
 						Text(String(localized: "You watch this"))
-							.dsText(.label11).fontWeight(.bold)
+							.dsText(.label12).fontWeight(.bold)
 							.foregroundStyle(DS.tint)
 					}
 					if isIncident {
 						Text(String(localized: "Incident"))
-							.dsText(.label11).fontWeight(.bold)
+							.dsText(.label12).fontWeight(.bold)
 							.foregroundStyle(DS.attention)
 					}
 					ForEach(tags, id: \.self) { tag in
 						Text(tag)
-							.dsText(.label11)
+							.dsText(.label12)
 							.foregroundStyle(DS.textTertiary)
 					}
 				}

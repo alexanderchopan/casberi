@@ -48,7 +48,7 @@ struct WalletActingPartiesRows: View {
                 }
                 ForEach(ceilings, id: \.self) { note in
                     Text(note)
-                        .dsText(.label11)
+                        .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, DS.Space.s2)
@@ -76,7 +76,7 @@ struct WalletActingPartiesRows: View {
                 // The rung's own sentence, so a row and the count above it can
                 // never describe the same holder differently.
                 Text(holder.power.phrase)
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(holder.power.isUnbounded ? DS.attention : DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(detail(holder))

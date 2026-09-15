@@ -32,7 +32,7 @@ struct PairClientSheet: View {
 
                 // The honest gate: the token is real, the wire is not yet.
                 Text("Connecting goes live when your things sync. Code: \(MCPPairing.shortCode())")
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
             }
         }
@@ -59,7 +59,7 @@ struct PairClientSheet: View {
                 .frame(width: 36, height: 36)
                 .overlay(
                     Image(systemName: "hand.raised.fill")
-                        .dsGlyph(16)
+                        .dsGlyph(.subhead)
                         .foregroundStyle(.white)
                 )
             // One line, not a title over its own restatement: "Yours to

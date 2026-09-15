@@ -629,7 +629,7 @@ enum AppleWalletRoom {
     /// at Tesco" rather than a bare figure). Nil with no merchants: the
     /// headline's own empty branch is "Your card, this month", a statement
     /// with no figure in it, and §584 measured that a statement belongs at
-    /// `heading22` rather than being handed a manufactured zero.
+    /// `heading24` rather than being handed a manufactured zero.
     ///
     /// §374's mask is applied by the CALLER here rather than taken as a
     /// parameter, because this room's card already resolves it — see

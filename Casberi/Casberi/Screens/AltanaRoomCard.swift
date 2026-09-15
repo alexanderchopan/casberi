@@ -112,7 +112,7 @@ struct AltanaRoomCard: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     HStack(spacing: DS.Space.s2) {
                         Text(row.title)
-                            .dsText(.subhead13).fontWeight(.medium)
+                            .dsText(.subhead12).fontWeight(.medium)
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
                         if showsFaces(row) { faces(row) }
@@ -164,7 +164,7 @@ struct AltanaRoomCard: View {
                               style: StrokeStyle(lineWidth: 1.5,
                                                  dash: row.isGone ? [2, 3] : []))
             Image(systemName: glyph(row))
-                .dsGlyph(14)
+                .dsGlyph(.subhead)
                 .foregroundStyle(row.isRoot && !row.isGone ? .white : DS.textSecondary)
         }
         .frame(width: Self.seat, height: Self.seat)

@@ -40,7 +40,7 @@ struct WalletPerpsCard: View {
                 // liquidation" was information only a reader who knew the sort
                 // order could use. Now it says so.
                 Text(reading.text)
-                    .dsText(.heading22)
+                    .dsText(.heading24)
                     .foregroundStyle(reading.risk ? DS.attention : DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 2)

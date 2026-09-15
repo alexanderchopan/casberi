@@ -73,14 +73,14 @@ struct DSDoorRowLabel: View {
     var body: some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: icon)
-                .dsGlyph(13, weight: .regular)
+                .dsGlyph(.caption, weight: .regular)
                 .foregroundStyle(role == .destructive ? DS.destructive : DS.textSecondary)
                 // The column, not the glyph's own width: SF Symbols are
                 // not uniform, so without it a stack of doors staircases.
                 .frame(width: 18, alignment: .center)
                 .accessibilityHidden(true)
             title
-                .dsText(.callout15)
+                .dsText(.body17)
                 .foregroundStyle(ink)
             Spacer(minLength: 0)
         }

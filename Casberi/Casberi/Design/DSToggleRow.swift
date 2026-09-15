@@ -27,7 +27,7 @@ struct DSToggleRow: View {
                     .fixedSize(horizontal: false, vertical: true)
                 if let detail {
                     detail
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(detailTone)
                         .fixedSize(horizontal: false, vertical: true)
                 }

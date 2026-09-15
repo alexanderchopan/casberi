@@ -117,7 +117,7 @@ struct StocktwitsScreen: View {
                     focus: $fieldFocused, action: watch)
         if !displayHits.isEmpty {
             Text(AccountPageShape.onLabel("Stocktwits"))
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 .padding(.top, DS.Space.s2)
         }
         ForEach(displayHits) { stock in

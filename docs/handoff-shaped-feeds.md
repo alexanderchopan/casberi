@@ -107,7 +107,7 @@ a text list of photo titles. The chips change the query, not the shape.
 ## DECISION — ChatGPT / Claude (earned cards)
 
 - Pinned or `.doing` chats: takeaway card — project EYEBROW (label12 kerning 1),
-  bold title, the saved synthesis line (content) at callout15. NO buttons on
+  bold title, the saved synthesis line (content) at body17. NO buttons on
   cards — verbs live in the sheet and swipes (existing ruling). Pin glyph
   trailing the eyebrow.
 - All other chats: the standard compact FeedRow. Cards are earned, not default —

@@ -435,7 +435,7 @@ struct AppsScreen: View {
                 if looksLikeSite(query), let rss = rssSuggestion {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                         Text("RSS can follow most sites.")
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         VStack(spacing: DS.Space.s1) { appRow(rss) }
                     }
                 }
@@ -831,7 +831,7 @@ struct AppsScreen: View {
                 // the digits shift the name beside them as a connect changes
                 // nothing about the count but everything about its width.
                 Text(apps.count.formatted())
-                    .dsText(.subhead13)
+                    .dsText(.subhead12)
                     .monospacedDigit()
                     .foregroundStyle(DS.textTertiary)
                 Spacer(minLength: 0)
@@ -969,7 +969,7 @@ struct AppsScreen: View {
                                 Text(LocalizedStringKey(subline(entry)))
                             }
                         }
-                        .dsText(.subhead13)
+                        .dsText(.subhead12)
                         .foregroundStyle(entry.tier == 0 ? DS.attention : DS.textTertiary)
                         .lineLimit(1)
                     }
