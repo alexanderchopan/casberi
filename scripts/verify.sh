@@ -623,6 +623,19 @@ step "Defaults-lock audit"
 "$ROOT/scripts/defaults-lock-audit.py" || fail "a lock is held across a defaults write — see the output above"
 print -P "%F{green}✓ defaults-lock audit%f"
 
+# The day divider is the one line of type in the brand pink, and only a label
+# that names a TIME wears it (prd §740). A room grouped by something else
+# ("Your wallets", a repository, "Waiting on you") passes `dated: false`; the
+# nine that do are a floor, and `#FF2D87` is spelled once, in DesignTokens, so
+# the mark and the dividers cannot drift to two pinks. It reads shapes, not
+# colours: a wrong hex value or a room that should have opted out and didn't
+# passes this and is wrong on screen.
+step "Day-divider audit"
+"$ROOT/scripts/day-divider-audit.py" --self-test >/dev/null \
+  || fail "the day-divider audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/day-divider-audit.py" || fail "a day divider lost the brand ink, or a named group lost its opt-out — see the output above"
+print -P "%F{green}✓ day-divider audit%f"
+
 # Keeps the "What this app reaches" registry complete (prd §205): every host
 # the app calls must be disclosed in NetworkReach.swift or the explicit
 # non-reach denylist — an undisclosed fetch host fails here.
