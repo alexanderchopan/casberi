@@ -9369,7 +9369,7 @@ struct FeedScreen: View {
                         .contentShape(Rectangle())
                         .onTapGesture { withAnimation(DS.Motion.standard) { staleExpanded = true } }
                         .dsTapCard()
-                        .listRowBackground(dayCardBackground(positions[slots - 1]))
+                        .listRowBackground(rowPlate)   // a row like any other (prd §743)
                         .listRowInsets(.init(top: DS.Space.s2,
                                              leading: DS.Space.s4 + DS.Space.s3,
                                              bottom: DS.Space.s2,
@@ -9582,31 +9582,39 @@ struct FeedScreen: View {
             // in the one function that owns it, instead of making five call
             // sites pass a breaker predicate they have no reason to know about.
             dayCardBackground(.only, fill: skin.fill, shadowed: false)
-        } else if bare {
-            Color.clear
         } else {
-            dayCardBackground(position)
+            // EVERY ROW WEARS THE PLATE (prd §743, 2026-09-15, user: "i think
+            // the cards would make it look more purposeful"). `bare` and
+            // `position` are deliberately NOT read here: the plate is per
+            // row, never a merged run, and it is `surfaceListRow` — the 3%
+            // step the user ruled "enough edge to group on an OLED, not
+            // enough body to read as a gray box" — with no shadow, because
+            // forty 18pt blurs per screenful is the cost §61's runs existed
+            // to avoid, and a 3% fill has nothing for a shadow to lift.
+            // `surfaceSheet` (pure black in dark) is what a post's card wore
+            // until now, which on the ink page is no card at all.
+            rowPlate
         }
+    }
+
+    /// The one plate every feed row stands on (prd §743). One expression so
+    /// the wash below and the resting row can never disagree about the shape.
+    private var rowPlate: some View {
+        dayCardBackground(.only, fill: DS.surfaceListRow, shadowed: false)
     }
 
     /// The walk's position, wearing the run's own corners and insets. A bare
     /// row gets the wash alone; a card row keeps its surface with the wash over
     /// it, so a consent card or a post still reads as the card it is.
     private func selectionWash(_ position: RunPosition, bare: Bool) -> some View {
-        let r = DS.Radius.card
-        let top = position == .first || position == .only
-        let bottom = position == .last || position == .only
-        return ZStack {
-            if !bare { dayCardBackground(position) }
-            UnevenRoundedRectangle(topLeadingRadius: top ? r : 0,
-                                   bottomLeadingRadius: bottom ? r : 0,
-                                   bottomTrailingRadius: bottom ? r : 0,
-                                   topTrailingRadius: top ? r : 0,
-                                   style: .continuous)
+        // `position` and `bare` are unread since prd §743: the plate is per
+        // row, so the wash takes the plate's own `.only` shoulders and insets.
+        ZStack {
+            rowPlate
+            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
                 .fill(DS.tintDim)
                 .padding(.horizontal, DS.Space.s4)
-                .padding(.top, top ? DS.Space.s1 : 0)
-                .padding(.bottom, bottom ? DS.Space.s1 : 0)
+                .padding(.vertical, DS.Space.s1)
         }
     }
 

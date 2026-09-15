@@ -268,6 +268,7 @@ marks chronological position within the pair.
 | §548's tail order ("frames leads the conditional tail") | the Frames devnet's strip ran home · activity · frames · sponsors, frames first among the scopes that can be empty | amended by §688 — Holdings exists on this chain after all and takes the family's third place (Wallet, Hegotá and vibenet all put it there), so the tail is holdings · frames · sponsors. The ruling's substance is intact: frames still leads every scope it outranks, and §548 stands in every other respect |
 | §306 (every class interrupts the same way; the badge is asked for) | alarms and arrivals share `.active` and the default sound, and the permission ask includes `.badge` | amended by §713 — arrivals are `.passive` and silent, alarms keep the level and sound, the badge leaves the ask; the two classes, the collapse rules and quiet hours are untouched |
 | §306 (the right-hand slot's ladder: a held photo, the source's mark, nothing) | rung 1 reads `authorAvatarURL` and `previewImageData`; rung 2 is the source's mark | amended by §714 — rung 1 reads every URL the row holds (`previewImageURL`, `imageURLs`), rung 2 names the event's own bundled mark (token, protocol, Safe) ahead of the source's; the never-invents rule and rung 3 are untouched |
+| §493 ("no cards in a scope's list, anywhere") and the 2026-07-22 "lists are air" cut | ordinary feed rows render bare on the ink; only the cards-by-anatomy (post, consent, takeaway, fat token row) keep a surface, at `surfaceSheet` | superseded for the feed by §743 — every row stands on one `surfaceListRow` plate, per row, unshadowed; `standsAlone` keeps its other two jobs (the cover, the run break) |
 | §377 | A folded run of screenshots or posts is drawn as its members — the tiles fill the row's LEADING seat ("the tiles grow the leading seat and nothing else"), at `Mark.list` since the same day's amendment | overturned in part by §719 (the SEAT is the source's mark, as on every other row; the tiles are the text column's third line at `Mark.row`. The fold, the cap and the dedupe stand) |
 
 ## 1. Thesis
@@ -55205,3 +55206,52 @@ every magnitude, the plausibility bounds, the field precedence, and the rewrite
 rule, plus drift guards over `XLiveNotifications` (comment-stripped) that the
 new-notice stamp is the entry's time, that `capturedAt: .now` never returns,
 and that a landed notice is still rewritten. Wired in `verify.sh`.
+
+## §743 — Every feed row stands on a plate, at the darkest step the app has (user: "i think the cards would make it look more purposeful. so i guess we should do E?", after "i don't want gray" and "i'd want it almost indistinguishable", 2026-09-15)
+
+**Supersedes §493's "no cards in a scope's list, anywhere" and the 2026-07-22
+"lists are air" cut for the feed's rows.** Every row in every room — band,
+strip, post, token, the "Older" fold — draws one plate: `DS.surfaceListRow`
+(`#08080a` dark, `#ffffff` light), per row, at `DS.Radius.card`, with no shadow.
+The machinery already existed: `dayCardBackground` had been dormant for ordinary
+rows since 07-22 and was still worn by the "cards by anatomy" (a post, a consent
+card, a takeaway, a fat token row) — at `surfaceSheet`, which is pure black in
+dark, so on the ink page those cards were invisible and the anatomy's own
+padding was the only evidence they existed. `runBackground` now ignores `bare`
+and `position` and returns `rowPlate`; the Mac walk's `selectionWash` sits on the
+same plate with the same shoulders; `standsAlone` is untouched, because it also
+decides which thing declines the cover and where a run breaks, and neither of
+those changed.
+
+**How the ruling was reached — three constraints that could not all hold.** The
+user wanted cards for scanning ("the cards make it easier to read and scan"), no
+gray ("i don't want gray"), and a fill "almost indistinguishable" from the page.
+A card helps scanning only because its edge is visible, so the second and third
+asks bound the first from below. The mock (`design/row-grammar/row-grammar-mocks.html`)
+drew the same rows on plates 2%, 3% and 5% off pure black: at 2% the user could
+not see them ("i don't think you can even see them in D so what would the point
+be"); at 5% the page reads as charcoal on a Mac LCD. 3% is the floor where a
+card is still a card, and it is the value the app already held for exactly this
+question — `surfaceListRow`'s own doc quotes the 2026-08-16 ruling "enough edge
+to group a section on an OLED, not enough body to read as a gray box".
+
+**Geometry, unchanged from §61.** The plate spans the list cell inset
+`DS.Space.s4` from the screen edge, and the row's content sits at `s4 + s3`, so
+the plate bleeds 12pt past the text column and the leading mark keeps the day
+header's edge; consecutive plates are 8pt apart (each cell's `s2` inset less the
+plate's `s1` breathing edge). No row grew: the plate is painted inside the cell
+the row already occupied.
+
+**No shadow, on purpose.** `dayCardBackground`'s shadow is an 18pt blur per
+surface; §61's runs merged rows precisely so a day cast one silhouette instead of
+forty. Per-row plates would put every one of those blurs back on the app's
+hottest scroll, and a 3% fill has nothing for a shadow to lift. In light mode
+the plate is white on `#f2f2f7`, which is Apple's inset-grouped list and casts
+none either.
+
+**What this does not settle.** A themed dark background (Purple, Pink, …) puts a
+near-black plate on a hue, which is what the post cards already did at `#000`.
+The one-row-grammar collapse the same mock proposed (frame C: one anatomy, 26pt
+lead on every row) is a separate ruling and is not taken here. **UNSEEN on a
+device**: the build compiles; the 3% step was chosen from a browser mock on a
+Mac LCD, and the user is to look at it on the phone before it ships.
