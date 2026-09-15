@@ -954,7 +954,13 @@ enum HegotaScopeRail {
 /// `.mark` never rounds and `.avatar` always does.
 struct RailFace: View {
     let face: FaceScopeRail.Item.Face
-    let size: CGFloat
+    /// **A TIER, and defaulted to one on purpose.** `face-ramp-audit.py`
+    /// resolves a face's size by reading the declaration it comes from, and a
+    /// bare `let size: CGFloat` resolves to nothing — which is the audit
+    /// working, not the audit being wrong: a face whose size is a free number
+    /// is how the ramp drifted before it existed. `list` is the rail's own
+    /// rung; the deck passes `shelf` and the header's line passes `row`.
+    var size: CGFloat = DS.Face.list
 
     var body: some View {
         switch face {

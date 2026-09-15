@@ -482,7 +482,9 @@ struct FramesRoomList: View {
     let head: FramesRoom.Head
     let accounts: [FramesAccount]
     let section: FramesSection
-    let onSend: () -> Void
+    // `onSend` is deleted with the `.home` arm that used it (prd §744/§723):
+    // the send tiles are on the account card now, and a closure this view no
+    // longer calls is exactly what `dead-closure-audit.py` refuses.
     /// **THE OWNING ADDRESS TRAVELS WITH THE MOVE** — Hegotá's signature, and
     /// for its reason: in an unscoped room nothing else can say which of the
     /// shown addresses a transaction belonged to, and a sheet that cannot
@@ -552,8 +554,11 @@ struct FramesRoomList: View {
     @ViewBuilder private var scoped: some View {
         switch section {
         case .home:
-            // **HOME HOLDS THE TILES, NOT A FORM** (§553's ruling, mirrored).
-            FramesSendCard(onSend: onSend)
+            // **HOME HAS NO LIST (prd §744).** §553's "Home holds the tiles,
+            // not a form" still stands — the tiles simply moved onto the
+            // account card, where they sit beside the crown, and Home's list
+            // is the scope door rows the chrome draws above this view.
+            EmptyView()
         case .activity:
             rows(pairs)
         case .holdings:

@@ -40,8 +40,10 @@ struct DSScopeHeader<Scope: DSSectionScope, Account: View>: View {
     /// single account has nothing to say here and passes `EmptyView`.
     @ViewBuilder let account: () -> Account
 
-    @Namespace private var ns
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    // No `matchedGeometryEffect` here and so no namespace: the switcher's
+    // travelling fill named a position among chips of one size, and this
+    // strip says "picked" with weight and ink instead. Reduce Motion needs no
+    // branch for the same reason — the only motion is the scroll's own.
 
     @State private var contentWidth: CGFloat = 0
     @State private var viewportWidth: CGFloat = 0

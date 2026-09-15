@@ -3926,6 +3926,140 @@ struct FeedScreen: View {
     /// the faces reaching the edge" — was true and is now outranked: reaching
     /// the edge is what made the two strips read as unrelated, and a rail of
     /// 66pt slots scrolls at either inset regardless.
+
+    /// THE FRAMES ROOM'S CHROME, WITH NO BAR IN IT (prd §744, 2026-09-15).
+    ///
+    /// The wallet's own conversion one chain over, and the parts that differ
+    /// are facts about this seat rather than style:
+    ///
+    /// **The crown is this room's `.home` figure.** `FramesRoomFigure` already
+    /// switches on the scope and already draws the crown for `.home`
+    /// (`sponsorship`), so the card mounts that view pinned to `.home` rather
+    /// than growing a second crown. Off Home the same view draws where it
+    /// always did.
+    ///
+    /// **The acts ride the ALL card only, and that is not the mockup's
+    /// arrangement.** The drawing put Send and Top up on every account card;
+    /// the truth is that this device holds ONE key, so those verbs act for the
+    /// key's account no matter which card is showing. Per-card tiles would
+    /// promise that paging changes what Send sends from, which it does not.
+    /// The room's card is where a room's act belongs — the same place the
+    /// Wallet's `Watch a wallet` sits. (Asking `FramesKey.address()` per card
+    /// was the other candidate and is barred outright: a Keychain read in a
+    /// body is the build-525 class.)
+    @ViewBuilder
+    private func framesScopeChromeSection(_ active: FramesSection,
+                                          head: FramesRoom.Head) -> some View {
+        // Every account, never the scoped list: this is the control that SETS
+        // the scope, so feeding it the narrowed set would leave one card on
+        // screen and no way back.
+        let roster = FramesRoomSource.accounts()
+        // ONE pass, read once per row.
+        let readings = framesScopeReadings(head: head)
+        Section {
+            DSRoomScopeChrome(
+                sections: chrome.framesSections,
+                active: active,
+                home: .home,
+                attention: FramesSection.attention(),
+                onPick: { chrome.framesSection = $0 },
+                accounts: framesAccountSlots(roster),
+                scope: chrome.framesScope,
+                onPickAccount: { picked in
+                    withAnimation(DS.Motion.standard) {
+                        chrome.framesScope = (picked?.isEmpty ?? true) ? nil : picked
+                    }
+                },
+                reading: { readings[$0] },
+                crown: { slot in
+                    DSRoomSlot(headline: nil, reservesHeadline: false) {
+                        if slot.isShowing(chrome.framesScope) {
+                            FramesRoomFigure(head: head,
+                                             accounts: framesAccounts,
+                                             section: .home,
+                                             onOpenAccount: { feedSheet = .framesAccount($0) })
+                        }
+                    }
+                },
+                acts: { slot in
+                    if slot.id.isEmpty {
+                        FramesSendCard(onSend: { feedSheet = .framesSend })
+                    }
+                }
+            )
+            .listRowInsets(EdgeInsets(top: 0, leading: 0,
+                                      bottom: DSRoomChassis.contentGap, trailing: 0))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+    }
+
+    /// The Frames accounts as deck cards, "All" first.
+    ///
+    /// The deleted `FramesScopeRail.items` captioned with the BALANCE when an
+    /// account had no name, which was a rail's compromise: 66pt fits a number
+    /// or a name, not both. A card fits both, so the name leads and the
+    /// balance goes to the sub line where it belongs.
+    private func framesAccountSlots(_ roster: [FramesAccount]) -> [DSAccountSlot] {
+        let all = DSAccountSlot(
+            id: "",
+            name: String(localized: "All accounts"),
+            sub: roster.isEmpty
+                ? String(localized: "Nothing watched on this chain yet")
+                : ListFormatter.localizedString(
+                    byJoining: roster.map { FramesWatch.shared.name(for: $0.address)
+                        ?? WalletStore.shortAddress($0.address) }),
+            faces: roster.prefix(2).map { .wallet(address: $0.address) })
+        return [all] + roster.map { account in
+            DSAccountSlot(
+                id: account.address,
+                name: FramesWatch.shared.name(for: account.address)
+                    ?? WalletStore.shortAddress(account.address),
+                sub: FramesMoney.eth(fromWeiHex: account.balanceWeiHex ?? "")
+                    .map { String(localized: "\($0) test ETH") },
+                faces: [.wallet(address: account.address)])
+        }
+    }
+
+    /// What each Frames scope holds, before you open it (prd §744).
+    ///
+    /// Built once per pass rather than once per row: `FramesHoldings.tokens`
+    /// and `FramesConnections.map` both walk every account, and the emptiness
+    /// switch inside `FramesRoomFigure` calls them too. An empty scope answers
+    /// with the same `emptyHeadline` the slot would have drawn.
+    private func framesScopeReadings(head: FramesRoom.Head) -> [FramesSection: String] {
+        var out: [FramesSection: String] = [:]
+        for section in chrome.framesSections where section != .home {
+            switch section {
+            case .home:
+                break
+            case .activity:
+                out[section] = head.moveCount == 0
+                    ? section.emptyHeadline
+                    : String(localized: "\(head.moveCount) moves")
+            case .holdings:
+                let tokens = FramesHoldings.tokens(framesAccounts)
+                out[section] = tokens.isEmpty
+                    ? section.emptyHeadline
+                    : String(localized: "\(tokens.count) tokens")
+            case .accounts:
+                let nodes = FramesConnections.map(framesAccounts)?.nodes.count ?? 0
+                out[section] = nodes == 0
+                    ? section.emptyHeadline
+                    : String(localized: "\(nodes) connected")
+            case .frames:
+                out[section] = head.frameCount == 0
+                    ? section.emptyHeadline
+                    : String(localized: "\(head.frameCount) steps")
+            case .permissions:
+                out[section] = head.sponsoredCount == 0
+                    ? section.emptyHeadline
+                    : String(localized: "\(head.sponsoredCount) paid by somebody else")
+            }
+        }
+        return out
+    }
+
     @ViewBuilder private var hegotaRailSection: some View {
         let showsRail = HegotaScopeRail.shows(source: source,
                                               watched: HegotaRoomSource.accounts().count)
@@ -4829,69 +4963,30 @@ struct FeedScreen: View {
             // a body that writes its own observed state costs.
             let framesScope = FramesSection.resolve(chrome.framesSection,
                                                     present: chrome.framesSections)
-            // **FIGURE FIRST, THEN THE SLAB** — Wallet's order, which Hegotá
-            // emits as `visualSection` then `railSection`. The first cut had
-            // the switcher above the figure, which put the control that scopes
-            // the room above the drawing it scopes; reported from a screenshot.
-            Section {
-                FramesRoomFigure(head: head,
-                                 accounts: framesAccounts,
-                                 section: framesScope,
-                                 onOpenAccount: { feedSheet = .framesAccount($0) })
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: 0, trailing: DSRoomChassis.inset))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
-            // **THE RAIL LISTS EVERY ACCOUNT, NOT THE SCOPED ONE.** It is the
-            // control that SETS the scope, so feeding it the scoped list would
-            // leave one face on screen and no way back to the others — a filter
-            // that can be entered and not left.
-            let showsFramesRail = FramesScopeRail.shows(
-                source: source, watched: FramesRoomSource.accounts().count)
-            if showsFramesRail || FramesSection.shows(present: chrome.framesSections) {
+            // **THE CHROME LEADS, AND ON HOME IT IS THE WHOLE ROOM** (prd
+            // §744). Was figure-then-slab. The slab is gone: on Home the
+            // accounts are the deck's cards, each carrying this room's crown
+            // (`FramesRoomFigure` on its `.home` arm) and its acts, and the
+            // readings are door rows under it. Off Home the chrome is the
+            // scope header and the figure section below draws exactly as it
+            // did.
+            framesScopeChromeSection(framesScope, head: head)
+            if framesScope != .home {
                 Section {
-                    DSRoomRailSlab(
-                        showsRail: showsFramesRail,
-                        showsSwitcher: FramesSection.shows(present: chrome.framesSections),
-                        sections: chrome.framesSections,
-                        active: framesScope,
-                        attention: FramesSection.attention(),
-                        onPick: { chrome.framesSection = $0 }
-                    ) {
-                        // **THE SILHOUETTES.** The first cut passed
-                        // `EmptyView` and `showsRail: false`, so the fused slab
-                        // drew half of itself — §547 fused the rail and the
-                        // switcher precisely so they would not read as two
-                        // unrelated strips, and a room with only the switcher
-                        // is that failure wearing the fused component's name.
-                        FaceScopeRail(
-                            items: FramesScopeRail.items(FramesRoomSource.accounts()),
-                            scope: chrome.framesScope,
-                            compact: false,
-                            embedded: true,
-                            matches: FramesScopeRail.matches,
-                            onPick: { picked in
-                                withAnimation(DS.Motion.standard) {
-                                    chrome.framesScope = (picked?.isEmpty ?? true) ? nil : picked
-                                }
-                            },
-                            onReTap: nil,
-                            addTitle: nil,
-                            onAdd: nil)
-                    }
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: DSRoomChassis.contentGap,
-                                              trailing: DSRoomChassis.inset))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                    FramesRoomFigure(head: head,
+                                     accounts: framesAccounts,
+                                     section: framesScope,
+                                     onOpenAccount: { feedSheet = .framesAccount($0) })
+                        .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                                  bottom: 0, trailing: DSRoomChassis.inset))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
             }
             Group {
                 FramesRoomList(head: head,
                                accounts: framesAccounts,
                                section: framesScope,
-                               onSend: { feedSheet = .framesSend },
                                // **THESE ROWS WERE BUTTONS WIRED TO NOTHING**
                                // (2026-09-02). `FramesRoomList` has built every
                                // row as a `Button { onOpenMove(move) }` since

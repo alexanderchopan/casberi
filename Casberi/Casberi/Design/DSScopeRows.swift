@@ -87,8 +87,8 @@ struct DSScopeRows<Scope: DSSectionScope>: View {
     }
 
     private func accessibilityLabel(_ section: Scope, wants: Bool) -> Text {
-        let reading = reading(section)
-        let base = reading.map { "\(section.label), \($0)" } ?? "\(section.label), \(section.summary)"
+        let fact = reading(section)
+        let base = fact.map { "\(section.label), \($0)" } ?? "\(section.label), \(section.summary)"
         return Text(wants ? String(localized: "\(base), needs you") : base)
     }
 }
