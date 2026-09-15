@@ -275,6 +275,7 @@ extension FeedScreen {
         let readings = walletScopeReadings(streamTotal: streamTotal)
         Section {
             DSRoomScopeChrome(
+                source: "Wallet",
                 sections: chrome.walletSections,
                 active: active,
                 home: .home,
@@ -301,16 +302,21 @@ extension FeedScreen {
                     }
                 },
                 acts: { slot in
+                    // A ROW, not a slab (prd §750): the verb in the room's
+                    // tint, its glyph at the row's 26pt lead, the same insets
+                    // as the readings under it. The sentence that sat under
+                    // it ("Paste an address, or connect a wallet app") is
+                    // what the setup screen's field says — §748's cut.
                     if slot.id.isEmpty {
                         DSPushRow(title: Text("Follow address"),
-                                  subtitle: Text("Paste an address, or connect a wallet app"),
-                                  prominent: true,
+                                  tint: DS.tint,
                                   action: { route.pushBridge(.wallet) }) {
                             Image(systemName: "eye")
                                 .dsGlyph(DS.Space.s4, weight: .semibold)
                                 .foregroundStyle(DS.tint)
                                 .frame(width: DS.Face.row, height: DS.Face.row)
                         }
+                        .dsScopeRow()
                     }
                 }
             )

@@ -515,7 +515,14 @@ struct WalletBalanceHeadline: View {
         // balance that had gone from nothing to a whole ETH. The delta is a
         // fact and draws; the percentage is not and does not.
         let ratioless = first == 0 && delta != 0
-        let flat = !ratioless && TokenChartStyle.isFlat(change)
+        // **A MOVE THAT PRINTS AS ZERO IS NO MOVE (prd §750, §83).** Shipped
+        // in 589 on a watched roster: "0 ETH ▲ 0 ETH (+100.0%)" — a dust move
+        // against a dust start, so the ratio was real arithmetic and the words
+        // were a green arrow over nothing. The test is the formatted delta,
+        // not a threshold, because what must not happen is a sign and a colour
+        // beside a figure that reads 0.
+        let roundsToZero = exactFormat(abs(delta)) == exactFormat(0)
+        let flat = roundsToZero || (!ratioless && TokenChartStyle.isFlat(change))
         let ink = flat ? DS.textSecondary
                        : TokenChartStyle.accent(change: ratioless ? (delta > 0 ? 1 : -1) : change,
                                                 scheme: scheme)

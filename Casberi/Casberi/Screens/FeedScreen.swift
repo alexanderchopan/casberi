@@ -3941,6 +3941,7 @@ struct FeedScreen: View {
         let readings = framesScopeReadings(head: head)
         Section {
             DSRoomScopeChrome(
+                source: FramesIdentity.source,
                 sections: chrome.framesSections,
                 active: active,
                 home: .home,
@@ -4073,6 +4074,7 @@ struct FeedScreen: View {
             .readings(chrome.privacyDevnetSections)
         Section {
             DSRoomScopeChrome(
+                source: PrivacyDevnetIdentity.source,
                 sections: chrome.privacyDevnetSections,
                 active: active,
                 home: .home,
@@ -4134,6 +4136,7 @@ struct FeedScreen: View {
         if let head = HegotaRoomSource.compose() {
             Section {
                 DSRoomScopeChrome(
+                    source: HegotaIdentity.source,
                     sections: chrome.hegotaSections,
                     active: active,
                     home: .home,

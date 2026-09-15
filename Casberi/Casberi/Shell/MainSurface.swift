@@ -579,18 +579,18 @@ struct MainSurface: View {
         // and the two spring rows last, against the dock. They remain mutually
         // exclusive — `openFolder` is a category or the doors, never both — so
         // exactly one row ever sits between the faces and the dock.
-        if roomControlsShown {
+        // **A FACE RAIL SHOWS WHENEVER ITS ROOM HAS SOMETHING TO PICK (prd
+        // §750, 2026-09-15).** It showed only while the category's folder was
+        // up or a scope was already live, so a person who swiped into
+        // Farcaster or Wallet with the folder closed never learned the faces
+        // existed — the folder was the door to a control that has nothing to
+        // do with it. Each rail's own `shows` (more than one account) is the
+        // whole gate now. §674 is untouched: a room change still settles this
+        // row's height on `glide`, and with the folder out of the gate the
+        // height changes less often than it did.
         socialScopeRail
         githubScopeRail
-        // **VIBENET'S FACE RAIL IS FOLDED INTO ITS CROWN (prd §482
-        // amendment, 2026-08-26, user: "we cannot have four rows of chips").**
-        // It and the value chips under the sparkline were both a strip of
-        // this room's accounts — one above the crown, one below it — and only
-        // the lower one said what each account was worth. The scoping moved
-        // down into those chips, which costs a row of chrome and loses
-        // nothing. Wallet's rail is untouched: its crown carries no
-        // per-account strip to fold into.
-        }
+        accountRail
         // **THE FOLDERS SPRING UP OUT OF THEIR CHIP (2026-09-05, the Mac-dock
         // folder — see `DockSpringRow`).** A category's venues and the
         // octopus's four doors each rise above the dock anchored to the chip
@@ -636,74 +636,7 @@ struct MainSurface: View {
         BridgeCatalog.category(forSource: filter.source)
     }
 
-    private var roomControlsShown: Bool {
-        if case .category = chrome.openFolder { return true }
-        // §357: a live scope forces its own room's rail open whatever the
-        // folder says — a filter you are standing in must show you that you are
-        // in it, and must show its own exit.
-        return chrome.personScope != nil
-    }
 
-    /// The wallet face rail — see `WalletScopeRail`, which owns the whole of its
-    /// construction and the one predicate saying when it draws.
-    ///
-    /// `compact:` is the shell's existing fold state, so the rail shrinks on the
-    /// same scroll that folds the chips rather than growing an observer of its
-    /// own. `minimizesChrome` already animates that flip and already ignores the
-    /// inset change its own toggle causes (its settle window), which is what
-    /// makes a fold-sensitive control safe to put in this inset at all.
-    ///
-    /// **…and `!showsRail`, which is `SourceChips.folds`' own axis gate spelled
-    /// for this control** (2026-08-11). The strip already refuses to fold on a
-    /// regular-width surface — `folds` is `minimized && axis == .horizontal`,
-    /// and the strip is vertical exactly when `showsRail` — so on Mac and iPad
-    /// the chrome above this rail holds still while you scroll. Left
-    /// unqualified the rail was the ONE piece of shell chrome that resized
-    /// there, which does not read as a system compressing; it reads as one
-    /// control twitching. The reason the strip declines is the same reason this
-    /// one should: folding buys back vertical space, and a surface wide enough
-    /// to wear a rail is not short of it.
-    @ViewBuilder
-    private var vibenetScopeRail: some View {
-        // Derived from the ROOM, never from the watch list directly — the
-        // two can legitimately disagree (in the demo the card is a fixed
-        // fixture while the watch list holds whatever this device really
-        // watches), and a rail offering faces the card beneath it has
-        // never heard of is a control that cannot scope anything. One
-        // source of truth, so a pick always names a row the card has.
-        let addresses = VibenetRoomSource.card()?.items.map(\.address) ?? []
-        if VibenetScopeRail.shows(source: filter.source, watched: addresses.count) {
-            FaceScopeRail(
-                items: VibenetScopeRail.items(addresses),
-                scope: chrome.vibenetScope,
-                compact: chrome.minimized && !showsRail,
-                // MATCHES THE WALLET RAIL (2026-08-23). These are adjacent
-                // venues inside the same folded category, so switching
-                // between them must not restructure the control that sits
-                // above both — captioned here and captionless there meant
-                // the rail changed height, slot width and fold behaviour
-                // on a venue tap, which reads as the chrome jumping. The
-                // room card directly below names every account, exactly as
-                // the crown card does for wallets (§450), so the caption
-                // is redundant here for the same reason it is there.
-                namesInRoom: true,
-                matches: VibenetScopeRail.matches,
-                onPick: { picked in
-                    withAnimation(DS.Motion.standard) { chrome.vibenetScope = picked }
-                },
-                onReTap: nil,
-                // ONE slot, not two (prd §465, dropped 2026-08-24). Wallet's
-                // rail carries a "+" AND a book door because they lead to two
-                // DIFFERENT places — the roster's own field, and everyone
-                // else. Vibenet has one tier: watching another account and
-                // seeing the whole list are the same screen now, so a second
-                // slot pointing at the identical destination is chrome, not a
-                // choice. `addTitle`/`onAdd` deliberately left nil.
-                addTitle: nil,
-                onAdd: nil)
-            .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
-        }
-    }
 
     @ViewBuilder
     private var socialScopeRail: some View {
@@ -756,6 +689,39 @@ struct MainSurface: View {
     /// and a re-tap that opened github.com would leave the app on the one
     /// gesture whose whole grammar is "narrow what is already here". Re-tapping
     /// the lit face simply re-picks it, which is what `onReTap: nil` does.
+    /// THE WALLET FAMILY'S ACCOUNTS, where the social faces are (prd §750,
+    /// user: "should we put the wallets row of accounts on a third row above
+    /// the tab bar like we do for socials? … like on farcaster and bluesky").
+    ///
+    /// Published by the room's `DSRoomScopeChrome` and keyed by source, so the
+    /// rail belongs to the room on screen and nothing else. It draws only with
+    /// two or more real accounts — "All" beside one face picks nothing. The
+    /// head names the picked account in full, so the rail's caption is a label.
+    @ViewBuilder
+    private var accountRail: some View {
+        if let rail = chrome.accountRail, rail.source == filter.source {
+            let items: [FaceScopeRail.Item] = rail.slots.compactMap { slot in
+                guard !slot.id.isEmpty, let face = slot.faces.first else { return nil }
+                return FaceScopeRail.Item(id: slot.id, caption: slot.name, face: face,
+                                          tooltip: slot.sub.map { "\(slot.name) · \($0)" })
+            }
+            if items.count > 1 {
+                FaceScopeRail(
+                    items: items,
+                    scope: rail.scope.flatMap { $0.isEmpty ? nil : $0 },
+                    compact: chrome.minimized && !showsRail,
+                    matches: { a, b in a.caseInsensitiveCompare(b) == .orderedSame },
+                    onPick: { picked in
+                        withAnimation(DS.Motion.standard) { rail.onPick(picked) }
+                    },
+                    onReTap: nil,
+                    addTitle: nil,
+                    onAdd: nil)
+                .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
+            }
+        }
+    }
+
     @ViewBuilder
     private var githubScopeRail: some View {
         let watches = GitHubWatchStore.shared.watches

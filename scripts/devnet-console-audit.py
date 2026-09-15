@@ -123,21 +123,29 @@ def checks(console: str, hegota: str, vibenet: str, feed: str):
     h_bare = strip_comments(hegota)
     v_bare = strip_comments(vibenet)
 
-    # 1. THE SUM. Two tiles and a gap have to live inside the measured room.
-    pad = constant(console, "tilePadding")
-    gap = constant(console, "markGap")
-    mark = constant(console, "mark")
-    tile_gap = constant(console, "tileGap")
-    if None in (pad, gap, mark, tile_gap):
-        out.append("the panel's geometry constants could not be read — the budget cannot be re-added")
-    else:
-        tile = 2 * pad + mark + gap + VERB_LINE
-        total = 2 * tile + tile_gap
-        if total > ROOM_ALLOWANCE:
-            out.append(
-                "the split panel needs %dpt of a %dpt room (%dpt a tile) — the second verb "
-                "falls off the bottom of the screen, drawn correctly and invisible"
-                % (total, ROOM_ALLOWANCE, tile))
+    # 1. **HOME'S VERBS ARE ROWS (prd §750, 2026-09-15).** Checks 1, 2 and 2b
+    #    measured two tiles against the room's 304pt allowance, pinned the verb
+    #    to `price40` on a split panel and `stat24` in a menu, and kept the tint
+    #    fill off a menu's peers (§553, §559). The tiles are gone: on the user's
+    #    screenshot they were the loudest thing in the room and a fourth kind of
+    #    container ("these all look like different apps each component"), so
+    #    every verb is a `DevnetVerbRow` on the readings' insets. What this
+    #    asserts now is that shape — and that neither the tile rung nor the
+    #    tile's surface comes back, since a panel that quietly regrows a tile
+    #    would render perfectly.
+    if "struct DevnetVerbRow" not in c_bare:
+        out.append("the devnet verb row is gone — Home's verbs have no shared row to draw through")
+    panel = re.search(r"struct DevnetSendPanel: View \{.*?\n\}\n", c_bare, re.S)
+    if not panel or "DevnetVerbRow(" not in panel.group(0):
+        out.append("DevnetSendPanel no longer draws its verbs as rows — a verb is a tile again (§750)")
+    # Scoped to the two verb panels: the send SHEET draws its amount at the
+    # crown rung on purpose, and that is a figure, not a verb.
+    for name in ("DevnetSendPanel", "DevnetCreatePanel"):
+        body = re.search(r"struct %s: View \{.*?\n\}\n" % name, c_bare, re.S)
+        if body and (".price40" in body.group(0) or ".stat24" in body.group(0)
+                     or "DevnetTileSurface" in c_bare):
+            out.append("%s draws a verb on the tile rung or the tile surface again — "
+                       "Home is four containers again (§750)" % name)
 
     # 1b. THE PLAN STRIP STEPS ASIDE RATHER THAN RESERVING SPACE (prd §548).
     #     The amount screen is a plain `VStack` with NO `ScrollView`, so a
@@ -153,42 +161,6 @@ def checks(console: str, hegota: str, vibenet: str, feed: str):
         out.append(
             "the plan strip no longer steps aside — on a screen with no ScrollView a "
             "reserved height pushes the commit button off the bottom")
-
-    # 2. THE VERB'S RUNG, asserted APART from the sum. A panel that fits because
-    #    its verbs shrank has not been fixed — the 64pt IS the design, and it is
-    #    the obvious place to find room the next time something is added here.
-    #
-    #    AMENDED 2026-09-04, and the amendment is §559 rather than a relaxation.
-    #    That ruling: "Two verbs is the ceiling, and the second is the ink half.
-    #    Three is a menu, and a hero verb among peers is just shouting." So the
-    #    crown rung belongs to the SPLIT panel and must not be demanded of the
-    #    menu — vibenet carries four acts now (user: "folks testing won't want
-    #    to just send, the others are just as important"), and a `price40` verb
-    #    among four peers is the shouting §559 names.
-    #
-    #    Both halves are asserted, because each protects the other's failure:
-    #    the split panel must KEEP the rung (a panel that fits by shrinking its
-    #    words is not this panel), and the menu must NOT take it (a hero among
-    #    peers, and a two-word act that cannot set at half width without
-    #    scaling down).
-    #    The literal spelling `.dsText(.price40)` is GONE from the real file —
-    #    the rung is chosen inside the ternary now — so this asserts the rung
-    #    exists at all and the ternary check below pins where.
-    if ".price40" not in c_bare:
-        out.append("a verb left the crown rung — a panel that fits by shrinking its words is not this panel")
-    if "isMenu ? .stat24 : .price40" not in console:
-        out.append(
-            "the panel's verb no longer switches rung on its act count — either the split "
-            "panel lost the crown rung, or a menu of peers is wearing it (§559)")
-    if "private var isMenu: Bool { actCount > 2 }" not in console:
-        out.append(
-            "the menu switch is no longer §559's rule — a room that grows a third act can "
-            "keep shouting, or one that drops back to two cannot get its hero back")
-    # 2b. NO TINT FILL IN A MENU. The other half of "a hero among peers is just
-    #     shouting": the rung and the fill are the two things that rank a tile,
-    #     and dropping only one leaves the loudest signal in place.
-    if "let filled = isSend && !isMenu" not in c_bare:
-        out.append("a menu tile can take the tint fill — the hero is back among its peers (§559)")
 
     # 3. THE KEYPAD IS OURS. §552a swapped it for the system pad on arithmetic
     #    that was correct for a CARD and is meaningless on a sheet; what it cost
@@ -296,16 +268,14 @@ def checks(console: str, hegota: str, vibenet: str, feed: str):
 
 def self_test() -> int:
     good_console = """
-    static let tilePadding = DS.Space.s3
-    static let markGap = DS.Space.s2
-    static let mark: CGFloat = 36
-    static let tileGap = DS.Space.s3
-    struct DevnetKeypad { }
-    static let menuTileFloor: CGFloat = 104
-    private var isMenu: Bool { actCount > 2 }
-    let filled = isSend && !isMenu
-    Text(x).dsText(isMenu ? .stat24 : .price40)
-    """
+struct DevnetSendPanel: View {
+    var body: some View {
+        DevnetVerbRow(title: t, glyph: g, tint: c, act: a)
+    }
+}
+struct DevnetVerbRow: View { }
+struct DevnetKeypad { }
+"""
     good_h = 'DemoMode.isActive\nDevnetSendPanel(\nclaimFaucet(\nrateLimited\n'
     # §553b: vibenet claims in place like Hegotá, and carries no handsOff flag.
     good_v = ('DevnetSendPanel(tint: x, topUp: topUp, onSend: y)\n'
@@ -317,13 +287,14 @@ def self_test() -> int:
     cases = []
     cases.append(("the shipping shape", good_console, good_h, good_v, good_f, False))
 
-    fat = good_console.replace("DS.Space.s3\n    static let markGap", "DS.Space.s6\n    static let markGap")
-    fat = fat.replace("static let mark: CGFloat = 36", "static let mark: CGFloat = DS.Hit.min")
-    cases.append(("a tile fattened until the second verb falls off the screen",
-                  fat, good_h, good_v, good_f, True))
-
-    cases.append(("the verb drops below the crown rung",
-                  good_console.replace("isMenu ? .stat24 : .price40", ".stat24"),
+    cases.append(("a verb goes back to the tile rung",
+                  good_console.replace("DevnetVerbRow(title: t, glyph: g, tint: c, act: a)", "Text(x).dsText(.price40)\n        DevnetVerbRow(title: t, glyph: g, tint: c, act: a)"),
+                  good_h, good_v, good_f, True))
+    cases.append(("the panel stops drawing rows",
+                  good_console.replace("DevnetVerbRow(title: t, glyph: g, tint: c, act: a)", "VStack { }"),
+                  good_h, good_v, good_f, True))
+    cases.append(("the shared verb row is deleted",
+                  good_console.replace("struct DevnetVerbRow: View { }", ""),
                   good_h, good_v, good_f, True))
     cases.append(("the system keypad comes back",
                   good_console.replace("struct DevnetKeypad { }", "keyboardType(.decimalPad)"),
@@ -395,14 +366,9 @@ def main() -> int:
         for f in found:
             print("\033[31m✗ %s\033[39m" % f)
         return 1
-    console = CONSOLE.read_text()
-    tile = (2 * constant(console, "tilePadding") + constant(console, "mark")
-            + constant(console, "markGap") + VERB_LINE)
-    total = 2 * tile + constant(console, "tileGap")
-    dev, h, left = SMALLEST_MEASURED
-    print("\033[32m✓ devnet-console audit: the split panel sums to %dpt of a %dpt room "
-          "(390x844; on a %s at %dpt only %dpt is left below the first tile — measured, "
-          "and the room scrolls there)\033[39m" % (total, ROOM_ALLOWANCE, dev, h, left))
+    print("\033[32m✓ devnet-console audit: Home's verbs are rows on the readings' insets, "
+          "the keypad is ours, the plan strip steps aside, and the faucet claims in place "
+          "(prd §750)\033[39m")
     return 0
 
 

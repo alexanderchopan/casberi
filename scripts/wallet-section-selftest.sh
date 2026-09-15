@@ -243,8 +243,18 @@ guard DSRoomScopeChrome.swift "DSScopeRows(" \
   "the chrome no longer draws the scope rows — Home's list IS the readings (§747)"
 guard DSRoomScopeChrome.swift "DSScopeHeader(" \
   "the chrome no longer draws the scope header — a pushed scope must name itself (§747)"
-guard DSRoomScopeChrome.swift "DSAccountDeck(" \
-  "the chrome no longer draws the account deck — a name needs the card's width (§747)"
+# **THE ACCOUNTS ARE THE SHELL'S FACE RAIL, NOT A DECK** (prd §750, user: "put
+# the wallets row of accounts on a third row above the tab bar like we do for
+# socials"). The deck is deleted; the chrome publishes its accounts and the
+# shell draws them where the social faces are. Both halves, because a chrome
+# that stops publishing leaves the shell's rail silently empty.
+guard DSRoomScopeChrome.swift "chrome.accountRail = rail" \
+  "the chrome no longer publishes its accounts — the rail above the dock is empty (§750)"
+grep -q "private var accountRail: some View" Casberi/Casberi/Shell/MainSurface.swift \
+  && grep -q "        accountRail$" Casberi/Casberi/Shell/MainSurface.swift \
+  || fail "the shell no longer mounts the account rail beside the social faces (§750)"
+deny DSRoomScopeChrome.swift "DSAccountDeck(" \
+  "the account deck is back — the faces over the figure read as a contacts header (§750)"
 # THE SWIPE IS THE ROOM'S, NOT THE SCOPES' (user ruling, prd §747: "inside can't
 # be swipe bc swipe is for rooms but can be a scroll header"). A header that
 # grew a DragGesture would make one gesture mean two things by depth.
@@ -280,17 +290,21 @@ guard FeedScreen.swift "WalletSection.resolve(" \
 # `DSScopeRows` BELOW that deck. Source order in FeedScreen no longer says draw
 # order (a closure argument follows its call), so the guard reads both halves:
 # the wallet passes its sparkline as the chrome's crown, and the chrome draws
-# the deck — the crown — above the scope rows.
+# it first (see the order check below).
 chrome_fn=$(sed -n '/func walletScopeChromeSection(/,/^    }$/p' "$work/FeedScreen.swift.bare")
 [[ "$chrome_fn" == *"DSRoomScopeChrome("* && "$chrome_fn" == *"crown: { slot in"* \
    && "$chrome_fn" == *"walletTilesSection(visible"* ]] \
   || fail "drift: the wallet no longer passes its crown into DSRoomScopeChrome"
+# **One surface, in reading order** (prd §750): the head, then Actions, then
+# Readings. Read in the chrome, where the order is the source order.
 CHROME="Casberi/Casberi/Design/DSRoomScopeChrome.swift"
-deck_at=$(grep -n "DSAccountDeck(slots:" "$CHROME" | head -1 | cut -d: -f1 || true)
+head_at=$(grep -n "crown(showing)" "$CHROME" | head -1 | cut -d: -f1 || true)
+acts_at=$(grep -n 'String(localized: "Actions")' "$CHROME" | head -1 | cut -d: -f1 || true)
 rows_at=$(grep -n "DSScopeRows(sections:" "$CHROME" | head -1 | cut -d: -f1 || true)
-[[ -n "$deck_at" && -n "$rows_at" ]] || fail "drift: cannot locate the deck or the scope rows in DSRoomScopeChrome"
-(( deck_at < rows_at )) || fail "drift: the scope rows are drawn ABOVE the crown's deck — they must sit below it"
-grep -q "crown(slot)" "$CHROME" || fail "drift: the deck's card no longer draws the crown"
+[[ -n "$head_at" && -n "$acts_at" && -n "$rows_at" ]] \
+  || fail "drift: cannot locate the head, Actions or the Readings in DSRoomScopeChrome"
+(( head_at < acts_at && acts_at < rows_at )) \
+  || fail "drift: Home is out of order — the head, then Actions, then Readings (§750)"
 
 # EVERY empty-state gate must be the section's OWN render gate, spelled the same
 # way (prd §611 moved these from presence flags to `walletScopeIsEmpty`; the

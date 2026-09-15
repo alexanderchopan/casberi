@@ -79,12 +79,7 @@ struct DSScopeRows<Scope: DSSectionScope>: View {
                     .frame(width: DS.Space.s2 - 4, height: DS.Space.s2 - 4)
             }
         }
-        .padding(.horizontal, DSRoomChassis.inset)
-        .padding(.vertical, DS.Space.s3)
-        // A row is a finger target before it is a layout, and `body17` in
-        // `s3` padding lands a point or two under the floor on Mac's tighter
-        // spacing ramp.
-        .frame(minHeight: DS.Hit.min)
+        .dsScopeRow()
         // The word and its reading are one announcement; the summary says
         // what the scope HOLDS, since these nouns are learnable but not
         // self-explaining ("Permissions" must not read as app settings when
@@ -99,5 +94,18 @@ struct DSScopeRows<Scope: DSSectionScope>: View {
         let fact = reading(section)
         let base = fact.map { "\(section.label), \($0)" } ?? "\(section.label), \(section.summary)"
         return Text(wants ? String(localized: "\(base), needs you") : base)
+    }
+}
+
+extension View {
+    /// The insets every row in a wallet-family list wears — a reading row here,
+    /// an action row in the block above it (prd §750). One spelling, so the two
+    /// blocks cannot drift apart by a point. A row is a finger target before it
+    /// is a layout, and `body17` in `s3` padding lands a point or two under the
+    /// floor on Mac's tighter spacing ramp, hence the floor.
+    func dsScopeRow() -> some View {
+        padding(.horizontal, DSRoomChassis.inset)
+            .padding(.vertical, DS.Space.s3)
+            .frame(minHeight: DS.Hit.min)
     }
 }

@@ -97,7 +97,7 @@ struct DSActVerb: View {
 
     private var disc: some View {
         ZStack {
-            // 36pt — `DevnetConsole.mark`'s value, spelled here because Design/
+            // 36pt — the old devnet tile mark's value, spelled here because Design/
             // does not reach into Screens/. Under `DS.Hit.min` deliberately:
             // the disc is not a target, the whole tile is.
             Circle().fill(Color.white.opacity(disabled ? 0.10 : 0.22))

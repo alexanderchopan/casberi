@@ -64,6 +64,8 @@ struct FramesSendCard: View {
                     .dsText(.label12)
                     .foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, DSRoomChassis.inset)
+                    .padding(.bottom, DS.Space.s3)
             }
         }
     }

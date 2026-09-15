@@ -1,89 +1,125 @@
 import SwiftUI
 
-/// WHAT A WALLET-FAMILY ROOM WEARS INSTEAD OF A BAR (prd §747, 2026-09-15).
+/// THE WALLET FAMILY'S HOME — one surface, in reading order (prd §750,
+/// 2026-09-15, user: "look these all look like different apps each component.
+/// they don't blend together in any way, and now we have the accounts faces
+/// at the top it's totally confusing").
 ///
-/// One type, five rooms, and deliberately shaped as a DROP-IN for
-/// `DSRoomRailSlab`: the same `sections` / `active` / `attention` / `onPick`
-/// on the reading side and the same `scope` / `onPick` on the account side.
-/// The rooms disagree about almost everything else — Vibenet's chrome lives
-/// inside its card and Hegotá's is four `FeedScreen` sections; Frames mounts
-/// its send card inside the list and the Privacy devnet mounts its own as a
-/// section — so a component that asked them to agree about mounting would
-/// convert none of them. This asks them to agree about ARGUMENTS.
+/// §747 put the account at the TOP as a card you page, with the crown and the
+/// verbs inside it, and the readings as door rows under it. Shipped in 589 it
+/// read as four apps: a deck card, verb slabs at `price40`, a grouped list,
+/// the dock — four radii, four type scales, three insets — and the two grey
+/// faces over the figure looked like a contacts header where every other room
+/// puts its head.
 ///
-/// **What it draws, and it is one of two things.**
+/// This is the same facts on the app's own grammar, top to bottom:
 ///
-/// On HOME: the account deck (`DSAccountDeck`), each card carrying the room's
-/// crown and the room's acts, and under it the readings as door rows
-/// (`DSScopeRows`). Home has no list of its own any more — the rows ARE the
-/// list, which is what makes this a deletion rather than another strip.
+///   1. **the head** — the room's crown for the account in scope (the figure,
+///      the chart, its range chips), on the head surface every other room got
+///      in §745;
+///   2. **the account rail** — NOT drawn here. The room publishes its accounts
+///      to `ShellChrome.accountRail` and the shell draws them as a
+///      `FaceScopeRail` above the dock, where the Farcaster and Bluesky rails
+///      already sit (user, same day: "like on farcaster and bluesky"), so a
+///      pick survives a scroll and the head keeps one job;
+///   3. **Actions** — the room's verbs as rows under one label, the way §746
+///      made every verb a row;
+///   4. **Readings** — `DSScopeRows` under its own label (user: "it can't all
+///      be actions"). Not "Test": the devnets are test networks, but the
+///      Wallet room holds real money and the label is shared.
 ///
-/// Off home: the scope header (`DSScopeHeader`) — the reading's name at the
-/// room's title rung, the rest beside it, back to Home. The room's own figure
-/// and list are untouched underneath.
+/// The rail truncates a long name at its 66pt slot, which was §747's first
+/// complaint. The head names the picked account in FULL beside the figure
+/// (§450's caption, drawn by each room's crown), so the rail's word is a
+/// label and the head is the name — the §495 pairing, not a second truncation.
 ///
-/// **`home` is a parameter, not a convention.** Every one of the five scope
-/// enums calls its first case `home`, and none of them can say so through
-/// `DSSectionScope` without that protocol growing a case it has no business
-/// knowing about. The caller passes it; `rest` is everything else in the
-/// room's own order.
+/// Every room in the family (Wallet, Vibenet, Hegotá, Frames, the Privacy
+/// devnet) passes the same arguments it passed §747's chrome; only this file
+/// decides where they are drawn. The pushed-scope header is untouched.
 struct DSRoomScopeChrome<Scope: DSSectionScope, Crown: View, Acts: View>: View {
+    @Environment(ShellChrome.self) private var chrome
 
-    /// Every reading the room publishes, in its own order, INCLUDING home.
+    /// The room this chrome stands in — the key the published rail carries.
+    let source: String
     let sections: [Scope]
     let active: Scope
-    /// Which of them is the room itself.
     let home: Scope
     var attention: Set<Scope> = []
     let onPick: (Scope) -> Void
 
-    /// The accounts, deck-shaped. Empty is legal and means the room has no
-    /// account to page (a devnet before its key): the deck is skipped and the
-    /// crown and acts draw on their own card, which is how the "Create
-    /// account" tile ends up being the whole card.
     let accounts: [DSAccountSlot]
-    /// The account showing — nil is "All".
     let scope: String?
     let onPickAccount: (String?) -> Void
 
-    /// What the scope holds right now, in the room's words. An empty scope
-    /// answers with its own `emptyHeadline`, which is how §611's promise —
-    /// every scope present, every empty scope explaining itself — is kept
-    /// BEFORE the tap rather than after it.
     let reading: (Scope) -> String?
     @ViewBuilder let crown: (DSAccountSlot) -> Crown
     @ViewBuilder let acts: (DSAccountSlot) -> Acts
 
-    /// The readings minus home, in the room's order — the rows on Home and the
-    /// words in the header off it, from one list so the two can never disagree.
     private var rest: [Scope] { sections.filter { $0 != home } }
 
-    /// The card a room draws when it has no account to page. One card, no
-    /// scroll, and the same anatomy — a devnet before its key still has a
-    /// venue to name and a tile to offer, and a deck of one that cannot be
-    /// paged is a deck pretending.
-    private var soloSlot: DSAccountSlot? {
-        accounts.isEmpty ? nil : accounts.first
+    /// The slot the crown draws: the one in scope, else the "All" slot, else
+    /// the only one.
+    private var showing: DSAccountSlot? {
+        accounts.first { $0.isShowing(scope) }
+            ?? accounts.first { $0.id.isEmpty }
+            ?? accounts.first
+    }
+
+    /// The slot the ACTIONS are for. Every room in the family draws its verbs
+    /// for the "All" slot only — this device holds one key, so Send acts for
+    /// that key whichever account is in scope — and a solo room has only its
+    /// one slot. Resolved here so the label is never drawn over nothing.
+    private var actsSlot: DSAccountSlot? {
+        accounts.first { $0.id.isEmpty } ?? accounts.first
     }
 
     var body: some View {
+        content
+            .onAppear { publish() }
+            .onChange(of: accounts) { _, _ in publish() }
+            .onChange(of: scope) { _, _ in publish() }
+            .onDisappear {
+                if chrome.accountRail?.source == source { chrome.accountRail = nil }
+            }
+    }
+
+    private func publish() {
+        let rail = ShellChrome.AccountRail(source: source, slots: accounts,
+                                           scope: scope, onPick: onPickAccount)
+        if chrome.accountRail != rail { chrome.accountRail = rail }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         if active == home {
             VStack(alignment: .leading, spacing: DSRoomChassis.contentGap) {
-                if accounts.count > 1 {
-                    DSAccountDeck(slots: accounts, scope: scope, onPick: onPickAccount) { slot in
-                        cardBody(slot)
-                    }
-                } else if let solo = soloSlot {
-                    // A deck of one pages nowhere, so it is drawn as the card
-                    // it is. The room keeps its head, its crown and its acts —
-                    // only the scroll is absent, because there is nothing to
-                    // scroll to.
-                    DSAccountDeck(slots: [solo], scope: scope, onPick: onPickAccount) { slot in
-                        cardBody(slot)
-                    }
+                if let showing {
+                    crown(showing)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, DS.Space.s2)
+                        .dsWidgetSurface()
+                        .padding(.horizontal, DSRoomChassis.inset)
                 }
-                DSScopeRows(sections: rest, attention: attention,
-                            reading: reading, onPick: onPick)
+                if let actsSlot {
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        WalletSectionLabel(title: String(localized: "Actions"))
+                            .padding(.horizontal, DSRoomChassis.inset)
+                        VStack(spacing: 0) {
+                            acts(actsSlot)
+                        }
+                        .dsWidgetSurface()
+                    }
+                    .padding(.horizontal, DSRoomChassis.inset)
+                }
+                if !rest.isEmpty {
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        WalletSectionLabel(title: String(localized: "Readings"))
+                            .padding(.horizontal, DSRoomChassis.inset)
+                        DSScopeRows(sections: rest, attention: attention,
+                                    reading: reading, onPick: onPick)
+                    }
+                    .padding(.horizontal, DSRoomChassis.inset)
+                }
             }
         } else {
             DSScopeHeader(sections: rest, active: active, attention: attention,
@@ -93,18 +129,6 @@ struct DSRoomScopeChrome<Scope: DSSectionScope, Crown: View, Acts: View>: View {
         }
     }
 
-    @ViewBuilder
-    private func cardBody(_ slot: DSAccountSlot) -> some View {
-        VStack(alignment: .leading, spacing: DSRoomChassis.contentGap) {
-            crown(slot)
-            acts(slot)
-        }
-    }
-
-    /// Which account this reading is OF, under the header — the one fact the
-    /// deck was carrying that a pushed scope would otherwise lose. Nothing at
-    /// all when there is one account or none: a line naming the only account
-    /// there is says nothing the room does not already say.
     @ViewBuilder
     private var accountLine: some View {
         if accounts.count > 1 {
@@ -123,5 +147,22 @@ struct DSRoomScopeChrome<Scope: DSSectionScope, Crown: View, Acts: View>: View {
                 }
             }
         }
+    }
+}
+
+/// One account in a room of the wallet family: what the rail captions it, what
+/// the pushed header names it, and the face it wears. `id` is the address, or
+/// `""` for "All".
+struct DSAccountSlot: Identifiable, Equatable {
+    let id: String
+    let name: String
+    let sub: String?
+    let faces: [FaceScopeRail.Item.Face]
+}
+
+extension DSAccountSlot {
+    func isShowing(_ scope: String?) -> Bool {
+        guard let scope, !scope.isEmpty else { return id.isEmpty }
+        return id.caseInsensitiveCompare(scope) == .orderedSame
     }
 }

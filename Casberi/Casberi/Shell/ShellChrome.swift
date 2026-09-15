@@ -231,7 +231,7 @@ final class ShellChrome {
     /// are standing on closes it, and only until you leave.
     ///
     /// **§357 is NOT overturned** — it is enforced one level up, in
-    /// `MainSurface.roomControlsShown`: a live person scope forces the room's
+    /// the room's face rail (prd §750: shown whenever there is more than one to pick); a live person scope keeps the room's
     /// row open whatever this says, because a filter you are standing in must
     /// show you that you are in it and must show its own exit.
     enum OpenFolder: Equatable {
@@ -270,6 +270,34 @@ final class ShellChrome {
     /// removed, or the list falling back to one) — a scope pointing at a gone
     /// wallet is a feed with no rows and no way to explain itself.
     var walletScope: String?
+
+    /// THE ACCOUNT RAIL, PUBLISHED TO THE SHELL (prd §750, 2026-09-15, user:
+    /// "should we put the wallets row of accounts on a third row above the tab
+    /// bar like we do for socials? … like on farcaster and bluesky").
+    ///
+    /// A wallet-family room (`DSRoomScopeChrome`) publishes its accounts here
+    /// and `MainSurface.roomControls` draws them as a `FaceScopeRail` above the
+    /// dock, exactly where the social rail sits — §357's rule: a control that
+    /// persists across a room change mounts on the shell, never inside the
+    /// `.id()` subtree it commands. Keyed by SOURCE so a room being torn down
+    /// cannot clear the room being built: a swipe fires the old room's
+    /// `onDisappear` after the new room's `onAppear`, and an unkeyed clear
+    /// there would blank the rail one swipe in two.
+    var accountRail: AccountRail?
+
+    struct AccountRail: Equatable {
+        let source: String
+        let slots: [DSAccountSlot]
+        let scope: String?
+        /// The room's own pick — each room writes a different scope (Vibenet's
+        /// is not even chrome state), so the rail carries the room's handler
+        /// rather than the shell learning five key paths.
+        let onPick: (String?) -> Void
+
+        static func == (a: AccountRail, b: AccountRail) -> Bool {
+            a.source == b.source && a.slots == b.slots && a.scope == b.scope
+        }
+    }
 
     /// Which READING of the wallet room is on screen (prd §483, 2026-08-26) —
     /// nil until the room resolves one, then whatever was last picked.

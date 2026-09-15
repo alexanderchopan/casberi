@@ -43,51 +43,6 @@ enum DevnetConsole {
 
     /// The card's own inset, and the gap between the two halves.
     static let cardPadding = DS.Space.s4
-    static let tileGap = DS.Space.s3
-
-    /// Inside a tile: the mark, then the verb, hard against the bottom-left.
-    ///
-    /// **MEASURED, NOT CHOSEN (prd §553).** The room leaves 304pt below its
-    /// section strip on a 390×844 phone — measured off a screenshot of this
-    /// build, the same way §552 measured the chrome it could not move. Two
-    /// tiles and a gap have to live inside that, so each tile is 146 and its
-    /// contents are what fit:
-    ///
-    /// ```
-    ///   padding (s3 × 2)                 24
-    ///   the mark disc                    36
-    ///   gap (s2)                          8
-    ///   one line of price40 at 1.18×      48
-    ///   ────────────────────────────────────
-    ///                                   144pt   × 2 + a 12pt gap = 300 of 304
-    /// ```
-    ///
-    /// The first cut used `s4`, `s3` and `DS.Hit.min` and came to 174 a tile —
-    /// 348 for the pair, which overflowed by 44 and put "Top up" off the bottom
-    /// of the screen. That is the §552 failure exactly, arriving one layout
-    /// later: it renders perfectly and simply continues past the fold.
-    static let tilePadding = DS.Space.s3
-    static let markGap = DS.Space.s2
-
-    /// The mark disc. Under `DS.Hit.min` deliberately — it is not a target, the
-    /// whole tile is, and 146pt of tile is three times the hit floor.
-    static let mark: CGFloat = 36
-
-    /// **The floor a tile may not go under.** Two tiles plus the gap have to
-    /// leave the 64pt verb its line and the mark its disc; below this the verb
-    /// starts scaling and the panel stops being the thing it is. Asserted by
-    /// `devnet-console-audit.py` APART from anything else, because a tile
-    /// squeezed to fit one more element is exactly how this card lost its way
-    /// the first time.
-    static let tileFloor: CGFloat = 132
-
-    /// A MENU tile's floor (2026-09-04). Lower than `tileFloor` because the
-    /// verb inside it is `stat24` rather than `price40` and there are two rows
-    /// of these rather than one — re-added by `devnet-console-audit.py` check 1
-    /// against the same room allowance, so the grid cannot quietly grow past
-    /// the budget the split panel was measured into.
-    static let menuTileFloor: CGFloat = 104
-
     // MARK: - The sheet
 
     /// The face on the amount screen is the SAME RUNG as the face in the
@@ -189,61 +144,31 @@ enum DevnetAmountInput {
 
 // MARK: - The panel
 
-/// One half is the venue's colour and one half is the room's own card surface —
-/// which is `dsWidgetSurface`, the elevation ladder's raised rung, rather than a
-/// colour spelled here. A tinted tile cannot take that modifier (it would paint
-/// the sheet fill over the tint), so the two are one modifier with one branch
-/// instead of two backgrounds that could drift apart.
-private struct DevnetTileSurface: ViewModifier {
-    let tint: Color?
 
-    func body(content: Content) -> some View {
-        if let tint {
-            content.background(tint, in: RoundedRectangle(cornerRadius: DS.Radius.widget,
-                                                          style: .continuous))
-        } else {
-            content.dsWidgetSurface()
-        }
-    }
-}
-
-/// **HOME IS TWO VERBS, PERMANENTLY (prd §553).**
+/// **HOME'S VERBS ARE ROWS (prd §750, 2026-09-15).** They were two tiles at
+/// `price40`, the blue one filled (§553, §559), and on the user's screenshot
+/// the loudest thing in the room: "Send" at 34pt over a balance at 22pt, in a
+/// container of its own beside three others ("these all look like different
+/// apps each component"). §746 had already made every other verb in the app a
+/// row; these were the last. Each verb is a `DSPushRow` on the readings'
+/// insets: the glyph at the row's 26pt lead in the venue's tint, the word in
+/// the same tint, the faucet's report as the row's fact. The tint is still the
+/// only thing saying which venue this is.
 ///
-/// The blue half is the venue's own colour and the ink half is the room's card
-/// surface, so the two are peers in size and not in weight — the colour is the
-/// only thing saying which one the room is for.
-///
-/// Neither tile presents anything. Send hands upward to the screen's single
+/// Neither row presents anything. Send hands upward to the screen's single
 /// `.sheet` (a `.sheet` attached to a view inside a `List` row resolves to the
 /// same presenting controller as the screen's own and half-opens then closes,
-/// paid for three times already); Top up acts in place and reports on itself.
+/// paid for three times already); Top up acts in place and reports on itself
+/// in its own row.
 struct DevnetSendPanel: View {
     let tint: Color
-    /// **ALL THREE DEVNETS CLAIM IN PLACE NOW (prd §553b, 2026-09-01)**, so
-    /// nothing passes nil here today. It stays optional rather than required
-    /// because the reason it was optional is still a real state: a room whose
-    /// chain runs no faucet must draw the Send half alone rather than a button
-    /// that cannot act (§83). What changed is that vibenet turned out not to be
-    /// such a room — its faucet was reachable all along, one `curl` from the
-    /// page this tile used to open.
     var topUp: TopUp? = nil
     let onSend: () -> Void
 
-    /// **THE ROOM'S OTHER ACTS (2026-09-04, user ruling).**
-    ///
-    /// *"folks testing won't want to just send, the others are just as
-    /// important"* — which is the premise the two-tile panel was built without.
-    /// On a devnet the person here came to make an account or authorize a key
-    /// at least as often as to move money, so Create and Authorize are not
-    /// supporting verbs, they are peers.
-    ///
-    /// Empty for Hegotá and Frames, which keep the split panel exactly as it
-    /// was — this is a room's decision about its own acts, not a new default.
+    /// Verbs past the two every venue has (the Privacy devnet's Shield,
+    /// vibenet's Create and Authorize), drawn after them in the order given.
     var extras: [Act] = []
 
-    /// One act beyond Send and Top up. No busy or note state, deliberately:
-    /// both of those open a sheet that owns its own progress, where Top up
-    /// completes in place and has to say so.
     struct Act: Identifiable {
         let id: String
         let title: String
@@ -254,257 +179,79 @@ struct DevnetSendPanel: View {
         }
     }
 
-    /// How many acts this panel is carrying.
-    private var actCount: Int { 1 + (topUp == nil ? 0 : 1) + extras.count }
-
-    /// **§559 DECIDES THE LAYOUT, and it is a scope rather than a taste.**
-    ///
-    /// That ruling: *"Two verbs is the ceiling, and the second is the ink half.
-    /// Three is a menu, and a hero verb among peers is just shouting."* So the
-    /// panel does not offer a style — it reads its own act count and takes the
-    /// grammar §559 already assigned to it. Two acts keep the crown rung and
-    /// the tinted Send; three or more become a menu, where nothing wears the
-    /// head rung and nothing takes the tint fill.
-    ///
-    /// Encoding the rule as the switch means a room that grows a third act
-    /// cannot accidentally keep shouting, and one that loses back down to two
-    /// gets its hero back with no edit.
-    private var isMenu: Bool { actCount > 2 }
-
-    /// What the ink half does, and what it is currently saying about itself.
     struct TopUp {
         var busy = false
-        /// Only ever present when there is something to say. The rate limit and
-        /// the failure read the SAME way on purpose: §525 rules the hourly
-        /// refusal expected rather than a fault, and either way the next step
-        /// is identical — tap it again.
         var note: String? = nil
         var action: () -> Void
     }
 
     var body: some View {
-        if isMenu {
-            // TWO COLUMNS, not a stack. Four full-width tiles at the stacked
-            // height is most of a screen, and the room's crown and rail sit
-            // above them — the same budget `devnet-console-audit.py` check 1
-            // guards, which is why the grid halves the width rather than
-            // lengthening the scroll.
-            //
-            // **A `Grid`, NOT A `LazyVGrid` (user, 2026-09-09: "the send and
-            // top up button overlap the rail").** This panel mounts as its own
-            // List row under the room's fused slab, and a lazy container
-            // inside a List cell reports a height it has not yet laid out —
-            // the cell came up short of two tile rows, and a cell whose
-            // content is taller than itself CENTRES that content, so the top
-            // tiles bled up over the slab above by half the shortfall. A
-            // `Grid` is sized eagerly, the cell is exactly as tall as the
-            // tiles, and `contentGap` is drawn where the section put it. The
-            // two-act branch below never had it: a `VStack` is not lazy.
-            let acts: [Kind] = [.send] + (topUp == nil ? [] : [.topUp]) + extras.map(Kind.extra)
-            let rows = CGFloat((acts.count + 1) / 2)
-            Grid(horizontalSpacing: DevnetConsole.tileGap, verticalSpacing: DevnetConsole.tileGap) {
-                ForEach(Array(stride(from: 0, to: acts.count, by: 2)), id: \.self) { i in
-                    GridRow {
-                        tile(kind: acts[i])
-                        if i + 1 < acts.count { tile(kind: acts[i + 1]) }
-                    }
-                }
+        VStack(spacing: 0) {
+            DevnetVerbRow(title: String(localized: "Send"), glyph: "arrow.up.right",
+                          tint: tint, act: onSend)
+            if let topUp {
+                DevnetVerbRow(title: String(localized: "Top up"), glyph: "drop",
+                              tint: tint, fact: topUp.note, busy: topUp.busy,
+                              act: topUp.action)
+                    .disabled(topUp.busy)
+                    .accessibilityLabel(Text("Top up from the faucet"))
             }
-            // **THE HEIGHT IS STATED, NOT INFERRED (prd §664).** The eager
-            // `Grid` above was this morning's answer to a lazy grid that
-            // under-reported to its List cell; on the Privacy devnet, whose
-            // three verbs make TWO rows in a cell shared with the room's move
-            // list, the tiles still rode up over the last row on a phone.
-            // A minimum height that is the rows' own floors plus their gaps
-            // is what the cell is told regardless of what the grid measures,
-            // so the tiles can never be taller than the cell that holds them.
-            .frame(minHeight: rows * DevnetConsole.tileFloor
-                              + max(0, rows - 1) * DevnetConsole.tileGap,
-                   alignment: .top)
-        } else {
-            VStack(spacing: DevnetConsole.tileGap) {
-                tile(kind: .send)
-                if topUp != nil { tile(kind: .topUp) }
+            ForEach(extras) { extra in
+                DevnetVerbRow(title: extra.title.replacingOccurrences(of: "\n", with: " "),
+                              glyph: extra.glyph, tint: tint, act: extra.act)
             }
-        }
-    }
-
-    private enum Kind {
-        case send, topUp
-        case extra(Act)
-    }
-
-    @ViewBuilder
-    private func tile(kind: Kind) -> some View {
-        let isSend: Bool = { if case .send = kind { return true }; return false }()
-        let isTopUp: Bool = { if case .topUp = kind { return true }; return false }()
-        // **THE TINT FILL IS THE MENU'S ONE CASUALTY, and §559 is why.** A hero
-        // among peers is shouting, so in a menu no tile takes the fill — the
-        // room keeps its colour on every DISC instead, which says whose room
-        // this is without saying which act it is for.
-        let filled = isSend && !isMenu
-        Button {
-            DSHaptic.tap()
-            switch kind {
-            case .send:  onSend()
-            case .topUp: topUp?.action()
-            case .extra(let extra): extra.act()
-            }
-        } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                if isTopUp, let note = topUp?.note {
-                    Text(note)
-                        .dsText(.callout15).fontWeight(.semibold)
-                        .foregroundStyle(DS.textSecondary)
-                        // One line in the menu, where the tile's height is
-                        // fixed (prd §665); the full note wraps in the
-                        // two-verb form, which grows.
-                        .lineLimit(isMenu ? 1 : nil)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                Spacer(minLength: 0)
-                disc(kind: kind, filled: filled)
-                Spacer().frame(height: DevnetConsole.markGap)
-                Text(label(kind))
-                    // `price40` is the crown rung and belongs to a surface that
-                    // exists to do ONE thing (§559). In a menu the verb drops to
-                    // `stat24` — which is also what lets a two-word act like
-                    // "Authorize a key" set at half width without shrinking to
-                    // fit, the failure `devnet-console-audit.py` check 2 exists
-                    // to catch in the SPLIT panel and must not be confused with
-                    // this.
-                    .dsText(isMenu ? .stat24 : .price40)
-                    .foregroundStyle(filled ? .white : DS.textPrimary)
-                    // A menu label wraps rather than shrinks: two short lines
-                    // read, a scaled-down one just looks broken beside its
-                    // neighbour.
-                    .lineLimit(isMenu ? 2 : 1)
-                    .minimumScaleFactor(isMenu ? 1 : 0.9)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .padding(DevnetConsole.tilePadding)
-            // **A FIXED height in the menu, not a floor (prd §665).** Rows of
-            // tiles with different contents (one-line "Send", two-line
-            // "Create\naccount") drew at different heights while the Grid
-            // sized its rows from what each cell REPORTED, and on a phone the
-            // second row overlapped the first by ~10pt (user: "everything is
-            // always clipping"). Every menu tile is `tileFloor` tall now —
-            // the two-line label's own height (disc 36 + gap 10 + 2×28 + 28
-            // of padding = 132) — so the grid is exactly rows × 132 plus gaps.
-            .frame(maxWidth: .infinity,
-                   minHeight: DevnetConsole.tileFloor,
-                   maxHeight: isMenu ? DevnetConsole.tileFloor : nil,
-                   alignment: .leading)
-            .modifier(DevnetTileSurface(tint: filled ? tint : nil))
-            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        }
-        .buttonStyle(PressSpring())
-        .disabled(isTopUp && (topUp?.busy ?? false))
-        .dsHover()
-        .accessibilityLabel(Text(isTopUp ? String(localized: "Top up from the faucet")
-                                         : label(kind)))
-    }
-
-    private func label(_ kind: Kind) -> String {
-        switch kind {
-        case .send:  return String(localized: "Send")
-        case .topUp: return String(localized: "Top up")
-        case .extra(let extra): return extra.title
-        }
-    }
-
-    @ViewBuilder
-    private func disc(kind: Kind, filled: Bool) -> some View {
-        let isTopUp: Bool = { if case .topUp = kind { return true }; return false }()
-        ZStack {
-            Circle()
-                .fill(filled ? AnyShapeStyle(Color.white.opacity(0.22))
-                             : AnyShapeStyle(DS.fillFaint))
-                .frame(width: DevnetConsole.mark, height: DevnetConsole.mark)
-            if isTopUp, topUp?.busy == true {
-                DSSpinner()
-            } else {
-                Image(systemName: glyph(kind))
-                    .accessibilityHidden(true)
-                    .dsGlyph(20, weight: .semibold)
-                    .foregroundStyle(filled ? AnyShapeStyle(Color.white) : AnyShapeStyle(tint))
-            }
-        }
-    }
-
-    /// **THE DROP IS UNCONDITIONAL AGAIN (prd §553b).** §553's amendment gave
-    /// this an outward-arrow branch for a `handsOff` tile, which vibenet was
-    /// the only room ever to set and no longer does — a flag with one possible
-    /// value is a branch that cannot happen, so both are gone. A tile that
-    /// LEAVES the app should say so again if one ever returns.
-    private func glyph(_ kind: Kind) -> String {
-        switch kind {
-        case .send:  return "arrow.up.right"
-        case .topUp: return "drop"
-        case .extra(let extra): return extra.glyph
         }
     }
 }
 
+/// One verb in a wallet-family room's Actions block (prd §750): the push row,
+/// its glyph on the faint disc at the row's lead, the readings' insets.
+struct DevnetVerbRow: View {
+    let title: String
+    let glyph: String
+    let tint: Color
+    var fact: String? = nil
+    var busy = false
+    let act: () -> Void
+
+    var body: some View {
+        DSPushRow(title: Text(title),
+                  fact: fact.map { Text($0) },
+                  tint: tint,
+                  busy: busy,
+                  opens: false,
+                  action: act) {
+            ZStack {
+                Circle().fill(DS.fillFaint)
+                    .frame(width: DS.Face.row, height: DS.Face.row)
+                Image(systemName: glyph)
+                    .accessibilityHidden(true)
+                    .dsGlyph(13, weight: .semibold)
+                    .foregroundStyle(tint)
+            }
+        }
+        .dsScopeRow()
+    }
+}
+
+
 // MARK: - Before there is an account
 
-/// **THE SAME OBJECT SAYING A DIFFERENT VERB (prd §553).**
-///
-/// §552d gave the keyless room a sentence and a button because Home's whole
-/// content was a gated card and gating it rendered the scope blank. This keeps
-/// that fix and drops its explanation: the room says what it can do, at the
-/// size it says everything else, and what a key IS belongs where the account
-/// lives rather than under the button that makes one.
-///
-/// The copy is no longer a claim about the ROOM (user, 2026-09-01: *"not
-/// necessarily true b/c user may be following account"*). You can be watching
-/// plenty of addresses here; the only thing missing is a key on THIS phone, so
-/// the verb says what it does and nothing else.
+/// The one verb a venue has before it has a key: a row like the verbs it
+/// becomes (prd §750). `title` keeps each venue's own words.
 struct DevnetCreatePanel: View {
     let tint: Color
-    /// Two lines by design — it is a two-word verb at the crown rung and the
-    /// tile is as tall as the split panel it replaces.
     let title: String
     var busy = false
     let onCreate: () -> Void
 
     var body: some View {
-        Button {
-            DSHaptic.tap()
-            onCreate()
-        } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                Spacer(minLength: 0)
-                ZStack {
-                    Circle().fill(tint)
-                        .frame(width: DevnetConsole.mark, height: DevnetConsole.mark)
-                    if busy {
-                        DSSpinner(onFill: true)
-                    } else {
-                        Image(systemName: "key")
-                            .accessibilityHidden(true)
-                            .dsGlyph(20, weight: .semibold)
-                            .foregroundStyle(.white)
-                    }
-                }
-                Spacer().frame(height: DevnetConsole.markGap)
-                Text(title)
-                    .dsText(.stat24)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(DevnetConsole.tilePadding)
-            .frame(maxWidth: .infinity, minHeight: DevnetConsole.tileFloor, alignment: .leading)
-            .modifier(DevnetTileSurface(tint: nil))
-            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        }
-        .buttonStyle(PressSpring())
-        .disabled(busy)
-        .dsHover()
+        DevnetVerbRow(title: title.replacingOccurrences(of: "\n", with: " "),
+                      glyph: "key", tint: tint, busy: busy, act: onCreate)
+            .disabled(busy)
     }
 }
+
 
 // MARK: - The keypad
 

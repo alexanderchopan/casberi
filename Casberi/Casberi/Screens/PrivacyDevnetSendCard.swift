@@ -45,8 +45,12 @@ struct PrivacyDevnetSendCard: View {
         if keyAddress == nil {
             create
         } else {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
+            // The rows sit flush in the Actions block (prd §750); the shielded
+            // line takes the rows' own inset above them.
+            VStack(alignment: .leading, spacing: 0) {
             shieldedLine
+                .padding(.horizontal, DSRoomChassis.inset)
+                .padding(.top, DS.Space.s3)
             DevnetSendPanel(
                 tint: Self.mark,
                 // `POST /api/claim`, byte-identical to Hegotá's — so the tile
@@ -104,6 +108,8 @@ struct PrivacyDevnetSendCard: View {
                     .dsText(.label12)
                     .foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, DSRoomChassis.inset)
+                    .padding(.bottom, DS.Space.s3)
             }
         }
     }

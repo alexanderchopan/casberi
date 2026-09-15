@@ -833,6 +833,7 @@ struct VibenetRoomCard: View {
         let strip = Self.fullItems(fallback: room)
         if showsRailDeck(strip) || (onPickScope != nil && VibenetSection.shows(present: scopes)) {
             DSRoomScopeChrome(
+                source: VibenetIdentity.source,
                 sections: scopes,
                 // `.home`, not `.holdings` — §491's amendment, and the same
                 // default `resolve` has always fallen back to.

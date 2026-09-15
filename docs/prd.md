@@ -55874,3 +55874,74 @@ CardPointers, Cursor) still draw no cover.
 **Enforced by** `appstoreconnect-selftest.sh` and `aws-selftest.sh`, which now
 fail if either head card is drawn again. **UNSEEN on a device**: built for the
 iOS simulator only.
+
+## §750 — The wallet family's Home is one surface: a head, Actions, Readings, and the accounts as the floating face rail above the dock (user: "wallet looks terrible now. the direction is fine but the execution is not. … these all look like different apps each component … and now we have the accounts faces at the top it's totally confusing", then "should we put the wallets row of accounts on a third row above the tab bar like we do for socials?", 2026-09-15)
+
+**What shipped in 589, measured off the user's two screenshots.** §747's Home was
+four containers with four radii and three insets: the account deck card, two act
+tiles at `price40` (Frames' blue one filled), a grouped list of readings, and the
+dock. "Send" was 34pt bold over a balance at 22pt, so the type ran backwards. The
+deck's head — two grey placeholder faces, "All accounts", a run of address tails —
+sat where every other room puts its head and repeated the Accounts reading below
+it. And inside the room a horizontal swipe paged the deck's accounts, while
+everywhere else it walks rooms. One roster also drew "0 ETH ▲ 0 ETH (+100.0%)"
+over a flat line.
+
+**The ruling, top to bottom** (`Design/DSRoomScopeChrome.swift`, the one file that
+decides placement for Wallet, Vibenet, Hegotá, Frames and the Privacy devnet):
+
+1. **The head.** The room's crown for the account in scope, on `dsWidgetSurface`
+   at the chassis inset. The picked account's full name is the crown's caption, as
+   §450 drew it.
+2. **Actions.** The room's verbs as rows under one `WalletSectionLabel`, inside one
+   surface. `DevnetSendPanel` and `DevnetCreatePanel` draw `DevnetVerbRow`: a
+   `DSPushRow` with the glyph on a faint disc at the 26pt lead, the word in the
+   venue's tint, the faucet's report as the row's fact. The Wallet's Follow
+   address is the same shape; the sentence under it went with §748.
+3. **Readings.** `DSScopeRows` under its own label (user: *"it can't all be
+   actions"*). The user offered "Test" and "Read"; the labels are **Actions** and
+   **Readings**, because the label is shared with the Wallet room and Wallet holds
+   real money, where "Test" over Send says the wrong thing.
+4. **The accounts are the face rail above the dock**, where Farcaster and Bluesky
+   keep theirs. The chrome publishes `ShellChrome.accountRail` (source, slots,
+   scope, the room's own pick handler), keyed by source so a room being torn down
+   cannot clear the room being built. `MainSurface.roomControls` draws it as a
+   `FaceScopeRail` beside the social and GitHub rails. It floats with no plate and
+   the feed's bottom inset makes room for it, which is what the band already did.
+
+`DSAccountDeck` is deleted. With it goes the swipe between accounts: a horizontal
+swipe in these rooms walks rooms again, and an account is picked on the rail
+(user: *"swipe moves between accounts, i guess that is fine as long as…"* — the
+question does not arise).
+
+**One rule changed for every face rail.** A rail showed only while the category's
+folder was open or a scope was already live, so a person who swiped into
+Farcaster or Wallet with the folder closed never learned the faces existed.
+`roomControlsShown` is deleted: each rail's own `shows` (more than one account) is
+the whole gate. §674's glide still settles the band's height, and with the folder
+out of the gate it changes less often. The unmounted `vibenetScopeRail` in
+`MainSurface` is deleted with it.
+
+**Checked and NOT changed:** a minimized strip already keeps a captioned rail's
+names (`FaceScopeRail` shrinks the face from `Face.list` to `Face.row` and never
+hides a caption). The earlier assessment that it hid them was wrong. Re-tap on a
+wallet face stays nil: the address card is a `ThingSheetView`-local target the
+shell cannot reach.
+
+**The zero move.** `WalletBalanceHeadline.moveLine` treats a delta whose formatted
+text equals the formatted zero as no change (§83): no arrow, no colour, no
+percentage.
+
+**What enforces it.** `devnet-console-audit.py`'s checks 1, 2 and 2b (the 304pt
+tile budget, the `price40`/`stat24` rung switch, no tint fill in a menu) are
+retired with the tiles; it now asserts the shared verb row exists, the send panel
+draws its verbs through it, and neither verb panel regrows the tile rung or the
+tile surface. The unused tile constants (`tileGap`, `tilePadding`, `markGap`,
+`mark`, `tileFloor`, `menuTileFloor`) and `DevnetTileSurface` are deleted.
+`dsScopeRow()` is the one spelling of the row insets both blocks share.
+
+**UNSEEN on a device.** iOS and Mac Catalyst build; audits and the harnesses that
+read the changed files were run. The first things to look at on a phone: the
+Wallet room with two or more watched accounts and the folder closed (the rail
+should be there), a devnet with no key (one Create row), and the Privacy devnet's
+shielded line above its rows.
