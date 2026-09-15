@@ -33,6 +33,17 @@ import SwiftUI
 /// **Still no invented picture.** A face is never a photograph we did not
 /// have; decoration in the picture's slot is a claim that there was something
 /// to see (`AssetMark`'s no-invented-hue rule, one medium over).
+///
+/// **A POST IS COVERED AS A POST (prd §756).** §732 let a post card decline the
+/// cover, so the rooms whose newest thing is nearly always a post — every social
+/// room — were the ones that never got one. The post yields its card instead:
+/// the row is lifted out of its run as usual, and this card draws it with the
+/// AUTHOR's face and name (a post's row leads with the person, §744, so a cover
+/// attributing it to `Farcaster` would be the one place in the app that does
+/// not) and with the whole `postText` rather than `title`, which is an
+/// 80-character clamp written for a row with no room. Three lines, one question
+/// — `SocialRoomSource` answers all of them, because a second place deciding
+/// what a post is drifts (§396a).
 struct FeedLedeCard: View {
     let thing: Thing
     /// The Mac keyboard walk's selection. Taken as a parameter rather than
@@ -77,8 +88,15 @@ struct FeedLedeCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             }
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                // **THE MARK LEADS AS A DISC (prd §567).**
-                BridgeIcon(name: thing.source, size: DS.Face.list, circular: true)
+                // **THE MARK LEADS AS A DISC (prd §567) — UNLESS THE THING IS
+                // A POST, AND THEN THE PERSON DOES (prd §756).** A post's own
+                // row leads with the author's face and name (§744), so a cover
+                // of that post leading with the network's mark would be the one
+                // place in the app where a post is attributed to Farcaster
+                // rather than to whoever wrote it. Same picture, same fallback
+                // as `PostCard`'s lead: the avatar when there is one, the seat's
+                // mark when there is not.
+                postDisc
                     .padding(.bottom, DS.Space.s1)
                 switch face {
                 case .picture:         titleBlock(underArt: true)
@@ -142,9 +160,9 @@ struct FeedLedeCard: View {
     /// is its filename, so display type is the app shouting a string it
     /// assembled.
     private func titleBlock(underArt: Bool) -> some View {
-        let short = thing.title.count <= Self.statementLimit
+        let short = words.count <= Self.statementLimit
         return VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(thing.title)
+            Text(words)
                 .dsText(underArt ? .heading22 : (short ? .heading34 : .heading22))
                 .foregroundStyle(DS.textPrimary)
                 .multilineTextAlignment(.leading)
@@ -261,6 +279,44 @@ struct FeedLedeCard: View {
         return due.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
     }
 
+    // MARK: - The post face (prd §756)
+
+    /// Whether this cover is over a POST — the one anatomy that yields its own
+    /// card to the cover (prd §756, user: "we want the most recent post to be
+    /// big, like it is on the all screen and that pattern should be on every
+    /// screen").
+    ///
+    /// Asked THROUGH `SocialRoomSource.rowKind`, never spelled beside it: that
+    /// is §489's rule and §396a's lesson — a second place answering "is this a
+    /// post" drifts the first time one of them is fixed. It costs what the card
+    /// already spends: `rowFacts` touches `previewImageData`, which `liveBody`
+    /// reads on the line above to pick its face.
+    private var isPost: Bool {
+        SocialRoom.drawsPosts(thing.source) && SocialRoomSource.standsAlone(thing)
+    }
+
+    /// The disc: the author's picture on a post, the seat's mark on everything
+    /// else — `PostCard`'s own lead, at this card's rung.
+    @ViewBuilder private var postDisc: some View {
+        if isPost, let avatar = thing.authorAvatarURL, !avatar.isEmpty {
+            RemoteThumb(urlString: avatar, size: DS.Face.list,
+                        fallback: thing.source, circular: true)
+        } else {
+            BridgeIcon(name: thing.source, size: DS.Face.list, circular: true)
+        }
+    }
+
+    /// What the card says at size.
+    ///
+    /// A post's `title` is `titleLine()`'s 80-character clamp, written for a row
+    /// that has no room — set as a headline it is a sentence cut mid-word with
+    /// nothing saying it was cut. The cover has the room, so it takes the post
+    /// itself (`SocialRoomSource.words(of:)`, the copy `PostCard` reads). Every
+    /// other kind keeps its title, which for them IS the thing's name.
+    private var words: String {
+        isPost ? SocialRoomSource.words(of: thing) : thing.title
+    }
+
     // MARK: - Shared pieces
 
     /// Who and when — the two facts the enlarged title drops by not being a
@@ -276,6 +332,16 @@ struct FeedLedeCard: View {
     /// which is a real regression to buy a tidier line.
     private var eyebrow: some View {
         HStack(spacing: DS.Space.s2) {
+            // The person leads on a post (prd §756), in the primary tier, and
+            // the network follows in the quiet one — the order the row itself
+            // uses, and the order that makes "who" the first thing read.
+            // `verbatim:` because a handle is data, never a string to localize.
+            if isPost {
+                Text(verbatim: SocialRoomSource.author(of: thing))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+            }
             Text(thing.source)
                 .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)

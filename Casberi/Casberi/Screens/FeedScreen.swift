@@ -3577,10 +3577,13 @@ struct FeedScreen: View {
     ///   caller once the fold has run (the real floor; see `bundledSections`).
     ///   A room with one thing in it covers that thing and shows nothing below,
     ///   which is what a room holding one thing looks like.
-    /// - The newest thing `standsAlone` — a consent card, a token pulse, a post
-    ///   card are full anatomies sized for their own reasons, and wrapping one
-    ///   in a cover is two rhythm-breakers stacked (for `ApprovalCard` it would
-    ///   bury the verbs). NOTE it declines rather than reaching PAST it: a
+    /// - The newest thing `standsAlone` AND IS NOT A POST (`coverDeclines`,
+    ///   prd §756) — a consent card and a token pulse are full anatomies sized
+    ///   for their own reasons, and wrapping one in a cover is two
+    ///   rhythm-breakers stacked (for `ApprovalCard` it would bury the verbs).
+    ///   A POST yields its card to the cover, which is the one thing that
+    ///   changed: it does not draw twice, because the covered row is lifted out
+    ///   of its run. NOTE it declines rather than reaching PAST it: a
     ///   stands-alone row keeps its own position at the top of the rows, so
     ///   covering something older would put a newer row underneath an older
     ///   card — the very thing this rewrite exists to make impossible.
@@ -3609,9 +3612,36 @@ struct FeedScreen: View {
             // later one is too.
             guard isRoom || Date.now.timeIntervalSince(thing.capturedAt) <= Self.ledeMaxAge
             else { return nil }
-            return standsAlone(thing) ? nil : thing.id
+            return coverDeclines(thing) ? nil : thing.id
         }
         return nil
+    }
+
+    /// The COVER's veto, which is `standsAlone` minus the posts (prd §756,
+    /// user: "we want the most recent post to be big, like it is on the all
+    /// screen and that pattern should be on every screen").
+    ///
+    /// `standsAlone` answers a different question — does this row draw on a card
+    /// of its own, i.e. does it break the day's run — and it must keep
+    /// answering it for the run layout, so the cover asks its own. §732 made
+    /// them the same answer ("option A": a post card already draws at card
+    /// size, and a second anatomy for the same post is two rhythm-breakers
+    /// stacked), and the user reversed it: a social room's newest thing is
+    /// nearly always a post, so option A left the one room family whose newest
+    /// thing IS the point without the cover every other room has.
+    ///
+    /// The "two anatomies" objection is answered by the cover itself rather
+    /// than by declining: the covered row is LIFTED OUT of its run (§732), so
+    /// the post draws once, and `FeedLedeCard` draws it as a post — the
+    /// author's face, the author's name, the whole `postText` (§756).
+    ///
+    /// Everything else that stands alone still declines: a consent card (its
+    /// verbs would be buried), a token pulse, a chat takeaway, and an approval
+    /// that happens to have landed in a social room.
+    private func coverDeclines(_ thing: Thing) -> Bool {
+        guard standsAlone(thing) else { return false }
+        guard SocialRoom.drawsPosts(thing.source) else { return true }
+        return !SocialRoomSource.standsAlone(thing)
     }
 
     /// The away window lifted into its own section (prd §389) — "Since you

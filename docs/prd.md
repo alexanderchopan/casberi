@@ -56201,3 +56201,60 @@ Both fire under mutation.
 
 Not built or run here (no Swift toolchain in this checkout); the simulator pass
 is owed.
+
+## §756 — A post yields its card to the cover, and the cover draws it as a post (user: "we want the most recent post to be big, like it is on the all screen and that pattern should be on every screen", then on three shapes "one cover, taught the author" and "none — rooms with a head keep it", 2026-09-15)
+
+**What §732 decided, and why it was reversed.** "Option A": a post or thread card
+declines the cover, on the reasoning that the newest post already draws at card
+size and a second anatomy for the same post is two rhythm-breakers stacked. That
+reasoning is sound about the stacking and wrong about the outcome, because a
+social room's newest thing is nearly always a post — so option A left the one
+room family whose newest thing IS the point as the only family with no cover.
+§755 had just fixed the other half of the same silence.
+
+**The stacking objection is answered by the cover, not by declining.** The
+covered row is LIFTED OUT of its run (§732), so the post draws exactly once. What
+changes is which anatomy draws it.
+
+**The ruling, in three parts** (`FeedScreen.coverDeclines`, `FeedLedeCard`,
+`SocialRoomSource`):
+
+1. **The cover's veto is its own question.** `standsAlone` answers "does this row
+   break the day's run", which the run layout still asks for every row, so the
+   cover asks `coverDeclines`: stands alone, and is not a post. A consent card
+   still declines (a cover over it buries its verbs), and so do a token pulse, a
+   chat takeaway, and an approval that happens to have landed in a social room —
+   the post test goes through `SocialRoomSource.standsAlone`, i.e. `rowKind`,
+   never through the source name alone.
+2. **The person leads, not the network.** A post's row leads with the author's
+   face and name (§744). A cover of that post leading with `BridgeIcon` would be
+   the one place in the app where a post is attributed to Farcaster rather than
+   to whoever wrote it. The disc is the author's avatar with `PostCard`'s own
+   fallback, and the eyebrow reads author · source · time.
+3. **The words are the post.** `title` is `titleLine()`'s 80-character clamp,
+   written for a row with no room; set as a headline it is a sentence cut
+   mid-word with nothing saying it was cut. The cover has the room, so it takes
+   `postText`. Every other kind keeps its title, which for those IS the thing's
+   name.
+
+**One copy of two facts** (`SocialRoomSource.author(of:)` / `.words(of:)`). There
+were two, in `PostCard` and `SocialThreadCard`, the second carrying the comment
+"Same Nostr-hex-vs-real-handle split as `PostCard.author` above" — §396a's shape
+exactly, one question answered beside itself. The cover would have been a third.
+Both cards now read the one copy.
+
+**Not extended, by the user's own answer**: the rooms with a real head keep it
+(§749's carve-out), the five mixed rooms still wait for their picture grid to
+draw nothing, Calendar / Reminders / Cursor / CardPointers lead with what is NEXT
+rather than what is newest, and Gmail's waiting section and Bitrefill's balance
+are ledes themselves.
+
+**Guarded** in `feed-reading-selftest.sh`: the cover asks `coverDeclines`, that
+function starts from `standsAlone`, lets a post through, and decides what a post
+is through `rowKind`; the card leads a post with `RemoteThumb` on
+`authorAvatarURL`, takes its words from `SocialRoomSource`, and draws them; both
+owners exist; and neither the card nor `ShapedRows` unpacks `postText` by hand
+again. Ten mutations, ten catches.
+
+Not built or run here (no Swift toolchain in this checkout); the simulator pass
+is owed, and the picture of a post at head size is a design checkpoint.

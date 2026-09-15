@@ -2235,27 +2235,16 @@ struct PostCard: View {
     /// on separate evidence.
     var whole: Bool = false
 
-    /// Empty-string handles exist (an unmigrated Farcaster row) — fall back
-    /// to the source name, same guard the avatar line already carries. A
-    /// Nostr `authorHandle` is the raw hex pubkey (the stable matching key,
-    /// not a display string — see `NostrIngest.land`), so it alone routes
-    /// through `shortHandle` for a short npub; Farcaster/Bluesky already
-    /// store a real handle and stay exactly as they render today.
-    private var author: String {
-        guard let handle = thing.authorHandle, !handle.isEmpty else { return thing.source }
-        return thing.source == "Nostr" ? SocialThread.shortHandle(handle) : handle
-    }
+    /// Who the post is by — `SocialRoomSource.author(of:)`, which is where the
+    /// three copies of this became one (prd §756). The empty-handle fallback
+    /// and the Nostr hex split live there.
+    private var author: String { SocialRoomSource.author(of: thing) }
 
     /// The words themselves (2026-07-27, the room's own catch-up with the
-    /// sheet's 2026-07-16 ruling): `postText` is the FULL post; `title` is
-    /// only ever `titleLine()`'s 80-character clamp, built for a row that
-    /// has no room, in a room whose entire content IS the words. Falls back
-    /// to `title` for a post landed before `postText` existed (a heal fills
-    /// it in on the next sync) — never a permalink.
-    private var words: String {
-        let full = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return full.isEmpty ? thing.title : full
-    }
+    /// sheet's 2026-07-16 ruling) — the full post, never the row's 80-character
+    /// `title`, in a room whose entire content IS the words. One copy since prd
+    /// §756: `SocialRoomSource.words(of:)`.
+    private var words: String { SocialRoomSource.words(of: thing) }
 
     /// How many lines the words get — nil for all of them.
     ///
@@ -2474,18 +2463,11 @@ struct SocialThreadCard: View {
     /// the head of a chain can be a long-form post.
     var whole: Bool = false
 
-    /// Same Nostr-hex-vs-real-handle split as `PostCard.author` above.
-    private var author: String {
-        guard let handle = head.authorHandle, !handle.isEmpty else { return head.source }
-        return head.source == "Nostr" ? SocialThread.shortHandle(handle) : handle
-    }
+    /// `PostCard.author`'s answer, from the one copy (prd §756).
+    private var author: String { SocialRoomSource.author(of: head) }
 
-    /// Same catch-up as `PostCard.words` (2026-07-27) — the full post, not
-    /// the row's 80-char `title`.
-    private func words(_ thing: Thing) -> String {
-        let full = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return full.isEmpty ? thing.title : full
-    }
+    /// `PostCard.words`' answer, from the one copy (prd §756).
+    private func words(_ thing: Thing) -> String { SocialRoomSource.words(of: thing) }
 
     /// `PostCard.clamp`'s ladder, read through that type's own constants so
     /// the two cards can never disagree about how long a tweet is.

@@ -83,6 +83,38 @@ enum SocialRoomSource {
         rowKind(thing).standsAlone
     }
 
+    // MARK: - A post, as the reader sees it
+
+    /// The person a post is BY, as a row draws them.
+    ///
+    /// **ONE COPY, because there were three (prd §756).** `PostCard.author`,
+    /// `SocialThreadCard.author` and now the cover each need the same answer,
+    /// and the two that existed carried the same three lines under a comment
+    /// saying so ("Same Nostr-hex-vs-real-handle split as `PostCard.author`
+    /// above"). That is the §396a shape exactly: one question answered beside
+    /// itself, drifting the first time somebody fixes one.
+    ///
+    /// Empty-string handles exist (an unmigrated Farcaster row), so the source
+    /// name is the fallback. A Nostr `authorHandle` is the raw hex pubkey — the
+    /// stable matching key, not a display string (see `NostrIngest.land`) — so
+    /// it alone routes through `shortHandle`; Farcaster and Bluesky store a real
+    /// handle and are returned as they are.
+    static func author(of thing: Thing) -> String {
+        guard let handle = thing.authorHandle, !handle.isEmpty else { return thing.source }
+        return thing.source == "Nostr" ? SocialThread.shortHandle(handle) : handle
+    }
+
+    /// The words themselves — `postText` is the FULL post; `title` is only ever
+    /// `titleLine()`'s 80-character clamp, built for a row that has no room.
+    ///
+    /// Falls back to `title` for a post landed before `postText` existed (a heal
+    /// fills it in on the next sync) — never a permalink. One copy, for
+    /// `author`'s reason.
+    static func words(of thing: Thing) -> String {
+        let full = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return full.isEmpty ? thing.title : full
+    }
+
     /// Whether a day's rows may be called POSTS — see `SocialRoom.groupIsPosts`.
     static func groupIsPosts(_ things: [Thing]) -> Bool {
         SocialRoom.groupIsPosts(things.map(rowFacts))

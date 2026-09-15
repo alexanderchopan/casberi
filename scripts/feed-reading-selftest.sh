@@ -41,13 +41,18 @@ ARTICLE="Casberi/Casberi/Model/FeedArticleText.swift"
 BODY="Casberi/Casberi/Screens/ArticleBody.swift"
 CONTENT="Casberi/Casberi/Screens/ThingContent.swift"
 INSIGHT="Casberi/Casberi/Model/FeedInsight.swift"
+# The cover and the two post cards — §756's three readers of one answer.
+LEDE="Casberi/Casberi/Screens/FeedLedeCard.swift"
+ROWS="Casberi/Casberi/Screens/ShapedRows.swift"
+SOCSRC="Casberi/Casberi/Model/SocialRoomSource.swift"
 # FeedScreen is split across files (prd §718). Checks read the room as ONE text,
 # so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
 cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 RENDER="Casberi/Casberi/GenUI/GenRenderer.swift"
-for f in "$HEALTH" "$SOURCE" "$ARTICLE" "$BODY" "$CONTENT" "$INSIGHT" "$FEED" "$RENDER"; do
+for f in "$HEALTH" "$SOURCE" "$ARTICLE" "$BODY" "$CONTENT" "$INSIGHT" "$FEED" "$RENDER" \
+         "$LEDE" "$ROWS" "$SOCSRC"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -68,6 +73,8 @@ PY
 strip_comments "$ARTICLE" > "$TMP/article.nocomment"
 strip_comments "$FEED"    > "$TMP/feed.nocomment"
 strip_comments "$BODY"    > "$TMP/body.nocomment"
+strip_comments "$LEDE"    > "$TMP/lede.nocomment"
+strip_comments "$ROWS"    > "$TMP/rows.nocomment"
 
 # --- drift guards -----------------------------------------------------------
 # Facts the compiled function can't prove on its own.
@@ -183,10 +190,61 @@ grep -q 'guard isRoom || Date.now.timeIntervalSince(thing.capturedAt) <= Self.le
 grep -q 'if memo.lede != nil, source == "All",' "$FEED" \
   || { echo "✗ the post-fold ledeMinRows floor applies to rooms again — a quiet"; \
        echo "  room would lose the cover this rule exists to give it"; exit 1; }
-# …and `standsAlone` is NOT freshness, so it still applies in both.
-grep -q 'return standsAlone(thing) ? nil : thing.id' "$FEED" \
-  || { echo "✗ standsAlone no longer declines the cover — a consent card, a post"; \
-       echo "  card or a token pulse would draw twice, in two anatomies"; exit 1; }
+# …and the anatomy veto is NOT freshness, so it still applies in both. It is
+# `coverDeclines` since prd §756 — `standsAlone` minus the posts — and it must
+# stay a separate question from `standsAlone`, which the run layout still asks
+# for every row.
+grep -q 'return coverDeclines(thing) ? nil : thing.id' "$FEED" \
+  || { echo "✗ the cover no longer asks coverDeclines — a consent card or a token"; \
+       echo "  pulse would draw twice, in two anatomies (prd §723/§756)"; exit 1; }
+_veto=$(awk '/private func coverDeclines\(/{f=1} f{print} f&&/^    }$/{exit}' "$TMP/feed.nocomment")
+case "$_veto" in
+  *"guard standsAlone(thing) else { return false }"*) ;;
+  *) echo "✗ coverDeclines no longer starts from standsAlone (prd §756) — a consent"; \
+     echo "  card's verbs would be buried under a cover of the same thing."; exit 1;;
+esac
+case "$_veto" in
+  *"SocialRoom.drawsPosts(thing.source)"*) ;;
+  *) echo "✗ coverDeclines no longer lets a POST through (prd §756) — the rooms whose"; \
+     echo "  newest thing is nearly always a post are exactly the ones the user asked"; \
+     echo "  to cover."; exit 1;;
+esac
+case "$_veto" in
+  *"SocialRoomSource.standsAlone(thing)"*) ;;
+  *) echo "✗ coverDeclines decides what a post is by its SOURCE alone (prd §756) — a"; \
+     echo "  like, a follow or an approval landed in a social room is not a post, and"; \
+     echo "  the answer must come from rowKind (§489/§396a)."; exit 1;;
+esac
+# THE COVER DRAWS A POST AS A POST (prd §756): the author's face, the author's
+# name, the whole postText. Each half fails invisibly — a cover under the wrong
+# face still looks like a cover.
+case "$(cat "$TMP/lede.nocomment")" in
+  *"RemoteThumb(urlString: avatar"*) ;;
+  *) echo "✗ the cover no longer leads a post with the author's picture (prd §756/§744)"; \
+     echo "  — it would attribute the post to the network instead of the person."; exit 1;;
+esac
+_words=$(awk '/private var words: String/{f=1} f{print} f&&/^    }$/{exit}' "$TMP/lede.nocomment")
+case "$_words" in
+  *"SocialRoomSource.words(of: thing)"*) ;;
+  *) echo "✗ the cover sets a post's 80-character title as its headline (prd §756) —"; \
+     echo "  titleLine()'s clamp is built for a row with no room, and the cover has it."; exit 1;;
+esac
+grep -q 'Text(words)' "$TMP/lede.nocomment" \
+  || { echo "✗ the cover's title block no longer draws \`words\` (prd §756) — the post"; \
+       echo "  branch would be computed and thrown away."; exit 1; }
+# ONE COPY OF THE POST'S TWO FACTS (prd §756, the §396a class). Three readers
+# now — the cover and the two post cards — and the two that existed before
+# carried the same lines under a comment saying they were the same lines.
+grep -q 'static func author(of thing: Thing)' "$SOCSRC" \
+  || { echo "✗ SocialRoomSource no longer owns the author line (prd §756)"; exit 1; }
+grep -q 'static func words(of thing: Thing)' "$SOCSRC" \
+  || { echo "✗ SocialRoomSource no longer owns the post's words (prd §756)"; exit 1; }
+for f in "$TMP/rows.nocomment" "$TMP/lede.nocomment"; do
+  grep -q 'postText ?? ""' "$f" \
+    && { echo "✗ $(basename "$f" .nocomment) unpacks postText by hand again (prd §756) —"; \
+         echo "  that is the third copy of a two-line answer, which is how §396a's bug"; \
+         echo "  reached three rooms. Read SocialRoomSource.words(of:)."; exit 1; }
+done
 grep -q 'leaderboard' "$TMP/feed.nocomment" \
   && { echo "✗ FeedScreen's code still mentions a leaderboard (prd §723)"; exit 1; }
 # THE SHAPED ROOMS COVER TOO (prd §732). §723 reached only `bundledSections`;
