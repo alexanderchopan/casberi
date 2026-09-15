@@ -26,6 +26,11 @@ Every index line below names the file to open. **Keep this file under 100KB** �
 - `prototype/` — visual spec. `design/app-icon/` — icon SVG sources.
 - The pbxproj is **hand-authored** (objectVersion 77, file-system-synchronized groups). New source files in synced folders are picked up automatically; Info.plist keys and target settings are edited directly in the pbxproj.
 
+## Xcode MCP and Apple docs (RULE)
+
+- **Xcode's MCP server is registered at user scope** (`claude mcp add --scope user --transport stdio xcode -- xcrun mcpbridge`, Xcode 27). It only connects while Xcode is running with the project open and *Xcode > Settings > Intelligence > "Allow external agents to use Xcode tools"* is on. Prefer its build/test/diagnostic tools over a raw `xcodebuild` when the session has it.
+- **Read Apple developer docs as Markdown, never the HTML page** (it is a JS app and fetches as an empty title). For `/documentation` pages append `.md` (`https://developer.apple.com/documentation/swiftui/view.md`); for `/design` and `/tutorials` pages also insert `/tutorials/data` before the path (`https://developer.apple.com/tutorials/data/design/human-interface-guidelines/buttons.md`); the few pages with no Markdown version take `.json` in place of `.md`.
+
 ## Building (critical)
 
 From the canonical `~/Developer/casberi` copy, a plain build codesigns cleanly — no workaround needed:
