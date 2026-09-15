@@ -504,22 +504,7 @@ struct FaceScopeRail: View {
 
     @ViewBuilder
     private func face(_ face: Item.Face) -> some View {
-        switch face {
-        case .wallet(let address):
-            WalletFace(address: address, size: faceSize, circular: true)
-        case .avatar(let url, let source):
-            if let url, !url.isEmpty {
-                RemoteThumb(urlString: url, size: faceSize, fallback: source, circular: true)
-            } else {
-                BridgeIcon(name: source, size: faceSize, circular: true)
-            }
-        case .mark(let url, let source):
-            if let url, !url.isEmpty {
-                RemoteThumb(urlString: url, size: faceSize, fallback: source, circular: false)
-            } else {
-                BridgeIcon(name: source, size: faceSize, circular: false)
-            }
-        }
+        RailFace(face: face, size: faceSize)
     }
 
     /// The ring a slot wears, following the FACE's own shape — a squircle mark
@@ -764,11 +749,11 @@ enum PrivacyDevnetScopeRail {
 }
 
 enum WalletScopeRail {
-    /// Whether the rail draws at all — which is ALSO the test for whether it,
-    /// rather than a room's own header, carries the add-a-wallet verb
-    /// (`FeedScreen.showsAddHint`). One rule with two readers on two different
-    /// screens, so it is spelled once here: two `+`s a thumb-width apart, both
-    /// opening the wallet manager, is one control too many, and a copy of this
+    /// Whether this room has a roster worth scoping at all. It outlived the
+    /// rail it was named for (§744): the shell reads it to decide whether the
+    /// room takes an account scope, and the crown card reads it to decide
+    /// whether to name the pick. One rule with two readers on two different
+    /// screens, so it is spelled once here, and a copy of this
     /// predicate in the feed would be free to drift out of step with the rail it
     /// is describing.
     static func shows(source: String, watched: Int) -> Bool {
@@ -784,23 +769,16 @@ enum WalletScopeRail {
             && watched > 1
     }
 
-    static func items(_ addresses: [WalletStore.WatchedAddress]) -> [FaceScopeRail.Item] {
-        addresses.map { addr in
-            let label = addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label
-            return FaceScopeRail.Item(
-                id: addr.address,
-                caption: label,
-                face: .wallet(address: addr.address),
-                tooltip: addr.label.isEmpty ? addr.address : "\(addr.label) · \(addr.address)")
-        }
-    }
-
-    /// Hex compares case-insensitively (EIP-55 case is a checksum), base58
-    /// exactly (Solana case is identity) — `WalletWatch.sameAddress`, which the
-    /// scope machinery (`WalletStore.scopeMatches`) already runs on.
-    static func matches(_ scope: String, _ id: String) -> Bool {
-        WalletWatch.sameAddress(scope, id)
-    }
+    // **`items` AND `matches` ARE DELETED (prd §744, 2026-09-15).** The wallet
+    // room draws no `FaceScopeRail` any more — its accounts are the cards of
+    // `DSAccountDeck`, built by `FeedScreen.walletAccountSlots` — so the two
+    // members that existed only to feed that rail went with it, per §723: a
+    // feature deleted from the surface is deleted from the model, or it is the
+    // dead control one layer down that no screen sweep sees.
+    //
+    // `shows` survives because it never belonged to the rail alone: the shell
+    // and the crown card both ask it whether this room has a roster worth
+    // scoping, and both still do.
 
     /// What the CROWN CARD calls the scoped wallet (prd §450) — its name, and
     /// the address tail that goes beside it.
@@ -959,5 +937,41 @@ enum HegotaScopeRail {
     static func matches(_ scope: String?, _ id: String) -> Bool {
         guard let scope else { return false }
         return scope.caseInsensitiveCompare(id) == .orderedSame
+    }
+}
+
+/// THE ONE DRAWER FOR A RAIL ITEM'S FACE (2026-09-15, prd §744).
+///
+/// It was `FaceScopeRail.face(_:)` and stayed private for as long as the rail
+/// was the only thing that drew one. `DSAccountDeck` draws the same faces at
+/// card size, and the alternative was a second copy of this switch — which is
+/// exactly how the wallet rail and `SocialRosterHero` drifted into the three
+/// differences §362 spent a pass collapsing.
+///
+/// The circle/squircle split is load-bearing rather than cosmetic: a project's
+/// mark in a circle says a PERSON published it (the same distinction
+/// `ShapedRows` draws between `faceSources` and `publisherMarkSources`), so
+/// `.mark` never rounds and `.avatar` always does.
+struct RailFace: View {
+    let face: FaceScopeRail.Item.Face
+    let size: CGFloat
+
+    var body: some View {
+        switch face {
+        case .wallet(let address):
+            WalletFace(address: address, size: size, circular: true)
+        case .avatar(let url, let source):
+            if let url, !url.isEmpty {
+                RemoteThumb(urlString: url, size: size, fallback: source, circular: true)
+            } else {
+                BridgeIcon(name: source, size: size, circular: true)
+            }
+        case .mark(let url, let source):
+            if let url, !url.isEmpty {
+                RemoteThumb(urlString: url, size: size, fallback: source, circular: false)
+            } else {
+                BridgeIcon(name: source, size: size, circular: false)
+            }
+        }
     }
 }

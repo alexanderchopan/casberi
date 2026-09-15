@@ -6553,9 +6553,6 @@ struct FeedScreen: View {
             // directly below and repeating three of it at the top is §208's own
             // "never say one thing twice"; in every other scope the room is
             // answering a different question entirely.
-            let latest = section == .home
-                ? Array(all.prefix(Self.walletTodayRows))
-                : []
 
             // The hero, and the only block with no header of its own: a title
             // above the first thing on a screen is noise (see
@@ -6569,24 +6566,13 @@ struct FeedScreen: View {
             // `Section` still takes list spacing, so a zero-height box is not a
             // absent one, and the count of sections above the bar has to match
             // on every scope for the bar to land in the same place.
-            if section == .home {
-                // The same one template as every scope below and as every
-                // vibenet scope (prd §495). Home is a bare view now too, so
-                // the Section and its row modifiers are written once here
-                // rather than inside the builder.
-                Section {
-                    // `reservesHeadline: false` — the crown IS this scope's
-                    // headline (`stat24` since §551), so it stands IN the row rather
-                    // than under it, which is what puts its first pixel level
-                    // with every other scope's headline.
-                    DSRoomSlot(headline: nil, reservesHeadline: false) {
-                        walletTilesSection(visible, streamTotal: all.count, drawsChart: true)
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-                }
-            }
+            // **THE CHROME LEADS, AND ON HOME IT IS THE WHOLE ROOM** (prd
+            // §744). The crown no longer stands in a section of its own: it
+            // rides the account card inside `walletScopeChromeSection`, which
+            // is what gives a watched wallet's name the card's full width
+            // instead of a 66pt rail slot's leftovers. Off Home this emits the
+            // scope header only, and the figure section below is untouched.
+            walletScopeChromeSection(section, visible: visible, streamTotal: all.count)
             // THE TOGGLE SITS BELOW THE SPARKLINE, IN THE CONTENT (user ruling,
             // 2026-08-26: *"we need to have those toggles be below the
             // sparkline"*, and *"we cannot have four rows of chips"*).
@@ -6670,7 +6656,6 @@ struct FeedScreen: View {
                     .listRowInsets(WalletCardStyle.rowInsets)
                 }
             }
-            walletScopeRailSection(section)
             // THE FOUR `walletGroupHeader` GROUPS BECOME SCOPES (prd §483).
             // Renamed to short nouns and split twice — NFTs out of "What you
             // hold", and "What it's doing" into Positions and Risk — so the
@@ -6684,22 +6669,23 @@ struct FeedScreen: View {
             // kinds of thing.
             switch section {
             case .home:
-                // **HOME'S SECOND HALF IS THE FLOW BAND (prd §690, user: "Home
-                // list could be the sankey … then we have home filled").** The
-                // crown's line says how much moved; the band says through whom
-                // — the total, decomposed, which is Home-shaped and not a
-                // preview of Activity. "Recent" that drew here was Activity
-                // filtered to four rows, the copy Hegotá's own note calls "a
-                // worse copy of the scope beside it." The devnets fill this
-                // half with their verb tiles; the Wallet, watch-only, fills it
-                // with the one reading only it has.
-                Section {
-                    walletFlowSection
-                        .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
-                                                  bottom: 0, trailing: DS.Space.s4))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
+                // **HOME HAS NO LIST OF ITS OWN (prd §744).** It held the flow
+                // band (§690), which was the right answer while the scopes
+                // were a 12pt chip strip: the room needed something below the
+                // bar and the band was the one reading only the Wallet has.
+                // The scopes are door rows now, drawn by the chrome above, and
+                // they ARE Home's list — so a band under them would be a
+                // second thing to read before the doors, which is the shape
+                // this direction exists to delete.
+                //
+                // The band is REHOMED rather than dropped, because §723 is
+                // blunt about the alternative: a feature deleted from the
+                // surface is deleted from the model, and an unmounted
+                // `walletFlowSection` is exactly the dead control one layer
+                // down that no screen sweep sees. It draws at the head of
+                // Activity now — it decomposes the moves, and Activity is
+                // where the moves are.
+                EmptyView()
             case .activity:
                 // **WHAT ALREADY HAPPENED, AND ONLY THAT** (user ruling, prd
                 // §483: *"on activity below the toggle bar, this is
@@ -6718,6 +6704,17 @@ struct FeedScreen: View {
                 // and nothing is lost; they simply draw nowhere until a scope
                 // earns them. Risk is the likely home (a deadline is a hazard
                 // with a clock) but that is a ruling, not a default.
+                // **THE FLOW BAND, REHOMED FROM HOME (prd §744).** It led
+                // Home until the scopes became rows; the total decomposed
+                // belongs with the moves it decomposes, which is here.
+                Section {
+                    walletFlowSection
+                        .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                                                  bottom: DSRoomChassis.contentGap,
+                                                  trailing: DS.Space.s4))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
                 walletStreamSections(walletStreamRows(all), nextEventID: nextEventID)
                 walletSeeAllSection(total: all.count)
             case .holdings:
@@ -8511,8 +8508,11 @@ struct FeedScreen: View {
     ///     and a shadowed name here would be a silent wrong figure.
     ///   - streamTotal: how many rows the stream holds in all, for the card's
     ///     own door.
+    // **NOT `private` (prd §744).** The crown rides the account card now, and
+    // that card is built in `FeedScreen+WalletRoom.swift` — `private` is
+    // file-scoped in Swift, so an extension in another file cannot see it.
     @ViewBuilder
-    private func walletTilesSection(_ visible: [Thing],
+    func walletTilesSection(_ visible: [Thing],
                                     latest: [Thing] = [],
                                     streamTotal: Int = 0,
                                     // **THE SPARKLINE IS HOME'S VISUAL, not the

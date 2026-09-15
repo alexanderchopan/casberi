@@ -224,117 +224,179 @@ extension FeedScreen {
     /// slower.
     static var walletVisualSlot: CGFloat { DSRoomChassis.visualSlot }
 
-    /// The wallet scope rail — the Address Book door, "All", and a face per
-    /// watched wallet — drawn in the room's own content directly under the
-    /// sparkline (prd §483, 2026-08-26, user: *"i now think these avatars and
-    /// address book should go BELOW the sparkline"*, and *"the toggles need to
-    /// go immediately below them"*).
+    /// THE ROOM'S CHROME, AND THERE IS NO BAR IN IT (prd §744, 2026-09-15).
     ///
-    /// **It was pinned in `MainSurface.roomControls` until this.** That is what
-    /// made the room four strips of chips deep before any content — source
-    /// chips, venue rail, this, then the scope toggle — and pushed the crown to
-    /// about 45% down the screen. Both this and the toggle come down; the crown
-    /// and its chart are what the room opens with.
+    /// Was `walletScopeRailSection` — the fused rail slab (§547), one deck of
+    /// faces over one deck of chips. Two complaints killed it and both were
+    /// measurable rather than matters of taste: a watched wallet's name cut at
+    /// ten characters (`accountle…` beside `alexanderc…`, on a roster whose
+    /// names differ only past the cut), and a scope was a 12pt word with no
+    /// rest fill under it, which is a caption's size and a caption's weight
+    /// for what the user rightly called *"a category of the wallet"*.
     ///
-    /// **Derived from the FULL watch list, never from the scoped room.** The
-    /// trap, paid for in Vibenet the same afternoon: derive the items from the
-    /// scoped room and picking a face collapses the strip to one item, the
-    /// `shows(…)` gate then hides it, and the control deletes itself the moment
-    /// it is used — with no way back to the other wallets.
-    /// **THE FUSED RAIL** (prd §547, 2026-09-01) — the account rail and the
-    /// scope switcher as ONE slab, where they were two strips four points
-    /// apart disagreeing about bleed, shape and selection. `DSRoomRailSlab`
-    /// carries the reasoning; what changes HERE is that the rail gives up its
-    /// full bleed to share the switcher's inset, and the two `Section`s become
-    /// one.
+    /// `DSRoomScopeChrome` carries the whole ruling; what lives here is the
+    /// wallet's own three answers to it.
     ///
-    /// **It keeps its name deliberately.** This is still the section that
-    /// mounts the wallet's scope rail — `category-fold-selftest` asks for it
-    /// by that name, and a rename to advertise the extra deck would cost that
-    /// guard for nothing.
+    /// **The accounts.** Whole names, never shortened by this caller — the
+    /// card exists to have room for one. "All" leads, as the rail's own All
+    /// slot did, and says what it is made of rather than repeating the word.
     ///
-    /// The gate is `||`, not `&&`: a room with one watched wallet has no rail
-    /// and a room with one reading has no switcher, and either alone is still
-    /// a slab worth drawing. With neither, nothing is emitted rather than an
-    /// empty glass box.
+    /// **The crown rides the card.** `walletTilesSection` is the room's
+    /// identity and it reads the CURRENT pick, so it draws on the card that
+    /// is showing and the neighbours reserve its box. KNOWN, and named rather
+    /// than hidden: a card mid-drag shows its head over an empty crown box
+    /// until the page settles, because the crown's inputs (`portfolio`,
+    /// `walletLive`, `selectedWallet`) are room state and not parameters. The
+    /// fix is to thread a scope through `walletTilesSection` and its four
+    /// sources, which is a change to the READING layer and does not belong in
+    /// the pass that moves the chrome.
+    ///
+    /// **The act.** Watching a wallet had no door in the room at all — the
+    /// only one is `WalletWatchField` on the account page, five taps away
+    /// behind the room gear (user, 2026-09-15: *"the wallets follow button is
+    /// missing and that's a fail"*). This is a DOOR to that field and not a
+    /// second field, so §466's "one way to watch a wallet" is intact: the tile
+    /// pushes `WalletScreen`, exactly as the four bridge setup screens' own
+    /// `Watch a wallet` slabs do, and it wears their word rather than a new
+    /// one. It rides the ALL card only — watching is something the room does,
+    /// not something one account does.
     @ViewBuilder
-    func walletScopeRailSection(_ active: WalletSection) -> some View {
-        let showsRail = WalletScopeRail.shows(source: source,
-                                              watched: wallet.addresses.count)
-        let showsSwitcher = WalletSection.shows(present: chrome.walletSections)
-        if showsRail || showsSwitcher {
-            Section {
-                DSRoomRailSlab(
-                    showsRail: showsRail,
-                    showsSwitcher: showsSwitcher,
-                    sections: chrome.walletSections,
-                    active: active,
-                    attention: chrome.walletSectionAttention,
-                    // Instant, for the reason vibenet's own pick states at
-                    // length (prd §495): animating a swap between two slots of
-                    // different natural height moves everything below the bar
-                    // and settles it back.
-                    onPick: { picked in chrome.walletSection = picked }
-                ) {
-                    FaceScopeRail(
-                        items: WalletScopeRail.items(wallet.addresses),
-                        scope: chrome.walletScope,
-                    // Never folded now: `compact` existed for a pinned strip
-                    // that had to yield height to the content scrolling under
-                    // it. In the content there is nothing to yield to.
-                    compact: false,
-                    // **NAMES ARE BACK (prd §483 — amends §450).** That ruling
-                    // dropped the rail's captions on the strength of the crown
-                    // card naming the pick one row down. Two things since have
-                    // taken that away: the caption itself is gone (it read
-                    // "Across your accounts", which the lit "All" already said),
-                    // and the face stopped carrying identity at all — it is one
-                    // uniform person mark now, tinted only weakly. Five
-                    // identical glyphs with nothing under them is not a roster.
-                    //
-                    // Which is the trade §483 made deliberately, not a
-                    // regression: identity moved from a colour you had to learn
-                    // to a WORD you can read. The caption is where it lives now,
-                    // so it has to be drawn.
-                        namesInRoom: false,
-                        // A deck of the slab, not a strip of its own (prd §547).
-                        embedded: true,
-                        matches: WalletScopeRail.matches,
-                        onPick: { picked in
-                            withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
-                        },
-                        // No re-tap verb: there is no "deeper" a watched address
-                        // goes that the room you are already in does not show.
-                        onReTap: nil,
-                        // ONE slot, not two (prd §466) — watching another wallet
-                        // and seeing the roster are the same screen, so an ADD slot
-                        // would point at the book door beside it.
-                        addTitle: nil,
-                        onAdd: nil)
+    func walletScopeChromeSection(_ active: WalletSection,
+                                  visible: [Thing],
+                                  streamTotal: Int) -> some View {
+        // ONE pass, read eight times — see `walletScopeReadings`.
+        let readings = walletScopeReadings(streamTotal: streamTotal)
+        Section {
+            DSRoomScopeChrome(
+                sections: chrome.walletSections,
+                active: active,
+                home: .home,
+                attention: chrome.walletSectionAttention,
+                // Instant, for the reason §495 states at length: animating a
+                // swap between two slots of different natural height moves
+                // everything below and settles it back.
+                onPick: { picked in chrome.walletSection = picked },
+                accounts: walletAccountSlots,
+                scope: chrome.walletScope,
+                onPickAccount: { picked in
+                    withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
+                },
+                reading: { readings[$0] },
+                crown: { slot in
+                    // The box is reserved on every card so paging never
+                    // changes the deck's height; only the showing card fills
+                    // it (see the note above).
+                    DSRoomSlot(headline: nil, reservesHeadline: false) {
+                        if slot.isShowing(chrome.walletScope) {
+                            walletTilesSection(visible, streamTotal: streamTotal,
+                                               drawsChart: true)
+                        }
+                    }
+                },
+                acts: { slot in
+                    if slot.id.isEmpty {
+                        DSPushRow(title: Text("Watch a wallet"),
+                                  subtitle: Text("Paste an address, or connect a wallet app"),
+                                  prominent: true,
+                                  action: { route.pushBridge(.wallet) }) {
+                            Image(systemName: "eye")
+                                .dsGlyph(DS.Space.s4, weight: .semibold)
+                                .foregroundStyle(DS.tint)
+                                .frame(width: DS.Face.row, height: DS.Face.row)
+                        }
+                    }
                 }
-                // ONE inset for the whole slab, where the rail used to run
-                // full bleed (`leading: 0`) under a switcher at
-                // `DSRoomChassis.inset`. That difference is a third of why the
-                // two never read as one object, so it is the first thing the
-                // fusion gives up — the faces stop reaching the screen edge.
-                // They scrolled at either inset (six 66pt slots overflow any
-                // phone), so nothing that used to fit stops fitting.
-                // **`railGap` ON TOP, NOT 0 (2026-09-03, prd §589, user: "the
-                // treemaps are clipping w/ the silhouette scope rail").** The
-                // chassis names a figure→rail gap and Vibenet pays it as its
-                // stack's spacing; this row paid nothing, so a figure that
-                // fills its whole box — the holdings treemap does, by
-                // construction since §495 — ended on the exact pixel the slab
-                // began (measured: cell to 484pt, glass from 485pt). The slab
-                // moves by one rung on every scope equally, so §483's "the
-                // bar must land in the same place" still holds.
-                .listRowInsets(EdgeInsets(top: DSRoomChassis.railGap, leading: DSRoomChassis.inset,
-                                          bottom: DSRoomChassis.contentGap,
-                                          trailing: DSRoomChassis.inset))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+            )
+            .listRowInsets(EdgeInsets(top: 0, leading: 0,
+                                      bottom: DSRoomChassis.contentGap, trailing: 0))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+    }
+
+    /// The watched wallets as deck cards, "All" first.
+    ///
+    /// The captions keep the rule the deleted `WalletScopeRail.items` had — a
+    /// given name, else the short address — but not its truncation: that
+    /// adapter fed a rail, and a rail had 66pt to work in. What is new is the
+    /// SUB line, which a card has room for and a slot never did: the short
+    /// address under a named wallet, and under "All" the names it is made of.
+    var walletAccountSlots: [DSAccountSlot] {
+        let watched = wallet.addresses
+        let named = watched.map { addr in
+            addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label
+        }
+        let all = DSAccountSlot(
+            id: "",
+            name: String(localized: "All accounts"),
+            // The roster, not a count: "2 accounts" is a number you already
+            // know from the deck, and the names are what tells you whether
+            // the one you want is in here.
+            sub: named.isEmpty ? nil : ListFormatter.localizedString(byJoining: named),
+            faces: watched.prefix(2).map { .wallet(address: $0.address) })
+        return [all] + watched.map { addr in
+            DSAccountSlot(
+                id: addr.address,
+                name: addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label,
+                sub: addr.label.isEmpty ? nil : WalletStore.shortAddress(addr.address),
+                faces: [.wallet(address: addr.address)])
+        }
+    }
+
+    /// WHAT EACH SCOPE HOLDS, BEFORE YOU OPEN IT (prd §744).
+    ///
+    /// The row's right-hand fact. §611 put every scope on every wallet on the
+    /// rule that a chip onto a sentence teaching the scope beats a chip onto
+    /// nothing — but a chip could only keep that promise AFTER the tap. A row
+    /// keeps it before, and an empty scope answers with the same
+    /// `emptyHeadline` its slot would have drawn, so the two never disagree.
+    ///
+    /// **Built ONCE per body pass, as a map.** The obvious shape — a
+    /// `(WalletSection) -> String?` the rows call — runs eight times a render,
+    /// and three of these answers are a fetch (`AddressConnections.map`, the
+    /// permissions holders, the risk scale). That is the cost class
+    /// `row-cost-audit.py` exists to catch, so the work happens here and the
+    /// rows read a dictionary.
+    ///
+    /// Absent, never empty-string, where the room genuinely cannot say it
+    /// cheaply: a row with no fact still opens, and a fact that guesses is
+    /// worse than none (§83).
+    func walletScopeReadings(streamTotal: Int) -> [WalletSection: String] {
+        var out: [WalletSection: String] = [:]
+        for section in chrome.walletSections where section != .home {
+            if walletScopeIsEmpty(section) {
+                out[section] = section.emptyHeadline
+                continue
+            }
+            switch section {
+            case .home:
+                break
+            case .activity:
+                out[section] = String(localized: "\(streamTotal) moves")
+            case .holdings:
+                out[section] = String(localized: "\(blockStream.els.count) tokens")
+            case .accounts:
+                if let map = AddressConnections.map(context: modelContext) {
+                    out[section] = String(localized: "\(map.nodes.count) connected")
+                }
+            case .positions, .nfts:
+                // Both are counted by the figure they open onto and by nothing
+                // cheap here: the positions card is assembled from four live
+                // reads and the NFT shelf from a per-address fetch. A row with
+                // no fact is honest; a row with a stale one is not.
+                break
+            case .risk:
+                let count = (walletRiskEntries ?? []).count
+                if count > 0 { out[section] = String(localized: "\(count) to watch") }
+            case .permissions:
+                let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
+                                                              context: modelContext)
+                if !holders.isEmpty {
+                    out[section] = String(localized: "\(holders.count) live approvals")
+                }
             }
         }
+        return out
     }
 
     /// The composition strip, lifted OUT of the crown card and into the
