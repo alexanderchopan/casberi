@@ -147,7 +147,6 @@ struct TokenDeltaPill: View {
         let text = label.isEmpty ? value : "\(value) · \(label)"
         Text(text)
             .dsText(compact ? .label12 : .subhead12)
-            .fontWeight(solid ? .bold : .regular)
             .monospacedDigit()
             // A delta that updates ROLLS its digits instead of blinking
             // (2026-08-04, the microanimation pass) — the crown's own

@@ -301,7 +301,7 @@ struct HegotaKeySheet: View {
                         Image(systemName: "trash").dsGlyph(.caption, weight: .semibold)
                         Text(String(localized: "Remove this key"))
                     }
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(DS.destructive)
                 }
                 .buttonStyle(PressSpring())

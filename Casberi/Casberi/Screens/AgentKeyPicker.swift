@@ -55,7 +55,7 @@ struct AgentKeyPicker: View {
                 // A label, never a rule — the design law bans hairlines
                 // outright, so the two groups are separated by words and air.
                 Text("Add another")
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                     .padding(.top, configured.isEmpty ? 0 : DS.Space.s2)
                     .padding(.leading, DS.Space.s1)

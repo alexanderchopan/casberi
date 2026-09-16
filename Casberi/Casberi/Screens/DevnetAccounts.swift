@@ -296,13 +296,13 @@ struct DevnetAccountRow: View {
         if watching {
             Label(String(localized: "Watching"), systemImage: "checkmark")
                 .labelStyle(.titleAndIcon)
-                .dsText(.label12).fontWeight(.semibold)
+                .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
                 .lineLimit(1)
                 .fixedSize()
         } else {
             Text(String(localized: "Watch"))
-                .dsText(.label12).fontWeight(.semibold)
+                .dsText(.label12)
                 .foregroundStyle(tint)
                 .lineLimit(1)
                 .fixedSize()
@@ -437,7 +437,7 @@ struct DevnetAccountsAct<W: DevnetWatchList>: View {
                 // The one head on the card. Its words carry the offer, so a
                 // row underneath never has to repeat it.
                 Text(String(localized: "Addresses worth watching"))
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
                     .padding(.top, DS.Space.s1)
                 ForEach(examples) { example in
@@ -509,7 +509,7 @@ struct DevnetAccountsAct<W: DevnetWatchList>: View {
                 WalletFace(address: address, size: DS.Face.list, circular: true)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(watch.name(for: address) ?? WalletStore.shortAddress(address))
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Text(watch.isWatching(address) ? String(localized: "Already watching")
@@ -722,7 +722,7 @@ private struct ExplorerGround: ViewModifier {
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
         } else {
-            content.dsListCardRow()
+            content.dsListRow()
         }
     }
 }

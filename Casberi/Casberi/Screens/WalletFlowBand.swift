@@ -220,11 +220,11 @@ struct WalletFlowBand: View {
         if abs(net) >= 1 {
             if net > 0 {
                 Text("Kept +\(WalletValue.money(net))")
-                    .dsText(.label12).fontWeight(.bold)
+                    .dsText(.label12)
                     .foregroundStyle(DS.confirm)
             } else {
                 Text("Down −\(WalletValue.money(-net))")
-                    .dsText(.label12).fontWeight(.bold)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
             }
         }
@@ -661,23 +661,23 @@ struct WalletFlowBand: View {
         // width for the number rather than spending it on a hex string.
         if lane.name.isEmpty {
             Text(valueText(lane))
-                .dsText(.label12).fontWeight(.bold)
+                .dsText(.label12)
                 .foregroundStyle(primary)
                 .lineLimit(1).minimumScaleFactor(0.8)
         } else if twoLine {
             VStack(alignment: incoming ? .leading : .trailing, spacing: 1) {
                 Text(lane.name)
-                    .dsText(.label12).fontWeight(.bold)
+                    .dsText(.label12)
                     .foregroundStyle(primary)
                     .lineLimit(1).minimumScaleFactor(0.8)
                 Text(valueText(lane))
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(secondary)
                     .lineLimit(1).minimumScaleFactor(0.8)
             }
         } else {
             Text("\(lane.name) · \(WalletValue.money(lane.usd))")
-                .dsText(.label12).fontWeight(.bold)
+                .dsText(.label12)
                 .foregroundStyle(primary)
                 .lineLimit(1).minimumScaleFactor(0.75)
         }

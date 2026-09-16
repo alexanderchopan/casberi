@@ -450,14 +450,16 @@ struct GenRender: View {
             }
 
         case "Bento":
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: DS.Space.s3),
-                          GridItem(.flexible(), spacing: DS.Space.s3)],
-                spacing: DS.Space.s3
-            ) {
-                ForEach(el.refs(0), id: \.self) { child in
-                    GenRender(id: child, els: els, slot: .tile)
-                        .gridSpan(els[child].map { $0.str(0) == "2" } ?? false)
+            // Rows, not a grid: a span-2 tile takes a row of its own, span-1
+            // tiles pair at equal widths (`genBentoRows`).
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                ForEach(Array(genBentoRows(el.refs(0), els: els).enumerated()), id: \.offset) { _, row in
+                    HStack(alignment: .top, spacing: DS.Space.s3) {
+                        ForEach(row, id: \.self) { child in
+                            GenRender(id: child, els: els, slot: .tile)
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+                        }
+                    }
                 }
             }
             .padding(.horizontal, DS.Space.s4)
@@ -499,54 +501,44 @@ private struct MountIn: ViewModifier {
     }
 }
 
-private struct GridSpan: ViewModifier {
-    let span2: Bool
-    func body(content: Content) -> some View {
-        // LazyVGrid has no native span; span-2 tiles get full-width treatment
-        // by the composition placing them in their own Bento.
-        content
+/// Bento's rows, in document order: a span-2 tile (arg 0 == "2") stands alone
+/// on its row, span-1 tiles pair up. A span-1 tile with no partner — the last
+/// one, or one a span-2 interrupts — takes its row alone, the `TilePair` rule:
+/// a half-width tile beside a hole reads as a layout bug.
+private func genBentoRows(_ refs: [String], els: GenEls) -> [[String]] {
+    var rows: [[String]] = []
+    var open: String?
+    for ref in refs {
+        if els[ref]?.str(0) == "2" {
+            if let o = open { rows.append([o]); open = nil }
+            rows.append([ref])
+        } else if let o = open {
+            rows.append([o, ref]); open = nil
+        } else {
+            open = ref
+        }
     }
+    if let o = open { rows.append([o]) }
+    return rows
 }
 
 extension View {
     func mountIn() -> some View { modifier(MountIn()) }
-    fileprivate func gridSpan(_ span2: Bool) -> some View { modifier(GridSpan(span2: span2)) }
 }
 
 // MARK: - Components
 
-/// Hero(eyebrow, title, subline) — the one place color breathes (ruling
-/// 2026-07-05): a soft radial wash behind the hero, the person's accent
-/// warmed by the hour (dawn leans amber, evening leans indigo). The
-/// composition below stays on the quiet page.
+/// Hero(eyebrow, title, subline) — words on the page. The hour-tinted radial
+/// wash that stood behind it is gone: gradients on content are dead
+/// (build-brief §8), and the hero stands on the page like everything else
+/// (prd §782).
 private struct GenHero: View {
     let el: GenEl
     /// Home's scroll ignores the top safe area (the cover bleeds); the quiet
     /// hero must clear it — plus the floating doors pill — itself.
     @Environment(\.genCoverTopInset) private var topInset
 
-    private var field: Color {
-        let hour = Calendar.current.component(.hour, from: .now)
-        let warm: Color = hour < 12 ? Color(hex: "#ff9f0a")
-                        : hour < 17 ? DS.tint
-                        : Color(hex: "#5e5ce6")
-        return DS.tint.mix(with: warm, by: 0.35)
-    }
-
     var body: some View {
-        heroBody
-            .background(alignment: .topLeading) {
-                RadialGradient(
-                    colors: [field.opacity(0.28), .clear],
-                    center: .topLeading,
-                    startRadius: 0, endRadius: 340
-                )
-                .padding(.top, -60)
-                .padding(.leading, -40)
-            }
-    }
-
-    private var heroBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(el.str(0))
                 .dsText(.label12)
@@ -664,13 +656,8 @@ private struct GenInsight: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s4)
-        // The agent-voice card's own elevated tone (2026-08-10) — the
-        // ceiling step of the same neutral ramp every treemap now shares
-        // (`DS.ink(magnitude: 1)`), not a hue. It still separates from a
-        // plain `dsWidgetSurface` card the way the old tint wash did; it
-        // just says "the agent is speaking" with lightness instead of color.
-        .background(DS.ink(magnitude: 1), in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        // No plate (prd §782): the agent's words stand in the column, and the
+        // air above them separates them from the block before.
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
         .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
@@ -1313,7 +1300,7 @@ struct OnThisDayHero: View {
         } label: {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 Text(echo.label)
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(DS.legibleCardFill(for: echo.thing.source))
                 Text(echo.thing.title)
                     .dsText(.heading24)
@@ -1661,7 +1648,7 @@ struct TopicMapHero: View {
                     let cell = cells[i]
                     VStack(alignment: .leading, spacing: 2) {
                         Text(cell.label)
-                            .dsText(.body17).fontWeight(.semibold)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(2).minimumScaleFactor(0.82)
                         Text("\(cell.count)")
@@ -1772,16 +1759,13 @@ struct LiveStreamHero: View {
                         }
                         Text(thing.title)
                             .dsText(.body17)
-                            .fontWeight(.semibold)
                             .foregroundStyle(.white)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
                     }
-                    .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
                     .padding(DS.Space.s3)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-                .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
         }
         .buttonStyle(.plain)
         // The frame IS the well (prd §766): its edge stands where every other
@@ -1826,7 +1810,7 @@ private struct GenMediaShelf: View {
                 // the type ramp carries the hierarchy — a bigger, primary-ink
                 // header so cards read as separate objects, not one soft field.
                 Text(el.str(0))
-                    .dsText(.body17).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                 Spacer(minLength: DS.Space.s2)
             }
             .padding(.horizontal, DS.Space.s4)
@@ -1864,12 +1848,18 @@ private struct GenMediaCompactTile: View {
             }
         }
         .frame(height: 180)
+        // The eyebrow rides a bottom scrim, the idiom every caption over a
+        // picture in this file uses — no pill behind the word (prd §782).
         .overlay(alignment: .bottomLeading) {
             Text(eyebrow)
                 .dsText(.label12).foregroundStyle(.white)
-                .padding(.horizontal, 8).padding(.vertical, 4)
-                .background(.black.opacity(0.45), in: Capsule())
                 .padding(DS.Space.s3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    LinearGradient(colors: [.black.opacity(0.55), .clear],
+                                   startPoint: .bottom, endPoint: .top)
+                )
+                .allowsHitTesting(false)
         }
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
     }
@@ -2198,10 +2188,7 @@ struct GenSection: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 if !room.isEmpty {
-                    Image(systemName: "chevron.right")
-                        .dsGlyph(.caption)
-                        .foregroundStyle(DS.textTertiary)
-                        .accessibilityHidden(true)
+                    DSChevron()
                 }
                 Spacer(minLength: 0)
             }
@@ -2312,7 +2299,7 @@ private struct GenClusterMap: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
                         Text(el.str(0))
-                            .dsText(.body17).fontWeight(.semibold)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                     }
                     if let subtitle = pickedLine ?? (el.str(1).isEmpty ? nil : el.str(1)) {
@@ -2504,7 +2491,7 @@ private struct PersonBadge: View {
                         // punctuation is the network's.
                         Text(String(handle.first(where: { $0.isLetter || $0.isNumber })
                                     ?? handle.first ?? " ").uppercased())
-                            .dsText(.label12).fontWeight(.bold)
+                            .dsText(.label12)
                             .foregroundStyle(DS.textSecondary))
                     .frame(width: size, height: size)
             }
@@ -3024,7 +3011,7 @@ private struct GenTagMap: View {
                     // A real, readable card title (ruling 2026-07-12): bigger,
                     // primary ink, so the type ramp carries the separation.
                     Text(eyebrow)
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                     Spacer()
                 }
@@ -3231,7 +3218,7 @@ private struct GenTagMap: View {
                     Spacer(minLength: 0)
                     if !preview, let value = item.value {
                         Text(value)
-                            .dsText(.subhead12).fontWeight(.semibold)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textPrimary)
                             .monospacedDigit()
                             .lineLimit(1)
@@ -3518,7 +3505,7 @@ private struct GenAgendaRow: View {
         HStack(spacing: DS.Space.s3) {
             Text(el.str(0))
                 .dsText(.subhead12).monospacedDigit()
-                .fontWeight(next ? .bold : .regular)
+                .fontWeight(next ? .medium : .regular)
                 .foregroundStyle(DS.textPrimary)
                 .frame(width: 58, alignment: .trailing)
             Capsule(style: .continuous)
@@ -3526,7 +3513,7 @@ private struct GenAgendaRow: View {
                 .frame(width: 3, height: next ? 34 : 26)
             VStack(alignment: .leading, spacing: 2) {
                 Text(el.str(1))
-                    .dsText(.body17).fontWeight(next ? .semibold : .regular)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary).lineLimit(1)
                 if !el.str(2).isEmpty {
                     Text(el.str(2)).dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
@@ -3664,7 +3651,7 @@ private struct GenFaces: View {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     if !el.str(0).isEmpty {
                         Text(el.str(0))
-                            .dsText(.body17).fontWeight(.semibold)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                     }
                     if !el.str(1).isEmpty {
@@ -3775,7 +3762,7 @@ private struct GenContactSheet: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
                         Text(el.str(0))
-                            .dsText(.body17).fontWeight(.semibold)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                     }
                     if !el.str(1).isEmpty {
@@ -3898,7 +3885,7 @@ private struct GenRunway: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
                         Text(el.str(0))
-                            .dsText(.body17).fontWeight(.semibold)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                     }
                     GeometryReader { geo in
@@ -4000,8 +3987,8 @@ private struct GenRunway: View {
 /// then a dispute would be an emergency in one place and a list item in the
 /// other.
 ///
-/// Drawn as a distinct BLOCK rather than as rows in a card, and it is the one
-/// module in the brief allowed `DS.attention`: everything else here reports,
+/// Rows on the page with no plate (prd §782), and the one module in the brief
+/// allowed `DS.attention`, on its eyebrow's glyph: everything else here reports,
 /// and this is the only thing that asks. A per-row severity hue was drawn
 /// first and cut — five rows in three colours reads as a status dashboard and
 /// makes the least urgent row look like a warning; rank already carries
@@ -4044,7 +4031,7 @@ private struct GenAlerts: View {
                                 .foregroundStyle(DS.attention)
                                 .accessibilityHidden(true)
                             Text(el.str(0))
-                                .dsText(.body17).fontWeight(.semibold)
+                                .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)
                         }
                     }
@@ -4077,15 +4064,11 @@ private struct GenAlerts: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(DS.Space.s4)
-                // The one tinted surface in the brief. `attention` at low
-                // opacity rather than `dsWidgetSurface` — against the neutral
-                // cards below it this reads as a different KIND of thing at a
-                // glance, which is the entire request.
-                .background(DS.attention.opacity(0.12),
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                // No tinted plate (prd §782): the attention glyph in the
+                // eyebrow says what kind of block this is, and air
+                // separates it from the next.
                 .padding(.horizontal, DS.Space.s4)
-                .padding(.top, DS.Space.s2)
+                .padding(.top, DS.Space.s4)
             }
         }
     }
@@ -4217,8 +4200,8 @@ struct GenFrontPage: View {
             } else {
                 // The single column — THE DECK since 2026-08-15 (user, on the
                 // approved mockups: "i want what was mocked up"). The head run
-                // (masthead, lede) stays bare on the ink; every chapter block
-                // after it renders as a card. Same segments the two-column
+                // (masthead, lede) and every chapter block after it stand on
+                // the page, `s4` of air apart (prd §782). Same segments the two-column
                 // page cuts, so the phone and the Mac disagree about layout
                 // and never about grouping.
                 // QUIET SECTIONS PAIR UP (mockup C, 2026-08-16): two
@@ -4237,11 +4220,11 @@ struct GenFrontPage: View {
                         acc.append([seg])
                     }
                 }
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                VStack(alignment: .leading, spacing: DS.Space.s4) {
                     ForEach(segs.prefix(headCount).flatMap { $0 }, id: \.self) { module($0) }
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                         if row.count == 2 {
-                            HStack(alignment: .top, spacing: DS.Space.s3) {
+                            HStack(alignment: .top, spacing: DS.Space.s4) {
                                 deckCard(row[0])
                                 deckCard(row[1])
                             }
@@ -4266,7 +4249,7 @@ struct GenFrontPage: View {
         // Alternation by index — see the stability rule in the header doc.
         let left = blocks.indices.filter { $0.isMultiple(of: 2) }.map { blocks[$0] }
         let right = blocks.indices.filter { !$0.isMultiple(of: 2) }.map { blocks[$0] }
-        return VStack(alignment: .leading, spacing: DS.Space.s3) {
+        return VStack(alignment: .leading, spacing: DS.Space.s4) {
             ForEach(head, id: \.self) { module($0) }
             HStack(alignment: .top, spacing: DS.Space.s4) {
                 column(left)
@@ -4276,7 +4259,7 @@ struct GenFrontPage: View {
     }
 
     private func column(_ blocks: [[String]]) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { deckCard($0.element) }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -4299,32 +4282,17 @@ struct GenFrontPage: View {
         return seg.count > 1 && seg.dropFirst().allSatisfy { quiet.contains($0) }
     }
 
-    /// One chapter block as a DECK CARD — ON INK (2026-08-15, second ruling
-    /// of the night, superseding the hue-ground version shipped hours
-    /// earlier: "it all looks vibecoded now"). The card GROUPING survives —
-    /// it is real structure, and the brief reads as movements because of it —
-    /// but the ground returns to the ink slab for every section, because four
-    /// saturated slabs stacked is colour saying nothing four times. The
-    /// page's whole colour budget now belongs to the lede card above
-    /// (`GenDayLede`), one bright object per screen; section identity stays
-    /// where colour does navigation, the docked nav chips. The modules'
-    /// own internal colours — treemap blues, chart accents, semantic
-    /// green/red — get their ink ground back, which is what they were
-    /// designed against.
+    /// One chapter block — a GROUP on the page, not a card (prd §782). The
+    /// grouping is real structure and the brief reads as movements because
+    /// of it; what separates two blocks is the stack's `s4` of air, never an
+    /// ink plate.
     ///
-    /// Quiet returns to the §386d dim, applied to the CARD's content as one
-    /// piece rather than per module — all the cards share a ground now, so
-    /// opacity is again the only contrast device, and whole-card reads as
-    /// intentional where per-module read as patchy.
+    /// Quiet returns to the §386d dim, applied to the block's content as one
+    /// piece rather than per module — whole-block reads as intentional where
+    /// per-module read as patchy.
     @ViewBuilder
     private func deckCard(_ seg: [String]) -> some View {
         let isQuiet = seg.count > 1 && seg.dropFirst().allSatisfy { quiet.contains($0) }
-        // BLACK CARDS WITH THEIR SEPARATION (2026-08-15, two user rulings
-        // minutes apart: "it's fine if it is black cards", then "i like the
-        // card separations, but not gray"): `surfaceSheet` (#111113) over the
-        // composer's pure-black `inkGround` — an edge, not a gray box. Never
-        // a stroke instead; no hairlines, zero exceptions.
-        //
         // **A SECTION CARD IS A DIGEST NOW** (2026-08-16, user, holding the
         // approved mock against the built brief: "the day brief DOES NOT
         // LOOK LIKE THIS"). They were right, and the gap was density: the
@@ -4344,15 +4312,13 @@ struct GenFrontPage: View {
                        members: Array(seg.dropFirst()), quietCard: isQuiet)
         } else {
             // The headless trailing run (the leads, anything unfiled) keeps
-            // the plain card — there is no section name to digest under.
+            // the plain group — there is no section name to digest under.
+            // Its modules carry their own column inset.
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 ForEach(seg, id: \.self) { module($0, inCard: true) }
             }
             .opacity(isQuiet ? 0.68 : 1)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(DS.Space.s4)
-            .background(DS.inkCard,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         }
     }
 
@@ -4399,7 +4365,7 @@ struct GenFrontPage: View {
                             .background(GenSection.hue(header.str(2)).opacity(0.14),
                                         in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                         Text(title)
-                            .dsText(.subhead12).fontWeight(.semibold)
+                            .dsText(.subhead12)
                             .foregroundStyle(DS.textSecondary)
                         Spacer(minLength: 0)
                         // Points RIGHT — it navigates. No chevron at all when
@@ -4434,7 +4400,7 @@ struct GenFrontPage: View {
                                     .lineLimit(1).minimumScaleFactor(0.7)
                                 if !parts.unit.isEmpty {
                                     Text(parts.unit)
-                                        .dsText(.subhead12).fontWeight(.semibold)
+                                        .dsText(.subhead12)
                                         .foregroundStyle(DS.textTertiary)
                                         .lineLimit(1)
                                 }
@@ -4465,6 +4431,9 @@ struct GenFrontPage: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+                // The digest's words stand in the modules' column — each
+                // module carries its own `s4` inset (prd §782).
+                .padding(.horizontal, DS.Space.s4)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -4476,12 +4445,9 @@ struct GenFrontPage: View {
                 ForEach(members, id: \.self) { module($0, inCard: true) }
             }
         }
-        // The §386d step-back, whole-card (see the plain branch above).
+        // The §386d step-back, whole-block (see the plain branch above).
         .opacity(quietCard ? 0.68 : 1)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s4)
-        .background(DS.inkCard,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         // The nav's scroll target AND its where-am-I spy — the header module
         // is no longer mounted, so the card takes over both of the jobs it
         // did: `scrollTo(headerRef)` lands here, and the offset preference
@@ -4639,12 +4605,10 @@ struct GenFrontPage: View {
         return ""
     }
 
-    /// One module. Inside a DECK CARD the chapter's top air and the
-    /// per-module quiet dim both stand down: the card's own margin is the air
-    /// now, and the card's ink-vs-hue ground carries the whole quiet contrast
-    /// (dimming white words on a saturated fill reads as a rendering bug, not
-    /// as "you have seen this"). The head run — outside any card — keeps
-    /// both behaviours exactly as §386d shipped them.
+    /// One module. Inside a chapter block the chapter's top air and the
+    /// per-module quiet dim both stand down: the deck's stack spacing is the
+    /// air, and the block dims as one piece (prd §782). The head run —
+    /// outside any block — keeps both behaviours exactly as §386d shipped them.
     private func module(_ ref: String, inCard: Bool = false) -> some View {
         GenRender(id: ref, els: els, slot: inAgentAnswer ? .block : .none)
             .padding(.top, !inCard && chapters.contains(ref) ? DS.Space.s4 : 0)
@@ -4735,14 +4699,14 @@ private struct GenValueSpark: View {
                 let chart = TokenChart(closes: series, price: series.last ?? 0, change: change)
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     HStack(spacing: DS.Space.s2) {
-                        Text(el.str(0)).dsText(.body17).fontWeight(.semibold)
+                        Text(el.str(0)).dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                         Spacer(minLength: DS.Space.s2)
                         if let scrubIndex, series.indices.contains(scrubIndex) {
                             // One claim at a time: mid-scrub the slot states
                             // the sample, not the range's delta.
                             Text(TokenChartStyle.priceText(series[scrubIndex]))
-                                .dsText(.body17).fontWeight(.semibold)
+                                .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)
                                 // Tabular, because it rolls — see `LiveTimeText` (prd §586).
                                 .monospacedDigit()
@@ -4817,7 +4781,7 @@ private struct GenBars: View {
                 let order = risingOrder
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
-                        Text(el.str(0)).dsText(.body17).fontWeight(.semibold)
+                        Text(el.str(0)).dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                     }
                     if !el.str(1).isEmpty {
@@ -4891,7 +4855,7 @@ private struct GenChartCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if !el.str(0).isEmpty {
-                Text(el.str(0)).dsText(.body17).fontWeight(.semibold)
+                Text(el.str(0)).dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
             }
             TokenChartView(chain: el.str(1), address: el.str(2)) {
@@ -4906,10 +4870,11 @@ private struct GenChartCard: View {
     }
 }
 
-/// StatRow(v0, l0, v1, l1, v2, l2) — up to three glanceable number tiles (a
-/// tile with an empty value drops out). Neutral ink by ruling: a bare count
-/// has no up/down direction to color (honesty §83) — any sign a value carries
-/// lives in its own text ("+4.0%"), never in the tile's fill.
+/// StatRow(v0, l0, v1, l1, v2, l2) — up to three glanceable numbers, each over
+/// its caption (a stat with an empty value drops out). No wells: the numbers
+/// stand side by side with air between them (prd §782). Neutral ink by
+/// ruling: a bare count has no up/down direction to color (honesty §83) — any
+/// sign a value carries lives in its own text ("+4.0%").
 private struct GenStatRow: View {
     let el: GenEl
     private var tiles: [(value: String, label: String)] {
@@ -4922,7 +4887,7 @@ private struct GenStatRow: View {
     var body: some View {
         Group {
             if !tiles.isEmpty {
-                HStack(spacing: DS.Space.s2) {
+                HStack(alignment: .top, spacing: DS.Space.s4) {
                     ForEach(Array(tiles.enumerated()), id: \.offset) { _, t in
                         VStack(alignment: .leading, spacing: DS.Space.s1) {
                             Text(t.value).dsText(.heading24).foregroundStyle(DS.textPrimary)
@@ -4931,8 +4896,6 @@ private struct GenStatRow: View {
                                 .lineLimit(1)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(DS.Space.s3)
-                        .dsWell(cornerRadius: DS.Radius.widget, recessed: true)
                     }
                 }
                 .padding(.horizontal, DS.Space.s4)
@@ -4966,7 +4929,7 @@ private struct GenAllocBar: View {
             if segs.count >= 2, total > 0 {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
-                        Text(el.str(0)).dsText(.body17).fontWeight(.semibold)
+                        Text(el.str(0)).dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                     }
                     GeometryReader { geo in
@@ -5021,19 +4984,11 @@ private struct GenDayNotes: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(DS.Space.s4)
-                // The elevated surface `Insight` already wears everywhere
-                // else (2026-08-10, was a tint wash until the treemap-ink
-                // pass retired hue-as-category app-wide): one grammar for
-                // agent voice — the neutral ramp's ceiling tone
-                // (`DS.ink(magnitude: 1)`), ink cards = your things. On
-                // `dsWidgetSurface` the synthesis card was indistinguishable
-                // from the modules it's summarizing; lightness alone still
-                // separates them.
-                .background(DS.ink(magnitude: 1),
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                // No plate (prd §782), the same as `Insight`: the agent's
+                // notes stand in the column, and air separates them from the
+                // modules around them.
                 .padding(.horizontal, DS.Space.s4)
-                .padding(.top, DS.Space.s2)
+                .padding(.top, DS.Space.s4)
             }
         }
     }
@@ -5103,7 +5058,7 @@ private func GenSignedText(_ s: String, scheme: ColorScheme) -> Text {
             let tail = token.dropFirst(trimmed.count)
             out = out + Text(trimmed)
                 .foregroundStyle(TokenChartStyle.accent(change: pct / 100, scheme: scheme))
-                .fontWeight(.semibold)
+                .fontWeight(.medium)
             if !tail.isEmpty { out = out + Text(String(tail)) }
         } else {
             buffer += token
@@ -5705,10 +5660,7 @@ private struct GenAskMore: View {
                             .dsText(.subhead12)
                             .foregroundStyle(DS.tint)
                             .multilineTextAlignment(.leading)
-                        Image(systemName: "chevron.right")
-                            .dsGlyph(.caption)
-                            .foregroundStyle(DS.tint)
-                            .accessibilityHidden(true)
+                        DSChevron(tint: DS.tint)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)
@@ -5832,7 +5784,7 @@ private struct GenMoversTile: View {
             }
             Spacer(minLength: DS.Space.s2)
             Text(m.value)
-                .dsText(.body17).fontWeight(.semibold)
+                .dsText(.body17)
                 .foregroundStyle(ink(m.value))
                 .monospacedDigit()
                 .lineLimit(1)
@@ -5932,7 +5884,7 @@ private struct GenDial: View {
             if !figure.isEmpty {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
-                        Text(el.str(0)).dsText(.body17).fontWeight(.semibold)
+                        Text(el.str(0)).dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                     }
                     FigureView(figure: figure, slot: .band, hue: DS.tint,
@@ -6005,7 +5957,7 @@ private struct GenNextTile: View {
                 .dsText(.subhead12)
                 .foregroundStyle(DS.textTertiary)
             Text(el.str(1))
-                .dsText(.body17).fontWeight(.semibold)
+                .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -6080,7 +6032,7 @@ private struct GenSourceMix: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
                         Text(el.str(0))
-                            .dsText(.body17).fontWeight(.semibold)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                     }
                     MiniTreemap(items: items) { item, index in cell(item, index: index) }

@@ -216,7 +216,7 @@ struct WalletbeatScreen: View {
 	private var suggestionRows: some View {
 		if !suggested.isEmpty {
 			Text(WalletbeatCopy.connectedOffer(suggested.count))
-				.dsText(.label12).fontWeight(.semibold)
+				.dsText(.label12)
 				.foregroundStyle(DS.textSecondary)
 			ForEach(suggested) { entry in
 				Button(action: { watch(entry) }) {
@@ -235,7 +235,7 @@ struct WalletbeatScreen: View {
 						// spelled two ways across two screens is the drift `WalletbeatCopy`
 						// exists to stop.
 						Text(String(localized: "Watch"))
-							.dsText(.label12).fontWeight(.bold)
+							.dsText(.label12)
 							.foregroundStyle(DS.tint)
 					}
 					.frame(minHeight: AccountFactRow.height)

@@ -192,7 +192,7 @@ struct WalletWidgetView: View {
     private var changeInk: Color {
         guard let pct = entry.line?.changePct else { return .white.opacity(0.6) }
         if MoneyFormat.isFlatPercent(pct) { return .white.opacity(0.6) }
-        return pct > 0 ? .green : .red
+        return pct > 0 ? WidgetChrome.gain : WidgetChrome.loss
     }
 
     /// "6 of 9 priced" — the sentence for `WidgetFlowBand.owesDisclosure`.

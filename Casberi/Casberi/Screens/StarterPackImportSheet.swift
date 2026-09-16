@@ -15,7 +15,7 @@ struct StarterPacksDoor: View {
                   action: { open = true }) {
             BridgeIcon(name: "Bluesky", size: DS.Mark.list, circular: false)
         }
-        .dsListCardRow()
+        .dsListRow()
         .sheet(isPresented: $open) {
             StarterPackImportSheet(onImport: onImport)
         }
@@ -74,7 +74,7 @@ struct StarterPackImportSheet: View {
                     .dsText(.body17).foregroundStyle(DS.textTertiary)
             } else {
                 ScrollView {
-                    LazyVStack(spacing: DS.Space.s2) {
+                    LazyVStack(spacing: DS.Space.s4) {
                         ForEach(packs) { pack in
                             packRow(pack)
                         }
@@ -89,33 +89,20 @@ struct StarterPackImportSheet: View {
         }
     }
 
+    /// A push row on nothing; the list's air separates packs (prd §782).
     private func packRow(_ pack: BlueskyStarterPacks.Pack) -> some View {
-        Button {
-            DSHaptic.tap()
-            selected = pack
-            Task { await loadMembers(pack) }
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                if let avatar = pack.creatorAvatarURL, !avatar.isEmpty {
-                    RemoteThumb(urlString: avatar, size: DS.Face.list, fallback: "Bluesky", circular: true)
-                } else {
-                    BridgeIcon(name: "Bluesky", size: DS.Face.list, circular: true)
-                }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(pack.name).dsText(.heading17).foregroundStyle(DS.textPrimary).lineLimit(1)
-                    Text(pack.creatorHandle.isEmpty ? "Bluesky" : "by @\(pack.creatorHandle)")
-                        .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .dsGlyph(.caption)
-                    .foregroundStyle(DS.textTertiary)
+        DSPushRow(title: Text(verbatim: pack.name),
+                  subtitle: Text(pack.creatorHandle.isEmpty ? "Bluesky" : "by @\(pack.creatorHandle)"),
+                  action: {
+                      selected = pack
+                      Task { await loadMembers(pack) }
+                  }) {
+            if let avatar = pack.creatorAvatarURL, !avatar.isEmpty {
+                RemoteThumb(urlString: avatar, size: DS.Face.list, fallback: "Bluesky", circular: true)
+            } else {
+                BridgeIcon(name: "Bluesky", size: DS.Face.list, circular: true)
             }
-            .padding(DS.Space.s3)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWell(cornerRadius: DS.Radius.widget)
         }
-        .buttonStyle(DSTileButtonStyle())
     }
 
     // MARK: - Detail

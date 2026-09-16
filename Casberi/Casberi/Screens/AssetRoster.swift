@@ -38,7 +38,7 @@ struct AssetRosterSlot<Mark: View>: View {
                 .frame(width: Self.markSize, height: Self.markSize)
             VStack(spacing: 2) {
                 Text(label)
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 if let price {

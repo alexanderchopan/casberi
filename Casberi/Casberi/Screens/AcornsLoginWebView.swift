@@ -55,7 +55,7 @@ struct AcornsLoginWebView: View {
                         Text(failure)
                             .dsText(.body17).foregroundStyle(DS.textPrimary)
                             .multilineTextAlignment(.center)
-                        Button("Try again") {
+                        Button("Reload Acorns' sign-in") {
                             self.failure = nil
                             loading = true
                             reloadCount += 1

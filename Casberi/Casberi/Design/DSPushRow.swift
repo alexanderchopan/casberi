@@ -196,7 +196,7 @@ struct DSMoreLink: View {
         } label: {
             HStack(spacing: 3) {
                 title
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .monospacedDigit()
                     .lineLimit(1)
                 Image(systemName: "chevron.right")

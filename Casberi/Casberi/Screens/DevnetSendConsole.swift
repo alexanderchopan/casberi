@@ -386,17 +386,13 @@ struct DevnetSendPlanStrip: View {
             ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
                 VStack(alignment: .leading, spacing: 1) {
                     Text(step.name)
-                        .dsText(.label12).fontWeight(.semibold)
+                        .dsText(.label12)
                         .foregroundStyle(DS.textSecondary)
                     Text(step.detail)
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                 }
                 .lineLimit(1)
-                .padding(.horizontal, DS.Space.s3)
-                .padding(.vertical, DS.Space.s2)
-                .background(DS.gray100,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
                 if index < steps.count - 1 {
                     Image(systemName: "arrow.right")
                         .accessibilityHidden(true)
@@ -633,7 +629,7 @@ struct DevnetAdvancedSheet: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Toggle(isOn: $hasWindow) {
                 Text(String(localized: "Only valid for a window"))
-                    .dsText(.body17).fontWeight(.semibold)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
             }
             .tint(tint)
@@ -934,7 +930,7 @@ struct DevnetSendSheet: View {
                     HStack(spacing: DS.Space.s3) {
                         WalletFace(address: pastedAddress, size: DS.Face.list, circular: true)
                         Text(WalletStore.shortAddress(pastedAddress))
-                            .dsText(.body17).fontWeight(.semibold)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                         Spacer(minLength: DS.Space.s2)
                         Image(systemName: "arrow.right")
@@ -972,7 +968,7 @@ struct DevnetSendSheet: View {
             VStack(spacing: DS.Space.s2) {
                 WalletFace(address: address, size: DevnetConsole.sheetFace, circular: true)
                 Text(name ?? WalletStore.shortAddress(address))
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
             }
@@ -1050,7 +1046,7 @@ struct DevnetSendSheet: View {
                         // (prd §746): it sits inside the amount field's own
                         // line, where a row would have nowhere to stand.
                         Text(String(localized: "Max"))
-                            .dsText(.label12).fontWeight(.semibold)
+                            .dsText(.label12)
                             .foregroundStyle(tint)
                             .dsTapTarget()
                     }
@@ -1215,7 +1211,7 @@ struct DevnetSendSheet: View {
                               : String(localized: "Add")))
                 if busy { DSSpinner(size: .mini, onFill: true) }
             }
-            .dsText(.body17).fontWeight(.semibold)
+            .dsText(.body17)
             .foregroundStyle(armed ? .white : DS.textTertiary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, DS.Space.s4)
@@ -1349,7 +1345,7 @@ struct DevnetSendSheet: View {
         HStack(spacing: DS.Space.s3) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(String(localized: "Who pays the fee"))
-                    .dsText(.body17).fontWeight(.semibold)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                 DSFootnote(Text(payer == nil
                      ? String(localized: "You do, from this account.")
@@ -1374,7 +1370,7 @@ struct DevnetSendSheet: View {
             } label: {
                 HStack(spacing: 4) {
                     Text(payer.map(payerName) ?? String(localized: "You"))
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.body17)
                         .lineLimit(1)
                     Image(systemName: "chevron.up.chevron.down")
                         .dsGlyph(.caption, weight: .semibold)
@@ -1412,7 +1408,7 @@ struct DevnetSendSheet: View {
     @ViewBuilder private func askShare(_ link: URL, expires: Date?) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(String(localized: "Signed. Now send it to \(payer.map(payerName) ?? "")."))
-                .dsText(.body17).fontWeight(.semibold)
+                .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             if let expires {
@@ -1426,7 +1422,7 @@ struct DevnetSendSheet: View {
                         .accessibilityHidden(true)
                     Text(String(localized: "Share the request"))
                 }
-                .dsText(.body17).fontWeight(.semibold)
+                .dsText(.body17)
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, DS.Space.s4)
@@ -1445,37 +1441,22 @@ struct DevnetSendSheet: View {
     /// cannot drift into a thinner dashed strip that reads as a hint rather
     /// than as the next item in the list.
     ///
-    /// **`dash` CARRIES ONE MEANING PER COLOUR** (prd §571). Both outlined
-    /// rows used to be the same neutral dash while meaning two different
-    /// things — the head is a row you did not add and cannot remove, the add
-    /// row is a row that is not there yet — so the treatment that separates
-    /// them from a real leg said nothing about which was which. Neutral is
-    /// "not yours"; the venue's tint is "not yet, and one tap makes it".
-    private func rowShell<Content: View>(dash: Color?,
-                                         @ViewBuilder content: () -> Content) -> some View {
+    /// **No plate and no dashed outline (prd §782).** The rows stand on the
+    /// sheet in the column; the head's quiet ink and the add row's tint say
+    /// which is which, as the §571 dash colours did.
+    private func rowShell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: DevnetConsole.legRow)
-            .padding(.horizontal, DS.Space.s4)
-            .background {
-                let shape = RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
-                if let dash {
-                    shape.strokeBorder(dash, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                } else {
-                    shape.fill(DS.gray100)
-                }
-            }
             // **THE WHOLE ROW IS THE TARGET.** Found on the simulator, not by
-            // reading: a dashed row has a STROKE and no fill, so SwiftUI
-            // hit-tests the glyph and the words and nothing between them —
-            // "Add a frame" ignored every tap past the end of its own label
-            // while looking completely live. The §83 dead control, except it
-            // is only dead in the half of itself nobody would think to avoid.
+            // reading: SwiftUI hit-tests the glyph and the words and nothing
+            // between them, so "Add a frame" ignored every tap past the end of
+            // its own label while looking completely live — the §83 dead control.
             .contentShape(Rectangle())
     }
 
     private func headRow(name: String, detail: String) -> some View {
-        rowShell(dash: DS.textTertiary.opacity(0.28)) {
+        rowShell {
             HStack(spacing: DS.Space.s3) {
                 Image(systemName: "checkmark.seal")
                     .accessibilityHidden(true)
@@ -1484,7 +1465,7 @@ struct DevnetSendSheet: View {
                     .frame(width: DevnetConsole.legFace, height: DevnetConsole.legFace)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(name)
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                     Text(detail)
                         .dsText(.label12)
@@ -1508,7 +1489,7 @@ struct DevnetSendSheet: View {
     /// that is true of all of them distinguishes none of them, which is the
     /// same finding as the Activity chart's "4 of them are frame…" (§554).
     private func legRow(_ leg: DevnetSendLeg, joinsNext: Bool) -> some View {
-        rowShell(dash: nil) {
+        rowShell {
             HStack(spacing: DS.Space.s3) {
                 WalletFace(address: leg.address, size: DevnetConsole.legFace, circular: true)
                 Text(name(for: leg.address))
@@ -1574,8 +1555,9 @@ struct DevnetSendSheet: View {
         // quarter turn: a bar bridging the gap between two joined rows.
         //
         // On the face's axis rather than the row's centre, so it reads as a
-        // chain running down the list. It bridges exactly `s2`, which is the
-        // stack's own gap, so joined rows touch and independent ones do not.
+        // chain running down the list. With no plate under the rows (prd §782)
+        // it runs face to face: the `s4` of air around both faces plus the
+        // stack's own `s2` gap.
         //
         // It can only ever draw a join the run declares: `joinsNext` comes
         // from the venue's encoder, so the last leg never ties (the node
@@ -1584,11 +1566,11 @@ struct DevnetSendSheet: View {
         .overlay(alignment: .bottomLeading) {
             Capsule()
                 .fill(tint)
-                // 4pt, not 3: measured on the simulator, a 3pt bar bridging an
-                // 8pt gap reads as a speck rather than a link.
-                .frame(width: 4, height: joinsNext ? DS.Space.s2 : 0)
+                // 4pt, not 3: measured on the simulator, a 3pt bar reads as a
+                // speck rather than a link.
+                .frame(width: 4, height: joinsNext ? DS.Space.s2 + DS.Space.s4 : 0)
                 .opacity(joinsNext ? 1 : 0)
-                .offset(x: DS.Space.s4 + DevnetConsole.legFace / 2 - 2, y: DS.Space.s2)
+                .offset(x: DevnetConsole.legFace / 2 - 2, y: DS.Space.s2 + DS.Space.s4 / 2)
                 .accessibilityHidden(true)
         }
     }
@@ -1598,7 +1580,7 @@ struct DevnetSendSheet: View {
             DSHaptic.tap()
             addingLeg = true
         } label: {
-            rowShell(dash: tint.opacity(0.45)) {
+            rowShell {
                 HStack(spacing: DS.Space.s3) {
                     Image(systemName: "plus")
                         .accessibilityHidden(true)
@@ -1606,7 +1588,7 @@ struct DevnetSendSheet: View {
                         .foregroundStyle(tint)
                         .frame(width: DevnetConsole.legFace, height: DevnetConsole.legFace)
                     Text(String(localized: "Add a frame"))
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.body17)
                         .foregroundStyle(tint)
                     Spacer(minLength: 0)
                 }
@@ -1628,7 +1610,7 @@ struct DevnetSendSheet: View {
         HStack(spacing: DS.Space.s3) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(choice.title)
-                    .dsText(.body17).fontWeight(.semibold)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                 Text(choiceOn ? choice.on : choice.off)
                     .dsText(.label12)
@@ -1663,7 +1645,7 @@ struct DevnetSendSheet: View {
             } label: {
                 HStack(spacing: DS.Space.s2) {
                     Text(String(localized: "Advanced"))
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                     Spacer(minLength: DS.Space.s2)
                     Text(advancedSummary)
@@ -1703,7 +1685,7 @@ struct DevnetSendSheet: View {
             HStack(spacing: DS.Space.s3) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                     Text(atomicChoice ? on : off)
                         .dsText(.label12)

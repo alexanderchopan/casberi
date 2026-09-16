@@ -1784,12 +1784,9 @@ struct ThingSheetView: View {
                     counterpartyRow(cp)
                 }
             }
-            // One quiet card (2026-07-13 polish): the bare rows floated in
-            // the sheet's field; the same faint fill the link preview wears
-            // gathers them into one readable spec block.
-            .padding(DS.Space.s4)
+            // The rows stand on no plate (prd §782): the table's own column
+            // gathers them, and air separates it from the blocks around it.
             .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWell()
         }
     }
 
@@ -1828,17 +1825,15 @@ struct ThingSheetView: View {
 
     // MARK: - The dial's wiring (stage sheets — B1, 2026-07-16)
 
-    /// The safety flag(s) on this transfer, as a real alert BANNER on the
-    /// detail screen (2026-07-23; user: the screen read as "vibe coded").
-    /// §160's "a one-line flag, not a card" rule was written for the FEED,
-    /// where the warning is a heads-up you scroll past; here it's the whole
-    /// reason you tapped in, and a thin red line under the amount lost that
-    /// fight to a routine "Name this address?" card sitting right below it.
-    /// A tinted red panel with the triangle gives the danger the weight the
-    /// screen's own hierarchy owes it — and fills the dead space the sheet
-    /// used to leave below the fold. A transfer can wear more than one flag
-    /// (a lookalike address sending a lookalike token is one scam, but each
-    /// half needs saying), so each is its own line inside the one banner.
+    /// The safety flag(s) on this transfer, as red lines under the amount
+    /// (2026-07-23; user: the screen read as "vibe coded"). §160's "a one-line
+    /// flag, not a card" rule was written for the FEED; here the warning is the
+    /// whole reason you tapped in, so each flag is a full red sentence with its
+    /// triangle. It stood on a tinted red panel until prd §782 (user: "remove
+    /// that red background"): the red words carry the danger, and air above
+    /// them sets the block apart. A transfer can wear more than one flag (a
+    /// lookalike address sending a lookalike token is one scam, but each half
+    /// needs saying), so each is its own line.
     private var securityWarning: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if thing.hasSecurityFlag("poisoning") {
@@ -1860,9 +1855,7 @@ struct ThingSheetView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s3)
-        .background(DS.destructive.opacity(0.12),
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .padding(.top, DS.Space.s2)
     }
 
     private func warningLine(_ text: String) -> some View {

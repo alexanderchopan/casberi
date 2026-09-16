@@ -155,7 +155,6 @@ struct FigureView: View {
                                 .fill(hue.opacity(0.32 - 0.07 * Double(i)))
                             Text(cell.label)
                                 .dsText(i == 0 ? .body17 : .subhead12)
-                                .fontWeight(i == 0 ? .semibold : .regular)
                                 .foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
@@ -188,7 +187,6 @@ struct FigureView: View {
                         HStack(spacing: DS.Space.s1) {
                             Text(bar.label)
                                 .dsText(.subhead12)
-                                .fontWeight(i == 0 ? .semibold : .regular)
                                 .foregroundStyle(i == 0 ? DS.textPrimary : DS.textSecondary)
                                 .lineLimit(1)
                             Spacer(minLength: 2)
@@ -731,7 +729,6 @@ struct ScatterFigure: View {
                         id: \.offset) { _, placement in
                     Text(placement.cluster.label)
                         .dsText(.subhead12)
-                        .fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                         .padding(.horizontal, 6)
@@ -973,7 +970,6 @@ private struct FlowFigure: View {
                 // so this is a duplicate paying rent in the worst spot.
                 Text(lane.name)
                     .dsText(.subhead12)
-                    .fontWeight(i == 0 ? .semibold : .regular)
                     .foregroundStyle(i == 0 ? DS.textPrimary : DS.textSecondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.9)

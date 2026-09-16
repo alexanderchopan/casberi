@@ -82,9 +82,8 @@ struct SocialReceptionCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(DS.Space.s4)
+        // On no plate (prd §782): air separates it from the blocks around it.
         .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWell()
     }
 }
 
@@ -118,8 +117,8 @@ struct ReplyingToCard: View {
         Button(action: onOpen) {
             HStack(alignment: .top, spacing: DS.Space.s3) {
                 // A rail, not a hairline: it is a 2pt shape marking a quoted
-                // block, the same way the quote card's fill marks one — the
-                // no-hairlines law is about DIVIDERS, and this divides nothing.
+                // block — the no-hairlines law is about DIVIDERS, and this
+                // divides nothing.
                 RoundedRectangle(cornerRadius: 1, style: .continuous)
                     .fill(DS.fillFaint)
                     .frame(width: 2)
@@ -218,9 +217,7 @@ struct SocialPersonContent: View {
                         }
                     }
                 }
-                .padding(DS.Space.s4)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .dsWell()
             }
         }
         .padding(.horizontal, DS.Space.s4)

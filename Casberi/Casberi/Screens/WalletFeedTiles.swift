@@ -343,15 +343,10 @@ struct WalletBalanceHeadline: View {
     /// The caption's words — one `Text` when it describes the reading, two
     /// concatenated when it NAMES a wallet (prd §450).
     ///
-    /// **Two weights, and §157's ruling survives both.** That note says the
-    /// caption "steps back so the number can step forward", and it is right
-    /// about a label: "Across your wallets" is chrome and stays tertiary. A
-    /// NAME is not chrome — it is the answer to "which wallet am I looking
-    /// at?", and at tertiary it would be the faintest thing about the wallet it
-    /// identifies. So the name takes semibold at `textSecondary`, one step up
-    /// and still a long way under a 48pt total, while the address tail beside
-    /// it stays tertiary. The gap the ruling protects is between the number and
-    /// this line, and it is intact.
+    /// **Two inks, one weight (prd §782).** "Across your wallets" is chrome and
+    /// stays tertiary; a wallet's NAME answers "which wallet?" and takes
+    /// `textSecondary`, while the address tail beside it stays tertiary. A
+    /// name carries no weight of its own (§764).
     ///
     /// `scaledFont` rather than `dsText`, because a concatenated `Text` needs
     /// `Text`'s own `.font(_:)` overload to stay `Text`-typed — the exact case
@@ -360,7 +355,6 @@ struct WalletBalanceHeadline: View {
     private var captionText: Text {
         let name = Text(caption)
             .font(DSTextStyle.label12.scaledFont)
-            .fontWeight(captionAddress == nil ? .medium : .semibold)
             .foregroundStyle(captionAddress == nil ? DS.textTertiary : DS.textSecondary)
         guard let captionDetail else { return name }
         return name + Text(verbatim: " · \(captionDetail)")
@@ -388,9 +382,7 @@ struct WalletBalanceHeadline: View {
                         // wallet "All" view). A chevron promises more behind
                         // the tap.
                         if onOpen != nil {
-                            Image(systemName: "chevron.right")
-                                .dsGlyph(.tick)
-                                .foregroundStyle(DS.textTertiary)
+                            DSChevron()
                         }
                     }
                     }
@@ -538,7 +530,7 @@ struct WalletBalanceHeadline: View {
                  : (ratioless
                     ? exactFormat(abs(delta))
                     : "\(exactFormat(abs(delta))) (\(TokenChartStyle.changeText(change)))"))
-                .dsText(.body17).fontWeight(.semibold)
+                .dsText(.body17)
                 .foregroundStyle(ink)
                 .monospacedDigit()
             // THE WINDOW WORD IS GONE (user ruling, prd §483: *"remove
@@ -615,8 +607,8 @@ struct WalletBalanceHeadline: View {
 /// So the badges retire and their counts come back as words on one subline —
 /// `WalletWatch.summary` is the SAME shared per-kind tally the badges read, so
 /// nothing is lost but the capsules. It renders only when `warnings` isn't
-/// empty (§146's floor, still right), and its whole surface is a faint fill
-/// inside the card, not a card of its own.
+/// empty (§146's floor, still right), and it is a bare row: air separates it
+/// from the balance, never a plate (prd §782).
 ///
 /// Title is always "Worth a look" (user, 2026-07-23: "we don't know if it
 /// needs attention, do we?") — the old critical-only "Needs attention" wording
@@ -658,9 +650,7 @@ struct WalletWarningsStrip: View {
                                         tint: tint),
                           title: String(localized: "Worth a look"),
                           subtitle: WalletWatch.summary(visible))
-                    .padding(.horizontal, DS.Space.s3)
-                    .padding(.vertical, 2)
-                    .dsWell(cornerRadius: DS.Radius.widget)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(PressSpring())
         }
@@ -940,9 +930,7 @@ struct WalletCompositionStrip: View {
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     if door {
-                        Image(systemName: "chevron.right")
-                            .dsGlyph(.tick)
-                            .foregroundStyle(DS.textTertiary)
+                        DSChevron()
                     }
                 }
                 if !places.isEmpty {
@@ -989,7 +977,7 @@ struct WalletDepositsTray: View {
         DSTray(title: String(localized: "Deposited"),
                height: min(560, CGFloat(206 + composition.deposits.count * 64))) {
             ScrollView {
-                VStack(spacing: DS.Space.s1) {
+                VStack(spacing: DS.Space.s4) {
                     // The tray's one figure, first (2026-08-15, wallet
                     // cohesion pass — the money receipt sheet's grammar,
                     // reading before rows). The rows then explain a number
@@ -1042,7 +1030,7 @@ struct WalletDepositsTray: View {
             }
             ShareBar(fraction: share, index: index, reduceMotion: reduceMotion)
         }
-        .dsCompositionRow()
+        .dsHover()
     }
 }
 
@@ -1073,7 +1061,7 @@ struct WalletLocksTray: View {
         DSTray(title: String(localized: "Locked"),
                height: min(560, CGFloat(206 + composition.locks.count * 74))) {
             ScrollView {
-                VStack(spacing: DS.Space.s1) {
+                VStack(spacing: DS.Space.s4) {
                     // The tray's one figure, first — in NATIVE units, the
                     // strip's own no-dollars rule ("pricing an illiquid lock
                     // at spot is the accounting opinion §240 refused").
@@ -1126,7 +1114,7 @@ struct WalletLocksTray: View {
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .lineLimit(1)
         }
-        .dsCompositionRow()
+        .dsHover()
     }
 
     /// The whole state of the lock in one sentence — power left, then when it
@@ -1155,20 +1143,8 @@ struct WalletLocksTray: View {
     }
 }
 
-/// The row surface both composition trays wear.
-///
-/// NOT `dsListCardRow()`, which every tray in this room reaches for by habit:
-/// that modifier applies `listRowBackground`, a List-scoped modifier, and
-/// `DSTray`'s content is a plain `VStack` — so inside a tray it silently
-/// paints nothing (audited 2026-07-31, prd §241). The hover effect it also
-/// carries does work, which is why the no-op went unnoticed.
-private extension View {
-    func dsCompositionRow() -> some View {
-        padding(DS.Space.s3)
-            .dsInkFill(cornerRadius: DS.Radius.widget)
-            .dsHover()
-    }
-}
+// The composition trays' rows stand on nothing: air separates them, never a
+// plate (prd §782), so the tray's stack spaces them at `DS.Space.s4`.
 
 // `ShareBar` moved to `Design/ChartEntrance.swift` on 2026-08-03 (prd §297),
 // where it grew its entrance — and its melt. It was private here while its only
@@ -1248,14 +1224,14 @@ struct WalletFaceChips: View {
         HStack(spacing: 6) {
             if let venue = entry.venueLabel {
                 Text(venue)
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(1)
             } else {
                 WalletFace(address: entry.id, size: DS.Face.badge, circular: true)
             }
             Text(WalletValue.money(entry.value))
-                .dsText(.label12).fontWeight(.semibold)
+                .dsText(.label12)
                 .foregroundStyle(DS.textPrimary)
                 .monospacedDigit()
             if let change = entry.change {
@@ -1533,7 +1509,7 @@ struct WalletAllocationTray: View {
         DSTray(title: String(localized: "Where it's held"),
                height: min(620, CGFloat(150 + listed.count * 62))) {
             ScrollView {
-                VStack(spacing: DS.Space.s1) {
+                VStack(spacing: DS.Space.s4) {
                     ForEach(listed) { position in
                         row(position)
                     }
@@ -1579,7 +1555,7 @@ struct WalletAllocationTray: View {
                 Spacer(minLength: 0)
             }
         }
-        .dsListCardRow()
+        .dsHover()
     }
 }
 
@@ -1848,11 +1824,10 @@ struct WalletWorthALookTray: View {
                         // again). Every row under here is actionable by
                         // definition, so the label discriminated nothing.
                         //
-                        // Rows carry their own padding since each wears a
-                        // surface, so the gap between them is s2 — the card
-                        // edges do the separating the air used to.
+                        // Rows stand on nothing, so air separates them: s4
+                        // between rows, never a plate (prd §782).
                         if hasActionable {
-                            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                            VStack(alignment: .leading, spacing: DS.Space.s4) {
                                 // A flat list (2026-07-24) — no Position
                                 // risk/Approvals/Delegations/Safe
                                 // sub-headers; each row states its own whole
@@ -1934,16 +1909,10 @@ struct WalletWorthALookTray: View {
     /// the tray still shows you what you muted, it just stops shouting about
     /// it elsewhere.
     ///
-    /// ## It LIFTS; it does not recess (prd §449)
+    /// ## It stands on nothing (prd §782)
     ///
-    /// It was boxed on `DS.surfaceWell` from 2026-07-24 to read as a quiet,
-    /// self-contained pile. `surfaceWell` is `#080809` and this sheet is INK,
-    /// `#000000` — a 1.02:1 step, which is not a quiet recess but an invisible
-    /// one. The token's own doc says it "dips toward the page", and on an ink
-    /// page there is nothing darker than the page to dip toward. So the pile
-    /// lifts on `DS.fillFaint` instead — the same fill `WalletWarningsStrip`
-    /// wears on the balance card, which makes the surface you tapped and the
-    /// pile you land on visibly the same object.
+    /// The pile's header is a row like the ones above it, with no well or
+    /// lift behind it: the tray's s6 of air is what sets it apart.
     ///
     /// ## The label is gone, and the sentence is said once
     ///
@@ -2000,7 +1969,7 @@ struct WalletWorthALookTray: View {
                             .background(Circle().fill(DS.fillLine))
                         VStack(alignment: .leading, spacing: 1) {
                             Text(awareTitle)
-                                .dsText(.body17).fontWeight(.medium)
+                                .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)
                                 .multilineTextAlignment(.leading)
                             Text(muted ? String(localized: "Muted — won't badge your feed")
@@ -2024,7 +1993,7 @@ struct WalletWorthALookTray: View {
                     WalletAwareness.isMuted = muted
                 } label: {
                     Text(muted ? String(localized: "Unmute") : String(localized: "Mute"))
-                        .dsText(.subhead12).fontWeight(.semibold)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.tint)
                         .contentShape(Rectangle())
                 }
@@ -2033,8 +2002,6 @@ struct WalletWorthALookTray: View {
                     .dsGlyph(.caption)
                     .foregroundStyle(DS.textTertiary)
             }
-            .padding(.horizontal, DS.Space.s3).padding(.vertical, DS.Space.s3)
-            .dsWell(cornerRadius: DS.Radius.widget)
 
             if awareExpanded {
                 VStack(spacing: 0) {
@@ -2107,22 +2074,8 @@ struct WalletWorthALookTray: View {
                 .dsHover()
             }
         }
-        // A REAL SURFACE per row (2026-07-31, prd §241 variant A). These were
-        // the only rows in the wallet room without one — bare vertical
-        // padding on the ink page — and since a title WRAPS here (the one
-        // place in the room where it does), two consecutive rows ran together
-        // with nothing between them. The design law bans hairlines, so
-        // separation has to come from tone, which is exactly what the
-        // elevation ladder is for: the row steps UP to `surfaceSheet` while
-        // the aware pile below stays recessed on `surfaceWell`, and the two
-        // groups read as different kinds of thing without a single line.
-        //
-        // Note this is a real background, NOT `dsListCardRow()`: that applies
-        // `listRowBackground`, which is a List-scoped modifier and silently
-        // does nothing inside `DSTray`'s plain VStack (see the tray audit
-        // note in prd §241).
-        .padding(DS.Space.s3)
-        .dsInkFill(cornerRadius: DS.Radius.widget)
+        // No plate (prd §782, superseding §241's variant A): what separates
+        // two rows, wrapped titles included, is the stack's s4 of air.
     }
 
     /// A group the ROOM states better, standing in for itself (prd §449).

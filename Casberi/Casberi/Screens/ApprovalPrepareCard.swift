@@ -60,9 +60,8 @@ struct ApprovalPrepareCard: View {
                 }
             }
         }
-        .padding(DS.Space.s4)
+        // No well (prd §782): the block stands in the sheet's column.
         .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWell()
     }
 
     /// Copy + the brief "Copied" acknowledgment — TokenSetupScreen's

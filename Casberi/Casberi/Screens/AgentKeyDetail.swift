@@ -122,7 +122,7 @@ struct AgentModelRow: View {
             // view, which re-evaluates the static, non-observable
             // `AgentModelStore.chosen` fresh (`AgentActiveStatusRow`'s trick,
             // same reason).
-            .dsListCardRow()
+            .dsListRow()
         }
     }
 
@@ -229,7 +229,7 @@ struct AgentSpendRow: View {
                 // held both the fixed and the unfixed spelling.
                 DSFootnote("Counted on \(DS.device). Your bill is \(provider.company)'s — see \(provider.console).")
             }
-            .dsListCardRow()
+            .dsListRow()
         }
     }
 
@@ -286,7 +286,7 @@ struct OpenRouterRoutingRow: View {
                     .onChange(of: webSearch) { _, on in AgentOpenRouter.webSearch = on }
                 }
             }
-            .dsListCardRow()
+            .dsListRow()
         }
     }
 }
@@ -359,7 +359,7 @@ struct AgentLibrarianRow: View {
                     }
                 }
             }
-            .dsListCardRow()
+            .dsListRow()
         }
     }
 
@@ -512,7 +512,7 @@ struct MCPServerRow: View {
                 }
             }
         }
-        .dsListCardRow()
+        .dsListRow()
         .onAppear {
             running = MCPServer.shared.running
             error = MCPServer.shared.lastError

@@ -70,18 +70,13 @@ struct TokenQuickSheet: View {
                     // No pool anywhere (dead/illiquid) — say so; the door out
                     // is the explorer link, honestly labeled.
                     if let url = URL(string: "https://dexscreener.com/\(route.chain)/\(route.address)") {
+                        // A door row, not a plate (prd §782).
                         Link(destination: url) {
-                            HStack(spacing: DS.Space.s2) {
-                                Text("No live price for this token — view on Dexscreener")
-                                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-                                Image(systemName: "arrow.up.right")
-                                    .dsGlyph(.caption, weight: .medium)
-                                    .foregroundStyle(DS.textTertiary)
-                            }
-                            .padding(DS.Space.s3)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .dsWell()
+                            DSDoorRowLabel(icon: "arrow.up.right",
+                                           title: Text("No live price for this token — view on Dexscreener"))
                         }
+                        .buttonStyle(.plain)
+                        .dsHover()
                     }
                 }
                 // No top padding: the head block's own bottom inset is the gap.

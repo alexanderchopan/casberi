@@ -69,7 +69,7 @@ struct WalletApprovalExposureCard: View {
         if !exposure.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 Text(String(localized: "Approvals"))
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(Self.mark)
 
                 // **THE HEADLINE RETIRED HERE (2026-08-29).** It read
@@ -209,25 +209,18 @@ struct WalletApprovalExposureCard: View {
         }
     }
 
+    /// A fact about the grant, so a `DSStamp` (§746: a fact is a stamp, never a
+    /// hand-drawn pill). An open-ended grant is waiting on you; a capped one is
+    /// true and not news (prd §782).
     @ViewBuilder
     private func chip(_ grant: WalletApprovalExposure.Grant) -> some View {
         if grant.unlimited || grant.forAll {
-            chipLabel(grant.forAll ? String(localized: "Manages all")
-                                   : String(localized: "Unlimited"),
-                      fill: Self.mark, ink: .fixed("#000000"))
+            DSStamp(word: grant.forAll ? String(localized: "Manages all")
+                                       : String(localized: "Unlimited"),
+                    weight: .urgent)
         } else {
-            chipLabel(String(localized: "Capped"),
-                      fill: DS.textPrimary.opacity(0.10), ink: DS.textSecondary)
+            DSStamp(word: String(localized: "Capped"), weight: .quiet)
         }
-    }
-
-    private func chipLabel(_ text: String, fill: Color, ink: Color) -> some View {
-        Text(text)
-            .dsText(.label12).fontWeight(.bold)
-            .foregroundStyle(ink)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            .background(fill, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
     }
 
     /// The token, and the grant's age when a real block timestamp was read.
@@ -247,7 +240,7 @@ struct WalletApprovalExposureCard: View {
             onOpen(target)
         } label: {
             Text(String(localized: "Review the oldest grant"))
-                .dsText(.body17).fontWeight(.semibold)
+                .dsText(.body17)
                 // Inverted against the card, and inverted correctly in BOTH
                 // themes: white-on-black in dark, black-on-white in light.
                 .foregroundStyle(DS.page)

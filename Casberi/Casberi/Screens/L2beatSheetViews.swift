@@ -120,7 +120,7 @@ struct L2beatMilestoneHead: View {
 	private func source(_ url: String) -> some View {
 		VStack(alignment: .leading, spacing: DS.Space.s2) {
 			Text(String(localized: "Source"))
-				.dsText(.label12).fontWeight(.semibold)
+				.dsText(.label12)
 				.foregroundStyle(DS.textTertiary)
 			Button {
 				DSHaptic.tap()
@@ -128,7 +128,7 @@ struct L2beatMilestoneHead: View {
 			} label: {
 				HStack(alignment: .top, spacing: DS.Space.s3) {
 					Text(L2beatSheetCopy.host(of: url))
-						.dsText(.subhead12).fontWeight(.semibold)
+						.dsText(.subhead12)
 						.foregroundStyle(DS.textPrimary)
 						.multilineTextAlignment(.leading)
 						.fixedSize(horizontal: false, vertical: true)
@@ -176,7 +176,7 @@ struct L2beatRevisionHead: View {
 				Text(revision.isStageMove
 					? String(localized: "L2BEAT moved this chain's stage")
 					: String(localized: "L2BEAT revised its assessment"))
-					.dsText(.label12).fontWeight(.semibold)
+					.dsText(.label12)
 					.foregroundStyle(DS.brandHue(for: "l2beat") ?? DS.tint)
 				Text(headline)
 					.dsText(.heading40)
@@ -198,7 +198,7 @@ struct L2beatRevisionHead: View {
 				}
 				if let risk {
 					Text(risk.value)
-						.dsText(.subhead12).fontWeight(.semibold)
+						.dsText(.subhead12)
 						.foregroundStyle(DS.textSecondary)
 				}
 				Spacer(minLength: 0)

@@ -105,7 +105,7 @@ struct WalletFlowRows: View {
                 Text(net > 0
                      ? String(localized: "Kept +\(WalletValue.money(net))")
                      : String(localized: "Down −\(WalletValue.money(-net))"))
-                    .dsText(.subhead12).fontWeight(.bold)
+                    .dsText(.subhead12)
                     .foregroundStyle(net > 0 ? DS.confirm : DS.textSecondary)
                     .monospacedDigit()
             }

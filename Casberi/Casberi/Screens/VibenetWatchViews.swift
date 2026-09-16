@@ -98,7 +98,7 @@ struct VibenetWatchField: View {
                 WalletFace(address: address, size: DS.Face.list, circular: true)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(watch.name(for: address) ?? VibenetRoom.shortAddress(address))
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Text(watch.isWatching(address) ? String(localized: "Already watching")
@@ -110,8 +110,6 @@ struct VibenetWatchField: View {
                 Spacer(minLength: 0)
             }
             .padding(.vertical, DS.Space.s2)
-            .padding(.horizontal, DS.Space.s3)
-            .dsWell()
             .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
         }
     }
@@ -185,7 +183,7 @@ struct VibenetDiscoverySection: View {
                 }
             } else {
                 Text(String(localized: "Recently created on vibenet"))
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
                 ForEach(discovered) { account in
                     DevnetAccountRow(

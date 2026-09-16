@@ -53,9 +53,8 @@ struct SafeQueueCard: View {
                 DSFootnote("Signatures happen in your Safe app — never here.")
             }
         }
-        .padding(DS.Space.s4)
+        // No well (prd §782): the block stands in the sheet's column.
         .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWell()
     }
 
     // MARK: - Head

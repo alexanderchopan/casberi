@@ -204,17 +204,16 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
                 }
                 Text(section.label)
                     .dsText(.label12)
-                    .fontWeight(isOn ? .semibold : .medium)
                     .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
                     .lineLimit(1)
                     // **A CHIP'S WORD NEVER ACCEPTS A NARROWER WIDTH (prd §724,
                     // 2026-09-13).** This strip sits in a `List` row, and a
                     // horizontal scroll inside a List row keeps the content
-                    // width it first measured. Two things grow a chip AFTER
-                    // that measure: the pick (`.semibold` is 1pt wider than
-                    // `.medium`, measured 2026-08-11) and the dot, which
-                    // arrives once the room resolves what needs you. Squeezed
-                    // by that difference the label truncated to "Revi…" on the
+                    // width it first measured. The dot grows a chip AFTER that
+                    // measure, arriving once the room resolves what needs you
+                    // (the pick's `.semibold` did too until prd §782 took the
+                    // weight off; the tint carries the pick). Squeezed by that
+                    // difference the label truncated to "Revi…" on the
                     // 0xBow room — an ellipsis where a scope's whole name is
                     // the affordance. Fixed horizontally, the strip scrolls
                     // instead; `DSChip` carries the same modifier for the

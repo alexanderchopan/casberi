@@ -92,9 +92,7 @@ struct PurchaseStageView: View {
                 .foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(DS.Space.s3)
-                .dsWell()
-                .padding(.top, DS.Space.s3)
+                .padding(.top, DS.Space.s4)
         }
         provenanceLine
     }
@@ -260,9 +258,8 @@ struct PurchaseStageView: View {
                 }
             }
         }
+        // The fact table stands on nothing; air above it separates it (prd §782).
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s4)
-        .dsWell()
     }
 
     @ViewBuilder private var provenanceLine: some View {

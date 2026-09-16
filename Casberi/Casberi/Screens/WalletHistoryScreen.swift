@@ -93,7 +93,7 @@ struct WalletHistoryScreen: View {
                                 // default, so every row here opts out explicitly.
                                 .listRowSeparator(.hidden)
                                 // No card per row (prd §212, 2026-07-25). This page
-                                // is the room's longest list, and `dsListCardRow`
+                                // is the room's longest list, and the list card row
                                 // gave all 128 transactions an opaque surface and a
                                 // shadow each — a stack of parcels where the day
                                 // header is already doing the grouping. The rows sit
@@ -115,7 +115,8 @@ struct WalletHistoryScreen: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
+        .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()

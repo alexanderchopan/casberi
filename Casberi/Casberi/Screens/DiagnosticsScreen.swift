@@ -48,7 +48,7 @@ struct DiagnosticsScreen: View {
                         .dsText(.mono17)
                         .foregroundStyle(line.hasPrefix("FAIL") ? DS.attention
                                          : line.hasPrefix("OK") ? DS.confirm : DS.textPrimary)
-                        .dsListCardRow()
+                        .dsListRow()
                         .listRowSeparator(.hidden)
                         .textSelection(.enabled)
                 }
@@ -66,7 +66,7 @@ struct DiagnosticsScreen: View {
                             .symbolEffect(.pulse, options: .repeating, isActive: running)
                         Text("Running…").dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     }
-                    .dsListCardRow()
+                    .dsListRow()
                 }
             }
             // — The reading leaves the phone (prd §670, 2026-09-10) —
@@ -84,11 +84,6 @@ struct DiagnosticsScreen: View {
             // thing, which is worse than one that is not there yet).
             if !running, !lines.isEmpty {
                 Section {
-                    DSDoorRow(icon: copied ? "checkmark" : "doc.on.doc",
-                              label: copied ? "Copied" : "Copy readings") {
-                        copyTranscript()
-                    }
-                    .dsListCardRow()
                     ShareLink(item: transcript, subject: Text("Casberi diagnostics")) {
                         HStack(spacing: DS.Space.s2) {
                             Image(systemName: "square.and.arrow.up")
@@ -105,7 +100,7 @@ struct DiagnosticsScreen: View {
                     }
                     .buttonStyle(.plain)
                     .dsHover()
-                    .dsListCardRow()
+                    .dsListRow()
                 }
             }
             // The switch sits BELOW the readings it produces, so the line
@@ -118,7 +113,7 @@ struct DiagnosticsScreen: View {
             // publish no API and no community project has mapped one, so a
             // seat written against a guessed path is §83's dead control. One
             // capture per provider answers it: sign in, let the dashboard
-            // load, close the sheet, then Copy above. The report is endpoints
+            // load, close the sheet, then Copy readings. The report is endpoints
             // and response SHAPES — never a value, never an amount.
             Section {
                 ForEach(WebSessionCapture.targets) { target in
@@ -126,7 +121,7 @@ struct DiagnosticsScreen: View {
                               subtitle: Text("Signs in through their own page and records what it asks for. Shapes only — no amounts, no values.")) {
                         capturing = target
                     }
-                    .dsListCardRow()
+                    .dsListRow()
                 }
             }
             #endif
@@ -134,11 +129,12 @@ struct DiagnosticsScreen: View {
                 DSToggleRow(title: Text("Measure stalls"),
                             detail: Text("Times the next launch and counts main-thread stalls during each foreground sweep. Costs a 16ms heartbeat while a sweep runs. Takes effect on the next launch."),
                             isOn: $measuring)
-                .dsListCardRow()
+                .dsListRow()
                 .onChange(of: measuring) { _, on in PerfReadings.measuring = on }
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
+        .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
@@ -150,19 +146,22 @@ struct DiagnosticsScreen: View {
         .navigationTitle(Text("Diagnostics"))
         .navigationBarTitleDisplayMode(.inline)
         .dsSheetDismiss { dismiss() }
-        // A Copy IN THE BAR (user, 2026-09-10: "we need a proper copy button
-        // ON the diagnostics, not just long press and hold to copy") — the
-        // rows below scroll off with the readings; this one is on screen the
-        // whole time. System style, like Done beside it (the `dsSheetDismiss`
-        // rule). Disabled, not hidden, while the run is still writing.
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button(copied ? String(localized: "Copied") : String(localized: "Copy")) {
-                    copyTranscript()
-                }
-                .tint(DS.tint)
-                .disabled(running || lines.isEmpty)
+        // Copy is PINNED TO THE BOTTOM BAND (prd §782), not the top bar. The
+        // user asked for a copy button that stays on screen while the readings
+        // scroll (2026-09-10), and §752/§767 put every control out of the top
+        // edge; a pinned bottom verb satisfies both. It is the one Copy — the
+        // row that repeated it inside the list is gone — and it stays drawn
+        // but inert while the run is still writing (§83).
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            DSSlabButton(title: copied ? String(localized: "Copied")
+                                       : String(localized: "Copy readings"),
+                         systemImage: copied ? "checkmark" : "doc.on.doc",
+                         enabled: !running && !lines.isEmpty) {
+                copyTranscript()
             }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s3)
+            .padding(.bottom, DS.Space.s2)
         }
         .task { await run() }
         #if DEBUG

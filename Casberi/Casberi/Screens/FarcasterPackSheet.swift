@@ -22,7 +22,7 @@ struct FarcasterPackDoor: View {
                   action: { open = true }) {
             BridgeIcon(name: "Farcaster", size: DS.Mark.list, circular: false)
         }
-        .dsListCardRow()
+        .dsListRow()
         .sheet(isPresented: $open, onDismiss: {
             if didFollow { onDismissAfterFollow?() }
         }) {

@@ -80,7 +80,7 @@ private struct ChipPeek: View {
                 BridgeIcon(name: landing, size: DS.Face.row, circular: true)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(landing)
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                     // A folded chip names both halves — the word you pressed
                     // and the seat it opens — so the peek explains the fold
@@ -116,7 +116,7 @@ private struct ChipPeek: View {
                 .allowsHitTesting(false)
                 if let reading = card.reading {
                     Text(reading)
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                 }

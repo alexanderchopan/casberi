@@ -832,7 +832,7 @@ extension PrivacyDevnetRoomCard {
         VStack(alignment: .leading, spacing: 0) {
             Spacer(minLength: 0)
             Text(PrivacyDevnetName.of(account.address))
-                .dsText(.body17).fontWeight(.semibold)
+                .dsText(.body17)
                 .foregroundStyle(mine ? DS.attention : DS.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.7)
         }

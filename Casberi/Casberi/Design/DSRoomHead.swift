@@ -527,7 +527,7 @@ extension DSRoomChassis {
                               HStack(spacing: DS.Space.s1 + 2) {
                                   if let stamp {
                                       Text(verbatim: stamp)
-                                          .dsText(.label12).fontWeight(.bold)
+                                          .dsText(.label12)
                                           .foregroundStyle(Color.fixed("#ffffff"))
                                           .padding(.horizontal, 5)
                                           .padding(.vertical, 1)
@@ -589,7 +589,7 @@ extension DSRoomChassis {
                           HStack(spacing: DS.Space.s2) {
                               if let flag {
                                   Text(verbatim: flag)
-                                      .dsText(.label12).fontWeight(.bold)
+                                      .dsText(.label12)
                                       .foregroundStyle(DS.attention)
                               }
                               trailing
@@ -619,7 +619,7 @@ extension DSRoomChassis {
             } label: {
                 HStack(spacing: DS.Space.s1) {
                     Text(verbatim: title)
-                        .dsText(.subhead12).fontWeight(.semibold)
+                        .dsText(.subhead12)
                     if external {
                         Image(systemName: "arrow.up.right")
                             .dsGlyph(.caption, weight: .semibold)

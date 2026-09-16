@@ -307,7 +307,7 @@ struct VibenetKeyTraySheet: View {
                         // A word, not a pill (prd §584) — see
                         // `VibenetRoomCard`'s own note. Same badge, second file.
                         Text(String(localized: "New"))
-                            .dsText(.label12).fontWeight(.semibold)
+                            .dsText(.label12)
                             .foregroundStyle(Self.mark)
                             .fixedSize()
                     }
@@ -325,7 +325,7 @@ struct VibenetKeyTraySheet: View {
             let urgent = key.actor.expiryStanding(now: .now) == .soon
             Text(key.actor.expiryLabel(now: .now))
                 .dsText(.label12)
-                .fontWeight(urgent ? .semibold : .regular)
+                .fontWeight(urgent ? .medium : .regular)
                 .foregroundStyle(urgent ? Self.mark : DS.textTertiary)
                 .multilineTextAlignment(.trailing)
                 .fixedSize(horizontal: false, vertical: true)

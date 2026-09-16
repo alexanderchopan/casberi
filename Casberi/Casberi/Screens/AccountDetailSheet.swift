@@ -288,7 +288,7 @@ struct AccountDetailSheet: View {
     /// confirm beneath it will offer, it just no longer outranks Export.
     private func dangerLabel(_ title: String) -> some View {
         Text(title)
-            .dsText(.body17).fontWeight(.semibold)
+            .dsText(.body17)
             .foregroundStyle(DS.destructive)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
@@ -382,7 +382,7 @@ struct AccountDetailSheet: View {
                 // it in bold green, and saying it twice in two lines spends
                 // the hero's subline on a fact already made.
                 (Text("things · ")
-                    + Text(storeSize).fontWeight(.semibold))
+                    + Text(storeSize))
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
             }
             // The whole on-device story, worn as one quiet capsule — the

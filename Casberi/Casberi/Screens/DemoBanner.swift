@@ -81,7 +81,6 @@ struct DemoBanner: View {
                 .accessibilityHidden(true)
                 Text("Demo")
                     .dsText(.label12)
-                    .fontWeight(.bold)
                     .foregroundStyle(DS.attention)
                 Text(verbatim: "·")
                     .dsText(.label12)

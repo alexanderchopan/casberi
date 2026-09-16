@@ -60,7 +60,7 @@ struct FilesScreen: View {
                 }
                 Spacer()
                 Button("Change") { picking = true }
-                    .dsText(.body17).fontWeight(.semibold)
+                    .dsText(.body17)
                     .foregroundStyle(DS.tint)
                     .buttonStyle(.plain)
             }

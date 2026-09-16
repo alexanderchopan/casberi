@@ -107,7 +107,8 @@ struct NetworkReachScreen: View {
                 group(String(localized: "Only if you connect them"), available)
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
+        .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
@@ -126,7 +127,7 @@ struct NetworkReachScreen: View {
     private func group(_ title: String, _ endpoints: [NetworkReach.Endpoint]) -> some View {
         Section {
             ForEach(endpoints) { endpoint in
-                row(endpoint).dsListCardRow()
+                row(endpoint).dsListRow()
             }
         } header: {
             Text(title).dsText(.label12).foregroundStyle(DS.textTertiary)

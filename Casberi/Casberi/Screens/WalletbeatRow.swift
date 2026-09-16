@@ -33,7 +33,7 @@ struct WalletbeatWalletRow: View {
 		} trailing: {
 			if let stage = card?.stage ?? entry?.stage {
 				Text(stage)
-					.dsText(.label12).fontWeight(.semibold)
+					.dsText(.label12)
 					.foregroundStyle(DS.textSecondary)
 			}
 		} below: {
@@ -130,12 +130,12 @@ struct WalletbeatNewsRow: View {
 				HStack(spacing: DS.Space.s2) {
 					if mine {
 						Text(String(localized: "You use this"))
-							.dsText(.label12).fontWeight(.bold)
+							.dsText(.label12)
 							.foregroundStyle(DS.tint)
 					}
 					if open {
 						Text(String(localized: "Unresolved"))
-							.dsText(.label12).fontWeight(.bold)
+							.dsText(.label12)
 							.foregroundStyle(DS.attention)
 					}
 					ForEach(tags, id: \.self) { tag in

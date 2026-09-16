@@ -102,7 +102,7 @@ struct WalletbeatReportCard: View {
 			Text(watching
 				? String(localized: "Watching — tap to stop")
 				: String(localized: "Watch this wallet"))
-				.dsText(.subhead12).fontWeight(.semibold)
+				.dsText(.subhead12)
 				.foregroundStyle(watching ? DS.textTertiary : DS.tint)
 		}
 		.buttonStyle(.plain)
@@ -128,7 +128,7 @@ struct WalletbeatReportCard: View {
 	private func dimensionSummary(proxy: ScrollViewProxy) -> some View {
 		VStack(alignment: .leading, spacing: DS.Space.s3) {
 			Text(WalletbeatCopy.coverage(counts))
-				.dsText(.label12).fontWeight(.semibold)
+				.dsText(.label12)
 				.foregroundStyle(DS.textSecondary)
 
 			ForEach(dimensions, id: \.self) { dimension in
@@ -195,7 +195,7 @@ struct WalletbeatReportCard: View {
 	private var incidentCrossLink: some View {
 		VStack(alignment: .leading, spacing: DS.Space.s2) {
 			Text(String(localized: "On record"))
-				.dsText(.label12).fontWeight(.semibold)
+				.dsText(.label12)
 				.foregroundStyle(DS.textTertiary)
 			ForEach(incidents) { row in
 				if let thing = row.live {
@@ -295,7 +295,7 @@ struct WalletbeatReportCard: View {
 			if let url = entry?.pageURL ?? URL(string: "https://\(WalletbeatHost.site)/\(walletID)/") {
 				Link(destination: url) {
 					Text(String(localized: "Full review on Walletbeat"))
-						.dsText(.subhead12).fontWeight(.semibold)
+						.dsText(.subhead12)
 						.foregroundStyle(DS.tint)
 				}
 			}

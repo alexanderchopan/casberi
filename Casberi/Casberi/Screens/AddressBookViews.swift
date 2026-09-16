@@ -469,7 +469,7 @@ struct CopyAddressButton: View {
                 switch style {
                 case .inline:
                     Text(copied ? "Copied" : "Copy")
-                        .dsText(.subhead12).fontWeight(.semibold)
+                        .dsText(.subhead12)
                         .foregroundStyle(copied ? DS.confirm : tint)
                         // A bare word is as tall as its text — floored.
                         .dsTapTarget()
@@ -731,7 +731,6 @@ struct AddressCard: View {
                         .opacity(titleReveal)
                         .accessibilityHidden(titleReveal < 0.5)
                 }
-                ToolbarItem(placement: .topBarLeading) { overflowMenu }
             }
             .dsSheetDismiss { dismiss() }
             .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
@@ -876,7 +875,6 @@ struct AddressCard: View {
                 // face rather than being drawn at its final radius around a
                 // face that is still arriving.
                 .addressHeroArrival(size: Self.identityFace)
-                .shadow(color: .black.opacity(0.55), radius: 16, y: 8)
             nameField
                 .padding(.top, DS.Space.s3)
             // The quiet tier (prd §569). With the name at the head rung this
@@ -963,10 +961,19 @@ struct AddressCard: View {
     /// Rename, and the door out of the book — the two verbs that are not this
     /// screen's decision (prd §443).
     ///
-    /// Rename used to be a top-LEADING toolbar button, which is where iOS puts
-    /// Back and Cancel; a destructive-looking position for the one control
-    /// that rewrites every title you have with this address. An overflow menu
-    /// is where a profile's secondary verbs live.
+    /// The secondary verbs ride a "More" tile at the end of `actionTiles`, in
+    /// the content: nothing that acts sits at the top of a screen (prd §752,
+    /// §767), and this menu was a top-leading toolbar item until prd §782.
+    ///
+    /// Drawn only when it holds a row (`hasOverflow`) — an empty menu is §83's
+    /// dead control.
+    private var hasOverflow: Bool {
+        canRename || isWatched
+            || (WalletStore.shared.canWatchMore && !current.kind.isMonogram)
+            || (isInBook && !isWatched)
+            || !AddressBookPeople.unfollowable(current).isEmpty
+    }
+
     private var overflowMenu: some View {
         Menu {
             // Absent, never disabled, for a contact or a social profile — a
@@ -1027,17 +1034,8 @@ struct AddressCard: View {
                     }
                 } label: { Label("Watch", systemImage: "eye") }
             }
-            // THE DOOR OUT (prd §446). It was a settings-shaped row in a card
-            // at the foot of the sheet, drawn at the weight the security
-            // notice above it wore; a link into somebody else's website is a
-            // secondary verb, and this is the menu those live in.
-            if let link = explorerLink {
-                let url = link.url
-                Button {
-                    DSHaptic.tap()
-                    openURL(url)
-                } label: { Label(link.label, systemImage: "arrow.up.right") }
-            }
+            // The explorer is NOT offered here: the Explorer tile beside this
+            // menu is the one door out (prd §782, one verb in one place).
             // NOT OFFERED FOR A WATCHED ADDRESS (prd §511). `WalletStore.add`
             // guarantees every watched wallet is also a book entry, so removing
             // the entry under a live watch leaves a wallet the app reads and
@@ -1060,13 +1058,9 @@ struct AddressCard: View {
                 } label: { Label("Unfollow", systemImage: "person.badge.minus") }
             }
         } label: {
-            Image(systemName: "ellipsis")
-                .dsGlyph(.subhead)
-                .foregroundStyle(DS.textPrimary)
-                .frame(width: 32, height: 32)
-                .background(DS.fillStrong, in: Circle())
-                .dsTapTarget(Circle())
+            actionTileFace("ellipsis", String(localized: "More"))
         }
+        .dsHover()
         .accessibilityLabel(Text("More"))
     }
 
@@ -1258,16 +1252,16 @@ struct AddressCard: View {
     /// copy verb, because copying "their Farcaster handle" is a different act
     /// from copying "their Bluesky handle" and one pill could only ever do one
     /// of them.
-    /// **WAYS TO REACH THEM, AS ONE GROUPED INSET** (prd §499, user: *"think
+    /// **WAYS TO REACH THEM, AS ONE GROUP** (prd §499, user: *"think
     /// about how Fantastical and Cardhop does its addresses"*).
     ///
     /// Cardhop's grammar exactly, and it is the fix for what the user called
     /// a database: the VALUE leads at reading size and the source is the small
     /// label above it — the inverse of a label column with mono values, which
-    /// is a fact table however well it is spaced. One soft inset holds every
-    /// row, rows are separated by air rather than by dividers (no hairlines,
-    /// ever), and each carries a round icon disc and its own copy on the
-    /// trailing edge.
+    /// is a fact table however well it is spaced. The rows stand on no plate
+    /// (prd §782) and are separated by air rather than by dividers (no
+    /// hairlines, ever); each carries a round icon disc and its own copy on
+    /// the trailing edge.
     ///
     /// The row is a real HIT TARGET — the whole row copies — because in a
     /// contacts app tapping the number is how you use it; the trailing glyph
@@ -1305,11 +1299,11 @@ struct AddressCard: View {
                                     .dsText(.subhead12)
                                     .foregroundStyle(DS.textTertiary)
                                     .lineLimit(1)
-                                // The value at READING size and semibold —
-                                // this is the fact the row exists for.
+                                // The value at READING size, in the rung's own
+                                // weight (§764) — this is the fact the row
+                                // exists for.
                                 Text(line.value)
                                     .dsText(line.monospaced ? .mono17 : .body17)
-                                    .fontWeight(.semibold)
                                     .foregroundStyle(DS.textPrimary)
                                     .textSelection(.enabled)
                                     .lineLimit(2)
@@ -1333,9 +1327,7 @@ struct AddressCard: View {
                     .transition(.scale(scale: 0.96).combined(with: .opacity))
                 }
             }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.vertical, DS.Space.s1)
-            .dsWell(cornerRadius: DS.Radius.sheet)
+            // On no plate (prd §782): the rows stand in the sheet's column.
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s6)
             // The unfold and the fold back, on the app's own spring.
@@ -1439,6 +1431,7 @@ struct AddressCard: View {
     /// A tile is ABSENT rather than disabled when its verb cannot run — a
     /// person with no address has nothing to copy and no explorer to open
     /// (§83), so they get the Note tile alone and the row simply narrows.
+    /// The last tile is `overflowMenu`, the card's secondary verbs (prd §782).
     @ViewBuilder
     private var actionTiles: some View {
         let copyValue = reachLines.first?.clipboard
@@ -1465,6 +1458,9 @@ struct AddressCard: View {
                     DSHaptic.tap()
                     openURL(link.url)
                 }
+            }
+            if hasOverflow {
+                overflowMenu
             }
         }
         .padding(.horizontal, DS.Space.s4)
@@ -1498,22 +1494,28 @@ struct AddressCard: View {
     private func actionTile(_ glyph: String, _ title: String,
                             _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
-            VStack(spacing: DS.Space.s1 + 2) {
-                Image(systemName: glyph)
-                    .dsGlyph(.body, weight: .medium)
-                    .foregroundStyle(DS.tint)
-                Text(title)
-                    .dsText(.label12).fontWeight(.semibold)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, DS.Space.s3 + 2)
-            .dsWell(cornerRadius: DS.Radius.control + 2)
-            .contentShape(Rectangle())
+            actionTileFace(glyph, title)
         }
         .buttonStyle(PressSpring())
         .dsHover()
+    }
+
+    /// One tile's face, shared by the Button tiles and the More menu. The well
+    /// stays: this is a control's face, not a plate behind content.
+    private func actionTileFace(_ glyph: String, _ title: String) -> some View {
+        VStack(spacing: DS.Space.s1 + 2) {
+            Image(systemName: glyph)
+                .dsGlyph(.body, weight: .medium)
+                .foregroundStyle(DS.tint)
+            Text(title)
+                .dsText(.label12)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, DS.Space.s3 + 2)
+        .dsWell(cornerRadius: DS.Radius.control + 2)
+        .contentShape(Rectangle())
     }
 
     private var addressBlock: some View {
@@ -1670,9 +1672,9 @@ struct AddressCard: View {
     /// (2026-08-01), as a FIELD rather than a card (prd §443), with the
     /// comparison MADE rather than asked for (2026-08-22, prd §444).
     ///
-    /// A card is a container of information and this is a CONDITION of the
-    /// screen, so it takes the full width and its own ground — the one thing
-    /// on the sheet that cannot be mistaken for another widget in the stack.
+    /// It stands on the page with no ground of its own (prd §782, user: "remove
+    /// that red background"): the words are red, like the thing sheet's
+    /// transfer warning, and that is what sets it apart from the rows around it.
     /// Both addresses print in full and un-truncated, which is the only form
     /// of this warning anyone can act on.
     ///
@@ -1705,10 +1707,10 @@ struct AddressCard: View {
                         .foregroundStyle(DS.destructive)
                     Text("Another address looks just like this one")
                         .dsText(.heading17)
-                        .foregroundStyle(DS.textPrimary)
+                        .foregroundStyle(DS.destructive)
                 }
                 Text(partingLine(mine, twins: twins.count))
-                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .dsText(.subhead12).foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     diffRow(String(localized: "This one"), current.address, mine)
@@ -1723,7 +1725,6 @@ struct AddressCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, DS.Space.s4)
             .padding(.vertical, DS.Space.s3)
-            .background(DS.destructive.opacity(0.16))
         }
     }
 
@@ -1767,7 +1768,9 @@ struct AddressCard: View {
         case .pivot:
             return Text(verbatim: segment.text)
                 .foregroundStyle(DS.destructive)
-                .fontWeight(.bold)
+                // The one character that parts them: a fact, so it takes the
+                // medium weight as well as the ink (§764).
+                .fontWeight(.medium)
         case .differing:
             return Text(verbatim: segment.text).foregroundStyle(DS.textPrimary)
         }
@@ -2025,7 +2028,7 @@ struct AddressCard: View {
                 AddressHistoryScreen(entry: current)
             } label: {
                 Text("See all \(total)")
-                    .dsText(.subhead12).fontWeight(.semibold)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.tint)
                     .contentShape(Rectangle())
                     .dsTapTarget()
@@ -2226,7 +2229,7 @@ struct AddressCard: View {
                             noteFocused = true
                         } label: {
                             Text("Edit")
-                                .dsText(.subhead12).fontWeight(.semibold)
+                                .dsText(.subhead12)
                                 .foregroundStyle(DS.tint)
                         }
                         .buttonStyle(.plain)

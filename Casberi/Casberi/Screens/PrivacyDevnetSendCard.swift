@@ -176,7 +176,7 @@ struct PrivacyDevnetSendCard: View {
                     .dsGlyph(.caption, weight: .semibold)
                     .foregroundStyle(Self.mark)
                 Text(String(localized: "\(PrivacyDevnetMoney.line(wei: wei)) shielded"))
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
             }
         }

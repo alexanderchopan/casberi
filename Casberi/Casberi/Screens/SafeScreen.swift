@@ -227,7 +227,7 @@ struct SafeScreen: View {
                 standingLines
                 Button { confirmDeleteSigner = true } label: {
                     Text("Delete this phone's key")
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.body17)
                         .foregroundStyle(DS.destructive)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .contentShape(Rectangle())

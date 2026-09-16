@@ -72,16 +72,9 @@ struct TokenWatchScreen: View {
             teardown: {},
             sheet: $sheet,
             act: { addBlock },
-            more: { EmptyView() },
+            more: { sortChips },
             keySheet: { EmptyView() }
         )
-        .toolbar {
-            // The sort choice lived in the old watchlist section's header.
-            // The roster has no header of its own, so it rides the toolbar.
-            if watched.count > 1 {
-                ToolbarItem(placement: .topBarTrailing) { sortMenu }
-            }
-        }
         .onAppear {
             loadWatched()
             // The rows' price column reads the SAME cached TokenPulse the
@@ -189,29 +182,27 @@ struct TokenWatchScreen: View {
         return thing.title
     }
 
-    /// The sort choice — a menu, not a segmented control, so the header
-    /// keeps its one-line height at every text size.
-    private var sortMenu: some View {
-        Menu {
-            ForEach(TokenWatchSortMode.allCases, id: \.self) { mode in
-                Button {
-                    DSHaptic.selection()
-                    TokenWatchOrder.shared.setMode(mode)
-                } label: {
-                    if mode == TokenWatchOrder.shared.mode {
-                        Label(mode.label, systemImage: "checkmark")
-                    } else {
-                        Text(mode.label)
+    /// The sort choice, as chips above the roster it orders (prd §752, §767:
+    /// nothing that picks sits at the top of a screen). Three choices, so
+    /// chips rather than a menu; drawn only when there is something to order.
+    @ViewBuilder private var sortChips: some View {
+        if watched.count > 1 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(TokenWatchSortMode.allCases, id: \.self) { mode in
+                        let on = mode == TokenWatchOrder.shared.mode
+                        Button {
+                            DSHaptic.selection()
+                            TokenWatchOrder.shared.setMode(mode)
+                        } label: {
+                            Chip(text: mode.label, selected: on)
+                        }
+                        .buttonStyle(PressSpring())
+                        .accessibilityAddTraits(on ? [.isSelected] : [])
                     }
                 }
             }
-        } label: {
-            HStack(spacing: 3) {
-                Text(TokenWatchOrder.shared.mode.label)
-                Image(systemName: "chevron.up.chevron.down")
-                    .dsGlyph(.tick)
-            }
-            .dsText(.label12).foregroundStyle(DS.textTertiary)
+            .scrollIndicators(.hidden)
         }
     }
 

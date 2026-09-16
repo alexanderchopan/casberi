@@ -101,7 +101,6 @@ struct WalletbeatVerdictTag: View {
 				.frame(width: 7, height: 7)
 			Text(WalletbeatCopy.label(verdict))
 				.dsText(.label12)
-				.fontWeight(.semibold)
 				.foregroundStyle(verdict.isJudged ? DS.textSecondary : DS.textTertiary)
 		}
 		.accessibilityElement()

@@ -136,10 +136,10 @@ struct WalletNFTShelfCard: View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(String(localized: "NFTs"))
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                 Text(headline)
-                    .dsText(.body17).fontWeight(.semibold)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
             }
             Spacer(minLength: 0)
@@ -149,7 +149,7 @@ struct WalletNFTShelfCard: View {
             if !demo {
                 Button(action: onEdit) {
                     Text(String(localized: "Edit"))
-                        .dsText(.subhead12).fontWeight(.medium)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.tint)
                 }
                 .buttonStyle(PressSpring())
@@ -416,7 +416,7 @@ struct WalletNFTCollectionRows: View {
             if !demo {
                 Button(action: onEdit) {
                     Text(String(localized: "Choose collections"))
-                        .dsText(.subhead12).fontWeight(.medium)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.tint)
                         .padding(.vertical, DS.Space.s3)
                         .contentShape(Rectangle())
@@ -484,7 +484,7 @@ struct WalletNFTCollectionRows: View {
             }
         }
         .frame(width: 56, height: 56)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         .accessibilityHidden(true)
     }
 }

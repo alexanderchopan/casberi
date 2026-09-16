@@ -15,8 +15,20 @@ enum WidgetChrome {
     /// the number is spelled here rather than imagined to be shared.
     static let blockRadius: CGFloat = 12
 
+    /// The recording tone, and the only red a tile draws: the app's
+    /// `DS.destructive` on a dark ground (`#ff453a`), spelled here because
+    /// `Design/` is app-side. It marks one state — a voice note recording.
+    static let recording = Color(red: 255 / 255, green: 69 / 255, blue: 58 / 255)
+
+    /// A change's direction, the app's `DS.confirm` / `DS.destructive` on a dark
+    /// ground (`#30d158`, `#ff453a`), spelled once so no tile picks its own
+    /// green or red (prd §782). A flat change takes neither (§83).
+    static let gain = Color(red: 48 / 255, green: 209 / 255, blue: 88 / 255)
+    static let loss = recording
+
     /// The app accent, carried across the app group by `ThemeStore` (falls back
-    /// to Casberi blue before the app has ever written it).
+    /// to Casberi blue before the app has ever written it — the same
+    /// `ThemeStore.accentHex` that `DS.tint` draws).
     static var accent: Color {
         let hex = UserDefaults(suiteName: SharedStore.appGroup)?
             .string(forKey: "theme.tint.hex") ?? "#1673e6"
@@ -205,10 +217,12 @@ struct WidgetFlowLanes: View {
     var showsFigures = true
 
     var body: some View {
+        // In wears the tile's accent and Out stays neutral ink: which side is
+        // which is the label's job, not a categorical hue's (prd §782).
         VStack(alignment: .leading, spacing: 5) {
             lane(weight: band.inWeight, usd: band.inUSD,
                  label: String(localized: "In"),
-                 fill: AnyShapeStyle(Color.green.opacity(0.85)))
+                 fill: AnyShapeStyle(WidgetChrome.accent))
             lane(weight: band.outWeight, usd: band.outUSD,
                  label: String(localized: "Out"),
                  fill: AnyShapeStyle(Color.white.opacity(0.32)))

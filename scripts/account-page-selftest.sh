@@ -110,7 +110,7 @@ menus=$(grep -c '.contextMenu {' "$TMP/page-bare.swift" || true)
   || { echo "✗ AccountPage: $swipes swipeActions but $menus contextMenus — a swipe with no Mac mirror"; exit 1; }
 
 # 3. No cards, no slab fills on the page — the only filled element is the field.
-for bad in 'dsListCardRow()' 'dsWell(' 'DSSlabDoor(' 'DSSlabButton(' 'surfaceListRow' 'dsTapCard()'; do
+for bad in 'dsWell(' 'DSSlabDoor(' 'DSSlabButton(' 'surfaceListRow' 'dsTapCard()'; do
   grep -qF "$bad" "$TMP/page-bare.swift" \
     && { echo "✗ AccountPage draws $bad — §639: no cards, no slabs (\"looks like a SaaS tool\")"; exit 1; }
 done

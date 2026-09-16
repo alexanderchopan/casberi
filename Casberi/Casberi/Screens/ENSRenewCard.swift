@@ -66,9 +66,8 @@ struct ENSRenewCard: View {
 
             DSFootnote("A transaction you sign there — never here.")
         }
-        .padding(DS.Space.s4)
+        // No well (prd §782): the block stands in the sheet's column.
         .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWell()
     }
 
     // MARK: - Parts
@@ -99,7 +98,6 @@ struct ENSRenewCard: View {
                 } label: {
                     Text(option.label)
                         .dsText(.subhead12)
-                        .fontWeight(option == term ? .semibold : .regular)
                         .foregroundStyle(option == term ? DS.textPrimary : DS.textSecondary)
                         .padding(.horizontal, DS.Space.s3)
                         .padding(.vertical, DS.Space.s2)

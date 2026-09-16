@@ -7,7 +7,7 @@ import SwiftUI
 /// one `label12` line. Every SETTING in a List needed the other shape — a
 /// title, a wrapping sentence under it, the switch — and eleven places drew
 /// it by hand at two title rungs. This is that shape, with no fill and no
-/// insets, so it sits in a `dsListCardRow` or a sheet column alike.
+/// insets, so it sits in a `dsListRow` or a sheet column alike.
 ///
 /// `detailTone` carries a row's own verdict (a failing sync reads red) on the
 /// line that states the fact, never on a badge beside it.
@@ -22,7 +22,7 @@ struct DSToggleRow: View {
         Toggle(isOn: $isOn) {
             VStack(alignment: .leading, spacing: 2) {
                 title
-                    .dsText(.body17).fontWeight(.medium)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let detail {

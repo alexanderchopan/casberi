@@ -88,8 +88,8 @@ struct FaceScopeRail: View {
     /// ONE flag rather than a `captions` knob beside a `selectionRing` knob,
     /// and that is the whole point: those two are not independent settings, they
     /// are one ruling with two consequences. Dropping the caption takes the
-    /// selection weight with it (§362 drew selection as opacity AND the
-    /// caption's semibold), so the ring has to step in — and the ring is only
+    /// caption's selection cue with it (§362 drew selection as opacity AND the
+    /// caption; its ink, not its weight, since prd §782), so the ring has to step in — and the ring is only
     /// free where `ringed` has nothing to say, which is the same rooms whose
     /// caption moved. Two flags would let a caller ask for a captionless rail
     /// with no visible selection at all, a state nobody designed.
@@ -114,7 +114,7 @@ struct FaceScopeRail: View {
     /// concentric rounded rect the switcher's picked chip wears one deck below.
     ///
     /// That fill is the whole point of the flag. Un-embedded, selection here is
-    /// a 0.7 recession on everything else plus a semibold caption
+    /// a 0.7 recession on everything else plus a primary-ink caption
     /// (`restOpacity`), which is a fine grammar for a strip standing alone and
     /// an unreadable one four points above a control that says "picked" with a
     /// travelling tint capsule. Two selection grammars stacked is what made the
@@ -260,7 +260,7 @@ struct FaceScopeRail: View {
     /// precisely because they follow every one of them. Recession is only
     /// meaningful against something raised; with no scope there is nothing to
     /// recede FROM, so every face sits at full strength and "All" is named by
-    /// its own slot's ink and weight, exactly as before.
+    /// its own slot's ink, exactly as before.
     ///
     /// **And when a scope IS picked it is 0.7, not 0.4.** The design law's "a
     /// mark someone recognizes stays opaque" is the same rule that keeps glass
@@ -273,7 +273,7 @@ struct FaceScopeRail: View {
     /// control in this app.
     ///
     /// Opacity is still doing less work than it looks like it is — the caption's
-    /// weight and ink carry selection alongside it (see `slot`), which is what
+    /// ink carries selection alongside it (see `slot`), which is what
     /// lets the dim end be this gentle without the lit face becoming ambiguous.
     private var restOpacity: Double { scope == nil ? 1 : 0.7 }
 
@@ -343,7 +343,7 @@ struct FaceScopeRail: View {
     /// same argument for an identicon.
     ///
     /// **What the ring does NOT replace, deliberately.** The 0.7 recession on
-    /// everything else and the caption's semibold both stay — they were
+    /// everything else and the caption's ink both stay — they were
     /// measured (see `restOpacity`), they carry the state in channels a ring
     /// does not, and a captionless rail leans on the ring precisely because
     /// those are absent. This swaps one indicator for another rather than
@@ -413,7 +413,7 @@ struct FaceScopeRail: View {
         } label: {
             VStack(spacing: DS.Space.s1) {
                 Text("All")
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
                     .frame(width: faceSize, height: faceSize)
                     // Embedded, the SLOT behind this circle carries the tint
@@ -456,8 +456,8 @@ struct FaceScopeRail: View {
 
     /// One face over its name.
     ///
-    /// **Selection is opacity and weight, never a ring** (§351's rule, which this
-    /// control respects rather than restates): a tint ring already means "the
+    /// **Selection is opacity and ink, never a ring** (§351's rule, which this
+    /// control respects rather than restates; ink, not weight, since prd §782): a tint ring already means "the
     /// active chip" one tier up in the strip and a dashed orange one means "needs
     /// reconnecting", so a third ring for selection would be a third meaning for
     /// one mark. The face itself is the identity, so it can carry selection by
@@ -490,7 +490,6 @@ struct FaceScopeRail: View {
                 if drawsCaption {
                     Text(item.caption)
                         .dsText(.label12)
-                        .fontWeight(isOn ? .semibold : .regular)
                         .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
                         .lineLimit(1)
                 }
@@ -549,7 +548,7 @@ struct FaceScopeRail: View {
     private func face(_ item: Item) -> some View {
         if inFolder, let characters = Self.characters(for: item) {
             Text(characters)
-                .dsText(.label12).fontWeight(.semibold)
+                .dsText(.label12)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
@@ -647,7 +646,7 @@ struct FaceScopeRail: View {
     ///
     /// Gated on `namesInRoom` — the ADAPTER's flag, not a per-item one — so a
     /// rail is either a "posted since" rail or a "this is the pick" rail and
-    /// never both at once. Without the caption's semibold, opacity alone was
+    /// never both at once. Without the caption, opacity alone was
     /// carrying selection, and `restOpacity` is a gentle 0.7 by ruling.
     private func ringWidth(_ item: Item, isOn: Bool) -> CGFloat {
         (item.ringed || (namesInRoom && isOn)) ? 2 : 0

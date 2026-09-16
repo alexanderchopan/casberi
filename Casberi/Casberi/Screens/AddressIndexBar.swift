@@ -45,7 +45,7 @@ struct AddressIndexBar: View {
             VStack(spacing: 0) {
                 ForEach(letters, id: \.self) { letter in
                     Text(letter)
-                        .dsText(.label12).fontWeight(.semibold)
+                        .dsText(.label12)
                         .foregroundStyle(active == letter ? DS.tint : DS.textTertiary)
                         .frame(height: Self.rowHeight)
                         .frame(maxWidth: .infinity)

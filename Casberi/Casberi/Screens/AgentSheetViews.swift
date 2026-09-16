@@ -71,10 +71,11 @@ struct AgentConversationHead: View {
 
 /// The conversation itself — the thing that was in the record all along.
 ///
-/// Two voices, drawn as two voices: yours tinted and trailing, the agent's
-/// faint and leading. Today's `ChatBubbles` gives both the same fill and the
-/// same alignment, so the only thing distinguishing a question from an answer
-/// is the label the importer typed into the string.
+/// Two voices, drawn as two voices: yours trailing, the agent's leading, each
+/// under its speaker's label and on no plate — air separates the turns (prd
+/// §782). `ChatBubbles` gives both the same alignment, so the only thing
+/// distinguishing a question from an answer there is the label the importer
+/// typed into the string.
 struct AgentTurnsView: View {
     let turns: [AgentSheet.Turn]
     /// How many turns the importer's clamp cut, when that is knowable.
@@ -100,7 +101,7 @@ struct AgentTurnsView: View {
     var body: some View {
         let shown = expanded ? turns : Array(turns.prefix(Self.collapsed))
         let hidden = turns.count - shown.count
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
             ForEach(Array(shown.enumerated()), id: \.offset) { _, turn in
                 bubble(turn)
             }
@@ -166,9 +167,9 @@ struct AgentTurnsView: View {
                       tier: .body17)
                 .fixedSize(horizontal: false, vertical: true)
                 .multilineTextAlignment(.leading)
-                // A bubble is capped, or the two voices stop being two
+                // A turn is capped, or the two voices stop being two
                 // (Mac parity, 2026-08-12). Alignment is the whole cue here —
-                // "yours tinted and trailing, the agent's faint and leading" —
+                // "yours trailing, the agent's leading" —
                 // and a turn long enough to fill the column is aligned to
                 // both edges at once, so the transcript collapses back into
                 // the wall of same-width blocks this view was written to
@@ -178,10 +179,6 @@ struct AgentTurnsView: View {
                 // a short turn keeps hugging its own text and no iPhone
                 // layout moves.
                 .frame(maxWidth: Self.bubbleMaxWidth, alignment: .leading)
-                .padding(.horizontal, DS.Space.s3)
-                .padding(.vertical, DS.Space.s2 + 1)
-                .background(mine ? DS.tintDim : DS.fillFaint,
-                            in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
         // Read apart, a name and a paragraph are two unrelated announcements.
@@ -232,9 +229,8 @@ struct AgentReceiptCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(DS.Space.s4)
+        // On no plate (prd §782): air separates it from the blocks around it.
         .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWell()
     }
 
     /// An absent number has no cell — `SocialReceptionCard`'s rule, and the
@@ -276,7 +272,9 @@ struct AgentGrantView: View {
                         .accessibilityHidden(true)
                     Text(verbatim: status)
                         .dsText(.body17)
-                        .fontWeight(.semibold)
+                        // The grant's state ("Expires in 3 days"): weight carries
+                        // the fact, at medium (§764).
+                        .fontWeight(.medium)
                         .foregroundStyle(grant.urgent ? DS.attention : DS.textSecondary)
                 }
                 .padding(.bottom, DS.Space.s2)

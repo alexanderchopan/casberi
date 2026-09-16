@@ -403,10 +403,12 @@ struct NoteGraphCounts: View {
     let linkedFrom: Int
 
     var body: some View {
-        HStack(spacing: DS.Space.s2) {
+        // Two figures on no plate, air between them (prd §782).
+        HStack(alignment: .top, spacing: DS.Space.s4) {
             cell(linksOut, String(localized: "links out"))
             cell(linkedFrom, String(localized: "notes link here"))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func cell(_ value: Int, _ noun: String) -> some View {
@@ -419,9 +421,6 @@ struct NoteGraphCounts: View {
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s3)
-        .dsWell()
         .accessibilityElement(children: .combine)
     }
 }
@@ -556,9 +555,7 @@ struct NoteReceptionCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWell()
     }
 }
 
@@ -717,9 +714,9 @@ struct WalkDoors: View {
                     .frame(maxWidth: .infinity, alignment: trailing ? .trailing : .leading)
                     if trailing { chevron(systemImage) }
                 }
-                .padding(DS.Space.s3)
-                .frame(maxWidth: .infinity)
-                .dsWell()
+                // A door on no plate (prd §782): the chevron and the whole-width
+                // target say it opens; 44pt tall like every row.
+                .frame(maxWidth: .infinity, minHeight: DS.Hit.min)
                 .contentShape(Rectangle())
             }
             .buttonStyle(PressSpring())
@@ -735,9 +732,11 @@ struct WalkDoors: View {
         }
     }
 
+    /// `DSChevron`'s glyph and ink, in either direction.
     private func chevron(_ systemImage: String) -> some View {
         Image(systemName: systemImage)
-            .dsGlyph(.caption, weight: .semibold)
+            .dsGlyph(.caption)
             .foregroundStyle(DS.textTertiary)
+            .accessibilityHidden(true)
     }
 }

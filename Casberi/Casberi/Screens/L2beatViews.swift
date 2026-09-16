@@ -96,7 +96,6 @@ struct L2beatStripKey: View {
 				.frame(height: Self.cellHeight)
 			Text(axis.shortLabel)
 				.dsText(.label12)
-				.fontWeight(focused == axis ? .semibold : .regular)
 				.foregroundStyle(focused == axis ? DS.textPrimary : DS.textTertiary)
 				.lineLimit(1)
 				.minimumScaleFactor(0.75)
@@ -136,7 +135,6 @@ struct L2beatStageChip: View {
 	var body: some View {
 		Text(stage?.label ?? String(localized: "Not staged"))
 			.dsText(compact ? .label12 : .label12)
-			.fontWeight(.semibold)
 			.foregroundStyle(L2beatCopy.stageInk(stage))
 			.lineLimit(1)
 			.accessibilityLabel(Text(L2beatCopy.stageReadout(stage)))
@@ -158,7 +156,6 @@ struct L2beatSentimentTag: View {
 				.frame(width: 7, height: 7)
 			Text(L2beatCopy.label(sentiment))
 				.dsText(.label12)
-				.fontWeight(.semibold)
 				.foregroundStyle(sentiment == .unknown ? DS.textTertiary : DS.textSecondary)
 		}
 		.accessibilityElement()

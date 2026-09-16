@@ -112,7 +112,8 @@ struct SocialPostContent: View {
 /// THE REST OF A SELF-THREAD (prd §363) — the posts that continued the one
 /// you're reading, under it, in reading type.
 ///
-/// A quiet card rather than the post's own display tier: these are the same
+/// Quiet reading type on no plate (prd §782) rather than the post's own
+/// display tier: these are the same
 /// person still talking, so they are the post's continuation, not four more
 /// posts competing with it. The count is the archive's own
 /// (`Thing.messageCount`) and it counts the WHOLE chain, head included, which
@@ -136,9 +137,7 @@ struct SocialThreadRest: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWell()
     }
 }
 
@@ -182,8 +181,9 @@ struct SocialPhoto: View {
 }
 
 /// The post this post QUOTES — both networks' signature form, dropped at ingest
-/// until 2026-07-16, so a quote-post read as a bare, contextless line. A
-/// recessed card inside the body: a smaller face, the handle, the words. In
+/// until 2026-07-16, so a quote-post read as a bare, contextless line. Set
+/// apart by a leading inset and secondary ink, never a plate or a line (prd
+/// §782): a smaller face, the handle, the words. In
 /// the SHEET a tap walks into it in-app (its own thread, its own quote); in a
 /// feed row it is a read with no door of its own — see `walkable`.
 struct SocialQuoteCard: View {
@@ -230,8 +230,7 @@ struct SocialQuoteCard: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s3)
-        .dsWell()
+        .padding(.leading, DS.Space.s4)
         .contentShape(Rectangle())
     }
 
@@ -377,8 +376,8 @@ struct SocialPostThread: View {
     }
 }
 
-/// The conversation under a post — read-only context in the spec table's quiet
-/// clothes: a face, the handle, the words. The header counts the thread
+/// The conversation under a post — read-only context on no plate (prd §782):
+/// a face, the handle, the words. The header counts the thread
 /// ("Replies · 8"), the rows arrive one after another (the feed's stagger). A
 /// tap on a reply WALKS INTO it (2026-07-16, was: opened the browser); a tap on
 /// its face opens the person. Shared by the thing sheet and the walker, so a
@@ -403,9 +402,7 @@ struct SocialRepliesSection: View {
                 row(reply).staggerIn(index: min(i, 8))
             }
         }
-        .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWell()
         .sheet(item: $profile) { p in
             SocialProfileCard(profile: p)
         }
@@ -615,22 +612,9 @@ struct SocialProfileCard: View {
     /// Their follow graph as a picker (prd §169/§184) — moved here from the
     /// setup row it used to sit beside.
     private var followRow: some View {
-        Button {
+        DSDoorRow(icon: "person.2", label: "Who they follow") {
             followImport = FollowImportTarget(source: shown.source, handle: shown.handle)
-        } label: {
-            HStack(spacing: DS.Space.s2) {
-                Image(systemName: "person.2")
-                    .dsGlyph(.subhead)
-                    .foregroundStyle(DS.textSecondary)
-                Text("Who they follow")
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                Spacer(minLength: 0)
-            }
-            .padding(DS.Space.s3)
-            .dsWell()
-            .contentShape(Rectangle())
         }
-        .buttonStyle(PressSpring())
     }
 
     private var header: some View {
@@ -664,16 +648,19 @@ struct SocialProfileCard: View {
     /// Watch would be a dead control on the one person it can never apply to.
     @ViewBuilder private var watchRow: some View {
         if watched {
+            // A STATE, not a verb: the door row's geometry with no button and
+            // no plate (prd §782), so it lines up with the doors under it.
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "checkmark")
-                    .dsGlyph(.subhead)
+                    .dsGlyph(.caption, weight: .regular)
                     .foregroundStyle(DS.confirm)
+                    .frame(width: 18, alignment: .center)
+                    .accessibilityHidden(true)
                 Text("Watching @\(shown.shortHandle)")
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                 Spacer(minLength: 0)
             }
-            .padding(DS.Space.s3)
-            .dsWell()
+            .frame(minHeight: DS.Hit.min)
         } else {
             // **THE ONE ACT, AT THE HEAD RUNG (prd §569).** This card exists
             // to answer "who is this, and do I want their posts" — everything
@@ -705,22 +692,9 @@ struct SocialProfileCard: View {
     /// someone in a thread, you can watch what they hold. Watch-only, so
     /// peeking is legitimate (the standing wallet ruling).
     private var walletRow: some View {
-        Button {
+        DSDoorRow(icon: "wallet.pass", label: "Watch their wallet") {
             watchWallet()
-        } label: {
-            HStack(spacing: DS.Space.s2) {
-                Image(systemName: "wallet.pass")
-                    .dsGlyph(.subhead)
-                    .foregroundStyle(DS.textSecondary)
-                Text("Watch their wallet")
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                Spacer(minLength: 0)
-            }
-            .padding(DS.Space.s3)
-            .dsWell()
-            .contentShape(Rectangle())
         }
-        .buttonStyle(PressSpring())
     }
 
     /// "Are they on the other network too?" — a SEARCH, never a claim. Nothing
@@ -732,22 +706,9 @@ struct SocialProfileCard: View {
         if let other = SocialPeople.otherSource(profile.source) {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if !searchedElsewhere {
-                    Button {
+                    DSDoorRow(icon: "magnifyingglass", label: "Look for them on \(other)") {
                         findElsewhere()
-                    } label: {
-                        HStack(spacing: DS.Space.s2) {
-                            Image(systemName: "magnifyingglass")
-                                .dsGlyph(.subhead)
-                                .foregroundStyle(DS.textSecondary)
-                            Text("Look for them on \(other)")
-                                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(DS.Space.s3)
-                        .dsWell()
-                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(PressSpring())
                 } else if elsewhere.isEmpty {
                     Text("No \(other) account by that name.")
                         .dsText(.body17).foregroundStyle(DS.textTertiary)

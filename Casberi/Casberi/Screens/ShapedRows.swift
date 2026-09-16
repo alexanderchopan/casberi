@@ -675,7 +675,7 @@ struct BandRow: View {
                     Text(countdown).dsText(.label12).foregroundStyle(DS.tint)
                 } else {
                     LiveTimeText(date: thing.capturedAt, color: timeInk)
-                        .fontWeight(newSinceLastSeen ? .semibold : .regular)
+                        .fontWeight(newSinceLastSeen ? .medium : .regular)
                         .animation(DS.Motion.standard, value: newSinceLastSeen)
                 }
             }
@@ -762,7 +762,7 @@ struct BandRow: View {
         let labelled: Text? = project.map { p in
             Text(p)
                 .foregroundStyle(hue ?? DS.textSecondary)
-                .fontWeight(hue != nil ? .semibold : .regular)
+                .fontWeight(hue != nil ? .medium : .regular)
         }
         let parts = [eventClock.map { Text($0) }, named.map { Text($0) }, labelled]
             .compactMap { $0 }
@@ -1966,7 +1966,7 @@ struct PhotoCell: View {
             .overlay(alignment: .topLeading) {
                 if let dayPill {
                     Text(dayPill)
-                        .dsText(.label12).fontWeight(.semibold)
+                        .dsText(.label12)
                         .foregroundStyle(.white)
                         // Vertical padding, not a pinned 22pt height: the pill
                         // now grows with the label instead of clipping it.
@@ -2312,7 +2312,7 @@ struct PostCard: View {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 if let why = SocialThread.contextLabel(for: thing) {
                     Text(why)
-                        .dsText(.label12).fontWeight(.semibold)
+                        .dsText(.label12)
                         .foregroundStyle(DS.legibleInk(for: thing.source) ?? DS.textTertiary)
                         .lineLimit(1)
                 }
@@ -2436,7 +2436,7 @@ struct PostImageGrid: View {
                                         RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
                                             .fill(.black.opacity(0.45))
                                         Text("+\(overflow)")
-                                            .dsText(.heading17).fontWeight(.bold)
+                                            .dsText(.heading17)
                                             .foregroundStyle(.white)
                                     }
                                 }
@@ -2503,7 +2503,7 @@ struct SocialThreadCard: View {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 if let why = SocialThread.contextLabel(for: head) {
                     Text(why)
-                        .dsText(.label12).fontWeight(.semibold)
+                        .dsText(.label12)
                         .foregroundStyle(DS.legibleInk(for: head.source) ?? DS.textTertiary)
                         .lineLimit(1)
                 }
@@ -2744,7 +2744,7 @@ struct BitrefillLede: View {
                     .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             }
             Text(balance)
-                .dsText(.body17).fontWeight(.semibold)
+                .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
         }
         .padding(.vertical, DS.Space.s2)
@@ -2766,12 +2766,12 @@ struct WatchlistLede: View {
             Spacer(minLength: 0)
             if up > 0 {
                 Text("\(up) up")
-                    .dsText(.subhead12).fontWeight(.semibold)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.confirm)
             }
             if down > 0 {
                 Text("\(down) down")
-                    .dsText(.subhead12).fontWeight(.semibold)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.destructive)
             }
             Text("24h")

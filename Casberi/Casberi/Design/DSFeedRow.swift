@@ -63,7 +63,7 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text(name)
                         .dsText(.body17)
-                        .fontWeight(emphasized ? .semibold : .regular)
+                        .fontWeight(emphasized ? .medium : .regular)
                         .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
                         .strikethrough(done, color: DS.textTertiary)
                         .lineLimit(nameLines)

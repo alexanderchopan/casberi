@@ -44,7 +44,6 @@ struct Chip: View {
             // "Try with / your key" inside a 28pt capsule).
             Text(text)
                 .dsText(.label12)
-                .fontWeight(selected ? .semibold : .regular)
                 .lineLimit(1)
             if let count {
                 Text(verbatim: "\(count)")

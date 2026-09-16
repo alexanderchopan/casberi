@@ -154,7 +154,7 @@ struct WalletbeatIncidentHead: View {
 	private func sources(_ sources: [WalletbeatSource]) -> some View {
 		VStack(alignment: .leading, spacing: DS.Space.s2) {
 			Text(String(localized: "Sources"))
-				.dsText(.label12).fontWeight(.semibold)
+				.dsText(.label12)
 				.foregroundStyle(DS.textTertiary)
 			ForEach(sources, id: \.url) { source in
 				Button {
@@ -164,7 +164,7 @@ struct WalletbeatIncidentHead: View {
 					HStack(alignment: .top, spacing: DS.Space.s3) {
 						VStack(alignment: .leading, spacing: 2) {
 							Text(source.label)
-								.dsText(.subhead12).fontWeight(.semibold)
+								.dsText(.subhead12)
 								.foregroundStyle(DS.textPrimary)
 								.multilineTextAlignment(.leading)
 								.fixedSize(horizontal: false, vertical: true)
@@ -220,7 +220,7 @@ struct WalletbeatRevisionHead: View {
 		VStack(alignment: .leading, spacing: DS.Space.s4) {
 			VStack(alignment: .leading, spacing: DS.Space.s2) {
 				Text(String(localized: "Walletbeat revised its review"))
-					.dsText(.label12).fontWeight(.semibold)
+					.dsText(.label12)
 					.foregroundStyle(DS.brandHue(for: "walletbeat") ?? DS.tint)
 				Text(attribute?.name ?? thing.title)
 					.dsText(.heading40)

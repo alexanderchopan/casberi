@@ -89,11 +89,6 @@ struct AltanaKeyCard: View {
         HStack(alignment: .center, spacing: DS.Space.s3) {
             RoundedRectangle(cornerRadius: DS.Radius.appIcon(46), style: .continuous)
                 .fill(hue)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DS.Radius.appIcon(46), style: .continuous)
-                        .fill(LinearGradient(colors: [.white.opacity(0.16), .clear],
-                                             startPoint: .top, endPoint: .center))
-                )
                 .frame(width: 46, height: 46)
                 .overlay(
                     Image(systemName: "key.horizontal.fill")
@@ -171,7 +166,7 @@ struct AltanaKeyCard: View {
     private func capLabel(_ label: String, _ date: Date?, trailing: Bool = false) -> some View {
         VStack(alignment: trailing ? .trailing : .leading, spacing: 1) {
             Text(label)
-                .dsText(.label12).fontWeight(.semibold)
+                .dsText(.label12)
                 .foregroundStyle(DS.textPrimary)
             Text(date.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "—")
                 .dsText(.subhead12)
@@ -195,7 +190,6 @@ struct AltanaKeyCard: View {
             Spacer(minLength: DS.Space.s3)
             Text(v)
                 .dsText(.subhead12)
-                .fontWeight(quiet ? .regular : .semibold)
                 .foregroundStyle(quiet ? DS.textSecondary : DS.textPrimary)
                 .monospacedDigit()
         }
@@ -214,7 +208,7 @@ struct AltanaKeyCard: View {
     private var alsoSignsFor: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(String(localized: "Also signs for"))
-                .dsText(.label12).fontWeight(.semibold)
+                .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
             // Each wallet is a door, so a row (prd §746) — they were chips,
             // which read as a choice among them rather than a way to each.

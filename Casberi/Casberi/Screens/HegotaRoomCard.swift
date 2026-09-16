@@ -322,13 +322,9 @@ struct HegotaRoomFigure: View {
                     // The spine: the address itself, which both sides cross.
                     // Top-aligned with the lane stacks: centred, it hung below
                     // the rows it is supposed to join and read as a stray mark.
-                    // It GRADES away from the head now, so the eye starts at
-                    // the two totals and runs down into the lanes that make
-                    // them up rather than reading the band as two lists.
+                    // One solid fill: no gradient on a figure's marks (prd §782).
                     Capsule()
-                        .fill(LinearGradient(
-                            colors: [DS.tint.opacity(0.75), DS.tint.opacity(0.25)],
-                            startPoint: .top, endPoint: .bottom))
+                        .fill(DS.tint.opacity(0.5))
                         .frame(width: 5, height: spineHeight(band))
                         .padding(.horizontal, DS.Space.s2)
                         .padding(.top, 4)
@@ -443,8 +439,6 @@ struct HegotaRoomFigure: View {
             if incoming, scale == .logarithmic {
                 Text(String(localized: "log"))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .padding(.horizontal, 7).padding(.vertical, 1)
-                    .background(Capsule().fill(DS.fillFaint))
                     .accessibilityLabel(String(localized: "Bar lengths are a log scale — the figures are exact"))
             }
             Text(qualifierText(band, incoming: incoming))
@@ -621,17 +615,10 @@ struct HegotaRoomFigure: View {
     @ViewBuilder private func laneBar(_ lane: HegotaFlow.Lane,
                                       share: Double, incoming: Bool) -> some View {
         GeometryReader { geo in
-            // **IT FADES AWAY FROM THE SPINE (prd §555).** A flat capsule is a
-            // bar chart drawn twice; a bar that is densest where it meets the
-            // address and thins as it leaves reads as movement, which is what
-            // the figure is about. The hue is unchanged — it is still the
-            // lane's leading frame mode, and the gradient never touches which
-            // end is which, because the STRONG end is always the spine.
+            // One solid fill in the lane's leading frame mode; the §555 fade
+            // is deleted, because a figure's marks carry no gradient (prd §782).
             Capsule()
-                .fill(LinearGradient(
-                    colors: [laneTint(lane).opacity(0.9), laneTint(lane).opacity(0.3)],
-                    startPoint: incoming ? .trailing : .leading,
-                    endPoint: incoming ? .leading : .trailing))
+                .fill(laneTint(lane).opacity(0.6))
                 .frame(width: max(4, geo.size.width * CGFloat(share)), height: 14)
                 .frame(maxWidth: .infinity, maxHeight: .infinity,
                        alignment: incoming ? .trailing : .leading)
@@ -749,7 +736,6 @@ struct HegotaRoomFigure: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(HegotaFormat.crown(account.balanceWei ?? 0))
                 .dsText(tall ? .body17 : .label12)
-                .fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.6)
             Text(HegotaWatch.shared.name(for: account.address)
@@ -841,8 +827,6 @@ struct HegotaRoomFigure: View {
                 Text(String(badge.count)).dsText(.label12).monospacedDigit()
             }
             .foregroundStyle(tint)
-            .padding(.leading, 6).padding(.trailing, 7).padding(.vertical, 2)
-            .background(Capsule().fill(tint.opacity(0.15)))
             .accessibilityElement()
             .accessibilityLabel(rosterReadout(badge))
         } else {
@@ -1118,7 +1102,7 @@ struct HegotaRoomFigure: View {
         return VStack(alignment: .leading, spacing: 2) {
             if tall {
                 Text(amount)
-                    .dsText(.body17).fontWeight(.semibold)
+                    .dsText(.body17)
                     .foregroundStyle(dim ? DS.textSecondary : DS.textPrimary)
                     .lineLimit(1).minimumScaleFactor(0.6)
                 Text(sub)
@@ -1144,7 +1128,7 @@ struct HegotaRoomFigure: View {
             } else {
                 HStack(spacing: DS.Space.s2) {
                     Text(amount)
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.body17)
                         .foregroundStyle(dim ? DS.textSecondary : DS.textPrimary)
                         .lineLimit(1).minimumScaleFactor(0.6)
                     Spacer(minLength: 0)
@@ -1249,40 +1233,6 @@ struct HegotaRoomFigure: View {
     // left behind: `HegotaRoom.valueSeries`' lesson.
 
 
-    /// One figure and what it counts. `stat24` is the ramp's own stat size —
-    /// big enough to be the drawing, small enough that three sit side by side.
-    @ViewBuilder private func stat(_ value: String, _ caption: String,
-                                   tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HegotaCountUp(target: Int(value) ?? 0, tint: tint)
-            Text(caption)
-                // **THREE lines, and the padding pays for the width.** Three
-                // boxes across a 342pt slot leave each about 60pt of text once
-                // its own inset is paid, and "On the ordinary nonce" wants
-                // three lines at that width — at two it truncated mid-word to
-                // "ordinary no…", which loses the noun the box exists to name.
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                .lineLimit(3).fixedSize(horizontal: false, vertical: true)
-                .minimumScaleFactor(0.9)
-        }
-        // **A FLOOR THAT NOW FILLS THE BOX (prd §588).** 88 was the whole of
-        // a stat block in a 166pt slot; at 256 three of them drew ~138 and
-        // centred the rest as air. A `minHeight` can only grow a block, so
-        // deriving it is safe in the direction that matters — the caption
-        // above is clamped and these blocks are the only other thing here.
-        .frame(maxWidth: .infinity,
-               minHeight: DSRoomChassis.crownLine(box: DSRoomChassis.figureSlot,
-                                                  chrome: 60),
-               alignment: .topLeading)
-        .padding(.horizontal, DS.Space.s2)
-        .padding(.vertical, DS.Space.s2)
-        // A well, so three numbers in a row read as three FACTS rather than as
-        // a sentence that lost its words. `surfaceWell` is the ground every
-        // other slab in this app sits on; the radius is the card's.
-        .dsWell(recessed: true)
-    }
-
-
 }
 
 // MARK: - What a frame IS, in colour
@@ -1365,55 +1315,6 @@ enum HegotaModeStyle {
         case .unknown:
             return String(localized: "A step this build doesn't know.")
         }
-    }
-}
-
-/// **THREE COUNTERS, AND NONE OF THEM WAITS** (prd §503, moment 04).
-///
-/// The whole content of a keyed nonce is that the queues advance
-/// INDEPENDENTLY — a stuck transaction in one does not hold up another — and
-/// three numbers sitting still say none of it. So each counts up on its own
-/// clock and they finish at different moments, which is the concept drawn
-/// rather than described.
-///
-/// **The rates are derived from the targets, not random.** A bigger number
-/// counts faster so every box lands within the same short window; random
-/// timing would read as jitter, and identical timing would say they are
-/// synchronised, which is the one thing this figure exists to deny.
-///
-/// Reduce Motion shows the figure, immediately — it is a number, and the
-/// count is decoration on top of it.
-struct HegotaCountUp: View {
-    let target: Int
-    var tint: Color
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var shown = 0
-
-    /// The window every counter lands inside. Long enough that three numbers
-    /// finishing apart is legible, short enough that nobody waits.
-    private static let window: Double = 0.75
-
-    var body: some View {
-        Text(String(reduceMotion ? target : shown))
-            .dsText(.stat24).foregroundStyle(tint)
-            .monospacedDigit().lineLimit(1)
-            .task {
-                guard !reduceMotion, target > 0 else { shown = target; return }
-                // A per-counter stride: each step is the same fraction of ITS
-                // own total, so the three tracks run at genuinely different
-                // speeds and stop at genuinely different times.
-                let steps = min(target, 14)
-                let step = max(1, target / steps)
-                let pause = UInt64(Self.window / Double(max(1, steps)) * 1_000_000_000)
-                var value = 0
-                while value < target {
-                    value = min(target, value + step)
-                    shown = value
-                    try? await Task.sleep(nanoseconds: pause)
-                }
-                shown = target
-            }
     }
 }
 
@@ -1608,8 +1509,6 @@ struct HegotaChainNotice: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(DS.Space.s4)
-            .dsWell(recessed: true)
         }
     }
 
@@ -2567,7 +2466,7 @@ struct HegotaMoveSheet: View {
                      ? String(localized: "It became 1 UTXO")
                      : String(localized: "It became \(String(minted.count)) UTXOs"))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
-                HStack(spacing: DS.Space.s2) {
+                HStack(alignment: .top, spacing: DS.Space.s4) {
                     ForEach(minted.sorted { $0.wei > $1.wei }.prefix(3), id: \.index) { coin in
                         VStack(alignment: .leading, spacing: 1) {
                             Text(HegotaFormat.eth(coin.wei))
@@ -2578,9 +2477,6 @@ struct HegotaMoveSheet: View {
                                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, DS.Space.s3)
-                        .padding(.vertical, DS.Space.s2)
-                        .dsWell(recessed: true)
                     }
                 }
                 // NAMED, never dropped — three cells is a width budget, and a
@@ -2885,8 +2781,7 @@ struct HegotaFrameSheet: View {
                         .foregroundStyle(HegotaModeStyle.hue(frame.mode))
                 }
                 if !back {
-                    Image(systemName: "chevron.right").dsGlyph(.caption)
-                        .foregroundStyle(DS.textTertiary)
+                    DSChevron()
                 }
             }
             .contentShape(Rectangle())
@@ -3215,7 +3110,7 @@ struct HegotaAccountSheet: View {
 
     @ViewBuilder private var sendStory: some View {
         if let sends {
-            HStack(alignment: .top, spacing: DS.Space.s2) {
+            HStack(alignment: .top, spacing: DS.Space.s4) {
                 sendStat(String(sends.ordinarySends),
                          String(localized: "Sends, key 0"), tint: DS.textPrimary)
                 // The one fact no other reading in this room can reach: sends
@@ -3241,9 +3136,6 @@ struct HegotaAccountSheet: View {
                 .lineLimit(2).fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .padding(.horizontal, DS.Space.s3)
-        .padding(.vertical, DS.Space.s2)
-        .dsWell(recessed: true)
     }
 
     private var name: String {

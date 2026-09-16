@@ -184,7 +184,7 @@ struct WalletWatchField: View {
                     WalletFace(address: address, size: DS.Face.list, circular: true)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(known?.name ?? draft)
-                            .dsText(.body17).fontWeight(.semibold)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
                         Text(previewFact(address: address, known: known))
@@ -194,8 +194,6 @@ struct WalletWatchField: View {
                     Spacer(minLength: 0)
                 }
                 .padding(.vertical, DS.Space.s2)
-                .padding(.horizontal, DS.Space.s3)
-                .dsWell()
                 .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
             } else if resolving {
                 HStack(spacing: DS.Space.s2) {

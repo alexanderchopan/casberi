@@ -71,7 +71,7 @@ struct WorkStageView: View {
             // row knows and it earns the slot outright.
             Text(verbatim: detail ?? reading.statusWord ?? "")
                 .dsText(.body17)
-                .fontWeight(.semibold)
+                .fontWeight(.medium)
                 .foregroundStyle(tint)
                 .fixedSize(horizontal: false, vertical: true)
         }

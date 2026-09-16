@@ -299,7 +299,7 @@ struct VibenetAccountDetail: View {
                                   ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
                                 .dsGlyph(.tick)
                             Text("\(VibenetBalanceFormat.line(abs(move))) ETH (\(VibenetBalanceFormat.percent(change)))")
-                                .dsText(.body17).fontWeight(.semibold)
+                                .dsText(.body17)
                                 .monospacedDigit()
                             Text(range.sinceLine)
                                 .dsText(.body17)
@@ -616,7 +616,7 @@ struct VibenetAccountDetail: View {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(section.group.title)
-                            .dsText(.label12).fontWeight(.semibold)
+                            .dsText(.label12)
                             .foregroundStyle(DS.textSecondary)
                         // What membership MEANS, so the group name is never
                         // something to infer from the keys inside it.
@@ -714,7 +714,7 @@ struct VibenetAccountDetail: View {
                       ? String(localized: "Stop tracking on the lock screen")
                       : String(localized: "Track on the lock screen"),
                       systemImage: tracking ? "bell.slash" : "bell")
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(Self.mark)
             }
             .buttonStyle(.plain)
@@ -847,7 +847,7 @@ struct VibenetAccountDetail: View {
                         // A word, not a pill (prd §584) — see
                         // `VibenetRoomCard`'s own note. Same badge, third file.
                         Text(String(localized: "New"))
-                            .dsText(.label12).fontWeight(.semibold)
+                            .dsText(.label12)
                             .foregroundStyle(Self.mark)
                             .fixedSize()
                     }
@@ -868,7 +868,7 @@ struct VibenetAccountDetail: View {
             let standing = actor.expiryStanding(now: .now)
             Text(actor.expiryLabel(now: .now))
                 .dsText(.label12)
-                .fontWeight(standing == .soon ? .semibold : .regular)
+                .fontWeight(standing == .soon ? .medium : .regular)
                 .foregroundStyle(standing == .soon ? DS.tint : DS.textTertiary)
                 .multilineTextAlignment(.trailing)
                 .fixedSize(horizontal: false, vertical: true)

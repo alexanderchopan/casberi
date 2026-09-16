@@ -694,12 +694,12 @@ grep -qE 'safeAreaInset\(edge: \.(top|bottom)' "$TMP/feed.nc" \
 # while every sibling had carried both since 2026-08-01.
 
 # A control a cursor can rest on must answer. `dsHover` is folded into
-# `dsListCardRow` for lists; anything that isn't a List row has to say it,
+# `dsListRow` for lists; anything that isn't a List row has to say it,
 # which is why this is a per-control check and not a global one.
 grep -q 'dsHover()' "$TMP/rail.nc" \
   || { echo "✗ the wallet rail has no hover state — on Mac a cursor crossing five faces and"; \
        echo "  a + gets no response from any of them, which reads as a dead app (the same"; \
-       echo "  argument dsListCardRow's own note makes for the 27 rows it covers)."; exit 1; }
+       echo "  argument dsListRow's own note makes for every List row)."; exit 1; }
 # The wallet rail draws NO caption at all since §450, so on Mac the tooltip is
 # the only thing a slot says before you click it — and on the social rail, where
 # the caption survives, it is still the only place a full address or bio fits.

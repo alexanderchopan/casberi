@@ -92,7 +92,6 @@ struct VibenetThisPhoneRow: View {
                         }
                     }
                     .dsText(.label12)
-                    .fontWeight(.semibold)
                     .foregroundStyle(Self.mark)
                 }
                 .buttonStyle(PressSpring())

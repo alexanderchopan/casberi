@@ -97,7 +97,7 @@ struct L2beatRiskCard: View {
 			Text(watching
 				? String(localized: "Watching — tap to stop")
 				: String(localized: "Watch this chain"))
-				.dsText(.subhead12).fontWeight(.semibold)
+				.dsText(.subhead12)
 				.foregroundStyle(watching ? DS.textTertiary : DS.tint)
 		}
 		.buttonStyle(.plain)
@@ -130,7 +130,7 @@ struct L2beatRiskCard: View {
 				L2beatStageChip(stage: project.stage)
 				if project.underReview {
 					Text(String(localized: "Under review"))
-						.dsText(.label12).fontWeight(.bold)
+						.dsText(.label12)
 						.foregroundStyle(DS.attention)
 				}
 				Spacer(minLength: 0)
@@ -193,7 +193,7 @@ struct L2beatRiskCard: View {
 	private var milestoneCrossLink: some View {
 		VStack(alignment: .leading, spacing: DS.Space.s2) {
 			Text(String(localized: "On record"))
-				.dsText(.label12).fontWeight(.semibold)
+				.dsText(.label12)
 				.foregroundStyle(DS.textTertiary)
 			ForEach(milestones) { row in
 				if let thing = row.live {
@@ -297,7 +297,7 @@ struct L2beatRiskCard: View {
 			if let url = project?.pageURL {
 				Link(destination: url) {
 					Text(String(localized: "Full assessment on L2BEAT"))
-						.dsText(.subhead12).fontWeight(.semibold)
+						.dsText(.subhead12)
 						.foregroundStyle(DS.tint)
 				}
 			}
@@ -394,7 +394,7 @@ struct L2beatRiskRow: View {
 			// It leads the sentence because it is the answer, and the sentence is the
 			// reasoning behind it.
 			Text(risk.value)
-				.dsText(.subhead12).fontWeight(.semibold)
+				.dsText(.subhead12)
 				.foregroundStyle(DS.textSecondary)
 
 			if !risk.explanation.isEmpty {
@@ -416,7 +416,7 @@ struct L2beatRiskRow: View {
 						.padding(.top, 6)
 					VStack(alignment: .leading, spacing: 1) {
 						Text(second.value)
-							.dsText(.label12).fontWeight(.semibold)
+							.dsText(.label12)
 							.foregroundStyle(DS.textSecondary)
 						if let text = second.explanation, !text.isEmpty {
 							Text(text)

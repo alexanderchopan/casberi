@@ -52,7 +52,7 @@ struct CategoryOrderSheet: View {
             Section {
                 ForEach(order, id: \.self) { name in
                     row(name)
-                        .dsListCardRow()
+                        .dsListRow()
                         .listRowSeparator(.hidden)
                 }
                 .onMove(perform: move)
@@ -72,7 +72,8 @@ struct CategoryOrderSheet: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
+        .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         // One verb, so the grabbers are always out — see the type's own doc.
         .environment(\.editMode, .constant(.active))

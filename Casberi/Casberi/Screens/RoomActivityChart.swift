@@ -49,7 +49,6 @@ struct RoomActivityChart: View {
 
     @State private var range: WalletRange = WalletRange.remembered(offered: [])
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorScheme) private var scheme
 
     /// **THE WINDOW RULE IS THE CROWN'S, VERBATIM.** Each date becomes a
     /// `ValueSample` carrying no value, purely so `WalletRange.offered` and
@@ -114,7 +113,6 @@ struct RoomActivityChart: View {
                 }
                 Text(caption)
                     .dsText(.label12)
-                    .fontWeight(captionAddress == nil ? .medium : .semibold)
                     .foregroundStyle(captionAddress == nil ? DS.textTertiary : DS.textSecondary)
                 if onOpen != nil { DSChevron() }
             }
@@ -141,25 +139,18 @@ struct RoomActivityChart: View {
         }
     }
 
+    /// **A SENTENCE, NOT A DASHBOARD (prd §782).** The direction is in the
+    /// words, so the line carries no triangle and no gain/loss ink.
     @ViewBuilder
     private func changeLine(_ delta: Int) -> some View {
-        let flat = delta == 0
-        let ink = flat ? DS.textSecondary
-                       : TokenChartStyle.accent(change: delta > 0 ? 1 : -1, scheme: scheme)
-        HStack(spacing: 5) {
-            if !flat {
-                Image(systemName: delta > 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
-                    .dsGlyph(.tick)
-                    .foregroundStyle(ink)
-            }
-            Text(flat ? String(localized: "Same as the window before")
-                      : String(localized: "\(String(abs(delta))) vs the window before"))
-                .dsText(.body17).fontWeight(.semibold)
-                .foregroundStyle(flat ? DS.textSecondary : ink)
-                .monospacedDigit()
-            Spacer(minLength: 0)
-        }
-        .lineLimit(1).minimumScaleFactor(0.7)
+        Text(delta == 0 ? String(localized: "Same as the window before")
+             : delta > 0 ? String(localized: "\(String(delta)) more than the window before")
+                         : String(localized: "\(String(-delta)) fewer than the window before"))
+            .dsText(.body17)
+            .foregroundStyle(DS.textSecondary)
+            .monospacedDigit()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .lineLimit(1).minimumScaleFactor(0.7)
     }
 
     // MARK: - the arithmetic, kept apart so a harness can drive it

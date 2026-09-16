@@ -874,16 +874,18 @@ private struct LinkPreviewCard: View {
         Button {
             openURL(url)
         } label: {
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let image {
                     // The image fills a fixed banner and never dictates the
                     // card's width — a bare scaledToFill's ideal size would
                     // stretch the whole card past the screen on a wide
-                    // banner (the ZStack-expansion gotcha, same fix).
+                    // banner (the ZStack-expansion gotcha, same fix). The
+                    // picture keeps its own clip; the words stand on nothing
+                    // (prd §782).
                     Color.clear
                         .frame(height: 140)
                         .overlay(Image(uiImage: image).resizable().scaledToFill())
-                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     if let title {
@@ -896,14 +898,13 @@ private struct LinkPreviewCard: View {
                         .dsText(.subhead12).foregroundStyle(DS.tint)
                         .lineLimit(1)
                 }
-                .padding(DS.Space.s3)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWell()
+            .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())
-        // Hover on the CARD, before the padding — the lift belongs to the
-        // card's own silhouette, not the gutter around it.
+        // Hover on the preview, before the padding — the lift belongs to
+        // its own silhouette, not the gutter around it.
         .dsHover()
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
@@ -1067,8 +1068,9 @@ private extension UIImage {
     }
 }
 
-/// Chat content reads as a conversation — one bubble per paragraph. No
-/// speakers are invented; the record holds text, the shape says chat.
+/// Chat content reads as a conversation — one paragraph at a time, separated
+/// by air, never a bubble plate (prd §782). No speakers are invented; the
+/// record holds text, the shape says chat.
 ///
 /// A long imported transcript (ChatGPT, Claude) used to hard-cut at 6
 /// paragraphs with no sign anything was missing — a silent truncation, the
@@ -1084,13 +1086,11 @@ private struct ChatBubbles: View {
     var body: some View {
         let shown = expanded ? paragraphs : Array(paragraphs.prefix(Self.collapsedCount))
         let hiddenCount = paragraphs.count - shown.count
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
             ForEach(Array(shown.enumerated()), id: \.offset) { _, line in
                 Text(ProseLinks.rendered(String(line)))
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .padding(.horizontal, DS.Space.s3)
-                    .padding(.vertical, DS.Space.s2)
-                    .dsWell(cornerRadius: 14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             if hiddenCount > 0 {
                 Button {
@@ -1101,7 +1101,6 @@ private struct ChatBubbles: View {
                 }
                 .buttonStyle(.plain)
                 .dsHover()
-                .padding(.horizontal, DS.Space.s3)
             }
         }
         .padding(.horizontal, DS.Space.s4)
@@ -1459,8 +1458,8 @@ private struct FileAudioContent: View {
     }
 }
 
-/// A file is a document chip — name, extension badge, and its note when the
-/// record carries one.
+/// A file is a row — name, extension badge, and its note when the record
+/// carries one — standing on nothing (prd §782).
 private struct FileChip: View {
     let name: String
     let note: String
@@ -1513,8 +1512,6 @@ private struct FileChip: View {
                 }
                 Spacer()
             }
-            .padding(DS.Space.s3)
-            .dsWell()
             if !compact, !note.isEmpty {
                 Text(ProseLinks.rendered(note))
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
@@ -1640,15 +1637,14 @@ private struct CommandCard: View {
 ///
 /// NO PERFORATION, despite the stub idea: build brief §8 bans hairlines with
 /// zero exceptions, and a dashed rule is a line. The two halves separate the
-/// way everything else in this app separates — a slightly stronger fill on the
-/// clock band than on the facts below it.
+/// way everything else in this app separates — by air, on no plate (prd §782).
 private struct MomentStub: View {
     let start: Date
     /// nil when no end is really known — an all-day event, or a kind that has
     /// no duration. A range is shown ONLY when this is present; a start plus a
     /// guessed length would be the §83 fake status.
     var end: Date?
-    /// A reminder past its due date. Colours the block and replaces the clock
+    /// A reminder past its due date. Colours the date and replaces the clock
     /// with the word, because "Overdue" IS the reading — the date beneath it is
     /// the detail.
     var overdue = false
@@ -1695,18 +1691,15 @@ private struct MomentStub: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
             clockBand
             // The all-day marker is CONSUMED by the clock band above, so it
             // never also draws as a row saying the same thing one line down.
             let rows = facts.filter { $0.action != .allDay }
             if !rows.isEmpty {
                 FactRows(facts: rows)
-                    .padding(.horizontal, DS.Space.s3)
-                    .padding(.bottom, DS.Space.s2)
             }
         }
-        .dsWell()
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
     }
@@ -1727,7 +1720,6 @@ private struct MomentStub: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(DS.Space.s3)
     }
 
     /// The date, as a block you read at a glance. Weekday abbreviated by
@@ -1745,9 +1737,6 @@ private struct MomentStub: View {
                 .foregroundStyle(DS.textTertiary)
         }
         .frame(width: 56)
-        .padding(.vertical, DS.Space.s2)
-        .background(overdue ? DS.destructive.opacity(0.12) : DS.gray100.opacity(0.6),
-                    in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
     }
 }
 
@@ -1835,9 +1824,9 @@ private struct MetricBand: View {
     let metrics: [ThingFact]
 
     var body: some View {
-        HStack(alignment: .top, spacing: 0) {
+        HStack(alignment: .top, spacing: DS.Space.s4) {
             ForEach(metrics) { metric in
-                VStack(spacing: DS.Space.s1) {
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
                     Text(metric.value)
                         .dsText(.stat24)
                         .foregroundStyle(DS.textPrimary)
@@ -1847,15 +1836,10 @@ private struct MetricBand: View {
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
-                        .multilineTextAlignment(.center)
                 }
-                .frame(maxWidth: .infinity)
             }
         }
-        .padding(.vertical, DS.Space.s3)
-        .padding(.horizontal, DS.Space.s2)
-        .frame(maxWidth: .infinity)
-        .dsWell()
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
     }
@@ -1948,15 +1932,12 @@ private struct PersonCard: View {
                     .foregroundStyle(DS.textSecondary)
                     .multilineTextAlignment(.center)
             }
-            // ONE slab, both groups — the ways to reach them first, because
+            // ONE table, both groups — the ways to reach them first, because
             // that is what the sheet is opened for, then what is true about
-            // them. Two slabs would draw a divider by whitespace where §8 bans
-            // one by line.
+            // them. It stands on no plate (prd §782).
             let rows = reachable + standing
             if !rows.isEmpty {
                 FactRows(facts: rows)
-                    .padding(DS.Space.s3)
-                    .dsWell()
                     .padding(.top, DS.Space.s2)
             }
         }
@@ -2003,17 +1984,11 @@ private struct AccessoryCard: View {
                     }
                     Spacer(minLength: 0)
                 }
-                .padding(DS.Space.s3)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background((reachable ? DS.confirm : DS.destructive).opacity(0.12),
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card,
-                                                 style: .continuous))
             }
             if !rest.isEmpty {
                 FactRows(facts: rest)
-                    .padding(DS.Space.s3)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .dsWell()
             }
             // The ceiling, said out loud. Reachability is about the
             // connection; nothing here reads a lock's bolt.
@@ -2146,9 +2121,9 @@ private struct TokenChartContent: View {
     }
 
     /// The market's shape, re-ranked (Big money, 2026-07-17): the two
-    /// biggest facts — market cap and 24h volume, in rank order — lead as
-    /// bold cards; whatever else the pair reported follows in the SAME
-    /// two-column grid as smaller cards (user checkpoint 2026-07-17: the
+    /// biggest facts — market cap and 24h volume, in rank order — lead at
+    /// the larger rung; whatever else the pair reported follows in the SAME
+    /// two-column grid at a smaller one (user checkpoint 2026-07-17: the
     /// free-floating chips broke the block's cohesion — demotion is scale,
     /// not a different anatomy). Still cells only for stats actually
     /// reported: a token with no cap leads with what it HAS (FDV honestly
@@ -2161,9 +2136,9 @@ private struct TokenChartContent: View {
             ].compactMap { label, value in value.map { (label, $0) } }
             let lead = cells.prefix(2)
             let rest = cells.dropFirst(2)
-            VStack(spacing: DS.Space.s2) {
+            VStack(spacing: DS.Space.s4) {
                 if !lead.isEmpty {
-                    HStack(alignment: .top, spacing: DS.Space.s2) {
+                    HStack(alignment: .top, spacing: DS.Space.s4) {
                         ForEach(lead, id: \.0) { label, value in
                             statCard(label: label, value: value, lead: true)
                         }
@@ -2173,7 +2148,7 @@ private struct TokenChartContent: View {
                     }
                 }
                 if !rest.isEmpty {
-                    HStack(alignment: .top, spacing: DS.Space.s2) {
+                    HStack(alignment: .top, spacing: DS.Space.s4) {
                         ForEach(rest, id: \.0) { label, value in
                             statCard(label: label, value: value, lead: false)
                         }
@@ -2184,24 +2159,22 @@ private struct TokenChartContent: View {
         }
     }
 
-    /// One card anatomy for every stat — the tile radius, a full s4 pad, the
-    /// value in the rounded money voice. Lead wears stat24; the rest demote
-    /// to price17 in the same seat.
+    /// One anatomy for every stat — the value in the rounded money voice, its
+    /// caption under it, on no plate (prd §782). Lead wears stat24; the rest
+    /// demote to price17 in the same seat.
     private func statCard(label: String, value: Double, lead: Bool) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(LocalizedStringKey(label))
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                .lineLimit(1)
             Text(TokenStats.compact(value))
                 .dsText(lead ? .stat24 : .price17)
                 .foregroundStyle(DS.textPrimary)
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+            Text(LocalizedStringKey(label))
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s4)
-        .dsWell(cornerRadius: DS.Radius.widget)
     }
 }
 

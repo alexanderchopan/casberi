@@ -361,32 +361,19 @@ extension View {
         }
     }
 
-    /// A grouped-list row background that lifts the whole SECTION as one card.
-    /// The sheet fill carries the ambient card shadow; in an inset-grouped List
-    /// the rows are gapless, so a row's shadow falls on the adjacent same-color
-    /// row and vanishes — only the section's outer silhouette casts, reading as
-    /// one lifted card rather than a stack of shadowed rows (ladder 2026-07-12).
-    /// Cursor-aware everywhere for free (Mac polish, 2026-07-28) — every row
-    /// was designed for a finger, which has no concept of hover, and on Mac
-    /// that reads as a dead app the instant the cursor moves without
-    /// anything responding. `.hoverEffect` is folded in HERE rather than
-    /// added at each of this modifier's 27 call sites, so a screen that
-    /// adopts `dsListCardRow()` gets Mac hover with no separate decision.
-    /// It's the same pointer API iPad has carried since Catalyst's
-    /// inception (a physical pointer on iPad and a Mac cursor are the same
-    /// UIKit interaction underneath), so it's a no-op on touch.
+    /// A List row that stands on the page: no plate, no separator (prd §782).
     ///
-    /// **`DS.surfaceListRow`, not `surfaceSheet` (prd §542)** — the one card in
-    /// the app that cannot take the ink swap. `listRowBackground` paints PER
-    /// ROW, so the pour every other card got would stripe a lit top onto each
-    /// row of a section instead of onto the section; with no pour and no tonal
-    /// step, an ink row on the ink page is an invisible settings list. See that
-    /// token's doc for the value and why it is still ink rather than gray.
-    func dsListCardRow() -> some View {
-        listRowBackground(
-            DS.surfaceListRow.shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
-        )
-        .hoverEffect(AutomaticHoverEffect())
+    /// It used to lift each section as one card — `DS.surfaceListRow` under an
+    /// 18pt shadow — and that was the last plate on every settings-side screen
+    /// after §749, §708 and §759 took cards off rows, account pages and blocks.
+    /// What separates two sections is the List's own section spacing, which is
+    /// air. The row keeps `.hoverEffect` so a Mac cursor still gets an answer
+    /// from every row (2026-07-28), and `AutomaticHoverEffect()` is still the
+    /// only spelling that launches on iOS 18–26 (prd §739).
+    func dsListRow() -> some View {
+        listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .hoverEffect(AutomaticHoverEffect())
     }
 
     /// The same cursor-aware treatment for anything that ISN'T a List row —

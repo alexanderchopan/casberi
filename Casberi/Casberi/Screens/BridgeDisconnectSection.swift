@@ -124,7 +124,7 @@ private struct DisconnectGround: ViewModifier {
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
         } else {
-            content.dsListCardRow()
+            content.dsListRow()
         }
     }
 }

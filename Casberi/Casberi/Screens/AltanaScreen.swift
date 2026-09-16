@@ -204,7 +204,7 @@ struct AltanaScreen: View {
                     .foregroundStyle(DS.textSecondary)
             } else if !discovered.isEmpty {
                 Text(String(localized: "Accounts in the keystore"))
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
                 ForEach(discovered) { account in
                     row(address: account.address, subtitle: nil)
@@ -251,7 +251,7 @@ struct AltanaScreen: View {
                 // be one keystore read per suggested row bought to decorate a
                 // list nobody may tap (`VibenetBridge.reference`'s refusal).
                 Text(watching ? String(localized: "Watching") : String(localized: "Watch"))
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(watching ? DS.textTertiary : Self.mark)
                     .lineLimit(1)
                     .fixedSize()

@@ -198,7 +198,7 @@ struct CloudflareRunwayCard: View {
         HStack(spacing: DS.Space.s1 + 2) {
             if let chip = CloudflareRunway.chip(item) {
                 Text(chip)
-                    .dsText(.label12).fontWeight(.bold)
+                    .dsText(.label12)
                     .foregroundStyle(Color.fixed("#000000"))
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)

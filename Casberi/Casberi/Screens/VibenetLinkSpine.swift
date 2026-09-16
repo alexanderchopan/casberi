@@ -29,7 +29,7 @@ import SwiftUI
 ///
 /// Two changes, and §467's refusal of per-row arrows survives both. **The
 /// columns are swapped**, so the account that granted the power leads and the
-/// row reads left-to-right in one direction — the weight difference below now
+/// row reads left-to-right in one direction — the ink difference below now
 /// AGREES with the roles instead of contradicting them. **And the roles are
 /// named at the head of each column** rather than in a caption 60pt below in
 /// tertiary ink: §467 was right that the direction should be said once rather
@@ -250,24 +250,15 @@ struct VibenetLinkSpine: View {
         }
     }
 
-    /// The two columns keep their DIFFERENT weights, which is not a ranking
-    /// and so not §295's business: the left column is the account that
-    /// AUTHORIZED and the right is its delegate, and the weight tells a
-    /// reader which side of the sentence a node is on before any name is
-    /// read. Making both primary (a slip while wiring the tap) turned the
-    /// figure into two identical columns joined by lines.
-    ///
-    /// Since §482 the heavier side is the one with more authority, so the
-    /// weight now AGREES with the column heads instead of pointing the other
-    /// way. Kept rather than dropped for that reason: two signals saying one
-    /// thing is redundancy, which is what a figure about permissions should
-    /// have.
+    /// The two columns keep DIFFERENT inks, which is not a ranking and so not
+    /// §295's business: the left column is the account that AUTHORIZED and
+    /// the right its delegate, and the ink says which side a node is on. A
+    /// name takes no weight (prd §782); the column heads name the roles.
     private func nodeBody(_ address: String, emphasised: Bool) -> some View {
         HStack(spacing: 7) {
             WalletFace(address: address, size: Self.faceSize, circular: true)
             Text(name(address))
                 .dsText(.body17)
-                .fontWeight(emphasised ? .semibold : .regular)
                 .foregroundStyle(emphasised ? DS.textPrimary : DS.textSecondary)
                 .lineLimit(1)
                 .truncationMode(.tail)

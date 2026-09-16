@@ -53,15 +53,11 @@ struct ConnectWalletRow: View {
                         .background(DS.tintDim, in: RoundedRectangle(
                             cornerRadius: DS.Radius.appIcon(34), style: .continuous))
                 }
-                .padding(.horizontal, DS.Space.s3)
-                .padding(.vertical, 11)
+                .frame(minHeight: DS.Hit.min)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                // The app's one card token, not the gray (prd §542). This
-                // is a row-card on a page, not a paper — no pour, no torn
-                // edge — so it takes `surfaceSheet` like every other card
-                // that sits on the page rather than ink like a paper.
-                .dsInkFill()
-                .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                // A row, not a card (prd §782): it stands in the page's
+                // column on nothing, and air separates it from its neighbours.
+                .contentShape(Rectangle())
             }
             .buttonStyle(PressSpring())
             .accessibilityLabel(Text(connecting ? "Waiting for your wallet, tap to cancel"

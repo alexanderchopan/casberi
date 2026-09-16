@@ -95,7 +95,7 @@ struct NameAddressPrompt: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text("Name this address?")
-                .dsText(.body17).fontWeight(.semibold)
+                .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
             Text(reason)
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)

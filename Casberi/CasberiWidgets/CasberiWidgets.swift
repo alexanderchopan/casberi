@@ -54,7 +54,7 @@ struct VoiceRecordingActivity: Widget {
             HStack(spacing: 10) {
                 Image(systemName: "waveform")
                     .dsGlyph(.title, weight: .medium)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(WidgetChrome.recording)
                 Text("Recording")
                     .dsText(.widgetChrome15)
                 Spacer()
@@ -65,7 +65,7 @@ struct VoiceRecordingActivity: Widget {
                     .frame(maxWidth: 56)
                 Image(systemName: "stop.circle.fill")
                     .dsGlyph(.title)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(WidgetChrome.recording)
             }
             .padding(14)
             .activityBackgroundTint(.black.opacity(0.8))
@@ -75,7 +75,7 @@ struct VoiceRecordingActivity: Widget {
                 DynamicIslandExpandedRegion(.leading) {
                     Image(systemName: "waveform")
                         .dsGlyph(.title, weight: .medium)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(WidgetChrome.recording)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     Text(timerInterval: context.state.startedAt...Date(
@@ -90,7 +90,7 @@ struct VoiceRecordingActivity: Widget {
                 }
             } compactLeading: {
                 Image(systemName: "waveform")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(WidgetChrome.recording)
             } compactTrailing: {
                 Text(timerInterval: context.state.startedAt...Date(
                     timeInterval: 60 * 60, since: context.state.startedAt))
@@ -99,7 +99,7 @@ struct VoiceRecordingActivity: Widget {
                     .frame(maxWidth: 44)
             } minimal: {
                 Image(systemName: "waveform")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(WidgetChrome.recording)
             }
             .widgetURL(URL(string: "casberi://home"))
         }

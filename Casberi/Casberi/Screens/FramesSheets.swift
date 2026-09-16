@@ -740,7 +740,7 @@ struct FramesFrameSheet: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 Text(String(localized: "What it approves"))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
-                HStack(spacing: DS.Space.s2) {
+                HStack(spacing: DS.Space.s4) {
                     approval(String(localized: "Running"), granted: execution)
                     approval(String(localized: "Payment"), granted: payment)
                 }
@@ -768,9 +768,6 @@ struct FramesFrameSheet: View {
             Text(word).dsText(.body17)
                 .foregroundStyle(granted ? DS.textPrimary : DS.textTertiary)
         }
-        .padding(.horizontal, DS.Space.s3)
-        .padding(.vertical, DS.Space.s2)
-        .dsWell(recessed: true)
     }
 
     // MARK: The budgets
@@ -978,7 +975,7 @@ struct FramesFrameSheet: View {
             HStack(spacing: DS.Space.s2) {
                 if back { Image(systemName: "chevron.left").dsGlyph(.caption) }
                 Text(move.rows[target].frame.stepName).dsText(.body17)
-                if !back { Image(systemName: "chevron.right").dsGlyph(.caption) }
+                if !back { DSChevron(tint: DS.tint) }
             }
             .foregroundStyle(DS.tint)
             .contentShape(Rectangle())

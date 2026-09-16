@@ -68,7 +68,7 @@ struct SpotifyLoginWebView: View {
                         Text(failure)
                             .dsText(.body17).foregroundStyle(DS.textPrimary)
                             .multilineTextAlignment(.center)
-                        Button("Try again") {
+                        Button("Reload Spotify's sign-in") {
                             self.failure = nil
                             loading = true
                             reloadCount += 1

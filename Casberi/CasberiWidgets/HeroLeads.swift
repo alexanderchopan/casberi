@@ -255,7 +255,7 @@ struct HeroMoneyLead: View {
                     Text(MoneyFormat.percentLabel(pct))
                         .dsText(.widgetSubline12)
                         .foregroundStyle(MoneyFormat.isFlatPercent(pct)
-                                         ? .white.opacity(0.6) : (pct > 0 ? .green : .red))
+                                         ? .white.opacity(0.6) : (pct > 0 ? WidgetChrome.gain : WidgetChrome.loss))
                         .monospacedDigit()
                 }
             }

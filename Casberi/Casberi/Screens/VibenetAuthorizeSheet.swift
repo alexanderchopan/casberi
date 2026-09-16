@@ -282,7 +282,7 @@ struct VibenetAuthorizeSheet: View {
                     Text(editing == nil ? String(localized: "Authorize") : String(localized: "Save"))
                     if busy { DSSpinner(size: .mini) }
                 }
-                .dsText(.body17).fontWeight(.semibold)
+                .dsText(.body17)
                 .foregroundStyle(canSubmit ? .white : DS.textTertiary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, DS.Space.s3)

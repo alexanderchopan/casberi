@@ -4478,7 +4478,7 @@ struct RootShell: View {
                 // the capsule's size, and the floor goes on after it.
                 Button(action: action.run) {
                     Text(action.label)
-                        .dsText(.label12).fontWeight(.semibold)
+                        .dsText(.label12)
                         .foregroundStyle(.white)
                         .padding(.horizontal, DS.Space.s3)
                         .frame(minHeight: 28)

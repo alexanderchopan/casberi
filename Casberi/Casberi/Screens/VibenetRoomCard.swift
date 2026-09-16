@@ -1353,7 +1353,7 @@ struct VibenetRoomCard: View {
                         Image(systemName: change >= 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
                             .dsGlyph(.tick)
                         Text("\(VibenetBalanceFormat.line(abs(move))) ETH (\(VibenetBalanceFormat.percent(change)))")
-                            .dsText(.body17).fontWeight(.semibold)
+                            .dsText(.body17)
                             .monospacedDigit()
                         // **NO WINDOW NAME BESIDE THE MOVE (prd §482
                         // amendment, user: "we don't have… 'since watching'").**
@@ -2140,22 +2140,9 @@ struct VibenetRoomCard: View {
             // slot above can never disagree about either the words or their
             // order.
             //
-            // `FlowLayout` and the chip recipe are the TRAY's, reused rather
-            // than re-drawn: two chip styles for one fact is how a room comes
-            // to disagree with the sheet it opens.
-            FlowLayout(spacing: 6) {
-                ForEach(key.actor.scope.grantedPlainLabels, id: \.self) { label in
-                    let admin = key.actor.scope.isAdmin
-                    Text(label)
-                        .dsText(.label12)
-                        .fontWeight(admin ? .semibold : .regular)
-                        .foregroundStyle(admin ? DS.attention : DS.tint)
-                        .padding(.horizontal, DS.Space.s2)
-                        .padding(.vertical, 3)
-                        .background((admin ? DS.attention : DS.tint).opacity(0.14),
-                                    in: Capsule(style: .continuous))
-                }
-            }
+            // The TRAY's own `VibenetScopeChips`: a permission is a fact, so
+            // a `DSStamp` word and never a capsule (prd §746, §782).
+            VibenetScopeChips(scope: key.actor.scope)
         }
         let padded = body
             .padding(.leading, DS.Face.rowCircle + DS.Space.s2)
@@ -2478,7 +2465,7 @@ struct VibenetRoomCard: View {
             onScope?("")
         } label: {
             Text(String(localized: "All"))
-                .dsText(.subhead12).fontWeight(.semibold)
+                .dsText(.subhead12)
                 .foregroundStyle(on ? DS.textPrimary : DS.textSecondary)
                 .padding(.horizontal, DS.Space.s3)
                 // ONE HEIGHT FOR THE WHOLE STRIP, and it is `DS.Hit.min`
@@ -2554,12 +2541,12 @@ struct VibenetRoomCard: View {
                 // read" is a fact this strip can state in one word.
                 if let native {
                     Text("\(VibenetBalanceFormat.line(native)) ETH")
-                        .dsText(.subhead12).fontWeight(.semibold)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                 } else {
                     Text(Self.displayName(item.address))
-                        .dsText(.subhead12).fontWeight(.semibold)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }
@@ -2950,7 +2937,7 @@ struct VibenetRoomCard: View {
                             Text(String(localized: "Devnet faucet"))
                             Image(systemName: "arrow.up.right")
                         }
-                        .dsText(.label12).fontWeight(.semibold)
+                        .dsText(.label12)
                         .foregroundStyle(Self.mark)
                         .lineLimit(1)
                         .fixedSize()
@@ -3055,7 +3042,7 @@ struct VibenetRoomCard: View {
                 // same-weight ruling still holds: a key added and a key
                 // revoked are both merely news and neither is graded.
                 Text(moved)
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.label12)
                     .foregroundStyle(Self.mark)
                     .fixedSize()
             }
@@ -3240,7 +3227,7 @@ struct VibenetRoomCard: View {
             .padding(.top, DS.Space.s4)
         } else if let soonest = aggregate.soonestExpiry {
             Text(soonest.line(now: .now))
-                .dsText(.label12).fontWeight(.semibold)
+                .dsText(.label12)
                 .foregroundStyle(Self.mark)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s4)
@@ -3275,7 +3262,6 @@ struct VibenetRoomCard: View {
                      reduceMotion: reduceMotion)
             Text(row.countdown(now: .now))
                 .dsText(.label12)
-                .fontWeight(urgent ? .semibold : .regular)
                 .foregroundStyle(urgent ? Self.mark : DS.textTertiary)
                 .monospacedDigit()
                 .frame(width: 42, alignment: .trailing)
@@ -3447,7 +3433,7 @@ struct VibenetRoomCard: View {
                         // by it. The room's one color carries urgency
                         // here (a stamp word stays the lock's alone).
                         Text(urgent)
-                            .dsText(.label12).fontWeight(.semibold)
+                            .dsText(.label12)
                             .foregroundStyle(Self.mark)
                             .lineLimit(1)
                     } else {

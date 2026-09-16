@@ -130,7 +130,7 @@ struct WalletRiskStrip: View {
                     // restated in a unit the protocol does not use, which is
                     // `Entry.detail`'s whole reason for existing.
                     Text(entry.detail)
-                        .dsText(.label12).fontWeight(.semibold)
+                        .dsText(.label12)
                         .foregroundStyle(entry.atRisk ? DS.attention : DS.confirm)
                         .lineLimit(1).minimumScaleFactor(0.7)
                         .frame(width: barWidth, alignment: .leading)

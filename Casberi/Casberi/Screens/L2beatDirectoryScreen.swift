@@ -116,7 +116,6 @@ struct L2beatDirectoryScreen: View {
 								Button(action: { DSHaptic.tap(); order = option }) {
 									Text(option.label)
 										.dsText(.subhead12)
-										.fontWeight(order == option ? .semibold : .regular)
 										.foregroundStyle(order == option ? DS.textPrimary : DS.textTertiary)
 								}
 								.buttonStyle(.plain)
@@ -253,12 +252,12 @@ struct L2beatDirectoryScreen: View {
 					// window, because an event with no date is half an event.
 					if let incident {
 						Text(incident.text)
-							.dsText(.label12).fontWeight(.bold)
+							.dsText(.label12)
 							.foregroundStyle(incident.recent ? DS.attention : DS.textTertiary)
 					}
 					if project.underReview {
 						Text(String(localized: "Under review"))
-							.dsText(.label12).fontWeight(.bold)
+							.dsText(.label12)
 							.foregroundStyle(DS.attention)
 					}
 					L2beatStageChip(stage: project.stage, compact: true)
@@ -281,13 +280,13 @@ struct L2beatDirectoryScreen: View {
 			// offering a control that would do nothing.
 			if watching {
 				Text(String(localized: "Watching"))
-					.dsText(.label12).fontWeight(.semibold)
+					.dsText(.label12)
 					.foregroundStyle(DS.textTertiary)
 					.frame(width: 58, alignment: .trailing)
 			} else {
 				Button(action: { watch(project) }) {
 					Text(String(localized: "Watch"))
-						.dsText(.label12).fontWeight(.bold)
+						.dsText(.label12)
 						.foregroundStyle(DS.tint)
 						.frame(width: 58, alignment: .trailing)
 				}

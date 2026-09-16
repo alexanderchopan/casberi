@@ -188,7 +188,6 @@ struct WalletNFTPickerSheet: View {
 
             Text(collection.name)
                 .dsText(.subhead12)
-                .fontWeight(on ? .semibold : .regular)
                 .foregroundStyle(on ? DS.textPrimary : DS.textSecondary)
                 .lineLimit(1)
             Text(collection.count == 1

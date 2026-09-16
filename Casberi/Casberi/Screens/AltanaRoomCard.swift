@@ -118,7 +118,7 @@ struct AltanaRoomCard: View {
                               if showsFaces(row) { faces(row) }
                               Text(row.countdown(now: now))
                                   .dsText(.subhead12)
-                                  .fontWeight(urgent ? .semibold : .regular)
+                                  .fontWeight(urgent ? .medium : .regular)
                                   .foregroundStyle(urgent ? Self.mark : DS.textTertiary)
                                   .monospacedDigit()
                                   .lineLimit(1)

@@ -135,12 +135,12 @@ struct L2beatNewsRow: View {
 				HStack(spacing: DS.Space.s2) {
 					if mine {
 						Text(String(localized: "You watch this"))
-							.dsText(.label12).fontWeight(.bold)
+							.dsText(.label12)
 							.foregroundStyle(DS.tint)
 					}
 					if isIncident {
 						Text(String(localized: "Incident"))
-							.dsText(.label12).fontWeight(.bold)
+							.dsText(.label12)
 							.foregroundStyle(DS.attention)
 					}
 					ForEach(tags, id: \.self) { tag in

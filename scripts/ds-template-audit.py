@@ -81,9 +81,8 @@ EXEMPT = {
     # ── Owned elsewhere on 2026-09-15: left untouched by §746, tightened as
     #    those sessions land.
     "Screens/ShapedRows.swift": (3, "feed rows — being rewritten by another session"),
-    "Screens/HegotaRoomCard.swift": (2, "a room head — being migrated by another session"),
     "Screens/PrivacyPoolsRoomCard.swift": (1, "a room head — being migrated by another session"),
-    "Screens/VibenetRoomCard.swift": (4, "a room head — being migrated by another session"),
+    "Screens/VibenetRoomCard.swift": (3, "a room head — being migrated by another session"),
     "Shell/DockFolderRow.swift": (2, "the dock, a user-protected differentiator: nothing about it changes here"),
     # ── Not a pill, measured one by one.
     "Screens/AddressIndexBar.swift": (1, "the A–Z scrub's track, drawn only while a finger is on it — an indicator"),
@@ -93,7 +92,7 @@ EXEMPT = {
     # ── A real pill, kept on a stated reason and OWED.
     "Screens/WalletFeedTiles.swift": (1, "the wallet crown's face chips — a choice, but each carries a face, a value and a delta "
                                          "Chip cannot; owed with the room-head migration"),
-    "GenUI/GenRenderer.swift": (5, "a distribution bar's clip and an eyebrow over artwork are drawings; the Suggest element's "
+    "GenUI/GenRenderer.swift": (3, "a distribution bar's clip is a drawing; the Suggest element's "
                                    "Review word and the approval card's Approve/Deny are model-emitted DISPLAY forms with no "
                                    "action (§717 kept GenUI kinds) — owed: whether an inert verb shape may render at all is a "
                                    "§83 ruling, not a shape swap"),

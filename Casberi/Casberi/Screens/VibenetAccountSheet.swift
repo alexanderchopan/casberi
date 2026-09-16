@@ -26,7 +26,10 @@ import SwiftUI
 struct VibenetAccountSheet: View {
     let address: String
     let room: VibenetRoom
-    var onRemove: (String) -> Void = { _ in }
+    /// Nil where the presenter cannot unwatch, and the row is then absent —
+    /// a Stop watching that closes the sheet and changes nothing is §83's
+    /// dead control (prd §782).
+    var onRemove: ((String) -> Void)? = nil
     /// **REVOKE, FROM THE ACCOUNT SHEET (2026-09-04)** — `(account, key)`.
     /// The confirmation and the last-admin guard belong to `VibenetKeySheet`;
     /// this only carries the decision up to whoever can send it. Nil where the
@@ -120,6 +123,9 @@ struct VibenetAccountSheet: View {
                             showsFace: false,
                             onOpenKey: { openedKey = PresentedKey(actor: $0, item: item) })
                             .padding(DS.Space.s4)
+                        accountVerbs
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.bottom, DS.Space.s4)
                     }
                     .dsPageBackground()
                     .dsSoftScrollEdges()
@@ -135,43 +141,7 @@ struct VibenetAccountSheet: View {
             .navigationTitle(item.map { VibenetWatch.shared.name(for: $0.address) ?? VibenetRoom.shortAddress($0.address) } ?? "")
             .navigationBarTitleDisplayMode(.inline)
             // The dismiss moved LEADING → trailing with the family (prd §560).
-            // It sits beside this sheet's own `.primaryAction` menu rather
-            // than opposite it, which is ordinary iOS — two trailing buttons —
-            // and means the exit is in the same corner here as on every other
-            // nav sheet.
             .dsSheetDismiss { dismiss() }
-            .toolbar {
-                if item != nil {
-                    ToolbarItem(placement: .primaryAction) {
-                        Menu {
-                            Button {
-                                renameText = VibenetWatch.shared.name(for: address) ?? ""
-                                renaming = true
-                            } label: {
-                                Label(String(localized: "Name this account…"), systemImage: "pencil")
-                            }
-                            // NOTE (2026-08-27, the address-book unification)
-                            // — this account is a row in the SAME `AddressBook`
-                            // the wallet manager reads, so a note written here
-                            // shows up there too.
-                            Button {
-                                noteDraft = AddressBook.shared.entry(for: address)?.note ?? ""
-                                editingNote = true
-                            } label: {
-                                Label(String(localized: "Note…"), systemImage: "note.text")
-                            }
-                            Button(role: .destructive) {
-                                onRemove(address)
-                                dismiss()
-                            } label: {
-                                Label(String(localized: "Stop watching"), systemImage: "trash")
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                        }
-                    }
-                }
-            }
             // This sheet is its own presentation host, so a nested sheet
             // presents cleanly — the half-open-then-close class is about a
             // `.sheet` on a List ROW resolving to the screen's controller,
@@ -201,6 +171,31 @@ struct VibenetAccountSheet: View {
         }
         .dsNavSheet()
     }
+    /// The account's verbs, as rows under its content (prd §752, §767: nothing
+    /// that acts sits at the top of a screen). They rode a toolbar overflow
+    /// menu before.
+    private var accountVerbs: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            DSDoorRow(icon: "pencil", label: "Name this account…") {
+                renameText = VibenetWatch.shared.name(for: address) ?? ""
+                renaming = true
+            }
+            // This account is a row in the SAME `AddressBook` the wallet
+            // manager reads, so a note written here shows up there too
+            // (2026-08-27, the address-book unification).
+            DSDoorRow(icon: "note.text", label: "Note…") {
+                noteDraft = AddressBook.shared.entry(for: address)?.note ?? ""
+                editingNote = true
+            }
+            if let onRemove {
+                DSDoorRow(icon: "trash", label: "Stop watching", role: .destructive) {
+                    onRemove(address)
+                    dismiss()
+                }
+            }
+        }
+    }
+
     /// The account, as the same paper every other vibenet sheet opens with.
     ///
     /// **The stamp is the account's STANDING** — the one thing about it

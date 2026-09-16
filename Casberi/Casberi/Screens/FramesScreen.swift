@@ -172,7 +172,7 @@ struct FramesPasskeyRow: View {
                     WalletFace(address: address, size: DS.Face.list, circular: true)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(String(localized: "Passkey account"))
-                            .dsText(.body17).fontWeight(.semibold)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                         Text(WalletStore.shortAddress(address))
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -205,7 +205,7 @@ struct FramesPasskeyRow: View {
                             .accessibilityHidden(true)
                         Text(String(localized: "Create a passkey account"))
                     }
-                    .dsText(.body17).fontWeight(.semibold)
+                    .dsText(.body17)
                     .foregroundStyle(FramesPasskey.enclaveAvailable ? DS.tint : DS.textTertiary)
                     .contentShape(Rectangle())
                 }

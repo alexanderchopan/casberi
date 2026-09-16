@@ -381,7 +381,7 @@ struct DSSlabField: View {
             if let secondaryLabel, secondaryArmed {
                 Button(action: secondaryAction) {
                     Text(secondaryLabel)
-                        .dsText(.subhead12).fontWeight(.bold)
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                 }
                 .buttonStyle(.plain)
@@ -395,7 +395,7 @@ struct DSSlabField: View {
             if !actionLabel.isEmpty {
                 Button(action: action) {
                     Text(actionLabel)
-                        .dsText(.subhead12).fontWeight(.bold)
+                        .dsText(.subhead12)
                         .foregroundStyle(armed ? DS.tint : DS.textTertiary)
                         .animation(DS.Motion.standard, value: armed)
                 }
@@ -825,7 +825,7 @@ struct DSSlabSwitch: View {
         Toggle(isOn: $isOn) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(LocalizedStringKey(title))
-                    .dsText(.body17).fontWeight(.medium)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                 if !detail.isEmpty {
                     Text(detail)

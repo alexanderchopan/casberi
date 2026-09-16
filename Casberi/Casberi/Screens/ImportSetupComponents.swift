@@ -273,7 +273,7 @@ struct ImportUpkeepSection: View {
                     .listRowBackground(Color.clear)
             } else {
                 Section {
-                    if held > 0 { removeLine.dsListCardRow() }
+                    if held > 0 { removeLine.dsListRow() }
                 } footer: {
                     // The staleness line leads when there is one — it is the
                     // fact worth reading — and the removal's own promise

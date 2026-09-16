@@ -75595,34 +75595,6 @@
         }
       }
     },
-    "Let's fill this feed." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Llenemos este feed."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "このフィードを充実させましょう。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "이 피드를 채워볼까요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "让我们来填满这个订阅流吧。"
-          }
-        }
-      }
-    },
     "Lets %@ move funds without any signature at all." : {
       "localizations" : {
         "es" : {

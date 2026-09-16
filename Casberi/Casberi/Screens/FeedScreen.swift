@@ -7177,22 +7177,18 @@ struct FeedScreen: View {
         }
     }
 
-    /// A shape's one glanceable block, wearing the same card surface as the
-    /// rows below it — a lede is part of the feed, not a foreign panel.
+    /// A shape's one glanceable block, bare like the rows below it — a lede
+    /// is part of the feed, not a foreign panel.
     private func ledeSection(_ content: some View) -> some View {
         Section {
+            // No plate (prd §782): the lede stands in the rows' column, and the
+            // air below it is what sets it apart from the run it heads.
             content
-                .listRowBackground(
-                    RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                        .fill(DS.surfaceSheet)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.vertical, DS.Space.s1)
-                        .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
-                )
+                .listRowBackground(Color.clear)
                 .listRowInsets(.init(top: DS.Space.s2,
-                                     leading: DS.Space.s4 + DS.Space.s3,
-                                     bottom: DS.Space.s2,
-                                     trailing: DS.Space.s4 + DS.Space.s3))
+                                     leading: DSRoomChassis.inset,
+                                     bottom: DS.Space.s4,
+                                     trailing: DSRoomChassis.inset))
                 .listRowSeparator(.hidden)
         }
     }
@@ -9395,7 +9391,7 @@ struct FeedScreen: View {
                          ? String(localized: "Hide past events")
                          : (count == 1 ? String(localized: "Show 1 past event")
                                        : String(localized: "Show \(count) past events")))
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.body17)
                         .monospacedDigit()
                     Image(systemName: pastEventsExpanded ? "chevron.up" : "chevron.down")
                         .dsGlyph(.caption)

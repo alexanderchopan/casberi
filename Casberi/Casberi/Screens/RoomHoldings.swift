@@ -111,7 +111,6 @@ struct RoomHoldingsFigure: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(cell.name)
                 .dsText(.body17)
-                .fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.7)
             Spacer(minLength: 0)

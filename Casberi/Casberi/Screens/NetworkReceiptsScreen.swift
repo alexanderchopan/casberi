@@ -64,7 +64,7 @@ struct NetworkReceiptsScreen: View {
             if let reach {
                 Section {
                     ReachCard(reach: reach)
-                        .dsListCardRow()
+                        .dsListRow()
                 }
             } else {
                 Section {
@@ -78,7 +78,7 @@ struct NetworkReceiptsScreen: View {
             if !undeclared.isEmpty {
                 Section {
                     ForEach(undeclared) { receipt in
-                        row(receipt).dsListCardRow()
+                        row(receipt).dsListRow()
                     }
                 } header: {
                     Text("Not on the list").dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -91,7 +91,7 @@ struct NetworkReceiptsScreen: View {
             if !declared.isEmpty {
                 Section {
                     ForEach(declared) { receipt in
-                        row(receipt).dsListCardRow()
+                        row(receipt).dsListRow()
                     }
                 } header: {
                     Text("Reached").dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -109,13 +109,14 @@ struct NetworkReceiptsScreen: View {
                         Text("Forget these receipts")
                             .dsText(.body17).foregroundStyle(DS.destructive)
                     }
-                    .dsListCardRow()
+                    .dsListRow()
                 } footer: {
                     DSFootnote("Forgetting them changes nothing about what's reached.", scale: .page)
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
+        .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
@@ -297,7 +298,7 @@ private struct ReachCard: View {
                 DSTreemapLeader(figure: cell.count.formatted(), name: cell.label)
             } else {
                 Text(cell.label)
-                    .dsText(.body17).fontWeight(.semibold)
+                    .dsText(.body17)
                     .foregroundStyle(cell.isTail ? DS.textSecondary : DS.textPrimary)
                     .lineLimit(2).minimumScaleFactor(0.8)
                 // The tail is a sum, not a service — printing its count beside a

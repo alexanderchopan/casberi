@@ -139,7 +139,7 @@ struct BridgeStepLines: View {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                     if numbered {
                         Text("\(i + startingAt)")
-                            .dsText(.body17).fontWeight(.bold)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textTertiary)
                             .frame(width: 13, alignment: .trailing)
                     }
@@ -240,7 +240,7 @@ struct AgentActiveStatusRow: View {
             // `tick` is otherwise unread — mutating it is enough to trigger
             // SwiftUI's own re-render, which re-evaluates `AgentKey.active`
             // (a static, non-observable read) fresh on every body pass.
-            .dsListCardRow()
+            .dsListRow()
         }
     }
 }
@@ -285,7 +285,7 @@ struct BridgeSyncStatusRows: View {
             }
             .padding(.leading, accountAct ? DSActRow.inset : 0)
             .padding(.vertical, accountAct ? DS.Space.s2 : 0)
-            .dsListCardRow()
+            .dsListRow()
         } else if let proof {
             let failed = proof.isFailure
             HStack(spacing: DS.Space.s2) {
@@ -308,12 +308,12 @@ struct BridgeSyncStatusRows: View {
             }
             .padding(.leading, accountAct ? DSActRow.inset : 0)
             .padding(.vertical, accountAct ? DS.Space.s2 : 0)
-            .dsListCardRow()
+            .dsListRow()
             if failed, let retry {
                 DSSlabDoor(title: String(localized: "Try again"),
                            systemImage: "arrow.clockwise",
                            action: retry)
-                    .dsListCardRow()
+                    .dsListRow()
             }
         }
     }
@@ -377,7 +377,7 @@ struct BridgeSearchResultRow: View {
             }
         }
         .buttonStyle(.plain)
-        .dsListCardRow()
+        .dsListRow()
     }
 }
 
