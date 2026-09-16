@@ -161,6 +161,7 @@ private struct SpotifyLoginWKWebView: UIViewRepresentable {
         private var lastReloadCount = 0
         private var poll: Timer?
         private weak var webView: WKWebView?
+        private let popup = LoginPopupWindow()
         /// When the web-player hop was refused. The session is normally in the
         /// jar before that hop is even asked for, but the cookie is written by
         /// a response we don't get to observe — so it is given a grace window
@@ -257,35 +258,39 @@ private struct SpotifyLoginWKWebView: UIViewRepresentable {
             tryExtract()
         }
 
-        /// A `target="_blank"` popup — Spotify's "Continue with Google/Apple"
-        /// buttons are exactly this. Returning nil (the default) makes them
-        /// dead taps, which reads as the app being frozen.
-        func webView(_ webView: WKWebView, createWebViewWith _: WKWebViewConfiguration,
-                     for navigationAction: WKNavigationAction,
+        /// The provider's popup ("Continue with Apple/Google") is a REAL child
+        /// window — see `LoginPopupWindow` for why loading it in place strands
+        /// Sign in with Apple on a blank page.
+        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                     for _: WKNavigationAction,
                      windowFeatures _: WKWindowFeatures) -> WKWebView? {
-            if navigationAction.targetFrame == nil,
-               let target = navigationAction.request.url {
-                webView.load(URLRequest(url: target))
-            }
-            return nil
+            popup.open(over: webView, configuration: configuration, delegate: self)
+        }
+
+        func webViewDidClose(_ webView: WKWebView) {
+            popup.close(webView)
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation _: WKNavigation!) {
+            guard !popup.holds(webView) else { return }
             self.webView = webView
             onLoadingChanged(true)
         }
 
         func webView(_ webView: WKWebView, didFinish _: WKNavigation!) {
+            guard !popup.holds(webView) else { tryExtract(); return }
             self.webView = webView
             onLoadingChanged(false)
             tryExtract()
         }
 
-        func webView(_: WKWebView, didFailProvisionalNavigation _: WKNavigation!, withError error: Error) {
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation _: WKNavigation!, withError error: Error) {
+            if popup.holds(webView) { popup.close(webView); return }
             report(error)
         }
 
-        func webView(_: WKWebView, didFail _: WKNavigation!, withError error: Error) {
+        func webView(_ webView: WKWebView, didFail _: WKNavigation!, withError error: Error) {
+            if popup.holds(webView) { popup.close(webView); return }
             report(error)
         }
 

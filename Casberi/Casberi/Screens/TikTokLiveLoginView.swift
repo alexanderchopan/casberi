@@ -89,30 +89,17 @@ private struct TikTokLoginWebView: UIViewRepresentable {
         private var captured = false
         private var pending = false
         var armed = false
-        /// The provider's sign-in window, laid over the login page. Kept as a
-        /// real web view rather than loaded in place, because the provider
-        /// hands the result back through `window.opener`.
-        private var popup: WKWebView?
+        private let popup = LoginPopupWindow()
 
         init(onCaptured: @escaping () -> Void) { self.onCaptured = onCaptured }
 
         func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
-                     for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-            popup?.removeFromSuperview()
-            let child = WKWebView(frame: webView.bounds, configuration: configuration)
-            child.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            child.customUserAgent = webView.customUserAgent
-            child.navigationDelegate = self
-            child.uiDelegate = self
-            webView.addSubview(child)
-            popup = child
-            return child
+                     for _: WKNavigationAction, windowFeatures _: WKWindowFeatures) -> WKWebView? {
+            popup.open(over: webView, configuration: configuration, delegate: self)
         }
 
         func webViewDidClose(_ webView: WKWebView) {
-            guard webView === popup else { return }
-            webView.removeFromSuperview()
-            popup = nil
+            popup.close(webView)
         }
 
         func cookiesDidChange(in cookieStore: WKHTTPCookieStore) { check(cookieStore) }

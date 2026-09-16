@@ -44,6 +44,7 @@ private struct InstagramLoginWebView: UIViewRepresentable {
         config.websiteDataStore = .default()
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
         config.websiteDataStore.httpCookieStore.add(context.coordinator)
         #if DEBUG
         if #available(iOS 16.4, *) { webView.isInspectable = true }
@@ -91,7 +92,7 @@ private struct InstagramLoginWebView: UIViewRepresentable {
     /// only by a completed sign-in and cleared by a sign-out, so requiring all
     /// three is what keeps a half-finished login from being stored as a whole
     /// one — §711's anonymous-token lesson, at the cookie layer.
-    final class Coordinator: NSObject, WKNavigationDelegate, WKHTTPCookieStoreObserver {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKHTTPCookieStoreObserver {
         let onCaptured: () -> Void
         private var captured = false
         /// False until `makeUIView`'s purge of the old instagram.com cookies
@@ -99,6 +100,17 @@ private struct InstagramLoginWebView: UIViewRepresentable {
         var armed = false
 
         init(onCaptured: @escaping () -> Void) { self.onCaptured = onCaptured }
+        private let popup = LoginPopupWindow()
+
+        /// "Continue with Apple/Google" opens a REAL popup — see `LoginPopupWindow`.
+        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                     for _: WKNavigationAction, windowFeatures _: WKWindowFeatures) -> WKWebView? {
+            popup.open(over: webView, configuration: configuration, delegate: self)
+        }
+
+        func webViewDidClose(_ webView: WKWebView) {
+            popup.close(webView)
+        }
 
         func cookiesDidChange(in cookieStore: WKHTTPCookieStore) { check(cookieStore) }
 

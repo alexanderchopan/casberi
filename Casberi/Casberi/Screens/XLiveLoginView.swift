@@ -51,6 +51,7 @@ private struct XLoginWebView: UIViewRepresentable {
         config.websiteDataStore = .default()
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
         config.websiteDataStore.httpCookieStore.add(context.coordinator)
         #if DEBUG
         if #available(iOS 16.4, *) { webView.isInspectable = true }
@@ -73,11 +74,22 @@ private struct XLoginWebView: UIViewRepresentable {
     /// straight past login with no NEW cookie write to observe at all — only
     /// a finished navigation ever asks in that case). Whichever sees both
     /// cookies first wins; `captured` makes the other a no-op.
-    final class Coordinator: NSObject, WKNavigationDelegate, WKHTTPCookieStoreObserver {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKHTTPCookieStoreObserver {
         let onCaptured: () -> Void
         private var captured = false
 
         init(onCaptured: @escaping () -> Void) { self.onCaptured = onCaptured }
+        private let popup = LoginPopupWindow()
+
+        /// "Continue with Apple/Google" opens a REAL popup — see `LoginPopupWindow`.
+        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                     for _: WKNavigationAction, windowFeatures _: WKWindowFeatures) -> WKWebView? {
+            popup.open(over: webView, configuration: configuration, delegate: self)
+        }
+
+        func webViewDidClose(_ webView: WKWebView) {
+            popup.close(webView)
+        }
 
         func cookiesDidChange(in cookieStore: WKHTTPCookieStore) { check(cookieStore) }
 
