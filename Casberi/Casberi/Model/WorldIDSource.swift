@@ -167,9 +167,12 @@ final class WorldIDSource {
     // MARK: - The read
 
     private func ethCall(data: String) async -> String? {
+        // Annotated rather than inferred: a heterogeneous literal (a dict and
+        // a string) inside a `[String: Any]` value only ever infers to `[Any]`
+        // with a warning, and this repo's pass reads warnings.
+        let params: [Any] = [["to": WorldID.addressBook, "data": data], "latest"]
         let body: [String: Any] = [
-            "id": 1, "jsonrpc": "2.0", "method": "eth_call",
-            "params": [["to": WorldID.addressBook, "data": data], "latest"],
+            "id": 1, "jsonrpc": "2.0", "method": "eth_call", "params": params,
         ]
         // Named to the ledger (prd §289): this host is a `g.alchemy.com`
         // subdomain, which the receipts screen would otherwise file under the

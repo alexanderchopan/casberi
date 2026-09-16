@@ -136,9 +136,9 @@ eq(WorldID.word("0x", 0), nil, "an empty return has no word")
 eq(WorldID.word("0xnothex", 0), nil, "a non-hex return has no word")
 check(WorldID.verifiedUntilSeconds(from: zeroReturn) == 0, "a zero word reads as zero seconds")
 check(WorldID.verifiedUntilSeconds(from: futureReturn) == 1_900_000_000, "a timestamp reads whole")
-eq(WorldID.verifiedUntilSeconds(from: "0x").map(String.init), nil,
+eq(WorldID.verifiedUntilSeconds(from: "0x").map { String($0) }, nil,
    "an empty return is UNREADABLE, never zero")
-eq(WorldID.verifiedUntilSeconds(from: "0x" + String(repeating: "f", count: 64)).map(String.init), nil,
+eq(WorldID.verifiedUntilSeconds(from: "0x" + String(repeating: "f", count: 64)).map { String($0) }, nil,
    "a word too large for an Int is unreadable rather than wrapped")
 
 // --- THE VERDICT --------------------------------------------------------------
