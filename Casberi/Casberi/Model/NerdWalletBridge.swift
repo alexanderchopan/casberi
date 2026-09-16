@@ -22,11 +22,17 @@ import SwiftData
 ///
 /// **What this seat is NOT, stated because the name invites the other
 /// reading.** Nothing here reaches an account. There is no sign-in, no token,
-/// no cookie and no personal data in either direction — NerdWallet's own
-/// money-tracking product is gone, and this is the publisher's public feed,
-/// fetched by this iPhone exactly as the RSS seat fetches any other. The
-/// catalog tagline says "news" for that reason, and the account page's one
-/// footnote says it again in words.
+/// no cookie and no personal data in either direction. NerdWallet DOES have
+/// an account — a free one carries a TransUnion VantageScore, linked bank
+/// accounts, cash flow, upcoming bills and net worth (checked 2026-09-16; an
+/// earlier draft of this comment said the product was gone, which was
+/// false). The seat leaves it alone on purpose (prd §780d): the articles are
+/// what a person comes to NerdWallet for, and nobody could say what reading
+/// that dashboard through a cookie session would add that Acorns and Rocket
+/// Money don't already carry. So this is the publisher's public feed, fetched
+/// by this iPhone exactly as the RSS seat fetches any other. The catalog
+/// tagline says "news" for that reason, and the account page's one footnote
+/// says it again in words.
 enum NerdWalletBridge {
     static let source = "NerdWallet"
     static let seatID = "nerdwallet"

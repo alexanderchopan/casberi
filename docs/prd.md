@@ -57141,3 +57141,11 @@ Two of the three had landed in the Reading shelf row on the website purely becau
 **Standing rule, wider than this seat: when a feature needs the person to perform a step that exists only because of how we built it, the step is the bug.** Reach for removing the step before reaching for words that excuse it.
 
 **Still unseen on a device**, unchanged from §780b: neither seat has run against a real account, and the auto-walk in particular is unexercised — it is four scripted navigations inside somebody's signed-in session, and the first honest test is a TestFlight sign-in.
+
+## §780d — NerdWallet stays news-only, and the reason is a choice, not a missing product (user: "if nerdwallet gives all that we don't need account b/c i dunno what a user is doing actually w/ nerd wallet account", 2026-09-16)
+
+§780's `NerdWalletBridge` header justified the seat's one-switch shape with a fact — that NerdWallet's money-tracking product was gone. **That was false.** A free NerdWallet account today carries a TransUnion VantageScore, linked bank accounts, cash flow, upcoming bills and net worth, on web and in their app (help centre, "What does NerdWallet do?", read 2026-09-16). So the seat had the right shape for the wrong reason, and a later session reading the header would have re-opened the sign-in question on a false premise.
+
+**Ruling: the seat stays a follow switch over the public feed, with no sign-in — as a choice.** The user's reason is the whole of it: nobody could say what a person is actually doing with a NerdWallet account that Casberi would need to read. Acorns and Rocket Money (§780b) already carry the account-shaped facts on the Wallet shelf; NerdWallet's contribution is the journalism, and the tagline ("news") says so. The header comment now states the account exists and that the seat leaves it alone on purpose. `nerdwallet-selftest.sh`'s guard — the screen must say "no sign-in" and the seat must hold no credential — is unchanged and is now guarding a decision rather than a claim about the publisher.
+
+**The class, for the next seat:** a shape argued from "they don't offer X" has to be checked against the provider's current product, because it is the one kind of reason that goes stale on its own. A shape argued from "we don't need X" does not.
