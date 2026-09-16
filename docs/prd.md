@@ -56943,6 +56943,54 @@ The octopus the person sees "while the app is loading" is the app-switcher cover
 
 **UNSEEN on a device.** First to look at on a phone: a receipt cover in All (the payout), and a picture cover in All, which is now its art and words with no box below.
 
+## §776 — Duolingo, on the same door as Spotify, Instagram, TikTok and X (user: "in the same way we did x spotify tiktok instagram can we do duolingo?", 2026-09-16)
+
+**The ask.** The seat family §701/§703/§726/§731 built: sign in inside the app, keep the session the sign-in leaves, read the person's own account with it. No developer app, no key, no server.
+
+**Why Duolingo takes it.** Duolingo publishes no API for a person's own practice history, so there is no other door. The web app authenticates with a `jwt_token` cookie and sends it back as `Authorization: Bearer` on every read. That cookie IS the credential, and it carries the account's id in its own `sub` claim — so nothing has to be asked for to know whose history to read.
+
+**What lands.** One thing per DAY practised, `.event`, `duolingo:day:<UTC yyyy-MM-dd>`: "38 XP in Spanish", with "3 lessons · 14 min" under it and the `Practice` facet on it. Not one per lesson — Duolingo keeps no per-lesson record to read, and the day is the unit its own streak, widget and notifications are counted in. The read is the last fortnight (`xp_summaries`), on the ten-minute `dueForHeal` throttle every other session seat uses.
+
+**Three things the day costs, each a silent failure and each held by `duolingo-selftest.sh`:**
+
+- A practice day arrives as midnight UTC and a feed groups by the READER's day, so the naive stamp files every row under yesterday for everyone east of Greenwich. The day's UTC components name the day; the stamp is local midday of it, clamped to `now` so today's row is never in the future.
+- Today is not finished. A row landed at breakfast reads 20 XP all evening unless it is rewritten when what it SAYS changes — §741's growing-aggregate rule, arriving from the other side. The test is the row's own words, because the row is all that is stored, and it catches a switched course as well.
+- A frozen day with no XP is a day you did not practise. Landing it would put "0 XP" in the feed and call it something you did, which is §83's fake status.
+
+**Honest about its footing.** NOTHING here is measured against Duolingo. The session that built it had duolingo.com refused at its egress proxy, so every shape is the public record of the web app's endpoints rather than a request this project has watched — a weaker footing than §731's TikTok entry and the same one §741's X entry shipped on. It is read defensively because of that: every field optional, every number through one reader that takes a JSON number or a numeric string, a 200 that is not a summaries array is `.drifted` and never an empty history, and a body naming no account is not an empty profile. `-duolingoProbe` prints the profile's keys, the parsed days and one raw day, so the first real sign-in is a one-launch correction rather than a guess.
+
+**Read-only, mechanically.** The harness fails the seat if either file builds a request that is not a GET. A live session against a person's own account is exactly where "it can never act as you" has to be a check rather than a sentence.
+
+**§711 holds.** Only a refusal (401/403) clears the stored token. A 429 is `.throttled` and a 5xx is `.unreachable`; both keep the credential, because throwing it away for a bad minute costs the person the whole web sign-in again.
+
+**"Learning" is a GROUP, not a category.** It joins the Life category beside Photos, Schedule and Fitness. A category is a dock chip with a glyph and a room of its own, and one seat does not fill one — but filing a language course under Fitness says something untrue about both.
+
+**UNSEEN on a device.** Everything: no build host here can compile this tree, and none can reach duolingo.com. First to run, in order — `scripts/duolingo-selftest.sh`, a build, then `-duolingoSession` with a real cookie and read what `-duolingoProbe` prints against what `DuolingoFeed` claims.
+
+## §777 — Measure the web app before writing the seat (user: "what about nerd wallet credit karma and acorns and rocket money and cash app", then "can we do them all or no", 2026-09-16)
+
+**The ask.** Five money seats on §776's door: Rocket Money, Acorns, NerdWallet, Credit Karma, Cash App.
+
+**What stopped it.** Every session-cookie seat so far — Spotify §703, Instagram §726, TikTok §731, X §701, Duolingo §776 — rested on knowing which endpoints a provider's own web app calls and what comes back. For those five that knowledge does not exist: none publishes an API, no community project has mapped one, and the session asked to build them could reach none of the hosts. A seat written against an invented path is a connectable catalogue row that lands nothing — §83's dead control, five times over, and it would LOOK finished. So the seats were not written.
+
+**The ruling: measure first, and make the measurement a tool rather than an afternoon.** `Model/WebSessionCapture.swift` + `Screens/WebSessionCaptureView.swift`, DEBUG only, reached from Diagnostics. It signs in through the provider's own page and records what the page then asks for: the endpoints, the auth scheme, and the SHAPE of each response. The report lands in the Diagnostics transcript, which already has a Copy door (§670).
+
+**It reports shapes, never values, and that is enforced rather than promised.** The subject is a person's money, and the failure mode is a transcript somebody pastes into a chat carrying an amount, an account number or a live bearer. So:
+
+- a host outside the named target's own is DROPPED before it is recorded, not redacted after — an analytics beacon riding the same page is never in the report, and `evil-cash.app` is not `cash.app`;
+- a URL keeps its scheme, host, path and query NAMES; every query value goes, and a path segment carrying an account becomes `<id>`, which also generalises `/users/8817342/recurring` into the thing worth knowing;
+- a response is sketched as keys, types and array lengths at bounded depth and width — `{merchant: string, amount: number}` is everything a parser needs and nothing about anyone's money;
+- an `Authorization` header is reported as its scheme;
+- the jar is non-persistent, so a measurement leaves no money session behind, and nothing is stored, landed, or carried into a Release build.
+
+`web-session-selftest.sh` holds every one of those, including the negative ones.
+
+**Bounded to five named providers on purpose.** An open-ended "record any site" tool is a different and worse thing than a bounded measurement of five known money apps, so `targets` is a closed list and a capture runs against a member of it or not at all.
+
+**What this is not.** Not a seat, not an offer, not a catalogue row, and it lands nothing. The five seats it exists to unblock are still unwritten, and should be written against a real report rather than against this file's optimism.
+
+**UNSEEN on a device, and unbuilt** — the session that wrote it had no Swift toolchain. First to run: `scripts/web-session-selftest.sh`, a build, then one capture per provider from Diagnostics.
+
 ## §778 — Wise, and the two doors that stay shut: Plaid, Stripe Financial Connections, and a cookie sign-in for banks (user: "in the same way we did sign-in for Instagram, Twitter, and Spotify, and TikTok, can we do any credit cards or banks like that", then "can we do plaid and stripe link? let's do simple fin and wise", then "i can't afford simplefin so get rid of it", 2026-09-16)
 
 **Renumbered on the day it was written**, from the two numbers a concurrent session had claimed for the Duolingo seat in a sibling branch (PR #166) before either merged. This entry and the one below moved up by two; Duolingo keeps what it took. The first three commits on this branch still cite the old numbers in their messages and cannot be rewritten — they are pushed and public — so this line is the forwarding address.

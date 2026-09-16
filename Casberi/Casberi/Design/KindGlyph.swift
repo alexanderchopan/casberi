@@ -194,6 +194,10 @@ enum BridgeGlyph {
         case "kindle":    return "book.pages"
         case "apple music": return "music.note"
         case "spotify":   return "music.note.list"
+        // The owl is nobody's to draw, and a graduation cap says a course was
+        // FINISHED. What this seat records is a day you spoke a language, so
+        // the glyph is the system's own speech bubble with a character in it.
+        case "duolingo":  return "character.bubble"
         case "wallet":    return "wallet.bifold"
         case "peer":      return "arrow.left.arrow.right"
         case "privacy pools", "0xbow privacy pools": return "shield.lefthalf.filled"

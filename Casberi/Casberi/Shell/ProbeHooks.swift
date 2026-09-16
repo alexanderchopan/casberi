@@ -58,6 +58,9 @@ enum ProbeHooks {
         // Spotify account, which is why the vault stores it device-only and
         // never syncs it. `-spotifyProbe` takes no value and is not here.
         "-spotifySession",
+        // A Duolingo `jwt_token`: the whole credential, and a bearer for the
+        // account (prd §776). `-duolingoProbe` takes no value and is not here.
+        "-duolingoSession",
     ]
 
     /// `-byokKey venice:vk-abc` → `-byokKey venice:‹redacted›`, but
@@ -5677,6 +5680,37 @@ enum ProbeHooks {
         // — and every one of them looks identical on the screen.
         Hook(key: "spotifyProbe") { _, context in
             Task { @MainActor in await spotifyReport(context: context) }
+        },
+        // `-duolingoSession "<jwt_token cookie>"` connects Duolingo headlessly
+        // with a token lifted from a browser — the ONE door a machine has to
+        // this seat, since its sign-in is a live human typing a password into
+        // Duolingo's own page inside a `WKWebView` no script can drive. Stores
+        // the token exactly as `DuolingoLiveLoginSheet` would, then reports
+        // what the seat makes of it.
+        //
+        // NOTHING about this seat is measured on a build host (see
+        // `DuolingoFeed`'s header): duolingo.com was unreachable from the
+        // session that wrote it, so this probe is how the first real sign-in
+        // becomes a measurement instead of a guess.
+        Hook(key: "duolingoSession") { token, context in
+            let jwt = token.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !jwt.isEmpty, jwt != "YES" else { return }
+            // Stored only if it decodes — a value that names no account is a
+            // credential every later read would refuse, and the page would say
+            // "signed in" over it forever.
+            guard DuolingoFeed.userID(fromJWT: jwt) != nil else {
+                NSLog("[Casberi] duolingo| that value is not a Duolingo JWT — no `sub` claim in its payload")
+                return
+            }
+            DuolingoLiveAuth.store(token: jwt)
+            Task { @MainActor in await DuolingoLive.diagnose(context: context) }
+        },
+        // `-duolingoProbe YES` reports the ALREADY-connected seat end to end:
+        // whether a token is stored and whose account it names, what the
+        // profile read answers, what the practice record parses to, and what a
+        // sweep lands.
+        Hook(key: "duolingoProbe") { _, context in
+            Task { @MainActor in await DuolingoLive.diagnose(context: context) }
         },
         // `-steamBridge "<key>:<profile>"` connects Steam headlessly.
         Hook(key: "steamBridge") { spec, context in

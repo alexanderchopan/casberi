@@ -2472,6 +2472,21 @@ enum DemoSeedAll {
                 t.previewImageURL = art(i + 8)
             }
         }
+        // Duolingo practice days (prd §776) — `.event`, one per DAY, with the
+        // lessons and the minutes in `content`, tagged `Practice` to match
+        // `DuolingoLive`. Consecutive days on purpose: the seat's whole
+        // subject is a streak, and a demo with gaps in it would show the one
+        // thing this seat exists to make visible as broken.
+        let duolingo: [(Int, Int, Int, Double)] = [
+            (38, 3, 14, 1), (20, 2, 9, 2), (55, 4, 21, 3),
+            (15, 1, 6, 4), (42, 3, 17, 5), (30, 2, 11, 6),
+        ]
+        out += duolingo.enumerated().map { i, d in
+            let line = d.1 == 1 ? "1 lesson · \(d.2) min" : "\(d.1) lessons · \(d.2) min"
+            return row(.event, "\(d.0) XP in Spanish", source: "Duolingo",
+                       ref: "demo:duolingo:\(i)", days: d.3, hour: 19,
+                       content: line, tags: ["Practice"])
+        }
         let shows: [(String, String, Double)] = [
             ("The one about compilers", "Signals and Threads", 2),
             ("Latency, end to end", "Signals and Threads", 11),
@@ -5345,6 +5360,7 @@ enum DemoSeedAll {
         ("Podcasts", "3 shows", "Follows shows you listen to."),
         ("Apple Music", "Synced 35m ago", "Reads what you played."),
         ("Spotify", "Synced 20m ago", "Reads what you recently played."),
+        ("Duolingo", "Synced 15m ago", "Reads the days you practised."),
         ("Steam", "Synced 2h ago", "Reads what you played."),
         ("Readwise", "Synced 1h ago", "Brings your highlights in."),
         ("Kindle", "Synced 3h ago", "Brings your highlights in."),

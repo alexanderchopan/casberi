@@ -97,6 +97,11 @@ extension DS {
         case "pinterest":           return Color.fixed("#e60023")
         case "spotify":             return Color.fixed("#1db954")   // their brand green — missing until now, so Spotify's icon tile and rain wash both fell back to gray/default blue
         case "apple music":         return Color.fixed("#fc3c44")   // Apple Music's coral-red mark
+        // Duolingo's own "feather green" — their documented brand green, and
+        // the field the owl stands on. Stated here rather than icon-sampled
+        // because no mark is bundled: the SF glyph fallback draws white on
+        // this, which is exactly what the real tile looks like.
+        case "duolingo":            return Color.fixed("#58cc02")
         case "bluesky":             return Color.fixed("#0285ff")
         case "snapchat":            return Color.fixed("#fffc00")   // their yellow — the field IS the mark (a white ghost sits on it), so the SF fallback's white glyph reads thin until the official icon is bundled at brand-snapchat
         case "telegram":            return Color.fixed("#229ed9")   // their blue, and the tile behind the bundled brand-telegram mark
