@@ -77,11 +77,12 @@ struct NetworkReceiptsScreen: View {
 
             if !undeclared.isEmpty {
                 Section {
+                    // A row, not a header (prd §784): a plain list pins headers.
+                    Text("Not on the list").dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .dsListRow()
                     ForEach(undeclared) { receipt in
                         row(receipt).dsListRow()
                     }
-                } header: {
-                    Text("Not on the list").dsText(.label12).foregroundStyle(DS.textTertiary)
                 } footer: {
                     Text("A bug in the list, not a hidden service — please report it.")
                         .dsText(.body17).foregroundStyle(DS.attention)
@@ -90,11 +91,11 @@ struct NetworkReceiptsScreen: View {
 
             if !declared.isEmpty {
                 Section {
+                    Text("Reached").dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .dsListRow()
                     ForEach(declared) { receipt in
                         row(receipt).dsListRow()
                     }
-                } header: {
-                    Text("Reached").dsText(.label12).foregroundStyle(DS.textTertiary)
                 } footer: {
                     DSFootnote(Text(ceiling), scale: .page)
                 }

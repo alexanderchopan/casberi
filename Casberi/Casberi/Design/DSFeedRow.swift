@@ -145,10 +145,9 @@ extension DSFeedRow where Below == EmptyView {
 /// Two rows spelled it by hand.
 struct DSFeedLive: View {
     var body: some View {
-        HStack(spacing: 4) {
-            Circle().fill(DS.confirm).frame(width: 6, height: 6)
-            Text("Live").dsText(.label12).foregroundStyle(DS.confirm)
-        }
+        // The word alone (prd §784): a green dot beside a green "Live" said
+        // it twice.
+        Text("Live").dsText(.label12).foregroundStyle(DS.confirm)
     }
 }
 

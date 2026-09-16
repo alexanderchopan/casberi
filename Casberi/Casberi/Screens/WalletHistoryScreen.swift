@@ -80,6 +80,13 @@ struct WalletHistoryScreen: View {
             } else {
                 ForEach(groups, id: \.0) { label, rows in
                     Section {
+                        // The day is a row, not a header (prd §784): a plain
+                        // list pins headers over the rows scrolling under them.
+                        WalletSectionLabel(title: label)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: DS.Space.s4, leading: DS.Space.s4,
+                                                      bottom: DS.Space.s1, trailing: DS.Space.s4))
                         ForEach(rows.keyed) { row in
                             // Corollary 3 (build 176) — see `ThingRowKeying`.
                             if let thing = row.live {
@@ -109,8 +116,6 @@ struct WalletHistoryScreen: View {
                                                           bottom: 0, trailing: DS.Space.s4))
                             }
                         }
-                    } header: {
-                        WalletSectionLabel(title: label)
                     }
                 }
             }

@@ -232,7 +232,7 @@ struct SettingsScreen: View {
             RowSpec(title: "Avatar",
                     // Set, the photo IS the fact — no words needed. It also
                     // rides the Apps nav bar as the settings entry.
-                    value: ProfileStore.shared.avatar == nil ? String(localized: "Add your photo") : "",
+                    value: "",
                     avatar: ProfileStore.shared.avatar,
                     avatarSeat: true,
                     action: {
@@ -242,10 +242,10 @@ struct SettingsScreen: View {
             // Your name (2026-08-29) — the greeting's second half. Sits beside
             // the photo rather than inside it: the A–Z field is one fact per
             // row, and "who am I to you" is two facts, a face and a name.
-            // Unset, the row still states what it would do — no name is a
-            // complete state, not a gap ("Good afternoon" is a whole sentence).
+            // Unset, the value is empty (prd §784): the row itself is the door,
+            // and no name is a complete state ("Good afternoon" is a whole sentence).
             RowSpec(title: "Name",
-                    value: ProfileStore.shared.name ?? String(localized: "Add your name"),
+                    value: ProfileStore.shared.name ?? "",
                     badge: ("signature", DS.textPrimary),
                     action: {
                         // The draft opens on what's stored, so Save on an

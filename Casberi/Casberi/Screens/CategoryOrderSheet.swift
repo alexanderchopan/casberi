@@ -50,19 +50,18 @@ struct CategoryOrderSheet: View {
     var body: some View {
         List {
             Section {
+                // A row, not a header (prd §784): a plain list pins headers.
+                Text("All and Pinned always lead.")
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 ForEach(order, id: \.self) { name in
                     row(name)
                         .dsListRow()
                         .listRowSeparator(.hidden)
                 }
                 .onMove(perform: move)
-            } header: {
-                // The grabbers are permanently visible, so "drag to reorder" was the
-                // affordance restated. Only the rule the grabbers cannot show.
-                Text("All and Pinned always lead.")
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .textCase(nil)
             } footer: {
                 if CategoryOrder.isCustom {
                     Button("Reset to the default order") { reset() }

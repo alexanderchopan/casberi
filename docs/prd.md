@@ -57224,3 +57224,17 @@ The absolute bound grew from 90s to 180s and restarts on each navigation the per
 **The feed row's line was already fixed.** §767 names the source only where the lead is not its mark, so the survey's "Calendar under a calendar icon" was a stale screenshot.
 
 **Unmeasured.** No simulator run; verified by the build, the static audits and the X, room-head, dock and catalogue selftests.
+
+## §784 — The face rail gets air, and four smaller generated-looking habits come off (user: "how could we improve if at all the wallet buttons rail, maybe create some space between it and stuff that clips it"; "do all these", 2026-09-16)
+
+**The folder's faces sit 4pt apart, and a face's characters stand 5pt inside its circle.** At 2pt the lenses ran together, and four characters of an address filled a 36pt circle to its edge, so the pick ring looked like it was touching them. The venue seats and the 10pt gap before the faces are unchanged. The overlap the user saw, an address drawn over the rail, was not reproduced from the code: the band is a real safe-area inset, so lists stop above it. It needs a screenshot of the room to fix.
+
+**Settings' Avatar and Name rows carry no instruction in the value slot.** "Add your photo" and "Add your name" were directions where a fact belongs; unset, the value is empty and the row is the door.
+
+**The live marker is the word "Live", with no dot.** A green dot beside a green word said it twice, on every live row and the cover.
+
+**A plain list's section names are rows, not headers.** `.plain` pins headers over the rows scrolling beneath them, the stock List behaviour the §782 switch introduced on Dock order, Network reach, Network receipts and Wallet history. The feed made the same move on 2026-08-29.
+
+**The Deposited and Where it's held trays size to their measured content** (`WalletTraySize`), as the Worth a look tray already did. Their fixed estimates were set for the padded rows §782 removed.
+
+**Unmeasured.** No simulator run; verified by the build and the static audits.

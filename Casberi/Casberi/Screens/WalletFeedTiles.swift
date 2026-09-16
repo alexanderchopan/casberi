@@ -974,10 +974,15 @@ struct WalletCompositionStrip: View {
 struct WalletDepositsTray: View {
     let composition: WalletComposition
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Sized to what it draws (prd §784), like the Worth a look tray; the
+    /// estimate only holds the first frame.
+    @State private var contentHeight: CGFloat = 0
+    @ScaledMetric(relativeTo: .title2) private var titleHeight: CGFloat = 28
 
     var body: some View {
         DSTray(title: String(localized: "Deposited"),
-               height: min(560, CGFloat(206 + composition.deposits.count * 64))) {
+               height: WalletTraySize.height(content: contentHeight, title: titleHeight, cap: 560,
+                                             estimate: CGFloat(170 + composition.deposits.count * 50))) {
             ScrollView {
                 VStack(spacing: DS.Space.s4) {
                     // The tray's one figure, first (2026-08-15, wallet
@@ -1004,6 +1009,7 @@ struct WalletDepositsTray: View {
                         row(deposit, index: index)
                     }
                 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
             }
             .scrollIndicators(.hidden)
         }
@@ -1506,16 +1512,20 @@ struct WalletAllocationTray: View {
     /// Enough to be the whole answer for a normal book without becoming a
     /// ledger — beyond this the tail is dust the treemap already floors out.
     private var listed: [WalletPortfolio.Position] { Array(portfolio.positions.prefix(12)) }
+    @State private var contentHeight: CGFloat = 0
+    @ScaledMetric(relativeTo: .title2) private var titleHeight: CGFloat = 28
 
     var body: some View {
         DSTray(title: String(localized: "Where it's held"),
-               height: min(620, CGFloat(150 + listed.count * 62))) {
+               height: WalletTraySize.height(content: contentHeight, title: titleHeight, cap: 620,
+                                             estimate: CGFloat(120 + listed.count * 50))) {
             ScrollView {
                 VStack(spacing: DS.Space.s4) {
                     ForEach(listed) { position in
                         row(position)
                     }
                 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
             }
             .scrollIndicators(.hidden)
         }
@@ -2276,5 +2286,15 @@ struct WalletSeeAllRow: View {
         DSMoreLink(title: Text("See all \(count) transactions"), action: onOpen)
             .frame(maxWidth: .infinity)
             .padding(.vertical, DS.Space.s1)
+    }
+}
+
+/// A wallet tray's height from its measured content (prd §784): the tray's
+/// own padding, title and home-indicator allowance on top of what it draws,
+/// capped, with the estimate standing in until the first measure lands.
+enum WalletTraySize {
+    static func height(content: CGFloat, title: CGFloat, cap: CGFloat, estimate: CGFloat) -> CGFloat {
+        guard content > 0 else { return min(cap, estimate) }
+        return min(cap, content + DS.Space.s6 + title + DS.Space.s4 + DS.Space.s6 + 34)
     }
 }

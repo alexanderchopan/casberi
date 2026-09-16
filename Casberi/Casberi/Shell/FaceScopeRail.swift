@@ -301,7 +301,9 @@ struct FaceScopeRail: View {
 
     @ViewBuilder
     private var seats: some View {
-        HStack(spacing: 2) {
+        // 4pt between faces in the folder (prd §784): at 2 the lenses and
+        // their characters ran together.
+        HStack(spacing: inFolder ? 4 : 2) {
             // THE BOOK LEADS (user ruling, prd §483, 2026-08-26: *"address
             // book can be first before All"*). It trailed the faces until
             // this, which put the one slot that is a DOOR at the far end of
@@ -547,11 +549,14 @@ struct FaceScopeRail: View {
     @ViewBuilder
     private func face(_ item: Item) -> some View {
         if inFolder, let characters = Self.characters(for: item) {
+            // Inset 5pt a side (prd §784), so four characters never reach the
+            // circle's edge or the pick ring around it.
             Text(characters)
                 .dsText(.label12)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
+                .frame(width: faceSize - 10)
                 .frame(width: faceSize, height: faceSize)
                 .background(Circle().fill(DS.fillStrong))
         } else {

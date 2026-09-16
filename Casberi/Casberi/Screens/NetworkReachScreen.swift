@@ -126,11 +126,12 @@ struct NetworkReachScreen: View {
 
     private func group(_ title: String, _ endpoints: [NetworkReach.Endpoint]) -> some View {
         Section {
+            // A row, not a header (prd §784): a plain list pins headers.
+            Text(title).dsText(.label12).foregroundStyle(DS.textTertiary)
+                .dsListRow()
             ForEach(endpoints) { endpoint in
                 row(endpoint).dsListRow()
             }
-        } header: {
-            Text(title).dsText(.label12).foregroundStyle(DS.textTertiary)
         }
     }
 
