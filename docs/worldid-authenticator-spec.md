@@ -133,15 +133,58 @@ The heavy stage, and the one with the open transport question.
   party. Casberi verifies the RP's signature against `rpRegistry` before it draws anything.
 - **The nullifier pool** for long-running actions: query before presenting (the crate does this).
 
-### Stage 4 — Admin, and recovery
+### Stage 4 — the Safe is the Recovery Agent, and this phone is one of its signers
 
-- The management key (secp256k1, `FramesKey` body). With it Casberi can insert and remove other
-  authenticators and set a **Recovery Agent**. The registry accepts ERC-1271, so the person's Safe —
-  which this app already reads and co-signs for (§425, §652) — can be the Recovery Agent. That is a
-  sentence the Safe room can say and no other app can.
-- **"This phone can recover your World ID"** is the product line. It is also the largest trust
-  claim in the app and gets the fullest honesty treatment: what the key can do, where it lives,
-  what happens if this phone is lost.
+**MEASURED, and it reorders the plan.** The registry checks a recovery signature with
+`SignatureChecker.isValidSignatureNow` — ERC-1271 — while every management op (insert, remove,
+recovery-agent update) goes through `ECDSA.recover` and must come from an EOA
+(`WorldIDRegistry.sol:275` vs `:760`). So:
+
+- **A Safe cannot be an Admin Authenticator.** Only a key can add or remove keys.
+- **A Safe can be the Recovery Agent.** Safe v1.4.1 has a canonical deployment on chain 480
+  (`safe-deployments`, `networkAddresses["480"]`). A recovery is a `RecoverAccount(leafIndex,
+  newAuthenticatorAddress, newPubkey, newCommitment, nonce)` signed by the Safe — N-of-M owners,
+  collected asynchronously, submitted by anyone, no deadline in the message.
+- **A management signature is a voucher.** `InsertAuthenticator(...)` carries a nonce and no
+  expiry, so World App can sign an insertion once and Casberi can execute it later, as long as no
+  other management op moved the nonce first. "Be there at the time" is the moment of signing, not
+  the moment of execution.
+
+**The product this makes.** Casberi already renders a Safe's queue, says who a transaction waits
+on, and holds a co-signer key that can sign and never spend (§425, §652, `SafeRoomSource`,
+`SafeSigner`, `SafeTransaction`). Point that at a Safe whose job is *recover my World ID* — owners:
+the person's World App wallet, this phone's co-signer, a friend, a hardware key; threshold 2 — and
+the existing Safe room becomes the World ID recovery console with no new signing machinery. The
+sentence is **"Your World ID can be recovered by 2 of these 4, and this phone is one of them."**
+No other app can say it, because no other app already holds a Safe co-signer and a Safe queue.
+
+**What recovery does, stated plainly.** It installs ONE new authenticator and revokes every old one
+(`recoverAccount`, spec §Recovery). It is not a way to add a key beside World App; it is what the
+person reaches for when the phone with World App is gone. After it, World App is re-inserted by the
+new admin (this phone), and credentials are re-requested through WIP-103 — the `sub` is unchanged
+because the leaf is unchanged, so the ownership proof still works; the issuer's policy decides.
+
+**Two ways in, and which one is permissionless.**
+
+- *Path A — the World ID exists in World App first.* Designating a Recovery Agent is a management
+  op: World App must sign `InitiateRecoveryAgentUpdate(leafIndex, newRecoveryAgent, nonce)`, then a
+  delay runs (today initiate → cooldown → execute; WIP-102, Last Call, makes it immediate with a
+  revert window). **UNMEASURED and likely the wall:** the spec says "Users may designate the PoH
+  AMPC system as their Recovery Agent … In the future, other Recovery Agents are expected", which
+  reads as World App offering one choice today. The contract takes any address; the UI may not.
+- *Path B — Casberi creates the World ID.* `createAccount(recoveryAddress, authenticators, …)` is
+  permissionless and takes the Recovery Agent **at creation, with no cooldown**. This phone is the
+  first Admin key, the Safe is the Recovery Agent from block one, and World App is inserted later
+  with a voucher this phone signs. Nothing here asks World for anything. **UNMEASURED and decisive:**
+  whether the Orb issues a credential to an account World App did not create. Enrollment is out of
+  scope for their own web authenticator, so assume no until an Orb visit with a Casberi-made leaf
+  says otherwise.
+
+**Build order inside the stage.** (1) `SafeBridge` learns World Chain — one row beside eth/base,
+and the Safe Transaction Service host for 480, UNMEASURED; (2) the Safe room recognises a queued
+`recoverAccount` to the registry and draws it as what it is — "recover a World ID, replacing every
+key" — never as an opaque call; (3) the World ID row states the recovery agent, the threshold, and
+whether this phone is an owner; (4) Path B's create flow, gated on the Orb question.
 
 ## 3. The keys, stated once
 
@@ -183,5 +226,9 @@ The heavy stage, and the one with the open transport question.
 3. `cargo-mobench` on an iPhone 17 Pro: query + nullifier proving time and peak memory.
 4. Tools for Humanity's issuer: will it re-issue the Orb credential to a second authenticator on
    the same account, and through which endpoint.
+5. World App's recovery-agent picker: an arbitrary address, or the AMPC only. If arbitrary, Stage 4
+   Path A is open today and is the cheapest thing in this document.
+6. An Orb visit with a leaf Casberi created (`createAccount`): does the credential issue. If yes,
+   Path B needs nothing from World App at all.
 
 Until (1) is a yes, nothing in Stage 1 draws in the app — §83 forbids a door that opens on nothing.
