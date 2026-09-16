@@ -1459,6 +1459,13 @@ harness "X live self-test" "X live self-test" "scripts/x-live-selftest.sh" "the 
 # 200 that is not a summaries array read as an empty history says "up to date"
 # over a body nobody understood, and today's row never grows.
 harness "Duolingo self-test" "Duolingo self-test" "scripts/duolingo-selftest.sh" "the Duolingo self-test failed — run scripts/duolingo-selftest.sh"
+# The web-session capture (prd §777) — an instrument that records a MONEY app's
+# own traffic, so what it may report is the whole check: a host outside the
+# named target is dropped rather than redacted, a URL keeps its path and loses
+# every value, a response is keys and types and never an amount, an
+# Authorization header is a scheme. Each of those is one edit away from a
+# transcript somebody pastes into a chat.
+harness "Web-session capture self-test" "Web-session capture self-test" "scripts/web-session-selftest.sh" "the web-session capture self-test failed — run scripts/web-session-selftest.sh"
 
 # The export half's own harness (prd §456) — `TelegramExport.swift`, compiled
 # whole. UNMEASURED against a real Telegram archive more strongly than any

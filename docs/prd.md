@@ -56966,3 +56966,27 @@ The octopus the person sees "while the app is loading" is the app-switcher cover
 **"Learning" is a GROUP, not a category.** It joins the Life category beside Photos, Schedule and Fitness. A category is a dock chip with a glyph and a room of its own, and one seat does not fill one — but filing a language course under Fitness says something untrue about both.
 
 **UNSEEN on a device.** Everything: no build host here can compile this tree, and none can reach duolingo.com. First to run, in order — `scripts/duolingo-selftest.sh`, a build, then `-duolingoSession` with a real cookie and read what `-duolingoProbe` prints against what `DuolingoFeed` claims.
+
+## §777 — Measure the web app before writing the seat (user: "what about nerd wallet credit karma and acorns and rocket money and cash app", then "can we do them all or no", 2026-09-16)
+
+**The ask.** Five money seats on §776's door: Rocket Money, Acorns, NerdWallet, Credit Karma, Cash App.
+
+**What stopped it.** Every session-cookie seat so far — Spotify §703, Instagram §726, TikTok §731, X §701, Duolingo §776 — rested on knowing which endpoints a provider's own web app calls and what comes back. For those five that knowledge does not exist: none publishes an API, no community project has mapped one, and the session asked to build them could reach none of the hosts. A seat written against an invented path is a connectable catalogue row that lands nothing — §83's dead control, five times over, and it would LOOK finished. So the seats were not written.
+
+**The ruling: measure first, and make the measurement a tool rather than an afternoon.** `Model/WebSessionCapture.swift` + `Screens/WebSessionCaptureView.swift`, DEBUG only, reached from Diagnostics. It signs in through the provider's own page and records what the page then asks for: the endpoints, the auth scheme, and the SHAPE of each response. The report lands in the Diagnostics transcript, which already has a Copy door (§670).
+
+**It reports shapes, never values, and that is enforced rather than promised.** The subject is a person's money, and the failure mode is a transcript somebody pastes into a chat carrying an amount, an account number or a live bearer. So:
+
+- a host outside the named target's own is DROPPED before it is recorded, not redacted after — an analytics beacon riding the same page is never in the report, and `evil-cash.app` is not `cash.app`;
+- a URL keeps its scheme, host, path and query NAMES; every query value goes, and a path segment carrying an account becomes `<id>`, which also generalises `/users/8817342/recurring` into the thing worth knowing;
+- a response is sketched as keys, types and array lengths at bounded depth and width — `{merchant: string, amount: number}` is everything a parser needs and nothing about anyone's money;
+- an `Authorization` header is reported as its scheme;
+- the jar is non-persistent, so a measurement leaves no money session behind, and nothing is stored, landed, or carried into a Release build.
+
+`web-session-selftest.sh` holds every one of those, including the negative ones.
+
+**Bounded to five named providers on purpose.** An open-ended "record any site" tool is a different and worse thing than a bounded measurement of five known money apps, so `targets` is a closed list and a capture runs against a member of it or not at all.
+
+**What this is not.** Not a seat, not an offer, not a catalogue row, and it lands nothing. The five seats it exists to unblock are still unwritten, and should be written against a real report rather than against this file's optimism.
+
+**UNSEEN on a device, and unbuilt** — the session that wrote it had no Swift toolchain. First to run: `scripts/web-session-selftest.sh`, a build, then one capture per provider from Diagnostics.

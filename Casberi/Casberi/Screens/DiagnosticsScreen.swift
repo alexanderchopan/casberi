@@ -33,6 +33,12 @@ struct DiagnosticsScreen: View {
     /// `chrome.flash` here would be the same trap the optional `filter` above
     /// exists to avoid.
     @State private var copied = false
+    #if DEBUG
+    /// The provider being measured (prd §777). DEBUG only — this is an
+    /// instrument, not a seat: nothing it does lands in the corpus, stores a
+    /// credential, or reaches a Release build.
+    @State private var capturing: WebSessionCapture.Target?
+    #endif
 
     var body: some View {
         List {
@@ -111,6 +117,23 @@ struct DiagnosticsScreen: View {
             // something the eye lands on next. Both gates it feeds cache on
             // first read, hence "next launch" — said on the control, not in
             // fine print elsewhere (the AgentKeyDetail rule).
+            #if DEBUG
+            // WHAT A PROVIDER'S OWN WEB APP CALLS (prd §777). Five money apps
+            // publish no API and no community project has mapped one, so a
+            // seat written against a guessed path is §83's dead control. One
+            // capture per provider answers it: sign in, let the dashboard
+            // load, close the sheet, then Copy above. The report is endpoints
+            // and response SHAPES — never a value, never an amount.
+            Section {
+                ForEach(WebSessionCapture.targets) { target in
+                    DSPushRow(title: Text("Measure \(target.name)"),
+                              subtitle: Text("Signs in through their own page and records what it asks for. Shapes only — no amounts, no values.")) {
+                        capturing = target
+                    }
+                    .dsListCardRow()
+                }
+            }
+            #endif
             Section {
                 DSToggleRow(title: Text("Measure stalls"),
                             detail: Text("Times the next launch and counts main-thread stalls during each foreground sweep. Costs a 16ms heartbeat while a sweep runs. Takes effect on the next launch."),
@@ -146,6 +169,18 @@ struct DiagnosticsScreen: View {
             }
         }
         .task { await run() }
+        #if DEBUG
+        .sheet(item: $capturing) { target in
+            WebSessionCaptureView(target: target) { calls in
+                let report = WebSessionCapture.report(calls)
+                let verdict = report.isEmpty
+                    ? WebSessionCapture.nothingRecorded
+                    : "\(report.count) endpoint(s)"
+                lines.append("— \(target.name): \(verdict)")
+                lines.append(contentsOf: report)
+            }
+        }
+        #endif
     }
 
     private func log(_ s: String) { lines.append(s) }
