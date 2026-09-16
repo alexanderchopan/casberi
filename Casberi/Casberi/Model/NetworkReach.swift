@@ -612,6 +612,15 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "spotify"),
                  purpose: "Reads what you recently played, using the same web-player session you signed in with. The requests carry only that session — no account of ours, no key, no server.",
                  hosts: ["api.spotify.com", "open.spotify.com", "accounts.spotify.com"]),
+        // Duolingo signs in through its own page inside \(DS.device) (the
+        // connect screen's sheet), and \(DS.device) then reads the web app's
+        // own endpoints as you: your profile, and the record of which days you
+        // practised. One host for all of it. No developer app, no key, no
+        // server — the session lives only on this device.
+        Endpoint(service: "Duolingo",
+                 reach: .whenConnected(bridge: "duolingo"),
+                 purpose: "Reads the days you practised and your streak, using the same session you signed in with. The requests carry only that session — no account of ours, no key, no server.",
+                 hosts: ["www.duolingo.com"]),
 
         // MARK: Work
 

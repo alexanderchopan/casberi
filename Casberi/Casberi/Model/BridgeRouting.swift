@@ -107,6 +107,9 @@ enum BridgeRouter {
         case files
         case dropbox
         case spotify
+        // The practice-day seat (prd §776) — a web sign-in, so it finishes on
+        // connect like every other one-account seat below.
+        case duolingo
         case twitch
         case slack
         case substack
@@ -253,7 +256,7 @@ enum BridgeRouter {
         /// deciding you were done. Those stay up until they're closed.
         var finishesOnConnect: Bool {
             switch self {
-            case .token, .steam, .obsidian, .files, .dropbox, .spotify, .twitch, .slack,
+            case .token, .steam, .obsidian, .files, .dropbox, .spotify, .duolingo, .twitch, .slack,
                  .icloudMail, .gmail, .exchange,
                  // Grok is `OpenRouterSetupScreen` structurally (its own
                  // doc-comment says so) and was missed here when it landed
@@ -330,6 +333,7 @@ enum BridgeRouter {
             case .files:          "files"
             case .dropbox:        "dropbox"
             case .spotify:        "spotify"
+            case .duolingo:       "duolingo"
             case .twitch:         "twitch"
             case .slack:          "slack"
             case .substack:       "substack"
@@ -439,6 +443,7 @@ enum BridgeRouter {
         Row(offer: "Files",     id: "files",  destination: .files),
         Row(offer: "Dropbox",   id: "dropbox", destination: .dropbox),
         Row(offer: "Spotify",   id: "spotify", destination: .spotify),
+        Row(offer: "Duolingo",  id: "duolingo", destination: .duolingo),
         Row(offer: "Twitch",    id: "twitch", destination: .twitch),
         Row(offer: "Slack",    id: "slack",   destination: .slack),
         Row(offer: "Substack",  id: "substack", destination: .substack),
@@ -649,6 +654,7 @@ struct BridgeDestinationView: View {
         case .files:          FilesScreen()
         case .dropbox:        DropboxScreen()
         case .spotify:        SpotifyScreen()
+        case .duolingo:       DuolingoScreen()
         case .twitch:         TwitchScreen()
         case .slack:          SlackScreen()
         case .substack:       HandleSetupScreen(bridge: .substack)

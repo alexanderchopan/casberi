@@ -764,6 +764,13 @@ enum VerbDerivation {
         case "spotify":
             return HandOffState.installedSchemes.contains("spotify")
                 ? URL(string: "spotify://") : nil
+        // A practice day has no permalink — Duolingo publishes no page for
+        // one — so the app itself is the whole hand-off, and gated like every
+        // other: an unclaimed scheme is refused asynchronously while
+        // reporting success, which renders as a disc that does nothing.
+        case "duolingo":
+            return HandOffState.installedSchemes.contains("duolingo")
+                ? URL(string: "duolingo://") : nil
         case "safari":    return nil   // links open directly via Open link
         default:          return nil
         }
@@ -835,7 +842,7 @@ enum HandOffState {
                                      "youtube", "obsidian",
                                      "calshow", "x-apple-reminderkit",
                                      "chatgpt", "music", "spotify", "mobilenotes",
-                                     "shareddocuments", "message"]
+                                     "shareddocuments", "message", "duolingo"]
 
     #if DEBUG
     /// The same list, for `-photoVerbProbe`'s census. Exposed rather than

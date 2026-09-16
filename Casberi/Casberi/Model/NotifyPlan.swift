@@ -905,7 +905,7 @@ enum NotifyDigest {
         "GitHub", "GitLab", "Linear", "Notion", "Slack", "Trello", "Jira",
         "Sentry", "Vercel", "PagerDuty", "Cloudflare", "App Store Connect", "Stripe",
         "Shopify", "Reddit", "YouTube", "Spotify", "Strava", "Garmin",
-        "Todoist", "Pinterest", "Day One",
+        "Todoist", "Pinterest", "Day One", "Duolingo",
         "Farcaster", "Telegram", "Bluesky", "Instagram", "Snapchat", "TikTok", "X",
         "Steam", "Dropbox", "Twitch", "Substack", "Stocktwits",
     ]

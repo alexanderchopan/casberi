@@ -274,6 +274,19 @@ enum BridgeRefresh {
                 _ = await SpotifyIngest.refresh(context: context)
             }
         }
+        // Duolingo's live door (prd §776), on the same ten-minute throttle as
+        // the other session-cookie seats and the same by-name pause. A
+        // practice day changes at most a handful of times a day, so a read
+        // every foreground would be asking a person's own account far more
+        // often than anything could have changed.
+        let duolingoPaused = store.bridges.contains { $0.id == "duolingo" && $0.status == .paused }
+        if DuolingoLiveAuth.connected, !duolingoPaused,
+           force || BridgeRefresh.dueForHeal("duolingo.live") {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await sweepTimed("duolingo.live") { await DuolingoLive.refresh(context: context) }
+            }
+        }
         // Instagram's live door (prd §726) — the person's own session, read
         // on `dueForHeal`'s ten-minute throttle and NEVER every foreground:
         // Meta flags a busy session harder than X or Spotify do, and the cost

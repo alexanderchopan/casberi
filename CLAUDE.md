@@ -104,6 +104,7 @@ deliberately does not check are in `docs/verify.md`.
 - **RULE: a feature deleted from the surface is deleted from the model**, or it is §83's dead control one layer down where no screen sweep sees it (the ranked board and `roomScoped`) → docs/hooks/system.md · prd §723
 - **RULE: name every column a `propertiesToFetch` read touches** (the RSS page's sync) → docs/hooks/system.md · prd §722
 - **Feed-walk self-test (scripts/feed-walk-selftest.sh, 2026-09-08) — next/previous follows the list you opened from; `FeedSheetRoute.thing` carries a `WalkScope` value, never a `[Thing]`** → docs/verify.md · prd §645
+- **Duolingo self-test (scripts/duolingo-selftest.sh, 2026-09-16) — a JWT payload read as plain base64 is nil for every token carrying a `-`; a practice day stamped at its UTC midnight files under yesterday; a 200 that is not a summaries array is not an empty history; the seat may never build a request that is not a GET** → docs/hooks/bridges.md · prd §776
 - **Mail-location self-test (scripts/mail-location-selftest.sh, 2026-09-15) — the message door: a `Message-ID` fence, and an unencoded `/` that turns Gmail's one search into a PATH** → docs/hooks/bridges.md · prd §735
 - **Readable-body self-test (scripts/readable-body-selftest.sh, 2026-09-08) — the page extractor: one 200-paragraph / 8,000-character bound across app and appex, and which hosts a scrape is fair on** → docs/verify.md · prd §645
 - **Reading-draw self-test (scripts/reading-draw-selftest.sh, 2026-09-08) — the sheet's `.link` arm: *has a body* draws, *could get one* fetches; an article draws the art, the words, then the door** → docs/verify.md · prd §645 · §709
@@ -313,6 +314,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-rainPulse <s>` — bump `ShellChrome.refreshPulse` after a delay (NSLogs `rainPulse: dealt N tiles`); deal rain only through `ShellChrome.rain(sources:)` → docs/verify.md · prd §655
 - `-hfWatch` `-hfPapers` `-hfProbe` — the Hugging Face bridge (2026-08-03, prd §290, Model/HuggingFaceBridge.swift; screen → docs/hooks/bridges.md · prd §290
 - `-spotifySession "<sp_dc>"` `-spotifyProbe` — the Spotify seat's session, and its chain link by link (prd §703, 2026-09-12) → docs/hooks/bridges.md · prd §703
+- `-duolingoSession "<jwt_token>"` `-duolingoProbe` — Duolingo's live door, the fifth seat on the session-cookie pattern: the cookie IS the bearer and carries the account id in its own `sub` claim; one `.event` per DAY practised, stamped at the reader's own midday (a UTC midnight files under yesterday east of Greenwich) and rewritten while today is still running. UNMEASURED against Duolingo — read the probe before trusting a field → docs/hooks/bridges.md · prd §776
 - **A 200 from `open.spotify.com/api/token` is not a signed-in session (`isAnonymous`); only `.refused` clears the credential, and a 429 is `.throttled`** → docs/hooks/bridges.md · prd §711 · §711b
 - `-stockWatch` — resolves each query on Stocktwits (keyless symbol search), watches the top match, and syncs → docs/hooks/bridges.md
 
