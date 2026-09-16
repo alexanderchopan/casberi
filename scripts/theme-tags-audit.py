@@ -82,7 +82,7 @@ LITERAL = re.compile(r'(?<![=!]=\s)(?<![=!]=)"([A-Za-z][A-Za-z0-9 ]*)"')
 # A `String(localized: "…")` tag is still a literal tag.
 LOCALIZED = re.compile(r'String\(localized:\s*"([^"]*)"\)')
 # A FUNCTION THAT COMPOSES THE ARRAY — the hole this audit had until
-# 2026-09-16 (prd §777), and the house pattern it was blind to.
+# 2026-09-16 (prd §779), and the house pattern it was blind to.
 #
 # `STAMP` reads the three ways a tag is written AT the row: `tags: [...]`,
 # `tags = [...]`, `tags.append(...)`. But the money bridges do not write tags
@@ -271,7 +271,7 @@ def self_test():
                            False, "a runtime tag, which has no literal to rule"),
         "Ternary.swift": ('let t = Thing(tags: [m == "quarantined" ? "Watchlist" : "Post"])\n',
                           False, "a ternary's TEST operand, which is never stamped"),
-        # The §777 hole, from both sides.
+        # The §779 hole, from both sides.
         "Helper.swift": ('static func tags(_ x: Int) -> [String] {\n'
                          '    var out = ["Impounded"]\n'
                          '    if x > 0 { out.append("Levied") }\n'

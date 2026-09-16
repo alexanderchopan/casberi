@@ -481,7 +481,7 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "aws"),
                  purpose: "Reads CloudWatch alarms, CodePipeline deploy results, Cost Explorer, and a count of EC2/S3/RDS/Lambda resources — with a read-only IAM key pair you create and sign requests with yourself. Only ever Describe/List/Get calls: nothing here creates, changes, or deletes anything on your account. The exact host depends on the AWS region you enter (e.g. monitoring.us-east-1.amazonaws.com) — every one is a subdomain of amazonaws.com. console.aws.amazon.com is where the key pair is created — opened in your browser, never called by the app.",
                  hosts: ["amazonaws.com"]),
-        // Wise (2026-09-16, prd §776) — one host, fixed. `wise.com` is the
+        // Wise (2026-09-16, prd §778) — one host, fixed. `wise.com` is the
         // settings page the setup door OPENS in the browser and is a
         // different host from the API, which is exactly the linear.app /
         // api.linear.app case the audit's denylist is written for.

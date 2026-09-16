@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// Wise, connected (2026-09-16, prd §776) — one field, then what you hold.
+/// Wise, connected (2026-09-16, prd §778) — one field, then what you hold.
 ///
 /// Sentry's shape rather than the generic paste screen's: saving the token is
 /// not the end of connecting, because every read Wise offers is per-PROFILE

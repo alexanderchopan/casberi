@@ -648,7 +648,7 @@ enum AppleWalletRoom {
                              currency: String) -> String {
         guard let top = merchants.first else {
             // Not "Your card": since iOS 18.4 this room may be standing on a
-            // UK bank account with no card behind it at all (prd §777). The
+            // UK bank account with no card behind it at all (prd §779). The
             // empty state names the MONTH, which is true of either.
             return String(localized: "Your spending, this month")
         }

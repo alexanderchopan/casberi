@@ -190,7 +190,7 @@ enum BridgeCatalog {
         // words and is NOT ordinary marketing copy — see AppleWalletScreen.
         // The last line names the two ceilings so the copy can never drift
         // past them: the two regions it covers, and that pending charges
-        // aren't a statement. It said "US-only" until prd §777 — FinanceKit
+        // aren't a statement. It said "US-only" until prd §779 — FinanceKit
         // has handed over UK bank accounts through open banking since iOS
         // 18.4, and this bridge's query never filtered them out, so the
         // sentence was false for eleven months about rows that were already
@@ -208,7 +208,7 @@ enum BridgeCatalog {
               // Health/Strava/HomeKit already set the precedent for a seat
               // that cannot exist here.
               needsSetup: true, added: day(2026, 8, 6), unavailableOnMac: true),
-        // Wise (prd §776, 2026-09-16) — balances and transfers over a
+        // Wise (prd §778, 2026-09-16) — balances and transfers over a
         // read-only personal token. The tagline names BOTH halves because the
         // seat is honestly two things, and neither alone would be worth a
         // tile: a balance with no movement is a number, and a transfer list

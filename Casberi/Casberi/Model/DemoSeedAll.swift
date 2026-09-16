@@ -197,7 +197,7 @@ enum DemoSeedAll {
                               // need these or the rows outlive the demo and
                               // freeze in place looking like real ones.
                               "aws:", "polar:", "dodopayments:",
-                              // Wise (prd §776) — the same reasoning again:
+                              // Wise (prd §778) — the same reasoning again:
                               // its rows carry the REAL bridge's
                               // `wise:transfer:` shape so the seat's own
                               // dedupe and heal recognise them, so exit() and
@@ -3555,7 +3555,7 @@ enum DemoSeedAll {
                 t.priceCurrency = "EUR"
                 t.transferCounterparty = "Bitcoin"
             })
-        // Wise (prd §776). REAL ref shape (`wise:transfer:<id>`) and REAL
+        // Wise (prd §778). REAL ref shape (`wise:transfer:<id>`) and REAL
         // titles — every one is what `WiseShape.rowTitle` would compose for
         // that transfer, including `AppleWalletRoom.money`'s own rule that an
         // amount of 100 or more drops its decimals. A demo row wearing a title
@@ -5402,7 +5402,7 @@ enum DemoSeedAll {
         ("Apple Wallet", "Synced 6m ago", "Reads Apple Card, Cash and Savings."),
         ("Privacy", "Synced 2h ago", "Reads your virtual-card purchases."),
         ("Bitrefill", "Synced 4h ago", "Reads your orders and refills."),
-        // Wise (prd §776, 2026-09-16). The proof line states the BALANCES,
+        // Wise (prd §778, 2026-09-16). The proof line states the BALANCES,
         // which is what `WiseWatch.registerBridge` really composes from
         // `WiseShape.balanceLine` — not a "Synced Nm ago", which this seat
         // never says.

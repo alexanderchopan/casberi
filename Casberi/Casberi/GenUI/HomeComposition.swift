@@ -83,12 +83,12 @@ enum HomeComposition {
             "Regression", "Resolved",                     // GitHub, Sentry
             "Card", "Payment", "Pending", "Settled",      // Apple Wallet, cards
             // The instrument a money row came off, stamped by
-            // `AppleWalletBridge.tags` (prd §777). "Card" was already here;
+            // `AppleWalletBridge.tags` (prd §779). "Card" was already here;
             // "Bank" arrived with it the day the seat stopped calling a UK
             // current account a card. A state label, never a subject — which
             // is the whole reason this set exists.
             "Bank",
-            // Wise (prd §776). "Transfer" says what a row IS — money moving
+            // Wise (prd §778). "Transfer" says what a row IS — money moving
             // between two accounts — and "Returned" what became of it;
             // neither says what anything is ABOUT. They shipped without a
             // line here, so for one commit the Themes treemap could have

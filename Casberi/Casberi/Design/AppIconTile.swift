@@ -251,7 +251,7 @@ extension DS {
         case "privacy":             return Color.fixed("#232320")   // their near-black (icon-sampled)
         // Wise's bright green, from their published brand palette rather
         // than icon-sampled — no mark is bundled for this seat, so the glyph
-        // is an SF Symbol on this ground (prd §776). Re-sample if a mark is
+        // is an SF Symbol on this ground (prd §778). Re-sample if a mark is
         // ever bundled.
         case "wise":                return Color.fixed("#9fe870")
         case "coinbase":            return Color.fixed("#0052ff")   // their official brand blue

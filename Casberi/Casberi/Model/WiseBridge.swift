@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// WISE (2026-09-16, prd §776) — the multi-currency account, read with a
+/// WISE (2026-09-16, prd §778) — the multi-currency account, read with a
 /// personal API token the person mints for themselves.
 ///
 /// ## Why this one passes §278's test when Plaid does not

@@ -1919,7 +1919,7 @@ enum ProbeHooks {
         // a card. An empty Apple Wallet room has FIVE causes that render as one
         // silence (not supported, not connected, access denied, a device in
         // neither region FinanceKit serves — the US on 17.4+, the UK on
-        // 18.4+ (prd §777) — or nothing spent yet) and only the last is
+        // 18.4+ (prd §779) — or nothing spent yet) and only the last is
         // normal.
         //
         // One NSLog per line — a joined multi-line message gets truncated by

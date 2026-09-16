@@ -4,7 +4,7 @@ import SwiftData
 import FinanceKit
 #endif
 
-/// APPLE WALLET (2026-08-06, prd §313; regions corrected §777) — the cards
+/// APPLE WALLET (2026-08-06, prd §313; regions corrected §779) — the cards
 /// and accounts held in Wallet on this device, read through FinanceKit.
 ///
 /// The entitlement (`com.apple.developer.financekit`) was granted by Apple on
@@ -55,7 +55,7 @@ import FinanceKit
 ///   through open banking — the accounts and cards a person has connected in
 ///   Wallet. `refresh` has always asked `AccountQuery()` with NO filter, so
 ///   those accounts have been landing since the day iOS 18.4 shipped while
-///   every sentence this app wrote about the seat said "US-only" (prd §777).
+///   every sentence this app wrote about the seat said "US-only" (prd §779).
 ///   Everywhere else the seat is empty by construction rather than by
 ///   failure, which is still worth saying — it is just not "everywhere but
 ///   the US".
@@ -271,7 +271,7 @@ enum AppleWalletBridge {
         let accounts = (try? await FinanceStore.shared.accounts(query: AccountQuery())) ?? []
         var names: [UUID: String] = [:]
         // WHICH of them is a card, and which is an account you hold money in
-        // (prd §777). `readBalances` already reads this distinction off the
+        // (prd §779). `readBalances` already reads this distinction off the
         // same enum for the payment-due date; the landing path never asked,
         // so every row wore "Card" — true of an Apple Card charge and false
         // of a UK current account's direct debit, which is §83's fake status
@@ -481,7 +481,7 @@ enum AppleWalletBridge {
     /// every import room can. `Pending` is a tag rather than a title-only fact
     /// because "what hasn't posted yet" is a real question.
     ///
-    /// **The instrument is READ, never assumed (prd §777).** This returned
+    /// **The instrument is READ, never assumed (prd §779).** This returned
     /// `["Card", …]` unconditionally from the day it shipped, which was true
     /// while the seat only ever saw Apple Card, Apple Cash and Savings, and
     /// became false the moment FinanceKit started handing over UK bank
@@ -581,7 +581,7 @@ enum AppleWalletBridge {
                               source: sourceName,
                               capturedAt: creep.at,
                               sourceRef: ref)
-            // No instrument word (prd §777): a series is recurring charges to
+            // No instrument word (prd §779): a series is recurring charges to
             // one merchant, and the same subscription may be paid off a card
             // or by direct debit off an account. The state word is the whole
             // true tag.

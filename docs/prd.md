@@ -56943,7 +56943,9 @@ The octopus the person sees "while the app is loading" is the app-switcher cover
 
 **UNSEEN on a device.** First to look at on a phone: a receipt cover in All (the payout), and a picture cover in All, which is now its art and words with no box below.
 
-## §776 — Wise, and the two doors that stay shut: Plaid, Stripe Financial Connections, and a cookie sign-in for banks (user: "in the same way we did sign-in for Instagram, Twitter, and Spotify, and TikTok, can we do any credit cards or banks like that", then "can we do plaid and stripe link? let's do simple fin and wise", then "i can't afford simplefin so get rid of it", 2026-09-16)
+## §778 — Wise, and the two doors that stay shut: Plaid, Stripe Financial Connections, and a cookie sign-in for banks (user: "in the same way we did sign-in for Instagram, Twitter, and Spotify, and TikTok, can we do any credit cards or banks like that", then "can we do plaid and stripe link? let's do simple fin and wise", then "i can't afford simplefin so get rid of it", 2026-09-16)
+
+**Renumbered on the day it was written**, from the two numbers a concurrent session had claimed for the Duolingo seat in a sibling branch (PR #166) before either merged. This entry and the one below moved up by two; Duolingo keeps what it took. The first three commits on this branch still cite the old numbers in their messages and cannot be rewritten — they are pushed and public — so this line is the forwarding address.
 
 **The question was whether §701's door reaches money.** §701 (X), §726 (Instagram), §731 (TikTok) and §703 (Spotify) all sign in inside a `WKWebView` and read with the cookies the person's own sign-in leaves there. Asked of a bank, the answer is no, and the reason is mechanical before it is legal — recorded here so the next session does not re-derive it:
 
@@ -56971,9 +56973,9 @@ The octopus the person sees "while the app is loading" is the app-switcher cover
 
 **UNMEASURED, and UNBUILT.** No Wise token has ever been given to this app, and the host this was written on has no egress to `api.transferwise.com` — every field map is taken from Wise's published reference, read rather than remembered. §772's caveat applies with the same force: **no build ran.** This is a Linux host with no Swift toolchain, so nothing here has been compiled, and the shell self-tests cannot run (`account-page-selftest.sh` passes its drift guards and fails at `xcrun`). On a Mac, `scripts/verify.sh` is the gate. On a phone, run `-wiseProbe YES` against a real token before trusting any parse — it walks profiles, balances and transfers, printing each status and each payload's FIELD NAMES, and never a token, a balance or an amount.
 
-## §777 — Apple Wallet has been reading UK bank accounts for months, and every sentence about it said "US-only" (user: "fix financekit too", 2026-09-16)
+## §779 — Apple Wallet has been reading UK bank accounts for months, and every sentence about it said "US-only" (user: "fix financekit too", 2026-09-16)
 
-**§776 found it and left it; this fixes it.** `AppleWalletBridge.refresh` has always asked `FinanceStore.shared.accounts(query: AccountQuery())` with NO predicate, so it takes whatever FinanceKit holds. Since **iOS 18.4 in the UK** that includes REAL BANK ACCOUNTS through open banking — the accounts and cards a person has connected in Wallet (Barclays, Barclaycard, First Direct, Halifax, HSBC, Lloyds, M&S Bank, MBNA, Monzo, Nationwide, NatWest, RBS, Santander). Those rows have been landing, with merchant names, while six separate strings told the person the seat could not do it.
+**§778 found it and left it; this fixes it.** `AppleWalletBridge.refresh` has always asked `FinanceStore.shared.accounts(query: AccountQuery())` with NO predicate, so it takes whatever FinanceKit holds. Since **iOS 18.4 in the UK** that includes REAL BANK ACCOUNTS through open banking — the accounts and cards a person has connected in Wallet (Barclays, Barclaycard, First Direct, Halifax, HSBC, Lloyds, M&S Bank, MBNA, Monzo, Nationwide, NatWest, RBS, Santander). Those rows have been landing, with merchant names, while six separate strings told the person the seat could not do it.
 
 **What was false, and where.** Not one drifted sentence — the claim was written into every layer at once, because it was true when §278 surveyed FinanceKit and §313 shipped the seat, and nothing re-read it when 18.4 landed:
 
@@ -57001,11 +57003,11 @@ Three derived rows were audited with it, and they do NOT all go the same way:
 
 **`Bank` is registered in `HomeComposition.mechanicalTags`**, which is what keeps a stamped state label out of the Themes treemap as though it were a subject.
 
-### A defect §776 shipped one commit earlier, caught by the same sweep
+### A defect §778 shipped one commit earlier, caught by the same sweep
 
 **Wise's `Transfer` and `Returned` tags were not in `mechanicalTags`.** Every other bridge's state labels are; these two were written and never registered, so the Themes treemap would have drawn "Transfer" as a SUBJECT — a theme called "Transfer", sitting beside real ones. Both are in the set now, with the reason stated. The class is worth naming because it is invisible from every other gate: a new tag needs a line in that set or it silently becomes a topic, and nothing about the row renders wrong.
 
-**UNSEEN and UNBUILT, the same caveat §776 carries.** Linux host, no Swift toolchain, nothing compiled; every `scripts/*-audit.py`, `demo-selftest.py`, `network-reach-audit.sh` and `catalog-sync.sh` are green. Two things only a device can answer, and both are why the copy names versions rather than products: which `Account` cases a real UK Wallet returns, and whether a connected bank account's transactions carry `merchantName` the way a card's do — `merchantLabel` already falls back to the description, so a miss degrades rather than breaks. `-appleWalletProbe` reports which of the five silences a real device is in.
+**UNSEEN and UNBUILT, the same caveat §778 carries.** Linux host, no Swift toolchain, nothing compiled; every `scripts/*-audit.py`, `demo-selftest.py`, `network-reach-audit.sh` and `catalog-sync.sh` are green. Two things only a device can answer, and both are why the copy names versions rather than products: which `Account` cases a real UK Wallet returns, and whether a connected bank account's transactions carry `merchantName` the way a card's do — `merchantLabel` already falls back to the description, so a miss degrades rather than breaks. `-appleWalletProbe` reports which of the five silences a real device is in.
 
 ### Amendment (same session) — the audit that exists to catch an unruled tag could not see the way this codebase writes them
 
