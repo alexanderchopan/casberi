@@ -207,6 +207,12 @@ enum BridgeGlyph {
         // `arrow.left.arrow.right`, which is the same group: these two are not
         // the same object (the npm/PyPI rule), so they do not share a mark.
         case "wise":      return "arrow.left.arrow.right.circle"
+        // The three finance seats of §780b/§780c. Acorns invests spare change,
+        // Rocket Money watches what repeats, NerdWallet is reading — so the
+        // glyphs say growth, recurrence and an article, not three wallets.
+        case "acorns":    return "chart.line.uptrend.xyaxis"
+        case "rocket money": return "arrow.triangle.2.circlepath"
+        case "nerdwallet": return "newspaper"
         // The unstake queue's whole subject is waiting, then collecting — an
         // hourglass says that where a generic coin or chain glyph wouldn't.
         case "ether.fi":  return "hourglass"

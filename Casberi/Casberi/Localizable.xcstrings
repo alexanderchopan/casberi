@@ -1463,6 +1463,34 @@
         }
       }
     },
+    "%@ +%lld more" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ y %lld más"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ほか %lld 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 외 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 等 %lld 项"
+          }
+        }
+      }
+    },
     "%@ Down from %@ in %@." : {
       "localizations" : {
         "en" : {
@@ -12643,6 +12671,34 @@
         }
       }
     },
+    "%@ — %lld day streak" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ — racha de %lld días"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ — %lld 日連続"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ — %lld일 연속"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ — 连续 %lld 天"
+          }
+        }
+      }
+    },
     "%@ — DNS changed: %@ → %@" : {
       "localizations" : {
         "en" : {
@@ -15655,6 +15711,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%lld 个早于价格数据"
+          }
+        }
+      }
+    },
+    "%lld articles in" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld artículos añadidos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 件の記事を取り込みました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "기사 %lld개 추가됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已加入 %lld 篇文章"
           }
         }
       }
@@ -37105,6 +37189,90 @@
         }
       }
     },
+    "Acorns answered, but Casberi didn't recognise the shape." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns respondió, pero Casberi no reconoció el formato."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns から応答がありましたが、Casberi は形式を認識できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns가 응답했지만 Casberi가 형식을 인식하지 못했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns 已响应，但 Casberi 无法识别其格式。"
+          }
+        }
+      }
+    },
+    "Acorns didn't hand back a session — tap Try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns no devolvió una sesión: toca Reintentar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns からセッションが返されませんでした。再試行をタップしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns가 세션을 반환하지 않았습니다. 다시 시도를 누르세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns 未返回会话 — 请点按重试。"
+          }
+        }
+      }
+    },
+    "Acorns signed you out — connect again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns cerró tu sesión: vuelve a conectar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns からサインアウトされました。もう一度接続してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns에서 로그아웃되었습니다. 다시 연결하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns 已将你登出 — 请重新连接。"
+          }
+        }
+      }
+    },
     "Across %lld accounts" : {
       "localizations" : {
         "es" : {
@@ -42331,6 +42499,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已到达"
+          }
+        }
+      }
+    },
+    "Articles only — NerdWallet's public feed. No sign-in, and nothing here reads your money." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo artículos: el feed público de NerdWallet. Sin inicio de sesión, y nada aquí lee tu dinero."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "記事のみ — NerdWallet の公開フィードです。サインインは不要で、ここではお金の情報を読み取りません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "기사만 — NerdWallet의 공개 피드입니다. 로그인이 없으며, 여기서 금융 정보를 읽지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅文章 — NerdWallet 的公开订阅源。无需登录，这里不会读取你的资金信息。"
           }
         }
       }
@@ -47597,6 +47793,62 @@
         }
       }
     },
+    "Casberi couldn't read a session from Acorns. If you're signed in, this is the probe's problem, not yours — tap Try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi no pudo leer una sesión de Acorns. Si has iniciado sesión, el problema es nuestro, no tuyo: toca Reintentar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi は Acorns のセッションを読み取れませんでした。サインイン済みの場合、これはこちら側の問題です。再試行をタップしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi가 Acorns의 세션을 읽지 못했습니다. 로그인되어 있다면 이는 저희 문제입니다. 다시 시도를 누르세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 无法读取 Acorns 的会话。如果你已登录，这是我们的问题 — 请点按重试。"
+          }
+        }
+      }
+    },
+    "Casberi couldn't read a session from Rocket Money. If you're signed in, this is the probe's problem, not yours — tap Try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi no pudo leer una sesión de Rocket Money. Si has iniciado sesión, el problema es nuestro, no tuyo: toca Reintentar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi は Rocket Money のセッションを読み取れませんでした。サインイン済みの場合、これはこちら側の問題です。再試行をタップしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi가 Rocket Money의 세션을 읽지 못했습니다. 로그인되어 있다면 이는 저희 문제입니다. 다시 시도를 누르세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 无法读取 Rocket Money 的会话。如果你已登录，这是我们的问题 — 请点按重试。"
+          }
+        }
+      }
+    },
     "Casberi diagnostics" : {
       "localizations" : {
         "es" : {
@@ -50246,6 +50498,34 @@
         }
       }
     },
+    "Connect Acorns" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conectar Acorns"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns を接続"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns 연결"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "连接 Acorns"
+          }
+        }
+      }
+    },
     "Connect Apple Wallet" : {
       "localizations" : {
         "es" : {
@@ -50270,6 +50550,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "连接 Apple Wallet"
+          }
+        }
+      }
+    },
+    "Connect Rocket Money" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conectar Rocket Money"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money を接続"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money 연결"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "连接 Rocket Money"
           }
         }
       }
@@ -53028,6 +53336,62 @@
         }
       }
     },
+    "Couldn't reach Acorns — try again in a moment." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con Acorns: inténtalo de nuevo en un momento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns に接続できませんでした。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns에 연결할 수 없습니다. 잠시 후 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Acorns — 请稍后再试。"
+          }
+        }
+      }
+    },
+    "Couldn't reach Acorns' sign-in — check your connection and tap Try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo abrir el inicio de sesión de Acorns: comprueba tu conexión y toca Reintentar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns のサインインページに接続できませんでした。接続を確認して再試行をタップしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns 로그인 페이지에 연결할 수 없습니다. 연결을 확인하고 다시 시도를 누르세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法打开 Acorns 的登录页面 — 请检查网络后点按重试。"
+          }
+        }
+      }
+    },
     "Couldn't reach App Store Connect — check your connection." : {
       "localizations" : {
         "es" : {
@@ -53252,6 +53616,34 @@
         }
       }
     },
+    "Couldn't reach Duolingo — try again in a moment." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con Duolingo: inténtalo de nuevo en un momento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo に接続できませんでした。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo에 연결할 수 없습니다. 잠시 후 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Duolingo — 请稍后再试。"
+          }
+        }
+      }
+    },
     "Couldn't reach Farcaster — try again." : {
       "localizations" : {
         "es" : {
@@ -53448,6 +53840,34 @@
         }
       }
     },
+    "Couldn't reach NerdWallet — check your connection." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con NerdWallet: comprueba tu conexión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "NerdWallet に接続できませんでした。接続を確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "NerdWallet에 연결할 수 없습니다. 연결을 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 NerdWallet — 请检查网络。"
+          }
+        }
+      }
+    },
     "Couldn't reach OpenSea — check your connection." : {
       "localizations" : {
         "es" : {
@@ -53528,6 +53948,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法连接到 PostHog——请检查你的网络连接。"
+          }
+        }
+      }
+    },
+    "Couldn't reach Rocket Money — try again in a moment." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con Rocket Money: inténtalo de nuevo en un momento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money に接続できませんでした。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money에 연결할 수 없습니다. 잠시 후 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Rocket Money — 请稍后再试。"
+          }
+        }
+      }
+    },
+    "Couldn't reach Rocket Money's sign-in — check your connection and tap Try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo abrir el inicio de sesión de Rocket Money: comprueba tu conexión y toca Reintentar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money のサインインページに接続できませんでした。接続を確認して再試行をタップしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money 로그인 페이지에 연결할 수 없습니다. 연결을 확인하고 다시 시도를 누르세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法打开 Rocket Money 的登录页面 — 请检查网络后点按重试。"
           }
         }
       }
@@ -53892,6 +54368,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法连接 Walletbeat。上面的计数来自本应用上次更新时。"
+          }
+        }
+      }
+    },
+    "Couldn't reach Wise — check your connection." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con Wise: comprueba tu conexión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise に接続できませんでした。接続を確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise에 연결할 수 없습니다. 연결을 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Wise — 请检查网络。"
           }
         }
       }
@@ -55382,6 +55886,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法读取付款方。"
+          }
+        }
+      }
+    },
+    "Couldn't read your Wallet: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo leer tu Wallet: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wallet を読み取れませんでした: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wallet을 읽을 수 없습니다: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法读取你的 Wallet：%@"
           }
         }
       }
@@ -59064,6 +59596,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "即将到期"
+          }
+        }
+      }
+    },
+    "Duolingo didn't accept that sign-in — tap Connect to try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo no aceptó ese inicio de sesión: toca Conectar para intentarlo de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo はそのサインインを受け付けませんでした。「接続」をタップしてもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo가 해당 로그인을 수락하지 않았습니다. 연결을 눌러 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo 未接受该登录 — 请点按连接重试。"
+          }
+        }
+      }
+    },
+    "Duolingo is busy right now — your days will arrive shortly." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo está ocupado ahora mismo: tus días llegarán en breve."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo は現在混雑しています。練習記録はまもなく届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo가 지금 혼잡합니다. 기록이 곧 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo 当前繁忙 — 你的记录稍后会到达。"
+          }
+        }
+      }
+    },
+    "Duolingo signed this app out — tap Connect to sign in again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo cerró la sesión de esta app: toca Conectar para volver a iniciar sesión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo によってこのアプリはサインアウトされました。「接続」をタップして再度サインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo에서 이 앱이 로그아웃되었습니다. 연결을 눌러 다시 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo 已将此应用登出 — 请点按连接重新登录。"
           }
         }
       }
@@ -63910,6 +64526,34 @@
         }
       }
     },
+    "Follow NerdWallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir NerdWallet"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "NerdWallet をフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "NerdWallet 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注 NerdWallet"
+          }
+        }
+      }
+    },
     "Follow a starter pack" : {
       "localizations" : {
         "es" : {
@@ -64018,6 +64662,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "一键关注所有人。"
+          }
+        }
+      }
+    },
+    "Follow an address in Casberi" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir una dirección en Casberi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi でアドレスをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi에서 주소 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Casberi 中关注一个地址"
           }
         }
       }
@@ -66440,6 +67112,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "获取你的 API 密钥"
+          }
+        }
+      }
+    },
+    "Get your API token" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Obtén tu token de API"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "API トークンを取得"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "API 토큰 받기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "获取你的 API 令牌"
           }
         }
       }
@@ -77104,6 +77804,34 @@
         }
       }
     },
+    "Measure %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Medir %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を計測"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 측정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "测量 %@"
+          }
+        }
+      }
+    },
     "Measure stalls" : {
       "localizations" : {
         "es" : {
@@ -77128,6 +77856,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "测量卡顿"
+          }
+        }
+      }
+    },
+    "Measuring %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Midiendo %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を計測中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 측정 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在测量 %@"
           }
         }
       }
@@ -92860,6 +93616,62 @@
         }
       }
     },
+    "Opening Acorns' sign-in…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abriendo el inicio de sesión de Acorns…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns のサインインを開いています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns 로그인을 여는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在打开 Acorns 登录…"
+          }
+        }
+      }
+    },
+    "Opening Rocket Money's sign-in…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abriendo el inicio de sesión de Rocket Money…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money のサインインを開いています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money 로그인을 여는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在打开 Rocket Money 登录…"
+          }
+        }
+      }
+    },
     "Opening Spotify's sign-in…" : {
       "localizations" : {
         "es" : {
@@ -96220,6 +97032,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "把它粘贴到下方。"
+          }
+        }
+      }
+    },
+    "Paste the API token from your Wise settings." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pega el token de API desde los ajustes de Wise."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise の設定から API トークンを貼り付けてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise 설정에서 API 토큰을 붙여넣으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从 Wise 设置中粘贴 API 令牌。"
           }
         }
       }
@@ -100441,6 +101281,34 @@
         }
       }
     },
+    "Read what your cards and accounts spend" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lee lo que gastan tus tarjetas y cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カードと口座の支出を読み取ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "카드와 계좌의 지출을 읽습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "读取你的卡片和账户支出"
+          }
+        }
+      }
+    },
     "Read yesterday" : {
       "localizations" : {
         "es" : {
@@ -101122,6 +101990,34 @@
         }
       }
     },
+    "Reading NerdWallet…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo NerdWallet…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "NerdWallet を読み込み中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "NerdWallet 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取 NerdWallet…"
+          }
+        }
+      }
+    },
     "Reading Polar…" : {
       "localizations" : {
         "es" : {
@@ -101230,6 +102126,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在读取 Walletbeat…"
+          }
+        }
+      }
+    },
+    "Reading Wise…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo Wise…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise を読み込み中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取 Wise…"
           }
         }
       }
@@ -101878,6 +102802,34 @@
         }
       }
     },
+    "Reading your Acorns…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo tu Acorns…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns を読み込み中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取你的 Acorns…"
+          }
+        }
+      }
+    },
     "Reading your Dropbox…" : {
       "localizations" : {
         "es" : {
@@ -101902,6 +102854,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在读取你的 Dropbox…"
+          }
+        }
+      }
+    },
+    "Reading your Duolingo…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo tu Duolingo…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo を読み込み中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取你的 Duolingo…"
+          }
+        }
+      }
+    },
+    "Reading your Rocket Money…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo tu Rocket Money…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money を読み込み中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取你的 Rocket Money…"
           }
         }
       }
@@ -106495,6 +107503,62 @@
         }
       }
     },
+    "Returned" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Devuelto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "返金済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "반환됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已退回"
+          }
+        }
+      }
+    },
+    "Returned · %@%@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Devuelto · %@%@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "返金済み · %@%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "반환됨 · %@%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已退回 · %@%@"
+          }
+        }
+      }
+    },
     "Reverted" : {
       "localizations" : {
         "es" : {
@@ -107035,6 +108099,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "风险"
+          }
+        }
+      }
+    },
+    "Rocket Money answered, but Casberi didn't recognise the shape." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money respondió, pero Casberi no reconoció el formato."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money から応答がありましたが、Casberi は形式を認識できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money가 응답했지만 Casberi가 형식을 인식하지 못했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money 已响应，但 Casberi 无法识别其格式。"
+          }
+        }
+      }
+    },
+    "Rocket Money signed you out — connect again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money cerró tu sesión: vuelve a conectar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money からサインアウトされました。もう一度接続してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money에서 로그아웃되었습니다. 다시 연결하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money 已将你登出 — 请重新连接。"
           }
         }
       }
@@ -109923,6 +111043,34 @@
         }
       }
     },
+    "Sending · %@%@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviando · %@%@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金中 · %@%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보내는 중 · %@%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发送中 · %@%@"
+          }
+        }
+      }
+    },
     "Sending…" : {
       "localizations" : {
         "es" : {
@@ -110455,6 +111603,34 @@
         }
       }
     },
+    "Sent · %@%@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado · %@%@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金済み · %@%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보냄 · %@%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已发送 · %@%@"
+          }
+        }
+      }
+    },
     "Sent — %@…" : {
       "localizations" : {
         "es" : {
@@ -110983,6 +112159,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "设置一个代理"
+          }
+        }
+      }
+    },
+    "Setting up your account…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Configurando tu cuenta…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントを設定中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정을 설정하는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在设置你的账户…"
           }
         }
       }
@@ -112498,6 +113702,34 @@
         }
       }
     },
+    "Sign in to Duolingo" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Iniciar sesión en Duolingo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo にサインイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Duolingo에 로그인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "登录 Duolingo"
+          }
+        }
+      }
+    },
     "Sign in to Instagram" : {
       "localizations" : {
         "es" : {
@@ -113283,6 +114515,34 @@
         }
       }
     },
+    "Signed in — %lld day streak" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sesión iniciada: racha de %lld días"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サインイン済み — %lld 日連続"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "로그인됨 — %lld일 연속"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已登录 — 连续 %lld 天"
+          }
+        }
+      }
+    },
     "Signed in — Spotify is busy right now, so your plays will arrive shortly." : {
       "localizations" : {
         "es" : {
@@ -113307,6 +114567,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已登录 —— Spotify 当前繁忙，你的播放记录稍后就会到达。"
+          }
+        }
+      }
+    },
+    "Signed in — couldn't reach Duolingo just now, it'll retry on its own." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sesión iniciada: no se pudo conectar con Duolingo ahora mismo, lo reintentará por su cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サインイン済み — 現在 Duolingo に接続できませんでしたが、自動的に再試行します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "로그인됨 — 지금은 Duolingo에 연결할 수 없지만 자동으로 다시 시도합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已登录 — 暂时无法连接 Duolingo，稍后会自动重试。"
+          }
+        }
+      }
+    },
+    "Signed in, but Rocket Money didn't hand anything back — connect again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sesión iniciada, pero Rocket Money no devolvió nada: vuelve a conectar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サインインしましたが、Rocket Money から何も返されませんでした。もう一度接続してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "로그인했지만 Rocket Money가 아무것도 반환하지 않았습니다. 다시 연결하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已登录，但 Rocket Money 未返回任何内容 — 请重新连接。"
           }
         }
       }
@@ -113363,6 +114679,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已登录，但无法读取收件箱 — 请重试。"
+          }
+        }
+      }
+    },
+    "Signed in, but nothing readable came back yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sesión iniciada, pero aún no se ha recibido nada legible."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サインインしましたが、読み取れるデータはまだ届いていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "로그인했지만 아직 읽을 수 있는 데이터가 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已登录，但尚未收到可读取的数据。"
           }
         }
       }
@@ -113587,6 +114931,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Face ID 后签名。它永远不会执行。"
+          }
+        }
+      }
+    },
+    "Signs in through their own page and records what it asks for. Shapes only — no amounts, no values." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Inicia sesión en su propia página y registra lo que pide. Solo formatos: sin importes ni valores."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提供元のページでサインインし、何を要求しているかを記録します。形式のみで、金額や値は記録しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "제공자의 페이지에서 로그인하고 무엇을 요청하는지 기록합니다. 형식만 기록하며 금액이나 값은 기록하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在其自有页面登录并记录它请求的内容。仅记录格式 — 不含金额，不含数值。"
           }
         }
       }
@@ -123685,6 +125057,34 @@
         }
       }
     },
+    "This %@ can't share financial data. It needs iOS 17.4 in the US, or iOS 18.4 in the UK." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este %@ no puede compartir datos financieros. Necesita iOS 17.4 en EE. UU., o iOS 18.4 en el Reino Unido."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この %@ は金融データを共有できません。米国では iOS 17.4、英国では iOS 18.4 が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 %@은(는) 금융 데이터를 공유할 수 없습니다. 미국에서는 iOS 17.4, 영국에서는 iOS 18.4가 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此 %@ 无法共享金融数据。美国需要 iOS 17.4，英国需要 iOS 18.4。"
+          }
+        }
+      }
+    },
     "This %@ can't share financial data. It's US-only, and needs iOS 17.4." : {
       "localizations" : {
         "es" : {
@@ -124779,6 +126179,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此 iPhone 无法共享财务数据。Apple Card、Apple Cash 和储蓄账户仅限美国，且需要 iOS 17.4 或更高版本。"
+          }
+        }
+      }
+    },
+    "This iPhone can't share financial data. It needs iOS 17.4 or later in the US, or iOS 18.4 or later in the UK." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este iPhone no puede compartir datos financieros. Necesita iOS 17.4 o posterior en EE. UU., o iOS 18.4 o posterior en el Reino Unido."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この iPhone は金融データを共有できません。米国では iOS 17.4 以降、英国では iOS 18.4 以降が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone은 금융 데이터를 공유할 수 없습니다. 미국에서는 iOS 17.4 이상, 영국에서는 iOS 18.4 이상이 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此 iPhone 无法共享金融数据。美国需要 iOS 17.4 或更高版本，英国需要 iOS 18.4 或更高版本。"
           }
         }
       }
@@ -126207,6 +127635,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "今天"
+          }
+        }
+      }
+    },
+    "Today's line and what just landed." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La línea de hoy y lo que acaba de llegar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日の推移と、今届いたもの。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘의 흐름과 방금 도착한 것."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今天的走势，以及刚刚到达的内容。"
           }
         }
       }
@@ -135959,6 +137415,34 @@
         }
       }
     },
+    "What your watched addresses are worth." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuánto valen las direcciones que sigues."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のアドレスの評価額。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 중인 주소의 가치."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的地址的价值。"
+          }
+        }
+      }
+    },
     "What your watched wallets are worth." : {
       "localizations" : {
         "es" : {
@@ -137441,6 +138925,118 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "为何重要 — %lld 字"
+          }
+        }
+      }
+    },
+    "Wise accepted the token but showed no profile on it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise aceptó el token pero no mostró ningún perfil en él."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise はトークンを受け付けましたが、プロフィールが見つかりませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise가 토큰을 수락했지만 프로필이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise 接受了该令牌，但其中没有任何资料。"
+          }
+        }
+      }
+    },
+    "Wise answered — no transfers in that window. Card spending isn't read: it lives in the balance statement, behind Wise's signed-approval step." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise respondió: no hay transferencias en ese periodo. El gasto con tarjeta no se lee: está en el extracto del saldo, tras el paso de aprobación firmada de Wise."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise から応答がありました — その期間に送金はありません。カード利用は読み取りません。残高明細にあり、Wise の署名承認の先にあります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise가 응답했습니다 — 해당 기간에 송금이 없습니다. 카드 지출은 읽지 않습니다. 잔액 명세서에 있으며 Wise의 서명 승인 단계 뒤에 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise 已响应 — 该时段没有转账。不读取卡片消费：它位于余额对账单中，在 Wise 的签名审批步骤之后。"
+          }
+        }
+      }
+    },
+    "Wise refused that token, or couldn't be reached." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise rechazó ese token, o no se pudo conectar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise がそのトークンを拒否したか、接続できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise가 해당 토큰을 거부했거나 연결할 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise 拒绝了该令牌，或无法连接。"
+          }
+        }
+      }
+    },
+    "Wise refused that token. Check it hasn't expired, and that you copied the whole thing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise rechazó ese token. Comprueba que no haya caducado y que lo hayas copiado entero."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise がそのトークンを拒否しました。有効期限が切れていないか、全体をコピーしたかご確認ください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise가 해당 토큰을 거부했습니다. 만료되지 않았는지, 전체를 복사했는지 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wise 拒绝了该令牌。请确认它尚未过期，并且你复制了完整内容。"
           }
         }
       }
@@ -141119,6 +142715,34 @@
         }
       }
     },
+    "Your accounts and balances land in your feed. Read-only — Acorns is never asked to move money." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tus cuentas y saldos llegan a tu feed. Solo lectura: nunca se le pide a Acorns que mueva dinero."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "口座と残高がフィードに届きます。読み取り専用で、Acorns に送金を依頼することはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계좌와 잔액이 피드에 표시됩니다. 읽기 전용이며, Acorns에 송금을 요청하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户和余额会出现在信息流中。只读 — 绝不会要求 Acorns 转账。"
+          }
+        }
+      }
+    },
     "Your accounts are here and reading fine, but this app doesn't have the signing contract's address for the chain vibenet is running right now — so it can't send or authorize on it yet." : {
       "localizations" : {
         "es" : {
@@ -141457,6 +143081,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的验证码"
+          }
+        }
+      }
+    },
+    "Your day" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日の記録"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘의 기록"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的一天"
           }
         }
       }
@@ -143022,6 +144674,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的来源"
+          }
+        }
+      }
+    },
+    "Your spending, this month" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tus gastos de este mes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今月の支出"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이번 달 지출"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你本月的支出"
+          }
+        }
+      }
+    },
+    "Your subscriptions and recurring bills land in your feed." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tus suscripciones y facturas recurrentes llegan a tu feed."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サブスクリプションと定期的な請求がフィードに届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "구독과 정기 청구가 피드에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的订阅和定期账单会出现在信息流中。"
           }
         }
       }

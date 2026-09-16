@@ -189,6 +189,14 @@ enum DemoSeedAll {
                               // they outlive the demo, indistinguishable
                               // from a real landed key authorization.
                               "vibenet:",
+                              // The three finance seats of §780b/§780c. Their
+                              // demo rows carry the REAL bridges' ref shapes
+                              // (`AcornsLive.refPrefix`, `RocketMoneyLive`'s,
+                              // `NerdWalletBridge`'s) so each seat's own
+                              // dedupe recognises them — which means teardown
+                              // needs these three or they outlive the demo,
+                              // indistinguishable from a real landed balance.
+                              "acorns:", "rocketmoney:", "nerdwallet:",
                               // AWS/Polar/Dodo (2026-08-31, prd §484's check
                               // G) — same reasoning as vibenet above: their
                               // rows carry the REAL bridges' ref shapes,
@@ -3600,6 +3608,56 @@ enum DemoSeedAll {
                 t.transferDirection = w.4
             }
         }
+
+        // The three finance seats of §780b/§780c. Acorns and Rocket Money land
+        // READINGS (`.note`) rather than transactions — their shipped ingests
+        // land one row per account and per subscription, updated in place,
+        // because a balance and a subscription are STATES and not events.
+        // NerdWallet lands links, like every other feed seat.
+        let acorns: [(String, Double)] = [
+            ("Invest — $3,481.22", 3481.22),
+            ("Later — $1,140.06", 1140.06),
+            ("Checking — $191.40", 191.40),
+        ]
+        out += acorns.enumerated().map { i, a in
+            row(.note, a.0, source: "Acorns", ref: "acorns:/v1/accounts:demo\(i)",
+                days: 0, hour: 9) { t in
+                t.authorHandle = "Acorns"
+                t.priceValue = a.1
+                t.priceCurrency = "USD"
+            }
+        }
+
+        let rocket: [(String, Double, Double)] = [
+            ("Netflix — $22.99", 22.99, 3),
+            ("Spotify — $11.99", 11.99, 9),
+            ("iCloud+ — $9.99", 9.99, 14),
+            ("Gym — $48.00", 48.00, 21),
+        ]
+        out += rocket.enumerated().map { i, r in
+            row(.note, r.0, source: "Rocket Money",
+                ref: "rocketmoney:demo\(i)", days: r.2, hour: 8) { t in
+                t.authorHandle = "Rocket Money"
+                t.priceValue = r.1
+                t.priceCurrency = "USD"
+            }
+        }
+
+        let nerdwallet: [(String, String, Double)] = [
+            ("Mortgage Rates Today: A Little Lower, But Still Over 6%",
+             "https://www.nerdwallet.com/article/mortgages/mortgage-rates-today", 0),
+            ("Chase 5% Bonus Categories, Q4: Grocery Stores and Dining",
+             "https://www.nerdwallet.com/article/credit-cards/chase-bonus-categories", 2),
+            ("The Financial Regrets Americans Say They Would Undo",
+             "https://www.nerdwallet.com/article/finance/spending-regrets", 5),
+        ]
+        out += nerdwallet.enumerated().map { i, n in
+            row(.link, n.0, source: "NerdWallet",
+                ref: "nerdwallet:demo\(i)", days: n.2, hour: 13) { t in
+                t.content = n.1
+                t.authorHandle = "NerdWallet"
+            }
+        }
         return out
     }
 
@@ -5423,6 +5481,13 @@ enum DemoSeedAll {
         // `WiseShape.balanceLine` — not a "Synced Nm ago", which this seat
         // never says.
         ("Wise", "£1,240 · €310", "Reads your balances and transfers."),
+        // The three finance seats of §780b/§780c. Each proof line says what
+        // that seat really composes: Acorns and Rocket Money state a reading
+        // (their pages never say "Synced Nm ago" while a session is live),
+        // NerdWallet counts what landed.
+        ("Acorns", "$4,812 · 3 accounts", "Reads your accounts and balances."),
+        ("Rocket Money", "12 subscriptions · $184/mo", "Reads your subscriptions and recurring bills."),
+        ("NerdWallet", "Synced 20m ago", "Reads NerdWallet's public feed."),
         ("Stripe", "Synced 10m ago", "Reads what your money did."),
         // Furnished 2026-08-31 (prd §484's check G). All three shipped on
         // 2026-08-30 as catalog offers with no seat and no rows, so a demo
