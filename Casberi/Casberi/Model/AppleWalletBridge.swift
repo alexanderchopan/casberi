@@ -4,8 +4,8 @@ import SwiftData
 import FinanceKit
 #endif
 
-/// APPLE WALLET (2026-08-06, prd §313) — Apple Card, Apple Cash and Savings,
-/// read on device through FinanceKit.
+/// APPLE WALLET (2026-08-06, prd §313; regions corrected §777) — the cards
+/// and accounts held in Wallet on this device, read through FinanceKit.
 ///
 /// The entitlement (`com.apple.developer.financekit`) was granted by Apple on
 /// 2026-08-06 for this exact bundle id, against a request that described this
@@ -49,8 +49,16 @@ import FinanceKit
 ///
 /// ## What it cannot do, stated so the copy can't drift
 ///
-/// - **US only.** Apple Card, Apple Cash and Savings exist nowhere else, so
-///   this seat is empty for most of the world by construction, not by failure.
+/// - **TWO REGIONS, not one, and this doc said one for eleven months.** In
+///   the **US** (iOS 17.4+) FinanceKit hands over Apple Card, Apple Cash and
+///   Savings. In the **UK** (iOS 18.4+) it hands over REAL BANK ACCOUNTS
+///   through open banking — the accounts and cards a person has connected in
+///   Wallet. `refresh` has always asked `AccountQuery()` with NO filter, so
+///   those accounts have been landing since the day iOS 18.4 shipped while
+///   every sentence this app wrote about the seat said "US-only" (prd §777).
+///   Everywhere else the seat is empty by construction rather than by
+///   failure, which is still worth saying — it is just not "everywhere but
+///   the US".
 /// - **No categories.** `merchantCategoryCode` is on the wire and deliberately
 ///   unused: an MCC is a payment-network billing code, not a description of
 ///   what you bought, and rendering "5812" as "Restaurants" is a guess we'd be
@@ -192,9 +200,9 @@ enum AppleWalletBridge {
             case .denied:
                 return String(localized: "Access wasn't granted. You can turn it on in Settings › Privacy & Security › Financial Data.")
             case .unavailable:
-                return String(localized: "This iPhone can't share financial data. Apple Card, Apple Cash and Savings are US-only, and this needs iOS 17.4 or later.")
+                return String(localized: "This iPhone can't share financial data. It needs iOS 17.4 or later in the US, or iOS 18.4 or later in the UK.")
             case .failed(let why):
-                return String(localized: "Couldn't read your card: \(why)")
+                return String(localized: "Couldn't read your Wallet: \(why)")
             }
         }
     }
@@ -262,7 +270,17 @@ enum AppleWalletBridge {
 
         let accounts = (try? await FinanceStore.shared.accounts(query: AccountQuery())) ?? []
         var names: [UUID: String] = [:]
-        for account in accounts { names[account.id] = account.displayName }
+        // WHICH of them is a card, and which is an account you hold money in
+        // (prd §777). `readBalances` already reads this distinction off the
+        // same enum for the payment-due date; the landing path never asked,
+        // so every row wore "Card" — true of an Apple Card charge and false
+        // of a UK current account's direct debit, which is §83's fake status
+        // on the one screen about somebody's money.
+        var cards: Set<UUID> = []
+        for account in accounts {
+            names[account.id] = account.displayName
+            if case .liability = account { cards.insert(account.id) }
+        }
         await readBalances(accounts: accounts)
 
         // The read window starts BEFORE the cursor, so pending rows landed on
@@ -281,7 +299,7 @@ enum AppleWalletBridge {
             limit: maxPerPass)
         guard let txns = try? await FinanceStore.shared.transactions(query: query) else { return nil }
 
-        let landed = land(txns, accountNames: names, context: context)
+        let landed = land(txns, accountNames: names, cardAccounts: cards, context: context)
         landDueRows(context: context)
         try? context.save()
         // After the save, so the pass reads a corpus including what just
@@ -297,7 +315,7 @@ enum AppleWalletBridge {
             id: seatID, name: sourceName,
             proof: landed == 0 ? String(localized: "Up to date")
                                : String(localized: "\(landed) in"),
-            can: [String(localized: "Read your card activity")])
+            can: [String(localized: "Read what your cards and accounts spend")])
         return landed
         #else
         return nil
@@ -357,7 +375,7 @@ enum AppleWalletBridge {
     @available(iOS 17.4, *)
     @MainActor
     private static func land(_ txns: [Transaction], accountNames: [UUID: String],
-                             context: ModelContext) -> Int {
+                             cardAccounts: Set<UUID>, context: ModelContext) -> Int {
         let name = sourceName
         let fetch = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == name })
         let existing = (try? context.fetch(fetch)) ?? []
@@ -373,6 +391,7 @@ enum AppleWalletBridge {
             let merchant = AppleWalletRoom.normalizeMerchant(raw)
             let isRefund = txn.creditDebitIndicator == .credit
             let settled = txn.status == .booked
+            let isCard = cardAccounts.contains(txn.accountID)
             let title = rowTitle(merchant: merchant, amount: amount, currency: currency,
                                  isRefund: isRefund, isSettled: settled)
 
@@ -387,7 +406,7 @@ enum AppleWalletBridge {
                     row.priceCurrency = currency
                     row.transferCounterparty = merchant
                     row.transferAmount = AppleWalletRoom.money(amount, currency)
-                    row.tags = tags(isRefund: isRefund, isSettled: settled)
+                    row.tags = tags(isCard: isCard, isRefund: isRefund, isSettled: settled)
                     row.capturedAt = txn.postedDate ?? txn.transactionDate
                 }
                 continue
@@ -403,7 +422,7 @@ enum AppleWalletBridge {
             thing.transferAmount = AppleWalletRoom.money(amount, currency)
             thing.priceValue = amount
             thing.priceCurrency = currency
-            thing.tags = tags(isRefund: isRefund, isSettled: settled)
+            thing.tags = tags(isCard: isCard, isRefund: isRefund, isSettled: settled)
             // The account, plus the descriptor AS THE BANK WROTE IT when
             // normalization changed it. `enrichedText` is retrieval-only by the
             // 2026-07-15 ruling, so neither is ever displayed — but both are
@@ -458,11 +477,27 @@ enum AppleWalletBridge {
         return "\(merchant) · \(money)"
     }
 
-    /// Facet tags (§308's vocabulary) so a card room can be narrowed the way
+    /// Facet tags (§308's vocabulary) so this room can be narrowed the way
     /// every import room can. `Pending` is a tag rather than a title-only fact
     /// because "what hasn't posted yet" is a real question.
-    static func tags(isRefund: Bool, isSettled: Bool) -> [String] {
-        var out = ["Card"]
+    ///
+    /// **The instrument is READ, never assumed (prd §777).** This returned
+    /// `["Card", …]` unconditionally from the day it shipped, which was true
+    /// while the seat only ever saw Apple Card, Apple Cash and Savings, and
+    /// became false the moment FinanceKit started handing over UK bank
+    /// accounts: a direct debit off a current account is not a card charge,
+    /// and a tag that says it is, is the §83 fake status on the one screen
+    /// about somebody's money. `Card` now means the transaction came off a
+    /// LIABILITY account — a credit line — and `Bank` that it came off an
+    /// asset account you hold money in. Apple Cash is the one imperfect fit
+    /// (a stored-value account rather than a bank), and it is much closer to
+    /// `Bank` than to `Card`.
+    ///
+    /// Both words are in `HomeComposition.mechanicalTags`, which is what keeps
+    /// a stamped state label out of the Themes treemap as though it were a
+    /// subject.
+    static func tags(isCard: Bool, isRefund: Bool, isSettled: Bool) -> [String] {
+        var out = [isCard ? "Card" : "Bank"]
         if isRefund { out.append("Refund") }
         if !isSettled { out.append("Pending") }
         return out
@@ -546,7 +581,11 @@ enum AppleWalletBridge {
                               source: sourceName,
                               capturedAt: creep.at,
                               sourceRef: ref)
-            thing.tags = ["Card", "Price rise"]
+            // No instrument word (prd §777): a series is recurring charges to
+            // one merchant, and the same subscription may be paid off a card
+            // or by direct debit off an account. The state word is the whole
+            // true tag.
+            thing.tags = ["Price rise"]
             thing.transferCounterparty = creep.merchant
             thing.priceValue = creep.now
             thing.priceCurrency = creep.currency
@@ -562,7 +601,8 @@ enum AppleWalletBridge {
                               source: sourceName,
                               capturedAt: AppleWalletRoom.silenceOccurredAt(silence),
                               sourceRef: ref)
-            thing.tags = ["Card", "Silence"]
+            // No instrument word, for `creeps`' reason directly above.
+            thing.tags = ["Silence"]
             thing.transferCounterparty = silence.merchant
             context.insert(thing)
         }
@@ -631,6 +671,9 @@ enum AppleWalletBridge {
                               capturedAt: .now,
                               sourceRef: ref)
             thing.dueAt = date
+            // "Card" is earned here and nowhere else by assumption:
+            // `readBalances` fills `dues` only inside `if case .liability`,
+            // so every row this loop makes really is a credit line's bill.
             thing.tags = ["Card", "Payment"]
             context.insert(thing)
         }

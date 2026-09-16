@@ -189,8 +189,13 @@ enum BridgeCatalog {
         // The summary's third paragraph is the entitlement's terms in plain
         // words and is NOT ordinary marketing copy — see AppleWalletScreen.
         // The last line names the two ceilings so the copy can never drift
-        // past them: US-only, and pending charges aren't a statement.
-        Offer(name: "Apple Wallet", tagline: "What your card actually spends",  group: "Wallet",    connectable: true,
+        // past them: the two regions it covers, and that pending charges
+        // aren't a statement. It said "US-only" until prd §777 — FinanceKit
+        // has handed over UK bank accounts through open banking since iOS
+        // 18.4, and this bridge's query never filtered them out, so the
+        // sentence was false for eleven months about rows that were already
+        // landing.
+        Offer(name: "Apple Wallet", tagline: "What your cards and accounts spend",  group: "Wallet",    connectable: true,
               // Dead on Mac, and it always was (2026-08-12). FinanceKit is
               // compiled out of the Catalyst build outright
               // (`#if canImport(FinanceKit) && !targetEnvironment(macCatalyst)`,

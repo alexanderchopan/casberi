@@ -647,7 +647,10 @@ enum AppleWalletRoom {
     static func headlineText(merchants: [MerchantRow], total: Double,
                              currency: String) -> String {
         guard let top = merchants.first else {
-            return String(localized: "Your card, this month")
+            // Not "Your card": since iOS 18.4 this room may be standing on a
+            // UK bank account with no card behind it at all (prd §777). The
+            // empty state names the MONTH, which is true of either.
+            return String(localized: "Your spending, this month")
         }
         let money = money(total, currency)
         if merchants.count == 1 {

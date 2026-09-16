@@ -56970,3 +56970,39 @@ The octopus the person sees "while the app is loading" is the app-switcher cover
 **Guards run, all green:** `network-reach-audit.sh` (the new `api.transferwise.com` reach, and `wise.com` added to the setup-door denylist — a different host by construction, the `linear.app` / `api.linear.app` case), `catalog-sync.sh` (the website shelf cell, the hero tile and the `.ai-wise` ground landed in the same session, per the standing rule), `setup-copy-audit.py`, `connect-shape-audit.py`, `catalog-mode-audit.py`, `ds-template-audit.py`, `footnote-audit.py`, `keychain-audit.py` (the two new `TokenVault` items carry the standing device-only policy — `TokenVault` enforces it at the one `set` every bridge shares), `receipts-coverage-audit.py`, `swiftdata-liveness-audit.py`, `prd-index-audit.py`.
 
 **UNMEASURED, and UNBUILT.** No Wise token has ever been given to this app, and the host this was written on has no egress to `api.transferwise.com` — every field map is taken from Wise's published reference, read rather than remembered. §772's caveat applies with the same force: **no build ran.** This is a Linux host with no Swift toolchain, so nothing here has been compiled, and the shell self-tests cannot run (`account-page-selftest.sh` passes its drift guards and fails at `xcrun`). On a Mac, `scripts/verify.sh` is the gate. On a phone, run `-wiseProbe YES` against a real token before trusting any parse — it walks profiles, balances and transfers, printing each status and each payload's FIELD NAMES, and never a token, a balance or an amount.
+
+## §777 — Apple Wallet has been reading UK bank accounts for months, and every sentence about it said "US-only" (user: "fix financekit too", 2026-09-16)
+
+**§776 found it and left it; this fixes it.** `AppleWalletBridge.refresh` has always asked `FinanceStore.shared.accounts(query: AccountQuery())` with NO predicate, so it takes whatever FinanceKit holds. Since **iOS 18.4 in the UK** that includes REAL BANK ACCOUNTS through open banking — the accounts and cards a person has connected in Wallet (Barclays, Barclaycard, First Direct, Halifax, HSBC, Lloyds, M&S Bank, MBNA, Monzo, Nationwide, NatWest, RBS, Santander). Those rows have been landing, with merchant names, while six separate strings told the person the seat could not do it.
+
+**What was false, and where.** Not one drifted sentence — the claim was written into every layer at once, because it was true when §278 surveyed FinanceKit and §313 shipped the seat, and nothing re-read it when 18.4 landed:
+
+- `AppleWalletBridge`'s header ceiling ("**US only.** Apple Card, Apple Cash and Savings exist nowhere else"), which is the sentence every later copy was derived from;
+- the `.unavailable` outcome line, shown to anyone whose device cannot share financial data — telling a UK person on 17.4 that the feature is US-only, when the true answer is "update to 18.4";
+- `AppleWalletScreen`'s own shorter copy of it;
+- the catalog comment naming "US-only" as one of the seat's two permanent ceilings;
+- `NSFinancialDataUsageDescription` — the string **Apple itself shows** in the system permission prompt — which named three US products and nothing else;
+- `docs/store-copy.md`, i.e. the App Store listing, which opened the claim with "In the US".
+
+**The honesty rule cuts both ways here, and that is why the fix is not just "delete US-only".** A sentence that under-claims is still a false status: it tells somebody a working feature is unavailable to them, which §83 bans for exactly the reason it bans the reverse. The replacement names both regions and both minimum versions rather than a country list that will go stale the next time Apple adds one: "It needs iOS 17.4 or later in the US, or iOS 18.4 or later in the UK."
+
+**The tagline widened with it** — "What your card actually spends" → "What your cards and accounts spend" — and so did the seat's `can` line, the room's empty-state head ("Your card, this month" → "Your spending, this month": since 18.4 that room may be standing on an account with no card behind it), and the website tile and wallet page.
+
+### The defect under the copy: every row was tagged `Card`
+
+`AppleWalletBridge.tags` returned `["Card", …]` unconditionally. That was true while the seat only ever saw Apple Card, Apple Cash and Savings; it became false the moment a UK current account's direct debit landed wearing it. A tag asserting an instrument the row did not come off is the §83 fake status on the one screen about somebody's money, and it renders perfectly.
+
+**The distinction was already in hand and never asked for.** `readBalances` has read `if case .liability(let liability) = account` since the seat shipped, to take the payment-due date. `refresh` now builds the liability account ids in the same loop that builds the names — no extra request, no new API — and `land` stamps `Card` for a liability (a credit line) and `Bank` for an asset account. Apple Cash is the one imperfect fit, a stored-value account rather than a bank, and it is much closer to `Bank` than to `Card`.
+
+Three derived rows were audited with it, and they do NOT all go the same way:
+
+- **`Price rise` and `Silence` lose the instrument word entirely.** A series is recurring charges to one merchant, and the same subscription may be paid off a card or by direct debit off an account — so neither row can name one. The state word is the whole true tag.
+- **`Payment` KEEPS `Card`, and it is the one place the word is earned rather than assumed**: `readBalances` fills `dues` only inside `if case .liability`, so every row that loop makes really is a credit line's bill.
+
+**`Bank` is registered in `HomeComposition.mechanicalTags`**, which is what keeps a stamped state label out of the Themes treemap as though it were a subject.
+
+### A defect §776 shipped one commit earlier, caught by the same sweep
+
+**Wise's `Transfer` and `Returned` tags were not in `mechanicalTags`.** Every other bridge's state labels are; these two were written and never registered, so the Themes treemap would have drawn "Transfer" as a SUBJECT — a theme called "Transfer", sitting beside real ones. Both are in the set now, with the reason stated. The class is worth naming because it is invisible from every other gate: a new tag needs a line in that set or it silently becomes a topic, and nothing about the row renders wrong.
+
+**UNSEEN and UNBUILT, the same caveat §776 carries.** Linux host, no Swift toolchain, nothing compiled; every `scripts/*-audit.py`, `demo-selftest.py`, `network-reach-audit.sh` and `catalog-sync.sh` are green. Two things only a device can answer, and both are why the copy names versions rather than products: which `Account` cases a real UK Wallet returns, and whether a connected bank account's transactions carry `merchantName` the way a card's do — `merchantLabel` already falls back to the description, so a miss degrades rather than breaks. `-appleWalletProbe` reports which of the five silences a real device is in.

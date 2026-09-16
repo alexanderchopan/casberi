@@ -1917,9 +1917,10 @@ enum ProbeHooks {
         // `LIVE` then reports what the device itself can do — supported,
         // connected, how many rows landed, and whether the real corpus composes
         // a card. An empty Apple Wallet room has FIVE causes that render as one
-        // silence (not supported, not connected, access denied, a US-only
-        // product on a non-US account, or nothing spent yet) and only the last
-        // is normal.
+        // silence (not supported, not connected, access denied, a device in
+        // neither region FinanceKit serves — the US on 17.4+, the UK on
+        // 18.4+ (prd §777) — or nothing spent yet) and only the last is
+        // normal.
         //
         // One NSLog per line — a joined multi-line message gets truncated by
         // the log reader (the `-todayProbe` lesson).
