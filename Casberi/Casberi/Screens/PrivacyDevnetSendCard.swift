@@ -24,6 +24,16 @@ struct PrivacyDevnetSendCard: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var store
 
+    /// **WHOSE HOME THIS IS (prd §774, user: "send and top up … on each
+    /// account's home page … they may do it from home but may also from the
+    /// account, but make it consistent").** nil is the room's All page, which
+    /// acts for this phone's CURRENT account; an address is one account's own
+    /// page, which acts for that account and makes it current the moment you
+    /// send. `stranger` is an account this phone holds no key for: its page
+    /// keeps the room's own verb, Create account, and nothing that would
+    /// spend — a Send there could only ever send from somebody else.
+    var account: String? = nil
+    var stranger = false
     let onSend: () -> Void
     /// **SHIELD, THIS CHAIN'S REASON TO EXIST (prd §593e).** Send moves ETH to
     /// an address; Shield puts it into the pool. It is an act, not a mode of
@@ -42,7 +52,9 @@ struct PrivacyDevnetSendCard: View {
     private static let mark = DS.brandHue(for: PrivacyDevnetIdentity.source) ?? DS.tint
 
     var body: some View {
-        if keyAddress == nil {
+        if stranger {
+            createOnly
+        } else if keyAddress == nil {
             create
         } else {
             // The rows sit flush in the Actions block (prd §750); the shielded
@@ -56,14 +68,94 @@ struct PrivacyDevnetSendCard: View {
                 // `POST /api/claim`, byte-identical to Hegotá's — so the tile
                 // acts in place rather than opening a page.
                 topUp: .init(busy: topUpBusy, note: topUpNote, action: topUp),
-                onSend: onSend,
+                onSend: { becomeCurrent(); onSend() },
                 extras: [
                     DevnetSendPanel.Act(id: "shield",
                                         title: String(localized: "Shield"),
                                         glyph: "arrow.down.circle",
-                                        act: onShield),
-                ])
+                                        act: { becomeCurrent(); onShield() }),
+                    // **CREATE STAYS ONCE THERE IS AN ACCOUNT (user, prd
+                    // §774):** "even if user has one they may want another".
+                    DevnetSendPanel.Act(id: "create",
+                                        title: String(localized: "Create\naccount"),
+                                        glyph: "plus.rectangle.on.rectangle",
+                                        act: makeAnother),
+                ],
+                from: from)
+            if let createError {
+                Text(createError)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, DSRoomChassis.inset)
+                    .padding(.bottom, DS.Space.s3)
             }
+            }
+            .task(id: account ?? "") { refreshFrom() }
+        }
+    }
+
+    /// The Send row's fact when this phone holds more than one account here
+    /// (prd §774): nil with one. Read on appear, never in the body.
+    @State private var from: String?
+
+    /// The account page of an address this phone holds no key for.
+    private var createOnly: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            DevnetVerbRow(title: String(localized: "Create account"),
+                          glyph: "plus.rectangle.on.rectangle", tint: Self.mark,
+                          busy: creating, act: makeAnother)
+            if let createError {
+                Text(createError)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, DSRoomChassis.inset)
+                    .padding(.bottom, DS.Space.s3)
+            }
+        }
+    }
+
+    /// This page's account becomes the one Send and Shield sign as, and the
+    /// live state's `mine` follows it.
+    private func becomeCurrent() {
+        if PrivacyDevnetKey.select(account) {
+            PrivacyDevnetLiveState.shared.setMine(account)
+        }
+    }
+
+    /// Only the All page names the sender: an account's own page IS the name.
+    private func refreshFrom() {
+        let held = PrivacyDevnetKey.addresses()
+        from = account == nil && held.count > 1
+            ? PrivacyDevnetKey.address().map(WalletStore.shortAddress) : nil
+    }
+
+    /// A further account on this phone (prd §774): watched (§602's rule for
+    /// the first, same reason), told to the live state as `mine`, scoped so
+    /// the room turns to it, and current so Send, Shield and Top up act for it.
+    private func makeAnother() {
+        guard !creating else { return }
+        guard !DemoMode.isActive else {
+            createError = String(localized: "No key is made in the demo — this is where your own would be.")
+            return
+        }
+        creating = true
+        defer { creating = false }
+        do {
+            let made = try PrivacyDevnetKey.createAnother()
+            keyAddress = made
+            createError = nil
+            if PrivacyDevnetWatch.shared.add(made) {
+                PrivacyDevnetBridge.registerBridge(store: store)
+            }
+            PrivacyDevnetLiveState.shared.setMine(made)
+            chrome.privacyDevnetScope = made
+            refreshFrom()
+            Task { await PrivacyDevnetLiveState.shared.refresh() }
+            chrome.rain(sources: [PrivacyDevnetIdentity.source])
+        } catch {
+            createError = String(localized: "Couldn't make a key: \(String(describing: error))")
         }
     }
 
@@ -155,7 +247,9 @@ struct PrivacyDevnetSendCard: View {
     // MARK: - Top up
 
     private func topUp() {
-        guard !topUpBusy, let address = keyAddress else { return }
+        // The CURRENT account, read at the tap: a face picked on the rail can
+        // have changed it since this card's state was set (prd §774).
+        guard !topUpBusy, let address = account ?? PrivacyDevnetKey.address() else { return }
         topUpBusy = true
         topUpNote = nil
         Task { @MainActor in
@@ -203,7 +297,11 @@ enum PrivacyDevnetSendPlanSteps {
         let weiHex = "0x" + (wei.isEmpty ? "0" : RLP.hex(wei))
         guard let fields = try? PrivacyDevnetSend.transfer(
             to: destination, weiHex: weiHex,
-            nonce: PrivacyDevnetLiveState.shared.accounts.first?.nonce ?? 0,
+            // The SENDER's nonce, not the first account read: with more than
+            // one account here the first is often somebody else (prd §774).
+            nonce: PrivacyDevnetLiveState.shared.accounts.first(where: {
+                $0.address.caseInsensitiveCompare(PrivacyDevnetKey.address() ?? "") == .orderedSame
+            })?.nonce ?? 0,
             gasPrice: 0)
         else { return [] }
         return fields.frames.map { DevnetSendStep(name: name(for: $0), detail: detail(for: $0)) }

@@ -276,7 +276,11 @@ struct VibenetRoomCard: View {
     /// card has one call site, the acts draw once per render on Home only, and
     /// a generic here would spread through 3,600 lines to save an allocation
     /// nothing measures.
-    var acts: (() -> AnyView)? = nil
+    ///
+    /// **Handed the page's account (prd §774)** — "" for All — so each of your
+    /// own accounts' pages acts for that account and anybody else's keeps
+    /// Create account only, the rule every room in the family follows.
+    var acts: ((String) -> AnyView)? = nil
 
     /// Which account the room is scoped to, and the door to the book — the
     /// two halves of the face rail this card ABSORBED (prd §482 amendment,
@@ -868,11 +872,10 @@ struct VibenetRoomCard: View {
                 },
                 figure: { _ in scopeVisualDissolving },
                 acts: { slot in
-                    // The ALL card only: this device holds ONE key, so Send,
-                    // Top up, Create and Authorize act for that key whichever
-                    // card is showing.
-                    if slot.id.isEmpty, let acts {
-                        acts()
+                    // Every page (prd §774): the closure decides what this
+                    // page's account gets.
+                    if let acts {
+                        acts(slot.id)
                     }
                 }
             )

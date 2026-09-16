@@ -22,6 +22,16 @@ import SwiftData
 /// paid for three times already. Top up needs no sheet: it acts in place and
 /// reports on itself, which is the whole of its design.
 struct HegotaSendCard: View {
+    /// **WHOSE HOME THIS IS (prd §774, user: "send and top up … on each
+    /// account's home page … they may do it from home but may also from the
+    /// account, but make it consistent").** nil is the room's All page, which
+    /// acts for this phone's CURRENT account; an address is one account's own
+    /// page, which acts for that account and makes it current the moment you
+    /// send. `stranger` is an account this phone holds no key for: its page
+    /// keeps the room's own verb, Create account, and nothing that would
+    /// spend — a Send there could only ever send from somebody else.
+    var account: String? = nil
+    var stranger = false
     /// Raise the send sheet. Owned by the screen, for the reason above.
     var onSend: () -> Void = {}
 
@@ -38,14 +48,95 @@ struct HegotaSendCard: View {
     // this is an ordinary send flow, not a frame/vault reading.
     private static let mark = DS.tint
 
+    /// The Send row's fact when this phone holds more than one account here
+    /// (prd §774): nil with one. Read on appear, never in the body.
+    @State private var from: String?
+
     var body: some View {
-        if sender == nil {
+        if stranger {
+            createOnly
+        } else if sender == nil {
             create
         } else {
-            DevnetSendPanel(
-                tint: Self.mark,
-                topUp: .init(busy: topUpBusy, note: topUpNote, action: topUp),
-                onSend: onSend)
+            VStack(alignment: .leading, spacing: 0) {
+                DevnetSendPanel(
+                    tint: Self.mark,
+                    topUp: .init(busy: topUpBusy, note: topUpNote, action: topUp),
+                    onSend: {
+                        // This page's account becomes the one the send sheet
+                        // signs as.
+                        HegotaKey.select(account)
+                        onSend()
+                    },
+                    // **CREATE STAYS ONCE THERE IS AN ACCOUNT (user, prd §774):**
+                    // "even if user has one they may want another".
+                    extras: [
+                        .init(id: "create", title: String(localized: "Create\naccount"),
+                              glyph: "plus.rectangle.on.rectangle", act: makeAnother),
+                    ],
+                    from: from)
+                if let createError {
+                    Text(createError)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.destructive)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, DSRoomChassis.inset)
+                        .padding(.bottom, DS.Space.s3)
+                }
+            }
+            .task(id: account ?? "") { refreshFrom() }
+        }
+    }
+
+    /// The account page of an address this phone holds no key for.
+    private var createOnly: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            DevnetVerbRow(title: String(localized: "Create account"),
+                          glyph: "plus.rectangle.on.rectangle", tint: Self.mark,
+                          busy: creating, act: makeAnother)
+            if let createError {
+                Text(createError)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, DSRoomChassis.inset)
+                    .padding(.bottom, DS.Space.s3)
+            }
+        }
+    }
+
+    /// Only the All page names the sender: an account's own page IS the name.
+    private func refreshFrom() {
+        let held = HegotaKey.addresses()
+        from = account == nil && held.count > 1
+            ? HegotaKey.address().map(WalletStore.shortAddress) : nil
+    }
+
+    /// A further account on this phone (prd §774). Watched so it has a face
+    /// on the rail — the first account is offered a watch on the account
+    /// page, but a second made from the room has no other way in — scoped so
+    /// the room turns to it, and current so Send and Top up act for it.
+    private func makeAnother() {
+        guard !DemoMode.isActive else {
+            createError = String(localized: "No key is made in the demo — this is where your own would be.")
+            return
+        }
+        guard !creating else { return }
+        creating = true
+        createError = nil
+        Task { @MainActor in
+            defer { creating = false }
+            do {
+                let made = try HegotaKey.createAnother()
+                _ = HegotaWatch.shared.add(made)
+                chrome.hegotaScope = made
+                refreshFrom()
+                DSHaptic.success()
+                pour()
+                await HegotaLiveState.shared.refresh()
+            } catch {
+                createError = String(localized: "Couldn't make a key on this phone.")
+            }
         }
     }
 
@@ -116,7 +207,7 @@ struct HegotaSendCard: View {
             topUpNote = String(localized: "The faucet isn't reached in the demo.")
             return
         }
-        guard let address = HegotaKey.address() else { return }
+        guard let address = account ?? HegotaKey.address() else { return }
         topUpBusy = true
         topUpNote = nil
         Task { @MainActor in
@@ -179,6 +270,6 @@ struct HegotaSendCard: View {
     /// the Keychain. It borrows the fixture's own account for display, and
     /// every write above refuses before it reaches a signature.
     private var sender: String? {
-        HegotaKey.address() ?? (DemoMode.isActive ? HegotaLiveState.demoOwnerAddress : nil)
+        account ?? HegotaKey.address() ?? (DemoMode.isActive ? HegotaLiveState.demoOwnerAddress : nil)
     }
 }

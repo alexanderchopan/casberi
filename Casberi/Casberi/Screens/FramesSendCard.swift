@@ -17,6 +17,16 @@ import SwiftUI
 struct FramesSendCard: View {
     @Environment(ShellChrome.self) private var chrome
 
+    /// **WHOSE HOME THIS IS (prd §774, user: "send and top up … on each
+    /// account's home page … they may do it from home but may also from the
+    /// account, but make it consistent").** nil is the room's All page, which
+    /// acts for this phone's CURRENT account; an address is one account's own
+    /// page, which acts for that account and makes it current the moment you
+    /// send. `stranger` is an account this phone holds no key for: its page
+    /// keeps the room's own verb, Create account, and nothing that would
+    /// spend — a Send there could only ever send from somebody else.
+    var account: String? = nil
+    var stranger = false
     let onSend: () -> Void
 
     @State private var keyAddress: String? = FramesKey.address()
@@ -29,16 +39,99 @@ struct FramesSendCard: View {
     /// brand and the console is chrome around it.
     private static let mark = DS.tint
 
+    /// The Send row's fact when this phone holds more than one account here
+    /// (prd §774): nil with one. Read on appear, never in the body — the
+    /// build-525 rule — and set directly by `makeAnother`.
+    @State private var from: String?
+
     var body: some View {
-        if keyAddress == nil {
+        if stranger {
+            createOnly
+        } else if keyAddress == nil && account == nil {
             create
         } else {
-            DevnetSendPanel(
-                tint: Self.mark,
-                // The faucet leaves nothing to open — it funds the address in
-                // place, so the tile acts here.
-                topUp: .init(busy: topUpBusy, note: topUpNote, action: topUp),
-                onSend: onSend)
+            VStack(alignment: .leading, spacing: 0) {
+                DevnetSendPanel(
+                    tint: Self.mark,
+                    // The faucet leaves nothing to open — it funds the address in
+                    // place, so the tile acts here.
+                    topUp: .init(busy: topUpBusy, note: topUpNote, action: topUp),
+                    onSend: {
+                        // This page's account becomes the one the send sheet
+                        // signs as. A passkey account is not a `FramesKey`
+                        // item, so `select` declines it and the room's scope
+                        // says who sends (§728d).
+                        FramesKey.select(account)
+                        onSend()
+                    },
+                    // **CREATE STAYS ONCE THERE IS AN ACCOUNT (user, prd §774):**
+                    // "even if user has one they may want another". It was
+                    // drawn INSTEAD of this panel, so the first account closed
+                    // the door behind it — vibenet's own fix, one chain over.
+                    extras: [
+                        .init(id: "create", title: String(localized: "Create\naccount"),
+                              glyph: "plus.rectangle.on.rectangle", act: makeAnother),
+                    ],
+                    from: from)
+                if let createError {
+                    Text(createError)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.destructive)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, DSRoomChassis.inset)
+                        .padding(.bottom, DS.Space.s3)
+                }
+            }
+            .task(id: account ?? "") { refreshFrom() }
+        }
+    }
+
+    /// The account page of an address this phone holds no key for.
+    private var createOnly: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            DevnetVerbRow(title: String(localized: "Create account"),
+                          glyph: "plus.rectangle.on.rectangle", tint: Self.mark,
+                          busy: creating, act: makeAnother)
+            if let createError {
+                Text(createError)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, DSRoomChassis.inset)
+                    .padding(.bottom, DS.Space.s3)
+            }
+        }
+    }
+
+    /// Only the All page names the sender: an account's own page IS the name.
+    private func refreshFrom() {
+        let held = FramesKey.addresses()
+        from = account == nil && held.count > 1
+            ? FramesKey.address().map(WalletStore.shortAddress) : nil
+    }
+
+    /// A further account on this phone (prd §774). It is watched so it has a
+    /// face on the rail, scoped so the room turns to it, and current so Send
+    /// and Top up act for it — `FramesKey.createAnother` set that last part.
+    private func makeAnother() {
+        guard !creating else { return }
+        guard !DemoMode.isActive else {
+            createError = String(localized: "No key is made in the demo — this is where your own would be.")
+            return
+        }
+        creating = true
+        defer { creating = false }
+        do {
+            let made = try FramesKey.createAnother()
+            createError = nil
+            keyAddress = made
+            _ = FramesWatch.shared.add(made)
+            chrome.framesScope = made
+            refreshFrom()
+            Task { await FramesLiveState.shared.refresh() }
+            chrome.rain(sources: [FramesIdentity.source])
+        } catch {
+            createError = String(localized: "Couldn't make a key: \(String(describing: error))")
         }
     }
 
@@ -91,7 +184,9 @@ struct FramesSendCard: View {
     // MARK: - Top up
 
     private func topUp() {
-        guard !topUpBusy, let address = keyAddress else { return }
+        // The CURRENT account, read at the tap: a face picked on the rail can
+        // have changed it since this card's state was set (prd §774).
+        guard !topUpBusy, let address = account ?? FramesKey.address() else { return }
         topUpBusy = true
         topUpNote = nil
         Task { @MainActor in
@@ -142,7 +237,11 @@ enum FramesSendPlanSteps {
               DevnetSendParse.isValidAddress(destination),
               let target = RLP.data(fromHex: destination)
         else { return [] }
-        let nonce = FramesLiveState.shared.accounts.first?.nonce ?? 0
+        // The SENDER's nonce, not the first account read: with more than one
+        // account here the first is often somebody else (prd §774).
+        let nonce = FramesLiveState.shared.accounts.first(where: {
+            $0.address.caseInsensitiveCompare(FramesKey.address() ?? "") == .orderedSame
+        })?.nonce ?? 0
         // The same deadline rule the send signs with (prd §728b), so the
         // preview shows the deadline frame the transaction will really lead with.
         let deadline = FramesSend.deadline()

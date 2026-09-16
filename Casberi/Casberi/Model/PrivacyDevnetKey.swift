@@ -67,6 +67,16 @@ enum PrivacyDevnetKey {
     private static let service = "casberi-privacydevnet-signer"
     private static let account = "device-secp256k1"
     private static let addressKey = "privacydevnet.signer.address"
+    /// **MORE THAN ONE ACCOUNT ON THIS PHONE (prd §774, 2026-09-16).** The
+    /// first key keeps the item name and the cached address every phone that
+    /// made one before today already holds, so nothing migrates; every later
+    /// key is its own item, named by its address, and `addressesKey` lists
+    /// those in the order they were made. `currentKey` names the one
+    /// `address()` answers with — the account the room's acts spend from —
+    /// and it is set by making a key or by picking its face on the room's
+    /// rail (`select`).
+    private static let addressesKey = "privacydevnet.signer.addresses"
+    private static let currentKey = "privacydevnet.signer.current"
 
     // MARK: - Presence
 
@@ -76,11 +86,11 @@ enum PrivacyDevnetKey {
 
     /// Attribute-only, so it decrypts nothing and raises no prompt.
     static func presence() -> Presence {
-        guard address() != nil else { return .none }
+        guard let address = address() else { return .none }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrAccount as String: accountName(for: address),
             kSecReturnAttributes as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
@@ -116,7 +126,52 @@ enum PrivacyDevnetKey {
     /// The address this key signs as, cached so a row can be drawn without
     /// decrypting the scalar.
     static func address() -> String? {
+        let held = addresses()
+        if let current = UserDefaults.standard.string(forKey: currentKey),
+           let match = held.first(where: { $0.caseInsensitiveCompare(current) == .orderedSame }) {
+            return match
+        }
+        return held.first
+    }
+
+    /// The first account's address — the item every phone that made a key
+    /// before §774 holds under `account`.
+    private static func firstAddress() -> String? {
         UserDefaults.standard.string(forKey: addressKey)
+    }
+
+    /// Every account this phone holds on this chain, the first one first.
+    /// A defaults read, never a Keychain one — a rail can ask it per pass.
+    static func addresses() -> [String] {
+        let later = UserDefaults.standard.stringArray(forKey: addressesKey) ?? []
+        guard let first = firstAddress() else { return later }
+        return [first] + later.filter { $0.caseInsensitiveCompare(first) != .orderedSame }
+    }
+
+    /// Does this phone hold the key for `address`?
+    static func holds(_ address: String?) -> Bool {
+        guard let address else { return false }
+        return addresses().contains { $0.caseInsensitiveCompare(address) == .orderedSame }
+    }
+
+    /// Make `address` the account the room's acts spend from. Answers whether
+    /// it was one of this phone's — a stranger's face picks nothing, so the
+    /// rail can call this on every pick without checking first.
+    @discardableResult
+    static func select(_ address: String?) -> Bool {
+        guard let address, holds(address) else { return false }
+        UserDefaults.standard.set(address, forKey: currentKey)
+        return true
+    }
+
+    /// The Keychain item a given address's scalar lives under: the first
+    /// account's is the bare name every shipped phone has, a later one's is
+    /// suffixed with its address.
+    private static func accountName(for address: String) -> String {
+        if let first = firstAddress(), first.caseInsensitiveCompare(address) == .orderedSame {
+            return account
+        }
+        return account + ":" + address.lowercased()
     }
 
     static func biometryAvailable() -> Bool {
@@ -188,7 +243,7 @@ enum PrivacyDevnetKey {
                 // Read, and not a key. It can sign nothing, so nothing is lost
                 // by replacing it, and leaving it would reproduce this same
                 // duplicate on every future tap.
-                delete()
+                deleteFirst()
                 let replacement = try mint()
                 guard case .stored(let address) = replacement else {
                     throw Failure.keychainRefused(errSecDuplicateItem)
@@ -204,16 +259,53 @@ enum PrivacyDevnetKey {
     /// throwing, because a duplicate is the one keychain answer this file can
     /// do something about.
     private static func mint() throws -> Minted {
+        var fresh = try freshKey()
+        guard try store(&fresh, named: account) else { return .duplicate }
+        UserDefaults.standard.set(fresh.address, forKey: addressKey)
+        return .stored(fresh.address)
+    }
+
+    /// **A SECOND ACCOUNT, AND A THIRD (prd §774).** With no account yet this
+    /// IS `create()`, adoption and all; with one, it mints a fresh scalar
+    /// under its own item, lists it, and makes it the current account. A
+    /// duplicate here is a real fault rather than something to adopt — two
+    /// fresh scalars deriving one address is not a state the curve allows.
+    @discardableResult
+    static func createAnother() throws -> String {
+        guard !addresses().isEmpty else { return try create() }
+        var fresh = try freshKey()
+        guard try store(&fresh, named: accountName(for: fresh.address)) else {
+            throw Failure.keychainRefused(errSecDuplicateItem)
+        }
+        var later = UserDefaults.standard.stringArray(forKey: addressesKey) ?? []
+        later.append(fresh.address)
+        UserDefaults.standard.set(later, forKey: addressesKey)
+        UserDefaults.standard.set(fresh.address, forKey: currentKey)
+        return fresh.address
+    }
+
+    private struct Fresh {
+        var scalar: [UInt8]
+        let address: String
+    }
+
+    /// Generate a scalar and derive its address. Nothing is written.
+    private static func freshKey() throws -> Fresh {
         guard let key = try? P256K.Recovery.PrivateKey(format: .uncompressed),
               let addr = ethereumAddress(uncompressedPublicKey: [UInt8](key.publicKey.dataRepresentation))
         else { throw Failure.curve }
+        return Fresh(scalar: [UInt8](key.dataRepresentation), address: addr)
+    }
 
-        var scalar = [UInt8](key.dataRepresentation)
+    /// Write the scalar under `name`, zeroing it afterwards either way. False
+    /// when an item of that name already exists — the one keychain answer the
+    /// callers can do something about.
+    private static func store(_ fresh: inout Fresh, named name: String) throws -> Bool {
         var add: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecValueData as String: Data(scalar),
+            kSecAttrAccount as String: name,
+            kSecValueData as String: Data(fresh.scalar),
             // Device-only and non-synchronizable, named for
             // `scripts/keychain-audit.py`. Worthless money is still not a
             // reason to let a signing key ride a backup onto another device.
@@ -237,13 +329,11 @@ enum PrivacyDevnetKey {
             kSecAttrSynchronizable as String: false,
         ]
         let status = SecItemAdd(add as CFDictionary, nil)
-        scalar.resetBytes(in: 0..<scalar.count)
+        fresh.scalar.resetBytes(in: 0..<fresh.scalar.count)
         add[kSecValueData as String] = nil
-        if status == errSecDuplicateItem { return .duplicate }
+        if status == errSecDuplicateItem { return false }
         guard status == errSecSuccess else { throw Failure.keychainRefused(status) }
-
-        UserDefaults.standard.set(addr, forKey: addressKey)
-        return .stored(addr)
+        return true
     }
 
     /// **THREE ANSWERS, NEVER TWO.** "The bytes are not a key" and "we could
@@ -292,11 +382,34 @@ enum PrivacyDevnetKey {
         return .adopted(addr)
     }
 
+    /// Remove the account `address()` names — the first key by its own item,
+    /// a later one by its address — and forget it; the next held account, if
+    /// any, becomes the current one. With nothing remembered at all it clears
+    /// the first item anyway, so an orphaned item can still be removed by
+    /// hand (the pre-§774 behaviour, and `-hegotaKeyMake delete`'s).
     static func delete() {
+        guard let current = address() else { deleteFirst(); return }
+        if let first = firstAddress(), first.caseInsensitiveCompare(current) == .orderedSame {
+            deleteFirst()
+        } else {
+            removeItem(named: accountName(for: current))
+            let later = (UserDefaults.standard.stringArray(forKey: addressesKey) ?? [])
+                .filter { $0.caseInsensitiveCompare(current) != .orderedSame }
+            UserDefaults.standard.set(later, forKey: addressesKey)
+        }
+        UserDefaults.standard.removeObject(forKey: currentKey)
+    }
+
+    private static func deleteFirst() {
+        removeItem(named: account)
+        UserDefaults.standard.removeObject(forKey: addressKey)
+    }
+
+    private static func removeItem(named name: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrAccount as String: name,
             // `SynchronizableAny`, `SignerKey`'s own constant. A delete query
             // that names no synchronizability matches only the
             // non-synchronizable item, so an item written under any other
@@ -306,7 +419,6 @@ enum PrivacyDevnetKey {
             kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
         ]
         SecItemDelete(query as CFDictionary)
-        UserDefaults.standard.removeObject(forKey: addressKey)
     }
 
     // MARK: - Signing
@@ -330,7 +442,7 @@ enum PrivacyDevnetKey {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrAccount as String: accountName(for: expected),
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecUseAuthenticationContext as String: context,

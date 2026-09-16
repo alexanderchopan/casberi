@@ -61,11 +61,12 @@ struct VibenetSendCard: View {
     /// Open the create sheet — Home's own door since 2026-09-04, no longer the
     /// panel's stand-in for having nothing to send from.
     let onCreate: () -> Void
-    /// Authorize a key on the account this panel sends from. Its SUBJECT is
-    /// that account, which is unambiguous only because `signableVibenetAccount`
-    /// answers with the one account this phone's key can act for — see the
-    /// caller, where the second-account case is named.
+    /// Authorize a key on the account this panel sends from — the page's own
+    /// account, or the first this phone's key acts for on All (prd §774).
     let onAuthorize: () -> Void
+    /// Who Send spends from, named on the All page when this phone's key acts
+    /// for more than one account (prd §774); nil otherwise.
+    var from: String? = nil
 
     @State private var topUpBusy = false
     /// Only ever set by a tap. **Not pre-populated**, in the demo or anywhere
@@ -102,7 +103,8 @@ struct VibenetSendCard: View {
                       glyph: "plus.rectangle.on.rectangle", act: onCreate),
                 .init(id: "authorize", title: String(localized: "Authorize\na key"),
                       glyph: "key", act: onAuthorize),
-            ])
+            ],
+            from: from)
     }
 
     // MARK: - Top up

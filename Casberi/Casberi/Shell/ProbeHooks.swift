@@ -6579,8 +6579,11 @@ enum ProbeHooks {
                 // Read BEFORE create(), because afterwards there is an item
                 // either way and the orphan is no longer distinguishable.
                 let orphaned = PrivacyDevnetKey.keychainHoldsItem() && address == nil
-                NSLog("[Casberi] privacyKey| presence=%@ address=%@ item=%@ orphaned=%@",
+                // `held=` is every account this phone holds here (prd §774);
+                // `address=` is the CURRENT one, which Send acts for.
+                NSLog("[Casberi] privacyKey| presence=%@ address=%@ held=%d item=%@ orphaned=%@",
                       String(describing: presence), address ?? "-",
+                      PrivacyDevnetKey.addresses().count,
                       PrivacyDevnetKey.keychainHoldsItem() ? "YES" : "NO",
                       orphaned ? "YES" : "NO")
                 if presence != .present {
@@ -6849,8 +6852,11 @@ enum ProbeHooks {
                 // Read BEFORE create(), because afterwards there is an item
                 // either way and the orphan is no longer distinguishable.
                 let orphaned = FramesKey.keychainHoldsItem() && address == nil
-                NSLog("[Casberi] framesKey| presence=%@ address=%@ item=%@ orphaned=%@ biometry=%@",
+                // `held=` is every account this phone holds here (prd §774);
+                // `address=` is the CURRENT one, which Send acts for.
+                NSLog("[Casberi] framesKey| presence=%@ address=%@ held=%d item=%@ orphaned=%@ biometry=%@",
                       String(describing: presence), address ?? "-",
+                      FramesKey.addresses().count,
                       FramesKey.keychainHoldsItem() ? "YES" : "NO",
                       orphaned ? "YES" : "NO",
                       FramesKey.biometryAvailable() ? "YES" : "NO")
@@ -7254,7 +7260,7 @@ enum ProbeHooks {
             let spend = value.lowercased() == "claim"
             Task { @MainActor in
                 // The same resolution Home does, spelled here rather than
-                // shared: `FeedScreen.signableVibenetAccount` is private to
+                // shared: `FeedScreen.signableVibenetAccounts` is private to
                 // that screen, and a probe that guessed differently would
                 // report about an account the tile never offers.
                 let ours = VibenetDeviceKey.actorID()?.lowercased()

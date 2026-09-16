@@ -1223,7 +1223,9 @@ done
 # **THE ACTS ARE ON THE CARD, NOT A SECTION BELOW IT** (prd §747, keeping §682's
 # ruling by construction). `vibenetSendRow` mounted under the card until today,
 # which put the verbs below the list on any Home with history.
-grep -q 'acts: { AnyView(vibenetSendRow) }' "$TMP/feed.nc.swift" \
+# Since prd §774 the card hands the closure the page's account, so the acts
+# draw on every page and each account's page acts for itself.
+grep -qF 'acts: { AnyView(vibenetSendRow(scope: $0)) }' "$TMP/feed.nc.swift" \
   || { echo "✗ vibenet's verbs are not handed to the card — prd §747/§682: they ride the"
        echo "  account card beside the crown, never a Section under the room's list."; exit 1; }
 # **AND NOTHING MAY DRAW BELOW THE FIGURE SLOT EITHER** (2026-09-02, reported

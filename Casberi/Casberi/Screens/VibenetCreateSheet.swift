@@ -559,7 +559,7 @@ struct VibenetCreateSheet: View {
             // **WATCH WHAT YOU JUST MADE (prd §681, user: "vibenet says create
             // account even tho i already have created an account").** The room
             // finds this phone's account by looking for a WATCHED account whose
-            // actors include this key (`FeedScreen.signableVibenetAccount`), and
+            // actors include this key (`FeedScreen.signableVibenetAccounts`), and
             // creating one never added it to the watch list — so the account
             // existed on chain, the key could sign for it, and the room went on
             // offering to create a second one. It is watched here, at the one

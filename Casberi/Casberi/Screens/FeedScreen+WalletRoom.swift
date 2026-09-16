@@ -314,24 +314,25 @@ extension FeedScreen {
                     // as the readings under it. The sentence that sat under
                     // it ("Paste an address, or connect a wallet app") is
                     // what the setup screen's field says — §748's cut.
-                    if slot.id.isEmpty {
-                        DSPushRow(title: Text("Follow address"),
-                                  tint: DS.tint,
-                                  action: { route.pushBridge(.wallet) }) {
-                            // The same 26pt disc as the devnet verbs and the
-                            // Readings rows under it (§752b), so all three share
-                            // one leading column and one look.
-                            ZStack {
-                                Circle().fill(DS.fillFaint)
-                                    .frame(width: DS.Face.row, height: DS.Face.row)
-                                Image(systemName: "eye")
-                                    .accessibilityHidden(true)
-                                    .dsGlyph(.caption, weight: .semibold)
-                                    .foregroundStyle(DS.tint)
-                            }
+                    // Every page, the All page and each account's (prd §774):
+                    // following another address is the room's act, and the
+                    // Actions block is drawn on whichever page is showing.
+                    DSPushRow(title: Text("Follow address"),
+                              tint: DS.tint,
+                              action: { route.pushBridge(.wallet) }) {
+                        // The same 26pt disc as the devnet verbs and the
+                        // Readings rows under it (§752b), so all three share
+                        // one leading column and one look.
+                        ZStack {
+                            Circle().fill(DS.fillFaint)
+                                .frame(width: DS.Face.row, height: DS.Face.row)
+                            Image(systemName: "eye")
+                                .accessibilityHidden(true)
+                                .dsGlyph(.caption, weight: .semibold)
+                                .foregroundStyle(DS.tint)
                         }
-                        .dsScopeRow()
                     }
+                    .dsScopeRow()
                 }
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 0,

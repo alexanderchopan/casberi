@@ -608,7 +608,7 @@ struct FeedScreen: View {
         /// Somebody asking this phone to pay their fee (prd §728c), opened by a
         /// `casberi://frames/sponsor` link through `chrome.framesSponsorRequest`.
         case framesSponsor(FramesSponsorRequest)
-        /// Carries the sending account, which only `signableVibenetAccount()`
+        /// Carries the sending account, which only `signableVibenetAccounts()`
         /// can resolve — the sheet must never re-derive it and disagree.
         case vibenetSend(Data)
         // `vibenetSend` was HERE and is deleted (prd §538, 2026-08-31):
@@ -781,12 +781,12 @@ struct FeedScreen: View {
     /// were. `VibenetSendSheet` and its `FeedSheetRoute` case are deleted.
     ///
     /// Gated on there being an account to send FROM, never drawn as a dead
-    /// control over nothing (§83). This app has never authorized more than
-    /// one signer per account, so "the first account this phone's key can
-    /// act for" is also the only one — `signableVibenetAccount` scans the
-    /// last saved read the same way `VibenetThisPhoneRow` already checks its
-    /// own presence, and answers nil rather than guessing when there is
-    /// none, same as every refusal `VibenetSigner` states rather than hides.
+    /// control over nothing (§83). `signableVibenetAccounts` scans the last
+    /// saved read the same way `VibenetThisPhoneRow` already checks its own
+    /// presence, and answers empty rather than guessing when there is none,
+    /// same as every refusal `VibenetSigner` states rather than hides. Since
+    /// prd §774 the page decides which of them: All acts for the first, each
+    /// account's own page for itself.
     /// **THE ROOM'S ACTS, HANDED TO THE CARD (prd §747).** It was a `Section`
     /// mounted below `VibenetRoomCard`, which put the verbs under the list on
     /// any Home with history — §682's complaint, one seat over. It is passed
@@ -794,8 +794,17 @@ struct FeedScreen: View {
     /// the crown. The `Section`s inside are gone with the move: a card is not
     /// a List.
     @ViewBuilder
-    private var vibenetSendRow: some View {
-        if let account = Self.signableVibenetAccount() {
+    private func vibenetSendRow(scope raw: String) -> some View {
+        // **EVERY PAGE (prd §774).** "" is the All page and acts for the first
+        // account this phone's key can act for; one of those accounts' own
+        // pages acts for itself; anybody else's page keeps Create account.
+        let scope: String? = raw.isEmpty ? nil : raw
+        let signable = Self.signableVibenetAccounts()
+        let account: Data? = scope == nil
+            ? signable.first
+            : signable.first { VibenetTransaction.hex($0).caseInsensitiveCompare(
+                String(scope!.dropFirst(2))) == .orderedSame }
+        if let account {
                 VibenetSendCard(account: account,
                                 onSend: { feedSheet = .vibenetSend(account) },
                                 // **CREATE IS A PEER NOW, NOT THE FALLBACK
@@ -806,15 +815,10 @@ struct FeedScreen: View {
                                 // — one act is not a menu (§559), so that state
                                 // correctly keeps the single hero tile.
                                 onCreate: { feedSheet = .vibenetCreate },
-                                // **THE SUBJECT IS `account`**, which is sound
-                                // only while there is one signable account —
-                                // `signableVibenetAccount`'s own doc says "also
-                                // the only one". Promoting Create to a peer is
-                                // exactly what can make that false, so a second
-                                // signable account needs an account picker on
-                                // this tile before the assumption is trusted
-                                // again. Named here rather than left implicit
-                                // because it is a fact this pass introduced.
+                                // **THE SUBJECT IS `account`** — the page's own
+                                // account, or the first signable one on All.
+                                // The picker this comment once asked for is the
+                                // account pages themselves (prd §774).
                                 onAuthorize: {
                                     let seq = Self.vibenetChangeSequences(for: account)
                                     feedSheet = .vibenetAuthorize(
@@ -822,12 +826,22 @@ struct FeedScreen: View {
                                         localEpoch: seq?.localEpoch ?? 0,
                                         localSequence: seq?.localSequence ?? 0,
                                         editing: nil)
-                                })
+                                },
+                                from: scope == nil && signable.count > 1
+                                    ? WalletStore.shortAddress("0x" + VibenetTransaction.hex(account))
+                                    : nil)
+                .id(raw)
             // The 2026-09-04 row chrome is gone with the Section it belonged
             // to: this draws on the account card now (prd §747), and the card
             // owns its own padding. Nothing here may add List row insets — a
             // card is not a List, and the separator this was suppressing
             // cannot exist inside one.
+        } else if scope != nil {
+            // Somebody else's page: nothing here can spend from it.
+            DevnetVerbRow(title: String(localized: "Create account"),
+                          glyph: "plus.rectangle.on.rectangle",
+                          tint: DS.brandHue(for: VibenetIdentity.source) ?? Color.fixed("#0052ff"),
+                          act: { feedSheet = .vibenetCreate })
         } else {
             // **A SCOPE NEVER DRAWS NOTHING (prd §552d), NOW IN THE ROOM'S OWN
             // LANGUAGE (§553).** §538 gated the console on an account this
@@ -843,28 +857,32 @@ struct FeedScreen: View {
             // The door is the EXISTING create sheet, not a one-tap mint like
             // Hegotá's: a vibenet account is deployed by a sponsor, so it has a
             // real flow with a payer check behind it and cannot be a keystroke.
-                // **A PHONE WITH A KEY IS NEVER OFFERED A SECOND ACCOUNT (prd
-                // §681).** This scope draws when no WATCHED account lists this
-                // device's key as an actor — which is true both for a phone
-                // that has never made one and for a phone whose account exists
-                // on chain but is not watched (creating one did not watch it
-                // until today, and a reinstall drops the watch list while the
-                // Keychain key survives). The second case was the report:
-                // "create account even tho i already have created an account".
-                // The key's own presence tells the two apart, so the verb does.
-                DevnetCreatePanel(tint: DS.brandHue(for: VibenetIdentity.source)
-                                        ?? Color.fixed("#0052ff"),
-                                  title: VibenetDeviceKey.presence() == .present
-                                      ? String(localized: "Find my\naccount")
-                                      : String(localized: "Create\naccount"),
-                                  busy: vibenetFinding,
-                                  onCreate: {
-                                      if VibenetDeviceKey.presence() == .present {
-                                          findVibenetAccount()
-                                      } else {
-                                          feedSheet = .vibenetCreate
-                                      }
-                                  })
+                // **FIND, AND CREATE BESIDE IT (prd §774, amending §681).**
+                // This scope draws when no WATCHED account lists this device's
+                // key as an actor — true for a phone that has never made one,
+                // for a phone whose account exists on chain but is not watched
+                // (§681's case: a reinstall drops the watch list while the
+                // Keychain key survives), AND for a phone that made a key and
+                // never an account, or wants a second. §681 let the key's
+                // presence pick ONE verb, so that third phone saw "Find my
+                // account", tapped it, was told no account uses this key, and
+                // had nowhere to go (user: "it has a link to find my account
+                // but not create account"). A key present is a reason to
+                // offer Find first; it was never a reason to withhold Create.
+                let tint = DS.brandHue(for: VibenetIdentity.source) ?? Color.fixed("#0052ff")
+                if VibenetDeviceKey.presence() == .present {
+                    DevnetCreatePanel(tint: tint,
+                                      title: String(localized: "Find my\naccount"),
+                                      busy: vibenetFinding,
+                                      onCreate: findVibenetAccount)
+                    DevnetVerbRow(title: String(localized: "Create account"),
+                                  glyph: "plus.rectangle.on.rectangle", tint: tint,
+                                  act: { feedSheet = .vibenetCreate })
+                } else {
+                    DevnetCreatePanel(tint: tint,
+                                      title: String(localized: "Create\naccount"),
+                                      onCreate: { feedSheet = .vibenetCreate })
+                }
         }
     }
 
@@ -1551,28 +1569,23 @@ struct FeedScreen: View {
         }
     }
 
-    private static func signableVibenetAccount() -> Data? {
-        // **THE DEMO ANSWERS FIRST (prd §552b).** Both halves of the real gate
-        // are unreachable in a tour: a demo has no device key to name in an
-        // actor list, and `VibenetRoomSource.compose()` returns the fixture
-        // without writing `VibenetState`, so the read below finds nothing
-        // either. The room's DEFAULT scope was therefore empty in the demo from
-        // the day §538 made the console its content — and the demo is the first
-        // tap of onboarding (§217). See `VibenetRoom.demoSignableAccount`.
-        if let demo = VibenetRoom.demoSignableAccount() { return demo }
+    /// Every account this phone's key can act for, in snapshot order (prd
+    /// §774) — the All page sends from the first, each one's own page from
+    /// itself.
+    private static func signableVibenetAccounts() -> [Data] {
+        if let demo = VibenetRoom.demoSignableAccount() { return [demo] }
         guard let ours = VibenetDeviceKey.actorID()?.lowercased(),
-              let items = VibenetState.saved?.items else { return nil }
-        for item in items where item.actors.contains(where: { $0.actorId.lowercased() == ours }) {
-            return VibenetTransaction.data(fromHex: item.address)
-        }
-        return nil
+              let items = VibenetState.saved?.items else { return [] }
+        return items
+            .filter { $0.actors.contains(where: { $0.actorId.lowercased() == ours }) }
+            .compactMap { VibenetTransaction.data(fromHex: $0.address) }
     }
 
     /// The change sequences for one account, for Home's Authorize tile
     /// (2026-09-04).
     ///
     /// **Read off the last saved snapshot, never a live call** — this runs on a
-    /// tap inside a view body, the same rail `signableVibenetAccount` above
+    /// tap inside a view body, the same rail `signableVibenetAccounts` above
     /// keeps. Nil is a real answer and the caller sends 0/0, which is what the
     /// account-detail door has always done for an account whose sequences the
     /// last read could not fetch: the Keystore refuses a stale sequence rather
@@ -3953,15 +3966,14 @@ struct FeedScreen: View {
     /// than growing a second crown. Off Home the same view draws where it
     /// always did.
     ///
-    /// **The acts ride the ALL card only, and that is not the mockup's
-    /// arrangement.** The drawing put Send and Top up on every account card;
-    /// the truth is that this device holds ONE key, so those verbs act for the
-    /// key's account no matter which card is showing. Per-card tiles would
-    /// promise that paging changes what Send sends from, which it does not.
-    /// The room's card is where a room's act belongs — the same place the
-    /// Wallet's `Watch a wallet` sits. (Asking `FramesKey.address()` per card
-    /// was the other candidate and is barred outright: a Keychain read in a
-    /// body is the build-525 class.)
+    /// **The acts ride EVERY page (prd §774, superseding §747's "All card
+    /// only").** That ruling reasoned from one key per phone, so Send acted
+    /// for the same account whichever card showed. A phone can hold several
+    /// accounts now, and the user's rule is the mockup's: All acts for the
+    /// current account, each of your own accounts' pages acts for itself, and
+    /// anybody else's page keeps Create account only — a stranger's card never
+    /// offers to send from the stranger. (`FramesKey.holds` is a defaults
+    /// read; the Keychain is never asked from a body, the build-525 class.)
     @ViewBuilder
     private func framesScopeChromeSection(_ active: FramesSection,
                                           head: FramesRoom.Head) -> some View {
@@ -3982,6 +3994,11 @@ struct FeedScreen: View {
                 accounts: framesAccountSlots(roster),
                 scope: chrome.framesScope,
                 onPickAccount: { picked in
+                    // One of this phone's own faces makes that account the
+                    // one Send and Top up act for (prd §774); a stranger's
+                    // face picks nothing — `select` answers false and
+                    // changes nothing.
+                    FramesKey.select(picked)
                     withAnimation(DS.Motion.standard) {
                         chrome.framesScope = (picked?.isEmpty ?? true) ? nil : picked
                     }
@@ -4004,9 +4021,17 @@ struct FeedScreen: View {
                                      onOpenAccount: { feedSheet = .framesAccount($0) })
                 },
                 acts: { slot in
-                    if slot.id.isEmpty {
-                        FramesSendCard(onSend: { feedSheet = .framesSend })
-                    }
+                    // **EVERY PAGE (prd §774).** All acts for this phone's
+                    // current account; one of your own accounts — a key here
+                    // or the passkey account — acts for itself; anybody else's
+                    // page keeps Create account only.
+                    let mine = slot.id.isEmpty || FramesKey.holds(slot.id)
+                        || FramesPasskey.accountAddress()
+                            .map { $0.caseInsensitiveCompare(slot.id) == .orderedSame } == true
+                    FramesSendCard(account: slot.id.isEmpty ? nil : slot.id,
+                                   stranger: !mine,
+                                   onSend: { feedSheet = .framesSend })
+                        .id(slot.id)
                 }
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 0,
@@ -4121,6 +4146,13 @@ struct FeedScreen: View {
                 accounts: PrivacyDevnetRoomCard.slots(roster),
                 scope: chrome.privacyDevnetScope,
                 onPickAccount: { picked in
+                    // One of this phone's own faces makes that account the
+                    // one Send, Shield and Top up act for (prd §774), and the
+                    // live state's `mine` follows so the first-transaction
+                    // moment watches the right address.
+                    if PrivacyDevnetKey.select(picked) {
+                        PrivacyDevnetLiveState.shared.setMine(picked)
+                    }
                     withAnimation(DS.Motion.standard) {
                         chrome.privacyDevnetScope = (picked?.isEmpty ?? true) ? nil : picked
                     }
@@ -4157,13 +4189,15 @@ struct FeedScreen: View {
                         })
                 },
                 acts: { slot in
-                    // The ALL card only: this device holds ONE key, so Send
-                    // and Shield act for that key whichever card is showing.
-                    if slot.id.isEmpty {
-                        PrivacyDevnetSendCard(
-                            onSend: { feedSheet = .privacyDevnetSend },
-                            onShield: { feedSheet = .privacyDevnetShield })
-                    }
+                    // **EVERY PAGE (prd §774)** — Frames' rule: All acts for
+                    // the current account, your own account for itself, and
+                    // anybody else's page keeps Create account only.
+                    PrivacyDevnetSendCard(
+                        account: slot.id.isEmpty ? nil : slot.id,
+                        stranger: !(slot.id.isEmpty || PrivacyDevnetKey.holds(slot.id)),
+                        onSend: { feedSheet = .privacyDevnetSend },
+                        onShield: { feedSheet = .privacyDevnetShield })
+                        .id(slot.id)
                 }
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 0,
@@ -4196,6 +4230,9 @@ struct FeedScreen: View {
                     accounts: HegotaRoomReadings.slots(roster),
                     scope: chrome.hegotaScope,
                     onPickAccount: { picked in
+                        // One of this phone's own faces makes that account
+                        // the one Send and Top up act for (prd §774).
+                        HegotaKey.select(picked)
                         withAnimation(DS.Motion.standard) {
                             chrome.hegotaScope = (picked?.isEmpty ?? true) ? nil : picked
                         }
@@ -4218,12 +4255,15 @@ struct FeedScreen: View {
                                          section: scope)
                     },
                     acts: { slot in
-                        // The ALL card only: this device holds ONE key, so
-                        // Send and Top up act for that key whichever card is
-                        // showing (Frames' own rule, same reason).
-                        if slot.id.isEmpty {
-                            HegotaSendCard(onSend: { feedSheet = .hegotaSend })
-                        }
+                        // **EVERY PAGE (prd §774)** — Frames' rule. The demo's
+                        // owner counts as yours, the way `sender` borrows it.
+                        let mine = slot.id.isEmpty || HegotaKey.holds(slot.id)
+                            || (DemoMode.isActive
+                                && slot.id.caseInsensitiveCompare(HegotaLiveState.demoOwnerAddress) == .orderedSame)
+                        HegotaSendCard(account: slot.id.isEmpty ? nil : slot.id,
+                                       stranger: !mine,
+                                       onSend: { feedSheet = .hegotaSend })
+                            .id(slot.id)
                     }
                 )
                 .listRowInsets(EdgeInsets(top: 0, leading: 0,
@@ -6377,7 +6417,7 @@ struct FeedScreen: View {
                                     // `vibenetSendRow` was, handed to the card
                                     // so the verbs ride the account card
                                     // rather than a Section below the list.
-                                    acts: { AnyView(vibenetSendRow) },
+                                    acts: { AnyView(vibenetSendRow(scope: $0)) },
                                     // The face rail's two halves, now the
                                     // crown's (prd §482 amendment).
                                     scopedAddress: chrome.vibenetScope)

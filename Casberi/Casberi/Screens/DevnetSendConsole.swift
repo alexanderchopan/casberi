@@ -168,6 +168,10 @@ struct DevnetSendPanel: View {
     /// Verbs past the two every venue has (the Privacy devnet's Shield,
     /// vibenet's Create and Authorize), drawn after them in the order given.
     var extras: [Act] = []
+    /// Which account Send and Top up act for, as the Send row's fact — passed
+    /// only when this phone holds MORE THAN ONE account on the chain (prd
+    /// §774), because a fact that could not be otherwise changes nothing.
+    var from: String? = nil
 
     struct Act: Identifiable {
         let id: String
@@ -188,7 +192,7 @@ struct DevnetSendPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             DevnetVerbRow(title: String(localized: "Send"), glyph: "arrow.up.right",
-                          tint: tint, act: onSend)
+                          tint: tint, fact: from, act: onSend)
             if let topUp {
                 DevnetVerbRow(title: String(localized: "Top up"), glyph: "drop",
                               tint: tint, fact: topUp.note, busy: topUp.busy,

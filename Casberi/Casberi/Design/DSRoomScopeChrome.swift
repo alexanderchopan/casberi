@@ -83,13 +83,15 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
             ?? accounts.first
     }
 
-    /// The slot the ACTIONS are for. Every room in the family draws its verbs
-    /// for the "All" slot only — this device holds one key, so Send acts for
-    /// that key whichever account is in scope — and a solo room has only its
-    /// one slot. Resolved here so the label is never drawn over nothing.
-    private var actsSlot: DSAccountSlot? {
-        accounts.first { $0.id.isEmpty } ?? accounts.first
-    }
+    /// The slot the ACTIONS are for: **the page you are on (prd §774, user:
+    /// "they may do it from home but may also from the account, but make it
+    /// consistent").** Until §774 every room drew its verbs for the "All" slot
+    /// whichever account was in scope, on the reasoning that the device held
+    /// one key — false once a phone can hold several. The room's `acts`
+    /// closure decides what a slot gets, and every room in the family gives
+    /// EVERY page its room-level verb (Create account, Follow address), so the
+    /// label is never drawn over nothing.
+    private var actsSlot: DSAccountSlot? { showing }
 
     var body: some View {
         content
