@@ -203,6 +203,57 @@ grep -q 'confirmationDialog' "$TMP/detail-bare.swift" \
 grep -qF 'Remove \(bridge.name)' "$TMP/detail-bare.swift" \
   && { echo "✗ BridgeDetailScreen says Remove where every other screen says Disconnect"; exit 1; }
 
+# 11b. THE EXITS DRAW FOR ANY SEAT THE STORE HOLDS (2026-09-16). A session-cookie
+#      seat clears its own credential when the provider refuses it (§711), so
+#      gating Pause and Disconnect on the credential-derived state alone left a
+#      warned seat with no exit: "Needs reconnecting · Fix" on the catalogue row,
+#      and behind the Fix a page offering only Connect. Undismissable, and not
+#      visible in any build, sweep or audit.
+grep -q 'if seat != nil || state.connected {' "$TMP/page-bare.swift" \
+  || { echo "✗ AccountPage's exits are gated on the state alone — a seat whose refusal wiped its own credential would have no Pause and no Disconnect"; exit 1; }
+
+# 11c. The state is DERIVED in the shape, never in the view. The whole reason
+#      the shape is Foundation-only is that this harness compiles the shipped
+#      judgement; a copy re-inlined in `AccountPageState.of` is a second
+#      opinion nothing above can see.
+python3 - "$TMP/page-bare.swift" <<'PY2' || { echo "✗ AccountPageState.of decides the state itself — the judgement belongs in AccountPageShape.state, which this harness compiles"; exit 1; }
+import sys, re
+src = open(sys.argv[1]).read()
+m = re.search(r'enum AccountPageState \{(.*?)\n\}', src, re.S)
+body = m.group(1) if m else ""
+ok = "AccountPageShape.state(" in body
+# No case it returns on its own — every exit is the shape's.
+ok = ok and not re.search(r'return \.(notConnected|paused|reading|needsReconnecting)', body)
+sys.exit(0 if ok else 1)
+PY2
+
+# 11d. THE ATTENTION LINE IS RECOGNISED BY IDENTITY, NEVER BY ITS WORDS. It is
+#      localized and ships in es, ja, ko and zh-Hans, so a `hasPrefix("Needs
+#      reconnecting")` is correct on one device language out of five and the
+#      English-only harness above cannot see the other four. A prefix test
+#      shipped for one commit; this is why it did not stay.
+grep -q 'line == BridgeHealth.attentionLine ? BridgeHealth.attentionReason : line' "$TMP/page-bare.swift" \
+  || { echo "✗ AccountPageState no longer resolves the attention line by identity against BridgeHealth's constant"; exit 1; }
+grep -qE 'hasPrefix\("[Nn]eeds|contains\("[Nn]eeds' "$TMP/page-bare.swift" "$TMP/shape-bare.swift" \
+  && { echo "✗ a localized state sentence is matched by its English words — recognise BridgeHealth.attentionLine by identity"; exit 1; }
+grep -q 'static let attentionReason = String(localized:' Casberi/Casberi/Model/BridgeHealth.swift \
+  || { echo "✗ BridgeHealth.attentionReason is gone — the page would restate Needs reconnecting beside itself"; exit 1; }
+
+# 11e. RESUMING A SHUT-OUT SEAT DOES NOT CLAIM A SYNC (prd §784, §83). A paused
+#      seat makes no requests, so nothing can have cleared the refusal while it
+#      was paused; the resume arm used to write "Synced just now" regardless.
+python3 - Casberi/Casberi/Model/BridgeStore.swift <<'PY3' || { echo "✗ BridgeStore.togglePause resumes a shut-out seat as connected — the catalogue row would claim a sync that never happened"; exit 1; }
+import sys, re
+src = open(sys.argv[1]).read()
+m = re.search(r'func togglePause\(_ id: String\) \{(.*?)\n    \}', src, re.S)
+body = m.group(1) if m else ""
+ok = "BridgeHealth.needsReconnect(bridges[i].name) != nil" in body
+ok = ok and "BridgeHealth.attentionLine" in body
+# The refusal check must come BEFORE the connected write it guards.
+a, b = body.find("needsReconnect"), body.find('statusLine = "Synced just now"')
+sys.exit(0 if ok and 0 <= a < b else 1)
+PY3
+
 # 12. The mark has its own rung, and the page wears it.
 grep -q 'static let account: CGFloat = 76' "$TOKENS" \
   || { echo "✗ DS.Mark.account is not 76 — the account page's head has one rung"; exit 1; }
@@ -279,6 +330,64 @@ check("connected covers reading, paused, needs-reconnecting",
       && S.State.needsReconnecting(reason: "").connected && !S.State.notConnected.connected)
 check("needsReconnecting is only that case",
       S.State.needsReconnecting(reason: "x").needsReconnecting && !S.State.paused.needsReconnecting)
+
+// ── the state DERIVATION ──────────────────────────────────────────────────
+// Every failure here renders as a perfectly ordinary page, and one of them
+// shipped: a session-cookie seat clears its own credential the moment the
+// provider refuses it (§711), so reading the credential FIRST made the page
+// say "Not connected" while the catalogue row said "Needs reconnecting ·
+// Fix" — and the page's exits are gated on the state, so the warning had no
+// Pause and no Disconnect behind it (user, 2026-09-16).
+print("the state derivation")
+func standing(credential: Bool = false, registered: Bool = false, paused: Bool = false,
+              shutOutReason: String? = nil, keyRefused: Bool = false,
+              lastOK: Date? = nil) -> S.Standing {
+    S.Standing(credential: credential, registered: registered, paused: paused,
+               shutOutReason: shutOutReason, keyRefused: keyRefused, lastOK: lastOK)
+}
+// BridgeHealth.attentionReason — the seat's line WITHOUT the two words the
+// state line says itself. The caller resolves it by identity against
+// `BridgeHealth.attentionLine`, because that line ships translated (guard 11d).
+let shutOut = "it stopped letting us in"
+check("nothing held anywhere → not connected",
+      S.state(standing()) == .notConnected)
+check("a credential and nothing wrong → reading",
+      S.state(standing(credential: true, registered: true, lastOK: ago(600)))
+        == .reading(lastRead: ago(600)))
+check("registered, no credential, nothing wrong → not connected",
+      S.state(standing(registered: true)) == .notConnected)
+check("THE SHIPPED BUG: refused seat whose session it already wiped still says needs reconnecting",
+      S.state(standing(credential: false, registered: true, shutOutReason: shutOut)).needsReconnecting)
+check("…and it reads as connected, so the page draws Pause and Disconnect",
+      S.state(standing(credential: false, registered: true, shutOutReason: shutOut)).connected)
+check("a health refusal with the credential still here says needs reconnecting",
+      S.state(standing(credential: true, registered: true, keyRefused: true))
+        == .needsReconnecting(reason: "key refused"))
+check("a health refusal with the credential gone says it too",
+      S.state(standing(credential: false, registered: true, keyRefused: true)).needsReconnecting)
+check("paused beats a standing refusal — the person's word, not the provider's",
+      S.state(standing(credential: true, registered: true, paused: true, shutOutReason: shutOut,
+                       keyRefused: true)) == .paused)
+check("a stale health flag under an UNREGISTERED seat raises nothing",
+      S.state(standing(credential: false, registered: false, keyRefused: true)) == .notConnected)
+check("a stale attention line under an unregistered seat raises nothing",
+      S.state(standing(shutOutReason: shutOut)) == .notConnected)
+
+// The state line says "Needs reconnecting" itself, so the reason it is handed
+// must not say it again — that is why `Standing` carries a REASON and not the
+// seat's whole line. Guard 11d pins the caller that strips it.
+print("the reason beside the state line")
+check("the state line reads once, not twice",
+      S.stateLine(S.state(standing(registered: true, shutOutReason: shutOut)), now: now)
+        == "Needs reconnecting · it stopped letting us in")
+check("a seat with no reason to give leaves no dangling dot",
+      S.stateLine(S.state(standing(registered: true, shutOutReason: "")), now: now)
+        == "Needs reconnecting")
+check("another seat's own sentence goes through whole",
+      S.stateLine(S.state(standing(registered: true,
+                                   shutOutReason: "Photos access is off — reconnect to resume")),
+                  now: now)
+        == "Needs reconnecting · Photos access is off — reconnect to resume")
 
 // ── the meta line ─────────────────────────────────────────────────────────
 print("the meta line")
@@ -456,5 +565,14 @@ mutate "$SHAPE" 'guard !q.isEmpty else { return rows }' 'let _ = q' \
        "a query no longer filters the roster"
 mutate "$SHAPE" 'let q = query.trimmingCharacters(in: .whitespaces)' 'let q = query' \
        "whitespace alone reads as a query"
+
+# The state derivation (prd §784). Both mutations restore something that
+# SHIPPED, and neither is visible in a build: the page renders, and it renders
+# a seat with a warning on it and no way to act on the warning or be rid of it.
+mutate "$SHAPE" 'guard standing.credential || standing.registered else { return .notConnected }' \
+       'guard standing.credential else { return .notConnected }' \
+       "the credential is read first again — a refused seat says Not connected"
+mutate "$SHAPE" 'if let reason = standing.shutOutReason {' 'if let reason = String?.none {' \
+       "a shut-out seat stops saying so — the catalogue warns and the page does not"
 
 echo "✓ account-page-selftest passed"

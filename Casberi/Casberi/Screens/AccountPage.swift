@@ -526,8 +526,16 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 
     // MARK: - 6. Exits
 
+    /// **Pause and Disconnect draw for any seat THE STORE HOLDS**, credential
+    /// or not (prd §784, 2026-09-16). Gating them on `state.connected` alone
+    /// meant a seat whose refusal had already wiped its own session had no
+    /// exit at all: the catalogue row warned "Needs reconnecting · Fix", the Fix
+    /// landed here, and here there was only a Connect button — no way to act
+    /// on the warning, and no way to be rid of it. A seat the app lists can
+    /// always be taken off its own page; Pause is the keep-everything half of
+    /// that, and it clears the warning without deleting anything.
     @ViewBuilder private var exits: some View {
-        if state.connected {
+        if seat != nil || state.connected {
             Button {
                 store.togglePause(seatID)
                 DSHaptic.tap()
@@ -613,23 +621,39 @@ private struct AccountThingSheet: View {
     }
 }
 
-/// The state a seat is in, from what the app holds: the vault or store says
-/// whether it is connected at all; `BridgeStore` says paused or attention;
-/// `BridgeHealth` says whether a key was refused and when it last read. One
-/// derivation, so every adopter's dot agrees with the catalog row's.
+/// The state a seat is in, from what the app holds: the seat's own store says
+/// whether a credential is here; `BridgeStore` says registered, paused or shut
+/// out; `BridgeHealth` says whether a key was refused and when it last read.
+/// One derivation, so every adopter's dot agrees with the catalog row's.
+///
+/// THE JUDGEMENT ITSELF IS IN `AccountPageShape.state` — Foundation-only, so
+/// `account-page-selftest.sh` compiles the shipped one. This is the gathering
+/// half: three stores read, nothing decided (prd §784). It stopped deciding
+/// after the credential-first order made every session-cookie seat say "Not
+/// connected" over a catalogue row saying "Needs reconnecting" (see that
+/// function).
 enum AccountPageState {
     static func of(name: String, seatID: String, connected: Bool,
                    store: BridgeStore) -> AccountPageShape.State {
-        guard connected else { return .notConnected }
         let seat = store.bridges.first { $0.id == seatID }
-        if seat?.status == .paused { return .paused }
-        if BridgeHealth.needsReconnect(name) != nil {
-            return .needsReconnecting(reason: String(localized: "key refused"))
-        }
-        if seat?.status == .attention {
-            return .needsReconnecting(reason: seat?.statusLine ?? "")
-        }
-        return .reading(lastRead: BridgeHealth.record(for: name)?.lastOK)
+        let line: String? = seat?.status == .attention ? (seat?.statusLine ?? "") : nil
+        return AccountPageShape.state(.init(
+            credential: connected,
+            registered: seat != nil,
+            paused: seat?.status == .paused,
+            shutOutReason: line.map { reason(fromStatusLine: $0) },
+            keyRefused: BridgeHealth.needsReconnect(name) != nil,
+            lastOK: BridgeHealth.record(for: name)?.lastOK))
+    }
+
+    /// The one attention line that restates "Needs reconnecting" is
+    /// `BridgeHealth`'s own, so it is recognised BY IDENTITY against that
+    /// constant — never by matching a prefix, which would be an English
+    /// literal tested against a sentence translated into four languages
+    /// (prd §784). The other four attention lines are their own sentences
+    /// (Photos access, a vault, a folder) and go through whole.
+    private static func reason(fromStatusLine line: String) -> String {
+        line == BridgeHealth.attentionLine ? BridgeHealth.attentionReason : line
     }
 }
 

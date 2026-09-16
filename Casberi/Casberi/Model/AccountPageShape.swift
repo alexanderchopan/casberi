@@ -36,6 +36,69 @@ enum AccountPageShape {
         }
     }
 
+    /// What the app HOLDS about a seat — the four facts the state is derived
+    /// from, none of them a view. `AccountPageState.of` gathers them from the
+    /// vault, `BridgeStore` and `BridgeHealth`; the judgement itself lives
+    /// here so the harness compiles the shipped one rather than a copy.
+    struct Standing: Equatable {
+        /// The seat's own credential is present — a token in the vault, a
+        /// folder picked, an address watched. What each seat's screen passes
+        /// as `connected:`.
+        var credential: Bool
+        /// `BridgeStore` holds this seat at all.
+        var registered: Bool
+        /// The seat is paused.
+        var paused: Bool
+        /// The store holds the seat in `.attention`, with its REASON — the
+        /// half of its line that is not "Needs reconnecting", which
+        /// `stateLine` says itself. The caller resolves it, because deciding
+        /// it here would mean matching a localized sentence against an
+        /// English literal (it did, for one commit): the line ships
+        /// translated into es, ja, ko and zh-Hans, so the prefix test passed
+        /// on exactly one device language and an English-only harness could
+        /// not see the other four.
+        var shutOutReason: String?
+        /// `BridgeHealth` is holding a run of 401/403s against this seat.
+        var keyRefused: Bool
+        /// Last 2xx, for the reading line.
+        var lastOK: Date?
+    }
+
+    /// The state a seat is in (prd §784).
+    ///
+    /// **A REFUSAL CLEARS THE SEAT'S OWN CREDENTIAL, so "no credential" is not
+    /// "never connected."** Every session-cookie seat — Instagram, X, TikTok,
+    /// Spotify, Duolingo, Acorns, Rocket Money — deletes its session the
+    /// moment the provider refuses it, precisely so the next tap is a
+    /// sign-in (`InstagramLive.forgetSessionIfRefused`, §711). This
+    /// derivation used to read the credential FIRST and return
+    /// `.notConnected` on that alone, so those seats drew "Not connected" on
+    /// their own page while the catalogue row two taps away drew "Needs
+    /// reconnecting · Fix" — the same seat, two answers, and the page's
+    /// exits are gated on the state, so the honest one hid Pause and
+    /// Disconnect. There was no way to act on the warning and no way to be
+    /// rid of it (user, 2026-09-16: "I can't even dismiss the warning or
+    /// disconnect so that this doesn't show").
+    ///
+    /// So the STORE's word comes first: a seat the app is still holding is
+    /// still the app's to speak about. The credential only decides between
+    /// reading and not connected, which is the one question it can answer.
+    static func state(_ standing: Standing) -> State {
+        // Nothing held anywhere is simply not connected. A health flag filed
+        // under a name no seat is registered against cannot raise a warning
+        // whose only exit is a Disconnect that removes nothing (§83).
+        guard standing.credential || standing.registered else { return .notConnected }
+        if standing.paused { return .paused }
+        if let reason = standing.shutOutReason {
+            return .needsReconnecting(reason: reason)
+        }
+        if standing.keyRefused {
+            return .needsReconnecting(reason: String(localized: "key refused"))
+        }
+        guard standing.credential else { return .notConnected }
+        return .reading(lastRead: standing.lastOK)
+    }
+
     /// The line under the name, dot excluded (the view draws the dot in the
     /// line's own tone). `now` is injectable so the harness can pin "8m ago".
     static func stateLine(_ state: State, now: Date = .now) -> String {
