@@ -405,7 +405,7 @@ private struct RocketMoneyLoginWKWebView: UIViewRepresentable {
             if UserDefaults.standard.bool(forKey: "rocketLoginProbe") {
                 for delay in [0.0, 4.0] {
                     DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak webView] in
-                        webView?.evaluateJavaScript(Self.probeScript) { result, _ in
+                        webView?.evaluateJavaScript(RocketMoneyLoginWKWebView.probeScript) { result, _ in
                             NSLog("rocketLogin| t=%.0fs %@", delay, (result as? String) ?? "no answer")
                         }
                     }
