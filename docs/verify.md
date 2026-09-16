@@ -890,8 +890,18 @@ while the directory sat there full of per-harness logs. `include-hidden-files:
 true` is one line, and it is the difference between a failed unattended run and
 a dead end.
 
-**Still open: `ens-selftest`.** One Swift assertion fails, in a block above the
-30-line tail the summary prints, so which one is not knowable from the summary
-alone. `ENSName.swift` and the harness have not changed since prd §765, so this
-is not a fresh regression — it has been red the whole time. The artifact fix
-above is what makes the next run say which assertion it is.
+**And the summary could not name a failure it printed.** The per-harness report
+was `tail -30`, which shows the END of a run — passes — while the ✗ naming the
+failure scrolled past hundreds of checks earlier. `ens-selftest` reported
+"1 FAILED" and thirty green ticks for days: the one line anybody needed was
+structurally unreachable. The report greps the ✗ lines first now, wherever they
+are, and then tails.
+
+**Still open: `ens-selftest`.** One Swift assertion, in a block the old summary
+could not reach. `ENSName.swift` and the harness have not changed since prd
+§765, so it is not a fresh regression — it has been red the whole time. The two
+reporting fixes above are what make the next run name it.
+
+**Measured, one run later.** The same suite on the same runner: **4 failed → 1
+failed**. `hegota-tx` and `vibenet-signer` pass on the vendored keccak,
+`sweep-clock` passes on the proportion, and the artifact uploaded 330 files.

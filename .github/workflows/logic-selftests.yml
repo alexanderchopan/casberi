@@ -165,6 +165,15 @@ jobs:
             if [[ "$rc" != 0 ]]; then
               fails+=("${s:t}")
               print -r -- "✗ ${s:t} (rc=$rc)"
+              # THE FAILED ASSERTIONS FIRST, wherever they are in the file, and
+              # only then the tail (2026-09-16). A harness prints a ✓ per check
+              # and a ✗ for each failure, so a `tail -30` shows the END of a
+              # long run — which is passes — while the line naming the failure
+              # scrolled past hundreds of checks ago. `ens-selftest` failed on
+              # CI for days reporting only "1 FAILED" and thirty ✓s: the one
+              # line anybody needed was structurally unreachable from the
+              # summary. A grep costs nothing and cannot be scrolled off.
+              grep -n '✗' "$OUT/$b.log" 2>/dev/null | head -20 | sed 's/^/    ✗→ /'
               tail -30 "$OUT/$b.log" 2>/dev/null | sed 's/^/    /'
             fi
           done
