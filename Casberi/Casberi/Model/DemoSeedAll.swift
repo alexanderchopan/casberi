@@ -197,6 +197,13 @@ enum DemoSeedAll {
                               // need these or the rows outlive the demo and
                               // freeze in place looking like real ones.
                               "aws:", "polar:", "dodopayments:",
+                              // Wise (prd §778) — the same reasoning again:
+                              // its rows carry the REAL bridge's
+                              // `wise:transfer:` shape so the seat's own
+                              // dedupe and heal recognise them, so exit() and
+                              // the freshness re-stamp need this entry or they
+                              // outlive the demo looking like real transfers.
+                              "wise:transfer:demo",
                               // Peer/Privacy Pools rows carry the REAL
                               // bridges' own ref prefixes (2026-08-10, so
                               // their room heads' ref-shape matching
@@ -3563,6 +3570,36 @@ enum DemoSeedAll {
                 t.priceCurrency = "EUR"
                 t.transferCounterparty = "Bitcoin"
             })
+        // Wise (prd §778). REAL ref shape (`wise:transfer:<id>`) and REAL
+        // titles — every one is what `WiseShape.rowTitle` would compose for
+        // that transfer, including `AppleWalletRoom.money`'s own rule that an
+        // amount of 100 or more drops its decimals. A demo row wearing a title
+        // the shipped shaper would never produce is a mock of a feature rather
+        // than the feature, which is the §368 failure this file already paid
+        // for once.
+        //
+        // Four rows because the seat's whole news is the STATE MOVING: one
+        // completed, one still sending and one returned are the three branches
+        // of `WiseShape.stage`, and a demo that only ever showed "Sent" would
+        // hide the two that matter. `content` stays empty because Wise
+        // publishes no per-transfer permalink — the shipped bridge sets none
+        // either, and inventing one here would be a door that goes nowhere.
+        let wise: [(String, Double, String, [String], String, Double)] = [
+            ("Sent · £820 → €961 · Rent", 820, "GBP", ["Transfer"], "sent", 5),
+            ("Sending · £120 → €141 · Invoice 204", 120, "GBP",
+             ["Transfer", "Pending"], "sent", 1),
+            ("Sent · £45.00 → $57.10", 45, "GBP", ["Transfer"], "sent", 19),
+            ("Returned · £300 → €351", 300, "GBP",
+             ["Transfer", "Returned"], "received", 41),
+        ]
+        out += wise.enumerated().map { i, w in
+            row(.transaction, w.0, source: "Wise", ref: "wise:transfer:demo\(i)",
+                days: w.5, hour: 11, tags: w.3) { t in
+                t.priceValue = w.1
+                t.priceCurrency = w.2
+                t.transferDirection = w.4
+            }
+        }
         return out
     }
 
@@ -5381,6 +5418,11 @@ enum DemoSeedAll {
         ("Apple Wallet", "Synced 6m ago", "Reads Apple Card, Cash and Savings."),
         ("Privacy", "Synced 2h ago", "Reads your virtual-card purchases."),
         ("Bitrefill", "Synced 4h ago", "Reads your orders and refills."),
+        // Wise (prd §778, 2026-09-16). The proof line states the BALANCES,
+        // which is what `WiseWatch.registerBridge` really composes from
+        // `WiseShape.balanceLine` — not a "Synced Nm ago", which this seat
+        // never says.
+        ("Wise", "£1,240 · €310", "Reads your balances and transfers."),
         ("Stripe", "Synced 10m ago", "Reads what your money did."),
         // Furnished 2026-08-31 (prd §484's check G). All three shipped on
         // 2026-08-30 as catalog offers with no seat and no rows, so a demo

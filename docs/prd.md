@@ -56990,3 +56990,87 @@ The octopus the person sees "while the app is loading" is the app-switcher cover
 **What this is not.** Not a seat, not an offer, not a catalogue row, and it lands nothing. The five seats it exists to unblock are still unwritten, and should be written against a real report rather than against this file's optimism.
 
 **UNSEEN on a device, and unbuilt** — the session that wrote it had no Swift toolchain. First to run: `scripts/web-session-selftest.sh`, a build, then one capture per provider from Diagnostics.
+
+## §778 — Wise, and the two doors that stay shut: Plaid, Stripe Financial Connections, and a cookie sign-in for banks (user: "in the same way we did sign-in for Instagram, Twitter, and Spotify, and TikTok, can we do any credit cards or banks like that", then "can we do plaid and stripe link? let's do simple fin and wise", then "i can't afford simplefin so get rid of it", 2026-09-16)
+
+**Renumbered on the day it was written**, from the two numbers a concurrent session had claimed for the Duolingo seat in a sibling branch (PR #166) before either merged. This entry and the one below moved up by two; Duolingo keeps what it took. The first three commits on this branch still cite the old numbers in their messages and cannot be rewritten — they are pushed and public — so this line is the forwarding address.
+
+**The question was whether §701's door reaches money.** §701 (X), §726 (Instagram), §731 (TikTok) and §703 (Spotify) all sign in inside a `WKWebView` and read with the cookies the person's own sign-in leaves there. Asked of a bank, the answer is no, and the reason is mechanical before it is legal — recorded here so the next session does not re-derive it:
+
+- **The session is not in the cookies.** Chase, Amex, Capital One, Monzo and Revolut all hold a short-lived bearer in JS memory, refreshed against a device-bound token. Cookies alone get a 401, and there is no bank equivalent of the public guest bearer `x.com` embeds in every page load — §701's second ingredient simply does not exist here.
+- **Bot defense is in front of the login AND the API** on the majors (Akamai Bot Manager, F5 Shape), keying on TLS fingerprint and behavioural telemetry a `WKWebView` does not emit. A read that worked this week is one shape drift from a lockout.
+- **The risk ratio inverts §701's own test.** §701 states the risk before the tap and notes it structurally cannot reach anyone else's account: a throttled X account is a cost the person chose. A frozen current account is not the same bet, and bank terms generally shift liability when a session is driven by a third-party program.
+
+**Plaid stays refused and §278 needs no amendment.** Every call in that chain authenticates as the DEVELOPER, which puts Casberi's identity on the person's bank requests and makes Casberi the data recipient — §67's Tier 2 line, a legal posture rather than an engineering one. **Stripe Financial Connections inherits the refusal by the same clause**: the session is minted server-side with the secret key, and the publishable key alone cannot start one. (Stripe *Link* is a checkout wallet, not a bank-data API, and was never a candidate.) MX, Finicity, Teller and Akoya were already named in §278; these two join them.
+
+**SimpleFIN was built and removed in the same session, and it was not refused.** §278 named it as the one aggregator shape that passes: the person subscribes (~$1.50/mo, billed to them), connects their own banks, and hands the app a one-time Setup Token it claims for a read-only Access URL. The credential is theirs, scoped to their data, with nothing of ours in the chain. It is out because the user does not want the subscription — an affordability call, not a design one — so the shape stays blessed and the code is in this commit's history if it is ever wanted back. `IngestSupport.postText` went with it: it had exactly one caller (SimpleFIN's claim, which answers with a bare URL rather than JSON) and a helper with no caller is dead code.
+
+**What shipped: Wise** (`Model/WiseBridge.swift`, `Screens/WiseScreen.swift`), on the Bitrefill / Privacy.com / Readwise pattern exactly — a personal API token the person mints in their own settings and can scope read-only, `api.transferwise.com` talking straight to the phone.
+
+- **Three reads, and the order is forced.** `GET /v1/profiles` resolves which profile the token belongs to, because every other Wise read is per-profile; then `GET /v4/profiles/{id}/balances?types=STANDARD` and `GET /v1/transfers?profile={id}`. The profile resolve is also the token check, which is why the connect makes one request and not two. `WiseFetch.resolveProfile` keeps the PERSONAL profile where there is one: a freelancer's token commonly sees a business profile too, and reading that one by accident would put a company's money in a personal feed.
+- **`WiseAuth.configured` is a token AND a resolved profile**, `ASCAuth`'s / `AWSAuth`'s shape and their reason: a token alone can be stored and still read nothing, and a seat reading "connected" while every pass returns empty is §83's fake status.
+- **A transfer is a `Thing`, a balance is a STATE** (§216) — the standing money exception (Apple Wallet, Gnosis Pay, Privacy.com). `priceValue`/`priceCurrency` take the SOURCE side, the money that actually left the account; the target side is what the recipient got at a rate this bridge did not set, and it rides the title only (`£100.00 → €113.79`), never a total.
+- **A transfer's STATUS changes after it lands**, so `WiseIngest.heal` reconciles known refs every pass — Linear's and Trello's shape and their exact reason: dedupe never revisits a known ref, so a first sight would otherwise be frozen as the last word and a bounced payment would read as sent forever. `healbackDays` is 14 rather than Apple Wallet's 7 because Wise's slow states are slow.
+- **`WiseFetch.date` exists because `created` is not ISO 8601.** Wise sends `"2018-12-16 15:25:51"` — a space, no `T`, no zone — which `ISO8601DateFormatter` refuses outright, and a bridge whose every row dated to nil would have rendered as an empty room with nothing wrong in it.
+
+**The ceiling is stated on the screen, not only in the code.** Wise CARD spending lives in the balance statement (`/v1/profiles/{id}/balance-statements/{balanceId}/statement.json`), which is SCA-protected for any UK/EEA profile: Wise answers 403 with a one-time token in `x-2fa-approval`, cleared only by signing it with an RSA private key whose public half the person has uploaded to Wise by hand. That is buildable — an on-device keypair, a PEM to paste, a signed retry — and is deliberately NOT built rather than half-built, because an untestable signing path behind a paste step ships as a control nobody can prove works. `canLine`, `emptyReadNote` and the connected screen's one note all say so, because a bank seat that silently omits card spending leaves the obvious expectation of it unmet, which §83 treats as a status claim.
+
+**The bank door that is already open, and is mislabelled — NOT fixed here, recorded so it is not re-derived.** `AppleWalletBridge` holds `com.apple.developer.financekit` and calls `FinanceStore.shared.accounts(query: AccountQuery())` with no filter. On iOS 18.4+ in the UK, FinanceKit returns real bank accounts through open banking (Barclays, HSBC, Lloyds, Monzo, NatWest, Nationwide, RBS, Santander) as ordinary `Account`s with `transactionHistory` — so those already land, with merchant names, through the seat that ships today. The copy is stale: `AppleWalletScreen.swift:115` says "It's US-only, and needs iOS 17.4", the catalog comment says the same, and the bridge's own header calls US-only a fact "by construction". All three were true when §278 and §313 were written and stopped being true in 18.4. Claiming it costs a device read to confirm which `AccountType` cases come back, then four strings — no new host, no key, no CloudKit deploy.
+
+**Guards run, all green:** `network-reach-audit.sh` (the new `api.transferwise.com` reach, and `wise.com` added to the setup-door denylist — a different host by construction, the `linear.app` / `api.linear.app` case), `catalog-sync.sh` (the website shelf cell, the hero tile and the `.ai-wise` ground landed in the same session, per the standing rule), `setup-copy-audit.py`, `connect-shape-audit.py`, `catalog-mode-audit.py`, `ds-template-audit.py`, `footnote-audit.py`, `keychain-audit.py` (the two new `TokenVault` items carry the standing device-only policy — `TokenVault` enforces it at the one `set` every bridge shares), `receipts-coverage-audit.py`, `swiftdata-liveness-audit.py`, `prd-index-audit.py`.
+
+**UNMEASURED, and UNBUILT.** No Wise token has ever been given to this app, and the host this was written on has no egress to `api.transferwise.com` — every field map is taken from Wise's published reference, read rather than remembered. §772's caveat applies with the same force: **no build ran.** This is a Linux host with no Swift toolchain, so nothing here has been compiled, and the shell self-tests cannot run (`account-page-selftest.sh` passes its drift guards and fails at `xcrun`). On a Mac, `scripts/verify.sh` is the gate. On a phone, run `-wiseProbe YES` against a real token before trusting any parse — it walks profiles, balances and transfers, printing each status and each payload's FIELD NAMES, and never a token, a balance or an amount.
+
+## §779 — Apple Wallet has been reading UK bank accounts for months, and every sentence about it said "US-only" (user: "fix financekit too", 2026-09-16)
+
+**§778 found it and left it; this fixes it.** `AppleWalletBridge.refresh` has always asked `FinanceStore.shared.accounts(query: AccountQuery())` with NO predicate, so it takes whatever FinanceKit holds. Since **iOS 18.4 in the UK** that includes REAL BANK ACCOUNTS through open banking — the accounts and cards a person has connected in Wallet (Barclays, Barclaycard, First Direct, Halifax, HSBC, Lloyds, M&S Bank, MBNA, Monzo, Nationwide, NatWest, RBS, Santander). Those rows have been landing, with merchant names, while six separate strings told the person the seat could not do it.
+
+**What was false, and where.** Not one drifted sentence — the claim was written into every layer at once, because it was true when §278 surveyed FinanceKit and §313 shipped the seat, and nothing re-read it when 18.4 landed:
+
+- `AppleWalletBridge`'s header ceiling ("**US only.** Apple Card, Apple Cash and Savings exist nowhere else"), which is the sentence every later copy was derived from;
+- the `.unavailable` outcome line, shown to anyone whose device cannot share financial data — telling a UK person on 17.4 that the feature is US-only, when the true answer is "update to 18.4";
+- `AppleWalletScreen`'s own shorter copy of it;
+- the catalog comment naming "US-only" as one of the seat's two permanent ceilings;
+- `NSFinancialDataUsageDescription` — the string **Apple itself shows** in the system permission prompt — which named three US products and nothing else;
+- `docs/store-copy.md`, i.e. the App Store listing, which opened the claim with "In the US".
+
+**The honesty rule cuts both ways here, and that is why the fix is not just "delete US-only".** A sentence that under-claims is still a false status: it tells somebody a working feature is unavailable to them, which §83 bans for exactly the reason it bans the reverse. The replacement names both regions and both minimum versions rather than a country list that will go stale the next time Apple adds one: "It needs iOS 17.4 or later in the US, or iOS 18.4 or later in the UK."
+
+**The tagline widened with it** — "What your card actually spends" → "What your cards and accounts spend" — and so did the seat's `can` line, the room's empty-state head ("Your card, this month" → "Your spending, this month": since 18.4 that room may be standing on an account with no card behind it), and the website tile and wallet page.
+
+### The defect under the copy: every row was tagged `Card`
+
+`AppleWalletBridge.tags` returned `["Card", …]` unconditionally. That was true while the seat only ever saw Apple Card, Apple Cash and Savings; it became false the moment a UK current account's direct debit landed wearing it. A tag asserting an instrument the row did not come off is the §83 fake status on the one screen about somebody's money, and it renders perfectly.
+
+**The distinction was already in hand and never asked for.** `readBalances` has read `if case .liability(let liability) = account` since the seat shipped, to take the payment-due date. `refresh` now builds the liability account ids in the same loop that builds the names — no extra request, no new API — and `land` stamps `Card` for a liability (a credit line) and `Bank` for an asset account. Apple Cash is the one imperfect fit, a stored-value account rather than a bank, and it is much closer to `Bank` than to `Card`.
+
+Three derived rows were audited with it, and they do NOT all go the same way:
+
+- **`Price rise` and `Silence` lose the instrument word entirely.** A series is recurring charges to one merchant, and the same subscription may be paid off a card or by direct debit off an account — so neither row can name one. The state word is the whole true tag.
+- **`Payment` KEEPS `Card`, and it is the one place the word is earned rather than assumed**: `readBalances` fills `dues` only inside `if case .liability`, so every row that loop makes really is a credit line's bill.
+
+**`Bank` is registered in `HomeComposition.mechanicalTags`**, which is what keeps a stamped state label out of the Themes treemap as though it were a subject.
+
+### A defect §778 shipped one commit earlier, caught by the same sweep
+
+**Wise's `Transfer` and `Returned` tags were not in `mechanicalTags`.** Every other bridge's state labels are; these two were written and never registered, so the Themes treemap would have drawn "Transfer" as a SUBJECT — a theme called "Transfer", sitting beside real ones. Both are in the set now, with the reason stated. The class is worth naming because it is invisible from every other gate: a new tag needs a line in that set or it silently becomes a topic, and nothing about the row renders wrong.
+
+**UNSEEN and UNBUILT, the same caveat §778 carries.** Linux host, no Swift toolchain, nothing compiled; every `scripts/*-audit.py`, `demo-selftest.py`, `network-reach-audit.sh` and `catalog-sync.sh` are green. Two things only a device can answer, and both are why the copy names versions rather than products: which `Account` cases a real UK Wallet returns, and whether a connected bank account's transactions carry `merchantName` the way a card's do — `merchantLabel` already falls back to the description, so a miss degrades rather than breaks. `-appleWalletProbe` reports which of the five silences a real device is in.
+
+### Amendment (same session) — the audit that exists to catch an unruled tag could not see the way this codebase writes them
+
+The paragraph above says Wise's `Transfer` and `Returned` "shipped without a line" in `mechanicalTags`. That is true and it is not the whole finding, because `scripts/theme-tags-audit.py` is the check whose entire stated job is *"a new bridge's status label fails the build until someone decides which it is"* — and it stayed **green** over those two tags, and over `Bank`. Proven by mutation, not assumed: dropping each of the three from the hand list left the audit passing.
+
+**What it could not see.** `STAMP` reads the three ways a tag is written AT the row — `tags: [...]`, `tags = [...]`, `tags.append(...)`. But the money bridges do not write tags at the row. They call a helper that builds the array and returns it (`AppleWalletBridge.tags`, `PrivacyBridge.settlementTags`, `WiseShape.tags`), and inside that helper the accumulator is named `out`, not `tags`:
+
+```swift
+static func tags(...) -> [String] {
+    var out = [isCard ? "Card" : "Bank"]
+    if isRefund { out.append("Refund") }
+```
+
+Nothing there matches. The hole had been open for thirteen months and was invisible the whole time for a specific reason worth writing down: **every word those helpers used was also written literally somewhere else** — `Card`, `Refund`, `Pending` all appear in a plain `thing.tags = [...]` elsewhere in the tree, so the audit ruled them by accident. It took a helper stamping a word that appears nowhere else to expose it, which is the same shape as §510a's four missing `refPrefixes` families and §723's dead control one layer down.
+
+**The fix is a signature plus a shape, never a name carve-out.** A `[String]` helper named exactly `tags` or ending in `Tags`, and inside it a literal counts only where it really enters the array — `return [`, `= [`, `.append(`. The first cut was written wide ("any func returning `[String]` with 'tag' in the name") and reported nine findings, **every one wrong**: `tagsDoc` composes VoiceOver sentences, `tagList` normalizes an incoming array, and `hubTags`/`notionTags` PARSE a payload, so their literals are dictionary keys and a stoplist. Each of those four is now a passing self-test case, so the wide version cannot come back — and an interpolated localized string is excluded for the reason the module doc already gives about runtime tags: `"You have \(n) tag."` has no literal to rule.
+
+**A check that cannot demonstrate it catches anything certifies nothing**, so the three tags this entry is about were each mutated out of the hand list and each is now named by the audit, with the file it is stamped in.

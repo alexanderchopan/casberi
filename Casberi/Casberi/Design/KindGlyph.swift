@@ -203,6 +203,10 @@ enum BridgeGlyph {
         case "privacy pools", "0xbow privacy pools": return "shield.lefthalf.filled"
         case "gnosis pay": return "creditcard"
         case "apple wallet": return "creditcard.fill"
+        // The conversion, which is what a Wise transfer IS. Not Peer's
+        // `arrow.left.arrow.right`, which is the same group: these two are not
+        // the same object (the npm/PyPI rule), so they do not share a mark.
+        case "wise":      return "arrow.left.arrow.right.circle"
         // The unstake queue's whole subject is waiting, then collecting — an
         // hourglass says that where a generic coin or chain glyph wouldn't.
         case "ether.fi":  return "hourglass"

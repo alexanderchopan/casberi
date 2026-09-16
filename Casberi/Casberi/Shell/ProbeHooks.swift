@@ -1336,6 +1336,17 @@ enum ProbeHooks {
         Hook(key: "privacyProbe") { _, _ in
             Task { await PrivacyFetch.probe() }
         },
+        // `-wiseProbe YES` reads the STORED Wise token (connect first via
+        // `-tokenBridge "Wise:<token>"`) and walks the read link by link —
+        // profiles, then balances, then transfers — NSLogging each status and
+        // each payload's FIELD NAMES. The `-privacyProbe`/`-awsProbe` lesson:
+        // an empty Wise room has several causes (no token, a refused token, a
+        // profile that never resolved, a quiet account, or shape drift in a
+        // doc-derived field map) and only the last is a bug. Never prints the
+        // token, a balance, or an amount.
+        Hook(key: "wiseProbe") { _, _ in
+            Task { await WiseFetch.probe() }
+        },
         // `-posthogHost <host>` / `-posthogProject <id>` — the two settings a
         // fresh connect would pick by hand, so a headless run can reach the
         // scoped reads. Declared BEFORE `-posthogProbe`: hooks run in list
@@ -1909,9 +1920,10 @@ enum ProbeHooks {
         // `LIVE` then reports what the device itself can do — supported,
         // connected, how many rows landed, and whether the real corpus composes
         // a card. An empty Apple Wallet room has FIVE causes that render as one
-        // silence (not supported, not connected, access denied, a US-only
-        // product on a non-US account, or nothing spent yet) and only the last
-        // is normal.
+        // silence (not supported, not connected, access denied, a device in
+        // neither region FinanceKit serves — the US on 17.4+, the UK on
+        // 18.4+ (prd §779) — or nothing spent yet) and only the last is
+        // normal.
         //
         // One NSLog per line — a joined multi-line message gets truncated by
         // the log reader (the `-todayProbe` lesson).
