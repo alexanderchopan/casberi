@@ -57006,3 +57006,21 @@ Three derived rows were audited with it, and they do NOT all go the same way:
 **Wise's `Transfer` and `Returned` tags were not in `mechanicalTags`.** Every other bridge's state labels are; these two were written and never registered, so the Themes treemap would have drawn "Transfer" as a SUBJECT — a theme called "Transfer", sitting beside real ones. Both are in the set now, with the reason stated. The class is worth naming because it is invisible from every other gate: a new tag needs a line in that set or it silently becomes a topic, and nothing about the row renders wrong.
 
 **UNSEEN and UNBUILT, the same caveat §776 carries.** Linux host, no Swift toolchain, nothing compiled; every `scripts/*-audit.py`, `demo-selftest.py`, `network-reach-audit.sh` and `catalog-sync.sh` are green. Two things only a device can answer, and both are why the copy names versions rather than products: which `Account` cases a real UK Wallet returns, and whether a connected bank account's transactions carry `merchantName` the way a card's do — `merchantLabel` already falls back to the description, so a miss degrades rather than breaks. `-appleWalletProbe` reports which of the five silences a real device is in.
+
+### Amendment (same session) — the audit that exists to catch an unruled tag could not see the way this codebase writes them
+
+The paragraph above says Wise's `Transfer` and `Returned` "shipped without a line" in `mechanicalTags`. That is true and it is not the whole finding, because `scripts/theme-tags-audit.py` is the check whose entire stated job is *"a new bridge's status label fails the build until someone decides which it is"* — and it stayed **green** over those two tags, and over `Bank`. Proven by mutation, not assumed: dropping each of the three from the hand list left the audit passing.
+
+**What it could not see.** `STAMP` reads the three ways a tag is written AT the row — `tags: [...]`, `tags = [...]`, `tags.append(...)`. But the money bridges do not write tags at the row. They call a helper that builds the array and returns it (`AppleWalletBridge.tags`, `PrivacyBridge.settlementTags`, `WiseShape.tags`), and inside that helper the accumulator is named `out`, not `tags`:
+
+```swift
+static func tags(...) -> [String] {
+    var out = [isCard ? "Card" : "Bank"]
+    if isRefund { out.append("Refund") }
+```
+
+Nothing there matches. The hole had been open for thirteen months and was invisible the whole time for a specific reason worth writing down: **every word those helpers used was also written literally somewhere else** — `Card`, `Refund`, `Pending` all appear in a plain `thing.tags = [...]` elsewhere in the tree, so the audit ruled them by accident. It took a helper stamping a word that appears nowhere else to expose it, which is the same shape as §510a's four missing `refPrefixes` families and §723's dead control one layer down.
+
+**The fix is a signature plus a shape, never a name carve-out.** A `[String]` helper named exactly `tags` or ending in `Tags`, and inside it a literal counts only where it really enters the array — `return [`, `= [`, `.append(`. The first cut was written wide ("any func returning `[String]` with 'tag' in the name") and reported nine findings, **every one wrong**: `tagsDoc` composes VoiceOver sentences, `tagList` normalizes an incoming array, and `hubTags`/`notionTags` PARSE a payload, so their literals are dictionary keys and a stoplist. Each of those four is now a passing self-test case, so the wide version cannot come back — and an interpolated localized string is excluded for the reason the module doc already gives about runtime tags: `"You have \(n) tag."` has no literal to rule.
+
+**A check that cannot demonstrate it catches anything certifies nothing**, so the three tags this entry is about were each mutated out of the hand list and each is now named by the audit, with the file it is stamped in.
