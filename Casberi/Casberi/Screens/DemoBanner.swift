@@ -68,17 +68,12 @@ struct DemoBanner: View {
                 // — the render server drives it and the shell pays nothing
                 // per frame (§651, §660). The halo behind it is a static
                 // gradient, not a second animation.
-                ZStack {
-                    Circle()
-                        .fill(RadialGradient(colors: [DS.attention.opacity(0.55), DS.attention.opacity(0)],
-                                             center: .center, startRadius: 0, endRadius: 10))
-                    Image(systemName: "circle.fill")
-                        .dsGlyph(.tick)
-                        .foregroundStyle(DS.attention)
-                        .symbolEffect(.pulse, options: reduceMotion ? .nonRepeating : .repeating)
-                }
-                .frame(width: 20, height: 20)
-                .accessibilityHidden(true)
+                // A flat dot (prd §783): the halo and the pulse were the tell.
+                Image(systemName: "circle.fill")
+                    .dsGlyph(.tick)
+                    .foregroundStyle(DS.attention)
+                    .frame(width: 20, height: 20)
+                    .accessibilityHidden(true)
                 Text("Demo")
                     .dsText(.label12)
                     .foregroundStyle(DS.attention)

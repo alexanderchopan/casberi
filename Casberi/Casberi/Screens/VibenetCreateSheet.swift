@@ -231,7 +231,7 @@ struct VibenetCreateSheet: View {
             Circle()
                 .fill(headIsFault ? DS.destructive.opacity(0.16) : Self.mark.opacity(0.18))
                 .frame(width: DS.Face.list, height: DS.Face.list)
-            Image(systemName: headIsFault ? "exclamationmark.triangle.fill" : "faceid")
+            Image(systemName: headIsFault ? "exclamationmark.circle.fill" : "faceid")
                 .dsGlyph(headIsFault ? .subhead : .body, weight: .semibold)
                 .foregroundStyle(headIsFault ? DS.destructive : Self.mark)
         }

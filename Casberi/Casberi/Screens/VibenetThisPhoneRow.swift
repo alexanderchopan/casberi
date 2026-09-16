@@ -111,7 +111,7 @@ struct VibenetThisPhoneRow: View {
             Circle()
                 .fill(presence == .present ? Self.mark : DS.fillFaint)
                 .frame(width: DS.Face.rowCircle, height: DS.Face.rowCircle)
-            Image(systemName: presence == .destroyed ? "exclamationmark.triangle.fill" : "faceid")
+            Image(systemName: presence == .destroyed ? "key.slash" : "faceid")
                 .dsGlyph(presence == .destroyed ? .tick : .caption, weight: .semibold)
                 .foregroundStyle(presence == .present ? Color.white
                                  : (presence == .destroyed ? DS.destructive : DS.textTertiary))

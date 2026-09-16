@@ -89,7 +89,7 @@ struct WalletWatchField: View {
                 .animation(DS.Motion.standard, value: previewAddress)
             if let result {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Image(systemName: resultIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    Image(systemName: resultIsError ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
                         .dsGlyph(.caption)
                         .foregroundStyle(resultIsError ? DS.destructive : DS.confirm)
                     Text(result)

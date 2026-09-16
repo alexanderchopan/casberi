@@ -645,8 +645,10 @@ struct WalletWarningsStrip: View {
             let tint: Color = hasLiquidation ? DS.destructive
                 : hasActionable ? DS.attention : DS.textSecondary
             Button(action: onOpen) {
-                WalletRow(mark: .symbol(hasLiquidation || hasActionable
-                                        ? "exclamationmark.triangle.fill" : "info.circle.fill",
+                // The triangle is for money at risk; a grant worth revoking is a
+                // circle; nothing to do is information (prd §783).
+                WalletRow(mark: .symbol(hasLiquidation ? "exclamationmark.triangle.fill"
+                                        : hasActionable ? "exclamationmark.circle.fill" : "info.circle.fill",
                                         tint: tint),
                           title: String(localized: "Worth a look"),
                           subtitle: WalletWatch.summary(visible))

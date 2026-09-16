@@ -2136,7 +2136,7 @@ struct GenSection: View {
     /// neutral dot rather than a wrong noun.
     static func symbol(_ hue: String) -> String {
         switch hue {
-        case "attention": return "exclamationmark.triangle.fill"
+        case "attention": return "exclamationmark.circle.fill"
         case "confirm":   return "checkmark.circle.fill"
         case "tint":      return "chart.line.uptrend.xyaxis"
         case "life":      return "sun.max.fill"
@@ -4026,7 +4026,7 @@ private struct GenAlerts: View {
                     // attention hue where they carry it.
                     if !el.str(0).isEmpty {
                         HStack(spacing: DS.Space.s2) {
-                            Image(systemName: "exclamationmark.triangle.fill")
+                            Image(systemName: "exclamationmark.circle.fill")
                                 .dsGlyph(.caption)
                                 .foregroundStyle(DS.attention)
                                 .accessibilityHidden(true)

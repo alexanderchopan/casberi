@@ -248,7 +248,7 @@ private struct ReachCard: View {
         // attention for a finding the person should look at.
         return DSStamp(word: word,
                        weight: clean ? .good : .urgent,
-                       glyph: clean ? "checkmark" : "exclamationmark.triangle.fill")
+                       glyph: clean ? "checkmark" : "exclamationmark.circle.fill")
             .accessibilityElement(children: .combine)
     }
 

@@ -820,7 +820,7 @@ struct HegotaRoomFigure: View {
             // triangle beside three cheerful marks is not something a person
             // reads as "we could not reach the chain for this one".
             DSStamp(word: String(localized: "couldn't read"), weight: .urgent,
-                    glyph: "exclamationmark.triangle")
+                    glyph: "exclamationmark.circle")
         } else if badge.mark.counted {
             HStack(spacing: 4) {
                 Image(systemName: rosterGlyph(badge.mark)).dsGlyph(.tick, weight: .semibold)
@@ -861,7 +861,7 @@ struct HegotaRoomFigure: View {
 
     private func rosterGlyph(_ mark: HegotaRoster.Mark) -> String {
         switch mark {
-        case .unread:    return "exclamationmark.triangle"
+        case .unread:    return "exclamationmark.circle"
         case .coins:     return "tray.full"
         case .keys:      return "key.fill"
         case .frames:    return "square.stack.3d.up"
@@ -1291,7 +1291,7 @@ enum HegotaModeStyle {
         case .verify:    return "checkmark.shield"
         case .sender:    return "arrow.right"
         case .general:   return "chevron.left.forwardslash.chevron.right"
-        case .assertion: return "exclamationmark.triangle"
+        case .assertion: return "checkmark.seal"
         case .utxo:      return "tray.full"
         case .unknown:   return "questionmark"
         }

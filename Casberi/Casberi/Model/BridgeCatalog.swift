@@ -211,7 +211,7 @@ enum BridgeCatalog {
         // The two finance seats of §780b. Wallet group, beside Apple Wallet and
         // Gnosis Pay — this shelf is where money lives, and Reading would
         // promise reading rather than an account.
-        Offer(name: "Acorns", tagline: "Your accounts and balances, in your total", group: "Wallet", connectable: true,
+        Offer(name: "Acorns", tagline: "Round-ups, savings and investments", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 15)),
         Offer(name: "Rocket Money", tagline: "Subscriptions and bills, before they hit", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 15)),
@@ -227,37 +227,37 @@ enum BridgeCatalog {
         // whose total it joins — not in Markets, which was where things you
         // watched rather than owned lived until that category was deleted
         // (2026-09-06, prd §638).
-        Offer(name: "Coinbase",    tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
+        Offer(name: "Coinbase",    tagline: "Coinbase balances",  group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 7, 21)),
-        Offer(name: "Kraken",      tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
+        Offer(name: "Kraken",      tagline: "Kraken balances",  group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 7, 21)),
-        Offer(name: "Binance",     tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
+        Offer(name: "Binance",     tagline: "Binance balances",  group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 7, 27)),
         // "Gemini Exchange", not "Gemini" — the catalog already has an offer
         // named "Gemini" (the Google AI chat importer), an unrelated company
         // that happens to share the word. Named fully everywhere it's
         // user-facing (this tile, the venue's display name, the website) so
         // the two are never confused for one another.
-        Offer(name: "Gemini Exchange", tagline: "Your exchange balance, in your total", group: "Wallet", connectable: true,
+        Offer(name: "Gemini Exchange", tagline: "Gemini balances", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 7, 27)),
         // A validator can't be FOUND from a wallet address the way a Solana
         // stake account can (see EthValidatorWatch.swift) — the only free
         // path is asking for the index directly, which is why this is a
         // named watch-list like Tokens rather than something that
         // rides a watched wallet automatically.
-        Offer(name: "ETH Validators", tagline: "Your validator balance, in your total", group: "Wallet", connectable: true,
+        Offer(name: "ETH Validators", tagline: "Validator balances", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 7, 27)),
-        Offer(name: "Gmail",       tagline: "Your inbox, findable",                  group: "Mail",      connectable: true,
+        Offer(name: "Gmail",       tagline: "Your Gmail inbox",                  group: "Mail",      connectable: true,
               needsSetup: true),
-        Offer(name: "iCloud Mail", tagline: "Your @icloud.com inbox, findable",      group: "Mail",      connectable: true,
+        Offer(name: "iCloud Mail", tagline: "Your iCloud inbox",      group: "Mail",      connectable: true,
               needsSetup: true),
-        Offer(name: "ChatGPT",     tagline: "Import your chats, keep them findable", group: "Agent",     connectable: true,
+        Offer(name: "ChatGPT",     tagline: "Your ChatGPT conversations", group: "Agent",     connectable: true,
               needsSetup: true),
-        Offer(name: "Claude",      tagline: "Import your chats, keep them findable", group: "Agent",     connectable: true,
+        Offer(name: "Claude",      tagline: "Your Claude conversations", group: "Agent",     connectable: true,
               needsSetup: true),
-        Offer(name: "Claude Code", tagline: "Import your sessions, keep them findable", group: "Agent", connectable: true,
+        Offer(name: "Claude Code", tagline: "Your coding sessions", group: "Agent", connectable: true,
               needsSetup: true, added: day(2026, 8, 8)),
-        Offer(name: "Gemini",      tagline: "Import your chats, keep them findable", group: "Agent",     connectable: true,
+        Offer(name: "Gemini",      tagline: "Your Gemini conversations", group: "Agent",     connectable: true,
               needsSetup: true),
         // MARKETS IS DELETED (user ruling 2026-09-06, prd §638: "i want to get
         // away from crypto bullshit but wallets and the other stuff in them
@@ -562,7 +562,7 @@ enum BridgeCatalog {
               needsSetup: true, added: day(2026, 8, 30)),
         Offer(name: "Stripe",      tagline: "What your money did today",             group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 7, 31)),
-        Offer(name: "Polar",       tagline: "What your money did today",             group: "Work",      connectable: true,
+        Offer(name: "Polar",       tagline: "Sales and subscribers",             group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 30)),
         Offer(name: "Dodo Payments", tagline: "Every payment, the moment it lands", group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 8, 30)),
@@ -602,11 +602,11 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Pinterest",   tagline: "Your pins, in your feed",               group: "Images",    connectable: true,
               needsSetup: true),
-        Offer(name: "Raindrop",    tagline: "Bookmarks become findable",             group: "Saves",     connectable: true,
+        Offer(name: "Raindrop",    tagline: "Bookmarks and collections",             group: "Saves",     connectable: true,
               needsSetup: true),
         Offer(name: "Readwise",    tagline: "Highlights stay with you",              group: "Reading",   connectable: true,
               needsSetup: true),
-        Offer(name: "Apple Journal", tagline: "Your entries, findable",              group: "Notes",     connectable: true,
+        Offer(name: "Apple Journal", tagline: "Your journal entries",              group: "Notes",     connectable: true,
               needsSetup: true),
         Offer(name: "Day One",     tagline: "Import your journal",                   group: "Notes",     connectable: true,
               needsSetup: true),
@@ -707,7 +707,7 @@ enum BridgeCatalog {
         // category's personal-life miscellany better (the same reasoning that
         // put HomeKit there). Own "Storage" group so its detail-page eyebrow
         // reads honestly ("Storage · Files", not "Notes · Files").
-        Offer(name: "Files",       tagline: "Any folder, findable",                  group: "Storage",   connectable: true,
+        Offer(name: "Files",       tagline: "Any folder you point it at",                  group: "Storage",   connectable: true,
               needsSetup: true, added: day(2026, 7, 27)),
         // Storage, beside Files (2026-07-27): the same "point at a folder"
         // idea, reading Dropbox's own API instead of a local bookmark — so it
@@ -746,7 +746,7 @@ enum BridgeCatalog {
               needsSetup: true, added: day(2026, 7, 28)),
         Offer(name: "Podcasts",    tagline: "Follow any show",                       group: "Listening", connectable: true,
               needsSetup: true),
-        Offer(name: "Contacts",    tagline: "The people you know, findable",         group: "People",    connectable: true),
+        Offer(name: "Contacts",    tagline: "The people you know",         group: "People",    connectable: true),
     ]
 
     /// What every screen actually reads (Apps page, Home tile count, the

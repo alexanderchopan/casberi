@@ -118,7 +118,7 @@ struct HegotaKeySheet: View {
             Circle()
                 .fill(presence == .destroyed ? DS.destructive.opacity(0.16) : Self.mark.opacity(0.18))
                 .frame(width: DS.Face.list, height: DS.Face.list)
-            Image(systemName: presence == .destroyed ? "exclamationmark.triangle.fill" : "key.fill")
+            Image(systemName: presence == .destroyed ? "key.slash" : "key.fill")
                 .dsGlyph(presence == .destroyed ? .caption : .subhead, weight: .semibold)
                 .foregroundStyle(presence == .destroyed ? DS.destructive : Self.mark)
         }

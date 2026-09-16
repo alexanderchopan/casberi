@@ -503,41 +503,6 @@ grep -q 'if !words.isEmpty' Casberi/Casberi/Screens/SocialReceptionCard.swift \
 # not only by a board.
 grep -q 'thing.parent?.handle' Casberi/Casberi/Model/XPersonSource.swift \
   || { echo "✗ the person room no longer reads the stored card (parsing the localized 'To @' title back apart is the failure it exists to avoid)"; exit 1; }
-# (5) THE ROOM HEAD. `XRoom` is compiled whole below; these are the three
-# wiring facts it can't prove about itself — that it is asked at all, that the
-# probe mirrors the chain (`-roomInsightProbe`'s own rule), and that the demo
-# check knows about it.
-grep -q 'XRoomSource.compose(things: visible).map { .x(\$0) }' "$FEEDSCREEN" \
-  || { echo "✗ the X room head is never composed"; exit 1; }
-grep -q 'XRoomCard(room: room)' "$FEEDSCREEN" \
-  || { echo "✗ nothing draws the X room head"; exit 1; }
-grep -q 'note("xHead"' Casberi/Casberi/Shell/ProbeHooks.swift \
-  || { echo "✗ -roomInsightProbe doesn't know about the X head — it would report the room as leading with the treemap it displaced"; exit 1; }
-grep -q 'xHead             "X"' scripts/verify.sh \
-  || { echo "✗ the demo room-head coverage check has no X row — a head that stops composing over the demo goes unnoticed"; exit 1; }
-# `RoomFigure`'s chain mirrors `shapedSections`, and this is the first
-# per-source head that is a FIGURE rather than a text hero — so without a
-# branch there the chip PEEK previews the treemap while the room draws a year
-# strip, which that chain's contract calls worse than no preview at all.
-# (Lived in `Composer.buildPanel` until prd §386p deleted the agent panel; the
-# per-room function survived for the peek, and so does this invariant.)
-grep -q 'XRoomSource.compose(things: things), source == XRoomSource.source' Casberi/Casberi/Model/RoomFigure.swift \
-  || { echo "✗ the X chip peek no longer mirrors the room's head — it would preview a figure the room doesn't draw"; exit 1; }
-# The displacement itself (§349's rule): this card takes the treemap's slot, so
-# the year ROWS carrying each year's subject are what keeps it from drawing
-# less than what it replaced.
-grep -q 'mostly \\(subject)' Casberi/Casberi/Model/XRoom.swift \
-  || { echo "✗ the year rows no longer name each year's subject — the head now draws LESS than the treemap it displaces (§349)"; exit 1; }
-# THE LEAD SAYS ONE THING ONCE (2026-08-22, prd §451). `XRoom.headline` named
-# the busiest year and its count — row one verbatim, and the strip's only
-# full-height capsule — so it is gone and the note leads at the same tier.
-# BOTH halves are guarded, because either alone passes over a broken card: the
-# function must not return under its old name, and the card must really promote
-# the note. One that dropped the headline and left the note at `subhead12`
-# would render as a head with no lead at all.
-grep -q 'static func headline(_ room: XRoom)' Casberi/Casberi/Model/XRoom.swift \
-  && { echo "✗ XRoom.headline is back — it restates row one and the strip's tallest bar (§451)"; exit 1; }
-python3 scripts/support/x-head-lead.py Casberi/Casberi/Screens/XRoomCard.swift || exit 1
 
 # --- extract the shipped functions -----------------------------------------
 python3 - "$OEMBED" "$XARCH" "$SUPPORT" "$TMP/extracted.swift" "$TOPICS" <<'PY'
@@ -652,12 +617,6 @@ pieces = [
     "}\n",
     # DateQuery is Foundation-only, so it compiles exactly as it ships.
     wholefile("Casberi/Casberi/Model/DateQuery.swift"),
-    # …and so is `XRoom` (2026-08-13, prd §375), by design: the room head's
-    # whole judgement — which year is loudest, what a year was about, which
-    # years are silent — compiled AS SHIPPED. It is the only proof these
-    # numbers are right, since no real archive has ever been imported here and
-    # every failure in it renders as a perfectly good-looking card.
-    wholefile("Casberi/Casberi/Model/XRoom.swift"),
     # The half of the archive that isn't posts (2026-08-18, prd §396) — the
     # connected-app inventory, the account's own beginning, every rename, and
     # BOTH date parsers, which moved here from `XArchiveImport` precisely so
@@ -1193,94 +1152,6 @@ check("…and so does the snake_case spelling of a note's own links",
       XArchiveImport.clean("see https://t.co/n1",
                            entities: XArchiveImport.noteEntities(snake)) == "see https://example.com/long")
 
-print("")
-print("XRoom — the years, and which one was loudest")
-// Built as a table so the expected answers are readable: (year, count).
-func sightings(_ table: [(Int, Int)], terms: [Int: [String]] = [:],
-               likes: [Int: [Int]] = [:]) -> [XRoom.Sighting] {
-    var out: [XRoom.Sighting] = []
-    for (year, count) in table {
-        let yearLikes: [Int] = likes[year] ?? []
-        for i in 0..<count {
-            let like: Int? = i < yearLikes.count ? yearLikes[i] : nil
-            out.append(XRoom.Sighting(ref: "x:tweet:\(year)-\(i)", year: year,
-                                      terms: terms[year] ?? [], likes: like))
-        }
-    }
-    return out
-}
-check("a room under the post floor declines",
-      XRoom.compose(sightings([(2019, 5), (2020, 5), (2021, 5)])) == nil)
-check("a room under the year floor declines, however big",
-      XRoom.compose(sightings([(2019, 400), (2020, 400)])) == nil)
-let deep = XRoom.compose(sightings([(2019, 30), (2021, 12), (2022, 5)]))!
-// The SILENT year is the assertion that matters here: 2020 has no rows, and it
-// must still take its column — dropping it would put 2019 and 2021 side by
-// side and silently rescale the axis.
-check("the span runs first year to last, gaps included",
-      deep.years.map(\.year) == [2019, 2020, 2021, 2022])
-check("a silent year is drawn, at zero",
-      deep.years.first { $0.year == 2020 }?.posts == 0 && deep.silent == 1)
-check("the busiest year is the one with the most posts", deep.busiest.year == 2019)
-check("the total counts every sighting", deep.total == 47)
-// THE LEAD IS THE NOTE (2026-08-22, prd 451). `XRoom.headline` is gone — it
-// said the busiest year and its count, which `rows` puts one line below
-// verbatim (row one IS `busiest`, same sort, same tie rule) and the strip
-// draws as its only full-height capsule. The note is the card's lead now, and
-// what it must carry is what the drawing cannot: the total, and how many of
-// the span's years were written in.
-check("the note says how much of the span you wrote in",
-      XRoom.note(deep).contains("3") && XRoom.note(deep).contains("4"))
-check("the lead states the total, which no bar in the strip does",
-      XRoom.note(deep).contains("47"))
-// The redundancy this cut removed, asserted as the property that made it one:
-// a lead naming the busiest year would be naming row one.
-check("row one is the busiest year, so a lead naming it would repeat it",
-      XRoom.rows(deep).first?.year == deep.busiest.year
-      && XRoom.rows(deep).first?.posts == deep.busiest.posts)
-// A TOTAL order. Two years tied on posts must resolve the same way every time
-// or the card renames its own rows between two identical opens.
-let tied = XRoom.compose(sightings([(2019, 20), (2020, 20), (2021, 20)]))!
-check("a tie goes to the earlier year, deterministically",
-      tied.busiest.year == 2019
-      && XRoom.compose(sightings([(2021, 20), (2020, 20), (2019, 20)]))!.busiest.year == 2019)
-check("rows are biggest first and never include a silent year",
-      XRoom.rows(deep).map(\.year) == [2019, 2021, 2022])
-// The subject floor — `topicMap`'s recurrence rule in miniature. One mention
-// does not make a year's subject, which is the whole difference between a
-// reading and a label.
-let subjects = XRoom.compose(sightings([(2019, 30), (2020, 30), (2021, 30)],
-                                        terms: [2019: ["Design"], 2020: [], 2021: []]))!
-check("a term said in every post of a year is that year's subject",
-      subjects.years.first { $0.year == 2019 }?.subject == "Design")
-check("a year with no terms has no subject rather than a blank one",
-      subjects.years.first { $0.year == 2020 }?.subject == nil)
-check("one mention in a big year is not a subject",
-      XRoom.subject(["Lisbon": 1], posts: 300) == nil)
-check("…and two mentions in a small year is",
-      XRoom.subject(["Lisbon": 2], posts: 6) == "Lisbon")
-check("a subject tie breaks alphabetically, deterministically",
-      XRoom.subject(["Berlin": 4, "Athens": 4], posts: 10) == "Athens")
-// The tap target. `likes` nil is NOT zero — an archive vintage that recorded
-// no counts must not make the first post it sees the year's loudest.
-let loud = XRoom.compose(sightings([(2019, 8), (2020, 8), (2021, 8)],
-                                    likes: [2019: [4, 91, 7]]))!
-check("a year's loudest post is the one with the most likes",
-      loud.years.first { $0.year == 2019 }?.loudestRef == "x:tweet:2019-1")
-check("a year with no counts names no loudest post rather than picking one",
-      loud.years.first { $0.year == 2020 }?.loudestRef == nil)
-check("a bar is a share of the busiest year, and never divides by nothing",
-      XRoom.share(posts: 15, of: 30) == 0.5 && XRoom.share(posts: 5, of: 0) == 0)
-check("a share can't exceed the axis", XRoom.share(posts: 40, of: 30) == 1)
-// The footnote separates "not read yet" from "nothing recurred", which is the
-// difference between a card that will heal and one that never will.
-check("a card with no subjects at all says the room hasn't been read",
-      XRoom.footnote(deep)?.contains("read") == true)
-check("a card with every subject named has no footnote",
-      XRoom.footnote(XRoom.compose(sightings([(2019, 30), (2020, 30), (2021, 30)],
-                                              terms: [2019: ["A"], 2020: ["B"], 2021: ["C"]]))!) == nil)
-
-// ---------------------------------------------------------------------------
 // 2026-08-18, prd §396 — the account's own record, and your years with one
 // person. Both files are compiled WHOLE and unmodified above.
 // ---------------------------------------------------------------------------

@@ -2153,7 +2153,7 @@ struct ThingSheetView: View {
     /// copied, so the place to watch it is the place it came from.
     private var xPostVerb: Verb? {
         guard thing.isLive, thing.kind == .note,
-              thing.source == XRoomSource.source,
+              thing.source == XArchiveImport.source,
               let raw = thing.externalLink?.trimmingCharacters(in: .whitespacesAndNewlines),
               !raw.isEmpty,
               let url = URL(string: raw), url.scheme == "https"

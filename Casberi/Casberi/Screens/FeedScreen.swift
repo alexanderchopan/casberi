@@ -1734,8 +1734,6 @@ struct FeedScreen: View {
         var imageOnly: Set<UUID> = []
         var wideArt: Set<UUID> = []
         var coarse: Set<String> = []
-        /// A coarse group's own subject, by label (prd §379).
-        var subjects: [String: String] = [:]
         /// Set while the sections render; read by `feedList` a few lines later
         /// to decide whether "that's everything" is still true. Same
         /// write-during-body / read-later shape `groups` already has, and safe
@@ -3126,46 +3124,6 @@ struct FeedScreen: View {
             guard let first = rows.first(where: \.isLive) else { return nil }
             return label == coarseLabel(first.capturedAt) ? label : nil
         })
-    }
-
-    /// What each COARSE group was mostly about (prd §379) — the tail stops
-    /// being a list of month names and becomes an index.
-    ///
-    /// §218 made the tail short and §254 made it quiet, and neither made it
-    /// BROWSABLE: "March", "April", "May" are three identical headers, so
-    /// finding last spring still means scrolling into it and reading rows.
-    ///
-    /// The rule is `XRoom.subject` CALLED, never re-implemented — §375's own
-    /// recurrence floor (two mentions or a tenth of the group, whichever is
-    /// larger), already compiled whole and mutation-proven by
-    /// `x-selftest.sh`. It is the same question that ruling asked of a year,
-    /// asked of a month.
-    ///
-    /// Terms come from `ocrTopics` ONLY. Tags were considered and declined:
-    /// most of them are FACETS (`Post`, `Liked`, `Watchlist`, `Memory` — §308),
-    /// so a month would report its structure as its subject, which is the
-    /// §83 fake status wearing a label. `ocrTopics` is the deterministic
-    /// extraction (§313), so every subject drawn here is a term that literally
-    /// appears in the things beneath it.
-    ///
-    /// Nil is the NORMAL answer and the header is built for it: a month of
-    /// wallet transactions and calendar events carries no topic terms at all,
-    /// and inventing one for it would be worse than saying nothing.
-    private func coarseSubjects(_ groups: [(String, [Thing])],
-                                coarse: Set<String>) -> [String: String] {
-        var out: [String: String] = [:]
-        for (label, rows) in groups where coarse.contains(label) {
-            var terms: [String: Int] = [:]
-            var counted = 0
-            // `.isLive` before any stored read — a derived array, read in the
-            // same graph update a heal's delete can land in (CLAUDE.md).
-            for t in rows where t.isLive {
-                counted += 1
-                for term in t.ocrTopics { terms[term, default: 0] += 1 }
-            }
-            if let subject = XRoom.subject(terms, posts: counted) { out[label] = subject }
-        }
-        return out
     }
 
     private func coarseLabel(_ date: Date) -> String {
@@ -6519,10 +6477,6 @@ struct FeedScreen: View {
                         // lookup, not a newest-of-many match.
                         openBySourceRef(ref, in: visible)
                     }
-                case .x(let room):
-                    XRoomCard(room: room) { year in
-                        openYear(year, in: visible)
-                    }
                 case .journal(let room, let name):
                     JournalRoomCard(room: room, source: name) { year in
                         openJournalYear(year, source: name, in: visible)
@@ -7212,7 +7166,6 @@ struct FeedScreen: View {
                                   imageOnly: Set<UUID>,
                                   wideArt: Set<UUID>,
                                   coarse: Set<String>,
-                                  subjects: [String: String],
                                   more: Bool,
                                   dayLine: DayBrief.Whisper?,
                                   tailDays: Int,
@@ -7239,7 +7192,7 @@ struct FeedScreen: View {
             "single=\(single) strip=\(strip) bundle=\(bundle)",
             "stripTiles=\(stripTiles) bundleArt=\(bundleArt)",
             "imageOnly=\(imageOnly.count) wideArt=\(wideArt.count)",
-            "coarse=\(coarse.count) subjects=\(subjects.count)",
+            "coarse=\(coarse.count)",
             "newSince=\(boundary == nil ? 0 : 1) moment=\(moment ? 1 : 0)",
             "window=\(more ? "open" : "whole")",
             "dayLine=\(dayLine == nil ? 0 : 1)",
@@ -7336,9 +7289,6 @@ struct FeedScreen: View {
             memo.imageOnly = perfAccum("imageOnlyIDs") { imageOnlyIDs(memo.days) }
             memo.wideArt = perfAccum("wideArtIDs") { wideArtIDs(memo.groups) }
             memo.coarse = perfAccum("coarseLabels") { coarseLabels(in: memo.days) }
-            memo.subjects = perfAccum("coarseSubjects") {
-                coarseSubjects(memo.days, coarse: memo.coarse)
-            }
         }
         // The away window becomes sectioning (prd §389) — OUTSIDE the memo
         // above, deliberately: `newSince` freezes when the page lands and so
@@ -7368,7 +7318,6 @@ struct FeedScreen: View {
         let imageOnly = memo.imageOnly
         let wideArt = memo.wideArt
         let coarse = memo.coarse
-        let subjects = memo.subjects
         // The day header speaks (prd §385, 2026-08-14): the Today header
         // carries the day's own sentence — `DayBrief`'s whisper, the ONE
         // implementation of "what today was" (the capsule, the kept pill and
@@ -7436,7 +7385,7 @@ struct FeedScreen: View {
             // is reported separately, as its own fact.
             logAllFeedCensus(groups: memo.groups, hasCover: ledeThing != nil, boundary: boundary,
                              moment: split.moment, imageOnly: imageOnly, wideArt: wideArt,
-                             coarse: coarse, subjects: subjects, more: window.more,
+                             coarse: coarse, more: window.more,
                              dayLine: dayLine,
                              tailDays: tailDayGroups.count, tailDrawn: tailDrawn)
         }
@@ -7500,12 +7449,6 @@ struct FeedScreen: View {
                     // groups only, and only when a term actually recurs, so
                     // the recent days keep their bare date and nothing is
                     // invented for a month with no topic terms in it.
-                    if let subject = subjects[label] {
-                        Text(String(localized: "mostly \(subject)"))
-                            .dsText(.subhead12)
-                            .foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
                     // Today's own line (prd §385) — the §379 subject line's
                     // shape, on the one day it never covers (Today is never
                     // coarse, so at most one of these two renders). The
@@ -8265,7 +8208,6 @@ struct FeedScreen: View {
         // drew (`FeedInsight.topicMap`). It declines under `XRoom`'s floors so
         // a shallow archive keeps the treemap; see that type's own note for
         // why the year rows carry each year's subject.
-        case x(XRoom)
         // The two journal rooms (2026-08-17, prd §398) — the first head serving
         // MORE THAN ONE source, and the only place in this enum where that is
         // right: Day One and Apple Journal hold the same object under two app
@@ -8317,7 +8259,7 @@ struct FeedScreen: View {
             case .gnosisPay(let room):
                 return room.months.isEmpty && room.currencies.count <= 1
                     ? GnosisPayRoom.headline(room, mask: mask) : nil
-            case .posthog, .walletbeat, .l2beat, .vibenet, .privacyPools, .x, .journal, .agent:
+            case .posthog, .walletbeat, .l2beat, .vibenet, .privacyPools, .journal, .agent:
                 return nil
             }
         }
@@ -8411,8 +8353,6 @@ struct FeedScreen: View {
             return RailgunRoomSource.compose(things: visible).map { .railgun($0) }
         case SafeRoomSource.source:
             return SafeRoomSource.compose(things: visible).map { .safe($0) }
-        case XRoomSource.source:
-            return XRoomSource.compose(things: visible).map { .x($0) }
         case let name where JournalRoomSource.sources.contains(name):
             return JournalRoomSource.compose(things: visible).map { .journal($0, source: name) }
         case let name where AgentRoomSource.sources.contains(name):
@@ -8436,27 +8376,6 @@ struct FeedScreen: View {
         guard let match = visible.first(where: { $0.isLive && $0.sourceRef == ref })
         else { return }
         openThing(match)
-    }
-
-    /// Open a year's loudest post (2026-08-13, prd §375). A year owns hundreds
-    /// of rows, so like every other head that ranks a group this hands back a
-    /// value and the lookup lands here.
-    ///
-    /// Two landings, and the fallback is the point: an archive vintage that
-    /// recorded no `favorite_count` has no loudest post to name, and a card
-    /// whose tap did nothing would be a dead control (P4). So a year with no
-    /// counts opens its NEWEST post instead — still that year, still a real
-    /// row, and never a claim about reach we don't have.
-    private func openYear(_ year: XRoom.Year, in visible: [Thing]) {
-        if let ref = year.loudestRef {
-            openBySourceRef(ref, in: visible)
-            return
-        }
-        let calendar = Calendar.current
-        openNewest(source: XRoomSource.source, in: visible) { thing in
-            thing.kind == .note
-                && calendar.component(.year, from: thing.capturedAt) == year.year
-        }
     }
 
     /// Open a journal year's last entry (2026-08-17, prd §398). A year owns
@@ -9156,7 +9075,7 @@ struct FeedScreen: View {
     /// Guarded internally for the same corollary-4 reason as its three
     /// siblings.
     private static func isXPhotoTile(_ thing: Thing) -> Bool {
-        thing.isLive && thing.source == XRoomSource.source && thing.kind == .note
+        thing.isLive && thing.source == XArchiveImport.source && thing.kind == .note
             && thing.postText == nil
             && (thing.tags.contains("Photo") || thing.tags.contains("Video"))
             && thing.previewImageData != nil
@@ -9184,7 +9103,7 @@ struct FeedScreen: View {
     /// which tiles wear it, in the two rooms that can hold one.
     private static func isVideoTile(_ thing: Thing) -> Bool {
         guard thing.isLive else { return false }
-        if thing.source == XRoomSource.source { return thing.tags.contains("Video") }
+        if thing.source == XArchiveImport.source { return thing.tags.contains("Video") }
         return FilesIngest.isVideoRef(thing.sourceRef)
     }
 
@@ -9201,7 +9120,7 @@ struct FeedScreen: View {
         // test that made it a tile — and its title is the placeholder word the
         // importer gave it. Printing that under every cell would be a grid of
         // identical labels saying nothing.
-        if thing.source == XRoomSource.source { return nil }
+        if thing.source == XArchiveImport.source { return nil }
         // An Instagram picture post is a tile precisely BECAUSE it has no
         // caption; its title is the placeholder word the importer gave it, and
         // printing that under every cell is a grid of identical labels.

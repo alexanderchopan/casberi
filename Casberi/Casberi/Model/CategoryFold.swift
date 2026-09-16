@@ -126,7 +126,7 @@ enum CategoryFold {
         "Wallet":   "creditcard.fill",
         "Work":     "laptopcomputer",
         "Life":     "calendar",
-        "Agents":   "sparkles",
+        "Agents":   "terminal",
         "Media":    "play.circle",
         "Social":   "bubble.left.and.bubble.right",
         "Reading":  "book",

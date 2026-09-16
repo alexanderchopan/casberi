@@ -4108,6 +4108,34 @@
         }
       }
     },
+    "%@ fewer than the window before" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ menos que el periodo anterior"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "前の期間より%@件少ない"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이전 기간보다 %@개 적음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "比上一时段少 %@"
+          }
+        }
+      }
+    },
     "%@ fills your week — %lld things across %lld app." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6903,6 +6931,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "另有 %@ 项未显示"
+          }
+        }
+      }
+    },
+    "%@ more than the window before" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ más que el periodo anterior"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "前の期間より%@件多い"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이전 기간보다 %@개 많음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "比上一时段多 %@"
           }
         }
       }
@@ -59964,6 +60020,34 @@
         }
       }
     },
+    "Each service sees your IP, as any app or website does. iCloud Private Relay covers Safari browsing, not an app's own requests." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada servicio ve tu IP, como cualquier app o sitio web. iCloud Private Relay cubre la navegación en Safari, no las solicitudes propias de una app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "どのアプリやウェブサイトと同じように、各サービスにはあなたの IP が見えます。iCloud プライベートリレーが保護するのは Safari での閲覧で、アプリ自身のリクエストではありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 앱이나 웹사이트와 마찬가지로 각 서비스는 사용자의 IP를 볼 수 있습니다. iCloud 비공개 릴레이는 Safari 브라우징에만 적용되며 앱 자체의 요청에는 적용되지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "和任何应用或网站一样，每项服务都能看到你的 IP。iCloud 专用代理只保护 Safari 浏览，不保护应用自身的请求。"
+          }
+        }
+      }
+    },
     "Earlier" : {
       "localizations" : {
         "es" : {
@@ -61397,6 +61481,34 @@
         }
       }
     },
+    "Every service reached shows up here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada servicio al que se accede aparece aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "接続したサービスはすべてここに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "접속한 모든 서비스가 여기에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "访问过的每项服务都会显示在这里。"
+          }
+        }
+      }
+    },
     "Every token, key, and mail password Casberi holds — connected apps stop syncing and paired clients disconnect. Your things stay.\n\nPhotos and Calendar access is iOS's; revoke those in Settings. No undo." : {
       "localizations" : {
         "es" : {
@@ -61785,6 +61897,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "全部使用普通 nonce 发送。"
+          }
+        }
+      }
+    },
+    "Everything you can add is under All." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todo lo que puedes añadir está en Todas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "追加できるものはすべて「すべて」にあります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "추가할 수 있는 모든 항목은 전체에 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可添加的内容都在“全部”中。"
           }
         }
       }
@@ -82894,6 +83034,34 @@
         }
       }
     },
+    "No collections were found on Ethereum, Base, Arbitrum, Optimism, Polygon, Monad or Robinhood." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se encontraron colecciones en Ethereum, Base, Arbitrum, Optimism, Polygon, Monad ni Robinhood."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum、Base、Arbitrum、Optimism、Polygon、Monad、Robinhood でコレクションは見つかりませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum, Base, Arbitrum, Optimism, Polygon, Monad, Robinhood에서 컬렉션을 찾지 못했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Ethereum、Base、Arbitrum、Optimism、Polygon、Monad 和 Robinhood 上未找到收藏。"
+          }
+        }
+      }
+    },
     "No collections were found on Ethereum, Base, Arbitrum, Optimism, Polygon, Monad or Robinhood. Solana and HyperEVM NFTs can't be read yet." : {
       "localizations" : {
         "es" : {
@@ -92484,6 +92652,34 @@
         }
       }
     },
+    "Only what came from %@ goes, and importing again brings it back." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo se elimina lo que vino de %@, y volver a importarlo lo recupera."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "削除されるのは %@ から取り込んだものだけで、もう一度インポートすれば戻ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 가져온 항목만 삭제되며, 다시 가져오면 복원됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只会移除来自 %@ 的内容，再次导入即可恢复。"
+          }
+        }
+      }
+    },
     "Only what's news: a milestone crossed, a metric falling silent, a deploy you annotated." : {
       "localizations" : {
         "es" : {
@@ -93043,6 +93239,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Safe 中打开"
+          }
+        }
+      }
+    },
+    "Open in Safe to sign" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abrir en Safe para firmar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe で開いて署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe에서 열어 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Safe 中打开以签名"
           }
         }
       }
@@ -105797,6 +106021,90 @@
         }
       }
     },
+    "Reload Acorns' sign-in" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recargar el inicio de sesión de Acorns"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns のサインインを再読み込み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns 로그인 다시 불러오기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "重新加载 Acorns 登录"
+          }
+        }
+      }
+    },
+    "Reload Rocket Money's sign-in" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recargar el inicio de sesión de Rocket Money"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money のサインインを再読み込み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money 로그인 다시 불러오기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "重新加载 Rocket Money 登录"
+          }
+        }
+      }
+    },
+    "Reload Spotify's sign-in" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recargar el inicio de sesión de Spotify"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify のサインインを再読み込み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spotify 로그인 다시 불러오기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "重新加载 Spotify 登录"
+          }
+        }
+      }
+    },
     "Reminder" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -113866,6 +114174,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "使用 GitHub 登录 — 或粘贴令牌 — 你选择的信息源以及你关注的任何仓库都会持续到达。这里的关注是私密的。"
+          }
+        }
+      }
+    },
+    "Sign the renewal on ENS" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmar la renovación en ENS"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ENS で更新に署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ENS에서 갱신에 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 ENS 上签署续费"
+          }
+        }
+      }
+    },
+    "Sign the revoke on Revoke.cash" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmar la revocación en Revoke.cash"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Revoke.cash で取り消しに署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Revoke.cash에서 취소에 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Revoke.cash 上签署撤销"
           }
         }
       }
@@ -123313,6 +123677,34 @@
         }
       }
     },
+    "The question and its matched things go straight to the provider." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La pregunta y lo que coincide con ella van directamente al proveedor."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "質問と一致したアイテムは、プロバイダに直接送られます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "질문과 일치하는 항목은 제공업체로 바로 전송됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "问题及其匹配的内容会直接发送给服务提供方。"
+          }
+        }
+      }
+    },
     "The question and its matched things go straight to the provider. They bill you directly." : {
       "localizations" : {
         "es" : {
@@ -128143,6 +128535,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "交易"
+          }
+        }
+      }
+    },
+    "Transactions land as they settle on chain." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las transacciones llegan a medida que se confirman en la cadena."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取引はチェーン上で確定すると表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "거래는 체인에서 확정되는 대로 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "交易在链上结算后显示。"
           }
         }
       }
@@ -137131,6 +137551,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你看到的内容"
+          }
+        }
+      }
+    },
+    "What you send goes straight to the provider." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que envías va directamente al proveedor."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送信した内容はプロバイダに直接送られます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보낸 내용은 제공업체로 바로 전송됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你发送的内容会直接发送给服务提供方。"
           }
         }
       }

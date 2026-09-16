@@ -355,7 +355,7 @@ struct BridgeApp: Identifiable, Codable {
         var glyph: String {
             switch self {
             case .connected: "circle.fill"
-            case .attention: "exclamationmark.triangle.fill"
+            case .attention: "exclamationmark.circle.fill"
             case .paused:    "pause.circle"
             }
         }

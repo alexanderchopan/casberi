@@ -263,7 +263,7 @@ struct SettingsScreen: View {
             // previews sync STATE — a green on-device lock or the blue cloud —
             // which is itself the privacy fact at a glance.
             RowSpec(title: "Data", value: String(localized: "\(thingCount) things · on device"),
-                    badge: icloudSync ? ("icloud.fill", DS.tint) : ("lock.iphone", DS.confirm),
+                    badge: icloudSync ? ("icloud.fill", DS.textPrimary) : ("lock.iphone", DS.textPrimary),
                     countsUp: true,
                     bounce: rungBounce,
                     action: { detail = .data }),
@@ -348,7 +348,7 @@ struct SettingsScreen: View {
                                String(localized: "%@ answers on tap"), $0.agent)
                            : $0.agent
                     } ?? String(localized: "Bring your own agent"),
-                    badge: ("key.fill", keyed ? DS.confirm : DS.textPrimary),
+                    badge: ("key.fill", DS.textPrimary),
                     action: { detail = .key }),
             // "What you can do" (2026-07-11 as "How it works") sat here until
             // 2026-09-10 — a sheet holding one sentence, reached from a row
@@ -359,7 +359,7 @@ struct SettingsScreen: View {
             // Dev-facing on purpose: TestFlight reports become a screenshot
             // of on-device facts instead of a description (2026-07-09).
             RowSpec(title: "Diagnostics",
-                    value: String(localized: "Test and report"),
+                    value: "",
                     // The instrument, not the trace — the ECG line is the
                     // Feed tab's glyph (ruled 2026-07-10: Feed keeps it).
                     badge: ("stethoscope", DS.textPrimary),
@@ -370,7 +370,7 @@ struct SettingsScreen: View {
             // tap, one honest action: it opens Mail, nothing more (no sheet,
             // no version restated — that's Updates' job).
             RowSpec(title: "Support",
-                    value: String(localized: "Email us"),
+                    value: "privacy@casberi.app",
                     trail: .leaves,
                     badge: ("envelope", DS.textPrimary),
                     action: {

@@ -3122,7 +3122,6 @@ else
     gnosisPayHead     "Gnosis Pay"
     railgunHead       "Railgun"
     safeHead          "Safe"
-    xHead             "X"
     instagramHead     "Instagram"
     dayOneHead        "Day One"
     appleJournalHead  "Apple Journal"

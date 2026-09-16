@@ -57202,3 +57202,25 @@ The absolute bound grew from 90s to 180s and restarts on each navigation the per
 **The two security warnings lost their red grounds too, at the checkpoint (user: "oh my yes remove that red background!").** The thing sheet's transfer warning is its red sentences and triangles under the amount, with air above. The address book's look-alike band no longer spans the screen on a red wash; its heading and its explaining line are red instead, matching the transfer warning (user: "the look alike address without the band should have red text just like the one without the box"), and the parting character keeps its red marker. The wallet trays' fixed height estimates were set for padded rows and may now open a little tall.
 
 **Unmeasured.** No simulator run: the pass is verified by the iOS build, the static audits and the selftests. The join bar in the send console, the four-tile action row in the address book at phone width, and the plain lists' pinned section headers have not been looked at on a screen.
+
+## §783 — The X room draws no year chart, and a second pass of generated-looking UI comes off (user: "on twitter remove the 'Your year in X' chart it should just be notifications only no chart"; "fix all except the dock agent sparkle", 2026-09-16)
+
+**The X room leads with its newest thing, like every room without a figure (§749).** The year strip, the busiest-years rows and their "mostly …" subjects are deleted with the model under them (`XRoom`, `XRoomSource`, `XRoomCard`), the chip peek's X branch, `-xRoomProbe`, the census's `xHead` row and the selftest blocks that proved them. §375 and §451 are superseded. The archive import is untouched; what the room shows is the rows.
+
+**The day header states the day and nothing computed about it.** The coarse groups' "mostly Work" clause (§379) is deleted with `coarseSubjects`. The coarse weight step (§254) stays.
+
+**Accounts: the status dot draws only when something is off.** A green dot on every connected row carried nothing; attention and paused keep theirs.
+
+**Settings: one ink for every glyph, and a value is a fact.** Data and Your key no longer tint their glyphs. Diagnostics shows no trailing description, and Support shows the address it mails.
+
+**The demo banner is a flat dot.** The radial halo and the repeating pulse are deleted.
+
+**The triangle means risk.** A liquidation, a flagged transfer, a look-alike address and a Safe short of owners keep it. A fault or an unreadable read is `exclamationmark.circle`, a destroyed key is `key.slash`, a verified assertion is `checkmark.seal`, the risk scope tile is `shield`, and a bridge needing attention is a circle.
+
+**Every catalogue line says what that seat brings.** Six "…, in your total", ten "…, findable" and two identical Stripe/Polar lines became each seat's own noun ("Kraken balances", "Your Claude conversations", "Sales and subscribers"). The website's shelf cells carry the same words.
+
+**The dock's Agents chip is `terminal`, not `sparkles`** (user, choosing from a mockup of the three). Sparkles is every app's AI-feature glyph; the shelf is ChatGPT, Claude, Gemini, Claude Code and Cursor. One word in `CategoryFold.glyphs`; the chip's size, layout and gestures are unchanged.
+
+**The feed row's line was already fixed.** §767 names the source only where the lead is not its mark, so the survey's "Calendar under a calendar icon" was a stale screenshot.
+
+**Unmeasured.** No simulator run; verified by the build, the static audits and the X, room-head, dock and catalogue selftests.

@@ -17,7 +17,7 @@ enum ScopeTileGlyph {
     static let permissions = "key"
     static let positions   = "building.columns"
     static let nfts        = "photo.on.rectangle.angled"
-    static let risk        = "exclamationmark.triangle"
+    static let risk        = "shield"
     static let frames      = "square.stack.3d.down.right"
     static let utxos       = "circle.grid.3x3"
     static let snapshots   = "camera.viewfinder"

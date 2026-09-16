@@ -22,27 +22,7 @@ enum RoomFigure {
                             affinity: ChipMemory.weight(for: source),
                             reading: nil, rising: nil)
         }
-        // The per-source heads OUTRANK everything below in the room itself, and
-        // all but one of them are text heroes §334 excludes on purpose. X is
-        // the exception (2026-08-13, prd §375): its head is a FIGURE — the
-        // years of an archive — so leaving it out would make this tile preview
-        // the topic treemap while the room draws a year strip, which is the
-        // exact drift this chain's contract forbids.
-        //
-        // Drawn as bars rather than a pulse: the room's own rows are the top
-        // years ranked, a tile fits four, and a year is a label a person reads.
-        if let room = XRoomSource.compose(things: things), source == XRoomSource.source {
-            // Title only, and no caption, because the room itself has one
-            // line now: `XRoom.headline` retired 2026-08-22 (prd §451) and the
-            // note took the lead. A peek that kept the old pair would preview
-            // a card the room no longer draws — this chain's one contract.
-            return card(XRoom.note(room), "",
-                        .bars(XRoom.rows(room).prefix(4).map {
-                            AgentPanel.Bar(label: String($0.year), value: $0.posts,
-                                           detail: $0.posts.formatted())
-                        }))
-        }
-        // Safe is the second exception, and for X's exact reason (2026-08-17):
+        // Safe's head is a FIGURE, not a text hero (2026-08-17):
         // its head is a FIGURE, not a text hero — rings, one per pending
         // transaction, ranked. Leaving it out made the peek preview NOTHING at
         // all (no topic map, no leaderboard, no heatmap registry entry), so

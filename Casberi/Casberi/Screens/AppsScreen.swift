@@ -926,7 +926,9 @@ struct AppsScreen: View {
                         .saturation(soon ? 0 : 1)
                         .opacity(soon ? 0.5 : 1)
                         .overlay(alignment: .topTrailing) {
-                            if isConnected, let bridge = entry.bridge {
+                            // Drawn only when something is OFF (prd §783): a green
+                            // dot on every connected row said nothing.
+                            if isConnected, let bridge = entry.bridge, bridge.status != .connected {
                                 Circle()
                                     .fill(bridge.status.color)
                                     .frame(width: 11, height: 11)
