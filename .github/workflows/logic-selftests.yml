@@ -165,6 +165,15 @@ jobs:
             if [[ "$rc" != 0 ]]; then
               fails+=("${s:t}")
               print -r -- "✗ ${s:t} (rc=$rc)"
+              # THE FAILED ASSERTIONS FIRST, wherever they are in the file, and
+              # only then the tail (2026-09-16). A harness prints a ✓ per check
+              # and a ✗ for each failure, so a `tail -30` shows the END of a
+              # long run — which is passes — while the line naming the failure
+              # scrolled past hundreds of checks ago. `ens-selftest` failed on
+              # CI for days reporting only "1 FAILED" and thirty ✓s: the one
+              # line anybody needed was structurally unreachable from the
+              # summary. A grep costs nothing and cannot be scrolled off.
+              grep -n '✗' "$OUT/$b.log" 2>/dev/null | head -20 | sed 's/^/    ✗→ /'
               tail -30 "$OUT/$b.log" 2>/dev/null | sed 's/^/    /'
             fi
           done
@@ -184,6 +193,22 @@ jobs:
           fi
 
       # The logs are the whole point of a run nobody watched.
+      #
+      # `include-hidden-files` is load-bearing, and its absence made this step a
+      # no-op for the life of the workflow (2026-09-16). `OUT` is `.selftest-out`
+      # — a DOT directory — and `upload-artifact@v4` skips hidden paths by
+      # default, so every run has ended with
+      #
+      #     ##[warning]No files were found with the provided path: .selftest-out/
+      #
+      # while the directory sat there full of per-harness logs. The one place
+      # that keeps a failed unattended run from being a dead end was silently
+      # empty, which is exactly the failure this step's own comment is about:
+      # the step ran, reported a warning nobody reads, and shipped nothing.
+      #
+      # Found while diagnosing `ens-selftest`, whose failing assertion is above
+      # the 30-line tail the summary prints — the artifact is the only way to
+      # see which one it is.
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -191,3 +216,4 @@ jobs:
           name: selftest-logs
           path: .selftest-out/
           retention-days: 7
+          include-hidden-files: true

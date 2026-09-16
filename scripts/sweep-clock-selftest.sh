@@ -187,16 +187,67 @@ check((pass.flatMap { value($0, "worst") } ?? 0) > 200, "the pass reports the wo
 // 3. A sweep that only AWAITS is not called janky. A network read that takes
 //    two seconds costs nobody a frame, and an instrument that flags it sends
 //    the next person to optimize the wrong thing.
+//
+// MEASURED AS A PROPORTION, not as a zero, and that is a fix for a check that
+// could not pass on a busy machine (2026-09-16). This asserted `hitches == 0`,
+// which is true on an idle Mac and a coin flip on a hosted runner: the
+// instrument charges whatever stalled the main actor during the window, and on
+// `macos-latest` — three cores, three harnesses at once — the machine itself
+// stalls it. CI read `waiter … hitches=1 stalled=120ms` against a correct
+// instrument, on `main` and on every branch, so the check was red for a
+// property it was not testing.
+//
+// The real property is comparative and survives contention: an await is charged
+// a SMALL fraction of its own window, where a block is charged nearly all of
+// it. The regression this guards — awaits charged as jank — takes the waiter to
+// ~100% (it slept 400ms of a 408ms window), and the same CI run that failed the
+// old line read 29%, well under the bar. The blocker comparison is kept beside
+// it so the two can never quietly converge.
 await SweepClock.measure("waiter") { try? await Task.sleep(for: .milliseconds(400)) }
 lines = SweepClock.summary()
-check((line(lines, "waiter").flatMap { value($0, "hitches") } ?? 99) == 0,
-      "an awaiting sweep is charged no hitch")
+let waiterWall = line(lines, "waiter").flatMap { value($0, "wall") } ?? 1
+let waiterStalled = line(lines, "waiter").flatMap { value($0, "stalled") } ?? 99_999
+let waiterShare = waiterStalled / max(waiterWall, 1)
+// The bar is 0.8, and the number is chosen against the REGRESSION rather than
+// against a tidy-looking margin. Awaits charged as jank reads ~100%: the waiter
+// sleeps 400ms of a ~410ms window, so essentially all of it. Machine
+// contention reads whatever share of the CPU the runner stole — CI has
+// measured 29% and 48% on correct code, and a bar at 0.5 left one point of
+// room, which is a flake waiting to happen. 0.8 still fails the regression by
+// twenty points and survives a runner stealing three quarters of the box.
+check(waiterShare < 0.8,
+      "an awaiting sweep is charged a small share of its window (read \(Int(waiterShare * 100))%)")
+check(waiterStalled < blockerStalled,
+      "an await is charged less than a block (\(Int(waiterStalled))ms vs \(Int(blockerStalled))ms)")
 
-// 4. Rank is by time STALLED, not wall time — `waiter` is slower than
-//    `blocker` by the clock and must still sort below it.
+// 4. Rank is by time STALLED, not wall time.
+//
+// ASSERTED AS AN ORDERING, not as a winner (2026-09-16, the second machine
+// -dependent assertion in this file). It read `firstLabel == "blocker"`, which
+// assumes `slow` — a sweep that only sleeps for 1.2s — stalls nothing. On a
+// contended runner it stalls plenty: CI measured `slow … stalled=707ms` against
+// `blocker … stalled=481ms`, so the report led with `slow` and this check
+// failed while the code did exactly what it says — it ranked by stall, and
+// `slow` genuinely had the biggest one. A test that fails when its subject is
+// right is worse than no test.
+//
+// The property is the ORDER: every slot printed in non-increasing `stalled`,
+// whatever the machine did to the numbers. That holds on an idle Mac and a
+// hammered runner alike, and the decoy's intent — `slow` has the longest WALL
+// and must not win on that — is carried by the mutation below, which flips the
+// sort key directly and is caught.
 let slots = lines.filter { $0.contains("sweepSlot|") }
-let firstLabel = slots.first?.split(separator: " ").dropFirst().first.map(String.init) ?? ""
-check(firstLabel == "blocker", "the report ranks by stall, not by wall time (led with \(firstLabel))")
+let slotLabels = slots.map { $0.split(separator: " ").dropFirst().first.map(String.init) ?? "" }
+let slotStalls = slots.compactMap { value($0, "stalled") }
+check(slotStalls.count == slots.count, "every slot line carries a stalled figure")
+check(zip(slotStalls, slotStalls.dropFirst()).allSatisfy { $0 >= $1 },
+      "the report is ordered by time STALLED, descending \(slotStalls.map { Int($0) })")
+// …and the one comparison that does not depend on `slow`'s noise: a sweep that
+// BLOCKS for 350ms outranks one that only awaits.
+let blockerRank = slotLabels.firstIndex(of: "blocker") ?? 99
+let waiterRank = slotLabels.firstIndex(of: "waiter") ?? -1
+check(blockerRank < waiterRank,
+      "a blocking sweep outranks an awaiting one (blocker \(blockerRank), waiter \(waiterRank))")
 
 // 5. Every label that ran appears. A report that silently drops one reads as
 //    a sweep that cost nothing.

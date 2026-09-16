@@ -844,3 +844,83 @@ room *should* have opted out: check 3 counts opt-outs, it does not classify
 labels, so a room grouped by repository that forgets the flag passes this and
 is wrong on screen. And it pins the hex, not `brandInk`'s call sites, so a
 future surface can take the ink — deliberately, with a ruling.
+
+## The logic self-tests could not pass on a hosted runner, and the artifact that would have said why was never uploaded (2026-09-16)
+
+`logic-selftests.yml` has failed on **every run since it shipped** — on `main` and on every branch — and three separate causes were stacked behind one red X.
+
+**Two harnesses imported a module no runner has.** `hegota-tx-selftest.sh` and
+`vibenet-signer-selftest.sh` hash bytes in Python to check a Swift encoder
+against values taken off the chain — deliberately a *different* keccak than the
+app's, because hashing the app's bytes with the app's own `Keccak256` proves
+nothing. They used `pysha3`, which is on the dev Mac and on no `macos-latest`
+image, so both died on `ModuleNotFoundError: No module named 'sha3'` while
+passing locally. A check whose verdict depends on what happens to be installed
+is not a check: it reads as a real failure when the machine changes and a real
+pass when it does not, and neither verdict is about the code.
+
+`scripts/support/keccak.py` is Keccak-f[1600] in the standard library alone,
+written against the specification and sharing no line with the app's Swift — so
+the independence those harnesses need is intact. It proves itself before it is
+believed (`--self-test`: the two published vectors, the rate boundary at 135 /
+136 / 200 bytes, the hex door, and a refusal to be `hashlib.sha3_256`, which
+differs only in a padding byte and would look like a working substitute). Both
+harnesses run that self-test before their first hash. Verified end to end: the
+vendored implementation reproduces `hegota-tx-selftest`'s pinned on-chain
+transaction hash, byte for byte, from the raw bytes in the harness.
+
+**One assertion could not pass on a busy machine.** `sweep-clock-selftest`
+asserted that a sweep which only awaits is charged `hitches == 0`. True on an
+idle Mac; a coin flip on three cores running three harnesses at once, because
+the instrument charges whatever stalled the main actor during the window and on
+a contended runner the machine itself stalls it. CI read `waiter … hitches=1
+stalled=120ms` against a perfectly correct instrument. The property that
+actually matters is comparative and survives contention: an await is charged a
+small share of its own window (29% in that run) where a block is charged nearly
+all of it (83%), and the regression it guards — awaits charged as jank — takes
+the waiter to ~100%. It asserts the share now, with the blocker comparison
+beside it so the two cannot quietly converge.
+
+**And the diagnosis was impossible by construction.** The workflow's own comment
+says "the logs are the whole point of a run nobody watched", and the upload step
+had never uploaded anything: `OUT` is `.selftest-out`, a DOT directory, and
+`upload-artifact@v4` skips hidden paths unless told otherwise. Every run ended
+with `No files were found with the provided path` — a warning nobody reads —
+while the directory sat there full of per-harness logs. `include-hidden-files:
+true` is one line, and it is the difference between a failed unattended run and
+a dead end.
+
+**And the summary could not name a failure it printed.** The per-harness report
+was `tail -30`, which shows the END of a run — passes — while the ✗ naming the
+failure scrolled past hundreds of checks earlier. `ens-selftest` reported
+"1 FAILED" and thirty green ticks for days: the one line anybody needed was
+structurally unreachable. The report greps the ✗ lines first now, wherever they
+are, and then tails.
+
+**Still open: `ens-selftest`.** One Swift assertion, in a block the old summary
+could not reach. `ENSName.swift` and the harness have not changed since prd
+§765, so it is not a fresh regression — it has been red the whole time. The two
+reporting fixes above are what make the next run name it.
+
+**A second assertion in that harness had the same disease, and the new report
+is what found it.** With the ✗ lines leading the summary, the next run named it
+on sight: `the report ranks by stall, not by wall time (led with slow)`. The
+check asserted `blocker` leads, which assumes `slow` — a sweep that only sleeps
+for 1.2s — stalls nothing. CI measured `slow … stalled=707ms` against
+`blocker … stalled=481ms`: the report led with `slow` because `slow` genuinely
+had the biggest stall, and the check failed while the code did exactly what it
+says. A test that fails when its subject is right is worse than no test. It
+asserts the ORDER now — every slot printed in non-increasing `stalled`, true on
+an idle Mac and a hammered runner alike — plus the one comparison that does not
+depend on the machine: a sweep that blocks outranks one that only awaits. The
+decoy's intent (`slow` has the longest WALL and must not win on it) is carried
+by the mutation, which flips the sort key directly and is caught.
+
+Same pass raised the await-share bar from 0.5 to 0.8, chosen against the
+regression rather than a tidy margin: awaits-charged-as-jank reads ~100%, while
+contention has measured 29% and 48% on correct code — one point of room under
+the old bar, which is a flake waiting to happen.
+
+**Measured, one run later.** The same suite on the same runner: **4 failed → 1
+failed**. `hegota-tx` and `vibenet-signer` pass on the vendored keccak,
+`sweep-clock` passes on the proportion, and the artifact uploaded 330 files.

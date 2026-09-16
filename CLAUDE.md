@@ -96,6 +96,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Secret-scan self-test (scripts/secret-scan-selftest.py, 2026-08-02)** → docs/verify.md · prd §277
 - **On-device self-test (scripts/ondevice-selftest.sh, 2026-08-02)** → docs/verify.md · prd §282
 - **CI, at last (.github/workflows/static-checks.yml, 2026-08-19)** → docs/verify.md
+- **The logic self-tests could never pass on a hosted runner, three causes deep (2026-09-16): two harnesses imported `pysha3` (now `scripts/support/keccak.py`, vendored, self-proving, still not the app's keccak), one assertion measured a zero where only a PROPORTION survives a contended machine, and the log artifact was never uploaded because `.selftest-out` is a dot directory** → docs/verify.md
 - **verify.sh's audit list is provably complete now** → docs/verify.md
 - **Live-integrations heartbeat (scripts/live-integrations.sh, 2026-07-17)** → docs/verify.md
 - **Demo census — every other surface, one launch (Shell/DemoCensus.swift + verify.sh "Demo census", 2026-09-05; `DEMO_SHOTS=1` for the room screenshots)** → docs/verify.md · prd §617
