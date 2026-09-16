@@ -54,8 +54,13 @@ final class WorldIDSource {
     /// screen open into an unbounded run of chain reads.
     static let perPassBudget = 6
 
-    /// OBSERVED: a card draws off this, so an answer landing while it is open
-    /// has to re-render it.
+    /// OBSERVED, and the surfaces read it DIRECTLY rather than copying it into
+    /// `@State` (2026-09-16). A copy taken after `fill` returns is wrong in one
+    /// real case: `fill` returns immediately when the same address is already
+    /// in flight from another surface, so a card opened over a person room's
+    /// pending read copied `.unknown` and kept it for the whole visit. Reading
+    /// the store in the body means the answer draws whenever it lands, whoever
+    /// bought it.
     private var records: [String: Record] = [:]
 
     /// In flight right now — so a card and the room behind it do not each buy
@@ -95,65 +100,75 @@ final class WorldIDSource {
     /// Asks for one address unless it was asked recently. Safe to call from a
     /// `.task`: it returns immediately for anything already known, in flight,
     /// or not a hex address.
-    func fill(_ address: String) async {
-        guard !DemoMode.isActive, ENS.isHexAddress(address) else { return }
+    ///
+    /// **Answers whether it actually spent a request**, which is what lets the
+    /// list below bound REQUESTS rather than loop iterations — counting an
+    /// early return against the budget let six cached or in-flight addresses
+    /// exhaust it and skip the one address nobody had asked about.
+    @discardableResult
+    func fill(_ address: String) async -> Bool {
+        guard !DemoMode.isActive, ENS.isHexAddress(address) else { return false }
         let key = Self.key(for: address)
-        guard !asking.contains(key) else { return }
-        if let existing = records[key], !isStale(existing) { return }
-        guard let data = WorldID.verifiedUntilCalldata(address: address) else { return }
+        guard !asking.contains(key) else { return false }
+        if let existing = records[key], !isStale(existing) { return false }
+        guard let data = WorldID.verifiedUntilCalldata(address: address) else { return false }
         asking.insert(key)
         defer { asking.remove(key) }
-        guard let returned = await ethCall(data: data),
-              let seconds = WorldID.verifiedUntilSeconds(from: returned) else { return }
+        guard let returned = await ethCall(data: data) else { return false }
         // Only a READ answer is written. A chain that did not answer leaves
         // the record alone — writing a zero there would turn "we could not
         // reach World Chain" into "this address is not verified", which is
         // the one lie this file exists to avoid.
+        //
+        // An answer this app cannot READ is still an answer, and it is kept
+        // (`unreadableSeconds`): dropping it re-asked the same address on every
+        // single visit, forever, for a word the chain was perfectly happy to
+        // give — which is what a permanent-verification sentinel would be.
+        let seconds = WorldID.verifiedUntilSeconds(from: returned) ?? WorldID.unreadableSeconds
         records[key] = Record(untilUnix: seconds, askedAt: .now)
         persist()
+        return true
     }
 
-    /// Asks for a list, bounded by `perPassBudget`. Sequential on purpose:
-    /// these reads share one public host, and a `TaskGroup` would arrive as a
-    /// burst (`WeiNamesSource`'s measured lesson).
+    /// Asks for a list, bounded by `perPassBudget` REQUESTS. Sequential on
+    /// purpose: these reads share one public host, and a `TaskGroup` would
+    /// arrive as a burst (`WeiNamesSource`'s measured lesson). The staleness
+    /// and shape tests are `fill(_:)`'s alone — a second copy here could
+    /// disagree with the one that decides.
     func fill(_ addresses: [String]) async {
         var spent = 0
         for address in addresses {
             guard spent < Self.perPassBudget else { return }
-            let key = Self.key(for: address)
-            if let existing = records[key], !isStale(existing) { continue }
-            guard ENS.isHexAddress(address) else { continue }
-            await fill(address)
-            spent += 1
+            if await fill(address) { spent += 1 }
         }
     }
 
-    /// The first of these addresses the book verifies, if any — what a
-    /// person's room asks, since one person's several addresses are one
-    /// person.
-    func fillAndFindVerified(_ addresses: [String]) async -> WorldID.Status {
-        await fill(addresses)
+    /// The best answer the book holds about a PERSON — one person's several
+    /// addresses are one person, so a room asks about the set and draws one
+    /// line. Pure: it reads what is known and buys nothing, so a body may read
+    /// it on every pass and the fill stays an intent's cost (`fill(_:)` above,
+    /// called where the room can afford to wait).
+    ///
+    /// A live mark wins; a lapsed one beats `.absent`, because "was verified
+    /// once" is worth more than "this book holds nothing"; `.unknown` is the
+    /// answer only while nothing has been asked at all.
+    func status(among addresses: [String], asOf now: Date = .now) -> WorldID.Status {
+        var best: WorldID.Status = .unknown
         for address in addresses {
-            let status = status(for: address)
+            let status = status(for: address, asOf: now)
             if status.isVerified { return status }
+            if case .lapsed = status { best = status; continue }
+            if case .absent = status, case .unknown = best { best = .absent }
         }
-        // A lapsed mark is worth more than nothing here — it says somebody
-        // was verified once — so it wins over `.absent` when no live one is
-        // found.
-        for address in addresses {
-            if case .lapsed = status(for: address) { return status(for: address) }
-        }
-        return addresses.contains(where: { hasAnswer(for: $0) }) ? .absent : .unknown
+        return best
     }
 
-    /// Drops what is known for an address — called when a book entry is
-    /// removed, so a re-added address asks again rather than showing a verdict
-    /// from a previous life.
-    func forget(_ address: String) {
-        records.removeValue(forKey: Self.key(for: address))
-        persist()
-    }
-
+    /// Drops every answer. **No caller today, and its doc no longer invents
+    /// one** — an earlier version said it ran when a book entry was removed,
+    /// which nothing did (`AddressBook.remove` is not main-actor isolated and
+    /// calls nothing here). It is kept for the Data tray's wipe, one line from
+    /// being real; the per-address twin was deleted rather than left claiming
+    /// a behaviour the app does not have.
     func forgetAll() {
         records = [:]
         persist()

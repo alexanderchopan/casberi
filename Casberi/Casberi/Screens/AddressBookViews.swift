@@ -625,13 +625,24 @@ struct AddressCard: View {
     /// `AddressNames`, which is what stops the read being bought again.
     @State private var primaryNames: [AddressNames.Entry] = []
 
-    /// WHETHER THIS ADDRESS BELONGS TO A VERIFIED HUMAN (prd §784), filled by
-    /// its own task below. `.unknown` until something answers, and `.unknown`
-    /// and `.absent` both draw NOTHING — World ID's book holding no
+    /// WHETHER THIS ADDRESS BELONGS TO A VERIFIED HUMAN (prd §784), READ off
+    /// the store rather than copied into `@State` (`/code-review`, 2026-09-16).
+    ///
+    /// A copy taken after `fill` returned was wrong whenever the same address
+    /// was already in flight from another surface — `fill` returns immediately
+    /// then, so the card copied `.unknown` and kept it for the whole visit even
+    /// as the answer landed. `WorldIDSource` is `@Observable`, so reading it
+    /// here is what makes the line appear the moment anybody's read answers.
+    /// A dictionary lookup, not a fetch — nothing here reaches the network
+    /// (build 525's rule); the read is bought by the task below.
+    ///
+    /// `.unknown` and `.absent` both draw NOTHING — World ID's book holding no
     /// verification for an address is the ordinary answer for almost every
     /// address on earth, and drawing it would read as a claim about the person
-    /// (§83). Only a mark that exists is said out loud.
-    @State private var worldStatus: WorldID.Status = .unknown
+    /// (§83).
+    private var worldStatus: WorldID.Status {
+        WorldIDSource.shared.status(for: entry.address)
+    }
 
     /// THE NAME THAT ARRIVED WHILE YOU WERE LOOKING (prd §599) — the one
     /// string `AddressArrivingName` types in, and nil on every visit where
@@ -745,16 +756,11 @@ struct AddressCard: View {
             .task { await AddressKind.detect(entry.address) }
             // A READ BOUGHT BY AN INTENT (the `AddressNames` rule): opening
             // this card is what asks World Chain, and a row scrolling past
-            // never does. Shown first from whatever is already known, so a
-            // second visit draws on the first frame; `fill` returns having
-            // asked nothing when the answer is fresh.
+            // never does. Whatever is already known draws on the first frame
+            // because the line reads the store; `fill` returns having asked
+            // nothing when the answer is fresh.
             .task(id: entry.address) {
-                let book = WorldIDSource.shared
-                worldStatus = book.status(for: entry.address)
-                await book.fill(entry.address)
-                withAnimation(DS.Motion.standard) {
-                    worldStatus = book.status(for: entry.address)
-                }
+                await WorldIDSource.shared.fill(entry.address)
             }
             .task {
                 exposure = await WalletApprovalExposure.forSpender(entry.address,
@@ -908,6 +914,7 @@ struct AddressCard: View {
                 .padding(.top, 2)
             bitcoinVintageLine
             worldIDLine
+                .animation(DS.Motion.standard, value: worldStatus)
             // THE GROUP RIDES THE IDENTITY (prd §499) — where a contacts app
             // puts somebody's company. It used to sit in the verb row beside
             // Copy, which made filing look like an action of the same weight

@@ -128,6 +128,11 @@ eq(WorldID.network, "worldchain-mainnet", "Alchemy's id for World Chain")
 check(WorldID.chainId == 480, "World Chain is chain id 480")
 check(WorldID.rpc.hasPrefix("https://"), "the RPC is https")
 check(!WorldID.rpc.contains("/v2/"), "the RPC is the KEYLESS public endpoint — no key in the URL")
+// THE HOST IS ITS OWN, and the receipts screen is why: a service is resolved
+// BY HOST first, so sharing the wallet's World Chain host filed this read
+// under the Wallet bridge for people who never connected it.
+check(!WorldID.rpc.contains("g.alchemy.com"),
+      "the World ID read does NOT share the wallet's Alchemy host — one host, one service")
 
 // --- what comes back ----------------------------------------------------------
 eq(WorldID.word(futureReturn, 0), "00000000000000000000000000000000000000000000000000000000713fb300",
@@ -160,6 +165,14 @@ check(!WorldID.status(fromReturn: "0x", asOf: now).isVerified, "unknown is not v
 // THE BOUNDARY. A verification that expires this very second has expired.
 check(WorldID.status(untilUnix: 1_800_000_000, asOf: now) == .lapsed(at: now),
       "a mark expiring exactly now is lapsed, not verified")
+// AN ANSWER WE CANNOT READ IS STILL AN ANSWER. It is stored so the address is
+// not re-asked on every visit forever, and it reads back as UNKNOWN — never as
+// absent, which would be a claim about somebody off a word we did not parse.
+check(WorldID.status(untilUnix: WorldID.unreadableSeconds, asOf: now) == .unknown,
+      "an unreadable answer is UNKNOWN, never absent")
+check(!WorldID.status(untilUnix: WorldID.unreadableSeconds, asOf: now).isVerified,
+      "an unreadable answer is not verified")
+check(WorldID.unreadableSeconds < 0, "the unreadable marker cannot collide with a timestamp")
 
 if failures == 0 { print("  assertions passed") } else { exit(1) }
 SWIFT
@@ -174,10 +187,10 @@ swiftc -Onone -o "$TMP/run" "$WORLDID" "$KECCAK" "$TMP/main.swift" 2>&1 | head -
 
 # 1. A READ THAT DID NOT ANSWER MUST NOT BE WRITTEN. The guard and the write
 #    in one grep, so reordering them fails here rather than on somebody's card.
-grep -q 'guard let returned = await ethCall(data: data),' "$TMP/source.stripped" \
+grep -q 'guard let returned = await ethCall(data: data) else { return false }' "$TMP/source.stripped" \
   || { echo "✗ WorldIDSource.fill no longer guards on the chain having answered — a zero written on a network failure says 'not a person'"; exit 1; }
-grep -q 'let seconds = WorldID.verifiedUntilSeconds(from: returned) else { return }' "$TMP/source.stripped" \
-  || { echo "✗ WorldIDSource.fill no longer refuses an unreadable return"; exit 1; }
+grep -q 'WorldID.verifiedUntilSeconds(from: returned) ?? WorldID.unreadableSeconds' "$TMP/source.stripped" \
+  || { echo "✗ WorldIDSource.fill no longer keeps an answer it could not read — dropping it re-asks that address on every visit forever"; exit 1; }
 
 # 2. ABSENCE DRAWS NOTHING, on both surfaces. The card switches all four cases
 #    and the two silent ones must stay silent; the room draws only on a live
@@ -188,11 +201,28 @@ grep -A 1 'case .absent, .unknown:' "$TMP/card.stripped" | grep -q 'EmptyView()'
   || { echo "✗ the address card draws something for .absent/.unknown — 'not in World ID's book' is not a fact about a person (§83)"; exit 1; }
 grep -q 'if case .verified(let until) = worldStatus' "$TMP/room.stripped" \
   || { echo "✗ the person room no longer draws only on a VERIFIED mark"; exit 1; }
+# 2b. NOTHING IN THE ROOM WAITS ON THIS READ. Up to `perPassBudget` sequential
+#     calls to a public RPC at 15s a timeout; ahead of the room's own loads it
+#     left the whole screen spinning to decide one line that usually draws
+#     nothing.
+fill_line=$(grep -n 'WorldIDSource.shared.fill(' "$TMP/room.stripped" | head -1 | cut -d: -f1)
+done_line=$(grep -n 'loading = false' "$TMP/room.stripped" | head -1 | cut -d: -f1)
+if [[ -z "$fill_line" || -z "$done_line" || "$fill_line" -lt "$done_line" ]]; then
+  echo "✗ the person room awaits the World ID read before it finishes loading — an unreachable World Chain stalls the room"; exit 1
+fi
+# 2c. BOTH SURFACES READ THE STORE, never a `@State` copy taken after `fill`
+#     returns: `fill` returns immediately for an address already in flight, so
+#     a copy made then stays `.unknown` for the whole visit.
+for _f in "$TMP/card.stripped" "$TMP/room.stripped"; do
+  if grep -q '@State private var worldStatus' "$_f"; then
+    echo "✗ a surface copies the World ID status into @State — it must read the @Observable store"; exit 1
+  fi
+done
 
 # 3. THE READ IS BOUGHT BY AN INTENT, never by a row. `fill` may be reached
 #    from a card task and the room's load, and from nowhere that scrolls.
 callers=$(grep -rn "WorldIDSource.shared" --include="*.swift" Casberi/Casberi | grep -v "Model/WorldIDSource.swift" | wc -l | tr -d ' ')
-[[ "$callers" -le 4 ]] \
+[[ "$callers" -le 6 ]] \
   || { echo "✗ $callers callers of WorldIDSource — a read is bought by opening a card or a room, never by a row scrolling past (AddressNames' rule)"; exit 1; }
 
 # 4. THE HOST IS DISCLOSED, and under its own service. It is a `g.alchemy.com`
@@ -202,6 +232,22 @@ grep -q '"worldchain-mainnet.g.alchemy.com"' "$REACH" \
   || { echo "✗ World Chain's host is not in NetworkReach"; exit 1; }
 grep -q 'Endpoint(service: "World ID"' "$REACH" \
   || { echo "✗ NetworkReach has no World ID entry — the read is not tied to any bridge, so it needs its own"; exit 1; }
+# …AND THAT ENTRY RESOLVES TO ITSELF. A receipt's service is `service(forHost:)`
+# first and the caller's own name second, so a host listed under two entries is
+# labelled with one of them — sharing the wallet's Alchemy host filed this read
+# under the WALLET BRIDGE, for people who never connected it, while the code
+# and this harness both claimed otherwise.
+worldid_hosts=$(awk '/Endpoint\(service: "World ID"/,/\]\)/' "$REACH" | grep 'hosts:')
+if [[ -z "$worldid_hosts" ]]; then
+  echo "✗ could not read the World ID entry's hosts"; exit 1
+fi
+case "$worldid_hosts" in
+  *g.alchemy.com*)
+    echo "✗ the World ID entry lists the wallet's Alchemy host — a receipts row for a read that needs no bridge would say 'Wallet'"; exit 1 ;;
+esac
+worldid_host=$(echo "$worldid_hosts" | sed -E 's/.*"([a-z0-9.-]+)".*/\1/')
+grep -q "$worldid_host" "$WORLDID" \
+  || { echo "✗ the declared World ID host ($worldid_host) is not the one WorldID.rpc calls"; exit 1; }
 grep -q 'service: "World ID"' "$TMP/source.stripped" \
   || { echo "✗ the read no longer names itself to NetworkLedger — the receipts screen would attribute it to the Wallet bridge"; exit 1; }
 
@@ -273,7 +319,14 @@ mutate "a short address padded rather than refused" \
   'guard value.hasPrefix("0x"), value.count == 42,' \
   'guard value.hasPrefix("0x"), value.count <= 42,'
 
-# 6. The selector taken from the wrong signature. It reverts, the return is
+# 6. The unreadable marker read as an ordinary number — it is negative, so it
+#    falls through to `.absent` and claims "this book holds nothing" about a
+#    word we simply failed to parse.
+mutate "an unreadable answer read as absent" \
+  'guard seconds != unreadableSeconds else { return .unknown }' \
+  'guard seconds != Int.min else { return .unknown }'
+
+# 7. The selector taken from the wrong signature. It reverts, the return is
 #    empty, and every address reads as "not in the book" — forever, silently.
 mutate "the selector computed from the wrong signature" \
   'static let verifiedUntilSignature = "addressVerifiedUntil(address)"' \

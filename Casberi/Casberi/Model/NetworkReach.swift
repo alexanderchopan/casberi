@@ -195,20 +195,22 @@ enum NetworkReach {
                          "api.zerion.io", "coins.llama.fi",
                          "rpc.mevblocker.io", "mainnet.base.org", "mainnet.optimism.io",
                          "arb1.arbitrum.io", "eth.api.onfinality.io", "polygon.api.onfinality.io"]),
-        // World ID (2026-09-16, prd §784). Its host is a `g.alchemy.com`
-        // subdomain the Wallet entry above also lists, and it is here AGAIN on
-        // purpose: this read happens whether or not you watch a wallet —
-        // opening an address card or a person's room is what buys it — so
-        // filing it under a bridge you may never have connected would be the
-        // wrong answer to "what reaches out, and when". The call also names
-        // itself to `NetworkLedger` (`service: "World ID"`), because the
-        // receipts screen's suffix match would otherwise attribute it to the
-        // Wallet bridge. Keyless, no account: the `/public` endpoint, one
-        // `eth_call`, no key in the URL.
+        // World ID (2026-09-16, prd §784). ITS OWN HOST, and that is a fix
+        // rather than a preference (`/code-review`, same day). This read
+        // happens whether or not you watch a wallet — opening an address card
+        // or a person's room is what buys it — so it needs its own row here,
+        // and a row is only honest if the screen can resolve it: a receipt's
+        // service is `NetworkReach.service(forHost:)` first and the caller's
+        // own name second (`NetworkLedger.resolvedService`), because the host
+        // match is the half a static audit can prove. Sharing the wallet's
+        // `worldchain-mainnet.g.alchemy.com` therefore filed this read under
+        // the WALLET BRIDGE, for people who never connected it, while the code
+        // and the harness both claimed otherwise. One host, one service, and
+        // both rows true. Keyless: one `eth_call`, no key in the URL.
         Endpoint(service: "World ID",
                  reach: .always,
                  purpose: "Opening an address card or a person's room asks World Chain one question about that address: whether World ID's public address book holds a verification for it. The request carries the address and nothing about you — no key, no account, and nothing is written. Almost every address is absent from that book, and nothing is drawn when it is.",
-                 hosts: ["worldchain-mainnet.g.alchemy.com"]),
+                 hosts: ["worldchain.drpc.org"]),
         // Disclosed 2026-08-01, and it should have been here all along: these
         // hosts have been reached since WalletConnect shipped, but the reach
         // audit only reads THIS app's source and every one of these literals

@@ -26,7 +26,9 @@ import Foundation
 /// Not worth, and the surfaces must never say otherwise (§83): **a zero is
 /// not "not a person".** It means this book has no verification for this
 /// address, which is the ordinary answer for almost every address on earth.
-/// So `absent` and `unknown` both draw NOTHING, and only `verified` draws.
+/// So `absent` and `unknown` both draw NOTHING. `verified` draws, and so does
+/// `lapsed` — "was verified, and it ran out" is a different fact from "never
+/// was", and the date is what says so.
 ///
 /// ## Measured, and deliberately not
 ///
@@ -54,7 +56,22 @@ enum WorldID {
 
     /// The keyless host the read goes to. Declared in `NetworkReach` under
     /// "World ID" — this file is the only place it is spelled.
-    static let rpc = "https://worldchain-mainnet.g.alchemy.com/public"
+    ///
+    /// **NOT the wallet's `worldchain-mainnet.g.alchemy.com`, and that is the
+    /// fix rather than a preference.** The receipts screen resolves a row's
+    /// service BY HOST (`NetworkLedger.resolvedService` is `byHost ?? named`,
+    /// and the host match wins because it is the half a static audit can
+    /// prove), so one host reached by two callers can only ever be labelled
+    /// with one of their names. Sharing Alchemy's host filed this read under
+    /// the **Wallet bridge** — for a person who never connected Wallet — while
+    /// the code, prd §784 and the harness all claimed otherwise. Two purposes,
+    /// two hosts, and each row says something true.
+    ///
+    /// dRPC because this app already reaches that provider and has measured it
+    /// (`WeiNamesSource`'s pacer was tuned against `eth.drpc.org`); their chain
+    /// subdomains are uniform. **UNMEASURED for World Chain** — `-worldIDProbe`
+    /// prints the host it called and whether anything answered.
+    static let rpc = "https://worldchain.drpc.org"
 
     /// The mapping's public getter.
     static let verifiedUntilSignature = "addressVerifiedUntil(address)"
@@ -133,10 +150,19 @@ enum WorldID {
         return status(untilUnix: seconds, asOf: now)
     }
 
+    /// The second stored for an answer the chain gave that this file could not
+    /// read as a number — a word too large for an `Int`, which is what a
+    /// permanent-verification sentinel would look like (UNMEASURED, see the
+    /// header). It is stored so the address is not re-asked on every visit,
+    /// and it reads back as `.unknown`, which draws nothing: we were answered
+    /// and we do not know what it said.
+    static let unreadableSeconds = -1
+
     /// The verdict for a stored second. A verification EXPIRES, so the stored
     /// number keeps answering as the clock moves past it — a lapsed mark needs
     /// no second read to stop claiming.
     static func status(untilUnix seconds: Int, asOf now: Date) -> Status {
+        guard seconds != unreadableSeconds else { return .unknown }
         guard seconds > 0 else { return .absent }
         let until = Date(timeIntervalSince1970: TimeInterval(seconds))
         return until > now ? .verified(until: until) : .lapsed(at: until)

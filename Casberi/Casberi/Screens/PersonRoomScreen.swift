@@ -24,16 +24,20 @@ struct PersonRoomScreen: View {
     @State private var transactions: [Thing] = []
     @State private var verifiedAddresses: [String] = []
     /// IS ANYBODY THERE (prd §784) — what World ID's book says about this
-    /// person's verified addresses, filled by `load()`. One person is one
-    /// verification however many addresses they have proved, so this is the
-    /// first live mark among them, not a list.
+    /// person's verified addresses. One person is one verification however
+    /// many addresses they have proved, so this is the best mark among them,
+    /// not a list. READ off the `@Observable` store rather than copied into
+    /// `@State`, so it draws when the answer lands whoever bought it; the read
+    /// itself is bought at the END of `load()`.
     ///
     /// Farcaster only, and not by taste: an account's verified addresses are
     /// the only place in this app where a social handle is joined to an
     /// address the person proved they hold. Nothing here draws unless the mark
     /// exists (§83) — absence is the ordinary answer and says nothing about
     /// whoever is posting.
-    @State private var worldStatus: WorldID.Status = .unknown
+    private var worldStatus: WorldID.Status {
+        WorldIDSource.shared.status(among: verifiedAddresses)
+    }
     /// Your years with this person, when the corpus can describe them
     /// (2026-08-18, prd §396). X only: it is the one source here whose rows
     /// name somebody you never watched and never will be able to.
@@ -316,11 +320,6 @@ struct PersonRoomScreen: View {
                 addrs = await FarcasterIngest.verifiedEthAddresses(fid: fid)
             }
             verifiedAddresses = addrs
-            // The read is bought by opening this room, the `AddressNames`
-            // rule — and it is bounded by `WorldIDSource.perPassBudget`, so a
-            // person with a dozen verified addresses still costs a handful of
-            // calls. Answers persist, so a second visit costs none.
-            worldStatus = await WorldIDSource.shared.fillAndFindVerified(addrs)
             if !addrs.isEmpty {
                 let addressSet = Set(addrs)
                 // Same proven-safe shape `WalletScreen`/`WalletApprovals` use
@@ -340,5 +339,16 @@ struct PersonRoomScreen: View {
 
         loaded = await profileFetch
         loading = false
+
+        // WORLD ID LAST, AND THE ORDER IS THE FIX (`/code-review`, 2026-09-16).
+        // This is up to `perPassBudget` sequential calls to a public RPC whose
+        // reachability is UNMEASURED, at 15s a timeout — and it sat ahead of
+        // the transactions fetch, the merge and the profile, so an unreachable
+        // World Chain left the whole room spinning for a minute and a half to
+        // decide one line that usually draws nothing. Nothing below waits on
+        // it: the header reads the store, which re-renders when an answer
+        // lands. The read is still bought by opening the room (`AddressNames`'
+        // rule) and answers persist, so a second visit costs nothing.
+        await WorldIDSource.shared.fill(verifiedAddresses)
     }
 }

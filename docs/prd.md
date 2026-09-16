@@ -57242,3 +57242,21 @@ The absolute bound grew from 90s to 180s and restarts on each navigation the per
 **Disclosed twice on purpose.** `worldchain-mainnet.g.alchemy.com` joins the Wallet entry (the chain) AND a new `World ID` entry at `.always` (the book), because that read happens whether or not you watch a wallet — filing it under a bridge you may never connect would be the wrong answer to "what reaches out, and when". The call names itself to `NetworkLedger` as `World ID`, since the receipts screen's suffix match would otherwise hand it to Wallet.
 
 **Unmeasured, and stated rather than papered over.** Nothing here has spoken to World Chain: the selector is computed from `Keccak256` at call time and pinned in the harness against an independent implementation, but what a PERMANENT verification looks like in that mapping — a far-future second, or a sentinel this file reads as malformed — is unknown. `-worldIDProbe` prints the RAW word for exactly that reason. Read it before trusting a status on an address you know is verified.
+
+## §784a — the World ID read's own host, the room that waited on it, and a chain that could sink the others (`/code-review` on §784, 2026-09-16)
+
+Eight findings on §784's branch; six were real and are fixed here. Each one had shipped with a comment or a harness guard asserting the opposite, which is the class worth recording.
+
+**The receipts row said Wallet.** `NetworkLedger.resolvedService` is `byHost ?? named` — the host match wins, deliberately, because it is the half a static audit can prove. So the read's `service: "World ID"` never applied: the host was the wallet's `worldchain-mainnet.g.alchemy.com`, and a person who never connected Wallet would have seen this read filed under that bridge. §784's "disclosed twice on purpose" was describing a registry that cannot express it. **One host, one service** — the read moved to `worldchain.drpc.org` (dRPC, whose `eth` subdomain this app already measures in `WeiNamesSource`), the wallet keeps Alchemy's, and the harness now refuses a World ID entry that lists a `g.alchemy.com` host.
+
+**The person room waited a minute and a half to draw nothing.** The read sat ahead of the transactions fetch, the merge and the profile: up to six sequential calls to a public RPC whose reachability is unmeasured, at fifteen seconds a timeout, for one line that is absent for almost every person. It runs after `loading = false` now, and nothing on the screen waits on it.
+
+**A card opened over a pending read stayed blank.** `fill` returns immediately when an address is already in flight, so a `@State` copy taken after it returned held `.unknown` for the whole visit. Both surfaces read the `@Observable` store directly; the copy is gone and the harness refuses its return.
+
+**An answer we could not read was thrown away.** A word too large for an `Int` — which is what a permanent-verification sentinel would be — took the same path as an unreachable chain, so that address was re-asked on every single visit, forever. `WorldID.unreadableSeconds` keeps it, and it reads back as `.unknown`: we were answered, and we do not know what it said. Never `.absent`, which would be a claim about somebody off a word we failed to parse.
+
+**An unmeasured chain could have taken the others with it.** The holdings read sends every selected network for three wallets in ONE body, so a chain the Portfolio endpoint refuses does not fail alone — Ethereum, Base and the rest vanish from the treemap because of a switch flipped for a chain somebody was curious about. "Off by default" defers that to whoever flips it, silently, which is §83's quiet harm rather than an honest control. `WalletIngest.unprovenNetworks` names the chain and the read retries once without it; an entry there is a debt to be deleted by measurement, not a feature.
+
+**A function whose doc invented its own caller.** `forget(_:)` said it ran when a book entry was removed. Nothing did, and nothing could without an actor hop `AddressBook` does not have. Deleted; `forgetAll` stays, with a doc that admits it is waiting for the Data tray.
+
+Also: the file header claimed "only `verified` draws" while the card draws `lapsed` too, as §784 itself ruled. The header was wrong, not the card.
