@@ -121,10 +121,18 @@ The heavy stage, and the one with the open transport question.
   committed numbers. Run `cargo-mobench` on the user's iPhone before designing the wait; a proof
   that takes eight seconds is a sheet with a progress line, one that takes forty is a different
   product.
-- **Request transport — UNMEASURED and decisive.** IDKit hands a signed `ProofRequest` to World
-  App by deep link / QR / bridge. Whether that path is authenticator-agnostic (a URL scheme any
-  registered authenticator can claim; a QR Casberi can scan) or World-App-only decides whether
-  Stage 3 exists. Read `worldcoin/idkit` for the v4 request transport.
+- **Request transport — MEASURED 2026-09-16, and it says wait.** Today's IDKit is `@worldcoin/idkit-core`
+  2.1.0 (`packages/core/src/bridge.ts`): the RP posts an AES-encrypted request to
+  `https://bridge.worldcoin.org/request`, gets a `request_id`, and shows
+  `https://world.org/verify?t=wld&i=<request_id>&k=<key>[&b=<bridge>]` — a universal link on World's
+  domain, so it opens World App and nothing else can claim it on iOS. The URI does carry everything
+  an authenticator needs (bridge, id, key), so a QR scanned by Casberi could serve the request
+  through the bridge's app-side endpoints — but that half is unpublished (no `world-id-bridge` repo)
+  and, more to the point, **the request is the 3.0 protocol**: `credential_types`,
+  `verification_level`, a Semaphore `nullifier_hash`. A 4.0 authenticator holds no Semaphore secret
+  and cannot answer it. The 4.0 `ProofRequest` (`crates/primitives/src/request`) is a schema with no
+  published transport, and `idkit-js` has no 4.0 branch under any obvious name. Stage 3 waits for
+  World to ship the 4.0 RP side; until then a proving key on this phone has nobody to prove to.
 - **Attestation.** Every proof carries a WIP-106 token: `Platform.iOS`, `SecLevel` as it is (the
   signing key is software; the assertion key is Enclave), `UserPresence.biometric` when Face ID was
   asked for the signature. Casberi says what it is; it never claims a Secure Element it does not
@@ -221,8 +229,8 @@ whether this phone is an owner; (4) Path B's create flow, gated on the Orb quest
 
 1. World App on a verified phone: is there an *add authenticator* flow, and what does it hand out
    or take in (a QR of a pubkey? a callback?).
-2. `worldcoin/idkit` at v4: how a `ProofRequest` reaches an authenticator, and whether a third
-   party can register as one.
+2. ~~`worldcoin/idkit` at v4~~ — MEASURED: IDKit 2.1.0 speaks the 3.0 bridge, and no 4.0 transport
+   is published. Re-check when `idkit-core` 3.x lands; Stage 3 is gated on it.
 3. `cargo-mobench` on an iPhone 17 Pro: query + nullifier proving time and peak memory.
 4. Tools for Humanity's issuer: will it re-issue the Orb credential to a second authenticator on
    the same account, and through which endpoint.
