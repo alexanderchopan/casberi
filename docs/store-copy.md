@@ -54,7 +54,40 @@ There is no Casberi server and no backend at all. No account, no ads, no trackin
 
 Casberi isn't another chatbot. It's your own things, in one feed.
 
-### iOS What's New — append these two bullets
+### iOS What's New — 1.0.24 (build 606), REWRITTEN 2026-09-16, NOT YET APPLIED
+
+Ruled by the user on 2026-09-16 (prd §784): the field says what changed at the
+altitude a customer reads, and nothing else. The whole field, verbatim:
+
+```
+Design and performance improvements.
+```
+
+*(35)*
+
+**It does not take a PATCH while 1.0.24 is In Review.** What's New answers 409
+during review — this file's header records the measurement. Applying it means
+removing the version from review in App Store Connect, editing the field, and
+submitting again, which spends the queue position. Promotional text and review
+notes are the two fields that stay editable.
+
+The App Store Connect shape, for when the record is editable (unrun from this
+repo — no script covers version localizations yet):
+
+```sh
+# GET /v1/apps/{appId}/appStoreVersions?filter[versionString]=1.0.24
+# GET /v1/appStoreVersions/{versionId}/appStoreVersionLocalizations
+# PATCH /v1/appStoreVersionLocalizations/{locId}
+#   {"data":{"type":"appStoreVersionLocalizations","id":"<locId>",
+#            "attributes":{"whatsNew":"Design and performance improvements."}}}
+```
+
+**The two bullets this replaces are REVIEW-FACING, and they move to review
+notes rather than out of the submission.** They were written after the 3.1.5
+rejection of macOS 1.0.11 to state that the devnet tokens carry no value and
+that Bankr only answers. What's New is customer copy; the reviewer reads
+review notes, which takes a PATCH during review — so the disclosure survives
+this change only if it is pasted there. Kept verbatim for that paste:
 
 • Developer networks — Base Vibenet, Hegotá UTXO and Frames are test networks: make an account, claim from the faucet and send test transactions. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network.
 
