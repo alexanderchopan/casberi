@@ -158,12 +158,22 @@ grep -v '^PRE=' "$WORK/out.txt"
 
 # The two hashes, checked by a DIFFERENT keccak than the app's — and against
 # values taken off the chain rather than produced by us.
+#
+# That keccak is `scripts/support/keccak.py`, vendored 2026-09-16: it used to be
+# `pysha3`, which is on the dev Mac and on no hosted runner, so this harness
+# failed on EVERY CI run with `ModuleNotFoundError` while passing locally. The
+# vendored one is still not the app's — written against the spec, sharing no
+# line with `Keccak256.swift` — which is the property this block needs.
+python3 scripts/support/keccak.py --self-test >/dev/null \
+  || { echo "  ✗ the vendored keccak fails its own vectors — fix it before believing anything below"; exit 1; }
 python3 - "$WORK/out.txt" <<'HASH' || exit 1
-import sys, sha3
+import sys
+sys.path.insert(0, "scripts/support")
+from keccak import keccak256_hex
 pre = [l for l in open(sys.argv[1]) if l.startswith("PRE=")][0].strip()[4:]
 raw = "06f8cc83301824c18004948943545177806ed17b9f23f0a21ee5948ecaa776f842df0103948943545177806ed17b9f23f0a21ee5948ecaa776c583013880808080e1028094000000000000000000000000000000000000beefc7827530830300006480f85cf85a01948943545177806ed17b9f23f0a21ee5948ecaa77680b8410143e8142de20dc818de9216f98ddf9d3680d6088872f3974c695353c57b8d700f791148767c0ad102f874525fcd6e15476c2a82f6967725f14e9f61d8495dbd08843b9aca008506fc23ac0080c0c0"
 def kec(h):
-    k = sha3.keccak_256(); k.update(bytes.fromhex(h)); return "0x" + k.hexdigest()
+    return "0x" + keccak256_hex(h)
 ok = True
 if kec(raw) != "0x960dfe6178034daddc45810b7286c72232becb9a015a851b22160f95413d89d4":
     print("  ✗ the pinned raw bytes no longer hash to the real transaction hash"); ok = False

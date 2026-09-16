@@ -184,6 +184,22 @@ jobs:
           fi
 
       # The logs are the whole point of a run nobody watched.
+      #
+      # `include-hidden-files` is load-bearing, and its absence made this step a
+      # no-op for the life of the workflow (2026-09-16). `OUT` is `.selftest-out`
+      # — a DOT directory — and `upload-artifact@v4` skips hidden paths by
+      # default, so every run has ended with
+      #
+      #     ##[warning]No files were found with the provided path: .selftest-out/
+      #
+      # while the directory sat there full of per-harness logs. The one place
+      # that keeps a failed unattended run from being a dead end was silently
+      # empty, which is exactly the failure this step's own comment is about:
+      # the step ran, reported a warning nobody reads, and shipped nothing.
+      #
+      # Found while diagnosing `ens-selftest`, whose failing assertion is above
+      # the 30-line tail the summary prints — the artifact is the only way to
+      # see which one it is.
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -191,3 +207,4 @@ jobs:
           name: selftest-logs
           path: .selftest-out/
           retention-days: 7
+          include-hidden-files: true

@@ -756,14 +756,21 @@ echo "vibenet transaction:"
 "$WORK/txrun" > "$WORK/tx.out" || { grep '✗' "$WORK/tx.out"; exit 1; }
 grep -v '^PREIMAGE=' "$WORK/tx.out"
 # The hash itself — computed here rather than in Swift, so the fixture is
-# checked by a DIFFERENT keccak than the app would use.
+# checked by a DIFFERENT keccak than the app would use. That keccak is
+# `scripts/support/keccak.py` since 2026-09-16 (it was `pysha3`, absent from
+# every hosted runner, so this harness failed on every CI run); it is written
+# against the spec and shares no line with the app's `Keccak256.swift`.
+python3 scripts/support/keccak.py --self-test >/dev/null \
+  || { echo "  ✗ the vendored keccak fails its own vectors — fix it before believing anything below"; exit 1; }
 python3 - "$WORK/tx.out" <<'HASH' || exit 1
-import sys, sha3
+import sys
+sys.path.insert(0, "scripts/support")
+from keccak import keccak256_hex
 line = [l for l in open(sys.argv[1]) if l.startswith("PREIMAGE=")][0].strip()[9:]
-k = sha3.keccak_256(); k.update(bytes.fromhex(line))
+got = keccak256_hex(line)
 want = "96c32d8901d632f6b97b4c79300d46b5daba7667de24724da15de0cbd85f4ca9"
-if k.hexdigest() != want:
-    print(f"  ✗ signing hash is 0x{k.hexdigest()}, the PROVEN one is 0x{want}")
+if got != want:
+    print(f"  ✗ signing hash is 0x{got}, the PROVEN one is 0x{want}")
     sys.exit(1)
 print("  ✓ signing hash matches the vector proven against the chain")
 HASH
@@ -772,7 +779,9 @@ HASH
 # the hash our encoder produces. Nothing about that signature is ours, so this
 # cannot pass by construction — it passes only if every byte agrees.
 python3 - "$WORK/tx.out" <<'CREATE' || exit 1
-import sys, sha3
+import sys
+sys.path.insert(0, "scripts/support")
+from keccak import keccak256
 try:
     from cryptography.hazmat.primitives.asymmetric import ec, utils as asu
     from cryptography.hazmat.primitives import hashes
@@ -781,7 +790,7 @@ except ImportError:
     print("  · creation check SKIPPED (no `cryptography` module) — install it to re-prove")
     sys.exit(0)
 line = [l for l in open(sys.argv[1]) if l.startswith("CREATEPRE=")][0].strip()[10:]
-k = sha3.keccak_256(); k.update(bytes.fromhex(line)); digest = k.digest()
+digest = keccak256(bytes.fromhex(line))
 R = 0x7a78b8c5ee7278d3e6812ebf2a4477bca7f0c2a1abd075ceafcc990ba383f83b
 S = 0x62623ad1059cbe29ae29cda1fc6c910dce18ce267eb9c16650710e8040550dce
 X = 0x24f65a4ae084d179defd8ea06a058f29f2861a3b4b7d318d05ae7b8f40f4f140
@@ -869,10 +878,11 @@ PY2
   if swiftc -Onone -o "$WORK/txm" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/RLP.swift" "$WORK/txmain/main.swift" 2>/dev/null \
      && "$WORK/txm" > "$WORK/m.out" 2>/dev/null \
      && python3 - "$WORK/m.out" <<'H2' >/dev/null 2>&1
-import sys, sha3
+import sys
+sys.path.insert(0, "scripts/support")
+from keccak import keccak256_hex
 line = [l for l in open(sys.argv[1]) if l.startswith("PREIMAGE=")][0].strip()[9:]
-k = sha3.keccak_256(); k.update(bytes.fromhex(line))
-sys.exit(0 if k.hexdigest() == "96c32d8901d632f6b97b4c79300d46b5daba7667de24724da15de0cbd85f4ca9" else 1)
+sys.exit(0 if keccak256_hex(line) == "96c32d8901d632f6b97b4c79300d46b5daba7667de24724da15de0cbd85f4ca9" else 1)
 H2
   then
     echo "  ✗ MUTATION SURVIVED: $label"; return 1

@@ -13,7 +13,7 @@ transaction carries its decoded fields, its 65-byte `senderAuth`, and the
 address — varying the channel value, the per-change tag, and whether `calls`
 is phased or flat. One match out of sixteen is not a coincidence.
 
-Needs `coincurve` and `pysha3`, and network. NOT run by verify.sh for
+Needs `coincurve` and network (keccak is vendored, see `keccak.py`). NOT run by verify.sh for
 `live-integrations.sh`'s reason: it needs egress, and a check that cannot run
 offline must never be able to fail a build. The harness pins its OUTPUT.
 
@@ -39,8 +39,12 @@ def rpc(method, params):
 
 
 def keccak(b):
-    import sha3
-    k = sha3.keccak_256(); k.update(b); return k.digest()
+    # Vendored 2026-09-16 (was `pysha3`, which no hosted runner has). Still not
+    # the app's keccak, which is the point — see `keccak.py`'s own header.
+    import os, sys
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from keccak import keccak256
+    return keccak256(b)
 
 
 def enc_len(l, off):

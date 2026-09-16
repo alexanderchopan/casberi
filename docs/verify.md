@@ -844,3 +844,54 @@ room *should* have opted out: check 3 counts opt-outs, it does not classify
 labels, so a room grouped by repository that forgets the flag passes this and
 is wrong on screen. And it pins the hex, not `brandInk`'s call sites, so a
 future surface can take the ink — deliberately, with a ruling.
+
+## The logic self-tests could not pass on a hosted runner, and the artifact that would have said why was never uploaded (2026-09-16)
+
+`logic-selftests.yml` has failed on **every run since it shipped** — on `main` and on every branch — and three separate causes were stacked behind one red X.
+
+**Two harnesses imported a module no runner has.** `hegota-tx-selftest.sh` and
+`vibenet-signer-selftest.sh` hash bytes in Python to check a Swift encoder
+against values taken off the chain — deliberately a *different* keccak than the
+app's, because hashing the app's bytes with the app's own `Keccak256` proves
+nothing. They used `pysha3`, which is on the dev Mac and on no `macos-latest`
+image, so both died on `ModuleNotFoundError: No module named 'sha3'` while
+passing locally. A check whose verdict depends on what happens to be installed
+is not a check: it reads as a real failure when the machine changes and a real
+pass when it does not, and neither verdict is about the code.
+
+`scripts/support/keccak.py` is Keccak-f[1600] in the standard library alone,
+written against the specification and sharing no line with the app's Swift — so
+the independence those harnesses need is intact. It proves itself before it is
+believed (`--self-test`: the two published vectors, the rate boundary at 135 /
+136 / 200 bytes, the hex door, and a refusal to be `hashlib.sha3_256`, which
+differs only in a padding byte and would look like a working substitute). Both
+harnesses run that self-test before their first hash. Verified end to end: the
+vendored implementation reproduces `hegota-tx-selftest`'s pinned on-chain
+transaction hash, byte for byte, from the raw bytes in the harness.
+
+**One assertion could not pass on a busy machine.** `sweep-clock-selftest`
+asserted that a sweep which only awaits is charged `hitches == 0`. True on an
+idle Mac; a coin flip on three cores running three harnesses at once, because
+the instrument charges whatever stalled the main actor during the window and on
+a contended runner the machine itself stalls it. CI read `waiter … hitches=1
+stalled=120ms` against a perfectly correct instrument. The property that
+actually matters is comparative and survives contention: an await is charged a
+small share of its own window (29% in that run) where a block is charged nearly
+all of it (83%), and the regression it guards — awaits charged as jank — takes
+the waiter to ~100%. It asserts the share now, with the blocker comparison
+beside it so the two cannot quietly converge.
+
+**And the diagnosis was impossible by construction.** The workflow's own comment
+says "the logs are the whole point of a run nobody watched", and the upload step
+had never uploaded anything: `OUT` is `.selftest-out`, a DOT directory, and
+`upload-artifact@v4` skips hidden paths unless told otherwise. Every run ended
+with `No files were found with the provided path` — a warning nobody reads —
+while the directory sat there full of per-harness logs. `include-hidden-files:
+true` is one line, and it is the difference between a failed unattended run and
+a dead end.
+
+**Still open: `ens-selftest`.** One Swift assertion fails, in a block above the
+30-line tail the summary prints, so which one is not knowable from the summary
+alone. `ENSName.swift` and the harness have not changed since prd §765, so this
+is not a fresh regression — it has been red the whole time. The artifact fix
+above is what makes the next run say which assertion it is.
