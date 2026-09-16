@@ -60,6 +60,21 @@ enum WalletIngest {
         Chain(network: "solana-mainnet", explorer: "https://solscan.io/tx/",              symbol: "SOL",   displayName: "Solana",
               kind: .solana, nativeDecimals: 9),
         Chain(network: "robinhood-mainnet", explorer: "https://robinhoodchain.blockscout.com/tx/", symbol: "ETH", displayName: "Robinhood"),
+        // World Chain (prd §784, 2026-09-16) — the OP-stack chain World App's
+        // accounts live on, so a person who holds WLD or spends from World App
+        // reads it here beside every other chain. `worldscan.org` is
+        // Etherscan-family, which is what `explorerAddressURL`'s `/tx/` →
+        // `/address/` rewrite rests on.
+        //
+        // **OFF BY DEFAULT, and the reason is MEASUREMENT, not taste** — see
+        // `WalletChainStore.selectable`. Nothing on the host that wrote this
+        // could reach Alchemy, so three facts every other chain here had
+        // proven before it landed are unproven for this one: that the
+        // Portfolio `by-address` call accepts `worldchain-mainnet` (a chain it
+        // refuses 400s the WHOLE holdings read), that `alchemy_getAssetTransfers`
+        // answers on it, and what DeFiLlama calls it. Measure those three
+        // before moving it into `defaultNetworkIDs`.
+        Chain(network: "worldchain-mainnet", explorer: "https://worldscan.org/tx/", symbol: "ETH", displayName: "World Chain"),
     ]
 
     /// The chain a landed transfer belongs to, read off its stored explorer

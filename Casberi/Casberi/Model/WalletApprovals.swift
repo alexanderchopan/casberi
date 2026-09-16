@@ -51,7 +51,12 @@ enum WalletApprovals {
     /// "fix it" link can't show the approval would break the honesty rule.
     /// NOTE: membership here must keep up with `WalletChainStore.selectable`
     /// by hand — a new EVM chain added there is silently approval-blind until
-    /// its host + range are measured and added here.
+    /// its host + range are measured and added here. World Chain (prd §784)
+    /// is out for exactly that reason and deliberately: neither its log host
+    /// nor Revoke.cash's coverage of chain 480 has been measured, and an
+    /// approval whose "fix it" link cannot show the approval is the honesty
+    /// rule's own example. `WorldID` does not read through this table — it
+    /// owns its one keyless call.
     private struct Chain {
         let network: String        // Alchemy id, matching WalletChainStore
         let chainId: Int           // Revoke.cash / EVM chain id

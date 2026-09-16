@@ -181,17 +181,34 @@ enum NetworkReach {
         // so the row names the chains it really talks to.
         Endpoint(service: "Wallet",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads the public onchain activity, balances, approvals, and DeFi positions of the wallets you watch — across Ethereum, Base, Arbitrum, Optimism, Polygon, HyperEVM, Monad and Solana. Each request carries only a public address you chose to watch. Block explorers open in your browser, not from here.",
+                 purpose: "Reads the public onchain activity, balances, approvals, and DeFi positions of the wallets you watch — across Ethereum, Base, Arbitrum, Optimism, Polygon, HyperEVM, Monad, World Chain and Solana. Each request carries only a public address you chose to watch. Block explorers open in your browser, not from here.",
                  hosts: ["api.g.alchemy.com", "eth-mainnet.g.alchemy.com",
                          "base-mainnet.g.alchemy.com", "arb-mainnet.g.alchemy.com",
                          "opt-mainnet.g.alchemy.com", "matic-mainnet.g.alchemy.com",
                          // HyperEVM (Alchemy names it `hyperliquid-mainnet`)
                          // and Monad, 2026-08-28.
                          "hyperliquid-mainnet.g.alchemy.com", "monad-mainnet.g.alchemy.com",
+                         // World Chain, 2026-09-16 (prd §784) — a chain you
+                         // switch on, off by default until it is measured.
+                         "worldchain-mainnet.g.alchemy.com",
                          "solana-mainnet.g.alchemy.com", "robinhood-mainnet.g.alchemy.com",
                          "api.zerion.io", "coins.llama.fi",
                          "rpc.mevblocker.io", "mainnet.base.org", "mainnet.optimism.io",
                          "arb1.arbitrum.io", "eth.api.onfinality.io", "polygon.api.onfinality.io"]),
+        // World ID (2026-09-16, prd §784). Its host is a `g.alchemy.com`
+        // subdomain the Wallet entry above also lists, and it is here AGAIN on
+        // purpose: this read happens whether or not you watch a wallet —
+        // opening an address card or a person's room is what buys it — so
+        // filing it under a bridge you may never have connected would be the
+        // wrong answer to "what reaches out, and when". The call also names
+        // itself to `NetworkLedger` (`service: "World ID"`), because the
+        // receipts screen's suffix match would otherwise attribute it to the
+        // Wallet bridge. Keyless, no account: the `/public` endpoint, one
+        // `eth_call`, no key in the URL.
+        Endpoint(service: "World ID",
+                 reach: .always,
+                 purpose: "Opening an address card or a person's room asks World Chain one question about that address: whether World ID's public address book holds a verification for it. The request carries the address and nothing about you — no key, no account, and nothing is written. Almost every address is absent from that book, and nothing is drawn when it is.",
+                 hosts: ["worldchain-mainnet.g.alchemy.com"]),
         // Disclosed 2026-08-01, and it should have been here all along: these
         // hosts have been reached since WalletConnect shipped, but the reach
         // audit only reads THIS app's source and every one of these literals

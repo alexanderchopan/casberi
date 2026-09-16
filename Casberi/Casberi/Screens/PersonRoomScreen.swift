@@ -23,6 +23,17 @@ struct PersonRoomScreen: View {
     @State private var posts: [Thing] = []
     @State private var transactions: [Thing] = []
     @State private var verifiedAddresses: [String] = []
+    /// IS ANYBODY THERE (prd §784) — what World ID's book says about this
+    /// person's verified addresses, filled by `load()`. One person is one
+    /// verification however many addresses they have proved, so this is the
+    /// first live mark among them, not a list.
+    ///
+    /// Farcaster only, and not by taste: an account's verified addresses are
+    /// the only place in this app where a social handle is joined to an
+    /// address the person proved they hold. Nothing here draws unless the mark
+    /// exists (§83) — absence is the ordinary answer and says nothing about
+    /// whoever is posting.
+    @State private var worldStatus: WorldID.Status = .unknown
     /// Your years with this person, when the corpus can describe them
     /// (2026-08-18, prd §396). X only: it is the one source here whose rows
     /// name somebody you never watched and never will be able to.
@@ -108,6 +119,11 @@ struct PersonRoomScreen: View {
                 if let bio = shown.bio, !bio.isEmpty {
                     Text(bio)
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if case .verified(let until) = worldStatus {
+                    Text("Verified human · World ID until \(until.formatted(.dateTime.month(.wide).year()))")
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let xPerson {
@@ -300,6 +316,11 @@ struct PersonRoomScreen: View {
                 addrs = await FarcasterIngest.verifiedEthAddresses(fid: fid)
             }
             verifiedAddresses = addrs
+            // The read is bought by opening this room, the `AddressNames`
+            // rule — and it is bounded by `WorldIDSource.perPassBudget`, so a
+            // person with a dozen verified addresses still costs a handful of
+            // calls. Answers persist, so a second visit costs none.
+            worldStatus = await WorldIDSource.shared.fillAndFindVerified(addrs)
             if !addrs.isEmpty {
                 let addressSet = Set(addrs)
                 // Same proven-safe shape `WalletScreen`/`WalletApprovals` use

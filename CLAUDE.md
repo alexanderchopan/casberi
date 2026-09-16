@@ -292,6 +292,8 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-gnosisPayProbe` — Gnosis Pay (2026-07-26, prd §222) → docs/hooks/wallet.md · prd §222
 - `-solNameProbe` `-solActivityProbe` — Wallet/Solana (2026-07-16, prd §85/§86) → docs/hooks/wallet.md · prd §85
 - **Wei / Gwei names, and the router the six copies became** (`-weiNameProbe`) → docs/hooks/wallet.md · prd §597
+- **Whether an address belongs to a VERIFIED HUMAN, keylessly — World ID's public address book on World Chain, no seat and no account (`-worldIDProbe`). Only `verified` and `lapsed` draw: a zero means that book holds nothing for this address, never "not a person" (§83), and a read that did not answer is never written** → docs/hooks/wallet.md · prd §784
+- **World Chain is in the wallet's chain picker and OFF by default — the first row there to land UNMEASURED (the Portfolio `by-address` call 400s the whole holdings read on a chain it refuses)** → docs/hooks/wallet.md · prd §784
 - `-wcProjectID` `-wcConnectProbe` `-wcTimeout` — Wallet/WalletConnect (2026-07-16, prd 84) → docs/hooks/wallet.md
 - `-prepareProbe` `-approvalProbe` — run the approval PREPARE path (prd 112, the preparing-surface ruling: reads and previews in-app, signatures → docs/hooks/wallet.md
 - **A spam NFT mint is one you didn't sign, not one that's cheap** (`-nftOriginProbe`) → docs/hooks/wallet.md · prd §481
