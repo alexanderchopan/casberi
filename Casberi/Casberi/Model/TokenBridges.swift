@@ -17,6 +17,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case linear   = "Linear"
     case bitrefill = "Bitrefill"
     case privacy  = "Privacy"
+    /// Wise (2026-09-16, prd §776) — the multi-currency account, over a
+    /// personal API token the person mints read-only in their own settings.
+    /// Its sweep is its own because the credential is a token PLUS a resolved
+    /// profile id (`WiseAuth.configured`), and because a transfer's status
+    /// changes after it lands. See `WiseAuth`.
+    case wise     = "Wise"
     case posthog  = "PostHog"
     case stripe   = "Stripe"
     /// Polar (2026-08-30) — a developer-first Merchant of Record, Stripe's
@@ -70,6 +76,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .linear:   "linear"
         case .bitrefill: "bitrefill"
         case .privacy:  "privacy"
+        case .wise:     "wise"
         case .posthog:  "posthog"
         case .stripe:   "stripe"
         case .polar:    "polar"
@@ -111,6 +118,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .linear:    URL(string: "https://linear.app/settings/api")
         case .bitrefill: URL(string: "https://www.bitrefill.com/account/developers")
         case .privacy:   URL(string: "https://app.privacy.com/account")
+        // Wise's settings ROOT, not a per-tab path: the API-tokens page
+        // sits behind "Integrations and tools" and its URL has moved at
+        // least once, so the step below names the tab (Cursor's and Dodo
+        // Payments' reasoning — a door that 404s is worse than one that
+        // needs a click).
+        case .wise:      URL(string: "https://wise.com/settings/")
         case .posthog:   URL(string: "https://us.posthog.com/settings/user-api-keys")
         case .stripe:    URL(string: "https://dashboard.stripe.com/apikeys")
         // Polar's own redirect helper — resolves to the signed-in org's
@@ -184,6 +197,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
              .stripe, .polar, .trello, .cursor, .pagerduty, .appStoreConnect,
              .dodoPayments:
             String(localized: "Get your API key")
+        case .wise:      String(localized: "Get your API token")
         case .aws:
             // "IAM" dropped to fit the 26-char door-label budget — the address
             // beneath (console.aws.amazon.com) already says where this leads.
@@ -236,6 +250,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .bitrefill: []
         case .privacy: [
             "Needs a paid plan"]
+        // The tab is named because the landing page does not open onto it;
+        // the scope is named because Wise offers a write grade and this
+        // seat has no use for it.
+        case .wise: [
+            "Integrations and tools → API tokens",
+            "Read-only is enough"]
         // The three scopes are NOT named here — the checklist directly beneath
         // this step is the list, the same fix Stripe took the day before
         // (§220, "a step that was already on screen twice"; audit 2026-07-31).
@@ -353,6 +373,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .linear:   "lin_api_…"
         case .bitrefill: "API key"
         case .privacy:  "API key"
+        case .wise:     "API token"
         case .posthog:  "phx_…"
         case .stripe:   "rk_live_…"
         // No confirmed prefix from Polar's docs — Organization Access
@@ -414,6 +435,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .linear:   "API key"
         case .bitrefill: "API key"
         case .privacy:  "API key"
+        case .wise:     "API token"
         case .posthog:  "personal API key"
         case .stripe:   "restricted key"
         case .polar:    "organization access token"
@@ -444,6 +466,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .linear:   "issues"
         case .bitrefill: "orders"
         case .privacy:  "purchases"
+        case .wise:     "transfers"
         case .posthog:  "updates"
         case .stripe:   "updates"
         case .polar:    "updates"
@@ -504,6 +527,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .linear:   "Reads issues assigned to you."
         case .bitrefill: "Reads your orders, refills, and balance — nothing here ever buys, pays, or spends."
         case .privacy:  "Reads your card transactions only. Privacy's key can't be scoped read-only, so nothing here creates, closes, or funds a card."
+        // The ceiling is in the sentence, because a card feed is the
+        // obvious expectation of a bank seat and this one cannot meet it:
+        // Wise card spending lives in the balance statement, behind Wise's
+        // own signed-approval step.
+        case .wise:     "Reads your balances and your transfers. Mint the token read-only — nothing here can send, convert, or spend. Card spending isn't read: it lives behind Wise's signed-approval step."
         case .posthog:  "Reads the metrics you watch and your project's annotations. The key is scoped read-only — it cannot ship a flag, edit a dashboard, or write anything back."
         case .stripe:   "Reads disputes, payouts, canceled subscriptions, failed payments, and your balance. The restricted key is read-only — it cannot refund, charge, or pay out."
         case .polar:    "Reads refunds, disputes, subscriptions leaving a healthy state, and your recurring revenue. The token is scoped read-only — it cannot refund, cancel a subscription, or create anything."
@@ -574,6 +602,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     /// genuinely ambiguous.
     var emptyReadNote: String? {
         switch self {
+        // Wise earns one for the ceiling rather than for the quiet: somebody
+        // who spends on a Wise CARD and sends nothing will read empty forever
+        // with a perfectly good token, and without this that is
+        // indistinguishable from a broken connection.
+        case .wise:
+            String(localized: "Wise answered — no transfers in that window. Card spending isn't read: it lives in the balance statement, behind Wise's signed-approval step.")
         case .trello:
             String(localized: "Trello answered — no cards are assigned to you. Only cards you're a member of are read, so add yourself to one and sync again.")
         // A new or quiet product legitimately reads empty for a while — the
@@ -660,6 +694,13 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     func onRemove(reconnecting: Bool = false) {
         switch self {
         case .bitrefill: BitrefillBalance.clear()
+        // Cleared on BOTH callers, Cloudflare's reasoning, and the PROFILE
+        // goes with it: a fresh token may name a different Wise account, and
+        // a stale profile id would make every read 403 against an account
+        // the new token cannot see. The screen re-resolves it on save.
+        case .wise:
+            WiseState.clear()
+            TokenVault.delete(WiseAuth.profileVaultKey)
         // Cleared on BOTH callers — a fresh token may belong to a different
         // account with a different budget, and the stale bucket must not
         // suppress a real crossing on the new one.
@@ -1058,6 +1099,12 @@ enum TokenIngest {
         // news by diffing per-alarm/per-pipeline state ledgers and a cost
         // baseline rather than mirroring a list.
         if bridge == .aws { return await AWSIngest.refresh(context: context) }
+        // Wise owns its whole pass for Linear's reason and one of its own: a
+        // transfer's STATUS changes after it lands, and the credential is a
+        // token plus a resolved profile id, so `TokenVault.get(bridge.tokenKey)`
+        // alone cannot establish that it is really connected
+        // (`WiseAuth.configured`).
+        if bridge == .wise { return await WiseIngest.refresh(context: context) }
         guard let token = TokenVault.get(bridge.tokenKey), !running.contains(bridge) else {
             return running.contains(bridge) ? 0 : nil
         }
@@ -1176,6 +1223,7 @@ enum TokenIngest {
         case .pagerduty: ownSweepUnreachable(.pagerduty)
         case .appStoreConnect: ownSweepUnreachable(.appStoreConnect)
         case .aws:      ownSweepUnreachable(.aws)
+        case .wise:     ownSweepUnreachable(.wise)
         case .jira:     await jira(token)
         }
     }

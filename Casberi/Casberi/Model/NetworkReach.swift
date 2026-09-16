@@ -481,6 +481,14 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "aws"),
                  purpose: "Reads CloudWatch alarms, CodePipeline deploy results, Cost Explorer, and a count of EC2/S3/RDS/Lambda resources — with a read-only IAM key pair you create and sign requests with yourself. Only ever Describe/List/Get calls: nothing here creates, changes, or deletes anything on your account. The exact host depends on the AWS region you enter (e.g. monitoring.us-east-1.amazonaws.com) — every one is a subdomain of amazonaws.com. console.aws.amazon.com is where the key pair is created — opened in your browser, never called by the app.",
                  hosts: ["amazonaws.com"]),
+        // Wise (2026-09-16, prd §776) — one host, fixed. `wise.com` is the
+        // settings page the setup door OPENS in the browser and is a
+        // different host from the API, which is exactly the linear.app /
+        // api.linear.app case the audit's denylist is written for.
+        Endpoint(service: "Wise",
+                 reach: .whenConnected(bridge: "wise"),
+                 purpose: "Reads which profile your token belongs to, your balances, and the transfers you have sent — with a personal API token you mint yourself and can scope read-only. Nothing here can send money, convert a balance, or add a recipient. Your card spending is not read at all: it lives in Wise's balance statement, behind a signed-approval step this app does not implement. wise.com is where the token is created — opened in your browser, never called by the app.",
+                 hosts: ["api.transferwise.com"]),
         // Host is user-configurable (Sentry's EU region answers on
         // de.sentry.io, and self-hosted installs exist) — PostHog's shape
         // exactly: the default cloud host is what's disclosed, and a host the

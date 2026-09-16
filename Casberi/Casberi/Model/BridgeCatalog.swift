@@ -203,6 +203,13 @@ enum BridgeCatalog {
               // Health/Strava/HomeKit already set the precedent for a seat
               // that cannot exist here.
               needsSetup: true, added: day(2026, 8, 6), unavailableOnMac: true),
+        // Wise (prd §776, 2026-09-16) — balances and transfers over a
+        // read-only personal token. The tagline names BOTH halves because the
+        // seat is honestly two things, and neither alone would be worth a
+        // tile: a balance with no movement is a number, and a transfer list
+        // with no balance has no context.
+        Offer(name: "Wise",        tagline: "What you hold, and what you sent", group: "Wallet", connectable: true,
+              needsSetup: true, added: day(2026, 9, 16)),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets
         // whose total it joins — not in Markets, which was where things you

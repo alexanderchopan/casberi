@@ -162,6 +162,11 @@ enum BridgeRouter {
         /// region) and its connected state shows what's standing — so it
         /// takes its own Destination for App Store Connect's exact reason.
         case aws
+        /// Wise is a TokenBridge for its token and seat id, but its screen
+        /// RESOLVES a profile before it can read anything — Sentry's exact
+        /// shape, and its exact reason: riding `.token` would finish the
+        /// connect the moment the token landed, with no profile picked.
+        case wise
         /// npm and PyPI share one screen and one ingest, parameterised by
         /// registry — the `.exchange(venue)` shape. They are watch lists, so
         /// they must not ride `.token` (they have no token at all) and must
@@ -350,6 +355,7 @@ enum BridgeRouter {
             case .sentry:         TokenBridge.sentry.bridgeID
             case .appStoreConnect: TokenBridge.appStoreConnect.bridgeID
             case .aws:             TokenBridge.aws.bridgeID
+            case .wise:            TokenBridge.wise.bridgeID
             // The registry's own raw value IS the seat id ("npm", "pypi"), so
             // the Row and this can't drift apart — `.exchange`'s rule.
             case .packages(let r): r.bridgeID
@@ -460,11 +466,13 @@ enum BridgeRouter {
         Row(offer: "Sentry", id: "sentry", destination: .sentry),
         Row(offer: "App Store Connect", id: "appstoreconnect", destination: .appStoreConnect),
         Row(offer: "AWS", id: "aws", destination: .aws),
+        Row(offer: "Wise", id: "wise", destination: .wise),
         Row(offer: "npm",  id: "npm",  destination: .packages(.npm)),
         Row(offer: "PyPI", id: "pypi", destination: .packages(.pypi)),
     ] + TokenBridge.allCases.filter {
         $0 != .posthog && $0 != .stripe && $0 != .polar && $0 != .sentry
             && $0 != .appStoreConnect && $0 != .aws
+            && $0 != .wise
     }.map {
         Row(offer: $0.rawValue, id: $0.bridgeID, destination: .token($0))
     }
@@ -669,6 +677,7 @@ struct BridgeDestinationView: View {
         case .sentry:         SentryScreen()
         case .appStoreConnect: AppStoreConnectScreen()
         case .aws:             AWSScreen()
+        case .wise:            WiseScreen()
         case .packages(let r): PackageWatchScreen(registry: r)
         case .walletHistory(let scope): WalletHistoryScreen(scope: scope)
         case .walletConnection: WalletConnectionScreen()

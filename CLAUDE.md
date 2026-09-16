@@ -312,6 +312,8 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-hideDemoBanner YES` — leave the demo banner unmounted for App Store stills (DEBUG only; pair with `-demoEnter YES`).
 - `-rainPulse <s>` — bump `ShellChrome.refreshPulse` after a delay (NSLogs `rainPulse: dealt N tiles`); deal rain only through `ShellChrome.rain(sources:)` → docs/verify.md · prd §655
 - `-hfWatch` `-hfPapers` `-hfProbe` — the Hugging Face bridge (2026-08-03, prd §290, Model/HuggingFaceBridge.swift; screen → docs/hooks/bridges.md · prd §290
+- `-wiseProbe` — Wise (2026-09-16, prd §776): a personal API token, read-only, the Bitrefill/Privacy.com pattern. Profiles → v4 balances (a STATE) → `/v1/transfers` (things, healed as their status moves). Card spending is NOT read — it lives behind Wise's SCA-signed statement step, and the seat says so. **Plaid and Stripe Financial Connections inherit §278's refusal; a cookie sign-in (§701) does not reach a bank** → prd §776
+- **A bank account already lands through Apple Wallet and the copy denies it (prd §776, NOT fixed).** `AppleWalletBridge` queries FinanceKit unfiltered, so iOS 18.4+ UK open-banking accounts come back with it — three strings still say "US-only" → prd §776
 - `-spotifySession "<sp_dc>"` `-spotifyProbe` — the Spotify seat's session, and its chain link by link (prd §703, 2026-09-12) → docs/hooks/bridges.md · prd §703
 - **A 200 from `open.spotify.com/api/token` is not a signed-in session (`isAnonymous`); only `.refused` clears the credential, and a 429 is `.throttled`** → docs/hooks/bridges.md · prd §711 · §711b
 - `-stockWatch` — resolves each query on Stocktwits (keyless symbol search), watches the top match, and syncs → docs/hooks/bridges.md

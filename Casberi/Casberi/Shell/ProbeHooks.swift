@@ -1333,6 +1333,17 @@ enum ProbeHooks {
         Hook(key: "privacyProbe") { _, _ in
             Task { await PrivacyFetch.probe() }
         },
+        // `-wiseProbe YES` reads the STORED Wise token (connect first via
+        // `-tokenBridge "Wise:<token>"`) and walks the read link by link —
+        // profiles, then balances, then transfers — NSLogging each status and
+        // each payload's FIELD NAMES. The `-privacyProbe`/`-awsProbe` lesson:
+        // an empty Wise room has several causes (no token, a refused token, a
+        // profile that never resolved, a quiet account, or shape drift in a
+        // doc-derived field map) and only the last is a bug. Never prints the
+        // token, a balance, or an amount.
+        Hook(key: "wiseProbe") { _, _ in
+            Task { await WiseFetch.probe() }
+        },
         // `-posthogHost <host>` / `-posthogProject <id>` — the two settings a
         // fresh connect would pick by hand, so a headless run can reach the
         // scoped reads. Declared BEFORE `-posthogProbe`: hooks run in list

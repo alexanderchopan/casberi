@@ -93,6 +93,10 @@ KNOWN_NON_REACH=(
   # app requests, reads or receives) — or in Safari itself from the door's
   # long press, and always on the Mac.
   app.privacy.com app.raindrop.io calendly.com linear.app www.notion.so
+  # wise.com — the settings page where a personal API token is minted. Never
+  # fetched: the read is `api.transferwise.com`, a different host by
+  # construction, and it IS disclosed in NetworkReach (prd §776).
+  wise.com
   venice.ai bankr.bot www.kraken.com portal.cdp.coinbase.com
   www.binance.com exchange.gemini.com console.x.ai
   # id.atlassian.com — where a Jira API token is minted. Never fetched: the
