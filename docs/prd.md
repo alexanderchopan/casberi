@@ -57260,3 +57260,17 @@ Eight findings on §784's branch; six were real and are fixed here. Each one had
 **A function whose doc invented its own caller.** `forget(_:)` said it ran when a book entry was removed. Nothing did, and nothing could without an actor hop `AddressBook` does not have. Deleted; `forgetAll` stays, with a doc that admits it is waiting for the Data tray.
 
 Also: the file header claimed "only `verified` draws" while the card draws `lapsed` too, as §784 itself ruled. The header was wrong, not the card.
+
+## §785 — World ID gets a SEAT, and it is a different subject from §784's read (user: "yes we want to make a worldid seat like we have with safe and others", 2026-09-16)
+
+**§784 refused a seat and this reverses that, without reversing its reasoning.** That refusal cited §515a — a protocol the wallet reads on its own must never also ship as an offer — and the rule stands exactly where it was pointed: **whether any address belongs to a verified human stays a fact the wallet reads on its own, with no seat, no offer and no website cell.** Nothing §784 built changes.
+
+**The seat is your own World ID ACCOUNT, which is a different subject.** Its keys, who can recover it, when its Orb credential runs out, and every change to any of that. You name your World App address; it yields things. That is not something the wallet reads on its own, and it is precisely the split the Safe seat already ships: the wallet reads addresses, the Safe seat reads *your* queue and *this phone's* signer standing. Same shape, same group, same `.watchedWallets` mode.
+
+**What it lands, and the one that matters.** `AuthenticatorInserted`, `AuthenticatorRemoved`, `AccountRecovered`, `RecoveryAgentUpdated` — every one carries `leafIndex` as an indexed topic, so a single `eth_getLogs` returns one account's whole history and nothing else. **A key you did not add is the compromise notice**, and it `standsAlone` in notifications beside a dispute, a deadline, a liquidation and a Safe signature. World ID's own 4.0 spec lists user-visible account auditability as a requirement, and nobody ships it.
+
+**Two standing facts beside the events**: whether a recovery agent is set at all (`address(0)` means losing every key ends the World ID — a real fact, stated once, never nagged), and the credential expiry §784's store already holds.
+
+**Keyless, and it adds no host.** Every read is an `eth_call` or `eth_getLogs` on World Chain through the host §784a gave the World ID read of its own. No account, no key, no service, no World App. The `leafIndex` is a SECRET in this app's terms — the 4.0 spec names authenticator-side knowledge of it as the tracking risk — so it lives in the Keychain, is never logged, never reaches a receipt, and takes a row in the redaction audit.
+
+**Specced, not built** (`docs/worldid-seat-spec.md`): the ruling, the offer's fields, all thirteen registration points traced through `"Safe"`, the website parity gate, the icon's home, and the three measurements that come first. The seat's entire content rests on a contract read nobody has run — and the largest unknown is whether a World App wallet address is an ADMIN authenticator at all, since WIP-104 allows proving-only keys that hold no address. If it is not, the seat cannot find an account from an address and needs a different door. Measure before building.
