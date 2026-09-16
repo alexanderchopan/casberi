@@ -57224,3 +57224,38 @@ The absolute bound grew from 90s to 180s and restarts on each navigation the per
 **The feed row's line was already fixed.** §767 names the source only where the lead is not its mark, so the survey's "Calendar under a calendar icon" was a stale screenshot.
 
 **Unmeasured.** No simulator run; verified by the build, the static audits and the X, room-head, dock and catalogue selftests.
+
+## §784 — What's New says "Design and performance improvements", and the review disclosure moves to review notes (user: "to just say design and performance improvements", 2026-09-16)
+
+**The ruling.** The 1.0.24 submission's What's New is one line:
+*Design and performance improvements.* Not a feature list, not the seats added
+in the train (Wise, Duolingo, Acorns, Rocket Money, NerdWallet, Apple Wallet's
+UK accounts). A release note is read by someone deciding whether to install an
+update, not by someone auditing a diff, and every seat this train added already
+states itself on its own page and in the catalogue.
+
+**What the repo held, and did not hold.** `docs/store-copy.md` carried no text
+for 1.0.24 at all — only a `### iOS What's New — append these two bullets`
+block written for an earlier train. So the field that went up with the
+submission is not recorded anywhere here, which is the same hole §643's
+amendment paid for. The new text is recorded with the version and build it
+belongs to, and its heading states that it is not yet applied.
+
+**The two bullets are not deleted, they are re-aimed.** They were written after
+the macOS 1.0.11 rejection under Guideline 3.1.5 to say that the devnet tokens
+have no price and no market and that Bankr only answers. That is an argument
+addressed to a reviewer, and it was sitting in the field customers read. The
+reviewer's field is review notes — which, unlike What's New, takes a PATCH
+while a version is In Review. They are kept verbatim in `docs/store-copy.md`
+for that paste. **A disclosure that moves must land somewhere, or the change
+is a deletion wearing a move's name.**
+
+**The cost of applying it, stated so nobody applies it by reflex.** What's New
+answers 409 during review. Changing it on 1.0.24 means removing the version
+from review, editing, and submitting again — the queue position is spent. The
+call is the user's; the field is staged in the repo either way, so it costs
+nothing to carry it to the next train instead.
+
+**Unmeasured.** Copy only. No App Store Connect key reaches the session this
+was written in, so nothing was read back from the live record and nothing was
+pushed to it.
