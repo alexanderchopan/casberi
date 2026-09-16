@@ -54,6 +54,11 @@ struct RocketMoneyScreen: View {
         .onAppear {
             reading = RocketMoneyIngest.lastReading
             if RocketMoneyAuth.connected { Task { await sync() } }
+            #if DEBUG
+            // `-rocketLoginProbe YES` (with `-openSetup "Rocket Money"`): open
+            // the sign-in headlessly; the view NSLogs `rocketLogin|` lines.
+            if UserDefaults.standard.bool(forKey: "rocketLoginProbe") { showLogin = true }
+            #endif
         }
     }
 

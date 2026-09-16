@@ -53,7 +53,7 @@ struct RocketMoneyLoginWebView: View {
                     onSignedIn: { signedIn = true },
                     onLearned: { learned = $0 },
                     onWalkChanged: { walking = $0 },
-                    onWalkDone: { onCaptured(); dismiss() },
+                    onWalkDone: { if RocketMoneyAuth.connected { onCaptured() }; dismiss() },
                     onLoadingChanged: { loading = $0 },
                     onFailure: { failure = $0; loading = false })
                     .ignoresSafeArea()
@@ -97,7 +97,10 @@ struct RocketMoneyLoginWebView: View {
             }
             .dsScreenTitle("Log in to Rocket Money")
             .dsSheetDismiss {
-                onCaptured()
+                // Done before a credential landed is a cancel, not a connect
+                // — the screen registers "Signed in" on `onCaptured`, and
+                // build 588 could earn that stamp by tapping Done on the wall.
+                if RocketMoneyAuth.connected { onCaptured() }
                 dismiss()
             }
         }
@@ -132,6 +135,22 @@ private struct RocketMoneyLoginWKWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
+        // Rocket Money's web app hides every route but the index behind
+        // "Please use the Rocket Money mobile app" when the layout viewport is
+        // 450 CSS px or narrower (`useBreakpoint("mobile")` in its bundle,
+        // `mobile: 450`). The gate is the WIDTH, not the user agent — the
+        // interstitial is server-rendered for every UA and the page's own
+        // viewport is `width=device-width` — so on a 402pt phone the sign-in
+        // never opened (build 588, user: "it says for best experience open app
+        // and doesn't take me to a sign in page"). Desktop content mode lays
+        // the page out desktop-class and says Safari-on-Mac; the viewport
+        // script pins the width the site honours, wide enough to clear the
+        // gate and narrow enough that its 470px sign-in box is legible.
+        config.defaultWebpagePreferences.preferredContentMode = .desktop
+        let viewport = WKUserScript(source: Self.viewportScript,
+                                    injectionTime: .atDocumentStart,
+                                    forMainFrameOnly: true)
+        config.userContentController.addUserScript(viewport)
         let script = WKUserScript(source: Self.captureScript,
                                   injectionTime: .atDocumentStart,
                                   forMainFrameOnly: false)
@@ -169,6 +188,7 @@ private struct RocketMoneyLoginWKWebView: UIViewRepresentable {
         private var lastReloadCount = 0
         private var poll: Timer?
         private weak var webView: WKWebView?
+        private let popup = LoginPopupWindow()
         private var reportedFailure = false
         private var announcedSignIn = false
         private var signedInAt: Date?
@@ -178,8 +198,30 @@ private struct RocketMoneyLoginWKWebView: UIViewRepresentable {
         /// post-login navigation is recognised, so an unrecognised landing
         /// would spin forever with no error. Longer than Acorns' because this
         /// flow is deliberately slower — the person is meant to browse.
+        /// Restarted by every navigation the PERSON makes (a link, a form):
+        /// a hand on the page is proof it is not hung, and a password hunt
+        /// plus a code from another app can honestly take longer than the
+        /// bound.
         private var startedAt = Date()
-        private static let absoluteBound: TimeInterval = 90
+        private static let absoluteBound: TimeInterval = 180
+
+        /// The sign-in flow's own pages, from Rocket Money's route table
+        /// (`requiresAuth: false`). `/login` REDIRECTS to `/` — one 302,
+        /// measured 2026-09-16; the login form IS the index page — so "any
+        /// page but /login" fired the walk on the first redirect, before
+        /// anybody had typed anything, which is how build 588 showed
+        /// "Setting up your account…" over a blank page. A page under any of
+        /// these is still the login, not the app.
+        private static let preLoginPaths = ["/", "/login", "/signup", "/forgot-password",
+                                            "/reset-password", "/auth", "/welcome",
+                                            "/get-the-app", "/wait-list", "/error",
+                                            "/rocket-sso-error",
+                                            "/verify-data-privacy-request"]
+        static func isPreLogin(_ path: String) -> Bool {
+            let p = path.isEmpty ? "/" : path
+            if p == "/" { return true }
+            return preLoginPaths.contains { $0 != "/" && (p == $0 || p.hasPrefix($0 + "/")) }
+        }
 
         /// The pages this view opens by itself once the sign-in takes, and the
         /// reason there is no button asking anybody to do it.
@@ -229,6 +271,15 @@ private struct RocketMoneyLoginWKWebView: UIViewRepresentable {
             guard walking else { return }
             walking = false
             onWalkChanged(false)
+            // A walk that captured no credential was a walk over the login —
+            // a tap on an app link before signing in, say. It is not a
+            // connect: put the page back where the person can sign in and
+            // let a real sign-in start the walk again.
+            guard announcedSignIn else {
+                signedInAt = nil
+                webView?.load(URLRequest(url: url))
+                return
+            }
             // Everything the pages taught is already stored; the credential is
             // in hand. Nothing here needs the person, so the sheet closes
             // itself rather than leaving them on a page they never asked for.
@@ -308,10 +359,11 @@ private struct RocketMoneyLoginWKWebView: UIViewRepresentable {
                 tryExtract()
                 return
             }
+            if navigationAction.navigationType != .other { startedAt = Date() }
             // Every in-app page is allowed on purpose: browsing IS the capture.
             if (navigationAction.targetFrame?.isMainFrame ?? true),
                target.host?.hasSuffix("app.rocketmoney.com") == true,
-               target.path != "/login", signedInAt == nil {
+               !Self.isPreLogin(target.path), signedInAt == nil {
                 signedInAt = Date()
                 // The sign-in took. Walk the pages ourselves rather than ask
                 // the person to — see `walk()`.
@@ -321,32 +373,54 @@ private struct RocketMoneyLoginWKWebView: UIViewRepresentable {
             tryExtract()
         }
 
-        func webView(_ webView: WKWebView, createWebViewWith _: WKWebViewConfiguration,
-                     for navigationAction: WKNavigationAction,
+        /// The provider's popup ("Continue with Apple/Google") is a REAL child
+        /// window — see `LoginPopupWindow` for why loading it in place strands
+        /// Sign in with Apple on a blank page.
+        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                     for _: WKNavigationAction,
                      windowFeatures _: WKWindowFeatures) -> WKWebView? {
-            if navigationAction.targetFrame == nil,
-               let target = navigationAction.request.url {
-                webView.load(URLRequest(url: target))
-            }
-            return nil
+            popup.open(over: webView, configuration: configuration, delegate: self)
+        }
+
+        func webViewDidClose(_ webView: WKWebView) {
+            popup.close(webView)
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation _: WKNavigation!) {
+            guard !popup.holds(webView) else { return }
             self.webView = webView
             onLoadingChanged(true)
         }
 
         func webView(_ webView: WKWebView, didFinish _: WKNavigation!) {
+            guard !popup.holds(webView) else { tryExtract(); return }
             self.webView = webView
             onLoadingChanged(false)
             tryExtract()
+            #if DEBUG
+            // `-rocketLoginProbe YES`: what the page DREW, once at load and
+            // once after the app has hydrated — the layout width the site
+            // measured, whether the "use the mobile app" wall is up, and
+            // whether a sign-in field exists. Never a value typed into one.
+            if UserDefaults.standard.bool(forKey: "rocketLoginProbe") {
+                for delay in [0.0, 4.0] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak webView] in
+                        webView?.evaluateJavaScript(Self.probeScript) { result, _ in
+                            NSLog("rocketLogin| t=%.0fs %@", delay, (result as? String) ?? "no answer")
+                        }
+                    }
+                }
+            }
+            #endif
         }
 
-        func webView(_: WKWebView, didFailProvisionalNavigation _: WKNavigation!, withError error: Error) {
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation _: WKNavigation!, withError error: Error) {
+            if popup.holds(webView) { popup.close(webView); return }
             report(error)
         }
 
-        func webView(_: WKWebView, didFail _: WKNavigation!, withError error: Error) {
+        func webView(_ webView: WKWebView, didFail _: WKNavigation!, withError error: Error) {
+            if popup.holds(webView) { popup.close(webView); return }
             report(error)
         }
 
@@ -403,6 +477,56 @@ private struct RocketMoneyLoginWKWebView: UIViewRepresentable {
             }
         }
     }
+
+    /// Pins the viewport the site lays out in. Its own tag says
+    /// `width=device-width`, and Next re-manages the tag on every route, so
+    /// this rewrites it whenever it appears rather than once. 520 CSS px
+    /// clears the 450px "mobile" gate, sits under the 680px tablet rung,
+    /// and fits the 470px sign-in box at 0.77× on a 402pt screen.
+    static let viewportWidth = 520
+    private static let viewportScript = """
+    (function() {
+        const WIDTH = 'width=\(viewportWidth)';
+        function pin() {
+            var found = false;
+            document.querySelectorAll('meta[name="viewport"]').forEach(function(m) {
+                found = true;
+                if (m.getAttribute('content') !== WIDTH) { m.setAttribute('content', WIDTH); }
+            });
+            if (!found && document.head) {
+                var m = document.createElement('meta');
+                m.setAttribute('name', 'viewport');
+                m.setAttribute('content', WIDTH);
+                document.head.appendChild(m);
+            }
+        }
+        function watchHead() {
+            if (!document.head) { return false; }
+            new MutationObserver(pin).observe(document.head, {
+                childList: true, subtree: true, attributes: true, attributeFilter: ['content', 'name']
+            });
+            pin();
+            return true;
+        }
+        if (!watchHead()) {
+            var root = new MutationObserver(function() { if (watchHead()) { root.disconnect(); } });
+            root.observe(document.documentElement, { childList: true });
+        }
+    })();
+    """
+
+    #if DEBUG
+    /// Shape only — a width, a path, two booleans and the UA's first words.
+    private static let probeScript = """
+    JSON.stringify({
+        path: location.pathname,
+        width: window.innerWidth,
+        ua: navigator.userAgent.slice(0, 48),
+        wall: /use the Rocket Money mobile app/i.test(document.body ? document.body.innerText : ''),
+        field: !!document.querySelector('input[type=email], input[type=password], input[name=email]')
+    })
+    """
+    #endif
 
     /// Hooks `fetch` and `XMLHttpRequest` for two things: the
     /// `authorization: Bearer …` header, and the BODY of any POST to a
