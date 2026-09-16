@@ -773,6 +773,13 @@ enum Retriever {
             // whole-corpus keyword scan, and it is a state label the Themes
             // treemap must not draw as a subject.
             (["what i played", "recently played", "i played", "my plays", "played"], "Played"),
+            // Duolingo's practice days (`DuolingoLive`, prd §776). "Played"'s
+            // case exactly: "what did I practise" narrows to these rather
+            // than scanning the whole corpus for the word, and it is a state
+            // label the Themes treemap must not draw as a subject. Both
+            // spellings, because the app is read in en-US and en-GB alike.
+            (["what i practised", "what i practiced", "i practised", "i practiced",
+              "my practice", "practised", "practiced", "practice"], "Practice"),
             (["my saves", "saves", "saved"], "Saved"),
             // The read X can't answer about your own corpus: posts you kept
             // that no longer exist there. Stamped by the author pass — see

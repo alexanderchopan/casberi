@@ -568,6 +568,13 @@ enum BridgeCatalog {
         // prd §518 removed from the catalog, arriving from the other side.
         Offer(name: "Garmin",      tagline: "Watch activities, in your feed",        group: "Fitness",   connectable: true,
               added: day(2026, 9, 6), unavailableOnMac: true),
+        // Duolingo (2026-09-16, prd §776) — the first seat in "Learning", and
+        // its own group rather than a lodger in Fitness: a practice day is a
+        // habit, but a shelf that files a language course under exercise says
+        // something untrue about both. The group joins the Life category, so
+        // nothing about the dock, its glyphs or the website's categories moves.
+        Offer(name: "Duolingo",    tagline: "Every day you practise",                group: "Learning",  connectable: true,
+              needsSetup: true, added: day(2026, 9, 16)),
         Offer(name: "Cal.com",     tagline: "Bookings land in your feed",            group: "Schedule",  connectable: true,
               needsSetup: true),
         Offer(name: "Calendly",    tagline: "Meetings join your things",             group: "Schedule",  connectable: true,
@@ -804,7 +811,10 @@ enum BridgeCatalog {
         // same reason (user ruling 2026-07-27): Files' folder contents are
         // unpredictable, so it reads as personal-life miscellany, not a
         // dedicated content type.
-        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People", "Storage", "Mail"]),
+        // "Learning" joins Life 2026-09-16 with Duolingo (prd §776) rather
+        // than earning a category of its own: a category is a dock chip with
+        // a glyph and a room, and one seat does not fill one.
+        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People", "Storage", "Mail", "Learning"]),
         ("Agents",  "Claude",      ["Agent"]),
         ("Media",   "YouTube",     ["Watching", "Listening", "Games", "Images"]),
         ("Social",  "Bluesky",     ["Network"]),
@@ -1080,7 +1090,7 @@ enum BridgeSetupMode {
     /// X, Instagram and TikTok sign in since §701/§726/§731 — each keeps its
     /// export as a second act, but the word on the catalogue is the first door.
     static let signInSeats: Set<String> = ["Dropbox", "Slack", "Twitch", "CardPointers", "GitHub", "X", "Spotify",
-        "Instagram", "TikTok"]
+        "Instagram", "TikTok", "Duolingo"]
 
     /// A one-time export you point at. Instagram and Snapchat were missed in
     /// this list's first life (2026-07-31) and TikTok would have been missed
