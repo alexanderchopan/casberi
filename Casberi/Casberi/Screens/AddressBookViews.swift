@@ -625,6 +625,25 @@ struct AddressCard: View {
     /// `AddressNames`, which is what stops the read being bought again.
     @State private var primaryNames: [AddressNames.Entry] = []
 
+    /// WHETHER THIS ADDRESS BELONGS TO A VERIFIED HUMAN (prd §785), READ off
+    /// the store rather than copied into `@State` (`/code-review`, 2026-09-16).
+    ///
+    /// A copy taken after `fill` returned was wrong whenever the same address
+    /// was already in flight from another surface — `fill` returns immediately
+    /// then, so the card copied `.unknown` and kept it for the whole visit even
+    /// as the answer landed. `WorldIDSource` is `@Observable`, so reading it
+    /// here is what makes the line appear the moment anybody's read answers.
+    /// A dictionary lookup, not a fetch — nothing here reaches the network
+    /// (build 525's rule); the read is bought by the task below.
+    ///
+    /// `.unknown` and `.absent` both draw NOTHING — World ID's book holding no
+    /// verification for an address is the ordinary answer for almost every
+    /// address on earth, and drawing it would read as a claim about the person
+    /// (§83).
+    private var worldStatus: WorldID.Status {
+        WorldIDSource.shared.status(for: entry.address)
+    }
+
     /// THE NAME THAT ARRIVED WHILE YOU WERE LOOKING (prd §599) — the one
     /// string `AddressArrivingName` types in, and nil on every visit where
     /// nothing was learned.
@@ -735,6 +754,14 @@ struct AddressCard: View {
             .dsSheetDismiss { dismiss() }
             .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
             .task { await AddressKind.detect(entry.address) }
+            // A READ BOUGHT BY AN INTENT (the `AddressNames` rule): opening
+            // this card is what asks World Chain, and a row scrolling past
+            // never does. Whatever is already known draws on the first frame
+            // because the line reads the store; `fill` returns having asked
+            // nothing when the answer is fresh.
+            .task(id: entry.address) {
+                await WorldIDSource.shared.fill(entry.address)
+            }
             .task {
                 exposure = await WalletApprovalExposure.forSpender(entry.address,
                                                                    context: modelContext)
@@ -886,6 +913,8 @@ struct AddressCard: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 2)
             bitcoinVintageLine
+            worldIDLine
+                .animation(DS.Motion.standard, value: worldStatus)
             // THE GROUP RIDES THE IDENTITY (prd §499) — where a contacts app
             // puts somebody's company. It used to sit in the verb row beside
             // Copy, which made filing look like an action of the same weight
@@ -1609,6 +1638,37 @@ struct AddressCard: View {
                 Text(verbatim: amount)
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
             }
+        }
+    }
+
+    /// WORLD ID, WHEN THERE IS ONE (prd §785).
+    ///
+    /// One line of type under the kind line, in the quiet tier where this card
+    /// already keeps facts about the address rather than about you. It is not
+    /// a stamp: the stamp slot above the face holds a state of YOURS ("Not
+    /// kept", "Watched"), and this is somebody else's fact.
+    ///
+    /// Two of the four statuses draw nothing. `.absent` is deliberate and is
+    /// the whole honesty of the feature — see `WorldID`'s header. A LAPSED
+    /// mark is drawn, because "was verified, and it ran out" is a different
+    /// fact from "never was", and the date is what says so.
+    @ViewBuilder
+    private var worldIDLine: some View {
+        switch worldStatus {
+        case .verified(let until):
+            Text("Verified human · World ID until \(until.formatted(.dateTime.month(.wide).year()))")
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, DS.Space.s4)
+                .transition(.opacity)
+        case .lapsed(let at):
+            Text("World ID verification lapsed \(at.formatted(.dateTime.month(.wide).year()))")
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, DS.Space.s4)
+                .transition(.opacity)
+        case .absent, .unknown:
+            EmptyView()
         }
     }
 

@@ -60,6 +60,21 @@ enum WalletIngest {
         Chain(network: "solana-mainnet", explorer: "https://solscan.io/tx/",              symbol: "SOL",   displayName: "Solana",
               kind: .solana, nativeDecimals: 9),
         Chain(network: "robinhood-mainnet", explorer: "https://robinhoodchain.blockscout.com/tx/", symbol: "ETH", displayName: "Robinhood"),
+        // World Chain (prd §785, 2026-09-16) — the OP-stack chain World App's
+        // accounts live on, so a person who holds WLD or spends from World App
+        // reads it here beside every other chain. `worldscan.org` is
+        // Etherscan-family, which is what `explorerAddressURL`'s `/tx/` →
+        // `/address/` rewrite rests on.
+        //
+        // **OFF BY DEFAULT, and the reason is MEASUREMENT, not taste** — see
+        // `WalletChainStore.selectable`. Nothing on the host that wrote this
+        // could reach Alchemy, so three facts every other chain here had
+        // proven before it landed are unproven for this one: that the
+        // Portfolio `by-address` call accepts `worldchain-mainnet` (a chain it
+        // refuses 400s the WHOLE holdings read), that `alchemy_getAssetTransfers`
+        // answers on it, and what DeFiLlama calls it. Measure those three
+        // before moving it into `defaultNetworkIDs`.
+        Chain(network: "worldchain-mainnet", explorer: "https://worldscan.org/tx/", symbol: "ETH", displayName: "World Chain"),
     ]
 
     /// The chain a landed transfer belongs to, read off its stored explorer
@@ -127,6 +142,23 @@ enum WalletIngest {
     /// `getAssetTransfers`. Firing it at `solana-mainnet` would spend a request
     /// per watched address per direction to be told the method doesn't exist.
     private static var transferChains: [Chain] { chains.filter { $0.kind == .evm } }
+
+    /// Chains in `WalletChainStore.selectable` whose Alchemy Portfolio support
+    /// is NOT proven (prd §785, 2026-09-16 — World Chain is the first).
+    ///
+    /// The holdings read sends every selected network for up to three wallets
+    /// in ONE body, so a chain the endpoint refuses does not fail alone: it
+    /// takes the whole chunk with it, and Ethereum, Base and the rest vanish
+    /// from a person's treemap because of a switch they flipped for a chain
+    /// they were curious about. "Off by default" only defers that to whoever
+    /// flips it, silently, which is §83's quiet harm rather than a dead
+    /// control. So `collectCandidatesAlchemy` retries ONCE without these, and
+    /// a chain whose refusal costs only itself is a chain that can safely be
+    /// offered while its measurement is outstanding.
+    ///
+    /// **An entry here is a debt, not a feature.** Measure the chain end to
+    /// end (`-portfolioProbe` reports the refusal in one line) and delete it.
+    private static let unprovenNetworks: Set<String> = ["worldchain-mainnet"]
 
     /// The networks one address can actually live on, by its SHAPE — base58
     /// reads Solana, `0x…` reads the EVM chains. This is what makes Solana free
@@ -2063,13 +2095,35 @@ enum WalletIngest {
             Array(routed[$0..<min($0 + 3, routed.count)])
         }) {
             var pageKey: String? = nil
+            // See `unprovenNetworks`: one chain the endpoint refuses would
+            // otherwise take every other chain in this body down with it.
+            var dropUnproven = false
             for _ in 0..<8 {
+                var addressesBody: [[String: Any]] = []
+                for entry in chunk {
+                    let networks = dropUnproven
+                        ? entry.networks.filter { !unprovenNetworks.contains($0) }
+                        : entry.networks
+                    guard !networks.isEmpty else { continue }
+                    addressesBody.append(["address": entry.address, "networks": networks])
+                }
+                guard !addressesBody.isEmpty else { break }
                 var body: [String: Any] = [
-                    "addresses": chunk.map { ["address": $0.address, "networks": $0.networks] },
+                    "addresses": addressesBody,
                     "withMetadata": true, "withPrices": true,
                 ]
                 if let pageKey { body["pageKey"] = pageKey }
-                guard let root = await fetchPortfolioPage(url, body: body),
+                let page = await fetchPortfolioPage(url, body: body)
+                // ONE retry, and only when an unproven chain was in the body:
+                // a refusal is indistinguishable from any other failure here,
+                // so the cheap test is to ask again without the chain whose
+                // support nobody has proven. It no-ops the day that set empties.
+                if page == nil, !dropUnproven,
+                   chunk.contains(where: { $0.networks.contains { unprovenNetworks.contains($0) } }) {
+                    dropUnproven = true
+                    continue
+                }
+                guard let root = page,
                       let data = root["data"] as? [String: Any],
                       let tokens = data["tokens"] as? [[String: Any]] else { break }
                 reached = true

@@ -28,7 +28,7 @@ KNOWN_NON_REACH=(
   # Block explorers & app permalinks — opened in the browser on tap
   etherscan.io basescan.org arbiscan.io optimistic.etherscan.io
   polygonscan.com solscan.io revoke.cash robinhoodchain.blockscout.com
-  hyperevmscan.io monadscan.com
+  hyperevmscan.io monadscan.com worldscan.org
   gnosisscan.io njump.me
   # Hegota's EXPLORER only — a permalink the PERSON's browser opens on a
   # transaction row.

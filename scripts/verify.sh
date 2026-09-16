@@ -2015,6 +2015,22 @@ harness "GitHub person-watch pure-logic self-test" "github-person self-test" "sc
 # catch-all, and that a resolved name never overwrites one somebody typed.
 harness "Wei/Gwei name pure-logic self-test" "wei-names self-test" "scripts/wei-names-selftest.sh" "the Wei/Gwei name self-test failed — run scripts/wei-names-selftest.sh"
 
+# World ID (prd §785). The read is one `eth_call` whose every failure arrives as
+# the same silence, and the silence is also the CORRECT answer for almost every
+# address on earth — so a broken read here looks exactly like a working one,
+# forever. The mutations name the four: a mistyped selector (reverts; every
+# address reads "not in the book"), an unreadable return counted as a zero (the
+# app certain about people it never asked about), an expired mark still saying
+# "verified human" beside an address you are about to pay, and a zero read as a
+# verification, which would hand the mark to the poisoned look-alike this fact
+# exists to separate from its target. The drift guards hold what the decoder
+# cannot: that a read which did not answer is never WRITTEN, that `.absent` and
+# `.unknown` draw nothing on either surface (§83 — "not in World ID's book" is
+# not a claim about a person), that the host is disclosed under its own service
+# rather than the Wallet bridge's, and that World Chain stays OFF by default
+# while its Alchemy reads are unmeasured.
+harness "World ID pure-logic self-test" "worldid self-test" "scripts/worldid-selftest.sh" "the World ID self-test failed — run scripts/worldid-selftest.sh"
+
 # ENS (prd §534). Catches the silent wrong answer this ladder is built around: a lapsed
 # name reads as "expires" for its whole ninety-day grace period (the exact bug ENSExpiry
 # shipped with), a subname is followed into a row the registrar 404s forever, or a

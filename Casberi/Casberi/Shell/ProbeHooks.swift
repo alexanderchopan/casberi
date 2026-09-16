@@ -3331,6 +3331,20 @@ enum ProbeHooks {
                 for line in lines { NSLog("weiName| %@", line) }
             }
         },
+        // `-worldIDProbe <0x…|YES>` — World ID's address book, step by step
+        // (prd §785): the contract, the computed selector, the calldata, the
+        // RAW word that came back, and the verdict. Bare `YES` reads the
+        // watched wallets. The raw word is printed because the one thing this
+        // read is UNMEASURED on is what a permanent verification looks like —
+        // a far-future second or a sentinel — and an absent mark, an
+        // unreachable chain and a reverted call otherwise all present as the
+        // same silence.
+        Hook(key: "worldIDProbe") { spec, _ in
+            Task { @MainActor in
+                let lines = await WorldIDSource.probe(spec)
+                for line in lines { NSLog("worldID| %@", line) }
+            }
+        },
         // `-etherfiUnstakeProbe YES` NSLogs each watched wallet's outstanding
         // ether.fi unstake requests (amount, queued vs CLAIMABLE) or the
         // honest miss, then runs the reconciling sync. The queued/claimable

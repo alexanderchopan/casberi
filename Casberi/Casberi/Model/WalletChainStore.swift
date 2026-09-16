@@ -47,6 +47,26 @@ final class WalletChainStore {
     /// Two reads, two halves of one product; the picker says "HyperEVM"
     /// because that is the chain a token balance lives on, and calling the row
     /// "Hyperliquid" would claim the perps book is in it.
+    ///
+    /// **World Chain (prd §785, 2026-09-16) is the first chain here that
+    /// landed UNMEASURED, and it is OFF by default because of it.** Every
+    /// other row was read end-to-end first — that is this table's own rule,
+    /// and it is not suspended, it is unmet: the session that added it had no
+    /// network route to Alchemy at all. What is unproven, in the order it
+    /// would bite: the Portfolio `by-address` call accepting
+    /// `worldchain-mainnet` (a chain it refuses 400s the whole holdings read,
+    /// for every chain in that request, which is why this must not be on by
+    /// default), `alchemy_getAssetTransfers` answering on it, and DeFiLlama's
+    /// key for it (absent from `DefiLlamaPrices.chainKey`, so the price
+    /// backstop simply does not cover this chain yet — a miss, never a wrong
+    /// number). Zerion has no mapping either (`ZerionAPI.networkFor`), so both
+    /// halves ride the Alchemy path. Measure the three, then move it into
+    /// `defaultNetworkIDs` with a seed row beside the others.
+    ///
+    /// Note `WorldID` reads World Chain whether or not this row is on: that is
+    /// one `eth_call` on a keyless public host, not this table's Alchemy
+    /// pipeline, and it is a fact about an address rather than a chain you
+    /// follow.
     static let selectable: [(id: String, name: String)] = [
         ("eth-mainnet",      "Ethereum"),
         ("base-mainnet",     "Base"),
@@ -57,6 +77,7 @@ final class WalletChainStore {
         ("monad-mainnet",    "Monad"),
         ("solana-mainnet",   "Solana"),
         ("robinhood-mainnet","Robinhood"),
+        ("worldchain-mainnet", "World Chain"),
     ]
     static var allNetworkIDs: [String] { selectable.map(\.id) }
 
