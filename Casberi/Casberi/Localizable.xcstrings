@@ -151396,6 +151396,34 @@
         }
       }
     },
+    "it stopped letting us in" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "dejó de darnos acceso"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アクセスが拒否されるようになりました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "접근이 거부되기 시작했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它不再允许我们访问"
+          }
+        }
+      }
+    },
     "its own account" : {
       "localizations" : {
         "es" : {

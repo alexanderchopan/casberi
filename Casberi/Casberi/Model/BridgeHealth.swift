@@ -152,6 +152,19 @@ enum BridgeHealth {
     /// be a lie told by the wrong file.
     static let attentionLine = String(localized: "Needs reconnecting — it stopped letting us in")
 
+    /// The same fact WITHOUT the two words the account page's state line says
+    /// itself (prd §784). The page draws "Needs reconnecting · <reason>", so
+    /// handing it the whole line said it twice, one middle dot apart.
+    ///
+    /// TWO STRINGS, NOT ONE COMPOSED FROM THE OTHER, and not one parsed out of
+    /// the other: the line ships translated into four languages, so a prefix
+    /// test against an English literal is right on exactly one device
+    /// language, and a format string with an argument would orphan the four
+    /// translations `attentionLine` already has. They must agree, and the only
+    /// thing keeping them in step is this note — which is the cost of not
+    /// parsing a sentence a translator owns.
+    static let attentionReason = String(localized: "it stopped letting us in")
+
     /// Fold what the last sweep learned onto the seats' own status.
     ///
     /// Run at the START of a sweep, reflecting the PREVIOUS pass, and that is

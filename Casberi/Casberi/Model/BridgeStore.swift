@@ -324,8 +324,24 @@ final class BridgeStore {
     func togglePause(_ id: String) {
         guard let i = bridges.firstIndex(where: { $0.id == id }) else { return }
         if bridges[i].status == .paused {
-            bridges[i].status = .connected
-            bridges[i].statusLine = "Synced just now"
+            // RESUMING A SHUT-OUT SEAT DOES NOT CLEAR THE REFUSAL (prd §784).
+            // Only a 2xx does (`BridgeHealth.folded`), and a paused seat makes
+            // no requests, so nothing can have changed while it was paused —
+            // yet this arm wrote `.connected` and "Synced just now"
+            // unconditionally, which on such a seat is the §83 fake status:
+            // the catalogue row claiming a sync that never happened while the
+            // account page reads "Needs reconnecting" a tap away. It went
+            // unreached until §784 offered Pause on a seat needing
+            // reconnection, which is the whole point of offering it — a
+            // person is meant to be able to put a warning down and pick it
+            // back up.
+            if BridgeHealth.needsReconnect(bridges[i].name) != nil {
+                bridges[i].status = .attention
+                bridges[i].statusLine = BridgeHealth.attentionLine
+            } else {
+                bridges[i].status = .connected
+                bridges[i].statusLine = "Synced just now"
+            }
         } else {
             bridges[i].status = .paused
             bridges[i].statusLine = "Paused"
