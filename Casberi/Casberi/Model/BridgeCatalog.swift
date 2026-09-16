@@ -189,8 +189,13 @@ enum BridgeCatalog {
         // The summary's third paragraph is the entitlement's terms in plain
         // words and is NOT ordinary marketing copy — see AppleWalletScreen.
         // The last line names the two ceilings so the copy can never drift
-        // past them: US-only, and pending charges aren't a statement.
-        Offer(name: "Apple Wallet", tagline: "What your card actually spends",  group: "Wallet",    connectable: true,
+        // past them: the two regions it covers, and that pending charges
+        // aren't a statement. It said "US-only" until prd §779 — FinanceKit
+        // has handed over UK bank accounts through open banking since iOS
+        // 18.4, and this bridge's query never filtered them out, so the
+        // sentence was false for eleven months about rows that were already
+        // landing.
+        Offer(name: "Apple Wallet", tagline: "What your cards and accounts spend",  group: "Wallet",    connectable: true,
               // Dead on Mac, and it always was (2026-08-12). FinanceKit is
               // compiled out of the Catalyst build outright
               // (`#if canImport(FinanceKit) && !targetEnvironment(macCatalyst)`,
@@ -203,6 +208,13 @@ enum BridgeCatalog {
               // Health/Strava/HomeKit already set the precedent for a seat
               // that cannot exist here.
               needsSetup: true, added: day(2026, 8, 6), unavailableOnMac: true),
+        // Wise (prd §778, 2026-09-16) — balances and transfers over a
+        // read-only personal token. The tagline names BOTH halves because the
+        // seat is honestly two things, and neither alone would be worth a
+        // tile: a balance with no movement is a number, and a transfer list
+        // with no balance has no context.
+        Offer(name: "Wise",        tagline: "What you hold, and what you sent", group: "Wallet", connectable: true,
+              needsSetup: true, added: day(2026, 9, 16)),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets
         // whose total it joins — not in Markets, which was where things you

@@ -38,7 +38,7 @@ TRY IT BEFORE YOU CONNECT ANYTHING
 One tap fills Casberi with sample data, so you can feel the whole app first.
 
 ONE FEED
-A deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your workouts and your notes. Read it all together, or one app at a time. No dashboard tour every morning. In the US, Apple Card, Apple Cash and Savings land with the merchant's real name, read on this iPhone and never uploaded.
+A deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your workouts and your notes. Read it all together, or one app at a time. No dashboard tour every morning. Apple Card, Apple Cash and Savings in the US — and the bank accounts connected to Wallet in the UK — land with the merchant's real name, read on this iPhone and never uploaded.
 
 SEE WHAT'S HAPPENING
 Every app opens as a room shaped like what's in it: a calendar reads as an agenda, a wallet leads with its balance. Home Screen widgets carry your day, what's due and your wallet. Spotlight and Shortcuts find any thing by what it says.

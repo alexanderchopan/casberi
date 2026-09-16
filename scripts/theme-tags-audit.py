@@ -81,6 +81,70 @@ STAMP = re.compile(r"tags(?:\s*:\s*\[|\s*=\s*\[|\.append\()([^\]\)]*)")
 LITERAL = re.compile(r'(?<![=!]=\s)(?<![=!]=)"([A-Za-z][A-Za-z0-9 ]*)"')
 # A `String(localized: "…")` tag is still a literal tag.
 LOCALIZED = re.compile(r'String\(localized:\s*"([^"]*)"\)')
+# A FUNCTION THAT COMPOSES THE ARRAY — the hole this audit had until
+# 2026-09-16 (prd §779), and the house pattern it was blind to.
+#
+# `STAMP` reads the three ways a tag is written AT the row: `tags: [...]`,
+# `tags = [...]`, `tags.append(...)`. But the money bridges do not write tags
+# at the row — they call a helper that builds the array and returns it
+# (`AppleWalletBridge.tags`, `PrivacyBridge.settlementTags`,
+# `WiseShape.tags`), and inside that helper the variable is `out`, not `tags`:
+#
+#     static func tags(...) -> [String] {
+#         var out = [isCard ? "Card" : "Bank"]
+#         if isRefund { out.append("Refund") }
+#
+# Nothing there matches `STAMP`, so every word such a helper alone stamps was
+# invisible. It went unnoticed for thirteen months because the words those
+# helpers use were also written literally somewhere else — until Wise stamped
+# `Transfer`/`Returned` and Apple Wallet `Bank` from a helper and nowhere else,
+# and this audit stayed green over three tags it exists to rule (verified by
+# mutation: removing them from `mechanicalTags` did not fail the check).
+#
+# Matched on the SIGNATURE, so the next bridge's helper is covered without an
+# edit here — but NARROWLY, because the first cut of this was written wide
+# ("any func returning `[String]` whose name contains tag") and reported nine
+# findings, every one of them wrong. The tree has four `[String]` helpers with
+# "tag" in the name that compose nothing:
+#
+#   · `tagsDoc` builds VoiceOver SENTENCES about your tags;
+#   · `tagList` normalizes an incoming array;
+#   · `hubTags` and `notionTags` PARSE tags out of a payload, so their literals
+#     are dictionary keys and a stoplist ("region", "type", "status") — the
+#     exact inverse of a stamp.
+#
+# Two rules keep them out and let the real composers in, and neither is a
+# name carve-out that would rot:
+#
+#   1. NAME: exactly `tags`, or ending in `Tags`. Drops `tagsDoc`/`tagList`.
+#   2. SHAPE: inside the body, a literal counts only where it is really being
+#      PUT IN the array — `return [`, `= [`, `.append(`. A subscript key
+#      (`prop["type"]`), a `case "select":`, and a `Set<String>` stoplist are
+#      none of those. `LITERAL`'s comparison lookbehind still applies on top.
+#
+# An INTERPOLATED localized string is excluded for the reason the module doc
+# already gives about runtime tags: `"You have \(n) tag."` has no literal to
+# rule, and reporting it is the crying-wolf failure this audit is written to
+# avoid.
+TAG_FUNC = re.compile(r"func\s+(?:tags|\w+Tags)\s*\([^)]*\)\s*->\s*\[String\]\s*\{")
+# The three ways a literal enters the array a helper is building.
+COMPOSE = re.compile(r"(?:return\s*\[|=\s*\[|\.append\()([^\]\)]*)")
+# A membership set inside a helper is a FILTER, not a stamp — `hubTags`'
+# stoplist is the live example, and it is `= [` shaped like everything else.
+SET_LITERAL = re.compile(r"Set<[^>]*>\s*=\s*\[.*?\]", re.S)
+
+
+def balanced(text, open_index):
+    """The text between `text[open_index]` == '{' and its matching '}'."""
+    depth = 0
+    for i in range(open_index, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[open_index + 1:i]
+    return text[open_index + 1:]
 
 
 def strip_comments(text):
@@ -99,8 +163,16 @@ def stamped_tags(sources):
             if path.resolve() == COMPOSITION.resolve():
                 continue
             body = strip_comments(path.read_text(errors="ignore"))
-            for chunk in STAMP.findall(body):
-                for tag in LITERAL.findall(chunk) + LOCALIZED.findall(chunk):
+            chunks = STAMP.findall(body)
+            # …plus what every tag-composing helper PUTS IN its array. The
+            # helper's own literals ARE stamps: its return value is assigned to
+            # `Thing.tags` by its callers, which is the only thing a stamp is.
+            for m in TAG_FUNC.finditer(body):
+                helper = SET_LITERAL.sub("", balanced(body, m.end() - 1))
+                chunks += COMPOSE.findall(helper)
+            for chunk in chunks:
+                localized = [t for t in LOCALIZED.findall(chunk) if "\\(" not in t]
+                for tag in LITERAL.findall(chunk) + localized:
                     found.setdefault(tag, path.name)
     return found
 
@@ -199,6 +271,36 @@ def self_test():
                            False, "a runtime tag, which has no literal to rule"),
         "Ternary.swift": ('let t = Thing(tags: [m == "quarantined" ? "Watchlist" : "Post"])\n',
                           False, "a ternary's TEST operand, which is never stamped"),
+        # The §779 hole, from both sides.
+        "Helper.swift": ('static func tags(_ x: Int) -> [String] {\n'
+                         '    var out = ["Impounded"]\n'
+                         '    if x > 0 { out.append("Levied") }\n'
+                         '    return out\n}\n',
+                         True, "an unruled tag a HELPER composes and returns"),
+        "HelperRuled.swift": ('static func settlementTags(_ x: Int) -> [String] {\n'
+                              '    return ["Watchlist"]\n}\n',
+                              False, "a helper whose tags are all ruled"),
+        "HelperTest.swift": ('static func tagsFor(_ m: String) -> [String] {\n'
+                             '    return m == "quarantined" ? ["Post"] : ["Liked"]\n}\n',
+                             False, "a helper's TEST operand, which is never stamped"),
+        "NotATagFunc.swift": ('static func names(_ x: Int) -> [String] {\n'
+                              '    return ["Nonsuch"]\n}\n',
+                              False, "a [String] helper that is not about tags"),
+        # The four real helpers the first, wider cut reported wrongly.
+        "HelperDoc.swift": ('func tagsDoc(_ n: Int) -> [String] {\n'
+                            '    return [String(localized: "You have \\(n) tag.")]\n}\n',
+                            False, "a helper composing SENTENCES, not tags"),
+        "HelperStoplist.swift": ('static func hubTags(_ raw: Any?) -> [String] {\n'
+                                 '    let stoplist: Set<String> = ["Nonsuch", "region"]\n'
+                                 '    return ((raw as? [String]) ?? []).filter '
+                                 '{ !stoplist.contains($0) }\n}\n',
+                                 False, "a helper's stoplist, which filters rather than stamps"),
+        "HelperKeys.swift": ('static func notionTags(_ p: [String: Any]) -> [String] {\n'
+                             '    var out: [String] = []\n'
+                             '    guard let type = p["Nonsuch"] as? String else { return out }\n'
+                             '    switch type {\n    case "Quarantined": out.append(type)\n'
+                             '    default: break\n    }\n    return out\n}\n',
+                             False, "a helper PARSING a payload, whose literals are keys"),
         "CommentOnly.swift": ('// "Watchlist" and "Nonsuch" are state labels\n'
                               'let t = Thing(tags: ["Onchain"])\n',
                               False, "prose naming a tag it does not stamp"),

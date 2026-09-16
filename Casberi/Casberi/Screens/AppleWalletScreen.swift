@@ -112,7 +112,7 @@ struct AppleWalletScreen: View {
     /// rather than a Connect button that can only fail — the no-dead-controls
     /// rule (§83).
     @ViewBuilder private var unavailableBlock: some View {
-        Text("This \(DS.device) can't share financial data. It's US-only, and needs iOS 17.4.")
+        Text("This \(DS.device) can't share financial data. It needs iOS 17.4 in the US, or iOS 18.4 in the UK.")
             .dsText(.subhead12)
             .foregroundStyle(DS.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
