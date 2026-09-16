@@ -902,6 +902,25 @@ could not reach. `ENSName.swift` and the harness have not changed since prd
 §765, so it is not a fresh regression — it has been red the whole time. The two
 reporting fixes above are what make the next run name it.
 
+**A second assertion in that harness had the same disease, and the new report
+is what found it.** With the ✗ lines leading the summary, the next run named it
+on sight: `the report ranks by stall, not by wall time (led with slow)`. The
+check asserted `blocker` leads, which assumes `slow` — a sweep that only sleeps
+for 1.2s — stalls nothing. CI measured `slow … stalled=707ms` against
+`blocker … stalled=481ms`: the report led with `slow` because `slow` genuinely
+had the biggest stall, and the check failed while the code did exactly what it
+says. A test that fails when its subject is right is worse than no test. It
+asserts the ORDER now — every slot printed in non-increasing `stalled`, true on
+an idle Mac and a hammered runner alike — plus the one comparison that does not
+depend on the machine: a sweep that blocks outranks one that only awaits. The
+decoy's intent (`slow` has the longest WALL and must not win on it) is carried
+by the mutation, which flips the sort key directly and is caught.
+
+Same pass raised the await-share bar from 0.5 to 0.8, chosen against the
+regression rather than a tidy margin: awaits-charged-as-jank reads ~100%, while
+contention has measured 29% and 48% on correct code — one point of room under
+the old bar, which is a flake waiting to happen.
+
 **Measured, one run later.** The same suite on the same runner: **4 failed → 1
 failed**. `hegota-tx` and `vibenet-signer` pass on the vendored keccak,
 `sweep-clock` passes on the proportion, and the artifact uploaded 330 files.
