@@ -23,7 +23,7 @@ struct PersonRoomScreen: View {
     @State private var posts: [Thing] = []
     @State private var transactions: [Thing] = []
     @State private var verifiedAddresses: [String] = []
-    /// IS ANYBODY THERE (prd §784) — what World ID's book says about this
+    /// IS ANYBODY THERE (prd §785) — what World ID's book says about this
     /// person's verified addresses. One person is one verification however
     /// many addresses they have proved, so this is the best mark among them,
     /// not a list. READ off the `@Observable` store rather than copied into

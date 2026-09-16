@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// The reads behind `WorldID` (prd §784, 2026-09-16) — kept apart from the
+/// The reads behind `WorldID` (prd §785, 2026-09-16) — kept apart from the
 /// encoders so that file stays Foundation-only and its harness can compile it
 /// whole, the `WeiNames`/`WeiNamesSource` split.
 ///

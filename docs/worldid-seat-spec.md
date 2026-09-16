@@ -3,7 +3,7 @@
 Written 2026-09-16 for a session with Xcode, a simulator and the icon file. It
 is the ruling plus every registration point, derived by reading how the **Safe**
 seat is wired (the user's own reference: *"a worldid seat like we have with safe
-and others"*). Nothing here is built. §784 and §784a are shipped and untouched.
+and others"*). Nothing here is built. §785 and §785a are shipped and untouched.
 
 Numbers, addresses and event shapes below were read off `worldcoin/world-id-protocol`
 at `9577f2f` and `contracts/deployments/core/production.json`. Everything marked
@@ -13,22 +13,22 @@ at `9577f2f` and `contracts/deployments/core/production.json`. Everything marked
 
 ## 1. The ruling this reverses, and the line that survives
 
-§784 refused a seat, citing **§515a**: *a protocol the wallet reads on its own
+§785 refused a seat, citing **§515a**: *a protocol the wallet reads on its own
 must never also ship as an offer* — the rule that keeps one capability from
-appearing twice in the catalogue. That reasoning still holds for what §784
+appearing twice in the catalogue. That reasoning still holds for what §785
 built, and that half does not change.
 
 **The seat is a different subject.** Two facts, two surfaces:
 
 | | subject | how it arrives | seat? |
 |---|---|---|---|
-| §784 (shipped) | is **any address** a verified human | the wallet reads it on its own, keylessly, when you open a card | **no** — §515a |
+| §785 (shipped) | is **any address** a verified human | the wallet reads it on its own, keylessly, when you open a card | **no** — §515a |
 | this spec | **your own World ID account**: its keys, who can recover it, when its credential runs out, and every change to any of that | you name your World App address; it yields things | **yes** |
 
 This is exactly Safe's split. The wallet reads addresses on its own; the Safe
 seat reads *your* queue and *this phone's* signer standing. Same shape here.
 
-**Write the ruling as §785** before the code, and state the §515a reasoning in
+**Write the ruling as §786** before the code, and state the §515a reasoning in
 it — a later reader will otherwise see two World ID surfaces and assume drift.
 (`prd-index-audit.py --next` said 922 sections written; confirm the number is
 still free at commit time and say it out loud.)
@@ -39,7 +39,7 @@ still free at commit time and say it out loud.)
 
 All of it is **keyless `eth_call` / `eth_getLogs` on World Chain (480)** through
 `WorldID.rpc`. No account, no key, no service, no World App. The seat adds **no
-new host** — the one §784a moved to its own row already covers it.
+new host** — the one §785a moved to its own row already covers it.
 
 `WorldIDRegistry` proxy: `0x0000000000aE079eB8a274cD51c0f44a9E4d67d4`
 
@@ -85,7 +85,7 @@ auditability as a requirement nobody ships. It `standsAlone` in notifications
 - `getRecoveryAgent(uint64 leafIndex) → address` — set, or `address(0)`. "No
   recovery agent" is a real and useful fact: lose every key and the World ID is
   gone. State it; never nag.
-- The Orb credential's expiry, which §784's `WorldIDSource` already reads for
+- The Orb credential's expiry, which §785's `WorldIDSource` already reads for
   the same address. The seat does not re-read it — it draws what that store holds.
 
 ### 2.4 What it must never do
@@ -93,7 +93,7 @@ auditability as a requirement nobody ships. It `standsAlone` in notifications
 - Claim to hold your World ID, prove anything, or verify a person. It reads a
   public registry. The authenticator work (`docs/worldid-authenticator-spec.md`)
   is a different, larger thing and is not this.
-- Say "not verified" about anybody. §784's four-case rule carries over whole.
+- Say "not verified" about anybody. §785's four-case rule carries over whole.
 - Read the leaf index of an address the person did not name.
 
 ---
@@ -132,7 +132,7 @@ half-present in a way no compiler catches.
 | 8 | `website/` | shelf cell, hero marquee tile, `.ai-worldid` background — see §5 |
 | 9 | `Model/NetworkReach.swift` | no new host; widen the World ID entry's purpose to name the seat's reads |
 | 10 | `Model/NotifyPlan.swift` / `NotifySweep.swift` | the key-change notice; `standsAlone` |
-| 11 | `docs/prd.md`, `CLAUDE.md`, `docs/hooks/wallet.md` | §785, one index line, the long entry |
+| 11 | `docs/prd.md`, `CLAUDE.md`, `docs/hooks/wallet.md` | §786, one index line, the long entry |
 | 12 | `scripts/worldid-seat-selftest.sh` (or extend `worldid-selftest.sh`) | the pure half + drift guards |
 | 13 | `Shell/ProbeHooks.swift` | `-worldIDAccountProbe <0x…>` — packed data, leaf index presence, recovery agent, event count |
 
@@ -155,7 +155,7 @@ which category row a cell sits in (§780c). Put it on the Wallet row by eye.
 
 ## 6. The icon
 
-`~/Downloads` has the real file. It now has a home, which it did not under §784:
+`~/Downloads` has the real file. It now has a home, which it did not under §785:
 
 - **App**: `Casberi/Casberi/Assets.xcassets/brand-worldid.imageset/` with a
   `Contents.json` beside the file — copy the shape of any existing

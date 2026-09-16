@@ -188,14 +188,14 @@ enum NetworkReach {
                          // HyperEVM (Alchemy names it `hyperliquid-mainnet`)
                          // and Monad, 2026-08-28.
                          "hyperliquid-mainnet.g.alchemy.com", "monad-mainnet.g.alchemy.com",
-                         // World Chain, 2026-09-16 (prd §784) — a chain you
+                         // World Chain, 2026-09-16 (prd §785) — a chain you
                          // switch on, off by default until it is measured.
                          "worldchain-mainnet.g.alchemy.com",
                          "solana-mainnet.g.alchemy.com", "robinhood-mainnet.g.alchemy.com",
                          "api.zerion.io", "coins.llama.fi",
                          "rpc.mevblocker.io", "mainnet.base.org", "mainnet.optimism.io",
                          "arb1.arbitrum.io", "eth.api.onfinality.io", "polygon.api.onfinality.io"]),
-        // World ID (2026-09-16, prd §784). ITS OWN HOST, and that is a fix
+        // World ID (2026-09-16, prd §785). ITS OWN HOST, and that is a fix
         // rather than a preference (`/code-review`, same day). This read
         // happens whether or not you watch a wallet — opening an address card
         // or a person's room is what buys it — so it needs its own row here,

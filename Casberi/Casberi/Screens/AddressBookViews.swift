@@ -625,7 +625,7 @@ struct AddressCard: View {
     /// `AddressNames`, which is what stops the read being bought again.
     @State private var primaryNames: [AddressNames.Entry] = []
 
-    /// WHETHER THIS ADDRESS BELONGS TO A VERIFIED HUMAN (prd §784), READ off
+    /// WHETHER THIS ADDRESS BELONGS TO A VERIFIED HUMAN (prd §785), READ off
     /// the store rather than copied into `@State` (`/code-review`, 2026-09-16).
     ///
     /// A copy taken after `fill` returned was wrong whenever the same address
@@ -1641,7 +1641,7 @@ struct AddressCard: View {
         }
     }
 
-    /// WORLD ID, WHEN THERE IS ONE (prd §784).
+    /// WORLD ID, WHEN THERE IS ONE (prd §785).
     ///
     /// One line of type under the kind line, in the quiet tier where this card
     /// already keeps facts about the address rather than about you. It is not

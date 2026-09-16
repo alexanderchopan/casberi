@@ -1,6 +1,6 @@
 import Foundation
 
-/// WHETHER AN ADDRESS BELONGS TO A VERIFIED HUMAN (prd §784, 2026-09-16) — the
+/// WHETHER AN ADDRESS BELONGS TO A VERIFIED HUMAN (prd §785, 2026-09-16) — the
 /// pure half, encoders and verdict, with every read in `WorldIDSource`.
 ///
 /// World ID's address book is one contract on World Chain holding one mapping:
@@ -64,7 +64,7 @@ enum WorldID {
     /// prove), so one host reached by two callers can only ever be labelled
     /// with one of their names. Sharing Alchemy's host filed this read under
     /// the **Wallet bridge** — for a person who never connected Wallet — while
-    /// the code, prd §784 and the harness all claimed otherwise. Two purposes,
+    /// the code, prd §785 and the harness all claimed otherwise. Two purposes,
     /// two hosts, and each row says something true.
     ///
     /// dRPC because this app already reaches that provider and has measured it

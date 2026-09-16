@@ -48,7 +48,7 @@ final class WalletChainStore {
     /// because that is the chain a token balance lives on, and calling the row
     /// "Hyperliquid" would claim the perps book is in it.
     ///
-    /// **World Chain (prd §784, 2026-09-16) is the first chain here that
+    /// **World Chain (prd §785, 2026-09-16) is the first chain here that
     /// landed UNMEASURED, and it is OFF by default because of it.** Every
     /// other row was read end-to-end first — that is this table's own rule,
     /// and it is not suspended, it is unmet: the session that added it had no

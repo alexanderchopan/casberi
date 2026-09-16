@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Casberi World ID self-test (prd §784, 2026-09-16) — the SHIPPED pure logic
+# Casberi World ID self-test (prd §785, 2026-09-16) — the SHIPPED pure logic
 # behind "is this address a verified human":
 #
 #   Casberi/Casberi/Model/WorldID.swift
@@ -251,13 +251,13 @@ grep -q "$worldid_host" "$WORLDID" \
 grep -q 'service: "World ID"' "$TMP/source.stripped" \
   || { echo "✗ the read no longer names itself to NetworkLedger — the receipts screen would attribute it to the Wallet bridge"; exit 1; }
 
-# 5. WORLD CHAIN IS OFF BY DEFAULT while it is unmeasured (prd §784). The
+# 5. WORLD CHAIN IS OFF BY DEFAULT while it is unmeasured (prd §785). The
 #    holdings read is one request per chunk across every selected chain, so a
 #    chain the Portfolio endpoint refuses 400s the WHOLE read.
 grep -q '("worldchain-mainnet", "World Chain")' "$CHAINS" \
   || { echo "✗ World Chain is not in the wallet's chain picker"; exit 1; }
 if grep -A 4 'defaultNetworkIDs = \[' "$CHAINS" | grep -q 'worldchain-mainnet'; then
-  echo "✗ World Chain is ON by default — measure the Portfolio by-address call, getAssetTransfers and DeFiLlama's key first (prd §784)"; exit 1
+  echo "✗ World Chain is ON by default — measure the Portfolio by-address call, getAssetTransfers and DeFiLlama's key first (prd §785)"; exit 1
 fi
 
 # --- mutation liveness --------------------------------------------------------

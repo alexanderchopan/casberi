@@ -60,7 +60,7 @@ enum WalletIngest {
         Chain(network: "solana-mainnet", explorer: "https://solscan.io/tx/",              symbol: "SOL",   displayName: "Solana",
               kind: .solana, nativeDecimals: 9),
         Chain(network: "robinhood-mainnet", explorer: "https://robinhoodchain.blockscout.com/tx/", symbol: "ETH", displayName: "Robinhood"),
-        // World Chain (prd §784, 2026-09-16) — the OP-stack chain World App's
+        // World Chain (prd §785, 2026-09-16) — the OP-stack chain World App's
         // accounts live on, so a person who holds WLD or spends from World App
         // reads it here beside every other chain. `worldscan.org` is
         // Etherscan-family, which is what `explorerAddressURL`'s `/tx/` →
@@ -144,7 +144,7 @@ enum WalletIngest {
     private static var transferChains: [Chain] { chains.filter { $0.kind == .evm } }
 
     /// Chains in `WalletChainStore.selectable` whose Alchemy Portfolio support
-    /// is NOT proven (prd §784, 2026-09-16 — World Chain is the first).
+    /// is NOT proven (prd §785, 2026-09-16 — World Chain is the first).
     ///
     /// The holdings read sends every selected network for up to three wallets
     /// in ONE body, so a chain the endpoint refuses does not fail alone: it

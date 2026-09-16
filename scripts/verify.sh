@@ -2015,7 +2015,7 @@ harness "GitHub person-watch pure-logic self-test" "github-person self-test" "sc
 # catch-all, and that a resolved name never overwrites one somebody typed.
 harness "Wei/Gwei name pure-logic self-test" "wei-names self-test" "scripts/wei-names-selftest.sh" "the Wei/Gwei name self-test failed — run scripts/wei-names-selftest.sh"
 
-# World ID (prd §784). The read is one `eth_call` whose every failure arrives as
+# World ID (prd §785). The read is one `eth_call` whose every failure arrives as
 # the same silence, and the silence is also the CORRECT answer for almost every
 # address on earth — so a broken read here looks exactly like a working one,
 # forever. The mutations name the four: a mistyped selector (reverts; every

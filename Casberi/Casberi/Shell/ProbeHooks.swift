@@ -3332,7 +3332,7 @@ enum ProbeHooks {
             }
         },
         // `-worldIDProbe <0x…|YES>` — World ID's address book, step by step
-        // (prd §784): the contract, the computed selector, the calldata, the
+        // (prd §785): the contract, the computed selector, the calldata, the
         // RAW word that came back, and the verdict. Bare `YES` reads the
         // watched wallets. The raw word is printed because the one thing this
         // read is UNMEASURED on is what a permanent verification looks like —

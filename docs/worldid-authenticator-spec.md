@@ -1,9 +1,9 @@
-# World ID beyond §784 — this phone as an authenticator
+# World ID beyond §785 — this phone as an authenticator
 
 Spec, 2026-09-16. Read against `worldcoin/world-id-protocol` at `9577f2f` (2026-09-16), the World ID 4.0
 product/technical spec, WIP-103 and WIP-104, and the deployed `WorldIDRegistry` on World Chain.
 Everything below marked **MEASURED** was read off that tree or the chain; everything marked
-**UNMEASURED** was not, and each one names the check that settles it. §784 stands as stage 0 and
+**UNMEASURED** was not, and each one names the check that settles it. §785 stands as stage 0 and
 this does not reopen it.
 
 ## 0. The one-paragraph version
@@ -219,10 +219,10 @@ whether this phone is an owner; (4) Path B's create flow, gated on the Orb quest
 
 ## 5. What is deliberately not built
 
-- **Sign in with World ID** (OIDC) — declined in §784; nothing here changes the reason.
+- **Sign in with World ID** (OIDC) — declined in §785; nothing here changes the reason.
 - **Being a relying party.** Casberi has nothing to gate. Session proofs for its own doors would be
   a proof shown to itself.
-- **Hosting mini apps.** A different product; §784's reply stands.
+- **Hosting mini apps.** A different product; §785's reply stands.
 - **Running an OPRF node, or being an Issuer.** Issuing PoH takes an Orb.
 
 ## 6. The first four measurements, in order

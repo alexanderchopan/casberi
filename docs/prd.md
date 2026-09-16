@@ -57225,7 +57225,7 @@ The absolute bound grew from 90s to 180s and restarts on each navigation the per
 
 **Unmeasured.** No simulator run; verified by the build, the static audits and the X, room-head, dock and catalogue selftests.
 
-## §784 — World ID is a fact about an address, not a seat; World Chain is a chain you switch on (user: "how can we put worldID into the app", then "do A&B", 2026-09-16)
+## §785 — World ID is a fact about an address, not a seat; World Chain is a chain you switch on (user: "how can we put worldID into the app", then "do A&B", 2026-09-16)
 
 **The question was open, and the three answers were not equal.** World publishes three doors a native app with no server can use: a public address book on World Chain (`addressVerifiedUntil(address)`, one keyless `eth_call`), World Chain itself (an OP-stack chain Alchemy serves), and Sign in with World ID (OIDC, PKCE, a public app id). The third is the one that looks like "a World ID integration" and it is the one refused: this app has no server, no accounts and no other people, so a proof verified on your own phone would be a badge gating nothing — §83's dead control with a logo on it. Declined on the record, not deferred.
 
@@ -57243,11 +57243,11 @@ The absolute bound grew from 90s to 180s and restarts on each navigation the per
 
 **Unmeasured, and stated rather than papered over.** Nothing here has spoken to World Chain: the selector is computed from `Keccak256` at call time and pinned in the harness against an independent implementation, but what a PERMANENT verification looks like in that mapping — a far-future second, or a sentinel this file reads as malformed — is unknown. `-worldIDProbe` prints the RAW word for exactly that reason. Read it before trusting a status on an address you know is verified.
 
-## §784a — the World ID read's own host, the room that waited on it, and a chain that could sink the others (`/code-review` on §784, 2026-09-16)
+## §785a — the World ID read's own host, the room that waited on it, and a chain that could sink the others (`/code-review` on §785, 2026-09-16)
 
-Eight findings on §784's branch; six were real and are fixed here. Each one had shipped with a comment or a harness guard asserting the opposite, which is the class worth recording.
+Eight findings on §785's branch; six were real and are fixed here. Each one had shipped with a comment or a harness guard asserting the opposite, which is the class worth recording.
 
-**The receipts row said Wallet.** `NetworkLedger.resolvedService` is `byHost ?? named` — the host match wins, deliberately, because it is the half a static audit can prove. So the read's `service: "World ID"` never applied: the host was the wallet's `worldchain-mainnet.g.alchemy.com`, and a person who never connected Wallet would have seen this read filed under that bridge. §784's "disclosed twice on purpose" was describing a registry that cannot express it. **One host, one service** — the read moved to `worldchain.drpc.org` (dRPC, whose `eth` subdomain this app already measures in `WeiNamesSource`), the wallet keeps Alchemy's, and the harness now refuses a World ID entry that lists a `g.alchemy.com` host.
+**The receipts row said Wallet.** `NetworkLedger.resolvedService` is `byHost ?? named` — the host match wins, deliberately, because it is the half a static audit can prove. So the read's `service: "World ID"` never applied: the host was the wallet's `worldchain-mainnet.g.alchemy.com`, and a person who never connected Wallet would have seen this read filed under that bridge. §785's "disclosed twice on purpose" was describing a registry that cannot express it. **One host, one service** — the read moved to `worldchain.drpc.org` (dRPC, whose `eth` subdomain this app already measures in `WeiNamesSource`), the wallet keeps Alchemy's, and the harness now refuses a World ID entry that lists a `g.alchemy.com` host.
 
 **The person room waited a minute and a half to draw nothing.** The read sat ahead of the transactions fetch, the merge and the profile: up to six sequential calls to a public RPC whose reachability is unmeasured, at fifteen seconds a timeout, for one line that is absent for almost every person. It runs after `loading = false` now, and nothing on the screen waits on it.
 
@@ -57259,18 +57259,18 @@ Eight findings on §784's branch; six were real and are fixed here. Each one had
 
 **A function whose doc invented its own caller.** `forget(_:)` said it ran when a book entry was removed. Nothing did, and nothing could without an actor hop `AddressBook` does not have. Deleted; `forgetAll` stays, with a doc that admits it is waiting for the Data tray.
 
-Also: the file header claimed "only `verified` draws" while the card draws `lapsed` too, as §784 itself ruled. The header was wrong, not the card.
+Also: the file header claimed "only `verified` draws" while the card draws `lapsed` too, as §785 itself ruled. The header was wrong, not the card.
 
-## §785 — World ID gets a SEAT, and it is a different subject from §784's read (user: "yes we want to make a worldid seat like we have with safe and others", 2026-09-16)
+## §786 — World ID gets a SEAT, and it is a different subject from §785's read (user: "yes we want to make a worldid seat like we have with safe and others", 2026-09-16)
 
-**§784 refused a seat and this reverses that, without reversing its reasoning.** That refusal cited §515a — a protocol the wallet reads on its own must never also ship as an offer — and the rule stands exactly where it was pointed: **whether any address belongs to a verified human stays a fact the wallet reads on its own, with no seat, no offer and no website cell.** Nothing §784 built changes.
+**§785 refused a seat and this reverses that, without reversing its reasoning.** That refusal cited §515a — a protocol the wallet reads on its own must never also ship as an offer — and the rule stands exactly where it was pointed: **whether any address belongs to a verified human stays a fact the wallet reads on its own, with no seat, no offer and no website cell.** Nothing §785 built changes.
 
 **The seat is your own World ID ACCOUNT, which is a different subject.** Its keys, who can recover it, when its Orb credential runs out, and every change to any of that. You name your World App address; it yields things. That is not something the wallet reads on its own, and it is precisely the split the Safe seat already ships: the wallet reads addresses, the Safe seat reads *your* queue and *this phone's* signer standing. Same shape, same group, same `.watchedWallets` mode.
 
 **What it lands, and the one that matters.** `AuthenticatorInserted`, `AuthenticatorRemoved`, `AccountRecovered`, `RecoveryAgentUpdated` — every one carries `leafIndex` as an indexed topic, so a single `eth_getLogs` returns one account's whole history and nothing else. **A key you did not add is the compromise notice**, and it `standsAlone` in notifications beside a dispute, a deadline, a liquidation and a Safe signature. World ID's own 4.0 spec lists user-visible account auditability as a requirement, and nobody ships it.
 
-**Two standing facts beside the events**: whether a recovery agent is set at all (`address(0)` means losing every key ends the World ID — a real fact, stated once, never nagged), and the credential expiry §784's store already holds.
+**Two standing facts beside the events**: whether a recovery agent is set at all (`address(0)` means losing every key ends the World ID — a real fact, stated once, never nagged), and the credential expiry §785's store already holds.
 
-**Keyless, and it adds no host.** Every read is an `eth_call` or `eth_getLogs` on World Chain through the host §784a gave the World ID read of its own. No account, no key, no service, no World App. The `leafIndex` is a SECRET in this app's terms — the 4.0 spec names authenticator-side knowledge of it as the tracking risk — so it lives in the Keychain, is never logged, never reaches a receipt, and takes a row in the redaction audit.
+**Keyless, and it adds no host.** Every read is an `eth_call` or `eth_getLogs` on World Chain through the host §785a gave the World ID read of its own. No account, no key, no service, no World App. The `leafIndex` is a SECRET in this app's terms — the 4.0 spec names authenticator-side knowledge of it as the tracking risk — so it lives in the Keychain, is never logged, never reaches a receipt, and takes a row in the redaction audit.
 
 **Specced, not built** (`docs/worldid-seat-spec.md`): the ruling, the offer's fields, all thirteen registration points traced through `"Safe"`, the website parity gate, the icon's home, and the three measurements that come first. The seat's entire content rests on a contract read nobody has run — and the largest unknown is whether a World App wallet address is an ADMIN authenticator at all, since WIP-104 allows proving-only keys that hold no address. If it is not, the seat cannot find an account from an address and needs a different door. Measure before building.
