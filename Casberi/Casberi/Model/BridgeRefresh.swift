@@ -337,6 +337,30 @@ enum BridgeRefresh {
                 _ = await RSSIngest.refresh(context: context)
             }
         }
+        // One publisher, one feed — its own slot rather than riding RSS's,
+        // because a NerdWallet row is stamped `NerdWallet` and a person who
+        // has not turned the seat on must pay nothing for it.
+        // The two finance seats (§780b) — each sweeps only while its own
+        // session is in the Keychain, so a person who never connected pays
+        // nothing for either.
+        if AcornsAuth.connected {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await AcornsIngest.refresh(context: context)
+            }
+        }
+        if RocketMoneyAuth.connected {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await RocketMoneyIngest.refresh(context: context)
+            }
+        }
+        if NerdWalletBridge.following {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await NerdWalletIngest.refresh(context: context)
+            }
+        }
         // What the articles actually SAY (2026-08-06) — a bounded, ledgered
         // read of the pages RSS and Substack rows already link to, into
         // retrieval-only `enrichedText`. Its own slot: it is several fetches

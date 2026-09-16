@@ -734,6 +734,29 @@ enum NetworkReach {
                  purpose: "Fetches a publication's public feed for new posts.",
                  hosts: ["substack.com", "the publication you follow"]),
 
+        // One host and one document. Worth saying plainly on THIS entry, since
+        // the seat's name is the one in the catalog most likely to be read as
+        // reaching an account: there is no sign-in here and nothing account-
+        // shaped is asked for or sent.
+        Endpoint(service: "NerdWallet",
+                 reach: .whenConnected(bridge: "NerdWallet"),
+                 purpose: "Fetches NerdWallet's public article feed. No account, and the request carries nothing about you.",
+                 hosts: ["www.nerdwallet.com"]),
+
+        // The two finance seats of §780b. Both sign in through their OWN
+        // provider's page inside a web view on this device; the session stays
+        // in this iPhone's Keychain and the reads go straight to the provider.
+        // Every path is a read — neither seat has an endpoint that could move
+        // money, and both say so on their own page.
+        Endpoint(service: "Acorns",
+                 reach: .whenConnected(bridge: "Acorns"),
+                 purpose: "Signs you in on Acorns' own page, then reads your accounts and balances as you. Read-only — nothing here can move money.",
+                 hosts: ["oak.acorns.com", "api.acorns.com"]),
+        Endpoint(service: "Rocket Money",
+                 reach: .whenConnected(bridge: "Rocket Money"),
+                 purpose: "Signs you in on Rocket Money's own page, then reads your subscriptions and recurring bills as you. Read-only — nothing here can cancel or pay anything.",
+                 hosts: ["app.rocketmoney.com", "api.rocketmoney.com"]),
+
         // MARK: Shopping
 
         Endpoint(service: "Shopify",

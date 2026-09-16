@@ -31,6 +31,12 @@ enum ProbeHooks {
         "-igLiveSession",
         // A TikTok web session's whole cookie header (prd §731).
         "-tiktokLiveSession",
+        // A Rocket Money bearer — a live session over linked bank accounts.
+        "-rocketSession",
+        // An Acorns bearer — a live BROKERAGE session. The most sensitive
+        // value any probe here takes after `-ascKey`, and the reason the seat
+        // is staged DEBUG-only (see `AcornsLive`).
+        "-acornsSession",
         // The `.p8` itself — a real ECDSA private key, and the most sensitive
         // value any probe in this file takes. `-ascKeyID`/`-ascIssuer` are
         // deliberately NOT here: they are identifiers, useless without the
@@ -5711,6 +5717,55 @@ enum ProbeHooks {
         // sweep lands.
         Hook(key: "duolingoProbe") { _, context in
             Task { @MainActor in await DuolingoLive.diagnose(context: context) }
+        },
+        // `-acornsSession "<bearer>"` stores an Acorns bearer lifted from a
+        // signed-in browser session — `-spotifySession`'s door, for the same
+        // reason: the sign-in is a live human typing a password into Acorns'
+        // own page inside a `WKWebView` that no script can drive. Then reports
+        // what the seat makes of it.
+        Hook(key: "acornsSession") { bearer, _ in
+            let token = bearer.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !token.isEmpty, token != "YES" else { return }
+            AcornsAuth.store(bearer: token, cookieHeader: nil)
+            Task { @MainActor in await AcornsLive.probe() }
+        },
+        // `-acornsProbe YES` reads every confirmed endpoint with whatever
+        // credential is already stored and reports the SHAPE of each answer —
+        // status, JSON type and key names, never a value (see `AcornsLive`).
+        // This is the probe the seat is waiting on: it says which of the four
+        // endpoints a real session actually opens, which is the one fact no
+        // amount of keyless probing could establish.
+        Hook(key: "acornsProbe") { _, _ in
+            Task { @MainActor in await AcornsLive.probe() }
+        },
+        // `-acornsForget YES` drops the stored session — the way back to a
+        // clean run without reinstalling.
+        Hook(key: "acornsForget") { _, _ in
+            AcornsAuth.clear()
+            NSLog("acorns| credential cleared")
+        },
+        // `-rocketSession "<bearer>"` stores a Rocket Money bearer lifted from
+        // a signed-in browser session. Unlike Acorns this seat ALSO needs a
+        // catalogue — its schema is closed, so the operations are learned from
+        // the live page (`RocketMoneyLoginWebView`) and a bearer alone gets
+        // only the seed read.
+        Hook(key: "rocketSession") { bearer, _ in
+            let token = bearer.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !token.isEmpty, token != "YES" else { return }
+            RocketMoneyAuth.store(bearer: token, cookieHeader: nil)
+            Task { @MainActor in await RocketMoneyLive.probe() }
+        },
+        // `-rocketProbe YES` runs the seed read, then replays every captured
+        // READ and reports each answer's SHAPE — status, JSON type, key names,
+        // never a value (§780). It also names which wanted operations the page
+        // has not taught it yet, which is the difference between "the session
+        // is dead" and "you didn't open the Subscriptions page".
+        Hook(key: "rocketProbe") { _, _ in
+            Task { @MainActor in await RocketMoneyLive.probe() }
+        },
+        Hook(key: "rocketForget") { _, _ in
+            RocketMoneyAuth.clear()
+            NSLog("rocket| credential and captured operations cleared")
         },
         // `-steamBridge "<key>:<profile>"` connects Steam headlessly.
         Hook(key: "steamBridge") { spec, context in

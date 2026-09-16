@@ -68,10 +68,6 @@ struct DiagnosticsScreen: View {
                     }
                     .dsListCardRow()
                 }
-            } footer: {
-                // "Copy or share it below and send it back" restated the two
-                // controls below it (prd §748).
-                DSFootnote("Every line is a real result from this device.", scale: .page)
             }
             // — The reading leaves the phone (prd §670, 2026-09-10) —
             //

@@ -110,9 +110,12 @@ enum BridgeRouter {
         // The practice-day seat (prd §776) — a web sign-in, so it finishes on
         // connect like every other one-account seat below.
         case duolingo
+        case acorns
+        case rocketMoney
         case twitch
         case slack
         case substack
+        case nerdwallet
         case reddit
         case youtube
         case podcasts
@@ -339,9 +342,12 @@ enum BridgeRouter {
             case .dropbox:        "dropbox"
             case .spotify:        "spotify"
             case .duolingo:       "duolingo"
+            case .acorns:         AcornsLive.seatID
+            case .rocketMoney:    RocketMoneyLive.seatID
             case .twitch:         "twitch"
             case .slack:          "slack"
             case .substack:       "substack"
+            case .nerdwallet:     NerdWalletBridge.seatID
             case .reddit:         "reddit"
             case .youtube:        "youtube"
             case .podcasts:       "podcasts"
@@ -450,9 +456,12 @@ enum BridgeRouter {
         Row(offer: "Dropbox",   id: "dropbox", destination: .dropbox),
         Row(offer: "Spotify",   id: "spotify", destination: .spotify),
         Row(offer: "Duolingo",  id: "duolingo", destination: .duolingo),
+        Row(offer: "Acorns", id: AcornsLive.seatID, destination: .acorns),
+        Row(offer: "Rocket Money", id: RocketMoneyLive.seatID, destination: .rocketMoney),
         Row(offer: "Twitch",    id: "twitch", destination: .twitch),
         Row(offer: "Slack",    id: "slack",   destination: .slack),
         Row(offer: "Substack",  id: "substack", destination: .substack),
+        Row(offer: "NerdWallet", id: NerdWalletBridge.seatID, destination: .nerdwallet),
         Row(offer: "Reddit",    id: "reddit",   destination: .reddit),
         Row(offer: "YouTube",   id: "youtube",  destination: .youtube),
         Row(offer: "Podcasts",  id: "podcasts", destination: .podcasts),
@@ -663,9 +672,12 @@ struct BridgeDestinationView: View {
         case .dropbox:        DropboxScreen()
         case .spotify:        SpotifyScreen()
         case .duolingo:       DuolingoScreen()
+        case .acorns:         AcornsScreen()
+        case .rocketMoney:    RocketMoneyScreen()
         case .twitch:         TwitchScreen()
         case .slack:          SlackScreen()
         case .substack:       HandleSetupScreen(bridge: .substack)
+        case .nerdwallet:     NerdWalletScreen()
         case .reddit:         HandleSetupScreen(bridge: .reddit)
         case .youtube:        HandleSetupScreen(bridge: .youtube)
         case .podcasts:       HandleSetupScreen(bridge: .podcasts)

@@ -42,6 +42,7 @@ cd "$(dirname "$0")/.."
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
 ONBOARD="Casberi/Casberi/Screens/IntroCover.swift"
 INDEX="website/index.html"
+DOCS="website/docs.html"
 # Overridable so the check can be proven against fixtures without mutating a
 # tracked file (a peer session's `git add -A` would commit the mutation).
 if [ -n "${CATALOG_SYNC_COPYDOCS:-}" ]; then
@@ -74,6 +75,16 @@ awk '/id="catalog"/{f=1} f' "$INDEX" \
   | grep -oE '<span>[^<]+</span>' \
   | sed -E 's|<span>([^<]+)</span>|\1|' | sort > "$tmp/web_shelf_raw"
 sort -u "$tmp/web_shelf_raw" > "$tmp/web_shelf"
+
+# --- 2b. The website DOCS list (docs.html #every-app), which nothing checked
+#         until 2026-09-15. It is a second hand-kept copy of the same catalog,
+#         grouped by a website taxonomy of its own, and it had silently drifted
+#         one app away from the shelf. The "97 apps" line above it was wrong by
+#         two at the same time — a hand-kept NUMBER beside a hand-kept LIST.
+awk '/id="every-app"/{f=1} f' "$DOCS" \
+  | grep -oE '<li><b>[^<]+</b>' \
+  | sed -E 's|<li><b>([^<]+)</b>|\1|' | sort > "$tmp/web_docs_raw"
+sort -u "$tmp/web_docs_raw" > "$tmp/web_docs"
 
 # --- 3. Website hero marquee tiles (inside the .rain div) -----------------
 awk '/class="rain">/{f=1} /rain-target/{f=0} f' "$INDEX" \
@@ -116,6 +127,47 @@ if [ -n "$extra" ]; then
   while IFS= read -r a; do bad "on website shelf but NOT a connectable offer: $a"; done <<< "$extra"
 fi
 [ -z "$missing$extra" ] && say "  ✓ in sync"
+
+# === Check 1b: the docs "every app" list == connectable ==================
+# Added 2026-09-15 after the user found the count stale ("we need to update the
+# number of apps here, or just remove that number, and we need to update the
+# docs on the website too"). The shelf was gated and the docs list was not, so
+# the docs list is where drift accumulated silently.
+say "Website docs list ↔ connectable offers"
+docs_dupes="$(uniq -d "$tmp/web_docs_raw")"
+docs_missing="$(comm -23 "$tmp/connectable" "$tmp/web_docs")"
+docs_extra="$(comm -13 "$tmp/connectable" "$tmp/web_docs")"
+if [ -n "$docs_dupes" ]; then
+  while IFS= read -r n; do
+    [ -n "$n" ] && bad "listed more than once in the docs list: $n"
+  done <<< "$docs_dupes"
+fi
+if [ -n "$docs_missing" ]; then
+  while IFS= read -r a; do bad "connectable but MISSING from docs.html #every-app: $a"; done <<< "$docs_missing"
+fi
+if [ -n "$docs_extra" ]; then
+  while IFS= read -r a; do bad "in docs.html #every-app but NOT a connectable offer: $a"; done <<< "$docs_extra"
+fi
+[ -z "$docs_missing$docs_extra" ] && say "  ✓ in sync"
+
+# === Check 1c: the app COUNT on the home page is the real one ============
+# The no-JS fallback. `app.js` derives it at runtime from the shelf, so this
+# only pins the server-rendered number — but that number is what a crawler and
+# a JS-less visitor read, and it is the one that was wrong.
+# The claim is "100+" — rounded DOWN to a ten, so it stays true as seats are
+# added and can never over-promise. Checked as: the stated ten must be the
+# shelf's own floor. A stated 100+ over a 99-cell shelf is a lie; over 109 it
+# is stale but still true, and the check still fails it, because a number that
+# drifts silently is what put "97" over a 101-cell shelf.
+say "Home page app count"
+shelf_n="$(wc -l < "$tmp/web_shelf_raw" | tr -d ' ')"
+stated_n="$(grep -oE 'id="bk-count">[0-9]+\+? apps' "$INDEX" | grep -oE '[0-9]+' || echo 0)"
+want_n=$(( shelf_n / 10 * 10 ))
+if [ "$stated_n" != "$want_n" ]; then
+  bad "the home page says ${stated_n}+ apps; the shelf holds $shelf_n, so it should say ${want_n}+"
+else
+  say "  ✓ ${stated_n}+ apps, the floor of the shelf's $shelf_n"
+fi
 
 # === Check 2: every marquee name resolves to a real offer ================
 check_marquee_validity() {

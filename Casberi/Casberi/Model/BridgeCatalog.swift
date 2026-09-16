@@ -208,6 +208,13 @@ enum BridgeCatalog {
               // Health/Strava/HomeKit already set the precedent for a seat
               // that cannot exist here.
               needsSetup: true, added: day(2026, 8, 6), unavailableOnMac: true),
+        // The two finance seats of §780b. Wallet group, beside Apple Wallet and
+        // Gnosis Pay — this shelf is where money lives, and Reading would
+        // promise reading rather than an account.
+        Offer(name: "Acorns", tagline: "Your accounts and balances, in your total", group: "Wallet", connectable: true,
+              needsSetup: true, added: day(2026, 9, 15)),
+        Offer(name: "Rocket Money", tagline: "Subscriptions and bills, before they hit", group: "Wallet", connectable: true,
+              needsSetup: true, added: day(2026, 9, 15)),
         // Wise (prd §778, 2026-09-16) — balances and transfers over a
         // read-only personal token. The tagline names BOTH halves because the
         // seat is honestly two things, and neither alone would be worth a
@@ -718,6 +725,15 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Kindle",      tagline: "Import your highlights",                group: "Reading",   connectable: true,
               needsSetup: true),
+        // WALLET, not Reading (user, prd §780c: "acorns and rocket and nerd go
+        // in wallet"), reversing §780's placement. The original argument was
+        // that a money shelf promises an account this seat has no door to —
+        // the ruling is that a person looking for their finance apps looks in
+        // one place, and the tagline ("news") is what keeps the promise
+        // honest. See `NerdWalletBridge` for why it is one switch and not a
+        // follow list.
+        Offer(name: "NerdWallet",  tagline: "Personal-finance news, as it lands", group: "Wallet",   connectable: true,
+              needsSetup: true, added: day(2026, 9, 15)),
         // Reading group, beside Kindle (2026-07-28, prd §224, corrected same
         // day from an initial Notes placement) — both are import-only, no
         // live read. Safari has no bookmarks API at all, and Chrome's own
@@ -1102,7 +1118,7 @@ enum BridgeSetupMode {
     /// X, Instagram and TikTok sign in since §701/§726/§731 — each keeps its
     /// export as a second act, but the word on the catalogue is the first door.
     static let signInSeats: Set<String> = ["Dropbox", "Slack", "Twitch", "CardPointers", "GitHub", "X", "Spotify",
-        "Instagram", "TikTok", "Duolingo"]
+        "Instagram", "TikTok", "Duolingo", "Acorns", "Rocket Money"]
 
     /// A one-time export you point at. Instagram and Snapchat were missed in
     /// this list's first life (2026-07-31) and TikTok would have been missed
@@ -1130,5 +1146,5 @@ enum BridgeSetupMode {
         "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster", "Bluesky", "Nostr",
         "Telegram", "Shopify", "Deals", "Stocktwits", "Hugging Face", "Radicle",
         "npm", "PyPI", "Altana", "Walletbeat", "L2BEAT", "ENS", "Hegotá Frames", "Hegotá UTXO",
-        "Base Vibenet", "ETH Validators", "Hegotá Privacy"]
+        "Base Vibenet", "ETH Validators", "Hegotá Privacy", "NerdWallet"]
 }

@@ -245,6 +245,10 @@ extension DS {
         case "reddit":              return Color.fixed("#ff4500")
         case "youtube":             return Color.fixed("#ff0000")
         case "substack":            return Color.fixed("#ff6719")
+        // Their brand green, read off nerdwallet.com itself (2026-09-15) — the
+        // seat draws an SF glyph on this field, never a reproduction of the
+        // logo, which is also what the website cell does.
+        case "nerdwallet":          return Color.fixed("#008254")
         case "podcasts":            return Color.fixed("#8a2be2")   // Apple Podcasts purple
         case "contacts":            return Color.fixed("#34c759")   // Contacts green
         case "kindle":              return Color.fixed("#f2a900")   // Amazon/Kindle amber

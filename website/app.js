@@ -512,3 +512,26 @@
     rearm();
   }
 })();
+
+/* The catalogue count is DERIVED, never typed (2026-09-15). It read "97 apps"
+   over a 101-cell shelf because it was a hand-kept number beside a hand-kept
+   list — the same drift the app's own catalog-sync gate exists to stop.
+
+   It rounds DOWN to a ten and says "100+" (user ruling): a claim that stays
+   true as seats are added, and — unlike an exact number — one that cannot be
+   read as wrong the moment the shelf changes. Rounding down is what keeps it
+   honest; "100+" over 101 under-promises, and never the reverse.
+
+   The markup carries a correct server-rendered value for no-JS and for first
+   paint; this only ever corrects it. `catalog-sync.sh` pins that fallback, so
+   both halves are checked. */
+(function () {
+  var el = document.getElementById('bk-count');
+  if (!el) { return; }
+  var shelf = document.getElementById('catalog');
+  if (!shelf) { return; }
+  var n = shelf.querySelectorAll('.mini-cell').length;
+  if (n <= 0) { return; }
+  var floored = Math.floor(n / 10) * 10;
+  el.textContent = (floored >= 10 ? floored + '+' : String(n)) + ' apps';
+})();

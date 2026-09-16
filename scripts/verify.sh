@@ -1534,6 +1534,8 @@ harness "Row-window self-test" "row-window self-test" "scripts/row-window-selfte
 # bounds — a per-candidate timeout and a total crawl budget — that keep one
 # slow host from pinning the whole bridge, which is the reported symptom.
 harness "RSS discovery self-test" "RSS discovery self-test" "scripts/rss-discovery-selftest.sh" "the RSS discovery self-test failed — run scripts/rss-discovery-selftest.sh"
+harness "NerdWallet self-test" "NerdWallet self-test" "scripts/nerdwallet-selftest.sh" "the NerdWallet self-test failed — run scripts/nerdwallet-selftest.sh"
+harness "Rocket Money read-only self-test" "rocket money self-test" "scripts/rocketmoney-selftest.sh" "the Rocket Money read-only self-test failed — run scripts/rocketmoney-selftest.sh"
 
 # Pure-logic self-test for the Cloudflare DNS change detector (prd §296). Same
 # reasoning as the X harness above: the bridge was authored against Cloudflare's
