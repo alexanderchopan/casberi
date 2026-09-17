@@ -58,6 +58,14 @@ enum WebSessionCapture {
         Target(key: "bankr", name: "Bankr",
                signInURL: "https://bankr.bot/api-keys",
                apiHosts: ["api.bankr.bot", "bankr.bot"]),
+        // Privy's developer dashboard (prd §803). It does publish an API —
+        // `api.privy.io`, app id + secret — but that secret has no read-only
+        // scope and the dashboard's charts are not known to be in it, so this
+        // measures which door a seat would need. The dashboard signs in through
+        // Privy's own auth hosts, so every `privy.io` subdomain is recorded.
+        Target(key: "privy", name: "Privy",
+               signInURL: "https://home.privy.io/login",
+               apiHosts: ["privy.io"]),
     ]
 
     static func target(_ key: String) -> Target? {

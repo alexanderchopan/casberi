@@ -109,7 +109,7 @@ struct DiagnosticsScreen: View {
             // first read, hence "next launch" — said on the control, not in
             // fine print elsewhere (the AgentKeyDetail rule).
             #if DEBUG
-            // WHAT A PROVIDER'S OWN WEB APP CALLS (prd §777). Five money apps
+            // WHAT A PROVIDER'S OWN WEB APP CALLS (prd §777, Privy §803). Five money apps
             // publish no API and no community project has mapped one, so a
             // seat written against a guessed path is §83's dead control. One
             // capture per provider answers it: sign in, let the dashboard

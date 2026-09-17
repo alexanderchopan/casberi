@@ -57553,3 +57553,11 @@ Also: the file header claimed "only `verified` draws" while the card draws `laps
 **Corrected, not re-measured.** §801a called the 3.0 path "server-free" and named a Pro free trial as the reason to re-open it. That path runs only through `@worldcoin/idkit-core` 2.x, and npm marks every 2.x release deprecated ("Old-versions moved to new ones"; 2.0.0, 2.0.2 and 2.1.0 checked). The current 4.2.4 requires `rp_context`, whose signature needs the portal's secret signing key. World's migration guide tells new apps to start on IDKit 4.x. §801a's measurements still hold: an unsigned 3.0 request reached World App, and the verify endpoints take no key. They describe a protocol on its way out, which is no base for a feature.
 
 **The one re-open condition left is §787's:** a Casberi server, which the user has ruled out, or World shipping a 4.0 request that needs no RP secret. A Pro free trial on World ID would need one of the two.
+
+## §803 — Privy's dashboard is measured before it is a seat (user: "for privy could we build a bridge like we do w/ bankr and tiktok to this dashboard https://home.privy.io/login", then "yes lets do it", 2026-09-17)
+
+**A capture target, not a seat.** `WebSessionCapture.targets` gains Privy beside Bankr (`home.privy.io/login`, every `privy.io` subdomain recorded, because the dashboard signs in through Privy's own auth hosts). DEBUG only, reached from Diagnostics, shapes never values — §777's instrument unchanged.
+
+**Why measure a provider that HAS an API.** Privy's documented door is `api.privy.io` with the app id and app secret (users, linked accounts, wallets). Two facts keep it from being the obvious answer: the secret carries no read-only scope, so the phone would hold full authority over the app (delete users, make wallets) — a heavier key than §800's read-only Bankr key — and the dashboard's own charts (active users, login methods, billing) are not known to be in it. The capture answers which door a seat would need: if the dashboard's reads are the public API's shapes, the seat is a keyed one (the Stripe/PostHog pattern); only if they are not is a §701 session door weighed, with the account-flag reasoning the ChatGPT/Claude refusal recorded.
+
+**Not yet run.** Nothing is known about the dashboard's endpoints until someone signs in and copies the reading.

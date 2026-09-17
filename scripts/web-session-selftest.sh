@@ -67,7 +67,11 @@ func check(_ ok: Bool, _ what: String) {
 func json(_ s: String) -> Any? { try? JSONSerialization.jsonObject(with: Data(s.utf8)) }
 
 // ── The bounded target list ──────────────────────────────────────────────
-check(WebSessionCapture.targets.count == 1, "one provider, and no open-ended 'record any site'")
+check(WebSessionCapture.targets.count == 2, "two providers, and no open-ended 'record any site'")
+let privy = WebSessionCapture.target("privy")!
+check(WebSessionCapture.records(host: "home.privy.io", in: privy), "Privy's dashboard host is recorded")
+check(WebSessionCapture.records(host: "auth.privy.io", in: privy), "…and its auth host, a subdomain of the same")
+check(!WebSessionCapture.records(host: "notprivy.io", in: privy), "a lookalike of privy.io is NOT Privy")
 check(["cashapp", "creditkarma", "rocketmoney", "acorns", "nerdwallet"].allSatisfy { WebSessionCapture.target($0) == nil },
       "a seat that was refused or is built has no capture row")
 check(WebSessionCapture.target("bankr")?.apiHosts.contains("api.bankr.bot") == true, "Bankr records its API host")
