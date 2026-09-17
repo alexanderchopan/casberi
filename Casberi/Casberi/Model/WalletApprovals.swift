@@ -51,17 +51,18 @@ enum WalletApprovals {
     /// "fix it" link can't show the approval would break the honesty rule.
     /// NOTE: membership here must keep up with `WalletChainStore.selectable`
     /// by hand — a new EVM chain added there is silently approval-blind until
-    /// its host + range are measured and added here. World Chain (prd §785)
-    /// is out for exactly that reason and deliberately: neither its log host
-    /// nor Revoke.cash's coverage of chain 480 has been measured, and an
-    /// approval whose "fix it" link cannot show the approval is the honesty
-    /// rule's own example. `WorldID` does not read through this table — it
-    /// owns its one keyless call.
+    /// its host + range are measured and added here. World Chain was out under
+    /// §785 for exactly that reason and is IN since §797, measured: its logs
+    /// come off Blockscout and Revoke.cash serves chain 480. `WorldID` does
+    /// not read through this table — it owns its one keyless call.
     private struct Chain {
         let network: String        // Alchemy id, matching WalletChainStore
         let chainId: Int           // Revoke.cash / EVM chain id
         let rpcs: [String]         // keyless hosts, first that answers wins
         let maxRange: Int          // widest getLogs block range the host takes
+        /// Where this chain's LOGS come from when its RPCs cannot serve them
+        /// (prd §797) — World Chain's Blockscout. nil = `eth_getLogs` on `rpcs`.
+        var logsViaBlockscout = false
     }
     private static let allChains: [Chain] = [
         Chain(network: "eth-mainnet", chainId: 1,
@@ -75,6 +76,16 @@ enum WalletApprovals {
               rpcs: ["https://mainnet.optimism.io"], maxRange: 9_000),
         Chain(network: "matic-mainnet", chainId: 137,
               rpcs: ["https://polygon.api.onfinality.io/public"], maxRange: 90_000),
+        // World Chain (prd §797). MEASURED: its public RPCs cap eth_getLogs at
+        // 100 blocks and the app's Alchemy key at 10, so the owner-filtered
+        // log reads ride Blockscout (whole-chain ranges, one request) while
+        // block numbers, token metadata and block times stay on the Wallet's
+        // own Alchemy World Chain host. Revoke.cash serves chain 480 (its
+        // page names World Chain), so the fix-it door shows the approval.
+        // `maxRange` is Blockscout's, not a node's: one chunk covers any gap.
+        Chain(network: "worldchain-mainnet", chainId: 480,
+              rpcs: ["https://worldchain-mainnet.g.alchemy.com/public"],
+              maxRange: 50_000_000, logsViaBlockscout: true),
     ]
     private static var chains: [Chain] {
         let active = Set(WalletChainStore.activeNetworkIDs())
@@ -560,6 +571,16 @@ enum WalletApprovals {
     private static func fetchLogs(_ chain: Chain, owner: String,
                                   from: Int, to: Int) async -> [[String: Any]]? {
         let ownerTopic = "0x000000000000000000000000" + owner.dropFirst(2).lowercased()
+        if chain.logsViaBlockscout {
+            // One topic0 per Blockscout query, so the node's OR becomes two
+            // reads; either failing fails the chunk, the node path's rule.
+            guard let approvals = WorldApp.blockscoutLogs(fromJSON: await IngestSupport.getJSON(
+                    WorldApp.blockscoutLogsURL(address: nil, topic0: approvalTopic, topic1: ownerTopic, from: from, to: to))),
+                  let operators = WorldApp.blockscoutLogs(fromJSON: await IngestSupport.getJSON(
+                    WorldApp.blockscoutLogsURL(address: nil, topic0: forAllTopic, topic1: ownerTopic, from: from, to: to)))
+            else { return nil }
+            return approvals + operators
+        }
         let params: [String: Any] = [
             "fromBlock": hex(from), "toBlock": hex(to),
             "topics": [[approvalTopic, forAllTopic], ownerTopic],
@@ -573,6 +594,11 @@ enum WalletApprovals {
     private static func fetchPermit2Logs(_ chain: Chain, owner: String,
                                         from: Int, to: Int) async -> [[String: Any]]? {
         let ownerTopic = "0x000000000000000000000000" + owner.dropFirst(2).lowercased()
+        if chain.logsViaBlockscout {
+            return WorldApp.blockscoutLogs(fromJSON: await IngestSupport.getJSON(
+                WorldApp.blockscoutLogsURL(address: permit2Address, topic0: permit2ApprovalTopic,
+                                           topic1: ownerTopic, from: from, to: to)))
+        }
         let params: [String: Any] = [
             "address": permit2Address,
             "fromBlock": hex(from), "toBlock": hex(to),

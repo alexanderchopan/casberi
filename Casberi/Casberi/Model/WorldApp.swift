@@ -102,6 +102,46 @@ enum WorldApp {
         return c
     }()
 
+    // MARK: - Approval logs off Blockscout (prd §797)
+
+    /// World Chain's Blockscout — its `module=logs&action=getLogs` answers an
+    /// owner-filtered query across the WHOLE chain in one call (MEASURED:
+    /// every approval a real World App wallet ever made, in one request),
+    /// where the public RPCs cap `eth_getLogs` at 100 blocks and the app's
+    /// Alchemy key at 10.
+    static let blockscoutAPI = "https://worldchain-mainnet.explorer.alchemy.com/api"
+
+    static func blockscoutLogsURL(address: String?, topic0: String, topic1: String,
+                                  from: Int, to: Int) -> String {
+        var url = blockscoutAPI + "?module=logs&action=getLogs"
+            + "&fromBlock=\(from)&toBlock=\(to)"
+            + "&topic0=\(topic0.lowercased())&topic1=\(topic1.lowercased())&topic0_1_opr=and"
+        if let address { url += "&address=\(address.lowercased())" }
+        return url
+    }
+
+    /// Blockscout's answer as `eth_getLogs` logs, or nil when it did not answer.
+    /// Two shapes differ from a node's and both matter:
+    /// - "No logs found" is `status: "0"` with an EMPTY result — an answer, not
+    ///   a failure, so it is `[]` and the approval cursor may advance.
+    /// - `topics` is padded to four with `null`. The approval parser reads the
+    ///   topic COUNT to tell an ERC-20 grant (3) from an ERC-721 one (4), so
+    ///   an unstripped pad would drop every real ERC-20 approval.
+    static func blockscoutLogs(fromJSON object: Any?) -> [[String: Any]]? {
+        guard let root = object as? [String: Any],
+              let result = root["result"] as? [[String: Any]] else { return nil }
+        let status = root["status"] as? String
+        let message = (root["message"] as? String) ?? ""
+        guard status == "1" || (result.isEmpty && message == "No logs found") else { return nil }
+        return result.map { log in
+            var out = log
+            if let topics = log["topics"] as? [Any] {
+                out["topics"] = topics.compactMap { $0 as? String }
+            }
+            return out
+        }
+    }
+
     // MARK: - Usernames
 
     /// A World App username and picture from World's public usernames service

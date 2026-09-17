@@ -191,6 +191,10 @@ enum NetworkReach {
                          // World Chain, 2026-09-16 (prd §785) — a chain you
                          // switch on, off by default until it is measured.
                          "worldchain-mainnet.g.alchemy.com",
+                         // World Chain's approval logs (prd §797): its public
+                         // RPCs cap eth_getLogs at 100 blocks, so the owner-
+                         // filtered log read rides World Chain's Blockscout.
+                         "worldchain-mainnet.explorer.alchemy.com",
                          "solana-mainnet.g.alchemy.com", "robinhood-mainnet.g.alchemy.com",
                          "api.zerion.io", "coins.llama.fi",
                          "rpc.mevblocker.io", "mainnet.base.org", "mainnet.optimism.io",

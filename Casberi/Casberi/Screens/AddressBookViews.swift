@@ -1695,7 +1695,14 @@ struct AddressCard: View {
         // provenance ("Contacts", "Bluesky · @uma") already names what it is,
         // and "Wallet" would be a fabrication on both.
         if !current.kind.isMonogram {
-            parts.append(current.kind.label
+            // A World App account says so (prd §797). The evidence is its World
+            // App username, forward-verified — the module a World App wallet
+            // carries is Safe's standard 4337 module and proves nothing on its
+            // own. A contract or a key never becomes one.
+            let isWorldApp = primaryNames.contains { $0.label == NameResolve.worldAppLabel }
+                && current.kind != .contract && current.kind != .key
+            parts.append(isWorldApp ? String(localized: "World App wallet")
+                         : current.kind.label
                          ?? BitcoinAddress.scriptKind(current.address)
                          ?? String(localized: "Wallet"))
         }

@@ -93,6 +93,10 @@ enum NameResolve {
     /// `forwardVerified` below, which is what makes the three meet one bar —
     /// so nothing downstream needs a badge saying which names can be trusted,
     /// because an unverifiable one is never returned.
+    /// The label a World App username wears (prd §795) — one spelling, read by
+    /// the address card to say "World App wallet" (§797).
+    static var worldAppLabel: String { String(localized: "World App") }
+
     static func primaryNames(for hexAddress: String) async -> [PrimaryName] {
         guard ENS.isHexAddress(hexAddress) else { return [] }
         var out: [PrimaryName] = []
@@ -107,7 +111,7 @@ enum NameResolve {
         // the same bar as the three above. Last: it is an app's handle, not a
         // name registry the address chose on chain.
         if let worldApp = await WorldAppDeFi.username(for: hexAddress) {
-            out.append(PrimaryName(label: String(localized: "World App"), name: worldApp.name))
+            out.append(PrimaryName(label: worldAppLabel, name: worldApp.name))
         }
         return out
     }

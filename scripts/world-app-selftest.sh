@@ -94,6 +94,24 @@ check(WorldApp.username(fromJSON: ["error": "Record not found."], for: who) == n
 var http = rec; http["profile_picture_url"] = "http://example.com/a.png"
 check(WorldApp.username(fromJSON: http, for: who)?.pictureURL == nil, "a non-https picture is dropped")
 
+// Blockscout logs (prd §797): the two shapes that differ from a node's.
+let padded: [String: Any] = ["status": "1", "message": "OK", "result": [
+    ["address": "0x2cfc85d8e48f8eab294be644d9e25c3030863003", "blockNumber": "0x4b45cc", "logIndex": "0x9a",
+     "transactionHash": "0xabc", "data": "0xff",
+     "topics": ["0x8c5b", "0x0000e135", "0x000022d4", NSNull()]]]]
+let logs = WorldApp.blockscoutLogs(fromJSON: padded)
+check((logs?.first?["topics"] as? [String])?.count == 3,
+      "Blockscout's null topic pad is stripped — an ERC-20 approval keeps its 3 topics")
+check(WorldApp.blockscoutLogs(fromJSON: ["status": "0", "message": "No logs found", "result": [Any]()])?.isEmpty == true,
+      "'No logs found' is an empty answer, not a failure")
+check(WorldApp.blockscoutLogs(fromJSON: ["status": "0", "message": "Something went wrong", "result": [Any]()]) == nil,
+      "any other status 0 is a failure — the cursor must not advance")
+check(WorldApp.blockscoutLogs(fromJSON: nil) == nil, "no answer is a failure")
+let url = WorldApp.blockscoutLogsURL(address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+                                     topic0: "0xDA9F", topic1: "0x0000E135", from: 10, to: 20)
+check(url.contains("fromBlock=10&toBlock=20") && url.contains("topic0=0xda9f&topic1=0x0000e135&topic0_1_opr=and")
+      && url.hasSuffix("&address=0x000000000022d473030f116ddee9f6b43ac78ba3"), "the Blockscout logs query — got \(url)")
+
 if failures > 0 { print("✗ world-app-selftest: \(failures) failure(s)"); exit(1) }
 SWIFT
 
@@ -123,5 +141,17 @@ grep -q 'WorldAppDeFi.syncGrantEvents' Casberi/Casberi/Model/WalletIngest.swift 
   || { echo "✗ the next-grant row is not synced"; exit 1; }
 grep -q '"usernames.worldcoin.org"' Casberi/Casberi/Model/NetworkReach.swift \
   || { echo "✗ the usernames host is not declared"; exit 1; }
+
+# World Chain approvals ride Blockscout, and the chain is in the approvals table.
+grep -q 'Chain(network: "worldchain-mainnet", chainId: 480,' Casberi/Casberi/Model/WalletApprovals.swift \
+  && grep -q 'maxRange: 50_000_000, logsViaBlockscout: true)' Casberi/Casberi/Model/WalletApprovals.swift \
+  || { echo "✗ World Chain is not in the approvals table on Blockscout — its approvals go unread (prd §797)"; exit 1; }
+[[ $(grep -c 'if chain.logsViaBlockscout' Casberi/Casberi/Model/WalletApprovals.swift) -eq 2 ]] \
+  || { echo "✗ a log read ignores logsViaBlockscout — World Chain would hit a 100-block RPC cap"; exit 1; }
+grep -q '"worldchain-mainnet.explorer.alchemy.com"' Casberi/Casberi/Model/NetworkReach.swift \
+  || { echo "✗ World Chain's Blockscout host is not declared"; exit 1; }
+# "World App wallet" rests on a verified World App username, never the module.
+grep -q 'primaryNames.contains { $0.label == NameResolve.worldAppLabel }' Casberi/Casberi/Screens/AddressBookViews.swift \
+  || { echo "✗ the address card's World App wallet label no longer rests on the verified username"; exit 1; }
 
 echo "✓ world-app-selftest passed"
