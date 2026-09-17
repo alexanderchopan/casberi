@@ -3169,6 +3169,11 @@ else
     gnosisPayHead     "Gnosis Pay"
     railgunHead       "Railgun"
     safeHead          "Safe"
+    # Privy (prd §803g). Shipped with `privyHead` in `roomInsightReport` and no
+    # line here — the registry drift this step's own header warns about — and
+    # invisible until the demo furnished the seat (§803g), because a room with
+    # no demo rows has no head to miss.
+    privyHead         "Privy"
     instagramHead     "Instagram"
     dayOneHead        "Day One"
     appleJournalHead  "Apple Journal"

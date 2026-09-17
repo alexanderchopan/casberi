@@ -42,6 +42,16 @@ extension UIImage {
             return BrandMark.image(for: symbol)
                 ?? UIImage(named: ref.replacingOccurrences(of: "sample:", with: "sample-"))
         }
+        // App marks (prd §803g). A Privy app's `logo_url` lives on that app's
+        // own CDN and the demo reaches nothing, so a demo app wears the app's
+        // OWN shipped `brand-*` mark — the `sample:token-` reasoning one
+        // family up: a logo we already bundle is the real logo, and drawing a
+        // letter instead would claim a limit the app doesn't have. An app with
+        // no bundled mark carries no logo at all and draws the stack glyph,
+        // which is exactly what a real app whose `logo_url` is missing gets.
+        if ref.hasPrefix("sample:app-") {
+            return UIImage(named: "brand-" + ref.replacingOccurrences(of: "sample:app-", with: ""))
+        }
         // Book covers, keyed by BOOK (2026-08-12). A Readwise highlight
         // carries the cover of the book it came from, so a real reading room
         // is a column of spines; the demo drew six identical source glyphs

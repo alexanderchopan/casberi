@@ -57,7 +57,8 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 6
+    /// 7 · the Privy seat (prd §803g).
+    static let version = 7
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -386,6 +387,17 @@ enum DemoSeedAll {
                               // it, the bare-prefix trap the PostHog and
                               // Stocktwits entries above are scoped against.
                               "bitcoin:settled:\(demoWallet):demo",
+                              // Privy's apps and their activity (prd §803g) —
+                              // the same reasoning again: a demo row is built
+                              // by the seat's OWN `ref`/`txRef`, so the room,
+                              // the app page and the dedupe all recognise it,
+                              // which means exit() and the freshness re-stamp
+                              // need these or they outlive the demo looking
+                              // like real app wallets. Scoped by the `demo-`
+                              // app id, never the bare `privy:` prefix: a real
+                              // Privy app's id is Privy's own, so nothing a
+                              // signed-in account lands can collide with these.
+                              "privy:app:demo-", "privy:tx:demo-",
                               // Dropbox joins the real namespace so its images
                               // can satisfy `FilesBridge.isStoredPicture`
                               // (2026-08-17) — scoped to the demo FOLDER, never
@@ -756,6 +768,14 @@ enum DemoSeedAll {
         // And Hegotá's fixture account — forgotten BY ADDRESS, never a
         // blanket clear, since a dev install may be watching a real one.
         HegotaLiveState.forgetDemo()
+        // Privy's apps, balances and activity stamps (prd §803g). Cleared
+        // WHOLE rather than by name, which is the Cloudflare/PostHog accepted
+        // risk and not a lapse from the rule above it: this store holds one
+        // account's app list, it is written only by a real signed-in read, and
+        // the demo replaced it — so there is no half to keep. A real Privy
+        // session is untouched (`PrivyHomeAuth` is the Keychain and this never
+        // reaches it), and its next sync refills the store in one pass.
+        PrivyHomeStore.shared.forgetDemo()
 
         // Apple Wallet's own bespoke connected flag, and App Store Connect's
         // planted standing — same accepted risk as Cloudflare above: a real
@@ -1432,6 +1452,7 @@ enum DemoSeedAll {
         out += vibenet()
         out += appleWallet()
         out += cards()
+        out += privy()
         out += work()
         out += infra()
         out += writing()
@@ -3661,6 +3682,209 @@ enum DemoSeedAll {
         return out
     }
 
+    // MARK: Privy — the apps that made you a wallet, and what moved in them
+
+    /// THE ONE TABLE behind the demo's Privy seat (prd §803g) — read by the
+    /// ROWS (`privy()`) and by the STORE (`seedPrivyHome()`), because the seat
+    /// is both halves and neither alone furnishes it: the rows are what lands
+    /// in the feed, and every FACT a row draws — the app's name, its logo, when
+    /// it was last used, what its wallet holds — is read back out of
+    /// `PrivyHomeStore` by ref (§803e). Two copies is how a row and its own app
+    /// drift apart, and the drift would render as a room of nameless rows over
+    /// a head that composes perfectly.
+    ///
+    /// The shape is chosen to draw every branch the seat has, because a demo
+    /// that seeds eight funded apps proves only that one of them works:
+    ///   · three FUNDED, so the head has a total, a lede and a ranked list;
+    ///   · two used inside the 90-day window and holding nothing, so the head's
+    ///     `recent` list draws — one of them made two days ago, so the seat's
+    ///     own story shows: a new app arrives at the TOP of the feed rather
+    ///     than among two years of history. Two days is outside
+    ///     `NotifySweep.newsWindow` (36h) and that is deliberate, for the same
+    ///     reason the legs below are dated back: a pour IS a first sync, and a
+    ///     first sync files apps into the past. Nothing here plans an
+    ///     `appWalletMade` notification, and nothing should;
+    ///   · two read and QUIET, which `shown(showEmpty:)` keeps out of the feed
+    ///     by default — so "Show empty apps" on the account page has something
+    ///     to reveal rather than being a switch over nothing (§83);
+    ///   · one NEVER READ, so the footnote's "not read yet" half draws and the
+    ///     row trails its time instead of a figure it does not have;
+    ///   · one app with TWO wallets (the row's "+1" line) and one on SOLANA,
+    ///     which the explorer door sends to Solscan and the activity read
+    ///     skips by design.
+    ///
+    /// The names are real apps that really do make wallets through Privy
+    /// (measured 2026-09-17 against Privy's own published customers), the
+    /// house style everywhere else in this file. The ids are `demo-` prefixed
+    /// on purpose: a real Privy app id here would let a later real sync
+    /// reconcile a demo row as its own.
+    static let demoPrivyApps: [(name: String, id: String, made: Double, used: Double,
+                                usd: Double?, bySymbol: [String: Double], logo: String?,
+                                wallets: [(address: String, chain: String)])] = [
+        ("OpenSea", "demo-opensea", 620, 6, 412.80, ["ETH": 380.20, "USDC": 32.60],
+         "sample:app-opensea", [("0xa392c0349a3c5291fcfc288de2c084d90f4141a4", "ethereum")]),
+        ("Farcaster", "demo-farcaster", 540, 2, 128.40, ["ETH": 128.40],
+         "sample:app-farcaster", [("0xc1cae6f6060667a71aaa6251bfd4f3a3167160bd", "ethereum")]),
+        ("Hyperliquid", "demo-hyperliquid", 300, 18, 61.20, ["USDC": 61.20],
+         "sample:app-hyperliquid", [("0xeee65b123ad00e36a3bac52411490bfc42ccaa0f", "ethereum")]),
+        // Made two days ago, used today — the new app at the top of the feed.
+        ("Blackbird", "demo-blackbird", 2, 0, 0, [:],
+         nil, [("0x3099de0c01391e2c60daaa55d71331915ba6f56d", "ethereum")]),
+        ("Polymarket", "demo-polymarket", 410, 31, 0, [:],
+         "sample:app-polymarket", [("0xe0af8728c2ba356e8ab875815936950438330b15", "ethereum")]),
+        // Two wallets, so the row's line says "0x536…db31 +1".
+        ("Zora", "demo-zora", 700, 320, 0, [:], nil,
+         [("0x536db2af616435cbb3190b3dc001f4e50f3fdb31", "ethereum"),
+          ("0x66e6bbd0a8dc416e20b38909212ca8225f8c7d53", "ethereum")]),
+        ("Courtyard", "demo-courtyard", 180, 140, 0, [:], nil,
+         [("0xfc5ff7ada491929cb2d59be9d8b9f9fe8907d545", "ethereum")]),
+        // Never read (`usd: nil`), and the Solana one.
+        ("Pump.fun", "demo-pumpfun", 250, 88, nil, [:], nil,
+         [("3J3pkq9Dyv87XL9Q2nnMPN2YUfYbeVV9s2Cp", "solana")]),
+    ]
+
+    /// What moved in those wallets (prd §803f) — `(app id, received, amount,
+    /// symbol, usd, counterparty, daysAgo)`. EVM only, as the real read is:
+    /// `activityTargets` never asks Zerion about a Solana wallet.
+    ///
+    /// The newest is three days back on purpose. `NotifySweep.classify` returns
+    /// `.moneyIn` for any received row above the dust line, and a leg landed
+    /// inside the 36-hour news window would have the demo planning a
+    /// notification about money that arrived while nobody was looking — old
+    /// history dated into the past is what a first sync really lands.
+    static let demoPrivyMoves: [(app: String, received: Bool, amount: Double, symbol: String,
+                                 usd: Double, counterparty: String, days: Double)] = [
+        ("demo-farcaster",   true,  0.0120, "ETH",  38.20, "Coinbase",  3),
+        ("demo-opensea",     true,  0.0500, "ETH", 159.00, "Sam",       9),
+        ("demo-hyperliquid", true, 60.0000, "USDC", 60.00, "Coinbase", 17),
+        ("demo-opensea",     false, 0.0200, "ETH",  63.60, "Uniswap",  21),
+        ("demo-polymarket",  false, 20.0000, "USDC", 20.00, "Coinbase", 30),
+        ("demo-hyperliquid", false, 12.0000, "USDC", 12.00, "Sam",      41),
+    ]
+
+    /// The table as the SEAT'S OWN TYPE, built once and read by both halves.
+    /// Every ref, line and figure then comes out of `PrivyHomeFeed`'s own
+    /// functions — the same ones the live read calls — so a demo row and a real
+    /// one cannot be shaped differently, and a change to the seat's grammar
+    /// reaches the demo without anybody remembering to copy it.
+    private static func demoPrivyAppValues() -> [PrivyHomeFeed.App] {
+        demoPrivyApps.map { app in
+            // `at()` anchors to a DAY boundary, so the app used "today" would
+            // otherwise be last used at 18:00 of a day that has not got there
+            // yet — a future timestamp on a fact about the past.
+            PrivyHomeFeed.App(id: app.id, name: app.name, logoURL: app.logo, origin: nil,
+                              createdAt: at(app.made, 9),
+                              lastActiveAt: min(at(app.used, 18), .now),
+                              wallets: app.wallets.map {
+                                  PrivyHomeFeed.Wallet(address: $0.address, chain: $0.chain)
+                              })
+        }
+    }
+
+    /// The rows: one `.event` per app dated the day its wallet was made, and
+    /// one `.transaction` per leg dated when it was mined — `PrivyHomeLive`'s
+    /// own two landings.
+    ///
+    /// A row carries almost nothing itself. `PrivyAppRow` reads the app out of
+    /// `PrivyHomeStore` by ref, so `title`/`content` here are only the fallback
+    /// a row shows before the store answers — exactly what `land()` writes.
+    private static func privy() -> [Thing] {
+        var out: [Thing] = []
+        let apps = demoPrivyAppValues()
+        // The date is looked up BY ID, never by position — and `zip` is no
+        // better, since it pairs positionally too. The mapping is 1:1 today
+        // and `PrivyHomeFeed.apps(_:)` itself drops an app with no wallet, so
+        // the day the builder gains a filter every row after it would take a
+        // different app's creation date: silently, and dated wrongly in a room
+        // whose whole subject is when a wallet was made.
+        let made = Dictionary(demoPrivyApps.map { ($0.id, $0.made) },
+                              uniquingKeysWith: { a, _ in a })
+        out += apps.enumerated().compactMap { (i, app) -> Thing? in
+            guard let days = made[app.id] else { return nil }
+            return row(.event, app.name, source: "Privy", ref: PrivyHomeFeed.ref(app),
+                       days: days, hour: 9 + (i % 10),
+                       content: PrivyHomeFeed.line(app))
+        }
+        out += demoPrivyMoves.enumerated().map { i, move in
+            // A real hash, in shape: the ref is the only place it is read, and
+            // `txRef` lowercases it exactly as the live read does.
+            let hash = "0x" + String(format: "%02x", i) + String(repeating: "9be4d1c7", count: 7)
+                + String(repeating: "0", count: 6)
+            let app = apps.first { $0.id == move.app }
+            return row(.transaction,
+                       PrivyHomeFeed.txTitle(received: move.received, value: move.amount,
+                                             symbol: move.symbol),
+                       source: "Privy",
+                       ref: PrivyHomeFeed.txRef(appID: move.app, hash: hash,
+                                                received: move.received, symbol: move.symbol),
+                       days: move.days, hour: 10 + (i % 8)) { t in
+                // The app's name and mark, never `walletAddress` — that field
+                // enrols a row in the WATCHED wallets' scope and verbs, and an
+                // app wallet is not watched (§803f).
+                t.authorHandle = app?.name
+                t.previewImageURL = app?.logoURL
+                // The ADDRESS only, never `transferCounterparty`: the real
+                // read has no name to stamp (Zerion hands back an address),
+                // and that field is drawn on the money receipt AND grouped as
+                // a merchant by the spend ask — so a demo leg carrying one
+                // would exercise a shape the seat can never produce.
+                t.counterpartyAddress = counterpartyAddress(for: move.counterparty)
+                t.transferDirection = move.received ? "received" : "sent"
+                t.transferAmount = PrivyHomeFeed.amount(move.amount, symbol: move.symbol)
+                t.transferUSD = move.usd
+            }
+        }
+        return out
+    }
+
+    /// The Privy store the rows are read back through (prd §803g).
+    ///
+    /// Planted in `seedBridgeState`, which runs BEFORE the pour, for this
+    /// file's standing reason: a head that lands after its own rows reads as a
+    /// late correction rather than an app filling up — and here it is stronger
+    /// than usual, because without the store every Privy row in the feed draws
+    /// its fallback title over a room whose head declines entirely
+    /// (`sourceHead` returns nil under `appCount > 0`).
+    ///
+    /// `readAt` is a FIXED offset, never `.now`: `toRead` re-reads a funded
+    /// wallet every six hours, so a balance stamped now would be re-read the
+    /// moment a sweep ran — which in the demo reaches nothing and would leave
+    /// the seat looking permanently stale. An hour back is inside every window.
+    @MainActor
+    private static func seedPrivyHome() {
+        let store = PrivyHomeStore.shared
+        store.setApps(demoPrivyAppValues())
+        let readAt = Date.now.addingTimeInterval(-3_600)
+        var balances: [String: PrivyHomeFeed.Balance] = [:]
+        for app in demoPrivyApps {
+            // `usd: nil` is the app nothing has read yet — NOT a zero. The two
+            // render differently on purpose (§83): an unread app trails its
+            // time and is counted in "not read yet", an empty one states its
+            // emptiness.
+            guard let usd = app.usd else { continue }
+            // The whole balance sits on the app's FIRST wallet; a second one is
+            // empty, which is what a spare embedded wallet really is.
+            balances[PrivyHomeFeed.key(app.wallets[0].address)] =
+                .init(usd: usd, bySymbol: app.bySymbol, readAt: readAt)
+            for wallet in app.wallets.dropFirst() {
+                balances[PrivyHomeFeed.key(wallet.address)] =
+                    .init(usd: 0, bySymbol: [:], readAt: readAt)
+            }
+        }
+        store.setBalances(balances)
+        // The Activity tile is offered only once something has landed
+        // (`activityCount`), so the count has to be here or the tile is
+        // missing over rows the room holds — and the read stamps go with it,
+        // because a wallet whose legs are in the corpus has been read.
+        //
+        // `landed` is the SHORTFALL, never the table's size: `noteActivity`
+        // ADDS, and `-demoSeed force` runs this path again, which would count
+        // the same six legs twice.
+        store.noteActivity(read: Set(demoPrivyMoves.map(\.app)).compactMap { id in
+            demoPrivyApps.first { $0.id == id }?.wallets.first?.address
+        }, landed: max(0, demoPrivyMoves.count - store.activityCount), at: readAt)
+    }
+
     // MARK: Work — the rooms whose rows are one-line facts
 
     /// Cloudflare's certificate expiries — the one row-shape no other
@@ -5316,6 +5540,11 @@ enum DemoSeedAll {
             }
         }
 
+        // 6b · Privy's apps and their balances (prd §803g) — the seat whose
+        // rows carry almost nothing and read every fact back out of its store.
+        // See `seedPrivyHome`.
+        seedPrivyHome()
+
         // 7 · The address book — the counterparties the transfers above name,
         // so the wallet's people have faces. See `seedAddressBook`.
         seedAddressBook()
@@ -5488,6 +5717,12 @@ enum DemoSeedAll {
         ("Acorns", "$4,812 · 3 accounts", "Reads your accounts and balances."),
         ("Rocket Money", "12 subscriptions · $184/mo", "Reads your subscriptions and recurring bills."),
         ("NerdWallet", "Synced 20m ago", "Reads NerdWallet's public feed."),
+        // Privy (prd §803g). The proof line is what `PrivyScreen.signedInLine`
+        // really composes from the same seeded store — "8 apps · 3 funded" —
+        // never a "Synced Nm ago", which this seat does not say while a
+        // session is live. It must stay in step with `demoPrivyApps` above:
+        // three funded of eight.
+        ("Privy", "8 apps · 3 funded", "Reads which apps made you a wallet."),
         ("Stripe", "Synced 10m ago", "Reads what your money did."),
         // Furnished 2026-08-31 (prd §484's check G). All three shipped on
         // 2026-08-30 as catalog offers with no seat and no rows, so a demo

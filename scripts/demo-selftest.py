@@ -675,6 +675,94 @@ def check_n_retired_protocols_still_draw(files_text):
               name in (names or []), False)
 
 
+# Check O — the Privy demo table, against itself and against what the seat
+# SAYS (prd §803g).
+#
+# Privy is the first demo seat whose rows carry almost nothing: `PrivyAppRow`
+# and `PrivyRoomCard` read every fact — name, logo, last used, balance — back
+# out of `PrivyHomeStore`, which `seedPrivyHome()` plants from the same table
+# the rows are built from. So three different things have to agree, and two of
+# the three disagreements render as a perfectly healthy room:
+#
+#   · the SEAT'S PROOF LINE ("8 apps · 3 funded") is what the catalog and the
+#     account page show, and it is a hand-written count of a table right above
+#     it. Add a funded app and forget the line and the demo states a number
+#     that is not true of itself — §83's fake status, arriving from the one
+#     place built to demonstrate honesty.
+#   · a MOVE naming an app the table does not hold lands an activity row under
+#     `privy:tx:<unknown>:…`: `byID` misses, so the row has no app name and no
+#     logo, and the app page's own prefix search never finds it.
+#   · a move on a SOLANA-only app is a leg the real read can never produce —
+#     `activityTargets` skips a non-EVM wallet, by measurement — so the demo
+#     would be showing a capability the seat does not have.
+#
+# The address shapes are checked too, and cheaply: `PrivyHomeFeed.wallets(in:)`
+# drops anything that is not address-shaped, so a typo'd demo address is an app
+# with no wallet, which `apps(_:)` drops entirely — a silently missing row.
+PRIVY_EVM = r'0x[0-9a-fA-F]{40}'
+PRIVY_SOLANA = r'[1-9A-HJ-NP-Za-km-z]{32,44}'
+
+
+def extract_privy_apps(demo_src):
+    """`(name, id, usd, [(address, chain)])` per `demoPrivyApps` entry. `usd`
+    is the literal — `"nil"` for an app nothing has read yet, which is NOT the
+    same as a zero and must not be counted as one."""
+    clean = strip_comments(demo_src)
+    m = re.search(r'static let demoPrivyApps:.*?= \[(.*?)\n    \]', clean, re.DOTALL)
+    if not m:
+        return None
+    out = []
+    for chunk in re.split(r'\n        \(', m.group(1)):
+        chunk = chunk.strip()
+        quoted = re.findall(r'"([^"]*)"', chunk)
+        if len(quoted) < 2:
+            continue
+        usd = re.match(r'"[^"]*",\s*"[^"]*",\s*[\d._]+,\s*[\d._]+,\s*(nil|[\d._]+)', chunk)
+        wallets = re.findall(r'\("(' + PRIVY_EVM + r'|' + PRIVY_SOLANA + r')",\s*"(\w+)"\)', chunk)
+        out.append((quoted[0], quoted[1], usd.group(1) if usd else None, wallets))
+    return out
+
+
+def extract_privy_moves(demo_src):
+    """The app id each `demoPrivyMoves` leg names."""
+    clean = strip_comments(demo_src)
+    m = re.search(r'static let demoPrivyMoves:.*?= \[(.*?)\n    \]', clean, re.DOTALL)
+    if not m:
+        return None
+    return re.findall(r'\(\s*"([^"]+)",\s*(?:true|false)', m.group(1))
+
+
+def check_o_privy_demo_agrees_with_itself(files_text):
+    """Check O — the Privy demo table, its wallets, its moves and the seat's
+    proof line all say the same thing."""
+    demo_src = files_text["DemoSeedAll"]
+    apps = extract_privy_apps(demo_src)
+    moves = extract_privy_moves(demo_src)
+    if not apps or moves is None:
+        check("O · demoPrivyApps and demoPrivyMoves found", False, True)
+        return
+    for name, app_id, _, wallets in apps:
+        # `demo-` is what keeps `refPrefixes`' `privy:app:demo-` from ever
+        # sweeping a REAL Privy app's rows, and what stops a real sync from
+        # reconciling a demo row as its own.
+        check(f'O · demo app "{name}" carries a demo- id', app_id.startswith("demo-"), True)
+        check(f'O · demo app "{name}" has a wallet of a readable shape',
+              len(wallets) > 0, True)
+    funded = sum(1 for _, _, usd, _ in apps
+                 if usd not in (None, "nil") and float(usd.replace("_", "")) >= 0.01)
+    line = re.search(r'\("Privy",\s*"([^"]*)"', strip_comments(demo_src))
+    check('O · the Privy seat states the table it stands on',
+          line.group(1) if line else "no seat",
+          f"{len(apps)} apps · {funded} funded")
+    known = {app_id: wallets for _, app_id, _, wallets in apps}
+    for app_id in sorted(set(moves)):
+        check(f'O · move on "{app_id}" names an app in the table', app_id in known, True)
+        # Zerion's transfer read is EVM-only, and `activityTargets` skips a
+        # Solana wallet — so a leg on one is a row the real seat can never land.
+        check(f'O · "{app_id}" has an EVM wallet its activity could ride',
+              any(a.startswith("0x") for a, _ in known.get(app_id, [])), True)
+
+
 def check_e_seat_names_have_rows(files_text):
     """Check E — every `seatTable` name appears as a literal string
     somewhere OUTSIDE the table's own declaration — i.e., in one of the
@@ -1142,6 +1230,13 @@ KNOWN_COMPUTED_REF = {
     "PostHogWatch.metricRef": "posthog:metric:",
     "StockWatch.symbolRef": "stocktwits:sym:",
     "ENSName.ref": "ens:name:",
+    # Privy's two landings (prd §803g). The seeder builds both with the seat's
+    # OWN functions rather than spelling a ref, which is why neither appears as
+    # a literal — and both are scoped in `refPrefixes` by the demo app id
+    # (`privy:app:demo-`, `privy:tx:demo-`), so a real Privy app's rows can
+    # never be swept with them.
+    "PrivyHomeFeed.ref": "privy:app:",
+    "PrivyHomeFeed.txRef": "privy:tx:",
 }
 
 
@@ -1297,6 +1392,7 @@ def run_checks(files_text):
     check_d_seat_names_are_real(files_text)
     check_l_seat_names_resolve_at_runtime(files_text)
     check_e_seat_names_have_rows(files_text)
+    check_o_privy_demo_agrees_with_itself(files_text)
     check_m_rowless_seats_are_furnished(files_text)
     check_n_retired_protocols_still_draw(files_text)
     check_f_shape_coverage(files_text)
@@ -1486,6 +1582,34 @@ def self_test():
         lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
             '("Binance", "Read-only key",', '("BinanceX", "Read-only key",', 1)),
         check_m_rowless_seats_are_furnished, True)
+
+    # Check O's three, one per way the Privy table can drift out of agreement
+    # with itself. Each renders as a healthy room.
+    ok &= verify_fixture(
+        "a Privy seat line that no longer counts its own table is caught",
+        # Hyperliquid emptied. The seat goes on saying "3 funded" over two, and
+        # the head — which counts the table — quietly says two.
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            '("Hyperliquid", "demo-hyperliquid", 300, 18, 61.20, ["USDC": 61.20],',
+            '("Hyperliquid", "demo-hyperliquid", 300, 18, 0, [:],', 1)),
+        check_o_privy_demo_agrees_with_itself, True)
+
+    ok &= verify_fixture(
+        "a Privy move on an app the table doesn't hold is caught",
+        # `byID` misses, so the row lands with no app name and no logo, and the
+        # app page's prefix search never finds it.
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            '("demo-opensea",     true,', '("demo-opensee",     true,', 1)),
+        check_o_privy_demo_agrees_with_itself, True)
+
+    ok &= verify_fixture(
+        "a Privy app with an unreadable wallet address is caught",
+        # One hex digit short. `PrivyHomeFeed.wallets(in:)` drops it, `apps(_:)`
+        # drops the app with it, and the demo silently loses a row.
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            "0xa392c0349a3c5291fcfc288de2c084d90f4141a4",
+            "0xa392c0349a3c5291fcfc288de2c084d90f4141a", 1)),
+        check_o_privy_demo_agrees_with_itself, True)
 
     ok &= verify_fixture(
         "a re-seeded source in infra() is caught",

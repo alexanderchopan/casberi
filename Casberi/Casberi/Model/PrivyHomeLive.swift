@@ -180,6 +180,20 @@ final class PrivyHomeStore {
         DefaultsWrite.remove(Self.balancesKey)
     }
 
+    /// Leaving the demo (prd §803g). `forget()` alone is wrong here for one
+    /// field: it keeps `activityCount`, correctly, because signing out keeps
+    /// the rows that count was taken from — and leaving the demo DELETES them
+    /// (`DemoSeedAll.teardown` clears the corpus first). A kept count offers
+    /// the Activity tile over nothing, which is §83's dead control in the one
+    /// place §803f took care to gate it.
+    func forgetDemo() {
+        forget()
+        guard activityCount != 0 else { return }
+        activityCount = 0
+        revision &+= 1
+        DefaultsWrite.remove(Self.activityCountKey)
+    }
+
     var room: PrivyHomeFeed.Room { PrivyHomeFeed.room(apps, balances: balances, now: .now) }
 }
 

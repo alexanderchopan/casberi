@@ -1317,6 +1317,11 @@ struct RemoteThumb: View {
     var perishable = false
     /// A circle clip instead of the app-icon squircle — for author avatars.
     var circular = false
+    /// Draw NOTHING until the image arrives, instead of the photo placeholder
+    /// — for a mark that already has a glyph of its own underneath (Privy's
+    /// app stack), where the placeholder would cover it and read as a broken
+    /// picture rather than an app that has no logo.
+    var bare = false
     @State private var image: UIImage?
     @State private var failed = false
 
@@ -1326,6 +1331,8 @@ struct RemoteThumb: View {
                 Image(uiImage: image).resizable().scaledToFill()
             } else if failed || RemoteImageLoader.isDead(urlString), let fallback {
                 BridgeIcon(name: fallback, size: size)
+            } else if bare {
+                Color.clear
             } else {
                 ZStack {
                     DS.fillFaint

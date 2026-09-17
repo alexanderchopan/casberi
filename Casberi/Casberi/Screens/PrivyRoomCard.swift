@@ -67,23 +67,29 @@ struct PrivyRoomCard: View {
 /// An app's own logo on the row's 26pt lead, from the `logo_url` Privy
 /// returns. Until it loads, or when there is none, the stack glyph every
 /// Privy row wears.
+///
+/// Through `RemoteThumb` — the app's own loader — rather than `AsyncImage`
+/// (prd §803g). Three reasons, and the first two are why every other remote
+/// mark in the app already goes this way: the loader downsamples off main and
+/// caches to disk, so a room of app logos is not a row body's worth of
+/// full-size decodes on every pass (§626), and it remembers a dead URL instead
+/// of re-asking for it. The third is the demo: `RemoteImageLoader` resolves a
+/// bundled `sample:` ref in DEBUG, so the furnished demo draws real app marks
+/// with no request, and `AsyncImage` could only ever draw the glyph.
+/// `bare` keeps the stack glyph below showing until the logo arrives.
 struct PrivyAppMark: View {
     let logoURL: String?
 
     var body: some View {
         DSGlyphLead(glyph: "square.stack.3d.up")
             .overlay {
-                if let url = logoURL.flatMap(URL.init(string:)) {
-                    AsyncImage(url: url) { phase in
-                        if let image = phase.image {
-                            image.resizable().scaledToFill()
-                                .transition(.opacity)
-                        }
-                    }
+                if let logoURL, !logoURL.isEmpty {
+                    RemoteThumb(urlString: logoURL, size: DS.Mark.row, bare: true)
                 }
             }
             .frame(width: DS.Mark.row, height: DS.Mark.row)
-            .clipShape(RoundedRectangle(cornerRadius: DS.Mark.row * 0.24, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.row),
+                                        style: .continuous))
             .accessibilityHidden(true)
     }
 }
