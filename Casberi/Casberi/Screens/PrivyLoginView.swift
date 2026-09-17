@@ -6,10 +6,12 @@ import WebKit
 /// the session back, which Safari's sheet is built to prevent. A stated
 /// exception to §653, as §703, §726, §731 and §776 are.
 ///
-/// The gate is BOTH halves of a Privy session in the jar: an access token
-/// (`privy-token` or `privy-access-token`) and `privy-refresh-token`. A
-/// signed-out visit writes `privy-session` and analytics cookies and never
-/// these, so nothing before the email code can close the sheet.
+/// The gate is a signed-in session in the jar: an access token (`privy-token`
+/// or `privy-access-token`) and `privy-refresh-token`. A signed-out visit
+/// writes `privy-session` and analytics cookies and never these, so nothing
+/// before the email code can close the sheet. What is KEPT is every cookie the
+/// API host would receive, by name (`PrivyHomeFeed.apiCookies`) — Privy Home
+/// authenticates by cookie, and its two access tokens are different values.
 struct PrivyLoginSheet: View {
     let onCaptured: () -> Void
     @Environment(\.dismiss) private var dismiss
@@ -38,6 +40,13 @@ private struct PrivyLoginWebView: UIViewRepresentable {
         // PERSISTENT: the email code is read in another app, and an ephemeral
         // jar does not reliably outlive the switch (§731's reason).
         config.websiteDataStore = .default()
+        // Privy Home's /login is a landing card whose "Get started" opens the
+        // email form; no URL opens the form directly (read from its bundle,
+        // 2026-09-17: the button calls the SDK's `login()`). Press it once, so
+        // the sheet opens ON the sign-in (user: "make it so the page it first
+        // hits is the actual sign in page").
+        config.userContentController.addUserScript(
+            WKUserScript(source: Self.skipLanding, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
@@ -64,6 +73,27 @@ private struct PrivyLoginWebView: UIViewRepresentable {
         }
         return webView
     }
+
+    /// Waits up to five seconds for the landing's button, clicks it once,
+    /// and does nothing on any other page or once an email field exists.
+    private static let skipLanding = """
+    (function() {
+        if (location.hostname !== 'home.privy.io' || location.pathname.indexOf('/login') !== 0) { return; }
+        var tries = 0;
+        var timer = setInterval(function() {
+            tries += 1;
+            if (document.querySelector('input[type="email"]') || tries > 50) { clearInterval(timer); return; }
+            var buttons = document.querySelectorAll('button');
+            for (var i = 0; i < buttons.length; i++) {
+                if ((buttons[i].textContent || '').trim() === 'Get started') {
+                    clearInterval(timer);
+                    buttons[i].click();
+                    return;
+                }
+            }
+        }, 100);
+    })();
+    """
 
     func updateUIView(_ webView: WKWebView, context: Context) {}
 
@@ -109,11 +139,11 @@ private struct PrivyLoginWebView: UIViewRepresentable {
             guard armed, !captured else { return }
             cookieStore.getAllCookies { [weak self] cookies in
                 guard let self, !self.captured else { return }
-                let jar = cookies.filter { $0.domain.hasSuffix("privy.io") }
-                    .map { (name: $0.name, value: $0.value) }
-                guard let session = PrivyHomeFeed.session(jar) else { return }
+                let session = PrivyHomeFeed.apiCookies(
+                    cookies.map { (name: $0.name, value: $0.value, domain: $0.domain) })
+                guard PrivyHomeFeed.isSession(session) else { return }
                 self.captured = true
-                PrivyHomeAuth.store(access: session.access, refresh: session.refresh)
+                PrivyHomeAuth.store(session)
                 // The session now lives in the Keychain; the jar's copy goes.
                 let privy = cookies.filter { $0.domain.hasSuffix("privy.io") }
                 for cookie in privy { cookieStore.delete(cookie) }

@@ -59,33 +59,106 @@ enum PrivyHomeFeed {
     static let accessCookies = ["privy-token", "privy-access-token"]
     static let refreshCookie = "privy-refresh-token"
 
-    /// The two halves of a session out of a cookie jar, or nil while the jar
-    /// does not hold a signed-in session yet. A signed-out visit writes
-    /// `privy-session` and analytics cookies, never these.
-    static func session(_ jar: [(name: String, value: String)]) -> (access: String, refresh: String)? {
-        func value(_ name: String) -> String? {
-            jar.first { $0.name == name && !$0.value.isEmpty }?.value
+    /// MEASURED on the simulator, 2026-09-17: `privy_home/me` answers
+    /// "Missing auth token" to a valid bearer ALONE and "Invalid auth token" to
+    /// one token's value sent under both cookie names. Privy Home runs Privy's
+    /// HttpOnly-cookie mode, and the sign-in leaves two DIFFERENT tokens —
+    /// `privy-token` on `.home.privy.io` and `privy-access-token` on
+    /// `.privy.home.privy.io`. So the session is every cookie a browser would
+    /// send to the API host, each with its own value, and a read carries all of
+    /// them plus the bearer, as the page's own `credentials: include` does.
+    static func apiCookies(_ jar: [(name: String, value: String, domain: String)]) -> [String: String] {
+        var out: [String: String] = [:]
+        for cookie in jar where !cookie.value.isEmpty && domainMatches(apiHost, cookie.domain)
+            && isSessionCookie(cookie.name) {
+            out[cookie.name] = cookie.value
         }
-        guard let refresh = value(refreshCookie),
-              let access = accessCookies.lazy.compactMap(value).first else { return nil }
-        return (access, refresh)
+        return out
     }
 
-    /// What a refresh handed back. Privy's cookie mode answers
-    /// `refresh_token: "deprecated"` in the body and sets the real one as a
-    /// cookie, so the cookie wins and the body's word is never stored.
-    static func rotated(body: Any?, cookies: [(name: String, value: String)])
-        -> (access: String?, refresh: String?) {
+    /// Privy's own cookies and Cloudflare's, and nothing else: the jar also
+    /// holds Google Analytics and HubSpot trackers, which the API never needs
+    /// and which have no business in the Keychain or on a request we send.
+    static func isSessionCookie(_ name: String) -> Bool {
+        name.hasPrefix("privy-") || ["cf_clearance", "__cf_bm", "_cfuvid"].contains(name)
+    }
+
+    /// RFC 6265 domain-match: `privy.home.privy.io` receives cookies set for
+    /// `.home.privy.io` and `.privy.io`, never `home.privy.io.evil`.
+    static func domainMatches(_ host: String, _ domain: String) -> Bool {
+        let d = domain.hasPrefix(".") ? String(domain.dropFirst()) : domain
+        return host == d || host.hasSuffix("." + d)
+    }
+
+    /// A jar holds a signed-in session when it carries a refresh token and an
+    /// access token for the API host. A signed-out visit writes `privy-session`
+    /// and analytics cookies, never these.
+    static func isSession(_ cookies: [String: String]) -> Bool {
+        cookies[refreshCookie] != nil && accessCookies.contains { cookies[$0] != nil }
+    }
+
+    static func bearer(_ cookies: [String: String]) -> String? {
+        accessCookies.lazy.compactMap { cookies[$0] }.first
+    }
+
+    static func cookieHeader(_ cookies: [String: String]) -> String {
+        cookies.keys.sorted().map { "\($0)=\(cookies[$0]!)" }.joined(separator: "; ")
+    }
+
+    /// A renewal's answer merged into the stored session: every `Set-Cookie`
+    /// by name, and the body's `token` only where no cookie carried an access
+    /// token. Privy's cookie mode answers `refresh_token: "deprecated"` in the
+    /// body; that word is never stored.
+    static func rotated(_ cookies: [String: String], body: Any?,
+                        setCookies: [(name: String, value: String)]) -> [String: String] {
+        var out = cookies
+        for cookie in setCookies {
+            if cookie.value.isEmpty { out.removeValue(forKey: cookie.name) } else { out[cookie.name] = cookie.value }
+        }
         let object = body as? [String: Any]
         func usable(_ s: String?) -> String? {
             guard let s, !s.isEmpty, s != "deprecated" else { return nil }
             return s
         }
-        let jar = Dictionary(cookies.map { ($0.name, $0.value) }, uniquingKeysWith: { a, _ in a })
-        let access = accessCookies.lazy.compactMap { usable(jar[$0]) }.first
-            ?? usable(object?["token"] as? String)
-        let refresh = usable(jar[refreshCookie]) ?? usable(object?["refresh_token"] as? String)
-        return (access, refresh)
+        let setNames = Set(setCookies.map(\.name))
+        if !accessCookies.contains(where: setNames.contains), let token = usable(object?["token"] as? String) {
+            out["privy-token"] = token
+        }
+        if !setNames.contains(refreshCookie), let refresh = usable(object?["refresh_token"] as? String) {
+            out[refreshCookie] = refresh
+        }
+        return out
+    }
+
+    /// Privy's error `code` (or `error`) out of a refusal body — a machine
+    /// word like `missing_or_invalid_token`, never a value.
+    static func errorCode(_ json: Any?) -> String? {
+        guard let object = json as? [String: Any] else { return nil }
+        if let code = object["code"] as? String, !code.isEmpty { return code }
+        if let error = object["error"] as? String, !error.isEmpty { return String(error.prefix(60)) }
+        return nil
+    }
+
+    /// A token's CLAIMS as shape, for the trace: whether its audience is Privy
+    /// Home's app id, and how long until it expires. Never the token, never a
+    /// subject. "opaque" when it is not a JWT at all.
+    static func describe(jwt: String, now: Date) -> String {
+        let parts = jwt.split(separator: ".")
+        guard parts.count == 3 else { return "opaque len=\(jwt.count)" }
+        var b64 = String(parts[1]).replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        while b64.count % 4 != 0 { b64 += "=" }
+        guard let data = Data(base64Encoded: b64),
+              let claims = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        else { return "jwt unreadable" }
+        let aud: String
+        switch claims["aud"] {
+        case let s as String: aud = s == appID ? "home" : "other"
+        case let a as [String]: aud = a.contains(appID) ? "home" : "other"
+        default: aud = "none"
+        }
+        let exp = (claims["exp"] as? NSNumber).map { Int($0.doubleValue - now.timeIntervalSince1970) }
+        return "jwt aud=\(aud) exp=\(exp.map { "\($0)s" } ?? "none") iss=\((claims["iss"] as? String) ?? "none")"
     }
 
     enum Failure: Equatable {

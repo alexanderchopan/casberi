@@ -11,26 +11,33 @@ import SwiftData
 /// key, add funds, or change anything at Privy — the two buttons Privy Home
 /// draws for those are left out on purpose (user, 2026-09-17).
 enum PrivyHomeAuth {
-    private static let accessKey = "privy.home.access"
-    private static let refreshKey = "privy.home.refresh"
+    /// The session: every cookie a browser would send to Privy Home's API
+    /// host, by name (`PrivyHomeFeed.apiCookies`), as one JSON object in the
+    /// device-only Keychain.
+    private static let cookiesKey = "privy.home.cookies"
 
-    static var access: String? { TokenVault.get(accessKey).flatMap { $0.isEmpty ? nil : $0 } }
-    static var refresh: String? { TokenVault.get(refreshKey).flatMap { $0.isEmpty ? nil : $0 } }
+    static var cookies: [String: String] {
+        guard let raw = TokenVault.get(cookiesKey), let data = raw.data(using: .utf8),
+              let map = try? JSONDecoder().decode([String: String].self, from: data) else { return [:] }
+        // A session stored before trackers were filtered out still sends only
+        // what the API needs.
+        return map.filter { PrivyHomeFeed.isSessionCookie($0.key) }
+    }
 
     /// A refresh token is what keeps the session alive; an access token alone
-    /// expires within the hour and cannot be renewed.
-    static var connected: Bool { refresh != nil }
+    /// expires within minutes and cannot be renewed.
+    static var connected: Bool { cookies[PrivyHomeFeed.refreshCookie] != nil }
 
-    static func store(access: String?, refresh: String?) {
-        if let access, !access.isEmpty { TokenVault.set(access, for: accessKey) }
-        if let refresh, !refresh.isEmpty { TokenVault.set(refresh, for: refreshKey) }
+    static func store(_ cookies: [String: String]) {
+        guard let data = try? JSONEncoder().encode(cookies),
+              let raw = String(data: data, encoding: .utf8) else { return }
+        TokenVault.set(raw, for: cookiesKey)
     }
 
     /// Clears the session only. The apps already landed are the person's
     /// record, not the session's.
     static func clear() {
-        TokenVault.delete(accessKey)
-        TokenVault.delete(refreshKey)
+        TokenVault.delete(cookiesKey)
     }
 }
 
@@ -129,38 +136,73 @@ enum PrivyHomeLive {
 
     // MARK: - The session
 
-    /// `privy_home/me`, renewing the session once if the access token has
-    /// expired. The refresh's own refusal is the session's.
+    /// What the last session read tried, as SHAPE: each attempt's status and
+    /// Privy's error `code` — never a token. Shown by `-privyProbe` and in the
+    /// DEBUG log, because a refusal right after a good sign-in has more than
+    /// one cause and each wants a different fix.
+    @MainActor private(set) static var lastTrace: [String] = []
+
+    /// `privy_home/me` with the whole session, renewed once when refused.
+    /// The refusal that clears the session is the renewal's.
     @MainActor
     private static func readMe() async -> (json: Any?, status: Int) {
-        if PrivyHomeAuth.access != nil {
-            let first = await get(PrivyHomeFeed.meURL)
-            guard first.status == 401 else { return first }
+        lastTrace = []
+        let session = PrivyHomeAuth.cookies
+        trace("session cookies=\(session.keys.sorted().joined(separator: ","))")
+        if let bearer = PrivyHomeFeed.bearer(session) {
+            trace("access \(PrivyHomeFeed.describe(jwt: bearer, now: .now))")
         }
+        let first = await get(PrivyHomeFeed.meURL)
+        guard first.status == 401 || first.status == 403 else { return first }
         let renewed = await renew()
         guard renewed == 200 else { return (nil, renewed) }
         return await get(PrivyHomeFeed.meURL)
     }
 
     @MainActor
-    private static func get(_ url: String) async -> (json: Any?, status: Int) {
-        var headers = PrivyHomeFeed.headers
-        headers["Cookie"] = cookieHeader()
-        return await IngestSupport.getJSONStatus(
-            url, auth: PrivyHomeAuth.access.map { "Bearer \($0)" },
-            headers: headers, service: PrivyHomeFeed.source)
+    private static func trace(_ line: String) {
+        lastTrace.append(line)
+        #if DEBUG
+        NSLog("[Casberi] privy| %@", line)
+        #endif
     }
 
-    /// The page's own renewal: `POST /sessions` with the refresh token, both as
-    /// the body and as the cookie Privy's cookie mode reads. The rotated pair
-    /// replaces the stored one. Cookies are handled by hand so the rotated
-    /// session never lands in the shared cookie store.
+    @MainActor
+    private static func get(_ url: String) async -> (json: Any?, status: Int) {
+        let session = PrivyHomeAuth.cookies
+        var headers = PrivyHomeFeed.headers
+        headers["Cookie"] = PrivyHomeFeed.cookieHeader(session)
+        let (json, status) = await IngestSupport.getJSONBody(
+            url, auth: PrivyHomeFeed.bearer(session).map { "Bearer \($0)" },
+            headers: headers, service: PrivyHomeFeed.source)
+        trace("me → \(status)\(PrivyHomeFeed.errorCode(json).map { " " + $0 } ?? "")")
+        return (status == 200 ? json : nil, status)
+    }
+
+    /// The page's own renewal: `POST /sessions` with the whole session — the
+    /// cookie mode's body word first, then the refresh token in the body,
+    /// because which one Privy Home wants was not measured. Every `Set-Cookie`
+    /// is merged into the stored session by name. Cookies are handled by hand
+    /// so the rotated session never lands in the shared cookie store.
     @MainActor
     private static func renew() async -> Int {
-        guard let refresh = PrivyHomeAuth.refresh,
-              let url = URL(string: PrivyHomeFeed.sessionsURL),
-              let body = try? JSONSerialization.data(withJSONObject: ["refresh_token": refresh])
-        else { return 401 }
+        guard let refresh = PrivyHomeAuth.cookies[PrivyHomeFeed.refreshCookie] else { return 401 }
+        var last = 401
+        for bodyToken in ["deprecated", refresh] {
+            let status = await renew(bodyToken: bodyToken, label: bodyToken == refresh ? "body" : "cookie")
+            if status == 200 { return 200 }
+            last = status
+            guard status == 401 || status == 403 || status == 400 else { return status }
+        }
+        return last
+    }
+
+    @MainActor
+    private static func renew(bodyToken: String, label: String) async -> Int {
+        let session = PrivyHomeAuth.cookies
+        guard let url = URL(string: PrivyHomeFeed.sessionsURL),
+              let body = try? JSONSerialization.data(withJSONObject: ["refresh_token": bodyToken])
+        else { return 0 }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.httpBody = body
@@ -168,34 +210,25 @@ enum PrivyHomeLive {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         for (field, value) in PrivyHomeFeed.headers { request.setValue(value, forHTTPHeaderField: field) }
-        request.setValue(cookieHeader(), forHTTPHeaderField: "Cookie")
-        if let access = PrivyHomeAuth.access {
-            request.setValue("Bearer \(access)", forHTTPHeaderField: "Authorization")
+        request.setValue(PrivyHomeFeed.cookieHeader(session), forHTTPHeaderField: "Cookie")
+        if let bearer = PrivyHomeFeed.bearer(session) {
+            request.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization")
         }
         guard let (data, http) = await IngestSupport.sendRequest(request, service: PrivyHomeFeed.source)
-        else { return 0 }
+        else { trace("renew \(label) → no response"); return 0 }
+        let json = try? JSONSerialization.jsonObject(with: data)
+        trace("renew \(label) → \(http.statusCode)\(PrivyHomeFeed.errorCode(json).map { " " + $0 } ?? "")")
         guard http.statusCode == 200 else { return http.statusCode }
         let fields = http.allHeaderFields.reduce(into: [String: String]()) { out, pair in
             if let k = pair.key as? String, let v = pair.value as? String { out[k] = v }
         }
-        let cookies = HTTPCookie.cookies(withResponseHeaderFields: fields, for: url)
+        let setCookies = HTTPCookie.cookies(withResponseHeaderFields: fields, for: url)
             .map { (name: $0.name, value: $0.value) }
-        let pair = PrivyHomeFeed.rotated(body: try? JSONSerialization.jsonObject(with: data),
-                                         cookies: cookies)
-        guard pair.access != nil || pair.refresh != nil else { return 0 }
-        PrivyHomeAuth.store(access: pair.access, refresh: pair.refresh)
+        let rotated = PrivyHomeFeed.rotated(session, body: json, setCookies: setCookies)
+        trace("renew set=\(setCookies.map(\.name).sorted().joined(separator: ","))")
+        guard PrivyHomeFeed.isSession(rotated) else { return 0 }
+        PrivyHomeAuth.store(rotated)
         return 200
-    }
-
-    @MainActor
-    private static func cookieHeader() -> String {
-        var parts: [String] = []
-        if let access = PrivyHomeAuth.access {
-            parts.append("privy-token=\(access)")
-            parts.append("privy-access-token=\(access)")
-        }
-        if let refresh = PrivyHomeAuth.refresh { parts.append("\(PrivyHomeFeed.refreshCookie)=\(refresh)") }
-        return parts.joined(separator: "; ")
     }
 
     // MARK: - Landing
@@ -266,9 +299,8 @@ enum PrivyHomeLive {
     /// never a token, an address or an amount.
     @MainActor
     static func diagnose(context: ModelContext) async {
-        NSLog("[Casberi] privy| session: access=%@ refresh=%@",
-              PrivyHomeAuth.access == nil ? "no" : "yes",
-              PrivyHomeAuth.refresh == nil ? "no" : "yes")
+        NSLog("[Casberi] privy| session: %@",
+              PrivyHomeAuth.cookies.keys.sorted().joined(separator: ","))
         guard PrivyHomeAuth.connected else {
             NSLog("[Casberi] privy| NOT CONNECTED — sign in from Privy's account page")
             return

@@ -14,11 +14,13 @@
 #
 #   · an email account read as a wallet puts a person's address in a row
 #     titled like an app, and asks Zerion for the holdings of an email
-#   · a session gated on the refresh cookie alone "connects" a jar that can
-#     never read, and one gated on a signed-out visit's cookies closes the
-#     sheet before the email code is typed
+#   · a session sent as a bearer alone, or as one token under both cookie
+#     names, is refused (MEASURED) — and the page then says "signed out" over
+#     a sign-in that worked
+#   · a session gated on a signed-out visit's cookies closes the sheet before
+#     the email code is typed
 #   · a refresh body's `"deprecated"` stored as the refresh token signs the
-#     person out on the next renewal, an hour later, with no explanation
+#     person out on the next renewal, with no explanation
 #   · a 200 that is not `user.apps` read as "no apps" says "up to date" over
 #     a body nobody understood (§83)
 #   · a millisecond timestamp read as seconds dates every app in the year
@@ -70,26 +72,45 @@ let evm2 = "0x1111111111111111111111111111111111111111"
 let sol = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
 
 // ── The session ──────────────────────────────────────────────────────────
-check(PrivyHomeFeed.session([("privy-session", "t"), ("_ga", "x")]) == nil,
-      "a signed-out visit's cookies are not a session")
-check(PrivyHomeFeed.session([("privy-refresh-token", "r")]) == nil,
-      "a refresh token alone is not a session")
-check(PrivyHomeFeed.session([("privy-token", "a")]) == nil,
-      "an access token alone is not a session")
-let s1 = PrivyHomeFeed.session([("privy-token", "a"), ("privy-refresh-token", "r")])
-check(s1?.access == "a" && s1?.refresh == "r", "both halves make a session")
-let s2 = PrivyHomeFeed.session([("privy-access-token", "b"), ("privy-refresh-token", "r")])
-check(s2?.access == "b", "privy-access-token stands in for privy-token")
-check(PrivyHomeFeed.session([("privy-token", ""), ("privy-refresh-token", "r")]) == nil,
-      "an empty cookie is not a token")
+// Measured 2026-09-17: a bearer alone is "Missing auth token", and one token
+// sent under both cookie names is "Invalid auth token". The session is every
+// cookie the API host receives, each with its own value.
+let jar: [(name: String, value: String, domain: String)] = [
+    ("privy-token", "T", ".home.privy.io"),
+    ("privy-access-token", "A", ".privy.home.privy.io"),
+    ("privy-refresh-token", "R", ".privy.home.privy.io"),
+    ("privy-session", "S", ".home.privy.io"),
+    ("cf_clearance", "C", ".privy.io"),
+    ("privy-other", "X", ".auth.privy.io"),
+    ("evil", "E", "privy.home.privy.io.evil"),
+    ("empty", "", ".privy.io"),
+    ("hubspotutk", "H", ".privy.io"),
+    ("_ga", "G", ".privy.io"),
+]
+let api = PrivyHomeFeed.apiCookies(jar)
+check(api["privy-token"] == "T" && api["privy-access-token"] == "A",
+      "the two access tokens keep their OWN values")
+check(api["privy-session"] == "S" && api["cf_clearance"] == "C", "parent-domain cookies ride along, as a browser sends them")
+check(api["privy-other"] == nil, "a sibling subdomain's cookie is not sent")
+check(api["hubspotutk"] == nil && api["_ga"] == nil, "analytics trackers are never kept or sent")
+check(api["evil"] == nil, "a lookalike domain is not a domain match")
+check(api["empty"] == nil, "an empty cookie is not kept")
+check(PrivyHomeFeed.isSession(api), "access + refresh is a session")
+check(!PrivyHomeFeed.isSession(["privy-session": "S", "_ga": "x"]), "a signed-out visit's cookies are not a session")
+check(!PrivyHomeFeed.isSession(["privy-refresh-token": "R"]), "a refresh token alone is not a session")
+check(!PrivyHomeFeed.isSession(["privy-token": "T"]), "an access token alone is not a session")
+check(PrivyHomeFeed.bearer(api) == "T", "the bearer is privy-token")
+check(PrivyHomeFeed.cookieHeader(["b": "2", "a": "1"]) == "a=1; b=2", "the Cookie header carries every cookie")
 
-let r1 = PrivyHomeFeed.rotated(body: json(#"{"token":"A2","refresh_token":"deprecated"}"#),
-                               cookies: [("privy-refresh-token", "R2")])
-check(r1.access == "A2" && r1.refresh == "R2", "cookie mode: the refresh comes from the cookie")
-let r2 = PrivyHomeFeed.rotated(body: json(#"{"token":"A2","refresh_token":"deprecated"}"#), cookies: [])
-check(r2.refresh == nil, "\"deprecated\" is never stored as a refresh token")
-let r3 = PrivyHomeFeed.rotated(body: json(#"{"token":"A3","refresh_token":"R3"}"#), cookies: [])
-check(r3.access == "A3" && r3.refresh == "R3", "body mode: both come from the body")
+let r1 = PrivyHomeFeed.rotated(api, body: json(#"{"token":"T2","refresh_token":"deprecated"}"#),
+                               setCookies: [("privy-access-token", "A2"), ("privy-refresh-token", "R2")])
+check(r1["privy-access-token"] == "A2" && r1["privy-refresh-token"] == "R2", "Set-Cookie rotates by name")
+check(r1["privy-token"] == "T", "a body token does not overwrite when a cookie carried access")
+let r2 = PrivyHomeFeed.rotated(["privy-refresh-token": "R"], body: json(#"{"token":"T3","refresh_token":"deprecated"}"#), setCookies: [])
+check(r2["privy-refresh-token"] == "R", "\"deprecated\" is never stored as a refresh token")
+check(r2["privy-token"] == "T3", "body mode: the token comes from the body")
+let r3 = PrivyHomeFeed.rotated(api, body: nil, setCookies: [("privy-session", "")])
+check(r3["privy-session"] == nil, "a cleared cookie is dropped")
 
 check(PrivyHomeFeed.classify(status: 200) == nil, "200 is not a failure")
 check(PrivyHomeFeed.classify(status: 401) == .refused(401), "401 is a refusal")
