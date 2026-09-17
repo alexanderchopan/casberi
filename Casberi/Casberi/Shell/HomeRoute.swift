@@ -33,7 +33,8 @@ final class HomeRoute {
     /// real array mutation SwiftUI has never seen before.
     enum Node: Hashable {
         case apps
-        case settings
+        // `settings` is GONE (prd §796): Settings is the third section of
+        // the Accounts screen, reached through `openSettings` below.
         case bridge(BridgeRouter.Destination)
         /// A tag's project view — the same screen the feed's Themes treemap
         /// opens. Pushed by an Ask answer's ProjectTile and the "open work"
@@ -104,11 +105,11 @@ final class HomeRoute {
 
     /// The avatar's own door: press it once to land on `door`, press it again
     /// to leave (user, 2026-09-12 — "if you press your avatar again it closes
-    /// that screen").
+    /// that screen"). The door was Settings then and is Accounts since §796.
     ///
     /// The face is the one seat that survives INTO the screen it opens (it is
     /// hosted on `RootShell`'s layer, above the stack — see `DockDoors`), so
-    /// while Settings is up the control is still under the thumb and the only
+    /// while that screen is up the control is still under the thumb and the only
     /// honest reading of a second press is "put it back". A door that stays
     /// lit and does nothing is the dead control §83 forbids.
     ///
@@ -187,6 +188,13 @@ final class HomeRoute {
     /// just to the shelf); AppsScreen consumes it on appear, after the
     /// `.apps` push above has mounted the stack.
     var openOffer: String?
+
+    /// Land the Accounts screen on its Settings section once it mounts (prd
+    /// §796) — set by the three direct doors (the Mac menu's ⌘,,
+    /// `casberi://settings`, `-openSettings YES`) beside `present(.apps)`, and
+    /// consumed by `AppsScreen` on appear. Settings was its own `Node` until
+    /// §796 made it a section; the doors kept their meaning, not their node.
+    var openSettings = false
 
     /// A catalog CATEGORY the Apps screen should land filtered to — set by a
     /// door that named the category in the same gesture ("Set up an agent"),

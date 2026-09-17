@@ -315,7 +315,7 @@ grep -q 'static func clusterWidth(fold: CGFloat) -> CGFloat { agentSize(fold: fo
 grep -q 'clusterInset + clusterWidth(fold: fold) + seam' "$DOCK" \
   || { echo "✗ DSDock.agentSeat no longer spans the door CLUSTER."; fail=1; }
 grep -q 'DockDoors(' "$TMP/root.nc" \
-  || { echo "✗ RootShell no longer hosts DockDoors — Settings must stand on the shell's"; \
+  || { echo "✗ RootShell no longer hosts DockDoors — the face must stand on the shell's"; \
        echo "  own layer, which survives into a pushed room; the strip does not."; fail=1; }
 grep -q 'AvatarChip(' "$TMP/doors.nc" \
   || { echo "✗ the face is gone from the dock's leading seat."; fail=1; }
@@ -324,13 +324,36 @@ grep -q 'AvatarChip(' "$TMP/doors.nc" \
 # opens, so a second press that re-presents the same screen is a control that
 # looks live and does nothing — §83's dead control. Both seats (the phone's
 # fixed dock seat and the iPad rail's own avatar) must route through
-# `HomeRoute.toggle`, never `present`.
-grep -q 'route.toggle(.settings)' "$TMP/root.nc" \
-  || { echo "✗ the dock's face no longer TOGGLES Settings (prd §705) — pressing it a"; \
-       echo "  second time must close the screen it opened, not re-present it."; fail=1; }
-grep -q 'route.toggle(.settings)' "$TMP/main.nc" \
-  || { echo "✗ the iPad rail's avatar no longer toggles Settings — the two seats are"; \
+# `HomeRoute.toggle`, never `present`. The screen it opens is ACCOUNTS since
+# prd §796 (user, 2026-09-17: "what if the avatar icon was for apps and we put
+# a settings button"); it was Settings from §700 to then.
+grep -q 'route.toggle(.apps)' "$TMP/root.nc" \
+  || { echo "✗ the dock's face no longer TOGGLES Accounts (prd §705, §796) — pressing it"; \
+       echo "  a second time must close the screen it opened, not re-present it."; fail=1; }
+grep -q 'route.toggle(.apps)' "$TMP/main.nc" \
+  || { echo "✗ the iPad rail's avatar no longer toggles Accounts — the two seats are"; \
        echo "  one door and must behave identically."; fail=1; }
+# Settings is the third SECTION of the Accounts screen (prd §796): Manage |
+# Connect | Settings, one switcher, and the list below swaps — no push, no
+# second screen, so the face toggles ONE screen in and out. `HomeRoute.Node`
+# has no `settings` case any more; the three direct doors (⌘,,
+# `casberi://settings`, `-openSettings YES`) present `.apps` and leave
+# `openSettings`, which the screen consumes on appear. Without that consume,
+# every one of them lands on Manage and reads as a broken link.
+strip_comments "Casberi/Casberi/Screens/AppsScreen.swift" > "$TMP/apps.nc"
+grep -q 'case yours, all, settings' "$TMP/apps.nc" \
+  || { echo "✗ the Accounts switcher lost its Settings section (prd §796)."; fail=1; }
+grep -q 'SettingsRows()' "$TMP/apps.nc" \
+  || { echo "✗ the Accounts screen no longer draws SettingsRows under its switcher (prd §796)."; fail=1; }
+grep -q 'route.openSettings = false' "$TMP/apps.nc" \
+  || { echo "✗ the Accounts screen no longer consumes HomeRoute.openSettings — ⌘,,"; \
+       echo "  casberi://settings and -openSettings YES would land on Manage (prd §796)."; fail=1; }
+[ "$(grep -c 'route.openSettings = true' "$TMP/root.nc")" -ge 2 ] \
+  || { echo "✗ RootShell's settings doors (the deep link, -openSettings) no longer ask for"; \
+       echo "  the Settings section (prd §796)."; fail=1; }
+grep -q 'case settings' "Casberi/Casberi/Shell/HomeRoute.swift" \
+  && { echo "✗ HomeRoute.Node has a settings case again — Settings is a section of Accounts,"; \
+       echo "  not a screen (prd §796)."; fail=1; }
 grep -q 'AppsDoor()' "$TMP/doors.nc" \
   && { echo "✗ the catalogue door is back in the FIXED seat (prd §700: only the avatar is"; \
        echo "  fixed; the catalogue is the strip's last item)."; fail=1; }

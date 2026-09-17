@@ -778,14 +778,16 @@ struct RootShell: View {
                 }
                 }
             }
-            // `-openSettings YES` pushes Settings. Lives HERE, not a screen's
+            // `-openSettings YES` lands on the Accounts screen's Settings
+            // section (prd §796; it pushed a Settings screen before). Lives HERE, not a screen's
             // own onAppear — content-first landing is now the ONLY landing
             // (the Pinned board it used to have to out-race retired
             // 2026-07-20), so there's only ever one surface to time against.
             // This onAppear runs after the whole tree mounts — same proven
             // timing as the `-deeplink` hook above.
             if UserDefaults.standard.bool(forKey: "openSettings") {
-                sceneState.route.present(.settings)
+                sceneState.route.openSettings = true
+                sceneState.route.present(.apps)
             }
             // `-openRoom "<Source>"` scopes the feed to one source's room.
             // Extracted to a method rather than inlined: adding it inline tipped
@@ -2254,7 +2256,9 @@ struct RootShell: View {
                     // 2026-09-11). `AgentHintCapsule` taught the hold that
                     // raised the agent, and `AgentBar` was the agent's own
                     // seat; the ask is deprecated, so what stands in the
-                    // dock's leading seat is your face — Settings. The
+                    // dock's leading seat is your face — Accounts since
+                    // prd §796 (Settings until then; it is a door in the
+                    // Accounts head row now). The
                     // catalogue stood beside it for a few hours (§697) and
                     // is the strip's LAST item now (prd §700): the face is
                     // the one fixed mark, the places scroll.
@@ -2266,7 +2270,7 @@ struct RootShell: View {
                     // used to have. The iPad rail's own pair keeps theirs.
                     // On a pushed screen the seat is the way back (prd §767),
                     // so no screen needs a back chevron at its top edge.
-                    DockDoors(onSettings: { sceneState.route.toggle(.settings) },
+                    DockDoors(onAccounts: { sceneState.route.toggle(.apps) },
                               onBack: sceneState.route.path.isEmpty
                                   ? nil : { sceneState.route.goBack() })
                 }
@@ -2460,7 +2464,9 @@ struct RootShell: View {
         case "account", "apps":
             sceneState.route.present(.apps)
         case "settings":
-            sceneState.route.present(.settings)
+            // The Accounts screen, landed on its Settings section (prd §796).
+            sceneState.route.openSettings = true
+            sceneState.route.present(.apps)
         // casberi://brief — the agent, raised onto the brief (2026-07-25).
         // The hero widget carries the brief's own lede now, so its tap has to
         // land on the sentence it was showing; landing on the feed instead

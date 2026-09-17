@@ -239,16 +239,18 @@ struct SourceChips: View {
     /// your sources). On the phone it is the strip's LAST item since prd
     /// §700 (`catalogueMark`); the iPad rail still pins it at the head.
     var onApps: () -> Void = {}
-    /// Opens Settings — the avatar joined this strip too (2026-07-20,
-    /// Stories-style: your own face leads, fixed, ahead of the catalogue
-    /// door). The system nav bar it used to live in alone is hidden now.
-    var onSettings: () -> Void = {}
+    /// The avatar's door — Accounts, as a TOGGLE (prd §796; it opened
+    /// Settings from 2026-07-20, when the face joined this strip
+    /// Stories-style, until 2026-09-17). Distinct from `onApps` because the
+    /// face is the one seat that stands on top of the screen it opens, so it
+    /// routes through `HomeRoute.toggle` (§705) where the catalogue door
+    /// presents.
+    var onAccounts: () -> Void = {}
     /// Pull-to-refresh spin, threaded through to the avatar exactly as it
     /// was when it lived in the toolbar.
     var refreshSpin: Int = 0
-    /// The zoom anchor BOTH fixed doors grow out of — the catalogue's
-    /// "appsDoor" transition and the avatar's "settingsDoor" transition
-    /// share one namespace under different ids, same as before the move.
+    /// The zoom anchor the catalogue door grows out of ("appsDoor"). The
+    /// avatar's "settingsDoor" source went with its Settings job (§796).
     var zoomNS: Namespace.ID? = nil
     let onTap: (String) -> Void
 
@@ -767,13 +769,14 @@ struct SourceChips: View {
         }
     }
 
-    /// The avatar door — Settings. Stories-style: your own face leads the
-    /// strip (2026-07-20), the same "add a source"-adjacent fixed placement
-    /// the catalogue door already had. `AvatarChip` (`TopDoors.swift`) owns
-    /// the actual door/bounce/spin — this just wires this screen's params.
+    /// The avatar door — Accounts (§796). Stories-style: your own face leads
+    /// the strip (2026-07-20), the same "add a source"-adjacent fixed
+    /// placement the catalogue door already had. `AvatarChip`
+    /// (`TopDoors.swift`) owns the actual door/bounce/spin — this just wires
+    /// this screen's params.
     @ViewBuilder private var avatarChip: some View {
-        AvatarChip(onSettings: onSettings, refreshSpin: refreshSpin,
-                   pullTension: chrome.pullTension, zoomNS: zoomNS,
+        AvatarChip(onAccounts: onAccounts, refreshSpin: refreshSpin,
+                   pullTension: chrome.pullTension,
                    doorUnion: doorsUnion)
     }
 
