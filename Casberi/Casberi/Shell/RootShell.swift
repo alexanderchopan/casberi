@@ -778,14 +778,16 @@ struct RootShell: View {
                 }
                 }
             }
-            // `-openSettings YES` pushes Settings. Lives HERE, not a screen's
+            // `-openSettings YES` lands on the Accounts screen's Settings
+            // section (prd §796; it pushed a Settings screen before). Lives HERE, not a screen's
             // own onAppear — content-first landing is now the ONLY landing
             // (the Pinned board it used to have to out-race retired
             // 2026-07-20), so there's only ever one surface to time against.
             // This onAppear runs after the whole tree mounts — same proven
             // timing as the `-deeplink` hook above.
             if UserDefaults.standard.bool(forKey: "openSettings") {
-                sceneState.route.present(.settings)
+                sceneState.route.openSettings = true
+                sceneState.route.present(.apps)
             }
             // `-openRoom "<Source>"` scopes the feed to one source's room.
             // Extracted to a method rather than inlined: adding it inline tipped
@@ -2462,7 +2464,9 @@ struct RootShell: View {
         case "account", "apps":
             sceneState.route.present(.apps)
         case "settings":
-            sceneState.route.present(.settings)
+            // The Accounts screen, landed on its Settings section (prd §796).
+            sceneState.route.openSettings = true
+            sceneState.route.present(.apps)
         // casberi://brief — the agent, raised onto the brief (2026-07-25).
         // The hero widget carries the brief's own lede now, so its tap has to
         // land on the sentence it was showing; landing on the feed instead

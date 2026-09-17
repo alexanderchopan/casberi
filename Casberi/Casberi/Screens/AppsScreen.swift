@@ -44,7 +44,7 @@ struct AppsScreen: View {
     /// catalog with connected rows wearing their state in place. Seeded once
     /// per mount from whether anything is connected at all — a first run has
     /// nothing to manage, so it opens on the catalog.
-    @State private var yoursOnly = false
+    @State private var section: AccountsHeld = .all
     @State private var scopeSeeded = false
     /// Bumped when a category's LAST addable app connects — the section header
     /// glows once in the category's own color and a toast names the set now
@@ -127,7 +127,7 @@ struct AppsScreen: View {
     /// with nothing connected drops its chip under Yours rather than filtering
     /// to an empty list behind a selected chip.
     private var ranked: [Ranked] {
-        yoursOnly ? rankedAll.filter { $0.tier == 0 || $0.tier == 2 } : rankedAll
+        section == .yours ? rankedAll.filter { $0.tier == 0 || $0.tier == 2 } : rankedAll
     }
 
     private var rankedAll: [Ranked] {
@@ -166,20 +166,14 @@ struct AppsScreen: View {
                         // top") — a visible slab, not the nav bar's
                         // pull-down `.searchable` field, which the App Store
                         // shape hid a scroll below the fold.
-                        // Search, Manage | Connect, Settings (user, prd §796):
-                        // the face in the dock opens THIS screen, so the way
-                        // into Settings stands here, in the head row.
+                        // Search, then Manage | Connect | Settings (user, prd
+                        // §796): the face in the dock opens THIS screen, and
+                        // Settings is its third section, not a screen of its own.
                         HStack(spacing: DS.Space.s2) {
                             searchField
                             scopeSegment
-                            settingsDoor
                         }
-                        if query.isEmpty {
-                            scopeStrip(proxy)
-                            catalogList
-                        } else {
-                            searchResults
-                        }
+                        sections(proxy)
                     }
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.vertical, DS.Space.s4)
@@ -235,6 +229,26 @@ struct AppsScreen: View {
         )
     }
 
+    /// What stands under the head row — the search hits, the settings rows, or
+    /// the catalogue with its category strip.
+    ///
+    /// ITS OWN `@ViewBuilder`, not a third branch inline. The VStack above is
+    /// the one whose tuple `scrollContent` erases to `AnyView` to stay inside
+    /// the type checker's budget (see there): a two-way if/else was already
+    /// enough to need that erasure, so §796's third arm is lifted out rather
+    /// than added to it.
+    @ViewBuilder
+    private func sections(_ proxy: ScrollViewProxy) -> some View {
+        if !query.isEmpty {
+            searchResults
+        } else if section == .settings {
+            SettingsRows()
+        } else {
+            scopeStrip(proxy)
+            catalogList
+        }
+    }
+
     var body: some View {
         scrollContent
         .scrollIndicators(.hidden)
@@ -251,7 +265,15 @@ struct AppsScreen: View {
             if passed > connectMilestoneReached { connectMilestoneReached = passed }
             if !scopeSeeded {
                 scopeSeeded = true
-                yoursOnly = connectedCount > 0
+                section = connectedCount > 0 ? .yours : .all
+            }
+            // The three direct doors to Settings — ⌘, on the Mac,
+            // `casberi://settings` and `-openSettings YES` — present this
+            // screen and leave this request (prd §796); consumed here, after
+            // the seed, so it wins.
+            if route.openSettings {
+                route.openSettings = false
+                section = .settings
             }
         }
         // The store's shape after any connect/disconnect — drives the promote
@@ -583,10 +605,10 @@ struct AppsScreen: View {
         // two selection styles for one kind of choice, one row apart. Same two
         // words, both always visible, the chosen one filled.
         DSSectionSwitcher(sections: AccountsHeld.allCases,
-                          active: yoursOnly ? .yours : .all,
+                          active: section,
                           scrolls: false) { picked in
             withAnimation(DS.Motion.standard) {
-                yoursOnly = picked == .yours
+                section = picked
                 scope = CatalogScope(name: nil)
             }
         }
@@ -595,43 +617,23 @@ struct AppsScreen: View {
         .accessibilityLabel(Text("Which accounts"))
     }
 
-    /// The Settings door (prd §796, 2026-09-17, user: "what if the avatar icon
-    /// was for apps and we put a settings button. so under accounts title it
-    /// says search, update, manage, settings").
-    ///
-    /// The dock's face opened Settings from 2026-07-20 to 2026-09-17 and opens
-    /// Accounts now, so this is the one touch door to Settings; the menu's ⌘,
-    /// and `casberi://settings` still present it directly. A glyph, not a
-    /// word: the pair beside it is a CHOICE and this is a DOOR, and §746 keeps
-    /// the two shapes apart — a third capsule reading "Settings" would look
-    /// like a scope that filters the list. `push`, not `present`, so the way
-    /// back (the dock's seat, §767) lands on this screen, not Home. Bare, at
-    /// the slab's height and the hit floor's width: it is content, so no
-    /// glass (the floating layer's) and no well (§782).
-    private var settingsDoor: some View {
-        Button {
-            DSHaptic.selection()
-            route.push(.settings)
-        } label: {
-            Image(systemName: "gearshape")
-                .dsGlyph(.title)
-                .foregroundStyle(DS.textSecondary)
-                .frame(width: DS.Hit.min, height: DSSlab.height)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(PressSpring())
-        .dsHover()
-        .accessibilityLabel(Text("Settings"))
-        .dsTooltip(String(localized: "Settings"))
-    }
-
+    /// The screen's three sections (prd §796): what you hold, what you could
+    /// add, and the app's own settings. Settings is a SECTION and not a door
+    /// (user, 2026-09-17: "it should be a button that says settings … or can
+    /// it toggle? like manage and connect"): the same switcher, the same
+    /// screen, the list below swaps — so the dock's face toggles one screen in
+    /// and out, and nothing is pushed.
     private enum AccountsHeld: String, CaseIterable, DSSectionScope {
-        case yours, all
+        case yours, all, settings
         var id: String { rawValue }
         var label: String {
             // "Manage" and "Connect" (user, 2026-09-16, prd §793): what you do
             // on each side — look after what you hold, add what you don't.
-            self == .yours ? String(localized: "Manage") : String(localized: "Connect")
+            switch self {
+            case .yours:    String(localized: "Manage")
+            case .all:      String(localized: "Connect")
+            case .settings: String(localized: "Settings")
+            }
         }
     }
 
@@ -642,7 +644,9 @@ struct AppsScreen: View {
         // `height: DS.Radius.widget + 36` — a corner-radius token standing in
         // for a height, arriving at exactly `DSSlab.height` by coincidence
         // rather than by agreement (2026-08-28).
-        DSSlabField(placeholder: String(localized: "Search accounts"),
+        // "Search", not "Search accounts" (prd §796): the title above already
+        // says accounts, and three words now share the row with this field.
+        DSSlabField(placeholder: String(localized: "Search"),
                     text: $query, actionLabel: "",
                     focus: $searchFocused,
                     glyph: "magnifyingglass", clearable: true,
@@ -803,7 +807,7 @@ struct AppsScreen: View {
     /// wrapping a lazy grid inside each.
     private var catalogList: some View {
         Group {
-            if yoursOnly && ranked.isEmpty {
+            if section == .yours && ranked.isEmpty {
                 // Reachable only by choosing Manage with nothing connected —
                 // the seed opens a first run on Connect. One sentence, and the
                 // way out is the control the person just used.

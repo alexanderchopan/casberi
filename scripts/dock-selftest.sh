@@ -333,19 +333,27 @@ grep -q 'route.toggle(.apps)' "$TMP/root.nc" \
 grep -q 'route.toggle(.apps)' "$TMP/main.nc" \
   || { echo "✗ the iPad rail's avatar no longer toggles Accounts — the two seats are"; \
        echo "  one door and must behave identically."; fail=1; }
-grep -q 'route.toggle(.settings)' "$TMP/root.nc" "$TMP/main.nc" \
-  && { echo "✗ a dock seat opens Settings again — the face is the Accounts door (prd §796)"; \
-       echo "  and Settings is a door in the Accounts head row."; fail=1; }
-# Settings kept exactly one touch door when the face stopped opening it: the
-# Accounts head row's gear (prd §796). Without it Settings is reachable by the
-# Mac menu and a deep link only — a screen no finger can find. `push`, never
-# `present`, so the dock's seat (the way back, §767) lands on Accounts.
+# Settings is the third SECTION of the Accounts screen (prd §796): Manage |
+# Connect | Settings, one switcher, and the list below swaps — no push, no
+# second screen, so the face toggles ONE screen in and out. `HomeRoute.Node`
+# has no `settings` case any more; the three direct doors (⌘,,
+# `casberi://settings`, `-openSettings YES`) present `.apps` and leave
+# `openSettings`, which the screen consumes on appear. Without that consume,
+# every one of them lands on Manage and reads as a broken link.
 strip_comments "Casberi/Casberi/Screens/AppsScreen.swift" > "$TMP/apps.nc"
-grep -q 'route.push(.settings)' "$TMP/apps.nc" \
-  || { echo "✗ the Accounts screen lost its Settings door (prd §796) — no touch path to"; \
-       echo "  Settings is left; the face opens Accounts."; fail=1; }
-grep -q 'private var settingsDoor' "$TMP/apps.nc" && grep -q 'settingsDoor$' "$TMP/apps.nc" \
-  || { echo "✗ the Settings door is defined but not drawn in the Accounts head row."; fail=1; }
+grep -q 'case yours, all, settings' "$TMP/apps.nc" \
+  || { echo "✗ the Accounts switcher lost its Settings section (prd §796)."; fail=1; }
+grep -q 'SettingsRows()' "$TMP/apps.nc" \
+  || { echo "✗ the Accounts screen no longer draws SettingsRows under its switcher (prd §796)."; fail=1; }
+grep -q 'route.openSettings = false' "$TMP/apps.nc" \
+  || { echo "✗ the Accounts screen no longer consumes HomeRoute.openSettings — ⌘,,"; \
+       echo "  casberi://settings and -openSettings YES would land on Manage (prd §796)."; fail=1; }
+[ "$(grep -c 'route.openSettings = true' "$TMP/root.nc")" -ge 2 ] \
+  || { echo "✗ RootShell's settings doors (the deep link, -openSettings) no longer ask for"; \
+       echo "  the Settings section (prd §796)."; fail=1; }
+grep -q 'case settings' "Casberi/Casberi/Shell/HomeRoute.swift" \
+  && { echo "✗ HomeRoute.Node has a settings case again — Settings is a section of Accounts,"; \
+       echo "  not a screen (prd §796)."; fail=1; }
 grep -q 'AppsDoor()' "$TMP/doors.nc" \
   && { echo "✗ the catalogue door is back in the FIXED seat (prd §700: only the avatar is"; \
        echo "  fixed; the catalogue is the strip's last item)."; fail=1; }

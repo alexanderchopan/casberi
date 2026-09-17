@@ -7,7 +7,7 @@ import SwiftUI
 /// strip), and on into the dock's fixed seat (§700). The user re-read it: the
 /// face is about YOU, and what is yours in this app is your accounts — so the
 /// face opens the Accounts screen, and Settings is a door in that screen's
-/// head row (`AppsScreen.settingsDoor`), one step further in. Kept as its own
+/// switcher (`Manage | Connect | Settings`, one section of it). Kept as its own
 /// small view (not folded directly into `SourceChips`) so
 /// `AvatarDoor`/`DoorSpin`/`DoorBounce` stay one shared definition regardless
 /// of where the door lives.

@@ -8,8 +8,13 @@ import PhotosUI
 /// uniform tiles, and every neighboring surface — the feed, the Apps page,
 /// this screen's own detail trays — already speaks rows). Pushed from Apps,
 /// not a tab of its own (2026-07-06 restructure).
-struct SettingsScreen: View {
-    @Environment(ShellChrome.self) private var chrome
+/// The settings rows — the third SECTION of the Accounts screen since prd
+/// §796 (Manage | Connect | Settings), drawn by `AppsScreen` under its
+/// switcher. It was its own pushed screen (`SettingsScreen`) behind the dock's
+/// face until then; the face opens Accounts now, and Settings is one pick
+/// away inside it, so this view is the rows, the colophon and the sheets they
+/// open, and nothing of a screen's own: no head, no scroll, no page.
+struct SettingsRows: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
     @Environment(BridgeStore.self) private var bridgeStore
@@ -45,29 +50,14 @@ struct SettingsScreen: View {
     @State private var nameDraft = ""
 
     var body: some View {
-        ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    // One parcel, no group headers — every row in one A–Z
-                    // field. (A big avatar hero lived here for an hour on
-                    // 2026-07-10 and was rejected: personalization paints your
-                    // SPACE — it never builds a profile of you.)
-                    DSScreenHead(title: Text("Settings"))
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.bottom, DS.Space.s2)
-                    rowList(allRows)
-                    colophon
-                }
-                .padding(.top, ShellMetrics.topInset)
-                .padding(.bottom, ShellMetrics.bottomInset)
-            }
-            .scrollIndicators(.hidden)
-        .minimizesChrome(chrome)
-        .dsSoftScrollEdges()
-            .dsAdaptiveContentWidth()
-            .dsPageBackground()
-            // Name in the content, the way back in the dock's seat (prd §767).
-            .navigationTitle(Text("Settings"))
-            .toolbar(.hidden, for: .navigationBar)
+        VStack(alignment: .leading, spacing: 0) {
+            // One parcel, no group headers — every row in one A–Z field. (A
+            // big avatar hero lived here for an hour on 2026-07-10 and was
+            // rejected: personalization paints your SPACE — it never builds a
+            // profile of you.)
+            rowList(allRows)
+            colophon
+        }
             .onAppear { readCounts(); markMilestone() }
             // The count is re-read when the app comes back to this screen —
             // a sweep may have landed things while it was away — and never
@@ -230,8 +220,9 @@ struct SettingsScreen: View {
     private var primaryRows: [RowSpec] {
         [
             RowSpec(title: "Avatar",
-                    // Set, the photo IS the fact — no words needed. It also
-                    // rides the Apps nav bar as the settings entry.
+                    // Set, the photo IS the fact — no words needed. It is
+                    // also the dock's face (§700), the door to this screen
+                    // (§796).
                     value: "",
                     avatar: ProfileStore.shared.avatar,
                     avatarSeat: true,
@@ -507,8 +498,13 @@ struct SettingsScreen: View {
         return String(localized: "Version \(v) (\(b))")
     }
 
+    /// The rows, spaced and pressed as the app rows above them are
+    /// (`AppsScreen.flatCatalogList`: `s1` between rows, `PressSpring` under
+    /// the finger). No horizontal inset of its own — the Accounts screen's
+    /// content already carries the page's (prd §590, the same lesson one
+    /// section over).
     private func rowList(_ rows: [RowSpec]) -> some View {
-        VStack(spacing: 0) {
+        VStack(spacing: DS.Space.s1) {
             ForEach(rows, id: \.title) { row in
                 Button(action: row.action) {
                     AccountRow(title: row.title, value: row.value,
@@ -519,16 +515,17 @@ struct SettingsScreen: View {
                                countsUp: row.countsUp,
                                bounce: row.bounce)
                 }
-                .buttonStyle(DSTileButtonStyle())
+                .buttonStyle(PressSpring())
             }
         }
         .padding(.vertical, DS.Space.s2)
-        .padding(.horizontal, DS.Space.s4)
     }
 }
 
-/// A Settings row in the feed's grammar: glyph seat leading, title, the live
-/// fact trailing. The avatar row seats the photo — identity earns the image.
+/// A Settings row in the APP ROW's anatomy (prd §796, user: "design the row of
+/// settings to look more like the rows of apps"): a 44pt tile leading, the
+/// title with its fact UNDER it, and the trail. The avatar row seats the photo
+/// — identity earns the image.
 struct AccountRow: View {
     /// What the tap does, said at the row's end (prd §767): a door takes the
     /// chevron, a trip out of the app takes the arrow, a flip in place takes
@@ -546,57 +543,86 @@ struct AccountRow: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// THE PUSH ROW'S ANATOMY (prd §764, §767): a 26pt lead, a regular 17pt
-    /// title, the fact at 12pt in the tertiary tier, then the trail. It was a
-    /// 34pt tinted squircle, an 18pt title and a 17pt fact — the only rows in
-    /// the app on those three numbers — with three lead species (a seal, a
-    /// green lock, gray squares) and a green fact for a saved key.
+    /// THE APP ROW'S ANATOMY (`AppsScreen.appRow`, prd §796): a `DS.Mark.tile`
+    /// lead, a regular 17pt title, the fact at 12pt in the tertiary tier under
+    /// it, then the trail; `s3` between, `s2` above and below. §764/§767 had
+    /// given this row the PUSH row's shape — a 26pt disc and the fact trailing
+    /// — so the settings rows and the app rows one pick away were two
+    /// anatomies on one screen.
     var body: some View {
         HStack(spacing: DS.Space.s3) {
             lead
-                .frame(width: DS.Mark.row, height: DS.Mark.row)
-            // The title doubles as its own catalog key — localized at render
-            // so the stored English still drives sort/id.
-            Text(LocalizedStringKey(title))
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-            Spacer(minLength: DS.Space.s2)
-            if !value.isEmpty {
-                // A fact that leads with a live number arrives by counting to
-                // it (CountUpText renders any other shape plainly).
-                Group {
-                    if countsUp, !reduceMotion { CountUpText(text: value) }
-                    else { Text(value) }
+                .frame(width: DS.Mark.tile, height: DS.Mark.tile)
+            VStack(alignment: .leading, spacing: 2) {
+                // The title doubles as its own catalog key — localized at
+                // render so the stored English still drives sort/id.
+                Text(LocalizedStringKey(title))
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                if !value.isEmpty {
+                    // A fact that leads with a live number arrives by counting
+                    // to it (CountUpText renders any other shape plainly).
+                    Group {
+                        if countsUp, !reduceMotion { CountUpText(text: value) }
+                        else { Text(value) }
+                    }
+                    .dsText(.subhead12)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
                 }
-                .dsText(.subhead12)
-                .foregroundStyle(DS.textTertiary)
-                .multilineTextAlignment(.trailing)
-                .lineLimit(2)
             }
+            Spacer(minLength: DS.Space.s2)
             switch trail {
             case .opens:  DSPushRowTrail()
             case .leaves: DSPushRowTrail(glyph: "arrow.up.right")
             case .flips:  EmptyView()
             }
         }
-        .padding(.vertical, DS.Space.s3)
+        .padding(.vertical, DS.Space.s2)
         .contentShape(Rectangle())
     }
 
     /// The avatar row seats the photo — identity earns the image. Every other
-    /// row leads with the glyph disc the head rows and Readings rows wear.
+    /// row leads with a glyph on the app icon's tile.
     @ViewBuilder private var lead: some View {
         if avatarSeat {
-            AvatarSeat(avatar: avatar, size: DS.Mark.row)
+            AvatarSeat(avatar: avatar, size: DS.Mark.tile)
         } else if let avatar {
             Image(uiImage: avatar)
                 .resizable().scaledToFill()
-                .frame(width: DS.Mark.row, height: DS.Mark.row)
+                .frame(width: DS.Mark.tile, height: DS.Mark.tile)
                 .clipShape(Circle())
         } else if let badge {
-            DSGlyphLead(glyph: badge.symbol, tint: badge.color, bounce: bounce)
+            SettingsTile(glyph: badge.symbol, tint: badge.color, bounce: bounce)
         }
+    }
+}
+
+/// A setting's lead in the APP ICON's frame (prd §796): the squircle
+/// `BridgeIcon` clips a brand mark to, at the same size and radius, holding a
+/// glyph on the faint fill instead of a picture — so a settings row and an
+/// app row read as one list with two kinds of mark. The glyph swaps in place
+/// for a row that flips (Theme) and bounces once for a milestone (Data), as
+/// the 26pt disc it replaces did.
+private struct SettingsTile: View {
+    let glyph: String
+    var tint: Color = DS.textPrimary
+    var bounce = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.tile), style: .continuous)
+                .fill(DS.fillFaint)
+            Image(systemName: glyph)
+                .accessibilityHidden(true)
+                .dsGlyph(.title, weight: .medium)
+                .foregroundStyle(tint)
+                .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace.downUp))
+                .symbolEffect(.bounce, value: bounce)
+        }
+        .frame(width: DS.Mark.tile, height: DS.Mark.tile)
     }
 }
 
