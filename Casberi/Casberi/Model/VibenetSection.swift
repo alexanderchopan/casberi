@@ -141,20 +141,28 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// **WHAT THE SCOPE WOULD HOLD, and why these accounts have none.** No
-    /// subject, no door, nothing chain-wide.
+    /// **THE CLAUSE THE HEADLINE AND THE DRAWING CANNOT SAY (prd §799,
+    /// 2026-09-17).** §769 redrew `DSEmptyState` as a skeleton with the
+    /// short state over it, so this is VoiceOver's value and nothing else.
+    /// It was two sentences until the sweep counted them: the second
+    /// restated `emptyHeadline` and the first restated `summary`, 782 words
+    /// over six rooms, heard by one reader and seen by none. What is left
+    /// is the qualifier neither of those carries — the bound on the read,
+    /// the dust floor, the spam filter.
+    ///
+    /// No subject, no door, nothing chain-wide.
     var emptyBody: String? {
         switch self {
         case .home:
             return nil
         case .activity:
-            return String(localized: "A key granted or revoked, a lock, an unlock — each lands here as the chain reports it. None has happened on these accounts.")
+            return String(localized: "A key granted or revoked, a lock, an unlock.")
         case .holdings:
-            return String(localized: "The tokens each account holds, sized by balance. None of these accounts holds any yet.")
+            return String(localized: "Tokens per account, sized by balance.")
         case .accounts:
-            return String(localized: "The keystore accounts you watch, and who can act for each. None is watched here.")
+            return String(localized: "Keystore accounts, and who can act for each.")
         case .permissions:
-            return String(localized: "A key, a passkey or a delegate that can act for an account, and when each lapses. Nothing can act for these accounts yet.")
+            return String(localized: "A key, a passkey or a delegate, and when it lapses.")
         }
     }
 

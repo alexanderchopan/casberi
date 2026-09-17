@@ -11,10 +11,11 @@ import SwiftUI
 /// `WalletFlowEmptyFigure`, which knows WHICH of three things is true of the
 /// window; this knows only that the scope is empty, and says what it is for.
 ///
-/// **Two tiers and no more** — the headline row's own `stat24`, carrying the
-/// short state, and one paragraph. Wallet's slot passes `reservesHeadline:
-/// false`, so the row is drawn here at the chassis' own height rather than
-/// left to it, and the two line up with every other scope's headline.
+/// **The short state over the skeleton** — the headline row's own `stat24`.
+/// `emptyBody` rides `words:`, which §769 made VoiceOver's value alone, and
+/// §799 cut to one clause. Wallet's slot passes `reservesHeadline: false`, so
+/// the row is drawn here at the chassis' own height rather than left to it,
+/// and it lines up with every other scope's headline.
 ///
 /// **No door.** Watching a wallet, editing NFT picks and revoking a grant all
 /// live on the cards that have something to act on; an empty scope states a

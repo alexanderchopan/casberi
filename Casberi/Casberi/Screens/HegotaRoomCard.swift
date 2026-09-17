@@ -83,9 +83,10 @@ struct HegotaRoomFigure: View {
     }
 
     /// **A SCOPE WITH NOTHING IN IT TEACHES WHAT IT WOULD HOLD (prd §611).**
-    /// Two tiers and no more: the reserved row carries `emptyHeadline` (via
-    /// `slotHeadline`) and this carries the one paragraph. No door — Top up
-    /// and Send are Home's (§594).
+    /// The reserved row carries `emptyHeadline` (via `slotHeadline`); the
+    /// skeleton draws what would fill the place; and `emptyBody` rides
+    /// `words:`, which §769 made VoiceOver's value alone — one clause since
+    /// §799. No door — Top up and Send are Home's (§594).
     @ViewBuilder private var emptyState: some View {
         if let words = section.emptyBody {
             DSEmptyState(headline: section.emptyHeadline.map { Text($0) },

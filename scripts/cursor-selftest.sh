@@ -104,7 +104,12 @@ grep -q 'thing.summary = summary' "$CURSOR" \
 # on every legitimate edit, and the pressure that creates is to weaken the
 # guard rather than keep the promise. So it asserts the four verbs are named
 # ON CURSOR'S OWN LINE, which is the thing that actually has to stay true.
-CURSOR_COPY=$(grep -F 'case .cursor:' "$BRIDGES" | grep -F 'cloud agents')
+#
+# ANCHORED ON THE COPY A PERSON READS (prd §799, 2026-09-17) — see
+# `appstoreconnect-selftest.sh` for the full reasoning. `TokenBridge.canLine`
+# was deleted because nothing drew it; `NetworkReach`'s Cursor purpose is
+# drawn in Settings, and is scoped here to its own Endpoint block.
+CURSOR_COPY=$(awk '/service: "Cursor"/ { f = 1 } f && /purpose:/ { print; exit }' "$REACH")
 # Stems, so an edit between "starts"/"start"/"starting" still passes; the
 # label is spelled separately so the failure reads as English.
 for pair in 'start:start one' 'follow:follow one up' 'stop:stop one' 'delet:delete one'; do

@@ -1034,7 +1034,6 @@ enum PolarWatch {
             .compactMap { $0 }.joined(separator: " · ")
         store.registerConnected(
             id: TokenBridge.polar.bridgeID, name: source,
-            proof: proof.isEmpty ? String(localized: "Connected") : proof,
-            can: [TokenBridge.polar.canLine])
+            proof: proof.isEmpty ? String(localized: "Connected") : proof)
     }
 }

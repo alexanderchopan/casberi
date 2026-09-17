@@ -55,7 +55,9 @@ import Foundation
 /// So the promise is kept the only way it can be — by conduct. This file issues
 /// exactly one HTTP verb, `GET`, against exactly one path. There is no code
 /// here that launches, follows up, stops, archives or deletes an agent, and the
-/// catalog copy plus `TokenBridge.canLine` say so in those words. If a future
+/// catalog copy plus `NetworkReach`'s Cursor purpose — the sentence Settings
+/// draws — say so in those words (§799 deleted `canLine`, which nothing drew).
+/// If a future
 /// pass adds a write to this file, that copy becomes a lie: change the copy in
 /// the same commit or don't add the write.
 ///

@@ -226,8 +226,7 @@ struct SentryScreen: View {
                 ? String(localized: "\(added) in")
                 : String(localized: "Synced just now")
             store.registerConnected(id: TokenBridge.sentry.bridgeID, name: "Sentry",
-                                    proof: proof,
-                                    can: [TokenBridge.sentry.canLine])
+                                    proof: proof)
         } else {
             result = .failed(String(localized: "Couldn't reach Sentry — check your connection."))
         }

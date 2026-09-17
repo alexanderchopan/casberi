@@ -160,9 +160,12 @@ struct FramesRoomFigure: View {
     }
 
     /// **A SCOPE WITH NOTHING IN IT TEACHES WHAT IT WOULD HOLD (prd §611).**
-    /// Two tiers and no more: the chassis' reserved row carries the short
-    /// state (`emptyHeadline`, via `slotHeadline`) and this carries the one
-    /// paragraph. No door — Top up and Send are Home's tiles (§553).
+    /// The chassis' reserved row carries the short state (`emptyHeadline`,
+    /// via `slotHeadline`); the skeleton draws what would fill the place; and
+    /// `emptyBody` rides `words:`, which §769 made VoiceOver's value alone —
+    /// one clause since §799, not the paragraph this comment described for a
+    /// year after it stopped being drawn. No door — Top up and Send are
+    /// Home's tiles (§553).
     @ViewBuilder private var emptyState: some View {
         if let words = section.emptyBody {
             DSEmptyState(headline: section.emptyHeadline.map { Text($0) },

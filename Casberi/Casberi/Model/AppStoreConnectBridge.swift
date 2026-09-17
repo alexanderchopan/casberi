@@ -55,10 +55,12 @@ import CryptoKit
 /// The promise is therefore kept the only way it can be — by conduct. Every
 /// request in this file is a `GET` through `IngestSupport`'s funnel. There is
 /// no code here that creates, submits, releases, rejects, removes, replies to
-/// a review, or uploads anything. `TokenBridge.canLine` and the catalog copy
-/// say so in those words, and **`scripts/appstoreconnect-selftest.sh` fails
-/// the build if a write verb ever appears in this file** — because prose is
-/// what CLAUDE.md calls memory, and memory lost.
+/// a review, or uploads anything. The catalog copy and `NetworkReach`'s App
+/// Store Connect purpose — the one a person actually reads, in Settings — say
+/// so in those words, and **`scripts/appstoreconnect-selftest.sh` fails the
+/// build if a write verb ever appears in this file, and reads the promise off
+/// the reach registry** (§799 deleted `canLine`, which nothing drew) — because
+/// prose is what CLAUDE.md calls memory, and memory lost.
 ///
 /// ## UNMEASURED (2026-08-06)
 ///
@@ -1334,10 +1336,6 @@ enum ASCWatch {
         }
         store.registerConnected(
             id: TokenBridge.appStoreConnect.bridgeID, name: source,
-            proof: proof,
-            // The read-only promise has ONE home (`TokenBridge.canLine`) — the
-            // PostHog contract. A second copy here would be the only reader of
-            // a string nothing else renders, and the two would drift.
-            can: [TokenBridge.appStoreConnect.canLine])
+            proof: proof)
     }
 }

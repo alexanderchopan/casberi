@@ -77,10 +77,16 @@ and gets turned off within a week:
     `StocktwitsScreen` has none by ruling (§185) and carries its honesty fact
     on the slab note beside the field instead — a real design decision, not an
     omission.
-  · It does not count words in `canLine`/`summary`. Those are the CONNECTED
-    state and the product page, read in different places for different reasons,
-    and holding a capability line to a connect page's budget would delete true
-    differentiating information (the §192 ruling).
+  · It does not count words in `summary`. That is the CONNECTED state, read in
+    a different place for a different reason, and holding it to a connect
+    page's budget would delete true differentiating information (§192).
+    `canLine` was the other half of this exemption until prd §799 deleted it:
+    the wordiness sweep asked who DRAWS a seat's `can` sentences and the answer
+    was one screen, `BridgeDetailScreen`, which only the demo's seats reach —
+    575 words kept current where nobody could read them. A copy budget cannot
+    catch that, and this audit does not try; what it teaches is the question.
+    The conduct promises those sentences carried live in `NetworkReach` now,
+    which Settings draws.
 """
 
 import os

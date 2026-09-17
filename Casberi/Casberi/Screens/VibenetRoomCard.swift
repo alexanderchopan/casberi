@@ -2303,7 +2303,8 @@ struct VibenetRoomCard: View {
     /// **A SCOPE WITH NOTHING IN IT TEACHES WHAT IT WOULD HOLD (prd §611).**
     /// The generic form — Activity and Holdings keep their own richer figures,
     /// which know whether the account was unreached, undeployed or merely
-    /// empty. Two tiers and no more; no door.
+    /// empty. The short state over the skeleton, no door; `emptyBody` rides
+    /// `words:`, VoiceOver's value alone since §769 and one clause since §799.
     private func scopeEmptyFigure(_ section: VibenetSection) -> some View {
         // The whole box, not `scopeFigure` (prd §769): the headline is centred
         // on the skeleton, so no row is reserved and the gear is cleared by

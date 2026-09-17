@@ -222,11 +222,14 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// **WHAT THE SCOPE WOULD HOLD, and why this one has none.**
-    ///
-    /// The return on making an empty chip reachable, and the reason the ruling
-    /// above is not a dead control: each sentence teaches the mechanism the
-    /// scope is about, which is worth more than the chip was hiding.
+    /// **THE CLAUSE THE HEADLINE AND THE DRAWING CANNOT SAY (prd §799,
+    /// 2026-09-17).** §769 redrew `DSEmptyState` as a skeleton with the
+    /// short state over it, so this is VoiceOver's value and nothing else.
+    /// It was two sentences until the sweep counted them: the second
+    /// restated `emptyHeadline` and the first restated `summary`, 782 words
+    /// over six rooms, heard by one reader and seen by none. What is left
+    /// is the qualifier neither of those carries — the bound on the read,
+    /// the burned spend key, the sponsor.
     ///
     /// **NO SUBJECT, and that is deliberate.** Not "this address" or "the 2
     /// addresses you watch" — the face rail directly above already says which
@@ -246,17 +249,17 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
         case .home:
             return nil
         case .activity:
-            return String(localized: "No transaction from what you watch has landed on the stretch of chain this read covered.")
+            return String(localized: "Covers the stretch of chain this read reached.")
         case .holdings:
-            return String(localized: "Nothing you watch holds a balance here yet.")
+            return String(localized: "Balances on the chain and in the pool.")
         case .accounts:
-            return String(localized: "How the accounts you follow relate — who they have both dealt with. None of them shares a counterparty yet, so there is nothing to draw between them.")
+            return String(localized: "Drawn from counterparties two accounts share.")
         case .frames:
-            return String(localized: "A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here ran any — a plain transfer runs none.")
+            return String(localized: "A plain transfer runs no steps.")
         case .permissions:
-            return String(localized: "What has been allowed on this account. A pool spend burns a key that can never be used again, so the same note cannot be spent twice; a sponsored transaction is one somebody else covered the gas for. Nothing here has spent a key, and nothing here was sponsored.")
+            return String(localized: "Here that means a burned spend key, or gas somebody else paid.")
         case .roots:
-            return String(localized: "A proof names a moment the chain still remembers, and proves it belongs to that set without saying which member it is. Nothing here names one — a plain transfer proves nothing.")
+            return String(localized: "A plain transfer names no snapshot.")
         }
     }
 

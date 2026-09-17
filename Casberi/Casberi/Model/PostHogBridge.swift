@@ -487,12 +487,7 @@ enum PostHogWatch {
         store.registerConnected(
             id: TokenBridge.posthog.bridgeID, name: source,
             proof: String(localized: "\(count) metric watched")
-                + (project.isEmpty ? "" : " · \(project)"),
-            // The read-only promise has ONE home (`TokenBridge.canLine`) —
-            // PostHog routes away from TokenSetupScreen, so a second copy here
-            // would be the only reader of a string nothing else renders, and
-            // the two would drift.
-            can: [TokenBridge.posthog.canLine])
+                + (project.isEmpty ? "" : " · \(project)"))
     }
 }
 

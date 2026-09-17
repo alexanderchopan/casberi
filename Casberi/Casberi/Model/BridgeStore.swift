@@ -51,9 +51,15 @@ final class BridgeStore {
     /// reconnects the bridge if its name is already here, appends a fresh
     /// BridgeApp otherwise. Returns true when the bridge is new — callers
     /// celebrate first connections, not re-syncs.
+    ///
+    /// **`can` DEFAULTS TO NOTHING (prd §799).** It is drawn in one place,
+    /// `BridgeDetailScreen`, and only a seat with no routed screen lands
+    /// there — the demo's. A seat with its own screen may pass sentences, but
+    /// nobody will read them, which is how `TokenBridge.canLine` came to hold
+    /// 575 unread words.
     @discardableResult
     func registerConnected(id: String, name: String, proof: String,
-                           can: [String]) -> Bool {
+                           can: [String] = []) -> Bool {
         if let existing = bridges.first(where: { $0.name == name }) {
             reconnect(existing.id, proof: proof)
             return false

@@ -2202,7 +2202,7 @@ mutate "every scope gated again, so two chips vanish on the address that most ne
   'static func present() -> [FramesSection] { order }' \
   'static func present() -> [FramesSection] { order.filter { !$0.isConditional } }'
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" $F3 \
-  'A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here has run any — a plain transfer runs none.' ' '
+  'A plain transfer runs no steps.' ' '
 mutate "frames marked unconditional" $F3 \
   'case .holdings, .accounts, .frames, .permissions: return true' 'case .holdings, .accounts, .frames, .permissions: return false'
 mutate "a chip growing a dot that can never honestly light" $F3 \

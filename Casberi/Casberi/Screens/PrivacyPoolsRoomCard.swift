@@ -158,8 +158,9 @@ struct PrivacyPoolsRoomCard: View {
     /// `PrivacyPoolsSection.present(shielded:)` is passed at the call site.
     private var shieldedHasContent: Bool { !room.holdings.isEmpty }
 
-    /// Two tiers and no more: the short state and one paragraph, in the
-    /// card's own type. No door (prd §611).
+    /// The short state over the skeleton, in the card's own type;
+    /// `emptyBody` rides `words:`, VoiceOver's value alone since §769 and one
+    /// clause since §799. No door (prd §611).
     @ViewBuilder private func emptyBody(_ scope: PrivacyPoolsSection) -> some View {
         if let words = scope.emptyBody {
             DSEmptyState(headline: scope.emptyHeadline.map { Text($0) },

@@ -21,7 +21,7 @@
 #   2. THE CONDUCT GUARD. An App Store Connect key carries a ROLE, not scopes,
 #      and no role is read-only for what this bridge reads — the narrowest one
 #      that works (Developer) can also upload a build and submit a version.
-#      The catalog copy and `TokenBridge.canLine` promise Casberi "never
+#      The catalog copy and `NetworkReach`'s purpose promise Casberi "never
 #      submits a version, releases one, removes an app from sale, replies to a
 #      review, uploads a build, or changes anything". That promise is kept by
 #      one thing only: this file issuing GET and nothing else. Prose is what
@@ -109,7 +109,17 @@ grep -qE 'IngestSupport\.(getJSON|getJSONStatus)\(' "$ASC" \
 # and kept all five, and still failed the build. A guard that pins prose
 # fails on every legitimate edit, and the pressure that creates is to weaken
 # the guard rather than keep the promise.
-ASC_COPY=$(grep -F 'case .appStoreConnect:' "$BRIDGES" | grep -F 'review status')
+#
+# ANCHORED ON THE COPY A PERSON READS (prd §799, 2026-09-17). This read
+# `TokenBridge.canLine` until the wordiness sweep asked who draws it: `can`
+# reaches one screen, `BridgeDetailScreen`, and only a seat with no routed
+# screen lands there — the demo's. So the sentence this guard protected was
+# never on anyone's screen. It reads `NetworkReach`'s App Store Connect
+# purpose now, which Settings draws (§702), and the promise it names is one a
+# person can actually check. Scoped to this service's own Endpoint block for
+# the vibenet reason: a conduct guard keyed on prose must be anchored to the
+# thing it guards, never to a literal another seat also carries.
+ASC_COPY=$(awk '/service: "App Store Connect"/ { f = 1 } f && /purpose:/ { print; exit }' "$REACH")
 for pair in 'submit:submit a version' 'release:release one' 'remove:remove an app from sale' 'repl:reply to a review' 'upload:upload a build'; do
   stem="${pair%%:*}"; label="${pair#*:}"
   printf '%s' "$ASC_COPY" | grep -qi "$stem" \

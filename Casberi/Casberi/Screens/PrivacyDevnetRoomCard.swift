@@ -378,10 +378,11 @@ extension PrivacyDevnetRoomCard {
 
     /// **A SCOPE WITH NOTHING IN IT TEACHES WHAT IT WOULD HOLD (prd §610).**
     ///
-    /// Two tiers and no more: the chassis' reserved row carries the short
-    /// state (`emptyHeadline`) and this carries one paragraph saying what the
-    /// scope is about and why this room has none. A lead line between them
-    /// would be a third register of text in a box with no drawing in it.
+    /// The chassis' reserved row carries the short state (`emptyHeadline`)
+    /// and the skeleton draws what would fill the place. `emptyBody` rides
+    /// `words:`, which §769 made VoiceOver's value alone — one clause since
+    /// §799, where it used to be a paragraph saying what the scope is about
+    /// and why this room has none.
     ///
     /// **No door.** Top up and Send are Home's, by ruling — a scope's empty
     /// state states a fact and stops.

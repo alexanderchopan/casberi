@@ -15,8 +15,8 @@ import SwiftData
 /// ## WHY THIS FILE IS THE ONLY ONE THAT SIGNS
 ///
 /// `vibenet-selftest.sh` ties a caller of `VibenetDeviceKey.sign` to the three
-/// sentences the app SHOWS a person — the catalog bullet, `VibenetBridge`'s
-/// `canLine`, and the reach registry's purpose — and fails the build if a
+/// never-signs promises — the catalog bullet, `VibenetBridge`'s seat sentence
+/// and the reach registry's purpose — and fails the build if a
 /// signing path appears while any of them still claims the seat never signs.
 /// Keeping the signature in one file is what makes that guard checkable: the
 /// promise is about a specific, small, readable place rather than about a

@@ -1032,7 +1032,6 @@ enum AWSWatch {
         let proof = standing.region
         store.registerConnected(
             id: TokenBridge.aws.bridgeID, name: AWSShape.source,
-            proof: proof,
-            can: [TokenBridge.aws.canLine])
+            proof: proof)
     }
 }

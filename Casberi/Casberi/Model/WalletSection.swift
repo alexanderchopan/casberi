@@ -156,11 +156,18 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// **WHAT THE SCOPE WOULD HOLD, and why this wallet has none.** The return
-    /// on making an empty chip reachable: each sentence teaches the reading the
-    /// scope is about. No subject (the face rail above already says which
-    /// wallets are scoped), no door (every verb lives on the card that draws
-    /// it), and nothing that states a chain-wide fact and can go stale.
+    /// **THE CLAUSE THE HEADLINE AND THE DRAWING CANNOT SAY (prd §799,
+    /// 2026-09-17).** §769 redrew `DSEmptyState` as a skeleton with the
+    /// short state over it, so this is VoiceOver's value and nothing else.
+    /// It was two sentences until the sweep counted them: the second
+    /// restated `emptyHeadline` and the first restated `summary`, 782 words
+    /// over six rooms, heard by one reader and seen by none. What is left
+    /// is the qualifier neither of those carries — the bound on the read,
+    /// the dust floor, the spam filter.
+    ///
+    /// No subject (the face rail above already says which wallets are scoped),
+    /// no door (every verb lives on the card that draws it), and nothing that
+    /// states a chain-wide fact and can go stale.
     var emptyBody: String? {
         switch self {
         case .home:
@@ -170,21 +177,21 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             // and when nothing priced was found, and nothing here can tell
             // those apart — so it says what was found, which is true either way
             // and is `holdings`' own phrasing one scope over.
-            return String(localized: "What the accounts you follow are worth, and the line that worth traces. Nothing priced was found for them.")
+            return String(localized: "What these accounts are worth, and the line it traces.")
         case .activity:
-            return String(localized: "Transfers, approvals and what's ahead, as the chain reports them. Nothing from these wallets has been read yet.")
+            return String(localized: "Transfers, approvals, and what's ahead.")
         case .holdings:
-            return String(localized: "The tokens a wallet holds, sized by what each is worth. Nothing priced was found here — dust below the floor is left out.")
+            return String(localized: "Tokens sized by worth. Dust below the floor is left out.")
         case .positions:
-            return String(localized: "Money at work in a protocol: lent, pooled, or held as a perp. Nothing here is deployed anywhere this app reads.")
+            return String(localized: "Money lent, pooled, or held as a perp.")
         case .nfts:
-            return String(localized: "The collections a wallet holds, as pictures. Nothing here holds one that survived the spam filter.")
+            return String(localized: "Collections you hold, minus what the spam filter caught.")
         case .risk:
-            return String(localized: "A position a price move could liquidate, and how close it stands. Nothing here carries leverage.")
+            return String(localized: "A position a price move could liquidate, and how close it stands.")
         case .accounts:
-            return String(localized: "How the accounts you follow relate — who they have both dealt with, and which pay each other directly. None of them shares a counterparty yet, so there is nothing to draw between them.")
+            return String(localized: "Drawn from shared counterparties and direct payments.")
         case .permissions:
-            return String(localized: "What has been allowed to reach these wallets: a token approval, a Safe module, a delegate. Nothing here has granted any.")
+            return String(localized: "A token approval, a Safe module, a delegate.")
         }
     }
 

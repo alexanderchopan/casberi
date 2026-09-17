@@ -811,7 +811,7 @@ struct TokenSetupScreen: View {
                 ? String(localized: "\(added) \(bridge.noun) in")
                 : String(localized: "Synced just now")
             if store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
-                                       proof: proof, can: [bridge.canLine]) {
+                                       proof: proof) {
                 DSHaptic.success()
                 // The handshake, acknowledged: the icon coin-flips in time with
                 // the haptic. Gated on `registerConnected` returning true — the

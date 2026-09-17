@@ -35172,6 +35172,34 @@
         }
       }
     },
+    "A key granted or revoked, a lock, an unlock." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una clave concedida o revocada, un bloqueo, un desbloqueo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キーの付与または取り消し、ロック、アンロック。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키 부여 또는 취소, 잠금, 잠금 해제."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "密钥的授予或撤销、加锁、解锁。"
+          }
+        }
+      }
+    },
     "A key here could act for a vibenet account." : {
       "localizations" : {
         "es" : {
@@ -35336,6 +35364,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "可代表账户行事的密钥、通行密钥或委托方，以及各自的失效时间。目前还没有任何一方能代表这些账户行事。"
+          }
+        }
+      }
+    },
+    "A key, a passkey or a delegate, and when it lapses." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una clave, una passkey o un delegado, y cuándo caduca."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キー、パスキー、またはデリゲートと、その失効時期。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키, 패스키 또는 위임자와, 만료 시점."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "密钥、通行密钥或委托方，以及各自何时失效。"
           }
         }
       }
@@ -35789,6 +35845,62 @@
         }
       }
     },
+    "A plain transfer names no snapshot." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una transferencia simple no nombra ninguna instantánea."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通常の送金はスナップショットを指し示しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "일반 전송은 스냅숏을 지목하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "普通转账不指向任何快照。"
+          }
+        }
+      }
+    },
+    "A plain transfer runs no steps." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una transferencia simple no ejecuta ningún paso."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通常の送金はステップを実行しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "일반 전송은 단계를 실행하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "普通转账不含任何步骤。"
+          }
+        }
+      }
+    },
     "A policy key ran" : {
       "localizations" : {
         "es" : {
@@ -35897,6 +36009,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "从资金池支出会销毁一把永不可再用的密钥，因此同一张票据无法重复花费。这里尚未支出过。"
+          }
+        }
+      }
+    },
+    "A position a price move could liquidate, and how close it stands." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una posición que un movimiento de precio podría liquidar, y lo cerca que está."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "価格変動で清算されうるポジションと、その距離。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가격 변동으로 청산될 수 있는 포지션과, 그 거리."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可能因价格波动被清算的仓位，以及距离有多近。"
           }
         }
       }
@@ -36271,6 +36411,34 @@
         }
       }
     },
+    "A spent piece still shows — the rest were made from it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una pieza ya gastada sigue apareciendo: de ella se formaron las demás."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "使用済みのピースもここに表示されます — 他のピースの元になっているためです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이미 사용된 조각도 계속 표시됩니다 — 나머지가 그것에서 만들어졌기 때문입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已花费的份额仍会显示——其余份额皆由它而来。"
+          }
+        }
+      }
+    },
     "A sponsored transaction is one somebody else covered the gas for. Nothing here was." : {
       "localizations" : {
         "es" : {
@@ -36463,6 +36631,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "某项订阅涨价了"
+          }
+        }
+      }
+    },
+    "A token approval, a Safe module, a delegate." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una aprobación de token, un módulo de Safe, un delegado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "トークンの承認、Safe のモジュール、デリゲート。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "토큰 승인, Safe 모듈, 위임자."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "代币授权、Safe 模块、委托方。"
           }
         }
       }
@@ -44616,6 +44812,62 @@
         }
       }
     },
+    "Balances on the chain and in the pool." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Saldos en la cadena y en el pool."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チェーン上とプール内の残高。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "체인과 풀에 있는 잔액."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "链上与资金池中的余额。"
+          }
+        }
+      }
+    },
+    "Balances on this chain, per account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Saldos en esta cadena, por cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このチェーン上の残高、アカウントごとに。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 체인의 잔액, 계정별로."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "本链上的余额，按账户列出。"
+          }
+        }
+      }
+    },
     "Bankr" : {
       "localizations" : {
         "es" : {
@@ -50522,6 +50774,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你持有的收藏品"
+          }
+        }
+      }
+    },
+    "Collections you hold, minus what the spam filter caught." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las colecciones que tienes, menos lo que atrapó el filtro de spam."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保有しているコレクション（スパムフィルターが除いたものを除く）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보유한 컬렉션에서 스팸 필터가 걸러낸 것을 뺀 것."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你持有的收藏，已剔除垃圾过滤器拦下的部分。"
           }
         }
       }
@@ -56826,6 +57106,34 @@
         }
       }
     },
+    "Covers the stretch of chain this read reached." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cubre el tramo de cadena que alcanzó esta lectura."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この読み取りが到達したチェーンの範囲まで。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이번 읽기가 다다른 체인 구간까지."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅覆盖本次读取所及的链段。"
+          }
+        }
+      }
+    },
     "Create" : {
       "localizations" : {
         "es" : {
@@ -59622,6 +59930,62 @@
         }
       }
     },
+    "Drawn from counterparties two accounts share." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se dibuja a partir de las contrapartes que dos cuentas comparten."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "2つのアカウントが共有する取引相手から描かれます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "두 계정이 공유하는 거래 상대에서 그려집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由两个账户共同的交易对手绘制。"
+          }
+        }
+      }
+    },
+    "Drawn from shared counterparties and direct payments." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se dibuja a partir de contrapartes compartidas y pagos directos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共有する取引相手と直接の支払いから描かれます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공유하는 거래 상대와 직접 결제에서 그려집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由共同的交易对手与直接往来绘制。"
+          }
+        }
+      }
+    },
     "Drop to file here" : {
       "localizations" : {
         "es" : {
@@ -59988,6 +60352,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每笔交易都以产品的形式呈现。"
+          }
+        }
+      }
+    },
+    "Each deposit in, and each reclaim out." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada depósito que entra y cada retirada que sale."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "入金と引き出しを一件ずつ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "각 입금과 각 회수."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每一笔存入与每一笔取回。"
           }
         }
       }
@@ -61309,6 +61701,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每月"
+          }
+        }
+      }
+    },
+    "Every move of ETH here is a log, so this list is exact." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada movimiento de ETH aquí es un log, así que esta lista es exacta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここでのETHの移動はすべてログとして残るため、この一覧は正確です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기서 ETH의 모든 이동은 로그로 남기 때문에 이 목록은 정확합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这里每一次 ETH 转移都会留下日志，因此这份列表是准确的。"
           }
         }
       }
@@ -68803,6 +69223,90 @@
         }
       }
     },
+    "Here that means a burned spend key, or gas somebody else paid." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aquí eso significa una clave de gasto quemada, o gas que pagó otra persona."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここではそれは、焼却された支出キー、または他者が支払ったガス代を指します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기서는 소각된 지출 키, 또는 다른 사람이 낸 가스비를 뜻합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在此即为已销毁的支出密钥，或由他人支付的 gas。"
+          }
+        }
+      }
+    },
+    "Here that means a named nonce key, or gas somebody else paid." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aquí eso significa una clave nonce con nombre, o gas que pagó otra persona."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここではそれは、名前付き nonce キー、または他者が支払ったガス代を指します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기서는 명명된 nonce 키, 또는 다른 사람이 낸 가스비를 뜻합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在此即为具名 nonce 密钥，或由他人支付的 gas。"
+          }
+        }
+      }
+    },
+    "Here that means gas somebody else paid." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aquí eso significa gas que pagó otra persona."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここではそれは、他者が支払ったガス代を指します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기서는 다른 사람이 낸 가스비를 뜻합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在此即为由他人支付的 gas。"
+          }
+        }
+      }
+    },
     "Hide past events" : {
       "localizations" : {
         "es" : {
@@ -74107,6 +74611,34 @@
         }
       }
     },
+    "Keystore accounts, and who can act for each." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuentas del keystore, y quién puede actuar por cada una."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キーストアのアカウントと、それぞれに対して操作できる相手。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키스토어 계정과, 각 계정을 대신할 수 있는 주체."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "keystore 账户，以及谁可以代为操作。"
+          }
+        }
+      }
+    },
     "Kraken didn't say what this key can do." : {
       "localizations" : {
         "es" : {
@@ -78957,6 +79489,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "转入"
+          }
+        }
+      }
+    },
+    "Money lent, pooled, or held as a perp." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dinero prestado, en pools o en un perp."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "貸し出し、プール、パープで保有している資金。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대출, 풀, 또는 퍼프로 보유한 자금."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "借出、入池，或以永续合约持有的资金。"
           }
         }
       }
@@ -98078,6 +98638,34 @@
         }
       }
     },
+    "Pending, cleared, asked for proof, or declined." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pendiente, aprobado, con prueba solicitada o rechazado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保留、承認、証明の要求、または却下。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대기, 승인, 증명 요청, 또는 거절."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "待处理、已通过、要求提供证明，或被拒绝。"
+          }
+        }
+      }
+    },
     "People" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -98103,6 +98691,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "人物"
+          }
+        }
+      }
+    },
+    "Per asset, with the cover set each hides among." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por activo, con el conjunto entre el que se esconde cada uno."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "資産ごとに、それぞれが紛れ込む集合とともに。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "자산별로, 각각이 숨어 있는 집합과 함께."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按资产列出，并附各自藏身其中的集合。"
           }
         }
       }
@@ -128536,6 +129152,34 @@
         }
       }
     },
+    "Tokens besides the chain's own coin — Home's balance is the whole of it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los tokens además de la moneda propia de la cadena: el saldo en Inicio es todo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チェーン本来のコイン以外のトークン — ホームの残高がすべてです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "체인 고유 코인 외의 토큰 — 홈의 잔액이 전부입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "除链上原生币外的代币——主页上的余额即是全部。"
+          }
+        }
+      }
+    },
     "Tokens moved" : {
       "localizations" : {
         "es" : {
@@ -128560,6 +129204,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "代币已转移"
+          }
+        }
+      }
+    },
+    "Tokens per account, sized by balance." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tokens por cuenta, dimensionados por saldo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントごとのトークン、残高の大きさで。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정별 토큰, 잔액 크기로."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按账户列出的代币，以余额大小呈现。"
           }
         }
       }
@@ -128616,6 +129288,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已发送代币"
+          }
+        }
+      }
+    },
+    "Tokens sized by worth. Dust below the floor is left out." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tokens dimensionados por su valor. El polvo por debajo del umbral se deja fuera."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "価値の大きさで並ぶトークン。しきい値未満の塵は除きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가치 크기로 나타낸 토큰. 기준 미만의 먼지는 제외합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按价值大小呈现的代币。低于门槛的尘埃不计入。"
           }
         }
       }
@@ -129207,6 +129907,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "转账、授权和即将发生的事，按链上报告呈现。尚未从这些钱包读取到任何内容。"
+          }
+        }
+      }
+    },
+    "Transfers, approvals, and what's ahead." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Transferencias, aprobaciones y lo que viene."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送受金、承認、そしてこれから起きること。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "전송, 승인, 그리고 앞으로 있을 일."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转账、授权，以及即将发生的事。"
           }
         }
       }
@@ -137465,6 +138193,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "这笔支出消耗了什么并不会公开 — 已花掉的 UTXO 是金库存储里的一个比特位，而不是一个事件。"
+          }
+        }
+      }
+    },
+    "What these accounts are worth, and the line it traces." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que valen estas cuentas, y la línea que traza ese valor."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これらのアカウントの価値と、それが描く推移。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정들의 가치와, 그 가치가 그리는 선."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这些账户的价值，以及它勾出的走势。"
           }
         }
       }

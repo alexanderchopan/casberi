@@ -2099,7 +2099,7 @@ mutate "every scope gated again, so a chip vanishes on the room that most needs 
   'static func present() -> [PrivacyPoolsSection] { order }' \
   'static func present() -> [PrivacyPoolsSection] { order.filter { !$0.isConditional } }'
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" section \
-  'Where each deposit stands with the screener: pending, cleared, asked for proof, or declined. No deposit here has a standing on record.' ' '
+  'Pending, cleared, asked for proof, or declined.' ' '
 mutate "the dot fires on ordinary progress" section \
   'guard present.contains(.review), needsProof || declined else { return [] }' \
   'guard present.contains(.review) else { return [] }'

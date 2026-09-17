@@ -214,13 +214,13 @@ mutate "risk is marked unconditional, so the tail rule stops being enforced" \
 mutate "every scope gated again, so five chips vanish on the wallet that most needs them" \
   's/static func present\(\) -> \[WalletSection\] \{ order \}/static func present() -> [WalletSection] { order.filter { !\$0.isConditional } }/'
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
-  's/A position a price move could liquidate, and how close it stands\. Nothing here carries leverage\./ /'
+  's/A position a price move could liquidate, and how close it stands\./ /'
 mutate "the ruled short noun becomes a question again" \
   's/String\(localized: "Permissions"\)/String(localized: "Who can reach it")/'
 mutate "home loses its empty copy again, so the wallet room says nothing when nothing came back (prd §761)" \
   's/case \.home:        return String\(localized: "No balance yet"\)/case .home:        return nil/'
 mutate "home's empty copy promises a load state it cannot know (§83)" \
-  's/Nothing priced was found for them\./The balance will appear once the read lands./'
+  's/What these accounts are worth, and the line it traces\./The balance will appear once the read lands./'
 
 # ── drift guards ─────────────────────────────────────────────────────────────
 # The wiring the compiled enum cannot prove. Read from a COMMENT-STRIPPED copy:

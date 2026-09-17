@@ -113,17 +113,25 @@ enum PrivacyPoolsSection: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// **WHAT THE SCOPE WOULD HOLD, and why this room has none.** No subject,
-    /// no door (the respond row lives on the review card that has something to
-    /// respond to), nothing chain-wide.
+    /// **THE CLAUSE THE HEADLINE AND THE DRAWING CANNOT SAY (prd §799,
+    /// 2026-09-17).** §769 redrew `DSEmptyState` as a skeleton with the
+    /// short state over it, so this is VoiceOver's value and nothing else.
+    /// It was two sentences until the sweep counted them: the second
+    /// restated `emptyHeadline` and the first restated `summary`, 782 words
+    /// over six rooms, heard by one reader and seen by none. What is left
+    /// is the qualifier neither of those carries — the bound on the read,
+    /// the dust floor, the spam filter.
+    ///
+    /// No subject, no door (the respond row lives on the review card that has
+    /// something to respond to), nothing chain-wide.
     var emptyBody: String? {
         switch self {
         case .activity:
-            return String(localized: "Each deposit into a pool and each reclaim out of one, in order. None from these wallets has landed.")
+            return String(localized: "Each deposit in, and each reclaim out.")
         case .shielded:
-            return String(localized: "What each pool holds for you, per asset, and how much larger the set it hides among has grown. Nothing here carries an amount this app can state.")
+            return String(localized: "Per asset, with the cover set each hides among.")
         case .review:
-            return String(localized: "Where each deposit stands with the screener: pending, cleared, asked for proof, or declined. No deposit here has a standing on record.")
+            return String(localized: "Pending, cleared, asked for proof, or declined.")
         }
     }
 

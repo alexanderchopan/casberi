@@ -492,7 +492,7 @@ enum NetworkReach {
                  hosts: ["api.cloudflare.com", "dash.cloudflare.com"]),
         Endpoint(service: "App Store Connect",
                  reach: .whenConnected(bridge: "appstoreconnect"),
-                 purpose: "Reads your apps' review status, your customer reviews and your builds, with a key you generate and a token this iPhone signs itself — nothing about the key ever leaves the Keychain. Never your sales, your proceeds, or your analytics. Apple has no read-only role, so nothing here submits, releases, replies, or uploads. appstoreconnect.apple.com is the page that generates the key and the page a row links to — opened in your browser, never called by the app.",
+                 purpose: "Reads your apps' review status, your customer reviews and your builds, with a key you generate and a token this iPhone signs itself — nothing about the key ever leaves the Keychain. Never your sales, your proceeds, or your analytics. Apple has no read-only role, so nothing here submits, releases, removes an app from sale, replies, or uploads. appstoreconnect.apple.com is the page that generates the key and the page a row links to — opened in your browser, never called by the app.",
                  hosts: ["api.appstoreconnect.apple.com", "appstoreconnect.apple.com"]),
         Endpoint(service: "Cursor",
                  reach: .whenConnected(bridge: "cursor"),

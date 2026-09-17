@@ -11,8 +11,8 @@ import SwiftData
 /// `VibenetDeviceKey.sign` has no caller, so no signature exists to send, and
 /// nothing this file does can write to the chain. That pairing is the claim,
 /// not "there is no key", and `vibenet-selftest.sh` ties it to the three
-/// sentences the app SHOWS a person: the catalog bullet, the `canLine` below,
-/// and the reach registry's purpose. A signing path may not appear without
+/// never-signs promises: the catalog bullet, the seat sentence below, and the
+/// reach registry's purpose — which is the one Settings draws. A signing path may not appear without
 /// those three moving in the same commit. It reads a watched account's account-abstraction
 /// state — is it established, which actors can act for it, is it locked —
 /// the same "riding live state, never a landed `Thing`" shape

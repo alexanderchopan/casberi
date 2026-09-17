@@ -959,7 +959,7 @@ mutate "moved promoted ABOVE spends, so a pool spend reads as an ordinary transa
 mutate "every scope gated again, so four chips vanish on the address that most needs them" \
   "$SECTION" 'static func present() -> [PrivacyDevnetSection] { order }' 'static func present() -> [PrivacyDevnetSection] { order.filter { !$0.isConditional } }'
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
-  "$SECTION" 'A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here ran any — a plain transfer runs none.' ''
+  "$SECTION" 'A plain transfer runs no steps.' ''
 mutate "spends swallowed into quiet" \
   "$ROOM" "if nullifiers > 0 { return finish(.spends(nullifiers: nullifiers)) }" \
   "if false { return finish(.spends(nullifiers: nullifiers)) }"

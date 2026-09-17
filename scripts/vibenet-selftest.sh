@@ -450,8 +450,8 @@ done
 
 # THE COPY MUST MOVE WITH THE CODE (2026-08-29). Three surfaces promise, in
 # words a person reads, that this seat never signs and never sends: the catalog
-# offer's last feature bullet, the bridge's own `canLine` sentence on the detail
-# screen, and the reach registry's purpose on the privacy screen. All three are
+# offer's last feature bullet, the bridge's own seat sentence (its `can:`),
+# and the reach registry's purpose on the privacy screen. All three are
 # TRUE today — this phone can MAKE a key (`VibenetDeviceKey.create`, wired into
 # the Permissions scope) and `VibenetDeviceKey.sign` has no caller at all, so no
 # signature exists to send and `VibenetSigner.decide` refuses everything with
@@ -544,7 +544,7 @@ sys.exit(0 if 'nothing is ever signed or sent' in block else 1)
 VIBEREACH
 if [[ -n "$SIGN_CALLERS$SEND_PATHS" && $VIBE_PROMISES -gt 0 ]]; then
   echo "✗ vibenet can now sign or send (${SIGN_CALLERS}${SEND_PATHS} ) while $VIBE_PROMISES never-signs promise(s) still stand"
-  echo "  amend BridgeCatalog's Base Vibenet feature bullet, VibenetBridge.canLine, and NetworkReach's vibenet purpose in the same commit"
+  echo "  amend BridgeCatalog's Base Vibenet feature bullet, VibenetBridge's seat sentence, and NetworkReach's vibenet purpose in the same commit"
   exit 1
 fi
 if [[ -z "$SIGN_CALLERS$SEND_PATHS" && $VIBE_PROMISES -lt 3 ]]; then

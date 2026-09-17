@@ -1203,7 +1203,7 @@ mutate "shows() lets a single scope draw a control" \
 mutate "every scope gated again, so four chips vanish on the address that most needs them" \
   HegotaSection.swift 's/static func present\(\) -> \[HegotaSection\] \{ order \}/static func present() -> [HegotaSection] { order.filter { !\$0.isConditional } }/'
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
-  HegotaSection.swift 's/This chain can hold a balance as pieces.*?were made from\./ /'
+  HegotaSection.swift 's/A spent piece still shows.*?made from it\./ /'
 mutate "coins is marked unconditional, so the head-reflow rule stops being enforced" \
   HegotaSection.swift 's/case \.frames, \.coins, \.permissions: return true/case .frames, .permissions: return true\n        case .coins: return false/'
 mutate "the unspent-output scope goes back to the friendly gloss" \

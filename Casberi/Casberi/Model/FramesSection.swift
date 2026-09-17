@@ -171,25 +171,33 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// **WHAT THE SCOPE WOULD HOLD, and why this address has none.** No
-    /// subject (the face rail above says which is scoped), no door (Top up and
-    /// Send are Home's tiles, §553), and nothing that states a chain-wide fact
-    /// — every transaction measured on this chain is self-paid, and a sentence
-    /// saying so becomes a lie the first time one is not.
+    /// **THE CLAUSE THE HEADLINE AND THE DRAWING CANNOT SAY (prd §799,
+    /// 2026-09-17).** §769 redrew `DSEmptyState` as a skeleton with the
+    /// short state over it, so this is VoiceOver's value and nothing else.
+    /// It was two sentences until the sweep counted them: the second
+    /// restated `emptyHeadline` and the first restated `summary`, 782 words
+    /// over six rooms, heard by one reader and seen by none. What is left
+    /// is the qualifier neither of those carries — the bound on the read,
+    /// the dust floor, the spam filter.
+    ///
+    /// No subject (the face rail above says which is scoped), no door (Top up
+    /// and Send are Home's tiles, §553), and nothing that states a chain-wide
+    /// fact — every transaction measured on this chain is self-paid, and a
+    /// sentence saying so becomes a lie the first time one is not.
     var emptyBody: String? {
         switch self {
         case .home:
             return nil
         case .activity:
-            return String(localized: "What moved, newest first, and whether the chain accepted it. Nothing from what you watch has landed on the stretch of chain this read covered.")
+            return String(localized: "Covers the stretch of chain this read reached.")
         case .holdings:
-            return String(localized: "The tokens an address holds besides the chain's own coin. Nothing you watch holds one — the balance on Home is the whole of it.")
+            return String(localized: "Tokens besides the chain's own coin — Home's balance is the whole of it.")
         case .accounts:
-            return String(localized: "How the accounts you follow relate — who they have both dealt with. None of them shares a counterparty yet, so there is nothing to draw between them.")
+            return String(localized: "Drawn from counterparties two accounts share.")
         case .frames:
-            return String(localized: "A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here has run any — a plain transfer runs none.")
+            return String(localized: "A plain transfer runs no steps.")
         case .permissions:
-            return String(localized: "What somebody else was allowed to do for this account. On this chain that is paying: a sponsored transaction is one somebody else paid the gas for. Every transaction here paid its own.")
+            return String(localized: "Here that means gas somebody else paid.")
         }
     }
 

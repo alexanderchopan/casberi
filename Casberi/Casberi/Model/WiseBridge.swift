@@ -592,8 +592,7 @@ enum WiseWatch {
             ?? String(localized: "Connected")
         store.registerConnected(
             id: TokenBridge.wise.bridgeID, name: WiseShape.source,
-            proof: proof,
-            can: [TokenBridge.wise.canLine])
+            proof: proof)
     }
 }
 

@@ -198,9 +198,17 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// **WHAT THE SCOPE WOULD HOLD, and why this address has none.** No
-    /// subject (the face rail above says which is scoped), no door (Top up and
-    /// Send are Home's, §594), and nothing that states a chain-wide fact —
+    /// **THE CLAUSE THE HEADLINE AND THE DRAWING CANNOT SAY (prd §799,
+    /// 2026-09-17).** §769 redrew `DSEmptyState` as a skeleton with the
+    /// short state over it, so this is VoiceOver's value and nothing else.
+    /// It was two sentences until the sweep counted them: the second
+    /// restated `emptyHeadline` and the first restated `summary`, 782 words
+    /// over six rooms, heard by one reader and seen by none. What is left
+    /// is the qualifier neither of those carries — the bound on the read,
+    /// the dust floor, the spam filter.
+    ///
+    /// No subject (the face rail above says which is scoped), no door (Top up
+    /// and Send are Home's, §594), and nothing that states a chain-wide fact —
     /// "no transaction on this chain has ever been sponsored" was true when
     /// measured and becomes a lie the first time one is.
     var emptyBody: String? {
@@ -208,17 +216,17 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         case .home:
             return nil
         case .activity:
-            return String(localized: "Every move of ETH on this chain is a log, so this list is exact. Nothing has moved to or from what you watch.")
+            return String(localized: "Every move of ETH here is a log, so this list is exact.")
         case .holdings:
-            return String(localized: "Nothing you watch holds a balance here yet.")
+            return String(localized: "Balances on this chain, per account.")
         case .accounts:
-            return String(localized: "How the accounts you follow relate — who they have both dealt with. None of them shares a counterparty yet, so there is nothing to draw between them.")
+            return String(localized: "Drawn from counterparties two accounts share.")
         case .frames:
-            return String(localized: "A frame transaction runs in numbered steps, each carrying its own budget. Nothing here has run one — a plain transfer runs none.")
+            return String(localized: "A plain transfer runs no steps.")
         case .coins:
-            return String(localized: "This chain can hold a balance as pieces, each spent whole and never in part. None of these addresses has ever held one — and a piece that has been spent still shows here, since it is what the rest were made from.")
+            return String(localized: "A spent piece still shows — the rest were made from it.")
         case .permissions:
-            return String(localized: "What is allowed to act on this account. Here that is a named nonce key, whose transfers do not wait for the ordinary counter, and a sponsor, who covered somebody's gas. Everything here went on the ordinary nonce and paid its own way.")
+            return String(localized: "Here that means a named nonce key, or gas somebody else paid.")
         }
     }
 

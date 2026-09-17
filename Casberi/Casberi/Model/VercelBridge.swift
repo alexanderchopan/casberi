@@ -40,8 +40,9 @@ import Foundation
 /// deploys, promotes, cancels, rolls back or deletes, and — worth its own
 /// sentence because it is the thing a person would actually fear — nothing
 /// here reads environment variables, which is where a Vercel project keeps its
-/// secrets. **Tripwire: add a write to `VercelFetch` and `TokenBridge.canLine`
-/// becomes a lie. Change it in the same commit, or don't add the write.**
+/// secrets. **Tripwire: add a write to `VercelFetch` and `NetworkReach`'s
+/// Vercel purpose becomes a lie. Change it in the same commit, or don't add
+/// the write.**
 /// Mechanical since 2026-08-04 — `scripts/vercel-selftest.sh` fails the build
 /// on any write verb appearing in this file.
 ///

@@ -1247,10 +1247,6 @@ enum StripeWatch {
             .compactMap { $0 }.joined(separator: " · ")
         store.registerConnected(
             id: TokenBridge.stripe.bridgeID, name: source,
-            proof: proof.isEmpty ? String(localized: "Connected") : proof,
-            // The read-only promise has ONE home (`TokenBridge.canLine`), the
-            // PostHog contract — a second copy here would be the only reader of
-            // a string nothing else renders, and the two would drift.
-            can: [TokenBridge.stripe.canLine])
+            proof: proof.isEmpty ? String(localized: "Connected") : proof)
     }
 }

@@ -300,9 +300,8 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             "Use the Read all resources template"]
         // No scope to choose, and the steps deliberately don't pretend there
         // is one: Cursor's keys carry no permissions at all (see
-        // `CursorFetch`). What that means is said once, in `canLine`, which is
-        // the line about trust — not repeated here as an instruction nobody
-        // can act on (§220).
+        // `CursorFetch`). What that means is said once, in `NetworkReach`'s Cursor
+        // purpose — not repeated here as an instruction nobody can act on (§220).
         case .cursor: [
             "API Keys → create a Cloud Agents key"]
         // The three scopes are NOT named here — Sentry owns its own screen and
@@ -313,7 +312,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             "Give it only these scopes:"]
         // No scope to choose, and no pretending otherwise: a Vercel token is
         // account-wide (see `VercelFetch`). What that means is said once, in
-        // `canLine`.
+        // `NetworkReach`'s Vercel purpose.
         case .vercel: [
             "Scope it to your team"]
         // The read-only box IS named here, unlike PostHog's and Stripe's
@@ -351,12 +350,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // own (`TokenSetupScreen.jiraSiteSection`), Trello's exact reason:
         // this is the one bridge here besides Trello that needs two pastes.
         // No scope to name: a Jira API token carries the same access as your
-        // account (see `canLine`), so there is no box to tick the way
+        // account (see `NetworkReach`'s Jira purpose), so there is no box to tick the way
         // Cloudflare's or Sentry's steps name one.
         case .jira: []
         // AWS has a real read-only IAM POLICY — unlike Cursor's or App Store
         // Connect's key, which carry no such thing — so the step names it
-        // rather than leaving the promise to conduct alone (see `canLine`).
+        // rather than leaving the promise to conduct alone (see `NetworkReach`).
         case .aws: []
         }
     }
@@ -510,80 +509,16 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     var source: String { rawValue }
 
 
-    var canLine: String {
-        switch self {
-        case .readwise: "Reads your highlights."
-        // Two deletions, both because the connected GitHub screen renders this
-        // sentence directly above the things it was describing (audit,
-        // 2026-07-31): the seven feeds were the seven switch rows beneath it,
-        // and "never touching your GitHub account" is the private-watch field's
-        // own slab note verbatim. "Privately" carries what's left.
-        case .github:   "Reads the GitHub feeds you pick, plus any repos and people you watch privately."
-        case .todoist:  "Reads your open tasks."
-        case .raindrop: "Reads your bookmarks."
-        case .calcom:   "Reads your bookings."
-        case .calendly: "Reads your scheduled meetings."
-        case .notion:   "Reads the pages you connect."
-        case .linear:   "Reads issues assigned to you."
-        case .bitrefill: "Reads your orders, refills, and balance — nothing here ever buys, pays, or spends."
-        case .privacy:  "Reads your card transactions only. Privacy's key can't be scoped read-only, so nothing here creates, closes, or funds a card."
-        // The ceiling is in the sentence, because a card feed is the
-        // obvious expectation of a bank seat and this one cannot meet it:
-        // Wise card spending lives in the balance statement, behind Wise's
-        // own signed-approval step.
-        case .wise:     "Reads your balances and your transfers. Mint the token read-only — nothing here can send, convert, or spend. Card spending isn't read: it lives behind Wise's signed-approval step."
-        case .posthog:  "Reads the metrics you watch and your project's annotations. The key is scoped read-only — it cannot ship a flag, edit a dashboard, or write anything back."
-        case .stripe:   "Reads disputes, payouts, canceled subscriptions, failed payments, and your balance. The restricted key is read-only — it cannot refund, charge, or pay out."
-        case .polar:    "Reads refunds, disputes, subscriptions leaving a healthy state, and your recurring revenue. The token is scoped read-only — it cannot refund, cancel a subscription, or create anything."
-        case .dodoPayments: "Reads your payments as they succeed, plus refunds, disputes, and subscriptions leaving a healthy state. The key is read-only — it cannot charge, refund, or cancel anything."
-        // The read-only promise here is the strongest of any bridge in this
-        // file, because Casberi MINTS it rather than asking you to: the
-        // authorize link is built with `scope=read`, so Trello itself issues a
-        // token that has no write permission to give. Every other keyed bridge
-        // depends on the person ticking the right box on someone else's page.
-        case .trello:   "Reads the cards assigned to you and when they're due. The token is minted read-only, so it cannot move a card, comment, or write anything back."
-        // What is NOT read is worth a clause here. Cloudflare's API is mostly
-        // traffic numbers, and someone connecting an infrastructure account has
-        // every right to wonder whether their visitors' data is about to land
-        // in a feed.
-        case .cloudflare: "Reads certificate, domain and token expiry dates, and tells you when a DNS record changes. No analytics, nothing about your visitors. A read-only token cannot change a record or purge cache."
-        // The Privacy.com sentence, one rung stronger, because the risk is one
-        // rung higher: Cursor's key carries no scopes at all, and the thing it
-        // could do unasked isn't just spending — it's spending AND writing a
-        // branch to your repository. Naming the four verbs Casberi doesn't use
-        // is the whole promise, so they're listed rather than summarised. If a
-        // write is ever added to `CursorFetch`, this line has to change in the
-        // same commit.
-        case .cursor:   "Reads the cloud agents you've run — what each was asked to do, what it says it did, and the pull request it opened. Cursor's key can't be scoped read-only, so this only lists them: never starts, follows up, stops, or deletes one."
-        // What is NOT read is the load-bearing clause. Sentry holds the data
-        // your users generated when something broke — anyone connecting it has
-        // every right to ask whether that is about to land in a feed. It isn't:
-        // this reads the ISSUE list, which is titles and code locations, and
-        // never an event, a stack trace, a request body, or a user.
-        case .sentry:   "Reads your unresolved issues — the error, the project, and where in your code it happened. Never an event, a stack trace, or anything about the person who hit it. The token is scoped read-only: it cannot resolve an issue, comment, or change a project."
-        case .vercel:   "Reads your deployments — the project, whether each one shipped or broke, and its commit message. Vercel's token can't be scoped read-only, so this only lists them: never deploys, promotes, rolls back, cancels, or deletes one, and never reads your environment variables."
-        case .pagerduty: "Reads your incidents — what fired, on which service, how urgent, and when it was resolved. A read-only key cannot page anyone, acknowledge, resolve, or reassign."
-        case .gitlab:   "Reads the issues and merge requests assigned to you, across every project. The read_api token cannot comment, merge, close, or write anything back."
-        // The Cursor sentence, one rung stronger, because the risk is one rung
-        // higher: an App Store Connect key carries a ROLE rather than scopes,
-        // and the narrowest role that can read all four of these can also ship
-        // software to the public under your name. Naming the six verbs Casberi
-        // doesn't use IS the promise, so they are listed rather than
-        // summarised — and if a write is ever added to `AppStoreConnectBridge`,
-        // this line has to change in the same commit
-        // (`scripts/appstoreconnect-selftest.sh` fails the build if it isn't).
-        case .appStoreConnect: "Reads your apps' review status, your customer reviews, and your builds. Apple has no read-only role, so this only reads: it never submits, releases, removes an app from sale, replies to a review, or uploads a build — and never touches your sales, proceeds, or anything about the people who use your apps."
-        // The Privacy.com/Cursor sentence: a Jira API token carries no scopes
-        // and no read-only grade at all, so the promise is kept the same way
-        // — by naming the verbs this code doesn't use. If a write is ever
-        // added to `jira()`, this line has to change in the same commit.
-        case .jira:      "Reads the issues assigned to you — the project, the status, and when each is due. A Jira token has the same access as your account, so this only ever reads: never transitions, comments on, or edits an issue."
-        // The IAM policy carries the promise on AWS's own side; this file's
-        // own conduct is the backstop — it issues only Describe*/List*/Get*
-        // actions and never a write, mechanically guarded (see the type doc).
-        case .aws:       "Reads CloudWatch alarms, CodePipeline deploys, Cost Explorer, and a resource inventory (EC2, S3, RDS, Lambda). Give the key a read-only IAM policy; this file only ever issues Describe/List/Get calls regardless — never a write, no matter what the policy allows."
-        }
-    }
+    // **NO `canLine`, DELETED (prd §799, 2026-09-17).** Twenty-five sentences,
+    // 575 words, handed to `BridgeStore.registerConnected(can:)` — and `can`
+    // is drawn in exactly one place, `BridgeDetailScreen`, which only the
+    // demo's seats reach (`BridgeRouter.destination(forID:)` falls there for
+    // an id `rows` has never heard of, and every keyed bridge has a row). So
+    // the read-only promise was written, guarded and kept current where no
+    // person could read it. It has one home now, and that home is on screen:
+    // `NetworkReach`'s purpose for the service, drawn in Settings (§702). The
+    // App Store Connect and Cursor conduct guards read it there — see
+    // `scripts/appstoreconnect-selftest.sh` and `scripts/cursor-selftest.sh`.
 
     /// What an EMPTY but SUCCESSFUL read means, for the bridges where empty is
     /// a state worth explaining rather than good news (2026-08-03, prd §291).
