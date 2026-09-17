@@ -1539,6 +1539,7 @@ harness "Row-window self-test" "row-window self-test" "scripts/row-window-selfte
 # Nothing here can make Safe's quota refuse on demand, so this proves the gate's
 # fold (compiled whole) and that each surface still asks it before saying none.
 harness "Safe gate self-test" "safe gate self-test" "scripts/safe-gate-selftest.sh" "the Safe gate self-test failed — run scripts/safe-gate-selftest.sh"
+harness "Safe gateway self-test" "safe gateway self-test" "scripts/safe-gateway-selftest.sh" "the Safe Client Gateway self-test failed — run scripts/safe-gateway-selftest.sh"
 
 # "Is this address a feed?" — the discriminator every RSS follow hangs off
 # (2026-08-16), from a user report of following a site that publishes none.

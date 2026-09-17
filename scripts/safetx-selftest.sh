@@ -205,10 +205,17 @@ done
   || { echo "✗ SafeSigner.swift makes more than one POST — it may make exactly one"; exit 1; }
 printf '%s' "$SIGNER_CODE" | grep -q 'multisig-transactions/\\(safeTxHash)/confirmations/' \
   || { echo "✗ the one POST no longer goes to Safe's confirmations endpoint"; exit 1; }
-# Every host this file names must be Safe's own.
+# Every host this file names must be Safe's own. TWO of them are, since
+# 2026-09-17 (prd §789b): the one POST lands on the transaction service, where
+# a confirmation has to go, and the proposal READ moved to Safe's Client
+# Gateway with the rest of this app's Safe reads — the transaction service
+# meters keyless callers against one exhausted 5,000-a-month pool, so leaving
+# the read there would have left SIGNING broken for the same reason the room
+# was. The rule is unchanged and is the point of the loop: this file reaches
+# Safe and nothing else. Adding a third host is still a decision, not a line.
 for host in $(printf '%s' "$SIGNER_CODE" | grep -oE 'https://[a-z0-9.-]+' | sort -u); do
-  [[ "$host" == "https://api.safe.global" ]] \
-    || { echo "✗ SafeSigner.swift reaches $host — it may reach api.safe.global and nothing else"; exit 1; }
+  [[ "$host" == "https://api.safe.global" || "$host" == "https://safe-client.safe.global" ]] \
+    || { echo "✗ SafeSigner.swift reaches $host — it may reach Safe's own hosts (api.safe.global, safe-client.safe.global) and nothing else"; exit 1; }
 done
 # EVERY RAIL MUST HAVE A READER (2026-09-07). The entire safety argument for
 # signing on a chain is that `getTransactionHash` can be read back from the

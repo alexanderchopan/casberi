@@ -91,10 +91,16 @@ let now = Date(timeIntervalSince1970: 1_800_000_000)
 // Reopening time.
 check(SafeServiceLedger.reopensAt(resetHeader: "196279", now: now) == now.addingTimeInterval(196_279),
       "a measured x-ratelimit-reset (196279s) is believed")
-check(SafeServiceLedger.reopensAt(resetHeader: nil, now: now) == now.addingTimeInterval(15 * 60),
-      "no header closes for fifteen minutes")
-check(SafeServiceLedger.reopensAt(resetHeader: "garbage", now: now) == now.addingTimeInterval(15 * 60),
-      "an unreadable header closes for fifteen minutes")
+// ONE MINUTE, not fifteen, since 2026-09-17 (prd §789b). The reads moved to
+// Safe's Client Gateway, which sends no rate-limit header at all and whose 429
+// is a per-IP burst refilling in ~20s — so the headerless default stopped being
+// "a malformed header from a monthly pool" and became the normal case for a
+// two-second blip. Fifteen minutes there is a quarter hour of a room unable to
+// say what is in the queue. Sixty seconds is 3x the measured recovery.
+check(SafeServiceLedger.reopensAt(resetHeader: nil, now: now) == now.addingTimeInterval(60),
+      "no header closes for one minute (the gateway's burst, not a monthly pool)")
+check(SafeServiceLedger.reopensAt(resetHeader: "garbage", now: now) == now.addingTimeInterval(60),
+      "an unreadable header closes for one minute")
 check(SafeServiceLedger.reopensAt(resetHeader: "999999999", now: now) == now.addingTimeInterval(32 * 86_400),
       "a header claiming years is capped at 32 days")
 check(SafeServiceLedger.reopensAt(resetHeader: "0", now: now) > now,

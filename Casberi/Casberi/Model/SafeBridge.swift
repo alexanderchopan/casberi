@@ -42,14 +42,18 @@ import SwiftData
 /// row that asks a person to go sign something — which until then named the
 /// Safe app in a sentence and offered no way to reach it.
 ///
-/// Re-verified live 2026-07-30 while adding (2)/(3): `/owners/{addr}/safes/`
+/// Re-verified live 2026-07-30 while adding (2)/(3): `/owners/{addr}/safes`
 /// answers per chain (vitalik.eth: 59 on eth, more on base — overwhelmingly
 /// NOT his, confirming the spam-decoy risk above is real, not theoretical);
-/// `/safes/{addr}/` carries `nonce`/`threshold`/`owners`/`modules`/`guard`;
-/// `/multisig-transactions/{hash}/` exists (the original bridge assumed it
-/// might not and always re-fetched the whole queue instead); and the `gno`
-/// segment (Gnosis Chain) answers cleanly — not previously in this bridge's
-/// chain list despite Gnosis Pay accounts being Safes themselves.
+/// `/safes/{addr}` carries `nonce`/`threshold`/`owners`/`modules`/`guard`;
+/// a single transaction can be read by its hash (the original bridge assumed
+/// it might not and always re-fetched the whole queue instead); and Gnosis
+/// Chain answers cleanly — not previously in this bridge's chain list despite
+/// Gnosis Pay accounts being Safes themselves.
+///
+/// Those four reads left `api.safe.global` for Safe's Client Gateway on
+/// 2026-09-17 (prd §789b) — same facts, same four questions, a host with no
+/// shared monthly pool. `SafeGatewayShape` is the whole translation.
 ///
 /// Three enrichments (2026-08-11), all keyless, no new endpoint:
 /// (4) Row titles now name an AMOUNT ("a transfer of 1,500 USDC to
@@ -116,6 +120,10 @@ enum SafeBridge {
         /// `seg` — which is exactly the guess the original bridge refused to
         /// make, correctly, when it omitted this door entirely.
         let shortName: String
+        /// The EVM chain id, which is how Safe's Client Gateway names a chain
+        /// — a third spelling beside `seg` and `shortName`, and the reason
+        /// all three are carried rather than derived from each other.
+        let chainId: Int
     }
     /// `gno` (Gnosis Chain) carries `network: nil` — it isn't a
     /// WalletChainStore/Alchemy-selectable chain at all (same reason
@@ -124,12 +132,12 @@ enum SafeBridge {
     /// toggle either — they run whenever a watched EOA might be a Gnosis
     /// Pay/Safe signer.
     private static let chains: [Chain] = [
-        Chain(network: "eth-mainnet",   seg: "eth",  shortName: "eth"),
-        Chain(network: "base-mainnet",  seg: "base", shortName: "base"),
-        Chain(network: "arb-mainnet",   seg: "arb1", shortName: "arb1"),
-        Chain(network: "opt-mainnet",   seg: "oeth", shortName: "oeth"),
-        Chain(network: "matic-mainnet", seg: "pol",  shortName: "matic"),
-        Chain(network: nil,             seg: "gno",  shortName: "gno"),
+        Chain(network: "eth-mainnet",   seg: "eth",  shortName: "eth",   chainId: 1),
+        Chain(network: "base-mainnet",  seg: "base", shortName: "base",  chainId: 8453),
+        Chain(network: "arb-mainnet",   seg: "arb1", shortName: "arb1",  chainId: 42161),
+        Chain(network: "opt-mainnet",   seg: "oeth", shortName: "oeth",  chainId: 10),
+        Chain(network: "matic-mainnet", seg: "pol",  shortName: "matic", chainId: 137),
+        Chain(network: nil,             seg: "gno",  shortName: "gno",   chainId: 100),
     ]
 
     /// The door out — the person's own Safe app, open on this Safe's queue.
@@ -144,9 +152,32 @@ enum SafeBridge {
         return WalletChainStore.activeNetworkIDs().contains(network)
     }
 
-    private static func baseURL(_ seg: String) -> String {
-        "https://api.safe.global/tx-service/\(seg)/api/v1"
+    /// Safe's Client Gateway, which is what `app.safe.global` itself reads
+    /// (prd §789b). It replaced `api.safe.global/tx-service` for every READ
+    /// in this file: the transaction service meters keyless callers against
+    /// one 5,000-a-month pool shared with every keyless caller on earth, and
+    /// that pool was measured empty (§789), so cutting this app's share of it
+    /// could not have brought the queue back. The gateway publishes no
+    /// `x-ratelimit` header, declares no authentication scheme in its own
+    /// OpenAPI, and answers all six of these chains without a key; its only
+    /// cap is a per-IP burst that a sequential pass does not reach.
+    ///
+    /// The one WRITE — `SafeSigner`'s confirmation POST — stays on the
+    /// transaction service, because that is where a signature has to land.
+    ///
+    /// Still named `baseURL` on purpose: `safe-gate-selftest.sh` proves no
+    /// read goes around `SafeServiceGate` by looking for this call beside a
+    /// direct `IngestSupport.getJSON`, and renaming it would make that guard
+    /// pass by matching nothing.
+    private static func baseURL(_ chain: Chain) -> String {
+        "https://safe-client.safe.global/v1/chains/\(chain.chainId)"
     }
+
+    /// A pending queue is single digits in practice, and the gateway's list
+    /// carries no `dataDecoded`, so each row costs one more read. Bounded so
+    /// a pathological queue cannot spend a pass — and sequentially, because
+    /// the burst cap is the only limit this host has.
+    private static let queueDetailCap = 40
 
     private static func isSafeKey(_ seg: String, _ address: String) -> String {
         "wallet.safe.isSafe.\(seg).\(address.lowercased())"
@@ -186,7 +217,7 @@ enum SafeBridge {
         // pasted or ENS-resolved address failed silently, forever (a 422
         // reads as "unreachable" below, never cached, retried every pass).
         let result: Bool
-        switch await SafeServiceGate.get("\(baseURL(chain.seg))/safes/\(EIP55.checksum(address))/") {
+        switch await SafeServiceGate.get("\(baseURL(chain))/safes/\(EIP55.checksum(address))") {
         case .ok: result = true
         case .missing: result = false
         case .throttled, .unreachable: return nil
@@ -264,13 +295,26 @@ enum SafeBridge {
         return boxed?.rows
     }
 
+    /// The gateway answers the queue in two steps: a list that names each
+    /// pending transaction, then one read per transaction for the decoded
+    /// call the batch reading needs (§652's `multiSend` is 96% of real Safe
+    /// traffic, and the list carries only `methodName`/`actionCount`).
+    ///
+    /// **A detail that does not answer fails the whole read, on purpose.** A
+    /// queue of four returned as three is §789's bug one layer down — a
+    /// refused read rendering as a smaller queue rather than as "we could not
+    /// look". nil here means unreachable, and the room says so.
     private static func fetchPendingQueue(chain: Chain, address: String) async -> [[String: Any]]? {
-        guard let root = await SafeServiceGate.get(
-                "\(baseURL(chain.seg))/safes/\(EIP55.checksum(address))/multisig-transactions/?executed=false")
-                .json as? [String: Any],
-              let results = root["results"] as? [[String: Any]]
-        else { return nil }
-        return results
+        let listed = await SafeServiceGate.get(
+            "\(baseURL(chain))/safes/\(EIP55.checksum(address))/transactions/queued")
+        guard let ids = SafeGatewayShape.queuedIDs(listed.json) else { return nil }
+        var rows: [[String: Any]] = []
+        for id in ids.prefix(queueDetailCap) {
+            let read = await SafeServiceGate.get("\(baseURL(chain))/transactions/\(id)")
+            guard let row = SafeGatewayShape.txRow(read.json) else { return nil }
+            rows.append(row)
+        }
+        return rows
     }
 
     // MARK: - Owner reverse-lookup (2026-07-30)
@@ -288,11 +332,9 @@ enum SafeBridge {
     /// read.
     private static func ownerSafes(chain: Chain, address: String) async -> [String]? {
         let boxed = await ownerCache.value(key: ownerCacheKey(chain.seg, address), ttl: 600) {
-            guard let root = await SafeServiceGate.get(
-                    "\(baseURL(chain.seg))/owners/\(EIP55.checksum(address))/safes/")
-                    .json as? [String: Any],
-                  let safes = root["safes"] as? [String]
-            else { return nil }
+            let read = await SafeServiceGate.get(
+                "\(baseURL(chain))/owners/\(EIP55.checksum(address))/safes")
+            guard let safes = SafeGatewayShape.ownerSafes(read.json) else { return nil }
             return JSONStrings(rows: safes)
         }
         return boxed?.rows
@@ -315,18 +357,12 @@ enum SafeBridge {
 
     private static func safeDetail(chain: Chain, address: String) async -> SafeDetail? {
         let boxed = await detailCache.value(key: "\(chain.seg)|\(address.lowercased())", ttl: 60) {
-            guard let root = await SafeServiceGate.get(
-                    "\(baseURL(chain.seg))/safes/\(EIP55.checksum(address))/").json as? [String: Any]
-            else { return nil }
-            let threshold = (root["threshold"] as? Int) ?? 0
-            let nonce = Int((root["nonce"] as? String) ?? "") ?? (root["nonce"] as? Int) ?? 0
-            let owners = ((root["owners"] as? [String]) ?? []).map { $0.lowercased() }.sorted()
-            let modules = ((root["modules"] as? [String]) ?? []).map { $0.lowercased() }.sorted()
-            let rawGuard = (root["guard"] as? String)?.lowercased()
-            let guardAddr = (rawGuard == nil || rawGuard == "0x0000000000000000000000000000000000000000")
-                ? nil : rawGuard
-            let config = SafeConfig(threshold: threshold, owners: owners, modules: modules, guardAddr: guardAddr)
-            return SafeDetailBox(detail: SafeDetail(nonce: nonce, config: config))
+            let read = await SafeServiceGate.get(
+                "\(baseURL(chain))/safes/\(EIP55.checksum(address))")
+            guard let d = SafeGatewayShape.detail(read.json) else { return nil }
+            let config = SafeConfig(threshold: d.threshold, owners: d.owners,
+                                    modules: d.modules, guardAddr: d.guardAddr)
+            return SafeDetailBox(detail: SafeDetail(nonce: d.nonce, config: config))
         }
         return boxed?.detail
     }
@@ -1193,8 +1229,10 @@ enum SafeBridge {
                 }
                 continue   // still live — leave tracked
             }
-            guard let root = await SafeServiceGate.get(
-                    "\(baseURL(chain.seg))/multisig-transactions/\(hash)/").json as? [String: Any]
+            // The gateway takes a bare `safeTxHash` as a transaction id
+            // (measured §789b), so this stays one read keyed on what we hold.
+            guard let root = SafeGatewayShape.txRow(
+                    await SafeServiceGate.get("\(baseURL(chain))/transactions/\(hash)").json)
             else { continue }   // unreachable or throttled this pass — recheck next time
             guard (root["isExecuted"] as? Bool) == true else { continue }
             added += await landOutcome(context: context, chain: chain, hash: hash, tx: root,
@@ -1568,9 +1606,9 @@ enum SafeBridge {
         let seg = parts[2], safeTxHash = parts[3]
         guard let chain = chains.first(where: { $0.seg == seg }) else { return .fail("unknown chain") }
         guard isChainActive(chain) else { return .fail("chain switched off") }
-        let read = await SafeServiceGate.get("\(baseURL(chain.seg))/multisig-transactions/\(safeTxHash)/")
+        let read = await SafeServiceGate.get("\(baseURL(chain))/transactions/\(safeTxHash)")
         if case .throttled = read { return .fail("throttled") }
-        guard let root = read.json as? [String: Any] else { return .fail("unreachable") }
+        guard let root = SafeGatewayShape.txRow(read.json) else { return .fail("unreachable") }
         // `thing.walletAddress` is either the Safe itself (directly watched)
         // or the signer that led us here — either way the transaction's own
         // `safe` field names the Safe to re-check nonce against.

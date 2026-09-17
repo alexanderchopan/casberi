@@ -31,8 +31,22 @@ struct SafeServiceLedger: Codable, Equatable {
     /// Longest the gate is believed. The measured reset was 54 hours; a
     /// header claiming more than a month is not trusted for longer.
     static let maxClosed: TimeInterval = 32 * 86_400
-    /// When a 429 carries no reset header.
-    static let defaultClosed: TimeInterval = 15 * 60
+    /// When a 429 carries no reset header — ONE MINUTE since 2026-09-17, and
+    /// the change is the whole reason to read this line (prd §789b).
+    ///
+    /// Fifteen minutes was right for the transaction service, whose 429 is a
+    /// MONTHLY pool running dry: it always sends `x-ratelimit-reset`, so this
+    /// default only ever caught a malformed one, and waiting long was the
+    /// polite guess. The reads now go to Safe's Client Gateway, which sends
+    /// NO rate-limit header at all and whose 429 is a per-IP BURST —
+    /// measured refilling within ~20 seconds (§789b point 4). Fifteen
+    /// minutes there would take a two-second blip and turn it into a quarter
+    /// hour of a room saying it cannot see the queue.
+    ///
+    /// One minute is three times the measured recovery, so it is a bound
+    /// rather than a race, and a sequential pass never reaches the cap that
+    /// produces this 429 in the first place.
+    static let defaultClosed: TimeInterval = 60
 
     func isClosed(now: Date) -> Bool {
         guard let throttledUntil else { return false }

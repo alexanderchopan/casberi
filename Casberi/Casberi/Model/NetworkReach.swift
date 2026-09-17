@@ -261,7 +261,13 @@ enum NetworkReach {
                  // about THIS send and holds however many others exist.
                  purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the wallets you watch — keyless, public data. Also reads Aave's public rate to compare against a vault you hold. If you make this phone a Safe signer and tap Sign, one 65-byte signature is sent to Safe's own service — a signature, never a transaction: it can never execute anything on its own.",
                  hosts: ["blue-api.morpho.org", "app.morpho.org", "app.aave.com", "app.spark.fi",
-                         "api.safe.global", "api.hyperliquid.xyz"]),
+                         // Safe is TWO hosts since 2026-09-17 (prd §789b): the
+                         // Client Gateway answers every READ — what your Safes
+                         // are, who signs for them, what is waiting — and the
+                         // transaction service takes the one signature POST.
+                         // Both are Safe's own.
+                         "safe-client.safe.global", "api.safe.global",
+                         "api.hyperliquid.xyz"]),
         Endpoint(service: "Tokens",
                  reach: .whenConnected(bridge: "Tokens"),
                  purpose: "Fetches the public price history of a token you watch to draw its chart on \(DS.device). Carries only the token — nothing about you.",

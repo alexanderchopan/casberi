@@ -262,8 +262,24 @@ enum SafeSigner {
 
     // MARK: - Reading the proposal
 
+    /// The WRITE's host. One `POST`, to Safe's transaction service, because
+    /// that is where a confirmation has to land — the Client Gateway the
+    /// reads moved to (prd §789b) is a read path.
     private static func baseURL(_ seg: String) -> String {
         "https://api.safe.global/tx-service/\(seg)/api/v1"
+    }
+
+    /// The READ's host — Safe's own Client Gateway, which takes a bare
+    /// `safeTxHash` as a transaction id (measured §789b). The proposal read
+    /// moved here with the rest for §789's reason: the transaction service
+    /// meters keyless callers against one exhausted pool, so leaving this
+    /// read there would have left SIGNING broken for the same reason the
+    /// room was.
+    ///
+    /// Safe-owned either way, which is the rule `safetx-selftest.sh` holds
+    /// this file to — it reaches Safe and nothing else.
+    private static func gatewayURL(_ rail: Rail) -> String {
+        "https://safe-client.safe.global/v1/chains/\(rail.chainId)"
     }
 
     /// A uint256 field that arrives as a String in v2 and an Int in v1 of the
@@ -328,9 +344,9 @@ enum SafeSigner {
         guard let rail = rails.first(where: { $0.seg == seg }) else {
             return .failure(.chainUnsupported(seg))
         }
-        let read = await SafeServiceGate.get("\(baseURL(seg))/multisig-transactions/\(safeTxHash)/")
+        let read = await SafeServiceGate.get("\(gatewayURL(rail))/transactions/\(safeTxHash)")
         if case .throttled(let until) = read { return .failure(.serviceThrottled(until: until)) }
-        guard let row = read.json as? [String: Any],
+        guard let row = SafeGatewayShape.txRow(read.json),
               let safeAddress = row["safe"] as? String,
               let tx = transaction(from: row)
         else { return .failure(.proposalUnreadable) }
