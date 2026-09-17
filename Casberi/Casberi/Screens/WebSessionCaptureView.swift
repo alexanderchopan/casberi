@@ -15,20 +15,25 @@ import WebKit
 /// property of the code rather than a rule somebody follows.
 struct WebSessionCaptureView: View {
     let target: WebSessionCapture.Target
-    /// Called with the report once the capture is closed.
-    var onReport: ([WebSessionCapture.Call]) -> Void
+    /// Called with the report once the capture is closed: the calls, and
+    /// the target's cookie NAMES read from the jar at that moment.
+    var onReport: ([WebSessionCapture.Call], [String]) -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var calls: [WebSessionCapture.Call] = []
+    @State private var jar = CaptureJar()
 
     var body: some View {
         NavigationStack {
-            CaptureWebView(target: target, onCall: { calls.append($0) })
+            CaptureWebView(target: target, jar: jar, onCall: { calls.append($0) })
                 .ignoresSafeArea()
                 .dsScreenTitle(String(localized: "Measuring \(target.name)"))
                 .dsSheetDismiss {
-                    onReport(calls)
-                    dismiss()
+                    let captured = calls
+                    jar.cookieNames { cookies in
+                        onReport(captured, WebSessionCapture.cookieReport(cookies, in: target))
+                        dismiss()
+                    }
                 }
         }
         .dsNavSheet()
@@ -36,8 +41,28 @@ struct WebSessionCaptureView: View {
     }
 }
 
+/// The one handle on the page's jar the close needs. Weak, so the sheet
+/// never keeps a web view alive past its own dismissal.
+final class CaptureJar {
+    weak var webView: WKWebView?
+
+    /// Names, domains and the `HttpOnly` flag — `HTTPCookie.value` is never
+    /// read here.
+    func cookieNames(_ done: @escaping ([WebSessionCapture.CookieName]) -> Void) {
+        guard let store = webView?.configuration.websiteDataStore.httpCookieStore else {
+            done([]); return
+        }
+        store.getAllCookies { cookies in
+            done(cookies.map {
+                WebSessionCapture.CookieName(name: $0.name, domain: $0.domain, httpOnly: $0.isHTTPOnly)
+            })
+        }
+    }
+}
+
 private struct CaptureWebView: UIViewRepresentable {
     let target: WebSessionCapture.Target
+    let jar: CaptureJar
     let onCall: (WebSessionCapture.Call) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(target: target, onCall: onCall) }
@@ -47,6 +72,9 @@ private struct CaptureWebView: UIViewRepresentable {
         // NON-PERSISTENT. A measurement must not leave a money provider's
         // session sitting in the shared jar, and nothing here keeps one.
         config.websiteDataStore = .nonPersistent()
+        // A landing page's autoplay video otherwise takes the whole screen in
+        // the system player, and the capture reads as a black sheet.
+        config.allowsInlineMediaPlayback = true
         config.userContentController.addUserScript(
             WKUserScript(source: Self.captureScript,
                          injectionTime: .atDocumentStart,
@@ -59,6 +87,7 @@ private struct CaptureWebView: UIViewRepresentable {
         webView.uiDelegate = context.coordinator
         if #available(iOS 16.4, *) { webView.isInspectable = true }
         webView.load(URLRequest(url: URL(string: target.signInURL)!))
+        jar.webView = webView
         return webView
     }
 
@@ -106,6 +135,12 @@ private struct CaptureWebView: UIViewRepresentable {
                 shape: (body["body"] as? String).flatMap { text in
                     (try? JSONSerialization.jsonObject(with: Data(text.utf8)))
                         .map { WebSessionCapture.shape($0) }
+                },
+                headerNames: WebSessionCapture.headerNames(body["headers"] as? [String] ?? []),
+                credentials: (body["credentials"] as? String).flatMap { $0.isEmpty ? nil : $0 },
+                sentShape: (body["sent"] as? String).flatMap { text in
+                    (try? JSONSerialization.jsonObject(with: Data(text.utf8)))
+                        .map { WebSessionCapture.shape($0) }
                 })
             DispatchQueue.main.async { self.onCall(call) }
         }
@@ -122,13 +157,32 @@ private struct CaptureWebView: UIViewRepresentable {
     private static let captureScript = """
     (function() {
         var MAX = 200000;
-        function post(method, url, status, auth, body) {
+        function post(method, url, status, auth, body, extra) {
             try {
+                extra = extra || {};
                 window.webkit.messageHandlers.casberiCapture.postMessage({
                     method: method || 'GET', url: String(url), status: status || 0,
-                    auth: auth || '', body: (body || '').slice(0, MAX)
+                    auth: auth || '', body: (body || '').slice(0, MAX),
+                    headers: extra.headers || [], credentials: extra.credentials || '',
+                    sent: (typeof extra.sent === 'string') ? extra.sent.slice(0, MAX) : ''
                 });
             } catch (e) {}
+        }
+        // Header NAMES only. The values stay in the page.
+        function headerNames(h) {
+            var out = [];
+            try {
+                if (!h) { return out; }
+                if (typeof Headers !== 'undefined' && h instanceof Headers) {
+                    h.forEach(function(_, k) { out.push(k); }); return out;
+                }
+                if (Array.isArray(h)) {
+                    for (var i = 0; i < h.length; i++) { if (h[i]) { out.push(String(h[i][0])); } }
+                    return out;
+                }
+                for (var k in h) { out.push(k); }
+            } catch (e) {}
+            return out;
         }
         function headerValue(h, name) {
             try {
@@ -154,12 +208,19 @@ private struct CaptureWebView: UIViewRepresentable {
             var auth = headerValue(args[1] && args[1].headers, 'authorization')
                 || ((typeof Request !== 'undefined' && first instanceof Request)
                     ? headerValue(first.headers, 'authorization') : '');
+            var isRequest = (typeof Request !== 'undefined' && first instanceof Request);
+            var extra = {
+                headers: headerNames(args[1] && args[1].headers)
+                    .concat(isRequest ? headerNames(first.headers) : []),
+                credentials: (args[1] && args[1].credentials) || (isRequest ? first.credentials : ''),
+                sent: args[1] && args[1].body
+            };
             return origFetch.apply(this, args).then(function(response) {
                 try {
                     response.clone().text().then(function(text) {
-                        post(method, url, response.status, auth, text);
-                    }).catch(function() { post(method, url, response.status, auth, ''); });
-                } catch (e) { post(method, url, response.status, auth, ''); }
+                        post(method, url, response.status, auth, text, extra);
+                    }).catch(function() { post(method, url, response.status, auth, '', extra); });
+                } catch (e) { post(method, url, response.status, auth, '', extra); }
                 return response;
             });
         };
@@ -171,15 +232,20 @@ private struct CaptureWebView: UIViewRepresentable {
             return origOpen.apply(this, arguments);
         };
         XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
+            (this.__cbHeaders = this.__cbHeaders || []).push(String(header));
             if (String(header).toLowerCase() === 'authorization') { this.__cbAuth = value; }
             return origSet.apply(this, arguments);
         };
-        XMLHttpRequest.prototype.send = function() {
+        XMLHttpRequest.prototype.send = function(sentBody) {
             var xhr = this;
             xhr.addEventListener('load', function() {
                 var text = '';
                 try { if (xhr.responseType === '' || xhr.responseType === 'text') { text = xhr.responseText; } } catch (e) {}
-                post(xhr.__cbMethod, xhr.__cbURL, xhr.status, xhr.__cbAuth, text);
+                post(xhr.__cbMethod, xhr.__cbURL, xhr.status, xhr.__cbAuth, text, {
+                    headers: xhr.__cbHeaders || [],
+                    credentials: xhr.withCredentials ? 'include' : '',
+                    sent: sentBody
+                });
             });
             return origSend.apply(this, arguments);
         };

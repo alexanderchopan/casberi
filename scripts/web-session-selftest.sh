@@ -41,6 +41,11 @@ grep -qF 'WebSessionCapture.records(host: url.host, in: target) else { return }'
   || { echo "✗ the capture no longer drops a call to a host outside its target"; exit 1; }
 grep -qF 'WebSessionCapture.redactedURL(raw)' "$VIEW" \
   || { echo "✗ a raw URL reaches a Call — query values and account ids would be reported"; exit 1; }
+grep -qF 'WebSessionCapture.headerNames(' "$VIEW" \
+  || { echo "✗ request header names reach a Call without the name filter"; exit 1; }
+if grep -vE '^[[:space:]]*//' "$VIEW" | grep -qE '\$0\.value|cookie\.value'; then
+  echo "✗ the capture reads a cookie VALUE"; exit 1
+fi
 grep -qF 'WebSessionCapture.authScheme(' "$VIEW" \
   || { echo "✗ an Authorization header is no longer reduced to its scheme"; exit 1; }
 # The report is built from shapes. A raw body string must never reach a Call.
@@ -62,18 +67,21 @@ func check(_ ok: Bool, _ what: String) {
 func json(_ s: String) -> Any? { try? JSONSerialization.jsonObject(with: Data(s.utf8)) }
 
 // ── The bounded target list ──────────────────────────────────────────────
-check(WebSessionCapture.targets.count == 5, "five providers, and no open-ended 'record any site'")
-check(WebSessionCapture.target("rocketmoney")?.name == "Rocket Money", "a target resolves by key")
-check(WebSessionCapture.target(" CASHAPP ")?.name == "Cash App", "a key is trimmed and case-folded")
+check(WebSessionCapture.targets.count == 1, "one provider, and no open-ended 'record any site'")
+check(["cashapp", "creditkarma", "rocketmoney", "acorns", "nerdwallet"].allSatisfy { WebSessionCapture.target($0) == nil },
+      "a seat that was refused or is built has no capture row")
+check(WebSessionCapture.target("bankr")?.apiHosts.contains("api.bankr.bot") == true, "Bankr records its API host")
+check(WebSessionCapture.target("bankr")?.name == "Bankr", "a target resolves by key")
+check(WebSessionCapture.target(" BANKR ")?.name == "Bankr", "a key is trimmed and case-folded")
 check(WebSessionCapture.target("venmo") == nil, "a provider not in the list names nothing")
 check(WebSessionCapture.target("") == nil, "and neither does an empty key")
 
-let cash = WebSessionCapture.target("cashapp")!
-check(WebSessionCapture.records(host: "cash.app", in: cash), "the target's own host is recorded")
-check(WebSessionCapture.records(host: "api.cash.app", in: cash), "…and a subdomain of it")
-check(!WebSessionCapture.records(host: "evil-cash.app", in: cash), "a lookalike host is NOT the target")
-check(!WebSessionCapture.records(host: "google-analytics.com", in: cash), "a beacon riding the same page is never recorded")
-check(!WebSessionCapture.records(host: nil, in: cash), "a call with no host is not recorded")
+let bankrTarget = WebSessionCapture.target("bankr")!
+check(WebSessionCapture.records(host: "bankr.bot", in: bankrTarget), "the target's own host is recorded")
+check(WebSessionCapture.records(host: "privy.bankr.bot", in: bankrTarget), "…and a subdomain of it")
+check(!WebSessionCapture.records(host: "notbankr.bot", in: bankrTarget), "a lookalike host is NOT the target")
+check(!WebSessionCapture.records(host: "google-analytics.com", in: bankrTarget), "a beacon riding the same page is never recorded")
+check(!WebSessionCapture.records(host: nil, in: bankrTarget), "a call with no host is not recorded")
 
 // ── A URL keeps its shape and loses its values ───────────────────────────
 let raw = "https://api.rocketmoney.com/users/8817342/recurring?limit=50&token=abc123&after=2026-09-01"
@@ -143,6 +151,28 @@ check(report.contains { $0.contains("(no readable body)") }, "a call with nothin
 check(!calls[3].replayable, "a 401 is not something to replay")
 check(!calls[0].replayable, "and neither is a POST")
 check(!WebSessionCapture.nothingRecorded.isEmpty, "an empty capture has a sentence of its own")
+
+// ── How a call proves who it is: names, never values ─────────────────────
+check(WebSessionCapture.headerNames(["Privy-Id-Token", "x-access-token", "privy-id-token"])
+        == ["privy-id-token", "x-access-token"], "header names are lowercased, deduped and sorted")
+check(WebSessionCapture.headerNames(["Bearer eyJhbGci", "a=b", "x:y", ""]).isEmpty,
+      "a string that is a VALUE in the name slot is dropped, never reported")
+let signed = WebSessionCapture.Call(method: "POST", url: "https://api.bankr.bot/api-keys", status: 201,
+    authScheme: nil, shape: "{apiKey: string}", headerNames: ["privy-id-token"],
+    credentials: "include", sentShape: "{name: string, readOnly: bool}")
+let signedLine = WebSessionCapture.report([signed]).first ?? ""
+check(signedLine.contains("headers=[privy-id-token]") && signedLine.contains("credentials=include")
+      && signedLine.contains("sent {name: string, readOnly: bool}"),
+      "a report line names the headers, the credentials mode and the fields sent")
+let bankr = WebSessionCapture.target("bankr")!
+let jar = WebSessionCapture.cookieReport([
+    .init(name: "privy-token", domain: ".bankr.bot", httpOnly: true),
+    .init(name: "_ga", domain: ".google.com", httpOnly: false),
+], in: bankr)
+check(jar == ["cookies: privy-token (httpOnly) @.bankr.bot"],
+      "the target's own cookies are named; another site's are not")
+check(WebSessionCapture.cookieReport([], in: bankr) == ["cookies: none on this target's hosts"],
+      "an empty jar says so")
 
 print(failures == 0 ? "web-session-selftest: all checks ✓" : "web-session-selftest: \(failures) FAILED")
 exit(failures == 0 ? 0 : 1)

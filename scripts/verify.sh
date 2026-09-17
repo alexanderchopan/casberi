@@ -1466,6 +1466,11 @@ harness "Duolingo self-test" "Duolingo self-test" "scripts/duolingo-selftest.sh"
 # Authorization header is a scheme. Each of those is one edit away from a
 # transcript somebody pastes into a chat.
 harness "Web-session capture self-test" "Web-session capture self-test" "scripts/web-session-selftest.sh" "the web-session capture self-test failed — run scripts/web-session-selftest.sh"
+# Bankr's key, made in the app (prd §800) — the request asks for Agent API
+# and read-only and nothing else, a key that comes back wider is never
+# stored (an ABSENT flag included), and the sign-in's jar never outlives the
+# sheet. The key reaches a wallet's agent; that is why its scope is a test.
+harness "Bankr key-mint self-test" "Bankr key-mint self-test" "scripts/bankr-mint-selftest.sh" "the Bankr key-mint self-test failed — run scripts/bankr-mint-selftest.sh"
 
 # The export half's own harness (prd §456) — `TelegramExport.swift`, compiled
 # whole. UNMEASURED against a real Telegram archive more strongly than any

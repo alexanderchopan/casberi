@@ -86,21 +86,6 @@ KNOWN_NON_REACH=(
   # those hosts ARE disclosed in NetworkReach (the "Radicle" entry names both
   # default seeds). The explorer is only ever a link written into a row.
   radicle.network
-  # The five providers the WEB-SESSION CAPTURE measures (prd §777) — Rocket
-  # Money, Acorns, NerdWallet, Credit Karma, Cash App. Here rather than in
-  # NetworkReach because that screen states what THIS APP reaches, and no
-  # shipped build reaches these at all: the capture is `#if DEBUG`, it is
-  # reached only from Diagnostics, and the only thing that ever loads these
-  # hosts is a `WKWebView` the person drives by hand. No sweep, no ingest, no
-  # `URLSession`, no Release build.
-  #
-  # Per this list's own standing lesson, that is a claim about CONDUCT: the
-  # day any of the five becomes a real seat, its hosts belong in NetworkReach
-  # in the SAME COMMIT that lands the read, and its line here comes out. A
-  # denylist entry is believed, and nothing re-reads its reason when the code
-  # underneath it changes — which is exactly how the faucet above went wrong.
-  app.rocketmoney.com app.acorns.com www.nerdwallet.com
-  www.creditkarma.com cash.app
   # ether.fi's own app — where an unstake row's "claim" and a Cash row open on
   # tap. Never fetched: the reads are public RPC hosts, and those ARE disclosed
   # in NetworkReach (the "ether.fi" and "ether.fi Cash" entries).

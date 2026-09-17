@@ -33,9 +33,9 @@ import Foundation
 /// whole — every rule above is a test rather than a promise.
 enum WebSessionCapture {
 
-    /// The five this exists to measure. A capture runs against a named target
+    /// The seats this exists to measure. A capture runs against a named target
     /// and nothing else: an open-ended "record any site" tool is a different,
-    /// worse thing than a bounded measurement of five known providers.
+    /// worse thing than a bounded measurement of known providers.
     struct Target: Equatable, Identifiable {
         var id: String { key }
         var key: String
@@ -47,21 +47,17 @@ enum WebSessionCapture {
     }
 
     static let targets: [Target] = [
-        Target(key: "rocketmoney", name: "Rocket Money",
-               signInURL: "https://app.rocketmoney.com/",
-               apiHosts: ["api.rocketmoney.com", "app.rocketmoney.com"]),
-        Target(key: "acorns", name: "Acorns",
-               signInURL: "https://app.acorns.com/",
-               apiHosts: ["api.acorns.com", "app.acorns.com"]),
-        Target(key: "nerdwallet", name: "NerdWallet",
-               signInURL: "https://www.nerdwallet.com/login",
-               apiHosts: ["www.nerdwallet.com", "api.nerdwallet.com"]),
-        Target(key: "creditkarma", name: "Credit Karma",
-               signInURL: "https://www.creditkarma.com/auth/logon",
-               apiHosts: ["www.creditkarma.com", "api.creditkarma.com"]),
-        Target(key: "cashapp", name: "Cash App",
-               signInURL: "https://cash.app/account",
-               apiHosts: ["cash.app", "api.cash.app"]),
+        // Rocket Money, Acorns and NerdWallet were measured here and are
+        // built seats now (prd §780b); Credit Karma and Cash App were refused
+        // (§780). Their rows are gone — an instrument is kept only for what
+        // is still unmeasured.
+        //
+        // Bankr: whether a SIGNED-IN session may make a key with the Agent
+        // API on. Measured 2026-09-16 (prd §800) — it may, by cookie. The row
+        // stays until the in-app key flow has run on a real sign-in.
+        Target(key: "bankr", name: "Bankr",
+               signInURL: "https://bankr.bot/api-keys",
+               apiHosts: ["api.bankr.bot", "bankr.bot"]),
     ]
 
     static func target(_ key: String) -> Target? {
@@ -87,6 +83,16 @@ enum WebSessionCapture {
         var authScheme: String?
         /// The response body's shape, or nil where there was nothing to read.
         var shape: String?
+        /// The request's header NAMES, lowercased and deduped — never a
+        /// value. A session that rides `privy-id-token` rather than
+        /// `Authorization` reads `auth=none`, and this is what says so.
+        var headerNames: [String] = []
+        /// `fetch`'s `credentials` mode, where the page set one: `include`
+        /// means the session rides cookies.
+        var credentials: String? = nil
+        /// The REQUEST body's shape — the fields a POST sends, never their
+        /// values — so a call can be rebuilt without guessing its keys.
+        var sentShape: String? = nil
 
         /// A GET is the only thing a seat could ever replay, and the only
         /// thing this report recommends. A POST the page made is still worth
@@ -139,6 +145,39 @@ enum WebSessionCapture {
         guard let first = header?.split(separator: " ").first else { return nil }
         let scheme = String(first)
         return scheme.isEmpty ? nil : scheme
+    }
+
+    /// Header names as a report may carry them: lowercased, deduped, sorted,
+    /// and only strings that ARE header names. Anything with a space, a colon
+    /// or an `=` is a value that arrived in the wrong slot, and is dropped
+    /// rather than reported.
+    static func headerNames(_ raw: [String]) -> [String] {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
+        let names = raw.map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+            .filter { !$0.isEmpty && $0.count <= 64
+                && $0.unicodeScalars.allSatisfy(allowed.contains) }
+        return Array(Set(names)).sorted()
+    }
+
+    /// One cookie as the report may know it: its NAME, where it lives, and
+    /// whether page script can read it. Never its value.
+    struct CookieName: Equatable {
+        var name: String
+        var domain: String
+        var httpOnly: Bool
+    }
+
+    /// The target's own cookies, by name. A session a page's script never
+    /// touches (an `HttpOnly` cookie) is invisible to the `fetch` hook, so
+    /// this is the only line that can say a call's pass is a cookie.
+    static func cookieReport(_ cookies: [CookieName], in target: Target) -> [String] {
+        let own = cookies.filter {
+            records(host: $0.domain.hasPrefix(".") ? String($0.domain.dropFirst()) : $0.domain,
+                    in: target)
+        }
+        guard !own.isEmpty else { return ["cookies: none on this target's hosts"] }
+        let names = Set(own.map { "\($0.name)\($0.httpOnly ? " (httpOnly)" : "") @\($0.domain)" })
+        return ["cookies: " + names.sorted().joined(separator: ", ")]
     }
 
     // MARK: - Shape
@@ -200,7 +239,11 @@ enum WebSessionCapture {
         return ordered.map { call in
             let auth = call.authScheme.map { " auth=\($0)" } ?? " auth=none"
             let shape = call.shape.map { " \($0)" } ?? " (no readable body)"
-            return "\(call.replayable ? "GET*" : call.method) \(call.url) → \(call.status)\(auth)\(shape)"
+            let headers = call.headerNames.isEmpty
+                ? "" : " headers=[\(call.headerNames.joined(separator: ", "))]"
+            let credentials = call.credentials.map { " credentials=\($0)" } ?? ""
+            let sent = call.sentShape.map { " sent \($0)" } ?? ""
+            return "\(call.replayable ? "GET*" : call.method) \(call.url)\(sent) → \(call.status)\(auth)\(headers)\(credentials)\(shape)"
         }
     }
 

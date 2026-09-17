@@ -166,12 +166,13 @@ struct DiagnosticsScreen: View {
         .task { await run() }
         #if DEBUG
         .sheet(item: $capturing) { target in
-            WebSessionCaptureView(target: target) { calls in
+            WebSessionCaptureView(target: target) { calls, cookies in
                 let report = WebSessionCapture.report(calls)
                 let verdict = report.isEmpty
                     ? WebSessionCapture.nothingRecorded
                     : "\(report.count) endpoint(s)"
                 lines.append("— \(target.name): \(verdict)")
+                lines.append(contentsOf: cookies)
                 lines.append(contentsOf: report)
             }
         }
