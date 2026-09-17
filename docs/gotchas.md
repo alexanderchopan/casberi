@@ -25,3 +25,42 @@ Verbatim. CLAUDE.md now carries a one-line index entry for each, pointing here.
 - **`.fontWeight()` after `.dsText()` DOES work — measured, not assumed (2026-08-11).** `dsText` applies an explicit `.font(.system(size:weight:))`, so an outer weight modifier looks like a plausible no-op, and two shipped controls (the wallet face rail, `CategoryVenueSwitcher`) depend on that combination for their selection weight. Rendered `ImageRenderer` widths for the same string at 12pt: medium **47.0**, semibold **48.0**, font-then-fontWeight **48.0**. It overrides. Recorded because the plausible-but-wrong version of this ("the inner font wins") would have declared two working controls broken and prompted a pointless refactor of the type ramp — the cheap instrument (a 12-line `swift` script) settled it in one run.
 - **An `NLEmbedding` is not safe to call from two threads at once — ONE INFERENCE AT A TIME, process-wide (build 281, 2026-08-07).** Builds 280/281 shipped and crashed with two threads inside `CoreNLP::SentenceEmbedding::fillStringVector` at once; the design ASKS for it on every foreground (the backfill is deliberately off the main actor, the query side never leaves main). Proven: 3/3 dead unlocked, 3/3 survivors over 12,000 inferences locked. **THE RULE: every compute call (`vector(for:)`, `neighbors(for:)`, `distance`) goes through `EmbeddingIndex.serialized { }` — ONE gate for EVERY model, not one per instance** (both stacks share `fillWordVectors`, so per-object locking leaves the cross-object case open). **A SERIAL QUEUE, not an `NSLock`** — a mutex is not fair and the first cut traded the crash for a 2.5s main-thread stall (NSLock p95 280–347ms, max 2573ms; serial queue max 15ms). Mechanical in `ondevice-selftest.sh`; invisible to every check here, since the simulator ships no on-device model. It also reads exactly like the SwiftData liveness class and is not it — read the frames the report names. → docs/hooks/system.md · docs/prd.md §282
 - **A `private` nested type reached from another file ONLY through a signature type-checks, then crashes swift-frontend (prd §718).** Moving FeedScreen's wallet room to an extension file left `RunPosition` private; the moved code never names it, only calls `cardRunPositions` (which returns `[RunPosition]`). LLVM's verifier died on *"Global is external, but doesn't have external or weak linkage!"* with no diagnostic naming the fix. Open every nested type a moved signature mentions, and a harness that reads a split file by path must read every half → prd §718
+
+## A container that has not been sized proposes a PLACEHOLDER, and a `List` cell born there keeps it (prd §805, 2026-09-17)
+
+**Symptom.** For ten frames (~0.3s) of every cold launch, the feed drew in a column
+149pt wide on a 402pt screen — the cover card clipped mid-word, the day divider
+squeezed — then snapped to full width. It read as "the app loads wrong for a second".
+
+**What it is not.** Not slow layout, not a slow fetch, not the theme flip, and not the
+shell: `RootShell` and `MainSurface` measure **402 on their first layout pass**. A width
+probe placed at four depths found the `NavigationStack` handing its root content **36**,
+and the pager's `ZStack` and the feed's `List` being BORN in that pass. The container
+corrects to 402 forty milliseconds later, before anything is painted — so the container
+was never what the person saw.
+
+**What it is.** SwiftUI's `List` is a `UICollectionView`. Its first cell self-sizes
+against the container it was born in, and that stale size **survives the container's
+correction by another ~250ms**, because a cell is re-measured only when something forces
+one. At launch the thing that forces one is the first sweep landing. The head row was
+measured at 4pt (36 minus its insets), then 156, and reached its real 311 only 371ms in.
+
+**The fix.** Upstream of the `List`: hand the room a width that is right in the FIRST
+pass. A `GeometryReader` around `MainSurface.surface` is the only thing that reads a real
+width in the same pass it proposes one — `.onGeometryChange` writes `@State`, which lands
+a pass late, and that pass is the one that already corrects itself. `pinnedRoomWidth(_:)`
+subtracts the two columns reserved outside the pinned frame (the rail's leading padding,
+the detail pane's trailing inset), both derived from the measured width rather than from
+`surfaceWidth`, or the same one-pass-wrong layout simply moves to iPad. Nothing is pinned
+before the reader has a size.
+
+**The rule.** Anything that measures once and caches — a `List` cell, a `ViewThatFits`
+candidate, a `containerRelativeFrame` — will keep a placeholder width until something
+else invalidates it. Where a screen must be right in its first painted frame, the width
+comes from a reader in the same pass, never from state written during it.
+
+**How it was found, and how to find the next one.** By recording the launch at 30fps and
+measuring the content's right edge per frame, then adding a four-level width probe — not
+by reasoning about the layout. Reasoning had three plausible wrong answers ready
+(`dsAdaptiveContentWidth`, the pager's `pagerFrame`, a room snapshot). The same recording,
+re-run after the fix, is the proof: zero narrow frames, the `List` born at 402.

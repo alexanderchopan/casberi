@@ -156,6 +156,19 @@ struct MainSurface: View {
     /// not an axis one.
     private var showsRail: Bool { isRegular }
 
+    /// The width the ROOM gets out of a shell `width` (prd §805): the shell
+    /// minus the rail's column and the detail pane's, both of which are
+    /// reserved by modifiers OUTSIDE the frame this feeds. `nil` when there is
+    /// no measurement yet, so the pin is never a guess.
+    private func pinnedRoomWidth(_ width: CGFloat) -> CGFloat? {
+        guard width > 0 else { return nil }
+        let rail = showsRail ? PadLayout.railWidth : 0
+        let pane = isRegular && width >= PadLayout.minWidthForPane
+            ? PadLayout.paneWidth(for: width) : 0
+        let room = width - rail - pane
+        return room > 0 ? room : nil
+    }
+
     /// What sits BELOW the feed: the demo's marking, the room's own controls,
     /// then the source strip against the bottom edge (prd §591, 2026-09-03,
     /// user: *"what if the rail for source chips was at the bottom of the
@@ -1935,7 +1948,33 @@ struct MainSurface: View {
         // samples whatever the room behind it painted, feed or Apps or a
         // bridge form, and the pour reaches under it because the stack is now
         // full-width.
-        surface
+        // **THE SHELL MEASURES ITSELF IN THE PASS THAT BUILDS THE ROOM, NOT
+        // THE ONE AFTER (prd §805, user: "app still loads like this for a
+        // second or two", with a screenshot of the feed drawn in a column
+        // about a third of the screen wide).**
+        //
+        // Measured, not reasoned (the 2026-09-12 lesson: a complaint about
+        // how something LOOKS gets recorded and counted). A launch recorded
+        // at 30fps holds ten frames — ~0.3s — with every row laid out at
+        // 149pt of a 402pt screen, and a width probe at four depths says why:
+        // `RootShell` and this surface are 402 on their first layout pass,
+        // and the NavigationStack hands its root content **36**. The `List`
+        // is BORN in that pass, its first cell self-sizes to 36 minus its
+        // insets, and the stale size then survives the container's correction
+        // (402, 37ms later) by another ~250ms — the cell is only re-measured
+        // when the next content update forces it, and at launch that is
+        // whenever the first sweep lands.
+        //
+        // So the fix is upstream of the List: hand the room a width that is
+        // right in the FIRST pass. A `GeometryReader` is the only thing that
+        // reads a real width in the same pass it proposes one —
+        // `.onGeometryChange` writes `@State`, which by definition lands a
+        // pass late, and that pass is exactly the one that already corrects
+        // itself. One container on the launch path's deepest tree, accepted
+        // for the same reason `feedList`'s `ScrollViewReader` is.
+        GeometryReader { g in
+            surface(pinned: g.size.width)
+        }
         // Measured on the WHOLE surface — the stack now spans it, but this
         // stays true of the pane too:
         // `minWidthForPane` and `paneWidth(for:)` are both stated against the
@@ -2611,7 +2650,7 @@ struct MainSurface: View {
     @State private var swipeCommit = false
 
 
-    private var surface: some View {
+    private func surface(pinned pinnedWidth: CGFloat) -> some View {
         // `@Environment` hands back the object, not a projection, so the two
         // places this body needs a real `Binding` — the stack's path and the
         // connect form — take one through a local `@Bindable` re-declaration
@@ -2755,6 +2794,16 @@ struct MainSurface: View {
             // The room's last look for the carousel, taken at rest — see
             // `captureRestingLook`. A source change cancels a pending one.
             .task(id: filter.source) { await captureRestingLook() }
+            // The room's own width, stated (prd §805 — see `body`). This is
+            // the shell's width MINUS the two columns that are reserved
+            // outside this frame: the rail's leading padding
+            // (`dsRailColumn`) and the detail pane's trailing inset. Both are
+            // derived from `pinnedWidth` rather than from `surfaceWidth`,
+            // because `surfaceWidth` is the `@State` that lands a pass late —
+            // using it here would move the one-pass-wrong layout from iPhone
+            // to iPad instead of removing it. Zero only before the
+            // `GeometryReader` has a size at all, and then nothing is pinned.
+            .frame(width: pinnedRoomWidth(pinnedWidth))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // The strip FLOATS over the feed rather than sitting above it
             // (2026-07-20). It was a VStack sibling, which meant nothing ever

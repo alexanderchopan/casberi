@@ -57785,3 +57785,25 @@ Both landing rules declined replies. Farcaster's `refresh` passed `topLevelOnly:
 1. **Nothing is on by default.** `mentions` and `mine` both decode `false` on every account including your own, nothing in the app ever turns either on, and the only door is a chip strip inside the person tray reached by tapping a face on the setup screen. The default state of "I connected Farcaster and watched myself" is zero notifications, silently — §83's class exactly. Mentions-on-by-default is NOT the fix: `add(contentsOf:)` lands hundreds of accounts from a follow import, and one `castsByMention` per account per refresh is a flood.
 2. **Only your six newest posts are ever asked about** (`SocialInbound.ownPostPage`). The seventh goes quiet permanently, however much it is still being replied to. Raising it is 2 keyless requests per post per refresh.
 3. **Nobody recasting you is read at all.** `readLikes` exists on your casts; there is no `readRecasts`. The endpoint is already proven in the same file — `reactions(type: "Recast", …)` serves the sheet's engagement counts — so this is a wiring job plus a roll to keep the names in, `SocialLikers`' shape with a second namespace.
+## §805 — The room is laid out at 36pt on the pass that builds it, and the List keeps that width for a quarter of a second (user: "app still loads like this for a second or two", with a screenshot of the feed drawn in a column a fifth of the screen wide, 2026-09-17)
+
+**Measured, not reasoned.** The 2026-09-12 rule — a complaint about how something LOOKS gets recorded and counted — is what found this; three earlier guesses at "narrow first frame" would all have been wrong. A cold launch recorded on the simulator holds **ten frames, ~0.3s**, in which every row is laid out at **149pt of a 402pt screen**, clipped mid-word, exactly as the screenshot shows. Then it snaps.
+
+**A width probe at four depths says why.** `RootShell` and `MainSurface` are **402 on their first layout pass**; the `NavigationStack` hands its root content **36**. Timings from one launch, relative to the shell's first pass:
+
+| | width |
+|---|---|
+| RootShell, MainSurface root, first pass | 402 |
+| the pager's ZStack and the feed's `List`, first pass (+33ms) | 36 |
+| the same two, corrected (+73ms) | 402 |
+| the head row, first laid out (+115ms) | 4 (36 minus its insets) |
+| the head row, still wrong (+253ms) | 156 |
+| the head row, correct (+371ms) | 311 |
+
+So there are two separate facts and only the second one hurts. The container's 36 corrects in 40ms, before anything is painted. What the person sees is the **cell**: SwiftUI's `List` is a `UICollectionView`, its first cell self-sizes against the container it was born in, and that stale size survives the container's correction by another ~250ms — it is re-measured only when the next content update forces one, which at launch is whenever the first sweep lands. **The narrow frames are not slow layout; they are a correct layout measured once, early, against a placeholder.**
+
+**The fix is upstream of the `List`: hand the room a width that is right in the FIRST pass.** A `GeometryReader` around `MainSurface.surface` is the only thing that reads a real width in the same pass it proposes one — `.onGeometryChange` writes `@State`, which by definition lands a pass late, and that pass is the one that already corrects itself. `pinnedRoomWidth(_:)` turns the shell's width into the ROOM's by subtracting the two columns reserved outside the pinned frame: the rail's leading padding (`dsRailColumn`) and the detail pane's trailing inset. Both are derived from the measured width, never from `surfaceWidth` — using the `@State` there would have moved the one-pass-wrong layout from iPhone to iPad instead of removing it. Nothing is pinned before the reader has a size, so the pin is never a guess.
+
+**Verified by recording the launch again on the same simulator and counting frames: zero narrow frames.** The feed's first painted frame is the finished room at full width; the `List` is born at 402 and the day divider is born at its final 311, with no intermediate size at all. The Mac Catalyst compile and all 54 static audits pass.
+
+**The class, for the next one.** A container that has not been sized yet does not propose zero — it proposes a PLACEHOLDER, and a placeholder is indistinguishable from a real width to everything below it. Anything that measures once and caches (a `List` cell, a `ViewThatFits` candidate, a `containerRelativeFrame`) will keep that placeholder until something else invalidates it. Where a screen must be right in its first painted frame, the width has to come from a reader in the same pass, not from state written during it.
