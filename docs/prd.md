@@ -57343,3 +57343,15 @@ Also: the file header claimed "only `verified` draws" while the card draws `laps
 3. **Not BYOK** (the user's 2026-07-17 rule for wallet data: "I can't ask users to byok"), and not a proxy server (§787: "we are not doing a server").
 
 **What this does not fix.** The queue stays unread until Safe's reset or a key. `WalletWarnings`' Worth-a-look row still drops a Safe it couldn't read without saying so: a missing row makes no claim, which is §216's "states what it could read" shape, and that stands. A partial `unreachable` pass (one chain down, others answered) still reads "Up to date", as it did before this ruling, and is not widened here. Nothing here was seen on a device or simulator (no way to make Safe's quota refuse on demand); the evidence is the build, the self-test, and the measurement above.
+
+## §790 — A transfer with no time is read off its block, never dated now: HyperEVM and World Chain landed Alchemy transfers stamped with the sync (found measuring World App activity for the user's "what else can we do with World ID", 2026-09-16)
+
+**MEASURED, three transfers per chain per category:** `alchemy_getAssetTransfers` with `withMetadata: true` returns `"metadata": null` on **HyperEVM** and **World Chain** — fungible and NFT alike — while Ethereum, Base, Arbitrum, Optimism, Polygon, Monad and Robinhood carry `metadata.blockTimestamp`. The ingest read the time as `IngestSupport.isoDate(metadata.blockTimestamp) ?? .now`.
+
+**So every transfer read through Alchemy on those two chains landed dated the moment of the sync.** That is every NFT move there (NFT categories ride Alchemy unconditionally) and every fungible move whenever Zerion could not reach the wallet. HyperEVM has been on by default since §512, and World Chain since §788 an hour earlier. Nothing crashed and nothing read empty: a year-old mint simply claimed to be today's news, and the feed's order lied about when money moved — §83's quiet harm.
+
+**The time is read where it lives, on the block.** `TransferTimes` (Foundation-only) names the blocks whose transfers carry no time, and `WalletIngest.withBlockTimes` asks each one `eth_getBlockByNumber` on the same Alchemy host once, cached for the process, because a mined block's timestamp never changes. **A transfer whose block could not be read is DROPPED from that pass, never dated now** — nothing lands, so the next sync asks again, and a late row beats a wrong one. A transfer that already carried a time is never rewritten. Cost: one call per distinct block on the two chains, and only when a transfer came back without a time; no new host.
+
+**Rows already landed with the wrong date are NOT rewritten here.** A transfer's ref is its Alchemy `uniqueId`, so a re-sync does not re-land it with the right time. Correcting stored rows is a backfill, and it is left for its own decision rather than folded into the fix.
+
+`scripts/transfer-times-selftest.sh` compiles `TransferTimes` whole: a timeless transfer passed through, a hex block or timestamp read as decimal, a timed transfer rewritten, and `fetchAlchemy` bypassing the fill — each proven by a mutation.

@@ -1164,7 +1164,33 @@ enum WalletIngest {
         guard let root = await IngestSupport.postJSON(url, body: body) as? [String: Any],
               let result = root["result"] as? [String: Any],
               let transfers = result["transfers"] as? [[String: Any]] else { return nil }
-        return transfers
+        return await withBlockTimes(transfers, url: url, network: chain.network)
+    }
+
+    /// Alchemy returns no `blockTimestamp` on HyperEVM and World Chain, and a
+    /// transfer with no time was landing dated NOW (prd §790). Reads each
+    /// missing block's own time once, and drops a transfer whose block could
+    /// not be read so the next sync asks again — see `TransferTimes`.
+    private static func withBlockTimes(_ transfers: [[String: Any]], url: String,
+                                       network: String) async -> [[String: Any]] {
+        let missing = TransferTimes.blocksMissingTime(transfers)
+        guard !missing.isEmpty else { return transfers }
+        var times: [String: Date] = [:]
+        for block in missing {
+            if let cached = await TransferTimes.Cache.shared.time(network: network, block: block) {
+                times[block] = cached
+                continue
+            }
+            let body: [String: Any] = [
+                "id": 1, "jsonrpc": "2.0",
+                "method": "eth_getBlockByNumber", "params": [block, false],
+            ]
+            let root = await IngestSupport.postJSON(url, body: body) as? [String: Any]
+            guard let date = TransferTimes.time(fromBlockResult: root?["result"]) else { continue }
+            times[block] = date
+            await TransferTimes.Cache.shared.store(date, network: network, block: block)
+        }
+        return TransferTimes.filled(transfers, times: times)
     }
 
     private static func thing(from t: [String: Any], chain: Chain,

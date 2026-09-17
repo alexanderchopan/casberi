@@ -2039,6 +2039,13 @@ harness "Wei/Gwei name pure-logic self-test" "wei-names self-test" "scripts/wei-
 # while its Alchemy reads are unmeasured.
 harness "World ID pure-logic self-test" "worldid self-test" "scripts/worldid-selftest.sh" "the World ID self-test failed — run scripts/worldid-selftest.sh"
 
+# Transfer times (prd §790). Alchemy returns no `blockTimestamp` on HyperEVM and
+# World Chain, and a transfer with no time landed dated NOW — a year-old mint as
+# today's news, with nothing empty and nothing crashed to notice. Catches a
+# timeless transfer passed through, a hex block or timestamp read as decimal, a
+# timed transfer rewritten from the cache, and `fetchAlchemy` bypassing the fill.
+harness "Transfer-times self-test" "transfer times self-test" "scripts/transfer-times-selftest.sh" "the transfer-times self-test failed — run scripts/transfer-times-selftest.sh"
+
 # ENS (prd §534). Catches the silent wrong answer this ladder is built around: a lapsed
 # name reads as "expires" for its whole ninety-day grace period (the exact bug ENSExpiry
 # shipped with), a subname is followed into a row the registrar 404s forever, or a
