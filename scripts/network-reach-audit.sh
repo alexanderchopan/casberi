@@ -30,6 +30,9 @@ KNOWN_NON_REACH=(
   polygonscan.com solscan.io revoke.cash robinhoodchain.blockscout.com
   hyperevmscan.io monadscan.com worldscan.org
   gnosisscan.io njump.me
+  # World's own page for its grant-claim app (prd §795) — the permalink a World
+  # ID grant row opens in the person's browser. The app never fetches world.org.
+  world.org
   # Hegota's EXPLORER only — a permalink the PERSON's browser opens on a
   # transaction row.
   #

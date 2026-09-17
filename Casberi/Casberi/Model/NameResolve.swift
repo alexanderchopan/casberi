@@ -103,6 +103,12 @@ enum NameResolve {
         for (registry, name) in await WeiNamesSource.primaryNames(for: hexAddress) {
             out.append(PrimaryName(label: registry.label, name: name))
         }
+        // World App's username (prd §795), forward-verified inside the lookup —
+        // the same bar as the three above. Last: it is an app's handle, not a
+        // name registry the address chose on chain.
+        if let worldApp = await WorldAppDeFi.username(for: hexAddress) {
+            out.append(PrimaryName(label: String(localized: "World App"), name: worldApp.name))
+        }
         return out
     }
 

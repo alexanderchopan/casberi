@@ -3319,6 +3319,15 @@ enum ProbeHooks {
                 for line in lines { NSLog("aerodromeProbe| %@", line) }
             }
         },
+        // `-worldAppProbe YES` (prd §795) — each watched EVM wallet's WLD Vault
+        // balance and World App username, the grant calendar, then one
+        // next-grant row sync. Pairs with `-walletAddress`.
+        Hook(key: "worldAppProbe") { _, context in
+            Task { @MainActor in
+                let lines = await WorldAppDeFi.probe(context: context)
+                for line in lines { NSLog("worldAppProbe| %@", line) }
+            }
+        },
         // `-weiNameProbe <name|0x…|YES>` — the Wei/Gwei name read step by step
         // (prd §597): a name's registry, its token id and the address it
         // resolves to, or an address's primary name on all three services with
@@ -3383,6 +3392,7 @@ enum ProbeHooks {
                 let composition = WalletComposition.from(
                     aave: live.positions, morpho: live.morpho, uniswap: live.uniswap,
                     hyperliquid: live.hyperliquid, aerodrome: live.aerodrome,
+                    worldApp: live.worldApp,
                     etherfiCash: live.etherfiCash, etherfiUnstake: live.etherfiUnstake)
                 for line in composition.probeLines { NSLog("compositionProbe| %@", line) }
             }

@@ -511,6 +511,11 @@ final class WalletStore {
             if found == nil, ENS.looksLikeName(entry.label) {
                 found = await ENS.avatar(for: entry.label)
             }
+            // A World App wallet's own picture (prd §795), after ENS — the
+            // face a person chose in World App, verified with its username.
+            if found == nil, ENS.isHexAddress(entry.address) {
+                found = await WorldAppDeFi.username(for: entry.address)?.pictureURL
+            }
             guard let found else { continue }
             avatarURLs[key] = found
             if !ENS.isHexAddress(entry.address),

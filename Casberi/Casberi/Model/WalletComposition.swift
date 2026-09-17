@@ -170,6 +170,7 @@ struct WalletComposition: Equatable, Sendable {
                      uniswap: UniswapLiquidity.Book,
                      hyperliquid: HyperliquidDeFi.Book,
                      aerodrome: AerodromeDeFi.Book,
+                     worldApp: WorldAppDeFi.Book = WorldAppDeFi.Book(),
                      etherfiCash: EtherFiCash.Book = EtherFiCash.Book(),
                      etherfiUnstake: EtherFiUnstake.Book = EtherFiUnstake.Book())
     -> WalletComposition {
@@ -219,6 +220,14 @@ struct WalletComposition: Equatable, Sendable {
         let hyper = hyperliquid.perpAccountValue + hyperliquid.spotUsd
         if hyper >= floor {
             out.deposits.append(Deposit(place: "Hyperliquid", usd: hyper))
+        }
+
+        // World App's WLD Vault (prd §795): WLD out of the wallet's balance and
+        // into World App's savings vault, earning. Priced WLD only — an
+        // unpriced deposit contributes nothing rather than a zero.
+        let worldAppVault = worldApp.vaults.reduce(0) { $0 + ($1.usd ?? 0) }
+        if worldAppVault >= floor {
+            out.deposits.append(Deposit(place: "WLD Vault", usd: worldAppVault))
         }
 
         // An ether.fi Cash account is a smart account holding collateral with

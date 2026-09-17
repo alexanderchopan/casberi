@@ -233,9 +233,15 @@ enum NetworkReach {
                  // the mainnet RPC hosts already declared above, so it adds no
                  // host here; it is named because the privacy screen answers
                  // "what does this app ask about me", not "which hostnames".
-                 purpose: "Resolves .eth, .sol, .wei and .gwei names and their avatars — for the wallets you watch, and for an address when you open it in your address book. Carries only the name or address being looked up. The .wei and .gwei registries are read directly on Ethereum, through the public nodes listed under “Wallet activity”.",
+                 // World App usernames joined 2026-09-16 (prd §795): World's
+                 // public usernames service, and the host its pictures are
+                 // served from. Also asked for a counterparty met on World
+                 // Chain, which is the one reach the sentence below adds.
+                 purpose: "Resolves .eth, .sol, .wei and .gwei names, World App usernames, and their avatars — for the wallets you watch, for an address when you open it in your address book, and for the other side of a World Chain transfer. Carries only the name or address being looked up. The .wei and .gwei registries are read directly on Ethereum, through the public nodes listed under “Wallet activity”.",
                  hosts: ["api.ensideas.com", "metadata.ens.domains", "app.ens.domains",
-                         "sns-sdk-proxy.bonfida.workers.dev", "lite-api.jup.ag"]),
+                         "sns-sdk-proxy.bonfida.workers.dev", "lite-api.jup.ag",
+                         "usernames.worldcoin.org",
+                         "static.usernames.app-backend.toolsforhumanity.com"]),
         Endpoint(service: "Wallet DeFi & Safe",
                  reach: .whenConnected(bridge: "Wallet"),
                  // A SEND in a registry that is otherwise all reads, and it is

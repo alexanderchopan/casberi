@@ -2046,6 +2046,13 @@ harness "World ID pure-logic self-test" "worldid self-test" "scripts/worldid-sel
 # timed transfer rewritten from the cache, and `fetchAlchemy` bypassing the fill.
 harness "Transfer-times self-test" "transfer times self-test" "scripts/transfer-times-selftest.sh" "the transfer-times self-test failed — run scripts/transfer-times-selftest.sh"
 
+# World App (prd §795). Every read answers with the same silence when wrong: a
+# mistyped selector reverts (this file's first draft had two), a vault balance
+# over 18.4 WLD overflows a UInt64 into nothing, an off-by-one grant month
+# states the wrong amount on the wrong date, and a username record for a
+# different address would put a stranger's handle beside your money.
+harness "World App self-test" "world app self-test" "scripts/world-app-selftest.sh" "the World App self-test failed — run scripts/world-app-selftest.sh"
+
 # ENS (prd §534). Catches the silent wrong answer this ladder is built around: a lapsed
 # name reads as "expires" for its whole ninety-day grace period (the exact bug ENSExpiry
 # shipped with), a subname is followed into a row the registrar 404s forever, or a

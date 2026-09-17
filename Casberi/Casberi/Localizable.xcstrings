@@ -140197,6 +140197,34 @@
         }
       }
     },
+    "World App" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "World App"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "World App"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "World App"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "World App"
+          }
+        }
+      }
+    },
     "World ID" : {
       "localizations" : {
         "es" : {
@@ -140221,6 +140249,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "World ID"
+          }
+        }
+      }
+    },
+    "World ID grant · %@ WLD opens %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Subvención de World ID · %1$@ WLD disponible el %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "World IDグラント · %1$@ WLD、%2$@に開始"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "World ID 그랜트 · %1$@ WLD, %2$@ 시작"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "World ID 补助 · %1$@ WLD，%2$@ 开放"
           }
         }
       }

@@ -46,6 +46,9 @@ enum MorphoDeFi {
     private static let chains: [(id: Int, network: String)] = [
         (1, "eth-mainnet"), (8453, "base-mainnet"), (42161, "arb-mainnet"),
         (10, "opt-mainnet"), (137, "matic-mainnet"),
+        // World Chain (prd §795): MEASURED — Morpho's API answers
+        // `chainId_in: [480]` with World App's Re7 WLD vault positions.
+        (480, "worldchain-mainnet"),
     ]
 
     /// Same warning line Aave wears — 1.0 is liquidation itself, 1.5 is the

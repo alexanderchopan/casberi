@@ -8911,6 +8911,7 @@ struct FeedScreen: View {
                                uniswap: walletLive.uniswap,
                                hyperliquid: walletLive.hyperliquid,
                                aerodrome: walletLive.aerodrome,
+                               worldApp: walletLive.worldApp,
                                etherfiCash: walletLive.etherfiCash,
                                etherfiUnstake: walletLive.etherfiUnstake)
     }

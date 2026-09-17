@@ -715,6 +715,12 @@ enum WalletIngest {
                                                             addresses: evmAddresses,
                                                             existing: existing)
         added += aerodromeAdded ?? 0
+        // World ID grants (prd §795): the next grant's opening date and amount,
+        // for watched wallets that have received a grant before.
+        let worldAppGrantAdded = await WorldAppDeFi.syncGrantEvents(context: context,
+                                                                    addresses: evmAddresses,
+                                                                    existing: existing)
+        added += worldAppGrantAdded ?? 0
         // Uniswap V3 liquidity positions (2026-07-30) ride the same pass —
         // the range-crossing alert (both directions, unlike a liquidation
         // alert) plus the settled-activity sweep (Increase/Decrease/Collect,
@@ -977,6 +983,16 @@ enum WalletIngest {
             (a, await ENS.reverseName(for: a))
         }
         for (a, n) in resolved where n != nil { names[a] = n }
+        // A World App wallet names itself by its World App username (prd
+        // §795) — asked only for counterparties met on World Chain, where
+        // World App wallets live, and only where ENS had nothing. Forward-
+        // verified inside `username(for:)`; sequential, the pass's own bound.
+        let worldChainCounterparties = Set(transfers.compactMap { f -> String? in
+            f.chain.network == WorldApp.network ? counterparty(of: f.t, received: f.received) : nil
+        })
+        for a in unknown.prefix(16) where names[a] == nil && worldChainCounterparties.contains(a) {
+            if let u = await WorldAppDeFi.username(for: a) { names[a] = u.name }
+        }
         return names
     }
 
