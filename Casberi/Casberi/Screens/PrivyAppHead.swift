@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// ONE APP'S PAGE (prd §803e) — the mockup's app page, drawn in the thing
 /// sheet in place of the title block: the app's logo and name, what its wallet
@@ -12,6 +13,19 @@ import SwiftUI
 /// `PrivyHomeStore`.
 struct PrivyAppHead: View {
     let app: PrivyHomeFeed.App
+    @Environment(\.modelContext) private var modelContext
+
+    /// This app's activity as VALUES, read once in `.task` (a fetch never
+    /// belongs in a body, §628, and a `[Thing]` held in state is the liveness
+    /// class — these are strings and numbers).
+    private struct Moved: Identifiable {
+        let id: String
+        let title: String
+        let received: Bool
+        let usd: Double?
+        let when: Date
+    }
+    @State private var moved: [Moved] = []
 
     var body: some View {
         let store = PrivyHomeStore.shared
@@ -73,11 +87,50 @@ struct PrivyAppHead: View {
                 }
             }
 
+            if !moved.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Activity")
+                        .dsText(.heading24)
+                        .foregroundStyle(DS.textPrimary)
+                        .padding(.bottom, DS.Space.s1)
+                    ForEach(moved) { line in
+                        DSFeedRow(name: line.title, nameLines: 1,
+                                  line: Text(line.when, format: .dateTime.month(.abbreviated).day().year())) {
+                            DSGlyphLead(glyph: line.received ? "arrow.down" : "arrow.up",
+                                        tint: line.received ? DS.confirm : DS.textPrimary)
+                        } trailing: {
+                            if let usd = line.usd {
+                                Text(verbatim: (mask ?? PrivyHomeFeed.usd(usd)))
+                                    .dsText(.price17)
+                                    .monospacedDigit()
+                                    .foregroundStyle(line.received ? DS.confirm : DS.textPrimary)
+                            }
+                        }
+                    }
+                }
+            }
+
             Text(verbatim: facts)
                 .dsText(.subhead12)
                 .foregroundStyle(DS.textTertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .task(id: app.id) { loadActivity() }
+    }
+
+    @MainActor
+    private func loadActivity() {
+        let source = PrivyHomeFeed.source
+        let prefix = PrivyHomeFeed.txPrefix(appID: app.id)
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == source && ($0.sourceRef?.starts(with: prefix) ?? false) },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = 12
+        moved = ((try? modelContext.fetch(descriptor)) ?? []).filter(\.isLive).map {
+            Moved(id: $0.sourceRef ?? $0.id.uuidString, title: $0.title,
+                  received: $0.transferDirection == "received", usd: $0.transferUSD,
+                  when: $0.capturedAt)
+        }
     }
 
     private var facts: String {

@@ -153,7 +153,7 @@ check(!PrivyHomeFeed.isWalletAddress("0x123"), "a short hex is not an address")
 // ── What to read, and what the room says ─────────────────────────────────
 let now = Date(timeIntervalSince1970: 1790000000)
 func app(_ id: String, _ address: String, lastActive: Date? = nil) -> PrivyHomeFeed.App {
-    .init(id: id, name: id, logoURL: nil, createdAt: nil, lastActiveAt: lastActive,
+    .init(id: id, name: id, logoURL: nil, origin: nil, createdAt: nil, lastActiveAt: lastActive,
           wallets: [.init(address: address, chain: nil)])
 }
 func hex(_ n: Int) -> String { "0x" + String(repeating: String(n % 10), count: 40) }
@@ -205,6 +205,27 @@ check(PrivyHomeFeed.explorerURL(.init(address: evm, chain: nil)).hasPrefix("http
       "an EVM wallet opens Blockscan's cross-chain page")
 check(PrivyHomeFeed.explorerURL(.init(address: sol, chain: "solana")).hasPrefix("https://solscan.io/account/"),
       "a Solana wallet opens Solscan")
+
+// ── Activity and sections ────────────────────────────────────────────────
+let txr = PrivyHomeFeed.txRef(appID: "a1", hash: "0xABC", received: true, symbol: "ETH")
+check(txr == "privy:tx:a1:0xabc:in:eth", "a leg's ref names its app, hash, direction and symbol")
+check(txr.hasPrefix(PrivyHomeFeed.txPrefix(appID: "a1")), "an app finds its own activity by prefix")
+check(!txr.hasPrefix(PrivyHomeFeed.refPrefix), "an activity row is never read as an app row")
+let solApp = PrivyHomeFeed.App(id: "sol", name: "sol", logoURL: nil, origin: nil, createdAt: nil,
+                               lastActiveAt: now, wallets: [.init(address: sol, chain: "solana")])
+let targetsA = PrivyHomeFeed.activityTargets([fundedApp, emptyOld, emptyRecent, solApp],
+                                             balances: balances, readAt: [:], now: now)
+check(targetsA.map(\.address) == [hex(1), hex(3)], "activity reads funded then recent EVM wallets, never an empty unused one or Solana")
+let targetsB = PrivyHomeFeed.activityTargets([fundedApp], balances: balances,
+                                             readAt: [PrivyHomeFeed.key(hex(1)): now.addingTimeInterval(-3600)], now: now)
+check(targetsB.isEmpty, "a wallet read an hour ago is not re-read")
+check(PrivyHomeFeed.txTitle(received: true, value: 0.00213456, symbol: "ETH") == "Received 0.002135 ETH",
+      "an amount keeps four significant digits")
+check(PrivyHomeFeed.Section.present(hasActivity: false) == [.home, .apps], "no Activity tile over nothing")
+check(PrivyHomeFeed.Section.apps.allows(ref: "privy:app:x") && !PrivyHomeFeed.Section.apps.allows(ref: txr),
+      "Apps holds app rows only")
+check(PrivyHomeFeed.Section.activity.allows(ref: txr) && !PrivyHomeFeed.Section.activity.allows(ref: "privy:app:x"),
+      "Activity holds what moved only")
 
 print(failures == 0 ? "privy-selftest: all checks ✓" : "privy-selftest: \(failures) FAILED")
 exit(failures == 0 ? 0 : 1)

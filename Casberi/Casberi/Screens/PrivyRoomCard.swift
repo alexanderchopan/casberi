@@ -31,6 +31,7 @@ struct PrivyRoomCard: View {
     private var listed: [PrivyHomeFeed.Room.Entry] { room.funded + room.recent }
 
     var body: some View {
+        let store = PrivyHomeStore.shared
         DSRoomChassis.Head(
             lead: lead,
             footnotes: [.quiet(PrivyHomeFeed.footnote(room))]) {
@@ -51,6 +52,13 @@ struct PrivyRoomCard: View {
                         }
                     }
                 }
+            }
+        } scopes: {
+            // The mockup's tiles (prd §803f), under the well as every scoped
+            // room's are. Activity appears once something has moved.
+            DSScopeTiles(sections: PrivyHomeFeed.Section.present(hasActivity: store.activityCount > 0),
+                         active: store.section) { picked in
+                store.section = picked
             }
         }
     }

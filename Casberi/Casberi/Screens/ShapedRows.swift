@@ -155,6 +155,10 @@ struct BandRow: View {
         // which `mailSender` already reads for the circle.
         if thing.kind == .mail, let sender = mailSender { return sender }
         switch thing.source {
+        // Which app wallet the money moved in (prd §803f) — the row's lead is
+        // the app's logo, and its name is the word the logo cannot say.
+        case "Privy":
+            return thing.authorHandle
         // WHY a post is here beats WHO posted it in this slot (2026-07-16): a
         // liked cast, a channel cast, and your own post used to read
         // identically, and the row already leads with the author's FACE — so

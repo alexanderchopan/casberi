@@ -28,6 +28,16 @@ enum ScopeTileGlyph {
 /// Privacy Pools' three scopes as tiles (prd §763). Conformed here for the
 /// reason `DSSectionScope` is conformed in `MainSurface`: the enum stays
 /// Foundation-only so the harness compiles it whole.
+extension PrivyHomeFeed.Section: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .home:     return ScopeTileGlyph.home
+        case .apps:     return ScopeTileGlyph.frames
+        case .activity: return ScopeTileGlyph.activity
+        }
+    }
+}
+
 extension PrivacyPoolsSection: DSTileScope {
     var glyph: String {
         switch self {

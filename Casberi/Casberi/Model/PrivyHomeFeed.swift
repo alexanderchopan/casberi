@@ -310,6 +310,92 @@ enum PrivyHomeFeed {
 
     static func ref(_ app: App) -> String { refPrefix + app.id }
 
+    // MARK: - Activity (prd §803f)
+
+    static let txPrefix = "privy:tx:"
+
+    /// One leg of one transaction in one app's wallet. The app id rides the
+    /// ref so an app's page can find its own activity by prefix.
+    static func txRef(appID: String, hash: String, received: Bool, symbol: String) -> String {
+        "\(txPrefix)\(appID):\(hash.lowercased()):\(received ? "in" : "out"):\(symbol.lowercased())"
+    }
+
+    static func txPrefix(appID: String) -> String { "\(txPrefix)\(appID):" }
+
+    /// A funded or recently used app's EVM wallets whose activity is due —
+    /// every six hours at most, ten a pass. An empty wallet nobody uses has no
+    /// activity worth a Zerion call; Solana is not in Zerion's transfer read.
+    static let activityReadEvery: TimeInterval = 6 * 3_600
+    static let activityReadsPerPass = 10
+
+    static func activityTargets(_ apps: [App], balances: [String: Balance],
+                                readAt: [String: Date], now: Date) -> [(appID: String, address: String)] {
+        var out: [(appID: String, address: String)] = []
+        var seen = Set<String>()
+        let ranked = apps.sorted { (appUSD($0, balances: balances) ?? 0) > (appUSD($1, balances: balances) ?? 0) }
+        for app in ranked {
+            let funded = (appUSD(app, balances: balances) ?? 0) >= fundedFloor
+            guard funded || isRecent(app, now: now) else { continue }
+            for wallet in app.wallets where wallet.address.hasPrefix("0x") {
+                let k = key(wallet.address)
+                guard seen.insert(k).inserted else { continue }
+                if let last = readAt[k], now.timeIntervalSince(last) < activityReadEvery { continue }
+                out.append((app.id, wallet.address))
+            }
+        }
+        return Array(out.prefix(activityReadsPerPass))
+    }
+
+    /// "0.0021 ETH" — at most four significant digits.
+    static func amount(_ value: Double, symbol: String) -> String {
+        "\(value.formatted(.number.precision(.significantDigits(1...4)))) \(symbol)"
+    }
+
+    static func txTitle(received: Bool, value: Double, symbol: String) -> String {
+        received
+            ? String(localized: "Received \(amount(value, symbol: symbol))")
+            : String(localized: "Sent \(amount(value, symbol: symbol))")
+    }
+
+    // MARK: - The room's sections (prd §803f)
+
+    /// Home is the whole room; Apps and Activity narrow its feed. Activity is
+    /// offered only once there is some — a tile over nothing is §83's dead
+    /// control.
+    enum Section: String, CaseIterable, Identifiable, Sendable {
+        case home, apps, activity
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .home: return String(localized: "Home")
+            case .apps: return String(localized: "Apps")
+            case .activity: return String(localized: "Activity")
+            }
+        }
+
+        var summary: String {
+            switch self {
+            case .home: return String(localized: "Your app wallets and what moved in them")
+            case .apps: return String(localized: "Every app that made you a wallet")
+            case .activity: return String(localized: "What moved in your app wallets")
+            }
+        }
+
+        static func present(hasActivity: Bool) -> [Section] {
+            hasActivity ? [.home, .apps, .activity] : [.home, .apps]
+        }
+
+        /// Whether a row of this room belongs to the section.
+        func allows(ref: String?) -> Bool {
+            switch self {
+            case .home: return true
+            case .apps: return ref?.hasPrefix(PrivyHomeFeed.refPrefix) == true
+            case .activity: return ref?.hasPrefix(PrivyHomeFeed.txPrefix) == true
+            }
+        }
+    }
+
     /// The row's line: the wallet, short. Two wallets say so.
     static func line(_ app: App) -> String {
         guard let first = app.wallets.first else { return "" }

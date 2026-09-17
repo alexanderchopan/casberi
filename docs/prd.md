@@ -57625,3 +57625,18 @@ Also: the file header claimed "only `verified` draws" while the card draws `laps
 **Still not built, deliberately, with the reason.** The mockup's Home/Apps/Activity tiles and its "count Privy in the Wallet total" switch: Activity needs an app wallet's transfers landed, which no pass does yet, and a tile or switch with nothing behind it is §83's dead control. They come with the transfer read.
 
 **Measured in passing:** the first renewal with the full cookie set answered `refresh_token: "deprecated"` + cookies → `200`, rotating `privy-access-token`, `privy-refresh-token`, `privy-token` and `privy-session` — so §803d's cookie-mode refusal was the incomplete cookie set, and cookie mode is the renewal. A cold launch into the room draws the newest row as a cover for a few seconds before the head composes; that is every room's launch deferral, not this head.
+
+## §803f — Privy activity: what moved in your app wallets, the Home/Apps/Activity tiles, and the app page's own history (user: "yes keep going", 2026-09-17)
+
+**§803e held back the mockup's tiles and money-in notifications because nothing moved behind them. Now something does.**
+
+- **The read.** Each sync reads the Wallet seat's own Zerion transfer read (`ZerionAPI.transactions`) for the EVM wallets of funded or recently used apps — at most every six hours per wallet and ten wallets a pass (`PrivyHomeFeed.activityTargets`); an empty app nobody uses costs nothing, and Solana is not in that read. One `.transaction` row per leg, `privy:tx:<appID>:<hash>:<in|out>:<symbol>`, dated when it was mined, carrying `transferDirection`/`transferAmount`/`transferUSD`/`counterpartyAddress`, the app's name on `authorHandle` and its logo on `previewImageURL`. **Never `walletAddress`**, which would enrol an unwatched wallet in the watched wallets' scope and verbs. A leg Zerion could not price, or worth under a cent, is not landed: on an embedded wallet nobody watches, an unpriced token is almost always a spam drop.
+- **Money arriving notifies with no new rule.** `NotifySweep.classify` already returns `.moneyIn` for any `received` row at or above the wallet's dust line, and the row's source resolves to the Wallet category, so it joins that category's 18:00 digest (§770). Old history is dated into the past and stays outside the 36-hour news window.
+- **The rows.** In the room and in All, an activity row is the wallet room's money column (`BandRow(moneyColumn:)`) under the app's logo, with the app named on the line (`BandRow.project`'s "Privy" case).
+- **The tiles** (`PrivyHomeFeed.Section`, `DSScopeTiles` in the head's `scopes` slot, the Privacy Pools shape): Home is the whole room, Apps narrows the feed to app rows, Activity to what moved. Activity is offered only once a row has landed (`PrivyHomeStore.activityCount`). The pick lives on the store, not persisted — the room opens on Home — and never narrows All.
+- **The app page** lists that app's last twelve legs, read once in `.task` as values (§628, and no `[Thing]` in state).
+- **The sheet's eyebrow** for an app row reads "App wallet · made 2y ago", not "Event".
+
+**Measured on the simulator with the user's account:** the launch sync landed seven legs across the read wallets; the Activity tile narrows the room to them, dated and signed.
+
+**Still not built:** "count Privy in the Wallet total". It changes the number on another room's crown, which is the user's to rule on rather than this seat's to decide.

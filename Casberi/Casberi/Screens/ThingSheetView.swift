@@ -1459,7 +1459,10 @@ struct ThingSheetView: View {
             BridgeIcon(name: thing.source, size: DS.Face.badge, circular: true)
                 // The mark coin-flips as the sheet opens (delight, 2026-07-12).
                 .coinFlip(trigger: thing.id)
-            Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
+            // A Privy app row is an app wallet, not an "Event" (prd §803f).
+            Text(thing.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) == true
+                 ? "App wallet · made \(shortTime(thing.capturedAt)) ago"
+                 : "\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
