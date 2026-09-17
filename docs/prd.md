@@ -57355,3 +57355,18 @@ Also: the file header claimed "only `verified` draws" while the card draws `laps
 **Rows already landed with the wrong date are NOT rewritten here.** A transfer's ref is its Alchemy `uniqueId`, so a re-sync does not re-land it with the right time. Correcting stored rows is a backfill, and it is left for its own decision rather than folded into the fix.
 
 `scripts/transfer-times-selftest.sh` compiles `TransferTimes` whole: a timeless transfer passed through, a hex block or timestamp read as decimal, a timed transfer rewritten, and `fetchAlchemy` bypassing the fill — each proven by a mutation.
+
+## §791 — World App money says what it is: grants and the vault are named, and a World Chain counterparty that is a verified human says so on the sheet (user: "what else can we do with World ID", "i do like 1, 2, 3", "skip the social", 2026-09-16)
+
+**The Farcaster "Humans" idea is dropped, MEASURED, and §785's person-room mark is left as it is (user: "skip the social").** 0 of 246 sampled Farcaster accounts with an Ethereum verification had any of those addresses in World ID's address book (150 early fids, 250 random; the read itself proven on a known book entry). The book lists World App wallets, and people do not verify those on Farcaster.
+
+**The book is alive, and it is World App wallets.** 1,582 writes for 1,548 distinct addresses in ~2 hours, every sampled subject a Safe, every expiry the same rolling date. On 15 book-listed wallets' World Chain history, 15 of 140 transfer legs (≈1 in 9) had a verified human on the other side, so the mark means something where World App money moves.
+
+**Names, each proven by World's own chain state or published list — never by a pattern (the `knownContracts` rule: a wrong name is worse than none):**
+- **"World ID grants"** — the two Safes a grant is paid FROM: `holder()` on World's published `RecurringGrantDrop` and `RecurringGrantDropReservations` returns them. A claim moves WLD Safe → you through the allowance module, so the Safe is the counterparty the row meets, and 20 of 20 recent payouts carried a `RecurringGrantDrop` log. A grant Zerion calls `receive` now reads "Received 1.16 WLD from World ID grants". If World rotates a holder, the new one is simply unnamed — never misnamed.
+- **"WLD Vault"** — `WLDVault`, from World's "Useful Contract Deployments" and World App's own core (`bedrock`).
+- **Not named:** the published `WLDGrant`/`Grants4FirstBatch` (no WLD moves through them today), `MiniKitTransfer` (a payment's counterparty is the merchant, not the forwarder), and ORO mints, which already read "Minted ORO".
+
+**The sheet says when the other side is a verified human, on World Chain only.** A `World ID · Verified human until <month year>` spec row under Who, drawn only on `.verified` (§785: absence is not a fact about a person), reading the observable store. Opening the sheet is the intent that buys the read (`.task`, one `eth_call`, cached a week); a row scrolling past never asks. Other chains ask nothing: the book lists World App wallets, which live on World Chain.
+
+**Also in this change:** the ten Safe strings §789 shipped without translations — the next verify's localization gate would have failed on them.

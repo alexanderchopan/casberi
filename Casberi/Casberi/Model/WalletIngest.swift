@@ -875,6 +875,23 @@ enum WalletIngest {
         // ENS registrar controllers (name registrations/renewals).
         "0x253553366da8546fc250f225fe3d25d0c782303b": "ENS",
         "0x283af0b28c62c092c9727f1ee09c02ca627eb7f5": "ENS",
+        // World App on World Chain (prd §791, 2026-09-16). Each is proven by
+        // World's OWN chain state or its own published list, never by a
+        // pattern of transfers:
+        // • the two Safes a World ID grant is PAID FROM — the `holder()` that
+        //   World's published `RecurringGrantDrop` (0x2c1c…b162) and
+        //   `RecurringGrantDropReservations` (0xc2d2…6e18) contracts return
+        //   (`eth_call`, keyless). A grant claim's WLD moves Safe → you
+        //   through the allowance module, so the Safe is the counterparty a
+        //   grant row actually meets; 20 of 20 recent payouts carried a
+        //   `RecurringGrantDrop` log. A holder World rotates simply stops
+        //   being named — a grant from a new holder reads "Received WLD".
+        // • `WLDVault`, World App's WLD savings vault, from World's
+        //   "Useful Contract Deployments" page and World App's own core
+        //   (`worldcoin/bedrock`, wld_legacy_vault.rs).
+        "0x30672ebb8d3c3b62c261a23b4a225712ff2cadbc": "World ID grants",
+        "0xdaa7bbad496c4d4431423be64d878a769fbdebc8": "World ID grants",
+        "0x14a028cc500108307947dca4a1aa35029fb66ce0": "WLD Vault",
     ]
 
     /// Is this one of the canonical contracts above?

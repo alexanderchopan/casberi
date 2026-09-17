@@ -1782,12 +1782,36 @@ struct ThingSheetView: View {
                 // captured (native sends have none) (2026-07-15).
                 if hasCounterparty, let cp = thing.counterpartyAddress {
                     counterpartyRow(cp)
+                    // Whether the other side is a verified human (prd §791).
+                    // World Chain only: the book lists World App wallets, which
+                    // live there, and an address on any other chain is not one.
+                    // Only a VERIFIED mark draws — absence is not a fact about
+                    // a person (§785) — and it reads the observable store.
+                    if isWorldChainTransfer,
+                       case .verified(let until) = WorldIDSource.shared.status(for: cp) {
+                        DSSpecRow(label: Text("World ID"),
+                                  value: Text("Verified human until \(until.formatted(.dateTime.month(.wide).year()))"),
+                                  lineLimit: 1)
+                    }
                 }
             }
             // The rows stand on no plate (prd §782): the table's own column
             // gathers them, and air separates it from the blocks around it.
             .frame(maxWidth: .infinity, alignment: .leading)
+            // Opening the sheet is the intent that buys the World ID read
+            // (§785's rule) — one `eth_call`, cached a week, never from a row.
+            .task(id: thing.counterpartyAddress) {
+                guard hasCounterparty, isWorldChainTransfer,
+                      let cp = thing.counterpartyAddress else { return }
+                await WorldIDSource.shared.fill(cp)
+            }
         }
+    }
+
+    /// A transfer on World Chain, read off its explorer link — the chain the
+    /// World ID address book describes.
+    private var isWorldChainTransfer: Bool {
+        WalletIngest.chainName(forContent: thing.content) == "World Chain"
     }
 
     // `fromRow` was HERE and is DELETED with the row it drew (2026-09-15,
