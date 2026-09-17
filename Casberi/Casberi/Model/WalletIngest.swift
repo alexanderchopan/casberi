@@ -894,6 +894,22 @@ enum WalletIngest {
         "0x14a028cc500108307947dca4a1aa35029fb66ce0": "WLD Vault",
     ]
 
+    /// Is this one of the Safes a World ID grant is paid from (prd §791)? Read
+    /// off `knownContracts` so the name and the question can never disagree.
+    static func isWorldGrantHolder(_ address: String?) -> Bool {
+        guard let address else { return false }
+        return knownContracts[address.lowercased()] == "World ID grants"
+    }
+
+    /// Where a grant row's door lands (prd §792): World App's grants screen,
+    /// through the link World's OWN page for its "Worldcoin — Claim your
+    /// Worldcoin" app opens it with. MEASURED: World App's universal links
+    /// claim only `/grant/*` and `/mini-app/*` WITH a trailing slash, so the
+    /// documented `world.org/mini-app?app_id=` form opens Safari instead, and
+    /// `world.org/grant/…` 404s on the web. A custom scheme opens nothing when
+    /// the app is absent, so both dials gate on `HandOffState` answering it.
+    static let worldAppGrantsLink = URL(string: "worldapp://grants")!
+
     /// Is this one of the canonical contracts above?
     ///
     /// Distinct from `knownLabel != nil`, which also answers for an address the
@@ -1182,6 +1198,84 @@ enum WalletIngest {
               let result = root["result"] as? [String: Any],
               let transfers = result["transfers"] as? [[String: Any]] else { return nil }
         return await withBlockTimes(transfers, url: url, network: chain.network)
+    }
+
+    /// The rows §790 fixed only going forward: every Alchemy transfer already
+    /// stored on HyperEVM or World Chain was dated with the sync's clock (prd
+    /// §792). Re-reads each one's transaction and block, and rewrites
+    /// `capturedAt` when the stored date is not the block's.
+    ///
+    /// Bounded (`perPass` rows, stop after three failures in a row) and
+    /// resumable by a ledger of refs already answered, in UserDefaults — NOT a
+    /// done flag, because a row can arrive from iCloud after any flag was set
+    /// (prd §647). A ref is written to the ledger only when the chain answered
+    /// definitively (a time, or "no such transaction"); a network failure
+    /// leaves it to the next pass. Rows are found again by ref AFTER each
+    /// network wait and checked live, never held across it.
+    @MainActor
+    @discardableResult
+    static func healUntimedTransferDates(context: ModelContext) async -> Int {
+        guard !DemoMode.isActive else { return 0 }
+        let ledgerKey = "wallet.transferTimeHeal.checked.v1"
+        let perPass = 20
+        var checked = UserDefaults.standard.stringArray(forKey: ledgerKey) ?? []
+        let checkedSet = Set(checked)
+
+        var descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
+            $0.source == "Wallet" && $0.sourceRef != nil
+        })
+        descriptor.propertiesToFetch = [\.sourceRef, \.content]
+        let jobs = Array(((try? context.fetch(descriptor)) ?? []).compactMap { t -> TransferTimes.HealJob? in
+            guard t.isLive, let ref = t.sourceRef, !checkedSet.contains(ref) else { return nil }
+            return TransferTimes.healJob(ref: ref, content: t.content)
+        }.prefix(perPass))
+        guard !jobs.isEmpty else { return 0 }
+
+        var healed = 0
+        var failuresInARow = 0
+        for job in jobs {
+            guard failuresInARow < 3 else { break }
+            let url = "https://\(job.network).g.alchemy.com/v2/\(IngestSupport.alchemyKey)"
+            let txRoot = await IngestSupport.postJSON(url, body: [
+                "id": 1, "jsonrpc": "2.0",
+                "method": "eth_getTransactionByHash", "params": [job.hash],
+            ]) as? [String: Any]
+            guard let txRoot, txRoot["error"] == nil else { failuresInARow += 1; continue }
+            // Answered "no such transaction": nothing to date it by, and asking
+            // again will not change that.
+            guard let block = TransferTimes.blockNumber(fromTransactionResult: txRoot["result"]) else {
+                if txRoot["result"] is NSNull { checked.append(job.ref) }
+                failuresInARow = 0
+                continue
+            }
+            var actual = await TransferTimes.Cache.shared.time(network: job.network, block: block)
+            if actual == nil {
+                let blockRoot = await IngestSupport.postJSON(url, body: [
+                    "id": 1, "jsonrpc": "2.0",
+                    "method": "eth_getBlockByNumber", "params": [block, false],
+                ]) as? [String: Any]
+                actual = TransferTimes.time(fromBlockResult: blockRoot?["result"])
+                if let actual {
+                    await TransferTimes.Cache.shared.store(actual, network: job.network, block: block)
+                }
+            }
+            guard let actual else { failuresInARow += 1; continue }
+            failuresInARow = 0
+            checked.append(job.ref)
+
+            let ref: String? = job.ref
+            let found = (try? context.fetch(FetchDescriptor<Thing>(predicate: #Predicate {
+                $0.sourceRef == ref
+            }))) ?? []
+            for thing in found where thing.isLive && thing.source == "Wallet"
+                && TransferTimes.needsRewrite(stored: thing.capturedAt, actual: actual) {
+                thing.capturedAt = actual
+                healed += 1
+            }
+        }
+        if healed > 0 { context.saveHonestly() }
+        UserDefaults.standard.set(Array(checked.suffix(5_000)), forKey: ledgerKey)
+        return healed
     }
 
     /// Alchemy returns no `blockTimestamp` on HyperEVM and World Chain, and a

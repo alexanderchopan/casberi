@@ -271,6 +271,27 @@ if grep -q 'network: "worldchain-mainnet".*internalTransfers: true' "$(dirname "
   echo "✗ World Chain asks Alchemy for internal transfers — the call is refused whole"; exit 1
 fi
 
+# 6. THE GRANT DOOR LANDS WHERE IT SAYS, ONLY ON A GRANT, ONLY WHEN IT CAN OPEN
+#    (prd §792). `worldapp://grants` is the link World's own page uses; an
+#    unclaimed custom scheme opens NOTHING, so both dials gate on World App
+#    answering it here, and the scheme must be declared or it never answers.
+INGEST_W="Casberi/Casberi/Model/WalletIngest.swift"
+grep -q 'static let worldAppGrantsLink = URL(string: "worldapp://grants")!' "$INGEST_W" \
+  || { echo "✗ the grant door is not World App's grants link"; exit 1; }
+grep -q 'knownContracts\[address.lowercased()\] == "World ID grants"' "$INGEST_W" \
+  || { echo "✗ isWorldGrantHolder no longer reads the named grant holders"; exit 1; }
+grep -q '<string>worldapp</string>' Casberi/Casberi/Info.plist \
+  || { echo "✗ worldapp is not in LSApplicationQueriesSchemes — the door can never be offered"; exit 1; }
+grep -q '"worldapp"' Casberi/Casberi/Model/Verbs.swift \
+  || { echo "✗ worldapp is not a HandOffState candidate — installedSchemes never contains it"; exit 1; }
+for _dial in "Casberi/Casberi/Model/Verbs.swift" "Casberi/Casberi/Screens/ThingSheetView.swift"; do
+  _gate=$(grep -B4 'WalletIngest.worldAppGrantsLink' "$_dial")
+  echo "$_gate" | grep -q 'isWorldGrantHolder(thing.counterpartyAddress)' \
+    || { echo "✗ $_dial offers the grant door without the grant-holder gate"; exit 1; }
+  echo "$_gate" | grep -q 'installedSchemes.contains("worldapp")' \
+    || { echo "✗ $_dial offers the grant door without World App installed — a disc that opens nothing"; exit 1; }
+done
+
 # --- mutation liveness --------------------------------------------------------
 # Each mutation is a REAL past-or-plausible defect. A mutation that still
 # passes means nothing above was testing it.

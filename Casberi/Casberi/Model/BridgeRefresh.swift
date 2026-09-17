@@ -510,6 +510,10 @@ enum BridgeRefresh {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await WalletIngest.refresh(context: context)
+                // The dates §790 fixed only going forward (prd §792).
+                if BridgeRefresh.dueForHeal("wallet.transferTimes") {
+                    await WalletIngest.healUntimedTransferDates(context: context)
+                }
             }
             // The wallet's value-sample + faces pass (2026-07-15): fetch the
             // full holdings so a sample is recorded from a plain foreground on

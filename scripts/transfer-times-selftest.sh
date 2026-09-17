@@ -95,6 +95,32 @@ Task {
 }
 sem.wait()
 
+// --- the stored rows the heal re-times (prd §792) ------------------------------
+let hash = "0x" + String(repeating: "ab", count: 32)
+check(TransferTimes.healJob(ref: "wallet:0xdead:log:1", content: "https://worldscan.org/tx/" + hash)
+      == TransferTimes.HealJob(ref: "wallet:0xdead:log:1", network: "worldchain-mainnet", hash: hash),
+      "an Alchemy World Chain row is a heal job")
+check(TransferTimes.healJob(ref: "wallet:0xdead:log:1", content: "https://hyperevmscan.io/tx/" + hash.uppercased().replacingOccurrences(of: "0X", with: "0x"))?.network
+      == "hyperliquid-mainnet", "a HyperEVM row is a heal job, hash case folded")
+check(TransferTimes.healJob(ref: "wallet:zerion:\(hash):in:WLD::1", content: "https://worldscan.org/tx/" + hash) == nil,
+      "a Zerion row always carried its time — never re-timed")
+check(TransferTimes.healJob(ref: "wallet:0xdead:log:1", content: "https://basescan.org/tx/" + hash) == nil,
+      "a chain whose Alchemy rows carried a time is left alone")
+check(TransferTimes.healJob(ref: "vibenet:1", content: "https://worldscan.org/tx/" + hash) == nil,
+      "only wallet refs")
+check(TransferTimes.healJob(ref: nil, content: "https://worldscan.org/tx/" + hash) == nil, "no ref, no job")
+check(TransferTimes.healJob(ref: "wallet:x", content: "https://worldscan.org/tx/0x1234") == nil,
+      "a truncated hash is not asked about")
+check(TransferTimes.blockNumber(fromTransactionResult: ["blockNumber": "0x218230A"]) == "0x218230a",
+      "a mined transaction's block, lowercased")
+check(TransferTimes.blockNumber(fromTransactionResult: ["blockNumber": NSNull()]) == nil,
+      "a pending transaction has no block")
+check(TransferTimes.blockNumber(fromTransactionResult: NSNull()) == nil, "no such transaction has no block")
+check(!TransferTimes.needsRewrite(stored: blockDate.addingTimeInterval(30), actual: blockDate),
+      "within a minute is the same time")
+check(TransferTimes.needsRewrite(stored: blockDate.addingTimeInterval(86_400 * 200), actual: blockDate),
+      "a row dated months after its block is rewritten")
+
 if failures > 0 { print("✗ transfer-times-selftest: \(failures) failure(s)"); exit(1) }
 SWIFT
 
@@ -110,5 +136,19 @@ echo "$body" | grep -q 'return await withBlockTimes(transfers' \
 if echo "$body" | grep -qE '^\s*return transfers\s*$'; then
   echo "✗ fetchAlchemy returns raw transfers — a transfer with no time lands dated now"; exit 1
 fi
+
+# --- drift guards: the heal is scheduled, and forgets nothing it did not answer --
+grep -q 'await WalletIngest.healUntimedTransferDates(context: context)' Casberi/Casberi/Model/BridgeRefresh.swift \
+  || { echo "✗ the stored-date heal is not scheduled — rows dated by the sync stay wrong forever"; exit 1; }
+heal=$(awk '/static func healUntimedTransferDates\(/,/^    }$/' "$INGEST")
+[[ -n "$heal" ]] || { echo "✗ could not find healUntimedTransferDates in $INGEST"; exit 1; }
+echo "$heal" | grep -q 'guard !DemoMode.isActive' \
+  || { echo "✗ the heal reaches the network in the demo"; exit 1; }
+# The ledger records a ref only on a definitive answer: never on the failure arms.
+if echo "$heal" | grep -E 'failuresInARow \+= 1' | grep -q 'checked.append'; then
+  echo "✗ a network failure is written to the ledger — that row is never re-timed"; exit 1
+fi
+echo "$heal" | grep -q 'thing.isLive' \
+  || { echo "✗ the heal writes a row it did not re-check live after the network wait"; exit 1; }
 
 echo "✓ transfer-times-selftest passed"

@@ -235,6 +235,17 @@ enum VerbDerivation {
                                 icon: isExplorer || isRevoke || isHegota ? "arrow.up.right" : "safari",
                                 action: .openURL(url)))
             }
+            // A World ID grant's door is where you claim the next one (prd
+            // §792) — World App's grants screen, named by where it lands.
+            // Gated on the counterparty World's own grant contract names as its
+            // holder (so no other WLD row grows it) AND on World App answering
+            // its scheme here, because an unclaimed scheme opens nothing.
+            if thing.source == "Wallet",
+               WalletIngest.isWorldGrantHolder(thing.counterpartyAddress),
+               HandOffState.installedSchemes.contains("worldapp") {
+                out.append(Verb(label: "World App", icon: "arrow.up.right",
+                                action: .openURL(WalletIngest.worldAppGrantsLink)))
+            }
             // WHICH WALLET THIS CAME OUT OF, as a door (2026-09-15, prd §736).
             //
             // It replaces the spec table's "From — in Main". That row was the
@@ -838,11 +849,15 @@ enum HandOffState {
     /// set up on this device — reading iCloud Mail entirely on the web is an
     /// ordinary way to live — and an unclaimed scheme is refused
     /// asynchronously while reporting success.
+    /// `worldapp` joined 2026-09-16 with the World ID grant door (prd §792):
+    /// watching a World App wallet says nothing about whether World App is on
+    /// THIS phone — it may be somebody else's wallet, or read on a Mac.
     private static let candidates = ["todoist", "googlegmail", "photos-redirect",
                                      "youtube", "obsidian",
                                      "calshow", "x-apple-reminderkit",
                                      "chatgpt", "music", "spotify", "mobilenotes",
-                                     "shareddocuments", "message", "duolingo"]
+                                     "shareddocuments", "message", "duolingo",
+                                     "worldapp"]
 
     #if DEBUG
     /// The same list, for `-photoVerbProbe`'s census. Exposed rather than

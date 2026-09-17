@@ -63,6 +63,55 @@ enum TransferTimes {
         }
     }
 
+    // MARK: - The rows already stored wrong (prd §792)
+
+    /// The chains whose Alchemy transfers carried no time, with the explorer
+    /// prefix `WalletIngest` wrote their links from. The only rows the heal
+    /// re-times: every other chain's Alchemy rows carried `blockTimestamp`.
+    static let untimedChains: [(network: String, explorer: String)] = [
+        ("hyperliquid-mainnet", "https://hyperevmscan.io/tx/"),
+        ("worldchain-mainnet", "https://worldscan.org/tx/"),
+    ]
+
+    /// One stored row to re-time: its ref (to find it again after the network),
+    /// the chain, and the transaction hash its link names.
+    struct HealJob: Sendable, Equatable {
+        let ref: String
+        let network: String
+        let hash: String
+    }
+
+    /// A stored wallet row the heal should check, or nil. It must be an
+    /// ALCHEMY-sourced ref — a `wallet:zerion:` row always carried Zerion's
+    /// own time — on one of `untimedChains`, whose link ends in a full
+    /// 32-byte transaction hash. Anything else is left exactly as it is.
+    static func healJob(ref: String?, content: String) -> HealJob? {
+        guard let ref, ref.hasPrefix("wallet:"), !ref.hasPrefix("wallet:zerion:") else { return nil }
+        for chain in untimedChains where content.hasPrefix(chain.explorer) {
+            let hash = String(content.dropFirst(chain.explorer.count)).lowercased()
+            guard hash.count == 66, hash.hasPrefix("0x"),
+                  hash.dropFirst(2).allSatisfy(\.isHexDigit) else { return nil }
+            return HealJob(ref: ref, network: chain.network, hash: hash)
+        }
+        return nil
+    }
+
+    /// The block a transaction was mined in, from `eth_getTransactionByHash`.
+    /// Nil for a pending transaction (null `blockNumber`) or anything malformed.
+    static func blockNumber(fromTransactionResult result: Any?) -> String? {
+        guard let tx = result as? [String: Any],
+              let raw = tx["blockNumber"] as? String,
+              raw.hasPrefix("0x"), hexValue(raw) != nil else { return nil }
+        return raw.lowercased()
+    }
+
+    /// Whether a stored date is the sync's clock rather than the block's. A
+    /// minute of slack: the explorer's second and a stored second may be read
+    /// through different formatters, and nothing that close is the bug.
+    static func needsRewrite(stored: Date, actual: Date) -> Bool {
+        abs(stored.timeIntervalSince(actual)) > 60
+    }
+
     // MARK: - Pieces
 
     static func timestamp(of transfer: [String: Any]) -> String? {

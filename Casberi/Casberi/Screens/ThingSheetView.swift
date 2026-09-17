@@ -2072,6 +2072,13 @@ struct ThingSheetView: View {
             out.append(Verb(label: Self.explorerLabel(url), icon: "arrow.up.right",
                             action: .openURL(url)))
         }
+        // A World ID grant opens where the next one is claimed (prd §792) —
+        // only when World App is on this phone to answer the link.
+        if WalletIngest.isWorldGrantHolder(thing.counterpartyAddress),
+           HandOffState.installedSchemes.contains("worldapp") {
+            out.append(Verb(label: "World App", icon: "arrow.up.right",
+                            action: .openURL(WalletIngest.worldAppGrantsLink)))
+        }
         out.append(Verb(label: "Copy link", icon: "doc.on.doc", action: .copyText))
         return out
     }
@@ -2086,7 +2093,8 @@ struct ThingSheetView: View {
                      "gnosisscan.io": "Gnosisscan", "optimistic.etherscan.io": "Etherscan",
                      "mempool.space": "mempool", "solscan.io": "Solscan",
                      "app.0xbow.io": "0xBow", "app.safe.global": "Safe",
-                     "app.morpho.org": "Morpho", "app.hyperliquid.xyz": "Hyperliquid"]
+                     "app.morpho.org": "Morpho", "app.hyperliquid.xyz": "Hyperliquid",
+                     "worldscan.org": "Worldscan"]
         if let name = known[host] { return name }
         return String(localized: "Explorer")
     }
