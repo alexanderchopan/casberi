@@ -604,6 +604,13 @@ struct SafeSignBlock: View {
             return String(localized: "Couldn't reach the chain to re-check this transaction, so Casberi won't sign it. Try again in a moment.")
         case .proposalUnreadable:
             return String(localized: "Couldn't read this proposal well enough to sign it.")
+        case .serviceThrottled(let until):
+            // No "Try again": the gate answers every retry the same way until
+            // the reset, so the door would be a control that cannot work.
+            guard let until else {
+                return String(localized: "Safe is refusing free reads right now, so Casberi couldn't check this transaction before signing.")
+            }
+            return String(localized: "Safe is refusing free reads until \(until.formatted(date: .abbreviated, time: .shortened)), so Casberi couldn't check this transaction before signing.")
         case .hashMismatch, .serviceHashMismatch:
             return String(localized: "The Safe's own hash for this transaction doesn't match what Casberi worked out. Don't sign this anywhere until you know why.")
         }

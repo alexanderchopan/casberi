@@ -383,18 +383,34 @@ struct SafeScreen: View {
 
     // MARK: - Actions
 
+    /// Safe's keyless reads share one monthly pool across every app that uses
+    /// them, so the line names Safe's limit, not the person's usage.
+    static func throttledLine(until: Date?) -> String {
+        guard let until else {
+            return String(localized: "Safe's free read limit is used up, so the queue wasn't checked.")
+        }
+        return String(localized: "Safe's free read limit is used up, so the queue wasn't checked. It reopens \(until.formatted(.relative(presentation: .named))).")
+    }
+
     /// Refresh the queue for the watched wallets. The catalog seat is kept
     /// honest by `store.reconcileWalletSeats()`, not here.
     private func sync() async {
         guard hasWallets, !syncing else { return }
         syncing = true
         defer { syncing = false }
-        let added = await SafeBridge.syncNow(context: modelContext)
+        let result = await SafeBridge.syncNow(context: modelContext)
         // The sync is the other moment the queue can have changed.
         readQueue()
-        if let added {
+        switch result {
+        case .landed(let added):
             lastResult = .landed(added)
-        } else {
+        case .throttled(let until, _):
+            // A throttle is its own state and draws as `.says`, never
+            // `.failed` (§711b): nothing is wrong with the person's Safe or
+            // connection, and a "Try again" would meet the same closed gate.
+            // It is never `.landed(0)`, which reads "Up to date" (prd §789).
+            lastResult = .says(Self.throttledLine(until: until))
+        case .unreachable:
             lastResult = .failed(String(localized: "Couldn't reach Safe — check your connection."))
         }
     }

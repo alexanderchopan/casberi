@@ -168,7 +168,8 @@ enum SafeBridge {
     /// positive caches forever; a negative is re-checked periodically (see
     /// `negativeCacheTTL`). nil means the read itself failed (offline,
     /// rate-limited) — never cached, so a transient outage can't freeze a
-    /// real Safe as permanently "not one".
+    /// real Safe as permanently "not one". Every tx-service read goes through
+    /// `SafeServiceGate` (prd §789), so a 429 is a nil here and never a 404.
     private static func isSafe(chain: Chain, address: String) async -> Bool? {
         let key = isSafeKey(chain.seg, address)
         if let cached = UserDefaults.standard.object(forKey: key) as? Bool {
@@ -184,10 +185,12 @@ enum SafeBridge {
         // own comparison form), so without this every Safe watched via a
         // pasted or ENS-resolved address failed silently, forever (a 422
         // reads as "unreachable" below, never cached, retried every pass).
-        let (_, status) = await IngestSupport.getJSONStatus(
-            "\(baseURL(chain.seg))/safes/\(EIP55.checksum(address))/")
-        guard status == 200 || status == 404 else { return nil }
-        let result = status == 200
+        let result: Bool
+        switch await SafeServiceGate.get("\(baseURL(chain.seg))/safes/\(EIP55.checksum(address))/") {
+        case .ok: result = true
+        case .missing: result = false
+        case .throttled, .unreachable: return nil
+        }
         UserDefaults.standard.set(result, forKey: key)
         if !result {
             UserDefaults.standard.set(Date.now.timeIntervalSince1970,
@@ -202,11 +205,20 @@ enum SafeBridge {
     /// chains the wallet feed currently reads)? For the address book's kind
     /// detection (prd §169) — the person supplies a name, the chain supplies
     /// what the thing is.
-    static func isSafeAnywhere(_ address: String) async -> Bool {
+    ///
+    /// Nil when no chain said yes and at least one did not answer (prd §789).
+    /// It was a `Bool`, so a throttled service read as "not a Safe on any
+    /// chain", and `AddressKind` went on to file the Safe as a smart account.
+    static func isSafeAnywhere(_ address: String) async -> Bool? {
+        var unknown = false
         for chain in chains {
-            if await isSafe(chain: chain, address: address) == true { return true }
+            switch await isSafe(chain: chain, address: address) {
+            case true?: return true
+            case false?: continue
+            case nil: unknown = true
+            }
         }
-        return false
+        return unknown ? nil : false
     }
 
     /// Unwatching wipes the Safe-detection cache, the config snapshot, and
@@ -253,9 +265,9 @@ enum SafeBridge {
     }
 
     private static func fetchPendingQueue(chain: Chain, address: String) async -> [[String: Any]]? {
-        guard let root = await IngestSupport.getJSON(
+        guard let root = await SafeServiceGate.get(
                 "\(baseURL(chain.seg))/safes/\(EIP55.checksum(address))/multisig-transactions/?executed=false")
-                as? [String: Any],
+                .json as? [String: Any],
               let results = root["results"] as? [[String: Any]]
         else { return nil }
         return results
@@ -276,9 +288,9 @@ enum SafeBridge {
     /// read.
     private static func ownerSafes(chain: Chain, address: String) async -> [String]? {
         let boxed = await ownerCache.value(key: ownerCacheKey(chain.seg, address), ttl: 600) {
-            guard let root = await IngestSupport.getJSON(
+            guard let root = await SafeServiceGate.get(
                     "\(baseURL(chain.seg))/owners/\(EIP55.checksum(address))/safes/")
-                    as? [String: Any],
+                    .json as? [String: Any],
                   let safes = root["safes"] as? [String]
             else { return nil }
             return JSONStrings(rows: safes)
@@ -303,8 +315,8 @@ enum SafeBridge {
 
     private static func safeDetail(chain: Chain, address: String) async -> SafeDetail? {
         let boxed = await detailCache.value(key: "\(chain.seg)|\(address.lowercased())", ttl: 60) {
-            guard let root = await IngestSupport.getJSON(
-                    "\(baseURL(chain.seg))/safes/\(EIP55.checksum(address))/") as? [String: Any]
+            guard let root = await SafeServiceGate.get(
+                    "\(baseURL(chain.seg))/safes/\(EIP55.checksum(address))/").json as? [String: Any]
             else { return nil }
             let threshold = (root["threshold"] as? Int) ?? 0
             let nonce = Int((root["nonce"] as? String) ?? "") ?? (root["nonce"] as? Int) ?? 0
@@ -1181,9 +1193,9 @@ enum SafeBridge {
                 }
                 continue   // still live — leave tracked
             }
-            guard let root = await IngestSupport.getJSON(
-                    "\(baseURL(chain.seg))/multisig-transactions/\(hash)/") as? [String: Any]
-            else { continue }   // unreachable this pass — recheck next time
+            guard let root = await SafeServiceGate.get(
+                    "\(baseURL(chain.seg))/multisig-transactions/\(hash)/").json as? [String: Any]
+            else { continue }   // unreachable or throttled this pass — recheck next time
             guard (root["isExecuted"] as? Bool) == true else { continue }
             added += await landOutcome(context: context, chain: chain, hash: hash, tx: root,
                                        executed: true, safeAddress: safeAddress,
@@ -1304,16 +1316,35 @@ enum SafeBridge {
     /// watched wallets itself and reads the existing-refs set scoped to
     /// `sourceName` (2026-08-11 — Safe earned its own chip, so this is no
     /// longer the "Wallet" set `WalletIngest.refresh`'s own pass uses).
+    /// What a sync on the Safe page may say (prd §789). `landed(0)` is
+    /// "Up to date", so it is returned ONLY when the pass was answered: a
+    /// pass in which Safe refused every read used to land exactly there, in
+    /// confirm green, and `SafeScreen`'s "Couldn't reach Safe" branch was
+    /// unreachable code because this returned `Int?` and never nil.
+    enum SyncResult: Equatable {
+        case landed(Int)
+        /// Safe's shared keyless quota refused the pass. `landed` counts what
+        /// arrived before it did.
+        case throttled(until: Date?, landed: Int)
+        case unreachable
+    }
+
     @MainActor
-    static func syncNow(context: ModelContext) async -> Int? {
-        guard !running else { return 0 }
+    static func syncNow(context: ModelContext) async -> SyncResult {
+        guard !running else { return .landed(0) }
         running = true
         defer { running = false }
         let watched = WalletStore.shared.addresses.map(\.address)
         let addresses = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
-        guard !addresses.isEmpty else { return 0 }
-        return await sync(context: context, addresses: addresses,
-                          existing: IngestSupport.existingSourceRefs(context, source: sourceName))
+        guard !addresses.isEmpty else { return .landed(0) }
+        let mark = SafeServiceGate.mark()
+        let added = await sync(context: context, addresses: addresses,
+                               existing: IngestSupport.existingSourceRefs(context, source: sourceName))
+        switch SafeServiceGate.health(since: mark) {
+        case .answered: return .landed(added)
+        case .throttled(let until): return .throttled(until: until, landed: added)
+        case .unreachable: return added > 0 ? .landed(added) : .unreachable
+        }
     }
 
     /// Phrases describing what changed between two config snapshots — empty
@@ -1537,9 +1568,9 @@ enum SafeBridge {
         let seg = parts[2], safeTxHash = parts[3]
         guard let chain = chains.first(where: { $0.seg == seg }) else { return .fail("unknown chain") }
         guard isChainActive(chain) else { return .fail("chain switched off") }
-        guard let root = await IngestSupport.getJSON(
-                "\(baseURL(chain.seg))/multisig-transactions/\(safeTxHash)/") as? [String: Any]
-        else { return .fail("unreachable") }
+        let read = await SafeServiceGate.get("\(baseURL(chain.seg))/multisig-transactions/\(safeTxHash)/")
+        if case .throttled = read { return .fail("throttled") }
+        guard let root = read.json as? [String: Any] else { return .fail("unreachable") }
         // `thing.walletAddress` is either the Safe itself (directly watched)
         // or the signer that led us here — either way the transaction's own
         // `safe` field names the Safe to re-check nonce against.
@@ -1586,7 +1617,10 @@ enum SafeBridge {
         for chain in chains where isChainActive(chain) {
             for address in addresses {
                 guard let safe = await isSafe(chain: chain, address: address) else {
-                    lines.append("\(WalletStore.shortAddress(address)) \(chain.seg): unreachable")
+                    let why = SafeServiceGate.throttledUntil().map {
+                        "throttled until \($0.formatted(.iso8601))"
+                    } ?? "unreachable"
+                    lines.append("\(WalletStore.shortAddress(address)) \(chain.seg): \(why)")
                     continue
                 }
                 if safe {

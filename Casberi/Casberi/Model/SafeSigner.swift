@@ -205,6 +205,11 @@ enum SafeSigner {
         /// The transaction service did not answer, or answered a shape this
         /// build cannot read.
         case proposalUnreadable
+        /// Safe's shared keyless quota refused the read (prd §789). Not
+        /// `proposalUnreadable`: nothing is wrong with the proposal, and the
+        /// sentence for that one sends somebody looking for a fault that
+        /// isn't there. `until` is Safe's own reset, when it sent one.
+        case serviceThrottled(until: Date?)
         /// The chain did not answer. NOT the same as a mismatch: not knowing
         /// is not knowing it is fine.
         case chainUnreadable
@@ -323,8 +328,9 @@ enum SafeSigner {
         guard let rail = rails.first(where: { $0.seg == seg }) else {
             return .failure(.chainUnsupported(seg))
         }
-        guard let row = await IngestSupport.getJSON(
-                "\(baseURL(seg))/multisig-transactions/\(safeTxHash)/") as? [String: Any],
+        let read = await SafeServiceGate.get("\(baseURL(seg))/multisig-transactions/\(safeTxHash)/")
+        if case .throttled(let until) = read { return .failure(.serviceThrottled(until: until)) }
+        guard let row = read.json as? [String: Any],
               let safeAddress = row["safe"] as? String,
               let tx = transaction(from: row)
         else { return .failure(.proposalUnreadable) }
