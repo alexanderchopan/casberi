@@ -215,6 +215,11 @@ enum BridgeCatalog {
               needsSetup: true, added: day(2026, 9, 15)),
         Offer(name: "Rocket Money", tagline: "Subscriptions and bills, before they hit", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 15)),
+        // Privy (prd §803c) — every app that made you a wallet through Privy,
+        // with what the chain says is in each. Wallet group: the unit is an
+        // app, but the subject is money you hold.
+        Offer(name: "Privy", tagline: "Every app wallet you've made, in one place", group: "Wallet", connectable: true,
+              needsSetup: true, added: day(2026, 9, 17)),
         // Wise (prd §778, 2026-09-16) — balances and transfers over a
         // read-only personal token. The tagline names BOTH halves because the
         // seat is honestly two things, and neither alone would be worth a
@@ -1118,7 +1123,7 @@ enum BridgeSetupMode {
     /// X, Instagram and TikTok sign in since §701/§726/§731 — each keeps its
     /// export as a second act, but the word on the catalogue is the first door.
     static let signInSeats: Set<String> = ["Dropbox", "Slack", "Twitch", "CardPointers", "GitHub", "X", "Spotify",
-        "Instagram", "TikTok", "Duolingo", "Acorns", "Rocket Money", "Bankr"]
+        "Instagram", "TikTok", "Duolingo", "Acorns", "Rocket Money", "Bankr", "Privy"]
 
     /// A one-time export you point at. Instagram and Snapchat were missed in
     /// this list's first life (2026-07-31) and TikTok would have been missed

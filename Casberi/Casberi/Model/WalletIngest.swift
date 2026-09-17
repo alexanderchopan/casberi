@@ -1850,6 +1850,22 @@ enum WalletIngest {
                                     routeBySymbol: g.routes))
     }
 
+    /// One address that is NOT on the watch list, read for what it holds
+    /// (prd §803c: a Privy app's wallet). The same funnel, cache, floor and
+    /// spam rules as a watched wallet — and deliberately none of a watched
+    /// wallet's side effects: no value sample, no book entry, and it never
+    /// counts against §170's cap. nil = the chain could not be reached, which
+    /// a caller must not store as "empty".
+    static func unwatchedHoldings(address: String) async
+        -> (totalUSD: Double, bySymbol: [String: Double])? {
+        guard !DemoMode.isActive else { return (0, [:]) }
+        guard !networks(for: address).isEmpty else { return (0, [:]) }
+        let h = await holdings(addresses: [address])
+        guard h.reached else { return nil }
+        guard let g = h.group else { return (0, [:]) }
+        return (g.total, g.bySymbol)
+    }
+
     /// The top-5-by-value cells for one or more hex addresses, combined —
     /// builds on `fetchHeldTokens` (the shared read), so the treemap and the
     /// activity spam filter agree on what "held" means. `bySymbol` (every

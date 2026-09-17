@@ -580,6 +580,18 @@ enum IngestSupport {
         return (data, http)
     }
 
+    /// The funnel, for a caller that must build its own request (prd §803c,
+    /// Privy): a session refresh has to read `Set-Cookie` off the response and
+    /// must NOT leave the rotated cookies in the shared cookie storage, which
+    /// is a plain file rather than the device-only Keychain — so the caller
+    /// sets `httpShouldHandleCookies = false` on a request of its own. Still
+    /// one `send`, so the receipt and the bridge's health are recorded exactly
+    /// as for every other helper here.
+    static func sendRequest(_ request: URLRequest,
+                            service: String? = nil) async -> (Data, HTTPURLResponse)? {
+        await send(request, service: service)
+    }
+
     // MARK: - Bounded concurrent fan-out
 
     /// Runs `work` across `items` with at most `maxConcurrent` in flight at

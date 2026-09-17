@@ -211,6 +211,7 @@ enum BridgeGlyph {
         // Rocket Money watches what repeats, NerdWallet is reading — so the
         // glyphs say growth, recurrence and an article, not three wallets.
         case "acorns":    return "chart.line.uptrend.xyaxis"
+        case "privy":     return "square.stack.3d.up"
         case "rocket money": return "arrow.triangle.2.circlepath"
         case "nerdwallet": return "newspaper"
         // The unstake queue's whole subject is waiting, then collecting — an

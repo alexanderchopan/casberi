@@ -5743,6 +5743,19 @@ enum ProbeHooks {
         Hook(key: "acornsProbe") { _, _ in
             Task { @MainActor in await AcornsLive.probe() }
         },
+        // `-privyProbe YES` reads Privy Home with the stored session and
+        // reports it as SHAPE — status, key names, counts (prd §803c). The
+        // sign-in itself is an email code typed into Privy's own page, which
+        // no script can drive, so this probe reads a session a person made.
+        Hook(key: "privyProbe") { _, context in
+            Task { @MainActor in await PrivyHomeLive.diagnose(context: context) }
+        },
+        // `-privyForget YES` drops the stored session and what it read.
+        Hook(key: "privyForget") { _, _ in
+            PrivyHomeAuth.clear()
+            Task { @MainActor in PrivyHomeStore.shared.forget() }
+            NSLog("[Casberi] privy| session cleared")
+        },
         // `-acornsForget YES` drops the stored session — the way back to a
         // clean run without reinstalling.
         Hook(key: "acornsForget") { _, _ in
@@ -7741,6 +7754,11 @@ enum ProbeHooks {
              ? GnosisPayRoomSource.compose(things: things).map {
                 "\(GnosisPayRoom.headline($0)) · \($0.currencies.count) currencies"
              } : nil)
+        // Privy (prd §803c) — composed from its store, not the rows.
+        note("privyHead", source == PrivyHomeFeed.source
+             ? { let r = PrivyHomeStore.shared.room
+                 return r.appCount > 0 ? "\(r.appCount) apps · \(r.readCount) read · \(r.fundedCount) funded" : nil }()
+             : nil)
         // The fourth wallet-riding head (2026-08-11).
         note("railgunHead", source == RailgunRoomSource.source
              ? RailgunRoomSource.compose(things: things).map {

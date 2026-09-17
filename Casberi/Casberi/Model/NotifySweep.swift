@@ -308,6 +308,12 @@ enum NotifySweep {
         //   settled trade.
         if ref.hasPrefix("peer:expired:") { return nil }
         if ref.hasPrefix("peer:") { return .moneyIn }
+        // — Privy (prd §803c): an app row lands dated the day its wallet was
+        //   made, so only a genuinely new app is inside the news window — a
+        //   first sync's two years of apps file into the past and stay quiet.
+        //   A literal, as "peer:" is: `notify-selftest.sh` compiles this file
+        //   against stubs, and `PrivyHomeFeed.refPrefix` is the same string.
+        if ref.hasPrefix("privy:app:") { return .appWalletMade }
 
         // — CARD SPENDS ARE NOT NOTIFIED, and this absence is a decision worth
         //   writing down because both card bridges land perfectly good rows

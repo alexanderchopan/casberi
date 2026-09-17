@@ -2644,6 +2644,9 @@ struct FeedScreen: View {
                 // same nothing lost — this key matters only in the room whose
                 // revision is frozen.
                 source == FramesIdentity.source ? FramesRoomSource.identity : "",
+                // Privy's balances land no row either (prd §803c), so its
+                // store's revision re-keys its head and nobody else's.
+                source == PrivyHomeFeed.source ? PrivyHomeStore.identity : "",
                 // **AND ITS SCOPE** (2026-09-02). The face rail scopes this
                 // room's head from today, so it belongs in the memo key for
                 // this property's own stated reason: a head that survived a
@@ -2893,7 +2896,10 @@ struct FeedScreen: View {
     /// `walletAddress` is nil, so `scopeMatches` answers false for all of them
     /// and the room renders EMPTY with nothing on screen able to explain why.
     private var roomTakesWalletScope: Bool {
+        // Privy's rows are apps, not a watched wallet's transfers — they carry
+        // no `walletAddress`, so a picked wallet would empty the room (§803c).
         BridgeCatalog.category(forSource: source) == CategoryFold.walletCategory
+            && source != PrivyHomeFeed.source
     }
 
     /// The per-wallet scope (prd §128, widened to the whole Wallet category by
@@ -6455,6 +6461,10 @@ struct FeedScreen: View {
                             thing.priceCurrency == currency.code
                         }
                     }
+                case .privy(let room):
+                    PrivyRoomCard(room: room) { ref in
+                        openBySourceRef(ref, in: visible)
+                    }
                 case .railgun(let room):
                     RailgunRoomCard(room: room) { token in
                         // A token owns many moves, so the honest landing is
@@ -8198,6 +8208,10 @@ struct FeedScreen: View {
         // A fourth wallet-riding seat (2026-08-11) — grouped by TOKEN rather
         // than by rail, since Railgun has no funding platform to rank.
         case railgun(RailgunRoom)
+        // Privy (prd §803c) — the apps that made you a wallet, and what the
+        // chain says is in them. Composed from `PrivyHomeStore`, because a
+        // balance is chain state and lands no row.
+        case privy(PrivyHomeFeed.Room)
         // Safe (2026-08-11) — the fifth, and the one that earned its own
         // source rather than joining the fold at "Wallet" (`SafeBridge`'s
         // top-of-file doc, amendment (8)). Ranked by "your turn" rather than
@@ -8251,6 +8265,8 @@ struct FeedScreen: View {
                 return card.drawn.isEmpty ? card.headline : nil
             case .railgun(let room):
                 return room.tokens.isEmpty ? RailgunRoom.headline(room) : nil
+            case .privy(let room):
+                return room.funded.isEmpty && room.readCount == 0 ? PrivyHomeFeed.headline(room) : nil
             case .safe(let room):
                 // A module or a guard is a fact about money that keeps the card.
                 return room.entries.isEmpty && SafeRoom.note(room) == nil
@@ -8351,6 +8367,9 @@ struct FeedScreen: View {
             return GnosisPayRoomSource.compose(things: visible).map { .gnosisPay($0) }
         case RailgunRoomSource.source:
             return RailgunRoomSource.compose(things: visible).map { .railgun($0) }
+        case PrivyHomeFeed.source:
+            let room = PrivyHomeStore.shared.room
+            return room.appCount > 0 ? .privy(room) : nil
         case SafeRoomSource.source:
             return SafeRoomSource.compose(things: visible).map { .safe($0) }
         case let name where JournalRoomSource.sources.contains(name):

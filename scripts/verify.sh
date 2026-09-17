@@ -1459,6 +1459,10 @@ harness "X live self-test" "X live self-test" "scripts/x-live-selftest.sh" "the 
 # 200 that is not a summaries array read as an empty history says "up to date"
 # over a body nobody understood, and today's row never grows.
 harness "Duolingo self-test" "Duolingo self-test" "scripts/duolingo-selftest.sh" "the Duolingo self-test failed — run scripts/duolingo-selftest.sh"
+# Privy Home (prd §803c) — an email account read as a wallet, a "deprecated"
+# refresh token stored, a millisecond date in the year 57000, and every empty
+# wallet re-read each pass on the shared Zerion allowance.
+harness "Privy self-test" "Privy self-test" "scripts/privy-selftest.sh" "the Privy self-test failed — run scripts/privy-selftest.sh"
 # The web-session capture (prd §777) — an instrument that records a MONEY app's
 # own traffic, so what it may report is the whole check: a host outside the
 # named target is dropped rather than redacted, a URL keeps its path and loses

@@ -100,11 +100,6 @@ KNOWN_NON_REACH=(
   # fetched: the read is `api.transferwise.com`, a different host by
   # construction, and it IS disclosed in NetworkReach (prd §778).
   wise.com
-  # Privy Home, Privy's consumer wallet page — the web-session capture's
-  # sign-in page (prd §803, §803a). DEBUG, Diagnostics only, a hand-driven non-persistent
-  # WKWebView; no sweep or URLSession ever loads it. If Privy becomes a seat,
-  # its read hosts go in NetworkReach in the same commit and this line goes.
-  home.privy.io
   venice.ai bankr.bot www.kraken.com portal.cdp.coinbase.com
   www.binance.com exchange.gemini.com console.x.ai
   # id.atlassian.com — where a Jira API token is minted. Never fetched: the

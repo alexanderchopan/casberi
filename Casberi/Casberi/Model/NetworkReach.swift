@@ -781,6 +781,13 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Acorns"),
                  purpose: "Signs you in on Acorns' own page, then reads your accounts and balances as you. Read-only — nothing here can move money.",
                  hosts: ["oak.acorns.com", "api.acorns.com"]),
+        // Privy (prd §803c): signs in on Privy Home's own page, then reads
+        // which apps made the person a wallet. Balances are NOT read here —
+        // they ride the wallet holdings read, already declared above.
+        Endpoint(service: "Privy",
+                 reach: .whenConnected(bridge: "Privy"),
+                 purpose: "Signs you in on Privy Home's own page, then reads which apps made you a wallet. Read-only — nothing here can export a key or move money.",
+                 hosts: ["home.privy.io", "privy.home.privy.io"]),
         Endpoint(service: "Rocket Money",
                  reach: .whenConnected(bridge: "Rocket Money"),
                  purpose: "Signs you in on Rocket Money's own page, then reads your subscriptions and recurring bills as you. Read-only — nothing here can cancel or pay anything.",

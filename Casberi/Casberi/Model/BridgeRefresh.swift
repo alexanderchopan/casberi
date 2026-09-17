@@ -287,6 +287,17 @@ enum BridgeRefresh {
                 _ = await sweepTimed("duolingo.live") { await DuolingoLive.refresh(context: context) }
             }
         }
+        // Privy Home (prd §803c) — the app list changes when you sign in to a
+        // new app, and each pass also re-reads a bounded set of balances, so
+        // it rides the same ten-minute throttle and by-name pause.
+        let privyPaused = store.bridges.contains { $0.id == PrivyHomeFeed.seatID && $0.status == .paused }
+        if PrivyHomeAuth.connected, !privyPaused,
+           force || BridgeRefresh.dueForHeal("privy.home") {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await sweepTimed("privy.home") { await PrivyHomeLive.refresh(context: context) }
+            }
+        }
         // Instagram's live door (prd §726) — the person's own session, read
         // on `dueForHeal`'s ten-minute throttle and NEVER every foreground:
         // Meta flags a busy session harder than X or Spotify do, and the cost

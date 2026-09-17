@@ -115,6 +115,10 @@ enum NotifyKind: String, Sendable, CaseIterable {
     case likesReceived
     case repliesReceived
     case followersGained
+    /// An app made you a new wallet through Privy (prd §803c). Arrival, not
+    /// alarm: usually you just signed in somewhere — and if you did not, the
+    /// daily digest is where you notice a wallet you never made.
+    case appWalletMade
     /// The one notification a category's news becomes (prd §770): what arrived
     /// for a category that is switched on, delivered once a day.
     /// `NotifySweep.classify` never returns it; only `NotifyDigest.plan`
@@ -128,7 +132,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
              .appRejected, .agentRunFailed, .runningLow, .safeSignatureNeeded,
              .walletIncident, .chainReset, .unlockReady:
             return .alarm
-        case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained, .digest:
+        case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained, .appWalletMade, .digest:
             return .arrival
         }
     }
@@ -273,6 +277,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .likesReceived:    return String(localized: "Liked your post")
         case .repliesReceived:  return String(localized: "Someone replied")
         case .followersGained:  return String(localized: "New follower")
+        case .appWalletMade:    return String(localized: "New app wallet")
         case .digest:           return String(localized: "From your apps")
         }
     }
