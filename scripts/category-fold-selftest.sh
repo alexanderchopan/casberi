@@ -659,6 +659,44 @@ _anchorPos=${_serve%%openFolder = .category*}
   || { echo "✗ the folder request is never cleared (§754) — it would re-fire on every strip"; \
        echo "  that mounts afterwards."; exit 1; }
 
+# THE SCALE TRANSITION'S UNITPOINT IS A FRACTION OF THE BAND, NEVER OF THE
+# CONTENT (prd §806, 2026-09-17). `anchorShare` divides the chip's offset by
+# `rowWidth` — the venue capsule's own width, ~920pt for Work — and is right
+# for the tail's offset and the content closure, which are both inside the
+# content's space. The `.transition` sits on the `ScrollView`, whose frame is
+# the BAND's ~386pt, and a UnitPoint resolves against the view it is applied
+# to. Shipping the content's fraction there walked the same quarter down a
+# street a third as long: measured off a recording of Work closing, the row
+# gathered at x 285px while its chip sat at x 754px, 143pt adrift over empty
+# dock, so the close read as the row shrinking away instead of going back into
+# the chip. It looked fine for a year because a category whose venues FIT the
+# band has rowWidth == bandWidth, which makes the two fractions equal —
+# correct on the narrow folders, wrong on exactly the wide ones.
+_trans=$(awk '/\.transition\(reduceMotion/{f=1} f{print} f&&/combined\(with: \.opacity\)\)/{exit}' "$TMP/folder.nc")
+[[ -n "$_trans" ]] \
+  || { echo "✗ DockSpringRow no longer carries its scale transition (§621) — the folder would"; \
+       echo "  appear above the chip instead of coming out of it."; exit 1; }
+[[ "$_trans" == *"UnitPoint(x: bandShare"* ]] \
+  || { echo "✗ the folder's scale transition does not take bandShare (§806) — a UnitPoint on"; \
+       echo "  the scroll view resolves against the BAND's width, so the content-relative"; \
+       echo "  anchorShare gathers the row ~143pt from the chip that was tapped."; exit 1; }
+[[ "$_trans" != *"anchorShare"* ]] \
+  || { echo "✗ anchorShare is back in the folder's transition (§806) — it is the chip's"; \
+       echo "  fraction of the CONTENT, and this modifier measures in the BAND."; exit 1; }
+# And the two must stay two: one definition serving both spaces is the same
+# bug with the argument moved.
+grep -q 'private var bandShare: CGFloat' "$TMP/folder.nc" \
+  || { echo "✗ bandShare is gone from DockSpringRow (§806) — the band's fraction and the"; \
+       echo "  content's are different numbers and each has one caller."; exit 1; }
+_band=$(awk '/private var bandShare: CGFloat/{f=1} f{print} f&&/^    }$/{exit}' "$TMP/folder.nc")
+[[ "$_band" == *"bandWidth"* && "$_band" != *"rowWidth"* ]] \
+  || { echo "✗ bandShare divides by something other than bandWidth (§806) — dividing the"; \
+       echo "  chip's offset by the content's width is the shipped defect itself."; exit 1; }
+_anch=$(awk '/private var anchorShare: CGFloat/{f=1} f{print} f&&/^    }$/{exit}' "$TMP/folder.nc")
+[[ "$_anch" == *"rowWidth"* ]] \
+  || { echo "✗ anchorShare no longer divides by rowWidth (§806) — the tail's offset is"; \
+       echo "  multiplied by rowWidth, so its fraction must be of the content."; exit 1; }
+
 # A face with no picture carries its own characters, and an address's are bare
 # (user: "just xxxx with no elipsis"). Read into a variable, never `awk | grep -q`
 # (the pipefail race recorded further down).

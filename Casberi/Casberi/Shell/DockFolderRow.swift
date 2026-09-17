@@ -55,12 +55,37 @@ struct DockSpringRow<Content: View>: View {
         return min(max(DS.Space.s4, wanted), maxLeading)
     }
 
-    /// Where along the row the anchor falls, 0…1, for the tail and the
-    /// transition's origin.
+    /// Where along the row the anchor falls, 0…1 — measured along the
+    /// CONTENT, which is what the tail's offset and the content closure need,
+    /// because both live inside the content's own space.
     private var anchorShare: CGFloat {
         guard let anchorX, rowWidth > 0 else { return 0.1 }
         let x = anchorX - bandMinX - leading
         return min(max(x / rowWidth, 0.06), 0.94)
+    }
+
+    /// The same chip, as a fraction of the BAND (prd §806, 2026-09-17).
+    ///
+    /// **A fraction is meaningless without the thing it is a fraction OF, and
+    /// these two are fractions of different widths.** `anchorShare` divides by
+    /// `rowWidth`, the content's width — about 920pt with Work's twenty
+    /// venues. The `.scale` transition below sits on the `ScrollView`, whose
+    /// frame is `maxWidth: .infinity`, i.e. the band's ~386pt, and a
+    /// `UnitPoint` resolves against the view it is applied to. Handing the
+    /// content's fraction to the band's view walked the same quarter down a
+    /// street a third as long: measured off a recording of Work closing, the
+    /// row gathered at x 285px while its chip sat at x 754px — 143pt adrift,
+    /// over empty dock. So the close read as the row shrinking away rather
+    /// than going back into the chip, and a genie was drafted to say the thing
+    /// this transition was already trying to say.
+    ///
+    /// A category whose venues FIT the band has `rowWidth == bandWidth` and
+    /// the two fractions are equal, which is why this survived: it is correct
+    /// on the narrow folders and wrong on exactly the wide ones where the
+    /// gesture has something to tell you.
+    private var bandShare: CGFloat {
+        guard let anchorX, bandWidth > 0 else { return 0.1 }
+        return min(max((anchorX - bandMinX) / bandWidth, 0.06), 0.94)
     }
 
     var body: some View {
@@ -97,9 +122,11 @@ struct DockSpringRow<Content: View>: View {
             bandMinX = frame.minX
             bandWidth = frame.width
         }
+        // `bandShare`, NEVER `anchorShare` (prd §806): this modifier is on the
+        // scroll view, so the UnitPoint is resolved against the BAND's width.
         .transition(reduceMotion
                     ? .opacity
-                    : .scale(scale: 0.3, anchor: UnitPoint(x: anchorShare, y: 1.15))
+                    : .scale(scale: 0.3, anchor: UnitPoint(x: bandShare, y: 1.15))
                         .combined(with: .opacity))
     }
 }
