@@ -100,8 +100,8 @@ KNOWN_NON_REACH=(
   # fetched: the read is `api.transferwise.com`, a different host by
   # construction, and it IS disclosed in NetworkReach (prd §778).
   wise.com
-  # Privy's developer dashboard — the web-session capture's sign-in page
-  # (prd §803). DEBUG, Diagnostics only, a hand-driven non-persistent
+  # Privy Home, Privy's consumer wallet page — the web-session capture's
+  # sign-in page (prd §803, §803a). DEBUG, Diagnostics only, a hand-driven non-persistent
   # WKWebView; no sweep or URLSession ever loads it. If Privy becomes a seat,
   # its read hosts go in NetworkReach in the same commit and this line goes.
   home.privy.io

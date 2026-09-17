@@ -57561,3 +57561,11 @@ Also: the file header claimed "only `verified` draws" while the card draws `laps
 **Why measure a provider that HAS an API.** Privy's documented door is `api.privy.io` with the app id and app secret (users, linked accounts, wallets). Two facts keep it from being the obvious answer: the secret carries no read-only scope, so the phone would hold full authority over the app (delete users, make wallets) — a heavier key than §800's read-only Bankr key — and the dashboard's own charts (active users, login methods, billing) are not known to be in it. The capture answers which door a seat would need: if the dashboard's reads are the public API's shapes, the seat is a keyed one (the Stripe/PostHog pattern); only if they are not is a §701 session door weighed, with the account-flag reasoning the ChatGPT/Claude refusal recorded.
 
 **Not yet run.** Nothing is known about the dashboard's endpoints until someone signs in and copies the reading.
+
+## §803a — The page is Privy Home, a consumer wallet page, not the developer dashboard (found opening the capture on the simulator, 2026-09-17)
+
+**§803's premise was wrong, and the page said so.** `home.privy.io` draws "privy home — All your wallets, all in one place. View balances, fund accounts instantly, and manage your wallets with ease." It is Privy's page for a PERSON's embedded wallets across every app built on Privy; the developer dashboard is `dashboard.privy.io`. So §803's reasoning about the app secret, its missing read-only scope, and the Stripe/PostHog keyed door is about a different product and does not apply: a person has no app secret, and nothing documented reads a person's Privy Home.
+
+**What the capture now answers instead.** Which wallets Privy Home lists and what it reads for them. If it is addresses on public chains, the seat may be no session at all — the addresses become watched wallets on the existing Wallet seat (§169's address book), keyless. Only what the page knows that a chain does not (which app each wallet belongs to, a funding history) would argue for a §701 session door.
+
+**Verified so far:** the capture opens and Privy Home loads inside it on the simulator. Not yet signed in; no reading exists.
