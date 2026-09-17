@@ -59,6 +59,7 @@ FEED_ROWS = {
     "WalletbeatNewsRow": "Casberi/Casberi/Screens/WalletbeatRow.swift",
     "L2beatChainRow": "Casberi/Casberi/Screens/L2beatRow.swift",
     "L2beatNewsRow": "Casberi/Casberi/Screens/L2beatRow.swift",
+    "PrivyAppRow": "Casberi/Casberi/Screens/PrivyAppRow.swift",
 }
 
 # Constructed by a row builder but NOT a feed row, and why.

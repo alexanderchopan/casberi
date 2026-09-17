@@ -50,10 +50,21 @@ final class PrivyHomeStore {
 
     private static let appsKey = "privy.home.apps.v1"
     private static let balancesKey = "privy.home.balances.v1"
+    private static let hiddenKey = "privy.home.hidden.v1"
+    private static let showEmptyKey = "privy.home.showEmpty"
 
     private(set) var apps: [PrivyHomeFeed.App] = []
     private(set) var balances: [String: PrivyHomeFeed.Balance] = [:]
-    /// Moves whenever either changes — the room head's memo key, because a
+    /// Apps the person hid, by row ref. Only hides them here.
+    private(set) var hidden: Set<String> = []
+    /// Off by default: an app holding nothing and not used in 90 days is one
+    /// count in the head, not a row in the feed.
+    private(set) var showEmpty = false
+    /// The rows the feed draws — recomputed when any input moves, so a row's
+    /// filter is a set lookup, never a walk of the apps.
+    private(set) var shownRefs: Set<String> = []
+    private(set) var byRef: [String: PrivyHomeFeed.App] = [:]
+    /// Moves whenever the head's inputs change — its memo key, because a
     /// balance landing lands no row (the Hegotá note in `FeedScreen`).
     private(set) var revision = 0
 
@@ -67,31 +78,69 @@ final class PrivyHomeStore {
            let balances = try? JSONDecoder().decode([String: PrivyHomeFeed.Balance].self, from: data) {
             self.balances = balances
         }
+        if let data = d.data(forKey: Self.hiddenKey),
+           let hidden = try? JSONDecoder().decode(Set<String>.self, from: data) {
+            self.hidden = hidden
+        }
+        showEmpty = d.data(forKey: Self.showEmptyKey) == Data("1".utf8)
+        recompute()
     }
 
     static var identity: String { String(shared.revision) }
 
+    private func recompute() {
+        byRef = Dictionary(apps.map { (PrivyHomeFeed.ref($0), $0) }, uniquingKeysWith: { a, _ in a })
+        shownRefs = PrivyHomeFeed.shown(apps, balances: balances, hidden: hidden,
+                                        showEmpty: showEmpty, now: .now)
+        revision &+= 1
+    }
+
     func setApps(_ apps: [PrivyHomeFeed.App]) {
         guard apps != self.apps else { return }
         self.apps = apps
-        revision &+= 1
+        recompute()
         if let data = try? JSONEncoder().encode(apps) { DefaultsWrite.set(data, forKey: Self.appsKey) }
     }
 
     func setBalances(_ updates: [String: PrivyHomeFeed.Balance]) {
         guard !updates.isEmpty else { return }
         balances.merge(updates) { _, new in new }
-        revision &+= 1
+        recompute()
         if let data = try? JSONEncoder().encode(balances) {
             DefaultsWrite.set(data, forKey: Self.balancesKey)
         }
     }
 
-    /// Signing out forgets what the session read; the landed rows stay.
+    func setShowEmpty(_ on: Bool) {
+        guard on != showEmpty else { return }
+        showEmpty = on
+        recompute()
+        DefaultsWrite.set(Data((on ? "1" : "0").utf8), forKey: Self.showEmptyKey)
+    }
+
+    func setHidden(_ ref: String, _ isHidden: Bool) {
+        if isHidden { hidden.insert(ref) } else { hidden.remove(ref) }
+        recompute()
+        if let data = try? JSONEncoder().encode(hidden) { DefaultsWrite.set(data, forKey: Self.hiddenKey) }
+    }
+
+    /// Whether the feed draws this row. Not a Privy app row: always.
+    func shows(_ thing: Thing) -> Bool {
+        guard let ref = thing.sourceRef, ref.hasPrefix(PrivyHomeFeed.refPrefix) else { return true }
+        // Before the first read in this install there is nothing to judge by.
+        return apps.isEmpty || shownRefs.contains(ref)
+    }
+
+    func usd(_ ref: String) -> Double? {
+        byRef[ref].flatMap { PrivyHomeFeed.appUSD($0, balances: balances) }
+    }
+
+    /// Signing out forgets what the session read; the landed rows stay, and
+    /// so do the person's own hide choices.
     func forget() {
         apps = []
         balances = [:]
-        revision &+= 1
+        recompute()
         DefaultsWrite.remove(Self.appsKey)
         DefaultsWrite.remove(Self.balancesKey)
     }

@@ -24,11 +24,13 @@ struct PrivyScreen: View {
             state: AccountPageState.of(name: "Privy", seatID: PrivyHomeFeed.seatID,
                                        connected: connected, store: store),
             mode: .signIn,
-            cardSheet: { _ in
-                AnyView(PrivyLoginSheet(onCaptured: {
-                    connected = true
-                    Task { await confirm() }
-                }))
+            cardSheet: { id in
+                id == "privyApps"
+                    ? AnyView(PrivyAppsSheet())
+                    : AnyView(PrivyLoginSheet(onCaptured: {
+                        connected = true
+                        Task { await confirm() }
+                    }))
             },
             teardown: {
                 PrivyHomeAuth.clear()
@@ -38,7 +40,9 @@ struct PrivyScreen: View {
             act: {
                 if connected { connectedBlock } else { connectBlock }
             },
-            more: { EmptyView() },
+            more: {
+                if connected, !PrivyHomeStore.shared.apps.isEmpty { displayBlock }
+            },
             keySheet: { EmptyView() }
         )
         .onAppear {
@@ -74,6 +78,20 @@ struct PrivyScreen: View {
                              retry: { Task { await sync() } })
         DSSlabNote(text: "Every app you made a wallet in lands in your feed. Balances are read from the chain, not from Privy.",
                    plain: true)
+    }
+
+    /// How the room shows your apps (prd §803e) — Casberi's choices, never
+    /// Privy's settings: nothing here changes anything at Privy.
+    @ViewBuilder private var displayBlock: some View {
+        let store = PrivyHomeStore.shared
+        DSToggleRow(title: Text("Show empty apps"),
+                    detail: Text("Apps holding nothing that you haven't used in 90 days."),
+                    isOn: Binding(get: { store.showEmpty }, set: { store.setShowEmpty($0) }))
+        DSPushRow(title: Text("Hidden apps"),
+                  fact: Text(store.hidden.isEmpty ? String(localized: "None")
+                                                  : String(localized: "\(store.hidden.count)"))) {
+            sheet = .card(id: "privyApps")
+        }
     }
 
     private var signedInLine: String {

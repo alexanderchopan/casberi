@@ -192,6 +192,9 @@ enum PrivyHomeFeed {
         var id: String
         var name: String
         var logoURL: String?
+        /// Privy's `custom_origin` — where the app lives, when it says. Read
+        /// as an https URL or a bare host; anything else is nil.
+        var origin: String?
         var createdAt: Date?
         var lastActiveAt: Date?
         var wallets: [Wallet]
@@ -215,6 +218,7 @@ enum PrivyHomeFeed {
             out.append(App(id: id,
                            name: (name?.isEmpty == false ? name : nil) ?? shortAddress(wallets[0].address),
                            logoURL: string(record["logo_url"]),
+                           origin: webOrigin(record["custom_origin"]),
                            createdAt: date(record["created_at"]),
                            lastActiveAt: date(record["last_active_at"]),
                            wallets: wallets))
@@ -260,6 +264,42 @@ enum PrivyHomeFeed {
         }
         let base58 = Set("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
         return (32...44).contains(s.count) && s.allSatisfy { base58.contains($0) }
+    }
+
+    /// An https origin out of whatever `custom_origin` holds.
+    static func webOrigin(_ any: Any?) -> String? {
+        guard var raw = (any as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty else { return nil }
+        if !raw.contains("://") { raw = "https://" + raw }
+        guard let url = URL(string: raw), url.scheme == "https",
+              let host = url.host, host.contains(".") else { return nil }
+        return "https://\(host)"
+    }
+
+    /// Where a wallet can be looked at. An EVM embedded wallet has one address
+    /// on every chain, so it opens Blockscan's cross-chain page; Solana opens
+    /// Solscan. Doors, never fetched.
+    static func explorerURL(_ wallet: Wallet) -> String {
+        wallet.address.hasPrefix("0x")
+            ? "https://blockscan.com/address/\(wallet.address)"
+            : "https://solscan.io/account/\(wallet.address)"
+    }
+
+    /// Which app rows the feed shows (user, 2026-09-17: "Show empty apps",
+    /// "Hide an app"): a hidden app never; otherwise a funded app, an app used
+    /// lately, an app not read yet, and — only when asked — the rest.
+    static func shown(_ apps: [App], balances: [String: Balance], hidden: Set<String>,
+                      showEmpty: Bool, now: Date) -> Set<String> {
+        var out = Set<String>()
+        for app in apps {
+            let r = ref(app)
+            guard !hidden.contains(r) else { continue }
+            let usd = appUSD(app, balances: balances)
+            if showEmpty || usd == nil || (usd ?? 0) >= fundedFloor || isRecent(app, now: now) {
+                out.insert(r)
+            }
+        }
+        return out
     }
 
     static func shortAddress(_ address: String) -> String {
@@ -361,45 +401,71 @@ enum PrivyHomeFeed {
         return Array((funded + recent + never + quiet).prefix(readsPerPass))
     }
 
-    /// The room's head, as values (no `Thing`): the total, the funded apps by
-    /// value, and how many are empty or unused.
+    /// The room's head, as values (no `Thing`) — the mockup's order (user,
+    /// 2026-09-17): the apps holding money by value, then the apps used
+    /// recently, then ONE count for the rest rather than a row each.
     struct Room: Equatable {
         struct Entry: Equatable, Identifiable {
             var id: String { ref }
             var ref: String
             var name: String
-            var usd: Double
+            var logoURL: String?
+            /// nil = not read yet.
+            var usd: Double?
+            var lastActiveAt: Date?
             var line: String
         }
         var appCount: Int
-        /// The funded apps by value, capped at the head's eight.
+        /// The funded apps by value.
         var funded: [Entry]
-        /// Every funded app, before the cap.
+        /// Used inside `recentWindow` and holding nothing, newest use first.
+        var recent: [Entry]
+        /// Every funded app, before any cap.
         var fundedCount: Int
         var totalUSD: Double
         /// Apps whose balance has been read at least once.
         var readCount: Int
         var recentCount: Int
+        /// Neither funded nor recently used.
+        var quietCount: Int { appCount - fundedCount - recent.count }
     }
 
     static func room(_ apps: [App], balances: [String: Balance], now: Date) -> Room {
         var funded: [Room.Entry] = []
+        var recent: [Room.Entry] = []
         var total = 0.0
         var read = 0
-        var recent = 0
+        var recentCount = 0
         for app in apps {
-            if isRecent(app, now: now) { recent += 1 }
-            guard let usd = appUSD(app, balances: balances) else { continue }
-            read += 1
-            total += usd
-            if usd >= fundedFloor {
-                funded.append(.init(ref: ref(app), name: app.name, usd: usd, line: line(app)))
+            let usd = appUSD(app, balances: balances)
+            let isRecentApp = isRecent(app, now: now)
+            if isRecentApp { recentCount += 1 }
+            if usd != nil { read += 1 }
+            total += usd ?? 0
+            let entry = Room.Entry(ref: ref(app), name: app.name, logoURL: app.logoURL, usd: usd,
+                                   lastActiveAt: app.lastActiveAt,
+                                   line: lastUsed(app.lastActiveAt, now: now) ?? line(app))
+            if let usd, usd >= fundedFloor {
+                funded.append(entry)
+            } else if isRecentApp {
+                recent.append(entry)
             }
         }
-        funded.sort { $0.usd == $1.usd ? $0.name < $1.name : $0.usd > $1.usd }
-        return Room(appCount: apps.count, funded: Array(funded.prefix(8)),
-                    fundedCount: funded.count,
-                    totalUSD: total, readCount: read, recentCount: recent)
+        funded.sort { ($0.usd ?? 0) == ($1.usd ?? 0) ? $0.name < $1.name : ($0.usd ?? 0) > ($1.usd ?? 0) }
+        recent.sort { ($0.lastActiveAt ?? .distantPast) > ($1.lastActiveAt ?? .distantPast) }
+        return Room(appCount: apps.count, funded: funded, recent: recent,
+                    fundedCount: funded.count, totalUSD: total, readCount: read,
+                    recentCount: recentCount)
+    }
+
+    /// "Used today", "Used 3 days ago", "Used Mar 2025" — a row's line.
+    static func lastUsed(_ date: Date?, now: Date) -> String? {
+        guard let date else { return nil }
+        let days = Int(now.timeIntervalSince(date) / 86_400)
+        if days <= 0 { return String(localized: "Used today") }
+        if days == 1 { return String(localized: "Used yesterday") }
+        if days < 30 { return String(localized: "Used \(days) days ago") }
+        return String(localized: "Used \(date.formatted(.dateTime.month(.abbreviated).year()))")
     }
 
     static func usd(_ value: Double) -> String {
@@ -420,13 +486,20 @@ enum PrivyHomeFeed {
             : String(localized: "across \(room.fundedCount) apps, of \(room.appCount)")
     }
 
-    /// What the head left off, and what has not been read yet.
+    /// The one line for everything the head does not list, and what has not
+    /// been read yet.
     static func footnote(_ room: Room) -> String? {
         let unread = room.appCount - room.readCount
-        if unread > 0 {
-            return String(localized: "\(unread) wallets not read yet — they fill in over the next syncs")
+        let quiet = room.quietCount
+        switch (quiet > 0, unread > 0) {
+        case (true, true):
+            return String(localized: "\(quiet) more apps, empty or not used lately · \(unread) not read yet")
+        case (true, false):
+            return String(localized: "\(quiet) more apps, empty and not used lately")
+        case (false, true):
+            return String(localized: "\(unread) apps not read yet — they fill in over the next syncs")
+        case (false, false):
+            return nil
         }
-        let empty = room.appCount - room.fundedCount
-        return empty > 0 ? String(localized: "\(empty) apps hold nothing") : nil
     }
 }
