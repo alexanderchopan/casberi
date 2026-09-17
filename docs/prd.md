@@ -57547,3 +57547,9 @@ Also: the file header claimed "only `verified` draws" while the card draws `laps
 **Not demo-gated.** The §795 reads run for rows nobody asked about. This one runs only when somebody types a name, which is the intent an ENS lookup in the same field already answers. The host was already declared under "Wallet names", and its disclosure now names this use.
 
 `world-app-selftest.sh` pins the shapes, the holder check, the router order, that no family claims a username, and that nobody and unreachable stay apart. Four mutations were run against it and all four were caught.
+
+## §801b — World ID 3.0 is deprecated, so §801a's server-free path is not a door (user: "3.0 is deprecated", 2026-09-17)
+
+**Corrected, not re-measured.** §801a called the 3.0 path "server-free" and named a Pro free trial as the reason to re-open it. That path runs only through `@worldcoin/idkit-core` 2.x, and npm marks every 2.x release deprecated ("Old-versions moved to new ones"; 2.0.0, 2.0.2 and 2.1.0 checked). The current 4.2.4 requires `rp_context`, whose signature needs the portal's secret signing key. World's migration guide tells new apps to start on IDKit 4.x. §801a's measurements still hold: an unsigned 3.0 request reached World App, and the verify endpoints take no key. They describe a protocol on its way out, which is no base for a feature.
+
+**The one re-open condition left is §787's:** a Casberi server, which the user has ruled out, or World shipping a 4.0 request that needs no RP secret. A Pro free trial on World ID would need one of the two.
