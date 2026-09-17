@@ -290,7 +290,25 @@ enum BlueskyIngest {
             comps.queryItems = [
                 URLQueryItem(name: "actor", value: handle),
                 URLQueryItem(name: "limit", value: "30"),
-                URLQueryItem(name: "filter", value: "posts_no_replies"),
+                // `posts_no_replies` is the MIRROR's filter, and it is a
+                // choice about watching a stranger: their replies are half of
+                // a conversation you are not in.
+                //
+                // **Your own account is not a stranger, and the filter broke
+                // the inbound half (2026-09-17).** `landInbound` walks
+                // `SocialInbound.ownRecentPosts`, which reads YOUR posts out
+                // of the corpus — so every post this filter excluded was one
+                // the inbound reads could never ask about, and it excluded
+                // all of your replies. "Someone answered me in a thread" had
+                // no source, on an account explicitly marked as yours.
+                // Farcaster carried the identical bug under its own spelling
+                // (`topLevelOnly`) and is fixed in the same pass.
+                //
+                // Your replies land with no `socialContext`, so they are your
+                // words in your feed and never "replied to you" —
+                // `NotifySweep` keys that on `socialContext == "reply"`.
+                URLQueryItem(name: "filter",
+                             value: account.mine ? "posts_with_replies" : "posts_no_replies"),
             ]
             guard let url = comps.url,
                   let root = await IngestSupport.getJSON(url) as? [String: Any],
@@ -545,8 +563,9 @@ enum BlueskyIngest {
     /// shape that could never come back.
     ///
     /// UNMEASURED (2026-07-31, no network from the authoring host): the author
-    /// feed is fetched with `filter=posts_no_replies`, and whether the AppView
-    /// includes repost entries under that filter is the one fact to check
+    /// feed is fetched with `filter=posts_no_replies` — `posts_with_replies`
+    /// on an account marked `mine` since 2026-09-17 — and whether the AppView
+    /// includes repost entries under either filter is the one fact to check
     /// before trusting this. If it strips them, nothing lands (an honest
     /// silence, not a wrong answer) and the fix is the filter, not this code.
     @MainActor

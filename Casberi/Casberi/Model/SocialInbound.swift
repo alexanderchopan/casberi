@@ -86,6 +86,18 @@ enum SocialInbound {
     /// widening: a person with fresh posts still gets exactly the old
     /// behaviour, and a person without one stops being told nothing.
     ///
+    /// **This reads the corpus, so it can only ever see what the account's own
+    /// page LANDED — and from §239 (2026-07-31) until §804 (2026-09-17) both
+    /// pages excluded your replies**
+    /// (Farcaster's `topLevelOnly`, Bluesky's `filter=posts_no_replies`).
+    /// Every read below is therefore an invariant of the landing rule, not of
+    /// this function: with replies excluded, `landReplies` was asking
+    /// "did anyone answer?" about top-level casts alone, and on both networks
+    /// most conversation happens under a reply. Both pages now land your
+    /// replies when the account is marked `mine`, and that is what makes this
+    /// list the thing its name says it is. If either filter is ever widened
+    /// back, this goes blind again with nothing to report it.
+    ///
     /// `.isLive` at the boundary (corollary 4 of the SwiftData liveness rule):
     /// this hands an array of models onward to readers that will read stored
     /// properties off them, so the guarantee is made HERE, where it's local
@@ -108,7 +120,57 @@ enum SocialInbound {
             .sorted { $0.capturedAt > $1.capturedAt }
         let cutoff = Date.now.addingTimeInterval(-ownPostWindow)
         let fresh = mine.filter { $0.capturedAt > cutoff }
-        return Array((fresh.isEmpty ? mine : fresh).prefix(ownPostPage))
+        return share(fresh.isEmpty ? mine : fresh)
+    }
+
+    /// Splits `ownPostPage` between your top-level posts and your replies, so
+    /// neither kind can starve the other.
+    ///
+    /// **This exists because the fix for §804 could otherwise have swapped one
+    /// blindness for the other.** Before it, replies were excluded and only
+    /// your top-level posts were asked about; afterwards the page holds both
+    /// and the list is simply the newest six — so an account that mostly
+    /// replies (which on these networks is most active accounts) would fill
+    /// all six slots with replies and stop asking about its own posts
+    /// entirely. Nothing would look wrong: the pass still runs, still costs
+    /// the same, still lands replies. It would just have quietly moved which
+    /// half of your notifications you never see.
+    ///
+    /// So each side is guaranteed a floor and the leftovers go to whichever
+    /// side has more. The cost is unchanged — `ownPostPage` bounds the result
+    /// either way — and a person with only posts, or only replies, gets the
+    /// whole page exactly as before.
+    ///
+    /// A reply is one wearing a `parent` card. A reply whose parent could not
+    /// be fetched (deleted, or a node that wouldn't answer) reads as top-level
+    /// here, which costs nothing wrong: it is still your post and still worth
+    /// asking about. `pool` is already `.isLive`-filtered by the one caller.
+    ///
+    /// The result is NOT re-sorted. Both reads iterate it and fetch per entry;
+    /// which one goes first changes nothing.
+    @MainActor
+    static func share(_ pool: [Thing]) -> [Thing] {
+        let rootFloor = max(1, ownPostPage / 2)
+        let replyFloor = ownPostPage - rootFloor
+        var roots = 0, replies = 0
+        var taken: [Thing] = []
+        for thing in pool where taken.count < ownPostPage {
+            if thing.parent == nil {
+                if roots < rootFloor { taken.append(thing); roots += 1 }
+            } else if replies < replyFloor {
+                taken.append(thing)
+                replies += 1
+            }
+        }
+        // Whatever the other side didn't use. An account with no replies takes
+        // the whole page in posts here, which is the pre-§804 behaviour intact.
+        if taken.count < ownPostPage {
+            var held = Set(taken.map(ObjectIdentifier.init))
+            for thing in pool where taken.count < ownPostPage {
+                if held.insert(ObjectIdentifier(thing)).inserted { taken.append(thing) }
+            }
+        }
+        return taken
     }
 
     /// The followers already seen for one account — an ordered, capped ledger

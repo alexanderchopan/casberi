@@ -245,6 +245,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **The Safe CO-SIGNER — a key that can sign and can never spend** (`-signerProbe`) → docs/hooks/wallet.md · prd §425
 - `-wipeAccessProbe YES` — run the Data tray's Delete access internals and log before/after credential counts.
 - `-fcRecasts` `-bskyReposts` — Social grew an INBOUND half (2026-07-31, prd §239) → docs/hooks/social.md · prd §239
+- **An account marked `mine` lands its OWN replies (2026-09-17) — the inbound half reads `ownRecentPosts` out of the CORPUS, so a landing rule four files away decided what "did anyone answer me?" could see, and both pages declined replies (`topLevelOnly: true`, `filter=posts_no_replies`)** (`social-inbound-audit.py`) → docs/hooks/social.md · prd §804
 - `-fcName` `-fcLikes` `-fcMentions` — Farcaster grew likes/mentions/channels/replies (2026-07-14, same keyless Snapchain node): -fcName → docs/hooks/social.md
 - Social enrichment (2026-07-16, prd 81) — both networks, one pass through Model/SocialBridge.swift. → docs/hooks/social.md
 - `-likersProbe` — Who liked your post (2026-08-07, prd §330, Model/SocialLikers.swift, -likersProbe YES) → docs/hooks/social.md · prd §330

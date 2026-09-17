@@ -558,6 +558,27 @@ step "Source alias audit"
 "$ROOT/scripts/source-alias-audit.py" || fail "a renamed source resolves to no seat — see the output above"
 print -P "%F{green}✓ source alias audit%f"
 
+# AN ACCOUNT MARKED `mine` LANDS ITS OWN REPLIES (2026-09-17). §239's inbound
+# half — who replied to you, who liked your posts — reads through
+# `SocialInbound.ownRecentPosts`, which walks YOUR posts out of the corpus. So
+# what it can see is decided by the account page's landing rule, four files
+# away, and both pages declined replies: Farcaster's `topLevelOnly: true`,
+# Bluesky's `filter=posts_no_replies`. Right for a stranger, and on your own
+# account it meant `landReplies` only ever asked about top-level posts — so
+# every answer to anything you said in a THREAD, which is where nearly all
+# conversation on either network happens, had no source at all. Two
+# correct-looking filters, nothing failing to compile, and no other check here
+# could see it. This pins both filters to the `mine` flag, and pins the two
+# reads that the fix could have broken the other way: `ownRecentPosts` still
+# filtering on a nil `socialContext` (else a reply sent to YOU reads as a post
+# of yours), and `repliesReceived` still keyed on that marker (else your own
+# replies, which now land unmarked, would notify you about yourself).
+step "Social inbound audit"
+"$ROOT/scripts/social-inbound-audit.py" --self-test >/dev/null \
+  || fail "the social-inbound audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/social-inbound-audit.py" || fail "an account marked mine does not land its own replies — see the output above"
+print -P "%F{green}✓ social inbound audit%f"
+
 # The catalogue row's verb and the setup screen's mode chip are ONE fact (prd
 # §653): a dark row says its price — Allow / Sign in / Add key / Import /
 # Connect — from `Offer.mode`, and each screen passes its own `mode:` literal.

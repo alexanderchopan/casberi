@@ -466,7 +466,30 @@ enum FarcasterIngest {
                 }
             }
 
-            added += await landPage(messages, topLevelOnly: true, existing: &existing,
+            // `topLevelOnly` is the MIRROR's rule, and it is a rule about
+            // watching a stranger: their replies are half of a conversation
+            // you are not in, so a watched account's page lands their casts
+            // and not their answers.
+            //
+            // **Your own account is not a stranger, and applying the rule to
+            // it broke the inbound half (2026-09-17).** `landInbound` walks
+            // `SocialInbound.ownRecentPosts`, which reads YOUR casts out of
+            // the corpus — so anything this call declined to land was a cast
+            // the inbound reads could never ask about. Every one of your
+            // replies was declined. On Farcaster nearly all conversation
+            // happens under a reply, so "someone answered me in a thread" —
+            // the commonest notification the network produces — had no source
+            // at all, on an account explicitly marked as yours, with the
+            // switch on and nothing anywhere saying why.
+            //
+            // So your replies land when the account is `mine`, and only then.
+            // They carry no `socialContext` (the `why` marker is nil here), so
+            // they are your words in your feed, never "replied to you" —
+            // `NotifySweep` keys that notification on `socialContext ==
+            // "reply"` and cannot mistake one for the other. `ownRecentPosts`
+            // needs no change: it already filters on a nil context, so it
+            // picks them up as written.
+            added += await landPage(messages, topLevelOnly: !account.mine, existing: &existing,
                                     landed: landed, backfill: backfill, context: context)
 
             if account.likes {
@@ -934,7 +957,10 @@ enum FarcasterIngest {
               let text = body["text"] as? String, !text.isEmpty else { return false }
         if topLevelOnly,
            !(body["parentCastId"] is NSNull || body["parentCastId"] == nil) {
-            return false   // casts, not replies (the mirror's rule)
+            // Casts, not replies (the mirror's rule). Never set for an
+            // account marked `mine` — see `refresh`: your own replies are
+            // what the inbound half asks about.
+            return false
         }
         let ref = "fc:\(hash)"
         let images = imageEmbeds(body)
