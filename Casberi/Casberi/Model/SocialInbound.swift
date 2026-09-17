@@ -165,7 +165,12 @@ enum SocialInbound {
         // Whatever the other side didn't use. An account with no replies takes
         // the whole page in posts here, which is the pre-§804 behaviour intact.
         if taken.count < ownPostPage {
-            var held = Set(taken.map(ObjectIdentifier.init))
+            // Spelled as a closure, not `.map(ObjectIdentifier.init)`:
+            // that initialiser is overloaded (`AnyObject` and `Any.Type`)
+            // and an unapplied reference asks the type checker to pick.
+            // Written in a session with no Swift toolchain, so the form
+            // that cannot be ambiguous is the one that ships.
+            var held = Set(taken.map { ObjectIdentifier($0) })
             for thing in pool where taken.count < ownPostPage {
                 if held.insert(ObjectIdentifier(thing)).inserted { taken.append(thing) }
             }
