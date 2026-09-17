@@ -57652,3 +57652,9 @@ Also: the file header claimed "only `verified` draws" while the card draws `laps
 **The demo has a Privy seat** (`demo-selftest.py` check G, which caught its absence): six app wallets dated when each was made, four legs of activity across two of them, the real seats' ref shapes so the seat's own dedupe recognises them, and `privy:app:`/`privy:tx:` in the teardown list so they leave with the demo. The room's HEAD is `PrivyHomeStore`'s, which a demo never fills, so what the demo shows of Privy is its rows — stated because a future session will notice the head is bare in demo mode and go looking for a bug.
 
 **Unverified on a device:** the Wallet total's new figure. The simulator this was built on watches no wallets, so there is no Wallet room to read it in; the merge is proven by the code path and by `wallet-viz-selftest.sh`, not by a screenshot.
+
+## §803h — The Privy seat is MEASURED against the person's own account (user: "those balances are orrect", 2026-09-17)
+
+**Every earlier Privy entry carried "unmeasured" somewhere; this one retires it for the numbers.** On the user's own account, on the simulator: 90 apps with a wallet (Privy Home's own 117 counts apps holding only an email), 114 wallets, the room's total and per-app figures, and 12 transfers in one app wallet on a single day — all confirmed correct by the person they belong to.
+
+**What that verifies, precisely:** the `privy_home/me` parse (`PrivyHomeFeed.apps`, including the tolerant `accounts` walk that must not read an email as a wallet), the per-app balance sum over `WalletIngest.unwatchedHoldings`, and the Zerion activity read landing the right legs against the right app. It does NOT verify the Wallet-total merge (§803g — no watched wallet on that simulator), the money-in notification, or the renewal after a full 30-day gap.
