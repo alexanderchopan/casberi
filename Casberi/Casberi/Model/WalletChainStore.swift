@@ -48,20 +48,15 @@ final class WalletChainStore {
     /// because that is the chain a token balance lives on, and calling the row
     /// "Hyperliquid" would claim the perps book is in it.
     ///
-    /// **World Chain (prd §785, 2026-09-16) is the first chain here that
-    /// landed UNMEASURED, and it is OFF by default because of it.** Every
-    /// other row was read end-to-end first — that is this table's own rule,
-    /// and it is not suspended, it is unmet: the session that added it had no
-    /// network route to Alchemy at all. What is unproven, in the order it
-    /// would bite: the Portfolio `by-address` call accepting
-    /// `worldchain-mainnet` (a chain it refuses 400s the whole holdings read,
-    /// for every chain in that request, which is why this must not be on by
-    /// default), `alchemy_getAssetTransfers` answering on it, and DeFiLlama's
-    /// key for it (absent from `DefiLlamaPrices.chainKey`, so the price
-    /// backstop simply does not cover this chain yet — a miss, never a wrong
-    /// number). Zerion has no mapping either (`ZerionAPI.networkFor`), so both
-    /// halves ride the Alchemy path. Measure the three, then move it into
-    /// `defaultNetworkIDs` with a seed row beside the others.
+    /// **World Chain (prd §785, 2026-09-16) landed UNMEASURED and OFF, and
+    /// was measured end to end the same evening (prd §788), which put it ON.**
+    /// Zerion serves it as `world` (positions and transactions, one request
+    /// per wallet like HyperEVM and Monad), Alchemy's Portfolio `by-address`
+    /// call takes `worldchain-mainnet` beside `eth-mainnet` in one body,
+    /// `getAssetTransfers` answers once it is not asked for `internal`
+    /// transfers (`WalletIngest.Chain.internalTransfers`), and DeFiLlama
+    /// prices WLD under `wc`. World App's wallets live here, so a watched
+    /// World App address shows its WLD and USDC with nothing switched on.
     ///
     /// Note `WorldID` reads World Chain whether or not this row is on: that is
     /// one `eth_call` on a keyless public host, not this table's Alchemy
@@ -102,7 +97,7 @@ final class WalletChainStore {
     static let defaultNetworkIDs = ["eth-mainnet", "base-mainnet", "arb-mainnet",
                                     "opt-mainnet", "matic-mainnet",
                                     "hyperliquid-mainnet", "monad-mainnet",
-                                    "solana-mainnet"]
+                                    "solana-mainnet", "worldchain-mainnet"]
 
     private var selected: [String] { didSet { persist() } }
 
@@ -124,6 +119,7 @@ final class WalletChainStore {
         ("solana-mainnet",      "wallet.chains.solanaSeeded.v1"),
         ("hyperliquid-mainnet", "wallet.chains.hyperevmSeeded.v1"),
         ("monad-mainnet",       "wallet.chains.monadSeeded.v1"),
+        ("worldchain-mainnet",  "wallet.chains.worldchainSeeded.v1"),
     ]
 
     private init() {

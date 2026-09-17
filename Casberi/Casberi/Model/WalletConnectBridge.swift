@@ -224,6 +224,9 @@ enum WalletConnectBridge {
         // table's own doc sets for adding a row.
         "hyperliquid-mainnet": "eip155:999",
         "monad-mainnet":  "eip155:143",
+        // 2026-09-16 (prd §788): `eth_chainId` answers 0x1e0 (480) and
+        // Zerion's `/chains/world` reports `external_id` 0x1e0 — two sources.
+        "worldchain-mainnet": "eip155:480",
     ]
 
     /// Ethereum mainnet — the floor a proposal falls back to if the chain

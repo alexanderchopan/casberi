@@ -156,6 +156,9 @@ struct TokenChart {
         "polygon": "polygon_pos",
         "avalanche": "avax",
         "fantom": "ftm",
+        // Measured 2026-09-16 (prd §788): GeckoTerminal's network id is
+        // `world-chain` (20 WLD pools), Dexscreener's slug is `worldchain`.
+        "worldchain": "world-chain",
     ]
 
     /// Fetches a token's price curve for the range. GeckoTerminal's OHLCV is
@@ -224,6 +227,9 @@ struct TokenChart {
         // book at an EVM contract address answers with the wrong market.
         "hyperevm": "hyperliquid-mainnet",
         "monad": "monad-mainnet",
+        // Measured 2026-09-16 (prd §788): Alchemy's historical prices answer
+        // on `worldchain-mainnet` (23 hourly points for WLD over a day).
+        "worldchain": "worldchain-mainnet",
     ]
 
     /// Alchemy's Prices API historical endpoint — real candles for the EVM

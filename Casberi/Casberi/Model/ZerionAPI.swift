@@ -52,6 +52,12 @@ enum ZerionAPI {
         // spellings sitting either side of one entry is exactly the drift this
         // table exists to hold.
         "hyperevm": "hyperliquid-mainnet", "monad": "monad-mainnet",
+        // 2026-09-16 (prd §788). `world` is Zerion's id for World Chain
+        // (`external_id` 0x1e0 = 480, the same answer `eth_chainId` gives), read
+        // off `/v1/chains/` and checked against a live World App wallet:
+        // positions (USDC, WLD, WETH, ORO…) AND transactions both came back
+        // on `chain.id == "world"` with the filter list below carrying it.
+        "world": "worldchain-mainnet",
     ]
 
     /// One fungible holding as Zerion hands it over — already decimal-adjusted

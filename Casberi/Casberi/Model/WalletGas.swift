@@ -145,6 +145,9 @@ enum WalletGas {
         // Dexscreener slug it has nothing to do with.
         "hyperliquid-mainnet": "0x5555555555555555555555555555555555555555",
         "monad-mainnet": "0x3bd359c1119da7da1d913d1c4d2b7c461115433a",
+        // WETH at the OP-stack predeploy; Alchemy's prices `by-address` priced
+        // it on `worldchain-mainnet` (2026-09-16, prd §788).
+        "worldchain-mainnet": "0x4200000000000000000000000000000000000006",
     ]
 
     @MainActor private static var priceCache: [String: (price: Double, at: Date)] = [:]

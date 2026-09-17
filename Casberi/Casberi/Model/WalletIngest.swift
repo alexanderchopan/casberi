@@ -40,13 +40,22 @@ enum WalletIngest {
         /// of 10^9 computes to $0.00005, drops under `holdingFloor`, and the
         /// coin simply vanishes from the treemap (measured 2026-07-16).
         var nativeDecimals: Int = 18
+        /// Whether Alchemy's `getAssetTransfers` takes the `internal`
+        /// category here. MEASURED 2026-09-16 (prd §788) against every chain
+        /// in this table: Ethereum, Base and Polygon answer; Arbitrum,
+        /// Optimism, HyperEVM, Monad, Robinhood and World Chain REFUSE THE
+        /// WHOLE CALL ("The 'internal' category is not supported for this
+        /// network"). Asking anyway is not a missing category, it is a nil for
+        /// that chain — so the Alchemy arm landed no activity at all on six
+        /// chains, which is every read Robinhood (no Zerion mapping) ever made.
+        var internalTransfers: Bool = false
     }
     private static let allChains: [Chain] = [
-        Chain(network: "eth-mainnet",  explorer: "https://etherscan.io/tx/",              symbol: "ETH",   displayName: "Ethereum"),
-        Chain(network: "base-mainnet", explorer: "https://basescan.org/tx/",              symbol: "ETH",   displayName: "Base"),
+        Chain(network: "eth-mainnet",  explorer: "https://etherscan.io/tx/",              symbol: "ETH",   displayName: "Ethereum", internalTransfers: true),
+        Chain(network: "base-mainnet", explorer: "https://basescan.org/tx/",              symbol: "ETH",   displayName: "Base", internalTransfers: true),
         Chain(network: "arb-mainnet",  explorer: "https://arbiscan.io/tx/",               symbol: "ETH",   displayName: "Arbitrum"),
         Chain(network: "opt-mainnet",  explorer: "https://optimistic.etherscan.io/tx/",   symbol: "ETH",   displayName: "Optimism"),
-        Chain(network: "matic-mainnet",explorer: "https://polygonscan.com/tx/",           symbol: "MATIC", displayName: "Polygon"),
+        Chain(network: "matic-mainnet",explorer: "https://polygonscan.com/tx/",           symbol: "MATIC", displayName: "Polygon", internalTransfers: true),
         // HyperEVM and Monad (2026-08-28, prd §512). Both explorers are Etherscan-family
         // and were checked on a REAL hash and a REAL address (200 on both
         // `/tx/<hash>` and `/address/<addr>`), which is what
@@ -64,16 +73,8 @@ enum WalletIngest {
         // accounts live on, so a person who holds WLD or spends from World App
         // reads it here beside every other chain. `worldscan.org` is
         // Etherscan-family, which is what `explorerAddressURL`'s `/tx/` →
-        // `/address/` rewrite rests on.
-        //
-        // **OFF BY DEFAULT, and the reason is MEASUREMENT, not taste** — see
-        // `WalletChainStore.selectable`. Nothing on the host that wrote this
-        // could reach Alchemy, so three facts every other chain here had
-        // proven before it landed are unproven for this one: that the
-        // Portfolio `by-address` call accepts `worldchain-mainnet` (a chain it
-        // refuses 400s the WHOLE holdings read), that `alchemy_getAssetTransfers`
-        // answers on it, and what DeFiLlama calls it. Measure those three
-        // before moving it into `defaultNetworkIDs`.
+        // `/address/` rewrite rests on. MEASURED end to end the same day
+        // (prd §788) and ON by default since — see `WalletChainStore.selectable`.
         Chain(network: "worldchain-mainnet", explorer: "https://worldscan.org/tx/", symbol: "ETH", displayName: "World Chain"),
     ]
 
@@ -158,7 +159,9 @@ enum WalletIngest {
     ///
     /// **An entry here is a debt, not a feature.** Measure the chain end to
     /// end (`-portfolioProbe` reports the refusal in one line) and delete it.
-    private static let unprovenNetworks: Set<String> = ["worldchain-mainnet"]
+    /// EMPTY since 2026-09-16: World Chain, its only entry, was measured
+    /// (prd §788). The retry stays, because the next chain lands the same way.
+    private static let unprovenNetworks: Set<String> = []
 
     /// The networks one address can actually live on, by its SHAPE — base58
     /// reads Solana, `0x…` reads the EVM chains. This is what makes Solana free
@@ -1087,8 +1090,11 @@ enum WalletIngest {
                                           categories: ["erc721", "erc1155"]) ?? []
             return mapped + nfts
         }
+        let categories = chain.internalTransfers
+            ? ["external", "internal", "erc20", "erc721", "erc1155"]
+            : ["external", "erc20", "erc721", "erc1155"]
         return await fetchAlchemy(address: address, chain: chain, received: received,
-                                  categories: ["external", "internal", "erc20", "erc721", "erc1155"])
+                                  categories: categories)
     }
 
     /// Maps one Zerion fungible leg into the Alchemy-shaped dictionary —
@@ -2570,6 +2576,10 @@ enum WalletIngest {
         // network (the L1) that would route a HyperEVM token's chart at the
         // wrong book.
         "hyperliquid-mainnet": "hyperevm", "monad-mainnet": "monad",
+        // Measured 2026-09-16 (prd §788): Dexscreener lists WLD's pairs under
+        // `worldchain`; GeckoTerminal spells the same chain `world-chain`,
+        // which `TokenChart.geckoTerminalNetwork` translates.
+        "worldchain-mainnet": "worldchain",
         // Solana rides free: both chart tiers `TokenChart` falls through
         // (GeckoTerminal, then Dexscreener) spell it "solana", so an SPL cell's
         // tap opens a real chart the same way an ERC-20 cell's does.
@@ -2595,6 +2605,9 @@ enum WalletIngest {
         // error anywhere.
         "hyperliquid-mainnet": "0x5555555555555555555555555555555555555555",
         "monad-mainnet": "0x3bd359c1119da7da1d913d1c4d2b7c461115433a",
+        // World Chain is OP-stack, so WETH sits at the predeploy — read back
+        // off the chain via `symbol()` (2026-09-16, "WETH"), not assumed.
+        "worldchain-mainnet": "0x4200000000000000000000000000000000000006",
         // Base58 is case-SENSITIVE (project rule) — never lowercase this one.
         "solana-mainnet": "So11111111111111111111111111111111111111112",
     ]

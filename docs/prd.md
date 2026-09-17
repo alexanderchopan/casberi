@@ -57305,3 +57305,18 @@ Also: the file header claimed "only `verified` draws" while the card draws `laps
 **Re-open when World's app ships device pairing or a recovery-agent picker** — the one product change that turns the authenticator route on. Until then §83 forbids a door that opens on nothing.
 
 **One risk noted for §785a, not acted on here.** `worldchain.drpc.org`, the host §785a gave the address read, answered "Temporary internal error" to every call for several minutes after ~25 requests in a burst. `addressVerifiedUntil` itself is proven on Alchemy's public host (a zero word, not a revert). The read is intent-bought, so a burst is unlikely in the app, but the host is fragile.
+
+## §788 — World Chain is ON by default, because it was measured; and the Alchemy transfer arm stops asking six chains for a category they refuse (user: "Show World App money in the wallet" — "yes for sure", then "can you make sure it is on by default too", 2026-09-16)
+
+**§785 put World Chain in the picker OFF, and named the three reads that had to be proven first. All three were, plus the rest of the table.** Measured against a real World App wallet and a live WLD holder, never inferred from a chain's reputation:
+
+- **Zerion serves it as `world`** (`external_id` 0x1e0 = 480): positions (USDC, WLD, WETH, ORO) and transactions both return on `chain.id == "world"` with it in the `filter[chain_ids]` list. That is the fact that makes it free — like HyperEVM and Monad (§512), it rides the one Zerion request per wallet whatever the picker says, so ON costs nothing on the read that runs. Robinhood stays off because it has no such mapping.
+- **Alchemy's Portfolio `by-address` takes `worldchain-mainnet`** beside `eth-mainnet` in one body (no 400), native row and WLD priced. `unprovenNetworks` is EMPTY; its retry stays for the next chain.
+- **DeFiLlama prices WLD at 0.99 confidence under `wc`** (also `worldchain` and `world chain`; `/chains` publishes only the display name, which cannot ride a path).
+- The rest of the table, so no half of the wallet is quietly absent: GeckoTerminal `world-chain` (20 WLD pools), Dexscreener `worldchain`, Alchemy historical prices (23 hourly points), WETH at the OP-stack predeploy read back via `symbol()`, Alchemy's NFT `getContractsForOwner` (200), and CAIP-2 `eip155:480` from two sources (`eth_chainId` and Zerion). **OpenSea's `/api/v2/chains` does not list it**, so a piece there draws with no door — Robinhood's shape, §83.
+
+**On by default means three rows, and each alone is a hole:** `defaultNetworkIDs` (fresh installs), `seeded` (every install that chose its chains before today — without it only new installs read it, which is the state Solana shipped in), and the Zerion mapping (else it is an Alchemy chain per wallet). `worldid-selftest.sh` check 5 is AMENDED from "off" to all three, each proven by a mutation.
+
+**The bug the measurement found, fixed here: the Alchemy transfer arm asked every chain for `internal` transfers, and six chains refuse the whole call.** Ethereum, Base and Polygon answer; Arbitrum, Optimism, HyperEVM, Monad, Robinhood and World Chain return "The 'internal' category is not supported for this network" — not a missing category, a nil for that chain. So whenever Zerion could not reach a wallet, those six landed no activity at all, and **Robinhood, which has no Zerion mapping, has never landed a transfer through this path.** `WalletIngest.Chain.internalTransfers` is true only where it was measured to answer; the guard refuses it on World Chain.
+
+**Not changed:** the §785 address-book read, its host, and the World ID rulings (§786/§787). No icon: the chain picker draws none, and L2BEAT already ships `brand-l2b-worldchain`.

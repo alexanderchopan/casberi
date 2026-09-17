@@ -70,9 +70,13 @@ enum WalletNFTShelf {
     /// no, forever, and — because a failed read is honestly reported as "we
     /// could not see" rather than "you hold nothing" — would put a permanent
     /// unreadable row in the picker for a chain that simply has no read.
+    ///
+    /// World Chain joined 2026-09-16 (prd §788): `getContractsForOwner`
+    /// answers 200 on `worldchain-mainnet`. OpenSea's `/api/v2/chains` does
+    /// not list it, so it gets no `openSeaPath` row — Robinhood's shape.
     static let networks = ["eth-mainnet", "base-mainnet", "arb-mainnet",
                            "opt-mainnet", "matic-mainnet", "monad-mainnet",
-                           "robinhood-mainnet"]
+                           "robinhood-mainnet", "worldchain-mainnet"]
 
     /// Alchemy network id → OpenSea's own chain path, for a piece's door.
     ///

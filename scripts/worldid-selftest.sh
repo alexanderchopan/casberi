@@ -251,13 +251,24 @@ grep -q "$worldid_host" "$WORLDID" \
 grep -q 'service: "World ID"' "$TMP/source.stripped" \
   || { echo "✗ the read no longer names itself to NetworkLedger — the receipts screen would attribute it to the Wallet bridge"; exit 1; }
 
-# 5. WORLD CHAIN IS OFF BY DEFAULT while it is unmeasured (prd §785). The
-#    holdings read is one request per chunk across every selected chain, so a
-#    chain the Portfolio endpoint refuses 400s the WHOLE read.
+# 5. WORLD CHAIN IS ON BY DEFAULT, because it was measured (prd §788, which
+#    amends §785's off-until-measured guard rather than deleting it). On means
+#    three things together, and each alone ships a quiet hole: in the default
+#    set (fresh installs), in the seed list (every install that chose its
+#    chains before today — `seeded`'s own doc), and mapped in Zerion (else it
+#    costs an Alchemy chain per wallet, which is Robinhood's reason to be off).
 grep -q '("worldchain-mainnet", "World Chain")' "$CHAINS" \
   || { echo "✗ World Chain is not in the wallet's chain picker"; exit 1; }
-if grep -A 4 'defaultNetworkIDs = \[' "$CHAINS" | grep -q 'worldchain-mainnet'; then
-  echo "✗ World Chain is ON by default — measure the Portfolio by-address call, getAssetTransfers and DeFiLlama's key first (prd §785)"; exit 1
+grep -A 4 'defaultNetworkIDs = \[' "$CHAINS" | grep -q 'worldchain-mainnet' \
+  || { echo "✗ World Chain is not ON by default (prd §788)"; exit 1; }
+grep -q '("worldchain-mainnet", *"wallet.chains.worldchainSeeded.v1")' "$CHAINS" \
+  || { echo "✗ World Chain is on by default with no seed row — only installs made after today would read it"; exit 1; }
+grep -q '"world": "worldchain-mainnet"' "$(dirname "$CHAINS")/ZerionAPI.swift" \
+  || { echo "✗ World Chain is on by default but Zerion does not map it — every wallet pays an Alchemy chain for it"; exit 1; }
+# …and the Alchemy arm never asks it for `internal` transfers, which refuses
+# the WHOLE call there (measured on six chains, prd §788).
+if grep -q 'network: "worldchain-mainnet".*internalTransfers: true' "$(dirname "$CHAINS")/WalletIngest.swift"; then
+  echo "✗ World Chain asks Alchemy for internal transfers — the call is refused whole"; exit 1
 fi
 
 # --- mutation liveness --------------------------------------------------------

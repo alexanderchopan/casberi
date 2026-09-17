@@ -34,6 +34,11 @@ enum DefiLlamaPrices {
         // `hyperevm`, but `hyperliquid` is the key its own `/chains` listing
         // publishes, so that is the one kept.
         "hyperliquid-mainnet": "hyperliquid", "monad-mainnet": "monad",
+        // Measured 2026-09-16 (prd §788): WLD priced at 0.99 confidence under
+        // `wc`, `worldchain` and `world chain` alike. `/chains` publishes only
+        // the display name "World Chain", which cannot ride a URL path
+        // unescaped; `wc` is DeFiLlama's own internal id for chain 480.
+        "worldchain-mainnet": "wc",
     ]
 
     /// One priced coin as DeFiLlama returns it — the price plus the confidence
