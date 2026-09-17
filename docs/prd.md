@@ -57807,3 +57807,11 @@ So there are two separate facts and only the second one hurts. The container's 3
 **Verified by recording the launch again on the same simulator and counting frames: zero narrow frames.** The feed's first painted frame is the finished room at full width; the `List` is born at 402 and the day divider is born at its final 311, with no intermediate size at all. The Mac Catalyst compile and all 54 static audits pass.
 
 **The class, for the next one.** A container that has not been sized yet does not propose zero — it proposes a PLACEHOLDER, and a placeholder is indistinguishable from a real width to everything below it. Anything that measures once and caches (a `List` cell, a `ViewThatFits` candidate, a `containerRelativeFrame`) will keep that placeholder until something else invalidates it. Where a screen must be right in its first painted frame, the width has to come from a reader in the same pass, not from state written during it.
+
+## §803i — A tile shows what its word says: Apps holds app rows only (user: "so in production when i click apps vs activity, it is the same? there is no change on my app. something isn't working properly", 2026-09-17)
+
+**A real defect, and the rename caused it.** §803f's tiles were Home | Apps | Activity; §803g deleted the Apps tile and RENAMED Home to Apps — keeping Home's meaning, the whole room. So Apps drew app rows *and* transfers, and because a transfer is almost always newer than the app that made the wallet, the top of both lists was identical. The user's own screenshots show the tell the simulator had shown and this session read past: the FOOTER count changed (145 things vs 55) while every visible row stayed put.
+
+**The fix is one line of meaning:** `Section.apps.allows` is `privy:app:` rather than `true`. Apps is the app wallets, Activity is what moved in them, and each tile's list is now what its word says.
+
+**The lesson, since it is the second time this pass:** renaming a scope is renaming its CONTENTS. §803g changed the label and the glyph and left the predicate — and the check that would have caught it (`privy-selftest.sh`) was edited in the same breath to assert the wrong thing ("Apps is the whole room"), which is how a guard becomes a witness for the bug.

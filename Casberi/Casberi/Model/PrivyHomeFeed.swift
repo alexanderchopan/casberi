@@ -359,11 +359,12 @@ enum PrivyHomeFeed {
 
     // MARK: - The room's sections (prd §803f)
 
-    /// Apps is the whole room; Activity narrows its feed to what moved, and is
-    /// offered only once there is some — a tile over nothing is §83's dead
-    /// control. Two tiles, named for what they hold (user, 2026-09-17: "home
-    /// and apps say the same thing", then "i think it should be called apps and
-    /// activity") — a Home tile beside an Apps tile drew the same room twice.
+    /// Each tile holds what its word says: Apps the app wallets, Activity what
+    /// moved in them (user, 2026-09-17: "when i click apps vs activity, it is
+    /// the same"). Apps carried the deleted Home tile's meaning — the whole
+    /// room — so with transfers newest it drew the same list Activity did.
+    /// Activity is offered only once something has moved: a tile over nothing
+    /// is §83's dead control.
     enum Section: String, CaseIterable, Identifiable, Sendable {
         case apps, activity
         var id: String { rawValue }
@@ -389,7 +390,7 @@ enum PrivyHomeFeed {
         /// Whether a row of this room belongs to the section.
         func allows(ref: String?) -> Bool {
             switch self {
-            case .apps: return true
+            case .apps: return ref?.hasPrefix(PrivyHomeFeed.refPrefix) == true
             case .activity: return ref?.hasPrefix(PrivyHomeFeed.txPrefix) == true
             }
         }

@@ -223,8 +223,8 @@ check(PrivyHomeFeed.txTitle(received: true, value: 0.00213456, symbol: "ETH") ==
       "an amount keeps four significant digits")
 check(PrivyHomeFeed.Section.present(hasActivity: false) == [.apps], "no Activity tile over nothing, and one tile draws no tiles")
 check(PrivyHomeFeed.Section.present(hasActivity: true) == [.apps, .activity], "two tiles, named for what they hold")
-check(PrivyHomeFeed.Section.apps.allows(ref: txr) && PrivyHomeFeed.Section.apps.allows(ref: "privy:app:x"),
-      "Apps is the whole room")
+check(PrivyHomeFeed.Section.apps.allows(ref: "privy:app:x") && !PrivyHomeFeed.Section.apps.allows(ref: txr),
+      "Apps holds app rows only — a tile shows what its word says")
 check(PrivyHomeFeed.Section.activity.allows(ref: txr) && !PrivyHomeFeed.Section.activity.allows(ref: "privy:app:x"),
       "Activity holds what moved only")
 
