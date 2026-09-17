@@ -57569,3 +57569,16 @@ Also: the file header claimed "only `verified` draws" while the card draws `laps
 **What the capture now answers instead.** Which wallets Privy Home lists and what it reads for them. If it is addresses on public chains, the seat may be no session at all — the addresses become watched wallets on the existing Wallet seat (§169's address book), keyless. Only what the page knows that a chain does not (which app each wallet belongs to, a funding history) would argue for a §701 session door.
 
 **Verified so far:** the capture opens and Privy Home loads inside it on the simulator. Not yet signed in; no reading exists.
+
+## §803b — Privy Home, measured: one authenticated read holds every app and its wallets (2026-09-17)
+
+**Signed in on the simulator through the capture (email code), then Home → My apps → one app's page.** Eleven endpoints; the ones that matter:
+
+- **`GET privy.home.privy.io/api/v1/privy_home/me`** — `Authorization: Bearer`, plus `privy-app-id` and `privy-client` headers. Returns `{user: {id, apps: [N × {id, name, logo_url, accent_color, accounts, created_at, last_active_at, status, is_export_enabled, funding_config, …}]}}`. N was 132 for the test account while the page said 117, so the page filters; `accounts` is past the capture's depth, and the page draws one wallet address per app.
+- **`POST /api/v1/passwordless/init` `{email}`, then `/passwordless/authenticate` `{email, code, mode}`** → `{token, refresh_token, user: {linked_accounts}}`. Email-code sign-in, no captcha seen.
+- **`POST /api/v1/sessions` `{refresh_token}`** → a fresh `token` and `refresh_token`: the session renews itself.
+- **`GET /api/v1/apps/<id>`** — the app's public config (domains, accent), no person data.
+
+**Not seen on any `privy.io` host: balances and transactions.** The page's own routes are Next.js server components (`?_rsc=`, no readable body), and anything the page asks a chain provider for is outside the target and dropped by design. So Privy knows WHICH wallets; the money is on chain.
+
+**What that makes the seat, pending the user's ruling.** An in-app sign-in (§701 pattern) whose only read is `privy_home/me`, landing each app's wallet as a watched address NAMED for the app, with balances and activity from the Wallet seat's existing chain reads. Open questions before building: the watch cap (§170) against ~100+ app wallets, and the shape inside `accounts` (read it on the first real sync, through `LooseJSON` per §780b).
