@@ -57,7 +57,7 @@ import SwiftUI
 /// swap shape mid-flight.
 /// On iPad (regular width) the same strip turns 90° and becomes a fixed RAIL
 /// down the leading edge (2026-07-25, user ruling) — same 56pt Stories
-/// circles, same avatar-then-catalogue head, same rings, flips, catch bobs and
+/// circles, same face at the head, same rings, flips, catch bobs and
 /// accessibility. It is ONE view with an `axis`, not two: every behaviour on a
 /// chip (the sliding active ring, `ChipCatchBob`, the coin flip, the "All"
 /// chip reporting its frame so the capture flight knows where to land) would
@@ -173,18 +173,16 @@ struct SourceChips: View {
         guard count >= Self.restingTiles else { return Self.tileFloorCell }
         // "All" is a tile since prd §767, so it takes a cell rather than a mark.
         let allTile: CGFloat = labels.contains("All") ? 1 : 0
-        // The catalogue tile at the strip's TAIL (prd §700, a tile since
-        // §793) takes a cell when it rests on screen — at exactly three
-        // categories. Past three the half-cell peek is the tail at rest and
-        // the catalogue sits one scroll on, so it takes nothing.
-        let tailTile: CGFloat = count > Self.restingTiles ? 0 : 1
-        let cells = CGFloat(min(count, Self.restingTiles)) + allTile + tailTile
+        // NOTHING IS RESERVED PAST THE LAST CATEGORY since prd §798. The
+        // catalogue tile stood in that tail from §700 and took a cell of its
+        // own at exactly three categories; with it deleted the three tiles
+        // spread across the cell it was holding, and the slab ends where the
+        // places do.
+        let cells = CGFloat(min(count, Self.restingTiles)) + allTile
             + (count > Self.restingTiles ? 0.5 : 0)
         // What is left past "All": the strip minus its resting inset and
         // every non-category chip laid out ahead of the tiles (All, and the
-        // pinned room when present). The catalogue is not in `labels`; it is
-        // counted above as `tailTile`, because a tail nobody counted is a
-        // tail the three spread tiles cover.
+        // pinned room when present).
         let marks = CGFloat(labels.count - count) - allTile
         let available = stripWidth - stripInset - marks * (chipSize + Self.chipGap)
         return max(Self.tileFloorCell, (available / cells).rounded(.down))
@@ -234,24 +232,16 @@ struct SourceChips: View {
     /// stays the same width. Uniformity is what makes the type uniform here:
     /// the container bounds the longest word, so nothing else has to.
     private static let railChipWidth: CGFloat = PadLayout.railWidth - 2 * DS.Space.s2
-    /// Opens the app catalogue (user 2026-07-17: its door moved OUT of the
-    /// top-right cluster and INTO this strip — "add a source" belongs with
-    /// your sources). On the phone it is the strip's LAST item since prd
-    /// §700 (`catalogueMark`); the iPad rail still pins it at the head.
-    var onApps: () -> Void = {}
     /// The avatar's door — Accounts, as a TOGGLE (prd §796; it opened
     /// Settings from 2026-07-20, when the face joined this strip
-    /// Stories-style, until 2026-09-17). Distinct from `onApps` because the
-    /// face is the one seat that stands on top of the screen it opens, so it
-    /// routes through `HomeRoute.toggle` (§705) where the catalogue door
-    /// presents.
+    /// Stories-style, until 2026-09-17). Since prd §798 it is the strip's
+    /// ONLY door to that screen: the tail tile that opened it too is gone,
+    /// and this seat routes through `HomeRoute.toggle` (§705) because it
+    /// stands on top of the screen it opens.
     var onAccounts: () -> Void = {}
     /// Pull-to-refresh spin, threaded through to the avatar exactly as it
     /// was when it lived in the toolbar.
     var refreshSpin: Int = 0
-    /// The zoom anchor the catalogue door grows out of ("appsDoor"). The
-    /// avatar's "settingsDoor" source went with its Settings job (§796).
-    var zoomNS: Namespace.ID? = nil
     let onTap: (String) -> Void
 
     // No `BridgeStore` here since prd §670 — the two leaves that need it
@@ -295,8 +285,6 @@ struct SourceChips: View {
     /// The two fixed doors' glass union (2026-08-06) — see `dsGlassDoor`. Owned
     /// here rather than passed in, because the pair only exists in this strip.
     @Namespace private var doorGlassNS
-    /// Last time the catalogue door actually opened — see `openApps()`.
-    @State private var lastAppsOpen: TimeInterval = 0
     /// The strip's viewport width, for `categoryCell` (prd §662e). STATE,
     /// unlike the rest of the viewport sample, because the cells are LAYOUT
     /// and must re-lay when it changes — which is a mount or a rotation,
@@ -377,8 +365,9 @@ struct SourceChips: View {
     }
 
 
-    /// One value both doors key on, so the pair can't drift onto two different
-    /// unions and quietly stop being one shape.
+    /// The union the face's glass keys on. It held a PAIR until prd §798 —
+    /// the catalogue door beside it — and stays a union of one so the seat's
+    /// material is defined in the one place either door ever read.
     private var doorsUnion: DSGlassUnion {
         DSGlassUnion(id: "stripDoors", namespace: doorGlassNS)
     }
@@ -392,26 +381,21 @@ struct SourceChips: View {
     //
     // This comment used to describe THREE fixed marks — avatar, catalogue,
     // "All" — because that is what the head was from 2026-08-16 until the two
-    // doors moved to the sources tray on 2026-08-24 (see `head`). The widths
-    // below survive for the iPad RAIL, which still draws both doors.
+    // doors moved to the sources tray on 2026-08-24 (see `head`). The
+    // `avatarWidth`/`catalogueWidth` constants that outlived it are DELETED
+    // with the catalogue door itself (prd §798): nothing read either one —
+    // `headTrailingEdge` measures the agent seat on the phone and the "All"
+    // chip on the rail — so they were two numbers documenting a head that had
+    // not existed for a month.
     //
     // `iconGap` NARROWED s3→s2 the same day (user: "i think we could move the
     // avatar, apps, and all closer to each other"), and it is now the rail's
     // gap alone. Kept rather than reverted: the rail stacks the same marks
     // vertically and the tighter pitch reads better there too.
-    //
-    // `headTrailingEdge` and everything derived from it are computed from
-    // these constants, so the melt's ramp follows any change for free —
-    // nothing hardcodes a width.
-    private static let avatarWidth: CGFloat = 46
-    private static let catalogueWidth: CGFloat = 46
     private static let iconGap: CGFloat = DS.Space.s2
     /// Where the pinned head ENDS — on the phone that is the leading margin
     /// plus the "All" chip, and nothing else since the two doors moved to the
-    /// sources tray (2026-08-24; see `head`). `avatarWidth`/`catalogueWidth`
-    /// survive because the iPad RAIL still draws both — it has vertical room to
-    /// spare, which is the same reason its own doc gives for having no fade
-    /// mask — and `headDoors` sizes itself from them.
+    /// sources tray (2026-08-24; see `head`).
     ///
     /// Instance rather than `static` because `chipSize` folds with the strip
     /// (56→48): a static edge measured at the resting size would leave an 8pt
@@ -528,8 +512,8 @@ struct SourceChips: View {
         }
     }
 
-    /// The iPad rail. The two fixed doors sit at the HEAD, outside the scroll,
-    /// exactly as they do horizontally — but there is no leading-fade mask
+    /// The iPad rail. The fixed seat sits at the HEAD, outside the scroll,
+    /// exactly as it does horizontally — but there is no leading-fade mask
     /// here, because a rail has vertical room to spare and never has to run
     /// its chips underneath the doors to earn it. Chips below scroll on their
     /// own when a corpus grows past the rail's height.
@@ -652,14 +636,6 @@ struct SourceChips: View {
                             // THE MELT, PER CHIP — see `ChipMelt`.
                             .modifier(ChipMelt(clear: clear, ramp: ramp, far: far))
                     }
-                    // THE CATALOGUE, LAST (prd §700, 2026-09-11): after the
-                    // last category, in the tail §697 found empty. Not in
-                    // `labels` and not a chip — it opens a screen, not a
-                    // room — so it is drawn here once rather than through
-                    // `chip(_:)`, and it melts under the face exactly as a
-                    // chip does.
-                    catalogueMark
-                        .modifier(ChipMelt(clear: clear, ramp: ramp, far: far))
                 }
                 // The air between the bar and the first chip at rest — see
                 // `stripInset`.
@@ -758,22 +734,20 @@ struct SourceChips: View {
             case .horizontal:
                 HStack(spacing: Self.iconGap) {
                     avatarChip
-                    catalogueChip
                 }
             case .vertical:
                 VStack(spacing: Self.iconGap) {
                     avatarChip
-                    catalogueChip
                 }
             }
         }
     }
 
-    /// The avatar door — Accounts (§796). Stories-style: your own face leads
-    /// the strip (2026-07-20), the same "add a source"-adjacent fixed
-    /// placement the catalogue door already had. `AvatarChip`
-    /// (`TopDoors.swift`) owns the actual door/bounce/spin — this just wires
-    /// this screen's params.
+    /// The avatar door — Accounts (§796), and since §798 the rail's whole
+    /// head: the catalogue door that stood under it opened the same screen.
+    /// Stories-style, your own face leads the strip (2026-07-20). `AvatarChip`
+    /// (`TopDoors.swift`) owns the actual door/bounce/spin/alarm — this just
+    /// wires this screen's params.
     @ViewBuilder private var avatarChip: some View {
         AvatarChip(onAccounts: onAccounts, refreshSpin: refreshSpin,
                    pullTension: chrome.pullTension,
@@ -788,123 +762,16 @@ struct SourceChips: View {
     // would dissolve the head along with the chips. The same geometry is read
     // per chip now, off `fadeClear`/`fadeRamp`, which both halves still share.
 
-    /// The app-catalogue door — the same `AppsDoor` grid glyph (and its
-    /// attention state) it wore in the top-right, now the strip's first chip in
-    /// the neutral circle Pinned/All share. The store still zooms out of it.
-    @ViewBuilder private var catalogueChip: some View {
-        Button {
-            // A REAL action again (2026-07-26), not the no-op the
-            // highPriorityGesture below was given sole ownership of: whichever
-            // recognizer wins the press, the door opens. `openApps()`
-            // coalesces, so the belt and the braces can never both fire.
-            openApps()
-        } label: {
-            ZStack {
-                if let zoomNS {
-                    AppsDoor().matchedTransitionSource(id: "appsDoor", in: zoomNS)
-                } else {
-                    AppsDoor()
-                }
-            }
-            .frame(width: 46, height: 46)
-            // Glass on the NEUTRAL chips only (2026-07-20): this strip is
-            // pinned chrome the feed scrolls under, so the doors and the "All"
-            // chip wear the floating material. A source chip keeps its own app
-            // icon — an icon IS content, and frosting one would only muddy a
-            // mark the person recognizes.
-            //
-            // Joined to the avatar door beside it as one shape (2026-08-06) —
-            // the sentence above finally true of both doors, not just this one.
-            .dsGlassDoor(doorsUnion)
-            // THE DOOR IS THE CIRCLE, not the glyph inside it (user, "you
-            // press it and it doesn't respond, have to press it several
-            // times", 2026-07-26 — the third report on this button). A
-            // `.frame()` does not make its empty space hit-testable: the only
-            // rendered content in here is a 21pt SF Symbol, so the press had
-            // to land in roughly a 24×21pt box in the middle of a 46pt circle
-            // that looks tappable everywhere. Near-center taps worked,
-            // everything else fell through to the feed — which reads exactly
-            // like a flaky button. A source chip never had this because
-            // `BridgeIcon` fills its whole 46pt with a real image. Gesture
-            // hit-testing reads the same shape, which is why last round's
-            // `highPriorityGesture` couldn't fix it: the region was the bug,
-            // not the arbitration.
-            .contentShape(Circle())
-            .dsHover()
-        }
-        .buttonStyle(.plain)
-        // The door's glyph fills, colors and pulses when a bridge breaks —
-        // all three cues are visual, so the label has to say it too.
-        .modifier(CatalogueDoorSpokenLabel())
-        // This strip rides `.safeAreaInset(edge: .top)` on the paged feed
-        // TabView (`MainSurface`) — a plain Button's own tap gesture there
-        // competes with the TabView(.page)'s internal pan recognizer for the
-        // first touch (Apple's documented safeAreaInset-button bug, forums
-        // thread 725366) and can take several presses to win the
-        // arbitration (reported 2026-07-24: "requires pressing several
-        // times before opening"). `highPriorityGesture` wins immediately.
-        // Kept as the belt beside the Button's own braces above — it was
-        // never the whole story, but it costs nothing to keep winning.
-        .highPriorityGesture(TapGesture().onEnded { openApps() })
-    }
-
-    /// The catalogue door as the STRIP'S LAST ITEM (prd §700, 2026-09-11):
-    /// the same `AppsDoor` glyph (and its breakage alarm) the rail pins in a
-    /// glass circle, drawn here as ink on the slab like every chip beside it
-    /// (2026-09-09: the slab is the glass).
-    ///
-    /// **A TILE, glyph over its word, since prd §793 (user, 2026-09-16:
-    /// "make the Apps icon in the dock have a name and shape like the other
-    /// categories do").** §700 drew it as a bare mark, arguing a captioned
-    /// tile that pushes a screen is a new species wearing the old one's
-    /// shape; the user ruled the other way — the mark was the one unnamed
-    /// thing in a strip of named tiles. It is `categoryTile`'s anatomy
-    /// (frozen glyph, `dockCaption10` word, `tileWidth` × `iconSize`, centred
-    /// in a `categoryCell`) but never takes the selection fill: it opens a
-    /// screen, not a room, so there is nothing for it to be "on".
-    @ViewBuilder private var catalogueMark: some View {
-        Button {
-            openApps()
-        } label: {
-            VStack(spacing: 2) {
-                ZStack {
-                    if let zoomNS {
-                        AppsDoor(tileGlyph: glyphSize)
-                            .matchedTransitionSource(id: "appsDoor", in: zoomNS)
-                    } else {
-                        AppsDoor(tileGlyph: glyphSize)
-                    }
-                }
-                Text("Accounts")
-                    .dsText(.dockCaption10)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .foregroundStyle(DS.textPrimary)
-            }
-            .frame(width: Self.tileWidth, height: iconSize)
-            .padding(2.5)
-            .frame(width: categoryCell, height: chipSize)
-            // The door is the whole tile, not the glyph (2026-07-26, three
-            // reports deep — see `catalogueChip`).
-            .contentShape(chipShape(tile: true, outer: true))
-            .dsHover()
-        }
-        .buttonStyle(.plain)
-        .modifier(CatalogueDoorSpokenLabel())
-    }
-
-    /// One entry point for the door's two possible tap deliveries (the
-    /// Button's action and the high-priority tap). `highPriorityGesture`
-    /// failing the Button's own gesture is the documented behaviour, so in
-    /// practice only one arrives — the 0.4s coalesce is what makes relying on
-    /// that unnecessary, and keeps a double haptic impossible either way.
-    private func openApps() {
-        let now = Date().timeIntervalSinceReferenceDate
-        guard now - lastAppsOpen > 0.4 else { return }
-        lastAppsOpen = now
-        DSHaptic.selection()
-        onApps()
-    }
+    // THE CATALOGUE DOOR IS DELETED (prd §798, user 2026-09-17: "you forgot
+    // to get rid of the account icon"). `catalogueChip` (the rail's glass
+    // circle, 2026-07-17), `catalogueMark` (the strip's tail tile, §700, a
+    // named tile since §793) and the `openApps` coalesce they shared all went
+    // with it, and so did `AppsDoor` in `TopDoors.swift`. The face beside
+    // them opens the Accounts screen since §796 — the same screen, one press,
+    // from a seat that survives into a pushed room — so the tile was the same
+    // door twice, standing in the one place the strip had left to grow into.
+    // The breakage alarm the grid glyph carried is NOT lost with it: it rides
+    // the face now (`AvatarChip`'s dashed ring, §83).
 
     /// A folded category chip: its word at full size, in a capsule that grows
     /// to hold it.
@@ -1285,8 +1152,8 @@ struct SourceChips: View {
                     }
                 }
             }
-            // Same law as the catalogue door above: the chip is its own whole
-            // shape. A source chip was already whole (`BridgeIcon` fills its
+            // Same law the catalogue door was fixed under before it was
+            // deleted (prd §798): the chip is its own whole shape. A source chip was already whole (`BridgeIcon` fills its
             // 46pt with a real image), but "All" is a 12pt word inside a 56pt
             // frame — without this its press had to land on the letters. Same
             // `Capsule(style: .circular)` as the ring, and for the same reason
@@ -1632,20 +1499,14 @@ private struct ChipAttentionRing: View {
 /// string built ONCE (prd §670). Same string for both so they cannot drift
 /// on what a broken connection is called; a leaf so the bridge store it
 /// depends on is read here, not by the strip.
-/// The catalogue door's spoken name, as a LEAF for the same reason
-/// `ChipSpokenLabel` beside it is one (prd §697): `bridges.attentionCount`
-/// reads the bridge store, and read from the strip's own body it rebuilt all
-/// eleven chips on every one of the ~90 writes a landing sweep makes. The
-/// branch that took the store out of `chip(_:)` left these two modifiers
-/// behind, so the strip kept its dependency and the file did not compile at
-/// all once the property went.
 /// THE MELT, PER CHIP: solid until its leading edge reaches the bar's
 /// trailing edge (`clear`), then gone over `ramp` as it slides under the
 /// face — the 2026-07-19 ruling ("disappear into it, not into a hard line").
 /// `.scrollView` is the viewport's space. Evaluated by the render server,
 /// never a body pass. A modifier rather than a closure inline in the
-/// `ForEach` since prd §700, because the catalogue mark at the strip's tail
-/// is not in that loop and has to dissolve by the same rule.
+/// `ForEach` since prd §700, which drew a tail mark outside that loop. The
+/// tail is gone (§798) and this stays a modifier: the melt is a rule about
+/// the strip, not a line the loop happens to carry.
 private struct ChipMelt: ViewModifier {
     let clear: CGFloat
     let ramp: CGFloat
@@ -1666,19 +1527,6 @@ private struct ChipMelt: ViewModifier {
                 : 1
             return content.opacity(Double(min(lead, trail)))
         }
-    }
-}
-
-private struct CatalogueDoorSpokenLabel: ViewModifier {
-    @Environment(BridgeStore.self) private var bridges
-
-    func body(content: Content) -> some View {
-        let spoken = bridges.attentionCount > 0
-            ? String(localized: "Accounts, needs attention")
-            : String(localized: "Accounts")
-        content
-            .accessibilityLabel(Text(spoken))
-            .dsTooltip(spoken)
     }
 }
 

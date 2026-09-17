@@ -2259,15 +2259,15 @@ struct RootShell: View {
                     // dock's leading seat is your face — Accounts since
                     // prd §796 (Settings until then; it is a door in the
                     // Accounts head row now). The
-                    // catalogue stood beside it for a few hours (§697) and
-                    // is the strip's LAST item now (prd §700): the face is
-                    // the one fixed mark, the places scroll.
+                    // catalogue stood beside it for a few hours (§697), went
+                    // to the strip's tail (prd §700) and is DELETED there
+                    // (§798): the face is the one fixed mark and the one
+                    // door to Accounts, and the places scroll.
                     //
-                    // No zoom anchor: the `.zoom` transitions are declared in
-                    // `MainSurface` against ITS namespace, which this layer
-                    // cannot see — and the octopus standing here had none
-                    // either, so nothing on the phone loses a transition it
-                    // used to have. The iPad rail's own pair keeps theirs.
+                    // No zoom anchor, and none anywhere now: the `.zoom` into
+                    // Apps was declared in `MainSurface` against ITS namespace
+                    // and grew out of the tail tile's glyph, which §798 took
+                    // with the tile.
                     // On a pushed screen the seat is the way back (prd §767),
                     // so no screen needs a back chevron at its top edge.
                     DockDoors(onAccounts: { sceneState.route.toggle(.apps) },

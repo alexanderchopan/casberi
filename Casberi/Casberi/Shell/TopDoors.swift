@@ -23,10 +23,13 @@ struct AvatarChip: View {
     /// silent threshold (2026-08-04). Zero at rest and under Reduce Motion
     /// (the writer gates).
     var pullTension: CGFloat = 0
-    /// The glass union this door joins — `SourceChips.doorsUnion`, which pairs
-    /// it with the catalogue door beside it (2026-08-06). The door wears glass
-    /// either way; the union is what makes the two of them ONE shape. nil is a
-    /// preview or any future placement with no partner to merge with.
+    /// The glass union this door joins — `SourceChips.doorsUnion`, which
+    /// paired it with the catalogue door beside it from 2026-08-06 until §798
+    /// deleted that door. The door wears glass either way; the union is what
+    /// made the two of them ONE shape, and is kept as a union of one so the
+    /// material has a single definition. nil is the phone's own dock seat
+    /// (`DockDoors`), which stands on `RootShell`'s layer with nothing beside
+    /// it to merge with — and a preview.
     var doorUnion: DSGlassUnion? = nil
     /// The mark's drawn size. 46 everywhere it floats; the dock's leading
     /// seat folds it 46→40 with the chips beside it (prd §697), which a fixed
@@ -47,8 +50,8 @@ struct AvatarChip: View {
     var body: some View {
         Button {
             // A real action again (2026-07-26), not a no-op: whichever
-            // recognizer wins the press, the door opens. Same shape as
-            // `SourceChips.catalogueChip`, which this door sits beside.
+            // recognizer wins the press, the door opens. Same shape the
+            // catalogue door beside it had, until §798 deleted it.
             open()
         } label: {
             ZStack {
@@ -85,9 +88,11 @@ struct AvatarChip: View {
             .dsHover()
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(onBack == nil ? Text("Accounts") : Text("Back"))
-        .dsTooltip(onBack == nil ? String(localized: "Accounts") : String(localized: "Back"))
-        // See `SourceChips.catalogueChip`'s comment: a plain Button here
+        // The ring and the spoken name, read where they are drawn (prd §670).
+        // The name says what the ring says, because the ring is a visual cue
+        // and half the people using this app will never see it.
+        .modifier(DoorAlarm(isBack: onBack != nil))
+        // See `SourceChips`' deleted catalogue door: a plain Button here
         // competes with the paged feed TabView's pan recognizer for the
         // first touch (Apple forums thread 725366) and can need several
         // taps to win. `highPriorityGesture` wins immediately — kept as the
@@ -152,7 +157,8 @@ private struct DoorBounce: ViewModifier {
 
 /// The avatar (or a person glyph before one's set) — the Accounts entry
 /// (§796; it was Settings' until then). Sized up alongside the Apps door
-/// (2026-07-09): the doors earn presence in the bar, not a whisper.
+/// (2026-07-09): the doors earned presence in the bar, not a whisper, and
+/// this one keeps that size now that it stands alone (§798).
 struct AvatarDoor: View {
     var body: some View {
         if let avatar = ProfileStore.shared.avatar {
@@ -179,60 +185,52 @@ struct BackDoorGlyph: View {
     }
 }
 
-/// The Apps door — a grid glyph, bigger now so the store is findable
-/// (report 2026-07-09: the thin glyph was easy to miss). When a bridge needs
-/// reconnecting it goes UNMISTAKABLE: the glyph fills, turns the attention
-/// color, and pulses — a real breakage signal, never a standing one (the
-/// re-ruling 2026-07-07 that killed the tab badge still holds: this is a nav
-/// button, not a tab, and it only lights on actual breakage).
-struct AppsDoor: View {
-    /// The dock tile's frozen glyph size (prd §793), drawn the way
-    /// `CategoryGlyph` draws a category's — ink, fixed box — so the catalogue
-    /// tile reads as one of the strip's tiles. `nil` is the iPad rail's circle.
-    var tileGlyph: CGFloat? = nil
+/// THE APPS DOOR IS DELETED (prd §798, 2026-09-17). It was a grid glyph that
+/// filled, turned `DS.attention` and pulsed when a connection broke — drawn
+/// in the rail's glass circle and, since §793, in the dock's tail tile called
+/// "Accounts". The face beside it opens that same screen (§796), so the door
+/// was the same door twice and the user ruled the tile out.
+///
+/// **The alarm it carried is not deleted with it** (§83: no fake status, and
+/// no silent loss of a real one). `DoorAlarm` below moves it onto the face,
+/// in the dashed-ring vocabulary the chips already use for exactly this fact
+/// (`SourceChips.ChipAttentionRing`, 2026-07-21: dashed means broken, solid
+/// means selected). The pulse does not come with it — a chip's ring does not
+/// pulse, and the dock is no place for standing motion — but the resolution
+/// beat §412a argued for does: the ring leaves on a scale, so a repair reads
+/// as something happening rather than as a person no longer noticing.
+///
+/// A LEAF, for the reason prd §670 gives: `bridges` is written ~90 times by a
+/// landing sweep, and read from `AvatarChip`'s own body every one of those
+/// writes would rebuild the dock's fixed seat.
+private struct DoorAlarm: ViewModifier {
+    /// The seat is the BACK door (prd §767) — it is not about your accounts
+    /// then, so it carries neither the ring nor the accounts label.
+    let isBack: Bool
     @Environment(BridgeStore.self) private var bridges
+    /// The ring still DRAWS under Reduce Motion — it is the fact, not the
+    /// flourish; only its arrival and exit stop moving. `AppsDoor` gated its
+    /// healed beat the same way, and nothing mechanical catches this one
+    /// (`design-motion-audit.py` reads `onAppear` entrances).
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var needsAttention: Bool { bridges.attentionCount > 0 }
-
-    /// Bumped when the LAST broken connection heals (prd §412a, 2026-08-20).
-    ///
-    /// The door has announced breakage since 2026-07-09 and said nothing about
-    /// the repair: the pulse simply stopped and the glyph went quiet, which is
-    /// also exactly what it looks like when a person gives up and stops
-    /// noticing it. The app closes every other loop it opens — a write's outcome
-    /// buzzes, money arriving rains, a rejection flashes — and this was the one
-    /// alarm in the shell with no resolution beat.
-    ///
-    /// A one-shot `.bounce` on the way DOWN only, never on the way up: an alarm
-    /// that also celebrates itself starting reads as decoration, and the pulse
-    /// is already the whole signal there. Same `symbolEffect` vocabulary the
-    /// door already speaks, so this adds a beat rather than a second language.
-    @State private var healed = 0
-
-    var body: some View {
-        glyph
-            .foregroundStyle(needsAttention ? DS.attention : (tileGlyph == nil ? DS.tint : DS.textPrimary))
-            .symbolEffect(.pulse, options: .repeating, isActive: needsAttention)
-            // `value:` fires on CHANGE, so the counter only advances on a real
-            // high→low transition — a door that opens already-healthy has
-            // nothing to report and stays still.
-            .symbolEffect(.bounce, value: healed)
-            .onChange(of: needsAttention) { was, now in
-                guard was, !now, !reduceMotion else { return }
-                healed += 1
+    func body(content: Content) -> some View {
+        let broken = !isBack && bridges.attentionCount > 0
+        let spoken = isBack
+            ? String(localized: "Back")
+            : (broken ? String(localized: "Accounts, needs attention")
+                      : String(localized: "Accounts"))
+        content
+            .overlay {
+                if broken {
+                    Circle()
+                        .strokeBorder(DS.attention,
+                                      style: StrokeStyle(lineWidth: 2.5, dash: [3, 3]))
+                        .transition(.scale(scale: 1.25).combined(with: .opacity))
+                }
             }
-    }
-
-    @ViewBuilder private var glyph: some View {
-        let symbol = Image(systemName: needsAttention ? "square.grid.2x2.fill" : "square.grid.2x2")
-            .dsSymbolSwap(needsAttention)
-        if let size = tileGlyph {
-            symbol
-                .font(.system(size: size, weight: .medium))
-                .frame(width: size + 6, height: size + 2)
-        } else {
-            symbol.dsGlyph(.title)
-        }
+            .animation(reduceMotion ? nil : DS.Motion.press, value: broken)
+            .accessibilityLabel(Text(spoken))
+            .dsTooltip(spoken)
     }
 }

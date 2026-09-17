@@ -110,8 +110,6 @@ struct MainSurface: View {
         return false
         #endif
     }
-    /// Anchors the doors' zoom transitions (each room grows from its door).
-    @Namespace private var doorNS
 
     /// iPad (2026-07-25). `regular` alone decides the RAIL; the detail pane
     /// additionally needs real width (see `PadLayout.minWidthForPane`), so
@@ -842,8 +840,12 @@ struct MainSurface: View {
     private func pushedRoom(_ node: HomeRoute.Node) -> some View {
         switch node {
         case .apps:
+            // NO ZOOM SOURCE since prd §798: the transition grew out of the
+            // catalogue door's glyph ("appsDoor"), and that door is deleted.
+            // The face opens this screen now, and it is a fixed seat that
+            // stays put on top of what it opens — a zoom out of a mark that
+            // does not move would be a flourish about nothing.
             AppsScreen()
-                .navigationTransition(.zoom(sourceID: "appsDoor", in: doorNS))
         case .bridge(let dest):
             // Mac's connect form is PUSHED, not raised (see
             // `Destination.raisedByConnect`), so the one behaviour the sheet
@@ -1621,10 +1623,8 @@ struct MainSurface: View {
                     axis: axis,
                     categoryVenues: chips.venues,
                     minimized: chrome.minimized,
-                    onApps: { route.present(.apps) },
                     onAccounts: { route.toggle(.apps) },
-                    refreshSpin: chrome.refreshPulse,
-                    zoomNS: doorNS) { label in
+                    refreshSpin: chrome.refreshPulse) { label in
             // Compared against the CHIP, not the source: re-tapping the folded
             // Social chip while standing in Bluesky is a re-tap of the chip
             // you're on, and comparing raw sources would read it as a switch

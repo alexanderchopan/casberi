@@ -354,56 +354,57 @@ grep -q 'route.openSettings = false' "$TMP/apps.nc" \
 grep -q 'case settings' "Casberi/Casberi/Shell/HomeRoute.swift" \
   && { echo "✗ HomeRoute.Node has a settings case again — Settings is a section of Accounts,"; \
        echo "  not a screen (prd §796)."; fail=1; }
-grep -q 'AppsDoor()' "$TMP/doors.nc" \
-  && { echo "✗ the catalogue door is back in the FIXED seat (prd §700: only the avatar is"; \
-       echo "  fixed; the catalogue is the strip's last item)."; fail=1; }
-# The tail mark: drawn ONCE, after the ForEach, inside the horizontal strip's
-# HStack — so it scrolls with the places, melts under the face like a chip,
-# and never enters `labels` (it opens a screen, not a room). Counted in the
-# cell arithmetic, or three spread tiles cover it and a new person's "add an
-# account" rests one scroll past the edge.
+# THE CATALOGUE DOOR IS DELETED (prd §798, 2026-09-17, user: "you forgot to
+# get rid of the account icon"). It stood in the fixed seat for a few hours
+# (§697), went to the strip's tail (§700) and took a word there (§793) — by
+# which point the face beside it opened the SAME screen (§796), so the dock
+# carried two doors to Accounts and one of them was a tile among the places
+# that is not a place.
+#
+# Guarded negatively in three files, because every part of it is the kind of
+# thing a later pass restores by hand while "fixing" something else: the tile
+# itself, the cell it was reserved in (a tail nobody draws but everybody
+# counts is a hole at the end of the slab), and the view it drew.
+strip_comments "Casberi/Casberi/Shell/TopDoors.swift" > "$TMP/topdoors.nc"
+cat "$TMP/chips.nc" "$TMP/doors.nc" "$TMP/topdoors.nc" > "$TMP/seat.nc"
+grep -q 'AppsDoor' "$TMP/seat.nc" \
+  && { echo "✗ AppsDoor is back — the catalogue door is deleted (prd §798); the face"; \
+       echo "  beside it opens Accounts already (§796)."; fail=1; }
+grep -q 'catalogueMark\|catalogueChip' "$TMP/chips.nc" \
+  && { echo "✗ the strip draws a catalogue door again (prd §798) — on the phone's tail or"; \
+       echo "  at the iPad rail's head. The face is the door to Accounts."; fail=1; }
 python3 - "$TMP/chips.nc" <<'PY3' || fail=1
 import sys
 src = open(sys.argv[1]).read()
-i = src.find("private var horizontalStrip: some View")
-j = src.find("private func headDoors", i) if i >= 0 else -1
-strip = src[i:j] if i >= 0 and j > i else ""
-if not strip:
-    sys.exit("✗ horizontalStrip not found in SourceChips — this guard is testing nothing")
-fe = strip.find("ForEach(scrollingLabels")
-cm = strip.find("catalogueMark")
-if fe < 0 or cm < 0:
-    sys.exit("✗ the strip no longer draws catalogueMark after its ForEach — the catalogue\n"
-             "  has no seat anywhere on the phone (prd §700).")
-if cm < fe:
-    sys.exit("✗ catalogueMark is drawn BEFORE the categories — it belongs at the strip's\n"
-             "  tail (prd §700): leading, it slides under the fixed face on the first\n"
-             "  scroll and pushes All off its resting seat.")
-if strip.count("ChipMelt(") < 2:
-    sys.exit("✗ the tail mark no longer melts under the face like a chip — it would show a\n"
-             "  hard edge sliding under the avatar's glass (2026-07-19).")
-# "All" is a tile since prd §767, so it leaves the mark count and takes a cell;
-# the tail mark is still the "+ 1".
-# The tail is a TILE since prd §793, so it takes a cell when it rests on screen.
-if "let tailTile: CGFloat = count > Self.restingTiles ? 0 : 1" not in src \
-        or "+ allTile + tailTile" not in src:
-    sys.exit("✗ categoryCell no longer counts the tail tile — at three categories the spread\n"
-             "  tiles cover it and the catalogue rests one scroll past the edge.")
-mark = src[src.find("private var catalogueMark"):src.find("private func openApps")]
-if "contentShape(chipShape(tile: true, outer: true))" not in mark:
-    sys.exit("✗ the tail tile lost its hit region — the door is the whole TILE, not the glyph\n"
-             "  (2026-07-26, three user reports deep).")
-# A name and a tile's shape, like every category beside it (prd §793).
-if 'Text("Accounts")' not in mark or "frame(width: Self.tileWidth, height: iconSize)" not in mark:
-    sys.exit("✗ the catalogue is a bare mark again — it is a TILE with its word, like the\n"
-             "  categories (prd §793, user: \"have a name and shape like the other categorys\").")
-if "dsGlassDoor" in mark:
-    sys.exit("✗ the tail mark wears glass — chips are ink on the slab (2026-09-09); glass\n"
-             "  inside the scrolling slab is the arrangement that cost a frame per tick.")
-if "frame(width: categoryCell, height: chipSize)" not in mark:
-    sys.exit("✗ the tail tile no longer stands in a categoryCell frame — its pitch from the\n"
-             "  last tile would differ from every other pitch in the strip.")
+i = src.find("private var categoryCell: CGFloat")
+j = src.find("private static let restingTiles", i) if i >= 0 else -1
+cell = src[i:j] if i >= 0 and j > i else ""
+if not cell:
+    sys.exit("✗ categoryCell not found in SourceChips — this guard is testing nothing")
+if "tailTile" in cell:
+    sys.exit("✗ categoryCell reserves a cell past the last category again (prd §798) — the\n"
+             "  tail it was held for is deleted, so at three categories the tiles would\n"
+             "  spread around a gap nothing stands in.")
+if "+ allTile" not in cell:
+    sys.exit("✗ categoryCell no longer counts the All tile — it is a tile since prd §767\n"
+             "  and takes a cell like every category beside it.")
 PY3
+# THE BREAKAGE ALARM SURVIVES THE DOOR (prd §798, §83). The grid glyph filled,
+# turned `DS.attention` and pulsed when a connection broke; deleting it must
+# not delete the one signal in the shell that a bridge needs you. It rides the
+# face now, as the dashed ring the chips already mean "broken" by — and the
+# SPOKEN name has to say it too, because a ring is no use to VoiceOver.
+grep -q 'DoorAlarm(' "$TMP/topdoors.nc" \
+  || { echo "✗ the face no longer carries the breakage alarm (prd §798, §83) — the grid"; \
+       echo "  door that used to pulse is deleted, so this is the only one left."; fail=1; }
+grep -q 'bridges.attentionCount > 0' "$TMP/topdoors.nc" \
+  || { echo "✗ DoorAlarm no longer reads the bridge store's attention count — it is a LEAF"; \
+       echo "  for prd §670's reason, and it must read the fact it draws."; fail=1; }
+grep -q 'dash: \[3, 3\]' "$TMP/topdoors.nc" \
+  || { echo "✗ the alarm ring is not DASHED (2026-07-21) — solid means selected and dashed"; \
+       echo "  means broken; the same hue in both jobs is indistinguishable."; fail=1; }
+grep -q 'Accounts, needs attention' "$TMP/topdoors.nc" \
+  || { echo "✗ the face's spoken name no longer says a connection needs attention."; fail=1; }
 
 # --- 6. a CATEGORY still springs its folder out of its own chip -------------
 # Unchanged by §697: the octopus's folder is gone, every category's is not.

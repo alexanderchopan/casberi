@@ -11,10 +11,13 @@ import SwiftUI
 /// holds on its own: the face is the one mark in the dock that is about YOU,
 /// and it is the seat that has to survive into a pushed room, a bridge form
 /// and Settings itself (§357's rule, from the other direction — none of
-/// which the strip's `safeAreaInset` survives). The catalogue is a PLACE,
-/// like every category chip, and the places scroll: it is the strip's last
-/// item now (`SourceChips.catalogueMark`), after the last category, in the
-/// tail §697 noticed was empty.
+/// which the strip's `safeAreaInset` survives).
+///
+/// **And it holds ONE door again (prd §798, 2026-09-17).** §700 sent the
+/// grid to the strip's tail rather than deleting it, and §793 gave it a word
+/// ("Accounts") — by which point the face opened that same screen (§796) and
+/// the dock carried two doors to it, one of them a tile among the places
+/// that is not a place. The tail tile is deleted; this seat is the door.
 ///
 /// **Hosted on `RootShell`'s own layer, not inside the strip** — the seat the
 /// octopus held, for the reason above.
