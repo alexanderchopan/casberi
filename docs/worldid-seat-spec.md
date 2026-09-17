@@ -1,5 +1,12 @@
 # The World ID seat — build spec
 
+> **NOT BUILDABLE — MEASURED 2026-09-16 (prd §787).** §7's measurements were run before any code.
+> `getPackedAccountData` is ZERO for a real World App wallet (a 1-of-1 Safe) and for its owner key:
+> World App's authenticator is a hidden relayer-registered key, so no address a person can copy finds
+> their World ID. Public World Chain RPCs cap `eth_getLogs` at 100 blocks, so §2.2's one-call history
+> is thousands of calls. Every account's recovery agent is the same World contract. The rest of this
+> document is kept as the record of what was planned; do not build it from here.
+
 Written 2026-09-16 for a session with Xcode, a simulator and the icon file. It
 is the ruling plus every registration point, derived by reading how the **Safe**
 seat is wired (the user's own reference: *"a worldid seat like we have with safe

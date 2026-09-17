@@ -1,5 +1,13 @@
 # World ID beyond §785 — this phone as an authenticator
 
+> **BLOCKED IN WORLD'S APP — MEASURED 2026-09-16 (prd §787).** §6 measurement 1 is a NO: the user
+> checked World's app and found no way to add keys or guardians and no recovery choice. A new
+> authenticator joins only when one already on the account calls `insert_authenticator` (WalletKit's
+> pubkey validator names "a key scanned during pairing"), so without a pairing screen Stage 1 has no
+> door. Measurement 5 reads the same way: the recovery agent on every sampled account is World's PoH
+> Recovery Agent `0x00000000CBBA8Cb46C8CD414B62213F1B334fC59`. WalletKit is `worldcoin/walletkit`
+> (Swift: `walletkit-swift`, 127 MB compressed xcframework). Re-open when World's app ships pairing.
+
 Spec, 2026-09-16. Read against `worldcoin/world-id-protocol` at `9577f2f` (2026-09-16), the World ID 4.0
 product/technical spec, WIP-103 and WIP-104, and the deployed `WorldIDRegistry` on World Chain.
 Everything below marked **MEASURED** was read off that tree or the chain; everything marked
@@ -121,7 +129,7 @@ The heavy stage, and the one with the open transport question.
   committed numbers. Run `cargo-mobench` on the user's iPhone before designing the wait; a proof
   that takes eight seconds is a sheet with a progress line, one that takes forty is a different
   product.
-- **Request transport — MEASURED 2026-09-16, and it says wait.** Today's IDKit is `@worldcoin/idkit-core`
+- **Request transport — SUPERSEDED 2026-09-16 (prd §787): IDKit 4.x now ships a 4.0 transport with a Swift SDK (`idkit-swift`), so the paragraph below is stale; proving still needs a key on the account first.** The earlier reading, kept for the record — **MEASURED 2026-09-16, and it said wait.** Today's IDKit is `@worldcoin/idkit-core`
   2.1.0 (`packages/core/src/bridge.ts`): the RP posts an AES-encrypted request to
   `https://bridge.worldcoin.org/request`, gets a `request_id`, and shows
   `https://world.org/verify?t=wld&i=<request_id>&k=<key>[&b=<bridge>]` — a universal link on World's
@@ -227,10 +235,10 @@ whether this phone is an owner; (4) Path B's create flow, gated on the Orb quest
 
 ## 6. The first four measurements, in order
 
-1. World App on a verified phone: is there an *add authenticator* flow, and what does it hand out
-   or take in (a QR of a pubkey? a callback?).
-2. ~~`worldcoin/idkit` at v4~~ — MEASURED: IDKit 2.1.0 speaks the 3.0 bridge, and no 4.0 transport
-   is published. Re-check when `idkit-core` 3.x lands; Stage 3 is gated on it.
+1. ~~World App on a verified phone: is there an *add authenticator* flow~~ — MEASURED NO (prd §787):
+   no way to add keys or guardians, no recovery choice.
+2. ~~`worldcoin/idkit` at v4~~ — MEASURED twice: IDKit 2.1.0 spoke the 3.0 bridge; by the evening of
+   2026-09-16 IDKit 4.x ships a 4.0 transport (JS, Swift, Kotlin). Stage 3's transport gate is open.
 3. `cargo-mobench` on an iPhone 17 Pro: query + nullifier proving time and peak memory.
 4. Tools for Humanity's issuer: will it re-issue the Orb credential to a second authenticator on
    the same account, and through which endpoint.
