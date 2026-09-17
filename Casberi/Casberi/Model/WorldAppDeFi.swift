@@ -170,6 +170,40 @@ enum WorldAppDeFi {
 
     static let usernamesAPI = "https://usernames.worldcoin.org/api/v1/"
 
+    /// What a typed World App username answered (prd §802). Three outcomes,
+    /// because "nobody has that name" and "World did not answer" ask the
+    /// person for different things, and saying the first when it was the
+    /// second is a false fact (§83).
+    enum UsernameLookup: Equatable {
+        case found(WorldApp.UsernameHolder)
+        case notFound
+        case unreachable
+    }
+
+    /// Who holds a username somebody typed to FOLLOW (prd §802). One request:
+    /// World's record by name is the forward answer, the direction a name is
+    /// trusted in, so the reverse check `username(for:)` makes has nothing to
+    /// add here. A 404 is nobody; any other failure is unreachable.
+    ///
+    /// **Not demo-gated, unlike the reads above.** Those run for rows nobody
+    /// asked about; this runs only when somebody types a name and presses
+    /// Follow, the same intent `NameResolve.resolve` answers for ENS.
+    @MainActor
+    static func holder(ofUsername typed: String) async -> UsernameLookup {
+        guard let name = WorldApp.usernameQuery(typed),
+              let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { return .notFound }
+        let (json, status) = await IngestSupport.getJSONStatus(usernamesAPI + encoded)
+        switch status {
+        case 200:
+            guard let holder = WorldApp.holder(fromJSON: json, forUsername: name) else { return .notFound }
+            return .found(holder)
+        case 404:
+            return .notFound
+        default:
+            return .unreachable
+        }
+    }
+
     // MARK: - RPC
 
     private static func ethCall(to: String, data: String) async -> String? {

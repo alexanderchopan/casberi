@@ -241,7 +241,7 @@ enum NetworkReach {
                  // public usernames service, and the host its pictures are
                  // served from. Also asked for a counterparty met on World
                  // Chain, which is the one reach the sentence below adds.
-                 purpose: "Resolves .eth, .sol, .wei and .gwei names, World App usernames, and their avatars — for the wallets you watch, for an address when you open it in your address book, and for the other side of a World Chain transfer. Carries only the name or address being looked up. The .wei and .gwei registries are read directly on Ethereum, through the public nodes listed under “Wallet activity”.",
+                 purpose: "Resolves .eth, .sol, .wei and .gwei names, World App usernames, and their avatars — for the wallets you watch, for an address when you open it in your address book, for the other side of a World Chain transfer, and for a World App username you type to follow. Carries only the name or address being looked up. The .wei and .gwei registries are read directly on Ethereum, through the public nodes listed under “Wallet activity”.",
                  hosts: ["api.ensideas.com", "metadata.ens.domains", "app.ens.domains",
                          "sns-sdk-proxy.bonfida.workers.dev", "lite-api.jup.ag",
                          "usernames.worldcoin.org",

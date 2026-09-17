@@ -94,6 +94,31 @@ check(WorldApp.username(fromJSON: ["error": "Record not found."], for: who) == n
 var http = rec; http["profile_picture_url"] = "http://example.com/a.png"
 check(WorldApp.username(fromJSON: http, for: who)?.pictureURL == nil, "a non-https picture is dropped")
 
+// A typed username (prd §802), MEASURED shapes: letters and digits, an optional
+// ".NNNN" tag, case ignored, and nothing that could be half an address.
+check(WorldApp.usernameQuery("andy") == "andy", "a bare username")
+check(WorldApp.usernameQuery(" @Andy ") == "Andy", "a leading @ and whitespace are dropped, case kept")
+check(WorldApp.usernameQuery("laary.8938") == "laary.8938", "the four-digit tag shape")
+check(WorldApp.usernameQuery("vitalik.eth") == nil, "an ENS name is not a username")
+check(WorldApp.usernameQuery("andy.123") == nil, "a three-digit tag is not World's shape")
+check(WorldApp.usernameQuery("a_b") == nil && WorldApp.usernameQuery("a-b") == nil
+      && WorldApp.usernameQuery("a b") == nil, "punctuation and spaces are not username characters")
+check(WorldApp.usernameQuery("0x1234") == nil, "a half-typed hex address never asks World")
+check(WorldApp.usernameQuery(String(repeating: "a", count: 20)) != nil
+      && WorldApp.usernameQuery(String(repeating: "a", count: 21)) == nil, "twenty characters is the bound")
+check(WorldApp.usernameQuery("1BoatSLRHtKNngkdXEeobR76b53LETtpyT") == nil, "a Bitcoin address is not a username")
+check(WorldApp.usernameQuery("") == nil && WorldApp.usernameQuery("@") == nil, "nothing is not a username")
+
+let holderRecord: [String: Any] = ["username": "worLd", "address": "0x9D5A5203A1B4B7F0B9C5E8C2A1D3E4F5A6B7C8D9"]
+check(WorldApp.holder(fromJSON: holderRecord, forUsername: "world")
+      == WorldApp.UsernameHolder(name: "worLd", address: "0x9d5a5203a1b4b7f0b9c5e8c2a1d3e4f5a6b7c8d9"),
+      "the holder keeps World's spelling and a lowercased address")
+check(WorldApp.holder(fromJSON: holderRecord, forUsername: "worlds") == nil,
+      "a record for a different username names nobody")
+check(WorldApp.holder(fromJSON: ["username": "andy", "address": "andy.eth"], forUsername: "andy") == nil,
+      "a record without a hex address names nobody")
+check(WorldApp.holder(fromJSON: ["error": "Record not found."], forUsername: "andy") == nil, "an error body names nobody")
+
 // Blockscout logs (prd §797): the two shapes that differ from a node's.
 let padded: [String: Any] = ["status": "1", "message": "OK", "result": [
     ["address": "0x2cfc85d8e48f8eab294be644d9e25c3030863003", "blockNumber": "0x4b45cc", "logIndex": "0x9a",
@@ -123,6 +148,18 @@ swiftc -O -o "$TMP/run" "$APP" "$KECCAK" "$TMP/main.swift" 2>"$TMP/build.log" \
 # A username is forward-verified: two lookups, the second by the username.
 grep -q 'WorldApp.username(fromJSON: await IngestSupport.getJSON(usernamesAPI + encoded), for: addr) != nil' "$DEFI" \
   || { echo "✗ a World App username is no longer forward-verified — a stranger's handle could name this address"; exit 1; }
+# A typed username is a name ONLY in the follow field (prd §802): the book's bulk
+# paste reads a bare word as a person's name, so no Family may claim one.
+ROUTER="Casberi/Casberi/Model/NameResolve.swift"
+FIELD="Casberi/Casberi/Screens/WalletWatchField.swift"
+awk '/static func family\(of raw: String\)/,/^    }$/' "$ROUTER" | grep -q 'usernameQuery' \
+  && { echo "✗ NameResolve.family claims a World App username — a bulk paste's names become addresses"; exit 1; }
+grep -q 'if let username = WorldApp.usernameQuery(raw) { return .worldAppUsername(username) }' "$ROUTER" \
+  || { echo "✗ followTarget no longer asks for a username before ENS's catch-all"; exit 1; }
+[[ $(grep -c 'NameResolve.followTarget(of:' "$FIELD") -ge 4 ]] \
+  || { echo "✗ the follow field reads a draft without followTarget — a username arms, previews or follows inconsistently"; exit 1; }
+grep -q 'case 404:' "$DEFI" && grep -q 'return .unreachable' "$DEFI" \
+  || { echo "✗ a username lookup no longer tells nobody from unreachable (§83)"; exit 1; }
 # Every read is demo-gated.
 for fn in 'static func book(addresses:' 'static func syncGrantEvents(' 'static func username(for'; do
   awk -v f="$fn" 'index($0,f){on=1} on{print} on&&/^    }$/{exit}' "$DEFI" | grep -q 'DemoMode.isActive' \

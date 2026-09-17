@@ -57521,3 +57521,29 @@ Also: the file header claimed "only `verified` draws" while the card draws `laps
 **Also not buildable, from World's own docs.** Human-in-the-loop approvals need a relying-party signing key and a workflow server. "Hats" was a Shopify giveaway for registered agents, and it has sold out. World's mini-app catalogue API (`developer.worldcoin.org/api/v2/public/apps`) refuses any request whose origin is not `world-id-assets.com`. That is a gate, and a native client will not forge the origin to pass it.
 
 **Re-open only when** AgentKit accepts a credential most World App users hold, or a user brings an Orb-verified World ID and a reason to register an agent.
+
+## §801a — Double-checked against World's docs: production is open to anyone, a server-free path exists only on World ID 3.0, and Casberi still has nothing to gate with it (user: "can you double check here there is nothing else we can do? b/c they want folks developing on it and i'm not sure how it would only be in a sandbox", then "look here also" on the IDKit integration guide, 2026-09-17)
+
+**Sandbox is not a limit.** It is World's test copy of the World ID app, installed through TestFlight, with resettable accounts and simulated verification. Production is open to any app made in the Developer Portal. Nothing §787 or §801 found came from the sandbox.
+
+**Every current request needs a server, confirmed.** IDKit 4.x takes an `rp_context` on every request. Its signature is made from the portal's `signing_key`, which the integration guide and the RP signatures page both forbid in a client. Session proofs, which give a stable per-app `session_id`, need the same signature.
+
+**Checking a proof needs no key — MEASURED.** Both verify endpoints list no authentication. Called with no credentials, `POST developer.world.org/api/v2/verify/<app_id>` answered 404 "App not found" and `/api/v4/verify/<id>` answered 400 "responses array is required", never 401. So a 3.0 proof can be both requested and checked without a Casberi server: §801 measured the unsigned 3.0 bridge request reaching World App, and this closes the other half. World's legacy endpoint also answers "already verified", so World keeps the one-per-human count for a cloud action itself (documented, not measured).
+
+**Credentials a person can get without an Orb.** Selfie Check (Beta) needs only World App and a camera. It is a 90-day, medium-assurance credential, requested through `selfieCheckLegacy`, which returns only 3.0 proofs, and it is enabled per app by emailing Tools for Humanity. An NFC passport credential is the other route. Either would have answered this user's refused scan, and neither is accepted by AgentBook, which takes the Orb group only.
+
+**Three things this path does not settle.** World is moving every relying party to 4.0, and each app sets its own cut-off for 3.0 proofs; World publishes no end date for 3.0 itself. Whether a NEW portal app accepts an unsigned 3.0 request is unmeasured: World's own AgentKit app does. Making a portal app is an account action only the user can take.
+
+**The ruling stands: nothing is built.** World's own list of uses is free trials, referrals, rewards, airdrops, votes, faucets and approving a sensitive action. Casberi has no trial, referral or reward. Its faucet was declined in §795. A sensitive approval already asks Face ID on the phone, which proves presence better than a round trip to another app. **Re-open when Casberi has something one person should get once**, such as a Pro free trial: that is the first use World names, and it would run on the keyless path above.
+
+## §802 — Follow a World App username: type the handle, follow the wallet (user: "add the world app usernames", 2026-09-17)
+
+**What changed.** The follow field takes a World App username, such as `andy` or `laary.8938`. The preview names the holder as World spells the name (`worLd`) with "0x… · World App" under it, and Follow watches that address with the username as its book name. A leading `@` is dropped. A username that finds nobody says "No World App user is named …", and a service that did not answer says "Couldn't reach World App to look up …". Those are two different facts (§83), so the lookup returns three outcomes, not an optional. Following one also switches World Chain on, the way a `.sol` name switches Solana on.
+
+**The shape, MEASURED on World's usernames service.** Letters and digits, matched without regard to case, optionally with a dot and four digits. `_`, `-`, spaces and `@` return nothing. `WorldApp.usernameQuery` refuses anything starting `0x`, so a half-typed hex address never asks World. It also caps the handle at twenty characters, below the shortest Bitcoin and Solana addresses, so a pasted address never reads as a name. World's record by name is the forward answer, so it takes one request. `WorldApp.holder` keeps it only when the record's username is the one asked and its address is real hex.
+
+**A username is NOT a `NameResolve.Family`.** `looksLikeName` is also the address book's test for a pasted token, and a bulk paste writes a person's name as a bare word beside an address (`Alice, 0x…`). A family that claimed bare words would file "Alice" as an address. `NameResolve.followTarget` is the follow field's own question: a username first, because ENS's catch-all would otherwise take `laary.8938`, then the families. No top-level label is four digits, so ENS loses nothing.
+
+**Not demo-gated.** The §795 reads run for rows nobody asked about. This one runs only when somebody types a name, which is the intent an ENS lookup in the same field already answers. The host was already declared under "Wallet names", and its disclosure now names this use.
+
+`world-app-selftest.sh` pins the shapes, the holder check, the router order, that no family claims a username, and that nobody and unreachable stay apart. Four mutations were run against it and all four were caught.

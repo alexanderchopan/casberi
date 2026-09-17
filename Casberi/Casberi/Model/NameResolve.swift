@@ -49,6 +49,33 @@ enum NameResolve {
     /// try to resolve this?" call site makes.
     static func looksLikeName(_ raw: String) -> Bool { family(of: raw) != nil }
 
+    /// What the FOLLOW field can find an address by: a name one of the
+    /// families above claims, or a World App username (prd §802).
+    enum FollowTarget: Equatable {
+        case name(Family)
+        case worldAppUsername(String)
+    }
+
+    /// **Why a username is NOT a `Family`, and why it is asked FIRST here.**
+    ///
+    /// Not a family: `looksLikeName` is also the address book's test for a
+    /// pasted token (`AddressBook.looksLikeAddress`), and a bulk paste spells
+    /// a person's name as a bare word beside an address — `Alice, 0x…`. A
+    /// family claiming bare words would read that line as two addresses and
+    /// file "Alice" as one. So a username is a name only where somebody typed
+    /// it to follow.
+    ///
+    /// First: ENS's test is the catch-all for any dotted text, so it claims
+    /// World's `laary.8938` shape and answers it with no address. An ENS name
+    /// ends in a real top-level label, and no top-level label is four digits,
+    /// so taking that shape first costs ENS nothing. A bare word no family
+    /// claims at all.
+    static func followTarget(of raw: String) -> FollowTarget? {
+        if let username = WorldApp.usernameQuery(raw) { return .worldAppUsername(username) }
+        if let family = family(of: raw) { return .name(family) }
+        return nil
+    }
+
     /// The address a name resolves to, or nil — not a name, no record, or the
     /// resolver was unreachable. A no-op for input that is already an address.
     ///

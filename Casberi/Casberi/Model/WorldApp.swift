@@ -164,4 +164,52 @@ enum WorldApp {
         let safePicture = picture.flatMap { URL(string: $0)?.scheme == "https" ? $0 : nil }
         return Username(name: name, pictureURL: safePicture)
     }
+
+    /// Whoever holds a World App username, as the follow field finds them
+    /// (prd §802): the address, and the name spelled as World stores it
+    /// (`worLd`, not the `world` somebody typed).
+    struct UsernameHolder: Equatable, Sendable {
+        let name: String
+        let address: String
+    }
+
+    /// The username somebody TYPED, or nil when the text cannot be one
+    /// (prd §802). MEASURED on World's usernames service, 2026-09-17:
+    /// letters and digits, matched without regard to case, optionally
+    /// followed by a dot and four digits (`laary.8938`). A leading `@` is
+    /// how people write a handle, and the service answers it 404, so it is
+    /// dropped here. `_`, `-`, spaces and every other suffix are not
+    /// characters it searches on.
+    ///
+    /// **Two bounds keep this from swallowing an address.** Nothing starting
+    /// `0x` is a username, so a half-typed hex address never asks World; and
+    /// twenty characters sits below the shortest Bitcoin (26) and Solana (32)
+    /// address, so a pasted base58 address can never read as a name.
+    static func usernameQuery(_ raw: String) -> String? {
+        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.hasPrefix("@") { text.removeFirst() }
+        guard !text.lowercased().hasPrefix("0x") else { return nil }
+        let parts = text.split(separator: ".", omittingEmptySubsequences: false)
+        guard let base = parts.first, parts.count <= 2,
+              (1...20).contains(base.count),
+              base.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else { return nil }
+        if parts.count == 2 {
+            let tag = parts[1]
+            guard tag.count == 4, tag.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
+        }
+        return text
+    }
+
+    /// The holder of a typed username, read off World's record for it — only
+    /// when the record names THE USERNAME ASKED (case folded) and a real hex
+    /// address. A service that answered some other record, a fuzzy match or
+    /// an error body names nobody.
+    static func holder(fromJSON object: Any?, forUsername asked: String) -> UsernameHolder? {
+        guard let dict = object as? [String: Any],
+              let name = dict["username"] as? String, !name.isEmpty,
+              name.lowercased() == asked.lowercased(),
+              let address = dict["address"] as? String,
+              addressWord(address) != nil else { return nil }
+        return UsernameHolder(name: name, address: address.lowercased())
+    }
 }

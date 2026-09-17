@@ -7,6 +7,17 @@ import SwiftData
 private struct WalletResolvedDraft: Equatable {
     let input: String
     let address: String
+    /// The World App username as World stores it, when that is what the
+    /// draft resolved through (prd §802). Nil for every name family.
+    var worldAppName: String? = nil
+}
+
+/// A typed World App username that found nobody, or could not be asked —
+/// keyed to its draft like `WalletResolvedDraft`, so the preview stops
+/// saying "Looking up" and says which of the two happened (prd §802).
+private struct WalletMissedDraft: Equatable {
+    let input: String
+    let note: String
 }
 
 /// The ONE way to watch a wallet (prd §466, 2026-08-24) — paste an address,
@@ -51,6 +62,7 @@ struct WalletWatchField: View {
     @State private var result: String?
     @State private var resultIsError = false
     @State private var resolvedDraft: WalletResolvedDraft?
+    @State private var missedDraft: WalletMissedDraft?
     /// Set when a watch would exceed the cap — an honest modal, since the
     /// field cannot show "already full" from inside itself while it is
     /// still on screen at the cap (2026-07-24, carried from `WalletScreen`).
@@ -78,7 +90,7 @@ struct WalletWatchField: View {
                         actionLabel: String(localized: "Follow"),
                         focus: $addressFieldFocused,
                         isArmed: book.looksLikeAddress(draft)
-                                 || NameResolve.looksLikeName(draft),
+                                 || NameResolve.followTarget(of: draft) != nil,
                         // The paste fills; the preview, the lookalike and
                         // checksum notices and the armed verb then treat it
                         // exactly as typed (prd §618).
@@ -137,13 +149,22 @@ struct WalletWatchField: View {
     }
 
     private var previewAddress: String? {
+        let resolved = resolvedDraft?.input == draft ? resolvedDraft?.address : nil
+        // A World App username is asked before the book's own test reads the
+        // draft: that test takes ANY dotted text as a name, so `laary.8938`
+        // would preview as an address of its own (prd §802).
+        if case .worldAppUsername? = NameResolve.followTarget(of: draft) { return resolved }
         if book.looksLikeAddress(draft) { return draft }
-        if let resolvedDraft, resolvedDraft.input == draft { return resolvedDraft.address }
-        return nil
+        return resolved
+    }
+
+    private var worldAppName: String? {
+        resolvedDraft?.input == draft ? resolvedDraft?.worldAppName : nil
     }
 
     private var resolving: Bool {
-        NameResolve.looksLikeName(draft) && previewAddress == nil
+        NameResolve.followTarget(of: draft) != nil && previewAddress == nil
+            && missedDraft?.input != draft
     }
 
     private var draftIsUnsafe: Bool {
@@ -183,7 +204,7 @@ struct WalletWatchField: View {
                 HStack(spacing: DS.Space.s3) {
                     WalletFace(address: address, size: DS.Face.list, circular: true)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(known?.name ?? draft)
+                        Text(known?.name ?? worldAppName ?? draft)
                             .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
@@ -195,6 +216,8 @@ struct WalletWatchField: View {
                 }
                 .padding(.vertical, DS.Space.s2)
                 .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
+            } else if let missedDraft, missedDraft.input == draft {
+                noticeLine("magnifyingglass", DS.textTertiary, missedDraft.note)
             } else if resolving {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner(size: .mini)
@@ -212,6 +235,7 @@ struct WalletWatchField: View {
         var parts: [String] = []
         if address != draft { parts.append(WalletStore.shortAddress(address)) }
         if known != nil { parts.append(String(localized: "already in your book")) }
+        if worldAppName != nil { parts.append(NameResolve.worldAppLabel) }
         if let label = known?.kind.label { parts.append(label) }
         else if let script = BitcoinAddress.scriptKind(address) { parts.append(script) }
         return parts.isEmpty
@@ -225,14 +249,44 @@ struct WalletWatchField: View {
 
     private func resolvePreview() async {
         let asked = draft
-        guard NameResolve.looksLikeName(asked) else { return }
+        guard let target = NameResolve.followTarget(of: asked) else { return }
         try? await Task.sleep(for: .milliseconds(450))
         guard !Task.isCancelled else { return }
-        let hit = await NameResolve.resolve(asked)
-        guard !Task.isCancelled, let hit else { return }
-        withAnimation(DS.Motion.standard) {
-            resolvedDraft = WalletResolvedDraft(input: asked, address: hit)
+        switch target {
+        case .name:
+            let hit = await NameResolve.resolve(asked)
+            guard !Task.isCancelled, let hit else { return }
+            withAnimation(DS.Motion.standard) {
+                resolvedDraft = WalletResolvedDraft(input: asked, address: hit)
+            }
+        case .worldAppUsername(let name):
+            let lookup = await WorldAppDeFi.holder(ofUsername: name)
+            guard !Task.isCancelled else { return }
+            withAnimation(DS.Motion.standard) {
+                // A retyped name asks again, and the new answer replaces
+                // whichever half the last one left for the same draft.
+                if resolvedDraft?.input == asked { resolvedDraft = nil }
+                if missedDraft?.input == asked { missedDraft = nil }
+                switch lookup {
+                case .found(let holder):
+                    resolvedDraft = WalletResolvedDraft(input: asked, address: holder.address,
+                                                        worldAppName: holder.name)
+                case .notFound:
+                    missedDraft = WalletMissedDraft(input: asked, note: Self.noWorldAppUser(asked))
+                case .unreachable:
+                    missedDraft = WalletMissedDraft(input: asked, note: Self.worldAppUnreachable(asked))
+                }
+            }
         }
+    }
+
+    // One spelling each, shared by the preview and the Follow press.
+    private static func noWorldAppUser(_ name: String) -> String {
+        String(localized: "No World App user is named \(name).")
+    }
+
+    private static func worldAppUnreachable(_ name: String) -> String {
+        String(localized: "Couldn't reach World App to look up \(name).")
     }
 
     // MARK: - Watching
@@ -249,6 +303,26 @@ struct WalletWatchField: View {
     private func watch() {
         let input = draft
         guard !input.isEmpty else { return }
+        if case .worldAppUsername(let name)? = NameResolve.followTarget(of: input) {
+            Task {
+                switch await WorldAppDeFi.holder(ofUsername: name) {
+                case .found(let holder):
+                    // A World App wallet keeps its money on World Chain; the
+                    // chain is on by default (§788), and this keeps it on for
+                    // somebody who switched it off, as a `.sol` name does
+                    // for Solana.
+                    WalletChainStore.shared.ensureEnabled("worldchain-mainnet")
+                    addWatched(address: holder.address, label: holder.name)
+                case .notFound:
+                    resultIsError = true
+                    result = Self.noWorldAppUser(input)
+                case .unreachable:
+                    resultIsError = true
+                    result = Self.worldAppUnreachable(input)
+                }
+            }
+            return
+        }
         if let family = NameResolve.family(of: input) {
             Task {
                 guard let address = await NameResolve.resolve(input) else {
