@@ -1188,10 +1188,34 @@ grep -q 'room.items.isEmpty ? \[\] : order' "$TMP/section.nc.swift" \
   || { echo "✗ present() no longer offers every scope for a non-empty room (§611)."; exit 1; }
 # The obligation is checked by SENTENCE, not by case label — `label` and
 # `summary` also switch on every case, so a per-case grep passes vacuously.
-for words in "None has happened on these accounts" "None of these accounts holds any yet" \
-             "None is watched here" "Nothing can act for these accounts yet"; do
-  grep -qF "$words" "$TMP/section.nc.swift" \
-    || { echo "✗ a scope lost its empty copy ('$words') — a chip onto nothing is the dead control §83 bans (§611)."; exit 1; }
+# §611's obligation, in §799's spelling (amended 2026-09-17). This used to grep
+# for four `words:` sentences ("None has happened on these accounts", …). §799
+# deleted every one of them, and correctly: `DSEmptyState.words` has been
+# VoiceOver's value ALONE since §769, so those paragraphs were heard by one
+# reader and seen by none, and the headline plus the scope's `summary` already
+# said both sentences. The guard was not amended in that commit, so it failed
+# every pass from 2af59f9e (2026-09-17) onward, for prose the app is right to
+# have dropped.
+#
+# The RULE is unchanged, which is why this is amended and not deleted: a chip
+# that opens onto nothing must still say what would fill it (§83's dead
+# control). Since §769/§771 that is carried by the scope's own `emptyHeadline`
+# drawn over its skeleton figure, with `summary` as the sentence — so those are
+# what is checked now.
+EMPTY_BODY=$(awk '/var emptyHeadline: String\?/,/^    \}/' "$TMP/section.nc.swift")
+SUMMARY_BODY=$(awk '/var summary: String/,/^    \}/' "$TMP/section.nc.swift")
+for scope in activity holdings accounts permissions; do
+  print -r -- "$EMPTY_BODY" | grep -qE "case \.$scope:[[:space:]]*return String\(localized:" \
+    || { echo "✗ scope .$scope has no empty headline — a chip onto nothing that does not say what would fill it is the dead control §83 bans (§611, §769)."; exit 1; }
+done
+# `.home` is the room's landing, not a scope that can be empty on its own: it
+# draws the head and the feed, and says its emptiness there. A headline here
+# would be a second empty state stacked on the first.
+print -r -- "$EMPTY_BODY" | grep -qE "case \.home:[[:space:]]*return nil" \
+  || { echo "✗ .home grew an empty headline — the room's landing draws the head, not an empty scope (§611)."; exit 1; }
+for scope in home activity holdings accounts permissions; do
+  print -r -- "$SUMMARY_BODY" | grep -qE "case \.$scope:[[:space:]]*return String\(localized:" \
+    || { echo "✗ scope .$scope no longer says what it holds — the chip is unlabelled before the tap (§611)."; exit 1; }
 done
 grep -q 'scopeEmptyFigure(.permissions)' "$TMP/card.nc.swift" \
   || { echo "✗ an account nothing can act for opens Permissions onto 'No keys' over an empty grid again (§611)."; exit 1; }
