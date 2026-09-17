@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §700 (the catalogue is a bare mark) | the strip's tail catalogue is a grid glyph in a `chipSize` frame, never a captioned tile, and `categoryCell` counts it as one more mark | reversed by §793 (it is a tile named "Accounts", `categoryTile`'s anatomy in a `categoryCell`, and counts as a cell only when it rests on screen); its seat at the tail stands |
 | §644 (only alarms default on) | `arrivals` defaults off and `alarms` on, so a grant earned by a dispute is not spent on likes | superseded by §770 (the class switches are deleted; one switch per category, every category on, and on means one digest at most twice a day) |
 | §306 (two classes, and the batch keeps the worst alarm and counts money arrivals) | every alarm and arrival is its own notification, collapsed per sweep | amended by §770 (only `NotifyKind.standsAlone` is sent on its own; everything else waits for `NotifyDigest`, and the money collapse is deleted with the path that fed it) |
 | §713 (arrivals are passive) | an arrival lands silently in Notification Center without lighting the screen | amended by §770 (arrivals reach the lock screen only inside the digest, which lights the screen and makes no sound) |
@@ -57383,3 +57384,24 @@ Also: the file header claimed "only `verified` draws" while the card draws `laps
 - The word names where you land ("World App"), never the outcome ("Claim"), because Casberi claims nothing. **UNMEASURED on a device:** that `worldapp://grants` lands on the grants screen inside World App — read it off the first tap.
 
 **Not built, and why:** a door for the WLD Vault (World App's own screen, no documented link) and for ORO or other mini-app mints (no app id tied to a token by anything World publishes). The explorer disc on World Chain rows now reads "Worldscan".
+
+## §793 — The catalogue's scope reads Manage | Connect, and the dock's catalogue is a named tile (user: "in the catalogue we have filter for Yours and All, lets change Yours to Update, and change All to Connect. Lets also make the Apps icon in the doc have a name and shape like the other categorys do", then "maybe instead of 'Update' call it 'Manage'", 2026-09-16)
+
+**The scope pair names the job, not the set.** `AppsScreen`'s two sections are the same filter as before — your accounts, every account — and read `Manage` and `Connect`: what you do on each side. The empty state's way out says "under Connect". Nothing else in the screen changes; account pages' own "Yours · N" roster label is a different control and is untouched.
+
+**The catalogue in the dock is a TILE, reversing §700's "bare mark".** §700 kept it a grid glyph so a thing that pushes a screen would not wear a room's shape; the user ruled that the one unnamed mark in a strip of named tiles is the worse reading. It draws `categoryTile`'s anatomy — `AppsDoor(tileGlyph:)` at the tile's frozen glyph size in ink, "Accounts" at `dockCaption10` (the screen's own title, and already its spoken label), `tileWidth` × `iconSize` centred in a `categoryCell` — and keeps its seat at the strip's tail, its melt, its zoom source and its breakage alarm (the glyph still fills, turns `DS.attention` and pulses). It never takes the selection fill: it opens a screen, so there is nothing for it to be "on". The iPad rail's glass circle is unchanged.
+
+**The cell arithmetic follows the shape.** `categoryCell` counts the tail as a CELL when it rests on screen (exactly three categories) and as nothing past three, where the half-cell peek is the rest's edge and the catalogue is a scroll away. §700 had subtracted one mark's width in both cases, which made the fourth tile's "half" peek wider than half on every full dock.
+
+**UNSEEN on a device or simulator** (the standing rule to skip the simulator). Verified by build and `dock-selftest.sh` (amended: the tail must carry its word and the tile frame, stand in a `categoryCell`, take the tile's hit shape, and count as `tailTile`).
+
+## §794 — X, Instagram and TikTok are two verbs: Connect, then Import (user: "lets also make the twitter connection simpler it should be clear about live connections that page should have a connect and an import button", then "make sure you do the same to tiktok and instagram if they have same pattern of import", 2026-09-16)
+
+**The three seats with a live sign-in beside an archive read the same way now.** The act is `Connect` (the live read, §701/§726/§731), then `Import` (the archive), then whatever second act the seat has. Connect is the filled slab, its detail naming what arrives live ("Live notifications", "Live notifications and saves", "Live likes, comments and follows"); connected, it becomes the fact, which leads with "Live —". X had the archive FIRST and the live door under it as "Get live notifications" with a note that live never touches the archive; the order is swapped and the note is deleted, because two separate verbs already say they are separate.
+
+**Import is ONE row until tapped.** `ImportArchiveSection(closedDetail:)` keeps the door, the steps, the messages switch and the pick behind an `Import` row whose detail says what the archive holds, and "A newer archive" once one has landed. One case opens it by itself: an archive already asked for and not yet imported, whose steps carry the wait and the pick. An import that lands closes it again (`onChange(of: alreadyImported)`), which also fixes a re-opened block staying open after a re-import on every caller. Callers that pass no `closedDetail` keep §314's staging unchanged.
+
+**What stays.** Instagram's and TikTok's "may ask you to confirm it was you" notes are the price before the tap and are kept. The live sheets, the teardown (live half only), the second acts and `ImportUpkeepSection` are untouched.
+
+**UNSEEN on a device or simulator.** Verified by build, `setup-copy-audit.py`, `catalog-mode-audit.py`, `account-page-selftest.sh`, `x-selftest.sh`, `x-live-selftest.sh` and the localization audits.
+

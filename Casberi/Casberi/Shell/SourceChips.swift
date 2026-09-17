@@ -173,16 +173,19 @@ struct SourceChips: View {
         guard count >= Self.restingTiles else { return Self.tileFloorCell }
         // "All" is a tile since prd §767, so it takes a cell rather than a mark.
         let allTile: CGFloat = labels.contains("All") ? 1 : 0
-        let cells = CGFloat(min(count, Self.restingTiles)) + allTile
+        // The catalogue tile at the strip's TAIL (prd §700, a tile since
+        // §793) takes a cell when it rests on screen — at exactly three
+        // categories. Past three the half-cell peek is the tail at rest and
+        // the catalogue sits one scroll on, so it takes nothing.
+        let tailTile: CGFloat = count > Self.restingTiles ? 0 : 1
+        let cells = CGFloat(min(count, Self.restingTiles)) + allTile + tailTile
             + (count > Self.restingTiles ? 0.5 : 0)
         // What is left past "All": the strip minus its resting inset and
         // every non-category chip laid out ahead of the tiles (All, and the
-        // pinned room when present).
-        // ...plus ONE for the catalogue mark at the strip's TAIL (prd §700).
-        // It is not in `labels`, and a tail nobody counted is a tail the
-        // three spread tiles cover — the door a new person needs most would
-        // rest one scroll past the edge.
-        let marks = CGFloat(labels.count - count) - allTile + 1
+        // pinned room when present). The catalogue is not in `labels`; it is
+        // counted above as `tailTile`, because a tail nobody counted is a
+        // tail the three spread tiles cover.
+        let marks = CGFloat(labels.count - count) - allTile
         let available = stripWidth - stripInset - marks * (chipSize + Self.chipGap)
         return max(Self.tileFloorCell, (available / cells).rounded(.down))
     }
@@ -845,32 +848,46 @@ struct SourceChips: View {
     /// The catalogue door as the STRIP'S LAST ITEM (prd §700, 2026-09-11):
     /// the same `AppsDoor` glyph (and its breakage alarm) the rail pins in a
     /// glass circle, drawn here as ink on the slab like every chip beside it
-    /// (2026-09-09: the slab is the glass). It stands in a `chipSize` frame
-    /// so its pitch from the last tile is a chip's pitch, and it folds with
-    /// the chips (46→40). A BARE MARK, never a captioned tile — a tile that
-    /// pushes a screen is §697's own objection ("a new species wearing the
-    /// old one's shape"), and a mark is visibly not a folder.
+    /// (2026-09-09: the slab is the glass).
+    ///
+    /// **A TILE, glyph over its word, since prd §793 (user, 2026-09-16:
+    /// "make the Apps icon in the dock have a name and shape like the other
+    /// categories do").** §700 drew it as a bare mark, arguing a captioned
+    /// tile that pushes a screen is a new species wearing the old one's
+    /// shape; the user ruled the other way — the mark was the one unnamed
+    /// thing in a strip of named tiles. It is `categoryTile`'s anatomy
+    /// (frozen glyph, `dockCaption10` word, `tileWidth` × `iconSize`, centred
+    /// in a `categoryCell`) but never takes the selection fill: it opens a
+    /// screen, not a room, so there is nothing for it to be "on".
     @ViewBuilder private var catalogueMark: some View {
         Button {
             openApps()
         } label: {
-            ZStack {
-                if let zoomNS {
-                    AppsDoor().matchedTransitionSource(id: "appsDoor", in: zoomNS)
-                } else {
-                    AppsDoor()
+            VStack(spacing: 2) {
+                ZStack {
+                    if let zoomNS {
+                        AppsDoor(tileGlyph: glyphSize)
+                            .matchedTransitionSource(id: "appsDoor", in: zoomNS)
+                    } else {
+                        AppsDoor(tileGlyph: glyphSize)
+                    }
                 }
+                Text("Accounts")
+                    .dsText(.dockCaption10)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .foregroundStyle(DS.textPrimary)
             }
-            .frame(width: iconSize, height: iconSize)
-            .frame(width: chipSize, height: chipSize)
-            // The door is the circle, not the glyph (2026-07-26, three
+            .frame(width: Self.tileWidth, height: iconSize)
+            .padding(2.5)
+            .frame(width: categoryCell, height: chipSize)
+            // The door is the whole tile, not the glyph (2026-07-26, three
             // reports deep — see `catalogueChip`).
-            .contentShape(Circle())
+            .contentShape(chipShape(tile: true, outer: true))
             .dsHover()
         }
         .buttonStyle(.plain)
         .modifier(CatalogueDoorSpokenLabel())
-        .dsTooltip(String(localized: "Accounts"))
     }
 
     /// One entry point for the door's two possible tap deliveries (the

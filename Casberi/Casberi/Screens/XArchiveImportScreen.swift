@@ -76,9 +76,13 @@ struct XArchiveImportScreen: View {
             // other seat here follows (2026-07-13).
             teardown: { XLiveAuth.clear() },
             sheet: $sheet,
+            // TWO VERBS, live first (prd §794, user: "it should be clear about
+            // live connections, that page should have a connect and an import
+            // button"). Connect is the live read; Import opens the archive's
+            // steps only when asked for.
             act: {
-                archiveBlock
                 liveBlock
+                archiveBlock
                 if pending > 0 || pendingContext > 0 { secondActBlock }
             },
             more: {
@@ -101,9 +105,10 @@ struct XArchiveImportScreen: View {
         }
     }
 
-    /// The live-notifications door (prd §701) — a sign-in inside this app,
-    /// through `XLiveLoginSheet`, entirely apart from the archive above. Read
-    /// live, so it is offered whether or not an archive has ever been picked.
+    /// The live door (prd §701) — a sign-in inside this app, through
+    /// `XLiveLoginSheet`, entirely apart from the archive. FIRST since §794:
+    /// it is the one that keeps the room current, so the page says "live"
+    /// before it says "archive". Connected, the slab becomes the fact.
     @ViewBuilder private var liveBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if liveConnected {
@@ -111,20 +116,20 @@ struct XArchiveImportScreen: View {
                     Image(systemName: "bell.fill")
                         .dsGlyph(.body, weight: .medium)
                         .foregroundStyle(DS.tint)
-                    Text("Live notifications — your own account, signed in")
+                    Text("Live — notifications arrive as they happen")
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: 0)
                 }
             } else {
-                DSSlabButton(title: "Get live notifications",
+                DSSlabButton(title: "Connect",
+                             detail: String(localized: "Live notifications"),
                              systemImage: "bell.badge",
                              busy: false) { sheet = .card(id: "xLive") }
             }
             BridgeSyncStatusRows(syncing: liveSyncing,
                                 syncingLine: String(localized: "Checking your notifications…"),
                                 proof: liveResult)
-            DSSlabNote(text: "Live notifications never touch your archive above.", plain: true)
         }
     }
 
@@ -144,7 +149,8 @@ struct XArchiveImportScreen: View {
                 ],
                 pickTitle: "Choose folder",
                 alreadyImported: held > 0,
-                showsMessagesToggle: true) { importing = true }
+                showsMessagesToggle: true,
+                closedDetail: String(localized: "Your archive: posts, replies and likes")) { importing = true }
             BridgeSyncStatusRows(proof: result)
         }
     }

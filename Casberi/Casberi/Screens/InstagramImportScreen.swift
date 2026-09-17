@@ -129,14 +129,15 @@ struct InstagramImportScreen: View {
                     Image(systemName: "bell.fill")
                         .dsGlyph(.body, weight: .medium)
                         .foregroundStyle(DS.tint)
-                    Text(InstagramLiveAuth.username.map { "Signed in as @\($0)" }
+                    Text(InstagramLiveAuth.username.map { "Live — signed in as @\($0)" }
                          ?? String(localized: "Live — your own account, signed in"))
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: 0)
                 }
             } else {
-                DSSlabButton(title: "Connect your account",
+                DSSlabButton(title: "Connect",
+                             detail: String(localized: "Live notifications and saves"),
                              systemImage: "bell.badge",
                              busy: false) { sheet = .card(id: "igLive") }
             }
@@ -169,7 +170,9 @@ struct InstagramImportScreen: View {
                 ],
                 pickTitle: "Choose folder",
                 alreadyImported: held > 0,
-                showsMessagesToggle: true) { importing = true }
+                showsMessagesToggle: true,
+                // Two verbs, Connect then Import (prd §794).
+                closedDetail: String(localized: "Your export: saves, likes and posts")) { importing = true }
             BridgeSyncStatusRows(proof: result)
         }
     }

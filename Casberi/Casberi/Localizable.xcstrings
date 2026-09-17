@@ -35620,6 +35620,34 @@
         }
       }
     },
+    "A newer archive" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un archivo más reciente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいアーカイブ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "더 최신 아카이브"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "更新的存档"
+          }
+        }
+      }
+    },
     "A one-time import of your Kindle's highlights — the My Clippings.txt the device writes becomes findable notes, grouped by book. No account; Amazon offers no live read." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -76619,30 +76647,86 @@
         }
       }
     },
-    "Live notifications — your own account, signed in" : {
+    "Live likes, comments and follows" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Notificaciones en directo: tu propia cuenta, con sesión iniciada"
+            "value" : "Me gusta, comentarios y seguidores en directo"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "ライブ通知 — サインイン済みの自分のアカウント"
+            "value" : "ライブのいいね、コメント、フォロー"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "실시간 알림 — 로그인한 내 계정"
+            "value" : "실시간 좋아요, 댓글, 팔로우"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "实时通知 —— 你自己已登录的账户"
+            "value" : "实时点赞、评论和关注"
+          }
+        }
+      }
+    },
+    "Live notifications" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Notificaciones en directo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ライブ通知"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "실시간 알림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "实时通知"
+          }
+        }
+      }
+    },
+    "Live notifications and saves" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Notificaciones y guardados en directo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ライブ通知と保存"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "실시간 알림과 저장"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "实时通知和收藏"
           }
         }
       }
@@ -76699,6 +76783,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已在 App Store 上架"
+          }
+        }
+      }
+    },
+    "Live — notifications arrive as they happen" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En directo: las notificaciones llegan al momento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ライブ — 通知がリアルタイムで届きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "실시간 — 알림이 바로 도착합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "实时 — 通知即时送达"
           }
         }
       }
@@ -87158,30 +87270,30 @@
         }
       }
     },
-    "Nothing connected yet. Everything you can add is under All." : {
+    "Nothing connected yet. Everything you can add is under Connect." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Todavía no hay nada conectado. En Todo está todo lo que puedes añadir."
+            "value" : "Todavía no hay nada conectado. En Conectar está todo lo que puedes añadir."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "まだ何も接続されていません。追加できるものは「すべて」にあります。"
+            "value" : "まだ何も接続されていません。追加できるものは「接続」にあります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "아직 연결된 것이 없습니다. 추가할 수 있는 모든 것은 전체에 있습니다."
+            "value" : "아직 연결된 것이 없습니다. 추가할 수 있는 모든 것은 연결에 있습니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "尚未连接任何账户。可添加的一切都在“全部”中。"
+            "value" : "尚未连接任何账户。可添加的一切都在“连接”中。"
           }
         }
       }
@@ -143667,6 +143779,34 @@
         }
       }
     },
+    "Your archive: posts, replies and likes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu archivo: publicaciones, respuestas y me gusta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアーカイブ：投稿、返信、いいね"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 아카이브: 게시물, 답글, 좋아요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的存档：帖子、回复和点赞"
+          }
+        }
+      }
+    },
     "Your balance" : {
       "localizations" : {
         "es" : {
@@ -144124,6 +144264,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的ether.fi Cash信用额度接近上限 — 欠款%@，健康度%@"
+          }
+        }
+      }
+    },
+    "Your export: likes, favorites and history" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu exportación: me gusta, favoritos e historial"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのエクスポート：いいね、お気に入り、履歴"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 내보내기: 좋아요, 즐겨찾기, 기록"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的导出：点赞、收藏和历史记录"
+          }
+        }
+      }
+    },
+    "Your export: saves, likes and posts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu exportación: guardados, me gusta y publicaciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのエクスポート：保存、いいね、投稿"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 내보내기: 저장, 좋아요, 게시물"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的导出：收藏、点赞和帖子"
           }
         }
       }

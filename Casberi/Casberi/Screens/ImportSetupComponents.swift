@@ -95,6 +95,13 @@ enum ImportRequestMark {
 ///      screen. Tapping re-opens it for a fresher export and clears the mark,
 ///      so the cycle starts clean rather than reading "Asked 8 months ago".
 ///
+/// **CLOSED UNTIL ASKED on a two-verb page (prd §794).** A seat with a live
+/// sign-in beside its archive (X, Instagram, TikTok) passes `closedDetail`,
+/// and the block is ONE `Import` row until tapped — so the page reads
+/// Connect, Import, and the archive's steps never stand between a person and
+/// the live read. An archive already asked for and not yet imported opens on
+/// its steps, where the wait and the pick are; an import that lands closes it.
+///
 /// A screen with no door (TikTok, Snapchat — their export request lives inside
 /// their own app, not at a URL) passes `doorTitle: nil` and simply gets the
 /// steps numbered from 1 with the pick as the permanent primary. Stage 2 does
@@ -116,6 +123,10 @@ struct ImportArchiveSection: View {
     /// Shows the private-messages decision above the pick, for the two
     /// importers that honour it (`ImportOptions`).
     var showsMessagesToggle = false
+    /// Set on a two-verb page (prd §794): the `Import` row's detail while
+    /// nothing is imported, and the switch that keeps the block closed until
+    /// asked. nil keeps the one-page staging above.
+    var closedDetail: String? = nil
     let pick: () -> Void
 
     @Environment(\.accountAct) private var accountAct
@@ -127,7 +138,13 @@ struct ImportArchiveSection: View {
     /// not observable on their own.
     @State private var waiting: String?
 
-    private var open: Bool { !alreadyImported || expanded }
+    private var open: Bool {
+        if expanded { return true }
+        if alreadyImported { return false }
+        // A two-verb page stays closed until asked — unless an archive has
+        // already been asked for, whose steps carry the wait and the pick.
+        return closedDetail == nil || waiting != nil
+    }
     /// Stage 2: the door has been tapped and nothing has landed yet.
     private var pickLeads: Bool { doorTitle == nil || waiting != nil }
 
@@ -144,20 +161,24 @@ struct ImportArchiveSection: View {
             } else {
                 // One row instead of a wall. The detail says what it does, so
                 // the row is not a mystery chevron.
-                DSSlabDoor(title: "Import a newer archive",
-                           detail: String(localized: "Every few months"),
+                DSSlabDoor(title: closedDetail == nil ? "Import a newer archive" : "Import",
+                           detail: closedRowDetail,
                            systemImage: "arrow.down.circle") {
                     // The old mark belongs to the import that already landed.
                     // Clearing it here means the re-opened block starts at
                     // stage 1 rather than claiming a request that was answered
                     // long ago.
-                    ImportRequestMark.clear(source)
-                    waiting = nil
-                    expanded = true
+                    if alreadyImported {
+                        ImportRequestMark.clear(source)
+                        waiting = nil
+                    }
+                    withAnimation(DS.Motion.standard) { expanded = true }
                 }
             }
         }
         .onAppear { waiting = ImportRequestMark.waitingLine(source) }
+        // The job is done: back to the one row (prd §794).
+        .onChange(of: alreadyImported) { _, now in if now { expanded = false } }
     }
 
     @ViewBuilder
@@ -210,6 +231,11 @@ struct ImportArchiveSection: View {
                        detail: String(localized: "Already have it?"),
                        systemImage: pickIcon) { pick() }
         }
+    }
+
+    private var closedRowDetail: String {
+        guard let closedDetail else { return String(localized: "Every few months") }
+        return alreadyImported ? String(localized: "A newer archive") : closedDetail
     }
 
     /// The door itself opens the page (in-app, §653); this stamps the ask.

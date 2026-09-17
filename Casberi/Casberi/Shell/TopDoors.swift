@@ -191,6 +191,10 @@ struct BackDoorGlyph: View {
 /// re-ruling 2026-07-07 that killed the tab badge still holds: this is a nav
 /// button, not a tab, and it only lights on actual breakage).
 struct AppsDoor: View {
+    /// The dock tile's frozen glyph size (prd §793), drawn the way
+    /// `CategoryGlyph` draws a category's — ink, fixed box — so the catalogue
+    /// tile reads as one of the strip's tiles. `nil` is the iPad rail's circle.
+    var tileGlyph: CGFloat? = nil
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -212,10 +216,8 @@ struct AppsDoor: View {
     @State private var healed = 0
 
     var body: some View {
-        Image(systemName: needsAttention ? "square.grid.2x2.fill" : "square.grid.2x2")
-            .dsSymbolSwap(needsAttention)
-            .dsGlyph(.title)
-            .foregroundStyle(needsAttention ? DS.attention : DS.tint)
+        glyph
+            .foregroundStyle(needsAttention ? DS.attention : (tileGlyph == nil ? DS.tint : DS.textPrimary))
             .symbolEffect(.pulse, options: .repeating, isActive: needsAttention)
             // `value:` fires on CHANGE, so the counter only advances on a real
             // high→low transition — a door that opens already-healthy has
@@ -225,5 +227,17 @@ struct AppsDoor: View {
                 guard was, !now, !reduceMotion else { return }
                 healed += 1
             }
+    }
+
+    @ViewBuilder private var glyph: some View {
+        let symbol = Image(systemName: needsAttention ? "square.grid.2x2.fill" : "square.grid.2x2")
+            .dsSymbolSwap(needsAttention)
+        if let size = tileGlyph {
+            symbol
+                .font(.system(size: size, weight: .medium))
+                .frame(width: size + 6, height: size + 2)
+        } else {
+            symbol.dsGlyph(.title)
+        }
     }
 }

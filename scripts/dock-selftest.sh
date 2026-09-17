@@ -361,19 +361,25 @@ if strip.count("ChipMelt(") < 2:
              "  hard edge sliding under the avatar's glass (2026-07-19).")
 # "All" is a tile since prd §767, so it leaves the mark count and takes a cell;
 # the tail mark is still the "+ 1".
-if "let marks = CGFloat(labels.count - count) - allTile + 1" not in src:
-    sys.exit("✗ categoryCell no longer counts the tail mark — at three categories the spread\n"
+# The tail is a TILE since prd §793, so it takes a cell when it rests on screen.
+if "let tailTile: CGFloat = count > Self.restingTiles ? 0 : 1" not in src \
+        or "+ allTile + tailTile" not in src:
+    sys.exit("✗ categoryCell no longer counts the tail tile — at three categories the spread\n"
              "  tiles cover it and the catalogue rests one scroll past the edge.")
 mark = src[src.find("private var catalogueMark"):src.find("private func openApps")]
-if "contentShape(Circle())" not in mark:
-    sys.exit("✗ the tail mark lost its hit region — the door is the CIRCLE, not the glyph\n"
+if "contentShape(chipShape(tile: true, outer: true))" not in mark:
+    sys.exit("✗ the tail tile lost its hit region — the door is the whole TILE, not the glyph\n"
              "  (2026-07-26, three user reports deep).")
+# A name and a tile's shape, like every category beside it (prd §793).
+if 'Text("Accounts")' not in mark or "frame(width: Self.tileWidth, height: iconSize)" not in mark:
+    sys.exit("✗ the catalogue is a bare mark again — it is a TILE with its word, like the\n"
+             "  categories (prd §793, user: \"have a name and shape like the other categorys\").")
 if "dsGlassDoor" in mark:
     sys.exit("✗ the tail mark wears glass — chips are ink on the slab (2026-09-09); glass\n"
              "  inside the scrolling slab is the arrangement that cost a frame per tick.")
-if "frame(width: chipSize, height: chipSize)" not in mark:
-    sys.exit("✗ the tail mark no longer stands in a chipSize frame — its pitch from the last\n"
-             "  tile would differ from every other pitch in the strip.")
+if "frame(width: categoryCell, height: chipSize)" not in mark:
+    sys.exit("✗ the tail tile no longer stands in a categoryCell frame — its pitch from the\n"
+             "  last tile would differ from every other pitch in the strip.")
 PY3
 
 # --- 6. a CATEGORY still springs its folder out of its own chip -------------

@@ -99,14 +99,15 @@ struct TikTokImportScreen: View {
                     Image(systemName: "bell.fill")
                         .dsGlyph(.body, weight: .medium)
                         .foregroundStyle(DS.tint)
-                    Text(TikTokLiveAuth.username.map { "Signed in as @\($0)" }
+                    Text(TikTokLiveAuth.username.map { "Live — signed in as @\($0)" }
                          ?? String(localized: "Live — your own account, signed in"))
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: 0)
                 }
             } else {
-                DSSlabButton(title: "Connect your account",
+                DSSlabButton(title: "Connect",
+                             detail: String(localized: "Live likes, comments and follows"),
                              systemImage: "bell.badge",
                              busy: false) { sheet = .card(id: "tiktokLive") }
             }
@@ -159,7 +160,9 @@ struct TikTokImportScreen: View {
                 ],
                 pickTitle: "Choose export",
                 pickIcon: "square.and.arrow.down",
-                alreadyImported: held > 0) { importing = true }
+                alreadyImported: held > 0,
+                // Two verbs, Connect then Import (prd §794).
+                closedDetail: String(localized: "Your export: likes, favorites and history")) { importing = true }
             BridgeSyncStatusRows(proof: result)
         }
     }

@@ -564,7 +564,7 @@ struct AppsScreen: View {
     }
 
 
-    // MARK: - Yours | All (the Accounts door's scope, 2026-09-06)
+    // MARK: - Manage | Connect (the Accounts door's scope, 2026-09-06; renamed from Yours | All, prd §793)
 
     /// Two words, both always visible, the chosen one filled — never a lone
     /// toggle whose off state has to be inferred ("a gray Yours isn't
@@ -595,7 +595,9 @@ struct AppsScreen: View {
         case yours, all
         var id: String { rawValue }
         var label: String {
-            self == .yours ? String(localized: "Yours") : String(localized: "All")
+            // "Manage" and "Connect" (user, 2026-09-16, prd §793): what you do
+            // on each side — look after what you hold, add what you don't.
+            self == .yours ? String(localized: "Manage") : String(localized: "Connect")
         }
     }
 
@@ -768,11 +770,11 @@ struct AppsScreen: View {
     private var catalogList: some View {
         Group {
             if yoursOnly && ranked.isEmpty {
-                // Reachable only by choosing Yours with nothing connected —
-                // the seed opens a first run on All. One sentence, and the
+                // Reachable only by choosing Manage with nothing connected —
+                // the seed opens a first run on Connect. One sentence, and the
                 // way out is the control the person just used.
                 DSEmptyState(headline: Text("Nothing connected yet"),
-                             words: Text("Nothing connected yet. Everything you can add is under All."))
+                             words: Text("Nothing connected yet. Everything you can add is under Connect."))
                     .padding(.vertical, DS.Space.s4)
             } else if scope.name == nil {
                 flatCatalogList
