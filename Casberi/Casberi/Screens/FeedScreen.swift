@@ -2311,6 +2311,10 @@ struct FeedScreen: View {
                 && vibenetScopeAllows(thing)
                 && personScopeAllows(thing)
                 && githubScopeAllows(thing)
+                // Privy's display choices (prd §803e): hidden apps, and empty
+                // apps nobody uses unless the person asked to see them.
+                && (thing.source != PrivyHomeFeed.source
+                    || PrivyHomeStore.shared.shows(thing, inRoom: source == PrivyHomeFeed.source))
         }
     }
 
@@ -10017,6 +10021,15 @@ struct FeedScreen: View {
                 // plain band + timestamp — never a faked price.
                 if let pulse = TokenPulse.shared.pulse(for: thing) {
                     TokenRow(thing: thing, pulse: pulse)
+                } else if thing.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) == true {
+                    // An app wallet (prd §803e): its own logo, when it was last
+                    // used, and what it holds — in the room and in All alike.
+                    PrivyAppRow(thing: thing, sourceBadge: shape == .all || Pinboard.isPinnedRoom(source))
+                } else if thing.sourceRef?.hasPrefix(PrivyHomeFeed.txPrefix) == true {
+                    // What moved in an app wallet (prd §803f): the wallet
+                    // room's money column, under the app's own logo.
+                    BandRow(thing: thing, moneyColumn: true,
+                            sourceBadge: shape == .all || Pinboard.isPinnedRoom(source))
                 } else {
                     // The source badge (2026-08-09): a CROSS-SOURCE room asks
                     // for it, a single-source room doesn't — there the room

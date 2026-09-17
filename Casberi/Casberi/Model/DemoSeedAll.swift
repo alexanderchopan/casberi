@@ -197,6 +197,11 @@ enum DemoSeedAll {
                               // needs these three or they outlive the demo,
                               // indistinguishable from a real landed balance.
                               "acorns:", "rocketmoney:", "nerdwallet:",
+                              // Privy's demo rows carry the real seat's ref
+                              // shapes (`privy:app:`, `privy:tx:`) so its own
+                              // dedupe recognises them — so teardown needs them
+                              // too (prd §803g).
+                              "privy:app:", "privy:tx:",
                               // AWS/Polar/Dodo (2026-08-31, prd §484's check
                               // G) — same reasoning as vibenet above: their
                               // rows carry the REAL bridges' ref shapes,
@@ -3609,6 +3614,38 @@ enum DemoSeedAll {
             }
         }
 
+        // Privy (prd §803g) — the apps that made a wallet, dated when each was
+        // made, and what moved in two of them. The room's own head reads
+        // `PrivyHomeStore`, which a demo never fills, so what the demo shows of
+        // Privy is its ROWS: the app wallets and their activity.
+        let privyApps: [(String, Double)] = [
+            ("Zora", 640), ("Farcaster wallet", 430), ("Quidli", 300),
+            ("Wildcard", 210), ("Virtuals Protocol", 120), ("Clankermon", 40),
+        ]
+        out += privyApps.enumerated().map { i, app in
+            row(.event, app.0, source: "Privy", ref: "privy:app:demo\(i)",
+                days: app.1, hour: 11) { t in
+                t.content = "0x8f2c…a41\(i)"
+            }
+        }
+        let privyMoves: [(String, String, Bool, Double, Double)] = [
+            ("Received 0.6974 ZORA", "Zora", true, 12.40, 6),
+            ("Sent 0.004145 ETH", "Zora", false, 15.90, 12),
+            ("Received 2.154 ZORA", "Zora", true, 38.20, 24),
+            ("Received 0.02 ETH", "Farcaster wallet", true, 76.50, 31),
+        ]
+        out += privyMoves.enumerated().map { i, move in
+            row(.transaction, move.0, source: "Privy",
+                ref: "privy:tx:demo\(i):0xdemo\(i):\(move.2 ? "in" : "out"):tok",
+                days: move.4, hour: 15) { t in
+                t.authorHandle = move.1
+                t.transferDirection = move.2 ? "received" : "sent"
+                t.transferAmount = move.0.replacingOccurrences(of: "Received ", with: "")
+                    .replacingOccurrences(of: "Sent ", with: "")
+                t.transferUSD = move.3
+            }
+        }
+
         // The three finance seats of §780b/§780c. Acorns and Rocket Money land
         // READINGS (`.note`) rather than transactions — their shipped ingests
         // land one row per account and per subscription, updated in place,
@@ -5481,6 +5518,9 @@ enum DemoSeedAll {
         // `WiseShape.balanceLine` — not a "Synced Nm ago", which this seat
         // never says.
         ("Wise", "£1,240 · €310", "Reads your balances and transfers."),
+        // Privy (prd §803g) — the room states what it holds and how many apps
+        // made a wallet, which is what its own page says.
+        ("Privy", "$412 · 6 apps", "Reads which apps made you a wallet."),
         // The three finance seats of §780b/§780c. Each proof line says what
         // that seat really composes: Acorns and Rocket Money state a reading
         // (their pages never say "Synced Nm ago" while a session is live),

@@ -1625,11 +1625,16 @@ enum WalletIngest {
         // Watched validators merge into the COMBINED read only, same reasoning
         // as exchanges above — they aren't scoped to any one address.
         let validatorsUSD = address == nil ? (await EthValidatorRead.totalUSD() ?? 0) : 0
+        // Privy app wallets join the COMBINED read only, and only when the
+        // person keeps "Count in Wallet total" on (prd §803g). Last read, not
+        // read now: the Privy seat's own sync owns that budget.
+        let privy = address == nil ? await MainActor.run { PrivyHomeStore.shared.walletHoldings } : []
         // Either source alone is a real portfolio — someone whose crypto is all
         // on an exchange still has one, and returning nil would paint the empty
         // state over a balance we successfully read.
-        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 else { return nil }
-        let portfolio = WalletPortfolio.from(groups: groups, exchange: exchange, validatorsUSD: validatorsUSD)
+        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !privy.isEmpty else { return nil }
+        let portfolio = WalletPortfolio.from(groups: groups, exchange: exchange,
+                                             validatorsUSD: validatorsUSD, privy: privy)
 
         // More than one PLACE, not more than one wallet — a single wallet plus
         // a connected exchange is exactly the case this feature exists for.
@@ -1638,7 +1643,7 @@ enum WalletIngest {
         // builds its doc by indexing INTO `groups`, so with none to index a
         // portfolio that's real (exchange/validator balances) would otherwise
         // fall through to an empty, broken `root = Stack([])` document.
-        if address == nil, groups.count + (exchange.isEmpty ? 0 : 1) > 1 || groups.isEmpty, !portfolio.isEmpty {
+        if address == nil, groups.count + (exchange.isEmpty ? 0 : 1) + (privy.isEmpty ? 0 : 1) > 1 || groups.isEmpty, !portfolio.isEmpty {
             // NO TITLE AND NO SUBLINE (2026-08-22, prd §447) — the map draws
             // bare, and both empties are load-bearing rather than tidying.
             //

@@ -100,6 +100,10 @@ KNOWN_NON_REACH=(
   # fetched: the read is `api.transferwise.com`, a different host by
   # construction, and it IS disclosed in NetworkReach (prd §778).
   wise.com
+  # Blockscan's cross-chain address page — a Privy app wallet's "Explorer"
+  # door (prd §803e). Opened, never fetched: the balances come from the
+  # wallet holdings read already disclosed.
+  blockscan.com
   venice.ai bankr.bot www.kraken.com portal.cdp.coinbase.com
   www.binance.com exchange.gemini.com console.x.ai
   # id.atlassian.com — where a Jira API token is minted. Never fetched: the

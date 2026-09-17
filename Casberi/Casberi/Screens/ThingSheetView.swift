@@ -321,6 +321,8 @@ struct ThingSheetView: View {
                 let noteShape = self.noteShape
                 let walletbeatShape = self.walletbeatShape
                 let l2beatShape = self.l2beatShape
+                // A Privy app wallet (prd §803e) — a dictionary lookup.
+                let privyApp = thing.sourceRef.flatMap { PrivyHomeStore.shared.byRef[$0] }
                 let purchaseReading = self.purchaseReading
                 let workReading = self.workReading
                 let agentShape = self.agentShape
@@ -552,6 +554,12 @@ struct ThingSheetView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
                     .settleIn(delay: 0.06)
+            } else if let privyApp {
+                // REPLACES the title block: the app's page, not a row's title.
+                PrivyAppHead(app: privyApp)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s3)
+                    .settleIn(delay: 0.06)
             } else if let walletbeatShape {
                 // REPLACES the title block, like the note and receipt arms below: a
                 // watched wallet's title is just the wallet's name, which its own report
@@ -691,7 +699,7 @@ struct ThingSheetView: View {
                 // the same URL on every order in the corpus.
                 let contentShown = moneyReceipt == nil && !framedShot
                     && socialShape != .person && noteShape == nil
-                    && walletbeatShape == nil && l2beatShape == nil
+                    && walletbeatShape == nil && l2beatShape == nil && privyApp == nil
                     && agentShape != .grant && purchaseReading == nil
                     && (drawsSocialBody || agentShape == .conversation
                     || (!linkOnlyBody && thing.kind != .event
@@ -1451,7 +1459,10 @@ struct ThingSheetView: View {
             BridgeIcon(name: thing.source, size: DS.Face.badge, circular: true)
                 // The mark coin-flips as the sheet opens (delight, 2026-07-12).
                 .coinFlip(trigger: thing.id)
-            Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
+            // A Privy app row is an app wallet, not an "Event" (prd §803f).
+            Text(thing.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) == true
+                 ? "App wallet · made \(shortTime(thing.capturedAt)) ago"
+                 : "\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
@@ -2198,6 +2209,24 @@ struct ThingSheetView: View {
     /// the strongest thing you can do with the row, and the page below it is the
     /// notes — and re-capped at four, so adding one can never turn a sheet into
     /// a menu; the verb that loses is the last derivation ranked, not this one.
+    /// A Privy app's two doors (prd §803e): the app itself, when Privy names
+    /// where it lives, and the wallet on an explorer. Never Export keys or Add
+    /// funds (user, 2026-09-17).
+    private var privyVerbs: [Verb] {
+        guard let ref = thing.sourceRef, let app = PrivyHomeStore.shared.byRef[ref] else { return [] }
+        var out: [Verb] = []
+        if let origin = app.origin.flatMap(URL.init(string:)) {
+            out.append(Verb(label: String(localized: "Open in \(app.name)"),
+                            icon: "arrow.up.forward.app", action: .openURL(origin)))
+        }
+        if let wallet = app.wallets.first,
+           let explorer = URL(string: PrivyHomeFeed.explorerURL(wallet)) {
+            out.append(Verb(label: String(localized: "Explorer"), icon: "arrow.up.right",
+                            action: .openURL(explorer)))
+        }
+        return out
+    }
+
     private var sheetVerbs: [Verb] {
         var derived = VerbDerivation.verbs(for: thing)
         // WHERE you land, never "Open" — §302's Explorer ruling, generalised
@@ -2211,7 +2240,7 @@ struct ThingSheetView: View {
            case .openURL = first.action {
             derived[0] = Verb(label: word, icon: first.icon, action: first.action)
         }
-        let extras = [joinVerb, episodeVerb, xPostVerb].compactMap { $0 }
+        let extras = [joinVerb, episodeVerb, xPostVerb].compactMap { $0} + privyVerbs
         guard !extras.isEmpty else { return derived }
         return Array((extras + derived).prefix(4))
     }

@@ -57718,3 +57718,48 @@ owner lookup that §789a point 6 proved could never go on chain (every Safe an a
    pull is the user's ruling.** What does not change either way: nothing here fills
    `SafeServiceGate.shippedKey`, and `NetworkReach` gains `safe-client.safe.global` in the same commit
    as the first read that goes there, never before.
+## §803e — The Privy room draws the mockup: app logos, last used, balances, an app page, and the display choices (user: "i don't see the stuff from the mockup we were going to have", 2026-09-17)
+
+**§803c shipped the seat and listed the mockup's screens as owed; the user read the room and asked for them.** Built:
+
+- **The row** (`PrivyAppRow`, a registered feed species): the app's own `logo_url` on the 26pt lead, "Used 8 days ago" on the line (never the clock time a `.event` row otherwise shows), and the balance at `price17` in the trailing slot — or the row's time when the app holds nothing or is unread (§83: no figure it does not have). It reads the app out of `PrivyHomeStore.byRef`, a dictionary, never a walk (§626), in the room and in All alike.
+- **The head** (`PrivyRoomCard`): the total, the funded apps by value, then the apps used in the last 90 days, each with its logo, then ONE quiet line for the rest ("77 more apps, empty and not used lately") — the mockup's order.
+- **The app page** (`PrivyAppHead`, a thing-sheet arm that replaces the title block): logo and name, the balance at `price40`, holdings by symbol, every wallet as a copy row, joined and last used. Its doors ride the dial: "Open in <app>" when Privy's `custom_origin` is an https host, and "Explorer" — Blockscan's cross-chain address page for an EVM embedded wallet (one address on every chain), Solscan for Solana. "Send to Calendar" is removed for Privy, as for vibenet: joining an app is not an appointment.
+- **The display choices**, on the account page, all Casberi's and none sent to Privy: **Show empty apps** (off: an app holding nothing and unused for 90 days is not a feed row; an app not read yet still is), and **Hidden apps** (every app with a switch; a hidden app is never a row, funded or not). Filtered in `liveVisible` through `PrivyHomeStore.shows`, a set lookup recomputed only when apps, balances or a choice change.
+
+**Still not built, deliberately, with the reason.** The mockup's Home/Apps/Activity tiles and its "count Privy in the Wallet total" switch: Activity needs an app wallet's transfers landed, which no pass does yet, and a tile or switch with nothing behind it is §83's dead control. They come with the transfer read.
+
+**Measured in passing:** the first renewal with the full cookie set answered `refresh_token: "deprecated"` + cookies → `200`, rotating `privy-access-token`, `privy-refresh-token`, `privy-token` and `privy-session` — so §803d's cookie-mode refusal was the incomplete cookie set, and cookie mode is the renewal. A cold launch into the room draws the newest row as a cover for a few seconds before the head composes; that is every room's launch deferral, not this head.
+
+## §803f — Privy activity: what moved in your app wallets, the Home/Apps/Activity tiles, and the app page's own history (user: "yes keep going", 2026-09-17)
+
+**§803e held back the mockup's tiles and money-in notifications because nothing moved behind them. Now something does.**
+
+- **The read.** Each sync reads the Wallet seat's own Zerion transfer read (`ZerionAPI.transactions`) for the EVM wallets of funded or recently used apps — at most every six hours per wallet and ten wallets a pass (`PrivyHomeFeed.activityTargets`); an empty app nobody uses costs nothing, and Solana is not in that read. One `.transaction` row per leg, `privy:tx:<appID>:<hash>:<in|out>:<symbol>`, dated when it was mined, carrying `transferDirection`/`transferAmount`/`transferUSD`/`counterpartyAddress`, the app's name on `authorHandle` and its logo on `previewImageURL`. **Never `walletAddress`**, which would enrol an unwatched wallet in the watched wallets' scope and verbs. A leg Zerion could not price, or worth under a cent, is not landed: on an embedded wallet nobody watches, an unpriced token is almost always a spam drop.
+- **Money arriving notifies with no new rule.** `NotifySweep.classify` already returns `.moneyIn` for any `received` row at or above the wallet's dust line, and the row's source resolves to the Wallet category, so it joins that category's 18:00 digest (§770). Old history is dated into the past and stays outside the 36-hour news window.
+- **The rows.** In the room and in All, an activity row is the wallet room's money column (`BandRow(moneyColumn:)`) under the app's logo, with the app named on the line (`BandRow.project`'s "Privy" case).
+- **The tiles** (`PrivyHomeFeed.Section`, `DSScopeTiles` in the head's `scopes` slot, the Privacy Pools shape): Home is the whole room, Apps narrows the feed to app rows, Activity to what moved. Activity is offered only once a row has landed (`PrivyHomeStore.activityCount`). The pick lives on the store, not persisted — the room opens on Home — and never narrows All.
+- **The app page** lists that app's last twelve legs, read once in `.task` as values (§628, and no `[Thing]` in state).
+- **The sheet's eyebrow** for an app row reads "App wallet · made 2y ago", not "Event".
+
+**Measured on the simulator with the user's account:** the launch sync landed seven legs across the read wallets; the Activity tile narrows the room to them, dated and signed.
+
+**Still not built:** "count Privy in the Wallet total". It changes the number on another room's crown, which is the user's to rule on rather than this seat's to decide.
+
+## §803g — Privy money counts in the Wallet total, and the room's tiles are Apps | Activity (user: "what switch? to literally add money or to display money added", "oh, ofc do it", then "on the simulator home and apps say the same thing", "i think it should be called apps and activity", 2026-09-17)
+
+**The switch is DISPLAY ONLY, and the question deserved the answer before the code.** Nothing in this seat can move money; the choice is whether the Wallet room's combined total counts what your app wallets hold. **On by default** (user), reversible on Privy's account page.
+
+**Where it merges, and why there.** `portfolioRead`'s COMBINED read only — exactly where a connected exchange's balance and a watched validator's ETH already join (§163's reasoning: a total scoped to one address must not fold in money that address does not hold). `WalletPortfolio.from` gains `privy:`, holding each app's symbols with the APP as the holder's label and `privy:<appID>` as its id: the address is not watched, and the app is the name a person would recognise. The value samples and the per-wallet history are untouched, as they are for exchanges — a display total is not a price series. A hidden app is not counted: hiding one says it is not theirs to see. The read is the LAST read (`PrivyHomeStore.walletHoldings`), never a fetch: the Privy sweep owns that budget (§803c's bound).
+
+**The tiles.** §803f shipped Home | Apps | Activity; the user opened the room and both first tiles drew the same list, because app rows are nearly all of the room. Now **Apps** (the whole room) and **Activity** (what moved), and with nothing moved yet there is one scope, which `DSScopeTiles` draws as no tiles at all.
+
+**The demo has a Privy seat** (`demo-selftest.py` check G, which caught its absence): six app wallets dated when each was made, four legs of activity across two of them, the real seats' ref shapes so the seat's own dedupe recognises them, and `privy:app:`/`privy:tx:` in the teardown list so they leave with the demo. The room's HEAD is `PrivyHomeStore`'s, which a demo never fills, so what the demo shows of Privy is its rows — stated because a future session will notice the head is bare in demo mode and go looking for a bug.
+
+**Unverified on a device:** the Wallet total's new figure. The simulator this was built on watches no wallets, so there is no Wallet room to read it in; the merge is proven by the code path and by `wallet-viz-selftest.sh`, not by a screenshot.
+
+## §803h — The Privy seat is MEASURED against the person's own account (user: "those balances are orrect", 2026-09-17)
+
+**Every earlier Privy entry carried "unmeasured" somewhere; this one retires it for the numbers.** On the user's own account, on the simulator: 90 apps with a wallet (Privy Home's own 117 counts apps holding only an email), 114 wallets, the room's total and per-app figures, and 12 transfers in one app wallet on a single day — all confirmed correct by the person they belong to.
+
+**What that verifies, precisely:** the `privy_home/me` parse (`PrivyHomeFeed.apps`, including the tolerant `accounts` walk that must not read an email as a wallet), the per-app balance sum over `WalletIngest.unwatchedHoldings`, and the Zerion activity read landing the right legs against the right app. It does NOT verify the Wallet-total merge (§803g — no watched wallet on that simulator), the money-in notification, or the renewal after a full 30-day gap.

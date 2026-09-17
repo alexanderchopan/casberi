@@ -50,10 +50,37 @@ final class PrivyHomeStore {
 
     private static let appsKey = "privy.home.apps.v1"
     private static let balancesKey = "privy.home.balances.v1"
+    private static let hiddenKey = "privy.home.hidden.v1"
+    private static let showEmptyKey = "privy.home.showEmpty"
+    private static let activityReadKey = "privy.home.activityRead.v1"
+    private static let activityCountKey = "privy.home.activityCount"
+    private static let countsInWalletKey = "privy.home.countsInWallet"
 
     private(set) var apps: [PrivyHomeFeed.App] = []
     private(set) var balances: [String: PrivyHomeFeed.Balance] = [:]
-    /// Moves whenever either changes — the room head's memo key, because a
+    /// Apps the person hid, by row ref. Only hides them here.
+    private(set) var hidden: Set<String> = []
+    /// Off by default: an app holding nothing and not used in 90 days is one
+    /// count in the head, not a row in the feed.
+    private(set) var showEmpty = false
+    /// On by default (user, 2026-09-17: "oh, ofc do it"): the Wallet room's
+    /// combined total counts what your app wallets hold. Display only.
+    private(set) var countsInWallet = true
+    /// The rows the feed draws — recomputed when any input moves, so a row's
+    /// filter is a set lookup, never a walk of the apps.
+    private(set) var shownRefs: Set<String> = []
+    private(set) var byRef: [String: PrivyHomeFeed.App] = [:]
+    private(set) var byID: [String: PrivyHomeFeed.App] = [:]
+    /// When each wallet's activity was last read.
+    private(set) var activityReadAt: [String: Date] = [:]
+    /// How many activity rows have ever landed — whether the Activity tile
+    /// has anything behind it.
+    private(set) var activityCount = 0
+    /// The room's picked section. Not persisted: the room opens on Apps.
+    var section: PrivyHomeFeed.Section = .apps {
+        didSet { if section != oldValue { revision &+= 1 } }
+    }
+    /// Moves whenever the head's inputs change — its memo key, because a
     /// balance landing lands no row (the Hegotá note in `FeedScreen`).
     private(set) var revision = 0
 
@@ -67,31 +94,119 @@ final class PrivyHomeStore {
            let balances = try? JSONDecoder().decode([String: PrivyHomeFeed.Balance].self, from: data) {
             self.balances = balances
         }
+        if let data = d.data(forKey: Self.hiddenKey),
+           let hidden = try? JSONDecoder().decode(Set<String>.self, from: data) {
+            self.hidden = hidden
+        }
+        showEmpty = d.data(forKey: Self.showEmptyKey) == Data("1".utf8)
+        countsInWallet = d.data(forKey: Self.countsInWalletKey) != Data("0".utf8)
+        if let data = d.data(forKey: Self.activityReadKey),
+           let read = try? JSONDecoder().decode([String: Date].self, from: data) {
+            activityReadAt = read
+        }
+        activityCount = d.data(forKey: Self.activityCountKey)
+            .flatMap { Int(String(decoding: $0, as: UTF8.self)) } ?? 0
+        recompute()
     }
 
     static var identity: String { String(shared.revision) }
 
+    private func recompute() {
+        byRef = Dictionary(apps.map { (PrivyHomeFeed.ref($0), $0) }, uniquingKeysWith: { a, _ in a })
+        byID = Dictionary(apps.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        shownRefs = PrivyHomeFeed.shown(apps, balances: balances, hidden: hidden,
+                                        showEmpty: showEmpty, now: .now)
+        revision &+= 1
+    }
+
     func setApps(_ apps: [PrivyHomeFeed.App]) {
         guard apps != self.apps else { return }
         self.apps = apps
-        revision &+= 1
+        recompute()
         if let data = try? JSONEncoder().encode(apps) { DefaultsWrite.set(data, forKey: Self.appsKey) }
     }
 
     func setBalances(_ updates: [String: PrivyHomeFeed.Balance]) {
         guard !updates.isEmpty else { return }
         balances.merge(updates) { _, new in new }
-        revision &+= 1
+        recompute()
         if let data = try? JSONEncoder().encode(balances) {
             DefaultsWrite.set(data, forKey: Self.balancesKey)
         }
     }
 
-    /// Signing out forgets what the session read; the landed rows stay.
+    func setShowEmpty(_ on: Bool) {
+        guard on != showEmpty else { return }
+        showEmpty = on
+        recompute()
+        DefaultsWrite.set(Data((on ? "1" : "0").utf8), forKey: Self.showEmptyKey)
+    }
+
+    func setCountsInWallet(_ on: Bool) {
+        guard on != countsInWallet else { return }
+        countsInWallet = on
+        DefaultsWrite.set(Data((on ? "1" : "0").utf8), forKey: Self.countsInWalletKey)
+    }
+
+    /// What the Wallet room's combined read adds (prd §803g): every app's
+    /// holdings by symbol, from the last read, when the person counts them.
+    /// Hidden apps are not counted — hiding one says it isn't theirs to see.
+    var walletHoldings: [(symbol: String, usd: Double, appID: String, app: String)] {
+        guard countsInWallet else { return [] }
+        var out: [(symbol: String, usd: Double, appID: String, app: String)] = []
+        for app in apps where !hidden.contains(PrivyHomeFeed.ref(app)) {
+            var bySymbol: [String: Double] = [:]
+            for wallet in app.wallets {
+                for (symbol, usd) in balances[PrivyHomeFeed.key(wallet.address)]?.bySymbol ?? [:] {
+                    bySymbol[symbol, default: 0] += usd
+                }
+            }
+            for (symbol, usd) in bySymbol where usd > 0 {
+                out.append((symbol, usd, app.id, app.name))
+            }
+        }
+        return out
+    }
+
+    func setHidden(_ ref: String, _ isHidden: Bool) {
+        if isHidden { hidden.insert(ref) } else { hidden.remove(ref) }
+        recompute()
+        if let data = try? JSONEncoder().encode(hidden) { DefaultsWrite.set(data, forKey: Self.hiddenKey) }
+    }
+
+    func noteActivity(read addresses: [String], landed: Int, at now: Date) {
+        for address in addresses { activityReadAt[PrivyHomeFeed.key(address)] = now }
+        if let data = try? JSONEncoder().encode(activityReadAt) {
+            DefaultsWrite.set(data, forKey: Self.activityReadKey)
+        }
+        guard landed > 0 else { return }
+        activityCount += landed
+        revision &+= 1
+        DefaultsWrite.set(Data(String(activityCount).utf8), forKey: Self.activityCountKey)
+    }
+
+    /// Whether the feed draws this row: the picked section, then — for an app
+    /// row — the hide and show-empty choices. In All the section never applies.
+    func shows(_ thing: Thing, inRoom: Bool) -> Bool {
+        let ref = thing.sourceRef
+        if inRoom, !section.allows(ref: ref) { return false }
+        guard let ref, ref.hasPrefix(PrivyHomeFeed.refPrefix) else { return true }
+        // Before the first read in this install there is nothing to judge by.
+        return apps.isEmpty || shownRefs.contains(ref)
+    }
+
+    func usd(_ ref: String) -> Double? {
+        byRef[ref].flatMap { PrivyHomeFeed.appUSD($0, balances: balances) }
+    }
+
+    /// Signing out forgets what the session read; the landed rows stay, and
+    /// so do the person's own hide choices.
     func forget() {
         apps = []
         balances = [:]
-        revision &+= 1
+        activityReadAt = [:]
+        DefaultsWrite.remove(Self.activityReadKey)
+        recompute()
         DefaultsWrite.remove(Self.appsKey)
         DefaultsWrite.remove(Self.balancesKey)
     }
@@ -131,7 +246,8 @@ enum PrivyHomeLive {
         PrivyHomeStore.shared.setApps(apps)
         let added = land(apps, context: context, now: now)
         await readBalances(apps, now: now)
-        return added
+        let moved = await readActivity(apps, context: context, now: now)
+        return added + moved
     }
 
     // MARK: - The session
@@ -291,6 +407,67 @@ enum PrivyHomeLive {
                                                         readAt: now)
         }
         PrivyHomeStore.shared.setBalances(updates)
+    }
+
+    // MARK: - Activity
+
+    /// What moved in the wallets `PrivyHomeFeed.activityTargets` picks, off the
+    /// Wallet seat's own Zerion transfer read. One row per leg, dated when it
+    /// was mined, so money arriving notifies through the Wallet digest's own
+    /// `moneyIn` rule (§770) and old history files into the past. A leg Zerion
+    /// could not price, or worth under a cent, is not landed: on an embedded
+    /// wallet nobody watches, an unpriced token is almost always a spam drop.
+    @MainActor
+    private static func readActivity(_ apps: [PrivyHomeFeed.App], context: ModelContext,
+                                     now: Date) async -> Int {
+        let store = PrivyHomeStore.shared
+        let targets = PrivyHomeFeed.activityTargets(apps, balances: store.balances,
+                                                    readAt: store.activityReadAt, now: now)
+        guard !targets.isEmpty else { return 0 }
+        let results = await IngestSupport.boundedGather(targets, maxConcurrent: 3) { target in
+            await ZerionAPI.transactions(address: target.address)
+        }
+        var existing = IngestSupport.existingSourceRefs(context, source: PrivyHomeFeed.source)
+        var landed = 0
+        var readAddresses: [String] = []
+        var indexed: [Thing] = []
+        for (target, transfers) in zip(targets, results) {
+            guard let transfers else { continue }
+            readAddresses.append(target.address)
+            let app = store.byID[target.appID]
+            for transfer in transfers {
+                guard let usd = transfer.valueUSD, usd >= PrivyHomeFeed.fundedFloor else { continue }
+                let ref = PrivyHomeFeed.txRef(appID: target.appID, hash: transfer.hash,
+                                              received: transfer.received, symbol: transfer.symbol)
+                guard !existing.contains(ref) else { continue }
+                let thing = Thing(kind: .transaction,
+                                  title: PrivyHomeFeed.txTitle(received: transfer.received,
+                                                               value: transfer.amount,
+                                                               symbol: transfer.symbol),
+                                  content: "",
+                                  source: PrivyHomeFeed.source,
+                                  capturedAt: transfer.when,
+                                  sourceRef: ref)
+                // NOT `walletAddress`: that field enrols a row in the watched
+                // wallets' scope and verbs, and these wallets are not watched.
+                thing.authorHandle = app?.name
+                thing.previewImageURL = app?.logoURL
+                thing.counterpartyAddress = transfer.counterparty
+                thing.transferDirection = transfer.received ? "received" : "sent"
+                thing.transferAmount = PrivyHomeFeed.amount(transfer.amount, symbol: transfer.symbol)
+                thing.transferUSD = usd
+                context.insert(thing)
+                existing.insert(ref)
+                indexed.append(thing)
+                landed += 1
+            }
+        }
+        if landed > 0 {
+            SpotlightIndex.index(indexed.filter(\.isLive))
+            context.saveHonestly()
+        }
+        store.noteActivity(read: readAddresses, landed: landed, at: now)
+        return landed
     }
 
     // MARK: - Probe
