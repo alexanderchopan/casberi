@@ -57640,3 +57640,15 @@ Also: the file header claimed "only `verified` draws" while the card draws `laps
 **Measured on the simulator with the user's account:** the launch sync landed seven legs across the read wallets; the Activity tile narrows the room to them, dated and signed.
 
 **Still not built:** "count Privy in the Wallet total". It changes the number on another room's crown, which is the user's to rule on rather than this seat's to decide.
+
+## §803g — Privy money counts in the Wallet total, and the room's tiles are Apps | Activity (user: "what switch? to literally add money or to display money added", "oh, ofc do it", then "on the simulator home and apps say the same thing", "i think it should be called apps and activity", 2026-09-17)
+
+**The switch is DISPLAY ONLY, and the question deserved the answer before the code.** Nothing in this seat can move money; the choice is whether the Wallet room's combined total counts what your app wallets hold. **On by default** (user), reversible on Privy's account page.
+
+**Where it merges, and why there.** `portfolioRead`'s COMBINED read only — exactly where a connected exchange's balance and a watched validator's ETH already join (§163's reasoning: a total scoped to one address must not fold in money that address does not hold). `WalletPortfolio.from` gains `privy:`, holding each app's symbols with the APP as the holder's label and `privy:<appID>` as its id: the address is not watched, and the app is the name a person would recognise. The value samples and the per-wallet history are untouched, as they are for exchanges — a display total is not a price series. A hidden app is not counted: hiding one says it is not theirs to see. The read is the LAST read (`PrivyHomeStore.walletHoldings`), never a fetch: the Privy sweep owns that budget (§803c's bound).
+
+**The tiles.** §803f shipped Home | Apps | Activity; the user opened the room and both first tiles drew the same list, because app rows are nearly all of the room. Now **Apps** (the whole room) and **Activity** (what moved), and with nothing moved yet there is one scope, which `DSScopeTiles` draws as no tiles at all.
+
+**The demo has a Privy seat** (`demo-selftest.py` check G, which caught its absence): six app wallets dated when each was made, four legs of activity across two of them, the real seats' ref shapes so the seat's own dedupe recognises them, and `privy:app:`/`privy:tx:` in the teardown list so they leave with the demo. The room's HEAD is `PrivyHomeStore`'s, which a demo never fills, so what the demo shows of Privy is its rows — stated because a future session will notice the head is bare in demo mode and go looking for a bug.
+
+**Unverified on a device:** the Wallet total's new figure. The simulator this was built on watches no wallets, so there is no Wallet room to read it in; the merge is proven by the code path and by `wallet-viz-selftest.sh`, not by a screenshot.

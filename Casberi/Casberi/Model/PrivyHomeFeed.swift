@@ -359,16 +359,17 @@ enum PrivyHomeFeed {
 
     // MARK: - The room's sections (prd §803f)
 
-    /// Home is the whole room; Apps and Activity narrow its feed. Activity is
+    /// Apps is the whole room; Activity narrows its feed to what moved, and is
     /// offered only once there is some — a tile over nothing is §83's dead
-    /// control.
+    /// control. Two tiles, named for what they hold (user, 2026-09-17: "home
+    /// and apps say the same thing", then "i think it should be called apps and
+    /// activity") — a Home tile beside an Apps tile drew the same room twice.
     enum Section: String, CaseIterable, Identifiable, Sendable {
-        case home, apps, activity
+        case apps, activity
         var id: String { rawValue }
 
         var label: String {
             switch self {
-            case .home: return String(localized: "Home")
             case .apps: return String(localized: "Apps")
             case .activity: return String(localized: "Activity")
             }
@@ -376,21 +377,19 @@ enum PrivyHomeFeed {
 
         var summary: String {
             switch self {
-            case .home: return String(localized: "Your app wallets and what moved in them")
             case .apps: return String(localized: "Every app that made you a wallet")
             case .activity: return String(localized: "What moved in your app wallets")
             }
         }
 
         static func present(hasActivity: Bool) -> [Section] {
-            hasActivity ? [.home, .apps, .activity] : [.home, .apps]
+            hasActivity ? [.apps, .activity] : [.apps]
         }
 
         /// Whether a row of this room belongs to the section.
         func allows(ref: String?) -> Bool {
             switch self {
-            case .home: return true
-            case .apps: return ref?.hasPrefix(PrivyHomeFeed.refPrefix) == true
+            case .apps: return true
             case .activity: return ref?.hasPrefix(PrivyHomeFeed.txPrefix) == true
             }
         }

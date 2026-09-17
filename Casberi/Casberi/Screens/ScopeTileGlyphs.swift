@@ -31,7 +31,6 @@ enum ScopeTileGlyph {
 extension PrivyHomeFeed.Section: DSTileScope {
     var glyph: String {
         switch self {
-        case .home:     return ScopeTileGlyph.home
         case .apps:     return ScopeTileGlyph.frames
         case .activity: return ScopeTileGlyph.activity
         }

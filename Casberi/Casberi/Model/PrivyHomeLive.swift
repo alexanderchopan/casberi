@@ -54,6 +54,7 @@ final class PrivyHomeStore {
     private static let showEmptyKey = "privy.home.showEmpty"
     private static let activityReadKey = "privy.home.activityRead.v1"
     private static let activityCountKey = "privy.home.activityCount"
+    private static let countsInWalletKey = "privy.home.countsInWallet"
 
     private(set) var apps: [PrivyHomeFeed.App] = []
     private(set) var balances: [String: PrivyHomeFeed.Balance] = [:]
@@ -62,6 +63,9 @@ final class PrivyHomeStore {
     /// Off by default: an app holding nothing and not used in 90 days is one
     /// count in the head, not a row in the feed.
     private(set) var showEmpty = false
+    /// On by default (user, 2026-09-17: "oh, ofc do it"): the Wallet room's
+    /// combined total counts what your app wallets hold. Display only.
+    private(set) var countsInWallet = true
     /// The rows the feed draws — recomputed when any input moves, so a row's
     /// filter is a set lookup, never a walk of the apps.
     private(set) var shownRefs: Set<String> = []
@@ -72,8 +76,8 @@ final class PrivyHomeStore {
     /// How many activity rows have ever landed — whether the Activity tile
     /// has anything behind it.
     private(set) var activityCount = 0
-    /// The room's picked section. Not persisted: the room opens on Home.
-    var section: PrivyHomeFeed.Section = .home {
+    /// The room's picked section. Not persisted: the room opens on Apps.
+    var section: PrivyHomeFeed.Section = .apps {
         didSet { if section != oldValue { revision &+= 1 } }
     }
     /// Moves whenever the head's inputs change — its memo key, because a
@@ -95,6 +99,7 @@ final class PrivyHomeStore {
             self.hidden = hidden
         }
         showEmpty = d.data(forKey: Self.showEmptyKey) == Data("1".utf8)
+        countsInWallet = d.data(forKey: Self.countsInWalletKey) != Data("0".utf8)
         if let data = d.data(forKey: Self.activityReadKey),
            let read = try? JSONDecoder().decode([String: Date].self, from: data) {
             activityReadAt = read
@@ -135,6 +140,32 @@ final class PrivyHomeStore {
         showEmpty = on
         recompute()
         DefaultsWrite.set(Data((on ? "1" : "0").utf8), forKey: Self.showEmptyKey)
+    }
+
+    func setCountsInWallet(_ on: Bool) {
+        guard on != countsInWallet else { return }
+        countsInWallet = on
+        DefaultsWrite.set(Data((on ? "1" : "0").utf8), forKey: Self.countsInWalletKey)
+    }
+
+    /// What the Wallet room's combined read adds (prd §803g): every app's
+    /// holdings by symbol, from the last read, when the person counts them.
+    /// Hidden apps are not counted — hiding one says it isn't theirs to see.
+    var walletHoldings: [(symbol: String, usd: Double, appID: String, app: String)] {
+        guard countsInWallet else { return [] }
+        var out: [(symbol: String, usd: Double, appID: String, app: String)] = []
+        for app in apps where !hidden.contains(PrivyHomeFeed.ref(app)) {
+            var bySymbol: [String: Double] = [:]
+            for wallet in app.wallets {
+                for (symbol, usd) in balances[PrivyHomeFeed.key(wallet.address)]?.bySymbol ?? [:] {
+                    bySymbol[symbol, default: 0] += usd
+                }
+            }
+            for (symbol, usd) in bySymbol where usd > 0 {
+                out.append((symbol, usd, app.id, app.name))
+            }
+        }
+        return out
     }
 
     func setHidden(_ ref: String, _ isHidden: Bool) {
