@@ -23,6 +23,11 @@ enum ProbeHooks {
     /// flag lands here. Add the flag in the same commit as the probe.
     private static let secretArgKeys: Set<String> = [
         "-byokKey", "-tokenBridge", "-wcProjectID", "-ghClientID",
+        // Safe's API key — a JWT over our own developer account's quota
+        // (prd §789). Not a person's credential, and redacted anyway for
+        // `-wcProjectID`'s reason: anything credential-shaped stays out of
+        // the log so nobody has to remember which ones are safe.
+        "-safeKey",
         // Public by design (it names a Power-Up, not a person) — redacted for
         // the same reason `-wcProjectID` is: anything credential-shaped stays
         // out of the log, so nobody has to remember which ones are safe.

@@ -60,6 +60,57 @@ enum SafeServiceGate {
         return saved
     }())
 
+    // MARK: - The key (prd §789's capacity half)
+
+    /// Safe's API key — a JWT made at developer.safe.global with no IP and no
+    /// domain restriction, because a phone has neither: those fields match a
+    /// server's fixed address or a browser's `Origin`, and a native app sends
+    /// no `Origin` at all, so an entry in either one refuses every install.
+    /// The shape is `IngestSupport.alchemyKey`'s and
+    /// `GitHubDeviceFlow.shippedClientID`'s — a read-only key over public
+    /// data whose worst case is quota use.
+    ///
+    /// **EMPTY, and what was measured says why (2026-09-17).** A real key from
+    /// that dashboard, sent as `Authorization: Bearer`, got the SAME answer as
+    /// no key at all on `tx-service/eth/api/v1/about/`: `429`,
+    /// `x-ratelimit-limit: 5000`, `x-ratelimit-remaining: 0`, and resets one
+    /// second apart (175239 keyed, 175238 keyless) — the same pool, metered at
+    /// the KEYLESS tier's 5,000. `api/v2` answered 429 too. So the key was
+    /// served as anonymous, and whether any key lifts this refusal is
+    /// unproven. Until it is, shipping one would be a claim the app cannot
+    /// keep: the header is wired, the constant is not filled.
+    ///
+    /// Two readings are still open and are told apart by an invalid bearer: a
+    /// 401 means auth is evaluated (so the key or its activation is the fault),
+    /// the same 429 means the edge refuses before auth is read at all (so no
+    /// key helps and only fewer reads do).
+    ///
+    /// Safe's documented quota is counted PER ACCOUNT rather than per key, so
+    /// one shipped key would be one pool across every install, and a drained
+    /// pool is recovered by rotating it there — never by adding a second key.
+    private static let shippedKey = ""
+
+    static var apiKey: String {
+        #if DEBUG
+        // `-safeKey "$(scripts/dev-keys.sh get safe)"` proves a key against the
+        // real service before it ships in code — `GitHubDeviceFlow`'s
+        // `-ghClientID` shape, for its reason.
+        if let override = UserDefaults.standard.string(forKey: "safeKey"),
+           !override.isEmpty { return override }
+        #endif
+        return shippedKey
+    }
+
+    /// The `Authorization` value, or nil when there is no key — so no header
+    /// is sent at all rather than a `Bearer ` with nothing after it. §789
+    /// measured that a bogus bearer changes nothing, which makes a malformed
+    /// one indistinguishable from none; sending one would only turn a 401 we
+    /// could diagnose into a quota refusal we could not.
+    static var authorization: String? {
+        let key = apiKey
+        return key.isEmpty ? nil : "Bearer \(key)"
+    }
+
     static func mark() -> UInt64 { lock.withLock { $0.seq } }
 
     static func health(since mark: UInt64) -> Health {
@@ -83,7 +134,7 @@ enum SafeServiceGate {
         }) {
             return .throttled(until: until)
         }
-        let (json, status, response) = await IngestSupport.getJSONResponse(url)
+        let (json, status, response) = await IngestSupport.getJSONResponse(url, auth: authorization)
         let read: Read
         switch status {
         case 200 where json != nil: read = .ok(json!)

@@ -57612,3 +57612,25 @@ Also: the file header claimed "only `verified` draws" while the card draws `laps
 **Measured on that account:** 90 apps with a wallet (Privy Home's own count, 117, includes apps holding only an email), 114 wallets, every app carrying `created_at`; an account is `{address, type, verified_at, first_verified_at, latest_verified_at}`; the access token lives about ten minutes, so nearly every sync renews. Renewal: `refresh_token: "deprecated"` with the cookies → `401 missing_or_invalid_token`, the refresh token in the BODY → `200` (seen once, before the cookie fix; the first renewal with the full cookie set is still to be watched in the trace).
 
 **The sheet opens on the sign-in.** `home.privy.io/login` is a landing card whose "Get started" calls the SDK's `login()`; no URL opens the form (read from its bundle). A document-end script presses it once, on that path only, and stops once an email field exists.
+
+## §789a — A real Safe API key is served as ANONYMOUS: same 429, same 5,000 limit, same pool, so the header ships wired and the constant ships empty (user: "do we want a developer key or is there a better way to do reads to not hit that", then "i will get the key", 2026-09-17)
+
+**§789's proposal 2 was "then a shipped Builder key", and it was reasoning, not a measurement.** The user made one at developer.safe.global the next day — no IP restriction and no domain restriction, which is right for a phone: those fields match a server's fixed address or a browser's `Origin`, and a native app sends neither, so one entry there refuses every install. Five-year expiry, because the key ships inside an App Store build and a shorter one is a dated kill switch on the Safe room.
+
+**MEASURED, 2026-09-17, and it does not work.** `GET api.safe.global/tx-service/eth/api/v1/about/` with `Authorization: Bearer <the real key>` answered exactly as the keyless call beside it:
+
+| | status | `x-ratelimit-limit` | `x-ratelimit-remaining` | `x-ratelimit-reset` |
+|---|---|---|---|---|
+| keyed | 429 | 5000 | 0 | 175239 |
+| keyless | 429 | 5000 | 0 | 175238 |
+
+One second apart, so it is the same counter — and **5,000 is the keyless tier's own limit**, the number §789 measured with no key at all. `api/v2` answered 429 too, so the version difference Safe's docs now show for `multisig-transactions` is not the cause and is left alone.
+
+**So the key was served as anonymous, and "a key fixes this" is unproven here.** Two readings remain, told apart by an invalid bearer rather than by argument: a 401 would mean auth is evaluated and the fault is the key or its activation; the same 429 would mean the edge refuses before it reads the header, in which case no key of any tier helps and only fewer reads do. §789's measurement that a bogus bearer "changed nothing" already leans to the second.
+
+**RULING — the header is wired, the constant is empty.**
+1. `SafeServiceGate.authorization` is sent on every tx-service GET, and on the co-signer's one POST so the write draws on the same quota the reads do. `shippedKey` is `""`, so `authorization` is nil and **no header is sent at all** — today's behaviour exactly, byte for byte. A `Bearer ` with nothing after it would turn a diagnosable 401 into a quota refusal that reads the same as the shared pool's.
+2. **A key that is served as anonymous may not ship.** Filling that constant would put a credential in a public repo and claim a capacity the app has not been given; the room would go on saying the limit is used up while the code implied otherwise. `-safeKey "$(scripts/dev-keys.sh get safe)"` (DEBUG, `GitHubDeviceFlow`'s `-ghClientID` shape) proves a key against the live service before any constant is filled, and it is on `ProbeHooks.secretArgKeys` so `probeArgs:` never prints it.
+3. **`NetworkReach` still says keyless for `api.safe.global`, and that stays true** while no key ships. It changes in the same commit as a filled constant, never before — the privacy screen describes what the binary does, not what it is ready to do.
+4. **The read cut is now the only lever with evidence behind it**, so it is not "then" anymore, it is the work: the config and detection reads leave the transaction service for the chain (`getThreshold()`/`getOwners()`/`getModulesPaginated`/the guard slot/`nonce()`, on the keyless hosts `WalletApprovals` and `GnosisPayBridge` already measured and disclose), and the owner reverse-lookup gets a 24-hour negative cache. What CANNOT leave: a proposed-but-unexecuted transaction exists only in Safe's indexer, so the queue read is permanent.
+5. **The reverse lookup has no on-chain equivalent, measured against the contracts rather than assumed.** `OwnerManager` declares `event AddedOwner(address owner)` in 1.3.0 — NOT indexed — and `event AddedOwner(address indexed owner)` only from 1.4.1, so a topic-filtered `eth_getLogs` by owner finds 1.4.1+ Safes and misses the 1.3.0 population, which is most deployed Safes. It stays on the service, cached.

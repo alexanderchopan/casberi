@@ -483,9 +483,11 @@ enum SafeSigner {
     }
 
     /// **The only write this app makes.** One `POST`, one signature, to Safe's
-    /// own transaction service — keyless, because the signature is its own
-    /// authorization and the service verifies it against the Safe's owner set
-    /// before storing it.
+    /// own transaction service. The signature is its own authorization — the
+    /// service verifies it against the Safe's owner set before storing it —
+    /// and `SafeServiceGate.authorization` rides along only so this write
+    /// draws on the same quota the reads do (nil while no key ships, which is
+    /// today: prd §789).
     ///
     /// The body shape and the path are read from the service's OWN source
     /// (`SafeMultisigConfirmationSerializer`: a single `signature` field, hex,
@@ -495,6 +497,7 @@ enum SafeSigner {
     private static func post(seg: String, safeTxHash: String, signature: String) async -> Int {
         let (_, status) = await IngestSupport.postJSONStatus(
             "\(baseURL(seg))/multisig-transactions/\(safeTxHash)/confirmations/",
+            auth: SafeServiceGate.authorization,
             body: ["signature": signature],
             service: "Safe")
         return status
