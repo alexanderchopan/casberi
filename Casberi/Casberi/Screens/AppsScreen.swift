@@ -166,9 +166,13 @@ struct AppsScreen: View {
                         // top") — a visible slab, not the nav bar's
                         // pull-down `.searchable` field, which the App Store
                         // shape hid a scroll below the fold.
+                        // Search, Manage | Connect, Settings (user, prd §796):
+                        // the face in the dock opens THIS screen, so the way
+                        // into Settings stands here, in the head row.
                         HStack(spacing: DS.Space.s2) {
                             searchField
                             scopeSegment
+                            settingsDoor
                         }
                         if query.isEmpty {
                             scopeStrip(proxy)
@@ -589,6 +593,36 @@ struct AppsScreen: View {
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("Which accounts"))
+    }
+
+    /// The Settings door (prd §796, 2026-09-17, user: "what if the avatar icon
+    /// was for apps and we put a settings button. so under accounts title it
+    /// says search, update, manage, settings").
+    ///
+    /// The dock's face opened Settings from 2026-07-20 to 2026-09-17 and opens
+    /// Accounts now, so this is the one touch door to Settings; the menu's ⌘,
+    /// and `casberi://settings` still present it directly. A glyph, not a
+    /// word: the pair beside it is a CHOICE and this is a DOOR, and §746 keeps
+    /// the two shapes apart — a third capsule reading "Settings" would look
+    /// like a scope that filters the list. `push`, not `present`, so the way
+    /// back (the dock's seat, §767) lands on this screen, not Home. Bare, at
+    /// the slab's height and the hit floor's width: it is content, so no
+    /// glass (the floating layer's) and no well (§782).
+    private var settingsDoor: some View {
+        Button {
+            DSHaptic.selection()
+            route.push(.settings)
+        } label: {
+            Image(systemName: "gearshape")
+                .dsGlyph(.title)
+                .foregroundStyle(DS.textSecondary)
+                .frame(width: DS.Hit.min, height: DSSlab.height)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressSpring())
+        .dsHover()
+        .accessibilityLabel(Text("Settings"))
+        .dsTooltip(String(localized: "Settings"))
     }
 
     private enum AccountsHeld: String, CaseIterable, DSSectionScope {

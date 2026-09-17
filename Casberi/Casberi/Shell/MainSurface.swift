@@ -845,8 +845,9 @@ struct MainSurface: View {
             AppsScreen()
                 .navigationTransition(.zoom(sourceID: "appsDoor", in: doorNS))
         case .settings:
+            // A plain push: Settings is a row-height door in the Accounts head
+            // since prd §796, not a screen that grows out of the face.
             SettingsScreen()
-                .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
         case .bridge(let dest):
             // Mac's connect form is PUSHED, not raised (see
             // `Destination.raisedByConnect`), so the one behaviour the sheet
@@ -1625,7 +1626,7 @@ struct MainSurface: View {
                     categoryVenues: chips.venues,
                     minimized: chrome.minimized,
                     onApps: { route.present(.apps) },
-                    onSettings: { route.toggle(.settings) },
+                    onAccounts: { route.toggle(.apps) },
                     refreshSpin: chrome.refreshPulse,
                     zoomNS: doorNS) { label in
             // Compared against the CHIP, not the source: re-tapping the folded

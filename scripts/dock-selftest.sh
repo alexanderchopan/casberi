@@ -315,7 +315,7 @@ grep -q 'static func clusterWidth(fold: CGFloat) -> CGFloat { agentSize(fold: fo
 grep -q 'clusterInset + clusterWidth(fold: fold) + seam' "$DOCK" \
   || { echo "✗ DSDock.agentSeat no longer spans the door CLUSTER."; fail=1; }
 grep -q 'DockDoors(' "$TMP/root.nc" \
-  || { echo "✗ RootShell no longer hosts DockDoors — Settings must stand on the shell's"; \
+  || { echo "✗ RootShell no longer hosts DockDoors — the face must stand on the shell's"; \
        echo "  own layer, which survives into a pushed room; the strip does not."; fail=1; }
 grep -q 'AvatarChip(' "$TMP/doors.nc" \
   || { echo "✗ the face is gone from the dock's leading seat."; fail=1; }
@@ -324,13 +324,28 @@ grep -q 'AvatarChip(' "$TMP/doors.nc" \
 # opens, so a second press that re-presents the same screen is a control that
 # looks live and does nothing — §83's dead control. Both seats (the phone's
 # fixed dock seat and the iPad rail's own avatar) must route through
-# `HomeRoute.toggle`, never `present`.
-grep -q 'route.toggle(.settings)' "$TMP/root.nc" \
-  || { echo "✗ the dock's face no longer TOGGLES Settings (prd §705) — pressing it a"; \
-       echo "  second time must close the screen it opened, not re-present it."; fail=1; }
-grep -q 'route.toggle(.settings)' "$TMP/main.nc" \
-  || { echo "✗ the iPad rail's avatar no longer toggles Settings — the two seats are"; \
+# `HomeRoute.toggle`, never `present`. The screen it opens is ACCOUNTS since
+# prd §796 (user, 2026-09-17: "what if the avatar icon was for apps and we put
+# a settings button"); it was Settings from §700 to then.
+grep -q 'route.toggle(.apps)' "$TMP/root.nc" \
+  || { echo "✗ the dock's face no longer TOGGLES Accounts (prd §705, §796) — pressing it"; \
+       echo "  a second time must close the screen it opened, not re-present it."; fail=1; }
+grep -q 'route.toggle(.apps)' "$TMP/main.nc" \
+  || { echo "✗ the iPad rail's avatar no longer toggles Accounts — the two seats are"; \
        echo "  one door and must behave identically."; fail=1; }
+grep -q 'route.toggle(.settings)' "$TMP/root.nc" "$TMP/main.nc" \
+  && { echo "✗ a dock seat opens Settings again — the face is the Accounts door (prd §796)"; \
+       echo "  and Settings is a door in the Accounts head row."; fail=1; }
+# Settings kept exactly one touch door when the face stopped opening it: the
+# Accounts head row's gear (prd §796). Without it Settings is reachable by the
+# Mac menu and a deep link only — a screen no finger can find. `push`, never
+# `present`, so the dock's seat (the way back, §767) lands on Accounts.
+strip_comments "Casberi/Casberi/Screens/AppsScreen.swift" > "$TMP/apps.nc"
+grep -q 'route.push(.settings)' "$TMP/apps.nc" \
+  || { echo "✗ the Accounts screen lost its Settings door (prd §796) — no touch path to"; \
+       echo "  Settings is left; the face opens Accounts."; fail=1; }
+grep -q 'private var settingsDoor' "$TMP/apps.nc" && grep -q 'settingsDoor$' "$TMP/apps.nc" \
+  || { echo "✗ the Settings door is defined but not drawn in the Accounts head row."; fail=1; }
 grep -q 'AppsDoor()' "$TMP/doors.nc" \
   && { echo "✗ the catalogue door is back in the FIXED seat (prd §700: only the avatar is"; \
        echo "  fixed; the catalogue is the strip's last item)."; fail=1; }

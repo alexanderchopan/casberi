@@ -2254,7 +2254,9 @@ struct RootShell: View {
                     // 2026-09-11). `AgentHintCapsule` taught the hold that
                     // raised the agent, and `AgentBar` was the agent's own
                     // seat; the ask is deprecated, so what stands in the
-                    // dock's leading seat is your face — Settings. The
+                    // dock's leading seat is your face — Accounts since
+                    // prd §796 (Settings until then; it is a door in the
+                    // Accounts head row now). The
                     // catalogue stood beside it for a few hours (§697) and
                     // is the strip's LAST item now (prd §700): the face is
                     // the one fixed mark, the places scroll.
@@ -2266,7 +2268,7 @@ struct RootShell: View {
                     // used to have. The iPad rail's own pair keeps theirs.
                     // On a pushed screen the seat is the way back (prd §767),
                     // so no screen needs a back chevron at its top edge.
-                    DockDoors(onSettings: { sceneState.route.toggle(.settings) },
+                    DockDoors(onAccounts: { sceneState.route.toggle(.apps) },
                               onBack: sceneState.route.path.isEmpty
                                   ? nil : { sceneState.route.goBack() })
                 }

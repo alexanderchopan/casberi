@@ -1,15 +1,19 @@
 import SwiftUI
 
-/// The avatar door — the Settings entry. Lived alone in the top-right
-/// toolbar corner until 2026-07-20, when it joined the catalogue door as a
-/// second FIXED leading chip in `SourceChips` (Stories-style: your own face
-/// leads the strip, same as the catalogue door already did) — the vacated
-/// nav bar is hidden entirely (`MainSurface`), so this is the only way to
-/// Settings now. Kept as its own small view (not folded directly into
-/// `SourceChips`) so `AvatarDoor`/`DoorSpin`/`DoorBounce` stay one shared
-/// definition regardless of where the door lives.
+/// The avatar door — the ACCOUNTS entry (prd §796, 2026-09-17). It was the
+/// Settings entry from the day it lived alone in the top-right toolbar corner
+/// through 2026-07-20, when it joined the catalogue door as a second FIXED
+/// leading chip in `SourceChips` (Stories-style: your own face leads the
+/// strip), and on into the dock's fixed seat (§700). The user re-read it: the
+/// face is about YOU, and what is yours in this app is your accounts — so the
+/// face opens the Accounts screen, and Settings is a door in that screen's
+/// head row (`AppsScreen.settingsDoor`), one step further in. Kept as its own
+/// small view (not folded directly into `SourceChips`) so
+/// `AvatarDoor`/`DoorSpin`/`DoorBounce` stay one shared definition regardless
+/// of where the door lives.
 struct AvatarChip: View {
-    var onSettings: () -> Void
+    /// Opens (and, pressed again, closes — §705) the Accounts screen.
+    var onAccounts: () -> Void
     /// Bumped by pull-to-refresh — the avatar does one full spin while the
     /// refresh runs: it's the person's own face doing the work.
     var refreshSpin: Int = 0
@@ -19,10 +23,6 @@ struct AvatarChip: View {
     /// silent threshold (2026-08-04). Zero at rest and under Reduce Motion
     /// (the writer gates).
     var pullTension: CGFloat = 0
-    /// The zoom transition anchor — Settings grows out of the avatar. Shared
-    /// with `SourceChips`'s own `zoomNS` (the catalogue door's "appsDoor"
-    /// transition lives in the same namespace under a different id).
-    var zoomNS: Namespace.ID? = nil
     /// The glass union this door joins — `SourceChips.doorsUnion`, which pairs
     /// it with the catalogue door beside it (2026-08-06). The door wears glass
     /// either way; the union is what makes the two of them ONE shape. nil is a
@@ -41,7 +41,7 @@ struct AvatarChip: View {
     var onBack: (() -> Void)? = nil
     /// Taps bounce the door (Telegram grammar, same as the tab icons).
     @State private var avatarBounce = 0
-    /// Last time the door actually opened — see `openSettings()` below.
+    /// Last time the door actually opened — see `open()` below.
     @State private var lastOpen: TimeInterval = 0
 
     var body: some View {
@@ -61,11 +61,6 @@ struct AvatarChip: View {
                     BackDoorGlyph()
                         .modifier(DoorBounce(trigger: avatarBounce))
                         .transition(.opacity)
-                } else if let zoomNS {
-                    AvatarDoor()
-                        .modifier(DoorBounce(trigger: avatarBounce))
-                        .modifier(DoorSpin(trigger: refreshSpin, tension: pullTension))
-                        .matchedTransitionSource(id: "settingsDoor", in: zoomNS)
                 } else {
                     AvatarDoor()
                         .modifier(DoorBounce(trigger: avatarBounce))
@@ -90,8 +85,8 @@ struct AvatarChip: View {
             .dsHover()
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(onBack == nil ? Text("Settings") : Text("Back"))
-        .dsTooltip(onBack == nil ? String(localized: "Settings") : String(localized: "Back"))
+        .accessibilityLabel(onBack == nil ? Text("Accounts") : Text("Back"))
+        .dsTooltip(onBack == nil ? String(localized: "Accounts") : String(localized: "Back"))
         // See `SourceChips.catalogueChip`'s comment: a plain Button here
         // competes with the paged feed TabView's pan recognizer for the
         // first touch (Apple forums thread 725366) and can need several
@@ -107,7 +102,7 @@ struct AvatarChip: View {
         guard now - lastOpen > 0.4 else { return }
         lastOpen = now
         avatarBounce += 1
-        if let onBack { onBack() } else { onSettings() }
+        if let onBack { onBack() } else { onAccounts() }
     }
 }
 
@@ -155,9 +150,9 @@ private struct DoorBounce: ViewModifier {
     }
 }
 
-/// The avatar (or a person glyph before one's set) — the Settings entry.
-/// Sized up alongside the Apps door (2026-07-09): the two doors are the only
-/// way to Settings/Apps, so they earn presence in the bar, not a whisper.
+/// The avatar (or a person glyph before one's set) — the Accounts entry
+/// (§796; it was Settings' until then). Sized up alongside the Apps door
+/// (2026-07-09): the doors earn presence in the bar, not a whisper.
 struct AvatarDoor: View {
     var body: some View {
         if let avatar = ProfileStore.shared.avatar {

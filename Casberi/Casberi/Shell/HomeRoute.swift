@@ -104,11 +104,11 @@ final class HomeRoute {
 
     /// The avatar's own door: press it once to land on `door`, press it again
     /// to leave (user, 2026-09-12 — "if you press your avatar again it closes
-    /// that screen").
+    /// that screen"). The door was Settings then and is Accounts since §796.
     ///
     /// The face is the one seat that survives INTO the screen it opens (it is
     /// hosted on `RootShell`'s layer, above the stack — see `DockDoors`), so
-    /// while Settings is up the control is still under the thumb and the only
+    /// while that screen is up the control is still under the thumb and the only
     /// honest reading of a second press is "put it back". A door that stays
     /// lit and does nothing is the dead control §83 forbids.
     ///

@@ -1,6 +1,8 @@
 import SwiftUI
 
-/// The dock's leading seat: your face (prd §700, 2026-09-11).
+/// The dock's leading seat: your face (prd §700, 2026-09-11) — which opens
+/// your ACCOUNTS since prd §796 (2026-09-17); Settings is a door in that
+/// screen's head row.
 ///
 /// **This seat held two doors for a few hours.** §697 deleted the octopus
 /// and stood the face and the catalogue grid here as one glass cluster; the
@@ -22,21 +24,17 @@ import SwiftUI
 /// by this name.
 struct DockDoors: View {
     @Environment(ShellChrome.self) private var chrome
-    /// Settings — the avatar door.
-    var onSettings: () -> Void
-    /// The zoom anchor the door grows out of, shared with the iPad rail's own
-    /// avatar under the same id.
-    var zoomNS: Namespace.ID? = nil
+    /// Accounts — the avatar door (a toggle, §705).
+    var onAccounts: () -> Void
     /// Pops one frame; set while anything is pushed (prd §767).
     var onBack: (() -> Void)? = nil
 
     private var markSize: CGFloat { DSDock.agentSize(fold: chrome.fold) }
 
     var body: some View {
-        AvatarChip(onSettings: onSettings,
+        AvatarChip(onAccounts: onAccounts,
                    refreshSpin: chrome.refreshPulse,
                    pullTension: chrome.pullTension,
-                   zoomNS: zoomNS,
                    size: markSize,
                    onBack: onBack)
     }
