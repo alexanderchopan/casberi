@@ -70,20 +70,23 @@ enum SafeServiceGate {
     /// `GitHubDeviceFlow.shippedClientID`'s — a read-only key over public
     /// data whose worst case is quota use.
     ///
-    /// **EMPTY, and what was measured says why (2026-09-17).** A real key from
-    /// that dashboard, sent as `Authorization: Bearer`, got the SAME answer as
-    /// no key at all on `tx-service/eth/api/v1/about/`: `429`,
-    /// `x-ratelimit-limit: 5000`, `x-ratelimit-remaining: 0`, and resets one
-    /// second apart (175239 keyed, 175238 keyless) — the same pool, metered at
-    /// the KEYLESS tier's 5,000. `api/v2` answered 429 too. So the key was
-    /// served as anonymous, and whether any key lifts this refusal is
-    /// unproven. Until it is, shipping one would be a claim the app cannot
-    /// keep: the header is wired, the constant is not filled.
+    /// **EMPTY, and three requests say why (2026-09-17).** On
+    /// `tx-service/eth/api/v1/about/`, a real key from that dashboard, no key
+    /// at all, and `Bearer not-a-real-key` all answered the same: `429`,
+    /// `x-ratelimit-limit: 5000` (the KEYLESS tier's own number),
+    /// `x-ratelimit-remaining: 0`, resets stepping down one counter (175239,
+    /// 175238, 174690). `api/v2` answered 429 too.
     ///
-    /// Two readings are still open and are told apart by an invalid bearer: a
-    /// 401 means auth is evaluated (so the key or its activation is the fault),
-    /// the same 429 means the edge refuses before auth is read at all (so no
-    /// key helps and only fewer reads do).
+    /// **A key that cannot be told from a garbage key is not being read.** The
+    /// quota gate answers before the header is evaluated, so no key of any
+    /// tier lifts this while the shared pool is empty. That does not prove the
+    /// key is bad — a 401 is the only thing that would, and the edge never
+    /// sends one — so it is unproven rather than dead, and the test is a retry
+    /// once the pool reopens (near 2026-09-19 19:00Z): what matters then is
+    /// whether `x-ratelimit-limit` is still 5000, not whether it is a 200.
+    ///
+    /// Shipping a key that is not read would be a claim the app cannot keep,
+    /// so the header is wired and the constant is not filled.
     ///
     /// Safe's documented quota is counted PER ACCOUNT rather than per key, so
     /// one shipped key would be one pool across every install, and a drained
