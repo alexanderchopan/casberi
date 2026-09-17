@@ -131085,6 +131085,34 @@
         }
       }
     },
+    "Verified human · World ID until %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Humano verificado · World ID hasta %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "認証済みの人間 · World ID %@まで"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "인증된 사람 · World ID %@까지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已验证真人 · World ID 有效期至 %@"
+          }
+        }
+      }
+    },
     "Verify" : {
       "localizations" : {
         "es" : {
@@ -139745,6 +139773,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "锻炼进入你的订阅流"
+          }
+        }
+      }
+    },
+    "World ID verification lapsed %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La verificación de World ID caducó en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "World IDの認証は%@に失効しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "World ID 인증이 %@에 만료됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "World ID 验证已于 %@ 失效"
           }
         }
       }
