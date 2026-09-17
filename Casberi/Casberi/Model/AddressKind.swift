@@ -40,7 +40,8 @@ enum AddressKind {
             AddressBook.shared.setKind(.wallet, for: address)
             return
         }
-        if await SafeBridge.isSafeAnywhere(address) {
+        let isSafe = await SafeBridge.isSafeAnywhere(address)
+        if isSafe == true {
             AddressBook.shared.setKind(.safe, for: address)
             return
         }
@@ -54,9 +55,16 @@ enum AddressKind {
             return
         }
         guard isContract else {
+            // No code anywhere is a wallet whatever Safe's service said: a
+            // Safe is a deployed contract.
             AddressBook.shared.setKind(.wallet, for: address)
             return
         }
+        // It has code, and Safe's service did not answer whether it is a Safe
+        // (prd §789: throttled, most often). Filing it now would call a Safe a
+        // smart account and believe that for `recheckInterval`, so nothing is
+        // written and nothing is stamped — the next pass asks again.
+        guard isSafe != nil else { return }
         // It has code — but "contract" is the least useful true thing you can
         // say about somebody's own smart wallet (2026-08-03, prd §294). Asked
         // only for addresses that got this far, so an EOA (the common case)

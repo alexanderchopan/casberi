@@ -214,6 +214,19 @@ struct SafeRoom: Equatable {
     /// somebody reading this room should not have to remember.
     let guardSafes: [String]
 
+    /// Set while Safe's service is refusing reads (prd §789). Every count on
+    /// this card comes off the tracking snapshot the last ANSWERED sync left,
+    /// and a refused sync leaves it untouched — so "Your signature is needed"
+    /// may already be executed, and "Nothing pending" may not be true. The
+    /// card keeps drawing what it last knew and says how old that is.
+    struct ReadLimit: Equatable {
+        /// Safe's own reset, when it sent one.
+        let until: Date?
+        /// When the service last answered anything.
+        let lastAnswer: Date?
+    }
+    var readLimit: ReadLimit? = nil
+
     var moduleCount: Int { moduleSafes.reduce(0) { $0 + $1.count } }
     var guardCount: Int { guardSafes.count }
     var pendingCount: Int { entries.count }
@@ -459,6 +472,16 @@ struct SafeRoom: Equatable {
     /// is discoverable from its own full ring; a nonce collision is visible
     /// nowhere else in this app, and the cost of not knowing is a signature
     /// spent on a transaction that can never execute.
+    /// The age of what the card draws, while Safe refuses reads — nil
+    /// otherwise.
+    static func readLimitNote(_ room: SafeRoom, now: Date = .now) -> String? {
+        guard let limit = room.readLimit else { return nil }
+        guard let lastAnswer = limit.lastAnswer else {
+            return String(localized: "Safe's free read limit is used up — this may be out of date")
+        }
+        return String(localized: "Safe's free read limit is used up — last checked \(lastAnswer.formatted(.relative(presentation: .named, unitsStyle: .wide)))")
+    }
+
     static func stateNote(_ room: SafeRoom) -> String? {
         if room.contestedCount > 1 {
             let groups = room.contestedKeys.count

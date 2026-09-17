@@ -1523,6 +1523,14 @@ harness "Feed-fold self-test" "feed-fold self-test" "scripts/feed-fold-selftest.
 # and that the room still draws THROUGH the window rather than around it.
 harness "Row-window self-test" "row-window self-test" "scripts/row-window-selftest.sh" "the row-window self-test failed — run scripts/row-window-selftest.sh"
 
+# A refused Safe read is never an empty answer (prd §789). Safe's keyless quota
+# is one pool shared by every keyless caller, and when it ran dry every reader
+# folded the 429 into "nothing": the page said "Up to date", the ask said "No
+# Safe wallets detected", the address book filed a Safe as a smart account.
+# Nothing here can make Safe's quota refuse on demand, so this proves the gate's
+# fold (compiled whole) and that each surface still asks it before saying none.
+harness "Safe gate self-test" "safe gate self-test" "scripts/safe-gate-selftest.sh" "the Safe gate self-test failed — run scripts/safe-gate-selftest.sh"
+
 # "Is this address a feed?" — the discriminator every RSS follow hangs off
 # (2026-08-16), from a user report of following a site that publishes none.
 # Every failure it catches is invisible to a build, a screen sweep AND a landed

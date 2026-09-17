@@ -72,6 +72,9 @@ struct SafeRoomCard: View {
                 // the headline couldn't carry. Deliberately NOT attention ink:
                 // §238 ruled a rival pair is stated plainly.
                 .note(SafeRoom.stateNote(room)),
+                // What the counts above are as of, while Safe refuses reads
+                // (prd §789). Plain register: nothing is wrong with the Safe.
+                .note(SafeRoom.readLimitNote(room), glyph: "clock"),
             ],
             footnotes: [.quiet(SafeRoom.footnote(room, drawn: drawn.count))]) {
             if !drawn.isEmpty {

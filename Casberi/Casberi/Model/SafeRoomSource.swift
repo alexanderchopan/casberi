@@ -24,9 +24,12 @@ enum SafeRoomSource {
         let safeCount = SafeBridge.detectedCount()
         guard safeCount > 0 else { return nil }
         let entries = SafeBridge.pendingSnapshot().map(entry)
-        let room = SafeRoom.compose(entries: entries, safeCount: safeCount,
+        var room = SafeRoom.compose(entries: entries, safeCount: safeCount,
                                     moduleSafes: moduleSafes(),
                                     guardSafes: guardSafes())
+        if let until = SafeServiceGate.throttledUntil(now: now) {
+            room.readLimit = SafeRoom.ReadLimit(until: until, lastAnswer: SafeServiceGate.lastAnswerAt())
+        }
         // A quiet Safe with no module risk has nothing this card would say
         // beyond "nothing pending" — the `RailgunRoom.isEmpty` shape: one
         // fact is a sentence, not a card.
@@ -161,6 +164,7 @@ enum SafeRoomSource {
         out.append("headline=\(SafeRoom.headline(room))")
         out.append("note=\(SafeRoom.note(room) ?? "none")")
         out.append("stateNote=\(SafeRoom.stateNote(room) ?? "none")")
+        out.append("readLimitNote=\(SafeRoom.readLimitNote(room, now: now) ?? "none")")
         out.append("footnote=\(SafeRoom.footnote(room, drawn: min(rowCap, room.entries.count)) ?? "none")")
         out.append("stuckLine=\(SafeRoom.stuckLine(room, now: now) ?? "none")")
         out.append("totals| pending=\(room.pendingCount) awaitsYou=\(room.awaitsYouCount)"
