@@ -57645,3 +57645,76 @@ One second apart, so it is the same counter — and **5,000 is the keyless tier'
 4. **The read cut is the only lever left with evidence behind it**, so it is not "then" anymore, it is the work: the config and detection reads leave the transaction service for the chain (`getThreshold()`/`getOwners()`/`getModulesPaginated`/the guard slot/`nonce()`, on the keyless hosts `WalletApprovals` and `GnosisPayBridge` already measured and disclose), and the owner reverse-lookup gets a 24-hour negative cache. What CANNOT leave: a proposed-but-unexecuted transaction exists only in Safe's indexer, so the queue read is permanent.
 5. **UNMEASURED, and the next thing to measure: Safe's own Client Gateway.** `app.safe.global` draws the queue it shows somebody from `safe-client.safe.global/v1/chains/<id>/safes/<addr>/transactions/queued`, which is a different host from `api.safe.global` and is not obviously metered against the 5,000 — Safe's own web app cannot be paying out of the pool it publishes as "for exploration". If it answers keyless, the ONE read that can never leave the transaction service has somewhere else to go, which would matter more than any key. Measure it before designing around it, and record the shape rather than a value.
 6. **The reverse lookup has no on-chain equivalent, measured against the contracts rather than assumed.** `OwnerManager` declares `event AddedOwner(address owner)` in 1.3.0 — NOT indexed — and `event AddedOwner(address indexed owner)` only from 1.4.1, so a topic-filtered `eth_getLogs` by owner finds 1.4.1+ Safes and misses the 1.3.0 population, which is most deployed Safes. It stays on the service, cached.
+
+## §789b — Safe's Client Gateway answers KEYLESS on every chain, and all FOUR reads move, not just the queue: no quota, no auth scheme, a per-IP burst cap instead (measured, 2026-09-17)
+
+§789a point 5 named the Client Gateway as the next thing to measure and said to record the shape
+before designing around it. Measured, and it moves more than the queue: **every one of `SafeBridge`'s
+four transaction-service reads has a keyless equivalent on `safe-client.safe.global`** — including the
+owner lookup that §789a point 6 proved could never go on chain (every Safe an address signs for).
+
+1. **The first measurement was a wrong one, and it is recorded because it would be re-made.**
+   `curl` with its own User-Agent gets `HTTP 403`, `server: CloudFront`, `content-length: 0` on every
+   Client Gateway path. That is the edge refusing the agent, not a quota and not an auth wall — with a
+   browser User-Agent the same URL is `200`. A zero-length CloudFront 403 is a UA block; read it as
+   "the host is closed" and the whole finding below is missed.
+
+   Measured on the same URL, because which agents it refuses decides whether this host is usable at
+   all: `Casberi/1.0.13 CFNetwork/1568.100.1 Darwin/24.4.0` — URLSession's own default, what the app
+   would actually send — is **200**. A bare `Casberi`, no `User-Agent` header at all, and `curl/8.7.1`
+   are each **403**. So the edge is filtering on the agent's shape, the app clears it as it stands, and
+   `IngestSupport`'s existing Safari-shaped `User-Agent` is the belt-and-braces if it ever stops.
+   A 403 here is a WAF verdict, not a quota, and §789's gate already reads it the honest way — a
+   non-200 that is not a 429 is a failed read, which renders as unreachable, never as an empty queue.
+
+2. **No quota, and no authentication scheme at all.** Not one response on any path carries an
+   `x-ratelimit-*` header, where the transaction service answers every request with
+   `x-ratelimit-limit: 5000` and `remaining: 0`. The gateway's own OpenAPI (`/api-json`, 226KB)
+   declares `securitySchemes: []` and no top-level `security` — there is no key to get, so there is no
+   key to ship, and §789a's empty constant stays empty for this host too.
+
+3. **All six chains `SafeBridge` uses answer keyless** (1, 8453, 42161, 10, 137, 100): `200` where the
+   Safe exists, `404` where it does not — which is itself a cleaner detection discriminator than the
+   `eth_call`-nil collapse §789 shipped a gate to kill.
+
+4. **There IS a cap, and it is a per-IP BURST, not a pool.** Measured against one address:
+   40 sequential requests in 9.9s → 40×200. 20 @ 4 workers and 40 @ 8 workers in 1.3s → all 200.
+   80 @ 16 workers → 62×200, 18×429. 200 @ 25 workers in 2.4s → 60×200, 140×429. A single request
+   after 20s idle → 200. So it admits ~60–65 requests per short window per IP and refills within
+   ~20s, it sends no header saying so, and **a sweep that reads sequentially never reaches it**. This
+   is a shape to respect, not a ceiling to plan around: it is the opposite of a 5,000/month pool
+   shared with every keyless caller on earth.
+
+5. **Same minute, the transaction service is unchanged** — `429`, `x-ratelimit-limit: 5000`,
+   `remaining: 0`, `x-ratelimit-reset: 173980` (≈2.01 days, ≈2026-09-19 19:00Z). §789 and §789a both
+   still hold; nothing here retracts them.
+
+6. **The shapes, measured on a real Safe with a real pending queue, not read off the spec.**
+   - `GET /v1/chains/{id}/safes/{addr}` → nonce (Int), threshold, owners, modules, guard, version,
+     fallbackHandler. This is `safeDetail`'s whole read. Two differences that would silently produce
+     an empty config: an address arrives as `{value,name,logoUri}`, **not** a bare string, and an
+     absent guard is `null`, **not** the zero address.
+   - `GET /v1/chains/{id}/owners/{addr}/safes` → `{"safes":[…]}` — byte-for-byte the shape
+     `ownerSafes` already parses. A drop-in.
+   - `GET /v1/chains/{id}/safes/{addr}/transactions/queued` → `{count,next,previous,results}`;
+     a result is `LABEL`, `CONFLICT_HEADER` or `TRANSACTION`, and a `TRANSACTION` carries
+     `executionInfo` (MULTISIG) with nonce, confirmationsRequired, confirmationsSubmitted and
+     **`missingSigners`** — which is exactly the "who it waits on" line §652 derives by hand from
+     `confirmations` today, handed over already computed.
+   - The queued summary carries `methodName` and `actionCount` but **no `dataDecoded`**, so the batch
+     reading §652 built (`multiSend` is 96% of real Safe traffic) needs one
+     `GET /v1/chains/{id}/transactions/{id}` per queued transaction: `txData.dataDecoded`
+     (method/parameters, with `valueDecoded` for the inner batch), plus `detailedExecutionInfo`
+     (safeTxHash, submittedAt, proposer, confirmations[].signer/.signature). That is the one place the
+     gateway costs MORE requests than the transaction service, which returns the queue already
+     decoded — and queues are short, so it is a per-pending-transaction cost, not a per-Safe one.
+
+7. **What this does to §789a point 4.** The read cut is no longer the only lever with evidence behind
+   it, and it is now the more expensive one: moving detection and config on chain buys ~5 `eth_call`s
+   per Safe per pass against keyless public RPCs (~70 calls at 14 detected Safes), carries the
+   `eth_call`-nil ambiguity that §789 exists to prevent, and risks a Gnosis Chain regression where
+   `eth_call` is unmeasured on the hosts `SafeSigner` uses — to reach a host that answers all of it in
+   one request, keyless, with no quota. **Not built on yet: this is a measurement, and which lever to
+   pull is the user's ruling.** What does not change either way: nothing here fills
+   `SafeServiceGate.shippedKey`, and `NetworkReach` gains `safe-client.safe.global` in the same commit
+   as the first read that goes there, never before.
