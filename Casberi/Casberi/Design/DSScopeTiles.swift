@@ -54,9 +54,17 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     let sections: [Scope]
     let active: Scope
     var attention: Set<Scope> = []
+    /// One scrolling row of dock-width tiles instead of the four-column grid
+    /// (Accounts' category strip, 2026-09-17: "just use the way the dock
+    /// looks with the icons"). The dock's own anatomy — 52pt tiles, glyph
+    /// over word, the pick filled in tint — and an unpicked tile draws no
+    /// fill, because the dock's don't: a row of ten grey squares is the plate
+    /// §782 deleted.
+    var strip: Bool = false
     let onPick: (Scope) -> Void
 
     private static var columns: Int { 4 }
+    private static var stripTileWidth: CGFloat { 52 }
     /// Frozen, like the dock's `CategoryGlyph`, so a wide symbol and a tall one
     /// seat the word at the same height.
     private static var glyphSize: CGFloat { 20 }
@@ -67,7 +75,17 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     }
 
     var body: some View {
-        if sections.count > 1 {
+        if sections.count > 1, strip {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s1) {
+                    ForEach(sections) { section in
+                        tile(section)
+                            .frame(width: Self.stripTileWidth)
+                    }
+                }
+            }
+            .scrollClipDisabled()
+        } else if sections.count > 1 {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2),
                                      count: Self.columns),
                       alignment: .leading,
@@ -89,9 +107,11 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
             onPick(section)
         } label: {
             VStack(spacing: 2) {
-                Image(systemName: section.glyph)
-                    .font(.system(size: Self.glyphSize, weight: .medium))
-                    .frame(width: Self.glyphSize + 6, height: Self.glyphSize + 2)
+                // The dock's glyph, bouncing once when its tile becomes the
+                // pick — in the strip only, the one place these tiles ARE the
+                // dock's (user, 2026-09-17). A room's scope grid stays still.
+                CategoryGlyph(name: section.glyph, size: Self.glyphSize,
+                              isActive: strip && isOn)
                 Text(section.label)
                     .dsText(.dockCaption10)
                     .lineLimit(1)
@@ -99,7 +119,7 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
             }
             .foregroundStyle(isOn ? Color.white : DS.textPrimary)
             .frame(maxWidth: .infinity, minHeight: Self.tileHeight)
-            .background { shape.fill(isOn ? DS.tint : DS.surfaceRaised) }
+            .background { shape.fill(isOn ? DS.tint : (strip ? Color.clear : DS.surfaceRaised)) }
             // The dot the strip and the rows carry, at the tile's corner: the
             // same 6pt mark saying the same thing.
             .overlay(alignment: .topTrailing) {

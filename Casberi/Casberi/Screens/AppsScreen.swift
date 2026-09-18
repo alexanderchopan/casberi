@@ -84,27 +84,6 @@ struct AppsScreen: View {
         BridgeCatalog.category(of: offer)
     }
 
-    /// "Because you connected" — connecting one app suggests its natural
-    /// neighbours in the story carousel, eyebrowed with the reason. Cheap
-    /// adjacency, but it reads as the store knowing you: connect GitHub and
-    /// Linear surfaces; connect a Wallet and Tokens/Farcaster do.
-    private static let adjacency: [String: [String]] = [
-        "GitHub":       ["Linear", "Notion"],
-        "Linear":       ["GitHub", "Notion"],
-        "Notion":       ["GitHub", "Linear"],
-        "Wallet":       ["Tokens", "Farcaster"],
-        "Tokens":       ["Wallet"],
-        "Farcaster":    ["Bluesky", "Wallet"],
-        "Bluesky":      ["Farcaster"],
-        "Apple Health": ["Strava", "Garmin"],
-        "Strava":       ["Apple Health", "Garmin"],
-        "Garmin":       ["Apple Health", "Strava"],
-        "Readwise":     ["Kindle", "RSS"],
-        "Reddit":       ["YouTube"],
-        "Gmail":        ["Calendar"],
-        "Photos":       ["Apple Notes"],
-    ]
-
     // MARK: - Ranking (the For-you chart's one order)
 
     private struct Ranked: Identifiable {
@@ -169,9 +148,13 @@ struct AppsScreen: View {
                         // Search, then Manage | Connect | Settings (user, prd
                         // §796): the face in the dock opens THIS screen, and
                         // Settings is its third section, not a screen of its own.
-                        HStack(spacing: DS.Space.s2) {
-                            searchField
+                        // The three sections are big words and search has
+                        // its own row (user, 2026-09-17: search sharing a
+                        // row with three chips left it too short to type in,
+                        // and the head read as grey words on grey glass).
+                        VStack(alignment: .leading, spacing: DS.Space.s4) {
                             scopeSegment
+                            searchField
                         }
                         sections(proxy)
                     }
@@ -600,19 +583,34 @@ struct AppsScreen: View {
     /// may have no rows under the other, and a selected chip over an empty
     /// list reads as a broken screen.
     private var scopeSegment: some View {
-        // THE CATEGORY STRIP'S OWN CHIPS (prd §767). The pair was a solid-blue
-        // pill in a faint track beside a glass strip whose pick is `tintDim`:
-        // two selection styles for one kind of choice, one row apart. Same two
-        // words, both always visible, the chosen one filled.
-        DSSectionSwitcher(sections: AccountsHeld.allCases,
-                          active: section,
-                          scrolls: false) { picked in
-            withAnimation(DS.Motion.standard) {
-                section = picked
-                scope = CatalogScope(name: nil)
+        // Three words at the lead's words rung, the chosen one in primary and
+        // the others tertiary (user, 2026-09-17: "manage and connect big …
+        // settings should be a third word big there too"). A word, not a
+        // pill: §746 allows two pills, and this is neither a choice among
+        // filters nor a fact, it is which page of the screen you are on.
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
+            ForEach(AccountsHeld.allCases) { picked in
+                let isOn = picked == section
+                Button {
+                    guard !isOn else { return }
+                    DSHaptic.selection()
+                    withAnimation(DS.Motion.standard) {
+                        section = picked
+                        scope = CatalogScope(name: nil)
+                    }
+                } label: {
+                    Text(picked.label)
+                        .dsText(.heading24)
+                        .foregroundStyle(isOn ? DS.textPrimary : DS.textTertiary)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .dsHover()
+                .accessibilityAddTraits(isOn ? [.isSelected] : [])
             }
         }
-        .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("Which accounts"))
     }
@@ -658,12 +656,12 @@ struct AppsScreen: View {
     /// Which slice of the catalog is on screen. `nil` is **All** — every
     /// category, in catalog order, each under its own header.
     ///
-    /// ONE stored property on purpose. `DSSectionSwitcher` compares `active`
+    /// ONE stored property on purpose. `DSScopeTiles` compares `active`
     /// against the strip's own elements with `==`, so a scope that ALSO stored
     /// its count would stop equalling its chip the moment an app connected —
     /// the selected fill would silently drop off the strip on the one event
     /// this screen exists to produce. Label and summary are DERIVED.
-    private struct CatalogScope: DSSectionScope {
+    private struct CatalogScope: DSTileScope {
         /// nil is All; otherwise a `BridgeCatalog.categories` name.
         let name: String?
 
@@ -672,7 +670,11 @@ struct AppsScreen: View {
         /// strip's selection and its `scrollTo` ambiguous.
         var id: String { name ?? "\u{1}all" }
 
-        var label: String { name ?? String(localized: "A–Z") }
+        var label: String { name ?? String(localized: "All") }
+
+        /// The dock's own glyph for the category, and its "All" glyph for
+        /// All — the strip is the dock's tiles (user, 2026-09-17).
+        var glyph: String { CategoryFold.glyph(for: name ?? "All") }
 
         /// The tooltip and the accessibility clause. A chip's short noun is
         /// learnable but not self-explaining, and the useful second fact here
@@ -706,10 +708,14 @@ struct AppsScreen: View {
     /// an empty list is the dead control §83 bans, and a strip is the one place
     /// on this screen where that stays invisible until somebody taps it.
     private var scopes: [CatalogScope] {
-        [CatalogScope(name: nil)] + Self.categories.compactMap { cat in
-            ranked.contains { category(of: $0.offer) == cat.name }
-                ? CatalogScope(name: cat.name) : nil
-        }
+        // All, then A to Z (user, 2026-09-17). The home dock keeps the ruled
+        // wall order (§322); this strip is a directory's index, and the list
+        // under it is already alphabetical.
+        [CatalogScope(name: nil)] + Self.categories
+            .filter { cat in ranked.contains { category(of: $0.offer) == cat.name } }
+            .map(\.name)
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+            .map { CatalogScope(name: $0) }
     }
 
     /// The chips wearing the attention dot — a category holding a seat that
@@ -725,21 +731,18 @@ struct AppsScreen: View {
                   .map { CatalogScope(name: category(of: $0.offer)) })
     }
 
-    /// The category filter.
-    ///
-    /// TEXT chips, deliberately. `CategoryVenueSwitcher` and the sources tray
-    /// both draw `BridgeIcon`, and a strip of brand marks above a list of brand
-    /// marks is exactly the grammar collision this pass exists to end (prd
-    /// §518): the tray holds the sources you already have, the catalog holds
-    /// what you could add, and the two had been wearing one face.
+    /// The category filter: the dock's own tiles, glyph over word, in one
+    /// scrolling row (user, 2026-09-17). It was TEXT chips so a strip of
+    /// brand marks would not stand over a list of brand marks (prd §518); a
+    /// category glyph is not a brand mark, so that reason still holds.
     ///
     /// Hidden below two categories, where a filter narrows nothing.
     @ViewBuilder
     private func scopeStrip(_ proxy: ScrollViewProxy) -> some View {
         let all = scopes
         if all.count > 2 {
-            DSSectionSwitcher(sections: all, active: scope,
-                              attention: troubledScopes) { picked in
+            DSScopeTiles(sections: all, active: scope,
+                         attention: troubledScopes, strip: true) { picked in
                 withAnimation(DS.Motion.standard) {
                     scope = picked
                     proxy.scrollTo(Self.scopeAnchor, anchor: .top)
