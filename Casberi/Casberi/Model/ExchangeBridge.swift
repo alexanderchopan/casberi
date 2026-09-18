@@ -331,15 +331,23 @@ enum ExchangeBridge {
 
     private static func binanceHost() async -> String {
         if let cached = UserDefaults.standard.string(forKey: binanceHostKey) { return cached }
+        // Only an ANSWER picks the host, and only 451 means the US deployment
+        // (measured 2026-09-18: a restricted location gets 451 + "Service
+        // unavailable from a restricted location"). Any failure used to cache
+        // `.us` forever, so one ping through a VPN or a dropped connection
+        // sent a global key to binance.us for good (beta feedback: "the page
+        // straight up doesn't work"). No answer: use global, cache nothing.
+        let global = "https://api.binance.com"
+        guard let ping = URL(string: "\(global)/api/v3/ping") else { return global }
+        NetworkLedger.shared.record(ping)
+        guard let (_, response) = try? await URLSession.shared.data(from: ping),
+              let status = (response as? HTTPURLResponse)?.statusCode
+        else { return global }
         let host: String
-        let ping = URL(string: "https://api.binance.com/api/v3/ping")
-        if let ping { NetworkLedger.shared.record(ping) }
-        if let ping,
-           let (_, response) = try? await URLSession.shared.data(from: ping),
-           (response as? HTTPURLResponse)?.statusCode == 200 {
-            host = "https://api.binance.com"
-        } else {
-            host = "https://api.binance.us"
+        switch status {
+        case 200: host = global
+        case 451: host = "https://api.binance.us"
+        default:  return global
         }
         UserDefaults.standard.set(host, forKey: binanceHostKey)
         return host
@@ -375,9 +383,14 @@ enum ExchangeBridge {
     /// reasoning above: inbound can't lose anyone money, so refusing it would
     /// only reject safe keys for no gain.
     static func verifyBinance(key: String, secret: String) async -> KeyVerdict {
-        guard let root = await binanceAccount(key: key, secret: secret)
-        else { return .unverifiable(String(localized: "Couldn't reach Binance to check this key.")) }
+        guard let root = await binanceAccount(key: key, secret: secret) else {
+            UserDefaults.standard.removeObject(forKey: binanceHostKey)   // re-ask next try
+            return .unverifiable(String(localized: "Couldn't reach Binance to check this key."))
+        }
         if let code = root["code"] as? Int, code != 0 {
+            // A host cached by the old any-failure rule may be the wrong
+            // deployment; a rejected check re-asks rather than repeating it.
+            UserDefaults.standard.removeObject(forKey: binanceHostKey)
             let msg = (root["msg"] as? String) ?? "Binance rejected the key check."
             return .unverifiable(String(localized: "Binance rejected the key check: \(msg)"))
         }

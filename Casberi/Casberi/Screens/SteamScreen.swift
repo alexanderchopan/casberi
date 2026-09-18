@@ -70,7 +70,14 @@ struct SteamScreen: View {
     /// and `Web API key`, which is §220's Kraken finding. The requirement it
     /// was carrying is a real one nothing else on the screen states, so that
     /// half stayed.
+    ///
+    /// The first line is the one that stops people at the door: Valve gives no
+    /// key to a "limited" account (under $5 spent in its store), and a library
+    /// of free games is still limited (beta feedback, 2026-09-18: "I DO HAVE
+    /// GAMES THERE"). The games page is sign-in walled, so there is no keyless
+    /// way round it (measured 2026-09-18: 302 to /login).
     private var steps: [String] = [
+        "Steam needs $5 spent — free games don’t count",
         "Any domain works — casberi.app is fine.",
         "Your profile must be public.",
     ]

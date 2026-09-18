@@ -10,8 +10,17 @@ enum BridgeConnect {
     /// The one connect-success toast, shared by the Apps store and the product
     /// page so the copy can't drift — the proof itself arrives in the feed;
     /// this names what's now happening.
-    static func landingMessage(_ name: String) -> String {
-        String(localized: "Connected — your \(name) things are landing.")
+    /// Says WHERE the things land, because no one-tap seat gets a dock chip
+    /// of its own: each folds into its category's (Apple Music under Media),
+    /// and Contacts is search-only (`Corpus.searchOnlySources`). "Your
+    /// Contacts things are landing" sent a beta tester looking for a
+    /// Contacts tab and a Music tab that never draw (2026-09-18).
+    static func landingMessage(_ offer: BridgeCatalog.Offer) -> String {
+        if Corpus.searchOnlySources.contains(offer.name) {
+            return String(localized: "Connected — search any of your \(offer.name) by name.")
+        }
+        let room = BridgeCatalog.category(of: offer)
+        return String(localized: "Connected — \(offer.name) lands under \(room).")
     }
 
     static func connect(_ offer: BridgeCatalog.Offer, store: BridgeStore,
@@ -65,7 +74,9 @@ enum BridgeConnect {
             guard let result else { completion?(false); return }
             let proof = result.proof ?? (result.n > 0
                 ? String(localized: "\(result.n) \(result.noun) in")
-                : String(localized: "Synced just now"))
+                : result.id == "music"
+                    ? String(localized: "Nothing played recently yet")
+                    : String(localized: "Synced just now"))
             store.registerConnected(id: result.id, name: offer.name,
                                     proof: proof, can: [result.can])
             // No haptic here — the caller's landing toast carries it

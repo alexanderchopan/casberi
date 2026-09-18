@@ -72,8 +72,11 @@ enum MailProvider: String, CaseIterable, Identifiable {
         switch self {
         case .icloud: [
             "Sign-In and Security → App-Specific Passwords"]
+        // Google never ASKS: with 2-Step Verification off, the door's page
+        // just says "The setting you are looking for is not available for
+        // your account" (beta feedback, 2026-09-18). The step quotes it.
         case .gmail: [
-            "Turn on 2-Step Verification first if asked"]
+            "“Not available”? Turn on 2-Step Verification"]
         }
     }
 

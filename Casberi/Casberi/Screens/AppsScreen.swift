@@ -507,7 +507,7 @@ struct AppsScreen: View {
         connectHue = BridgeGlyph.glyphTint(for: offer.name)
             ?? DS.brandHue(for: offer.name) ?? DS.neutralBadge
         connectToken += 1
-        chrome.flash(BridgeConnect.landingMessage(offer.name), tone: .success)
+        chrome.flash(BridgeConnect.landingMessage(offer), tone: .success)
     }
 
     /// Connected, healthy bridges — the count whose 0 → 1 transition is the
