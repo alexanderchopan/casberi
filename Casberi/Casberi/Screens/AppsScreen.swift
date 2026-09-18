@@ -91,6 +91,8 @@ struct AppsScreen: View {
         let bridge: BridgeApp?
         let tier: Int
         var id: String { offer.name }
+        /// Connected, healthy or broken: the row belongs on Manage.
+        var isHeld: Bool { tier == 0 || tier == 2 }
     }
 
     private func actionable(_ offer: BridgeCatalog.Offer) -> Bool {
@@ -105,8 +107,16 @@ struct AppsScreen: View {
     /// (chips, sections, search, the attention dots) reads THIS, so a category
     /// with nothing connected drops its chip under Yours rather than filtering
     /// to an empty list behind a selected chip.
+    ///
+    /// The two lists SPLIT the catalogue (prd §812, user: "should it operate by
+    /// having only the items you have not connected?"): Manage holds what you
+    /// have connected, Connect only what you have not. Connect is a verb, so a
+    /// row there always has something to do; an account is on exactly one of
+    /// the two. Search reads `rankedAll`, so it finds an app on either side.
     private var ranked: [Ranked] {
-        section == .yours ? rankedAll.filter { $0.tier == 0 || $0.tier == 2 } : rankedAll
+        section == .yours
+            ? rankedAll.filter(\.isHeld)
+            : rankedAll.filter { !$0.isHeld }
     }
 
     private var rankedAll: [Ranked] {
@@ -410,7 +420,9 @@ struct AppsScreen: View {
     private var searchHits: [Ranked] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return [] }
-        return ranked.filter { entry in
+        // Across BOTH lists (prd §812): someone who connected Spotify and
+        // types it from Connect is shown their Spotify, not nothing.
+        return rankedAll.filter { entry in
             entry.offer.name.lowercased().contains(q)
                 || entry.offer.tagline.lowercased().contains(q)
                 || category(of: entry.offer).lowercased().contains(q)
@@ -540,8 +552,12 @@ struct AppsScreen: View {
     /// path (one-tap AND setup-screen) lands here identically.
     private func handleConnectChange(old: [String], new: [String]) {
         let added = Set(new).subtracting(Set(old))
-        // (4) Promote-lift the row that just took its seat.
+        // (4) Promote-lift the row that just took its seat. Since §812 that
+        // seat is on Manage, not further down the same list, so a connect
+        // made from Connect takes the switcher with it: the row leaves the
+        // list you were on and lifts in on the one it joined.
         if let name = added.first {
+            if section == .all { section = .yours }
             justConnectedName = name
             connectLiftToken += 1
         }
@@ -816,6 +832,12 @@ struct AppsScreen: View {
                 // way out is the control the person just used.
                 DSEmptyState(headline: Text("Nothing connected yet"),
                              words: Text("Nothing connected yet. Everything you can add is under Connect."))
+                    .padding(.vertical, DS.Space.s4)
+            } else if section == .all && ranked.isEmpty {
+                // Every app in the catalogue is connected (prd §812): Connect
+                // holds only what you have not added, so this is its honest end.
+                DSEmptyState(headline: Text("Everything is connected"),
+                             words: Text("Everything is connected."))
                     .padding(.vertical, DS.Space.s4)
             } else if scope.name == nil {
                 flatCatalogList

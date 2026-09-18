@@ -57912,3 +57912,14 @@ The line under a connected account's name (its live status line, "Synced 5m ago"
 **No freshness grey.** A proposed third state — green only within the hour, grey when older — was declined: a stale seat that still works is connected, and connected is green. §783's removal of the green DOT on every connected row stands: that was a mark repeated down the list; this is the row's own words carrying their state.
 
 **Also decided the same day, so it is not re-proposed:** the switcher's three words (`Manage | Connect | Settings`) take NO colour of their own — green and yellow already mean healthy and needs-fixing in the rows beneath, and a coloured "Connect" would read as a caution. They stay white-when-picked over grey, in that order: what you hold before what you could add, and the screen already opens on Connect when nothing is connected.
+
+## §812 — Manage and Connect split the catalogue: Connect lists only what you have not connected (user: "right now the connect list contains things you have connected and things you haven't… should it operate by having only the items you have not connected?", then "ok, make the change", 2026-09-18)
+
+Connect listed the whole catalogue, connected rows included, so an account sat on both lists and the switcher was not a split. Now `AppsScreen.ranked` gives Manage the held rows (`Ranked.isHeld`: connected, healthy or broken) and Connect every other row, so each account is on exactly one list and every Connect row has something to do.
+
+**Search spans both** (`searchHits` reads `rankedAll`): someone who connected Spotify and types it from Connect is shown their Spotify, not nothing.
+
+**A connect made from Connect moves the switcher to Manage**, where the row lifts into its seat (`handleConnectChange`); before, the lift happened further down the same list.
+
+**An empty Connect is an honest end:** "Everything is connected".
+
