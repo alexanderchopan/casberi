@@ -28,7 +28,7 @@ KNOWN_NON_REACH=(
   # Block explorers & app permalinks — opened in the browser on tap
   etherscan.io basescan.org arbiscan.io optimistic.etherscan.io
   polygonscan.com solscan.io revoke.cash robinhoodchain.blockscout.com
-  hyperevmscan.io monadscan.com worldscan.org
+  hyperevmscan.io monadscan.com worldscan.org explorer.arc.io
   gnosisscan.io njump.me
   # World's own page for its grant-claim app (prd §795) — the permalink a World
   # ID grant row opens in the person's browser. The app never fetches world.org.

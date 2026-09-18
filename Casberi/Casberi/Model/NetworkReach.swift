@@ -195,6 +195,10 @@ enum NetworkReach {
                          // RPCs cap eth_getLogs at 100 blocks, so the owner-
                          // filtered log read rides World Chain's Blockscout.
                          "worldchain-mainnet.explorer.alchemy.com",
+                         // Arc, 2026-09-17: read through Zerion today; this
+                         // host is named for the day `Chain.onAlchemy` flips on
+                         // (Alchemy lists the chain, our app has not enabled it).
+                         "arc-mainnet.g.alchemy.com",
                          "solana-mainnet.g.alchemy.com", "robinhood-mainnet.g.alchemy.com",
                          "api.zerion.io", "coins.llama.fi",
                          "rpc.mevblocker.io", "mainnet.base.org", "mainnet.optimism.io",

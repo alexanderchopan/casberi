@@ -73,6 +73,7 @@ final class WalletChainStore {
         ("solana-mainnet",   "Solana"),
         ("robinhood-mainnet","Robinhood"),
         ("worldchain-mainnet", "World Chain"),
+        ("arc-mainnet",      "Arc"),
     ]
     static var allNetworkIDs: [String] { selectable.map(\.id) }
 
@@ -97,7 +98,7 @@ final class WalletChainStore {
     static let defaultNetworkIDs = ["eth-mainnet", "base-mainnet", "arb-mainnet",
                                     "opt-mainnet", "matic-mainnet",
                                     "hyperliquid-mainnet", "monad-mainnet",
-                                    "solana-mainnet", "worldchain-mainnet"]
+                                    "solana-mainnet", "worldchain-mainnet", "arc-mainnet"]
 
     private var selected: [String] { didSet { persist() } }
 
@@ -120,6 +121,10 @@ final class WalletChainStore {
         ("hyperliquid-mainnet", "wallet.chains.hyperevmSeeded.v1"),
         ("monad-mainnet",       "wallet.chains.monadSeeded.v1"),
         ("worldchain-mainnet",  "wallet.chains.worldchainSeeded.v1"),
+        // Arc (2026-09-17, user: "add Arc chain also to the app and have it on
+        // by default") — free like World Chain: Zerion's one call per wallet
+        // already carries it, and it rides no Alchemy request.
+        ("arc-mainnet",         "wallet.chains.arcSeeded.v1"),
     ]
 
     private init() {

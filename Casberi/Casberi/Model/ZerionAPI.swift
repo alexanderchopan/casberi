@@ -58,6 +58,12 @@ enum ZerionAPI {
         // positions (USDC, WLD, WETH, ORO…) AND transactions both came back
         // on `chain.id == "world"` with the filter list below carrying it.
         "world": "worldchain-mainnet",
+        // 2026-09-17. `arc` is Zerion's id for Arc (`external_id` 0x13b2 =
+        // 5042, the same answer `eth_chainId` gives), read off `/v1/chains/`;
+        // positions (200, 235 rows) and transactions (200) both accepted it in
+        // the chain filter on a live wallet — which matters, because one id the
+        // filter refuses 400s the call for EVERY wallet (Solana, 2026-07-19).
+        "arc": "arc-mainnet",
     ]
 
     /// One fungible holding as Zerion hands it over — already decimal-adjusted

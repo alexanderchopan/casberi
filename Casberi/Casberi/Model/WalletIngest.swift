@@ -49,6 +49,15 @@ enum WalletIngest {
         /// that chain — so the Alchemy arm landed no activity at all on six
         /// chains, which is every read Robinhood (no Zerion mapping) ever made.
         var internalTransfers: Bool = false
+        /// Whether this app's Alchemy key serves the chain. MEASURED 2026-09-17
+        /// on Arc: Alchemy lists `arc-mainnet`, but our app answers every call
+        /// on it with HTTP 403 ("ARC_MAINNET is not enabled for this app") —
+        /// and `BridgeHealth` reads a 403 as a refused KEY, so one NFT call on
+        /// Arc would paint the whole Wallet seat as broken. A chain with this
+        /// off is read through Zerion only: never in the Alchemy transfer sync,
+        /// never in the Portfolio fallback's body. Flip it on once the chain is
+        /// enabled on the Alchemy dashboard, and not before.
+        var onAlchemy: Bool = true
     }
     private static let allChains: [Chain] = [
         Chain(network: "eth-mainnet",  explorer: "https://etherscan.io/tx/",              symbol: "ETH",   displayName: "Ethereum", internalTransfers: true),
@@ -76,7 +85,18 @@ enum WalletIngest {
         // `/address/` rewrite rests on. MEASURED end to end the same day
         // (prd §788) and ON by default since — see `WalletChainStore.selectable`.
         Chain(network: "worldchain-mainnet", explorer: "https://worldscan.org/tx/", symbol: "ETH", displayName: "World Chain"),
+        // Arc (2026-09-17) — Circle's L1, mainnet since 2026-09-16, chain id
+        // 5042 (`0x13b2`, from `eth_chainId` on `rpc.mainnet.arc.io`). USDC is
+        // its gas coin, 18 decimals as the native balance (docs.arc.io). Read
+        // through Zerion (`arc`), which MEASURED accepts it in both the
+        // positions and transactions filter; NOT through Alchemy yet (see
+        // `onAlchemy`). `explorer.arc.io` answers 200 on `/tx/` and `/address/`.
+        Chain(network: "arc-mainnet", explorer: "https://explorer.arc.io/tx/", symbol: "USDC", displayName: "Arc",
+              onAlchemy: false),
     ]
+
+    /// The chains the Alchemy calls may name (see `Chain.onAlchemy`).
+    private static let alchemyNetworks = Set(allChains.filter(\.onAlchemy).map(\.network))
 
     /// The chain a landed transfer belongs to, read off its stored explorer
     /// link (exact prefix match, so etherscan.io never claims
@@ -142,7 +162,7 @@ enum WalletIngest {
     /// The chains the TRANSFER sync reads — EVM only, since that pipeline IS
     /// `getAssetTransfers`. Firing it at `solana-mainnet` would spend a request
     /// per watched address per direction to be told the method doesn't exist.
-    private static var transferChains: [Chain] { chains.filter { $0.kind == .evm } }
+    private static var transferChains: [Chain] { chains.filter { $0.kind == .evm && $0.onAlchemy } }
 
     /// Chains in `WalletChainStore.selectable` whose Alchemy Portfolio support
     /// is NOT proven (prd §785, 2026-09-16 — World Chain is the first).
@@ -2286,7 +2306,7 @@ enum WalletIngest {
         // mix a `0x…` wallet and a `.sol` one and neither pays for the other's
         // chains. An address whose chains are all switched off has nothing to
         // ask and is dropped rather than sent with an empty list.
-        let routed = addresses.map { (address: $0, networks: networks(for: $0)) }
+        let routed = addresses.map { (address: $0, networks: networks(for: $0).filter(alchemyNetworks.contains)) }
                               .filter { !$0.networks.isEmpty }
         guard !routed.isEmpty else { return ([], false) }
 
@@ -2841,7 +2861,7 @@ enum WalletIngest {
 
         // Routed by shape, exactly as `fetchHeldTokens` does — a diagnostic that
         // asked differently than the real read would be worse than none.
-        let routed = addresses.map { (address: $0, networks: networks(for: $0)) }
+        let routed = addresses.map { (address: $0, networks: networks(for: $0).filter(alchemyNetworks.contains)) }
                               .filter { !$0.networks.isEmpty }
         guard !routed.isEmpty else {
             out.append("FAIL every watched address's chains are switched off")

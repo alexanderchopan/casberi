@@ -57854,3 +57854,17 @@ So there are two separate facts and only the second one hurts. The container's 3
 **The demo was poisoning reads.** `unwatchedHoldings` answered "reached, holds nothing" in demo mode, and the seat stored it as a real read, held for a week. It now returns nil in the demo (unread, never stored), and `PrivyHomeLive.refresh` does not run in the demo at all (§483: the demo reaches nothing).
 
 **Measured after, on the user's account:** $3.54 across 7 apps; Quidli $1.00 and Wildcard $0.96 match Privy Home exactly; the personal wallet appears nowhere. **Still short of Privy Home's ~$5.22**, and the gap is Farcaster wallet (Privy Home $1.37, ours under $0.96) — unresolved: small-token pricing or chain coverage, not yet measured.
+
+## §808 — Arc is a wallet chain, ON by default, read through Zerion and kept off Alchemy until our key serves it (user: "can we add Arc chain also to the app and have it on by default", 2026-09-17)
+
+**Arc** is Circle's EVM L1, mainnet since 2026-09-16, chain id 5042 (`0x13b2` from `eth_chainId` on `rpc.mainnet.arc.io`), USDC as its gas coin (18 decimals as the native balance, docs.arc.io). Explorer `explorer.arc.io`, 200 on `/tx/` and `/address/`.
+
+**Measured before a row was written:**
+- **Zerion indexes it** as `arc` (`/v1/chains/`, `external_id` 0x13b2). Positions (200, 235 rows on a live wallet) and transactions (200) both ACCEPT `arc` in `filter[chain_ids]` — the check that matters, because one id that filter refuses 400s the call for every wallet (Solana, 2026-07-19).
+- **Alchemy lists `arc-mainnet` but our app has not enabled it**: every call answers HTTP 403 "ARC_MAINNET is not enabled for this app". `BridgeHealth` reads a 403 as a refused KEY, so a single Alchemy NFT or transfer call on Arc would have painted the whole Wallet seat as broken.
+
+**So: three rows make "on", and one flag keeps Alchemy out.** `ZerionAPI.networkFor["arc"]`, `WalletChainStore.selectable` + `defaultNetworkIDs` + a `seeded` row (`wallet.chains.arcSeeded.v1`, so existing installs get it once and a later "off" sticks), and a `WalletIngest.Chain` row with the new `onAlchemy: false`. `onAlchemy` removes a chain from `transferChains` (the Alchemy transfer and NFT sync) and from both Portfolio fallback bodies (`alchemyNetworks`). Arc therefore costs nothing extra: Zerion's one call per wallet already carries every mapped chain. `arc-mainnet.g.alchemy.com` is disclosed in `NetworkReach` for the day the flag flips; `explorer.arc.io` is a door, in `KNOWN_NON_REACH`.
+
+**To finish it:** enable Arc Mainnet on the Alchemy dashboard for this app, then set `onAlchemy: true` on Arc's row — that restores the transfer fallback and NFTs on Arc. Not done here: enabling a network is an account setting, the user's to change.
+
+**Not wired, deliberately:** Arc has no entry in the gas, DeFiLlama, GeckoTerminal, WalletConnect or approvals tables. Each is a feature that reads a specific chain (gas estimates, price backstop, charts, dapp sessions, approval logs) and none is needed for balances and activity; each wants its own measurement first.
