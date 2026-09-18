@@ -4,19 +4,17 @@ import UserNotifications
 import UserNotificationsUI
 
 /// The long press of a digest notification (prd §809): the day's things as
-/// feed rows, under the digest's faces and app tiles. Everything it draws was decided by
-/// the app when it scheduled the digest (`NotifyCard`), so this reads no
-/// store and makes no request.
-///
-/// A row tap leaves that row's link in the app group and opens the app; the
-/// app's tap handler reads it before the notification's own link. An
-/// extension cannot open a URL itself.
+/// feed rows, under the digest's faces and app tiles. Everything it draws was
+/// decided by the app when it scheduled the digest (`NotifyCard`), and every
+/// picture arrives as one of the notification's own attachments, so this
+/// reads no store, no shared folder and no network, and carries no
+/// entitlement (§809a). A tap anywhere opens the digest's own door.
 final class NotificationViewController: UIViewController, UNNotificationContentExtension {
     private var host: UIHostingController<DigestCardView>?
 
     func didReceive(_ notification: UNNotification) {
         guard let card = NotifyCard.decoded(from: notification.request.content.userInfo) else { return }
-        let view = DigestCardView(card: card) { [weak self] link in self?.open(link) }
+        let view = DigestCardView(card: card, images: Self.images(notification.request.content.attachments))
         if let host {
             host.rootView = view
         } else {
@@ -40,11 +38,19 @@ final class NotificationViewController: UIViewController, UNNotificationContentE
         preferredContentSize = CGSize(width: width, height: height)
     }
 
-    private func open(_ link: String?) {
-        if let link, link.hasPrefix("casberi://") {
-            UserDefaults(suiteName: SharedStore.appGroup)?.set(link, forKey: NotifyCard.rowLinkKey)
+    /// The attachments, read once, by identifier. iOS hands an extension its
+    /// notification's attachments as security-scoped files.
+    private static func images(_ attachments: [UNNotificationAttachment]) -> [String: UIImage] {
+        var out: [String: UIImage] = [:]
+        for attachment in attachments where !attachment.identifier.isEmpty {
+            let url = attachment.url
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            if let data = try? Data(contentsOf: url), let image = UIImage(data: data) {
+                out[attachment.identifier] = image
+            }
         }
-        extensionContext?.performNotificationDefaultAction()
+        return out
     }
 }
 
@@ -53,13 +59,12 @@ final class NotificationViewController: UIViewController, UNNotificationContentE
 /// then the line, whole: nothing here is cut with an ellipsis.
 struct DigestCardView: View {
     let card: NotifyCard
-    let open: (String?) -> Void
+    let images: [String: UIImage]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center, spacing: 14) {
-                if let name = card.head, let url = card.faceURL(name),
-                   let image = UIImage(contentsOfFile: url.path) {
+                if let name = card.head, let image = images[name] {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFit()
@@ -72,10 +77,7 @@ struct DigestCardView: View {
             }
             VStack(alignment: .leading, spacing: 14) {
                 ForEach(Array(card.rows.enumerated()), id: \.offset) { _, row in
-                    Button { open(row.link) } label: {
-                        DigestRow(row: row, card: card)
-                    }
-                    .buttonStyle(.plain)
+                    DigestRow(row: row, card: card, image: row.face.flatMap { images[$0] })
                 }
             }
         }
@@ -88,6 +90,7 @@ struct DigestCardView: View {
 private struct DigestRow: View {
     let row: NotifyCard.Row
     let card: NotifyCard
+    let image: UIImage?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -111,7 +114,6 @@ private struct DigestRow: View {
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .contentShape(Rectangle())
     }
 
     private var label: String {
@@ -122,8 +124,7 @@ private struct DigestRow: View {
 
     @ViewBuilder private var lead: some View {
         let shape = RoundedRectangle(cornerRadius: row.round ? 13 : 6, style: .continuous)
-        if let name = row.face, let url = card.faceURL(name),
-           let image = UIImage(contentsOfFile: url.path) {
+        if let image {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()

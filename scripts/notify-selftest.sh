@@ -295,10 +295,20 @@ guard "a several-thing digest carries its card and answers to the extension's ca
       'content\.categoryIdentifier = NotifyCard\.category' "$NOTIFY"
 guard "the extension answers to the same category the app sets" \
       '<string>digest</string>' Casberi/NotificationContent/Info.plist
-guard "a row tapped in the card wins over the notification's own link" \
-      'guard let link = row \?\? userInfo\["link"\]' "$NOTIFY"
-guard "the extension only ever leaves an in-app link" \
-      'link\.hasPrefix\("casberi://"\)' Casberi/NotificationContent/NotificationViewController.swift
+guard "the card's pictures ride the notification as attachments, the tile sheet first (§809a)" \
+      'identifier: NotifyCard\.headAttachment' "$NOTIFY"
+guard "the extension reads its pictures from the notification's attachments" \
+      'Self\.images\(notification\.request\.content\.attachments\)' Casberi/NotificationContent/NotificationViewController.swift
+# §809a: the extension needs NO app group. Linking one to a new identifier is a
+# portal-only step no API can do, and it blocked the first iOS ship of this
+# target; an entitlement, a shared suite or a shared folder brings it back.
+if [[ -e Casberi/NotificationContent/NotificationContent.entitlements ]] \
+   || grep -qE 'SharedStore\.|suiteName|containerURL' Casberi/NotificationContent/*.swift \
+   || grep -q 'NotificationContent/NotificationContent.entitlements' Casberi/Casberi.xcodeproj/project.pbxproj; then
+  printf '  ✗ DRIFT: the NotificationContent extension reaches for an app group again (§809a)\n'; fail=1
+else
+  printf '  ✓ the NotificationContent extension carries no entitlement and reads no shared store (§809a)\n'
+fi
 guard "the settings footnote names the four kinds that stand alone" \
       'A dispute, a deadline, a liquidation or a Safe signature comes at once' "$SETTINGS"
 # `hasOwnApp` only orders the names, so a misspelt seat fails at nothing: that
@@ -807,23 +817,25 @@ ok(learned.slot == cal.date(bySettingHour: 19, minute: 45, second: 0, of: at(10)
    "the learned hour is the slot the digest is scheduled for")
 
 // ── the card (prd §809) ─────────────────────────────────────────────────────
-ok(NotifyDigest.card([replies[0]], folder: "f") == nil,
+ok(NotifyDigest.card([replies[0]]) == nil,
    "one thing has no card; its long press is its own picture")
-let card = NotifyDigest.card(replies + [pictured("p", "X", at: at(20), picture: "https://a/1.jpg")], folder: "f")!
+let card = NotifyDigest.card(replies + [pictured("p", "X", at: at(20), picture: "https://a/1.jpg")])!
 ok(card.title == NotifyDigest.plan(replies + [pictured("p", "X", at: at(20), picture: "https://a/1.jpg")])!.title,
    "the card's title is the banner's")
-ok(NotifyDigest.card((0..<12).map { kinded("c\($0)", "Bluesky", .repliesReceived, body: "c\($0)", at: at(8)) },
-                     folder: "f")!.rows.count == NotifyDigest.cardRowCap,
+ok(NotifyDigest.card((0..<12).map { kinded("c\($0)", "Bluesky", .repliesReceived, body: "c\($0)", at: at(8)) })!.rows.count == NotifyDigest.cardRowCap,
    "the card draws no more than its cap")
 ok(card.rows.first?.app == "X" && card.rows[1].who == "linda",
    "the card reads in the banner's order, and a row carries who acted")
-ok(NotifyDigest.card([pictured("w", "Wallet", at: at(8)), pictured("x", "X", at: at(20))], folder: "f")!
+ok(NotifyDigest.card([pictured("w", "Wallet", at: at(8)), pictured("x", "X", at: at(20))])!
      .rows.first?.app == "Wallet",
    "an app with no lock screen of its own leads the card, however old its news")
 ok(card.rows.first(where: { $0.app == "X" })?.round == true && card.rows[1].round == false,
    "a row with a picture draws round, a mark square")
 ok(card.rows.allSatisfy { $0.face == nil } && card.head == nil,
-   "faces and the head are the scheduler's to write, never invented here")
+   "faces and the head are the scheduler's to attach, never invented here")
+ok(NotifyCard.faceAttachment(0) != NotifyCard.headAttachment
+   && NotifyCard.faceAttachment(0) != NotifyCard.faceAttachment(1),
+   "every attachment the card names has its own identifier")
 ok(card.encoded().flatMap { NotifyCard.decoded(from: [NotifyCard.userInfoKey: $0]) } == card,
    "the card survives the trip through userInfo")
 

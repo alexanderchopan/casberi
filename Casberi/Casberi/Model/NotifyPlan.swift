@@ -1098,13 +1098,13 @@ enum NotifyDigest {
     /// The long press's card for a digest of several things. Nil for one
     /// thing: a lone item's long press is its own picture, as before. Faces
     /// and the head are left nil here; the scheduler writes the files.
-    static func card(_ group: [Item], folder: String) -> NotifyCard? {
+    static func card(_ group: [Item]) -> NotifyCard? {
         guard group.count > 1, let plan = plan(group) else { return nil }
         let rows = ordered(group).prefix(cardRowCap).map {
             NotifyCard.Row(app: $0.name, who: $0.who, line: $0.line, at: $0.occurredAt, link: $0.link,
                            face: nil, round: !($0.picture ?? "").isEmpty)
         }
-        return NotifyCard(title: plan.title, head: nil, rows: Array(rows), folder: folder)
+        return NotifyCard(title: plan.title, head: nil, rows: Array(rows))
     }
 
     /// The digest's rank among the day's notifications, for the scheduled

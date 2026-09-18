@@ -314,7 +314,6 @@ enum Notifications {
                     + [NotifyDigest.requestPrefix + String(Int(old.timeIntervalSince1970))])
         }
         guard let slot = next.slot else { return }
-        pruneFaces(now: now)
 
         for group in NotifyDigest.groups(next.queue) {
             guard let plan = NotifyDigest.plan(group), let category = group.first?.category else { continue }
@@ -343,19 +342,24 @@ enum Notifications {
                 // Several things: the thumbnail is the faces and app tiles
                 // (§770), and the long press is the card, its rows drawn by
                 // the NotificationContent extension (prd §809), under the
-                // same picture at card size.
-                let folder = safeName(digestRequestID(slot, category))
-                let sheet = await tileSheetPNG(for: group)
-                if var card = NotifyDigest.card(group, folder: folder) {
-                    card = await withFaces(card, items: Array(NotifyDigest.ordered(group)
-                        .prefix(NotifyDigest.cardRowCap)))
-                    if let sheet, let url = card.faceURL("head.png"), (try? sheet.write(to: url)) != nil {
-                        card.head = "head.png"
-                    }
-                    if let data = card.encoded() { info[NotifyCard.userInfoKey] = data }
+                // same picture at card size. Every picture rides the
+                // notification as an ATTACHMENT, the tile sheet first (iOS
+                // draws the first as the thumbnail), so the extension needs
+                // no app group and no shared folder (§809a).
+                var attachments: [UNNotificationAttachment] = []
+                if let sheet = await tileSheetPNG(for: group),
+                   let made = write(sheet, id: plan.id + ".tiles", identifier: NotifyCard.headAttachment) {
+                    attachments.append(made)
+                }
+                if var card = NotifyDigest.card(group) {
+                    if !attachments.isEmpty { card.head = NotifyCard.headAttachment }
+                    let faced = await withFaces(card, items: Array(NotifyDigest.ordered(group)
+                        .prefix(NotifyDigest.cardRowCap)), id: plan.id)
+                    attachments += faced.files
+                    if let data = faced.card.encoded() { info[NotifyCard.userInfoKey] = data }
                     content.categoryIdentifier = NotifyCard.category
                 }
-                if let sheet, let made = write(sheet, id: plan.id + ".tiles") { content.attachments = [made] }
+                content.attachments = attachments
             }
             content.userInfo = info
             let trigger = UNTimeIntervalNotificationTrigger(
@@ -561,14 +565,11 @@ enum Notifications {
     /// Fills each row's lead: the item's picture when it has one (a face, a
     /// cover), otherwise its own mark, otherwise its app's — rung 1 and rung 2
     /// of the ladder the single notification climbs. Fetched at once, each on
-    /// rung 1's short budget, downscaled, and written into the app group for
-    /// the extension. A row with nothing to draw keeps a nil face and the
-    /// extension draws its app's initial.
-    private static func withFaces(_ card: NotifyCard, items: [NotifyDigest.Item]) async -> NotifyCard {
-        guard let folder = NotifyCard.facesRoot()?.appendingPathComponent(card.folder, isDirectory: true)
-        else { return card }
-        try? FileManager.default.removeItem(at: folder)
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    /// rung 1's short budget, downscaled, and handed back as attachments the
+    /// extension reads by identifier. A row with nothing to draw keeps a nil
+    /// face and the extension draws its initial.
+    private static func withFaces(_ card: NotifyCard, items: [NotifyDigest.Item],
+                                  id: String) async -> (card: NotifyCard, files: [UNNotificationAttachment]) {
         let loaded = await withTaskGroup(of: (Int, Data?, Bool).self) { tasks in
             for (index, item) in items.enumerated() {
                 tasks.addTask { @MainActor in
@@ -582,19 +583,21 @@ enum Notifications {
             }
             var out: [(Int, Data?, Bool)] = []
             for await result in tasks { out.append(result) }
-            return out
+            return out.sorted { $0.0 < $1.0 }
         }
         var faced = card
+        var files: [UNNotificationAttachment] = []
         for (index, data, round) in loaded where index < faced.rows.count {
             guard let data,
                   let small = await Task.detached(priority: .utility, operation: { downscale(data) }).value
             else { continue }
-            let name = "\(index).png"
-            guard (try? small.write(to: folder.appendingPathComponent(name))) != nil else { continue }
+            let name = NotifyCard.faceAttachment(index)
+            guard let made = write(small, id: id + "." + name, identifier: name) else { continue }
+            files.append(made)
             faced.rows[index].face = name
             faced.rows[index].round = round
         }
-        return faced
+        return (faced, files)
     }
 
     /// A lead is drawn at 26pt, so 96px covers 3× with room; a 2MB avatar
@@ -612,26 +615,6 @@ enum Notifications {
             image.draw(in: CGRect(x: (side - drawn.width) / 2, y: (side - drawn.height) / 2,
                                   width: drawn.width, height: drawn.height))
         }
-    }
-
-    /// Faces for digests older than three days are removed. A card still in
-    /// Notification Center after that draws its initials, which is the
-    /// honest fallback, not a broken image.
-    private static func pruneFaces(now: Date) {
-        guard let root = NotifyCard.facesRoot(),
-              let folders = try? FileManager.default.contentsOfDirectory(
-                at: root, includingPropertiesForKeys: [.contentModificationDateKey])
-        else { return }
-        let floor = now.addingTimeInterval(-3 * 86_400)
-        for folder in folders {
-            let modified = (try? folder.resourceValues(forKeys: [.contentModificationDateKey]))?
-                .contentModificationDate ?? .distantPast
-            if modified < floor { try? FileManager.default.removeItem(at: folder) }
-        }
-    }
-
-    private static func safeName(_ id: String) -> String {
-        id.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
     }
 
     private static func rungOne(_ art: NotifyArt, photo: Data?, service: String) async -> Data? {
@@ -680,7 +663,7 @@ enum Notifications {
     /// `UNNotificationAttachment` needs a FILE, and it MOVES the file into its
     /// own store — so each write goes to a fresh per-request directory rather
     /// than a shared path two concurrent sweeps could race on.
-    private static func write(_ data: Data, id: String) -> UNNotificationAttachment? {
+    private static func write(_ data: Data, id: String, identifier: String = "") -> UNNotificationAttachment? {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("notify", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -689,7 +672,7 @@ enum Notifications {
             .replacingOccurrences(of: ":", with: "-")
         let url = dir.appendingPathComponent(safe + ".png")
         guard (try? data.write(to: url)) != nil else { return nil }
-        return try? UNNotificationAttachment(identifier: "", url: url, options: nil)
+        return try? UNNotificationAttachment(identifier: identifier, url: url, options: nil)
     }
 
     // MARK: - Likes (the one class with no row behind it)
@@ -768,14 +751,8 @@ enum Notifications {
     /// than opening the URL here. Same shape as the "Daily Brief" quick action,
     /// and for the same measured reason: a notification can COLD-launch the
     /// app, and `onOpenURL`'s routing is not guaranteed live at that instant.
-    ///
-    /// A row tapped inside a digest's long press (prd §809) left its own link
-    /// in the app group just before it opened the app; that wins over the
-    /// notification's, which opens the room or All.
     static func handleTap(userInfo: [AnyHashable: Any]) {
-        let row = store.string(forKey: NotifyCard.rowLinkKey)
-        store.removeObject(forKey: NotifyCard.rowLinkKey)
-        guard let link = row ?? userInfo["link"] as? String else { return }
+        guard let link = userInfo["link"] as? String else { return }
         store.set(link, forKey: "notify.link")
     }
 
