@@ -255,11 +255,21 @@ grep -q 'service: "World ID"' "$TMP/source.stripped" \
 #    amends §785's off-until-measured guard rather than deleting it). On means
 #    three things together, and each alone ships a quiet hole: in the default
 #    set (fresh installs), in the seed list (every install that chose its
-#    chains before today — `seeded`'s own doc), and mapped in Zerion (else it
-#    costs an Alchemy chain per wallet, which is Robinhood's reason to be off).
+#    chains before today — `seeded`'s own doc), and mapped in Zerion (which is
+#    what makes it free: one request per wallet already carries every mapped
+#    chain). §826 corrected the parenthesis this comment used to carry — an
+#    UNMAPPED chain was not merely "an Alchemy chain per wallet", it could not
+#    be read AT ALL while Zerion answered, which is why Robinhood was off,
+#    invisible, and wearing a dead toggle. `wallet-total-audit.py` owns that
+#    rule for the unmapped chains; this check stays World Chain's.
 grep -q '("worldchain-mainnet", "World Chain")' "$CHAINS" \
   || { echo "✗ World Chain is not in the wallet's chain picker"; exit 1; }
-grep -A 4 'defaultNetworkIDs = \[' "$CHAINS" | grep -q 'worldchain-mainnet' \
+# The WHOLE array, not a fixed window: this was `grep -A 4`, and §826 added a
+# tenth chain that pushed `worldchain-mainnet` onto the last line the window
+# still reached. It passed on luck, and the next chain would have failed a
+# check about World Chain for a reason that had nothing to do with it.
+defaults=$(sed -n '/defaultNetworkIDs = \[/,/\]/p' "$CHAINS")
+echo "$defaults" | grep -q 'worldchain-mainnet' \
   || { echo "✗ World Chain is not ON by default (prd §788)"; exit 1; }
 grep -q '("worldchain-mainnet", *"wallet.chains.worldchainSeeded.v1")' "$CHAINS" \
   || { echo "✗ World Chain is on by default with no seed row — only installs made after today would read it"; exit 1; }
