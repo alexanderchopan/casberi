@@ -109,7 +109,10 @@ present "the thread fold is table-driven, not shape-driven" \
 present "the person filter is gated on the roster set" \
   'guard SocialRoom\.hasRoster\(source\), let scope = chrome\.personScope' "$TMP/feed.nc"
 present "the fresh rings are gated on the same set" \
-  'guard SocialRoom\.hasRoster\(source\), let since = newSince' "$TMP/feed.nc"
+  'guard SocialRoom\.hasRoster\(source\) else \{' "$TMP/feed.nc"
+# prd §824: the rail's cap ranks by the same landing's recency, off the same gate.
+present "the rail's recency is published beside the fresh rings" \
+  'chrome\.recentHandles = newest\.sorted' "$TMP/feed.nc"
 present "the rail's own gate asks SocialRoom, not Shape" \
   'SocialRoom\.hasRoster\(source\)' "$TMP/feed.nc"
 present "the rail still asks the feed whether this is a social room" \

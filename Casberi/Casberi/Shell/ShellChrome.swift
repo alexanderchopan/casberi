@@ -482,6 +482,9 @@ final class ShellChrome {
     /// — both of which live in the feed. A ring that is one frame late is a ring
     /// that is late; a rail that is one frame late is a rail that blinks.
     var freshHandles: Set<String> = []
+    /// The room's authors, newest post first — which faces a long social rail
+    /// keeps before `+N` (prd §824). Written on landing, beside `freshHandles`.
+    var recentHandles: [String] = []
 
     /// A person's own room, asked for from outside the feed (prd §362). Set by
     /// re-tapping the lit face in the social rail — which lives on the shell,

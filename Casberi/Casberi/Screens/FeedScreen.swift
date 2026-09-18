@@ -7934,7 +7934,21 @@ struct FeedScreen: View {
     /// reason: it is a fact about arriving in a room, and recomputing it as rows
     /// stream in would dissolve the rings one by one while you watched.
     private func publishFreshHandles() {
-        guard SocialRoom.hasRoster(source), let since = newSince else {
+        guard SocialRoom.hasRoster(source) else {
+            chrome.freshHandles = []
+            chrome.recentHandles = []
+            return
+        }
+        // Newest post per author, for the rail's cap (prd §824).
+        var newest: [String: Date] = [:]
+        for thing in visible {
+            guard let handle = thing.authorHandle else { continue }
+            if newest[handle].map({ thing.capturedAt > $0 }) ?? true {
+                newest[handle] = thing.capturedAt
+            }
+        }
+        chrome.recentHandles = newest.sorted { $0.value > $1.value }.map(\.key)
+        guard let since = newSince else {
             chrome.freshHandles = []
             return
         }

@@ -148,6 +148,10 @@ struct DockSpringRow<Content: View>: View {
 /// needs.
 struct DockFolderRow<Faces: View>: View {
     let venues: [String]
+    /// False when the venues ride a capsule the faces already hold up (prd
+    /// §823): they are part of the room's row at rest, not a folder dealt out
+    /// of a chip nobody tapped, so they sit in their seats from the first frame.
+    var springs: Bool = true
     /// The room you are standing in — the lit venue.
     let standing: String
     /// **THE ROOM YOU ARE STANDING IN, ALONE AT THE CAPSULE'S HEAD WHILE THE
@@ -286,7 +290,7 @@ struct DockFolderRow<Faces: View>: View {
             // after another — the nearest first — so the row is seen
             // dealt out of the chip rather than switched on.
             let seatX = 2 + CGFloat(i) * Self.seatPitch + DS.Hit.min / 2
-            let settled = flowed || reduceMotion
+            let settled = flowed || reduceMotion || !springs
             folderVenue(venue, broken: broken.contains(venue))
                 .scaleEffect(settled ? 1 : 0.3)
                 .opacity(settled ? 1 : 0)

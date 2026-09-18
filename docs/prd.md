@@ -58085,3 +58085,23 @@ No editorial rule prefers a notification. Imports are dated in the past, so with
 **The rule §815 wrote was a proxy, and it was wrong for the room it was written for.** Tiles drew only when two or more kinds were present, because §805's Privy defect was All beside a single kind that drew the same list twice. But that is only true when the one kind IS the whole room. The user's GitHub room is mostly watched-repo Activity — a kind that shows under All only — plus two pull requests from notifications, so All and Pull requests are different lists and the tile was withheld from a room it would narrow.
 
 **The rule now:** `RoomKindTiles.present(room:kinds:hasUnkinded:)` draws All plus the kinds present when two or more are present, OR when one is and some row belongs to no tile. One kind that covers the whole room still draws nothing (§805 stands), and a room with no kind at all draws nothing however many All-only rows it holds. `room-kind-tiles-selftest.sh` holds all three cases.
+
+## §823 — A dock capsule the faces already hold up shows the category's rooms (user: "when you open wallet it shows all and the other wallets you are follwing but doesn't show the other rooms unless you press wallet again, and someone may not realiee that", then "do first one", 2026-09-18)
+
+**The report.** In Wallet, the capsule above the dock carried the room's own mark (§754), then All and the followed wallets (§753). Frames, Hegotá, Privacy, Safe and the rest appeared only on a second tap, on a seat that looked like one more face. Nothing said there was anything behind it.
+
+**The ruling** (`MainSurface.restingVenues`, `DockFolderRow.springs`): where the faces mount the capsule anyway, the category's venues ride it at rest too, the standing one lit, the faces after them — the open folder's own contents. **No row is added**: the mount is still venues-open-or-faces (2026-09-06's objection, §754 rule 5), and a room with no faces keeps §754's one seat and no capsule, the cost §754 already accepted. The resting venues do not spring (`springs: false`) — no chip was tapped, so there is nothing to flow out of — and opening the folder over them changes nothing but the tail.
+
+**The accepted cost.** A longer capsule: Wallet's rooms plus its faces run past the phone's width and scroll inside `DockSpringRow`, which is the Mac stack's answer and already how a long roster behaved.
+
+**Considered and not taken:** a stacked-cards lead seat that hints at its siblings — cheaper, but still a second tap to find a room.
+
+## §824 — A long social face rail draws eight faces, most recent poster first, and the rest behind `+N` (user: "in farcaster i am following a starter pack of 140 people tho, do you think that matters", then "yes make that fix of 'more'", 2026-09-18)
+
+**The report.** A Farcaster starter pack put 140 faces in the dock capsule. A filter of 140 unlabelled circles is not a filter, and since §823 they trail the category's rooms in the same capsule.
+
+**The ruling** (`SocialScopeRail.visible` / `railCap`, `FaceScopeRail.more` / `onMore`, `SocialFacesTray`, `ShellChrome.recentHandles`): over eight accounts, the rail draws eight — **most recent poster first** — then a `+N` seat, "All"'s own treatment (a word in a circle), whose tap opens a tray listing everyone. A row there scopes the room exactly as the face would. The scoped face always makes the rail, or the pick would hide behind `+N`. At eight or fewer nothing changes: store order, no `+N`.
+
+**§362's order ruling, bent at scale, not reversed.** It kept store order because position is half a small face's identity — true of five accounts, meaningless across 140, where store order is import order. The recency is published on LANDING beside `freshHandles` (the same pass over the same rows), so nothing reshuffles while you look.
+
+**Guarded** in `social-room-selftest.sh`: the recency is published from the fresh rings' own gated pass.

@@ -166,6 +166,13 @@ struct FaceScopeRail: View {
     /// look "selected" would claim to be filtering the room behind it. Drawn
     /// after the add slot, so the rail reads: you · add · everyone else.
 
+    /// **THE FACES THE RAIL LEAVES OFF (prd §824, user: "in farcaster i am
+    /// following a starter pack of 140 people").** A count above zero draws a
+    /// trailing `+N` seat whose tap is `onMore` — a list of everyone. The
+    /// caller decides which faces make the rail (`SocialScopeRail.visible`).
+    var more: Int = 0
+    var onMore: (() -> Void)?
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The picked slot's fill travels between slots exactly as the switcher's
     /// does one deck below (prd §547) — same effect, same Reduce Motion branch.
@@ -319,10 +326,39 @@ struct FaceScopeRail: View {
             ForEach(items) { item in
                 slot(item)
             }
+            if more > 0, onMore != nil {
+                moreSlot
+            }
             if let addTitle, onAdd != nil {
                 addSlot(title: addTitle)
             }
         }
+    }
+
+    /// `+N`, a count in a circle — "All"'s own treatment (a word where a face
+    /// would be), because it is a door to faces, not one of them (prd §824).
+    private var moreSlot: some View {
+        let label = String(localized: "\(more) more")
+        return Button {
+            DSHaptic.selection()
+            onMore?()
+        } label: {
+            Text(verbatim: "+\(more)")
+                .dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(width: faceSize - 6)
+                .frame(width: faceSize, height: faceSize)
+                .background(Circle().fill(DS.fillFaint))
+                .frame(width: slotWidth, height: slotHeight)
+                .frame(width: inFolder ? DS.Hit.min : nil, height: inFolder ? DS.Hit.min : nil)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .dsHover()
+        .accessibilityLabel(Text(label))
+        .dsTooltip(label)
     }
 
     /// What "All" draws inside its circle — see the note at the call site for
@@ -819,6 +855,39 @@ enum SocialScopeRail {
         }
     }
 
+    /// How many faces the rail draws before the rest go behind `+N` (prd §824).
+    /// Eight fit a phone beside a category's venues without the rail becoming
+    /// the whole capsule.
+    static let railCap = 8
+
+    /// The faces the rail draws, and how many it leaves off (prd §824).
+    ///
+    /// **Most recent poster first, once there are more than fit.** §362 kept
+    /// the store's order because position is half a small face's identity —
+    /// true of five accounts, and meaningless across a 140-person starter pack,
+    /// where store order is import order and the first eight are arbitrary.
+    /// `recent` is fixed for the visit (published on landing, like the
+    /// attention ring), so nothing reshuffles while you look. The scoped face
+    /// always makes the rail, or the pick would vanish behind `+N`. At or under
+    /// the cap nothing moves: store order, no `+N`.
+    static func visible(_ accounts: [SocialAccount], recent: [String],
+                        scope: String?) -> (shown: [SocialAccount], hidden: Int) {
+        guard accounts.count > railCap else { return (accounts, 0) }
+        let rank = Dictionary(recent.enumerated().map { ($1, $0) },
+                              uniquingKeysWith: { first, _ in first })
+        // Stable: unranked accounts keep store order behind the ranked ones.
+        let ordered = accounts.enumerated().sorted { a, b in
+            let ra = rank[a.element.key] ?? Int.max, rb = rank[b.element.key] ?? Int.max
+            return ra != rb ? ra < rb : a.offset < b.offset
+        }.map(\.element)
+        var shown = Array(ordered.prefix(railCap))
+        if let scope, !shown.contains(where: { matches(scope, $0.key) }),
+           let picked = accounts.first(where: { matches(scope, $0.key) }) {
+            shown[shown.count - 1] = picked
+        }
+        return (shown, accounts.count - shown.count)
+    }
+
     /// A handle is a plain string — no checksum, no case games. Stated as its own
     /// function anyway so the two adapters are read side by side and the wallet
     /// rule can never be applied here by accident.
@@ -942,6 +1011,45 @@ struct RailFace: View {
             } else {
                 BridgeIcon(name: source, size: size, circular: false)
             }
+        }
+    }
+}
+
+/// Everyone a social rail leaves off, as a list (prd §824) — the `+N` seat's
+/// door. A tap scopes the room to that person, exactly as their face would.
+struct SocialFacesTray: View {
+    let accounts: [SocialAccount]
+    let source: String
+    let scope: String?
+    let onPick: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        DSTray(title: String(localized: "Following"), height: 480,
+               detents: [.height(480), .large]) {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: DS.Space.s3) {
+                    ForEach(accounts) { account in
+                        Button {
+                            DSHaptic.selection()
+                            onPick(account.key)
+                            dismiss()
+                        } label: {
+                            DSPushRowLabel(
+                                title: Text(verbatim: account.title),
+                                subtitle: Text(verbatim: account.subtitle),
+                                tint: scope.map { SocialScopeRail.matches($0, account.key) } == true
+                                    ? DS.tint : DS.textPrimary,
+                                opens: false) {
+                                RailFace(face: .avatar(url: account.avatarURL, source: source),
+                                         size: DS.Face.list)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
         }
     }
 }

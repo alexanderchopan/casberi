@@ -624,12 +624,23 @@ struct MainSurface: View {
         // **THE FOLDERS SPRING UP OUT OF THEIR CHIP (2026-09-05, the Mac-dock
         // folder — see `DockSpringRow`).** The chip itself never moves, so the
         // word that closes the folder is where the finger just was.
-        let venues = folderVenues
+        //
+        // **A CAPSULE THAT IS ALREADY UP SHOWS ITS ROOMS (prd §823, user: "when
+        // you open wallet it shows all and the other wallets you are following
+        // but doesn't show the other rooms unless you press wallet again, and
+        // someone may not realize that").** Where the faces mount the row
+        // anyway, the category's venues ride it at rest too, so the sibling
+        // rooms are never behind the lone lead seat's unmarked tap. No row is
+        // added — the mount below is unchanged — and a room with no faces
+        // keeps §754's one seat and no capsule.
+        let openVenues = folderVenues
         let facesShow = roomFacesShow
+        let venues = openVenues.isEmpty && facesShow ? restingVenues : openVenues
         if !venues.isEmpty || facesShow {
-            DockSpringRow(anchorX: venues.isEmpty ? nil : chrome.folderAnchorX) { anchorLocalX in
+            DockSpringRow(anchorX: openVenues.isEmpty ? nil : chrome.folderAnchorX) { anchorLocalX in
                 DockFolderRow(
                     venues: venues,
+                    springs: !openVenues.isEmpty,
                     standing: filter.source,
                     lead: venues.isEmpty ? standingVenue : nil,
                     onOpenFolder: openStandingFolder,
@@ -668,6 +679,15 @@ struct MainSurface: View {
     /// folder has nothing to switch between, so it draws no seats.
     private var folderVenues: [String] {
         guard let category = openCategory else { return [] }
+        let venues = categoryVenues[category] ?? []
+        guard venues.count >= CategoryFold.switcherFloor else { return [] }
+        return CategoryFold.scopes(category: category, present: Set(venues))
+    }
+
+    /// The standing category's venues, for a capsule the faces keep up while
+    /// the folder is shut (prd §823). Same floor and order as an open folder.
+    private var restingVenues: [String] {
+        guard let category = currentCategory else { return [] }
         let venues = categoryVenues[category] ?? []
         guard venues.count >= CategoryFold.switcherFloor else { return [] }
         return CategoryFold.scopes(category: category, present: Set(venues))
@@ -730,8 +750,12 @@ struct MainSurface: View {
     private var socialScopeRail: some View {
         let accounts = socialAccounts
         if SocialScopeRail.shows(source: filter.source, accounts: accounts.count) {
+            // At most `railCap` faces, most recent poster first, the rest
+            // behind `+N` (prd §824).
+            let visible = SocialScopeRail.visible(accounts, recent: chrome.recentHandles,
+                                                  scope: chrome.personScope)
             FaceScopeRail(
-                items: SocialScopeRail.items(accounts, source: filter.source,
+                items: SocialScopeRail.items(visible.shown, source: filter.source,
                                              fresh: chrome.freshHandles),
                 scope: chrome.personScope,
                 compact: chrome.minimized && !showsRail,
@@ -752,9 +776,20 @@ struct MainSurface: View {
                             if case .avatar(let url, _) = item.face { return url }
                             return nil
                         }())
-                })
+                },
+                more: visible.hidden,
+                onMore: { allFacesShown = true })
+            .sheet(isPresented: $allFacesShown) {
+                SocialFacesTray(accounts: accounts, source: filter.source,
+                                scope: chrome.personScope) { picked in
+                    withAnimation(DS.Motion.standard) { chrome.personScope = picked }
+                }
+            }
         }
     }
+
+    /// The social rail's `+N` list is up (prd §824).
+    @State private var allFacesShown = false
 
     /// **THE GITHUB ROOM'S FACE RAIL** (user ruling, 2026-09-11) — the repos and
     /// people you watch, scoping one plain feed.
