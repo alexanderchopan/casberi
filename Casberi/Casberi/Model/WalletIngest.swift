@@ -1863,13 +1863,34 @@ enum WalletIngest {
     /// a caller must not store as "empty".
     static func unwatchedHoldings(address: String) async
         -> (totalUSD: Double, bySymbol: [String: Double])? {
-        guard !DemoMode.isActive else { return (0, [:]) }
+        // nil, never "reached, empty": a caller STORES what this returns, and
+        // the demo's zeros were saved as real reads and held for a week (§803j,
+        // found on the simulator the demo had been entered on).
+        guard !DemoMode.isActive else { return nil }
         guard !networks(for: address).isEmpty else { return (0, [:]) }
-        let h = await holdings(addresses: [address])
-        guard h.reached else { return nil }
-        guard let g = h.group else { return (0, [:]) }
-        return (g.total, g.bySymbol)
+        // The same candidates, prices and backstop as a watched wallet — but a
+        // CENT floor, not `holdingFloor` (§803j, measured). An app wallet holds
+        // pocket change by design: Privy Home read $1.37, $1.00 and $0.96 for
+        // the user's three funded apps, and the $1.99 line zeroed every one, so
+        // the room said $0.00 over money the person could see. The spam
+        // defence the $1.99 line was standing in for is already upstream:
+        // Zerion's `filter[trash]=only_non_trash`, and `holdingCeiling` below.
+        // Uncached: the Privy seat's own six-hour/weekly budget is the bound.
+        let (candidates, reached) = await collectCandidates(addresses: [address])
+        guard reached else { return nil }
+        let priced = await backstopPrices(await priceSPL(candidates))
+        var bySymbol: [String: Double] = [:]
+        for c in priced {
+            guard let price = c.price, price > 0 else { continue }
+            let usd = c.amount * price
+            guard usd.isFinite, usd >= unwatchedFloor, usd < holdingCeiling else { continue }
+            bySymbol[c.symbol, default: 0] += usd
+        }
+        return (bySymbol.values.reduce(0, +), bySymbol)
     }
+
+    /// A cent: the floor for a wallet nobody watches (see `unwatchedHoldings`).
+    static let unwatchedFloor: Double = 0.01
 
     /// The top-5-by-value cells for one or more hex addresses, combined —
     /// builds on `fetchHeldTokens` (the shared read), so the treemap and the

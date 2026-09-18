@@ -25,9 +25,9 @@ import Foundation
 /// answers with a bot challenge — so a sync is a plain request, not a hidden
 /// web view.
 ///
-/// **The inner shape of `accounts` was past the capture's depth.** It is read
-/// tolerantly (`wallets(in:)`): any object carrying an address-shaped
-/// `address` is a wallet, and an email or phone account is not.
+/// **An app's `accounts` hold more than its wallet** (measured, §803j): the
+/// email, Farcaster and X accounts you signed in with, a smart wallet, and any
+/// wallet of your OWN you linked. Only `isAppMadeWallet` is the app's wallet.
 enum PrivyHomeFeed {
 
     static let source = "Privy"
@@ -239,9 +239,8 @@ enum PrivyHomeFeed {
                 return
             }
             guard let object = node as? [String: Any] else { return }
-            let type = (string(object["type"]) ?? "").lowercased()
             if let address = string(object["address"]),
-               !["email", "phone", "sms"].contains(type),
+               isAppMadeWallet(object),
                isWalletAddress(address) {
                 let key = address.hasPrefix("0x") ? address.lowercased() : address
                 if seen.insert(key).inserted {
@@ -255,6 +254,29 @@ enum PrivyHomeFeed {
         }
         walk(json, depth: 0)
         return out
+    }
+
+    /// Whether an account is a wallet the APP made for you — the only kind
+    /// Privy Home lists (user, 2026-09-17: "that is my personal public one, not
+    /// a privy one … when i go to their homepage it doesnt show me that so our
+    /// app shouldn't either"). MEASURED on that account: of 114 `wallet`
+    /// accounts, 113 are `connector_type: embedded` / `wallet_client_type:
+    /// privy`, and one is `injected` / `rainbow` — the person's own wallet,
+    /// linked to Zora to sign in, and counted as one of Zora's until now.
+    ///
+    /// A `smart_wallet` IS the app's: the app makes it over the embedded signer,
+    /// and for an app that uses one it is where the money sits — the first cut
+    /// of this rule dropped them with the Rainbow wallet and the room read
+    /// $0.00, because Farcaster wallet's DEGEN lives at its smart wallet
+    /// (0xDB2…5EA9, the address Privy Home shows for it). An email, phone or
+    /// social account carries no connector and falls out on the same test.
+    static func isAppMadeWallet(_ account: [String: Any]) -> Bool {
+        let type = (string(account["type"]) ?? "").lowercased()
+        if type == "smart_wallet" { return true }
+        guard type == "wallet" else { return false }
+        let connector = (string(account["connector_type"]) ?? "").lowercased()
+        let client = (string(account["wallet_client_type"]) ?? "").lowercased()
+        return connector == "embedded" || client == "privy"
     }
 
     /// An EVM address (0x + 40 hex) or a Solana one (32–44 base58).
@@ -321,6 +343,22 @@ enum PrivyHomeFeed {
     }
 
     static func txPrefix(appID: String) -> String { "\(txPrefix)\(appID):" }
+
+    /// Apps whose wallet list LOST an address between two reads (§803j): their
+    /// landed activity may have come from a wallet that is no longer theirs —
+    /// the person's own linked wallet, read as Zora's until the fix — so it is
+    /// cleared and read again. An app that only GAINED a wallet keeps its rows,
+    /// and an app missing from the new read is left alone (an absent app is
+    /// "we could not see", never "it is gone": the delete-guard rule).
+    static func appsLosingWallets(old: [App], new: [App]) -> [String] {
+        let fresh = Dictionary(new.map { ($0.id, Set($0.wallets.map { key($0.address) })) },
+                               uniquingKeysWith: { a, _ in a })
+        return old.compactMap { app in
+            guard let now = fresh[app.id] else { return nil }
+            let before = Set(app.wallets.map { key($0.address) })
+            return before.isSubset(of: now) ? nil : app.id
+        }
+    }
 
     /// A funded or recently used app's EVM wallets whose activity is due —
     /// every six hours at most, ten a pass. An empty wallet nobody uses has no
@@ -567,7 +605,8 @@ enum PrivyHomeFeed {
 
     /// Under the figure.
     static func caption(_ room: Room) -> String {
-        room.fundedCount == 1
+        if room.fundedCount == 0 { return String(localized: "in \(room.appCount) app wallets") }
+        return room.fundedCount == 1
             ? String(localized: "in one app, of \(room.appCount)")
             : String(localized: "across \(room.fundedCount) apps, of \(room.appCount)")
     }

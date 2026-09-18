@@ -127,25 +127,35 @@ let body = """
 {"user":{"id":"u","apps":[
  {"id":"a1","name":"Wildcard","logo_url":"https://x/y.png","created_at":1714089600,"last_active_at":1719705600000,
   "accounts":[{"type":"email","address":"person@example.com"},
-              {"type":"wallet","address":"\(evm)","chain_type":"ethereum"}]},
+              {"type":"wallet","address":"\(evm)","chain_type":"ethereum","connector_type":"embedded","wallet_client_type":"privy"}]},
  {"id":"a2","name":"  ","created_at":"2025-01-02T03:04:05.000Z",
-  "accounts":[{"type":"wallet","address":"\(sol)","chain_type":"solana"},
-              {"type":"smart_wallet","address":"\(evm2)"},
-              {"type":"wallet","address":"\(evm2.uppercased().replacingOccurrences(of: "0X", with: "0x"))"}]},
+  "accounts":[{"type":"wallet","address":"\(sol)","chain_type":"solana","connector_type":"embedded","wallet_client_type":"privy"},
+              {"type":"wallet","address":"\(evm2)","connector_type":"embedded","wallet_client_type":"privy"},
+              {"type":"wallet","address":"\(evm2.uppercased().replacingOccurrences(of: "0X", with: "0x"))","connector_type":"embedded"}]},
  {"id":"a3","name":"Only email","accounts":[{"type":"email","address":"p@q.com"}]},
- {"id":"a1","name":"Duplicate","accounts":[{"type":"wallet","address":"\(evm)"}]}
+ {"id":"a4","name":"Zora","accounts":[
+              {"type":"wallet","address":"0x2222222222222222222222222222222222222222","connector_type":"embedded","wallet_client_type":"privy"},
+              {"type":"wallet","address":"0x3333333333333333333333333333333333333333","connector_type":"injected","wallet_client_type":"rainbow"},
+              {"type":"smart_wallet","address":"0x4444444444444444444444444444444444444444","smart_wallet_type":"kernel"},
+              {"type":"farcaster","fid":1,"owner_address":"0x5555555555555555555555555555555555555555"}]},
+ {"id":"a1","name":"Duplicate","accounts":[{"type":"wallet","address":"\(evm)","connector_type":"embedded"}]}
 ]}}
 """
 let apps = PrivyHomeFeed.apps(json(body)) ?? []
-check(apps.count == 2, "an app with no wallet and a repeated id are dropped")
+check(apps.count == 3, "an app with no wallet and a repeated id are dropped")
+let zora = apps.first { $0.id == "a4" }
+check(zora?.wallets.map(\.address) == ["0x2222222222222222222222222222222222222222",
+                                       "0x4444444444444444444444444444444444444444"],
+      "the wallets the APP made — embedded and smart — never your own linked wallet or a Farcaster custody address (MEASURED: your Rainbow wallet was counted as Zora's; dropping smart wallets zeroed the room)")
 check(apps.first?.wallets.map(\.address) == [evm], "an email account is never a wallet")
 check(apps.first?.wallets.first?.chain == "ethereum", "chain_type is kept")
 check(apps.first?.createdAt == Date(timeIntervalSince1970: 1714089600), "unix seconds read as seconds")
 check(apps.first?.lastActiveAt == Date(timeIntervalSince1970: 1719705600), "milliseconds read as milliseconds")
-check(apps.last?.createdAt != nil, "an ISO date reads")
-check(apps.last?.wallets.count == 2, "the same EVM address in two cases is one wallet")
-check(apps.last?.name == PrivyHomeFeed.shortAddress(sol), "a blank name falls back to the wallet, never empty")
-check(PrivyHomeFeed.line(apps.last!) == "\(PrivyHomeFeed.shortAddress(sol)) +1", "two wallets say so on the line")
+let a2 = apps.first { $0.id == "a2" }!
+check(a2.createdAt != nil, "an ISO date reads")
+check(a2.wallets.count == 2, "the same EVM address in two cases is one wallet")
+check(a2.name == PrivyHomeFeed.shortAddress(sol), "a blank name falls back to the wallet, never empty")
+check(PrivyHomeFeed.line(a2) == "\(PrivyHomeFeed.shortAddress(sol)) +1", "two wallets say so on the line")
 check(PrivyHomeFeed.ref(apps.first!) == "privy:app:a1", "the ref is the app id")
 check(!PrivyHomeFeed.isWalletAddress("person@example.com"), "an email is not address-shaped")
 check(!PrivyHomeFeed.isWalletAddress("0x123"), "a short hex is not an address")
@@ -227,6 +237,15 @@ check(PrivyHomeFeed.Section.apps.allows(ref: "privy:app:x") && !PrivyHomeFeed.Se
       "Apps holds app rows only — a tile shows what its word says")
 check(PrivyHomeFeed.Section.activity.allows(ref: txr) && !PrivyHomeFeed.Section.activity.allows(ref: "privy:app:x"),
       "Activity holds what moved only")
+
+// ── A wallet that stops being an app's ──────────────────────────────────
+let before = [PrivyHomeFeed.App(id: "z", name: "Zora", logoURL: nil, origin: nil, createdAt: nil, lastActiveAt: nil,
+                                wallets: [.init(address: hex(1), chain: nil), .init(address: hex(2), chain: nil)])]
+let after = [PrivyHomeFeed.App(id: "z", name: "Zora", logoURL: nil, origin: nil, createdAt: nil, lastActiveAt: nil,
+                               wallets: [.init(address: hex(1), chain: nil)])]
+check(PrivyHomeFeed.appsLosingWallets(old: before, new: after) == ["z"], "an app that lost a wallet has its activity re-read")
+check(PrivyHomeFeed.appsLosingWallets(old: after, new: before).isEmpty, "an app that gained one keeps its rows")
+check(PrivyHomeFeed.appsLosingWallets(old: before, new: []).isEmpty, "an app missing from a read is never cleared (we could not see)")
 
 print(failures == 0 ? "privy-selftest: all checks ✓" : "privy-selftest: \(failures) FAILED")
 exit(failures == 0 ? 0 : 1)

@@ -49,7 +49,11 @@ final class PrivyHomeStore {
     static let shared = PrivyHomeStore()
 
     private static let appsKey = "privy.home.apps.v1"
-    private static let balancesKey = "privy.home.balances.v1"
+    /// v2 (§803j): every v1 balance was read under the Wallet seat's $1.99
+    /// floor and says $0 for a wallet holding $1.37, so none of it is kept —
+    /// a new key means every wallet is read again, 30 a pass.
+    /// v3: v2 could hold the demo's zeros, stored as real reads.
+    private static let balancesKey = "privy.home.balances.v3"
     private static let hiddenKey = "privy.home.hidden.v1"
     private static let showEmptyKey = "privy.home.showEmpty"
     private static let activityReadKey = "privy.home.activityRead.v1"
@@ -174,6 +178,16 @@ final class PrivyHomeStore {
         if let data = try? JSONEncoder().encode(hidden) { DefaultsWrite.set(data, forKey: Self.hiddenKey) }
     }
 
+    func forgetActivityReads(_ addresses: [String], cleared: Int) {
+        for address in addresses { activityReadAt.removeValue(forKey: PrivyHomeFeed.key(address)) }
+        if let data = try? JSONEncoder().encode(activityReadAt) {
+            DefaultsWrite.set(data, forKey: Self.activityReadKey)
+        }
+        activityCount = max(0, activityCount - cleared)
+        revision &+= 1
+        DefaultsWrite.set(Data(String(activityCount).utf8), forKey: Self.activityCountKey)
+    }
+
     func noteActivity(read addresses: [String], landed: Int, at now: Date) {
         for address in addresses { activityReadAt[PrivyHomeFeed.key(address)] = now }
         if let data = try? JSONEncoder().encode(activityReadAt) {
@@ -228,6 +242,11 @@ enum PrivyHomeLive {
             lastFailure = .noSession
             return nil
         }
+        // The demo reaches nothing (§483): no Privy read, no chain read.
+        guard !DemoMode.isActive else {
+            lastFailure = .unreachable
+            return nil
+        }
         guard !running else { return 0 }
         running = true
         defer { running = false }
@@ -243,7 +262,9 @@ enum PrivyHomeLive {
             lastFailure = .drifted
             return nil
         }
+        let losing = PrivyHomeFeed.appsLosingWallets(old: PrivyHomeStore.shared.apps, new: apps)
         PrivyHomeStore.shared.setApps(apps)
+        if !losing.isEmpty { clearActivity(of: losing, apps: apps, context: context) }
         let added = land(apps, context: context, now: now)
         await readBalances(apps, now: now)
         let moved = await readActivity(apps, context: context, now: now)
@@ -411,6 +432,32 @@ enum PrivyHomeLive {
 
     // MARK: - Activity
 
+    /// Clears the activity landed for apps whose wallet list shrank, and marks
+    /// their remaining wallets unread so the next pass reads them again from
+    /// the app's own wallet (§803j). Only `privy:tx:<appID>:` rows — never an
+    /// app row, and never another app's.
+    @MainActor
+    private static func clearActivity(of appIDs: [String], apps: [PrivyHomeFeed.App],
+                                      context: ModelContext) {
+        let source = PrivyHomeFeed.source
+        var cleared = 0
+        for appID in appIDs {
+            let prefix = PrivyHomeFeed.txPrefix(appID: appID)
+            let descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == source && ($0.sourceRef?.starts(with: prefix) ?? false) })
+            for thing in (try? context.fetch(descriptor)) ?? [] where thing.isLive {
+                context.delete(thing)
+                cleared += 1
+            }
+        }
+        let addresses = apps.filter { appIDs.contains($0.id) }.flatMap(\.wallets).map(\.address)
+        PrivyHomeStore.shared.forgetActivityReads(addresses, cleared: cleared)
+        if cleared > 0 { context.saveHonestly() }
+        #if DEBUG
+        NSLog("[Casberi] privy| cleared %d activity rows from %d app(s) whose wallets changed", cleared, appIDs.count)
+        #endif
+    }
+
     /// What moved in the wallets `PrivyHomeFeed.activityTargets` picks, off the
     /// Wallet seat's own Zerion transfer read. One row per leg, dated when it
     /// was mined, so money arriving notifies through the Wallet digest's own
@@ -496,6 +543,45 @@ enum PrivyHomeLive {
                    let account = accounts.first as? [String: Any] {
                     NSLog("[Casberi] privy| account keys: %@", account.keys.sorted().joined(separator: ","))
                 }
+            }
+            // Which accounts are the app's OWN wallet and which are a wallet
+            // the person brought (§803j): every account's `type` and key set,
+            // tallied; how many apps share one address; and how many of the
+            // addresses are watched in Wallet. Counts and machine words only.
+            if let user = (json as? [String: Any])?["user"] as? [String: Any],
+               let list = user["apps"] as? [Any] {
+                var types: [String: Int] = [:]
+                var keySets: [String: Int] = [:]
+                var appsPerAddress: [String: Set<String>] = [:]
+                var fieldValues: [String: [String: Int]] = [:]
+                for case let app as [String: Any] in list {
+                    let appID = (app["id"] as? String) ?? ""
+                    for case let account as [String: Any] in (app["accounts"] as? [Any]) ?? [] {
+                        let type = (account["type"] as? String) ?? "none"
+                        types[type, default: 0] += 1
+                        keySets[account.keys.sorted().joined(separator: ","), default: 0] += 1
+                        for field in ["wallet_client_type", "connector_type", "chain_type", "wallet_index", "imported"] {
+                            if let v = account[field] { fieldValues[field, default: [:]]["\(v)", default: 0] += 1 }
+                        }
+                        if let address = account["address"] as? String, PrivyHomeFeed.isWalletAddress(address) {
+                            appsPerAddress[PrivyHomeFeed.key(address), default: []].insert(appID)
+                        }
+                    }
+                }
+                NSLog("[Casberi] privy| account types: %@", types.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: " "))
+                for (keys, n) in keySets.sorted(by: { $0.value > $1.value }) {
+                    NSLog("[Casberi] privy| account shape x%d: %@", n, keys)
+                }
+                for (field, values) in fieldValues {
+                    NSLog("[Casberi] privy| field %@: %@", field, values.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: " "))
+                }
+                let spread = appsPerAddress.values.map(\.count).sorted(by: >)
+                NSLog("[Casberi] privy| addresses=%d, apps per address (top): %@", spread.count,
+                      spread.prefix(8).map(String.init).joined(separator: ","))
+                let watched = Set(WalletStore.shared.addresses.map { PrivyHomeFeed.key($0.address) })
+                let shared = appsPerAddress.filter { watched.contains($0.key) }
+                NSLog("[Casberi] privy| watched in Wallet: %d address(es), in %@ app(s)", shared.count,
+                      shared.values.map { String($0.count) }.joined(separator: ","))
             }
         } else if status == 200 {
             NSLog("[Casberi] privy| DRIFTED — 200 without user.apps")
