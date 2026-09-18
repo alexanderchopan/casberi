@@ -72,7 +72,12 @@ refuse() { say "behind $BEHIND, ahead $AHEAD — NOT fast-forwarded: $1"; exit 0
 # A build, verify or ship reads the working tree for minutes at a time, and both
 # ship scripts rsync it. Moving files under one of those is how a single binary
 # ends up half from one commit and half from another.
-if pgrep -fl 'xcodebuild|verify\.sh|verify-mac\.sh|testflight.*\.sh' >/dev/null 2>&1; then
+# The pattern is overridable ONLY so `repo-sync-selftest.sh` can run inside
+# verify.sh: with the fixed pattern, the self-test's own sync always saw
+# verify running and refused, so the harness could never pass in the one pass
+# that runs it (2026-09-17). The self-test also drives the refusal itself.
+BUSY="${REPO_SYNC_BUSY_PATTERN:-xcodebuild|verify\.sh|verify-mac\.sh|testflight.*\.sh}"
+if pgrep -fl "$BUSY" >/dev/null 2>&1; then
   refuse "a build/verify/ship is running — the tree is being read right now"
 fi
 

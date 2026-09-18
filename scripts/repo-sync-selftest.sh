@@ -41,7 +41,9 @@ advance() {
      && git -c user.email=t@t -c user.name=t commit -qam two && git push -q origin main) >/dev/null 2>&1
   rm -rf "$TMP/push"
 }
-run() { CASBERI_REPO="$TMP/wc" zsh "$SCRIPT" >/dev/null 2>&1 }
+# A busy pattern that matches no process, so a verify or ship running around
+# this harness (verify.sh runs it) does not make every case a refusal.
+run() { CASBERI_REPO="$TMP/wc" REPO_SYNC_BUSY_PATTERN='^no-such-process-casberi$' zsh "$SCRIPT" >/dev/null 2>&1 }
 head_of() { git -C "$TMP/wc" rev-parse HEAD }
 
 print "repo-sync self-test"
@@ -114,6 +116,20 @@ if grep -q "NOT fast-forwarded" "$LOGF" 2>/dev/null; then
   ok "a refusal says so in the ledger, with its reason"
 else
   bad "a refusal was silent — indistinguishable from being in sync"
+fi
+
+# 7 · a build, verify or ship running holds the tree still. Driven by a
+#     sibling process with a unique argument: macOS `pgrep` never matches the
+#     caller's own ancestors, so this harness's shell could not stand in.
+fresh; advance
+BEFORE="$(head_of)"
+sleep 31.4159 & BUSY_PID=$!
+CASBERI_REPO="$TMP/wc" REPO_SYNC_BUSY_PATTERN='sleep 31\.4159' zsh "$SCRIPT" >/dev/null 2>&1
+kill $BUSY_PID 2>/dev/null; wait $BUSY_PID 2>/dev/null
+if [[ "$(head_of)" == "$BEFORE" ]]; then
+  ok "a running build, verify or ship holds the tree still"
+else
+  bad "the tree moved under a running build — one binary from two commits"
 fi
 
 print ""
