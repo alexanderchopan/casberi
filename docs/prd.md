@@ -57868,3 +57868,7 @@ So there are two separate facts and only the second one hurts. The container's 3
 **To finish it:** enable Arc Mainnet on the Alchemy dashboard for this app, then set `onAlchemy: true` on Arc's row — that restores the transfer fallback and NFTs on Arc. Not done here: enabling a network is an account setting, the user's to change.
 
 **Not wired, deliberately:** Arc has no entry in the gas, DeFiLlama, GeckoTerminal, WalletConnect or approvals tables. Each is a feature that reads a specific chain (gas estimates, price backstop, charts, dapp sessions, approval logs) and none is needed for balances and activity; each wants its own measurement first.
+
+## §808a — Arc rides Alchemy too, now the network is enabled (user: "i just enabled it", 2026-09-17)
+
+Measured the moment the user enabled Arc Mainnet on the Alchemy dashboard: `eth_chainId` → `0x13b2` (200), `getAssetTransfers` 200 for `external`/`erc20`/`erc721`/`erc1155` AND for `internal` — so Arc joins Ethereum, Base and Polygon as a chain that takes the internal category (§788) — and the Portfolio `by-address` read 200 with `arc-mainnet` beside `eth-mainnet` in one body. Transfers carry `metadata.blockTimestamp`, so Arc needs none of `TransferTimes`' block-time read (§790). Arc's row drops `onAlchemy: false` and takes `internalTransfers: true`; the `onAlchemy` flag stays for the next chain that arrives before our key serves it.

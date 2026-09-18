@@ -50,8 +50,9 @@ enum WalletIngest {
         /// chains, which is every read Robinhood (no Zerion mapping) ever made.
         var internalTransfers: Bool = false
         /// Whether this app's Alchemy key serves the chain. MEASURED 2026-09-17
-        /// on Arc: Alchemy lists `arc-mainnet`, but our app answers every call
-        /// on it with HTTP 403 ("ARC_MAINNET is not enabled for this app") —
+        /// on Arc: Alchemy lists `arc-mainnet`, but until the network was
+        /// enabled for our app every call answered HTTP 403 ("ARC_MAINNET is
+        /// not enabled for this app") —
         /// and `BridgeHealth` reads a 403 as a refused KEY, so one NFT call on
         /// Arc would paint the whole Wallet seat as broken. A chain with this
         /// off is read through Zerion only: never in the Alchemy transfer sync,
@@ -85,14 +86,16 @@ enum WalletIngest {
         // `/address/` rewrite rests on. MEASURED end to end the same day
         // (prd §788) and ON by default since — see `WalletChainStore.selectable`.
         Chain(network: "worldchain-mainnet", explorer: "https://worldscan.org/tx/", symbol: "ETH", displayName: "World Chain"),
-        // Arc (2026-09-17) — Circle's L1, mainnet since 2026-09-16, chain id
-        // 5042 (`0x13b2`, from `eth_chainId` on `rpc.mainnet.arc.io`). USDC is
-        // its gas coin, 18 decimals as the native balance (docs.arc.io). Read
-        // through Zerion (`arc`), which MEASURED accepts it in both the
-        // positions and transactions filter; NOT through Alchemy yet (see
-        // `onAlchemy`). `explorer.arc.io` answers 200 on `/tx/` and `/address/`.
+        // Arc (2026-09-17, prd §808) — Circle's L1, mainnet since 2026-09-16,
+        // chain id 5042 (`0x13b2`, from `eth_chainId` on `rpc.mainnet.arc.io`).
+        // USDC is its gas coin, 18 decimals as the native balance (docs.arc.io).
+        // Zerion (`arc`) accepts it in both filters. Alchemy served it only once
+        // the network was enabled for this app (403 before, 200 after, the same
+        // day) — and then `getAssetTransfers` took `internal` too, so it joins
+        // the three chains that do. `explorer.arc.io` answers 200 on `/tx/` and
+        // `/address/`.
         Chain(network: "arc-mainnet", explorer: "https://explorer.arc.io/tx/", symbol: "USDC", displayName: "Arc",
-              onAlchemy: false),
+              internalTransfers: true),
     ]
 
     /// The chains the Alchemy calls may name (see `Chain.onAlchemy`).
