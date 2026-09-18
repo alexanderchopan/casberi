@@ -2533,6 +2533,20 @@ harness "Save-coalescer self-test" "22 assertions, 5 mutations, 7 drift guards �
 # the reader filter wired at the candidates and not at the tool snapshot.
 harness "Account-page self-test" "6 mutations, 12 drift guards — the account page's words, order, note, and who-may-read list" "scripts/account-page-selftest.sh" "the account-page self-test failed — run scripts/account-page-selftest.sh"
 
+# The working copy's own sync (scripts/repo-sync.sh). Two opposite behaviours,
+# and either one failing is silent by nature: it must fast-forward a clean stale
+# copy, or the drift it exists to end simply continues; and it must not touch a
+# tree somebody is editing, or the thing meant to protect a session's work is
+# what eats it. Both mutations are proven to fail this harness — deleting the
+# dirty-tree guard reds the refusal cases, stubbing the fast-forward reds the
+# catch-up case — and the dirty case deliberately edits a file the incoming
+# commit does NOT touch, because on the same file git's own conflict refusal
+# saves the tree with or without our guard, and the check then certifies nothing.
+# Earned: on 2026-09-17 this copy sat 13 commits behind origin with a clean
+# `git status`, because the post-commit hook only ever integrated on a REJECTED
+# push and skipped even that whenever the tree was dirty.
+harness "Repo-sync self-test" "6 checks, 2 mutations — the working copy catches up when it is safe, and never when a session is mid-edit" "scripts/repo-sync-selftest.sh" "the repo-sync self-test failed — run scripts/repo-sync-selftest.sh"
+
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,
 # which is how fourteen data drawings shipped with no entrance and how the

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Keep the canonical working copy current with origin/main. Copy to
+  ~/Library/LaunchAgents/ and bootstrap it:
+
+    cp scripts/com.casberi.repo-sync.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.casberi.repo-sync.plist
+
+  WHY A TIMER AND NOT A HOOK. Git hooks only fire when THIS copy runs a git
+  command. The failure they cannot see is the one that actually happened: a
+  session commits from its own worktree, the post-commit hook pushes it to
+  origin, and this working copy — where nobody typed anything — never learns.
+  On 2026-09-17 it sat 13 commits behind with a clean `git status`. Only
+  something that runs on its own can close that.
+
+  Every 5 minutes rather than hourly: the cost is one `git fetch` against a
+  small repo, and the window where a session prepares a ship from a stale tree
+  is what this is shortening. The script exits silently when there is nothing
+  to do, so a quiet day writes nothing to the ledger.
+
+  It is SAFE to run at any moment by construction — it fast-forwards only a
+  clean tree with no local commits and no build in flight, and never stashes,
+  rebases or resets. See the script's own header for what it refuses and why.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.casberi.repo-sync</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-lc</string>
+        <string>/Users/alexanderchopan/Developer/casberi/scripts/repo-sync.sh</string>
+    </array>
+
+    <!-- -lc gives the job a login shell so `git` is on PATH exactly as it is in
+         a terminal. A LaunchAgent otherwise inherits a minimal PATH and the run
+         dies on "git: not found" with no other symptom. Same reason as
+         com.casberi.nightly-mac. -->
+
+    <key>StartInterval</key>
+    <integer>300</integer>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/alexanderchopan/Developer/casberi</string>
+
+    <!-- The script keeps its own ledger at .git/last-sync.log; these catch
+         anything that dies before it can write one (a bad PATH, a moved repo). -->
+    <key>StandardOutPath</key>
+    <string>/Users/alexanderchopan/Developer/casberi/scripts/output/repo-sync.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/alexanderchopan/Developer/casberi/scripts/output/repo-sync.stderr.log</string>
+
+    <!-- Unlike the nightly, a missed run SHOULD fire on wake: the whole point is
+         that the copy is current before anyone starts working in it, and the run
+         is a fetch, not a build. -->
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>

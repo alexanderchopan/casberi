@@ -1,0 +1,58 @@
+#!/bin/sh
+# Auto-backup to origin after every commit.
+#
+# TRACKED COPY. `.git/hooks` is not version controlled, so for a year this hook
+# — the only thing putting work on the remote — existed on exactly one machine
+# and in no backup. Install it with `scripts/install-hooks.sh`.
+#
+# Strategy: push. If the remote has moved ahead, fetch + rebase, and push only
+# when that rebase applies CLEANLY. On a genuine conflict, abort the rebase,
+# restore the working tree exactly as it was, and log what to do — a script
+# can't safely guess how to merge conflicting edits; that judgment is yours.
+# Runs in the background so `git commit` returns instantly.
+#
+# It integrates ONLY on a rejected push, and skips even that when the tree is
+# dirty. That is deliberate (both are cases needing judgment) but it means this
+# hook can never keep the copy current on its own: it fires only when someone
+# commits HERE. Pulling other sessions' work in is scripts/repo-sync.sh's job,
+# on a timer. If that agent is not loaded, this copy will drift again.
+{
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  dirty=$(git status --porcelain)
+
+  if git push origin "$branch"; then
+    echo "[$(date)] backup OK — pushed cleanly"
+    exit 0
+  fi
+
+  echo "[$(date)] push rejected — remote moved ahead, integrating…"
+  if ! git fetch origin "$branch"; then
+    echo "fetch failed (offline?). Your commit is safe locally; run 'git push' when back online."
+    exit 0
+  fi
+
+  # State the real distance. The old hook said only "remote moved ahead", so a
+  # copy 1 behind and a copy 13 behind logged the same sentence — and the 13
+  # case is the one where a ship built from this tree is stale.
+  behind=$(git rev-list --count "$branch..origin/$branch" 2>/dev/null || echo "?")
+  ahead=$(git rev-list --count "origin/$branch..$branch" 2>/dev/null || echo "?")
+  echo "  position: $behind behind, $ahead ahead of origin/$branch"
+
+  if [ -n "$dirty" ]; then
+    echo "Skipping auto-rebase: uncommitted changes in tree. Run: git pull --rebase && git push"
+    echo "NOTE: this copy is $behind commits behind and will STAY behind until that runs."
+    exit 0
+  fi
+
+  if git rebase "origin/$branch"; then
+    if git push origin "$branch"; then
+      echo "[$(date)] backup OK — rebased onto origin/$branch (no conflicts) + pushed"
+    else
+      echo "Rebased cleanly but push still failed — run 'git push' manually."
+    fi
+  else
+    git rebase --abort
+    echo "[$(date)] MERGE CONFLICT — auto-rebase aborted, working tree restored untouched."
+    echo "Resolve yourself:  git pull --rebase  → fix files → git add -A → git rebase --continue → git push"
+  fi
+} > "$(git rev-parse --git-dir)/last-autopush.log" 2>&1 &
