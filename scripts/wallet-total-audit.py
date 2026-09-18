@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Chain-filter audit (prd §825, 2026-09-18).
+"""Wallet-total audit (prd §825 + §826, 2026-09-18).
+
+WHAT THE WALLET ROOM'S CROWN NUMBER IS MADE OF, AND HOW IT FAILS. Renamed from
+`chain-filter-audit.py` when §826 added the composition rules — the chain filter
+was only half of why that number was wrong.
 
 WHY THIS EXISTS. The user opened the Wallet room and saw a Privy app wallet's
 money — Zora's, a STORED last read — and nothing at all from their own wallets,
@@ -32,6 +36,25 @@ So the shape is the check, not any particular chain:
   5. The crown DRAWS that stamp, and the room passes it. A fallback nothing
      says is a fallback that lies.
 
+  6. `portfolioRead` reads NOTHING from `PrivyHomeStore`. §803g merged an app
+     wallet's money into the crown behind a toggle that defaulted on, and the
+     user ruled it out: "do not combine privy with the regular wallet balance
+     leave privy separate". It was also the one contributor read from a STORED
+     last read while every other was live, which is how a pass that reached no
+     chain still drew a confident figure.
+  8. Zerion answering does not END the read. A chain Zerion does not map can
+     only be read through Alchemy, and Alchemy's body used to be built only
+     when Zerion was UNREACHED — so such a chain was invisible while Zerion
+     was up, its picker row was a dead control, and a wallet holding ten
+     dollars there showed three. Every SELECTABLE chain with no Zerion mapping
+     must also be in `defaultNetworkIDs` and carry a `seeded` row, or it is
+     money the app silently cannot see.
+  7. The dust floor is the ANSWERING ARM'S, not a constant. $1.99 predates
+     Zerion's server-side trash filter by four days, and on that arm it drops
+     only the person's genuine small positions — measured in §803j, fixed there
+     for app wallets alone, and the watched wallets kept the old line until
+     §826.
+
 WHAT IT DELIBERATELY DOES NOT CHECK. Whether either provider actually accepts
 any given chain — that is a measurement, not a static fact, and `-portfolioProbe`
 is where it is read. This only holds the shape that keeps one refusal from
@@ -43,11 +66,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FILES = {
-    "ZerionAPI": ROOT / "Casberi/Casberi/Model/ZerionAPI.swift",
     "WalletIngest": ROOT / "Casberi/Casberi/Model/WalletIngest.swift",
     "WalletPortfolio": ROOT / "Casberi/Casberi/Model/WalletPortfolio.swift",
     "WalletFeedTiles": ROOT / "Casberi/Casberi/Screens/WalletFeedTiles.swift",
     "FeedScreen": ROOT / "Casberi/Casberi/Screens/FeedScreen.swift",
+    "PrivyHomeLive": ROOT / "Casberi/Casberi/Model/PrivyHomeLive.swift",
+    "WalletChainStore": ROOT / "Casberi/Casberi/Model/WalletChainStore.swift",
+    "ZerionAPI": ROOT / "Casberi/Casberi/Model/ZerionAPI.swift",
 }
 
 
@@ -149,6 +174,55 @@ def audit(texts: dict) -> list:
     if "var asOf: Date?" not in code["WalletPortfolio"]:
         bad.append("WalletPortfolio dropped `asOf` — nothing can carry the stamp (prd §825)")
 
+    # 6 — Privy is not in this number, under any spelling.
+    if "PrivyHomeStore" in pr:
+        bad.append("portfolioRead reads PrivyHomeStore — an app wallet's money is not the "
+                   "person's wallet balance, and it is a stored read standing beside live "
+                   "ones (prd §826)")
+    if "walletHoldings" in ingest or "countsInWallet" in code["PrivyHomeLive"]:
+        bad.append("the Privy-into-Wallet merge is back (`walletHoldings` / `countsInWallet`) "
+                   "— it was deleted from the surface AND the model (prd §826, §723)")
+
+    # 7 — the dust floor belongs to the arm that answered.
+    fh = body(ingest, "static func fetchHeldTokensUncached(")
+    if not fh:
+        bad.append("WalletIngest.fetchHeldTokensUncached is gone — this audit is blind")
+    else:
+        if "c.trashFiltered" not in fh:
+            bad.append("fetchHeldTokensUncached no longer varies its floor by the answering "
+                       "arm — $1.99 on Zerion's trash-filtered read drops the person's own "
+                       "small positions (prd §826)")
+        if re.search(r">=\s*holdingFloor", fh):
+            bad.append("fetchHeldTokensUncached is back to the flat `holdingFloor` (prd §826)")
+
+    # 8 — the union, and the chains that depend on it.
+    cc = body(ingest, "static func collectCandidates(addresses:")
+    if not cc:
+        bad.append("WalletIngest.collectCandidates is gone — this audit is blind")
+    elif "collectCandidatesAlchemy(addresses: addresses, only:" not in cc:
+        bad.append("collectCandidates no longer asks Alchemy for the chains Zerion cannot map "
+                   "— a chain only Alchemy serves is invisible whenever Zerion answers, and "
+                   "its picker row is a dead control (prd §826)")
+    # Any selectable chain with no Zerion mapping rides that union, so it must
+    # be on by default and seeded — otherwise it is money nobody can see.
+    store = code["WalletChainStore"]
+    mapped = set(re.findall(r'"[a-z0-9-]+":\s*"([a-z0-9-]+)"', code["ZerionAPI"]))
+    selectable = re.findall(r'\("([a-z0-9-]+-mainnet)"\s*,\s*"[^"]+"\)', store)
+    defaults = re.search(r"defaultNetworkIDs\s*=\s*\[(.*?)\]", store, re.S)
+    defaults = set(re.findall(r'"([a-z0-9-]+)"', defaults.group(1))) if defaults else set()
+    seeded = re.search(r"seeded:\s*\[\(id:.*?\n\s*\]", store, re.S)
+    seeded = set(re.findall(r'"([a-z0-9-]+-mainnet)"', seeded.group(0))) if seeded else set()
+    for net in selectable:
+        if net in mapped:
+            continue
+        if net not in defaults:
+            bad.append(f"`{net}` has no Zerion mapping and is OFF by default — it can only be "
+                       f"read through the Alchemy union, so nobody sees its money unless they "
+                       f"find the row (prd §826)")
+        if net not in seeded:
+            bad.append(f"`{net}` is on by default with no `seeded` row — every install that "
+                       f"already saved a chain set keeps it off forever (prd §826)")
+
     # 5 — and it is drawn, and passed.
     if "asOf" not in body(code["WalletFeedTiles"], "struct WalletBalanceHeadline"):
         bad.append("WalletBalanceHeadline no longer draws `asOf` — the crown would show a "
@@ -202,6 +276,22 @@ def self_test() -> int:
          lambda t: t.replace("var asOf: Date? = nil", "var stampedAt: Date? = nil", 1)),
         ("the crown stops passing the stamp", "FeedScreen",
          lambda t: t.replace("asOf: portfolio?.asOf,", "")),
+        ("Privy is merged back into the wallet total", "WalletIngest",
+         lambda t: t.replace("let read = await holdingsByWallet()",
+                             "let privy = PrivyHomeStore.shared.x\n        let read = await holdingsByWallet()")),
+        ("the Privy merge returns through the model", "PrivyHomeLive",
+         lambda t: t.replace("    // `walletHoldings` and the",
+                             "    var countsInWallet = true\n    // `walletHoldings` and the")),
+        ("Zerion answering ends the read again", "WalletIngest",
+         lambda t: t.replace("collectCandidatesAlchemy(addresses: addresses, only: blind)",
+                             "collectCandidatesAlchemy(addresses: addresses)")),
+        ("an Alchemy-only chain goes back to off-by-default", "WalletChainStore",
+         lambda t: t.replace('"solana-mainnet", "robinhood-mainnet",', '"solana-mainnet",')),
+        ("an Alchemy-only chain loses its seed row", "WalletChainStore",
+         lambda t: t.replace('("robinhood-mainnet",   "wallet.chains.robinhoodSeeded.v1"),', "")),
+        ("the flat $1.99 floor comes back", "WalletIngest",
+         lambda t: t.replace("let floor = c.trashFiltered ? unwatchedFloor : holdingFloor",
+                             "let floor = holdingFloor").replace("usd >= floor", "usd >= holdingFloor")),
     ]
     for label, key, mutate in cases:
         texts = dict(base)
@@ -223,11 +313,13 @@ if __name__ == "__main__":
         sys.exit(self_test())
     findings = audit(read())
     if findings:
-        print("✗ chain-filter audit findings:")
+        print("✗ wallet-total audit findings:")
         for line in findings:
             print("  " + line)
-        print("\nOne chain a provider refuses must not empty every wallet's balances, and a "
-              "wallet we could not reach must stand on its last reading, stamped (prd §825).")
+        print("\nThe crown counts the person's OWN accounts; one refused chain must not empty "
+              "them all; a real position is not dust; and a wallet we could not reach stands on "
+              "its last reading, stamped (prd §825, §826).")
         sys.exit(1)
-    print("✓ chain-filter audit: one refused chain costs only itself, and an unreachable "
+    print("✓ wallet-total audit: the crown counts the person's own accounts, one refused "
+          "chain costs only itself, no real position is dropped as dust, and an unreachable "
           "pass stands on its last reading with a date on it")

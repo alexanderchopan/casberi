@@ -1692,14 +1692,11 @@ enum WalletIngest {
         let read = await holdingsByWallet()
         var groups = read.groups
         // **A WALLET WE COULDN'T REACH STANDS ON ITS LAST READING, NOT ON
-        // NOTHING (prd §825).** This room's number is merged from several
-        // places, and one of them — Privy's app wallets (§803g) — is a STORED
-        // last read that keeps showing whatever happens on the wire. So a pass
-        // where the chains refused us painted a crown made entirely of app
-        // wallets: the person saw money they hold in somebody's app and none
-        // of the money in their own wallets, on every scope, with nothing
-        // saying why (user, 2026-09-18: "it's showing my zora balance but not
-        // my wallets"). The recorded value samples already carry each wallet's
+        // NOTHING (prd §825).** A pass where the chains answered nothing left
+        // this room with no number of its own at all, and §826 has since taken
+        // the one contributor that kept showing regardless — Privy's stored app
+        // wallet figures — out of it, so there is nothing left to paper over a
+        // failed read. The recorded value samples already carry each wallet's
         // last reading, `lastKnownHoldingsByWallet` already stamps them and
         // already refuses anything older than three days, and the Today brief
         // has stood on it since 2026-07-22 — the room that exists to state
@@ -1727,16 +1724,22 @@ enum WalletIngest {
         // Watched validators merge into the COMBINED read only, same reasoning
         // as exchanges above — they aren't scoped to any one address.
         let validatorsUSD = address == nil ? (await EthValidatorRead.totalUSD() ?? 0) : 0
-        // Privy app wallets join the COMBINED read only, and only when the
-        // person keeps "Count in Wallet total" on (prd §803g). Last read, not
-        // read now: the Privy seat's own sync owns that budget.
-        let privy = address == nil ? await MainActor.run { PrivyHomeStore.shared.walletHoldings } : []
+        // **PRIVY IS NOT IN THIS NUMBER (prd §826, user: "do not combine privy
+        // with the regular wallet balance leave privy separate").** §803g
+        // merged an app wallet's money into the crown behind a toggle that
+        // defaulted ON, and it was the wrong shape twice over: money in an app
+        // somebody else made is not money in your wallet, and it was the ONE
+        // contributor read from a STORED last read while every other one was
+        // live — so a pass where the chains answered nothing showed a crown
+        // made entirely of app wallets ("it's showing my zora balance but not
+        // my wallets"). Privy's money is stated in Privy's own room, where the
+        // app that holds it is named. Nothing here reads `PrivyHomeStore`.
         // Either source alone is a real portfolio — someone whose crypto is all
         // on an exchange still has one, and returning nil would paint the empty
         // state over a balance we successfully read.
-        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !privy.isEmpty else { return nil }
+        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 else { return nil }
         let portfolio = WalletPortfolio.from(groups: groups, exchange: exchange,
-                                             validatorsUSD: validatorsUSD, privy: privy,
+                                             validatorsUSD: validatorsUSD,
                                              asOf: asOf)
 
         // More than one PLACE, not more than one wallet — a single wallet plus
@@ -1746,7 +1749,7 @@ enum WalletIngest {
         // builds its doc by indexing INTO `groups`, so with none to index a
         // portfolio that's real (exchange/validator balances) would otherwise
         // fall through to an empty, broken `root = Stack([])` document.
-        if address == nil, groups.count + (exchange.isEmpty ? 0 : 1) + (privy.isEmpty ? 0 : 1) > 1 || groups.isEmpty, !portfolio.isEmpty {
+        if address == nil, groups.count + (exchange.isEmpty ? 0 : 1) > 1 || groups.isEmpty, !portfolio.isEmpty {
             // NO TITLE AND NO SUBLINE (2026-08-22, prd §447) — the map draws
             // bare, and both empties are load-bearing rather than tidying.
             //
@@ -1992,13 +1995,19 @@ enum WalletIngest {
         // found on the simulator the demo had been entered on).
         guard !DemoMode.isActive else { return nil }
         guard !networks(for: address).isEmpty else { return (0, [:]) }
-        // The same candidates, prices and backstop as a watched wallet — but a
-        // CENT floor, not `holdingFloor` (§803j, measured). An app wallet holds
+        // The same candidates, prices and backstop as a watched wallet — and a
+        // CENT floor, unconditionally (§803j, measured). An app wallet holds
         // pocket change by design: Privy Home read $1.37, $1.00 and $0.96 for
         // the user's three funded apps, and the $1.99 line zeroed every one, so
-        // the room said $0.00 over money the person could see. The spam
-        // defence the $1.99 line was standing in for is already upstream:
-        // Zerion's `filter[trash]=only_non_trash`, and `holdingCeiling` below.
+        // the room said $0.00 over money the person could see. The spam defence
+        // that line stood in for is already upstream: Zerion's
+        // `filter[trash]=only_non_trash`, and `holdingCeiling` below.
+        //
+        // §826 carried that same reasoning to the WATCHED read, where the floor
+        // is now the answering arm's (a cent on Zerion, $1.99 on Alchemy, which
+        // has no trash filter). This path stays a flat cent because an app
+        // wallet's whole point is small change and its addresses come from
+        // Privy, not from a stranger's airdrop.
         // Uncached: the Privy seat's own six-hour/weekly budget is the bound.
         let (candidates, reached) = await collectCandidates(addresses: [address])
         guard reached else { return nil }
@@ -2174,6 +2183,13 @@ enum WalletIngest {
         let amount: Double
         let owner: String
         var price: Double?
+        /// Whether the arm that produced this had ALREADY dropped spam server
+        /// side (prd §826) — true off Zerion (`filter[trash]=only_non_trash`),
+        /// false off Alchemy's Portfolio endpoint, which has no equivalent.
+        /// Per candidate rather than per read, because one read can now mix
+        /// both arms: Zerion for the chains it maps, Alchemy for the ones it
+        /// does not (see `collectCandidates`).
+        var trashFiltered = false
     }
 
     /// Coalesces concurrent holdings reads and briefly caches the result — the
@@ -2314,6 +2330,30 @@ enum WalletIngest {
     private static func fetchHeldTokensUncached(addresses: [String]) async -> [HeldToken]? {
         let (candidates, reached) = await collectCandidates(addresses: addresses)
         guard reached else { return nil }
+        // **THE FLOOR IS THE ARM'S, AND $1.99 WAS EATING REAL MONEY (prd §826,
+        // user: "my balance is showing 6$ but i have more than that").**
+        //
+        // `holdingFloor` was set to $1.99 on 2026-07-15, up from $1, to keep
+        // fake-priced airdrop spam out of the treemap — four days BEFORE Zerion
+        // became the primary read and brought `filter[trash]=only_non_trash`
+        // with it. On that arm the spam is already gone when the candidates
+        // arrive, so all the line still does is drop the person's genuine small
+        // positions: a wallet holding a dollar of ETH on each of eight chains
+        // reads as holding nothing at all, and every one of those dollars is
+        // missing from the crown.
+        //
+        // §803j already made exactly this argument and MEASURED it — "the $1.99
+        // line zeroed every one, so the room said $0.00 over money the person
+        // could see" — and then applied the cent floor to `unwatchedHoldings`
+        // alone. The watched wallets, which are the room's whole subject, kept
+        // the old line. This is that fix arriving where it was always due.
+        //
+        // Alchemy's arm keeps $1.99, because it has no trash filter and nothing
+        // else upstream of here drops dust; `holdingCeiling` is unchanged on
+        // both, since a fake-priced airdrop is caught by its size, not its
+        // smallness. PER CANDIDATE, because one read mixes both arms now
+        // (`collectCandidates`' union) and a set-wide flag would hand one arm's
+        // floor to the other's rows.
 
         // Alchemy first — inline EVM prices, then its SPL Prices endpoint
         // (`priceSPL`) — then the keyless DeFiLlama backstop over anything still
@@ -2334,7 +2374,8 @@ enum WalletIngest {
             // still absurdly large (see `holdingCeiling`) — treemapWeight clamps
             // that safely, but left in it would inflate the displayed combined
             // total and dominate the allocation bar.
-            guard usd.isFinite, usd >= holdingFloor, usd < holdingCeiling else { return nil }
+            let floor = c.trashFiltered ? unwatchedFloor : holdingFloor
+            guard usd.isFinite, usd >= floor, usd < holdingCeiling else { return nil }
             return HeldToken(symbol: c.symbol, contract: c.contract,
                              network: c.network, usd: usd, amount: c.amount,
                              owner: c.owner)
@@ -2347,7 +2388,25 @@ enum WalletIngest {
     /// (2026-07-17) so the DeFiLlama probe can walk the SAME candidate list the
     /// real read builds. `reached` is false only when NOTHING was reachable at
     /// all (the nil the caller turns into "couldn't reach the chain").
-    private static func collectCandidates(addresses: [String]) async -> (candidates: [Candidate], reached: Bool) {
+    ///
+    /// **ZERION FIRST IS A UNION, NOT AN EITHER/OR (prd §826).** Zerion
+    /// answering used to end the read, and Alchemy's body was built only when
+    /// Zerion was UNREACHED — so a chain Zerion does not map could never be
+    /// read at all while Zerion was up. Robinhood Chain is exactly that chain,
+    /// and the consequence was a dead control and missing money: the picker
+    /// offered Robinhood, turning it on changed nothing, and a wallet holding
+    /// ten dollars there showed three (user, 2026-09-18: "it has almost ten
+    /// dollars on robinhood and almost three on ethereum"). `WalletChainStore`
+    /// had even written down the premise — "Robinhood has no Zerion mapping, so
+    /// it costs a real extra chain in the Alchemy body" — and weighed its COST
+    /// without noticing that the body carrying it was never sent.
+    ///
+    /// So Zerion serves the chains it maps and Alchemy is asked for the
+    /// selected chains it does NOT, in the same pass. That second call happens
+    /// only when such a chain is switched on, so nobody pays for a chain they
+    /// do not follow.
+    private static func collectCandidates(addresses: [String])
+        async -> (candidates: [Candidate], reached: Bool) {
         guard !addresses.isEmpty else { return ([], false) }
         // Zerion first (2026-07-19): one keyed `/positions` call per wallet
         // covers EVM + Solana holdings, priced, OFF Alchemy's paid credits — the
@@ -2357,9 +2416,18 @@ enum WalletIngest {
         // See `ZerionAPI`.
         if ZerionAPI.isConfigured {
             let z = await collectCandidatesZerion(addresses: addresses)
-            if z.reached { return z }
+            if z.reached {
+                // The selected chains Zerion cannot see, for these addresses.
+                let blind = Set(addresses.flatMap { networks(for: $0) })
+                    .subtracting(ZerionAPI.networkFor.values)
+                    .intersection(alchemyNetworks)
+                guard !blind.isEmpty else { return (z.candidates, true) }
+                let a = await collectCandidatesAlchemy(addresses: addresses, only: blind)
+                return (z.candidates + a.candidates, true)
+            }
         }
-        return await collectCandidatesAlchemy(addresses: addresses)
+        let a = await collectCandidatesAlchemy(addresses: addresses)
+        return (a.candidates, a.reached)
     }
 
     /// Zerion's holdings for the given wallets, mapped into `Candidate`s — the
@@ -2391,13 +2459,18 @@ enum WalletIngest {
                 // fallback marked it. Same call, same rule, both arms.
                 candidates.append(Candidate(symbol: clean(h.symbol), contract: h.contract,
                                             network: h.network, amount: h.amount,
-                                            owner: h.owner, price: h.price))
+                                            owner: h.owner, price: h.price,
+                                            trashFiltered: true))
             }
         }
         return (candidates, reached)
     }
 
-    private static func collectCandidatesAlchemy(addresses: [String]) async -> (candidates: [Candidate], reached: Bool) {
+    /// `only`, when given, restricts the body to those networks — the union
+    /// pass above asks for the chains Zerion cannot map and nothing else, so a
+    /// person following such a chain pays for it and for no other.
+    private static func collectCandidatesAlchemy(addresses: [String], only: Set<String>? = nil)
+        async -> (candidates: [Candidate], reached: Bool) {
         guard !addresses.isEmpty else { return ([], false) }
         // network → the native coin's symbol AND decimals. A chain's own coin
         // comes back with null metadata, so neither can be read off the
@@ -2410,7 +2483,9 @@ enum WalletIngest {
         // mix a `0x…` wallet and a `.sol` one and neither pays for the other's
         // chains. An address whose chains are all switched off has nothing to
         // ask and is dropped rather than sent with an empty list.
-        let routed = addresses.map { (address: $0, networks: networks(for: $0).filter(alchemyNetworks.contains)) }
+        let routed = addresses.map { (address: $0, networks: networks(for: $0)
+                                        .filter(alchemyNetworks.contains)
+                                        .filter { only?.contains($0) ?? true }) }
                               .filter { !$0.networks.isEmpty }
         guard !routed.isEmpty else { return ([], false) }
 

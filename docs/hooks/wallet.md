@@ -92,3 +92,17 @@ The crown's total merges several places, and one of them — Privy's app wallets
 **And the room stands on its last reading.** `portfolioRead` falls back to `lastKnownHoldingsByWallet()` when the live read produced no group AND something was UNREACHED — never when a wallet answered and holds nothing. `WalletPortfolio.asOf` carries the stamp and `WalletBalanceHeadline` draws "as of 2h ago" under the figure (§83: a dated number may be shown, never presented as current).
 
 **UNVERIFIED ON DEVICE** — written with no Xcode and no egress to either provider, so which one was refusing is still unmeasured. The fix makes either refusal survivable; `-portfolioProbe YES` names the culprit.
+
+## The crown counted an app's money and missed a whole chain (prd §826, 2026-09-18)
+
+§825 made a provider refusal survivable, and the user answered "IT IS STILL NOT FIXED". The tell had been mis-read: the Zora figure came from `unwatchedHoldings`, which rides the same funnel as a watched wallet — so the funnel worked, and something a WATCHED wallet does was losing the money. The wallet the user named settles it: `0x2F60…2725`, ~$10 on Robinhood and ~$3 on Ethereum, crown reading $6 — Ethereum's three plus Privy's app wallets. Robinhood's ten was never read.
+
+**Privy is out (user ruling).** §803g's "Count in Wallet total" defaulted ON and merged an app wallet's holdings into the crown. Money in a wallet an app made, in somebody else's product, is not your wallet balance — and it was the one contributor read from a STORED last read while every other was live, so a pass that reached no chain still drew a confident figure. `walletHoldings`, `countsInWallet`, its key and the toggle are deleted (§723).
+
+**Zerion-first was an either/or and is now a union.** `collectCandidates` returned Zerion's answer whenever Zerion answered and built Alchemy's body only when Zerion was UNREACHED — so a chain Zerion does not map could not be read while Zerion was up. Robinhood has no `networkFor` entry, so its picker row changed nothing: §83's dead control hiding real money. `WalletChainStore` had written the premise down ("it costs a real extra chain in the Alchemy body") and weighed that cost without noticing the body was never sent. **A cost you can describe is not a code path that runs.** Alchemy is now asked for the selected chains Zerion cannot map, in the same pass, and only when one is switched on.
+
+**Robinhood is ON by default with a `seeded` row** (§788/§808's rule for World Chain and Arc). The audit derives it: any selectable chain with no Zerion mapping must be in `defaultNetworkIDs` and seeded, or it is money nobody sees unless they find the row.
+
+**The $1.99 floor is the arm's, per candidate.** It was raised four days BEFORE Zerion brought `filter[trash]=only_non_trash`, so on that arm it drops only genuine small positions. §803j measured exactly this and fixed `unwatchedHoldings` alone — a fix applied to one caller of a shared rule is not applied. It rides `Candidate.trashFiltered` now (a cent on Zerion, $1.99 on Alchemy), per candidate because one read mixes both arms.
+
+`-portfolioProbe` reports `holders=` by kind, so the merge cannot come back unseen. **Unbuilt and unmeasured here** — reasoned from the code and the user's own figures.

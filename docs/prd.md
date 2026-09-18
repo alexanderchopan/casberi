@@ -58129,3 +58129,41 @@ No editorial rule prefers a notification. Imports are dated in the past, so with
 **`-portfolioProbe` reports both halves now** — what Alchemy is refusing, and whether the read was `live` or an `as of`. A refusal nobody can see is a refusal nobody fixes.
 
 **UNVERIFIED ON DEVICE.** Written on a Linux box with no Xcode and no egress to `api.zerion.io` or `api.g.alchemy.com`, so which provider was refusing was never measured — the fix makes either refusal survivable rather than naming the culprit. Run `scripts/verify.sh`, then `-portfolioProbe YES` on the real wallets and read the `Alchemy refusing` and `read=` lines before trusting this.
+
+## §826 — The wallet crown counted an app's money and missed a whole chain: Privy comes out, Robinhood comes on, and $1.99 stops eating real positions (user: "do not combine privy with the regular wallet balance leave privy separate", "my balance is showing 6$ but i have more than that", "it has almost ten dollars on robinhood and almost three on ethereum", 2026-09-18)
+
+**§825 hardened the wrong thing, and the user said so plainly: "IT IS STILL NOT FIXED".** That pass made a provider refusal survivable, which was worth doing and was not the bug. The tell was in the report all along and it was mis-read: the Zora figure came from `WalletIngest.unwatchedHoldings`, which rides the SAME Zerion/Alchemy funnel as a watched wallet — so the funnel worked. Something a watched wallet does, and an unwatched one does not, was losing the money. Three separate things were, and one of them was not in the read at all.
+
+**The wallet the user named settles it**: `0x2F60…2725`, ~$10 on Robinhood, ~$3 on Ethereum, crown reading **$6**. Ethereum's $3 plus Privy's app wallets ≈ $6. Robinhood's $10 was not partly counted or mis-priced — it was never read.
+
+### 1. Privy is out of the wallet total (user ruling)
+
+§803g merged an app wallet's holdings into the crown behind "Count in Wallet total", defaulting ON. Wrong twice: money in a wallet an app made for you, in somebody else's product, is not your wallet balance — and it was the ONE contributor read from a **stored last read** while every other was live, so a pass that reached no chain still drew a confident figure made entirely of app wallets. That is what "it's showing my zora balance but not my wallets" was describing.
+
+`walletHoldings`, `countsInWallet`, `setCountsInWallet`, the stored key and the toggle row are all **deleted** — a feature off the surface is deleted from the model (§723), or it is a dead control one layer down. An app's money is stated in Privy's own room, beside the app that holds it (`PrivyHomeStore.room`). Exchanges and validators still join the combined read only (§163): those are the person's own accounts, and the user named Privy.
+
+### 2. Zerion answering is a UNION now, not the end of the read
+
+`collectCandidates` returned Zerion's answer whenever Zerion answered at all, and built Alchemy's body **only when Zerion was unreached**. A chain Zerion does not map therefore could not be read while Zerion was up. Robinhood Chain is exactly that chain: it has no `ZerionAPI.networkFor` entry, it sat in the picker, and **turning it on changed nothing** — §83's dead control, hiding real money.
+
+`WalletChainStore` had even written the premise down — *"Robinhood has no Zerion mapping, so it costs a real extra chain in the Alchemy body"* — and weighed that cost without noticing the body was never sent. **A cost you can describe is not the same as a code path that runs.**
+
+Zerion now serves the chains it maps and Alchemy is asked, in the same pass, for the selected chains it does not (`collectCandidatesAlchemy(only:)`). That second call is made only when such a chain is switched on, so nobody pays for a chain they do not follow.
+
+### 3. Robinhood is ON by default, with a seed row
+
+A chain whose money the app cannot otherwise see belongs on — the rule §788 and §808 applied to World Chain and Arc. The `seeded` row is what reaches installs that already saved a chain set: without it the default would only ever apply to phones set up after today, which is the state Solana was in before its own flag existed. `wallet-total-audit.py` now derives this: **any selectable chain with no Zerion mapping must be in `defaultNetworkIDs` and carry a `seeded` row**, because such a chain rides the Alchemy union and is invisible to anyone who never finds the row.
+
+### 4. The $1.99 dust floor is the answering arm's, per candidate
+
+`holdingFloor` was raised to $1.99 on 2026-07-15 to keep fake-priced airdrop spam out of the treemap — **four days before** Zerion became the primary read and brought `filter[trash]=only_non_trash` with it. On that arm the spam is already gone when the candidates arrive, so the line only drops the person's genuine small positions: a dollar of ETH on each of eight chains reads as nothing.
+
+§803j already made this argument and MEASURED it — *"the $1.99 line zeroed every one, so the room said $0.00 over money the person could see"* — then applied the cent floor to `unwatchedHoldings` alone. The watched wallets, the room's whole subject, kept the old line. **A fix applied to one caller of a shared rule is not applied.** The floor is now carried on `Candidate.trashFiltered` — per candidate, not per read, because one read mixes both arms now and a set-wide flag would hand one arm's floor to the other's rows. Alchemy's arm keeps $1.99 (no trash filter upstream); `holdingCeiling` is unchanged on both, since a fake-priced airdrop is caught by its size, not its smallness.
+
+### What guards it
+
+`scripts/chain-filter-audit.py` is renamed **`scripts/wallet-total-audit.py`** — the chain filter was half of why one number was wrong, and the file now owns the whole question: what the crown is made of, and how it fails. Fifteen mutations, one per rule, each proven to change the file before it is asked to fail.
+
+**`-portfolioProbe` reports the composition** (`holders=wallet, venue`), so the merge this ruling removes could not come back unseen.
+
+**STILL UNBUILT AND UNMEASURED.** No Xcode here and no egress to either provider, so the union call, Robinhood's Alchemy response and the new floor are reasoned from the code and from the user's own figures, not observed. Run `scripts/verify.sh`, then `-portfolioProbe YES` on `0x2F60…2725` and check the total against ~$13 with `holders=` naming no app.

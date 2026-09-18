@@ -131,7 +131,6 @@ struct WalletPortfolio: Equatable {
     static func from(groups: [WalletIngest.HoldingsGroup],
                      exchange: [(symbol: String, usd: Double, venue: ExchangeBridge.Venue)] = [],
                      validatorsUSD: Double = 0,
-                     privy: [(symbol: String, usd: Double, appID: String, app: String)] = [],
                      asOf: Date? = nil)
     -> WalletPortfolio {
         var usdBySymbol: [String: Double] = [:]
@@ -152,15 +151,6 @@ struct WalletPortfolio: Equatable {
             usdBySymbol["ETH", default: 0] += validatorsUSD
             holdersBySymbol["ETH", default: []]
                 .append(Holder(address: "ethvalidators", label: "ETH Validators", usd: validatorsUSD))
-        }
-
-        // Privy app wallets (prd §803g) — the person's own money in wallets an
-        // app made, counted when they asked for it. Held by the APP, by name:
-        // the address is not watched, and the app is what they would recognise.
-        for holding in privy where holding.usd > 0 {
-            usdBySymbol[holding.symbol, default: 0] += holding.usd
-            holdersBySymbol[holding.symbol, default: []]
-                .append(Holder(address: "privy:" + holding.appID, label: holding.app, usd: holding.usd))
         }
 
         for group in groups {

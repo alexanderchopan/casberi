@@ -925,10 +925,12 @@ the old bar, which is a flake waiting to happen.
 failed**. `hegota-tx` and `vibenet-signer` pass on the vendored keccak,
 `sweep-clock` passes on the proportion, and the artifact uploaded 330 files.
 
-## Chain-filter audit (scripts/chain-filter-audit.py, 2026-09-18)
+## Wallet-total audit (scripts/wallet-total-audit.py, 2026-09-18 — renamed from `chain-filter-audit.py` by prd §826)
 
 **What it catches.** The shape that let one refused chain empty every watched wallet's balances at once (prd §825): a Zerion chain filter built from the whole chain map instead of the caller's routed networks, a filtered read with no unfiltered retry, an Alchemy arm that does not isolate a rejected body one network at a time, a hand-kept `unprovenNetworks` list coming back, `portfolioRead` losing its last-known fallback or its UNREACHED gate, and the crown losing the "as of" stamp that keeps that fallback honest under §83.
 
 **Why it is a static audit and not a harness.** Every rule is a shape in the source — which set feeds the filter, whether a retry exists, whether the fallback is gated — and none of it needs a running app. The measurement it deliberately leaves alone is whether either provider actually serves a given chain; that is `-portfolioProbe`'s (`Alchemy refusing …`, `read=live|as of …`), because it is a fact about the key and the day, not about the code.
 
 **Self-tested** with nine mutations, one per rule, each proven to change the file before it is asked to fail.
+
+**§826 widened it to the whole question.** The chain filter was only half of why one number was wrong, so the file now owns what the crown is MADE of as well as how it fails: no app-wallet money in the total (`portfolioRead` may not read `PrivyHomeStore`, and `walletHoldings`/`countsInWallet` may not return); the dust floor carried per candidate on the answering arm, never a flat `holdingFloor`; `collectCandidates` asking Alchemy for the chains Zerion cannot map; and — derived, not listed — every selectable chain with no Zerion mapping being in `defaultNetworkIDs` with a `seeded` row, because such a chain rides that union and is invisible to anyone who never finds its picker row. Fifteen mutations now, one per rule.

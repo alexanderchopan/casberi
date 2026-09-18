@@ -77,28 +77,35 @@ final class WalletChainStore {
     ]
     static var allNetworkIDs: [String] { selectable.map(\.id) }
 
-    /// What a wallet reads by default. Robinhood Chain (added 2026-07-15) is
-    /// genuinely readable but niche and new, so it's available in the picker yet
-    /// OFF by default: a chain you turn on, not one every wallet spends requests
-    /// on. Solana is ON, and unlike Robinhood it costs an EVM-only person
-    /// nothing — the holdings read routes each address to the chains its own
-    /// SHAPE can live on (`WalletIngest.networks(for:)`), so a `0x…` wallet
-    /// never spends a request on Solana and vice versa.
+    /// What a wallet reads by default. Solana costs an EVM-only person nothing —
+    /// the holdings read routes each address to the chains its own SHAPE can
+    /// live on (`WalletIngest.networks(for:)`), so a `0x…` wallet never spends a
+    /// request on Solana and vice versa.
     ///
-    /// HyperEVM and Monad are ON, unlike Robinhood, and the difference is
-    /// COST rather than taste: both are mapped in `ZerionAPI.networkFor`, and
-    /// Zerion's positions/transactions calls ask for every mapped chain in ONE
-    /// request per wallet whatever this set says (the toggle filters the
-    /// answer, `WalletIngest.collectCandidatesZerion`) — so switching them on
-    /// spends nothing on the read that actually runs. Robinhood has no Zerion
-    /// mapping, so it costs a real extra chain in the Alchemy body and stays
-    /// a chain you turn on. The only marginal cost here is the Alchemy
-    /// transfer FALLBACK, two requests per chain per wallet, and only when
-    /// Zerion is unreachable.
+    /// HyperEVM, Monad, World Chain and Arc are free in the same way: all four
+    /// are mapped in `ZerionAPI.networkFor`, and Zerion's positions and
+    /// transactions calls ask for the chains the caller routes in ONE request
+    /// per wallet, so switching them on spends nothing on the read that runs.
+    ///
+    /// **ROBINHOOD IS ON since 2026-09-18 (prd §826), and the reasoning that
+    /// kept it off was measuring the wrong thing.** It was "a chain you turn on"
+    /// because it has no Zerion mapping and so "costs a real extra chain in the
+    /// Alchemy body" — but that body was only ever built when Zerion was
+    /// UNREACHED, so while Zerion was up the chain could not be read at all and
+    /// the toggle changed nothing. A picker row that cannot affect what you see
+    /// is §83's dead control, and the person it was hiding money from was the
+    /// one who reported it: ten dollars on Robinhood, three on Ethereum, and a
+    /// crown that said six. `WalletIngest.collectCandidates` is a union now, so
+    /// the row works — and a chain whose money the app cannot otherwise see
+    /// belongs on, the same rule §788 and §808 applied to World Chain and Arc.
+    /// The marginal cost is honest and small: ONE Alchemy Portfolio call per
+    /// wallet per pass, for the unmapped chains only, and it is not made at all
+    /// by anyone who turns this row back off.
     static let defaultNetworkIDs = ["eth-mainnet", "base-mainnet", "arb-mainnet",
                                     "opt-mainnet", "matic-mainnet",
                                     "hyperliquid-mainnet", "monad-mainnet",
-                                    "solana-mainnet", "worldchain-mainnet", "arc-mainnet"]
+                                    "solana-mainnet", "robinhood-mainnet",
+                                    "worldchain-mainnet", "arc-mainnet"]
 
     private var selected: [String] { didSet { persist() } }
 
@@ -125,6 +132,13 @@ final class WalletChainStore {
         // by default") — free like World Chain: Zerion's one call per wallet
         // already carries it, and it rides no Alchemy request.
         ("arc-mainnet",         "wallet.chains.arcSeeded.v1"),
+        // Robinhood (2026-09-18, prd §826) — it shipped OFF and its toggle
+        // could not work, so every install that ever saw the picker has it
+        // stored as off for a reason that was never true. The seed row is what
+        // reaches those installs; without it this default would only ever
+        // apply to phones set up after today, which is the exact state Solana
+        // was in before its own flag existed.
+        ("robinhood-mainnet",   "wallet.chains.robinhoodSeeded.v1"),
     ]
 
     private init() {

@@ -4362,6 +4362,15 @@ enum ProbeHooks {
                       // the one line that separates "you hold nothing" from
                       // "we could not look".
                       p.asOf.map { "as of \(AccountPageShape.ago($0))" } ?? "live")
+                // WHAT THE NUMBER IS MADE OF (prd §826) — the holders behind it,
+                // by kind. Privy is NOT among them any more, and a probe that
+                // cannot say so could not have caught the merge in the first
+                // place.
+                let kinds = Set(p.positions.flatMap(\.holders).map {
+                    $0.address.hasPrefix("0x") ? "wallet"
+                        : ($0.address == "ethvalidators" ? "validators" : "venue")
+                }).sorted()
+                NSLog("Portfolio probe: holders=%@", kinds.isEmpty ? "none" : kinds.joined(separator: ", "))
                 // The card's whole tail, and its halves apart — `shapeLine` is
                 // what the row DRAWS, but a nil there has two causes (an
                 // unpriced/single-position book, no stables above the floor)

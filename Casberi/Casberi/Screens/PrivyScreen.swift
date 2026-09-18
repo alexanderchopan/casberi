@@ -87,9 +87,6 @@ struct PrivyScreen: View {
         DSToggleRow(title: Text("Show empty apps"),
                     detail: Text("Apps holding nothing that you haven't used in 90 days."),
                     isOn: Binding(get: { store.showEmpty }, set: { store.setShowEmpty($0) }))
-        DSToggleRow(title: Text("Count in Wallet total"),
-                    detail: Text("Adds what your app wallets hold to the Wallet room's total. Display only."),
-                    isOn: Binding(get: { store.countsInWallet }, set: { store.setCountsInWallet($0) }))
         DSPushRow(title: Text("Hidden apps"),
                   fact: Text(store.hidden.isEmpty ? String(localized: "None")
                                                   : String(localized: "\(store.hidden.count)"))) {
