@@ -57935,3 +57935,21 @@ Connect listed the whole catalogue, connected rows included, so an account sat o
 **The honesty rule's second half was the half missing.** §83's price for the demo is a marking that is continuous AND carries its way out. Continuous it was; the way out was only *present*, not *stated*. Three words fix that, and the explain sheet behind the tap is unchanged.
 
 The sentence wraps rather than truncating (`fixedSize(horizontal: false, vertical: true)`) so a large text size cannot cut "Tap to exit". The accessibility label follows the visible words ("Demo — not your things"); the hint stays "Opens the way out".
+
+## §814 — The World ID pitch: what we want World to ship, in order (user: "write the pitch for world id, what is it we want them to do?", then "this is good. keep it in a ruling so we can reference it later. i shared it with the team", 2026-09-18)
+
+**The ask, in one line:** let a native app with no server use World ID. None of World's doors opens for one today; each was measured (§787, §801, §801a, §801b). This entry is the outward-facing half of those rulings — the text shared with World's team — so the next conversation with them starts from it and not from a re-measurement.
+
+**Who is asking.** Casberi is a native iOS and Mac app, live on the App Store, with no server of ours. World is already a full part of it, all off public chain state: World Chain on by default (§788), World App money named from World's own contracts — grants, the WLD Vault, the next grant as a dated row (§791, §795) — World App usernames followed as wallets (§802), and a counterparty shown as a verified human off the address book (§785). None of it could be built on World ID itself, and the reasons apply to any local-first app.
+
+**What we want, ranked:**
+
+1. **A World ID 4.0 request that needs no relying-party secret.** IDKit 4.x signs every request with a portal `signing_key` the docs forbid in a client. The 3.0 path worked server-free — our unsigned request reached World App, and the verify endpoints take no key (§801a) — but 3.0 is deprecated (§801b). A public-client mode, as OAuth has PKCE. The most valuable of the three: it would let a Pro free trial be one per human with no backend.
+2. **Device pairing or a recovery-agent picker in World App.** WalletKit can already make this phone an authenticator; a new key joins only when a key already on the account adds it, and World App has no screen for that (§787).
+3. **AgentBook accepting a credential most users hold.** Our registration request reached World App and was refused, "Visit an Orb"; the contract is pinned to the Orb group (§801). Selfie Check or a passport credential would open it.
+
+**Two smaller asks.** A public World Chain RPC serving `eth_getLogs` over more than 100 blocks (dRPC's error text says 10,000; it is 100, §787). And a universal link into grants that opens World App: the documented `mini-app?app_id=` link opens Safari on a trailing-slash mismatch (§792).
+
+**Why they would care.** Their developer page asks people to build on World ID, and every native wallet, notes app and local-first client meets the same server requirement. Item 1 opens World ID to all of them at once.
+
+**What this changes in the app: nothing.** The re-open conditions stay where they were written — §787 (pairing, or a server), §801 (a non-Orb credential), §801b (a 4.0 request with no RP secret). If World ships any of the three, start from the matching ruling, not from this pitch. No reply from World is recorded here yet.
