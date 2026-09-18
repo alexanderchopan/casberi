@@ -1008,7 +1008,7 @@ struct AppsScreen: View {
                             }
                         }
                         .dsText(.subhead12)
-                        .foregroundStyle(entry.tier == 0 ? DS.attention : DS.textTertiary)
+                        .foregroundStyle(sublineColor(entry))
                         .lineLimit(1)
                     }
                     Spacer(minLength: DS.Space.s2)
@@ -1045,6 +1045,20 @@ struct AppsScreen: View {
         // The just-connected row lifts as the list re-sorts it into its
         // connected seat — a promotion you can feel, not a silent re-order.
         .connectPromote(isTarget: entry.offer.name == justConnectedName, token: connectLiftToken)
+    }
+
+    /// The line under a row's name says its STATE in colour (prd §811, user:
+    /// "if they are connected already it should all be green, or yellow for
+    /// needs fixing"): every connected account's live line is green, one that
+    /// needs fixing wears attention, and an app you could add keeps the grey
+    /// of a tagline. No third state: a stale but working seat is still
+    /// connected and still green.
+    private func sublineColor(_ entry: Ranked) -> Color {
+        switch entry.tier {
+        case 0:  DS.attention
+        case 2:  DS.confirm
+        default: DS.textTertiary
+        }
     }
 
     /// Sublines are honest states or the tagline — never marketing fluff.
