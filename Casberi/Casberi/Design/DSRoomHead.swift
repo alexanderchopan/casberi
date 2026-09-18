@@ -692,6 +692,26 @@ extension DSRoomChassis {
     }
 }
 
+extension DSRoomChassis.Head {
+    /// A head whose tiles may be absent (prd §816). The kind-tile rooms offer
+    /// tiles only over two kinds or more, and nil must draw the head ALONE —
+    /// the `scopes == nil` geometry — never an empty slot that moves the well.
+    /// Same stored fields as the builder form, so the same body draws both.
+    init(lead: DSRoomChassis.Lead,
+         door: DSRoomChassis.Door? = nil,
+         notes: [DSRoomChassis.Line?] = [],
+         footnotes: [DSRoomChassis.Line?] = [],
+         tiles: Scopes?,
+         @ViewBuilder content: () -> Content) {
+        self.lead = lead
+        self.door = door
+        self.notes = notes.compactMap { $0 }
+        self.footnotes = footnotes.compactMap { $0 }
+        self.content = content()
+        self.scopes = tiles
+    }
+}
+
 extension DSRoomChassis.Head where Scopes == EmptyView {
     /// A head with no section tiles — every room but a scoped one.
     init(lead: DSRoomChassis.Lead,

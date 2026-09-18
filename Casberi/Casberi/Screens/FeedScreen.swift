@@ -2557,7 +2557,7 @@ struct FeedScreen: View {
         var quietHead: SourceHead? = nil
         /// The lead's foot (prd §766): `leadFooter` over the whole room.
         var footer: String? = nil
-        /// The kind tiles of the Safe, GitHub and Stripe rooms (prd §815),
+        /// The kind tiles of a kind-tile room (prd §815, §816),
         /// read over the whole room BEFORE the pick narrows it — a presence
         /// read off the narrowed list would leave only the picked kind, and
         /// the tiles would vanish the moment one was tapped. Empty draws none.
@@ -2566,9 +2566,6 @@ struct FeedScreen: View {
         /// transaction awaits your signature, Stripe's Disputes while one is
         /// open.
         var kindAttention: Set<RoomKindTile> = []
-        /// A fact a deleted head carried that the cover now says under itself
-        /// — Safe's module warning (`SafeRoom.note`), on every tile.
-        var coverNote: String? = nil
     }
 
     /// The last head computed for each room, kept ACROSS the mount.
@@ -2918,7 +2915,6 @@ struct FeedScreen: View {
             let kinds = kindRoomReading(kindRoom, rows: rows)
             computed.kindTiles = kinds.tiles
             computed.kindAttention = kinds.attention
-            computed.coverNote = kinds.note
         }
         Self.headMemo[headIdentity] = computed
         heads = computed
@@ -2979,7 +2975,7 @@ struct FeedScreen: View {
                                     url: thing.content, authorHandle: thing.authorHandle)
     }
 
-    /// The kind tile in force in the Safe, GitHub or Stripe room (prd §815),
+    /// The kind tile in force in a kind-tile room (prd §815, §816),
     /// resolved: a pick whose kind is no longer offered is All. Before the
     /// room's first head computation there is no presence to resolve against,
     /// and the pick stands as picked.
@@ -2989,10 +2985,10 @@ struct FeedScreen: View {
         return RoomKindTiles.resolve(chrome.roomKind, present: present)
     }
 
-    /// The tiles, their dots and the cover's note, over the whole room.
+    /// The tiles and their dots, over the whole room.
     @MainActor
     private func kindRoomReading(_ room: RoomKindTiles.Room, rows: [Thing])
-        -> (tiles: [RoomKindTile], attention: Set<RoomKindTile>, note: String?) {
+        -> (tiles: [RoomKindTile], attention: Set<RoomKindTile>) {
         let census = RoomKindTiles.Census(room: room, refs: rows.map(\.sourceRef))
         var kinds: Set<RoomKindTile> = []
         for thing in rows {
@@ -3002,22 +2998,35 @@ struct FeedScreen: View {
         }
         let tiles = RoomKindTiles.present(room: room, kinds: kinds)
         var attention: Set<RoomKindTile> = []
-        var note: String?
         switch room {
         case .safe:
-            // The head's model still composes — only its card is deleted — so
-            // "your turn" and the module warning read exactly what it read.
-            if let safe = SafeRoomSource.compose(things: rows) {
-                if safe.awaitsYouCount > 0 { attention.insert(.queue) }
-                note = SafeRoom.note(safe)
+            // "Your turn", read off the same model the head draws, so the dot
+            // and the head's lede can never disagree. The module warning is
+            // the head's own alert line again (prd §816).
+            if let safe = SafeRoomSource.compose(things: rows), safe.awaitsYouCount > 0 {
+                attention.insert(.queue)
             }
         case .stripe:
             let open = RoomKindTiles.openDisputes(rows.map { (url: Optional($0.content), tags: $0.tags, title: $0.title) })
             if open > 0 { attention.insert(.disputes) }
-        case .github:
+        case .github, .appStoreConnect, .huggingFace, .posthog, .l2beat, .walletbeat:
             break
         }
-        return (tiles, attention.intersection(tiles), note)
+        return (tiles, attention.intersection(tiles))
+    }
+
+    /// The kind tiles as one control (prd §815, §816), or nil when the room
+    /// offers none. Where the room draws a head, the head carries it in its
+    /// `scopes` slot — `DSRoomChassis.Head`'s own geometry, the Privy pattern;
+    /// where it draws none, `kindTileSections` stands it under the cover. One
+    /// construction for both, so a tile is the same control in either place.
+    private var kindTilesInHead: DSScopeTiles<RoomKindTile>? {
+        guard let tiles = heads?.kindTiles, !tiles.isEmpty else { return nil }
+        return DSScopeTiles(sections: tiles,
+                            active: roomKindPick,
+                            attention: heads?.kindAttention ?? []) { picked in
+            withAnimation(DS.Motion.standard) { chrome.roomKind = picked }
+        }
     }
 
     /// The vibenet room's account scope (2026-08-23) — the same shape as
@@ -6260,6 +6269,10 @@ struct FeedScreen: View {
                     CloudflareRunwayCard(runway: runway) { item in
                         openBySourceRef(item.id, in: visible)
                     }
+                case .stripe(let room):
+                    StripeRoomCard(room: room, tiles: kindTilesInHead) { item in
+                        openBySourceRef(item.id, in: visible)
+                    }
                 case .polar(let room):
                     PolarRoomCard(room: room) { item in
                         openBySourceRef(item.id, in: visible)
@@ -6276,7 +6289,7 @@ struct FeedScreen: View {
                         openBySourceRef(retry.id, in: visible)
                     }
                 case .posthog(let room):
-                    PostHogRoomCard(room: room) { event in
+                    PostHogRoomCard(room: room, tiles: kindTilesInHead) { event in
                         openBySourceRef(PostHogWatch.metricRef(event), in: visible)
                     }
                 case .cardPointers(let room):
@@ -6285,7 +6298,7 @@ struct FeedScreen: View {
                     // row a scroll below, and each of those is its own door.
                     CardPointersRoomCard(room: room)
                 case .walletbeat(let room):
-                    WalletbeatRoomCard(room: room) { ref in
+                    WalletbeatRoomCard(room: room, tiles: kindTilesInHead) { ref in
                         // The card names a real row's `sourceRef`, so this lands
                         // exactly — the card itself holds no `Thing` (corollary 5)
                         // and the lookup happens here, against the live corpus.
@@ -6300,7 +6313,7 @@ struct FeedScreen: View {
                         route.path.append(.walletbeatDirectory)
                     }
                 case .l2beat(let room):
-                    L2beatRoomCard(room: room) { ref in
+                    L2beatRoomCard(room: room, tiles: kindTilesInHead) { ref in
                         openBySourceRef(ref, in: visible)
                     } onBrowse: {
                         // Pushed, not raised (§219 — Connect raises, Open pushes), and
@@ -6553,6 +6566,19 @@ struct FeedScreen: View {
                         openNewest(source: RailgunRoomSource.source, in: visible) { thing in
                             thing.priceCurrency == token.symbol
                         }
+                    }
+                case .safe(let room):
+                    // `fallbackRef` is what the card opens when nothing is
+                    // pending and only a module warning stands — without it
+                    // that card announced a door and had none (2026-08-17).
+                    SafeRoomCard(room: room,
+                                 fallbackRef: SafeRoomSource.fallbackRef(things: visible),
+                                 tiles: kindTilesInHead) { ref in
+                        // Unlike its siblings, a Safe entry OWNS a single row
+                        // — the tracking snapshot is keyed by the pending
+                        // thing's own `sourceRef` — so this is a direct
+                        // lookup, not a newest-of-many match.
+                        openBySourceRef(ref, in: visible)
                     }
                 case .journal(let room, let name):
                     JournalRoomCard(room: room, source: name) { year in
@@ -7111,7 +7137,7 @@ struct FeedScreen: View {
         }
     }
 
-    /// THE SAFE, GITHUB AND STRIPE ROOMS (prd §815): the cover, the kind tiles
+    /// THE KIND-TILE ROOMS (prd §815, §816): the cover, the kind tiles
     /// under it, then the days.
     ///
     /// The cover is LIFTED out of its day, the `.cursor` way, because the tiles
@@ -7126,11 +7152,18 @@ struct FeedScreen: View {
     /// under the tiles, all at the rows' inset. The cover holds the full box
     /// (`holdsLead`) so the tiles never move between picks. With no coverable
     /// thing the tiles still draw, at the top.
+    ///
+    /// A room that DRAWS a head (prd §816: Safe, Stripe, PostHog) draws no
+    /// cover and no tiles here — the head carries the tiles in its `scopes`
+    /// slot, and this draws only the narrowed days under it.
     @ViewBuilder
     private func kindTileSections(_ visible: [Thing], nextEventID: UUID?,
                                   heroShown: Bool) -> some View {
         let days = chronoDays(visible)
-        let tiles = heads?.kindTiles ?? []
+        // A drawn head carries the tiles in its own `scopes` slot (prd §816),
+        // so they stand here only when no head is drawn — Safe and Stripe with
+        // only a sentence, and every room that has no head at all.
+        let scopeTiles = heroShown ? nil : kindTilesInHead
         let coverID = heroShown ? nil : ledeThingID(in: days)
         let coverThing: Thing? = coverID.flatMap { id in
             visible.first(where: { (thing: Thing) -> Bool in thing.isLive && thing.id == id })
@@ -7138,24 +7171,20 @@ struct FeedScreen: View {
         if let coverThing {
             Section {
                 ledeListRow(coverThing,
-                            top: tiles.isEmpty ? DS.Space.s2 : 0,
-                            bottom: tiles.isEmpty ? DSRoomChassis.leadGap : DSRoomChassis.contentGap,
+                            top: scopeTiles == nil ? DS.Space.s2 : 0,
+                            bottom: scopeTiles == nil ? DSRoomChassis.leadGap : DSRoomChassis.contentGap,
                             holdsLead: true)
             }
         }
-        if !tiles.isEmpty {
+        if let scopeTiles {
             Section {
-                DSScopeTiles(sections: tiles,
-                             active: roomKindPick,
-                             attention: heads?.kindAttention ?? []) { picked in
-                    withAnimation(DS.Motion.standard) { chrome.roomKind = picked }
-                }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: coverThing == nil ? DS.Space.s2 : 0,
-                                          leading: DSRoomChassis.inset,
-                                          bottom: DSRoomChassis.leadGap,
-                                          trailing: DSRoomChassis.inset))
+                scopeTiles
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: coverThing == nil ? DS.Space.s2 : 0,
+                                              leading: DSRoomChassis.inset,
+                                              bottom: DSRoomChassis.leadGap,
+                                              trailing: DSRoomChassis.inset))
             }
         }
         if visible.isEmpty {
@@ -7947,10 +7976,8 @@ struct FeedScreen: View {
             FeedLedeCard(thing: thing,
                          selected: DS.isMac
                             && chrome.walkSelected == thing.id.uuidString,
-                         // A quiet head's sentence, under the cover (prd §760);
-                         // in a kind-tile room, the fact its deleted head
-                         // carried (Safe's module warning, prd §815).
-                         note: heads?.coverNote ?? heads?.quietHead?.quietLine,
+                         // A quiet head's sentence, under the cover (prd §760).
+                         note: heads?.quietHead?.quietLine,
                          // The All feed's cover fits its words; a room's may
                          // hold the lead's height (prd §775).
                          fillsLead: source != "All",
@@ -8314,9 +8341,9 @@ struct FeedScreen: View {
 
     private enum SourceHead {
         case runway(CloudflareRunway)
-        // Stripe has NO case here since prd §815: the room leads with its
-        // cover, and its kind tiles (Payments, Payouts, Disputes) sit under
-        // it. `StripeRoom` still composes for the widgets, the brief and asks.
+        // Stripe's head came back with its kind tiles in its scopes slot (prd
+        // §816, reversing §815's deletion).
+        case stripe(StripeRoom)
         case polar(PolarRoom)
         // Dodo Payments (2026-09-01, prd §558) — the third Merchant of Record,
         // and the only one whose head may state a revenue figure: its bridge
@@ -8364,10 +8391,13 @@ struct FeedScreen: View {
         // chain says is in them. Composed from `PrivyHomeStore`, because a
         // balance is chain state and lands no row.
         case privy(PrivyHomeFeed.Room)
-        // Safe has NO case here since prd §815: the room leads with its cover,
-        // its kind tiles (Queue, Activity, Permissions) sit under it, the
-        // Queue tile carries the "your turn" dot and the module warning rides
-        // the cover's note (`RoomHeads.coverNote`). `SafeRoom` still composes.
+        // Safe (2026-08-11) — the fifth, and the one that earned its own
+        // source rather than joining the fold at "Wallet" (`SafeBridge`'s
+        // top-of-file doc, amendment (8)). Ranked by "your turn" rather than
+        // a proportion — a Safe has no lead-token/lead-rail shape. Its kind
+        // tiles ride the head's scopes slot (prd §816, reversing §815's
+        // deletion: "keep the safe head the way it was").
+        case safe(SafeRoom)
         // X (2026-08-13, prd §375) — the first head over an IMPORT rather than
         // a live bridge, and the first that displaces a card the room already
         // drew (`FeedInsight.topicMap`). It declines under `XRoom`'s floors so
@@ -8401,6 +8431,8 @@ struct FeedScreen: View {
             case .runway(let room):
                 guard room.items.isEmpty, let next = room.next else { return nil }
                 return CloudflareRunway.quietHeadline(days: next.days)
+            case .stripe(let room):
+                return room.items.isEmpty ? StripeRoom.headline(room) : nil
             case .polar(let room):
                 return room.items.isEmpty ? PolarRoom.headline(room) : nil
             case .dodoPayments(let room):
@@ -8416,6 +8448,11 @@ struct FeedScreen: View {
                 return room.tokens.isEmpty ? RailgunRoom.headline(room) : nil
             case .privy(let room):
                 return room.funded.isEmpty && room.readCount == 0 ? PrivyHomeFeed.headline(room) : nil
+            case .safe(let room):
+                // A module or a guard is a fact about money that keeps the card.
+                return room.entries.isEmpty && SafeRoom.note(room) == nil
+                    && SafeRoom.guardNote(room) == nil && SafeRoom.stateNote(room) == nil
+                    ? SafeRoom.headline(room) : nil
             case .gnosisPay(let room):
                 return room.months.isEmpty && room.currencies.count <= 1
                     ? GnosisPayRoom.headline(room, mask: mask) : nil
@@ -8462,6 +8499,8 @@ struct FeedScreen: View {
         switch source {
         case "Cloudflare":
             return CloudflareRunwaySource.compose(things: visible).map { .runway($0) }
+        case "Stripe":
+            return StripeRoomSource.compose(things: visible).map { .stripe($0) }
         case "Polar":
             return PolarRoomSource.compose(things: visible).map { .polar($0) }
         case DodoPaymentsRoomSource.source:
@@ -8512,6 +8551,8 @@ struct FeedScreen: View {
         case PrivyHomeFeed.source:
             let room = PrivyHomeStore.shared.room
             return room.appCount > 0 ? .privy(room) : nil
+        case SafeRoomSource.source:
+            return SafeRoomSource.compose(things: visible).map { .safe($0) }
         case let name where JournalRoomSource.sources.contains(name):
             return JournalRoomSource.compose(things: visible).map { .journal($0, source: name) }
         case let name where AgentRoomSource.sources.contains(name):

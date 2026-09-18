@@ -427,10 +427,10 @@ final class ShellChrome {
     /// has since gone.
     var privacyPoolsSection: PrivacyPoolsSection?
 
-    /// The kind tile picked in the Safe, GitHub or Stripe room (prd §815).
+    /// The kind tile picked in a kind-tile room (prd §815, §816).
     /// Not persisted, and cleared on every source change: All is where each of
     /// those rooms opens ("for all of them we need a button that is 'all'").
-    /// One property for three rooms because only one room is ever standing,
+    /// One property for every such room because only one is ever standing,
     /// and `RoomKindTiles.resolve` handles a pick whose kind has gone.
     var roomKind: RoomKindTile = .all
 

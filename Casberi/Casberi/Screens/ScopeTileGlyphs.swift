@@ -33,11 +33,29 @@ enum ScopeTileGlyph {
     static let payments     = "dollarsign.circle"
     static let payouts      = "banknote"
     static let disputes     = "exclamationmark.triangle"
+    /// App Store Connect's and Hugging Face's kind tiles (prd §816). Each a
+    /// meaning no tile or dock seat had yet, so each a symbol none wears.
+    static let versions     = "app.badge"
+    static let reviews      = "star.bubble"
+    static let builds       = "hammer"
+    static let models       = "cpu"
+    static let datasets     = "cylinder.split.1x2"
+    static let papers       = "doc.text"
+    /// PostHog's, L2BEAT's and Walletbeat's (prd §816). News and Revisions
+    /// are one meaning in both rating rooms, so one glyph each.
+    static let metrics      = "gauge.with.dots.needle.33percent"
+    static let annotations  = "text.bubble"
+    static let milestones   = "flag"
+    static let chains       = "point.3.connected.trianglepath.dotted"
+    static let wallets      = "wallet.bifold"
+    static let news         = "newspaper"
+    static let revisions    = "arrow.triangle.2.circlepath"
 }
 
-/// Safe's, GitHub's and Stripe's kind tiles (prd §815). Activity and
-/// Permissions are the wallet family's own glyphs, because they are the same
-/// meaning; every new kind wears a glyph no other tile or dock seat wears.
+/// The rooms' kind tiles (prd §815, §816). Activity and Permissions are the
+/// wallet family's own glyphs, because they are the same meaning; every new
+/// kind wears a glyph no other tile or dock seat wears, and a meaning two rooms
+/// share (News, Revisions) is one case, so one glyph.
 extension RoomKindTile: DSTileScope {
     var glyph: String {
         switch self {
@@ -51,6 +69,19 @@ extension RoomKindTile: DSTileScope {
         case .payments:     return ScopeTileGlyph.payments
         case .payouts:      return ScopeTileGlyph.payouts
         case .disputes:     return ScopeTileGlyph.disputes
+        case .versions:     return ScopeTileGlyph.versions
+        case .reviews:      return ScopeTileGlyph.reviews
+        case .builds:       return ScopeTileGlyph.builds
+        case .models:       return ScopeTileGlyph.models
+        case .datasets:     return ScopeTileGlyph.datasets
+        case .papers:       return ScopeTileGlyph.papers
+        case .metrics:      return ScopeTileGlyph.metrics
+        case .annotations:  return ScopeTileGlyph.annotations
+        case .milestones:   return ScopeTileGlyph.milestones
+        case .chains:       return ScopeTileGlyph.chains
+        case .wallets:      return ScopeTileGlyph.wallets
+        case .news:         return ScopeTileGlyph.news
+        case .revisions:    return ScopeTileGlyph.revisions
         }
     }
 }

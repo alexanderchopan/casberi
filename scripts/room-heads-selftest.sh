@@ -1,10 +1,3 @@
-# The Stripe head's CARD is deleted (prd §815): the room leads with its cover
-# and its kind tiles. `StripeRoom` still composes for the widgets and the brief,
-# so the model half above stays guarded; the card must not come back unnoticed.
-[[ ! -e Casberi/Casberi/Screens/StripeRoomCard.swift ]] \
-  || { echo "✗ StripeRoomCard.swift is back — §815 deleted the Stripe head for the cover and kind tiles"; exit 1; }
-! grep -q 'case .stripe(let room)' "$FEED" \
-  || { echo "✗ FeedScreen draws a Stripe head again (§815: cover and kind tiles)"; exit 1; }
 #!/bin/zsh
 # Casberi room-head self-test — the SHIPPED pure judgement behind the Stripe and
 # PostHog feed-room heads (prd §298, 2026-08-04):
@@ -51,6 +44,7 @@ done
 # `position` is worthless if the source never filters the window.
 SRC_STRIPE="Casberi/Casberi/Model/StripeRoomSource.swift"
 SRC_POSTHOG="Casberi/Casberi/Model/PostHogRoomSource.swift"
+CARD_STRIPE="Casberi/Casberi/Screens/StripeRoomCard.swift"
 CARD_POSTHOG="Casberi/Casberi/Screens/PostHogRoomCard.swift"
 # FeedScreen is split across files (prd §718). Checks read the room as ONE text,
 # so a guard can neither fail nor pass because its code moved next door.
@@ -71,13 +65,10 @@ grep -q 'PostHogRoom.ranked(metrics)' "$SRC_POSTHOG" \
   || { echo "✗ PostHog metrics are no longer ranked — a silent metric would sort by volume it no longer has"; exit 1; }
 grep -q 'room.metrics.prefix(PostHogRoomSource.discCap)' "$CARD_POSTHOG" \
   || { echo "✗ the PostHog card no longer honours the disc cap"; exit 1; }
-# The Stripe head's CARD is deleted (prd §815): the room leads with its cover
-# and its kind tiles. `StripeRoom` still composes for the widgets and the brief,
-# so the model half stays guarded; the card must not come back unnoticed.
-[[ ! -e Casberi/Casberi/Screens/StripeRoomCard.swift ]] \
-  || { echo "✗ StripeRoomCard.swift is back — §815 deleted the Stripe head for the cover and kind tiles"; exit 1; }
-! grep -q 'case .stripe(let room)' "$FEED" \
-  || { echo "✗ FeedScreen draws a Stripe head again (§815: cover and kind tiles)"; exit 1; }
+grep -q 'StripeRoom.position(days: item.days, span: span)' "$CARD_STRIPE" \
+  || { echo "✗ the Stripe rail no longer places marks through the shipped position()"; exit 1; }
+grep -q 'case .stripe(let room)' "$FEED" \
+  || { echo "✗ the Stripe head is no longer rendered from the sourceHead chain"; exit 1; }
 grep -q 'case .posthog(let room)' "$FEED" \
   || { echo "✗ the PostHog head is no longer rendered from the sourceHead chain"; exit 1; }
 # ONE FIGURE HEIGHT AND ONE ROW CAP FOR EVERY CHART HEAD (prd §751).
@@ -98,10 +89,8 @@ for f in StripeRoomSource PolarRoomSource WalletbeatRoomSource L2beatRoomSource 
 done
 
 # The §219 failure inverted — see the probe's own comment.
-# `stripeHead` left with its card (prd §815) — a probe line for a head that is
-# not drawn would claim the room leads with it.
-! grep -q 'note("stripeHead"' "$PROBES" \
-  || { echo "✗ -roomInsightProbe reports a Stripe head §815 deleted"; exit 1; }
+grep -q 'note("stripeHead"' "$PROBES" \
+  || { echo "✗ -roomInsightProbe no longer mirrors the Stripe head; it would report 'leads with NOTHING'"; exit 1; }
 grep -q 'note("posthogHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the PostHog head; it would report 'leads with NOTHING'"; exit 1; }
 # RoomQuiet.Seat MIRRORS BridgeApp.Status (which lives in a SwiftUI file and so

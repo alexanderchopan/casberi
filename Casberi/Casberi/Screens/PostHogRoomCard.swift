@@ -26,6 +26,9 @@ import SwiftUI
 /// own block, and everything around it is the template's.
 struct PostHogRoomCard: View {
     let room: PostHogRoom
+    /// The room's kind tiles (prd §816), drawn in the head's `scopes` slot —
+    /// the Privy pattern. Nil, or fewer than two kinds, draws the head alone.
+    var tiles: DSScopeTiles<RoomKindTile>? = nil
     /// Opens the metric's own row. The card holds no `Thing`, so it hands back
     /// the event name the caller can resolve.
     var onOpen: (String) -> Void
@@ -42,7 +45,8 @@ struct PostHogRoomCard: View {
             notes: [.note(PostHogRoom.note(room, nextRung: PostHogMilestone.next(after:)))],
             footnotes: [.quiet(PostHogRoom.coverageNote(shown: drawn.count,
                                                         total: room.metrics.count,
-                                                        unread: room.unread))]) {
+                                                        unread: room.unread))],
+            tiles: tiles) {
             DSRoomChassis.Block { roster }
         }
     }
