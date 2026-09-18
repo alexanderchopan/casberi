@@ -115,15 +115,15 @@ struct PrivacyDevnetScreen: View {
 /// **Each is here for a DIFFERENT reading and both are MEASURED.** The pool
 /// participant is the only one of the two whose transactions reference a root,
 /// so watching it is the only way to see the Roots scope at all without waiting
-/// for somebody else to use the chain. Read off `rpc1.privacy.ethrex.xyz` on
-/// 2026-09-04, and re-confirmed the same day when the root storage derivation
-/// was checked against live state.
+/// for somebody else to use the chain. Re-read off `rpc1.privacy.ethrex.xyz`
+/// on 2026-09-18 after the relaunch: the pool sends its own spends, and the
+/// faucet sent the chain's first transactions (block 66).
 enum PrivacyDevnetExample {
     static let all: [DevnetExample] = [
-        DevnetExample(address: "0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980",
+        DevnetExample(address: "0x8fdab78244c5fa43809d064fc93e6c0e5041971d",
                       title: String(localized: "An address that used the pool"),
                       detail: String(localized: "One-time spend keys, and a proof")),
-        DevnetExample(address: "0x248ac8584135c94469a90fbb02ba053b17f1cc60",
+        DevnetExample(address: "0x189abc0be7003dd1238b7a404325b440c70e88e4",
                       title: String(localized: "An address that sent early"),
                       detail: String(localized: "The chain's first hour")),
     ]

@@ -48,7 +48,6 @@ func hx(_ s: String) -> Data {
 func hex(_ d: Data) -> String { d.map { String(format: "%02x", $0) }.joined() }
 typealias F = PrivacyDevnetTransaction.Frame
 typealias S = PrivacyDevnetTransaction.Signature
-typealias R = PrivacyDevnetTransaction.RootReference
 
 SWIFT
 # The fixtures live in the REPO, not in a directory passed as an argument: a
@@ -75,10 +74,14 @@ for (label, fx) in [("simple", fx_simple), ("rich", fx_rich)] {
 check(fx_rich.f.nonceKeys.count == 2, "the rich fixture really carries two keys")
 check(fx_rich.f.nonceKeys.allSatisfy { $0.count >= 31 },
       "and they are full-width, not the small named channels")
-check(fx_rich.f.recentRootReferences.count == 1, "and a recent-root reference")
-check(fx_rich.f.recentRootReferences[0].sourceID.count == 32,
-      "whose sourceID is 32 BYTES — the width Hegotá's UInt64 cannot hold")
-check(fx_simple.f.recentRootReferences.isEmpty, "the simple fixture carries none")
+// Since the relaunch a root reference is a FRAME to 0x…8272 whose data is
+// sourceID(32) ‖ slot(8) ‖ root(32), not an envelope field.
+let rootFrames = fx_rich.f.frames.filter { $0.target == hx("0000000000000000000000000000000000008272") }
+check(rootFrames.count == 1, "and a recent-root reference, riding as a frame to 0x…8272")
+check(rootFrames.first?.data.count == 72,
+      "whose data is sourceID(32) + slot(8) + root(32) — a 32-byte source Hegotá's UInt64 cannot hold")
+check(!fx_simple.f.frames.contains { $0.target == hx("0000000000000000000000000000000000008272") },
+      "the simple fixture carries none")
 
 // The elision rule: an empty-msg entry drops its signature from the SIGNING
 // bytes and keeps it in the BROADCAST bytes. If those two were identical the
@@ -129,12 +132,9 @@ mutate "the fee triple FLATTENED (Frames' own recorded trap)" \
   ".bytes(RLP.quantity(f.maxPriorityFeePerGas)),
          .bytes(RLP.quantity(f.maxFeePerGas)),
          .bytes(RLP.quantity(f.maxFeePerBlobGas)),"
-mutate "recent roots moved BEFORE the blob hashes" \
-  ".list(f.blobVersionedHashes.map { .bytes(\$0) }),
-         // LAST — see trap 2.
-         .list(f.recentRootReferences.map(\\.item))" \
-  ".list(f.recentRootReferences.map(\\.item)),
-         .list(f.blobVersionedHashes.map { .bytes(\$0) })"
+mutate "the pre-relaunch ninth list re-appended after the blob hashes" \
+  ".list(f.blobVersionedHashes.map { .bytes(\$0) })]" \
+  ".list(f.blobVersionedHashes.map { .bytes(\$0) }), .list([])]"
 mutate "the frame budgets flattened out of their pair" \
   ".list([.bytes(RLP.quantity(gasLimit)),
                           .bytes(RLP.quantity(stateLimit))])," \
@@ -190,10 +190,10 @@ strip_comments "$TX" > "$work/tx.bare"
 # Foundation-only, so the harness can compile it whole.
 grep -qE '^import (SwiftUI|UIKit|SwiftData)' "$work/tx.bare" \
   && fail "PrivacyDevnetTransaction is no longer Foundation-only"
-# The sourceID must stay Data. A UInt64 cannot hold this chain's 32 bytes, and
-# that is precisely the width Hegota shipped because no chain could disprove it.
-grep -qE 'var sourceID: Data' "$work/tx.bare" \
-  || fail "RootReference.sourceID is no longer Data — a UInt64 cannot hold this chain's 32-byte value"
+# The relaunch (2026-09-18) DROPPED the envelope's ninth list. Appending it
+# re-encodes 0 of 98 real transactions, so it must not come back.
+grep -qF 'recentRootReferences' "$work/tx.bare" \
+  && fail "the envelope carries recentRootReferences again — the relaunched chain dropped that field, and every send would hash a transaction the node does not have"
 
 # THE TWO RULES THE CHAIN ITSELF TAUGHT US (2026-09-04), each found by a real
 # broadcast and by nothing else. Both are REFUSALS rather than wrong sends, so
@@ -216,5 +216,5 @@ grep -qE 'mode: 1, flags: 3' "$work/send.bare" \
 grep -q "privacy-tx-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-print "  ok   drift guards: one body function, Foundation-only, 32-byte sourceID"
+print "  ok   drift guards: one body function, Foundation-only, no ninth list"
 print "✓ privacy-tx: 2 real transactions byte-exact, keccak == the chain's own hash, 8 mutations, 4 drift guards"

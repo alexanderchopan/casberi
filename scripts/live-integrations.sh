@@ -915,9 +915,9 @@ hr
 # `privacy-tx-selftest.sh` a green check over a chain that no longer exists.
 print -P "%F{45}Privacy devnet%f (keyless, EIP-8141 frames + EIP-8272 roots)"
 PV="https://rpc1.privacy.ethrex.xyz"
-PV_TX="0x3b87ac123b82cb860e82ee864d418a0953d9de53780a7e9e89626e859bb03820"   # §593a's own broadcast
-PV_FX_RICH="0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f" # privacy-tx-fixtures fx_rich
-PV_FX_SIMPLE="0xd4bf5b4d8d71d1cae6c2fe947daaa644f7b5770586f542ebe8ddc09b0040a51e"
+PV_TX="0x2a5948088aa9e81549ec19f26a806b33d686090906eec4ce007952bb810b6772"   # the pool's first deposit (the §593a broadcast went with the 2026-09-18 relaunch)
+PV_FX_RICH="0x2b90c598179b0cb8fca70a1c7c9211ca9a27945eeaae6c51ad0d8d0d501b45ac" # privacy-tx-fixtures fx_rich
+PV_FX_SIMPLE="0x2a5948088aa9e81549ec19f26a806b33d686090906eec4ce007952bb810b6772"
 
 # 1. All three hosts, and the chain id the encoder PINS (8141 = 0x1fcd). The
 #    old discovery row's one live question — is this Hegotá re-hosted? — is
@@ -955,18 +955,19 @@ if (( pv_up > 0 )); then
   fi
 
   # 3. **THE ENVELOPE'S OWN FIELD NAMES.** The reader (`PrivacyDevnetBridge`)
-  #    takes `frames[].gasLimit` and `frames[].stateLimit` — NOT Hegotá's
-  #    `executionGasLimit`/`stateGasLimit`, NOT Frames' `gasLimit`-only —
-  #    plus `nonceKeys` and `recentRootReferences[]{sourceId,root,slot}`. A
-  #    rename on any of these gets silently nil, and a frame drawn with a nil
-  #    budget looks like one that had none.
+  #    takes `frames[].gasLimit` and `frames[].stateGasLimit` (renamed from
+  #    `stateLimit` by the 2026-09-18 relaunch, which also moved root
+  #    references out of the envelope into a 72-byte frame to 0x…8272), plus
+  #    `nonceKeys`. A rename on any of these gets silently nil, and a frame
+  #    drawn with a nil budget looks like one that had none.
   pvshape=$(raw "$PV" "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionByHash\",\"params\":[\"$PV_FX_RICH\"]}" \
              | python3 -c '
 import sys, json
 r = (json.load(sys.stdin).get("result") or {})
 if not r: print("gone"); raise SystemExit
-f = (r.get("frames") or [{}])[0]
-rr = (r.get("recentRootReferences") or [{}])[0]
+fs = r.get("frames") or [{}]
+f = fs[-1]
+rf = [x for x in fs if (x.get("to") or "").lower() == "0x0000000000000000000000000000000000008272"]
 print(":".join([
   r.get("type",""),
   "frames" if r.get("frames") else "-",
@@ -974,17 +975,17 @@ print(":".join([
   "gasLimit" if "gasLimit" in f else ("executionGasLimit" if "executionGasLimit" in f else "-"),
   "stateLimit" if "stateLimit" in f else ("stateGasLimit" if "stateGasLimit" in f else "-"),
   "nonceKeys" if isinstance(r.get("nonceKeys"), list) else "-",
-  "roots" if all(k in rr for k in ("sourceId","root","slot")) else "-",
+  "roots" if rf and len((rf[0].get("data") or "")) == 2 + 144 else "-",
 ]))' 2>/dev/null)
   case "$pvshape" in
     gone|"")
       warn "Privacy — the pinned rich fixture (fx_rich) is gone (a reset, most likely); the envelope's field names are unverified tonight" ;;
-    0x6:frames:sigs:gasLimit:stateLimit:nonceKeys:roots)
-      pass "Privacy — a type-0x6 still carries frames, signatures, gasLimit+stateLimit per frame, nonceKeys and {sourceId,root,slot} roots — the names the reader takes" ;;
-    *:*:*:executionGasLimit:*|*:*:*:*:stateGasLimit:*)
-      fail "Privacy — a frame's budgets are now spelled Hegotá's way ($pvshape); every frame in the room draws with no budget" ;;
+    0x6:frames:sigs:gasLimit:stateGasLimit:nonceKeys:roots)
+      pass "Privacy — a type-0x6 still carries frames, signatures, gasLimit+stateGasLimit per frame, nonceKeys and a 72-byte 0x…8272 root frame — the names the reader takes" ;;
+    *:*:*:executionGasLimit:*|*:*:*:*:stateLimit:*)
+      fail "Privacy — a frame's budgets are spelled differently again ($pvshape); every frame in the room draws with no budget" ;;
     *:*:*:*:*:*:-)
-      fail "Privacy — recentRootReferences no longer carry sourceId/root/slot ($pvshape); the Roots scope reads nothing" ;;
+      fail "Privacy — the pinned spend no longer carries a 72-byte frame to 0x…8272 ($pvshape); the Roots scope reads nothing" ;;
     *)
       fail "Privacy — the type-0x6 shape moved ($pvshape); the encoder signs a list the chain no longer hashes" ;;
   esac
@@ -1048,7 +1049,7 @@ for l in reversed(logs):
 for h in pinned:
     if h not in seen: seen.append(h)
 KNOWN_TYPES={"0x0","0x1","0x2","0x3","0x4","0x6"}
-KNOWN_FRAME={"data","flags","gasLimit","mode","stateLimit","to","value"}
+KNOWN_FRAME={"data","flags","gasLimit","mode","stateGasLimit","to","value"}
 KNOWN_FRAMERECEIPT={"gasUsed","logs","stateGasUsed","status"}
 KNOWN_ROOT={"root","slot","sourceId"}
 newtypes=set(); newkeys=set(); typed=0
@@ -1063,8 +1064,7 @@ for h in seen:
     typed+=1
     for f in tx.get("frames") or []:
         newkeys |= {"frame."+k for k in f.keys()} - {"frame."+k for k in KNOWN_FRAME}
-    for r in tx.get("recentRootReferences") or []:
-        newkeys |= {"root."+k for k in r.keys()} - {"root."+k for k in KNOWN_ROOT}
+    if "recentRootReferences" in tx: newkeys.add("tx.recentRootReferences")
     try:
         rc=call("eth_getTransactionReceipt",[h]) or {}
     except Exception:
@@ -1133,13 +1133,13 @@ fi
 # (Until 2026-09-08 this block sat INSIDE the discovery row's predeploy loop,
 # so it ran twice per night and only when that row chose to look.)
 print -P "%F{cyan}ethrex privacy demo fixture%f (are the seeded values still the chain's own?)"
-priv_addr="0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980"
+priv_addr="0x8fdab78244c5fa43809d064fc93e6c0e5041971d"
 priv_bal=$(raw "$PV" \
   "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"$priv_addr\",\"latest\"]}" \
   | sed -n 's/.*"result":"\([^"]*\)".*/\1/p')
 if [ -z "$priv_bal" ]; then
   pass "privacy fixture — chain not reachable from here, nothing to compare"
-elif [ "$priv_bal" = "0x638168433fac308" ]; then
+elif [ "$priv_bal" = "0x636f7def7f4451a" ]; then
   pass "privacy fixture — the demo balance is still this address's own"
 else
   # WORDED WITHOUT A CAUSE, deliberately (2026-09-08). This row cannot separate
@@ -1150,20 +1150,20 @@ else
   # question needs is not available here for this account. Both readings matter
   # and one of them is the §593a-class defect the block above exists for, so
   # the row names the discrepancy and leaves the diagnosis to a person.
-  warn "privacy fixture — demo claims 0x638168433fac308, chain says $priv_bal; either seedDemo's balance has moved or it was never read off this chain (this node answers the same value at every height, so the row cannot tell which)"
+  warn "privacy fixture — demo claims 0x636f7def7f4451a, chain says $priv_bal; either seedDemo's balance has moved or it was never read off this chain (this node answers the same value at every height, so the row cannot tell which)"
 fi
 # Each seeded nullifier must appear on one of the two transactions the fixture
 # itself names. This is the exact check that would have caught the fabrication.
 priv_keys=$(for h in "$PV_FX_RICH" \
-                     0xeda9b1c8231c7ba375c831d63655acc813cf8c7d3ac2b095b23e3011d7b2999a; do
+                     0x6be1ba8f441fa2534815de1c202f6daf1fd306458e8bcdc870aa37e67a1e7b46; do
   raw "$PV" \
     "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionByHash\",\"params\":[\"$h\"]}"
 done)
 priv_missing=0
-for k in 0cca26d343c75c5d092b41abc4c7372c0105537e6f5209967fee5bb6b6ca390c \
-         277a116036d2c29207c09c18015780c8e161402d2017d07012147a1d4b7240fe \
-         1871055c1947afa152d04f00757f94f890efa87190de3d8e481d7c22b6b381e1 \
-         1a3f0e61700a2fc8652d33787331f955bff2b1a500426b4dfd83481f5c645ffe; do
+for k in 1479940291777d1f0f3d58bf8a46cf21c33e7cfcd8b9876766a33d3a39b3e821 \
+         2e0eb2f5b5991e31cdde9b66c0da09e603e20744ec9c708e93ba4409bc3e8cbc \
+         2668f91c3cd9b53720f2f382e73721595b20c023713e8b6d2337ee2acd1e912e \
+         298c7317b46b4b0760e7204070d6e9e6111b62bfb53ee06f746321615991c015; do
   # The wire strips a leading zero (quantity encoding), so match on the
   # significant bytes rather than the padded 32 — the same width fact
   # `PrivacyDevnetRoots.isNullifier` turns on.

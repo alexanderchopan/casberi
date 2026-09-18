@@ -999,13 +999,18 @@ extension PrivacyDevnetLiveState {
                 // scope for every address that ever sent anything.
                 if PrivacyDevnetRoots.isNullifier(data) { w.nullifiers.append(data) }
             }
-            for r in (tx["recentRootReferences"] as? [[String: Any]] ?? []) {
-                guard let src = r["sourceId"] as? String,
-                      let root = r["root"] as? String,
-                      let slot = PrivacyDevnetRPC.hexInt(r["slot"]) else { continue }
-                w.roots.append(PrivacyDevnetRoots.Reference(
-                    sourceID: PrivacyDevnetRPC.hexData(src), slot: slot,
-                    root: PrivacyDevnetRPC.hexData(root)))
+            // **A ROOT REFERENCE IS A FRAME since the relaunch (2026-09-18).**
+            // The envelope's `recentRootReferences` field is gone; the reference
+            // rides as a frame to `0x…8272` whose data is
+            // `sourceID(32) ‖ slot(8) ‖ root(32)` — measured on every
+            // root-carrying transaction of the new chain.
+            for f in (tx["frames"] as? [[String: Any]] ?? []) {
+                guard let to = f["to"] as? String,
+                      to.caseInsensitiveCompare(PrivacyDevnetChain.recentRoots) == .orderedSame,
+                      let r = PrivacyDevnetRoots.Reference(frameData:
+                                PrivacyDevnetRPC.hexData(f["data"] as? String ?? ""))
+                else { continue }
+                w.roots.append(r)
             }
             // The receipt is read ONLY for a transaction already known to be
             // yours, which is what keeps the walk's cost proportional to what
@@ -1027,7 +1032,8 @@ extension PrivacyDevnetLiveState {
             }
             let moveFrames = (tx["frames"] as? [[String: Any]] ?? []).map { f in
                 Frame(gasLimit: PrivacyDevnetRPC.hexInt(f["gasLimit"]),
-                      stateLimit: PrivacyDevnetRPC.hexInt(f["stateLimit"]),
+                      // `stateGasLimit` since the relaunch; `stateLimit` before.
+                      stateLimit: PrivacyDevnetRPC.hexInt(f["stateGasLimit"] ?? f["stateLimit"]),
                       // Both nil, deliberately: no per-frame breakdown is
                       // served on this chain (measured), and a figure must not
                       // weight or fail a frame off a value nobody reported.
@@ -1093,7 +1099,7 @@ extension PrivacyDevnetLiveState {
     /// A `static let` rather than a literal in `seedDemo` because the room card
     /// names the same address, and two copies of an address in two files is how
     /// a card draws a balance belonging to somebody else's fixture.
-    nonisolated static let demoAddress = "0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980"
+    nonisolated static let demoAddress = "0x8fdab78244c5fa43809d064fc93e6c0e5041971d"
 
     /// The demo's account.
     ///
@@ -1102,199 +1108,134 @@ extension PrivacyDevnetLiveState {
     /// seat as a room with nothing in it.
     ///
     /// **EVERY FIGURE IS REAL**, read off `rpc1.privacy.ethrex.xyz` on
-    /// 2026-09-04. One account rather than Hegotá's two, and that is a fact
-    /// about this chain rather than a shortcut: here the coin owners and the
-    /// keyed-nonce senders are the SAME population, because the nonce key is a
-    /// nullifier the pool emits for the address that spent it.
+    /// 2026-09-18, AFTER the relaunch (genesis `0x2036e3fe…`). The fixture this
+    /// replaces described a chain that no longer exists: every hash, key,
+    /// root and balance in it answered nothing on the new one. Re-measure the
+    /// whole block after the next relaunch — `live-integrations.sh`'s
+    /// "ethrex privacy demo fixture" rows say when.
+    ///
+    /// **Every hex value was read back, never typed.** Two nullifiers in the
+    /// first version of this fixture were fabricated and shipped; a value that
+    /// LOOKS like a 32-byte key is indistinguishable from one that is.
     nonisolated static func seedDemo() {
+        // THE POOL ITSELF (`PrivacyDevnetPool.address`): it sends its own
+        // spends, so one account furnishes Nullifiers, Roots and Frames. Its
+        // two transactions (blocks 8155 and 8160) each carry two one-time keys
+        // and a live root reference, riding as a frame to 0x…8272.
         var a = PrivacyDevnetAccount(address: demoAddress)
         a.reached = true
-        a.balanceWei = Decimal(string: "448132919986930440")   // 0.448133 ETH
+        a.balanceWei = Decimal(string: "447817749984724250")   // 0.447818 ETH
         a.nonce = 1
-        a.frameCount = 4
-        // The two 32-byte keys off block 13347, which are byte-identical to the
-        // pool's own spent-key log topics — the evidence that a keyed nonce is
-        // a nullifier on this chain.
-        // FOUR, not two: this address has TWO pool transactions, each carrying
-        // two keys.
-        //
-        // **TWO OF THESE WERE FABRICATED AND SHIPPED**, caught in review. The
-        // COUNT was measured by running the walk; the VALUES were then written
-        // from a different block's census, and the comment here claimed the
-        // measurement while standing over invented bytes. All four are now read
-        // back off `eth_getTransactionByHash` for the two hashes below —
-        // 13347's pair, then 13352's.
-        //
-        // The lesson is the one that makes eye review useless here: a fixture
-        // that LOOKS like a 32-byte key is indistinguishable from one that is,
-        // and a confident comment tells the next reader not to check. Read
-        // every hex value back, or do not claim it was measured.
+        a.frameCount = 6
         a.nullifiers = [
-            Self.hex("0cca26d343c75c5d092b41abc4c7372c0105537e6f5209967fee5bb6b6ca390c"),
-            Self.hex("277a116036d2c29207c09c18015780c8e161402d2017d07012147a1d4b7240fe"),
-            // CORRECTED 2026-09-04 during the ship review: these two were
-            // FABRICATED. Block 13352's real keys are the ones below — read
-            // back off `rpc1.privacy.ethrex.xyz` and compared against the
-            // transaction the fixture's own `Move` names. The invented pair
-            // appeared on neither of this address's two transactions.
-            //
-            // Third fabricated hex value in the session that wrote this file
-            // (the genesis hash and a transaction hash were the others, both
-            // caught before commit). A fixture that LOOKS like a 32-byte key is
-            // indistinguishable from one that is, which is why every value here
-            // has to be read back rather than reviewed by eye.
-            Self.hex("1871055c1947afa152d04f00757f94f890efa87190de3d8e481d7c22b6b381e1"),
-            Self.hex("1a3f0e61700a2fc8652d33787331f955bff2b1a500426b4dfd83481f5c645ffe"),
+            Self.hex("1479940291777d1f0f3d58bf8a46cf21c33e7cfcd8b9876766a33d3a39b3e821"),
+            Self.hex("2e0eb2f5b5991e31cdde9b66c0da09e603e20744ec9c708e93ba4409bc3e8cbc"),
+            Self.hex("2668f91c3cd9b53720f2f382e73721595b20c023713e8b6d2337ee2acd1e912e"),
+            Self.hex("298c7317b46b4b0760e7204070d6e9e6111b62bfb53ee06f746321615991c015"),
         ]
         a.roots = [
             PrivacyDevnetRoots.Reference(
-                sourceID: Self.hex("a0dfea37afb843c1fc18cfa21205766b96e6f7c7d7993ab5d5e041e0b1964f54"),
-                slot: 0x3431,
+                sourceID: Self.hex("e06e601046631b3e1dc3943f4f7d058de6da6772644dca7af1a42500c810b2f8"),
+                slot: 0x214b,
                 root: Self.hex("2dd32b6609c5a8e80505ac44c5cb8e9f712115c1f63f59b18be08fc9b9250bf4")),
             PrivacyDevnetRoots.Reference(
-                sourceID: Self.hex("a0dfea37afb843c1fc18cfa21205766b96e6f7c7d7993ab5d5e041e0b1964f54"),
-                slot: 0x3436,
+                sourceID: Self.hex("e06e601046631b3e1dc3943f4f7d058de6da6772644dca7af1a42500c810b2f8"),
+                slot: 0x2151,
                 root: Self.hex("1ea261e94b9f2b02699e293bd4ad36b4c39cf23975b84c4cc39794bb577df422")),
         ]
-        // THE TWO REAL TRANSACTIONS, so Activity and Frames draw in the demo
-        // rather than saying "nothing yet" under a chip that only exists
-        // because the counts above are non-zero. Hashes and shapes are this
-        // address's own, off blocks 13352 and 13347 — obtained by running the
-        // walk's own path against the live chain, not by hand.
-        // **THE DEMO'S CLOCK (prd §687).** These moves are real and so are
-        // their block numbers; what the fixture never carried was a TIME, so
-        // every row said `block 13352` where every other room says a clock
-        // time and the Activity chart had no axis. Derived from the blocks so
-        // the ORDER and the PROPORTIONS are the chain's own — 260 seconds a
-        // block puts the oldest fixture move about 40 days back, which is a
-        // history a 7d and a 30d window can honestly be drawn over. The same
-        // stretch §684 made for Hegotá and Frames, and stated the same way:
-        // what is measured stays measured, the absolute scale is the demo's.
-        let demoTip: UInt64 = 13_352
-        let demoSecondsPerBlock: Double = 260
+        // **THE DEMO'S CLOCK (prd §687).** The blocks are real; the moves'
+        // TIMES are derived from them so the ORDER and PROPORTIONS are the
+        // chain's own. 420 seconds a block puts the oldest fixture move about
+        // 40 days back, a history a 7d and a 30d window can honestly be drawn
+        // over. What is measured stays measured, the absolute scale is the
+        // demo's.
+        let demoTip: UInt64 = 8_160
+        let demoSecondsPerBlock: Double = 420
         func stamp(_ block: UInt64) -> Date {
             Date().addingTimeInterval(-Double(demoTip &- min(block, demoTip)) * demoSecondsPerBlock)
         }
-
+        let poolFrames = [Frame(gasLimit: 0x7530, stateLimit: 0),
+                          Frame(gasLimit: 0x4e200, stateLimit: 0x2fd00),
+                          Frame(gasLimit: 0x155cc0, stateLimit: 0x86470)]
         a.moves = [
-            Move(hash: "0xeda9b1c8231c7ba375c831d63655acc813cf8c7d3ac2b095b23e3011d7b2999a",
-                 block: 13352,
-                 frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
-                          Frame(gasLimit: 0x4e200, stateLimit: 0)],
+            Move(hash: "0x6be1ba8f441fa2534815de1c202f6daf1fd306458e8bcdc870aa37e67a1e7b46",
+                 block: 8160, frames: poolFrames,
                  nullifiers: [a.nullifiers[2], a.nullifiers[3]],
-                 roots: [a.roots[1]], sponsored: false, date: stamp(13352)),
-            Move(hash: "0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f",
-                 block: 13347,
-                 frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
-                          Frame(gasLimit: 0x4e200, stateLimit: 0)],
+                 roots: [a.roots[1]], sponsored: false, date: stamp(8160)),
+            Move(hash: "0x2b90c598179b0cb8fca70a1c7c9211ca9a27945eeaae6c51ad0d8d0d501b45ac",
+                 block: 8155, frames: poolFrames,
                  nullifiers: [a.nullifiers[0], a.nullifiers[1]],
-                 roots: [a.roots[0]], sponsored: false, date: stamp(13347)),
+                 roots: [a.roots[0]], sponsored: false, date: stamp(8155)),
         ]
-        // Zero, and CORRECT: no transaction measured on this chain carries a
-        // `payer` differing from its sender, so the Sponsors chip is absent in
-        // the demo exactly as it is on the live chain. Furnishing one would
-        // show a reading this chain has never produced.
+        // Zero, and CORRECT: every receipt read carries `payer` equal to its
+        // sender, so the Sponsors chip is absent in the demo exactly as it is
+        // on the live chain.
         a.sponsoredCount = 0
 
-        // **TWO MORE REAL ACCOUNTS (prd §593d, user: "you need to seed the demo
-        // with activity so it is present").** One account with two moves left
-        // most of the room's figures near-empty. Both below are the chain's own
-        // — every hash, key, frame budget, root, balance and nonce read back
-        // off `rpc1.privacy.ethrex.xyz` on 2026-09-04, the same rule the
-        // fixture above already enforces — and each furnishes a DIFFERENT
-        // reading: `b` is the other pool participant, whose two roots (slots
-        // 0xaf1/0xaf6) are AGED against the demo head, so the ring shows
-        // hollow marks past the edge beside `a`'s live pair; `c` is the
-        // chain's first-hour sender, whose keys are the ordinary channel and a
-        // NAMED channel (0x81410003) — so it lights Frames and correctly does
-        // NOT light Nullifiers, which is the per-evidence scope rule on
-        // display.
-        var b = PrivacyDevnetAccount(address: "0x753d91eef10c8e26924aabcb0ad73052f8fc4522")
+        // **THE POOL'S FIRST DEPOSITOR (prd §593d: "seed the demo with activity
+        // so it is present").** One transaction, block 8150: 1 ETH shielded
+        // into the pool on the ordinary nonce channel — a move that is NOT a
+        // spend, so it lights Activity and Frames and correctly leaves
+        // Nullifiers dark.
+        var b = PrivacyDevnetAccount(address: "0x30eac2d1bad148af79173b8cf1b6ec461e517128")
         b.reached = true
-        b.balanceWei = Decimal(string: "447999725722746562")   // 0.448000 ETH
-        b.nonce = 1
-        b.frameCount = 4
-        // **These four include the two the fixture above once misattributed.**
-        // They were called fabricated because they appear on neither of THAT
-        // address's transactions; they are byte-real on THIS one's (blocks
-        // 2787 and 2792), which is where they now live. The harness pins the
-        // attribution both ways.
-        b.nullifiers = [
-            Self.hex("055b6c2720e71fbe4d5fa4ad130f4f7b68879ee7d062d0e21af30c5e8ce5839c"),
-            Self.hex("08cda6582e3ed667ed4b907d27093659da30882f1d1437ee86125664ecf6f9ce"),
-            Self.hex("060ed959302b15fe85a8e0358e936cb5ca584d174295b603d46d5c3dc1a654d4"),
-            Self.hex("19dcb924895a2dc08568ae34801b4a393d9a37a75091b3c0d9c2378f62fe7ae5"),
-        ]
-        b.roots = [
-            PrivacyDevnetRoots.Reference(
-                sourceID: Self.hex("b08f15750c491f4cfd65215c11a33b3962903a8896fc586bbd7c697851c26e20"),
-                slot: 0xaf1,
-                root: Self.hex("2dd32b6609c5a8e80505ac44c5cb8e9f712115c1f63f59b18be08fc9b9250bf4")),
-            PrivacyDevnetRoots.Reference(
-                sourceID: Self.hex("b08f15750c491f4cfd65215c11a33b3962903a8896fc586bbd7c697851c26e20"),
-                slot: 0xaf6,
-                root: Self.hex("1ea261e94b9f2b02699e293bd4ad36b4c39cf23975b84c4cc39794bb577df422")),
-        ]
+        b.balanceWei = Decimal(string: "998953953371677673604")   // 998.954 ETH
+        b.nonce = 9
+        b.frameCount = 2
         b.moves = [
-            Move(hash: "0xb17e6a8292d3ed1f559d7e78f85b62fad2962b589e51ce90eb6462440b6d2a66",
-                 block: 2792,
-                 frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
-                          Frame(gasLimit: 0x155cc0, stateLimit: 0x86470)],
-                 nullifiers: [b.nullifiers[2], b.nullifiers[3]],
-                 roots: [b.roots[1]], sponsored: false, date: stamp(2792)),
-            Move(hash: "0x5ad114d29ed7e9326bbc300b951c6ee9a59c648985dbba9497dfea454cccaa4a",
-                 block: 2787,
-                 frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
-                          Frame(gasLimit: 0x155cc0, stateLimit: 0x86470)],
-                 nullifiers: [b.nullifiers[0], b.nullifiers[1]],
-                 roots: [b.roots[0]], sponsored: false, date: stamp(2787)),
+            Move(hash: "0x2a5948088aa9e81549ec19f26a806b33d686090906eec4ce007952bb810b6772",
+                 block: 8150,
+                 frames: [Frame(gasLimit: 0x13880, stateLimit: 0),
+                          Frame(gasLimit: 0xef251, stateLimit: 0x86470)],
+                 nullifiers: [], roots: [], sponsored: false, date: stamp(8150)),
         ]
 
-        var c = PrivacyDevnetAccount(address: "0x248ac8584135c94469a90fbb02ba053b17f1cc60")
+        // **THE CHAIN'S FIRST-HOUR SENDER** (the faucet, blocks 69 and 70). Its
+        // block-69 transaction carries a root reference at slot 0x47, AGED
+        // against the demo head, so the ring shows a hollow mark past the edge
+        // beside the pool's live pair; its block-70 transaction rides a NAMED
+        // channel (0x81410068), which lights Frames and correctly does NOT
+        // light Nullifiers — the per-evidence scope rule on display.
+        var c = PrivacyDevnetAccount(address: "0x189abc0be7003dd1238b7a404325b440c70e88e4")
         c.reached = true
-        // The chain's own figure for its first-hour sender — a genesis-scale
-        // balance, which is what a devnet fixture account holds. Real, not
-        // rounded to look plausible.
-        c.balanceWei = Decimal(string: "999999999912820000000000")
-        c.nonce = 406
+        // A faucet's genesis-scale balance, real, not rounded to look plausible.
+        c.balanceWei = Decimal(string: "992308612089494341806599")
+        c.nonce = 7695
         c.frameCount = 4
+        c.roots = [
+            PrivacyDevnetRoots.Reference(
+                sourceID: Self.hex("4d702eca76b95c1f4bf8ec0b03d6280d361b73f2bfcb688c5a79efcfdd23fcf1"),
+                slot: 0x47,
+                root: Self.hex("2222222222222222222222222222222222222222222222222222222222222222")),
+        ]
         c.moves = [
-            Move(hash: "0xd0b667abc741070f0bd46e156ed32848316261a3dcb550bab14db41bce06411b",
+            Move(hash: "0x6f07b8e74f8bdd8d69c2df20a30edb4d2d29e9e7b8c8d49c43cffeb65f71e8e4",
+                 block: 70,
+                 frames: [Frame(gasLimit: 0x13880, stateLimit: 0x17e80),
+                          Frame(gasLimit: 0x7530, stateLimit: 0x2cd30)],
+                 nullifiers: [], roots: [], sponsored: false, date: stamp(70)),
+            Move(hash: "0x3cabeae9675cc9a6a2dd79e7154fb161f4d2ba03641e446eb9067cc0fe55ab1d",
                  block: 69,
                  frames: [Frame(gasLimit: 0x13880, stateLimit: 0),
-                          Frame(gasLimit: 0x7530, stateLimit: 0x2cd30)],
-                 nullifiers: [], roots: [], sponsored: false, date: stamp(69)),
-            Move(hash: "0xd4bf5b4d8d71d1cae6c2fe947daaa644f7b5770586f542ebe8ddc09b0040a51e",
-                 block: 66,
-                 frames: [Frame(gasLimit: 0x13880, stateLimit: 0),
-                          Frame(gasLimit: 0x7530, stateLimit: 0x2cd30)],
-                 nullifiers: [], roots: [], sponsored: false, date: stamp(66)),
+                          Frame(gasLimit: 0x13880, stateLimit: 0)],
+                 nullifiers: [], roots: [c.roots[0]], sponsored: false, date: stamp(69)),
         ]
 
-        // **THE DEMO'S HEAD, and it must stay AHEAD of the fixture's roots but
+        // **THE DEMO'S HEAD, and it must stay AHEAD of the pool's roots but
         // inside the window**, or the one card this seat exists for draws
-        // nothing. Slot 0x3436 is 13,366; a head of 13,366 + 4,096 puts both
-        // roots at half the ring — visibly live, visibly counting down, which
-        // is the reading. A head taken from the real chain today (~14,450)
-        // would also work now and would silently age out of the window on any
-        // demo shown after the fixture is ~27 hours old in slot terms.
-        let head: UInt64 = 0x3436 + (PrivacyDevnetRoots.windowSlots / 2)
+        // nothing. Slot 0x2151 plus half the window puts both live roots at
+        // half the ring — visibly live, visibly counting down — and leaves the
+        // faucet's slot-0x47 reference aged. A head taken from the real chain
+        // today would already have aged every root out.
+        let head: UInt64 = 0x2151 + (PrivacyDevnetRoots.windowSlots / 2)
         Task { @MainActor in
             PrivacyDevnetLiveState.shared.installDemo([a, b, c], headSlot: head,
                                                 genesis: PrivacyDevnetChain.genesis)
-            // The demo carries a balance HISTORY too (prd §682) — Home's line
-            // is sampled per read, so a freshly poured demo would otherwise
-            // show the ring for its whole life and the line would be
-            // unreachable from here. Each series ends on the account's own
-            // balance above, and the dips are shields: value leaving the
-            // address for the pool, which is exactly what the reading means.
             // The demo carries a HISTORY too (prd §682/§683) — Home's line is
             // sampled per read, so a freshly poured demo would otherwise show
-            // no line for its whole life. Points are spread back over ten days
-            // so the 7d and since-watched chips both have something to offer,
-            // and the dips are shields: value leaving an address for the pool.
-            // Spread over ~45 days so 7d, 30d and since-watched all have two
-            // points and the range chips have something to offer —
+            // no line for its whole life. Each series ends on the account's own
+            // balance above; the depositor's step is its 1 ETH shield. Spread
+            // over ~45 days so 7d, 30d and since-watched all have two points —
             // `WalletRange.offered` requires the oldest sample to PREDATE a
             // window, not merely to sit inside it.
             let day: TimeInterval = 86_400
@@ -1307,9 +1248,9 @@ extension PrivacyDevnetLiveState {
                 }
             }
             RoomValueHistory.installDemo(room: PrivacyDevnetLiveState.historyRoom, book: [
-                demoAddress: series([0.9012, 0.8990, 0.7011, 0.6998, 0.6995, 0.4502, 0.4481]),
-                "0x753d91eef10c8e26924aabcb0ad73052f8fc4522": series([0.1002, 0.2503, 0.2501, 0.3999, 0.4480]),
-                "0x248ac8584135c94469a90fbb02ba053b17f1cc60": series([1.2004, 1.1998, 0.9002, 1.4003, 1.3999]),
+                demoAddress: series([0.0, 0.9998, 0.9998, 0.4499, 0.4478]),
+                "0x30eac2d1bad148af79173b8cf1b6ec461e517128": series([999.9551, 999.9549, 998.9541, 998.9540, 998.9540]),
+                "0x189abc0be7003dd1238b7a404325b440c70e88e4": series([992401.2, 992377.9, 992352.4, 992330.1, 992308.6]),
             ])
         }
     }

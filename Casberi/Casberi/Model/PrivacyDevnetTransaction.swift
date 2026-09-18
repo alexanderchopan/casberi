@@ -5,8 +5,19 @@ import Foundation
 /// harness compiles it WHOLE.
 ///
 /// **Proven against the chain, not read off a spec.** This envelope re-encodes
-/// **14 of 14** real type-`0x6` transactions byte-identically, their keccak
-/// matching the RPC's own hash 14/14. Two are pinned as fixtures.
+/// **98 of 98** real type-`0x6` transactions on the relaunched chain
+/// byte-identically (2026-09-18), their keccak matching the RPC's own hash, and
+/// the chain's own `ecrecover` returns the signer 14 of 14 over the signing
+/// bytes. Two are pinned as fixtures.
+///
+/// ## THE RELAUNCH DROPPED A FIELD (2026-09-18)
+///
+/// The devnet came back from genesis with **eight fields, not nine**:
+/// `recent_root_references` is gone from the envelope, and a root reference now
+/// rides as a FRAME sent to `0x…8272` carrying `sourceID(32) ‖ slot(8) ‖
+/// root(32)`. Appending the old empty list re-encodes 0 of 98, so every send
+/// this encoder built after the relaunch was a transaction the node could not
+/// hash the way we signed it.
 ///
 /// ## HOW IT WAS FOUND, because the method is worth more than the answer
 ///
@@ -26,10 +37,10 @@ import Foundation
 /// gave eight field names. **Build the cheap instrument, and when it fails, ask
 /// whether the SYSTEM can be made to answer rather than searching harder.**
 ///
-/// ## THE VECTOR THIS WAS PROVEN AGAINST
+/// ## THE VECTOR THIS WAS FIRST PROVEN AGAINST (the pre-relaunch chain)
 ///
 /// A transaction signed with THIS encoder and broadcast to the live chain on
-/// 2026-09-04. The node returned our own predicted hash, which is the proof —
+/// 2026-09-04, before the relaunch changed the envelope. The node returned our own predicted hash, which is the proof —
 /// the bytes we hashed are the bytes it hashed.
 ///
 ///     hash    0x3b87ac123b82cb860e82ee864d418a0953d9de53780a7e9e89626e859bb03820
@@ -43,28 +54,26 @@ import Foundation
 /// ## THE EIGHT FIELDS, AND WHY THEY ARE NEITHER SIBLING'S
 ///
 ///     chain_id, nonce_keys, nonce, sender, frames, signatures,
-///     fees(nested), blob_versioned_hashes, recent_root_references
+///     fees(nested), blob_versioned_hashes
 ///
 /// Hegotá is **eleven, flat**. Frames is **seven**, with the three fees NESTED
 /// and no keyed nonces. This is Frames' nested-fee shape PLUS Hegotá's keyed
-/// nonces PLUS recent roots — a third arrangement, which is why neither
-/// sibling's encoder can produce it and why this is a separate file rather
-/// than a parameter.
+/// nonces — a third arrangement, which is why neither sibling's encoder can
+/// produce it and why this is a separate file rather than a parameter.
 ///
 /// ## FOUR THINGS THAT SILENTLY PRODUCE A WRONG SIGNATURE
 ///
 /// 1. **The fee triple is NESTED.** Flattening it encodes cleanly, hashes to
 ///    something, and is refused — Frames' own recorded lesson, and the node
 ///    here confirms it by naming `fees` as one field.
-/// 2. **`recentRootReferences` comes LAST, after the blob hashes.** Putting it
-///    before them is a decode error, which is at least loud; putting it in a
-///    plausible-looking earlier slot would not be.
+/// 2. **The blob hashes are LAST.** Before the relaunch a ninth list,
+///    `recentRootReferences`, followed them; appending it now hashes a
+///    transaction the chain does not have (measured 0 of 98).
 /// 3. **`signer` is written LITERAL**, measured 9 of 9 on signed transactions
 ///    here — the opposite of Hegotá, which writes it EMPTY (measured 0/5). The
 ///    empty form is not merely different: it changes the hash.
-/// 4. **A `sourceID` is 32 BYTES.** `HegotaTransaction.RootReference` types it
-///    as `UInt64`, which cannot hold one — a width that no chain it was written
-///    for could ever disprove, since `0x…8272` has no code on Hegotá.
+/// 4. **A `sourceID` is 32 BYTES** (`PrivacyDevnetRoots.Reference`), now read
+///    out of a `0x…8272` frame's data rather than an envelope field.
 enum PrivacyDevnetTransaction {
 
     /// Measured off this chain's own type census: `0x2` and `0x6`, nothing else.
@@ -125,20 +134,6 @@ enum PrivacyDevnetTransaction {
         }
     }
 
-    /// A recent-root reference: `[source_id, slot, root]`.
-    ///
-    /// `sourceID` and `root` are 32 bytes; only `slot` is a quantity.
-    struct RootReference: Equatable, Sendable {
-        var sourceID: Data
-        var slot: UInt64
-        var root: Data
-        var item: RLP.Item {
-            .list([.bytes(sourceID),
-                   .bytes(RLP.quantity(slot)),
-                   .bytes(root)])
-        }
-    }
-
     /// The eight envelope fields, in the order the node's own decoder reads
     /// them.
     struct Fields: Equatable, Sendable {
@@ -156,7 +151,6 @@ enum PrivacyDevnetTransaction {
         var maxFeePerGas: UInt64
         var maxFeePerBlobGas: UInt64
         var blobVersionedHashes: [Data]
-        var recentRootReferences: [RootReference]
     }
 
     /// The eight fields as RLP. `elided` chooses between the bytes that get
@@ -181,9 +175,8 @@ enum PrivacyDevnetTransaction {
          .list([.bytes(RLP.quantity(f.maxPriorityFeePerGas)),
                 .bytes(RLP.quantity(f.maxFeePerGas)),
                 .bytes(RLP.quantity(f.maxFeePerBlobGas))]),
-         .list(f.blobVersionedHashes.map { .bytes($0) }),
          // LAST — see trap 2.
-         .list(f.recentRootReferences.map(\.item))]
+         .list(f.blobVersionedHashes.map { .bytes($0) })]
     }
 
     /// The bytes hashed to produce what a signature entry with an empty `msg`

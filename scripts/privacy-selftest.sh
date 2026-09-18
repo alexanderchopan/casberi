@@ -211,6 +211,16 @@ let root2 = d("1ea261e94b9f2b02699e293bd4ad36b4c39cf23975b84c4cc39794bb577df422"
 let real = PrivacyDevnetRoots.Reference(sourceID: src, slot: 0x3431, root: root)
 check(real.sourceID.count == 32, "sourceId is 32 bytes — the width Hegota's UInt64 cannot hold")
 
+// THE RELAUNCH MOVED THE REFERENCE INTO A FRAME (2026-09-18). The pool's block
+// 8155 spend on the new chain, its 0x…8272 frame's data read back verbatim.
+let framed = PrivacyDevnetRoots.Reference(frameData: d("e06e601046631b3e1dc3943f4f7d058de6da6772644dca7af1a42500c810b2f8000000000000214b2dd32b6609c5a8e80505ac44c5cb8e9f712115c1f63f59b18be08fc9b9250bf4"))
+check(framed?.sourceID == d("e06e601046631b3e1dc3943f4f7d058de6da6772644dca7af1a42500c810b2f8"),
+      "a 0x…8272 frame's first 32 bytes are the sourceID")
+check(framed?.slot == 0x214b, "the next 8 are the slot, big-endian")
+check(framed?.root == root, "and the last 32 are the root")
+check(PrivacyDevnetRoots.Reference(frameData: d("e06e6010")) == nil,
+      "anything that is not 72 bytes is not a reference")
+
 // THE BOUNDARY. Three slots decide it and each renders identically from outside.
 let base: UInt64 = 100_000
 let r = PrivacyDevnetRoots.Reference(sourceID: src, slot: base, root: root)
@@ -1249,39 +1259,31 @@ grep -qF 'faucet.privacy.ethrex.xyz' "Casberi/Casberi/Model/NetworkReach.swift" 
 # indistinguishable from one that is, so eye review cannot catch it and the
 # harness pinned only the named channels and the width rule.
 #
-# These four keys, two hashes and two roots were read back off
-# `eth_getTransactionByHash` against rpc1.privacy.ethrex.xyz. This guard cannot
+# These four keys, two hashes and the balance were read back off
+# `eth_getTransactionByHash` against rpc1.privacy.ethrex.xyz — re-measured on
+# 2026-09-18 after the relaunch, when every old value described a gone chain. This guard cannot
 # prove a value is real — nothing offline can — but it fails the build the
 # moment one CHANGES, which forces the next edit to be a deliberate one that
 # says where the new value came from.
 for v in \
-  '0cca26d343c75c5d092b41abc4c7372c0105537e6f5209967fee5bb6b6ca390c' \
-  '277a116036d2c29207c09c18015780c8e161402d2017d07012147a1d4b7240fe' \
-  '1871055c1947afa152d04f00757f94f890efa87190de3d8e481d7c22b6b381e1' \
-  '1a3f0e61700a2fc8652d33787331f955bff2b1a500426b4dfd83481f5c645ffe' \
-  '0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f' \
-  '0xeda9b1c8231c7ba375c831d63655acc813cf8c7d3ac2b095b23e3011d7b2999a' \
-  '448132919986930440'; do
+  '1479940291777d1f0f3d58bf8a46cf21c33e7cfcd8b9876766a33d3a39b3e821' \
+  '2e0eb2f5b5991e31cdde9b66c0da09e603e20744ec9c708e93ba4409bc3e8cbc' \
+  '2668f91c3cd9b53720f2f382e73721595b20c023713e8b6d2337ee2acd1e912e' \
+  '298c7317b46b4b0760e7204070d6e9e6111b62bfb53ee06f746321615991c015' \
+  '0x2b90c598179b0cb8fca70a1c7c9211ca9a27945eeaae6c51ad0d8d0d501b45ac' \
+  '0x6be1ba8f441fa2534815de1c202f6daf1fd306458e8bcdc870aa37e67a1e7b46' \
+  '447817749984724250'; do
   grep -qF -- "$v" "$work/bridge.bare" \
     || fail "a measured demo fixture value changed or vanished ($v) — every hex value here was read back off the chain, and two were once fabricated; re-measure and say so rather than editing in place"
 done
-# **THE TWO ONCE-FABRICATED VALUES ARE NOW REAL ON ACCOUNT `b` (prd §593d).**
-# They were called fabricated because they appear on NEITHER of account `a`'s
-# transactions. They ARE byte-real on the second pool participant's — blocks
-# 2787/2792 — and the §593d demo seeds that account, so they live here now,
-# correctly attributed. The guard flips: it fails if either reappears on `a`'s
-# hashes (the misattribution it was written to catch) but must find them on
-# `b`'s. `b`'s two hashes are read back off the chain the same as everything
-# else here.
-for v in '055b6c2720e71fbe4d5fa4ad130f4f7b68879ee7d062d0e21af30c5e8ce5839c' \
-         '08cda6582e3ed667ed4b907d27093659da30882f1d1437ee86125664ecf6f9ce'; do
+# The depositor's and the faucet's transactions are pinned the same way: every
+# hash here was read back off the relaunched chain (2026-09-18).
+for v in '0x2a5948088aa9e81549ec19f26a806b33d686090906eec4ce007952bb810b6772' \
+         '0x3cabeae9675cc9a6a2dd79e7154fb161f4d2ba03641e446eb9067cc0fe55ab1d' \
+         '0x6f07b8e74f8bdd8d69c2df20a30edb4d2d29e9e7b8c8d49c43cffeb65f71e8e4'; do
   grep -qF -- "$v" "$work/bridge.bare" \
-    || fail "a once-fabricated nullifier vanished ($v) — it belongs on account b's real transactions now (§593d)"
+    || fail "a measured demo transaction hash vanished ($v) — re-measure and say so rather than editing in place"
 done
-grep -qF '0x5ad114d29ed7e9326bbc300b951c6ee9a59c648985dbba9497dfea454cccaa4a' "$work/bridge.bare" \
-  || fail "account b's block-2787 transaction hash is gone — the two once-fabricated keys ride it"
-grep -qF '0xb17e6a8292d3ed1f559d7e78f85b62fad2962b589e51ce90eb6462440b6d2a66' "$work/bridge.bare" \
-  || fail "account b's block-2792 transaction hash is gone"
 
 # THE UNBOUNDED RANGE. A sibling ethrex node already refuses `fromBlock: 0x0`
 # with `query exceeds max block range 100000`, and walkCap cannot help because

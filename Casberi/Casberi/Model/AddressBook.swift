@@ -178,7 +178,7 @@ final class AddressBook {
         /// for the same reason as the other three, and one more: this chain
         /// holds almost nothing, so a mainnet read would not merely mislabel
         /// an address — it would label a devnet address that IS a contract
-        /// (the pool at 0x753d91ee…) as a plain wallet.
+        /// (the pool at 0x8fdab782…) as a plain wallet.
         static let privacyDevnet = "privacydevnet"
 
         /// Chains `AddressKind.detect` must not ask about — its five reads

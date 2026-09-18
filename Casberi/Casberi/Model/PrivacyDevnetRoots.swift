@@ -44,10 +44,10 @@ enum PrivacyDevnetRoots {
     /// separate, clearly-labelled conversion the caller may decline to use.
     static let secondsPerSlot: UInt64 = 12
 
-    /// One reference, as it rides the transaction envelope.
+    /// One reference, as it rides a frame to `0x…8272`.
     ///
     /// All three are `Data`, not integers, and `sourceID` is the one that
-    /// matters: it is 32 bytes on the wire (`b08f1575…51c26e20`), so the
+    /// matters: it is 32 bytes on the wire (`e06e6010…c810b2f8`), so the
     /// sibling seat's `UInt64` cannot hold it.
     struct Reference: Equatable, Sendable, Codable {
         var sourceID: Data
@@ -58,6 +58,21 @@ enum PrivacyDevnetRoots {
             self.sourceID = sourceID
             self.slot = slot
             self.root = root
+        }
+
+        /// Read a reference out of a `0x…8272` frame's data:
+        /// `sourceID(32) ‖ slot(8, big-endian) ‖ root(32)`, 72 bytes exactly.
+        ///
+        /// **The relaunch moved it here (2026-09-18)** — the envelope's
+        /// `recentRootReferences` field is gone. Measured on all three
+        /// root-carrying transactions of the new chain; anything that is not
+        /// 72 bytes is not a reference and reads as nil, never as a guess.
+        init?(frameData d: Data) {
+            guard d.count == 72 else { return nil }
+            let b = [UInt8](d)
+            self.sourceID = Data(b[0..<32])
+            self.slot = b[32..<40].reduce(UInt64(0)) { $0 << 8 | UInt64($1) }
+            self.root = Data(b[40..<72])
         }
     }
 

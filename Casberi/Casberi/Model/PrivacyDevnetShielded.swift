@@ -20,7 +20,11 @@ enum PrivacyDevnetPool {
     /// the chain resets and the pool moves, this is the single thing to update,
     /// and a stale value fails LOUDLY (a shield the node refuses, an empty
     /// View) rather than silently sending somewhere wrong.
-    static let address = "0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980"
+    ///
+    /// Moved with the 2026-09-18 relaunch: the old address has no code on the
+    /// new chain, and `0x8fdab782…` is the contract emitting `LeafAppended` and
+    /// `NoteSpent` (2,966 bytes of code, `domain()` answers).
+    static let address = "0x8fdab78244c5fa43809d064fc93e6c0e5041971d"
 
     /// `LeafAppended(bytes32 cm, uint64 epoch, uint32 index, bytes32 newRoot)`.
     static let leafAppendedTopic = "0x1c9386c619e61f45f16a19541b370266f8eb6fd22d241ff010e03cc31ea82368"

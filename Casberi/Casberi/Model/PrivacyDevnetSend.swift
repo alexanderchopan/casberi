@@ -209,8 +209,7 @@ enum PrivacyDevnetSend {
             maxPriorityFeePerGas: gasPrice,
             maxFeePerGas: gasPrice,
             maxFeePerBlobGas: 0,
-            blobVersionedHashes: [],
-            recentRootReferences: [])
+            blobVersionedHashes: [])
     }
 
     // MARK: - Shield
@@ -286,8 +285,7 @@ enum PrivacyDevnetSend {
             maxPriorityFeePerGas: gasPrice,
             maxFeePerGas: gasPrice,
             maxFeePerBlobGas: 0,
-            blobVersionedHashes: [],
-            recentRootReferences: [])
+            blobVersionedHashes: [])
     }
 
     private static func hex(_ bytes: [UInt8]) -> String {
