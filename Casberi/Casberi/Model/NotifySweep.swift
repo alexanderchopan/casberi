@@ -63,7 +63,9 @@ enum NotifySweep {
                 source: thing.source,
                 art: art(for: thing),
                 place: thing.source,
-                mark: mark(for: thing)))
+                mark: mark(for: thing),
+                who: thing.authorHandle,
+                usd: thing.transferUSD))
         }
 
         // Deadlines are a WINDOW scan, not a landing scan — the row that
@@ -99,7 +101,9 @@ enum NotifySweep {
                 source: thing.source,
                 art: art(for: thing),
                 place: thing.source,
-                mark: mark(for: thing)))
+                mark: mark(for: thing),
+                who: thing.authorHandle,
+                usd: thing.transferUSD))
         }
 
         for plan in out where plan.art != .none {

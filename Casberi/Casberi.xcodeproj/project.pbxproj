@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		CB000000000000000000001B /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000012 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CC000000000000000000002B /* CasberiWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000022 /* CasberiWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CF0000000000000000000001 /* NotificationContent.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CF0000000000000000000003 /* NotificationContent.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CE0000000000000000000001 /* WalletConnect in Frameworks */ = {isa = PBXBuildFile; productRef = CE0000000000000000000002 /* WalletConnect */; };
 		CE0000000000000000000005 /* ReownAppKit in Frameworks */ = {isa = PBXBuildFile; platformFilter = ios; productRef = CE0000000000000000000004 /* ReownAppKit */; };
 		CE0000000000000000000007 /* P256K in Frameworks */ = {isa = PBXBuildFile; productRef = CE0000000000000000000006 /* P256K */; };
@@ -29,6 +30,13 @@
 			remoteGlobalIDString = CC0000000000000000000023;
 			remoteInfo = CasberiWidgets;
 		};
+		CF0000000000000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CA0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CF0000000000000000000007;
+			remoteInfo = NotificationContent;
+		};
 		CD000000000000000000003C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = CA0000000000000000000001 /* Project object */;
@@ -47,6 +55,7 @@
 			files = (
 				CB000000000000000000001B /* ShareExtension.appex in Embed Foundation Extensions */,
 				CC000000000000000000002B /* CasberiWidgets.appex in Embed Foundation Extensions */,
+				CF0000000000000000000001 /* NotificationContent.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -58,6 +67,7 @@
 		CB0000000000000000000012 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC0000000000000000000022 /* CasberiWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CasberiWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD0000000000000000000032 /* CasberiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CasberiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CF0000000000000000000003 /* NotificationContent.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationContent.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -81,6 +91,13 @@
 				Info.plist,
 			);
 			target = CC0000000000000000000023 /* CasberiWidgets */;
+		};
+		CF0000000000000000000004 /* Exceptions for "NotificationContent" folder in "NotificationContent" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CF0000000000000000000007 /* NotificationContent */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -119,6 +136,14 @@
 			path = CasberiTests;
 			sourceTree = "<group>";
 		};
+		CF0000000000000000000005 /* NotificationContent */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CF0000000000000000000004 /* Exceptions for "NotificationContent" folder in "NotificationContent" target */,
+			);
+			path = NotificationContent;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -153,6 +178,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CF0000000000000000000006 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -164,6 +196,7 @@
 				CB0000000000000000000011 /* ShareExtension */,
 				CC0000000000000000000021 /* CasberiWidgets */,
 				CD0000000000000000000031 /* CasberiTests */,
+				CF0000000000000000000005 /* NotificationContent */,
 				CA0000000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -174,6 +207,7 @@
 				CA0000000000000000000004 /* Casberi.app */,
 				CB0000000000000000000012 /* ShareExtension.appex */,
 				CC0000000000000000000022 /* CasberiWidgets.appex */,
+				CF0000000000000000000003 /* NotificationContent.appex */,
 				CD0000000000000000000032 /* CasberiTests.xctest */,
 			);
 			name = Products;
@@ -196,6 +230,7 @@
 			dependencies = (
 				CB000000000000000000001D /* PBXTargetDependency */,
 				CC000000000000000000002D /* PBXTargetDependency */,
+				CF000000000000000000000D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				CA0000000000000000000006 /* Casberi */,
@@ -273,6 +308,27 @@
 			productReference = CD0000000000000000000032 /* CasberiTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		CF0000000000000000000007 /* NotificationContent */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CF0000000000000000000008 /* Build configuration list for PBXNativeTarget "NotificationContent" */;
+			buildPhases = (
+				CF000000000000000000000B /* Sources */,
+				CF0000000000000000000006 /* Frameworks */,
+				CF000000000000000000000C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CB0000000000000000000010 /* Shared */,
+				CF0000000000000000000005 /* NotificationContent */,
+			);
+			name = NotificationContent;
+			productName = NotificationContent;
+			productReference = CF0000000000000000000003 /* NotificationContent.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -290,6 +346,9 @@
 						CreatedOnToolsVersion = 26.5;
 					};
 					CC0000000000000000000023 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					CF0000000000000000000007 = {
 						CreatedOnToolsVersion = 26.5;
 					};
 					CD0000000000000000000033 = {
@@ -324,6 +383,7 @@
 				CB0000000000000000000013 /* ShareExtension */,
 				CC0000000000000000000023 /* CasberiWidgets */,
 				CD0000000000000000000033 /* CasberiTests */,
+				CF0000000000000000000007 /* NotificationContent */,
 			);
 		};
 /* End PBXProject section */
@@ -351,6 +411,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		CD0000000000000000000039 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF000000000000000000000C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -388,6 +455,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CF000000000000000000000B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -405,6 +479,12 @@
 			isa = PBXTargetDependency;
 			target = CA0000000000000000000005 /* Casberi */;
 			targetProxy = CD000000000000000000003C /* PBXContainerItemProxy */;
+		};
+		CF000000000000000000000D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = CF0000000000000000000007 /* NotificationContent */;
+			targetProxy = CF0000000000000000000002 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -784,6 +864,58 @@
 			};
 			name = Release;
 		};
+		CF0000000000000000000009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = NotificationContent/NotificationContent.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 616;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NotificationContent/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.28;
+				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.NotificationContent;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CF000000000000000000000A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = NotificationContent/NotificationContent.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 616;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NotificationContent/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.28;
+				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.NotificationContent;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -828,6 +960,15 @@
 			buildConfigurations = (
 				CD0000000000000000000035 /* Debug */,
 				CD0000000000000000000036 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CF0000000000000000000008 /* Build configuration list for PBXNativeTarget "NotificationContent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CF0000000000000000000009 /* Debug */,
+				CF000000000000000000000A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

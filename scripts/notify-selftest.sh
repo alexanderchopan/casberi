@@ -31,9 +31,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 PLAN="Casberi/Casberi/Model/NotifyPlan.swift"
+CARD="Casberi/Shared/NotifyCard.swift"
 SWEEP="Casberi/Casberi/Model/NotifySweep.swift"
 NOTIFY="Casberi/Casberi/Model/Notifications.swift"
-for f in "$PLAN" "$SWEEP" "$NOTIFY"; do
+for f in "$PLAN" "$CARD" "$SWEEP" "$NOTIFY"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -284,6 +285,20 @@ guard "…and everything else goes through the digest's one step" \
       'NotifyDigest\.advance\(previous' "$NOTIFY"
 guard "a category switched off filters the digest's queue too" \
       'allowed: \{ s\.allows\(category: \$0\.category\) \}' "$NOTIFY"
+guard "the digest is scheduled for the learned reading hour (prd §809)" \
+      'slots: NotifyDigest\.readingSlots\(opens: opens' "$NOTIFY"
+guard "…which learns from every foreground activation" \
+      'Notifications\.recordOpen\(\)' Casberi/Casberi/Shell/RootShell.swift
+guard "the digest is ranked by the most urgent thing inside it" \
+      'content\.relevanceScore = NotifyDigest\.relevance\(group\)' "$NOTIFY"
+guard "a several-thing digest carries its card and answers to the extension's category" \
+      'content\.categoryIdentifier = NotifyCard\.category' "$NOTIFY"
+guard "the extension answers to the same category the app sets" \
+      '<string>digest</string>' Casberi/NotificationContent/Info.plist
+guard "a row tapped in the card wins over the notification's own link" \
+      'guard let link = row \?\? userInfo\["link"\]' "$NOTIFY"
+guard "the extension only ever leaves an in-app link" \
+      'link\.hasPrefix\("casberi://"\)' Casberi/NotificationContent/NotificationViewController.swift
 guard "the settings footnote names the four kinds that stand alone" \
       'A dispute, a deadline, a liquidation or a Safe signature comes at once' "$SETTINGS"
 # `hasOwnApp` only orders the names, so a misspelt seat fails at nothing: that
@@ -647,31 +662,27 @@ ok(lone.title == "t-a" && lone.body == "b-a" && lone.link == "casberi://thing/a"
    "one item is simply that item: its own words and its own door")
 ok(lone.place == "Stripe", "…and it says where it came from")
 let oneApp = NotifyDigest.plan([item("a", "Stripe", at: at(10)), item("b", "Stripe", at: at(11))])!
-ok(oneApp.kind == .digest && oneApp.title.contains("Stripe") && oneApp.body.contains("2"),
-   "one app with several things says its name and the count")
+ok(oneApp.kind == .digest && oneApp.title == "Stripe: 2 transfers in",
+   "one app with several things says its name, a colon, and the count by kind")
+ok(oneApp.body == "t-b\nt-a", "…and when each thing fits on a line, the body is the things themselves, newest first")
 ok(oneApp.link == "casberi://feed/source/Stripe", "…and opens that app's room")
 let four = NotifyDigest.plan([item("s", "Stripe", at: at(10)), item("g", "GitHub", at: at(11)),
                               item("w", "Wallet", at: at(9)), item("x", "X", at: at(12))])!
-ok(four.title == "Work" && four.body.hasPrefix("4 from"),
-   "several apps say their category and how many")
+ok(four.title == "Work: 4 transfers in",
+   "several apps say their category, a colon, and how many")
 ok(four.link == "casberi://feed", "…and open All")
-func pos(_ text: String, _ needle: String) -> Int {
-    text.range(of: needle).map { text.distance(from: text.startIndex, to: $0.lowerBound) } ?? -1
-}
-ok(pos(four.body, "Wallet") >= 0 && pos(four.body, "Wallet") < pos(four.body, "X"),
-   "an app with no lock screen of its own is named first, however old its news")
-ok(pos(four.body, "X") < pos(four.body, "GitHub") && pos(four.body, "GitHub") < pos(four.body, "Stripe"),
-   "…then the apps with the newest news")
+ok(four.body == "Wallet: 1 transfer in\nAnd 3 more",
+   "several apps are a line each, an app with no lock screen of its own first, and past the cap the rest is counted")
 let six = NotifyDigest.plan(["A", "B", "C", "D", "E", "F"].enumerated().map {
     item("i\($0.offset)", $0.element, at: at(8 + $0.offset))
 })!
-ok(six.body.contains("3 more") && !six.body.contains("A"),
-   "past four apps, three are named and the rest are counted")
+ok(six.body.components(separatedBy: "\n").count == NotifyDigest.bodyLineCap,
+   "however many apps, the body holds no more lines than the banner shows")
 
 ok(NotifyDigest.plans([]).isEmpty, "no category queued, no notification")
 let split = NotifyDigest.plans([item("s", "Stripe", at: at(10), category: "Money"),
                                 item("g", "GitHub", at: at(11)), item("l", "Linear", at: at(12))])
-ok(split.map(\.title) == ["t-s", "Work"],
+ok(split.map(\.title) == ["t-s", "Work: 2 transfers in"],
    "one notification per category, in name order, never one for all of them")
 let twoRooms = NotifyDigest.plans([item("a", "Stripe", at: at(10), category: "Money"),
                                    item("b", "Stripe", at: at(11), category: "Money"),
@@ -680,9 +691,8 @@ ok(twoRooms.count == 2 && Set(twoRooms.map(\.id)).count == 2,
    "two categories' digests never share an id, so neither replaces the other")
 
 let headlined = NotifyDigest.plan((0..<5).map { item("h\($0)", "Bluesky", at: at(8 + $0)) })!
-let lines = headlined.body.components(separatedBy: "\n")
-ok(lines.count == 1 + NotifyDigest.headlineCap && lines[1] == "t-h4" && !headlined.body.contains("t-h1"),
-   "under the count, the newest headlines, newest first, and no more than the cap")
+ok(headlined.body == "t-h4 and 4 more",
+   "more things than lines: the newest one, and how many more")
 
 func pictured(_ id: String, _ seat: String, at when: Date,
               picture: String? = nil, mark: String? = nil) -> NotifyDigest.Item {
@@ -705,6 +715,117 @@ ok(thumb.filter { $0 == .picture(url: "https://a/1.jpg", source: "Bluesky") }.co
    "the same face or the same mark is drawn once")
 ok(thumb.contains(.mark("USDC")) && !thumb.contains(.mark("Wallet")),
    "an item's own mark wins over its app's")
+
+func kinded(_ id: String, _ seat: String, _ kind: NotifyKind, title: String? = nil,
+            body: String, who: String? = nil, usd: Double? = nil,
+            at when: Date, category: String = "Social") -> NotifyDigest.Item {
+    var i = item(id, seat, at: when, category: category)
+    i.kind = kind.rawValue; i.title = title ?? kind.headline; i.body = body; i.who = who; i.usd = usd; return i
+}
+
+// ── words that fit (prd §809) ───────────────────────────────────────────────
+// "No truncation ellipsis in the title or the bodies" and no app named twice.
+let people = ["linda", "jesse", "anna", "rafa", "sam"]
+let replies = people.enumerated().map {
+    kinded("r\($0.offset)", "Farcaster", .repliesReceived,
+           body: "a reply long enough that it would never fit on a lock screen line on its own",
+           who: $0.element, at: at(12 - $0.offset))
+} + [kinded("f0", "Farcaster", .followersGained, body: "mira.eth followed you", who: "mira.eth", at: at(7)),
+     kinded("f1", "Farcaster", .followersGained, body: "kai followed you", who: "kai", at: at(6))]
+let social = NotifyDigest.plan(replies)!
+ok(social.title == "Farcaster: 5 replies +2",
+   "the title steps down to the top kind and how many more when both kinds do not fit")
+ok(social.body == "linda, jesse and 3 more replied\nmira.eth and kai followed you",
+   "a kind with people says who, as many names as fit, instead of pasting a reply that runs past the edge")
+ok(NotifyDigest.named(["a", "b"], verb: "replied").first == "a and b replied",
+   "two names are joined as a list, not counted")
+let liked = kinded("l", "Bluesky", .likesReceived, title: "Liked by linda and 4 others", body: "my post", at: at(9))
+ok(liked.line == "Liked by linda and 4 others", "a title the plan wrote itself is the news, and stays")
+ok(kinded("e", "X", .repliesReceived, body: "", at: at(9)).line == NotifyKind.repliesReceived.headline,
+   "…and a row with no words of its own keeps its headline rather than a blank line")
+
+let paid = [kinded("m1", "Wallet", .moneyIn, body: "0.42 ETH from mira.eth", usd: 980, at: at(10), category: "Wallet"),
+            kinded("m2", "Wallet", .moneyIn, body: "250 USDC from coinbase.eth", usd: 250, at: at(11), category: "Wallet"),
+            kinded("m3", "Wallet", .moneyIn, body: "10 USDC from a.eth", usd: 10, at: at(9), category: "Wallet")]
+let money = NotifyDigest.plan(paid)!
+ok(money.title == "Wallet: +$1,240", "money arrived leads with the dollars")
+ok(money.body == "Largest: 0.42 ETH from mira.eth",
+   "several transfers that do not all fit say the largest")
+var unpriced = paid; unpriced[2].usd = nil
+ok(NotifyDigest.plan(unpriced)!.title == "Wallet: 3 transfers in",
+   "one transfer without a price and there is no total, because a partial sum is not the total")
+
+// The property the user asked for, over every fixture above and a worst case.
+let long = (0..<9).map { kinded("z\($0)", "App\($0 % 4)", NotifyKind.allCases[$0 % NotifyKind.allCases.count],
+                                body: String(repeating: "word ", count: 20), at: at(8), category: "Work") }
+for p in [oneApp, four, six, social, money, headlined, NotifyDigest.plan(long)!] {
+    let bodyLines = p.body.components(separatedBy: "\n")
+    ok(p.title.count <= NotifyDigest.titleBudget, "a digest title fits one line: \(p.title)")
+    ok(bodyLines.count <= NotifyDigest.bodyLineCap && bodyLines.allSatisfy { $0.count <= NotifyDigest.lineBudget },
+       "a digest body fits the banner, no line past the edge: \(p.body)")
+}
+let apps4 = NotifyDigest.plan(long)!.body
+let appLinesOnly = apps4.components(separatedBy: "\n").filter { $0.contains(":") }
+ok(Set(appLinesOnly.compactMap { $0.components(separatedBy: ":").first }).count == appLinesOnly.count,
+   "no app is named on two lines")
+ok(NotifyDigest.plan(long)!.title == "Work: 9 new",
+   "a top kind that is a sliver of the day does not lead the title")
+
+ok(NotifyKind.repliesReceived.counted(1) == "1 reply" && NotifyKind.repliesReceived.counted(3) == "3 replies",
+   "one is singular and more is plural, spelled out rather than inflected")
+
+// ── the rank (prd §809) ─────────────────────────────────────────────────────
+ok(NotifyDigest.relevance([kinded("a", "W", .moneyIn, body: "a", at: at(9)),
+                           kinded("b", "W", .approvalGranted, body: "b", at: at(9))])
+   == Double(NotifyKind.approvalGranted.severity) / 100,
+   "a digest ranks by the most urgent thing inside it")
+ok(NotifyDigest.relevance([kinded("a", "W", .likesReceived, body: "a", at: at(9))])
+   < NotifyDigest.relevance([kinded("b", "W", .moneyIn, body: "b", at: at(9))]),
+   "…so money outranks a like in the summary")
+ok(NotifyKind.allCases.filter { $0.severity == 0 }.allSatisfy { $0.digestRank < NotifyKind.runningLow.severity },
+   "every arrival ranks below every alarm")
+
+// ── the reading hour (prd §809) ─────────────────────────────────────────────
+func evening(_ day: Int, _ hour: Int, _ minute: Int) -> Date {
+    cal.date(byAdding: .day, value: -day, to: cal.date(bySettingHour: hour, minute: minute, second: 0, of: at(12))!)!
+}
+let habit = [evening(1, 20, 10), evening(1, 21, 30), evening(2, 20, 40), evening(3, 19, 55), evening(4, 8, 0)]
+ok(NotifyDigest.readingSlots(opens: habit, now: at(12), calendar: cal) == [19 * 60 + 30],
+   "the digest waits half an hour before the usual first evening open (20:10), on the quarter hour")
+ok(NotifyDigest.readingSlots(opens: Array(habit.prefix(2)), now: at(12), calendar: cal) == NotifyDigest.slots,
+   "two evenings are not a habit, and the fixed slot stands")
+ok(NotifyDigest.readingSlots(opens: [evening(1, 16, 5), evening(2, 16, 10), evening(3, 16, 0)],
+                             now: at(12), calendar: cal) == [NotifyDigest.readingWindow.lowerBound],
+   "an early reader still gets the digest in the evening")
+ok(NotifyDigest.readingSlots(opens: [evening(20, 20, 0), evening(21, 20, 0), evening(22, 20, 0)],
+                             now: at(12), calendar: cal) == NotifyDigest.slots,
+   "a habit older than the lookback no longer counts")
+let learned = NotifyDigest.advance(NotifyDigest.State(), adding: [item("x", "Stripe", at: at(10))],
+                                   allowed: everything, now: at(10), quiet: night, calendar: cal,
+                                   slots: [19 * 60 + 45])
+ok(learned.slot == cal.date(bySettingHour: 19, minute: 45, second: 0, of: at(10)),
+   "the learned hour is the slot the digest is scheduled for")
+
+// ── the card (prd §809) ─────────────────────────────────────────────────────
+ok(NotifyDigest.card([replies[0]], folder: "f") == nil,
+   "one thing has no card; its long press is its own picture")
+let card = NotifyDigest.card(replies + [pictured("p", "X", at: at(20), picture: "https://a/1.jpg")], folder: "f")!
+ok(card.title == NotifyDigest.plan(replies + [pictured("p", "X", at: at(20), picture: "https://a/1.jpg")])!.title,
+   "the card's title is the banner's")
+ok(NotifyDigest.card((0..<12).map { kinded("c\($0)", "Bluesky", .repliesReceived, body: "c\($0)", at: at(8)) },
+                     folder: "f")!.rows.count == NotifyDigest.cardRowCap,
+   "the card draws no more than its cap")
+ok(card.rows.first?.app == "X" && card.rows[1].who == "linda",
+   "the card reads in the banner's order, and a row carries who acted")
+ok(NotifyDigest.card([pictured("w", "Wallet", at: at(8)), pictured("x", "X", at: at(20))], folder: "f")!
+     .rows.first?.app == "Wallet",
+   "an app with no lock screen of its own leads the card, however old its news")
+ok(card.rows.first(where: { $0.app == "X" })?.round == true && card.rows[1].round == false,
+   "a row with a picture draws round, a mark square")
+ok(card.rows.allSatisfy { $0.face == nil } && card.head == nil,
+   "faces and the head are the scheduler's to write, never invented here")
+ok(card.encoded().flatMap { NotifyCard.decoded(from: [NotifyCard.userInfoKey: $0]) } == card,
+   "the card survives the trip through userInfo")
 
 // ── the ledger: fires once, ever ────────────────────────────────────────────
 let suite = "casberi.notify.selftest"
@@ -738,7 +859,8 @@ SWIFT
   # so this file was proven equivalent run-for-run by
   # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.6x faster).
   # Re-probe before trusting it again after adding mutations.
-  ( cd "$work" && swiftc -Onone -o harness NotifyPlan.swift main.swift 2>&1 | grep -E 'error:' || true )
+  cp "$CARD" "$work/NotifyCard.swift"
+  ( cd "$work" && swiftc -Onone -o harness NotifyPlan.swift NotifyCard.swift main.swift 2>&1 | grep -E 'error:' || true )
   [[ -x "$work/harness" ]] || { echo "  ✗ $label: did not compile"; return 2; }
   "$work/harness"
 }
@@ -861,10 +983,40 @@ mutate "a face never makes the thumbnail" \
        's/if let picture = item\.picture, !picture\.isEmpty \{/if let picture = item.picture, picture.isEmpty {/'
 mutate "an item's own mark loses to its app's" \
        's/let mark = item\.mark \?\? item\.seat/let mark = item.seat/'
-mutate "the body lists every headline in the queue" \
-       's/\.prefix\(headlineCap\)/.prefix(99)/'
-mutate "the digest names every app however many there are" \
-       's/if names\.count <= 4 \{/if names.count <= 400 {/'
+mutate "a title runs past the edge of the lock screen" \
+       's/static let titleBudget = 28/static let titleBudget = 99/'
+mutate "a body line runs past the edge" \
+       's/static let lineBudget = 32/static let lineBudget = 99/'
+mutate "the body grows past the two lines the banner shows" \
+       's/static let bodyLineCap = 2/static let bodyLineCap = 4/'
+mutate "a partial sum is stated as the money that arrived" \
+       's/money\.allSatisfy\(\{ \$0\.usd != nil \}\)/money.contains(where: { \$0.usd != nil })/'
+mutate "names never shrink to fit, so the fewest are always shown" \
+       's/\(1\.\.\.min\(3, people\.count\)\)\.reversed\(\)/(1...min(3, people.count))/'
+mutate "a sliver of the day leads the title" \
+       's/guard first\.items\.count >= rest else \{ return nil \}//'
+mutate "every app is named on every line again" \
+       's/parts = names\.map \{ app in/parts = items.map { \$0.name }.map { app in/'
+mutate "the digest lists every row's generic headline again" \
+       's/return generic && !body\.isEmpty \? body : title/return title/'
+mutate "the digest ranks by its least urgent thing" \
+       's/\?\.digestRank \}\.max\(\)/?.digestRank }.min()/'
+mutate "a like outranks money in the summary" \
+       's/case \.likesReceived:        return 3/case .likesReceived:        return 19/'
+mutate "an arrival outranks an alarm in the summary" \
+       's/case \.moneyIn, \.payoutPaid: return 15/case .moneyIn, .payoutPaid: return 25/'
+mutate "a single evening decides the reading hour" \
+       's/static let readingDaysNeeded = 3/static let readingDaysNeeded = 1/'
+mutate "the reading hour counts every open, not each evening's first" \
+       's/firstByDay\[day\] = min\(firstByDay\[day\] \?\? \.max, minute\)/firstByDay[open] = minute/'
+mutate "the learned hour leaves the evening" \
+       's/return \[min\(max\(slot, readingWindow\.lowerBound\), readingWindow\.upperBound\)\]/return [slot]/'
+mutate "the digest ignores the learned hour" \
+       's/slot: nextSlot\(after: now, quiet: quiet, calendar: calendar, slots: slots\)/slot: nextSlot(after: now, quiet: quiet, calendar: calendar)/'
+mutate "the card draws every row, however many" \
+       's/ordered\(group\)\.prefix\(cardRowCap\)/ordered(group).prefix(999)/'
+mutate "the card and the banner read in different orders" \
+       's/\(rank\[\$0\.element\.name\] \?\? \.max, \$0\.offset\) < \(rank\[\$1\.element\.name\] \?\? \.max, \$1\.offset\)/\$0.offset < \$1.offset/'
 
 # ── NotifySweep.classify() — the actual bridge-specific dispatch ───────────
 #
@@ -905,6 +1057,7 @@ final class Thing {
     var dueAt: Date?
     var transferDirection: String?
     var transferUSD: Double?
+    var authorHandle: String?
     var isFlagged: Bool = false
     var isLive: Bool = true
     var capturedAt: Date = Date()
@@ -1146,9 +1299,10 @@ exit(1)
 SWIFT
 
 cp "$PLAN" "$sweepwork/NotifyPlan.swift"
+cp "$CARD" "$sweepwork/NotifyCard.swift"
 cp "$SWEEP" "$sweepwork/NotifySweep.swift"
 rm -f "$sweepwork/harness"
-( cd "$sweepwork" && swiftc -Onone -o harness Stubs.swift NotifyPlan.swift NotifySweep.swift main.swift 2>&1 | grep -E 'error:' || true )
+( cd "$sweepwork" && swiftc -Onone -o harness Stubs.swift NotifyPlan.swift NotifyCard.swift NotifySweep.swift main.swift 2>&1 | grep -E 'error:' || true )
 if [[ -x "$sweepwork/harness" ]]; then
   "$sweepwork/harness" || fail=1
 else

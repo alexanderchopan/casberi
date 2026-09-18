@@ -28,7 +28,8 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SOURCES = [ROOT / "Casberi/Casberi", ROOT / "Casberi/Shared",
-           ROOT / "Casberi/ShareExtension", ROOT / "Casberi/CasberiWidgets"]
+           ROOT / "Casberi/ShareExtension", ROOT / "Casberi/CasberiWidgets",
+           ROOT / "Casberi/NotificationContent"]
 
 CALL = re.compile(r"URLSession\.shared\.(?:data|bytes|download)\s*\(")
 RECORD = re.compile(r"NetworkLedger\.shared\.record\s*\(")

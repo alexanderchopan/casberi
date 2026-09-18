@@ -190,6 +190,7 @@ struct CasberiApp: App {
         // anything is listening and the deep link is lost — the one case a
         // notification most needs to route correctly.
         UNUserNotificationCenter.current().delegate = NotifyDelegate.shared
+        Notifications.registerCategories()
     }
 
     /// Reads RootShell's per-window `chrome` back through `FocusedValues`

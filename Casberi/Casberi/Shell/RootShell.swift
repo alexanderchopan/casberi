@@ -1724,6 +1724,8 @@ struct RootShell: View {
         // were away" grounds on it; things landing from here on are
         // arriving while you're present.
         AppVisit.markOpened()
+        // The digest's reading hour learns from when the app is opened.
+        Notifications.recordOpen()
         // A STRANDED POUR resumes here (2026-08-07, found while writing the
         // spec for this feature's next pass). `pourIfNeeded` originally had
         // ONE call site — the onboarding cover's `onDismiss` — on the
