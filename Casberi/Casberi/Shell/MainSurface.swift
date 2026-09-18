@@ -703,6 +703,8 @@ struct MainSurface: View {
         SocialScopeRail.shows(source: filter.source, accounts: socialAccounts.count)
             || GitHubScopeRail.shows(source: filter.source,
                                      watched: GitHubWatchStore.shared.watches.count)
+            || PinterestScopeRail.shows(source: filter.source,
+                                        follows: PinterestStore.shared.follows.count)
             || accountRailItems.count > 1
     }
 
@@ -713,6 +715,7 @@ struct MainSurface: View {
     private var roomFaces: some View {
         socialScopeRail
         githubScopeRail
+        pinterestScopeRail
         accountRail
     }
 
@@ -824,6 +827,29 @@ struct MainSurface: View {
                 matches: GitHubScopeRail.matches,
                 onPick: { picked in
                     withAnimation(DS.Motion.standard) { chrome.githubScope = picked }
+                },
+                onReTap: nil,
+                addTitle: nil,
+                onAdd: nil)
+        }
+    }
+
+    /// THE PINTEREST ROOM'S FACE RAIL (prd §819) — you and the boards and people
+    /// you follow, scoping one feed. The GitHub rail's shape exactly, and for
+    /// its reasons: mounted on the shell (§357), no re-tap door, nothing drawn
+    /// until there is a second follow to pick between.
+    @ViewBuilder
+    private var pinterestScopeRail: some View {
+        let store = PinterestStore.shared
+        if PinterestScopeRail.shows(source: filter.source, follows: store.follows.count) {
+            FaceScopeRail(
+                items: PinterestScopeRail.items(store),
+                scope: chrome.pinterestScope,
+                compact: chrome.minimized && !showsRail,
+                inFolder: true,
+                matches: GitHubScopeRail.matches,
+                onPick: { picked in
+                    withAnimation(DS.Motion.standard) { chrome.pinterestScope = picked }
                 },
                 onReTap: nil,
                 addTitle: nil,
@@ -971,7 +997,7 @@ struct MainSurface: View {
         return things.first {
             $0.isLive
                 && $0.capturedAt <= now
-                && !Corpus.searchOnlySources.contains($0.source)
+                && !Corpus.roomOnlySources.contains($0.source)
                 && Corpus.showsInAll($0)
                 && !Corpus.isImportReceipt($0)
         }
@@ -2093,6 +2119,7 @@ struct MainSurface: View {
             // A kind tile belongs to its room, and every room opens on All
             // (prd §815).
             chrome.roomKind = .all
+            chrome.pinterestScope = nil
             // Dies with the room like the person scope above, NOT spanning
             // its category the way the wallet scope deliberately does: a
             // vibenet devnet address matches no row in Peer, Safe or any

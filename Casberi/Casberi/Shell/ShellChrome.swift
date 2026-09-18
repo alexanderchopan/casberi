@@ -459,6 +459,11 @@ final class ShellChrome {
     /// argument — a watch belongs to one seat.
     var githubScope: String?
 
+    /// The Pinterest room's scoped follow — `name` or `name/board`, or nil for
+    /// every pin (prd §819). Its own property for `githubScope`'s reason, and
+    /// cleared on a source change with it.
+    var pinterestScope: String?
+
     /// The vibenet room's scoped account, or nil for all of them
     /// (2026-08-23) — its own property rather than reusing `walletScope`,
     /// because these are two different address SETS and sharing one

@@ -431,7 +431,7 @@ enum BridgeRefresh {
                 _ = await NostrIngest.heal(context: context)
             }
         }
-        if !PinterestStore.shared.username.isEmpty {
+        if PinterestStore.shared.connected {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await PinterestIngest.refresh(context: context)

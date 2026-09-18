@@ -2279,9 +2279,9 @@ struct FeedScreen: View {
         // nil (so this is a no-op) unless that task actually found a live
         // `@Query` disagreeing with a raw fetch on the same store.
         if source != "All", let fallback = sourceRoomFallbackSnapshot {
-            return Pinboard.isPinnedRoom(source) ? fallback : Corpus.surfaced(fallback)
+            return Pinboard.isPinnedRoom(source) ? fallback : Corpus.surfaced(fallback, room: source)
         }
-        return Pinboard.isPinnedRoom(source) ? things : Corpus.surfaced(things)
+        return Pinboard.isPinnedRoom(source) ? things : Corpus.surfaced(things, room: source)
     }
 
     /// `rawOverride` is the escape hatch the safety-net refresh below uses:
@@ -2290,7 +2290,7 @@ struct FeedScreen: View {
     /// does) so the SAME filtering rules apply whether the source array
     /// came from the live `@Query` or from a raw fetch that bypassed it.
     private func liveVisible(rawOverride: [Thing]? = nil, kindPick: Bool = true) -> [Thing] {
-        let base = rawOverride.map { Pinboard.isPinnedRoom(source) ? $0 : Corpus.surfaced($0) }
+        let base = rawOverride.map { Pinboard.isPinnedRoom(source) ? $0 : Corpus.surfaced($0, room: source) }
             ?? feedThings
         // The kind tile's census (prd §815), built only while a tile other
         // than All is picked — one walk of the refs, because a Safe pending
@@ -2326,6 +2326,7 @@ struct FeedScreen: View {
                                                              url: thing.content,
                                                              tags: thing.tags))
                 } ?? true)
+                && pinterestScopeAllows(thing)
                 // Privy's display choices (prd §803e): hidden apps, and empty
                 // apps nobody uses unless the person asked to see them.
                 && (thing.source != PrivyHomeFeed.source
@@ -2618,6 +2619,7 @@ struct FeedScreen: View {
                 // The GitHub rail scopes the whole feed (2026-09-11), so it
                 // belongs here for this property's own stated reason.
                 chrome.githubScope ?? "",
+                chrome.pinterestScope ?? "",
                 // The vibenet rail scopes the CARD (2026-08-23), so it
                 // belongs in the memo key for the reason this property's
                 // own doc gives: a head that survived a scope change is a
@@ -3027,6 +3029,14 @@ struct FeedScreen: View {
                             attention: heads?.kindAttention ?? []) { picked in
             withAnimation(DS.Motion.standard) { chrome.roomKind = picked }
         }
+    }
+
+    /// The Pinterest room's follow scope (prd §819): every pin carries the
+    /// follow it came through in `authorHandle`. Gated on the room, like
+    /// GitHub's, so the compare never reaches another room's rows.
+    private func pinterestScopeAllows(_ thing: Thing) -> Bool {
+        guard source == "Pinterest", let scope = chrome.pinterestScope else { return true }
+        return thing.authorHandle == scope
     }
 
     /// The vibenet room's account scope (2026-08-23) — the same shape as
@@ -5160,10 +5170,10 @@ struct FeedScreen: View {
         // `rows` is HANDED IN by `listBody` rather than bound here, so the
         // animation key beside the List reads the same array instead of
         // fetching its own (see `listRevision`).
-        let roomHasContent = Corpus.hasSurfaced(rows)
+        let roomHasContent = Corpus.hasSurfaced(rows, room: source)
             || (debouncedAllSnapshot.map { !$0.isEmpty } ?? false)
             || (sourceRoomFallbackSnapshot.map { !$0.isEmpty } ?? false)
-            || Corpus.hasSurfaced(things)
+            || Corpus.hasSurfaced(things, room: source)
         if !roomHasContent && !LiveRoomSources.has(source) {
             Group { emptyState }
                 .listRowBackground(Color.clear)
@@ -10618,6 +10628,7 @@ struct FeedScreen: View {
                            || (source == "GitHub" && chrome.githubScope != nil)
                            // A kind tile narrows the list too (prd §815).
                            || roomKindPick != .all
+                           || (source == "Pinterest" && chrome.pinterestScope != nil)
                            || (shape == .vibenet && chrome.vibenetScope != nil))
     }
 

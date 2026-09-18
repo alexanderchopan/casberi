@@ -11,14 +11,10 @@ enum BridgeConnect {
     /// page so the copy can't drift — the proof itself arrives in the feed;
     /// this names what's now happening.
     /// Says WHERE the things land, because no one-tap seat gets a dock chip
-    /// of its own: each folds into its category's (Apple Music under Media),
-    /// and Contacts is search-only (`Corpus.searchOnlySources`). "Your
-    /// Contacts things are landing" sent a beta tester looking for a
-    /// Contacts tab and a Music tab that never draw (2026-09-18).
+    /// of its own: each folds into its category's (Apple Music under Media,
+    /// Contacts under Life). "Your Contacts things are landing" sent a beta
+    /// tester looking for a Contacts tab and a Music tab (2026-09-18).
     static func landingMessage(_ offer: BridgeCatalog.Offer) -> String {
-        if Corpus.searchOnlySources.contains(offer.name) {
-            return String(localized: "Connected — search any of your \(offer.name) by name.")
-        }
         let room = BridgeCatalog.category(of: offer)
         return String(localized: "Connected — \(offer.name) lands under \(room).")
     }
@@ -67,7 +63,7 @@ enum BridgeConnect {
                     .map { ($0, "music", "songs", "Reads what you've played.", nil) }
             case "Contacts":
                 result = await ContactsIngest.connectAndIngest(context: context)
-                    .map { ($0, "contacts", "contacts", "Reads your contacts — search-only, never in your feed.", nil) }
+                    .map { ($0, "contacts", "contacts", "Reads your contacts — their own room, never in All.", nil) }
             default:
                 result = nil
             }

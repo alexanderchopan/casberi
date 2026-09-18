@@ -124,9 +124,9 @@ func check(_ label: String, _ ok: Bool) {
 typealias Row = SheetWalk.Row
 func row(_ id: String, source: String = "RSS", tags: [String] = [],
          receipt: Bool = false, showsInAll: Bool = true,
-         searchOnly: Bool = false) -> Row {
+         roomOnly: Bool = false) -> Row {
     Row(id: id, source: source, tags: tags, isReceipt: receipt,
-        showsInAll: showsInAll, searchOnly: searchOnly)
+        showsInAll: showsInAll, roomOnly: roomOnly)
 }
 
 // ── the scope a room hands over ───────────────────────────────────────────
@@ -178,10 +178,14 @@ check("…and inside its own room it is",
       SheetWalk.eligible(row("b", source: "Instagram", showsInAll: false),
                          scope: instagram, from: "a"))
 
-print("\n…the search-only corpus is on no list")
-check("a search-only row is never walked to, even in its own room",
-      !SheetWalk.eligible(row("b", source: "Contacts", searchOnly: true),
-                          scope: WalkScope.feed(source: "Contacts", tag: "All", narrowed: false),
+print("\n…a room-only corpus is on its own room's list and no other (prd §818)")
+check("a room-only row is walked to inside its own room",
+      SheetWalk.eligible(row("b", source: "Contacts", roomOnly: true),
+                         scope: WalkScope.feed(source: "Contacts", tag: "All", narrowed: false),
+                         from: "a"))
+check("a room-only row is never walked to from All",
+      !SheetWalk.eligible(row("b", source: "Contacts", roomOnly: true),
+                          scope: all,
                           from: "a"))
 
 print("\n…a kind filter")
@@ -270,10 +274,10 @@ mutate "a thing offered as its own neighbour" \
   'guard scope.walks, row.id != selfID else { return false }' \
   'guard scope.walks else { return false }'
 
-# 7. The search-only corpus walked into.
-mutate "the search-only corpus walked into" \
-  'guard !row.searchOnly else { return false }' \
-  'guard !row.searchOnly || true else { return false }'
+# 7. A room-only corpus walked into from outside its room.
+mutate "a room-only corpus walked into from All" \
+  'guard !row.roomOnly || scope.source == row.source else { return false }' \
+  'guard !row.roomOnly || true else { return false }'
 
 # 8. The key stops distinguishing rooms, so two opens are one identity.
 mutate "the route key stops naming the room" \

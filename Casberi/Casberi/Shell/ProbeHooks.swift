@@ -2150,9 +2150,9 @@ enum ProbeHooks {
                       replies.first.map { " — @\($0.handle): \(String($0.text.prefix(60)))" } ?? "")
             }
         },
-        // `-pinterestUser <username>` connects Pinterest headlessly.
+        // `-pinterestUser <username|name/board>` adds a Pinterest follow headlessly.
         Hook(key: "pinterestUser") { name, context in
-            PinterestStore.shared.username = PinterestStore.normalize(name)
+            PinterestStore.shared.add(name)
             Task { @MainActor in
                 let n = await PinterestIngest.refresh(context: context)
                 NSLog("Pinterest probe: %@ new things", n.map(String.init) ?? "FAILED")

@@ -484,7 +484,7 @@ enum NoteSheetSource {
                                   tags: $0.tags,
                                   isReceipt: Corpus.isImportReceipt($0),
                                   showsInAll: Corpus.showsInAll($0),
-                                  searchOnly: Corpus.searchOnlySources.contains($0.source)),
+                                  roomOnly: Corpus.roomOnlySources.contains($0.source)),
                     scope: scope, from: id)
             }
         }

@@ -78,9 +78,10 @@ enum HandleBridge: String {
         }
     }
 
-    /// Every bridge here but Pinterest watches a LIST — a small following feed,
-    /// not just one mirror. Pinterest stays single (its feed is per-user).
-    var supportsMultiple: Bool { self != .pinterest }
+    /// Every bridge here watches a LIST — a small following feed, not just one
+    /// mirror. Pinterest was the single one until it learned to follow boards
+    /// (prd §819).
+    var supportsMultiple: Bool { true }
 
     /// The bridges whose field doubles as a finder: Bluesky/Farcaster people
     /// search, and Podcasts show search. Pinterest and the templated feeds
@@ -125,9 +126,7 @@ enum HandleBridge: String {
         case .farcaster: return FarcasterStore.shared.usernames
         case .nostr:
             return NostrStore.shared.accounts.map { $0.pubkeyHex.isEmpty ? $0.input : $0.pubkeyHex }
-        case .pinterest:
-            let u = PinterestStore.shared.username
-            return u.isEmpty ? [] : [u]
+        case .pinterest: return PinterestStore.shared.follows
         default:         return feedKind?.store.inputs ?? []
         }
     }
@@ -140,8 +139,10 @@ enum HandleBridge: String {
             name.hasSuffix(".bsky.social") ? String(name.dropLast(".bsky.social".count)) : name
         case .nostr:
             SocialThread.shortHandle(name)
-        case .farcaster, .pinterest:
+        case .farcaster:
             name
+        case .pinterest:
+            PinterestStore.shared.display(name)
         default:
             feedKind?.store.display(for: name) ?? name
         }
@@ -172,7 +173,7 @@ enum HandleBridge: String {
         case .bluesky:   BlueskyStore.shared.add(raw)
         case .farcaster: FarcasterStore.shared.add(raw)
         case .nostr:     NostrStore.shared.add(raw)
-        case .pinterest: PinterestStore.shared.username = PinterestStore.normalize(raw)
+        case .pinterest: PinterestStore.shared.add(raw)
         default:         feedKind?.store.add(FeedFollowEntry(input: raw))
         }
     }
@@ -207,8 +208,9 @@ enum HandleBridge: String {
             remainingTopics = NostrStore.shared.hashtags.map(\.tag)
             NostrStore.shared.remove(name)
         case .pinterest:
-            handle = PinterestStore.shared.username
-            PinterestStore.shared.username = ""
+            // Rows carry the follow they came through (prd §819), so the
+            // follow IS the handle `pruneAuthor` matches.
+            PinterestStore.shared.remove(name)
         default:
             // A feed item carries the FEED'S name in `authorHandle`, not the
             // URL that was typed — resolve the display name while the entry
@@ -221,15 +223,9 @@ enum HandleBridge: String {
                                  remainingTopics: remainingTopics, context: context)
     }
 
-    /// What the field shows for an existing connection — for the single
-    /// bridge (Pinterest), the connected name; for the multi bridges the
-    /// field is a fresh "add another", so it starts empty.
-    var displayName: String {
-        switch self {
-        case .pinterest: return PinterestStore.shared.username
-        default:         return ""
-        }
-    }
+    /// What the field shows for an existing connection — every bridge here
+    /// is a list now, so the field is a fresh "add another" and starts empty.
+    var displayName: String { "" }
 
     /// What lands, for proof lines: "3 posts in".
     var noun: String {
@@ -268,7 +264,7 @@ enum HandleBridge: String {
         case .nostr:
             "An npub, a raw hex pubkey, or name@domain — Nostr has no directory to search."
         case .pinterest:
-            "Just the username."
+            "Your username first; then a board or profile link follows it."
         default:
             feedKind?.fieldFooter ?? ""
         }
@@ -289,7 +285,7 @@ enum HandleBridge: String {
         case .bluesky:   "Reads public posts — accounts, feeds, mentions."
         case .farcaster: "Reads public casts — accounts, channels, likes."
         case .nostr:     "Reads public notes — accounts, hashtags, reactions."
-        case .pinterest: "Reads your public pins."
+        case .pinterest: "Reads public pins — yours, and the boards you follow."
         default:         feedKind?.canLine ?? ""
         }
     }
@@ -392,7 +388,7 @@ enum HandleBridge: String {
         case .nostr:
             if name.isEmpty { NostrStore.shared.removeAll() } else { NostrStore.shared.add(name) }
         case .pinterest:
-            PinterestStore.shared.username = name
+            if name.isEmpty { PinterestStore.shared.removeAll() } else { PinterestStore.shared.add(name) }
         default:
             guard let feedKind else { break }
             if name.isEmpty { feedKind.store.removeAll() }
@@ -639,7 +635,11 @@ struct HandleSetupScreen: View {
                     ?? AccountPageShape.subline(nouns: noun, weekCount: f.week)
                 out.append(AccountPageShape.Row(
                     id: name, title: display, subline: subline,
-                    weekCount: f.week, hasNew: f.new, isYou: false, avatarURL: nil))
+                    weekCount: f.week, hasNew: f.new,
+                    // Pinterest knows which follow is yours and has a picture
+                    // for each (its newest pin, prd §819); a feed follow has neither.
+                    isYou: bridge == .pinterest && PinterestStore.shared.mine == name,
+                    avatarURL: bridge == .pinterest ? PinterestStore.shared.meta[name]?.cover : nil))
             }
         }
         // Topics — channels, feeds, hashtags — are rows of the same roster
@@ -857,6 +857,9 @@ struct HandleSetupScreen: View {
         if bridge == .farcaster { return String(localized: "@name, or /channel") }
         if bridge == .bluesky { return String(localized: "Handle, or search a feed") }
         if bridge == .nostr { return String(localized: "npub, hex, name@domain, or #hashtag") }
+        if bridge == .pinterest, bridge.isConnected {
+            return String(localized: "A board or profile link")
+        }
         if let prefix = bridge.fieldPrefix { return prefix + bridge.placeholder }
         if let suffix = bridge.fieldSuffix { return bridge.placeholder + suffix }
         return bridge.placeholder
@@ -911,6 +914,7 @@ struct HandleSetupScreen: View {
     private var omniButtonLabel: String {
         if bridge == .farcaster, query.hasPrefix("/") { return "Follow" }
         if bridge == .nostr, query.hasPrefix("#") { return "Follow" }
+        if bridge == .pinterest { return bridge.isConnected ? "Follow" : "Connect" }
         if bridge.supportsMultiple { return "Add" }
         return bridge.currentName.isEmpty ? "Connect" : "Update"
     }
@@ -936,6 +940,14 @@ struct HandleSetupScreen: View {
     }
 
     private func connect() {
+        if bridge == .pinterest, query.lowercased().contains("pin.it/") {
+            let raw = query
+            Task {
+                query = await PinterestStore.resolveShortLink(raw)
+                if !bridge.normalize(query).isEmpty { connect() }
+            }
+            return
+        }
         let name = bridge.normalize(query)
         guard !name.isEmpty else { return }
         if bridge.supportsMultiple {

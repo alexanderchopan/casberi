@@ -879,6 +879,30 @@ enum GitHubScopeRail {
     }
 }
 
+/// The Pinterest room's rail (prd §819): one face per follow, yours first. A
+/// board wears its newest pin as a squircle MARK (a collection, the GitHub
+/// repo's shape); a person wears THEIR newest pin in a circle, since a
+/// profile picture is not in the public feed and the bare fallback (the
+/// Pinterest mark) would make every followed person the same face.
+enum PinterestScopeRail {
+    /// "All" beside one face picks nothing, so it takes a second follow.
+    static func shows(source: String, follows: Int) -> Bool {
+        source == "Pinterest" && follows > 1
+    }
+
+    static func items(_ store: PinterestStore) -> [FaceScopeRail.Item] {
+        store.follows.map { follow in
+            let board = PinterestStore.isBoard(follow)
+            return FaceScopeRail.Item(
+                id: follow,
+                caption: board ? (store.meta[follow]?.title ?? follow) : follow,
+                face: board ? .mark(url: store.meta[follow]?.cover, source: "Pinterest")
+                            : .avatar(url: store.meta[follow]?.cover, source: "Pinterest"),
+                tooltip: store.display(follow))
+        }
+    }
+}
+
 
 /// THE ONE DRAWER FOR A RAIL ITEM'S FACE (2026-09-15, prd §747).
 ///

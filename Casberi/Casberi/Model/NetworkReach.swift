@@ -604,8 +604,8 @@ enum NetworkReach {
                  hosts: ["nos.lol", "relay.damus.io", "the domain in a name you check"]),
         Endpoint(service: "Pinterest",
                  reach: .whenConnected(bridge: "Pinterest"),
-                 purpose: "Reads a public Pinterest profile's pins.",
-                 hosts: ["www.pinterest.com"]),
+                 purpose: "Reads the public pins of your profile and of the boards and people you follow. A pin.it share link is opened once to find the board it names.",
+                 hosts: ["www.pinterest.com", "pin.it"]),
 
         // MARK: Media
 

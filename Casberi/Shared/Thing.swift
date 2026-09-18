@@ -67,12 +67,16 @@ enum ThingKind: String, Codable, CaseIterable {
 }
 
 /// Which corpus things surface (2026-07-12). Some sources live in the corpus
-/// for search, Spotlight, and the answer path ONLY — never as feed rows,
-/// source chips, or Home synthesis. Contacts is the first: a big address book
-/// would bury the day's real captures. One rule, read by every surface that
-/// shows the corpus, so a search-only source is declared in exactly one place.
+/// for search, Spotlight, the answer path AND their own room only — never as
+/// All's rows, Home synthesis or a widget. Contacts is the first: a big address
+/// book would bury the day's real captures. One rule, read by every surface
+/// that shows the corpus, so a room-only source is declared in exactly one place.
+///
+/// It was search-only, with no room, until prd §818 (2026-09-18): a beta tester
+/// connected Contacts and looked for it, and the one list that browsed it (the
+/// address book, §690) was deleted. The room is the list; All stays clean.
 enum Corpus {
-    static let searchOnlySources: Set<String> = ["Contacts"]
+    static let roomOnlySources: Set<String> = ["Contacts"]
 
     /// Sources that keep their STAMP but earn no chip and no room (user
     /// ruling 2026-08-02: "i say get rid of the you chip and room").
@@ -91,13 +95,13 @@ enum Corpus {
     ///     to a plain list. §247 gave every room a hero; this room's contents
     ///     are a link, a note, a PDF and a dropped file — heterogeneous by
     ///     definition, which is the one thing a map can't be made of.
-    ///   • **Nothing was reachable only there.** Unlike `searchOnlySources`
+    ///   • **Nothing was reachable only there.** Unlike `roomOnlySources`
     ///     (hidden from the feed) or `bulkImportSources` (kept out of All),
     ///     every "You" thing already shows in All — so the room added scoping
     ///     and no reach, and scoping is already done better three ways: the
     ///     `.saved` mark, projects, and Find (§215).
     ///
-    /// Deliberately NOT `searchOnlySources`: that hides a source from the feed
+    /// Deliberately NOT `roomOnlySources`: that hides a source from the feed
     /// altogether, and your own captures belong in All more than anything a
     /// bridge pours in. The stamp stays on the record too, where the sheet's
     /// spec table already reads "From — written by you" in plain words. This
@@ -250,15 +254,14 @@ enum Corpus {
     /// `casberi://feed/source/…` door pointing at it? Read by every surface
     /// that offers a source as a destination, so the answer is declared once.
     static func earnsRoom(_ source: String) -> Bool {
-        !chiplessSources.contains(source) && !searchOnlySources.contains(source)
-            && !retiredSources.contains(source)
+        !chiplessSources.contains(source) && !retiredSources.contains(source)
     }
 
     /// Sources that arrive in BULK from a file you exported yourself —
     /// thousands of things in one pass, dated across years (2026-07-31).
     ///
     /// They keep their own room and their source chip, unlike
-    /// `searchOnlySources` above; what they must never do is enter the ALL
+    /// `roomOnlySources` above; what they must never do is enter the ALL
     /// feed, where a single import would bury every real capture the day it
     /// ran — the same failure the address-book rule exists to prevent, one
     /// step short of hiding the source entirely. All gets ONE receipt
@@ -405,9 +408,9 @@ enum Corpus {
     }
 
     /// The things a surface (Feed, Home) should show — the corpus minus the
-    /// search-only sources.
-    static func surfaced(_ things: [Thing]) -> [Thing] {
-        things.filter { !searchOnlySources.contains($0.source) }
+    /// room-only sources, except inside that source's own `room`.
+    static func surfaced(_ things: [Thing], room: String? = nil) -> [Thing] {
+        things.filter { !roomOnlySources.contains($0.source) || $0.source == room }
     }
 
     /// Is there ANY surfaced thing — without building the surfaced array.
@@ -417,8 +420,8 @@ enum Corpus {
     /// a cold CloudKit import fires (PERF 2026-07-29). `contains` short-
     /// circuits on the first surfaced thing — which, since search-only sources
     /// are rare, is almost always the very first element.
-    static func hasSurfaced(_ things: [Thing]) -> Bool {
-        things.contains { !searchOnlySources.contains($0.source) }
+    static func hasSurfaced(_ things: [Thing], room: String? = nil) -> Bool {
+        things.contains { !roomOnlySources.contains($0.source) || $0.source == room }
     }
 
     /// How many things exist, without materialising one — a SQL `COUNT`.

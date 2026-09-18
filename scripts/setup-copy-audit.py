@@ -386,14 +386,14 @@ def audit_door_table(name: str, body: str):
 # the RIGHT answer, not a gap, because one constant used by both the stamp and
 # the door is the pattern that cannot drift at all (§311's own lesson: the
 # desync happened because a second file hardcoded the literal instead).
-# A source can be REAL and still have no room: `Corpus.searchOnlySources`
-# (Contacts) and `chiplessSources` ("You") are stamped on rows and
-# deliberately earn no chip and no room — `Corpus.earnsRoom` is the one place
+# A source can be REAL and still have no room: `chiplessSources` ("You") is
+# stamped on rows and deliberately earns no chip and no room (Contacts left
+# this set when it got a room, prd §818) — `Corpus.earnsRoom` is the one place
 # that answer is declared. A door onto one of those passes the "is it stamped"
 # test and still lands nowhere, so it is checked separately and read OUT of
 # Thing.swift rather than copied here, or this goes stale the day the rule moves.
 NO_ROOM_SET_RE = re.compile(
-    r'static let (?:chiplessSources|searchOnlySources): Set<String> = \[([^\]]*)\]')
+    r'static let (?:chiplessSources): Set<String> = \[([^\]]*)\]')
 SOURCE_LITERAL_RE = re.compile(r'source:\s*"([^"]+)"')
 SOURCE_CONST_RE = re.compile(r'static let source(?:Name)?\s*=\s*"([^"]+)"')
 # The door is the account page's Activity row since §639, and its `source:` is
@@ -1333,9 +1333,9 @@ def self_test() -> bool:
     else:
         print("  ✓ catches a room door onto a stamped-but-roomless source")
 
-    rl = roomless_sources('static let searchOnlySources: Set<String> = ["Contacts", "HomeKit"]\n'
-                          'static let chiplessSources: Set<String> = ["You"]\n')
-    if rl != {"Contacts", "HomeKit", "You"}:
+    rl = roomless_sources('static let roomOnlySources: Set<String> = ["Contacts"]\n'
+                          'static let chiplessSources: Set<String> = ["You", "HomeKit"]\n')
+    if rl != {"HomeKit", "You"}:
         print(f"  SELF-TEST FAIL: roomless set parsed as {rl}")
         ok = False
     else:

@@ -4925,7 +4925,7 @@ enum DemoSeedAll {
     /// did: nothing in the demo, and therefore nothing in any screenshot sweep,
     /// ever opened one.
     ///
-    /// Both are `Corpus.searchOnlySources`, so these never crowd the feed —
+    /// Both are `Corpus.roomOnlySources`, so these never crowd the feed —
     /// they turn up when you search, which is the whole contract of those two
     /// bridges and is worth the demo proving.
     private static func contactsAndHome() -> [Thing] {

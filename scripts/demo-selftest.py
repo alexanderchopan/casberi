@@ -862,9 +862,8 @@ KNOWN_CHIPLESS_CAPTURE = {
     "Apple Notes",
 }
 KNOWN_SEARCH_ONLY = {
-    # `Thing.searchOnlySources` — reachable by search/Find, never a room or
-    # a chip, by the SAME ruling as the two above but a different mechanism
-    # (findable-not-browsable rather than no-distinct-source-at-all).
+    # `Corpus.roomOnlySources` — its demo rows are `contactsAndHome()`, not a
+    # seat in `seatTable`, so it is exempt by name (a room since prd §818).
     "Contacts",
 }
 

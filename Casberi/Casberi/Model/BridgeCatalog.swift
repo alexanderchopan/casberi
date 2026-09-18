@@ -605,7 +605,7 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Todoist",     tagline: "Tasks beside your lists",               group: "Schedule",  connectable: true,
               needsSetup: true),
-        Offer(name: "Pinterest",   tagline: "Your pins, in your feed",               group: "Images",    connectable: true,
+        Offer(name: "Pinterest",   tagline: "Your pins, and boards you follow",       group: "Images",    connectable: true,
               needsSetup: true),
         Offer(name: "Raindrop",    tagline: "Bookmarks and collections",             group: "Saves",     connectable: true,
               needsSetup: true),

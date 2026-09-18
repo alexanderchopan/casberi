@@ -64,7 +64,7 @@ struct WalkScope: Hashable {
 ///
 /// **The fetch cannot express all of it.** Two of the three tests below are
 /// about a row's SOURCE STRING against a set (`Corpus.bulkImportSources`,
-/// `Corpus.searchOnlySources`), which a `#Predicate` cannot push down to SQL,
+/// `Corpus.roomOnlySources`), which a `#Predicate` cannot push down to SQL,
 /// and the kind test rides `tags`, where a pushed-down `.contains` on an
 /// array-typed attribute is a documented SIGSEGV (CLAUDE.md, 2026-07-21). So
 /// the fetch is bounded and the decision is made here in Swift.
@@ -82,9 +82,9 @@ enum SheetWalk {
         let isReceipt: Bool
         /// `Corpus.showsInAll` — only consulted for the All room.
         let showsInAll: Bool
-        /// `Corpus.searchOnlySources.contains(source)` — the corpus the feed
-        /// never surfaces at all.
-        let searchOnly: Bool
+        /// `Corpus.roomOnlySources.contains(source)` — a corpus surfaced in its
+        /// own room and nowhere else.
+        let roomOnly: Bool
     }
 
     /// May this row be walked to?
@@ -94,8 +94,8 @@ enum SheetWalk {
         // one by hand: a door onto our own note about a sync, from inside
         // somebody's diary.
         guard !row.isReceipt else { return false }
-        // The search-only corpus is not on any list, so it is not on this one.
-        guard !row.searchOnly else { return false }
+        // A room-only corpus is on one list, its own room's (prd §818).
+        guard !row.roomOnly || scope.source == row.source else { return false }
         if let source = scope.source {
             guard row.source == source else { return false }
         } else {
