@@ -546,6 +546,16 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             BridgeDisconnectSection(bridgeID: seatID, name: source,
                                     teardown: teardown, note: disconnectNote, plain: true)
                 .plainAccountRow()
+        } else if seat != nil {
+            // The credential is gone but the seat is still registered — a
+            // sign-in seat clears its session on a refusal (Rocket Money,
+            // Acorns), and the flagged seat then kept the Accounts face's
+            // alarm ring with no control on this page to answer it except
+            // connecting again. Disconnect is the other honest answer.
+            BridgeDisconnectSection(bridgeID: seatID, name: source,
+                                    teardown: teardown, note: disconnectNote, plain: true)
+                .padding(.top, DS.Space.s4)
+                .plainAccountRow()
         }
     }
 
