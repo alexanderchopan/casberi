@@ -100,6 +100,9 @@ KNOWN_NON_REACH=(
   # fetched: the read is `api.transferwise.com`, a different host by
   # construction, and it IS disclosed in NetworkReach (prd §778).
   wise.com
+  # app.splits.org — the settings page where a Splits API key is created.
+  # Never fetched: the read is `api.splits.org` (prd §820).
+  app.splits.org
   # Blockscan's cross-chain address page — a Privy app wallet's "Explorer"
   # door (prd §803e). Opened, never fetched: the balances come from the
   # wallet holdings read already disclosed.

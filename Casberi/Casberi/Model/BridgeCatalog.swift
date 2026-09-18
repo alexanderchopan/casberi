@@ -227,6 +227,11 @@ enum BridgeCatalog {
         // with no balance has no context.
         Offer(name: "Wise",        tagline: "What you hold, and what you sent", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 16)),
+        // Splits (prd §820, 2026-09-18) — a team's self-custodied accounts
+        // over a Read-scoped key: the accounts, what they hold, and what
+        // moved, proposals included while they wait on signatures.
+        Offer(name: "Splits",      tagline: "Your team's accounts and payments", group: "Wallet", connectable: true,
+              needsSetup: true, added: day(2026, 9, 18)),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets
         // whose total it joins — not in Markets, which was where things you

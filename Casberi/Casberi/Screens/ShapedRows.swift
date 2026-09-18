@@ -159,6 +159,11 @@ struct BandRow: View {
         // the app's logo, and its name is the word the logo cannot say.
         case "Privy":
             return thing.authorHandle
+        // Which Splits account the money moved in (prd §820) — the title
+        // already names the counterparty and amount; the account is the one
+        // fact it does not carry.
+        case "Splits":
+            return thing.authorHandle
         // WHY a post is here beats WHO posted it in this slot (2026-07-16): a
         // liked cast, a channel cast, and your own post used to read
         // identically, and the row already leads with the author's FACE — so

@@ -91,7 +91,8 @@ enum VerbDerivation {
                     out.append(Verb(label: "Open in Calendar", icon: "calendar",
                                     action: .openURL(URL(string: "calshow://")!)))
                 }
-            } else if thing.source != VibenetIdentity.source, thing.source != PrivyHomeFeed.source {
+            } else if thing.source != VibenetIdentity.source, thing.source != PrivyHomeFeed.source,
+                      thing.source != SplitsShape.source {
                 // Not a hand-off — EventKit writes into the local store, which
                 // works with no Calendar app present. Ungated on purpose for
                 // every OTHER `.event` source (a workout, a HomeKit-scheduled

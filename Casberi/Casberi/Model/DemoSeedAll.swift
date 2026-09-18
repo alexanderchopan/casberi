@@ -217,6 +217,9 @@ enum DemoSeedAll {
                               // the freshness re-stamp need this entry or they
                               // outlive the demo looking like real transfers.
                               "wise:transfer:demo",
+                              // Splits (prd §820) — the real seat's ref
+                              // shapes, so the same teardown reasoning.
+                              "splits:account:demo", "splits:tx:demo",
                               // Peer/Privacy Pools rows carry the REAL
                               // bridges' own ref prefixes (2026-08-10, so
                               // their room heads' ref-shape matching
@@ -3614,6 +3617,36 @@ enum DemoSeedAll {
             }
         }
 
+        // Splits (prd §820). Two accounts, so the Accounts tile has rows, and
+        // four transactions, one still waiting on signatures so the Activity
+        // tile's dot shows. The inbound titles follow the shape measured on a
+        // real team ("Received <$0.01 (<0.001 ETH) from 0x2F60"); an OUTBOUND
+        // title has not been seen yet, so those two are this file's best
+        // reading of Splits' own wording, and the waiting prefix is exactly
+        // what `SplitsShape.rowTitle` composes.
+        out += [("Treasury", 120.0), ("Payroll", 64.0)].enumerated().map { i, a in
+            row(.event, a.0, source: "Splits", ref: "splits:account:demo\(i)",
+                days: a.1, hour: 9, content: "Account")
+        }
+        let splits: [(String, Double, String, [String], String, Double)] = [
+            ("Waiting for signatures · Sent $4,500 (4,500 USDC) to Dana Ortiz", 4_500, "sent",
+             ["Transfer", "Waiting"], "Payroll", 1),
+            ("Received $12,000 (12,000 USDC) from Acme Labs", 12_000, "received",
+             ["Transfer"], "Treasury", 3),
+            ("Sent $4,500 (4,500 USDC) to Dana Ortiz", 4_500, "sent",
+             ["Transfer"], "Payroll", 31),
+            ("Received $2,400 (0.8 ETH) from Fabrikam", 2_400, "received",
+             ["Transfer"], "Treasury", 44),
+        ]
+        out += splits.enumerated().map { i, x in
+            row(.transaction, x.0, source: "Splits", ref: "splits:tx:demo\(i)",
+                days: x.5, hour: 14, tags: x.3) { t in
+                t.transferUSD = x.1
+                t.transferDirection = x.2
+                t.authorHandle = x.4
+            }
+        }
+
         // Privy (prd §803g) — the apps that made a wallet, dated when each was
         // made, and what moved in two of them. The room's own head reads
         // `PrivyHomeStore`, which a demo never fills, so what the demo shows of
@@ -5518,6 +5551,8 @@ enum DemoSeedAll {
         // `WiseShape.balanceLine` — not a "Synced Nm ago", which this seat
         // never says.
         ("Wise", "£1,240 · €310", "Reads your balances and transfers."),
+        // Splits (prd §820): what `SplitsWatch.proof` composes — never a total.
+        ("Splits", "Northwind Labs · 2 accounts", "Reads your team's accounts and payments."),
         // Privy (prd §803g) — the room states what it holds and how many apps
         // made a wallet, which is what its own page says.
         ("Privy", "$412 · 6 apps", "Reads which apps made you a wallet."),

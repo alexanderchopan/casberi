@@ -527,6 +527,12 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "wise"),
                  purpose: "Reads which profile your token belongs to, your balances, and the transfers you have sent — with a personal API token you mint yourself and can scope read-only. Nothing here can send money, convert a balance, or add a recipient. Your card spending is not read at all: it lives in Wise's balance statement, behind a signed-approval step this app does not implement. wise.com is where the token is created — opened in your browser, never called by the app.",
                  hosts: ["api.transferwise.com"]),
+        // Splits (2026-09-18, prd §820) — one host, fixed. `app.splits.org`
+        // is the settings page the setup door OPENS, never fetched.
+        Endpoint(service: "Splits",
+                 reach: .whenConnected(bridge: "splits"),
+                 purpose: "Reads your team's accounts, their balances, your transactions and your contacts — with an API key you create yourself, which must have the Read scope only. Nothing here can propose, sign or send a transaction.",
+                 hosts: ["api.splits.org"]),
         // Host is user-configurable (Sentry's EU region answers on
         // de.sentry.io, and self-hosted installs exist) — PostHog's shape
         // exactly: the default cloud host is what's disclosed, and a host the

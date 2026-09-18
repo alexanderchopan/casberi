@@ -3011,6 +3011,13 @@ struct FeedScreen: View {
         case .stripe:
             let open = RoomKindTiles.openDisputes(rows.map { (url: Optional($0.content), tags: $0.tags, title: $0.title) })
             if open > 0 { attention.insert(.disputes) }
+        case .splits:
+            // A proposal waiting on signatures is the one thing in this room
+            // somebody has to act on (prd §820).
+            if rows.contains(where: { $0.sourceRef?.hasPrefix(SplitsShape.txPrefix) == true
+                                      && $0.tags.contains(SplitsShape.waitingTag) }) {
+                attention.insert(.queue)
+            }
         case .github, .appStoreConnect, .huggingFace, .posthog, .l2beat, .walletbeat:
             break
         }

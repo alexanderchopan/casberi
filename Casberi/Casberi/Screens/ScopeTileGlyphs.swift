@@ -82,6 +82,9 @@ extension RoomKindTile: DSTileScope {
         case .wallets:      return ScopeTileGlyph.wallets
         case .news:         return ScopeTileGlyph.news
         case .revisions:    return ScopeTileGlyph.revisions
+        // Splits' accounts are the wallet family's Accounts by name, so they
+        // wear its glyph rather than a second one (prd §820).
+        case .accounts:     return ScopeTileGlyph.accounts
         }
     }
 }

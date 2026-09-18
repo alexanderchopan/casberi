@@ -263,6 +263,7 @@ extension DS {
         // is an SF Symbol on this ground (prd §778). Re-sample if a mark is
         // ever bundled.
         case "wise":                return Color.fixed("#9fe870")
+        case "splits":              return Color.fixed("#000000")   // their icon's black field (icon-sampled)
         case "coinbase":            return Color.fixed("#0052ff")   // their official brand blue
         case "kraken":              return Color.fixed("#773bf5")   // their mascot's purple (icon-sampled)
         case "binance":             return Color.fixed("#0b0e11")   // their near-black app-icon field

@@ -94,6 +94,7 @@ enum HomeComposition {
             // line here, so for one commit the Themes treemap could have
             // drawn "Transfer" as a subject.
             "Transfer", "Returned",                       // Wise
+            "Not executed",                               // Splits (§820)
             "Price drop", "Price rise", "Refund",
             // Polar (prd §537). STATE by this set's own rule, and the pair
             // reads as one: "Sale" says what a row IS, "New subscriber" says

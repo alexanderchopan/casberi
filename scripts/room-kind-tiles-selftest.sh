@@ -43,6 +43,14 @@ grep -qF 'static let sourceName = "Safe"' Casberi/Casberi/Model/SafeBridge.swift
   || { echo "✗ SafeBridge.sourceName drifted from RoomKindTiles.Room's \"Safe\""; exit 1; }
 grep -qF 'static let source = "Stripe"' Casberi/Casberi/Model/StripeBridge.swift \
   || { echo "✗ StripeWatch.source drifted from RoomKindTiles.Room's \"Stripe\""; exit 1; }
+grep -qF 'static let source = "Splits"' Casberi/Casberi/Model/SplitsShape.swift \
+  || { echo "✗ SplitsShape.source drifted from RoomKindTiles.Room's \"Splits\""; exit 1; }
+grep -qF 'static let accountPrefix = "splits:account:"' Casberi/Casberi/Model/SplitsShape.swift \
+  || { echo "✗ SplitsShape.accountPrefix drifted — the Accounts tile reads splits:account:"; exit 1; }
+grep -qF 'static let waitingTag = "Waiting"' Casberi/Casberi/Model/SplitsShape.swift \
+  || { echo "✗ SplitsShape.waitingTag drifted — the Queue tile reads the \"Waiting\" tag"; exit 1; }
+grep -qF 'static let txPrefix = "splits:tx:"' Casberi/Casberi/Model/SplitsShape.swift \
+  || { echo "✗ SplitsShape.txPrefix drifted — the Activity tile reads splits:tx:"; exit 1; }
 grep -qF 'source: "GitHub"' Casberi/Casberi/Model/GitHubFeeds.swift \
   || { echo "✗ the GitHub seat no longer lands rows under \"GitHub\""; exit 1; }
 ASC="Casberi/Casberi/Model/AppStoreConnectBridge.swift"
@@ -148,7 +156,7 @@ else:
     for case in ["all", "queue", "activity", "permissions", "pullRequests", "issues",
                  "releases", "payments", "payouts", "disputes",
                  "versions", "reviews", "builds", "models", "datasets", "papers",
-                 "metrics", "annotations", "milestones", "chains", "wallets", "news", "revisions"]:
+                 "metrics", "annotations", "milestones", "chains", "wallets", "news", "revisions", "accounts"]:
         if not re.search(r'case \.%s:\s+return ScopeTileGlyph\.%s\b' % (case, case), body):
             fails.append(f"RoomKindTile.{case} does not wear ScopeTileGlyph.{case}")
 # All is the dock's own glyph, read from its one table.
@@ -324,6 +332,21 @@ check(RoomKindTiles.present(room: .walletbeat, kinds: [.revisions, .wallets, .ne
       "Walletbeat keeps Wallets · News · Revisions order")
 check(RoomKindTiles.present(room: .l2beat, kinds: [.wallets, .news]) == [],
       "Walletbeat's Wallets never make up L2BEAT's second tile")
+// ── Splits: refs decide, dust never landed so nothing to test here ───────
+let sx = RoomKindTiles.Census(room: .splits, refs: [])
+check(RoomKindTiles.Room(source: "Splits") == .splits, "Splits resolves from its source")
+check(sx.kind(ref: "splits:account:0xabc", url: nil, tags: []) == .accounts, "an account row is Accounts")
+check(sx.kind(ref: "splits:tx:1", url: nil, tags: ["Transfer", "Waiting"]) == .queue, "a proposal waiting on signatures is Queue")
+check(sx.kind(ref: "splits:tx:2", url: nil, tags: ["Transfer"]) == .activity, "a transaction that went through is Activity")
+check(sx.kind(ref: "splits:tx:3", url: nil, tags: ["Transfer", "Not executed"]) == .activity, "a proposal that failed is Activity, never Queue")
+check(sx.kind(ref: "splits:contact:0xabc", url: nil, tags: []) == nil, "anything else is All only")
+check(sx.kind(ref: nil, url: nil, tags: []) == nil, "a row with no ref claims nothing")
+check(RoomKindTiles.present(room: .splits, kinds: [.activity, .queue, .accounts]) == [.all, .accounts, .queue, .activity],
+      "Splits: All · Accounts · Queue · Activity")
+check(RoomKindTiles.present(room: .splits, kinds: [.activity, .accounts]) == [.all, .accounts, .activity],
+      "Splits with nothing waiting: no Queue tile")
+check(RoomKindTiles.present(room: .splits, kinds: [.accounts]) == [],
+      "a team with accounts and no activity draws no tiles (§805)")
 
 // ── Open disputes ───────────────────────────────────────────────────────
 let d1 = "https://dashboard.stripe.com/disputes/dp_1"

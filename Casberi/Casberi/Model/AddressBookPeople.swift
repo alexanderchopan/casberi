@@ -216,6 +216,22 @@ enum AddressBookPeople {
         return out
     }
 
+    /// The Splits team's contacts (prd §820) — its own names for the outside
+    /// addresses it pays and is paid by. A roster with no dates, so it is a
+    /// population of the book rather than rows in a room: read off the seat's
+    /// last pass (`SplitsState`), never fetched here. An address you have
+    /// named yourself wins, as every ephemeral population's does.
+    static func splits() -> [AddressBook.Entry] {
+        SplitsState.standing.contacts.map { contact in
+            AddressBook.Entry(
+                address: contact.address,
+                name: contact.label,
+                // No date to be had, the Twitch roster's reason.
+                addedAt: .distantPast,
+                provenance: "Splits")
+        }
+    }
+
     /// How many Twitch rows are scanned to build the channel list. A stream
     /// lands one row per broadcast, so a heavy follower accumulates rows fast
     /// — this bounds the walk without bounding the CHANNELS, which are what
@@ -231,7 +247,7 @@ enum AddressBookPeople {
     /// caller keeps its single walk.
     static func rows(in context: ModelContext,
                      excluding bookKeys: Set<String>) -> [AddressBook.Entry] {
-        merged(contacts(in: context) + social() + twitch(in: context))
+        merged(contacts(in: context) + social() + twitch(in: context) + splits())
             .filter { !bookKeys.contains($0.id) }
     }
 

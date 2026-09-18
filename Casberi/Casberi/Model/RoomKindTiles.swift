@@ -1,7 +1,8 @@
 import Foundation
 
 /// THE KIND TILES OF THE SAFE, GITHUB AND STRIPE ROOMS (prd §815), AND OF
-/// APP STORE CONNECT, HUGGING FACE, POSTHOG, L2BEAT AND WALLETBEAT (prd §816).
+/// APP STORE CONNECT, HUGGING FACE, POSTHOG, L2BEAT AND WALLETBEAT (prd §820), AND OF
+/// SPLITS (prd §820).
 ///
 /// **Where a room has a head, the tiles ride its `scopes:` slot** — the Privy
 /// pattern, `DSRoomChassis.Head`'s own geometry — and the head stays exactly as
@@ -46,6 +47,8 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
     // L2BEAT and Walletbeat (prd §816) — News and Revisions are ONE meaning in
     // both rooms, so one case each and one glyph each.
     case chains, wallets, news, revisions
+    // Splits (prd §820) — its Queue and Activity are Safe's cases above.
+    case accounts
 
     var id: String { rawValue }
 
@@ -74,6 +77,7 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .wallets:      return String(localized: "Wallets")
         case .news:         return String(localized: "News")
         case .revisions:    return String(localized: "Revisions")
+        case .accounts:     return String(localized: "Accounts")
         }
     }
 
@@ -102,6 +106,7 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .wallets:      return String(localized: "The wallets you watch")
         case .news:         return String(localized: "Milestones and incidents")
         case .revisions:    return String(localized: "Changes to a rating")
+        case .accounts:     return String(localized: "Your team's accounts")
         }
     }
 }
@@ -113,7 +118,7 @@ enum RoomKindTiles {
     /// to `SafeBridge.sourceName`, `StripeWatch.source`, the GitHub seat,
     /// `ASCShape.source` and the Hugging Face seat.
     enum Room: String, CaseIterable, Sendable {
-        case safe, github, stripe, appStoreConnect, huggingFace, posthog, l2beat, walletbeat
+        case safe, github, stripe, appStoreConnect, huggingFace, posthog, l2beat, walletbeat, splits
 
         init?(source: String) {
             switch source {
@@ -125,6 +130,7 @@ enum RoomKindTiles {
             case "PostHog":           self = .posthog
             case "L2BEAT":            self = .l2beat
             case "Walletbeat":        self = .walletbeat
+            case "Splits":            self = .splits
             default:                  return nil
             }
         }
@@ -139,6 +145,7 @@ enum RoomKindTiles {
             case .posthog:         return "PostHog"
             case .l2beat:          return "L2BEAT"
             case .walletbeat:      return "Walletbeat"
+            case .splits:          return "Splits"
             }
         }
 
@@ -153,6 +160,7 @@ enum RoomKindTiles {
             case .posthog:         return [.all, .metrics, .annotations, .milestones]
             case .l2beat:          return [.all, .chains, .news, .revisions]
             case .walletbeat:      return [.all, .wallets, .news, .revisions]
+            case .splits:          return [.all, .accounts, .queue, .activity]
             }
         }
     }
@@ -204,6 +212,10 @@ enum RoomKindTiles {
     static let walletbeatWallet  = "walletbeat:wallet:"
     static let walletbeatNews    = "walletbeat:news:"
     static let walletbeatRevision = "walletbeat:rev:"
+    /// Splits' rows (`SplitsShape.accountPrefix`, `.txPrefix`), spelled here
+    /// for the harness (prd §820).
+    static let splitsAccount     = "splits:account:"
+    static let splitsTx          = "splits:tx:"
 
     // MARK: - The census
 
@@ -291,6 +303,14 @@ enum RoomKindTiles {
                 if ref.hasPrefix(RoomKindTiles.walletbeatWallet) { return .wallets }
                 if ref.hasPrefix(RoomKindTiles.walletbeatNews) { return .news }
                 if ref.hasPrefix(RoomKindTiles.walletbeatRevision) { return .revisions }
+                return nil
+            case .splits:
+                guard let ref else { return nil }
+                if ref.hasPrefix(RoomKindTiles.splitsAccount) { return .accounts }
+                // A proposal waiting on signatures is Queue — Safe's meaning,
+                // so Safe's case — and a scheduled payment lands as one
+                // (prd §820). `SplitsShape.waitingTag`.
+                if ref.hasPrefix(RoomKindTiles.splitsTx) { return tags.contains("Waiting") ? .queue : .activity }
                 return nil
             }
         }

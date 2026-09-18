@@ -1484,6 +1484,10 @@ harness "Duolingo self-test" "Duolingo self-test" "scripts/duolingo-selftest.sh"
 # refresh token stored, a millisecond date in the year 57000, and every empty
 # wallet re-read each pass on the shared Zerion allowance.
 harness "Privy self-test" "Privy self-test" "scripts/privy-selftest.sh" "the Privy self-test failed — run scripts/privy-selftest.sh"
+# Splits (prd §820) — a Write key kept, the "data" wrapper missed so every
+# read parses to nothing, address-poisoning dust landed as news, and a
+# proposal waiting on signatures drawn as done.
+harness "Splits self-test" "Splits self-test" "scripts/splits-selftest.sh" "the Splits self-test failed — run scripts/splits-selftest.sh"
 # The rooms' kind tiles (prd §815, §816) — a `wallet:safe` prefix that claims
 # the outcome rows, an executed transaction still listed in Queue, a build
 # prefix that claims the expiry warning, All beside one kind drawing the same

@@ -207,6 +207,8 @@ enum BridgeGlyph {
         // `arrow.left.arrow.right`, which is the same group: these two are not
         // the same object (the npm/PyPI rule), so they do not share a mark.
         case "wise":      return "arrow.left.arrow.right.circle"
+        // The mark's own idea — a field of dots — without drawing the mark.
+        case "splits":    return "circle.hexagongrid"
         // The three finance seats of §780b/§780c. Acorns invests spare change,
         // Rocket Money watches what repeats, NerdWallet is reading — so the
         // glyphs say growth, recurrence and an article, not three wallets.

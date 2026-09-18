@@ -1339,6 +1339,13 @@ enum ProbeHooks {
         Hook(key: "wiseProbe") { _, _ in
             Task { await WiseFetch.probe() }
         },
+        // `-splitsProbe YES` reads the STORED Splits key (connect via
+        // `-tokenBridge "Splits:<key>"`) and logs each read's status, row
+        // count and FIELD NAMES, plus each transaction's status and stage.
+        // Never prints the key, a name, an address or an amount (prd §820).
+        Hook(key: "splitsProbe") { _, _ in
+            Task { await SplitsFetch.probe() }
+        },
         // `-posthogHost <host>` / `-posthogProject <id>` — the two settings a
         // fresh connect would pick by hand, so a headless run can reach the
         // scoped reads. Declared BEFORE `-posthogProbe`: hooks run in list

@@ -23,6 +23,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     /// profile id (`WiseAuth.configured`), and because a transfer's status
     /// changes after it lands. See `WiseAuth`.
     case wise     = "Wise"
+    /// Splits (2026-09-18, prd §820) — a team's self-custodied accounts, over
+    /// a Read-scoped API key. Its sweep is its own because a transaction is a
+    /// PROPOSAL whose status moves after it lands, and its screen checks the
+    /// key's scopes before keeping it. See `SplitsAuth`.
+    case splits   = "Splits"
     case posthog  = "PostHog"
     case stripe   = "Stripe"
     /// Polar (2026-08-30) — a developer-first Merchant of Record, Stripe's
@@ -77,6 +82,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .bitrefill: "bitrefill"
         case .privacy:  "privacy"
         case .wise:     "wise"
+        case .splits:   "splits"
         case .posthog:  "posthog"
         case .stripe:   "stripe"
         case .polar:    "polar"
@@ -124,6 +130,8 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // Payments' reasoning — a door that 404s is worse than one that
         // needs a click).
         case .wise:      URL(string: "https://wise.com/settings/")
+        // The API-keys page itself: the step below only has to name the scope.
+        case .splits:    URL(string: "https://app.splits.org/settings/team/api-keys/")
         case .posthog:   URL(string: "https://us.posthog.com/settings/user-api-keys")
         case .stripe:    URL(string: "https://dashboard.stripe.com/apikeys")
         // Polar's own redirect helper — resolves to the signed-in org's
@@ -198,6 +206,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
              .dodoPayments:
             String(localized: "Get your API key")
         case .wise:      String(localized: "Get your API token")
+        case .splits:    String(localized: "Get your API key")
         case .aws:
             // "IAM" dropped to fit the 26-char door-label budget — the address
             // beneath (console.aws.amazon.com) already says where this leads.
@@ -256,6 +265,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .wise: [
             "Integrations and tools → API tokens",
             "Read-only is enough"]
+        // The scope is the whole step: a Write or Owner key is refused on
+        // save (`SplitsShape.isReadOnly`), so saying so first saves a trip.
+        case .splits: [
+            "Create a key with the Read scope only"]
         // The three scopes are NOT named here — the checklist directly beneath
         // this step is the list, the same fix Stripe took the day before
         // (§220, "a step that was already on screen twice"; audit 2026-07-31).
@@ -373,6 +386,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .bitrefill: "API key"
         case .privacy:  "API key"
         case .wise:     "API token"
+        case .splits:   "sk_…"
         case .posthog:  "phx_…"
         case .stripe:   "rk_live_…"
         // No confirmed prefix from Polar's docs — Organization Access
@@ -435,6 +449,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .bitrefill: "API key"
         case .privacy:  "API key"
         case .wise:     "API token"
+        case .splits:   "API key"
         case .posthog:  "personal API key"
         case .stripe:   "restricted key"
         case .polar:    "organization access token"
@@ -466,6 +481,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .bitrefill: "orders"
         case .privacy:  "purchases"
         case .wise:     "transfers"
+        case .splits:   "transactions"
         case .posthog:  "updates"
         case .stripe:   "updates"
         case .polar:    "updates"
@@ -543,6 +559,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // indistinguishable from a broken connection.
         case .wise:
             String(localized: "Wise answered — no transfers in that window. Card spending isn't read: it lives in the balance statement, behind Wise's signed-approval step.")
+        // A new team reads empty, and so does one whose only arrivals were
+        // dust — which this seat drops on purpose, so the page says it did.
+        case .splits:
+            String(localized: "Splits answered — no transactions yet. Sends under a cent from strangers are left out on purpose.")
         case .trello:
             String(localized: "Trello answered — no cards are assigned to you. Only cards you're a member of are read, so add yourself to one and sync again.")
         // A new or quiet product legitimately reads empty for a while — the
@@ -636,6 +656,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .wise:
             WiseState.clear()
             TokenVault.delete(WiseAuth.profileVaultKey)
+        // A fresh key may belong to a different team, whose balances and
+        // contacts must not inherit the old one's.
+        case .splits:
+            SplitsState.clear()
         // Cleared on BOTH callers — a fresh token may belong to a different
         // account with a different budget, and the stale bucket must not
         // suppress a real crossing on the new one.
@@ -1040,6 +1064,9 @@ enum TokenIngest {
         // alone cannot establish that it is really connected
         // (`WiseAuth.configured`).
         if bridge == .wise { return await WiseIngest.refresh(context: context) }
+        // Splits owns its pass for Wise's reason: a proposal's status moves
+        // after it lands, and the balances are a state written beside it.
+        if bridge == .splits { return await SplitsIngest.refresh(context: context) }
         guard let token = TokenVault.get(bridge.tokenKey), !running.contains(bridge) else {
             return running.contains(bridge) ? 0 : nil
         }
@@ -1159,6 +1186,7 @@ enum TokenIngest {
         case .appStoreConnect: ownSweepUnreachable(.appStoreConnect)
         case .aws:      ownSweepUnreachable(.aws)
         case .wise:     ownSweepUnreachable(.wise)
+        case .splits:   ownSweepUnreachable(.splits)
         case .jira:     await jira(token)
         }
     }
