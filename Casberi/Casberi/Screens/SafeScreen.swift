@@ -387,9 +387,9 @@ struct SafeScreen: View {
     /// them, so the line names Safe's limit, not the person's usage.
     static func throttledLine(until: Date?) -> String {
         guard let until else {
-            return String(localized: "Safe's free read limit is used up, so the queue wasn't checked.")
+            return String(localized: "Safe paused reads, so the queue wasn't checked.")
         }
-        return String(localized: "Safe's free read limit is used up, so the queue wasn't checked. It reopens \(until.formatted(.relative(presentation: .named))).")
+        return String(localized: "Safe paused reads, so the queue wasn't checked. It reopens \(until.formatted(.relative(presentation: .named))).")
     }
 
     /// Refresh the queue for the watched wallets. The catalog seat is kept

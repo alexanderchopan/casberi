@@ -477,9 +477,9 @@ struct SafeRoom: Equatable {
     static func readLimitNote(_ room: SafeRoom, now: Date = .now) -> String? {
         guard let limit = room.readLimit else { return nil }
         guard let lastAnswer = limit.lastAnswer else {
-            return String(localized: "Safe's free read limit is used up — this may be out of date")
+            return String(localized: "Safe paused reads — this may be out of date")
         }
-        return String(localized: "Safe's free read limit is used up — last checked \(lastAnswer.formatted(.relative(presentation: .named, unitsStyle: .wide)))")
+        return String(localized: "Safe paused reads — last checked \(lastAnswer.formatted(.relative(presentation: .named, unitsStyle: .wide)))")
     }
 
     static func stateNote(_ room: SafeRoom) -> String? {

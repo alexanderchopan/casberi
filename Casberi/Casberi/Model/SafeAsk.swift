@@ -66,9 +66,9 @@ enum SafeAsk {
         case .answered:
             return nil
         case .throttled(let until?):
-            return String(localized: "Couldn't check your Safe — Safe's free read limit is used up until \(until.formatted(date: .abbreviated, time: .shortened)).")
+            return String(localized: "Couldn't check your Safe — Safe paused reads until \(until.formatted(date: .abbreviated, time: .shortened)).")
         case .throttled(nil):
-            return String(localized: "Couldn't check your Safe — Safe's free read limit is used up.")
+            return String(localized: "Couldn't check your Safe — Safe paused reads.")
         case .unreachable:
             return String(localized: "Couldn't reach Safe to check your queue.")
         }

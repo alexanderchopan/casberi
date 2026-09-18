@@ -46,7 +46,12 @@ enum SafeServiceGate {
 
     // MARK: - The live gate
 
-    private static let defaultsKey = "wallet.safe.serviceGate.v1"
+    /// v2 since 2026-09-18: a v1 close was written by `api.safe.global`'s
+    /// monthly-quota 429, whose reset ran days out. Every read moved to the
+    /// Client Gateway (§789b), but a shut gate sends nothing, so nothing could
+    /// reopen it and the Safe room said the limit was used up for days. A new
+    /// key forgets the old host's closes; the gateway's own are ~60s.
+    private static let defaultsKey = "wallet.safe.serviceGate.v2"
 
     /// Held only for the in-memory fold. The `UserDefaults` write happens
     /// after the lock is released, through `DefaultsWrite` (prd §721).

@@ -53712,6 +53712,62 @@
         }
       }
     },
+    "Couldn't check your Safe — Safe paused reads until %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo revisar tu Safe: Safe pausó las lecturas hasta %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safeを確認できませんでした — Safeは%@まで読み取りを一時停止しています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe를 확인할 수 없습니다 — Safe가 %@까지 읽기를 일시 중지했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法检查你的 Safe — Safe 已暂停读取，直到 %@。"
+          }
+        }
+      }
+    },
+    "Couldn't check your Safe — Safe paused reads." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo revisar tu Safe: Safe pausó las lecturas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safeを確認できませんでした — Safeは読み取りを一時停止しています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe를 확인할 수 없습니다 — Safe가 읽기를 일시 중지했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法检查你的 Safe — Safe 已暂停读取。"
+          }
+        }
+      }
+    },
     "Couldn't check your Safe — Safe's free read limit is used up until %@." : {
       "localizations" : {
         "es" : {
@@ -112155,6 +112211,174 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%1$@ 上的 Safe · %2$@ 是签名者"
+          }
+        }
+      }
+    },
+    "Safe paused reads right now, so Casberi couldn't check this transaction before signing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe pausó las lecturas por ahora, así que Casberi no pudo revisar esta transacción antes de firmar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safeが現在読み取りを一時停止しているため、Casberiは署名前にこの取引を確認できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe가 지금 읽기를 일시 중지해 Casberi가 서명 전에 이 거래를 확인할 수 없었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 目前已暂停读取，因此 Casberi 无法在签名前检查此交易。"
+          }
+        }
+      }
+    },
+    "Safe paused reads until %@, so Casberi couldn't check this transaction before signing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe pausó las lecturas hasta %@, así que Casberi no pudo revisar esta transacción antes de firmar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safeが%@まで読み取りを一時停止しているため、Casberiは署名前にこの取引を確認できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe가 %@까지 읽기를 일시 중지해 Casberi가 서명 전에 이 거래를 확인할 수 없었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 已暂停读取直到 %@，因此 Casberi 无法在签名前检查此交易。"
+          }
+        }
+      }
+    },
+    "Safe paused reads — last checked %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe pausó las lecturas: última revisión %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safeが読み取りを一時停止中 — 最終確認 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe가 읽기를 일시 중지함 — 마지막 확인 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 已暂停读取 — 上次检查于 %@"
+          }
+        }
+      }
+    },
+    "Safe paused reads — this may be out of date" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe pausó las lecturas: puede estar desactualizado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safeが読み取りを一時停止中 — 最新でない可能性があります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe가 읽기를 일시 중지함 — 최신 정보가 아닐 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 已暂停读取 — 此信息可能已过时"
+          }
+        }
+      }
+    },
+    "Safe paused reads, so the queue wasn't checked." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe pausó las lecturas, así que no se revisó la cola."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safeが読み取りを一時停止したため、キューを確認できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe가 읽기를 일시 중지해 대기열을 확인하지 못했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 已暂停读取，因此未检查队列。"
+          }
+        }
+      }
+    },
+    "Safe paused reads, so the queue wasn't checked. It reopens %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe pausó las lecturas, así que no se revisó la cola. Se reanuda %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safeが読み取りを一時停止したため、キューを確認できませんでした。%@に再開します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe가 읽기를 일시 중지해 대기열을 확인하지 못했습니다. %@에 다시 열립니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 已暂停读取，因此未检查队列。将于 %@恢复。"
           }
         }
       }
