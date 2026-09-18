@@ -107,7 +107,9 @@ CARD_PEER="Casberi/Casberi/Screens/PeerRoomCard.swift"
 CARD_POOLS="Casberi/Casberi/Screens/PrivacyPoolsRoomCard.swift"
 CARD_GNOSIS="Casberi/Casberi/Screens/GnosisPayRoomCard.swift"
 CARD_RAILGUN="Casberi/Casberi/Screens/RailgunRoomCard.swift"
-CARD_SAFE="Casberi/Casberi/Screens/SafeRoomCard.swift"
+# SafeRoomCard.swift is DELETED (prd §815): the Safe room leads with its cover
+# and its kind tiles. Every guard that read the card went with it; the guards on
+# `SafeRoom`, `SafeBridge` and the widget, which still compose, stay.
 # FeedScreen is split across files (prd §718). Checks read the room as ONE text,
 # so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
@@ -355,8 +357,7 @@ grep -q 'case .gnosisPay(let room)' "$FEED" \
   || { echo "✗ the Gnosis Pay head is no longer rendered from the sourceHead chain"; exit 1; }
 grep -q 'case .railgun(let room)' "$FEED" \
   || { echo "✗ the Railgun head is no longer rendered from the sourceHead chain"; exit 1; }
-grep -q 'case .safe(let room)' "$FEED" \
-  || { echo "✗ the Safe head is no longer rendered from the sourceHead chain"; exit 1; }
+# The Safe head is deleted (prd §815) — guarded the other way below.
 grep -q 'case PeerRoomSource.source:' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Peer room"; exit 1; }
 grep -q 'case PrivacyPoolsRoomSource.source:' "$FEED" \
@@ -365,8 +366,8 @@ grep -q 'case GnosisPayRoomSource.source:' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Gnosis Pay room"; exit 1; }
 grep -q 'case RailgunRoomSource.source:' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Railgun room"; exit 1; }
-grep -q 'case SafeRoomSource.source:' "$FEED" \
-  || { echo "✗ the sourceHead switch no longer claims the Safe room"; exit 1; }
+! grep -q 'case SafeRoomSource.source:' "$FEED" \
+  || { echo "✗ the sourceHead switch claims the Safe room again — §815 gave it the cover and kind tiles"; exit 1; }
 
 # The cards draw through the SHIPPED arithmetic and honour the row caps, so a
 # card cannot quietly re-rank or over-draw what the room composed.
@@ -427,8 +428,14 @@ grep -q 't.transferAmount = p.amount' "$DEMO" \
   || { echo "✗ the Privacy Pools demo no longer stamps the amount it put in its own title"; exit 1; }
 grep -q 't.transferAmount = r.amount' "$DEMO" \
   || { echo "✗ the Railgun demo no longer stamps transferAmount — every seeded move would keep its figure in its sentence and the ledger column would draw on no row at all"; exit 1; }
-grep -q 'room.entries.prefix(SafeRoomSource.rowCap)' "$CARD_SAFE" \
-  || { echo "✗ the Safe card no longer honours the entry cap"; exit 1; }
+[[ ! -e Casberi/Casberi/Screens/SafeRoomCard.swift ]] \
+  || { echo "✗ SafeRoomCard.swift is back — §815 deleted the Safe head for the cover and kind tiles"; exit 1; }
+! grep -q 'case .safe(let room)' "$FEED" \
+  || { echo "✗ FeedScreen draws a Safe head again (§815: cover and kind tiles)"; exit 1; }
+# The module warning is the one fact of the deleted head that had to survive
+# (§815): it rides the cover's note, on every tile.
+grep -q 'note = SafeRoom.note(safe)' "$FEED" \
+  || { echo "✗ the Safe module warning no longer reaches the room's cover (§815)"; exit 1; }
 # The strip exists so that superseding `FeedInsight.cardMonths` costs nothing.
 # A head outranks the generic registries, so a head that draws less than the
 # card it displaced is a regression wearing a new feature.
@@ -461,8 +468,8 @@ grep -q 'note("gnosisPayHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the Gnosis Pay head"; exit 1; }
 grep -q 'note("railgunHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the Railgun head"; exit 1; }
-grep -q 'note("safeHead"' "$PROBES" \
-  || { echo "✗ -roomInsightProbe no longer mirrors the Safe head"; exit 1; }
+! grep -q 'note("safeHead"' "$PROBES" \
+  || { echo "✗ -roomInsightProbe reports a Safe head §815 deleted"; exit 1; }
 # Each head gets its own probe, because for these five seats an empty room is
 # usually the HEALTHY answer and only one or two causes per room are bugs.
 for key in peerRoomProbe privacyPoolsRoomProbe gnosisPayRoomProbe railgunRoomProbe safeRoomProbe; do
@@ -501,67 +508,6 @@ grep -q 'if entry.awaitsYou {' "Casberi/Casberi/Model/SafeBridge.swift" \
 grep -q 'nonce: tx\["nonce"\] as? Int' "Casberi/Casberi/Model/SafeBridge.swift" \
   || { echo "✗ SafeBridge no longer stamps the queue nonce — same-nonce rivals become undetectable"; exit 1; }
 
-# THE DEAD CONTROL. `compose` returns a card on module risk ALONE, and both of
-# the card's tap paths used to resolve through `room.lead` — so that exact card
-# announced "Opens this Safe" and did nothing.
-grep -q 'room.lead?.ref ?? fallbackRef' "$CARD_SAFE" \
-  || { echo "✗ the Safe card no longer falls back to a real destination — a module-only card would announce a door it does not have"; exit 1; }
-grep -q 'SafeRoomSource.fallbackRef(things:' "$FEED" \
-  || { echo "✗ FeedScreen no longer hands the Safe card its fallback ref"; exit 1; }
-# ...and when there is no destination at all, BOTH the gesture and the
-# accessibility action must be withheld rather than left announcing one.
-grep -q 'if let destination {' "$CARD_SAFE" \
-  || { echo "✗ the Safe card's tap is no longer gated on having somewhere to go"; exit 1; }
-# The card must draw the state line, or a nonce collision is computed and never
-# said — the one fact nothing else in this app surfaces.
-# THE TINT AND THE WORDS MUST AGREE (2026-09-07, prd §652). A fully-signed
-# transaction behind two earlier ones cannot be sent, and painting it
-# confirm-green says "all good" in colour while the sentence beside it says the
-# opposite — the encoding-versus-words failure `stateLabel`'s own doc exists to
-# prevent, arriving from the other direction. Green is for what can be acted on.
-grep -q 'entry.awaitsYou ? DS.tint : entry.isExecutable ? DS.confirm' "$CARD_SAFE" \
-  || { echo "✗ the Safe row's state tint no longer keys on isExecutable — a blocked transaction would read as green while its own words say it cannot be sent"; exit 1; }
-# …and the row must draw the guard line the room now composes, or the standing
-# fact is computed and never seen (the §311 failure: a reading nothing renders
-# is indistinguishable from being fine).
-grep -q 'SafeRoom.guardNote(room)' "$CARD_SAFE" \
-  || { echo "✗ the Safe room card no longer draws the guard line — a guard would be read, diffed and never stated"; exit 1; }
-
-grep -q 'SafeRoom.stateNote(room)' "$CARD_SAFE" \
-  || { echo "✗ the Safe card no longer draws the state note — rival transactions would be detected and never mentioned"; exit 1; }
-grep -q 'room.isContested(entry)' "$CARD_SAFE" \
-  || { echo "✗ the Safe card no longer marks WHICH rings collide — the sentence says two of these contest and nothing says which"; exit 1; }
-
-# --- 2026-08-24: rows, not a rail (prd §464) --------------------------------
-# THE CLIP. The rings were a horizontal ScrollView of 60pt cells, and `rowCap`
-# is 3 — so it could never scroll, spent ~150pt of a ~330pt card on emptiness,
-# and clipped in three places for want of the width it was throwing away. A
-# card that goes back to a fixed-width cell goes straight back to truncating
-# `waitLabel` with no ellipsis, invisibly at the default size and for every
-# accessibility size and most non-English.
-strip_comments "$CARD_SAFE" > "$TMP/safecard.swift"
-if grep -q 'ScrollView(.horizontal' "$TMP/safecard.swift"; then
-  echo "✗ the Safe card's entries are back in a horizontal rail — three items cannot scroll, and the cell is what clipped"; exit 1
-fi
-if grep -qE 'frame\(width: [0-9]+\)' "$TMP/safecard.swift"; then
-  echo "✗ the Safe card has a fixed-width text box again — nothing on a row may carry a hardcoded width"; exit 1
-fi
-# The subject was cached on every entry and drawn ONLY in the VoiceOver label,
-# so a sighted reader got strictly less than a VoiceOver one. Both readers go
-# through the same function now, and this is what keeps them from drifting
-# apart again.
-grep -q 'DSFeedRow(name: SafeRoom.subject(entry)' "$TMP/safecard.swift" \
-  || { echo "✗ the Safe card no longer draws the transaction's subject — the row would say 2/3 and a wait and never what it is about"; exit 1; }
-grep -q 'var parts = \[SafeRoom.subject(entry)\]' "$TMP/safecard.swift" \
-  || { echo "✗ the Safe card's VoiceOver label no longer shares the row's own subject — the spoken card and the drawn one can drift"; exit 1; }
-# STATE IS A WORD BEFORE IT IS A COLOUR. Without this the row's three states are
-# one row in greyscale, in a PDF export, and to a red-green viewer.
-grep -q 'SafeRoom.stateLabel(entry)' "$TMP/safecard.swift" \
-  || { echo "✗ the Safe card no longer says the state — it would be carried by tint alone, which §83 forbids"; exit 1; }
-# The rival pair, said. It was a 9pt glyph offset off a ring's corner: the
-# smallest mark on the card carrying its highest-stakes fact, unlabelled.
-grep -q 'SafeRoom.positionLabel(entry)' "$TMP/safecard.swift" \
-  || { echo "✗ the Safe card no longer names the contested queue position — the pairing is drawn adjacent and never explained"; exit 1; }
 # THE DISC'S OWN CLIP, and its two halves. The frame was a frozen 44 holding a
 # `label12`, which goes through `dsText` and grows with the text setting — so
 # "10/12" outgrew the inner circle and met its own stroke. Scaling the frame is
@@ -577,8 +523,6 @@ grep -q 'frame(width: scaled, height: scaled)' "$TMP/safequeue.swift" \
   || { echo "✗ SafeSignatureDisc computes a scaled size and no longer uses it"; exit 1; }
 grep -q 'showsCount && !sizeCategory.isAccessibilityCategory' "$TMP/safequeue.swift" \
   || { echo "✗ SafeSignatureDisc no longer steps its count out of the ring at an accessibility size"; exit 1; }
-grep -q 'sizeCategory.isAccessibilityCategory, entry.required > 0' "$TMP/safecard.swift" \
-  || { echo "✗ the Safe card no longer carries the fraction when the ring stops drawing it — the count would be lost at an accessibility size"; exit 1; }
 
 # The chip's long-press peek must preview the room it opens. Safe's head is a
 # FIGURE (rings), not a text hero, so it belongs in this chain for X's exact

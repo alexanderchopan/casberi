@@ -195,7 +195,7 @@ check "shapedSections no longer calls sourceHead(visible) inline" \
 check "recomputeHeads filters .live at the read" \
       "$FEED" 'let onScreen = visible\.live' yes
 check "fullRoomRows filters .live before it hands rows back" \
-      "$FEED" 'let full = liveVisible\(rawOverride: raw\)\.live' yes
+      "$FEED" 'let full = liveVisible\(rawOverride: raw, kindPick: false\)\.live' yes
 
 # A6. THE ROOM HAS NO NARROWING LEFT, and the guard is that none comes back.
 #     Two helpers have now held this slot and both were deleted with the room

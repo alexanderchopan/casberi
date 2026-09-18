@@ -2090,6 +2090,9 @@ struct MainSurface: View {
             // A GitHub watch belongs to the GitHub seat, same argument
             // (2026-09-11) — a repo ref carried into Linear matches no row.
             chrome.githubScope = nil
+            // A kind tile belongs to its room, and every room opens on All
+            // (prd §815).
+            chrome.roomKind = .all
             // Dies with the room like the person scope above, NOT spanning
             // its category the way the wallet scope deliberately does: a
             // vibenet devnet address matches no row in Peer, Safe or any

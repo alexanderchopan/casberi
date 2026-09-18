@@ -1484,6 +1484,11 @@ harness "Duolingo self-test" "Duolingo self-test" "scripts/duolingo-selftest.sh"
 # refresh token stored, a millisecond date in the year 57000, and every empty
 # wallet re-read each pass on the shared Zerion allowance.
 harness "Privy self-test" "Privy self-test" "scripts/privy-selftest.sh" "the Privy self-test failed — run scripts/privy-selftest.sh"
+# The Safe, GitHub and Stripe kind tiles (prd §815) — a `wallet:safe` prefix
+# that claims the outcome rows, an executed transaction still listed in Queue,
+# All beside one kind drawing the same list twice, and one glyph wearing two
+# meanings.
+harness "Room kind-tiles self-test" "room kind-tiles self-test" "scripts/room-kind-tiles-selftest.sh" "the room kind-tiles self-test failed — run scripts/room-kind-tiles-selftest.sh"
 # The web-session capture (prd §777) — an instrument that records a MONEY app's
 # own traffic, so what it may report is the whole check: a host outside the
 # named target is dropped rather than redacted, a URL keeps its path and loses
@@ -3193,7 +3198,8 @@ else
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
   typeset -A ROOM_HEADS=(
     runway            "Cloudflare"
-    stripeHead        "Stripe"
+    # stripeHead and safeHead left with their cards (prd §815): those two
+    # rooms lead with their cover, and their kind tiles sit under it.
     polarHead         "Polar"
     dodoHead          "Dodo Payments"
     posthogHead       "PostHog"
@@ -3204,7 +3210,6 @@ else
     privacyPoolsHead  "Privacy Pools"
     gnosisPayHead     "Gnosis Pay"
     railgunHead       "Railgun"
-    safeHead          "Safe"
     instagramHead     "Instagram"
     dayOneHead        "Day One"
     appleJournalHead  "Apple Journal"

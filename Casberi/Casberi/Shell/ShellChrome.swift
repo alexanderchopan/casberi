@@ -427,6 +427,13 @@ final class ShellChrome {
     /// has since gone.
     var privacyPoolsSection: PrivacyPoolsSection?
 
+    /// The kind tile picked in the Safe, GitHub or Stripe room (prd §815).
+    /// Not persisted, and cleared on every source change: All is where each of
+    /// those rooms opens ("for all of them we need a button that is 'all'").
+    /// One property for three rooms because only one room is ever standing,
+    /// and `RoomKindTiles.resolve` handles a pick whose kind has gone.
+    var roomKind: RoomKindTile = .all
+
     /// Which watched account a SOCIAL room is scoped to — nil = all of them
     /// (prd §362, 2026-08-11). The handle as the account's own store spells it
     /// (`SocialAccount.key`), matched against `Thing.authorHandle`.

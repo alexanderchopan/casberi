@@ -23,6 +23,36 @@ enum ScopeTileGlyph {
     static let snapshots   = "camera.viewfinder"
     static let shielded    = "lock.shield"
     static let review      = "checkmark.shield"
+    /// The kind tiles of the Safe, GitHub and Stripe rooms (prd §815). All is
+    /// the dock's own All glyph, read from its one table rather than retyped.
+    static var all: String { CategoryFold.glyph(for: "All") }
+    static let queue        = "signature"
+    static let pullRequests = "arrow.triangle.pull"
+    static let issues       = "smallcircle.filled.circle"
+    static let releases     = "tag"
+    static let payments     = "dollarsign.circle"
+    static let payouts      = "banknote"
+    static let disputes     = "exclamationmark.triangle"
+}
+
+/// Safe's, GitHub's and Stripe's kind tiles (prd §815). Activity and
+/// Permissions are the wallet family's own glyphs, because they are the same
+/// meaning; every new kind wears a glyph no other tile or dock seat wears.
+extension RoomKindTile: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all:          return ScopeTileGlyph.all
+        case .queue:        return ScopeTileGlyph.queue
+        case .activity:     return ScopeTileGlyph.activity
+        case .permissions:  return ScopeTileGlyph.permissions
+        case .pullRequests: return ScopeTileGlyph.pullRequests
+        case .issues:       return ScopeTileGlyph.issues
+        case .releases:     return ScopeTileGlyph.releases
+        case .payments:     return ScopeTileGlyph.payments
+        case .payouts:      return ScopeTileGlyph.payouts
+        case .disputes:     return ScopeTileGlyph.disputes
+        }
+    }
 }
 
 /// Privacy Pools' three scopes as tiles (prd §763). Conformed here for the

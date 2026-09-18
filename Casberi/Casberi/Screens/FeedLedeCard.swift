@@ -59,6 +59,11 @@ struct FeedLedeCard: View {
     /// (§772); the All feed's never does, and fits its words inside the same
     /// well (prd §775).
     var fillsLead: Bool = true
+    /// Hold the lead's full box whatever the cover carries (prd §815). A room
+    /// with kind tiles draws them under the cover, and a cover that shrank
+    /// with its words would move the tiles from one pick to the next — the
+    /// one exception to §772's give-way, taken for the template's sake.
+    var holdsLead: Bool = false
 
     /// The art's height. Fixed rather than an aspect ratio so the card's own
     /// height is known before the image resolves — a ratio would restate the
@@ -148,7 +153,7 @@ struct FeedLedeCard: View {
         // carry a substantial rung — never a measurement, so the height is
         // decided before layout and a lead cannot flicker between two of them.
         .frame(maxWidth: .infinity,
-               minHeight: full ? box : 0,
+               minHeight: full || holdsLead ? box : 0,
                maxHeight: box,
                alignment: .topLeading)
         .clipped()

@@ -52,7 +52,8 @@ WALLET_VIEWS = (
     "WalletRiskStrip.swift", "WalletApprovalExposureCard.swift",
     "AddressBookViews.swift", "AddressConnectionsCard.swift",
     "GnosisPayRoomCard.swift", "RailgunRoomCard.swift", "PeerRoomCard.swift",
-    "PrivacyPoolsRoomCard.swift", "SafeRoomCard.swift", "SafeQueueCard.swift",
+    # SafeRoomCard.swift left with its head (prd §815).
+    "PrivacyPoolsRoomCard.swift", "SafeQueueCard.swift",
     "TokenQuickSheet.swift", "EthValidatorScreen.swift", "WalletRow.swift",
     "ApprovalPrepareCard.swift",
 )

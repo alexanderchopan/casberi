@@ -9,9 +9,10 @@ import SwiftData
 /// can touch `Thing`/`SwiftData` and so can never be compiled by a harness,
 /// while `SafeRoom.swift` is Foundation-only and is compiled WHOLE by
 /// `scripts/wallet-rooms-selftest.sh`. Its subject is mostly `SafeBridge`'s
-/// persisted STATE, the `ASCRoomSource` shape — but since 2026-08-17 it does
-/// read `things`, for one thing only: the ref a module-only card opens (see
-/// `fallbackRef`).
+/// persisted STATE, the `ASCRoomSource` shape. Since prd §815 no card draws
+/// it: the Safe room leads with its cover, and this model feeds the Queue
+/// tile's dot, the cover's module note, the widget, the brief and asks.
+/// `fallbackRef`, which only the deleted card's tap read, went with it.
 enum SafeRoomSource {
 
     static let source = SafeBridge.sourceName
@@ -94,29 +95,6 @@ enum SafeRoomSource {
         return "\(address.prefix(6))…\(address.suffix(4))"
     }
 
-    /// What the card opens when there is nothing pending to open.
-    ///
-    /// `compose` deliberately returns a card on module risk ALONE — that is
-    /// the highest-stakes fact this bridge has, and it is worth a card with no
-    /// queue behind it. But the card's tap has always resolved to
-    /// `room.lead`, so that exact card announced "Opens this Safe" to
-    /// VoiceOver and then did nothing: the honesty rule's dead control, on the
-    /// one card whose subject is funds being movable without a signature
-    /// (found 2026-08-17).
-    ///
-    /// The destination is the config-change alert `syncConfig` already lands
-    /// when a module is enabled — the row that says which Safe and which
-    /// module, which is exactly what someone tapping this wants. Nil when no
-    /// such row exists (a module present at FIRST sight seeds the baseline
-    /// silently by design, so there may genuinely be nothing to open), and
-    /// the card then draws with no tap at all rather than a door onto nothing.
-    static func fallbackRef(things: [Thing]) -> String? {
-        things.live
-            .filter { $0.source == source && ($0.sourceRef?.hasPrefix("wallet:safeconfig:") ?? false) }
-            .max(by: { $0.capturedAt < $1.capturedAt })?
-            .sourceRef
-    }
-
     /// The probe's lines — driven by `-safeRoomProbe`, calling the REAL
     /// `compose` (the `ASCRoomSource.probeLines` rule).
     ///
@@ -147,8 +125,7 @@ enum SafeRoomSource {
         var out: [String] = [
             "safeRoom| safeCount=\(safeCount) moduleCount=\(moduleCount)"
                 + " guardCount=\(SafeBridge.knownGuards().count)"
-                + " tracked=\(snapshot.count) rowCap=\(rowCap)"
-                + " fallbackRef=\(fallbackRef(things: things) ?? "none")",
+                + " tracked=\(snapshot.count) rowCap=\(rowCap)",
         ]
         for s in snapshot.sorted(by: { ($0.submittedAt ?? .distantPast) < ($1.submittedAt ?? .distantPast) }) {
             out.append("safeRoomEntry| yourTurn=\(s.yourTurn) \(s.have)/\(s.required)"

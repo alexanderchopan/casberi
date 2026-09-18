@@ -236,6 +236,8 @@ at all.
 | §611 (no door) | An empty scope states a fact and stops — no door | amended by §771 (an empty wallet Holdings or Activity list carries `Follow address`, and NFTs `Choose collections`; Risk and Permissions still carry none) |
 | §681 (the verb) | With a key on the phone, vibenet's Home draws "Find my account" INSTEAD of "Create account" | amended by §774 — Find first, Create beside it: a key present is a reason to lead with Find, never a reason to withhold Create; §681's recovery walk is untouched |
 | §747 (acts on the ALL card only) | A room-level act rides the ALL card, never the per-account ones, because the device holds one key | superseded by §774 — the Actions block is drawn for the page in view: All acts for the current account, each of your own accounts for itself, a stranger's page keeps the room's own verb (Create account, Follow address). §747's `Follow address` wording and the deck template stand |
+| §699 (the scope chip strip never shipped) | The GitHub room scopes by its face rail alone; a row of scope words at the top was killed | reversed by §815 — GitHub carries §752's kind tiles UNDER its cover (All · Pull requests · Issues · Releases), combined with the face rail; nothing sits at the top of the screen |
+| §772 (a thin cover gives way) | A `.words` cover with no substantial rung stops claiming `leadHeight` | amended by §815 for the Safe, GitHub and Stripe rooms only — their cover holds the full box (`holdsLead: true`) so the kind tiles under it never move. Everywhere else §772 stands |
 
 ### Known stale, by hand
 
@@ -57953,3 +57955,28 @@ The sentence wraps rather than truncating (`fixedSize(horizontal: false, vertica
 **Why they would care.** Their developer page asks people to build on World ID, and every native wallet, notes app and local-first client meets the same server requirement. Item 1 opens World ID to all of them at once.
 
 **What this changes in the app: nothing.** The re-open conditions stay where they were written — §787 (pairing, or a server), §801 (a non-Orb credential), §801b (a 4.0 request with no RP secret). If World ships any of the three, start from the matching ruling, not from this pitch. No reply from World is recorded here yet.
+
+
+## §815 — Safe, GitHub and Stripe get section tiles on the one template: All first, the cover above them, the list below (user: "for all of them we need a button that is 'all'", "you can't reuse an existing icon we use for a different type of tile, and you can't make up new icons for existing icons we have", "that is a template. we follow it in all rooms, so the buttons can't be in different places on each screen", 2026-09-18)
+
+Three rooms gain the section tiles the wallet family and Privy already wear (`DSScopeTiles`, §752, §803f). A tile is a KIND of row, read off the row's ref, URL or tags — never its title (`Model/RoomKindTiles.swift`, Foundation-only, driven by `scripts/room-kind-tiles-selftest.sh`).
+
+**The tiles.**
+
+- **Safe:** All · Queue · Activity · Permissions. Queue is a `wallet:safe:` row still unexecuted: a pending row SURVIVES its execution (`SafeBridge.landOutcome` lands a `wallet:safeoutcome:` row with the same `<seg>:<hash>` tail and deletes nothing), so a pending row whose outcome has landed is history and shows under All only. Activity is `wallet:safeoutcome:` and `wallet:safesigned:` (your signature — the proposed → signed → executed arc). Permissions is `wallet:safeconfig:` (owners, threshold, modules, guards). The prefixes are matched with their closing colon, because `hasPrefix("wallet:safe")` claims all four. Queue carries the attention dot while an entry awaits your signature (`SafeRoom.awaitsYouCount`).
+- **GitHub:** All · Pull requests · Issues · Releases, through `GitHubRowTag.kind(ref:url:)`. Stars, gists, activity and watches are All only. The face rail (`chrome.githubScope`) stays and COMBINES with the tile.
+- **Stripe:** All · Payments · Payouts · Disputes, off the event's tag on `stripe:event:` rows: `Dispute` (opened and closed), `Payout` (paid and failed), `Dunning` and `Churn` (a failed payment, a recovery, a canceled subscription). The runway and silence alerts are All only. Disputes carries the dot while a dispute is open — an opened row with no closing row for the same dispute URL (`RoomKindTiles.openDisputes`).
+
+**All is first and is where the room opens.** The pick lives on `ShellChrome.roomKind`, in memory only, and resets on every room change. A pick whose kind has gone resolves to All. A tile appears only over at least one row of its kind (§83), and a room with fewer than TWO kinds draws no tiles: All beside one kind is the same list twice, the §805 Privy defect. Presence is read over the whole room BEFORE the pick narrows it (`fullRoomRows` passes `kindPick: false`), or picking a tile would hide its siblings. A tile and a face together can hold nothing; the tiles then stay and say so under themselves (`keepsChromeWhenEmpty`).
+
+**The glyphs** (the user's two rules: an existing meaning keeps its glyph, and no glyph takes a second meaning). All is `tray.full`, read from the dock's own table (`ScopeTileGlyph.all` → `CategoryFold.glyph(for: "All")`); Activity and Permissions are the wallet family's `clock.arrow.circlepath` and `key`; new: Queue `signature`, Pull requests `arrow.triangle.pull`, Issues `smallcircle.filled.circle`, Releases `tag`, Payments `dollarsign.circle`, Payouts `banknote`, Disputes `exclamationmark.triangle`. The selftest holds every tile and dock glyph to one meaning.
+
+**The template, so the tiles sit at one height in every room.** These rooms lead with their COVER — the newest coverable thing in the picked tile (§763), which follows the pick because the list it is chosen from is already narrowed. The cover is lifted out of its day (the `.cursor` way) so it can stand ABOVE the tiles: the well at the top of the row, the tiles `contentGap` under it, the list `leadGap` under the tiles, all at `DSRoomChassis.inset` — `DSRoomChassis.Head`'s geometry with tiles. With no coverable thing the tiles draw at the top.
+
+**An exception to §772, for tile rooms only.** A thin `.words` cover gives way to its words (§772), and here that would move the tiles from one pick to the next — against the user's rule that the buttons are never in different places. So `FeedLedeCard(holdsLead: true)` holds the full `leadHeight` box in these three rooms. §772 stands everywhere else, and §775 (the All feed never holds the box) is untouched.
+
+**Safe's and Stripe's head cards are deleted** (§723: what nothing draws is deleted): `SafeRoomCard`, `StripeRoomCard`, their `SourceHead` cases, `SafeRoomSource.fallbackRef` (only the card's tap read it) and the `safeHead`/`stripeHead` probe lines and verify coverage. The MODELS stay — `SafeRoom` and `StripeRoom` feed the widgets, the Today brief, asks and the tile dots. **The Safe module warning survives on the cover**: `SafeRoom.note` rides `FeedLedeCard`'s note, on every tile. The head's guard line, state note, read-limit note and ranked queue rows are not redrawn anywhere in the room; the queue's per-transaction state stays on each row and in its sheet.
+
+**GitHub reverses §699's "the scope chip strip never shipped".** That strip was words at the top of the screen; these are §752's tiles under the lead, which the user approved for GitHub on 2026-09-18.
+
+**Safe's "Changes" is Permissions**, the wallet family's name and glyph for the same meaning (owners, threshold, modules, guards).

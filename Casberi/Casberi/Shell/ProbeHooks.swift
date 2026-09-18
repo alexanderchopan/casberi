@@ -7681,10 +7681,8 @@ enum ProbeHooks {
                     ? "quiet · \($0.next.map { n in CloudflareRunway.quietHeadline(days: n.days) } ?? "—")"
                     : "\(CloudflareRunway.headline(items: $0.items, span: $0.span)) · \($0.items.count) rows"
              } : nil)
-        note("stripeHead", source == "Stripe"
-             ? StripeRoomSource.compose(things: things).map {
-                "\(StripeRoom.headline($0)) · \($0.total) deadlines"
-             } : nil)
+        // `stripeHead` went with its card (prd §815): the Stripe room leads
+        // with its cover, and its kind tiles sit under it.
         // The two other Merchants of Record. `polarHead` shipped
         // 2026-08-30 with NO line here at all and `dodoHead` is new
         // 2026-09-01 — exactly the drift this hook's own header warns
@@ -7769,17 +7767,9 @@ enum ProbeHooks {
              ? RailgunRoomSource.compose(things: things).map {
                 "\(RailgunRoom.headline($0)) · \($0.tokens.count) tokens"
              } : nil)
-        // The fifth (2026-08-11). The three counts are printed apart
-        // because they are three different states that render as one
-        // number in `pendingCount` alone: a fully-signed transaction
-        // needs an execution, not a signature, and a contested pair
-        // needs neither from whoever loses.
-        note("safeHead", source == SafeRoomSource.source
-             ? SafeRoomSource.compose(things: things).map {
-                "\(SafeRoom.headline($0)) · \($0.pendingCount) pending"
-                + " · \($0.awaitsYouCount) awaiting you · \($0.readyCount) ready"
-                + " · \($0.contestedCount) contested"
-             } : nil)
+        // `safeHead` went with its card (prd §815): the Safe room leads with
+        // its cover, and its kind tiles sit under it. `-safeRoomProbe` still
+        // prints the model the Queue tile's dot and the cover's note read.
         // Three more per-source heads that shipped without a line
         // here — exactly the drift this probe's own header warns
         // against, and exactly how it was found (2026-08-10): a
