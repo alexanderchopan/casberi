@@ -45,7 +45,8 @@ struct DemoBanner: View {
     /// carries its way out; it does not need the whole sentence in every
     /// frame. So: one tinted capsule with the mark and the word, leading, at
     /// the size of a recording indicator. A tap opens the sentence and the
-    /// two verbs. Still never dismissible, still on the shell.
+    /// two verbs, and since 2026-09-18 the capsule NAMES that tap. Still
+    /// never dismissible, still on the shell.
     var body: some View {
         Button {
             DSHaptic.tap()
@@ -83,11 +84,19 @@ struct DemoBanner: View {
                     .accessibilityHidden(true)
                 // The sentence the accessibility label below has always
                 // spoken, on screen at last: "Demo" alone can be read as a
-                // mode somebody turned on; naming the data removes that
-                // reading.
-                Text("not your data")
+                // mode somebody turned on; naming the things removes that
+                // reading. **And the way out is on the capsule (user,
+                // 2026-09-18: "not everyone realizes it's a demo, and even
+                // if they do, they may not know how to exit it").** The
+                // capsule has carried the exit since §620, but only as a
+                // destination behind a tap nothing named — so the tap was
+                // discoverable by accident. Naming it costs three words and
+                // is the honesty rule's own second half: the marking carries
+                // the way out, and now it says so.
+                Text("Not your things. Tap to exit.")
                     .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, DS.Space.s3)
             .frame(minHeight: 34)
@@ -104,7 +113,7 @@ struct DemoBanner: View {
         }
         .buttonStyle(PressSpring())
         .dsHover()
-        .accessibilityLabel(Text("Demo — none of this is yours"))
+        .accessibilityLabel(Text("Demo — not your things"))
         .accessibilityHint(Text("Opens the way out"))
         .padding(.horizontal, DS.Space.s4)
         .scaleEffect(settled ? 1 : 0.92)

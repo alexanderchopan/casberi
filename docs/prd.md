@@ -57923,3 +57923,15 @@ Connect listed the whole catalogue, connected rows included, so an account sat o
 
 **An empty Connect is an honest end:** "Everything is connected".
 
+
+## §813 — The demo capsule says what the tap does (user: "let's make the demo banner say 'not your things. tap to exit'… not everyone realizes it's a demo, and even if they do, they may not know how to exit it", 2026-09-18)
+
+"Demo · not your data" (§679) named the state and left the way out behind a tap nothing announced. The capsule has carried the exit since §620 — it just never said so, so the exit was discoverable by accident. It now reads **"Demo · Not your things. Tap to exit."**: the amber dot and the amber word are untouched, and the secondary half carries both sentences.
+
+**"Things", not "data".** It is the app's own noun for what it holds (`Thing`), so the sentence lands in the same vocabulary as every room it stands over. "Data" is what a settings screen says.
+
+**Sentence case**, as every header in the app is (2026-07-08) — two short sentences with their own full stops, not a label.
+
+**The honesty rule's second half was the half missing.** §83's price for the demo is a marking that is continuous AND carries its way out. Continuous it was; the way out was only *present*, not *stated*. Three words fix that, and the explain sheet behind the tap is unchanged.
+
+The sentence wraps rather than truncating (`fixedSize(horizontal: false, vertical: true)`) so a large text size cannot cut "Tap to exit". The accessibility label follows the visible words ("Demo — not your things"); the hint stays "Opens the way out".
