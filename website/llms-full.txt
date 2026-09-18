@@ -117,7 +117,7 @@ Some things are missing on purpose. There's no separate actions or to-do tab —
 
 #### One screen
 
-Casberi is one screen — no tabs to learn, no account to make. Open it and it's yours. Along the bottom sits the dock: All (everything you've saved) comes first, then a chip for each category. Tap one to land in its room; its folder opens with the apps inside. Your avatar sits at the start of the dock and opens Settings, the catalog of apps sits at the end of the strip, and a swipe walks from one room to the next. That's the whole app: your things, read in one place.
+Casberi is one screen — no tabs to learn, no account to make. Open it and it's yours. Along the bottom sits the dock: All (everything you've saved) comes first, then a chip for each category. Tap one to land in its room; its folder opens with the apps inside. Your avatar leads the dock and opens your accounts — Manage, Connect and Settings — and a swipe walks from one room to the next. That's the whole app: your things, read in one place.
 
 #### Apps
 
@@ -157,7 +157,7 @@ Widgets put your day on the Home Screen: today's line and what just landed, what
 
 #### Settings
 
-Behind your avatar, one A–Z list: your photo, the color that washes the top of every screen (five to choose from), your data (all on your phone — export or delete anytime), diagnostics, how it works, language, light or dark, and your key. No account, no sign-in — there was never anything to sign up for.
+Behind your avatar, Settings is the third section: your photo and name, your data (all on your phone — export or delete anytime), dock order, light or dark, notifications, language, your key, and diagnostics. No account, no sign-in — there was never anything to sign up for.
 
 Your key is for an agent you bring — Claude, ChatGPT, Gemini, Venice, Bankr, or OpenRouter. It lives in the Keychain, and what it sends goes from your phone straight to that provider, billed to your key. There is no Casberi server in between.
 
