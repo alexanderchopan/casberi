@@ -304,6 +304,12 @@ check(hk("hf:models:x") == nil && hk("hf:modelx:y") == nil, "a ref that only STA
 check(hk(nil) == nil && hk("asc:review:1") == nil, "a row with no Hugging Face ref is All only")
 check(RoomKindTiles.present(room: .huggingFace, kinds: [.papers]) == [],
       "papers alone draw no tiles — All and Papers would be the same list (§805)")
+check(RoomKindTiles.present(room: .github, kinds: [.pullRequests], hasUnkinded: true) == [.all, .pullRequests],
+      "one kind beside All-only rows draws its tile — Activity plus pull requests narrows (§822)")
+check(RoomKindTiles.present(room: .github, kinds: [.pullRequests], hasUnkinded: false) == [],
+      "one kind that IS the whole room draws nothing — §805")
+check(RoomKindTiles.present(room: .github, kinds: [], hasUnkinded: true) == [],
+      "no kind at all draws nothing, however many All-only rows")
 check(RoomKindTiles.present(room: .huggingFace, kinds: [.papers, .models]) == [.all, .models, .papers],
       "Hugging Face keeps Models · Datasets · Papers order")
 check(RoomKindTiles.present(room: .appStoreConnect, kinds: [.builds, .reviews, .versions]) == [.all, .versions, .reviews, .builds],

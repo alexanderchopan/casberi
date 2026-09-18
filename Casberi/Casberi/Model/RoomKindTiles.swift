@@ -319,10 +319,18 @@ enum RoomKindTiles {
     // MARK: - Tiles
 
     /// The tiles to draw: All, then every kind present, in the room's order —
-    /// or none, when fewer than two kinds are present.
-    static func present(room: Room, kinds: Set<RoomKindTile>) -> [RoomKindTile] {
+    /// or none, when no pick would change the list.
+    ///
+    /// A pick changes the list when two kinds are present, OR when one is and
+    /// some row belongs to no tile (`hasUnkinded`: it shows under All only).
+    /// §805's defect was All beside a kind that IS the whole room; a GitHub
+    /// room of watched-repo Activity plus two pull requests is not that — its
+    /// Pull requests tile narrows to two rows (user, 2026-09-18: "i already
+    /// have at least two pull requests").
+    static func present(room: Room, kinds: Set<RoomKindTile>,
+                        hasUnkinded: Bool = false) -> [RoomKindTile] {
         let shown = room.order.filter { $0 != .all && kinds.contains($0) }
-        guard shown.count >= 2 else { return [] }
+        guard shown.count >= 2 || (shown.count == 1 && hasUnkinded) else { return [] }
         return [.all] + shown
     }
 

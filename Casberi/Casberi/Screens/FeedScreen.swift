@@ -2993,12 +2993,15 @@ struct FeedScreen: View {
         -> (tiles: [RoomKindTile], attention: Set<RoomKindTile>) {
         let census = RoomKindTiles.Census(room: room, refs: rows.map(\.sourceRef))
         var kinds: Set<RoomKindTile> = []
+        var hasUnkinded = false
         for thing in rows {
             if let kind = census.kind(ref: thing.sourceRef, url: thing.content, tags: thing.tags) {
                 kinds.insert(kind)
+            } else {
+                hasUnkinded = true
             }
         }
-        let tiles = RoomKindTiles.present(room: room, kinds: kinds)
+        let tiles = RoomKindTiles.present(room: room, kinds: kinds, hasUnkinded: hasUnkinded)
         var attention: Set<RoomKindTile> = []
         switch room {
         case .safe:
