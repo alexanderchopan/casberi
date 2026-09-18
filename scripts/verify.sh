@@ -3119,14 +3119,9 @@ xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
 # day only when its seeded offset is 365/366 or 730/731 days, the offsets in
 # `DemoSeedAll.writing()` are constants, and none of them is.
 #
-# `instagramHead` (2026-08-18, prd §395) is the FOURTEENTH, and the second
-# over an IMPORT rather than a live bridge. Its demo gap would have been the
-# subtlest yet and is worth recording: the seat's rows were already there and
-# already correct, but the head needs `InstagramRoom.minimumKept` kept posts
-# across `minimumAccounts` accounts before it will claim a library exists, and
-# the old seed had five saves across three — a corpus that composes every OTHER
-# Instagram card and not this one. `DemoSeedAll.instagram` grew a real library
-# in the same commit.
+# `instagramHead` (2026-08-18, prd §395) was the FOURTEENTH; it is deleted with
+# its model (prd §821) — no view had drawn it since §751, and the room leads with
+# its newest thing.
 #
 # `railgunHead` (2026-08-11) is the ELEVENTH source head, added by a
 # concurrent session mid-way through this list's own life — added here the
@@ -3214,7 +3209,6 @@ else
     gnosisPayHead     "Gnosis Pay"
     railgunHead       "Railgun"
     safeHead          "Safe"
-    instagramHead     "Instagram"
     dayOneHead        "Day One"
     appleJournalHead  "Apple Journal"
     chatgptHead       "ChatGPT"

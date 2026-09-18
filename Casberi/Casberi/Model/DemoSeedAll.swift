@@ -2003,9 +2003,8 @@ enum DemoSeedAll {
     /// Instagram — the room a person recognises, which means the room has to
     /// be MOSTLY OTHER PEOPLE (prd §395). The old seed was six captions and
     /// five saves across three accounts, which drew nothing this room actually
-    /// looks like and, once `InstagramRoom` shipped, could not compose its head
-    /// at all: that card needs `minimumKept` kept posts across
-    /// `minimumAccounts` accounts before it will claim a library exists.
+    /// looks like. (The head model it was grown for, `InstagramRoom`, is
+    /// deleted, prd §821: the room leads with its newest thing.)
     ///
     /// Four things it now carries deliberately, each exercising a branch that
     /// otherwise renders as the same silent nothing: kept posts with WORDS and

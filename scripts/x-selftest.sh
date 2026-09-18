@@ -243,6 +243,8 @@ grep -q 'if !includeDomains {' "$TOPICS" \
 # went with it, deliberately.
 grep -Eq '"X": *Label\(' Casberi/Casberi/Model/FeedHeatmap.swift \
   && { echo "✗ X has a heatmap label again (prd §817) — the room leads with a year grid instead of the newest notification"; exit 1; }
+grep -qF '"X":         Facts(foldsThreads: true,  hasRoster: false, leadsWithNewest: true)' Casberi/Casberi/Model/SocialRoom.swift \
+  || { echo "✗ X no longer leads with its newest thing (SocialRoom.leadsWithNewest, §821)"; exit 1; }
 grep -q 'connected("x")' Casberi/Casberi/Model/BridgeRefresh.swift \
   || { echo "✗ X does no foreground work — topics stop draining and authors are never fetched"; exit 1; }
 # The reply lead is a DRIFT GUARD and not an extracted assertion, deliberately:
@@ -316,7 +318,7 @@ print(cut[:cut.find("\n        case .instagram:")])
 XCASE
 )
 case "$X_CASE" in
-  *ledeThingID*) ;;
+  *ledeThingID*|*newestLead\(*) ;;
   *) echo "✗ the X room no longer covers its newest thing (prd §817) — with the year"; \
      echo "  grid deleted, nothing else leads this room."; exit 1;;
 esac
@@ -426,8 +428,13 @@ grep -q 'tags: \["Conversation"\]' "$SC" \
   || { echo "✗ Snapchat's rows are untagged again — the one import room whose halves can't be named"; exit 1; }
 grep -q 'already.tags.append("Memory")' "$SC" \
   || { echo "✗ Snapchat no longer repairs a row that predates the tag — the facet reaches only rows landed from today on"; exit 1; }
-grep -q 'kinds = \[.link, .note\]' Casberi/Casberi/Model/FeedInsight.swift \
-  || { echo "✗ TikTok's topic map is back to one kind — it would cover half the writing while claiming all of it"; exit 1; }
+# TikTok's topic map is DELETED (prd §817): the room leads with its newest
+# thing. The two-kind rule survives where the terms are still read — the topic
+# heal, which feeds the Today brief's cluster map.
+! grep -qE '^\s*case "TikTok":' Casberi/Casberi/Model/FeedInsight.swift \
+  || { echo "✗ TikTok has a topic map again — the room leads with its newest thing (§817)"; exit 1; }
+grep -q 'case "TikTok":    return TopicSource(kinds: \[.link, .note\]' Casberi/Casberi/Model/ScreenshotTopics.swift \
+  || { echo "✗ TikTok's topic heal is back to one kind — it would read half the writing"; exit 1; }
 
 # --- 2026-08-05: prd §310, the upkeep pass ---------------------------------
 grep -q 'await ImportCommit.commit' "$XARCH" \

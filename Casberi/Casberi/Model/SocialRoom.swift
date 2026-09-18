@@ -39,8 +39,8 @@ enum SocialRoom {
 
     // MARK: - The table
 
-    /// What a room declares about itself. Two fields, because two is all that
-    /// legitimately varies once `rowKind` below carries the rest.
+    /// What a room declares about itself. Three fields, because three is all
+    /// that legitimately varies once `rowKind` below carries the rest.
     struct Facts: Equatable {
         /// Whether a person's own consecutive self-replies fold into one
         /// thread card.
@@ -64,6 +64,15 @@ enum SocialRoom {
         /// the rows), and a rail of nine identical Telegram glyphs is the
         /// defect R4.2 and §313 both name.
         var hasRoster: Bool
+
+        /// Whether NOTHING leads the room but its newest thing (prd §821, user:
+        /// "it should just show newest notification"): no topic map, no
+        /// distribution, no mosaic, no year heatmap, and a picture grid never
+        /// declines the cover. The three rooms with a live door (X, Instagram,
+        /// TikTok). Their imports are dated in the past, so with the door
+        /// connected the newest row — and the cover — is the newest
+        /// notification, by date and by no rule of its own.
+        var leadsWithNewest: Bool = false
     }
 
     /// Every source that gets the social-room treatment.
@@ -77,10 +86,10 @@ enum SocialRoom {
         "Bluesky":   Facts(foldsThreads: true,  hasRoster: true),
         "Farcaster": Facts(foldsThreads: true,  hasRoster: true),
         "Nostr":     Facts(foldsThreads: true,  hasRoster: true),
-        "X":         Facts(foldsThreads: true,  hasRoster: false),
-        "Instagram": Facts(foldsThreads: false, hasRoster: false),
+        "X":         Facts(foldsThreads: true,  hasRoster: false, leadsWithNewest: true),
+        "Instagram": Facts(foldsThreads: false, hasRoster: false, leadsWithNewest: true),
         "Telegram":  Facts(foldsThreads: false, hasRoster: false),
-        "TikTok":    Facts(foldsThreads: false, hasRoster: false),
+        "TikTok":    Facts(foldsThreads: false, hasRoster: false, leadsWithNewest: true),
         "Snapchat":  Facts(foldsThreads: false, hasRoster: false),
     ]
 
@@ -104,6 +113,11 @@ enum SocialRoom {
 
     static func foldsThreads(_ source: String) -> Bool {
         facts(for: source)?.foldsThreads == true
+    }
+
+    /// The one predicate behind prd §821 — see `Facts.leadsWithNewest`.
+    static func leadsWithNewest(_ source: String) -> Bool {
+        facts(for: source)?.leadsWithNewest == true
     }
 
     // MARK: - One row, one anatomy

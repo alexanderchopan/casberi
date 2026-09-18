@@ -1148,29 +1148,6 @@ enum ProbeHooks {
         // these seats "nothing" is usually the HEALTHY answer — most wallets
         // have never touched Peer, never deposited into a pool, and hold no
         // Gnosis Pay card — and only one or two causes per room are bugs.
-        // `-instagramRoomProbe YES` — the Instagram room's head, account by
-        // account (2026-08-18, prd §395). No key, no network, no bridge state:
-        // it composes off the rows an import already landed, which is why the
-        // fetch below takes the WHOLE room rather than a page of it — "from 380
-        // accounts" computed over the newest five hundred saves of a decade is
-        // the §83 fake status in the largest type on the card.
-        //
-        // `probeLines` names every cause of an empty head, and prints the two
-        // coverage numbers the card deliberately does not carry: how many kept
-        // posts have their words back, and how many have a cover. Both are
-        // `InstagramCaptions` walking the library slowly in the background, and
-        // no screen anywhere says how far it has got — a probe can ask
-        // `enrichedText`/`previewImageData` once, where a card would fault every
-        // row of the room on every re-draw to do it.
-        Hook(key: "instagramRoomProbe") { _, context in
-            let source = InstagramRoomSource.source
-            let descriptor = FetchDescriptor<Thing>(
-                predicate: #Predicate { $0.source == source })
-            let rows = (try? context.fetch(descriptor)) ?? []
-            for line in InstagramRoomSource.probeLines(things: rows) {
-                NSLog("[Casberi] %@", line)
-            }
-        },
         // `-journalRoomProbe YES` — the journal rooms' head, year by year
         // (2026-08-17, prd §398). No key, no network, no bridge state: it
         // composes off the rows an import already landed, which is why the
@@ -7802,15 +7779,8 @@ enum ProbeHooks {
              ? ASCRoomSource.compose(things: things).map {
                 "\(ASCRoom.headline($0)) · \($0.apps.count) apps"
              } : nil)
-        // The fourteenth (2026-08-18, prd §395) — the second over an
-        // import, and the second that displaces a card below it: when
-        // this composes it takes the slot `leaderboard` held for this
-        // room. Both lines print either way, so the trade is visible
-        // here rather than inferred.
-        note("instagramHead", source == InstagramRoomSource.source
-             ? InstagramRoomSource.compose(things: things).map {
-                "\(InstagramRoom.headline($0)) · \($0.accounts.count) rows · \($0.gone) gone"
-             } : nil)
+        // `instagramHead` is deleted with its model (prd §821): the Instagram
+        // room leads with its newest thing and never had a drawn head since §751.
         // The journal rooms (2026-08-17, prd §398) — one composer
         // serving TWO rooms, and the only line in this list with two
         // names.

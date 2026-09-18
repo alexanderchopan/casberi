@@ -54,24 +54,21 @@ enum FeedHeatmap {
         // board, no grid. Bluesky's entry exactly, because the room is the same
         // room and every item in it is a note somebody posted.
         "Nostr":         Label(title: "Posting activity",     unit: "note",       units: "notes", columns: 14),
-        // The two import sources (2026-07-31). Both are a FULL year on
-        // purpose, unlike the social feeds above: an export is dated across
-        // years rather than being a rolling recent sample, so the grid it
-        // draws is the real shape of a habit and not a recent smudge.
+        // The import source (2026-07-31). A FULL year on purpose, unlike the
+        // social feeds above: an export is dated across years rather than
+        // being a rolling recent sample, so the grid it draws is the real
+        // shape of a habit and not a recent smudge.
         //
         // Snapchat counts memories only (`kinds`) — the room's saved chats are
         // dated by their newest message, which is when a conversation last
-        // moved, not a day you captured anything. Instagram counts the whole
-        // room because everything in it IS one dated act: a save, a like, a
-        // post, a comment. Both are FALLBACKS in the hero chain, below the
-        // cards that name WHO and WHAT (see `FeedScreen.shapedSections`).
+        // moved, not a day you captured anything. A FALLBACK in the hero chain,
+        // below the cards that name WHO and WHAT (see `FeedScreen.shapedSections`).
+        //
+        // Instagram, TikTok and X had labels here and lost them in prd §817 (X) and §821 (Instagram, TikTok):
+        // those rooms lead with their newest thing and carry kind tiles, so a
+        // year grid there is a figure no room draws (§723).
         "Snapchat":      Label(title: "Your memory year",     unit: "memory",     units: "memories",
                                kinds: [.file]),
-        "Instagram":     Label(title: "Your Instagram year",  unit: "entry",      units: "entries"),
-        // TikTok counts the whole room, the Instagram reason: a save, a like, a
-        // post and a comment are each one dated act, and the export dates every
-        // one of them.
-        "TikTok":        Label(title: "Your TikTok year",     unit: "entry",      units: "entries"),
         // **X IS NOT HERE, AND THE ABSENCE IS THE RULING (prd §817, user: "i
         // don't ever want to see this. it should just show most recent
         // notification").** "Your X year" counted the whole room honestly and
@@ -85,9 +82,9 @@ enum FeedHeatmap {
         // room's On This Day rode inside this card and goes with it — an
         // anniversary is a claim about the archive, and it was covering the
         // thing that just landed. `x-selftest.sh` holds the absence.
-        // "entry" for the reason Instagram and TikTok use it: this room mixes a
-        // followed channel's broadcasts with your own saved messages and chats,
-        // and the noun in a subtitle has to be true of everything it counts.
+        // "entry": this room mixes a followed channel's broadcasts with your
+        // own saved messages and chats, and the noun in a subtitle has to be
+        // true of everything it counts.
         "Telegram":      Label(title: "Your Telegram year",  unit: "entry",      units: "entries"),
         // Privacy.com, 2026-09-01 (prd §558) — the fallback beneath "Where the
         // cards go", which declines below three charges across two merchants.

@@ -211,10 +211,15 @@ check(RoomKindTiles.Room(source: "Safe") == .safe
       && RoomKindTiles.Room(source: "Walletbeat") == .walletbeat, "the eight rooms resolve from their sources")
 check(RoomKindTiles.Room(source: "Wallet") == nil && RoomKindTiles.Room(source: "All") == nil,
       "no other room grows kind tiles")
-// The rooms §816 held: their lead is a figure with no scopes slot (a treemap,
-// a heatmap, Cloudflare's runway), so tiles there would be hand-placed.
-for held in ["Instagram", "X", "TikTok", "Cloudflare", "Apple Health"] {
+// The rooms §816 held: their lead is a figure with no scopes slot (a heatmap,
+// Cloudflare's runway), so tiles there would be hand-placed.
+for held in ["Cloudflare", "Apple Health"] {
     check(RoomKindTiles.Room(source: held) == nil, "\(held) grows no kind tiles — its lead has no scopes slot")
+}
+// The social rooms DECLINED tiles (§821): nearly everyone has only the live
+// door, which is one kind, and the notifications already lead by date.
+for declined in ["Instagram", "X", "TikTok"] {
+    check(RoomKindTiles.Room(source: declined) == nil, "\(declined) has no kind tiles (§821, declined)")
 }
 // ONE MEANING, ONE CASE: News and Revisions are the same case in both rating
 // rooms, so they cannot wear two glyphs.

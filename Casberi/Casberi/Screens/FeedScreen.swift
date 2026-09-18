@@ -6228,13 +6228,19 @@ struct FeedScreen: View {
         // and since 2026-07-31 what an Instagram export's own captions and
         // comments are about. When there's too little text to say anything it
         // returns nil and the next card down takes the head.
-        let topicMap = liveStream == nil && sourceHead == nil && anniversary == nil && rosterAccounts.isEmpty
-            ? heads?.topicMap : nil
-        let distribution = liveStream == nil && sourceHead == nil && anniversary == nil && topicMap == nil
+        // X, Instagram and TikTok lead with their newest thing and nothing
+        // else (prd §821, `SocialRoom.leadsWithNewest`): none of the four
+        // registry figures below may claim them. Their registry entries are
+        // deleted too; this keeps a re-added one from taking the slot back.
+        let figuresMayLead = !SocialRoom.leadsWithNewest(source)
+        let topicMap = figuresMayLead && liveStream == nil && sourceHead == nil && anniversary == nil
             && rosterAccounts.isEmpty
+            ? heads?.topicMap : nil
+        let distribution = figuresMayLead && liveStream == nil && sourceHead == nil && anniversary == nil
+            && topicMap == nil && rosterAccounts.isEmpty
             ? heads?.distribution : nil
-        let mosaic = liveStream == nil && sourceHead == nil && anniversary == nil && topicMap == nil
-            && distribution == nil && rosterAccounts.isEmpty
+        let mosaic = figuresMayLead && liveStream == nil && sourceHead == nil && anniversary == nil
+            && topicMap == nil && distribution == nil && rosterAccounts.isEmpty
             ? heads?.mosaic : nil
         // The heatmap sits LAST (moved 2026-07-31), not third. It answers
         // WHEN, which is the weakest thing a room can lead with — every card
@@ -6248,7 +6254,7 @@ struct FeedScreen: View {
         // drew. Instagram and Snapchat are the first sources with two facts
         // to choose between, and for them the grid is the graceful fallback —
         // the role it already plays for Photos under the treemap.
-        let heatmapLabel = liveStream == nil && rosterAccounts.isEmpty && anniversary == nil
+        let heatmapLabel = figuresMayLead && liveStream == nil && rosterAccounts.isEmpty && anniversary == nil
             && topicMap == nil && distribution == nil && mosaic == nil
             && sourceHead == nil
             ? FeedHeatmap.label(for: source) : nil
@@ -6691,7 +6697,11 @@ struct FeedScreen: View {
             // one. A photograph with a caption stays a post card, because the
             // caption is the post — extracting its picture into a grid would
             // separate the two halves of one thing.
-            let (photoTiles, rest) = Self.splitTiles(visible.live, by: Self.isXPhotoTile)
+            // THE NEWEST THING LEADS, above the grid (prd §821): the cover is
+            // lifted out of the room first, so a picture wall never declines it.
+            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
+            if let cover { Section { ledeListRow(cover) } }
+            let (photoTiles, rest) = Self.splitTiles(uncovered, by: Self.isXPhotoTile)
             if !photoTiles.isEmpty { photoGridSection(photoTiles) }
             // A THREAD READS AS A THREAD (2026-08-18, prd §396). The archive
             // has named a self-reply's parent since §308, and until this pass
@@ -6707,17 +6717,18 @@ struct FeedScreen: View {
             let (roomThings, threadReplies) = foldThreadReplies(rest)
             let days = chronoGroups(roomThings)
             groupedSections(days, nextEventID: nextEventID,
-                            boundary: boundaryThingID(in: days), replies: threadReplies,
-                            cover: heroShown || !photoTiles.isEmpty ? nil : ledeThingID(in: days))
+                            boundary: boundaryThingID(in: days), replies: threadReplies)
         case .instagram:
             // The mixed room's fourth instance (2026-08-18, prd §395), on
             // Snapchat's, Files' and X's terms: what has pixels AND nothing to
             // say leads as a grid, everything else reads as rows.
-            let (photoTiles, rest) = Self.splitTiles(visible.live, by: Self.isInstagramPhotoTile)
+            // The newest thing leads, above the grid (prd §821) — X's rule.
+            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
+            if let cover { Section { ledeListRow(cover) } }
+            let (photoTiles, rest) = Self.splitTiles(uncovered, by: Self.isInstagramPhotoTile)
             if !photoTiles.isEmpty { photoGridSection(photoTiles) }
             let days = chronoGroups(rest)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
-                            cover: heroShown || !photoTiles.isEmpty ? nil : ledeThingID(in: days))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .files:
             // The Snapchat split for a connected folder (2026-08-02): images
             // whose heal has landed a thumbnail lead as a grid, everything
@@ -7152,6 +7163,23 @@ struct FeedScreen: View {
                                 cover: heroShown ? nil : ledeThingID(in: days))
             }
         }
+    }
+
+    /// THE NEWEST THING, LIFTED OUT OF A MIXED ROOM (prd §821).
+    ///
+    /// X's and Instagram's rooms draw a picture grid above their days, and a
+    /// grid used to decline the cover — so the room led with a wall of
+    /// photographs, never with what just arrived. Here the cover is chosen over
+    /// the WHOLE room (`ledeThingID`, §389's positional rule: the newest
+    /// coverable thing) and lifted out before the grid and the days are split,
+    /// so it draws once, first. `SocialRoom.leadsWithNewest` names these rooms.
+    private func newestLead(_ visible: [Thing], heroShown: Bool) -> (cover: Thing?, rest: [Thing]) {
+        let live = visible.live
+        guard !heroShown, let id = ledeThingID(in: chronoGroups(live)),
+              let cover = live.first(where: { (thing: Thing) -> Bool in thing.id == id }) else {
+            return (nil, live)
+        }
+        return (cover, live.filter { (thing: Thing) -> Bool in thing.id != id })
     }
 
     /// THE KIND-TILE ROOMS (prd §815, §816): the cover, the kind tiles

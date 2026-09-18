@@ -162,6 +162,29 @@ present "Telegram has a year grid to lead with" \
 absent "the channels board came back" \
   'title: "Which channels fill this"' "$INSIGHT"
 
+# --- the three rooms that lead with their newest thing (prd §821) ------------
+# X, Instagram and TikTok: no topic map, no year heatmap, and a picture grid
+# never declines the cover. One predicate names them; the figures' registry
+# entries are deleted and the four gates read the predicate once.
+present "X leads with its newest thing" \
+  '"X": *Facts\(foldsThreads: true, *hasRoster: false, leadsWithNewest: true\)' "$ROOM"
+present "Instagram leads with its newest thing" \
+  '"Instagram": Facts\(foldsThreads: false, hasRoster: false, leadsWithNewest: true\)' "$ROOM"
+present "TikTok leads with its newest thing" \
+  '"TikTok": *Facts\(foldsThreads: false, hasRoster: false, leadsWithNewest: true\)' "$ROOM"
+absent "a year heatmap came back to a room that leads with its newest thing" \
+  '"(X|Instagram|TikTok)": *Label\(' "$HEATMAP"
+absent "a topic map came back to a room that leads with its newest thing" \
+  'case "(X|Instagram|TikTok)":' "$INSIGHT"
+present "the four registry figures read the one predicate" \
+  'let figuresMayLead = !SocialRoom.leadsWithNewest\(source\)' "$TMP/feed.nc"
+present "the heatmap reads it too" \
+  'let heatmapLabel = figuresMayLead &&' "$TMP/feed.nc"
+absent "a picture grid declines the cover again" \
+  'heroShown \|\| !photoTiles.isEmpty' "$TMP/feed.nc"
+present "the cover is lifted out before the grid" \
+  'let \(cover, uncovered\) = newestLead\(visible, heroShown: heroShown\)' "$TMP/feed.nc"
+
 [[ $fail -eq 0 ]] || { echo "social-room-selftest: ✗ drift guard(s) failed"; exit 1; }
 
 # --- THE CATALOG GUARD ------------------------------------------------------
@@ -527,13 +550,13 @@ mutate "an empty group is called posts" \
   'guard true else { return false }'
 # A rail of faces above a room that cannot filter to any of them.
 mutate "an import room claims a roster" \
-  '"X":         Facts(foldsThreads: true,  hasRoster: false)' \
-  '"X":         Facts(foldsThreads: true,  hasRoster: true)'
+  '"X":         Facts(foldsThreads: true,  hasRoster: false, leadsWithNewest: true)' \
+  '"X":         Facts(foldsThreads: true,  hasRoster: true, leadsWithNewest: true)'
 # A thread fold over a room whose export names no parent — every self-reply
 # swallowed under whichever row happened to precede it.
 mutate "Instagram claims it can fold threads" \
-  '"Instagram": Facts(foldsThreads: false, hasRoster: false)' \
-  '"Instagram": Facts(foldsThreads: true,  hasRoster: false)'
+  '"Instagram": Facts(foldsThreads: false, hasRoster: false, leadsWithNewest: true)' \
+  '"Instagram": Facts(foldsThreads: true,  hasRoster: false, leadsWithNewest: true)'
 # Snapchat's rows re-entering the post switch, which would put its memories and
 # saved chats through an anatomy built for casts.
 mutate "Snapchat is treated as a post room" \

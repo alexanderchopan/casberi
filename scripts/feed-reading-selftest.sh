@@ -276,9 +276,13 @@ grep -qE '\b(ListeningLede|ReadingLede|listeningLedeSection|readingLedeSection)\
 # Music, the reading list and the generic room path (social, RSS, notes, media…).
 [ "$(grep -c 'cover: heroShown ? nil : ledeThingID(in: days))' "$FEED")" -ge 3 ] \
   || { echo "✗ a headless room no longer covers its newest thing (prd §732)"; exit 1; }
-# The five mixed rooms: the picture grid is the head, so the cover waits for no grid.
-[ "$(grep -cE 'cover: heroShown \|\| !(memoryTiles|tiles|photoTiles|imageTiles)\.isEmpty \? nil : ledeThingID' "$FEED")" -ge 5 ] \
+# The mixed rooms whose picture grid is the head (Snapchat, Telegram, Files):
+# the cover waits for no grid. X and Instagram left that rule in prd §821 — they
+# lead with their newest thing, lifted out ABOVE the grid (`newestLead`).
+[ "$(grep -cE 'cover: heroShown \|\| !(memoryTiles|tiles|photoTiles|imageTiles)\.isEmpty \? nil : ledeThingID' "$FEED")" -ge 3 ] \
   || { echo "✗ a mixed room lost its cover, or draws one under its picture grid (prd §732)"; exit 1; }
+[ "$(grep -c 'let (cover, uncovered) = newestLead(visible, heroShown: heroShown)' "$FEED")" -eq 2 ] \
+  || { echo "✗ X or Instagram no longer lifts its newest thing above the grid (prd §821)"; exit 1; }
 grep -q 'if let coverThing, coverThing.isLive { ledeListRow(coverThing) }' "$FEED" \
   || { echo "✗ daySection no longer draws a shaped room's cover (prd §732)"; exit 1; }
 # A SUPPRESSION TERM IS NOT A HEAD (prd §755). `rosterAccounts` belongs in every
