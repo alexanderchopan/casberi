@@ -15743,6 +15743,96 @@
         }
       }
     },
+    "%lld apps made you a wallet with Privy" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld apps te crearon una cartera con Privy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 個のアプリが Privy でウォレットを作成しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 앱이 Privy로 지갑을 만들었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个应用通过 Privy 为你创建了钱包"
+          }
+        }
+      }
+    },
+    "%lld apps not read yet — they fill in over the next syncs" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld apps aún sin leer: se completarán en las próximas sincronizaciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 個のアプリは未取得です。次回以降の同期で補完されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 앱을 아직 읽지 않았습니다 — 다음 동기화에서 채워집니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个应用尚未读取 — 将在接下来的同步中补全"
+          }
+        }
+      }
+    },
+    "%lld apps · %lld funded" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld apps · %2$lld funded"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld apps · %lld con fondos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 個のアプリ · %lld 件に入金あり"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 앱 · %lld개 입금됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个应用 · %lld 个已入金"
+          }
+        }
+      }
+    },
     "%lld are older than price data" : {
       "localizations" : {
         "es" : {
@@ -20081,6 +20171,68 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "另有 %lld 个应用"
+          }
+        }
+      }
+    },
+    "%lld more apps, empty and not used lately" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld apps más, vacías y sin uso reciente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "他に %lld 個のアプリ（残高なし・最近未使用）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 앱 더, 잔액 없고 최근 미사용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "另有 %lld 个应用，余额为空且近期未使用"
+          }
+        }
+      }
+    },
+    "%lld more apps, empty or not used lately · %lld not read yet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld more apps, empty or not used lately · %2$lld not read yet"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld apps más, vacías o sin uso reciente · %lld sin leer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "他に %lld 個のアプリ（残高なし、または最近未使用）· %lld 個は未取得"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 앱 더, 잔액 없거나 최근 미사용 · %lld개 아직 읽지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "另有 %lld 个应用，余额为空或近期未使用 · %lld 个尚未读取"
           }
         }
       }
@@ -37615,6 +37767,34 @@
         }
       }
     },
+    "Across %lld wallets" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %lld carteras"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 個のウォレット全体"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑 %lld개 전체"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共 %lld 个钱包"
+          }
+        }
+      }
+    },
     "Across your accounts" : {
       "localizations" : {
         "es" : {
@@ -39075,6 +39255,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "将它们计入你的合计总额。"
+          }
+        }
+      }
+    },
+    "Adds what your app wallets hold to the Wallet room's total. Display only." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Suma lo que tienen tus carteras de apps al total de Cartera. Solo visualización."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリウォレットの残高をウォレットの合計に加えます。表示のみ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱 지갑의 잔액을 지갑 합계에 더합니다. 표시 전용."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将应用钱包的余额计入钱包总额。仅用于显示。"
           }
         }
       }
@@ -41973,6 +42181,34 @@
         }
       }
     },
+    "App wallet · made %@ ago" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cartera de app · creada hace %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリウォレット · %@前に作成"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱 지갑 · %@ 전에 생성"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "应用钱包 · %@前创建"
+          }
+        }
+      }
+    },
     "App-specific password" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -42667,6 +42903,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "应用"
+          }
+        }
+      }
+    },
+    "Apps holding nothing that you haven't used in 90 days." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apps sin saldo que no has usado en 90 días."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "残高がなく、90日間使っていないアプリ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔액이 없고 90일간 사용하지 않은 앱."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "余额为空且 90 天未使用的应用。"
+          }
+        }
+      }
+    },
+    "Apps in your feed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apps en tu feed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フィード内のアプリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "피드의 앱"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "信息流中的应用"
           }
         }
       }
@@ -44700,6 +44992,34 @@
         }
       }
     },
+    "Balance not read yet — it fills in on the next sync" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Saldo aún sin leer: se completará en la próxima sincronización"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "残高は未取得です。次回の同期で補完されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔액을 아직 읽지 않았습니다 — 다음 동기화에서 채워집니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "余额尚未读取 — 将在下次同步时补全"
+          }
+        }
+      }
+    },
     "Balance refill" : {
       "localizations" : {
         "es" : {
@@ -45008,6 +45328,34 @@
         }
       }
     },
+    "Bankr couldn't make a key (%lld)." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr no pudo crear una clave (%lld)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr はキーを作成できませんでした（%lld）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr가 키를 만들지 못했습니다 (%lld)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr 无法创建密钥（%lld）。"
+          }
+        }
+      }
+    },
     "Bankr declined this one." : {
       "localizations" : {
         "es" : {
@@ -45060,6 +45408,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Bankr 拒绝：%@"
+          }
+        }
+      }
+    },
+    "Bankr didn't accept the sign-in. Sign in again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr no aceptó el inicio de sesión. Vuelve a iniciar sesión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr がサインインを受け付けませんでした。もう一度サインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr가 로그인을 거부했습니다. 다시 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr 未接受此登录。请重新登录。"
           }
         }
       }
@@ -45172,6 +45548,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Bankr 尚未被允许执行操作。请在其设置界面中开启。"
+          }
+        }
+      }
+    },
+    "Bankr made a key that can do more than read, so it wasn't saved. Remove it on bankr.bot." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr creó una clave que puede hacer más que leer, así que no se guardó. Elimínala en bankr.bot."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr が読み取り以上の権限を持つキーを作成したため、保存しませんでした。bankr.bot で削除してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr가 읽기 이상의 권한을 가진 키를 만들어 저장하지 않았습니다. bankr.bot에서 삭제하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr 创建的密钥权限超出只读，因此未保存。请在 bankr.bot 上删除。"
           }
         }
       }
@@ -51205,6 +51609,34 @@
         }
       }
     },
+    "Connected to a new Bankr account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conectado a una cuenta nueva de Bankr."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しい Bankr アカウントに接続しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 Bankr 계정에 연결했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已连接到新的 Bankr 账户。"
+          }
+        }
+      }
+    },
     "Connected to your account · %@" : {
       "localizations" : {
         "es" : {
@@ -53840,6 +54272,34 @@
         }
       }
     },
+    "Couldn't reach Bankr to make a key." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo contactar con Bankr para crear una clave."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キーを作成するため Bankr に接続できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키를 만들기 위해 Bankr에 연결하지 못했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Bankr 以创建密钥。"
+          }
+        }
+      }
+    },
     "Couldn't reach Bankr." : {
       "localizations" : {
         "es" : {
@@ -54372,6 +54832,34 @@
         }
       }
     },
+    "Couldn't reach Privy — try again in a moment." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo contactar con Privy: inténtalo de nuevo en un momento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy に接続できませんでした。少ししてからもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy에 연결하지 못했습니다 — 잠시 후 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Privy — 请稍后再试。"
+          }
+        }
+      }
+    },
     "Couldn't reach Rocket Money — try again in a moment." : {
       "localizations" : {
         "es" : {
@@ -54844,6 +55332,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法连接 Wise — 请检查网络。"
+          }
+        }
+      }
+    },
+    "Couldn't reach World App to look up %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo contactar con World App para buscar %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を調べるため World App に接続できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@을(를) 찾기 위해 World App에 연결하지 못했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 World App 查找 %@。"
           }
         }
       }
@@ -56894,6 +57410,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "刚才无法连接登记表"
+          }
+        }
+      }
+    },
+    "Count in Wallet total" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Contar en el total de Cartera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットの合計に含める"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑 합계에 포함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "计入钱包总额"
           }
         }
       }
@@ -61477,6 +62021,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "目录中的所有应用"
+          }
+        }
+      }
+    },
+    "Every app that made you a wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todas las apps que te crearon una cartera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットを作成したすべてのアプリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑을 만든 모든 앱"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "所有为你创建钱包的应用"
           }
         }
       }
@@ -69307,6 +69879,34 @@
         }
       }
     },
+    "Hidden apps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apps ocultas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非表示のアプリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "숨긴 앱"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已隐藏的应用"
+          }
+        }
+      }
+    },
     "Hide past events" : {
       "localizations" : {
         "es" : {
@@ -73284,6 +73884,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Jira 已响应 — 没有分配给你的问题。这里只读取以你为经办人的问题，请核对你指定的站点和项目。"
+          }
+        }
+      }
+    },
+    "Joined %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se unió %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@に参加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 가입"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@加入"
           }
         }
       }
@@ -78194,6 +78822,34 @@
         }
       }
     },
+    "Making a read-only key…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Creando una clave de solo lectura…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読み取り専用キーを作成中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽기 전용 키를 만드는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在创建只读密钥…"
+          }
+        }
+      }
+    },
     "Making it…" : {
       "localizations" : {
         "es" : {
@@ -81988,6 +82644,34 @@
         }
       }
     },
+    "New app wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nueva cartera de app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいアプリウォレット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 앱 지갑"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新的应用钱包"
+          }
+        }
+      }
+    },
     "New email" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -82974,6 +83658,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无 UTXO"
+          }
+        }
+      }
+    },
+    "No World App user is named %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ningún usuario de World App se llama %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ という名前の World App ユーザーはいません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@(이)라는 World App 사용자가 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有名为 %@ 的 World App 用户。"
           }
         }
       }
@@ -86200,6 +86912,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nonce"
+          }
+        }
+      }
+    },
+    "None" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ninguna"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无"
           }
         }
       }
@@ -92089,6 +92829,34 @@
         }
       }
     },
+    "One app made you a wallet with Privy" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una app te creó una cartera con Privy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 個のアプリが Privy でウォレットを作成しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "한 앱이 Privy로 지갑을 만들었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一个应用通过 Privy 为你创建了钱包"
+          }
+        }
+      }
+    },
     "One claim per hour." : {
       "localizations" : {
         "es" : {
@@ -93881,6 +94649,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在 Apple Notes 中打开一条笔记。"
+          }
+        }
+      }
+    },
+    "Open in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abrir en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ で開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 中打开"
           }
         }
       }
@@ -100470,6 +101266,90 @@
         }
       }
     },
+    "Privy answered in a shape Casberi doesn't read yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy respondió con una forma que Casberi aún no lee."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy の応答は Casberi がまだ読めない形式です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy의 응답 형식을 Casberi가 아직 읽지 못합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy 返回的结构 Casberi 尚无法读取。"
+          }
+        }
+      }
+    },
+    "Privy is busy right now — your apps will arrive shortly." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy está ocupado ahora mismo: tus apps llegarán en breve."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy は現在混み合っています。アプリはまもなく届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy가 지금 바쁩니다 — 앱이 곧 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy 当前繁忙 — 你的应用稍后就会出现。"
+          }
+        }
+      }
+    },
+    "Privy signed this app out — tap Connect to sign in again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy cerró la sesión de esta app: toca Conectar para volver a iniciar sesión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy がこのアプリをサインアウトしました。「接続」をタップして再度サインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy가 이 앱을 로그아웃했습니다 — 연결을 탭해 다시 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy 已将此应用登出 — 点按“连接”重新登录。"
+          }
+        }
+      }
+    },
     "Processing" : {
       "localizations" : {
         "es" : {
@@ -103890,6 +104770,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在读取你的 Duolingo…"
+          }
+        }
+      }
+    },
+    "Reading your Privy apps…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo tus apps de Privy…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy のアプリを読み込み中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy 앱을 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取你的 Privy 应用…"
           }
         }
       }
@@ -114243,6 +115151,34 @@
         }
       }
     },
+    "Show empty apps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mostrar apps vacías"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "残高のないアプリを表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔액 없는 앱 표시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "显示余额为空的应用"
+          }
+        }
+      }
+    },
     "Show every source" : {
       "localizations" : {
         "es" : {
@@ -115018,6 +115954,34 @@
         }
       }
     },
+    "Sign in to Bankr" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Iniciar sesión en Bankr"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr にサインイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr에 로그인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "登录 Bankr"
+          }
+        }
+      }
+    },
     "Sign in to Duolingo" : {
       "localizations" : {
         "es" : {
@@ -115070,6 +116034,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "登录 Instagram"
+          }
+        }
+      }
+    },
+    "Sign in to Privy" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Iniciar sesión en Privy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy にサインイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy에 로그인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "登录 Privy"
           }
         }
       }
@@ -131953,6 +132945,62 @@
         }
       }
     },
+    "Used %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usada %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@に使用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 사용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@使用"
+          }
+        }
+      }
+    },
+    "Used %lld days ago" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usada hace %lld días"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 日前に使用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld일 전에 사용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 天前使用"
+          }
+        }
+      }
+    },
     "Used %lld times" : {
       "localizations" : {
         "es" : {
@@ -132033,6 +133081,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已使用 1 次"
+          }
+        }
+      }
+    },
+    "Used today" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usada hoy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日使用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘 사용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今天使用"
+          }
+        }
+      }
+    },
+    "Used yesterday" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usada ayer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "昨日使用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "어제 사용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "昨天使用"
           }
         }
       }
@@ -133397,6 +134501,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "钱包 %@"
+          }
+        }
+      }
+    },
+    "Wallet balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Saldo de la cartera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットの残高"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑 잔액"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "钱包余额"
           }
         }
       }
@@ -137885,6 +139017,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "有什么会落进你的订阅流"
+          }
+        }
+      }
+    },
+    "What moved in your app wallets" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que se movió en tus carteras de apps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリウォレットでの動き"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱 지갑에서 일어난 변동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的应用钱包中的变动"
           }
         }
       }
@@ -148641,6 +149801,40 @@
         }
       }
     },
+    "across %lld apps, of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "across %1$lld apps, of %2$lld"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en %lld apps, de %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 個のアプリ（全 %lld 個中）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 앱에서, 총 %lld개 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "分布在 %lld 个应用，共 %lld 个"
+          }
+        }
+      }
+    },
     "across %lld chains" : {
       "localizations" : {
         "es" : {
@@ -152451,6 +153645,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "从 %@ 转入"
+          }
+        }
+      }
+    },
+    "in one app, of %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en una app, de %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 個のアプリ（全 %lld 個中）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "한 앱에서, 총 %lld개 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在一个应用中，共 %lld 个"
           }
         }
       }
