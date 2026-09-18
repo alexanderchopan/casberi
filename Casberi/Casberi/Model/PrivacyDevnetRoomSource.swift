@@ -63,7 +63,7 @@ enum PrivacyDevnetRoomSource {
             // snapshot is restored.
             hasRead: !live.accounts.isEmpty,
             headSlot: live.headSlot,
-            wasReset: live.wasReset())
+            wasReset: live.relaunchIsNews())
     }
 
     /// The accounts the room is showing, narrowed by the face rail's scope.

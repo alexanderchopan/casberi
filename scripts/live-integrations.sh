@@ -946,7 +946,7 @@ if (( pv_up > 0 )); then
   #    fixtures now describe a chain that no longer exists.
   pvgen=$(raw "$PV" '{"id":1,"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["0x0",false]}' \
            | python3 -c 'import sys,json;print((json.load(sys.stdin).get("result") or {}).get("hash",""))' 2>/dev/null)
-  if [[ "$pvgen" == "0x7ca0f7358d127dc4a68983050eb88837a5f384225254d1b009fa87fbcd0f2332" ]]; then
+  if [[ "$pvgen" == "0x2036e3fe3eaaa15382a9befde816137b6b2cda1e3df8ca0c92e89bc17a3fca5a" ]]; then
     pass "Privacy — same chain as when the seat was built (genesis unchanged)"
   elif [[ -n "$pvgen" ]]; then
     warn "Privacy — THE DEVNET RESTARTED (genesis is now $pvgen); PrivacyDevnetChain.genesis, both privacy-tx fixtures and seedDemo describe a chain that no longer exists — re-measure"

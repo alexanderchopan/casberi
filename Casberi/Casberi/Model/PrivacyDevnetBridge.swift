@@ -47,7 +47,10 @@ enum PrivacyDevnetChain {
     /// so a detector built on id or height reads `.same` through a wipe. This is
     /// the third signal, and the only one that cannot be fooled by a chain that
     /// simply kept running.
-    static let genesis = "0x7ca0f7358d127dc4a68983050eb88837a5f384225254d1b009fa87fbcd0f2332"
+    ///
+    /// Re-pinned 2026-09-18: the devnet was relaunched (first seen by the
+    /// nightly on 09-15), and a stale pin reads as "relaunched" forever.
+    static let genesis = "0x2036e3fe3eaaa15382a9befde816137b6b2cda1e3df8ca0c92e89bc17a3fca5a"
 
     /// Three nodes, walked in order — one being down is a retry, not an outage.
     static let hosts = ["https://rpc1.privacy.ethrex.xyz",
@@ -296,6 +299,21 @@ final class PrivacyDevnetLiveState {
     func wasReset() -> Bool? {
         guard let seen = observedGenesis else { return nil }
         return seen.caseInsensitiveCompare(PrivacyDevnetChain.genesis) != .orderedSame
+    }
+
+    /// Whether the room should still LEAD with the relaunch.
+    ///
+    /// **News for a week, then the new chain is just the chain** — Frames'
+    /// `sayRelaunchFor`. `wasReset()` compares against a SHIPPED constant, so
+    /// without this window a relaunch between builds reads as news until the
+    /// next release re-pins it: the user created two accounts on the new
+    /// chain and the head still said everything was gone (2026-09-18).
+    func relaunchIsNews(now: Date = Date()) -> Bool? {
+        guard let reset = wasReset() else { return nil }
+        guard reset else { return false }
+        guard let seen = Self.observedRelaunch() else { return true }
+        let age = now.timeIntervalSince(seen.at)
+        return age >= 0 && age <= FramesChainWatch.sayRelaunchFor
     }
 
     // MARK: - The relaunch, recorded so something can SAY it (prd §593d)
