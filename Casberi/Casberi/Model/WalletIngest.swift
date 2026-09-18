@@ -167,24 +167,77 @@ enum WalletIngest {
     /// per watched address per direction to be told the method doesn't exist.
     private static var transferChains: [Chain] { chains.filter { $0.kind == .evm && $0.onAlchemy } }
 
-    /// Chains in `WalletChainStore.selectable` whose Alchemy Portfolio support
-    /// is NOT proven (prd §785, 2026-09-16 — World Chain is the first).
+    /// The chains this app's Alchemy key REFUSES, learned from the endpoint
+    /// rather than hand-listed (prd §825, replacing `unprovenNetworks`).
     ///
     /// The holdings read sends every selected network for up to three wallets
     /// in ONE body, so a chain the endpoint refuses does not fail alone: it
     /// takes the whole chunk with it, and Ethereum, Base and the rest vanish
     /// from a person's treemap because of a switch they flipped for a chain
-    /// they were curious about. "Off by default" only defers that to whoever
-    /// flips it, silently, which is §83's quiet harm rather than a dead
-    /// control. So `collectCandidatesAlchemy` retries ONCE without these, and
-    /// a chain whose refusal costs only itself is a chain that can safely be
-    /// offered while its measurement is outstanding.
+    /// they were curious about.
     ///
-    /// **An entry here is a debt, not a feature.** Measure the chain end to
-    /// end (`-portfolioProbe` reports the refusal in one line) and delete it.
-    /// EMPTY since 2026-09-16: World Chain, its only entry, was measured
-    /// (prd §788). The retry stays, because the next chain lands the same way.
-    private static let unprovenNetworks: Set<String> = []
+    /// **A hand-kept list could only ever name the chain we already knew
+    /// about.** `unprovenNetworks` was that list, it was EMPTY, and an empty
+    /// list made its own retry dead code — so the next chain the endpoint
+    /// refused took every wallet's holdings down with it and nothing in the
+    /// app was left to catch it. That is not a debt to pay by measuring
+    /// harder; it is the wrong shape. `collectCandidatesAlchemy` now ISOLATES
+    /// a failing body — it asks one network at a time and records the ones
+    /// that fail ALONE while a sibling answers — so a refusal costs only its
+    /// own chain, whichever chain that turns out to be, and nobody has to have
+    /// heard of it first.
+    ///
+    /// Persisted, because a key's refusal is a property of the key and not of
+    /// the pass, and re-tested after a week, because "enable this network" is
+    /// a checkbox on the Alchemy dashboard and a chain that was refused on
+    /// Monday can serve on Tuesday (Arc did exactly that, 2026-09-17).
+    private actor RefusedNetworks {
+        static let shared = RefusedNetworks()
+        private static let storeKey = "wallet.alchemy.refused.v1"
+        /// How long a learned refusal stands before the chain is tried again.
+        private static let retestAfter: TimeInterval = 7 * 86_400
+        private var at: [String: Date]
+
+        init() {
+            at = (UserDefaults.standard.data(forKey: Self.storeKey))
+                .flatMap { try? JSONDecoder().decode([String: Date].self, from: $0) } ?? [:]
+        }
+
+        /// The refusals still standing — an expired one is dropped, so the
+        /// chain rejoins the next body and proves itself or is marked again.
+        func current(now: Date = .now) -> Set<String> {
+            let live = at.filter { now.timeIntervalSince($0.value) < Self.retestAfter }
+            if live.count != at.count { at = live; persist() }
+            return Set(live.keys)
+        }
+
+        func mark(_ network: String, at when: Date = .now) {
+            guard at[network] == nil else { return }
+            at[network] = when
+            persist()
+            NSLog("[Casberi] holdings: Alchemy refused %@ — dropped for a week", network)
+        }
+
+        /// A network that answered is not refused, whatever we learned before.
+        func clear(_ networks: Set<String>) {
+            let kept = at.filter { !networks.contains($0.key) }
+            guard kept.count != at.count else { return }
+            at = kept
+            persist()
+        }
+
+        private func persist() {
+            guard let data = try? JSONEncoder().encode(at) else { return }
+            DefaultsWrite.set(data, forKey: Self.storeKey)
+        }
+    }
+
+    /// What the Alchemy holdings arm has learned to stop asking for — read by
+    /// `-portfolioProbe` and by Diagnostics, never by a surface that would
+    /// present it as a fact about the chain itself.
+    static func refusedAlchemyNetworks() async -> [String] {
+        await RefusedNetworks.shared.current().sorted()
+    }
 
     /// The networks one address can actually live on, by its SHAPE — base58
     /// reads Solana, `0x…` reads the EVM chains. This is what makes Solana free
@@ -270,7 +323,8 @@ enum WalletIngest {
         // a miss leaves that wallet's entry absent and `fetch` falls through
         // to the original full Alchemy call for it.
         let zerionResults = await IngestSupport.boundedGather(evmAddresses, maxConcurrent: 4) { addr in
-            (addr.lowercased(), await ZerionAPI.transactions(address: addr))
+            (addr.lowercased(),
+             await ZerionAPI.transactions(address: addr, networks: Set(networks(for: addr))))
         }
         // `uniquingKeysWith`, not `uniqueKeysWithValues`: two watched entries
         // (an ENS name and its raw hex, say) can resolve to the SAME address,
@@ -1635,12 +1689,37 @@ enum WalletIngest {
             let cells = portfolio.treemapCells.joined(separator: ", ")
             return (["root = TagMap(\(q("")), \(q("")), [\(cells)], \(q("token")))"], portfolio)
         }
-        var groups = await topHoldingsByWallet()
+        let read = await holdingsByWallet()
+        var groups = read.groups
+        // **A WALLET WE COULDN'T REACH STANDS ON ITS LAST READING, NOT ON
+        // NOTHING (prd §825).** This room's number is merged from several
+        // places, and one of them — Privy's app wallets (§803g) — is a STORED
+        // last read that keeps showing whatever happens on the wire. So a pass
+        // where the chains refused us painted a crown made entirely of app
+        // wallets: the person saw money they hold in somebody's app and none
+        // of the money in their own wallets, on every scope, with nothing
+        // saying why (user, 2026-09-18: "it's showing my zora balance but not
+        // my wallets"). The recorded value samples already carry each wallet's
+        // last reading, `lastKnownHoldingsByWallet` already stamps them and
+        // already refuses anything older than three days, and the Today brief
+        // has stood on it since 2026-07-22 — the room that exists to state
+        // this money was the one surface that didn't.
+        //
+        // UNREACHED, never merely empty: a wallet that answered and holds
+        // nothing shows nothing, which is the truth. And only when the live
+        // read produced NO group at all — one wallet answering is a real
+        // portfolio, and mixing a live wallet with another's remembered
+        // figures would date a number nothing on screen could date.
+        if groups.isEmpty, read.unreached > 0 { groups = lastKnownHoldingsByWallet() }
         // The Wallet feed can scope to one watched wallet (prd §128) — filter
         // the groups AFTER the fetch, never before, so every wallet's value
-        // history still samples (topHoldingsByWallet's recordSample side effect)
+        // history still samples (holdingsByWallet's recordSample side effect)
         // regardless of what the feed is currently showing.
         if let address { groups = groups.filter { scopeMatch($0.address, address) } }
+        // Stamped from the groups that SURVIVED the scope, so a scoped page
+        // never wears another wallet's date (nil on a live read — the normal
+        // case — because a live group carries no `stale`).
+        let asOf = groups.compactMap(\.stale).min()
         // Connected exchanges merge into the COMBINED read only (prd §163). A
         // feed scoped to one wallet is answering "what does THIS address hold",
         // and folding a Kraken balance into that would make the scope a lie.
@@ -1657,7 +1736,8 @@ enum WalletIngest {
         // state over a balance we successfully read.
         guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !privy.isEmpty else { return nil }
         let portfolio = WalletPortfolio.from(groups: groups, exchange: exchange,
-                                             validatorsUSD: validatorsUSD, privy: privy)
+                                             validatorsUSD: validatorsUSD, privy: privy,
+                                             asOf: asOf)
 
         // More than one PLACE, not more than one wallet — a single wallet plus
         // a connected exchange is exactly the case this feature exists for.
@@ -1775,23 +1855,44 @@ enum WalletIngest {
     /// which is what the Wallet screen and Feed chip already did.
     @MainActor
     static func topHoldingsByWallet() async -> [HoldingsGroup] {
+        await holdingsByWallet().groups
+    }
+
+    /// The same read, plus HOW MANY watched wallets could not be reached at
+    /// all (prd §825). `topHoldingsByWallet` collapses "reached, holds
+    /// nothing" and "couldn't reach the chain" into the same absent group,
+    /// which is right for a caller that only wants to draw what it has — and
+    /// wrong for the one caller that has to decide whether a blank room means
+    /// "you hold nothing" or "we couldn't look". `portfolioRead` is that
+    /// caller; see the last-known fallback there.
+    @MainActor
+    static func holdingsByWallet() async -> (groups: [HoldingsGroup], unreached: Int) {
         let watched = WalletStore.shared.addresses
-        guard !watched.isEmpty else { return [] }
+        guard !watched.isEmpty else { return ([], 0) }
         // Concurrent, not sequential — three watched wallets waiting on three
         // requests in a row is the difference between a couple seconds and
         // most of an app launch (2026-07-09: separating wallets must not
         // make the pinned module noticeably slower to appear than the old
         // single combined request was).
-        let results = await withTaskGroup(of: (Int, HoldingsGroup?).self) { group in
+        let outcomes = await withTaskGroup(of: (Int, WalletHoldingsOutcome).self) { group in
             for (i, entry) in watched.enumerated() {
                 group.addTask {
-                    if case let .group(g) = await walletGroupOutcome(entry) { return (i, g) }
-                    return (i, nil)   // unreachable OR reached-but-empty both drop here
+                    let outcome = await walletGroupOutcome(entry)
+                    return (i, outcome)
                 }
             }
-            var collected: [(Int, HoldingsGroup?)] = []
+            var collected: [(Int, WalletHoldingsOutcome)] = []
             for await result in group { collected.append(result) }
             return collected
+        }
+        var results: [(Int, HoldingsGroup?)] = []
+        for (i, outcome) in outcomes {
+            if case let .group(g) = outcome { results.append((i, g)) }
+            else { results.append((i, nil)) }   // unreachable OR reached-but-empty
+        }
+        var unreached = 0
+        for (_, outcome) in outcomes {
+            if case .unreachable = outcome { unreached += 1 }
         }
         // Every real fetch feeds the wallet's value history (2026-07-14) —
         // forward-only, throttled inside recordSample, never back-filled.
@@ -1800,7 +1901,7 @@ enum WalletIngest {
                                             holdings: g.topBySymbol)
         } }
         let groups = results.sorted { $0.0 < $1.0 }.compactMap(\.1)
-        return groups
+        return (groups, unreached)
     }
 
     /// One watched wallet's holdings outcome — the three states Home has to
@@ -2274,7 +2375,7 @@ enum WalletIngest {
         // Bounded like the Alchemy fan-out — Zerion's free tier is 10 req/s, and
         // a watched set of a dozen wallets shouldn't burst past it.
         let holdings = await IngestSupport.boundedGather(routed, maxConcurrent: 4) { r in
-            await ZerionAPI.holdings(address: r.address)
+            await ZerionAPI.holdings(address: r.address, networks: r.networks)
         }
         var candidates: [Candidate] = []
         var reached = false
@@ -2315,74 +2416,128 @@ enum WalletIngest {
 
         var candidates: [Candidate] = []
         var reached = false
+        let refused = await RefusedNetworks.shared.current()
         for chunk in stride(from: 0, to: routed.count, by: 3).map({
             Array(routed[$0..<min($0 + 3, routed.count)])
         }) {
-            var pageKey: String? = nil
-            // See `unprovenNetworks`: one chain the endpoint refuses would
-            // otherwise take every other chain in this body down with it.
-            var dropUnproven = false
-            for _ in 0..<8 {
-                var addressesBody: [[String: Any]] = []
-                for entry in chunk {
-                    let networks = dropUnproven
-                        ? entry.networks.filter { !unprovenNetworks.contains($0) }
-                        : entry.networks
-                    guard !networks.isEmpty else { continue }
-                    addressesBody.append(["address": entry.address, "networks": networks])
+            let asked = Set(chunk.flatMap { $0.networks }).subtracting(refused)
+            guard !asked.isEmpty else { continue }
+            var rows = await portfolioTokens(url, chunk: chunk, networks: asked)
+            // ONE CHAIN MAY NOT TAKE THE OTHERS WITH IT (prd §825). A body
+            // naming several networks that the endpoint REJECTS is the shape
+            // that empties a person's whole treemap — every wallet, every
+            // chain, over one chain nobody has proven — so it is asked again
+            // ONE NETWORK AT A TIME, and what is rejected alone while a
+            // sibling answers is recorded (see `RefusedNetworks`).
+            //
+            // Rejected, not merely failed: a 0, a 429 or a 5xx is an outage,
+            // and probing ten chains one by one on a train would be the cure
+            // doing the disease's work. `portfolioTokens` draws that line.
+            //
+            // The sibling is the second half of the same care. If nothing at
+            // all answered, the refusal was not about the chains, so nothing
+            // is recorded and the pass simply reports unreached — which is
+            // what it is, and what the last-known fallback then stands on.
+            if rows.refused, asked.count > 1 {
+                var answered = Set<String>()
+                var refusals: [String] = []
+                for network in asked.sorted() {
+                    let one = await portfolioTokens(url, chunk: chunk, networks: [network])
+                    if one.reached {
+                        answered.insert(network)
+                        rows.tokens += one.tokens
+                        rows.reached = true
+                    } else if one.refused {
+                        // Rejected on its own, not merely unlucky — a 429 or a
+                        // dropped connection during the isolation pass says
+                        // nothing about the chain and must not cost it a week.
+                        refusals.append(network)
+                    }
                 }
-                guard !addressesBody.isEmpty else { break }
-                var body: [String: Any] = [
-                    "addresses": addressesBody,
-                    "withMetadata": true, "withPrices": true,
-                ]
-                if let pageKey { body["pageKey"] = pageKey }
-                let page = await fetchPortfolioPage(url, body: body)
-                // ONE retry, and only when an unproven chain was in the body:
-                // a refusal is indistinguishable from any other failure here,
-                // so the cheap test is to ask again without the chain whose
-                // support nobody has proven. It no-ops the day that set empties.
-                if page == nil, !dropUnproven,
-                   chunk.contains(where: { $0.networks.contains { unprovenNetworks.contains($0) } }) {
-                    dropUnproven = true
-                    continue
+                if !answered.isEmpty {
+                    await RefusedNetworks.shared.clear(answered)
+                    for network in refusals { await RefusedNetworks.shared.mark(network) }
                 }
-                guard let root = page,
-                      let data = root["data"] as? [String: Any],
-                      let tokens = data["tokens"] as? [[String: Any]] else { break }
-                reached = true
+            } else if rows.reached {
+                await RefusedNetworks.shared.clear(asked)
+            }
+            if rows.reached { reached = true }
 
-                for t in tokens {
-                    let md = t["tokenMetadata"] as? [String: Any]
-                    let mdSymbol = (md?["symbol"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-                    // A token that never registered a ticker still has a name —
-                    // the label rule (user, 2026-07-21): symbol when one exists,
-                    // name as the fallback, never both. Before this, a
-                    // symbol-less token was dropped from the map entirely.
-                    let mdName = (md?["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-                    let network = (t["network"] as? String) ?? ""
-                    // Native coin has no tokenAddress and no symbol — name it by
-                    // chain. NOT lowercased: an EVM contract is case-insensitive
-                    // hex, but a Solana mint is base58, where case IS the address.
-                    let contract = t["tokenAddress"] as? String
-                    let isNative = contract == nil
-                    guard let symbol = mdSymbol ?? (isNative ? native[network]?.symbol : nil) ?? mdName,
-                          let balHex = t["tokenBalance"] as? String else { continue }
-                    let decimals = (md?["decimals"] as? Int)
-                        ?? (isNative ? native[network]?.decimals : nil)
-                        ?? 18   // an ERC-20 that didn't report its own
-                    candidates.append(Candidate(symbol: clean(symbol), contract: contract,
-                                                network: network,
-                                                amount: hexToDouble(balHex) / pow(10, Double(decimals)),
-                                                owner: ((t["address"] as? String) ?? "").lowercased(),
-                                                price: firstPrice(t["tokenPrices"])))
-                }
-
-                guard let next = data["pageKey"] as? String, !next.isEmpty else { break }
-                pageKey = next
+            for t in rows.tokens {
+                let md = t["tokenMetadata"] as? [String: Any]
+                let mdSymbol = (md?["symbol"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+                // A token that never registered a ticker still has a name —
+                // the label rule (user, 2026-07-21): symbol when one exists,
+                // name as the fallback, never both. Before this, a
+                // symbol-less token was dropped from the map entirely.
+                let mdName = (md?["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+                let network = (t["network"] as? String) ?? ""
+                // Native coin has no tokenAddress and no symbol — name it by
+                // chain. NOT lowercased: an EVM contract is case-insensitive
+                // hex, but a Solana mint is base58, where case IS the address.
+                let contract = t["tokenAddress"] as? String
+                let isNative = contract == nil
+                guard let symbol = mdSymbol ?? (isNative ? native[network]?.symbol : nil) ?? mdName,
+                      let balHex = t["tokenBalance"] as? String else { continue }
+                let decimals = (md?["decimals"] as? Int)
+                    ?? (isNative ? native[network]?.decimals : nil)
+                    ?? 18   // an ERC-20 that didn't report its own
+                candidates.append(Candidate(symbol: clean(symbol), contract: contract,
+                                            network: network,
+                                            amount: hexToDouble(balHex) / pow(10, Double(decimals)),
+                                            owner: ((t["address"] as? String) ?? "").lowercased(),
+                                            price: firstPrice(t["tokenPrices"])))
             }
         }
         return (candidates, reached)
+    }
+
+    /// Every `tokens` row the Portfolio endpoint returns for one chunk of
+    /// addresses over one set of networks, paged out. `reached` is false when
+    /// the FIRST page didn't answer — which is the signal
+    /// `collectCandidatesAlchemy` isolates on; a later page dropping simply
+    /// ends the walk with what already landed, exactly as before.
+    ///
+    /// Split out of `collectCandidatesAlchemy` (prd §825) so the whole-body
+    /// read and the one-network-at-a-time retry are the same request made
+    /// twice rather than two spellings that can drift.
+    private static func portfolioTokens(
+        _ url: String,
+        chunk: [(address: String, networks: [String])],
+        networks: Set<String>
+    ) async -> (tokens: [[String: Any]], reached: Bool, refused: Bool) {
+        var out: [[String: Any]] = []
+        var reached = false
+        var refused = false
+        var pageKey: String? = nil
+        for _ in 0..<8 {
+            var addressesBody: [[String: Any]] = []
+            for entry in chunk {
+                let asked = entry.networks.filter(networks.contains)
+                guard !asked.isEmpty else { continue }
+                addressesBody.append(["address": entry.address, "networks": asked])
+            }
+            guard !addressesBody.isEmpty else { break }
+            var body: [String: Any] = [
+                "addresses": addressesBody,
+                "withMetadata": true, "withPrices": true,
+            ]
+            if let pageKey { body["pageKey"] = pageKey }
+            let answer = await fetchPortfolioPage(url, body: body)
+            guard let root = answer.page,
+                  let data = root["data"] as? [String: Any],
+                  let tokens = data["tokens"] as? [[String: Any]] else {
+                // Only on the FIRST page, and only for a status that says the
+                // body itself was rejected — see `fetchPortfolioPage`.
+                refused = !reached && (400...499).contains(answer.status) && answer.status != 429
+                break
+            }
+            reached = true
+            out += tokens
+            guard let next = data["pageKey"] as? String, !next.isEmpty else { break }
+            pageKey = next
+        }
+        return (out, reached, refused)
     }
 
     /// One Portfolio page, retried on a rate limit or a transient server drop
@@ -2394,16 +2549,26 @@ enum WalletIngest {
     /// backoff; a 400/401 (bad request / bad key) won't self-heal, so it fails
     /// fast. Total added wait is bounded (~2s worst case) so an offline device
     /// still falls through to the last-known card quickly rather than hanging.
-    private static func fetchPortfolioPage(_ url: String, body: [String: Any]) async -> [String: Any]? {
+    ///
+    /// The STATUS rides out with the page (prd §825) because the caller has to
+    /// tell a refusal from an outage: a 4xx that is not a 429 is the endpoint
+    /// understanding the body and rejecting it — the shape that means one of
+    /// the chains named in it is not served — while a 0, a 429 or a 5xx is
+    /// only "not now", and treating those the same would have the read probe
+    /// every chain one by one on a train.
+    private static func fetchPortfolioPage(_ url: String, body: [String: Any])
+        async -> (page: [String: Any]?, status: Int) {
         let backoff: [UInt64] = [500_000_000, 1_500_000_000]   // 0.5s, then 1.5s
+        var last = 0
         for attempt in 0...backoff.count {
             let (json, status) = await IngestSupport.postJSONStatus(url, body: body)
-            if let root = json as? [String: Any] { return root }
+            last = status
+            if let root = json as? [String: Any] { return (root, status) }
             let retriable = status == 429 || status == 0 || (500...599).contains(status)
-            guard retriable, attempt < backoff.count else { return nil }
+            guard retriable, attempt < backoff.count else { return (nil, status) }
             try? await Task.sleep(nanoseconds: backoff[attempt])
         }
-        return nil
+        return (nil, last)
     }
 
     /// Prices the Solana holdings the Portfolio endpoint left unpriced.

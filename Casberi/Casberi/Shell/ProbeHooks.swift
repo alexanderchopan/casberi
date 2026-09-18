@@ -4329,6 +4329,12 @@ enum ProbeHooks {
         Hook(key: "portfolioProbe") { value, _ in
             Task { @MainActor in
                 let scope = (value == "YES" || value.isEmpty) ? nil : value
+                // WHAT THE READ STOPPED ASKING FOR (prd §825), first — a chain
+                // this app's Alchemy key refuses is learned at runtime now,
+                // and a refusal nobody can see is a refusal nobody fixes.
+                let refused = await WalletIngest.refusedAlchemyNetworks()
+                NSLog("Portfolio probe: Alchemy refusing %@",
+                      refused.isEmpty ? "nothing" : refused.joined(separator: ", "))
                 guard let read = await WalletIngest.portfolioRead(scopeTo: scope) else {
                     NSLog("Portfolio probe: nothing read (no watched wallet priced)")
                     return
@@ -4349,9 +4355,13 @@ enum ProbeHooks {
                 // Stack` plus one `TagMap` per group, so it is two lines even
                 // for a single wallet.
                 let combined = read.doc.count == 1
-                NSLog("Portfolio probe: scope=%@ total=%@ tokens=%d wallets=%d map=%@",
+                NSLog("Portfolio probe: scope=%@ total=%@ tokens=%d wallets=%d map=%@ read=%@",
                       scope ?? "ALL", TokenStats.compact(p.totalUSD), p.tokenCount,
-                      p.walletCount, combined ? "COMBINED" : "per-wallet")
+                      p.walletCount, combined ? "COMBINED" : "per-wallet",
+                      // LIVE or the last-known standing in for it (prd §825) —
+                      // the one line that separates "you hold nothing" from
+                      // "we could not look".
+                      p.asOf.map { "as of \(AccountPageShape.ago($0))" } ?? "live")
                 // The card's whole tail, and its halves apart — `shapeLine` is
                 // what the row DRAWS, but a nil there has two causes (an
                 // unpriced/single-position book, no stables above the floor)

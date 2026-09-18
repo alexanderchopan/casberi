@@ -106,6 +106,12 @@ struct WalletBalanceHeadline: View {
     /// the Holdings scope one tap away answers the same question properly.
     /// Kept as a parameter because the token rooms still use it.
     var mover: String? = nil
+    /// The moment this number was read, when it is NOT now (prd §825) — set
+    /// from `WalletPortfolio.asOf`, so it is non-nil only where the wallet
+    /// half of the total is a last-known reading standing in for chains that
+    /// could not be reached. nil everywhere else, which is the normal case
+    /// and draws nothing.
+    var asOf: Date? = nil
     /// Whether the LINE is drawn.
     ///
     /// False in the wallet room's non-Home scopes (prd §483), where another
@@ -437,6 +443,18 @@ struct WalletBalanceHeadline: View {
                         // WHY it moved, in the quietest ink on the screen: the
                         // headline states the reading, this states its cause.
                         Text(mover)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                    if let asOf {
+                        // WHEN it was read, in the same quiet ink, and only
+                        // when that is not now (prd §825). §83: the crown may
+                        // stand on a wallet's last reading while the chains
+                        // are unreachable — it may not present that reading
+                        // as current. Same phrase the stale treemap group's
+                        // subline has used since 2026-07-17, so one dated
+                        // number reads the same way wherever it is drawn.
+                        Text("as of \(AccountPageShape.ago(asOf))")
                             .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     }

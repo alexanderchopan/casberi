@@ -40,6 +40,13 @@ struct WalletPortfolio: Equatable {
     var positions: [Position] = []
     /// How many watched wallets actually contributed a priced read.
     var walletCount: Int = 0
+    /// Set only when the wallet half of this total is a LAST-KNOWN reading —
+    /// the moment it was sampled (prd §825). nil on a live read, which is the
+    /// normal case. A surface drawing this number must say so: the crown
+    /// stamps it "as of 2h ago", the same phrase a stale treemap group's
+    /// subline has carried since 2026-07-17. §83 — a dated number may be
+    /// shown, a dated number presented as current may not.
+    var asOf: Date? = nil
 
     var isEmpty: Bool { positions.isEmpty }
     var tokenCount: Int { positions.count }
@@ -124,7 +131,8 @@ struct WalletPortfolio: Equatable {
     static func from(groups: [WalletIngest.HoldingsGroup],
                      exchange: [(symbol: String, usd: Double, venue: ExchangeBridge.Venue)] = [],
                      validatorsUSD: Double = 0,
-                     privy: [(symbol: String, usd: Double, appID: String, app: String)] = [])
+                     privy: [(symbol: String, usd: Double, appID: String, app: String)] = [],
+                     asOf: Date? = nil)
     -> WalletPortfolio {
         var usdBySymbol: [String: Double] = [:]
         var holdersBySymbol: [String: [Holder]] = [:]
@@ -177,7 +185,8 @@ struct WalletPortfolio: Equatable {
             }
         return WalletPortfolio(totalUSD: usdBySymbol.values.reduce(0, +),
                                positions: positions,
-                               walletCount: groups.count)
+                               walletCount: groups.count,
+                               asOf: asOf)
     }
 
     /// The combined treemap's cells — the merged amounts run through the same

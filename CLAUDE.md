@@ -78,6 +78,7 @@ deliberately does not check are in `docs/verify.md`.
 
 - **The pass was mostly IDLE CORES — time every step before optimising it (PERF)** → docs/verify.md · prd §612
 
+- **One chain may not empty every wallet's balances, and a wallet we could not reach stands on its LAST READING, stamped (prd §825) — the room showed a Privy app wallet's stored figure and none of the person's own.** A chain filter is an optimisation: it is built from the caller's routed networks and a failed filtered read retries unfiltered (`ZerionAPI.holdings`/`.transactions`); an Alchemy body the endpoint REJECTS (a 4xx that is not a 429, never an outage) is re-asked one network at a time and the refusal is learned, persisted and re-tested weekly (`RefusedNetworks`, `-portfolioProbe`). `unprovenNetworks` is deleted — a hand-kept list could only name the chain we already knew about → docs/hooks/wallet.md · prd §825
 - **The address book's delight pass** → docs/hooks/wallet.md · prd §441
 - **Address-book shape self-test (scripts/address-book-selftest.sh, 2026-08-22)** → docs/verify.md · prd §440
 - **SwiftData liveness audit (scripts/swiftdata-liveness-audit.py, 2026-07-25)** → docs/verify.md
@@ -88,6 +89,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Redaction coverage audit (scripts/redaction-coverage-audit.py, 2026-08-19)** → docs/verify.md · prd §277
 - **Ref-shape audit (scripts/ref-shape-audit.py, 2026-08-19)** → docs/verify.md
 - **Delete-guard audit (scripts/delete-guard-audit.py, 2026-08-19)** → docs/verify.md
+- **Chain-filter audit (scripts/chain-filter-audit.py, 2026-09-18) — one chain a provider refuses may not empty every wallet's balances, and an unreachable pass must stand on its last reading with a date on it** → docs/verify.md · prd §825
 - **Dead-closure audit (scripts/dead-closure-audit.py, 2026-09-10) — a control calling a closure property nothing ever supplies** → docs/verify.md · prd §669
 - **Defaults-lock audit (scripts/defaults-lock-audit.py, 2026-09-14) — a lock held across a `UserDefaults` write deadlocks with every view body (build 570)** → docs/verify.md · prd §721
 - **ShareLink style audit (scripts/sharelink-style-audit.py, 2026-09-11) — an unstyled share control in a `List` row becomes the row's action; give it `.buttonStyle(.plain)`** → docs/verify.md · prd §693

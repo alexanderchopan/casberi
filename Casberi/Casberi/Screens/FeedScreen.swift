@@ -8967,6 +8967,11 @@ struct FeedScreen: View {
                             // No mover line and a shorter chart — see the
                             // parameters' own docs (prd §483).
                             mover: nil,
+                            // THE DATE, WHEN THERE IS ONE (prd §825). Non-nil
+                            // only while the crown is standing on the wallets'
+                            // last known reading because the chains could not
+                            // be reached — see `WalletIngest.portfolioRead`.
+                            asOf: portfolio?.asOf,
                             drawsChart: drawsChart,
                             drawsReading: drawsChart,
                             // **DERIVED, not 96 (prd §588).** §483 set this

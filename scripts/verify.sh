@@ -605,6 +605,24 @@ step "Dead-closure audit"
 "$ROOT/scripts/dead-closure-audit.py" || fail "a control calls a closure nothing supplies — see the output above"
 print -P "%F{green}✓ dead-closure audit%f"
 
+# ONE REFUSED CHAIN, EVERY WALLET'S BALANCES (prd §825). The user opened the
+# Wallet room and saw a Privy app wallet's stored figure — Zora's — and nothing
+# from their own wallets, on "All" and on every individual page. Both holdings
+# arms ask for every chain in ONE request per wallet, so a chain a provider
+# refuses takes every chain for every wallet with it; Zerion's filter was built
+# from the whole chain map rather than the person's own selection, and Alchemy's
+# guard was `unprovenNetworks` — a hand-kept list that was EMPTY, which made its
+# own retry dead code. This holds the shape that replaced both: the filter comes
+# from the caller, a failed filtered read retries unfiltered, a rejected Alchemy
+# body is isolated one network at a time and the refusal is LEARNED, and a pass
+# that reached nothing stands on the last known reading with a date on it.
+step "Chain-filter audit"
+python3 "$ROOT/scripts/chain-filter-audit.py" --self-test >/dev/null \
+  || fail "the chain-filter audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/chain-filter-audit.py" \
+  || fail "one refused chain can empty every wallet's balances — see the output above"
+print -P "%F{green}✓ chain-filter audit%f"
+
 # A lead that would draw AIR (prd §772). §766 ruled that a room's lead is a
 # statement, a body and a foot and that "nothing in it is air it could honestly
 # fill" — and the body zone shipped with one possible filler, `summary`, which

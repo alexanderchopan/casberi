@@ -87,6 +87,16 @@ enum ZerionAPI {
         let owner: String
     }
 
+    /// One response's `data` array, or nil when the call did not answer with
+    /// one (unreachable, refused, or a shape we can't read). Split out so a
+    /// chain-filtered read and its unfiltered retry are the same request made
+    /// twice, never two spellings that can drift apart.
+    private static func dataRows(_ url: String, auth: String) async -> [[String: Any]]? {
+        guard let root = await IngestSupport.getJSON(url, auth: "Basic \(auth)") as? [String: Any],
+              let data = root["data"] as? [[String: Any]] else { return nil }
+        return data
+    }
+
     /// Every simple (wallet) fungible holding for one address, across the chains
     /// Casberi maps — priced, non-trash — or nil when Zerion couldn't be reached
     /// at all (the caller's honest-failure signal to fall back to Alchemy; an
@@ -95,7 +105,11 @@ enum ZerionAPI {
     /// never reach the treemap. The address goes in the PATH; auth is HTTP Basic
     /// over base64("<key>:") (Zerion's documented scheme — key as the username,
     /// empty password).
-    static func holdings(address: String) async -> [Holding]? {
+    /// `networks` are the Alchemy network ids the CALLER routes this address to
+    /// (`WalletIngest.networks(for:)`) — the chain filter is built from those
+    /// and from nothing else. Empty asks for every chain this file maps, which
+    /// is what a caller with no opinion (a probe) wants.
+    static func holdings(address: String, networks: Set<String> = []) async -> [Holding]? {
         // THE DEMO REACHES NOTHING (2026-08-12). Gated at the network
         // boundary, not at a caller: holdings are read from `WalletWatch
         // .liveState` — a per-view read the foreground sweep's demo gate
@@ -121,15 +135,32 @@ enum ZerionAPI {
         // filtered call; excluding it here is required for EVERY request to
         // succeed, not just Solana wallets (an EVM-only address still 400s if
         // `solana` rides along in the filter list).
-        let chains = networkFor.keys.filter { $0 != "solana" }.sorted().joined(separator: ",")
-        let query = "filter[positions]=only_simple"
+        //
+        // **THE FILTER IS AN OPTIMISATION, AND CORRECTNESS MAY NOT REST ON IT
+        // (prd §825).** One id this endpoint refuses 400s the call for EVERY
+        // wallet on EVERY chain — the Solana lesson above, and the shape that
+        // makes each newly mapped chain a loaded gun pointed at the whole
+        // room's money. Two changes close it: the list is now built from the
+        // chains the CALLER actually routes (a chain nobody switched on can no
+        // longer refuse a call it was never wanted in), and a failed filtered
+        // read is retried ONCE with no chain filter at all. Zerion then
+        // answers across everything it knows and the caller's own
+        // `allowed.contains(h.network)` pass drops the rest — which is where
+        // the real filtering has always happened.
+        let wanted = networks.isEmpty ? Set(networkFor.values) : networks
+        let ids = networkFor.filter { $0.key != "solana" && wanted.contains($0.value) }
+            .keys.sorted().joined(separator: ",")
+        let base = "filter[positions]=only_simple"
             + "&filter[trash]=only_non_trash"
             + "&currency=usd"
-            + "&filter[chain_ids]=\(chains)"
-        let url = "https://api.zerion.io/v1/wallets/\(encoded)/positions/?\(query)"
+        let stem = "https://api.zerion.io/v1/wallets/\(encoded)/positions/?\(base)"
 
-        guard let root = await IngestSupport.getJSON(url, auth: "Basic \(auth)") as? [String: Any],
-              let data = root["data"] as? [[String: Any]] else { return nil }
+        var rows: [[String: Any]]?
+        if !ids.isEmpty {
+            rows = await dataRows("\(stem)&filter[chain_ids]=\(ids)", auth: auth)
+        }
+        if rows == nil { rows = await dataRows(stem, auth: auth) }
+        guard let data = rows else { return nil }
 
         let owner = address.lowercased()   // matches the Alchemy candidate path
         var out: [Holding] = []
@@ -342,7 +373,9 @@ enum ZerionAPI {
     /// (5 chains × 2 directions). Solana excluded (see `holdings`' measured
     /// `filter[chain_ids]` quirk); Solana activity is untouched, still riding
     /// `SolanaActivity`'s Alchemy calls (cheap already — 2 requests/wallet).
-    static func transactions(address: String) async -> [Transfer]? {
+    /// `networks` scopes the chain filter exactly as it does for `holdings` —
+    /// and for the same reason (prd §825).
+    static func transactions(address: String, networks: Set<String> = []) async -> [Transfer]? {
         // THE DEMO REACHES NOTHING (2026-08-12). Gated at the network
         // boundary, not at a caller: holdings are read from `WalletWatch
         // .liveState` — a per-view read the foreground sweep's demo gate
@@ -358,12 +391,22 @@ enum ZerionAPI {
               let encoded = address.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
         else { return nil }
 
-        let chains = networkFor.keys.filter { $0 != "solana" }.sorted().joined(separator: ",")
-        let query = "currency=usd&filter[chain_ids]=\(chains)"
-        let url = "https://api.zerion.io/v1/wallets/\(encoded)/transactions/?\(query)"
+        // The chain filter is the CALLER's, and a refusal may not empty the
+        // whole read — see `holdings` for the argument; this arm carries the
+        // same hazard for a wallet's activity that that one carries for its
+        // money, and one fix that only covered the money would have left the
+        // room half-blind on the very next chain.
+        let wanted = networks.isEmpty ? Set(networkFor.values) : networks
+        let ids = networkFor.filter { $0.key != "solana" && wanted.contains($0.value) }
+            .keys.sorted().joined(separator: ",")
+        let stem = "https://api.zerion.io/v1/wallets/\(encoded)/transactions/?currency=usd"
 
-        guard let root = await IngestSupport.getJSON(url, auth: "Basic \(auth)") as? [String: Any],
-              let data = root["data"] as? [[String: Any]] else { return nil }
+        var rows: [[String: Any]]?
+        if !ids.isEmpty {
+            rows = await dataRows("\(stem)&filter[chain_ids]=\(ids)", auth: auth)
+        }
+        if rows == nil { rows = await dataRows(stem, auth: auth) }
+        guard let data = rows else { return nil }
 
         var out: [Transfer] = []
         for tx in data {

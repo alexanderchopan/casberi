@@ -58105,3 +58105,27 @@ No editorial rule prefers a notification. Imports are dated in the past, so with
 **§362's order ruling, bent at scale, not reversed.** It kept store order because position is half a small face's identity — true of five accounts, meaningless across 140, where store order is import order. The recency is published on LANDING beside `freshHandles` (the same pass over the same rows), so nothing reshuffles while you look.
 
 **Guarded** in `social-room-selftest.sh`: the recency is published from the fresh rings' own gated pass.
+
+## §825 — The wallet room showed an app wallet's money and none of your own: one chain may not empty every read, and a wallet we could not reach stands on its last reading (user: "balances are wrong in wallet. it's showing my zora balance but not my wallets and when i click on individual or all it isn't showing what i have", 2026-09-18)
+
+**The report, and what made it that shape.** The crown read a small figure, All read it, every individual wallet read nothing. The figure was Zora's — a Privy app wallet (§803g), which joins the combined total from `PrivyHomeStore.walletHoldings`, a **stored last read**. So one contributor to that number keeps showing whatever happens on the wire and every other contributor does not, and the room said, precisely, "here is money you hold in somebody's app, and nothing about the money in your own wallets". §83's failure mode with the honest half missing: nothing on the screen said a read had failed, because as far as the screen knew, one had not.
+
+**Three defects, and the first two are one shape.** Both holdings arms send every chain in ONE request, so a single chain the provider refuses does not fail alone — it takes every chain, for every wallet, on both arms:
+
+- **Zerion** built `filter[chain_ids]` from `networkFor.keys` — every chain this app maps, whatever the person had switched on. A chain nobody enabled could 400 the call for a wallet it was never wanted in. The file's own 2026-07-19 note says one refused id does exactly that (Solana), and then eight chains were added above it.
+- **Alchemy's** guard against the same thing was `unprovenNetworks`, a hand-kept list. It was EMPTY — correctly, everything in it had been measured — and an empty list made its own retry **dead code**. The mitigation could only ever catch a chain somebody had already thought of.
+- **The room had no last-known fallback.** `WalletIngest.lastKnownHoldingsByWallet()` has existed since 2026-07-22, stamps every group with the moment it was sampled and refuses anything older than three days. The Today brief has stood on it for two months. The room that exists to state this money was the one surface that did not.
+
+**The rulings.**
+
+1. **A chain filter is an optimisation, and correctness may not rest on it** (`ZerionAPI.holdings`, `.transactions`). The list is built from the networks the CALLER routes, and a filtered read that fails is retried ONCE with no chain filter at all — the caller's own `allowed.contains(h.network)` pass is where the real filtering has always happened. Both arms, because a fix covering only the money would leave the room half-blind on the very next chain.
+
+2. **One chain may not take the others with it, whichever chain it turns out to be** (`WalletIngest.RefusedNetworks`, `portfolioTokens`). A multi-network body the endpoint REJECTS is asked again one network at a time; what is rejected alone while a sibling answers is recorded, persisted and re-tested after a week (Alchemy's "enable this network" is a dashboard checkbox — Arc went 403 → 200 in one day, §808a). `unprovenNetworks` is deleted: a list of the chains we already knew about was the wrong shape, not a debt to pay by measuring harder.
+
+   **Rejected, not merely failed.** `fetchPortfolioPage` now hands its status out, and only a 4xx that is not a 429 counts: a 0, a 429 or a 5xx is an outage, and probing ten chains one by one on a train would be the cure doing the disease's work. And a pass where NOTHING answered records nothing — the refusal was not about the chains.
+
+3. **A wallet we could not reach stands on its last reading, stamped** (`WalletIngest.portfolioRead`, `WalletPortfolio.asOf`, `WalletBalanceHeadline.asOf`). UNREACHED, never merely empty: a wallet that answered and holds nothing shows nothing, which is the truth. Only when the live read produced no group at all — mixing one live wallet with another's remembered figures would date a number nothing on screen could date. The crown then says **"as of 2h ago"** under the figure, the same phrase a stale treemap group's subline has carried since 2026-07-17. §83: a dated number may be shown; a dated number presented as current may not.
+
+**`-portfolioProbe` reports both halves now** — what Alchemy is refusing, and whether the read was `live` or an `as of`. A refusal nobody can see is a refusal nobody fixes.
+
+**UNVERIFIED ON DEVICE.** Written on a Linux box with no Xcode and no egress to `api.zerion.io` or `api.g.alchemy.com`, so which provider was refusing was never measured — the fix makes either refusal survivable rather than naming the culprit. Run `scripts/verify.sh`, then `-portfolioProbe YES` on the real wallets and read the `Alchemy refusing` and `read=` lines before trusting this.
