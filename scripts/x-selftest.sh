@@ -233,8 +233,16 @@ grep -q 'topicsAt ?? Date.distantPast) < termsEpoch' "$TOPICS" \
 # and it must stay OFF for a screenshot corpus, where the domain is the answer.
 grep -q 'if !includeDomains {' "$TOPICS" \
   || { echo "✗ the noun read is no longer forked on the writing/pixels split"; exit 1; }
-grep -q '"X":             Label(title: "Your X year"' Casberi/Casberi/Model/FeedHeatmap.swift \
-  || { echo "✗ X has no heatmap label — and with it goes the room's On This Day, which rides inside that card"; exit 1; }
+# THE GRID IS GONE AND MUST STAY GONE (prd §817, user: "i don't ever want to
+# see this. it should just show most recent notification"). This guard is the
+# inverse of the one it replaces: "Your X year" was a WHEN card over a room
+# that is mostly the live notifications door, so one column of recent weeks lit
+# a year of black. A label here is all it takes to bring it back — the registry
+# can never decline the slot the way the derived heads do — and what it would
+# cover is the newest notice. The room's On This Day rode inside that card and
+# went with it, deliberately.
+grep -Eq '"X": *Label\(' Casberi/Casberi/Model/FeedHeatmap.swift \
+  && { echo "✗ X has a heatmap label again (prd §817) — the room leads with a year grid instead of the newest notification"; exit 1; }
 grep -q 'connected("x")' Casberi/Casberi/Model/BridgeRefresh.swift \
   || { echo "✗ X does no foreground work — topics stop draining and authors are never fetched"; exit 1; }
 # The reply lead is a DRIFT GUARD and not an extracted assertion, deliberately:
@@ -296,6 +304,22 @@ FEEDSCREEN="$FEEDSCREEN_DIR/FeedScreen.swift"
 cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEEDSCREEN"
 grep -q 'case "X":                   self = .x' "$FEEDSCREEN" \
   || { echo "✗ X has no room shape again — it falls to .plain and the room is a wall of 80-char BandRows"; exit 1; }
+# …and the shape must still hand the room's newest thing to the cover (prd
+# §817). Read off the `.x` case alone, on a comment-stripped copy: the same
+# ternary is spelled in the Instagram and Files cases beside it, so a file-wide
+# grep would pass with this branch's cover deleted.
+X_CASE=$(python3 - "$FEEDSCREEN" <<'XCASE'
+import re, sys
+src = re.sub(r'//.*$', '', open(sys.argv[1]).read(), flags=re.M)
+cut = src[src.find("\n        case .x:"):]
+print(cut[:cut.find("\n        case .instagram:")])
+XCASE
+)
+case "$X_CASE" in
+  *ledeThingID*) ;;
+  *) echo "✗ the X room no longer covers its newest thing (prd §817) — with the year"; \
+     echo "  grid deleted, nothing else leads this room."; exit 1;;
+esac
 # AMENDED 2026-08-26 (prd §489): the five post rooms draw through one call, so
 # the words rule is the table's (`whole:`) rather than four literal call sites.
 # The ruling is unchanged — something must still render a post as a post.

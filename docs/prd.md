@@ -239,6 +239,7 @@ at all.
 | §699 (the scope chip strip never shipped) | The GitHub room scopes by its face rail alone; a row of scope words at the top was killed | reversed by §815 — GitHub carries §752's kind tiles UNDER its cover (All · Pull requests · Issues · Releases), combined with the face rail; nothing sits at the top of the screen |
 | §772 (a thin cover gives way) | A `.words` cover with no substantial rung stops claiming `leadHeight` | amended by §815 for the Safe, GitHub and Stripe rooms only — their cover holds the full box (`holdsLead: true`) so the kind tiles under it never move. Everywhere else §772 stands |
 | §815 (Safe's and Stripe's heads deleted; the module warning on the cover) | The Safe and Stripe rooms lead with their cover, the kind tiles under it | reversed by §816 (user: "keep the safe head the way it was", "yes stripe's head could come back the same way") — both heads are restored exactly, and a room with a head carries its kind tiles in the head's `scopes` slot; only a room with no head drawn takes the cover path. §815's tiles, glyphs and pick rules stand |
+| §816 (X's lead: the topic map, or the year grid below its floor) | X keeps `FeedHeatmap`'s "Your X year" as the fallback under `TopicMapHero` | amended by §817 (user: "i don't ever want to see this. it should just show most recent notification") — the grid is deleted from X; the fallback is the cover, which draws the newest notice. §816's held-tiles reasoning stands: X still has no `DSRoomChassis.Head` and so no kind tiles |
 
 ### Known stale, by hand
 
@@ -58008,3 +58009,17 @@ Three rooms gain the section tiles the wallet family and Privy already wear (`DS
 - **Cloudflare:** `CloudflareRunwayCard` is its own `LeadFit` + `dsRoomHeadBlock` composition around `DSRunwayRail` (expiries on a time axis), not a `DSRoomChassis.Head`. Proposed: Domains `globe` (`cloudflare:zone:` and `cloudflare:domain:`), Certificates `checkmark.seal` (`cloudflare:cert:`), DNS `network` (`cloudflare:dns:`).
 
 **No head was deleted in this pass.**
+
+## §817 — The X room leads with its newest notification, never a year grid (user: "i don't ever want to see this. it should just show most recent notification", with a screenshot of "Your X year", 2026-09-18)
+
+`FeedHeatmap`'s "Your X year" is deleted. The registry entry is the whole change: the heatmap is last in `FeedScreen.shapedSections`' chain and comes from a static table, so it can never decline its slot the way the derived heads do — a label was all that stood between this room and the cover.
+
+**Why it was wrong, in the room as it is now.** The grid counted the room honestly (a post, a reply and a like are each one dated act) and still led with the wrong fact. Since §701 this room is mostly the live notifications door, and §737 sweeps it every ten minutes, so the corpus is weeks old: the card drew one bright column against a year of black, under a headline claiming a year. It answers WHEN — already the weakest lead in the chain (2026-07-31, which moved it last) — about the one room you open to find out WHO answered you. §386 had already ruled these grids "kinda useless" and taken X's off the panel tile while leaving the feed's; this finishes that.
+
+**What draws instead.** Nothing new was built. With no head, `heroShown` is false and the `.x` shape hands `ledeThingID` to `groupedSections` — §763's rule, which every other headless room has had since §723: the room covers its newest coverable thing, at size, drawn as a post (§756). A wordless picture post still leads as the grid half §375 gave this room, unchanged.
+
+**What goes with it, deliberately.** The room's On This Day rode INSIDE the heatmap card (`calendarHeatmapSection` → `OnThisDay.find`, 2026-07-21) and is gone with it. That is the right trade and not a regret: an anniversary is a claim about the archive, and it was sitting on top of the thing that just landed. `anniversary`/`OnThisDayHero` is scoped to the memories room and the two journals (§398) and is NOT widened to X — a card about 2019 above the newest notice is the same defect wearing a different coat.
+
+**Kept.** `FeedInsight.topicMap`'s "What you post about" (§309) still outranks the cover for anyone who has imported an archive: it says WHAT, over the person's own sentences, and it declines on its own when there is too little to say — which is every notifications-only room, this one included. If it should go too, that is one line in the same registry.
+
+**Guarded.** `x-selftest.sh` carried the label as a positive check ("X has no heatmap label") and now carries its inverse, plus a read of the `.x` case alone proving the room still hands its newest thing to the cover — the same ternary is spelled in the Instagram and Files cases beside it, so a file-wide grep would pass with this branch's cover deleted. Nothing else reads the label: `RoomFigure`'s pulse tile has excluded X since §386 (`pulseWorthy`), and `PersonRoomScreen` draws `XPersonCard` for an X person and falls back to "Their posting rhythm" at 14 columns for anyone else.

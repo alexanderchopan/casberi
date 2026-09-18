@@ -72,17 +72,22 @@ enum FeedHeatmap {
         // post and a comment are each one dated act, and the export dates every
         // one of them.
         "TikTok":        Label(title: "Your TikTok year",     unit: "entry",      units: "entries"),
-        // X counts the whole room for TikTok's and Instagram's reason: a post,
-        // a reply and a like are each one dated act, and the archive dates
-        // every one of them exactly — replies and posts from `created_at`,
-        // likes decoded from the post's own snowflake id. "Entries" rather
-        // than "posts" because a third of them are somebody else's posts that
-        // this person liked, and the noun in a subtitle has to be true of
-        // everything it counts.
-        "X":             Label(title: "Your X year",          unit: "entry",      units: "entries"),
-        // "entry" for the same reason X uses it: this room mixes a followed
-        // channel's broadcasts with your own saved messages and chats, and the
-        // noun in a subtitle has to be true of everything it counts.
+        // **X IS NOT HERE, AND THE ABSENCE IS THE RULING (prd §817, user: "i
+        // don't ever want to see this. it should just show most recent
+        // notification").** "Your X year" counted the whole room honestly and
+        // still led with the wrong fact: since §701 this room is mostly the
+        // live notifications door, so its grid is one bright column of recent
+        // weeks against a year of black — a card that says WHEN about a room
+        // you opened to find out WHO answered you. §386 already called these
+        // grids "kinda useless" and took X's off the panel tile; this takes it
+        // off the room, and the chain falls through to the cover, which draws
+        // the newest notice at size (§763, `FeedScreen.ledeThingID`). The
+        // room's On This Day rode inside this card and goes with it — an
+        // anniversary is a claim about the archive, and it was covering the
+        // thing that just landed. `x-selftest.sh` holds the absence.
+        // "entry" for the reason Instagram and TikTok use it: this room mixes a
+        // followed channel's broadcasts with your own saved messages and chats,
+        // and the noun in a subtitle has to be true of everything it counts.
         "Telegram":      Label(title: "Your Telegram year",  unit: "entry",      units: "entries"),
         // Privacy.com, 2026-09-01 (prd §558) — the fallback beneath "Where the
         // cards go", which declines below three charges across two merchants.
