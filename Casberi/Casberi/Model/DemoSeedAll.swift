@@ -259,6 +259,10 @@ enum DemoSeedAll {
                               // sits INSIDE the real shape and both halves
                               // stay exact.
                               "x-live:notif:demo-",
+                              // Instagram's and TikTok's live notices (prd
+                              // §832), X's case exactly: the real namespace
+                              // with the demo marker inside it.
+                              "ig-live:notif:demo-", "tiktok:live:notif:demo-",
                               "peer:demo", "privacypools:dep:demo",
                               "privacypools:ragequit:demo",
                               // Radicle (prd §401), same reasoning again: the
@@ -1421,7 +1425,9 @@ enum DemoSeedAll {
         out += xArchive()
         out += xNotices()
         out += instagram()
+        out += igNotices()
         out += tiktok()
+        out += tiktokNotices()
         out += snapchat()
         out += telegram()
         out += youtube()
@@ -1811,6 +1817,67 @@ enum DemoSeedAll {
                 t.authorAvatarURL = avatarArt(n.1)
                 t.quote = SocialCard(handle: n.3, text: n.2,
                                      avatarURL: avatarArt(n.3))
+            }
+        }
+    }
+
+    /// INSTAGRAM'S LIVE NOTICES (prd §832, user: "we need instagram in app and
+    /// demo to have the same layout"). The demo held only the export, so its
+    /// room was a six-day-old archive while a connected phone's leads with the
+    /// notification that landed an hour ago. `InstagramLive.thing(from:)`'s
+    /// shape exactly: `.link`, the person who ACTED as the face (§707), the
+    /// post's picture, NO `quote` and NO `postText` (§704) — the inbox never
+    /// names the post's author, so a card would be a guess.
+    private static func igNotices() -> [Thing] {
+        // (text, actor, days ago, hour, art, is a follow) — newer than every
+        // export row, and never in the future (`at` is a day plus an hour).
+        let rows: [(String, String, Double, Int, Int, Bool)] = [
+            ("lena liked your photo.", "lena", 1, 21, 0, false),
+            ("tomas commented: \"that light though\"", "tomas", 1, 18, 1, false),
+            ("ines started following you.", "ines", 1, 12, 0, true),
+            ("lena and 4 others liked your post.", "lena", 2, 20, 2, false),
+        ]
+        return rows.enumerated().map { i, n in
+            row(.link, n.0, source: "Instagram", ref: "ig-live:notif:demo-\(i)",
+                days: n.2, hour: n.3,
+                content: "https://www.instagram.com/p/demo\(i)/") { t in
+                t.authorHandle = n.1
+                t.authorAvatarURL = avatarArt(n.1)
+                if n.5 {
+                    t.socialContext = "follow"
+                } else {
+                    t.imageURLs = [art(n.4)]
+                    t.previewImageURL = art(n.4)
+                }
+            }
+        }
+    }
+
+    /// TIKTOK'S LIVE NOTICES (prd §832) — `TikTokLive.thing(from:)`'s shape:
+    /// the actor's face, the video's cover, and a `quote` card only where the
+    /// notice names the video's maker (here, you).
+    private static func tiktokNotices() -> [Thing] {
+        // (text, actor, your video's caption, days ago, hour, art, is a follow)
+        let rows: [(String, String, String?, Double, Int, Int, Bool)] = [
+            ("rui liked your video", "rui", "Two minutes on espresso ratios", 1, 22, 0, false),
+            ("dana commented: grind finer?", "dana", "Espresso puck prep, honestly", 1, 15, 3, false),
+            ("kofi followed you", "kofi", nil, 2, 19, 0, true),
+        ]
+        return rows.enumerated().map { i, n in
+            let link = "https://www.tiktok.com/@you/video/\(7_400_000_000_000_000_000 + i)"
+            return row(.link, n.0, source: "TikTok", ref: "tiktok:live:notif:demo-\(i)",
+                       days: n.3, hour: n.4, content: link) { t in
+                t.authorHandle = n.1
+                t.authorAvatarURL = avatarArt(n.1)
+                if n.6 {
+                    t.socialContext = "follow"
+                } else {
+                    t.imageURLs = [art(n.5)]
+                    t.previewImageURL = art(n.5)
+                }
+                if let caption = n.2 {
+                    t.quote = SocialCard(handle: "you", text: caption, avatarURL: nil, url: link)
+                }
             }
         }
     }
@@ -2475,16 +2542,21 @@ enum DemoSeedAll {
         // Music (its ingest lands `.link` things the same way), tagged
         // `Played` to match `SpotifyIngest`, on the generic `demo:` ref that
         // `refPrefixes` already covers.
-        let spotify: [(String, Double)] = [
-            ("Dayvan Cowboy — Boards of Canada", 1), ("Roygbiv — Boards of Canada", 6),
-            ("An Eagle in Your Mind — Boards of Canada", 15),
-            ("Avril 14th — Aphex Twin", 9), ("Xtal — Aphex Twin", 28),
-            ("Lianne — Bibio", 20),
+        // The album line is `SpotifyIngest`'s `summary` ("From <album> (year)"),
+        // which the cover draws as its second line (prd §832).
+        let spotify: [(String, Double, String)] = [
+            ("Dayvan Cowboy — Boards of Canada", 1, "From The Campfire Headphase (2005)"),
+            ("Roygbiv — Boards of Canada", 6, "From Music Has the Right to Children (1998)"),
+            ("An Eagle in Your Mind — Boards of Canada", 15, "From Music Has the Right to Children (1998)"),
+            ("Avril 14th — Aphex Twin", 9, "From Drukqs (2001)"),
+            ("Xtal — Aphex Twin", 28, "From Selected Ambient Works 85-92 (1992)"),
+            ("Lianne — Bibio", 20, "From Ambivalence Avenue (2009)"),
         ]
         out += spotify.enumerated().map { i, s in
             row(.link, s.0, source: "Spotify", ref: "demo:spotify:\(i)", days: s.1, hour: 9) { t in
                 t.tags = ["Played"]
                 t.previewImageURL = art(i + 8)
+                t.summary = s.2
             }
         }
         // Duolingo practice days (prd §776) — `.event`, one per DAY, with the
@@ -5475,9 +5547,11 @@ enum DemoSeedAll {
         ("CardPointers", "Synced 6m ago", "Reads the offers on your cards."),
         ("Files", "Synced 12m ago", "Reads a folder you point it at."),
         ("Dropbox", "Synced 1h ago", "Reads the folder you name."),
-        ("X", "Imported 412 posts", "Holds the archive you exported."),
-        ("Instagram", "Imported 336 items", "Holds the export you pointed at."),
-        ("TikTok", "Imported 276 items", "Holds the export you pointed at."),
+        // The three seats with a live door read it AND hold the export, and the
+        // demo lands both (prd §832).
+        ("X", "Synced 8m ago · 412 posts imported", "Reads your notifications and the archive you exported."),
+        ("Instagram", "Synced 10m ago · 336 items imported", "Reads your notifications and the export you pointed at."),
+        ("TikTok", "Synced 14m ago · 276 items imported", "Reads your activity and the export you pointed at."),
         ("Snapchat", "Imported 248 items", "Holds the export you pointed at."),
         ("Telegram", "4 channels · imported 214 items", "Follows public channels, read-only."),
         ("YouTube", "3 channels", "Follows channels without an account."),
