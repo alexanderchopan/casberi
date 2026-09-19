@@ -814,8 +814,11 @@ KNOWN_BYOK_PROVIDER = {
     # has a source, a room, or a chip to seed. ("Gemini" is NOT here — the
     # catalog's "Gemini" offer is the chat-IMPORT bridge, which does land
     # rows; Google's Gemini Apps is not itself a BYOK provider in this
-    # catalog.)
-    "Bankr", "Grok", "OpenRouter", "Venice",
+    # catalog.) "Apple Intelligence" (prd §833) holds no key at all — Apple's
+    # model on Private Cloud Compute answers the composer — but it is the
+    # same shape: an agent seat that answers and lands no `Thing`, so there
+    # is no room or chip to seed.
+    "Apple Intelligence", "Bankr", "Grok", "OpenRouter", "Venice",
 }
 KNOWN_BALANCE_ONLY = {
     # Merges into the Wallet room's holdings read (`WalletPortfolio`) and
