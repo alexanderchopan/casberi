@@ -239,6 +239,24 @@ enum WalletIngest {
         await RefusedNetworks.shared.current().sorted()
     }
 
+    /// The chains the person FOLLOWS that this pass could not read, by display
+    /// name (prd §827) — a chain Zerion does not map and Alchemy rejects.
+    ///
+    /// **§83: a total that silently omits a chain you switched on is a false
+    /// number.** Three passes at "Robinhood shows nothing" all ended with the
+    /// room drawing the money it could read and saying nothing about the money
+    /// it could not, so nobody could tell "you hold nothing there" from "we
+    /// never got an answer". The crown states this; it is not a diagnostic.
+    static func unreadableNetworks() async -> [String] {
+        let refused = await RefusedNetworks.shared.current()
+        guard !refused.isEmpty else { return [] }
+        let active = Set(WalletChainStore.activeNetworkIDs())
+        return allChains
+            .filter { refused.contains($0.network) && active.contains($0.network) }
+            .map(\.displayName)
+            .sorted()
+    }
+
     /// The networks one address can actually live on, by its SHAPE — base58
     /// reads Solana, `0x…` reads the EVM chains. This is what makes Solana free
     /// for an EVM-only person: their wallets never carry `solana-mainnet` into
@@ -2533,6 +2551,18 @@ enum WalletIngest {
                     await RefusedNetworks.shared.clear(answered)
                     for network in refusals { await RefusedNetworks.shared.mark(network) }
                 }
+            } else if rows.refused, let only = asked.first, asked.count == 1 {
+                // A ONE-CHAIN BODY THAT IS REJECTED NAMES ITS CHAIN (prd §827).
+                // §825 only recorded a refusal when a SIBLING answered, which is
+                // right for a mixed body and leaves the most informative case on
+                // the floor: the union pass (`collectCandidates`) asks Alchemy
+                // for the unmapped chains alone, so Robinhood arrives here by
+                // itself. Unmarked, that doomed call was re-made every pass
+                // forever and nothing anywhere recorded that the chain could not
+                // be read — the room simply showed the money that WAS readable.
+                // The weekly retest is the safety net if the rejection was the
+                // body's fault rather than the chain's.
+                await RefusedNetworks.shared.mark(only)
             } else if rows.reached {
                 await RefusedNetworks.shared.clear(asked)
             }

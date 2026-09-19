@@ -106,3 +106,17 @@ The crown's total merges several places, and one of them — Privy's app wallets
 **The $1.99 floor is the arm's, per candidate.** It was raised four days BEFORE Zerion brought `filter[trash]=only_non_trash`, so on that arm it drops only genuine small positions. §803j measured exactly this and fixed `unwatchedHoldings` alone — a fix applied to one caller of a shared rule is not applied. It rides `Candidate.trashFiltered` now (a cent on Zerion, $1.99 on Alchemy), per candidate because one read mixes both arms.
 
 `-portfolioProbe` reports `holders=` by kind, so the merge cannot come back unseen. **Unbuilt and unmeasured here** — reasoned from the code and the user's own figures.
+
+## The seed row never reached the wire (prd §827, 2026-09-19)
+
+User, on the third attempt: *"the balances in my wallet are wrong. they are not showing what is on robinhood chain, and this is the third time we have tried fixing this"*.
+
+`WalletChainStore` answered "which chains are on" in two places. `init` applied the `seeded` list to the instance's `selected`, which only the picker reads. `activeNetworkIDs()` — a separate static function, and the one **every** ingest calls (`WalletIngest`, `WalletApprovals`, `MorphoDeFi`, `SafeBridge`, `WalletSafety`, `WalletActingParties`, `WalletConnectBridge`) — read the saved array out of `UserDefaults` and ignored `seeded` completely.
+
+So on any install that had ever saved a chain set, a seeded chain was ON in the picker and never once asked for. §826's Robinhood default and seed row changed nothing for this user; §788's World Chain and §808's Arc had the same hole. The seeding code also never recorded its own flags, and could not persist its change: **Swift calls no property observer for an assignment made inside the owning type's initializer**, so `selected`'s `didSet { persist() }` never fired there.
+
+**Now:** `effectiveIDs(_:)` is the one rule — pure, no writes, safe for the static background path — and `activeNetworkIDs()` is `effectiveIDs()`. A seed applies until its flag is recorded, which `init` now does explicitly, alongside an explicit `persist()`.
+
+**Two more:** a one-chain Alchemy body that is rejected now marks that chain (§825 only marked when a sibling answered, which left the union pass's lone unmapped chain re-asked every pass forever, unrecorded). And `unreadableNetworks()` + the crown's `note:` state which followed chain didn't answer — §83, and the reason this recurred: the room drew what it could read and said nothing about what it could not, so "you hold nothing there" and "we never got an answer" looked identical.
+
+**Unmeasured:** whether Alchemy serves `robinhood-mainnet` at all (egress blocked from the authoring machine; Robinhood has no Zerion mapping, so Alchemy is its only reader). `-portfolioProbe YES` answers it in two lines — `chains asked` and `followed but unreadable`. Blockscout (§797's keyless pattern) is the alternative if refused, deliberately not built on speculation.

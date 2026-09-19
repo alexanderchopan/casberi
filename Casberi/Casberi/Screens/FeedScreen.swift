@@ -1694,6 +1694,10 @@ struct FeedScreen: View {
     /// the map it's standing under. Lands with the treemap doc, from the same
     /// read.
     @State var portfolio: WalletPortfolio?
+    /// Chains the person follows that the last holdings read could not reach
+    /// (prd §827) — the crown states them, because a total that quietly leaves
+    /// a chain out is §83's false number. Filled by `streamBlock`.
+    @State var unreadableChains: [String] = []
     /// The full allocation tray — every position and which wallets hold it.
     /// Routed through `feedSheet` (`.allocation`) now, not its own bool.
     /// The balance line's window (prd §155). Narrowed to what the record can
@@ -8972,6 +8976,9 @@ struct FeedScreen: View {
                             // last known reading because the chains could not
                             // be reached — see `WalletIngest.portfolioRead`.
                             asOf: portfolio?.asOf,
+                            // WHAT IS NOT IN THIS NUMBER (prd §827).
+                            note: unreadableChains.isEmpty ? nil
+                                : String(localized: "\(unreadableChains.joined(separator: ", ")) didn't answer — not in this total"),
                             drawsChart: drawsChart,
                             drawsReading: drawsChart,
                             // **DERIVED, not 96 (prd §588).** §483 set this
@@ -11300,6 +11307,11 @@ struct FeedScreen: View {
                     portfolio = nil
                 }
             }
+            // Read AFTER the holdings pass, so it reports what that pass
+            // actually found rather than the pass before it.
+            let unreadable = await WalletIngest.unreadableNetworks()
+            guard scope == selectedWallet else { return }
+            if unreadable != unreadableChains { unreadableChains = unreadable }
         }
     }
 

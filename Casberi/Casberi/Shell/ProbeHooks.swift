@@ -4332,9 +4332,18 @@ enum ProbeHooks {
                 // WHAT THE READ STOPPED ASKING FOR (prd §825), first — a chain
                 // this app's Alchemy key refuses is learned at runtime now,
                 // and a refusal nobody can see is a refusal nobody fixes.
+                // WHICH CHAINS ARE ACTUALLY ASKED FOR (prd §827) — the
+                // effective set, off the same rule every ingest reads. A chain
+                // ON in the picker but absent here is the defect §827 fixed,
+                // and it is the first line to read when money is missing.
+                NSLog("Portfolio probe: chains asked = %@",
+                      WalletChainStore.activeNetworkIDs().joined(separator: ", "))
                 let refused = await WalletIngest.refusedAlchemyNetworks()
                 NSLog("Portfolio probe: Alchemy refusing %@",
                       refused.isEmpty ? "nothing" : refused.joined(separator: ", "))
+                let unreadable = await WalletIngest.unreadableNetworks()
+                NSLog("Portfolio probe: followed but unreadable = %@",
+                      unreadable.isEmpty ? "none" : unreadable.joined(separator: ", "))
                 guard let read = await WalletIngest.portfolioRead(scopeTo: scope) else {
                     NSLog("Portfolio probe: nothing read (no watched wallet priced)")
                     return

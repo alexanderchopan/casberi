@@ -141,26 +141,57 @@ final class WalletChainStore {
         ("robinhood-mainnet",   "wallet.chains.robinhoodSeeded.v1"),
     ]
 
+    /// **THE ONE RULE FOR "WHICH CHAINS ARE ON" (prd §827).** Pure: it reads
+    /// `UserDefaults` and writes nothing, so the static read path every ingest
+    /// uses can call it freely.
+    ///
+    /// **Why it exists, and it is the whole of §827.** This logic lived TWICE —
+    /// once in `init`, applying the `seeded` list, and once in
+    /// `activeNetworkIDs()`, which did not. Every read in the app goes through
+    /// the static one (`WalletIngest`, `WalletApprovals`, `MorphoDeFi`,
+    /// `SafeBridge`, `WalletSafety`, `WalletActingParties`,
+    /// `WalletConnectBridge`), and the instance's `selected` reached only the
+    /// picker. So `seeded` — the mechanism whose own doc says a saved set that
+    /// predates an option "means never asked, not off" — **never affected a
+    /// single read.** It was decorative from the day it was written, which
+    /// silently cost World Chain (§788), Arc (§808) and Robinhood (§826) on
+    /// every install that had ever saved a chain set: the chain was ON in the
+    /// picker and never once asked for on the wire. Three passes at "Robinhood
+    /// shows nothing" ended here.
+    ///
+    /// A seed is applied until its flag is RECORDED, which `init` does — so
+    /// turning a seeded chain back off afterwards still sticks (the promise
+    /// `seeded` has always made).
+    static func effectiveIDs(_ d: UserDefaults = .standard) -> [String] {
+        guard let data = d.data(forKey: key),
+              let saved = try? JSONDecoder().decode([String].self, from: data)
+        else { return defaultNetworkIDs }   // never chosen — the defaults ARE the answer
+        // Only ids still selectable survive (a chain retired from the list
+        // shouldn't linger in the saved set).
+        let known = Set(allNetworkIDs)
+        let kept = saved.filter { known.contains($0) }
+        guard !kept.isEmpty else { return defaultNetworkIDs }
+        let pending = Set(seeded.filter { !d.bool(forKey: $0.key) }.map(\.id))
+            .subtracting(kept)
+        guard !pending.isEmpty else { return kept }
+        return allNetworkIDs.filter { kept.contains($0) || pending.contains($0) }
+    }
+
     private init() {
         let defaults = UserDefaults.standard
-        if let data = defaults.data(forKey: Self.key),
-           let saved = try? JSONDecoder().decode([String].self, from: data), !saved.isEmpty {
-            // Only ids still selectable survive (a chain retired from the list
-            // shouldn't linger in the saved set).
-            let known = Set(Self.allNetworkIDs)
-            selected = saved.filter { known.contains($0) }
-            if selected.isEmpty { selected = Self.defaultNetworkIDs }
-            for seed in Self.seeded where !defaults.bool(forKey: seed.key) {
-                defaults.set(true, forKey: seed.key)
-                guard !selected.contains(seed.id) else { continue }
-                selected = Self.allNetworkIDs.filter {
-                    selected.contains($0) || $0 == seed.id
-                }
-            }
-        } else {
-            selected = Self.defaultNetworkIDs   // a fresh wallet reads the defaults
-            for seed in Self.seeded { defaults.set(true, forKey: seed.key) }
+        let hadSaved = defaults.data(forKey: Self.key) != nil
+        selected = Self.effectiveIDs(defaults)
+        // RECORD the seeds, and PERSIST the set they produced. Both halves were
+        // missing: the flags were written from inside the seeding loop that the
+        // static path never ran, and the assignment that added a seeded chain
+        // could not persist it, because Swift does not call a property observer
+        // for an assignment made inside the owning type's initializer — so
+        // `didSet { persist() }` never fired here. Explicit, so neither rests
+        // on a language subtlety again.
+        for seed in Self.seeded where !defaults.bool(forKey: seed.key) {
+            defaults.set(true, forKey: seed.key)
         }
+        if hadSaved { persist() }
     }
 
     /// Turns a chain on if it isn't already — used when a watched address can
@@ -195,13 +226,5 @@ final class WalletChainStore {
     /// The active network ids, read straight from UserDefaults — thread-safe and
     /// free of Observation, so `WalletIngest`'s background fetches can call it.
     /// Falls back to every chain when nothing's been chosen.
-    static func activeNetworkIDs() -> [String] {
-        if let data = UserDefaults.standard.data(forKey: key),
-           let saved = try? JSONDecoder().decode([String].self, from: data) {
-            let known = Set(allNetworkIDs)
-            let kept = saved.filter { known.contains($0) }
-            if !kept.isEmpty { return kept }
-        }
-        return defaultNetworkIDs
-    }
+    static func activeNetworkIDs() -> [String] { effectiveIDs() }
 }

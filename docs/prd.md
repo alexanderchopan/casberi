@@ -58167,3 +58167,35 @@ A chain whose money the app cannot otherwise see belongs on — the rule §788 a
 **`-portfolioProbe` reports the composition** (`holders=wallet, venue`), so the merge this ruling removes could not come back unseen.
 
 **STILL UNBUILT AND UNMEASURED.** No Xcode here and no egress to either provider, so the union call, Robinhood's Alchemy response and the new floor are reasoned from the code and from the user's own figures, not observed. Run `scripts/verify.sh`, then `-portfolioProbe YES` on `0x2F60…2725` and check the total against ~$13 with `holders=` naming no app.
+
+## §827 — The `seeded` mechanism never reached the wire: one rule for which chains are on, and a total may not silently omit one (user: "the balances in my wallet are wrong. they are not showing what is on robinhood chain, and this is the third time we have tried fixing this", 2026-09-19)
+
+**Three passes, and the first two never touched the defect.** §826 turned Robinhood on by default and gave it a `seeded` row — the mechanism whose own doc says a saved set predating an option "means never asked, not off". §788 and §808 did the same for World Chain and Arc. **None of it reached a single read.**
+
+`WalletChainStore` held the answer to "which chains are on" TWICE:
+
+- `init` applied `seeded` to the instance's `selected` — and the picker is the only thing that reads `selected`.
+- `activeNetworkIDs()`, a separate static function, read the saved array straight out of `UserDefaults` and **ignored `seeded` entirely**.
+
+Every ingest in the app reads the static one: `WalletIngest`, `WalletApprovals`, `MorphoDeFi`, `SafeBridge`, `WalletSafety`, `WalletActingParties`, `WalletConnectBridge`. So on any install that had ever saved a chain set, a seeded chain was **ON in the picker and never once asked for on the wire**. The user's set predates Robinhood being on, so §826's default and seed row changed nothing for them — and the same hole silently cost World Chain and Arc.
+
+Two smaller faults compounded it, both in the seeding code that never ran:
+
+- The seed flags were written from inside that loop, so they were never recorded either.
+- The assignment that added a seeded chain could not persist: **Swift does not call a property observer for an assignment made inside the owning type's initializer**, so `selected`'s `didSet { persist() }` never fired in `init`.
+
+### The rulings
+
+1. **ONE rule, and the static path uses it** (`WalletChainStore.effectiveIDs`). Pure — it reads `UserDefaults` and writes nothing, so the static path every background ingest calls can use it freely. `activeNetworkIDs()` is now `effectiveIDs()`. A seed applies until its flag is RECORDED, which `init` does explicitly, so turning a seeded chain back off still sticks. `init` persists explicitly too: neither half rests on a language subtlety again.
+
+2. **A one-chain body that is rejected names its chain.** §825 recorded an Alchemy refusal only when a SIBLING answered — right for a mixed body, and it left the most informative case on the floor. The union pass asks Alchemy for the unmapped chains ALONE, so Robinhood arrives by itself; unmarked, that doomed call was re-made every pass forever and nothing recorded that the chain could not be read. The weekly retest covers a rejection that was the body's fault rather than the chain's.
+
+3. **A total may not silently omit a chain you switched on** (`WalletIngest.unreadableNetworks`, the crown's `note:`). §83, and the reason this recurred: the room drew the money it could read and said nothing about the money it could not, so nobody could tell "you hold nothing there" from "we never got an answer". The crown now states it — *"Robinhood didn't answer — not in this total"*.
+
+### What guards it
+
+`wallet-total-audit.py` gains both: `activeNetworkIDs` must resolve through the shared rule, `effectiveIDs` must apply `seeded`, `unreadableNetworks` must exist and the room must draw it. Eighteen mutations, each proven to change the file before it is asked to fail.
+
+`-portfolioProbe` now prints **`chains asked = …`** first. A chain ON in the picker but absent from that line is exactly this defect, and it is the first line to read when money is missing.
+
+**STILL UNMEASURED: whether Alchemy's Portfolio endpoint serves `robinhood-mainnet` at all.** Egress to `api.g.alchemy.com`, `api.zerion.io` and `robinhoodchain.blockscout.com` is blocked from the authoring machine. Robinhood has no Zerion mapping, so Alchemy is its only reader; if Alchemy refuses it, ruling 3 is what finally SAYS so instead of showing a quietly short number, and the next step is one measurement — `-portfolioProbe YES`, read `chains asked` and `followed but unreadable` — not a fourth guess. Blockscout is the known keyless alternative (§797's pattern) if that measurement comes back refused; it is deliberately NOT built on speculation.

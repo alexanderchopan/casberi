@@ -42,6 +42,17 @@ So the shape is the check, not any particular chain:
      leave privy separate". It was also the one contributor read from a STORED
      last read while every other was live, which is how a pass that reached no
      chain still drew a confident figure.
+  9. `activeNetworkIDs()` — the static path EVERY ingest reads — resolves
+     through the same rule the picker's instance uses, so a `seeded` row
+     actually reaches the wire. It did not for World Chain, Arc or Robinhood:
+     the seed list mutated the singleton's `selected` and every read went
+     through a separate static function that ignored it, so a chain could be ON
+     in the picker and never once asked for. That is what made "Robinhood shows
+     nothing" survive three passes.
+  10. A selected chain the read could not reach is NAMEABLE by a surface
+     (`unreadableNetworks`), because a total that silently omits a switched-on
+     chain is §83's false number — and silence is exactly why nobody could tell
+     "you hold nothing there" from "we never got an answer".
   8. Zerion answering does not END the read. A chain Zerion does not map can
      only be read through Alchemy, and Alchemy's body used to be built only
      when Zerion was UNREACHED — so such a chain was invisible while Zerion
@@ -223,6 +234,31 @@ def audit(texts: dict) -> list:
             bad.append(f"`{net}` is on by default with no `seeded` row — every install that "
                        f"already saved a chain set keeps it off forever (prd §826)")
 
+    # 9 — one rule for which chains are on, and the static path uses it.
+    store = code["WalletChainStore"]
+    active = body(store, "static func activeNetworkIDs(")
+    if not active:
+        bad.append("WalletChainStore.activeNetworkIDs is gone — this audit is blind")
+    elif "effectiveIDs" not in active:
+        bad.append("activeNetworkIDs no longer resolves through the shared rule — every "
+                   "ingest reads this path, so a `seeded` chain is ON in the picker and "
+                   "never asked for on the wire (prd §827)")
+    eff = body(store, "static func effectiveIDs(")
+    if not eff:
+        bad.append("WalletChainStore.effectiveIDs is gone — the two copies of 'which chains "
+                   "are on' are back (prd §827)")
+    elif "seeded" not in eff:
+        bad.append("effectiveIDs does not apply `seeded` — a chain added after somebody saved "
+                   "their set reaches only installs made afterwards (prd §827)")
+
+    # 10 — an unreachable selected chain can be stated.
+    if "static func unreadableNetworks(" not in ingest:
+        bad.append("WalletIngest.unreadableNetworks is gone — the crown cannot say which "
+                   "followed chain it failed to read (prd §827, §83)")
+    if "note: unreadableChains" not in code["FeedScreen"]:
+        bad.append("the wallet room no longer states the chains it could not read — a total "
+                   "that quietly omits one is a false number (prd §827, §83)")
+
     # 5 — and it is drawn, and passed.
     if "asOf" not in body(code["WalletFeedTiles"], "struct WalletBalanceHeadline"):
         bad.append("WalletBalanceHeadline no longer draws `asOf` — the crown would show a "
@@ -289,6 +325,13 @@ def self_test() -> int:
          lambda t: t.replace('"solana-mainnet", "robinhood-mainnet",', '"solana-mainnet",')),
         ("an Alchemy-only chain loses its seed row", "WalletChainStore",
          lambda t: t.replace('("robinhood-mainnet",   "wallet.chains.robinhoodSeeded.v1"),', "")),
+        ("the static read path stops applying the seed rule", "WalletChainStore",
+         lambda t: t.replace("static func activeNetworkIDs() -> [String] { effectiveIDs() }",
+                             "static func activeNetworkIDs() -> [String] { defaultNetworkIDs }")),
+        ("effectiveIDs stops applying seeded", "WalletChainStore",
+         lambda t: t.replace("let pending = Set(seeded.filter", "let pending = Set([String]().filter")),
+        ("the crown stops naming an unreadable chain", "FeedScreen",
+         lambda t: t.replace("note: unreadableChains.isEmpty ? nil", "note: nil ?? nil")),
         ("the flat $1.99 floor comes back", "WalletIngest",
          lambda t: t.replace("let floor = c.trashFiltered ? unwatchedFloor : holdingFloor",
                              "let floor = holdingFloor").replace("usd >= floor", "usd >= holdingFloor")),

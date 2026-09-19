@@ -112,6 +112,11 @@ struct WalletBalanceHeadline: View {
     /// could not be reached. nil everywhere else, which is the normal case
     /// and draws nothing.
     var asOf: Date? = nil
+    /// A chain the person FOLLOWS that this pass could not read (prd §827) —
+    /// set from `WalletIngest.unreadableNetworks()`. §83: a total that silently
+    /// omits a switched-on chain is a false number, and saying nothing is how
+    /// "Robinhood shows nothing" survived three passes. nil is the normal case.
+    var note: String? = nil
     /// Whether the LINE is drawn.
     ///
     /// False in the wallet room's non-Home scopes (prd §483), where another
@@ -445,6 +450,13 @@ struct WalletBalanceHeadline: View {
                         Text(mover)
                             .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
+                    }
+                    if let note {
+                        // The one thing the crown owes a reader whose money is
+                        // not all here: which place it could not reach.
+                        Text(note)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(2)
                     }
                     if let asOf {
                         // WHEN it was read, in the same quiet ink, and only
