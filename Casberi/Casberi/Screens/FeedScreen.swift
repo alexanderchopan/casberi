@@ -6216,12 +6216,6 @@ struct FeedScreen: View {
         // chain would fall through to a blank head. Cloudflare's is also the
         // one card here that renders on an EMPTY room, which is the whole
         // reason it exists — see `CloudflareRunway`.
-        // Derived ONCE and shared with the grid below — the memories room asks
-        // this set twice (which picture leads, and which rows are tiles) and
-        // walking `visible` per question is the shape the 2026-07-13 feed
-        // freeze was made of. Empty for every other room, so it costs nothing
-        // there.
-        let memoryTiles = shape == .snapchat ? visible.live.filter(Self.isMemoryTile) : []
         // THE ANNIVERSARY — a real thing from this exact day in an earlier year.
         //
         // It sits ABOVE `sourceHead` since 2026-08-17 (prd §398), which is a
@@ -6235,13 +6229,15 @@ struct FeedScreen: View {
         // this date in one of them.
         //
         // SCOPED, and the scope is the whole safety of the promotion: this is
-        // non-nil only for the memories room and the two journals, and neither
-        // has an ALARM head. Widen it to a room whose head is a dispute
+        // non-nil only for the two journals, which have no ALARM head. (The
+        // memories room had one too and lost it in prd §832, for §817's reason:
+        // an anniversary is a claim about the archive, and it was covering the
+        // thing that just landed.) Widen it to a room whose head is a dispute
         // deadline or a Safe awaiting your signature and a nostalgia card would
         // cover something time-critical — so a new source belongs here only
         // after that question is asked about its head.
         let anniversary: OnThisDay.Echo? = liveStream == nil
-            ? journalAnniversary(shape: shape, memoryTiles: memoryTiles, visible: visible)
+            ? journalAnniversary(visible: visible)
             : nil
         // READ, NOT COMPUTED (PERF 2026-08-21). The five registry answers below
         // come from `heads`, filled by this screen's own `.task(id: headKey)`;
@@ -6712,22 +6708,27 @@ struct FeedScreen: View {
             // The split is the honest one: a tile promises a picture, so a
             // row with no pixels stays a dated entry rather than a grey well
             // pretending to be a photograph.
-            let rest = visible.live.filter { !Self.isMemoryTile($0) }
+            //
+            // The newest thing leads, above the grid (prd §832, X's rule §821).
+            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
+            if let cover { Section { ledeListRow(cover) } }
+            let (memoryTiles, rest) = Self.splitTiles(uncovered, by: Self.isMemoryTile)
             if !memoryTiles.isEmpty { photoGridSection(memoryTiles) }
             let days = chronoGroups(rest)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
-                            cover: heroShown || !memoryTiles.isEmpty ? nil : ledeThingID(in: days))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .telegram:
             // The mixed room's fourth instance, and the widest: a followed
             // channel's wordless pictures lead as a grid, while its captioned
             // posts, your Saved Messages and whole imported conversations all
             // read as rows beneath them.
-            let (tiles, rest) = Self.splitTiles(visible.live, by: Self.isTelegramPhotoTile)
+            // The newest thing leads, above the grid (prd §832, X's rule §821).
+            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
+            if let cover { Section { ledeListRow(cover) } }
+            let (tiles, rest) = Self.splitTiles(uncovered, by: Self.isTelegramPhotoTile)
             if !tiles.isEmpty { photoGridSection(tiles) }
             let telegramDays = chronoGroups(rest)
             groupedSections(telegramDays, nextEventID: nextEventID,
-                            boundary: boundaryThingID(in: telegramDays),
-                            cover: heroShown || !tiles.isEmpty ? nil : ledeThingID(in: telegramDays))
+                            boundary: boundaryThingID(in: telegramDays))
         case .x:
             // The mixed room's third instance (2026-08-13, prd §375), and the
             // one that had to wait for the importer: until a wordless picture
@@ -8569,19 +8570,14 @@ struct FeedScreen: View {
         }
     }
 
-    /// Which rooms may lead with an anniversary, and what it reaches into.
-    ///
-    /// Two shapes, because the ROOMS are two shapes. The memories room asks only
-    /// its picture tiles — a photograph is what it has, and an echo naming a
-    /// saved chat there would open a wall of text where a tile was promised.
-    /// The journal rooms ask their entries, which is every row they have.
+    /// Which rooms may lead with an anniversary: the two journals, over their
+    /// entries, which is every row they have. Snapchat's memories room was the
+    /// other and left in prd §832 — it leads with its newest thing.
     ///
     /// The import receipt is excluded for the reason every aggregate over these
     /// rooms excludes it (`Corpus.isImportReceipt`): "3 years ago today" over
     /// our own note about a sync is the app reminiscing about itself.
-    private func journalAnniversary(shape: Shape, memoryTiles: [Thing],
-                                    visible: [Thing]) -> OnThisDay.Echo? {
-        if shape == .snapchat { return OnThisDay.find(in: memoryTiles) }
+    private func journalAnniversary(visible: [Thing]) -> OnThisDay.Echo? {
         guard JournalRoomSource.sources.contains(source) else { return nil }
         return OnThisDay.find(in: visible.live.filter {
             $0.kind == .note && !Corpus.isImportReceipt($0)

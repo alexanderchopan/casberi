@@ -276,14 +276,13 @@ grep -qE '\b(ListeningLede|ReadingLede|listeningLedeSection|readingLedeSection)\
 # Music, the reading list and the generic room path (social, RSS, notes, media…).
 [ "$(grep -c 'cover: heroShown ? nil : ledeThingID(in: days))' "$FEED")" -ge 3 ] \
   || { echo "✗ a headless room no longer covers its newest thing (prd §732)"; exit 1; }
-# The mixed rooms whose picture grid is the head (Snapchat, Telegram): the
-# cover waits for no grid. X and Instagram left that rule in prd §821, Photos
-# and Files in §832 — they lead with their newest thing, lifted out ABOVE the
-# grid (`newestLead`).
-[ "$(grep -cE 'cover: heroShown \|\| !(memoryTiles|tiles)\.isEmpty \? nil : ledeThingID' "$FEED")" -ge 2 ] \
-  || { echo "✗ a mixed room lost its cover, or draws one under its picture grid (prd §732)"; exit 1; }
-[ "$(grep -c 'let (cover, uncovered) = newestLead(visible, heroShown: heroShown)' "$FEED")" -eq 4 ] \
-  || { echo "✗ X, Instagram, Photos or Files no longer leads with its newest thing above the grid (prd §821, §832)"; exit 1; }
+# Every picture-grid room leads with its newest thing, lifted out ABOVE the
+# grid (`newestLead`): X and Instagram since prd §821, Photos, Files, Snapchat
+# and Telegram since §832. No grid declines the cover any more.
+grep -qE 'cover: heroShown \|\| !(memoryTiles|tiles|photoTiles|imageTiles)\.isEmpty' "$FEED" \
+  && { echo "✗ a picture grid declines the cover again (prd §832)"; exit 1; }
+[ "$(grep -c 'let (cover, uncovered) = newestLead(visible, heroShown: heroShown)' "$FEED")" -eq 6 ] \
+  || { echo "✗ a picture-grid room no longer leads with its newest thing above the grid (prd §821, §832)"; exit 1; }
 grep -q 'photoGridSection(visible)' "$FEED" \
   && { echo "✗ the Photos room draws its whole grid with no cover again (prd §832)"; exit 1; }
 grep -q 'if let coverThing, coverThing.isLive { ledeListRow(coverThing) }' "$FEED" \

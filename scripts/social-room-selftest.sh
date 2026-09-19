@@ -159,8 +159,9 @@ present "TikTok resolves to a room of its own" \
 present "Nostr has an activity grid to fall back to" \
   '"Nostr": *Label\(' "$HEATMAP"
 # Telegram's "Which channels fill this" was a board, deleted with the rest
-# (§723); a heatmap still wins the slot, so the room leads with its year.
-present "Telegram has a year grid to lead with" \
+# (§723), and its year grid went in prd §832: the room leads with its newest
+# thing, above the picture grid.
+absent "Telegram leads with a year grid again (prd §832)" \
   '"Telegram": *Label\(' "$HEATMAP"
 absent "the channels board came back" \
   'title: "Which channels fill this"' "$INSIGHT"

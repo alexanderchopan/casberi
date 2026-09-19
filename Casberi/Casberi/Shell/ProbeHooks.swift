@@ -7868,18 +7868,15 @@ enum ProbeHooks {
                 + " · \($0.total) conversations · \($0.turns) turns"
                 + " · rivals \($0.rivals.count)"
              })
-        // 2. the anniversary — the memories room's pictures, and (since
-        // §398) the two journals' entries. It OUTRANKS every head above
-        // in `shapedSections`, so it is printed after them and the
-        // `leader` below still names the right winner only because
-        // every head above answers nil for these three rooms.
-        let echo = source == "Snapchat"
+        // 2. the anniversary — the two journals' entries (§398; Snapchat's
+        // memories left in §832). It OUTRANKS every head above in
+        // `shapedSections`, so it is printed after them and the `leader`
+        // below still names the right winner only because every head above
+        // answers nil for these rooms.
+        let echo = JournalRoomSource.sources.contains(source)
             ? OnThisDay.find(in: things.filter {
-                $0.kind == .file && $0.previewImageData != nil })
-            : JournalRoomSource.sources.contains(source)
-                ? OnThisDay.find(in: things.filter {
-                    $0.kind == .note && !Corpus.isImportReceipt($0) })
-                : nil
+                $0.kind == .note && !Corpus.isImportReceipt($0) })
+            : nil
         note("anniversary", echo.map { "\($0.label) → \($0.thing.title)" })
         // 3. the treemap
         let map = FeedInsight.topicMap(source: source, things: things)

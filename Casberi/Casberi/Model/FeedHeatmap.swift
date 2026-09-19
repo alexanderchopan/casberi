@@ -21,14 +21,6 @@ enum FeedHeatmap {
         /// sample — a trailing year there would be a mostly-empty grid with one
         /// bright recent smudge, so they draw the last few months instead.
         var columns: Int = 53
-        /// The kinds this grid counts, or nil for everything in the room
-        /// (2026-07-31). Every source registered before this held ONE kind of
-        /// thing, so the room and the habit were the same set. Snapchat is the
-        /// first that isn't: its room holds saved conversations beside dated
-        /// memories, and "your memory year" has to mean memories or the noun
-        /// is a lie. A filter, not a second registry — the grid still draws
-        /// off the feed's own `visible` things and costs no query.
-        var kinds: Set<ThingKind>? = nil
     }
 
     static let labels: [String: Label] = [
@@ -53,21 +45,10 @@ enum FeedHeatmap {
         // board, no grid. Bluesky's entry exactly, because the room is the same
         // room and every item in it is a note somebody posted.
         "Nostr":         Label(title: "Posting activity",     unit: "note",       units: "notes", columns: 14),
-        // The import source (2026-07-31). A FULL year on purpose, unlike the
-        // social feeds above: an export is dated across years rather than
-        // being a rolling recent sample, so the grid it draws is the real
-        // shape of a habit and not a recent smudge.
-        //
-        // Snapchat counts memories only (`kinds`) — the room's saved chats are
-        // dated by their newest message, which is when a conversation last
-        // moved, not a day you captured anything. A FALLBACK in the hero chain,
-        // below the cards that name WHO and WHAT (see `FeedScreen.shapedSections`).
-        //
-        // Instagram, TikTok and X had labels here and lost them in prd §817 (X) and §821 (Instagram, TikTok):
-        // those rooms lead with their newest thing and carry kind tiles, so a
-        // year grid there is a figure no room draws (§723).
-        "Snapchat":      Label(title: "Your memory year",     unit: "memory",     units: "memories",
-                               kinds: [.file]),
+        // Snapchat and Telegram had labels here and lost them in prd §832,
+        // after Instagram, TikTok (§821) and X (§817): those rooms lead with
+        // their newest thing, so a year grid there is a figure no room draws
+        // (§723).
         // **X IS NOT HERE, AND THE ABSENCE IS THE RULING (prd §817, user: "i
         // don't ever want to see this. it should just show most recent
         // notification").** "Your X year" counted the whole room honestly and
@@ -81,10 +62,6 @@ enum FeedHeatmap {
         // room's On This Day rode inside this card and goes with it — an
         // anniversary is a claim about the archive, and it was covering the
         // thing that just landed. `x-selftest.sh` holds the absence.
-        // "entry": this room mixes a followed channel's broadcasts with your
-        // own saved messages and chats, and the noun in a subtitle has to be
-        // true of everything it counts.
-        "Telegram":      Label(title: "Your Telegram year",  unit: "entry",      units: "entries"),
         // Privacy.com, 2026-09-01 (prd §558) — the fallback beneath "Where the
         // cards go", which declines below three charges across two merchants.
         // WHEN is the weakest lead and it is the right one here: this grid can
@@ -95,16 +72,13 @@ enum FeedHeatmap {
 
     static func label(for source: String) -> Label? { labels[source] }
 
-    /// The things a label's grid actually counts. Two exclusions, both so the
-    /// subtitle's noun stays true: the kinds this label doesn't measure, and
-    /// the import receipt (`Corpus.isImportReceipt`) — the app's own row about
+    /// The things a label's grid actually counts: everything but the import
+    /// receipt (`Corpus.isImportReceipt`) — the app's own row about
     /// an import, which would light up today as if the person had captured
     /// something. Caller passes the feed's own `visible`; no query.
     static func counted(_ things: [Thing], label: Label) -> [Thing] {
         things.filter { thing in
-            guard !Corpus.isImportReceipt(thing) else { return false }
-            guard let kinds = label.kinds else { return true }
-            return kinds.contains(thing.kind)
+            !Corpus.isImportReceipt(thing)
         }
     }
 
