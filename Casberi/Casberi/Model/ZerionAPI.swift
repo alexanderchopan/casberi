@@ -64,6 +64,18 @@ enum ZerionAPI {
         // the chain filter on a live wallet — which matters, because one id the
         // filter refuses 400s the call for EVERY wallet (Solana, 2026-07-19).
         "arc": "arc-mainnet",
+        // 2026-09-19 (prd §828). `robinhood` (`external_id` 0x1237 = 4663),
+        // read off `/v1/chains/` and checked against the user's own wallet:
+        // positions came back PRICED (ETH 0.0031 = $8.10) with the filter
+        // carrying it. This is the fix §826's Alchemy union could never be —
+        // Alchemy's Portfolio answers Robinhood with every balance and NO
+        // price, the native coin included (25 rows, 0 priced, measured), so
+        // that arm dropped every dollar at the `price > 0` guard.
+        "robinhood": "robinhood-mainnet",
+        // 2026-09-17 (prd §810). `tempo` (`external_id` 0x1079 = 4217), read off
+        // `/v1/chains/`; positions (USDC, pathUSD on a live Tempo wallet) and
+        // transactions (dated) both came back with it in the chain filter.
+        "tempo": "tempo-mainnet",
     ]
 
     /// One fungible holding as Zerion hands it over — already decimal-adjusted

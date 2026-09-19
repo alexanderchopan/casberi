@@ -22,8 +22,8 @@ enum DefiLlamaPrices {
 
     /// Alchemy network id → DeFiLlama chain key. Mirrors `WalletIngest`'s own
     /// `chainSlug` (DeFiLlama, Dexscreener, and GeckoTerminal happen to spell
-    /// every chain we read the same way). A network absent here — Robinhood,
-    /// say — simply isn't backstopped rather than asked with a bad key.
+    /// every chain we read the same way). A network absent here simply isn't
+    /// backstopped rather than asked with a bad key.
     private static let chainKey: [String: String] = [
         "eth-mainnet": "ethereum", "base-mainnet": "base", "arb-mainnet": "arbitrum",
         "opt-mainnet": "optimism", "matic-mainnet": "polygon", "solana-mainnet": "solana",
@@ -39,6 +39,10 @@ enum DefiLlamaPrices {
         // the display name "World Chain", which cannot ride a URL path
         // unescaped; `wc` is DeFiLlama's own internal id for chain 480.
         "worldchain-mainnet": "wc",
+        // Measured 2026-09-19 (prd §828): WETH priced at 0.99 confidence
+        // under `robinhood`, the key `/chains` publishes as "Robinhood Chain"
+        // (4663). `robinhood-chain` and `rhc` answer nothing.
+        "robinhood-mainnet": "robinhood",
     ]
 
     /// One priced coin as DeFiLlama returns it — the price plus the confidence

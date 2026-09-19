@@ -4357,6 +4357,13 @@ enum ProbeHooks {
                 let unreadable = await WalletIngest.unreadableNetworks()
                 NSLog("Portfolio probe: followed but unreadable = %@",
                       unreadable.isEmpty ? "none" : unreadable.joined(separator: ", "))
+                // ANSWERED, PRICED NOTHING (prd §828) — the failure §827's
+                // line could not see. Read AFTER the pass below would be
+                // fresher; this is the last pass's finding, stated first so
+                // it is never missed.
+                let unpriced = await WalletIngest.unpricedNetworks()
+                NSLog("Portfolio probe: held but unpriced = %@",
+                      unpriced.isEmpty ? "none" : unpriced.joined(separator: ", "))
                 guard let read = await WalletIngest.portfolioRead(scopeTo: scope) else {
                     NSLog("Portfolio probe: nothing read (no watched wallet priced)")
                     return

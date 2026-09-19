@@ -60,6 +60,20 @@ So the shape is the check, not any particular chain:
      dollars there showed three. Every SELECTABLE chain with no Zerion mapping
      must also be in `defaultNetworkIDs` and carry a `seeded` row, or it is
      money the app silently cannot see.
+  11. A chain Alchemy serves WITHOUT PRICES is read through Zerion, and an
+     unpriced native coin is priced through its wrapped form (prd §828).
+     MEASURED 2026-09-19 against the user's own wallet: Alchemy's Portfolio
+     answered Robinhood with 25 rows and 0 prices, the native ETH included, so
+     §826's union read the balances and dropped every dollar at `price > 0`.
+     Zerion serves `robinhood` priced ($8.10 of ETH). `UNPRICED_ON_ALCHEMY` is
+     that measurement; every chain in it must be Zerion-mapped, and the
+     DeFiLlama backstop must reach `wrappedNativeContract` for a native row,
+     which has no contract of its own and was skipped outright.
+  12. A followed chain the pass HELD a native balance on and priced nothing is
+     named on the crown too ("Couldn't price X"), beside "No answer from X"
+     (prd §828). §827's line read only `RefusedNetworks`, and Alchemy never
+     refuses Robinhood — it answers without prices — so the line stayed
+     silent over the one failure it was written for.
   7. The dust floor is the ANSWERING ARM'S, not a constant. $1.99 predates
      Zerion's server-side trash filter by four days, and on that arm it drops
      only the person's genuine small positions — measured in §803j, fixed there
@@ -84,7 +98,13 @@ FILES = {
     "PrivyHomeLive": ROOT / "Casberi/Casberi/Model/PrivyHomeLive.swift",
     "WalletChainStore": ROOT / "Casberi/Casberi/Model/WalletChainStore.swift",
     "ZerionAPI": ROOT / "Casberi/Casberi/Model/ZerionAPI.swift",
+    "DefiLlamaPrices": ROOT / "Casberi/Casberi/Model/DefiLlamaPrices.swift",
 }
+
+# Chains whose Alchemy Portfolio answer carries balances and NO prices —
+# measured, not reasoned (curl the by-address endpoint with `withPrices: true`
+# and count `tokenPrices`). Robinhood, 2026-09-19: 25 rows, 0 priced (§828).
+UNPRICED_ON_ALCHEMY = {"robinhood-mainnet"}
 
 
 def strip_comments(text: str) -> str:
@@ -255,9 +275,37 @@ def audit(texts: dict) -> list:
     if "static func unreadableNetworks(" not in ingest:
         bad.append("WalletIngest.unreadableNetworks is gone — the crown cannot say which "
                    "followed chain it failed to read (prd §827, §83)")
-    if "note: unreadableChains" not in code["FeedScreen"]:
+    note = body(code["FeedScreen"], "var walletTotalNote: String?")
+    if "note: walletTotalNote" not in code["FeedScreen"] or "if !unreadableChains.isEmpty" not in note:
         bad.append("the wallet room no longer states the chains it could not read — a total "
                    "that quietly omits one is a false number (prd §827, §83)")
+    # 12 — and the chains it read and could not PRICE (prd §828). Alchemy
+    # answers Robinhood with every balance and no price, so it was never
+    # refused and §827's line stayed silent over the exact failure it was for.
+    if "if !unpricedChains.isEmpty" not in note or "WalletIngest.unpricedNetworks()" not in code["FeedScreen"]:
+        bad.append("the wallet room no longer names a chain it read and could not price — "
+                   "a native balance with no price leaves the total silently (prd §828, §83)")
+    held = body(ingest, "static func fetchHeldTokensUncached(")
+    if "UnpricedNetworks.shared.record(" not in held:
+        bad.append("fetchHeldTokensUncached no longer records a held native balance it could "
+                   "not price — the crown's second honesty line reads nothing (prd §828)")
+
+    # 11 — a chain Alchemy cannot price is read where it is priced, and a
+    # native coin is never skipped by the backstop for having no contract.
+    for net in sorted(UNPRICED_ON_ALCHEMY):
+        if net not in mapped:
+            bad.append(f"`{net}` is not Zerion-mapped — Alchemy answers it with NO prices "
+                       f"(measured), so every dollar there drops at `price > 0` (prd §828)")
+        if f'"{net}"' not in code["DefiLlamaPrices"]:
+            bad.append(f"`{net}` has no DeFiLlama chain key — when Zerion is down, the "
+                       f"backstop cannot price anything Alchemy left unpriced there (prd §828)")
+    bp = body(ingest, "static func backstopPrices(")
+    if not bp:
+        bad.append("WalletIngest.backstopPrices is gone — this audit is blind")
+    elif "wrappedNativeContract[" not in bp:
+        bad.append("backstopPrices no longer prices a native coin through its wrapped form — "
+                   "a native row has no contract, so the coin a wallet holds most of is the "
+                   "one thing guaranteed to vanish when Alchemy leaves it unpriced (prd §828)")
 
     # 5 — and it is drawn, and passed.
     if "asOf" not in body(code["WalletFeedTiles"], "struct WalletBalanceHeadline"):
@@ -321,17 +369,33 @@ def self_test() -> int:
         ("Zerion answering ends the read again", "WalletIngest",
          lambda t: t.replace("collectCandidatesAlchemy(addresses: addresses, only: blind)",
                              "collectCandidatesAlchemy(addresses: addresses)")),
+        # Generic since §828: Robinhood is Zerion-mapped now, so a mutation
+        # naming it would test nothing (and one did — it still named the `.v1`
+        # key §827a had already bumped, and "passed" by not running).
         ("an Alchemy-only chain goes back to off-by-default", "WalletChainStore",
-         lambda t: t.replace('"solana-mainnet", "robinhood-mainnet",', '"solana-mainnet",')),
+         lambda t: t.replace('("arc-mainnet",', '("zz-mainnet", "Zz"),\n        ("arc-mainnet",', 1)),
         ("an Alchemy-only chain loses its seed row", "WalletChainStore",
-         lambda t: t.replace('("robinhood-mainnet",   "wallet.chains.robinhoodSeeded.v1"),', "")),
+         lambda t: t.replace('("arc-mainnet",', '("zz-mainnet", "Zz"),\n        ("arc-mainnet",', 1)
+                    .replace('"worldchain-mainnet", "arc-mainnet"]', '"worldchain-mainnet", "arc-mainnet", "zz-mainnet"]')),
+        ("Robinhood loses its Zerion mapping", "ZerionAPI",
+         lambda t: t.replace('"robinhood": "robinhood-mainnet",', "")),
+        ("Robinhood loses its DeFiLlama key", "DefiLlamaPrices",
+         lambda t: t.replace('"robinhood-mainnet": "robinhood",', "")),
+        ("the backstop skips native coins again", "WalletIngest",
+         lambda t: t.replace("c.contract ?? wrappedNativeContract[c.network]", "c.contract")),
         ("the static read path stops applying the seed rule", "WalletChainStore",
          lambda t: t.replace("static func activeNetworkIDs() -> [String] { effectiveIDs() }",
                              "static func activeNetworkIDs() -> [String] { defaultNetworkIDs }")),
         ("effectiveIDs stops applying seeded", "WalletChainStore",
          lambda t: t.replace("let pending = Set(seeded.filter", "let pending = Set([String]().filter")),
         ("the crown stops naming an unreadable chain", "FeedScreen",
-         lambda t: t.replace("note: unreadableChains.isEmpty ? nil", "note: nil ?? nil")),
+         lambda t: t.replace("note: walletTotalNote,", "note: nil,")),
+        ("the note drops the unreadable half", "FeedScreen",
+         lambda t: t.replace("if !unreadableChains.isEmpty {", "if false {")),
+        ("the note drops the unpriced half", "FeedScreen",
+         lambda t: t.replace("if !unpricedChains.isEmpty {", "if false {")),
+        ("an answered-but-unpriced chain is never recorded", "WalletIngest",
+         lambda t: t.replace("await UnpricedNetworks.shared.record(", "_ = (")),
         ("the flat $1.99 floor comes back", "WalletIngest",
          lambda t: t.replace("let floor = c.trashFiltered ? unwatchedFloor : holdingFloor",
                              "let floor = holdingFloor").replace("usd >= floor", "usd >= holdingFloor")),

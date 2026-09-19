@@ -74,6 +74,7 @@ final class WalletChainStore {
         ("robinhood-mainnet","Robinhood"),
         ("worldchain-mainnet", "World Chain"),
         ("arc-mainnet",      "Arc"),
+        ("tempo-mainnet",    "Tempo"),
     ]
     static var allNetworkIDs: [String] { selectable.map(\.id) }
 
@@ -105,7 +106,7 @@ final class WalletChainStore {
                                     "opt-mainnet", "matic-mainnet",
                                     "hyperliquid-mainnet", "monad-mainnet",
                                     "solana-mainnet", "robinhood-mainnet",
-                                    "worldchain-mainnet", "arc-mainnet"]
+                                    "worldchain-mainnet", "arc-mainnet", "tempo-mainnet"]
 
     private var selected: [String] { didSet { persist() } }
 
@@ -158,6 +159,9 @@ final class WalletChainStore {
         // apply to phones set up after today, which is the exact state Solana
         // was in before its own flag existed.
         ("robinhood-mainnet",   "wallet.chains.robinhoodSeeded.v2"),
+        // Tempo (2026-09-17, prd §810, user: "lets add tempo on by default") —
+        // free the same way: Zerion only, no Alchemy request.
+        ("tempo-mainnet",       "wallet.chains.tempoSeeded.v1"),
     ]
 
     /// **THE ONE RULE FOR "WHICH CHAINS ARE ON" (prd §827).** Pure: it reads

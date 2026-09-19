@@ -28,7 +28,7 @@ KNOWN_NON_REACH=(
   # Block explorers & app permalinks — opened in the browser on tap
   etherscan.io basescan.org arbiscan.io optimistic.etherscan.io
   polygonscan.com solscan.io revoke.cash robinhoodchain.blockscout.com
-  hyperevmscan.io monadscan.com worldscan.org explorer.arc.io
+  hyperevmscan.io monadscan.com worldscan.org explorer.arc.io explore.tempo.xyz
   gnosisscan.io njump.me
   # World's own page for its grant-claim app (prd §795) — the permalink a World
   # ID grant row opens in the person's browser. The app never fetches world.org.
@@ -366,14 +366,26 @@ imap_hosts() {
 
 # Check B's source of truth: the chain table every Alchemy URL is built from.
 CHAINS_FILE="Casberi/Casberi/Model/WalletIngest.swift"
-alchemy_hosts() {
-  grep -oE 'Chain\(network: "[a-z0-9-]+"' "$CHAINS_FILE" \
-    | sed -E 's|.*"(.*)"|\1.g.alchemy.com|' | sort -u
+# A row marked `onAlchemy: false` (Tempo, prd §810) is never sent to Alchemy —
+# `alchemyNetworks` and `transferChains` both filter on it — so it discloses
+# no host. The whole `Chain(...)` call is read, since the flag sits on a
+# later line than the network.
+alchemy_hosts_in() {
+  perl -0ne 'while (/Chain\(network: "([a-z0-9-]+)"([^)]*)\)/g) {
+      print "$1.g.alchemy.com\n" unless $2 =~ /onAlchemy:\s*false/ }' "$1" | sort -u
 }
+alchemy_hosts() { alchemy_hosts_in "$CHAINS_FILE"; }
 
 if [[ "${1:-}" == "--self-test" ]]; then
   # A check that can't fail proves nothing.
   fails=0
+  # An `onAlchemy: false` row discloses nothing; an ordinary row still does.
+  fixture=$(mktemp)
+  printf '%s\n' 'Chain(network: "a-mainnet", explorer: "x", symbol: "A")' \
+    'Chain(network: "t-mainnet", explorer: "x", symbol: "T",' '      onAlchemy: false),' > "$fixture"
+  [[ "$(alchemy_hosts_in "$fixture")" == "a-mainnet.g.alchemy.com" ]] \
+    || { echo "self-test ✗ onAlchemy: false is not honoured (or a plain row is lost)"; fails=1; }
+  rm -f "$fixture"
   # Newline-separated, like the real extractor above: the loop in
   # `tail_disclosed` reads LINES, so a space-separated fixture would test
   # a shape the function never actually sees.

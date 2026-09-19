@@ -1698,6 +1698,22 @@ struct FeedScreen: View {
     /// (prd §827) — the crown states them, because a total that quietly leaves
     /// a chain out is §83's false number. Filled by `streamBlock`.
     @State var unreadableChains: [String] = []
+    /// Followed chains the last pass held money on and priced nothing (prd §828).
+    @State var unpricedChains: [String] = []
+
+    /// WHAT IS NOT IN THE WALLET TOTAL, in words (prd §827, §828) — nil when
+    /// every followed chain answered and priced.
+    var walletTotalNote: String? {
+        var parts: [String] = []
+        if !unreadableChains.isEmpty {
+            parts.append(String(localized: "No answer from \(unreadableChains.joined(separator: ", "))"))
+        }
+        if !unpricedChains.isEmpty {
+            parts.append(String(localized: "Couldn't price \(unpricedChains.joined(separator: ", "))"))
+        }
+        guard !parts.isEmpty else { return nil }
+        return String(localized: "\(parts.joined(separator: "; ")) — not in this total")
+    }
     /// The full allocation tray — every position and which wallets hold it.
     /// Routed through `feedSheet` (`.allocation`) now, not its own bool.
     /// The balance line's window (prd §155). Narrowed to what the record can
@@ -8977,8 +8993,10 @@ struct FeedScreen: View {
                             // be reached — see `WalletIngest.portfolioRead`.
                             asOf: portfolio?.asOf,
                             // WHAT IS NOT IN THIS NUMBER (prd §827).
-                            note: unreadableChains.isEmpty ? nil
-                                : String(localized: "\(unreadableChains.joined(separator: ", ")) didn't answer — not in this total"),
+                            // Two facts, two sentences (prd §828): a chain that
+                            // did not answer, and one that answered and could
+                            // not be priced. Both are out of the number.
+                            note: walletTotalNote,
                             drawsChart: drawsChart,
                             drawsReading: drawsChart,
                             // **DERIVED, not 96 (prd §588).** §483 set this
@@ -11310,8 +11328,11 @@ struct FeedScreen: View {
             // Read AFTER the holdings pass, so it reports what that pass
             // actually found rather than the pass before it.
             let unreadable = await WalletIngest.unreadableNetworks()
+            let unpriced = await WalletIngest.unpricedNetworks()
+                .filter { !unreadable.contains($0) }
             guard scope == selectedWallet else { return }
             if unreadable != unreadableChains { unreadableChains = unreadable }
+            if unpriced != unpricedChains { unpricedChains = unpriced }
         }
     }
 

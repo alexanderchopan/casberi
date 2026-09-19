@@ -13087,6 +13087,34 @@
         }
       }
     },
+    "%@ — not in this total" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: no incluido en este total"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — この合計に含まれていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — 이 합계에 포함되지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — 未计入此总额"
+          }
+        }
+      }
+    },
     "%@ — not rated is not yet examined, never a verdict.\n\nAs of %@; watched wallets are read live." : {
       "localizations" : {
         "en" : {
@@ -54468,6 +54496,34 @@
         }
       }
     },
+    "Couldn't price %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo valorar %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ の価格を取得できません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 가격을 알 수 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法为 %@ 定价"
+          }
+        }
+      }
+    },
     "Couldn't put the transaction together." : {
       "localizations" : {
         "es" : {
@@ -85338,6 +85394,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无地址"
+          }
+        }
+      }
+    },
+    "No answer from %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin respuesta de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ から応答なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에서 응답 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 未响应"
           }
         }
       }

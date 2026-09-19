@@ -96,6 +96,17 @@ enum WalletIngest {
         // `/address/`.
         Chain(network: "arc-mainnet", explorer: "https://explorer.arc.io/tx/", symbol: "USDC", displayName: "Arc",
               internalTransfers: true),
+        // Tempo (2026-09-17, prd §810) — Stripe's payments L1, chain id 4217
+        // (`0x1079` from `eth_chainId`). It has NO native coin: fees are paid in
+        // stablecoins, and `eth_getBalance` answers a meaningless 60-digit
+        // number, so nothing may read a native balance here — the symbol is
+        // only the fee line's label. Zerion (`tempo`) serves positions
+        // (USDC, pathUSD) and transactions; Alchemy serves the RPC but refuses
+        // `getAssetTransfers` ("EAPIs not enabled on specified network") and
+        // Portfolio ("Unsupported network"), so the row stays off Alchemy.
+        // `explore.tempo.xyz` answers 200 on `/tx/` and `/address/`.
+        Chain(network: "tempo-mainnet", explorer: "https://explore.tempo.xyz/tx/", symbol: "USD", displayName: "Tempo",
+              onAlchemy: false),
     ]
 
     /// The chains the Alchemy calls may name (see `Chain.onAlchemy`).
@@ -246,6 +257,58 @@ enum WalletIngest {
             guard let data = try? JSONEncoder().encode(at) else { return }
             DefaultsWrite.set(data, forKey: Self.storeKey)
         }
+    }
+
+    /// The chains where a pass HELD a native balance and could price nothing
+    /// (prd §828). The second way a followed chain contributes zero, and the
+    /// one §827's line could not see: Alchemy answers Robinhood with every
+    /// balance and no price, so the chain was never refused and never named —
+    /// the exact failure three passes were spent on, silent after all of them.
+    ///
+    /// Keyed on the NATIVE row on purpose. A native coin always has a real
+    /// price, so a held one that comes back unpriced is the read failing, never
+    /// "this is worthless"; an unpriced airdrop proves nothing and would name
+    /// every chain a wallet has ever been spammed on. Persisted, because the
+    /// holdings window serves a cold launch from cache without re-pricing, and
+    /// cleared by the first pass that prices anything on the chain.
+    private actor UnpricedNetworks {
+        static let shared = UnpricedNetworks()
+        private static let storeKey = "wallet.unpriced.v1"
+        private var nets: Set<String>
+
+        init() {
+            nets = (UserDefaults.standard.data(forKey: Self.storeKey))
+                .flatMap { try? JSONDecoder().decode(Set<String>.self, from: $0) } ?? []
+        }
+
+        func current() -> Set<String> { nets }
+
+        /// `touched` is every chain this pass held anything on; of those,
+        /// `stuck` is marked and the rest are cleared. A chain the pass never
+        /// touched keeps whatever an earlier pass learned.
+        func record(stuck: Set<String>, touched: Set<String>) {
+            let next = nets.subtracting(touched).union(stuck)
+            guard next != nets else { return }
+            nets = next
+            if let data = try? JSONEncoder().encode(next) { DefaultsWrite.set(data, forKey: Self.storeKey) }
+            if !stuck.isEmpty {
+                NSLog("[Casberi] holdings: held native on %@ and priced nothing", stuck.sorted().joined(separator: ", "))
+            }
+        }
+    }
+
+    /// Followed chains the last pass HELD money on and could not price, by
+    /// display name (prd §828) — the crown's second honesty line, beside
+    /// `unreadableNetworks`. "Didn't answer" and "couldn't be priced" are
+    /// different facts, and both leave the chain out of the total.
+    static func unpricedNetworks() async -> [String] {
+        let stuck = await UnpricedNetworks.shared.current()
+        guard !stuck.isEmpty else { return [] }
+        let active = Set(WalletChainStore.activeNetworkIDs())
+        return allChains
+            .filter { stuck.contains($0.network) && active.contains($0.network) }
+            .map(\.displayName)
+            .sorted()
     }
 
     /// What the Alchemy holdings arm has learned to stop asking for — read by
@@ -2404,6 +2467,11 @@ enum WalletIngest {
         // key's rate limits — the two the backstop exists to cover).
         let priced = await priceSPL(candidates)
         let backstopped = await backstopPrices(priced)
+        // A NATIVE BALANCE WITH NO PRICE IS A READ THAT FAILED (prd §828).
+        let touched = Set(backstopped.filter { $0.amount > 0 }.map(\.network))
+        let pricedOn = Set(backstopped.filter { ($0.price ?? 0) > 0 }.map(\.network))
+        let heldNative = Set(backstopped.filter { $0.contract == nil && $0.amount > 0 }.map(\.network))
+        await UnpricedNetworks.shared.record(stuck: heldNative.subtracting(pricedOn), touched: touched)
         return backstopped.compactMap { c in
             guard let price = c.price, price > 0 else { return nil }
             let usd = c.amount * price
@@ -2761,10 +2829,19 @@ enum WalletIngest {
     /// `fetchHeldTokens`' `price > 0` guard and vanish from the treemap. The
     /// whole wallet's misses go out in one batched request that doesn't ride
     /// the shared Alchemy key.
+    ///
+    /// **A NATIVE COIN IS ASKED FOR THROUGH ITS WRAPPED FORM (prd §828).**
+    /// Its row has no contract, so it used to be skipped here outright — and
+    /// Alchemy answers some chains with no price at all (Robinhood: 25 rows,
+    /// 0 priced, the ETH included), so the coin a wallet holds most of was
+    /// the one thing guaranteed to vanish. WETH trades at ETH's price.
     private static func backstopPrices(_ candidates: [Candidate]) async -> [Candidate] {
+        func priceContract(_ c: Candidate) -> String? {
+            c.contract ?? wrappedNativeContract[c.network]
+        }
         var seen = Set<String>()
         let unpriced = candidates.compactMap { c -> (network: String, contract: String)? in
-            guard c.price == nil, let contract = c.contract,
+            guard c.price == nil, let contract = priceContract(c),
                   seen.insert("\(c.network)|\(contract)").inserted else { return nil }
             return (network: c.network, contract: contract)
         }
@@ -2779,7 +2856,7 @@ enum WalletIngest {
         guard !found.isEmpty else { return candidates }
 
         return candidates.map { c in
-            guard c.price == nil, let contract = c.contract,
+            guard c.price == nil, let contract = priceContract(c),
                   let p = found["\(c.network)|\(contract)"],
                   p.confidence >= DefiLlamaPrices.confidenceFloor else { return c }
             var priced = c
@@ -3101,8 +3178,9 @@ enum WalletIngest {
     /// (ETH, MATIC, SOL) holds no token address of its own, but its wrapped
     /// form trades on the same pools at the same price, so a native
     /// holdings cell can open a real chart through it instead of dead-ending
-    /// on the Wallet screen. `robinhood-mainnet` has no `chainSlug` entry
-    /// (no Dexscreener coverage), so it stays routeless regardless.
+    /// on the Wallet screen — and the backstop prices an unpriced native coin
+    /// through it (`backstopPrices`, prd §828). `robinhood-mainnet` has no
+    /// `chainSlug` entry (no Dexscreener coverage), so it stays routeless.
     private static let wrappedNativeContract: [String: String] = [
         "eth-mainnet": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
         "base-mainnet": "0x4200000000000000000000000000000000000006",
@@ -3119,6 +3197,11 @@ enum WalletIngest {
         // World Chain is OP-stack, so WETH sits at the predeploy — read back
         // off the chain via `symbol()` (2026-09-16, "WETH"), not assumed.
         "worldchain-mainnet": "0x4200000000000000000000000000000000000006",
+        // Robinhood's WETH (2026-09-19, prd §828) — Alchemy's metadata names
+        // it WETH and DeFiLlama prices it at ETH's price (0.99 confidence).
+        // It is here for the native backstop, not a chart: Robinhood has no
+        // `chainSlug`, so its cells stay routeless.
+        "robinhood-mainnet": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
         // Base58 is case-SENSITIVE (project rule) — never lowercase this one.
         "solana-mainnet": "So11111111111111111111111111111111111111112",
     ]
