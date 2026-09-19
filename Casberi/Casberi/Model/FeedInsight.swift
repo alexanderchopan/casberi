@@ -21,8 +21,7 @@ import Foundation
 /// `merchant`, `domain`, `steamHours`, `repliedTo`), and `LeaderboardHero`.
 /// A room that led with a board now falls through this same chain to whatever
 /// ranks next — a distribution, a mosaic, its year heatmap — or draws no head
-/// at all, which is `RoomFigure`'s own standing ruling: an absent figure beats
-/// one that answers nothing.
+/// at all: an absent figure beats one that answers nothing.
 enum FeedInsight {
 
     // MARK: Distribution (stacked bar)
@@ -229,39 +228,11 @@ enum FeedInsight {
         // One kind: every row a followed channel lands is a
         // `.link`, and a Short is a video like any other — nothing in this
         // room belongs to anybody but the channels.
-        // The two journal rooms, 2026-08-17 (prd §398). Obsidian's case exactly
-        // — one kind, the person's own writing — and the pair that waited
-        // longest for it: until this pass the only thing either room could say
-        // about years of somebody's diary was WHICH DAYS they wrote on.
-        //
-        // "write", not "post" or "capture": these are the only two rooms in the
-        // app where that verb is unambiguously true of every row.
-        case "Day One", "Apple Journal":
-            title = "What you write about"; unit = ("entry", "entries"); kinds = [.note]
         case "YouTube":
             title = "What your channels cover"; unit = ("video", "videos"); kinds = [.link]
-        // The three chat imports, 2026-08-08. The rooms that had the least to
-        // lead with — no pictures, no authors, no counts worth ranking, and
-        // (until the transcript landed) no text either, so they led with a
-        // year heatmap over a corpus of subjects.
-        //
-        // TITLE, and it is a §83 question rather than a wording one. A
-        // ChatGPT or Claude transcript is BOTH voices: the person's asks and
-        // the model's answers, which are the longer half by far. "What you ask
-        // about" over that would credit the person with words they didn't
-        // write, which is exactly what YouTube's card refuses to do one case
-        // above. So these two say what they really rank — what the
-        // conversations were about — and only Gemini, whose export carries the
-        // asks and nothing else (see `GeminiImport.turns`), can honestly say
-        // "ask".
-        //
-        // One kind: every row in these rooms is a `.chat` the
-        // person had, there is no somebody-else half to leave out, and the
-        // import receipt is excluded by the loop below.
-        case "ChatGPT", "Claude":
-            title = "What your chats are about"; unit = ("chat", "chats"); kinds = [.chat]
-        case "Gemini":
-            title = "What you ask about"; unit = ("prompt", "prompts"); kinds = [.chat]
+        // The two journals and the three chat imports had cases here (§398,
+        // 2026-08-08) and lost them in prd §832: those rooms lead with their
+        // newest entry or conversation.
         default:
             return nil
         }

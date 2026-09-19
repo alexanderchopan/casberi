@@ -38,7 +38,18 @@ enum AccountPageShape {
 
     /// The line under the name, dot excluded (the view draws the dot in the
     /// line's own tone). `now` is injectable so the harness can pin "8m ago".
-    static func stateLine(_ state: State, now: Date = .now) -> String {
+    ///
+    /// `lands: false` (prd §835) is a seat that lands nothing — the agent
+    /// keys and Apple Intelligence. It never reads, so "Reading · 8m ago"
+    /// described work it does not do; it is a switch, and says On or Off.
+    static func stateLine(_ state: State, lands: Bool = true, now: Date = .now) -> String {
+        if !lands {
+            switch state {
+            case .notConnected: return String(localized: "Off")
+            case .reading:      return String(localized: "On")
+            default:            break
+            }
+        }
         switch state {
         case .notConnected:
             return String(localized: "Not connected")

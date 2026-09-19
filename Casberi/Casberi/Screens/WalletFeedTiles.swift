@@ -544,7 +544,7 @@ struct WalletBalanceHeadline: View {
         // not a threshold, because what must not happen is a sign and a colour
         // beside a figure that reads 0.
         let roundsToZero = exactFormat(abs(delta)) == exactFormat(0)
-        // **A WIPEOUT THE NUMBER ABOVE DENIES (prd §834, §83).** `ratioless`
+        // **A WIPEOUT THE NUMBER ABOVE DENIES (prd §837, §83).** `ratioless`
         // and `roundsToZero` guard the small end of this scale; nothing
         // guarded the large one. Shipped on the Privacy devnet: a line from
         // 983,580 ETH to 1 ETH is -99.9999%, which prints "-100.0%" — "all of

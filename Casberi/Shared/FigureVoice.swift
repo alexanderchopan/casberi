@@ -18,9 +18,9 @@ import Foundation
 /// property per view. Three reasons, in order of how much they cost when
 /// ignored:
 ///
-///  1. **Two grammars for one figure drift.** The runway is drawn in four
-///     places (`GenRunway`, `RunwayFigure`, `WalletRunwayRail`, the widget's
-///     `HeroRunway`). Written four times it would be described four ways, and
+///  1. **Two grammars for one figure drift.** The runway is drawn in three
+///     places (`GenRunway`, `WalletRunwayRail`, the widget's `HeroRunway`).
+///     Written three times it would be described three ways, and
 ///     the §418 lesson — a duplicate parser that reads the same bytes worse
 ///     than the original — is exactly this shape.
 ///  2. **A sentence is arithmetic, and arithmetic here gets a harness.** Every

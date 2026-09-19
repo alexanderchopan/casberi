@@ -49,7 +49,7 @@ struct AppleIntelligenceScreen: View {
             // the switch is never a control that does nothing (§83).
             if on {
                 DSSlabButton(title: "Ask Apple Intelligence",
-                             detail: "About anything you've saved",
+                             detail: "About your things",
                              systemImage: "bubble.left.and.bubble.right") {
                     DSHaptic.tap()
                     chrome.composerRequest += 1

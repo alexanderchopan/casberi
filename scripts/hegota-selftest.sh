@@ -1114,7 +1114,7 @@ check(RoomValueHistory.derived(balance: unit, undoNewestFirst: [(0, nil)], unit:
 
 // MARK: the fence — a sampled line belongs to the chain it was sampled on
 //
-// §834, and this file owns it because this file already compiles
+// §837, and this file owns it because this file already compiles
 // `RoomValueHistory` whole. Hegotá DERIVES its line and is not exposed: a
 // relaunch takes its moves and its line together. The Privacy devnet SAMPLES,
 // because its moves carry no wei — so its readings outlive the chain that
@@ -1385,7 +1385,7 @@ mutate "the balance line adds back gas somebody ELSE paid (a sponsored move bend
 mutate "the balance line stops undoing the fee at all (it drifts by the gas this address spent)" \
   HegotaRoom.swift 's/if !move\.incoming, !move\.isSponsored, let fee = move\.feeWei \{ undo \+= fee \}//'
 
-# THE FENCE (§834). Each of these renders as a crown plotting a chain that no
+# THE FENCE (§837). Each of these renders as a crown plotting a chain that no
 # longer exists, under a sentence saying nothing ever happened on it.
 mutate "an unstamped book is treated as belonging (the device this was reported from is never repaired)" \
   RoomValueHistory.swift 's/guard let stamp else \{ return false \}/guard let stamp else { return true }/'
@@ -1505,16 +1505,16 @@ deny account.bare "import SwiftUI" "HegotaAccount imports SwiftUI — it must st
 deny account.bare "import Observation" "HegotaAccount imports Observation — the value types must stay Foundation-only or the room's rules leave the harness"
 deny account.bare "URLSession" "HegotaAccount reaches the network — it is value types only"
 
-# THE FENCE IS THE SHIPPED DECISION (§834). `belongs` is driven above and
+# THE FENCE IS THE SHIPPED DECISION (§837). `belongs` is driven above and
 # mutated four ways; `fence` is what the app actually calls. If the two come
 # apart, every assertion here goes on passing while a relaunched devnet's
 # crown plots a chain that is gone.
 grep -qF 'guard !belongs(stamp:' "$HISTORY" \
-  || fail "RoomValueHistory.fence no longer decides through belongs — the predicate the harness drives is not the one the app runs (§834)"
+  || fail "RoomValueHistory.fence no longer decides through belongs — the predicate the harness drives is not the one the app runs (§837)"
 # …and it must still DROP the book. Grepping the file for the removal is not
 # enough: `forget(room:)` carries the same line, so a fence that stopped
 # dropping would leave this green. The check reads the fence's own body.
-python3 - "$HISTORY" <<'PYFENCE' || fail "RoomValueHistory.fence no longer drops the book it fences — a stamped mismatch that keeps its readings is the defect itself (§834)"
+python3 - "$HISTORY" <<'PYFENCE' || fail "RoomValueHistory.fence no longer drops the book it fences — a stamped mismatch that keeps its readings is the defect itself (§837)"
 import re, sys
 src = open(sys.argv[1], encoding="utf-8").read()
 m = re.search(r"    static func fence\(room: String, chain: String\) \{.*?\n    \}", src, re.S)

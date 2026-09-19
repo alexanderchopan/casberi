@@ -340,6 +340,7 @@ enum SafeSigner {
     /// `SafeBridge` config, because both are exactly the facts an attacker
     /// with the desktop key would change, and a cache is what they would beat.
     static func prepare(seg: String, safeTxHash: String) async -> Result<Ready, Refusal> {
+        await ClearSign.warm()
         guard let me = SignerKey.address() else { return .failure(.noKey) }
         guard let rail = rails.first(where: { $0.seg == seg }) else {
             return .failure(.chainUnsupported(seg))
@@ -401,7 +402,13 @@ enum SafeSigner {
         return .success(Ready(
             seg: seg, chainId: rail.chainId, safeAddress: safeAddress,
             safeTxHash: local, tx: tx,
-            reading: SafeCalldata.read(data: tx.data, to: tx.to, value: tx.value, safe: safeAddress),
+            // The chain opens the clear-signing registry for a call the
+            // reader cannot name (prd §834). No token read here: this file
+            // reaches Safe and nothing else, and the sign block states an
+            // amount in base units unless the descriptor itself names the
+            // token — the same rule it keeps for a plain `transfer`.
+            reading: SafeCalldata.read(data: tx.data, to: tx.to, value: tx.value, safe: safeAddress,
+                                       chainId: rail.chainId, style: .casberi()),
             have: confirmations.count, required: required,
             standing: Standing(safeAddress: safeAddress, seg: seg,
                                ownerCount: owners.count, threshold: threshold)))

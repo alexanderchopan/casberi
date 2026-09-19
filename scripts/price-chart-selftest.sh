@@ -202,7 +202,7 @@ check(TokenChartStyle.changeText(0.0004) == "0.0%",
 check(TokenChartStyle.changeText(0.042).hasPrefix("+"),
       "a real gain keeps its sign")
 
-// MARK: the other end of the same scale — a wipeout the balance denies (§834)
+// MARK: the other end of the same scale — a wipeout the balance denies (§837)
 //
 // The Privacy devnet's reported header: 983,580 ETH down to 1 ETH is
 // -99.9999%, which the one decimal we print rounds to "-100.0%" — "all of it

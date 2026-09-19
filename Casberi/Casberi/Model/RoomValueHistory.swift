@@ -134,7 +134,7 @@ enum RoomValueHistory {
         UserDefaults.standard.removeObject(forKey: chainKey(room))
     }
 
-    /// **A SAMPLED LINE BELONGS TO THE CHAIN IT WAS SAMPLED ON (prd §834).**
+    /// **A SAMPLED LINE BELONGS TO THE CHAIN IT WAS SAMPLED ON (prd §837).**
     ///
     /// A devnet is relaunched from genesis and the balances it held are gone —
     /// but this store is `UserDefaults` and survives, so the crown goes on

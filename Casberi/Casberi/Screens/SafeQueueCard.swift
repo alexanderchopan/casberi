@@ -412,6 +412,13 @@ struct SafeSignBlock: View {
             Text(verbatim: reading(ready))
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
+            // A LONE CALL IN ITS PROTOCOL'S WORDS (prd §834): every value the
+            // descriptor shows, then who wrote the words — they are the
+            // protocol's, published to the Ethereum Foundation's registry,
+            // not Casberi's and not checked by it.
+            if case .described(let described) = ready.reading {
+                describedLines(described)
+            }
             // THE BATCH, ITEMISED (2026-09-07). §238 measured 96 of a real
             // Safe's last 100 transactions as `multiSend`, so this is not a
             // branch for an exotic case — it is the one most people meet.
@@ -481,6 +488,38 @@ struct SafeSignBlock: View {
         }
         return sentence(for: ready.reading, to: ready.tx.to,
                         value: ready.tx.value, hash: ready.safeTxHash)
+    }
+
+    /// A described call's labelled values and its author. Values stay
+    /// verbatim — an amount whose decimals the descriptor does not name reads
+    /// "N base units of …abcd", the rule `sentence(for:)` keeps for a plain
+    /// transfer on this screen.
+    @ViewBuilder private func describedLines(_ described: ClearSign.Reading) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            ForEach(Array(described.lines.prefix(Self.batchDrawCap).enumerated()), id: \.offset) { _, line in
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(verbatim: line.label)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                    Spacer(minLength: DS.Space.s2)
+                    Text(verbatim: line.value)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                        .multilineTextAlignment(.trailing)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            // The same display bound as a batch, and never a silent one: an
+            // array argument can carry thousands of values.
+            if described.lines.count > Self.batchDrawCap {
+                let hidden = described.lines.count - Self.batchDrawCap
+                Text(verbatim: String(localized: "\(hidden) more values aren't shown here. Open it in your Safe app before signing."))
+                    .dsText(.subhead12).foregroundStyle(DS.attention)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let owner = described.owner {
+                Text(verbatim: String(localized: "Described by \(owner)"))
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+            }
+        }
     }
 
     /// The drawn calls of a batch, one line each, and the count of any this
@@ -585,6 +624,15 @@ struct SafeSignBlock: View {
             return calls.count == 1
                 ? String(localized: "A batch of 1 call inside this one.")
                 : String(localized: "A batch of \(calls.count) calls inside this one.")
+        case .described(let described):
+            // The protocol's own words (prd §834). Its sentence when every
+            // value in it could be stated, else its intent and the contract;
+            // the lone-call body below adds the labelled values and who wrote
+            // the words.
+            if described.sentence == nil, let contract = described.contract {
+                return String(localized: "\(described.intent) on \(contract).")
+            }
+            return described.headline.hasSuffix(".") ? described.headline : described.headline + "."
         case .undecoded(let selector):
             return String(localized: "Casberi can't read what this does. It calls \(selector) on \(WalletStore.shortAddress(to)). Hash \(hash).")
         }

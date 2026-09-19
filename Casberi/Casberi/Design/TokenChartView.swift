@@ -26,7 +26,7 @@ enum TokenChartStyle {
 
     /// Whether a ratio would PRINT as a total wipeout — "-100.0%".
     ///
-    /// **`isFlat`'s mirror at the other end of the scale (prd §834, §83).**
+    /// **`isFlat`'s mirror at the other end of the scale (prd §837, §83).**
     /// Flat exists because a change that rounds away has no direction to
     /// report; this exists because a change that rounds to the whole of it
     /// claims the balance is gone. Seen on the Privacy devnet: a line from

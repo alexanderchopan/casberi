@@ -554,6 +554,26 @@ enum SafeBridge {
         params.first { ($0["name"] as? String)?.caseInsensitiveCompare(name) == .orderedSame }?["value"] as? String
     }
 
+    // MARK: - Clear signing (prd §834)
+
+    /// A call `describe` can only name by its method, in its protocol's own
+    /// words — as a quoted phrase, because it lands inside a sentence we
+    /// wrote ("2 of 3 signatures collected on “Supply 2 WETH as collateral”").
+    /// nil when the registry has no descriptor or the bytes do not decode.
+    private static func clearPhrase(_ tx: [String: Any], chain: Chain, safeAddress: String,
+                                    facts: TokenFacts) -> String? {
+        guard let to = tx["to"] as? String, let data = tx["data"] as? String,
+              let bytes = SafeABI.hexBytes(data), bytes.count >= 4,
+              let reading = ClearSign.describe(chainId: chain.chainId, to: to, data: bytes,
+                                               value: (tx["value"] as? String) ?? "0",
+                                               from: safeAddress, style: .casberi(facts: facts))
+        else { return nil }
+        if reading.sentence == nil, let contract = reading.contract {
+            return String(localized: "“\(reading.intent)” on \(contract)")
+        }
+        return "“\(reading.headline)”"
+    }
+
     // MARK: - Amounts (2026-08-11)
 
     private typealias TokenFacts = [String: (symbol: String?, decimals: Int?)]
@@ -567,9 +587,15 @@ enum SafeBridge {
     /// there — the same "a read that answers with nothing states nothing"
     /// rule `tokenFacts` itself follows.
     private static func prefetchFacts(chain: Chain, txs: [[String: Any]]) async -> TokenFacts {
+        // Every caller describes right after this, on the main actor; the
+        // clear-signing snapshot is decoded off it first (prd §834).
+        await ClearSign.warm()
         guard let network = chain.network else { return [:] }
         var contracts = Set<String>()
-        for tx in txs { contracts.formUnion(neededContracts(tx)) }
+        for tx in txs {
+            contracts.formUnion(neededContracts(tx))
+            contracts.formUnion(clearSignTokens(tx, chain: chain))
+        }
         guard !contracts.isEmpty else { return [:] }
         var out: TokenFacts = [:]
         for contract in contracts.prefix(12) {
@@ -599,6 +625,16 @@ enum SafeBridge {
         return out
     }
 
+    /// The tokens a clear-signing phrase for `tx` would state an amount in,
+    /// so `prefetchFacts` reads their decimals in the same pass (prd §834).
+    private static func clearSignTokens(_ tx: [String: Any], chain: Chain) -> Set<String> {
+        guard let to = tx["to"] as? String, let data = tx["data"] as? String,
+              let bytes = SafeABI.hexBytes(data), bytes.count >= 4
+        else { return [] }
+        return ClearSign.tokensAsked(chainId: chain.chainId, to: to, data: bytes,
+                                     value: (tx["value"] as? String) ?? "0")
+    }
+
     /// "1,500 USDC" for a decoded call's amount param, given its target
     /// contract's cached facts — nil when either isn't known, which leaves
     /// the caller's older, amount-free wording untouched rather than
@@ -621,6 +657,14 @@ enum SafeBridge {
     private static func describe(_ tx: [String: Any], chain: Chain, safeAddress: String,
                                  facts: TokenFacts) -> String {
         if let decoded = tx["dataDecoded"] as? [String: Any] {
+            // The protocol's own words beat a method name split on its
+            // capitals — but never the readings above that already name a
+            // transfer, an approval or a batch by what it moves.
+            let method = decoded["method"] as? String
+            if !["transfer", "approve", "multiSend"].contains(method ?? ""),
+               let phrase = clearPhrase(tx, chain: chain, safeAddress: safeAddress, facts: facts) {
+                return phrase
+            }
             return describe(decoded: decoded, fallbackTo: tx["to"] as? String, chain: chain, facts: facts)
         }
         let to = tx["to"] as? String
@@ -635,6 +679,9 @@ enum SafeBridge {
         // point is that it moves nothing, described identically to a mystery.
         if rawValue == 0, !hasData, let to, to.lowercased() == safeAddress.lowercased() {
             return String(localized: "a rejection — blocks any other transaction at this nonce")
+        }
+        if hasData, let phrase = clearPhrase(tx, chain: chain, safeAddress: safeAddress, facts: facts) {
+            return phrase
         }
         if rawValue > 0 {
             let amountText = "\(WalletIngest.format(rawValue / pow(10, 18))) \(nativeSymbol(chain))"
@@ -1691,5 +1738,31 @@ enum SafeBridge {
             }
         }
         return lines.isEmpty ? "no Safes detected" : lines.joined(separator: " | ")
+    }
+}
+
+// MARK: - Clear signing's style in this app (prd §834)
+
+extension ClearSign.Style {
+    /// How a clear-signing description names things in Casberi: an address
+    /// the way every Safe line does (`…abcd`), a contract or token the
+    /// registry itself describes by that description's name, the Safe as
+    /// "this Safe", and an amount in base units unless its decimals are known
+    /// — `facts` are read off the token contract itself (`WalletApprovals`),
+    /// never guessed. An amount it cannot state keeps the reading out of a
+    /// sentence and on its labelled line.
+    static func casberi(facts: [String: (symbol: String?, decimals: Int?)] = [:]) -> Self {
+        Self(address: { WalletStore.shortAddress(EIP55.checksum($0)) },
+             name: { _ in nil },
+             token: { address in
+                 guard let fact = facts[address.lowercased()],
+                       let symbol = fact.symbol, let decimals = fact.decimals else { return nil }
+                 return ClearSign.Token(ticker: symbol, decimals: decimals)
+             },
+             collection: { _ in nil },
+             sender: String(localized: "this Safe"),
+             date: { $0.formatted(date: .abbreviated, time: .shortened) },
+             rawFallbacks: false,
+             namesFromRegistry: true)
     }
 }

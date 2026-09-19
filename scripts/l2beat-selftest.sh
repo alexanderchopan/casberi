@@ -41,7 +41,6 @@ SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
 DEMO="Casberi/Casberi/Model/DemoSeedAll.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
-FIGURE="Casberi/Casberi/Model/RoomFigure.swift"
 SHEETVIEW="Casberi/Casberi/Screens/ThingSheetView.swift"
 NOTIFY="Casberi/Casberi/Model/NotifySweep.swift"
 SNAP="scripts/l2beat-snapshot.py"
@@ -85,7 +84,6 @@ strip_comments "$DEMO"   > "$TMP/demo.nc"
 strip_comments "$ROWS"   > "$TMP/rows.nc"
 strip_comments "$DIRSCREEN" > "$TMP/dirscreen.nc"
 strip_comments "$CARDSCREEN" > "$TMP/cardscreen.nc"
-strip_comments "$FIGURE" > "$TMP/figure.nc"
 strip_comments "$CARD"   > "$TMP/card.nc"
 
 echo "Drift guards"
@@ -109,22 +107,6 @@ guard 'L2beatNewsRow(thing: thing, watchedChains: l2beatWatchedIDs)' "$FEED" \
   "the milestone rows no longer get the watch list — no row could say 'you watch this'"
 guard 'L2beatWatch.chainID(from: $0)' "$FEED" \
   "the feed's watch list is no longer derived from the room's own rows"
-
-# ---- The peek figure -------------------------------------------------------------------
-guard 'source == L2beatRoomSource.source' "$FIGURE" \
-  "the chip peek lost its L2BEAT figure — long-pressing the chip draws a blank"
-# The peek must never draw a league table of chains. A bar of STAGE RUNGS at tile scale,
-# with no legend, reads as taller-is-better — which is the one reading this refuses.
-#
-# On a COMMENT-STRIPPED copy: `RoomFigure` documents this very rule by naming what it must
-# not chart ("a bar chart of rungs is a league table"), so a guard over raw source fires on
-# the prose explaining it. Caught on this guard's own first run — the fifth time this
-# codebase has paid for it, and the first time in a guard written the same afternoon as the
-# comment it tripped over.
-if grep -qE 'value: \$0\.stage|rung' "$TMP/figure.nc"; then
-  echo "✗ the chip peek charts the STAGE — that is a league table of chains, not a tally"
-  exit 1
-fi
 
 # ---- Never a composite ------------------------------------------------------------------
 # The rule §419 had to enforce by refusal and this one satisfies by citation: L2BEAT

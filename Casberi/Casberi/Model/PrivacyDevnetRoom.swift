@@ -161,7 +161,7 @@ enum PrivacyDevnetRoom {
         }
     }
 
-    /// Whether the head's sentence STANDS above a figure (prd §834).
+    /// Whether the head's sentence STANDS above a figure (prd §837).
     ///
     /// **§606's rule, which had never reached the crown.** That ruling said the
     /// sentence draws only where there is no figure under it, and the card
@@ -188,7 +188,7 @@ enum PrivacyDevnetRoom {
         }
     }
 
-    /// Whether Home may draw its figure at all (prd §834).
+    /// Whether Home may draw its figure at all (prd §837).
     ///
     /// **The other half of `sentenceStands`, and without it that rule is a
     /// layout bug.** A lede that stands over a figure does not SHARE the slot

@@ -22,7 +22,7 @@ import UIKit
 ///
 /// **Two clocks, deliberately, and it is not the double-deal.** Each modifier
 /// owns its own state, which is what `settleIn` does at forty call sites here.
-/// The objection `FlowFigure`/`DemoNFTArt` are exempted for is INDEPENDENT
+/// The objection `DemoNFTArt` is exempted for is INDEPENDENT
 /// clocks on a strip that arrives as one object; these two are one element
 /// each, started in the same frame, on durations chosen to hand off. A shared
 /// clock threaded through the header would have to cross the name and the kind

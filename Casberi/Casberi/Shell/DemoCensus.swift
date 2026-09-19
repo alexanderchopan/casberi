@@ -253,20 +253,6 @@ enum DemoCensus {
             })
         }
         // Shape-based heads the insight reader does not reach.
-        for source in AgentRoomSource.sources.sorted() where sources.contains(source) {
-            out.append(Surface(name: "agentRoom.\(source)", gate: .required) {
-                let rows = all.filter { $0.source == source }
-                return AgentRoomSource.compose(source: source, things: rows) != nil
-                    ? .ok("\(rows.count) rows") : .empty("compose returned nil over \(rows.count) rows")
-            })
-        }
-        for source in JournalRoomSource.sources.sorted() where sources.contains(source) {
-            out.append(Surface(name: "journalRoom.\(source)", gate: .required) {
-                let rows = all.filter { $0.source == source }
-                return JournalRoomSource.compose(things: rows) != nil
-                    ? .ok("\(rows.count) rows") : .empty("compose returned nil over \(rows.count) rows")
-            })
-        }
         out.append(Surface(name: "awsRoom", gate: .required) {
             AWSRoomSource.compose(things: all.filter { $0.source == "AWS" }) != nil
                 ? .ok("composed") : .empty("compose returned nil")

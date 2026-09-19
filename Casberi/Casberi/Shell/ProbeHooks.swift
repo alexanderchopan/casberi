@@ -1148,47 +1148,6 @@ enum ProbeHooks {
         // these seats "nothing" is usually the HEALTHY answer — most wallets
         // have never touched Peer, never deposited into a pool, and hold no
         // Gnosis Pay card — and only one or two causes per room are bugs.
-        // `-journalRoomProbe YES` — the journal rooms' head, year by year
-        // (2026-08-17, prd §398). No key, no network, no bridge state: it
-        // composes off the rows an import already landed, which is why the
-        // fetch takes the WHOLE room rather than a page of it — a span is not a
-        // span if it is computed over the newest five hundred entries of a
-        // decade.
-        //
-        // BOTH journals in one launch, named apart. They share a composer and a
-        // card and have entirely separate corpora, so the failure this catches
-        // is one of them composing while the other silently doesn't — and a
-        // probe that reported a single merged answer could not see it.
-        Hook(key: "journalRoomProbe") { _, context in
-            for name in JournalRoomSource.sources.sorted() {
-                let descriptor = FetchDescriptor<Thing>(
-                    predicate: #Predicate { $0.source == name })
-                let rows = (try? context.fetch(descriptor)) ?? []
-                NSLog("[Casberi] journalRoom| — %@ —", name)
-                for line in JournalRoomSource.probeLines(things: rows) {
-                    NSLog("[Casberi] %@", line)
-                }
-            }
-        },
-        // `-agentRoomProbe YES` — the four agent rooms' heads, month by month
-        // (2026-08-23, prd §457). ChatGPT/Claude/Gemini/Claude Code in one
-        // launch, named apart — the journal probe's shape, for its reason:
-        // four separate corpora, one composer, and the failure worth catching
-        // is one room composing while a sibling silently doesn't.
-        //
-        // NO fetch limit, matching the journal probe: a room's span is not a
-        // span computed over the newest few hundred rows of a longer history.
-        Hook(key: "agentRoomProbe") { _, context in
-            for name in AgentRoomSource.sources.sorted() {
-                let descriptor = FetchDescriptor<Thing>(
-                    predicate: #Predicate { $0.source == name })
-                let rows = (try? context.fetch(descriptor)) ?? []
-                NSLog("[Casberi] agentRoom| — %@ —", name)
-                for line in AgentRoomSource.probeLines(source: name, things: rows, context: context) {
-                    NSLog("[Casberi] %@", line)
-                }
-            }
-        },
         Hook(key: "peerRoomProbe") { _, context in
             let source = PeerRoomSource.source
             var descriptor = FetchDescriptor<Thing>(
@@ -7830,44 +7789,8 @@ enum ProbeHooks {
              } : nil)
         // `instagramHead` is deleted with its model (prd §821): the Instagram
         // room leads with its newest thing and never had a drawn head since §751.
-        // The journal rooms (2026-08-17, prd §398) — one composer
-        // serving TWO rooms, and the only line in this list with two
-        // names.
-        //
-        // That is deliberate, not drift: `verify.sh`'s room-head
-        // coverage is a zsh associative array keyed by the name printed
-        // here, so a single shared label could only ever assert that ONE
-        // of the two journals composes. They have separate corpora and
-        // separate demo seeds, which is exactly the gap that check
-        // exists to catch — the §349 finding, where three rooms' heads
-        // were each broken in a different way and every one of them
-        // rendered as the same silent nothing.
-        let journalLabel = source == "Apple Journal" ? "appleJournalHead" : "dayOneHead"
-        note(journalLabel, JournalRoomSource.sources.contains(source)
-             ? JournalRoomSource.compose(things: things).map {
-                "\(JournalRoom.headline($0) ?? JournalRoom.note($0))"
-                + " · \($0.span) years · \($0.silent) silent"
-                + " · \($0.days) days · streak \($0.streak)"
-             } : nil)
-        // The four AGENT rooms (2026-08-23, prd §457) — one composer
-        // serving FOUR rooms, and so the second entry here with more
-        // than one name, for `journalLabel`'s reason exactly: the
-        // coverage check is keyed by the name printed here, so one
-        // shared label would assert that ONE of the four composes
-        // while three sat broken behind it. They have four separate
-        // corpora and four separate demo seats.
-        let agentLabel = ["ChatGPT": "chatgptHead", "Claude": "claudeHead",
-                          "Gemini": "geminiHead",
-                          ClaudeCodeImport.source: "claudeCodeHead"][source]
-        note(agentLabel ?? "agentHead", agentLabel == nil ? nil
-             : AgentRoomSource.compose(
-                source: source, things: things,
-                rivals: AgentRoomSource.rivals(besides: source, context: context)).map {
-                "\(AgentRoom.headline($0) ?? AgentRoom.note($0))"
-                + " · \($0.span) months · \($0.silent) silent"
-                + " · \($0.total) conversations · \($0.turns) turns"
-                + " · rivals \($0.rivals.count)"
-             })
+        // The journal and agent heads (§398, §457) are DELETED (prd §832):
+        // those rooms lead with their newest entry or conversation.
         // 2. the anniversary — the two journals' entries (§398; Snapchat's
         // memories left in §832). It OUTRANKS every head above in
         // `shapedSections`, so it is printed after them and the `leader`

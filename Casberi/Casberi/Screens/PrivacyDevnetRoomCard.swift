@@ -91,7 +91,7 @@ struct PrivacyDevnetRoomCard: View {
         // **THE CROWN OWNS THE NUMBER (prd §683).** Nil when Home draws the
         // shared crown, or the figure appears twice — seen on the simulator as
         // "2.2960 ETH" above "2.2960 ETH".
-        // **…AND ONLY WHERE THE CROWN ACTUALLY DRAWS (prd §834).** A lede
+        // **…AND ONLY WHERE THE CROWN ACTUALLY DRAWS (prd §837).** A lede
         // that owns the slot suppresses it, and then the number is nobody's.
         if section == .home, PrivacyDevnetRoom.drawsFigure(head.lede),
            homeSamples.count >= 2 { return nil }
@@ -114,7 +114,7 @@ struct PrivacyDevnetRoomCard: View {
         // when the sentence is all there is. `Frames` leads its Home with a
         // figure through the chassis for the same reason.
         case .home:
-            // **THE SAME GATE AS THE RING ITSELF (prd §834)** — a count of
+            // **THE SAME GATE AS THE RING ITSELF (prd §837)** — a count of
             // snapshots over a relaunch sentence, with no ring under it to
             // count, is the figure's caption outliving the figure.
             guard PrivacyDevnetRoom.drawsFigure(head.lede), !marks.isEmpty else { return nil }
@@ -205,10 +205,10 @@ struct PrivacyDevnetRoomCard: View {
     var moves: [PrivacyDevnetLiveState.Move] { pairs.map(\.move) }
 
     @ViewBuilder private var home: some View {
-        // **THE SLOT'S TWO OWNERS, RESOLVED ONCE (prd §834).**
+        // **THE SLOT'S TWO OWNERS, RESOLVED ONCE (prd §837).**
         //
         // `homeSamples` is a `UserDefaults` read plus a JSON decode of the
-        // whole sample book, and the §834 gate needs the same answer the crown
+        // whole sample book, and the §837 gate needs the same answer the crown
         // does — read twice, a body pass pays for the book twice and the two
         // reads can disagree (§646's rule for a room's `@Query`, and §628's
         // for a store read inside a body).
@@ -226,7 +226,7 @@ struct PrivacyDevnetRoomCard: View {
             // (prd §606) — see `slotHeadline`. Where the ring draws, it was
             // the drawing restated in three lines of heading type above it.
             //
-            // **THE CROWN IS A FIGURE TOO (prd §834).** This tested `marks`
+            // **THE CROWN IS A FIGURE TOO (prd §837).** This tested `marks`
             // alone, so §606 reached the ring and never the Home crown §683
             // added later: the sentence drew above the line every time, and
             // "Nothing on this chain from the 4 addresses you watch, yet."

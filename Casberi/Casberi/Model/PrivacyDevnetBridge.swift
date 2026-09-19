@@ -252,7 +252,7 @@ final class PrivacyDevnetLiveState {
     /// a shield shows as a dip.
     func noteBalances(_ accounts: [PrivacyDevnetAccount], chain: String?) {
         guard !DemoMode.isActive else { return }
-        // **FENCED BEFORE THE FIRST SAMPLE (prd §834).** A relaunch invalidates
+        // **FENCED BEFORE THE FIRST SAMPLE (prd §837).** A relaunch invalidates
         // every reading this store holds — the balances belonged to a chain
         // that no longer exists — and the crown goes on plotting them, because
         // `RoomValueHistory` is `UserDefaults` and outlives the chain. It sits
@@ -278,7 +278,7 @@ final class PrivacyDevnetLiveState {
 
     private func publish(accounts: [PrivacyDevnetAccount], head: UInt64?, cut: WalkCut?, genesis: String?) {
         // The genesis goes in with the balances, not after them: it is what
-        // fences the sample book (prd §834), and a fence that ran later would
+        // fences the sample book (prd §837), and a fence that ran later would
         // drop this pass's own reading with the dead chain's.
         noteBalances(accounts, chain: genesis)
         if let head { headSlot = head }
@@ -378,7 +378,7 @@ final class PrivacyDevnetLiveState {
         accounts = []
         headSlot = 0
         observedGenesis = nil
-        // The LINE goes with the accounts (prd §834). Both callers are
+        // The LINE goes with the accounts (prd §837). Both callers are
         // teardowns — a disconnect and the demo's — and a sampled line left
         // behind is a crown drawn over addresses the seat no longer follows.
         RoomValueHistory.forget(room: Self.historyRoom)

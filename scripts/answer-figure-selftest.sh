@@ -226,7 +226,7 @@ grep -q 'case "Dial":' "$RENDERER" \
        print "  the parser still accepts it, the root still references it — and the"; \
        print "  answer draws nothing where its figure should be."; exit 1; }
 # The dial is a re-home, not a redraw: the drawing stays `FigureView`'s.
-grep -q 'FigureView(figure: figure, slot: .band' "$RENDERER" \
+grep -q 'FigureView(figure: figure, reduceMotion:' "$RENDERER" \
   || { print "✗ GenDial no longer delegates to FigureView — the dial's floor, hues and"; \
        print "  entrance are that view's, and a second copy of them will drift."; exit 1; }
 
