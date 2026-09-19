@@ -613,20 +613,25 @@ grep -q 'DockCoach' "$TMP/root.nc" \
 # disconnect for me… I'm afraid I'll accidentally disconnect").
 #
 # Nothing else can see it: it builds, every screen paints, and the screen sweep
-# photographs a page that is entirely correct apart from its last 66 points.
-# Three screens had already noticed and each spelled its own clearance by hand,
-# which is exactly how a rule stays invisible — two of the three were right and
-# the sixty that never knew were wrong.
+# photographs a page that is entirely correct apart from the 66 points the seat
+# stands in. Three screens had already noticed and each spelled its own
+# clearance by hand, which is exactly how a rule stays invisible: three right,
+# the rest wrong, and nothing naming the difference.
 strip_comments "$DOCK" > "$TMP/dock.nc"
 grep -q 'static var seatClearance' "$TMP/dock.nc" \
   || { echo "✗ DSDock.seatClearance is gone — nothing states what a pushed screen owes the"; \
        echo "  seat, and its last row comes to rest under the back door (2026-09-19)."; fail=1; }
-clearance=$(awk '/static var seatClearance/,/^    }/' "$TMP/dock.nc")
-print -r -- "$clearance" | grep -q 'agentSize(minimized: false)' \
-  && print -r -- "$clearance" | grep -q 'agentBottomInset(minimized: false)' \
+awk '/static var seatClearance/,/^    }/' "$TMP/dock.nc" > "$TMP/clearance.nc"
+# Every grep below reads a FILE, never a pipe. `cmd | grep -q X` lets grep
+# close the pipe the moment it matches, and under `pipefail` that SIGPIPE
+# becomes the pipeline's own status — the size-dependent race
+# `logic-selftests.yml` records against its own summary line: green on a small
+# input, red on a large one.
+grep -q 'agentSize(minimized: false)' "$TMP/clearance.nc" \
+  && grep -q 'agentBottomInset(minimized: false)' "$TMP/clearance.nc" \
   || { echo "✗ DSDock.seatClearance no longer DERIVES from the seat — a hand-kept number"; \
        echo "  drifts the moment agentSize moves, as it already did once (44 → 46)."; fail=1; }
-print -r -- "$clearance" | grep -q 'fold' \
+grep -q 'fold' "$TMP/clearance.nc" \
   && { echo "✗ DSDock.seatClearance follows the fold — it is a scroll view's bottom content"; \
        echo "  inset, so a height that tracks the fold re-insets it on every scroll tick:"; \
        echo "  the bouncing screen prd §674 fixed."; fail=1; }
@@ -639,7 +644,8 @@ grep -q 'dsSeatClearance()' "$TMP/main.nc" \
 # back door. Applied to one screen instead, it is the hand-kept clearance this
 # check exists to retire.
 awk '/navigationDestination\(for: HomeRoute.Node.self\)/,/^        \}/' "$TMP/main.nc" \
-  | grep -q 'dsSeatClearance()' \
+  > "$TMP/resolver.nc"
+grep -q 'dsSeatClearance()' "$TMP/resolver.nc" \
   || { echo "✗ MainSurface's clearance has drifted out of the resolver that hides the top"; \
        echo "  chevron — the two are one arrangement (prd §767) and belong together, or"; \
        echo "  every screen has to remember the rule again."; fail=1; }
