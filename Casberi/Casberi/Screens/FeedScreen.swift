@@ -6621,23 +6621,6 @@ struct FeedScreen: View {
                         // lookup, not a newest-of-many match.
                         openBySourceRef(ref, in: visible)
                     }
-                case .journal(let room, let name):
-                    JournalRoomCard(room: room, source: name) { year in
-                        openJournalYear(year, source: name, in: visible)
-                    }
-                case .agent(let room, let name):
-                    AgentRoomCard(room: room, source: name) { month in
-                        openAgentMonth(month, source: name, in: visible)
-                    } onOpenLongest: { longest in
-                        // A single conversation, so it lands directly. Falls
-                        // back to its month rather than doing nothing when the
-                        // row carries no ref — a dead lead is P4.
-                        if let ref = longest.ref {
-                            openBySourceRef(ref, in: visible)
-                        } else {
-                            openAgentMonth(room.busiest, source: name, in: visible)
-                        }
-                    }
                 }
             }
         } else if let anniversary {
@@ -8469,20 +8452,10 @@ struct FeedScreen: View {
         // drew (`FeedInsight.topicMap`). It declines under `XRoom`'s floors so
         // a shallow archive keeps the treemap; see that type's own note for
         // why the year rows carry each year's subject.
-        // The two journal rooms (2026-08-17, prd §398) — the first head serving
-        // MORE THAN ONE source, and the only place in this enum where that is
-        // right: Day One and Apple Journal hold the same object under two app
-        // names, compose through one `JournalRoomSource`, and draw one card
-        // that differs by a kicker and a hue. It carries its source so the card
-        // can say which journal it is without storing a `Thing`.
-        case journal(JournalRoom, source: String)
-        // The four AGENT rooms (2026-08-23, prd §457) — the second head to
-        // serve more than one source, and right here for the journal reason:
-        // ChatGPT, Claude, Gemini and Claude Code hold the same object under
-        // four product names, compose through one `AgentRoomSource`, and draw
-        // one card that differs only by a hue. It carries its source so the
-        // card can pick that hue without storing a `Thing`.
-        case agent(AgentRoom, source: String)
+        // The journal and agent rooms had heads here (§398, §457) — a strip of
+        // years, a strip of months — DELETED in prd §832 (user: "those charts
+        // we have at their head is kind of useless"): they lead with their
+        // newest entry or conversation, the one template.
 
         /// THE HEAD'S SENTENCE, WHEN THE SENTENCE IS ALL IT HAS (prd §760, user:
         /// "the cover should always be there"). A head with no rows, no axis and
@@ -8522,7 +8495,7 @@ struct FeedScreen: View {
             case .gnosisPay(let room):
                 return room.months.isEmpty && room.currencies.count <= 1
                     ? GnosisPayRoom.headline(room, mask: mask) : nil
-            case .posthog, .walletbeat, .l2beat, .vibenet, .privacyPools, .journal, .agent:
+            case .posthog, .walletbeat, .l2beat, .vibenet, .privacyPools:
                 return nil
             }
         }
@@ -8614,17 +8587,6 @@ struct FeedScreen: View {
             return room.appCount > 0 ? .privy(room) : nil
         case SafeRoomSource.source:
             return SafeRoomSource.compose(things: visible).map { .safe($0) }
-        case let name where JournalRoomSource.sources.contains(name):
-            return JournalRoomSource.compose(things: visible).map { .journal($0, source: name) }
-        case let name where AgentRoomSource.sources.contains(name):
-            // `rivals` is a SEPARATE store read (see `AgentRoomSource.compose`'s
-            // doc) — `visible` here is this room's own rows and can never hold
-            // another seat's, which is exactly the shape `things=14` on a
-            // 14-row room proved on the probe's first real run.
-            return AgentRoomSource.compose(
-                source: name, things: visible,
-                rivals: AgentRoomSource.rivals(besides: name, context: modelContext))
-                .map { .agent($0, source: name) }
         default:
             return nil
         }
@@ -8637,50 +8599,6 @@ struct FeedScreen: View {
         guard let match = visible.first(where: { $0.isLive && $0.sourceRef == ref })
         else { return }
         openThing(match)
-    }
-
-    /// Open a journal year's last entry (2026-08-17, prd §398). A year owns
-    /// hundreds of entries, so like every other head that ranks a group this
-    /// hands back a value and the lookup lands here.
-    ///
-    /// The fallback is `openYear`'s and exists for the same reason — a card
-    /// whose tap did nothing would be a dead control (P4) — but the PRIMARY
-    /// landing differs, and deliberately: an X year opens its most-liked post
-    /// because an archive records popularity, and a journal records none at
-    /// all, so the honest answer is simply the last thing written that year.
-    private func openJournalYear(_ year: JournalRoom.Year, source name: String,
-                                 in visible: [Thing]) {
-        if let ref = year.newestRef {
-            openBySourceRef(ref, in: visible)
-            return
-        }
-        let calendar = Calendar.current
-        openNewest(source: name, in: visible) { thing in
-            thing.kind == .note
-                && calendar.component(.year, from: thing.capturedAt) == year.year
-        }
-    }
-
-    /// A tapped MONTH opens that month's last conversation (2026-08-23, prd
-    /// §457) — `openJournalYear` one unit down, and for its reason: an agent
-    /// room records no popularity of any kind, so there is nothing to rank a
-    /// month's conversations by and the honest landing is simply the last one.
-    ///
-    /// The fallback re-derives the month from `capturedAt` against the SAME
-    /// packing `AgentRoomSource` used, or a tap would land in a neighbouring
-    /// month — which looks like the card pointing at the wrong bar.
-    private func openAgentMonth(_ month: AgentRoom.Month, source name: String,
-                                in visible: [Thing]) {
-        if let ref = month.newestRef {
-            openBySourceRef(ref, in: visible)
-            return
-        }
-        let calendar = Calendar.current
-        openNewest(source: name, in: visible) { thing in
-            guard thing.kind == .chat else { return false }
-            let parts = calendar.dateComponents([.year, .month], from: thing.capturedAt)
-            return (parts.year ?? 0) * 12 + ((parts.month ?? 1) - 1) == month.month
-        }
     }
 
     /// Open a thing by its `id.uuidString`, resolved against the live feed — the

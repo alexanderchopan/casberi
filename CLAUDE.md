@@ -270,7 +270,6 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-roomInsightProbe` — what a source's room LEADS with (prd §247, 2026-07-31) → docs/hooks/rooms.md · prd §247
 - `-stripeRoomProbe` `-posthogRoomProbe` — the two room heads' readings line by line (prd §298, 2026-08-04; one NSLog per line, the -todayProbe truncation → docs/hooks/rooms.md · prd §298
 - **The note THING SHEETS, past §366** → docs/hooks/rooms.md · prd §399
-- `-journalRoomProbe` — the two JOURNAL room heads, year by year (prd §398, 2026-08-17, Model/JournalRoom.swift + → docs/hooks/rooms.md · prd §398
 - **The journals' three shipped defects, fixed in the same pass** → docs/hooks/imports.md · prd §398
 - `-peerRoomProbe` `-privacyPoolsRoomProbe` `-gnosisPayRoomProbe` — the three WALLET-RIDING room heads, line by line (prd §349, 2026-08-10; one NSLog per fill/row/spend → docs/hooks/wallet.md · prd §349
 - `-instagramImport` — import an UNZIPPED Instagram export folder (prd §245, Model/InstagramImport.swift; screen → docs/hooks/imports.md · prd §245

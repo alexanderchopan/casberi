@@ -307,6 +307,21 @@ case "$_hero" in
        echo "  have not drawn in the feed since §362, so this suppresses the cover in"; \
        echo "  every social room and puts nothing in its place."; exit 1;;
 esac
+# THE ANNIVERSARY, moved here from `journal-room-selftest.sh` when the journal
+# head it outranked was deleted (prd §832). It may lead only a journal room —
+# widen it and a nostalgia card covers something time-critical — and a text
+# anniversary must draw words, or it suppresses the cover and draws nothing.
+grep -q 'guard JournalRoomSource.sources.contains(source) else { return nil }' "$FEED" \
+  || { echo "✗ the anniversary is no longer scoped to the journal rooms (§398)"; exit 1; }
+grep -q 'if echo.thing.previewImageData != nil { picture } else { words }' Casberi/Casberi/GenUI/GenRenderer.swift \
+  || { echo "✗ OnThisDayHero no longer falls back to words — a text anniversary would draw an empty slot"; exit 1; }
+grep -qE 'static let sources: Set<String> = \[[^]]*"Obsidian"' Casberi/Casberi/Model/JournalRoomSource.swift \
+  && { echo "✗ Obsidian joined the journal rooms — its dates are file edits"; exit 1; }
+for gone in Model/AgentRoom Model/AgentRoomSource Screens/AgentRoomCard Model/JournalRoom Screens/JournalRoomCard; do
+  if [ -e "Casberi/Casberi/$gone.swift" ]; then
+    echo "✗ $gone is back (prd §832) — the chat and journal rooms lead with their newest thing"; exit 1
+  fi
+done
 # The density grid that term suppressed is DELETED (prd §832), with every
 # room figure that could stand in for the newest thing: the year-heatmap
 # registry and the art wall. A room with no head leads with its cover.

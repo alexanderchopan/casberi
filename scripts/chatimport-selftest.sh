@@ -113,10 +113,10 @@ grep -qE 'case "ChatGPT", "Claude", "Gemini"' "$TOPICS" \
   || { echo "✗ the chat rooms have no topic source — healTopics is a no-op for them again"; exit 1; }
 grep -q 'text: { $0.enrichedText ?? $0.content }' "$TOPICS" \
   || { echo "✗ a writing room reads the wrong field — the vault/chat rooms keep their words on enrichedText"; exit 1; }
-grep -q 'case "ChatGPT", "Claude":' "$INSIGHT" \
-  || { echo "✗ ChatGPT/Claude have no topic map — their rooms lead with a year heatmap over a corpus of subjects"; exit 1; }
-grep -q 'case "Gemini":' "$INSIGHT" \
-  || { echo "✗ Gemini has no topic map"; exit 1; }
+# The chat rooms' topic map is DELETED (prd §832): they lead with their newest
+# conversation. The `ocrTopics` terms above still land — search reads them.
+grep -qE 'case "(ChatGPT|Claude|Gemini)"' "$INSIGHT" \
+  && { echo "✗ a chat room leads with a topic map again (prd §832)"; exit 1; }
 # The writing/pixels fork, in the room where getting it wrong would be loudest:
 # people paste links into chats constantly, so counting hostnames would rank
 # the sites they pasted and call it what they talk about.

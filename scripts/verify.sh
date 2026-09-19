@@ -1424,27 +1424,8 @@ harness "Front-page self-test" "front-page self-test" "scripts/frontpage-selftes
 # parses to zero rows and reads as an empty account. Runs here with the rest
 # of the static head so it's part of `verify.sh` rather than something to
 # remember (the reach-audit lesson, 2026-07-31).
-# The journal rooms' head (prd §398). Same reason as X's below it and one
-# degree stronger: Day One and Apple Journal have no live read, no key anyone
-# could mint, and no export this project has ever held — so a harness is not
-# the best proof these numbers are right, it is the ONLY proof. Every failure
-# it catches renders as a convincing card: a streak counted across a gap, a
-# six-week journal drawn as a two-year span, silent years skipped so the axis
-# rescales itself, or a year printed as the quantity "2,019".
-harness "Journal-room self-test" "journal-room self-test" "scripts/journal-room-selftest.sh" "the journal-room self-test failed — run scripts/journal-room-selftest.sh"
-
-# The four AGENT rooms (ChatGPT/Claude/Gemini/Claude Code, prd §457,
-# 2026-08-23) — the journal harness's own reason, one room over: no ChatGPT,
-# Claude or Gemini export has ever been imported on this host, so this is not
-# the best proof these numbers are right, it is the only one. Every failure it
-# catches renders as a convincing card: turns compared across seats of
-# structurally different shape, a comparison line that flips on a single quiet
-# week instead of the whole-stretch rule, silent months skipped so the axis
-# rescales itself, or a month printed with its year as the quantity "2,025".
-harness "Agent-room self-test" "agent-room self-test" "scripts/agent-room-selftest.sh" "the agent-room self-test failed — run scripts/agent-room-selftest.sh"
-
-# The Apple Health riders (Strava/Garmin, 2026-09-06) — the journal harness's
-# reason at its strongest: NOTHING ON THIS MACHINE CAN PRODUCE THE INPUT. The
+# The Apple Health riders (Strava/Garmin, 2026-09-06) — a harness as the ONLY
+# proof, at its strongest: NOTHING ON THIS MACHINE CAN PRODUCE THE INPUT. The
 # simulator's Health store is empty and cannot be seeded with a Garmin- or
 # Strava-written workout, and the failure that matters most needs TWO apps to
 # have written the same ride, which only happens on a real phone belonging to
@@ -3126,17 +3107,8 @@ xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
 #     which is the exact registry-drift class this probe's own header
 #     warns about and would have reported three false "gaps" forever.
 #
-# `dayOneHead`/`appleJournalHead` (2026-08-17, prd §398) are ONE `SourceHead`
-# case under two names. These keys are an associative array, so a shared label
-# could only assert that one of the two journals composes — and they have
-# separate corpora and separate demo seeds, which is precisely the gap this
-# check exists to catch.
-#
-# Both are also the first rooms whose head can be legitimately OUTRANKED by the
-# anniversary, which would read here as a missing head. It cannot fire on the
-# demo by construction rather than by luck: an entry falls on today's month and
-# day only when its seeded offset is 365/366 or 730/731 days, the offsets in
-# `DemoSeedAll.writing()` are constants, and none of them is.
+# The journal and agent heads (`dayOneHead`…`claudeCodeHead`, prd §398/§457) are
+# DELETED (prd §832): those rooms lead with their newest entry or conversation.
 #
 # `instagramHead` (2026-08-18, prd §395) was the FOURTEENTH; it is deleted with
 # its model (prd §821) — no view had drawn it since §751, and the room leads with
@@ -3228,12 +3200,6 @@ else
     gnosisPayHead     "Gnosis Pay"
     railgunHead       "Railgun"
     safeHead          "Safe"
-    dayOneHead        "Day One"
-    appleJournalHead  "Apple Journal"
-    chatgptHead       "ChatGPT"
-    claudeHead        "Claude"
-    geminiHead        "Gemini"
-    claudeCodeHead    "Claude Code"
     radicleHead       "Radicle"
     cardPointersHead  "CardPointers"
     walletbeatHead    "Walletbeat"
