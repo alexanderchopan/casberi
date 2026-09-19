@@ -19,6 +19,19 @@ enum ScopeTileGlyph {
     static let nfts        = "photo.on.rectangle.angled"
     static let risk        = "shield"
     static let frames      = "square.stack.3d.down.right"
+    /// Privy's Apps — "every app that made you a wallet" (user, 2026-09-19:
+    /// *"on the privy screen, you're using the same icon for apps that we use
+    /// for frames. We need a different icon for apps there"*, prd §831).
+    ///
+    /// It wore `frames` for a month. A framed transaction and an app that
+    /// holds a wallet for you are two meanings, and §815's rule reads both
+    /// ways: one meaning is one glyph, so two meanings may not share one.
+    ///
+    /// A 3x2 grid of squares, which is the one affordance that says "apps"
+    /// without argument — and it is free: `square.grid.2x2` is spoken for,
+    /// and `circle.grid.3x3` is Hegota's UTXOs, circles rather than squares
+    /// and a different count.
+    static let apps        = "square.grid.3x2"
     static let utxos       = "circle.grid.3x3"
     static let snapshots   = "camera.viewfinder"
     static let shielded    = "lock.shield"
@@ -95,7 +108,7 @@ extension RoomKindTile: DSTileScope {
 extension PrivyHomeFeed.Section: DSTileScope {
     var glyph: String {
         switch self {
-        case .apps:     return ScopeTileGlyph.frames
+        case .apps:     return ScopeTileGlyph.apps
         case .activity: return ScopeTileGlyph.activity
         }
     }

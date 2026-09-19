@@ -181,6 +181,42 @@ for sym, owner in [("building.columns", "positions"), ("creditcard", "wallet"),
                    ("shield", "risk"), ("key", "permissions")]:
     if sym in meanings and meanings[sym] - {owner}:
         fails.append(f'"{sym}" is {owner}\'s and wears another meaning')
+# A CASE'S NAME AND ITS GLYPH'S NAME ARE THE SAME WORD (2026-09-19, prd 831).
+#
+# The check above reads the TABLE - one constant, one symbol - so it cannot see
+# two meanings pointing at one constant. Privy's Apps returned
+# `ScopeTileGlyph.frames` for a month and every guard here was green: the table
+# was fine, and the section enum nobody was reading is where the collision
+# lived (user: "on the privy screen, you're using the same icon for apps that
+# we use for frames"). So every `DSTileScope` conformance in this file is read,
+# not just RoomKindTile's, and a case may only wear the constant of its own
+# name - unless the pair is declared below, with its reason.
+ALIASES = {
+    # A Hegota coin IS a UTXO; the room says "Coins" and the vocabulary says
+    # utxos - one meaning under two words.
+    ("HegotaSection", "coins"): "utxos",
+    # A privacy root is the snapshot of the tree it was taken from.
+    ("PrivacyDevnetSection", "roots"): "snapshots",
+}
+seen_aliases = set()
+for m in re.finditer(r'extension ([\w.]+): DSTileScope \{(.*?)\n\}', glyphs, re.S):
+    owner, body = m.group(1), m.group(2)
+    short = owner.split(".")[0]
+    if re.search(r'return\s+"', body):
+        fails.append(f"{owner} spells a glyph literal - every tile glyph lives in ScopeTileGlyph")
+    for case, const in re.findall(r'case \.(\w+):\s*return ScopeTileGlyph\.(\w+)\b', body):
+        if case == const:
+            continue
+        if ALIASES.get((short, case)) == const:
+            seen_aliases.add((short, case))
+        else:
+            fails.append(f"{owner}.{case} wears ScopeTileGlyph.{const} - a case wears its own "
+                         f"name's glyph, or the pair is declared an alias with its reason")
+# A stale allowance fails too: an alias whose case is gone guards nothing.
+for (short, case), const in sorted(ALIASES.items()):
+    if (short, case) not in seen_aliases:
+        fails.append(f"the declared alias {short}.{case} -> {const} no longer exists - "
+                     f"delete it rather than leaving an allowance that guards nothing")
 for f in fails:
     print("✗ " + f)
 sys.exit(1 if fails else 0)

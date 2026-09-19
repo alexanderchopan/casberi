@@ -58287,3 +58287,19 @@ Two things it deliberately does NOT change. Content still scrolls UNDER the seat
 **The ruling: the room draws the tiles it drew last time, from the first frame, and the live reading confirms or corrects them.** `RoomKindTileMemory` keeps each room's last tile list (`room.kindTiles.v1`, written through `DefaultsWrite` only when the list changes, read once into memory), and `kindTilesInHead` falls back to it while `heads` is nil. Measured after the change: the first rendered frame of a relaunch into Splits carries all four tiles, with the list already beneath them.
 
 **What is never remembered: the attention dot.** A "needs you" dot drawn from memory would be a stale alert (§83), so it waits for the reading — the same frame that brings the lead's "N things since" footer. **The first visit after an install is still the late one**, because nothing has been read yet and there is nothing honest to draw.
+
+## §831 — Privy's Apps tile wore Frames' glyph, and the guard could not see it (user: "on the privy screen, you're using the same icon for apps that we use for frames. We need a different icon for apps there", 2026-09-19)
+
+`PrivyHomeFeed.Section.apps` returned `ScopeTileGlyph.frames` — `square.stack.3d.down.right`, the mark four devnet rooms wear for their Frames scope. A framed transaction and an app that holds a wallet for you are two meanings, and §815's rule reads both ways: one meaning is one glyph, so two meanings may not share one.
+
+**Apps takes `square.grid.3x2`.** A grid of squares is the one affordance that says "apps" without argument, and it is free: `square.grid.2x2` is spoken for, and `circle.grid.3x3` is Hegotá's UTXOs — circles rather than squares, and a different count.
+
+**Why every guard was green, which is the part worth keeping.** `room-kind-tiles-selftest.sh` already held "one glyph, one meaning, across every tile and every dock seat" — and it read the TABLE: each `static let` in `ScopeTileGlyph` against each row of `CategoryFold.glyphs`. One constant, one symbol, no duplicate. It was true and it was not the question. The collision lived a layer down, in a `DSTileScope` conformance pointing a second meaning at a constant that already had one, and nothing read those conformances except `RoomKindTile`'s — the one enum whose cases the check enumerates by hand.
+
+**So the check reads them all now: a case wears the constant of its own name.** `PrivyHomeFeed.Section.apps` must return `ScopeTileGlyph.apps`, and a mismatch fails unless the pair is declared an alias with its reason. There are exactly two, both real: `HegotaSection.coins → utxos` (a coin IS a UTXO; the room says "Coins" and the vocabulary says utxos, one meaning under two words) and `PrivacyDevnetSection.roots → snapshots` (a root is the snapshot of the tree it came from). **A stale allowance fails too** — an alias whose case has gone is a rule nobody reads. The literal check widens with it, from `RoomKindTile` to every conformance in the file.
+
+Six mutations drive it, the reported bug among them: Apps back on `frames`, Apps given a symbol another meaning already wears, Apps given a dock seat's symbol, a section spelling a literal instead of a constant, a declared alias gone stale, and a fresh undeclared alias anywhere in the file.
+
+**One thing changes underneath and is not worth a figure.** `DSSkeleton.Figure(glyph:)` keyed Apps' empty state off `frames` and drew `.steps` — framed transactions, a row of steps each, for a scope holding apps. It falls to the `.ranked` default now, beside `risk`, `shielded` and `review`, which is closer to what would fill it: apps with balances. No new drawing, because the box is reached only by an install that connected Privy and has no apps.
+
+**The class.** A table proving its own rows unique proves nothing about who points at them. When a rule is "one meaning, one glyph", the check has to read the layer where meanings are assigned, not the layer where glyphs are named.
