@@ -1,26 +1,11 @@
 #!/bin/zsh
-# Casberi agent-panel self-test — the SHIPPED composition behind the agent's
-# instrument panel (prd §334, 2026-08-07):
+# Casberi agent-panel self-test — what is left of the agent's instrument panel
+# (prd §334) after the chip peek went in §833 and took every per-room figure
+# and the ranking between them with it:
 #
 #   Casberi/Casberi/Model/AgentPanel.swift
-#     — Figure.isEmpty   (which readings are too thin to draw)
-#     — rank             (affinity order, one card per room, total ordering)
-#     — richness         (the tie-break, and why a pulse scores live days)
-#     — normalized       (bars against the leader; a curve over its own range)
-#     — levels           (per-day counts bucketed against the observed max)
-#
-# WHY A HARNESS. This is the first screen a person sees, and every failure in
-# it renders as a perfectly good-looking tile:
-#
-#   • a flat wallet curve drawn along the floor, which reads as "went to zero"
-#     — the most alarming possible way to say nothing happened;
-#   • a room appearing twice because two registries both answered for it;
-#   • tiles reshuffling between opens over identical data, which reads as a
-#     broken screen (§332's per-process Dictionary hashing, one surface over);
-#   • a heatmap outranking everything forever because raw length was scored
-#     instead of live days — every registered grid is the same width;
-#   • a bar row of NaN widths from a zero leader, which SwiftUI draws as
-#     nothing at all.
+#     — Figure.isEmpty   (the dial's floor: a rhythm, not a few dots)
+#     — compactUSD       (the one money formatter, forwarding to MoneyFormat)
 #
 # `AgentPanel.swift` is Foundation-only BY DESIGN, so this compiles it WHOLE
 # and UNMODIFIED with no stubs. There is no extraction step that can drift.
@@ -37,15 +22,7 @@ SRC="Casberi/Casberi/Model/AgentPanel.swift"
 # the coupling being made visible rather than hidden.
 MONEY="Casberi/Shared/MoneyFormat.swift"
 GRID="Casberi/Casberi/Screens/AgentPanelGrid.swift"
-# The per-room chain moved to its own file when the agent panel was deleted
-# (prd §386p). The panel built one figure per connected room on every open;
-# only the PER-ROOM function survived, for the chip peek. The invariants below
-# are unchanged — they just live one file over now.
-COMPOSER="Casberi/Casberi/Model/RoomFigure.swift"
-# The bento grid that routed by `fit` was deleted (prd §717, no call site since
-# §386p); the chip peek is the one surface still choosing a slot from it.
-PEEK="Casberi/Casberi/Shell/ChipPeek.swift"
-for f in "$SRC" "$MONEY" "$GRID" "$COMPOSER" "$PEEK"; do
+for f in "$SRC" "$MONEY" "$GRID"; do
   [[ -f "$f" ]] || { print -u2 "missing $f"; exit 1; }
 done
 
@@ -60,173 +37,20 @@ func check(_ ok: Bool, _ what: String) {
     if ok { print("  ✓ \(what)") } else { print("  ✗ \(what)"); failures += 1 }
 }
 
-func cells(_ n: Int) -> [AgentPanel.Cell] {
-    (0..<n).map { AgentPanel.Cell(label: "c\($0)", weight: n - $0) }
-}
-func bars(_ values: [Int]) -> [AgentPanel.Bar] {
-    values.enumerated().map { AgentPanel.Bar(label: "b\($0.offset)", value: $0.element,
-                                             detail: "\($0.element)") }
-}
-func card(_ source: String, _ figure: AgentPanel.Figure, key: String? = nil,
-          affinity: Int = 0) -> AgentPanel.Card {
-    AgentPanel.Card(source: source, key: key ?? source, title: "t", caption: "c",
-                    figure: figure, affinity: affinity)
-}
-func walltiles(_ labels: [String]) -> [AgentPanel.WallTile] {
-    labels.map { AgentPanel.WallTile(url: "https://x/\($0)", label: $0) }
-}
-func lanes(_ usds: [Double]) -> [AgentPanel.FlowLane] {
-    usds.enumerated().map { AgentPanel.FlowLane(name: "l\($0.offset)", usd: $0.element, count: 1) }
+func marks(_ n: Int) -> [AgentPanel.DialMark] {
+    (0..<n).map { AgentPanel.DialMark(hour: Double($0 % 24), recency: 0.5, source: "s\($0)") }
 }
 
 // ─────────────────── which readings are too thin to draw ───────────────────
 print("isEmpty")
-check(AgentPanel.Figure.treemap(cells(1)).isEmpty, "a one-cell map is not a map")
-check(!AgentPanel.Figure.treemap(cells(2)).isEmpty, "two cells is a map")
-check(AgentPanel.Figure.rail([]).isEmpty, "an empty rail draws nothing")
-check(AgentPanel.Figure.curve([1, 2]).isEmpty, "two points is a line between dots, not a curve")
-check(!AgentPanel.Figure.curve([1, 2, 3]).isEmpty, "three points is a curve")
-// The wall (spec item 4) — loosened from "needs a full 4-grid" so a tile with
-// a label but a failed/empty url can still draw something real.
-check(AgentPanel.Figure.wall(walltiles([])).isEmpty, "an empty wall draws nothing")
-check(AgentPanel.Figure.wall([AgentPanel.WallTile(url: "https://x", label: "")]).isEmpty,
-      "one tile alone is not a wall")
-check(!AgentPanel.Figure.wall(walltiles(["a", "b"])).isEmpty,
-      "two labeled tiles is enough, short of a full 4-grid")
-check(AgentPanel.Figure.wall([AgentPanel.WallTile(url: "", label: ""),
-                              AgentPanel.WallTile(url: "", label: "")]).isEmpty,
-      "two tiles with neither a url nor a label say nothing")
-
-// The runway (§338) — Stripe's and Cloudflare's rail, the figure that GAINS
-// from a small cell.
-func marks(_ ps: [Double]) -> [AgentPanel.RunwayMark] {
-    ps.map { AgentPanel.RunwayMark(position: $0, overdue: $0 <= 0, urgent: $0 < 0.2) }
-}
-check(AgentPanel.Figure.runway(marks: marks([0.5]), span: "30 days").isEmpty,
-      "one dot on an axis is a dot, not a runway — the claim is the SPREAD")
-check(!AgentPanel.Figure.runway(marks: marks([0.1, 0.7]), span: "30 days").isEmpty,
-      "two deadlines make a runway")
-check(AgentPanel.fit(.runway(marks: marks([0.1, 0.7]), span: "7 days")) == .any,
-      "a runway reads at every slot — one axis, no labels to clip")
-// The pulse pair — the one that actually happens on a quiet room.
-check(AgentPanel.Figure.pulse(Array(repeating: 0, count: 84)).isEmpty,
-      "a full-width grid of ZEROS is empty boxes claiming to be a year")
-var oneDay = Array(repeating: 0, count: 84); oneDay[40] = 1
-check(!AgentPanel.Figure.pulse(oneDay).isEmpty, "one live day is a real pulse")
-check(AgentPanel.Figure.pulse([1, 2, 3]).isEmpty, "a pulse shorter than a week is not a rhythm")
-
-// The flow — the figure the user asked for by name.
-check(AgentPanel.Figure.flow(inLanes: lanes([100]), outLanes: []).isEmpty,
-      "one side alone is a bar chart pretending to be a flow")
-check(!AgentPanel.Figure.flow(inLanes: lanes([100]), outLanes: lanes([40])).isEmpty,
-      "one lane each side is a real flow")
-
-// The wallet hero (spec "Agent panel tiles" item 2) — worth beside what it's
-// made of. Both halves must clear their OWN floor independently.
-check(AgentPanel.Figure.worth(curve: [1, 2], cells: cells(3)).isEmpty,
-      "a two-point curve half fails on its own, even with a good map")
-check(AgentPanel.Figure.worth(curve: [1, 2, 3], cells: cells(1)).isEmpty,
-      "a one-cell map half fails on its own, even with a good curve")
-check(!AgentPanel.Figure.worth(curve: [1, 2, 3], cells: cells(2)).isEmpty,
-      "both halves clearing their floor makes a real worth card")
-check(AgentPanel.fit(.worth(curve: [1, 2, 3], cells: cells(2))) == .large,
-      "worth needs the hero's width — a small cell crushes both halves")
-
-// ─────────────────── ranking ───────────────────
-print("rank")
-let ranked = AgentPanel.rank([
-    card("Photos", .treemap(cells(3)), affinity: 1),
-    card("Reddit", .bars(bars([5, 3, 1])), affinity: 9),
-])
-check(ranked.first?.source == "Reddit", "the room you actually open leads")
-
-// One card per room, even when two registries answer for it.
-let deduped = AgentPanel.rank([
-    card("Instagram", .treemap(cells(4)), affinity: 5),
-    card("Instagram", .bars(bars([9, 8])), affinity: 5),
-])
-check(deduped.count == 1, "a doubly-registered room takes one tile, not two")
-
-// …but the dedupe keys on KEY, not source: the Wallet legitimately holds its
-// curve and its flow as two cards. Keying on source would silently drop the
-// sankey, which is exactly the figure the user asked for by name.
-let wallet = AgentPanel.rank([
-    card("Wallet", .curve([1, 2, 3]), key: "wallet.curve", affinity: 5),
-    card("Wallet", .flow(inLanes: lanes([100]), outLanes: lanes([40])),
-         key: "wallet.flow", affinity: 5),
-])
-check(wallet.count == 2, "the Wallet's curve and flow both survive under their own keys")
-
-// Empty figures never become tiles.
-check(AgentPanel.rank([card("X", .treemap(cells(1)))]).isEmpty,
-      "a figure too thin to draw never becomes a card")
-
-// The cap.
-// MORE than the cap, deliberately: the fixture was 20 and the cap was raised
-// to 20 in §337, so it stopped exceeding it and deleting the cap changed
-// nothing — the mutation survived silently. A cap fixture has to overshoot.
-let many = (0..<(AgentPanel.maxCards + 8)).map { card("s\($0)", .bars(bars([3, 2])), affinity: 5) }
-check(AgentPanel.rank(many).count == AgentPanel.maxCards, "the panel caps at maxCards")
-
-// TOTAL order: equal affinity AND equal richness must fall to the name, or the
-// panel reshuffles between opens over identical data.
-let tied = AgentPanel.rank([
-    card("Zulip", .bars(bars([3, 2])), affinity: 4),
-    card("Apple Music", .bars(bars([3, 2])), affinity: 4),
-])
-check(tied.map(\.source) == ["Apple Music", "Zulip"], "equal cards sort by name, so the order is total")
-
-// Richness breaks an affinity tie before the name does.
-let rich = AgentPanel.rank([
-    card("Aaa", .bars(bars([3, 2])), affinity: 4),
-    card("Zzz", .bars(bars([5, 4, 3, 2])), affinity: 4),
-])
-check(rich.first?.source == "Zzz", "with equal affinity the fuller figure leads")
-
-// §336: a contribution wall answers WHEN — the weakest thing a room can say —
-// so it never outranks a real figure, even from a room you open far more.
-let demoted = AgentPanel.rank([
-    card("Photos", .pulse(oneDay), affinity: 99),
-    card("RSS", .bars(bars([5, 3])), affinity: 0),
-])
-check(demoted.first?.source == "RSS", "a year wall never leads over a real figure")
-check(AgentPanel.grade(.pulse(oneDay)) < AgentPanel.grade(.bars(bars([1]))),
-      "pulse grades below everything else")
-
-// The Wallet holds a slot without having been tapped (user: "the wallet should
-// always be on the visualizations") — affinity is a TAP counter, and the
-// wallet's figure is one you want without having gone looking for it.
-let pinned = AgentPanel.rank([
-    card("Photos", .bars(bars([9, 8])), affinity: 99),
-    card("Wallet", .curve([1, 2, 3]), key: "wallet.curve", affinity: 0),
-])
-check(pinned.first?.source == "Wallet", "the Wallet is pinned ahead of affinity")
-
-// A heatmap must not win on width alone.
-var sparse = Array(repeating: 0, count: 84); sparse[0] = 1; sparse[1] = 1
-check(AgentPanel.richness(.pulse(sparse)) == 2, "a pulse is scored on live days, not its width")
-check(AgentPanel.richness(.pulse(sparse)) < AgentPanel.richness(.bars(bars([4, 3, 2]))),
-      "…so a nearly-empty year does not outrank a real leaderboard")
-
-// ─────────────────── normalization ───────────────────
-print("normalized")
-check(AgentPanel.normalized(bars([10, 5])) == [1.0, 0.5], "bars are fractions of the leader")
-check(AgentPanel.normalized(bars([0, 0])) == [0.0, 0.0], "a zero leader yields zero widths, never NaN")
-check(AgentPanel.normalized(bars([0, 0])).allSatisfy { $0.isFinite }, "…and every width is finite")
-
-let curve = AgentPanel.normalized([10.0, 20.0, 30.0])
-check(curve == [0.0, 0.5, 1.0], "a curve maps over its own range")
-// The one that matters most on a wallet tile.
-check(AgentPanel.normalized([7.0, 7.0, 7.0]) == [0.5, 0.5, 0.5],
-      "a FLAT curve rides the middle — along the floor reads as 'went to zero'")
-check(AgentPanel.normalized([Double]()).isEmpty, "an empty curve normalizes to nothing")
-
-print("levels")
-check(AgentPanel.levels([0, 0, 0]) == [0, 0, 0], "an empty week has no intensity")
-let lv = AgentPanel.levels([0, 1, 4])
-check(lv[0] == 0 && lv[2] == 4, "the busiest day is the brightest")
-check(AgentPanel.levels([1, 1, 1]).allSatisfy { $0 == 4 },
-      "a uniformly busy room still shows its own shape, not one dim wall")
+let floor = AgentPanel.Figure.dialFloor
+check(AgentPanel.Figure.dial([]).isEmpty, "an empty dial draws nothing")
+check(AgentPanel.Figure.dial(marks(floor - 1)).isEmpty,
+      "one mark short of the floor is dots on a circle, not a rhythm")
+check(!AgentPanel.Figure.dial(marks(floor)).isEmpty, "the floor itself draws")
+// The composer (`KeptAskComposers.dialLine`) declines on this same constant,
+// so a floor that drifts low draws a dial the ladder never meant to emit.
+check(floor >= 12, "the dial floor has not drifted below a rhythm's worth of marks")
 
 print("money")
 // §341, reported live: a watched wallet holding $7.26M rendered "$7258k" on the
@@ -241,11 +65,6 @@ check(AgentPanel.compactUSD(640) == "$640", "under a thousand is plain")
 // A negative must not lose its tier — `abs` picks the tier, the sign rides the
 // value, and getting that backwards prints "$-7258065" for a drawdown.
 check(AgentPanel.compactUSD(-7_258_000) == "$-7.3M", "a negative keeps its tier")
-
-print("clamp")
-check(AgentPanel.clamp("short") == "short", "a short caption is untouched")
-check(AgentPanel.clamp("the quick brown fox jumps over", max: 15) == "the quick…",
-      "a clamp cuts at a word, never mid-word")
 
 print("")
 if failures > 0 { print("\(failures) failure(s)"); exit(1) }
@@ -285,65 +104,15 @@ PY
 }
 
 rc=0
-mutate "a flat curve is drawn along the floor" \
-  'guard hi > lo else { return curve.map { _ in 0.5 } }' \
-  'guard hi > lo else { return curve.map { _ in 0.0 } }' || rc=1
-mutate "a zero leader yields NaN bar widths" \
-  'guard let top = bars.map(\.value).max(), top > 0 else {
-            return Array(repeating: 0, count: bars.count)
-        }' \
-  'let top = bars.map(\.value).max() ?? 0' || rc=1
-mutate "a room can take two tiles" \
-  'guard !out.contains(where: { $0.key == card.key }) else { return }' \
-  'if false { return }' || rc=1
-mutate "dedupe keys on source and eats the sankey" \
-  'guard !out.contains(where: { $0.key == card.key }) else { return }' \
-  'guard !out.contains(where: { $0.source == card.source }) else { return }' || rc=1
-mutate "a lone deadline draws as a runway" \
-  'case .runway(let m, _): return m.count < 2' \
-  'case .runway(let m, _): return m.count < 1' || rc=1
-mutate "a one-sided flow draws" \
-  'case .flow(let inL, let outL): return inL.isEmpty || outL.isEmpty' \
-  'case .flow(let inL, let outL): return inL.isEmpty && outL.isEmpty' || rc=1
-mutate "the panel loses its cap" \
-  'guard out.count < maxCards else { return }' \
-  'if false { return }' || rc=1
-mutate "tile order stops being total" \
-  'return a.source < b.source' \
-  'return false' || rc=1
-mutate "a year wall outranks a real figure again" \
-  'if ga != gb { return ga > gb }' \
-  'if false { return false }' || rc=1
-mutate "the Wallet loses its pin" \
-  'if pa != pb { return pa }' \
-  'if false { return false }' || rc=1
-mutate "affinity stops leading the sort" \
-  'if a.affinity != b.affinity { return a.affinity > b.affinity }' \
-  'if false { return false }' || rc=1
-mutate "a pulse is scored on its width" \
-  'case .pulse(let p):   return p.filter { $0 > 0 }.count' \
-  'case .pulse(let p):   return p.count' || rc=1
-mutate "an all-zero year counts as a drawable pulse" \
-  'case .pulse(let p):   return p.count < 7 || !p.contains { $0 > 0 }' \
-  'case .pulse(let p):   return p.count < 7' || rc=1
-mutate "a two-point curve draws as a rule across the tile" \
-  'case .curve(let v):   return v.count < 3' \
-  'case .curve(let v):   return v.count < 2' || rc=1
-mutate "a worth card can half-draw on a thin map" \
-  'case .worth(let v, let c): return v.count < 3 || c.count < 2' \
-  'case .worth(let v, let c): return v.count < 3 && c.count < 2' || rc=1
-mutate "a wall of four gray boxes draws as a wall" \
-  'case .wall(let u):    return u.filter { !$0.label.isEmpty || !$0.url.isEmpty }.count < 2' \
-  'case .wall(let u):    return u.count < 2' || rc=1
-mutate "worth crushes into a small cell" \
-  'case .worth:   return .large' \
-  'case .worth:   return .any' || rc=1
-mutate "empty figures become blank tiles" \
-  'filter { !$0.figure.isEmpty }' \
-  'filter { _ in true }' || rc=1
-mutate "levels stop scaling to the room's own max" \
-  'let step = Double(count) / Double(top)' \
-  'let step = Double(count) / 100.0' || rc=1
+mutate "a dial of a few marks draws" \
+  'case .dial(let m):    return m.count < Self.dialFloor' \
+  'case .dial(let m):    return m.count < 1' || rc=1
+mutate "the dial floor drifts low" \
+  'static let dialFloor = 12' \
+  'static let dialFloor = 3' || rc=1
+mutate "the panel grows its own money table back" \
+  'static func compactUSD(_ usd: Double) -> String { MoneyFormat.compactUSD(usd) }' \
+  'static func compactUSD(_ usd: Double) -> String { "$\(Int(usd / 1000))k" }' || rc=1
 
 print ""
 print "Drift guards"
@@ -358,45 +127,26 @@ guard_has() {
   else print "  ✗ $what"; return 1; fi
 }
 
-# The panel's contract: the tile previews the figure the ROOM draws. The chain
-# below mirrors FeedScreen.shapedSections; if a registry is dropped here the
-# tile silently previews a different figure than the room.
-# Dropped with the panel (prd §386p): the tile tap, the Stripe and Cloudflare
-# rails, the flow card and the import-receipt exclusion all belonged to
-# `buildPanel`'s forty-room loop, not to one room's figure. What they guarded
-# still holds where it moved — the brief draws those rails and excludes
-# receipts, and TodayBrief's own checks cover it there.
-guard_has "the chain still asks topicMap first" "$COMPOSER" 'FeedInsight\.topicMap\(source:' || rc=1
-# "…then leaderboard" is DELETED (prd §723) — the ranked board is gone from
-# `RoomFigure`'s chain along with every room it headed, so a figure now goes
-# topic map → distribution → mosaic → heatmap.
-guard_has "…then distribution"  "$COMPOSER" 'FeedInsight\.distribution\(source:' || rc=1
-guard_has "…then mosaic"        "$COMPOSER" 'FeedInsight\.mosaic\(source:' || rc=1
-guard_has "…then the heatmap"   "$COMPOSER" 'FeedHeatmap\.label\(for:' || rc=1
-# Affinity is ChipMemory's weight, not a number invented here.
-guard_has "affinity rides ChipMemory" "$COMPOSER" 'ChipMemory\.weight\(for:' || rc=1
-# Import receipts are the app talking about itself.
-# A tap must land you in the room the tile previewed.
-# The sankey rides the room's own composer — the panel must not grow a second
-# flow engine that can disagree with the feed's band.
-# Both rails must ride their ROOM's own composer, or the tile and the room can
-# disagree about the same deadlines.
-# …and it must take a full-width slot: half a sankey is unreadable by the
-# sizing inventory this panel was built against.
-guard_has "a flow figure demands full width" "$SRC" 'case \.flow:    return \.bandOnly' || rc=1
-# …and the GRID must actually honour `fit`, or the model's constraint is a
-# comment. The guard moved with the logic: it lived on a helper in the grid
-# until §337 put routing in `AgentPanel.fit`, and a guard left pointing at the
-# old home reads ✗ while the behaviour is perfectly correct.
-guard_has "the chip peek routes by fit" "$PEEK" 'AgentPanel\.fit\(card\.figure\) == \.bandOnly' || rc=1
+# The chip peek is gone (prd §833), and nothing may quietly rebuild a per-room
+# figure chain on the model it read: those cases were deleted with it.
+src_nc="$(sed 's|//.*||' "$SRC")"
+revived=0
+for gone in 'case treemap' 'case bars' 'case rail' 'case pulse' 'case curve' \
+            'case wall' 'case flow' 'case runway' 'case worth' 'func rank'; do
+  if grep -qE "$gone\b" <<< "$src_nc"; then
+    print "  ✗ \`$gone\` is back on AgentPanel — the peek that drew it was deleted (§833)"
+    revived=1; rc=1
+  fi
+done
+(( revived )) || print "  ✓ no per-room figure or ranking survives the peek"
 # §334's tripwire: the moment a figure can be words, the panel is a list again.
 if sed 's|//.*||' "$SRC" | grep -qE 'case text\('; then
   print "  ✗ a Figure case may never be text (§334's tripwire)"; rc=1
 else
-  print "  ✓ no text figure — the panel only ever draws"
+  print "  ✓ no text figure — a figure only ever draws"
 fi
 # The entrance must honour Reduce Motion.
-guard_has "tile entrance honours Reduce Motion" "$GRID" 'reduceMotion \? nil' || rc=1
+guard_has "the dial's entrance honours Reduce Motion" "$GRID" 'reduceMotion \? nil' || rc=1
 
 print ""
 print "Glyph coverage — every catalog offer has a real mark"

@@ -45,7 +45,6 @@ SETUP="Casberi/Casberi/Screens/WalletbeatScreen.swift"
 SHEETSRC="Casberi/Casberi/Model/WalletbeatSheetSource.swift"
 SHEETVIEWS="Casberi/Casberi/Screens/WalletbeatSheetViews.swift"
 CARDSCREEN="Casberi/Casberi/Screens/WalletbeatCardScreen.swift"
-FIGURE="Casberi/Casberi/Model/RoomFigure.swift"
 SHEETVIEW="Casberi/Casberi/Screens/ThingSheetView.swift"
 RETRIEVER="Casberi/Casberi/Model/Retriever.swift"
 SNAP="scripts/walletbeat-snapshot.py"
@@ -147,14 +146,6 @@ guard '&& walletbeatShape == nil' "$SHEETVIEW" \
   "the Walletbeat arm is not subtracted from contentShown — the body would draw twice"
 guard 'WalletbeatReportCard(walletID:' "$SHEETVIEW" \
   "a watched wallet's sheet no longer draws its report card"
-
-# The chip peek must preview the room it opens — X's and Safe's rule (§334).
-guard 'source == WalletbeatRoomSource.source' "$FIGURE" \
-  "the Walletbeat chip peek no longer previews its head — long-pressing the chip draws nothing"
-# The bar's VALUE is the judged count, never the pass count: a bar drawn from passes ranks
-# the wallet nobody examined alongside one that passed nothing.
-guard 'value: $0.counts.judged' "$FIGURE" \
-  "the peek's bars no longer measure how much was JUDGED — they would imply a verdict"
 
 # §308 facets, and the rule that they only narrow behind a named source.
 guard '"Incident")' "$RETRIEVER" \

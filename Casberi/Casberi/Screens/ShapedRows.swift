@@ -2855,10 +2855,10 @@ struct AppReviewRow: View {
 /// 44pt band itself. That is the one thing a preview should never be: a bigger
 /// copy of what you are already looking at.
 ///
-/// **The grammar is `AppsScreen.PeekPreview`'s and `ChipPeek`'s, deliberately
-/// unchanged** — same 300pt card, same `surfaceSheet` ground, same `Space.s4`
-/// padding — because the app now peeks in three places and a third dialect
-/// would read as a different app each time. Both of that pattern's recorded
+/// **The grammar is `AppsScreen.PeekPreview`'s, deliberately unchanged** —
+/// same 300pt card, same `surfaceSheet` ground, same `Space.s4` padding —
+/// because the app peeks in more than one place and a second dialect would
+/// read as a different app each time. Both of that pattern's recorded
 /// lessons still apply and are already satisfied at the call site: the feed
 /// row's menu is non-empty (an empty menu can suppress the preview outright),
 /// and nothing here may look pressable, since the system's preview layer
@@ -2889,8 +2889,8 @@ struct AppReviewRow: View {
 struct RowPeek: View {
     let thing: Thing
 
-    /// The peek card's width — `ChipPeek`'s, so the two never differ by a few
-    /// points in a way that reads as a rendering fault rather than a choice.
+    /// The peek card's width — `AppsScreen.PeekPreview`'s, so the two never
+    /// differ by a few points in a way that reads as a rendering fault rather than a choice.
     private static let width: CGFloat = 300
     /// The picture's width, DERIVED rather than spelled: the card's own padding
     /// is a token that has already moved once (the 2026-07-25 breathing-room

@@ -74,24 +74,15 @@ KNOWN_EXEMPT = {
     # no release build and nobody using Reduce Motion will ever reach it.
     # A conscious ruling, not a snooze.
     "RootShell.swift:RootShell": "the -openAppsDelay probe hook, DEBUG-only",
-    # FlowFigure's entrance is real and lives one struct UP: `FigureView` owns
-    # the one `grown` clock every panel figure shares (with the Reduce Motion
-    # collapse the first check demands) and hands it down as `t`, which
-    # FlowFigure applies as `.opacity(t)`. Splitting a second entrance state
-    # into the child would put two clocks on one tile — the exact double-deal
-    # TileRain's "ONE gesture deals ONE shower" lesson forbids. The audit
-    # can't follow a value across a struct boundary, so: a conscious ruling.
-    "AgentPanelGrid.swift:FlowFigure": "entrance is FigureView's shared clock, passed as t",
-    # Same shape as FlowFigure above: `FigureView` owns the one `grown` clock
-    # every panel figure shares (with the Reduce Motion collapse the first
-    # check demands) and hands it down as `t`. DialFigure gates each mark's
-    # opacity on `t` reaching its own hour — that IS the radar sweep — and
-    # RiverFigure masks its width by `t`. A second entrance state inside either
-    # child would put two clocks on one tile, the double-deal TileRain's
-    # "ONE gesture deals ONE shower" lesson forbids. The audit cannot follow a
-    # value across a struct boundary, so: conscious rulings, not snoozes.
+    # DialFigure's entrance is real and lives one struct UP: `FigureView` owns
+    # the one `paint` clock (with the Reduce Motion collapse the first check
+    # demands) and hands it down as `ring`/`sweep`; DialFigure gates each
+    # mark's opacity on the sweep reaching its own hour — that IS the radar
+    # sweep. A second entrance state inside the child would put two clocks on
+    # one figure, the double-deal TileRain's "ONE gesture deals ONE shower"
+    # lesson forbids. The audit cannot follow a value across a struct
+    # boundary, so: a conscious ruling, not a snooze.
     "AgentPanelGrid.swift:DialFigure": "entrance is FigureView's shared clock, passed as t",
-    "AgentPanelGrid.swift:RiverFigure": "entrance is FigureView's shared clock, passed as t",
     # `size * 0.3` on the state badge is a FIXED proportion of the mark's own
     # size parameter, not a magnitude read off data — the same shape
     # `WalletFace`'s identicon blobs already draw (`d * 0.5`, `d * 0.42`),
@@ -108,7 +99,7 @@ KNOWN_EXEMPT = {
     # in for an NFT (prd §387), not a chart.
     #
     # It also already HAS its one entrance, one level up and shared, which is
-    # the FlowFigure shape above: the tiles ride `WalletNFTShelfCard`, whose
+    # the DialFigure shape above: the tiles ride `WalletNFTShelfCard`, whose
     # section carries `RowEntrance`. A per-tile entrance would be a second
     # clock on one card — the double-deal TileRain's "ONE gesture deals ONE
     # shower" lesson forbids, and it would animate eight tiles independently

@@ -91,9 +91,9 @@ enum DS {
     static let stepVerify = Color.fixed("#8c78ed")
 
     /// The RANK hues (prd §717) — categories with no state to say and no
-    /// identity to borrow: a theme river's bands by rank, a distribution's
-    /// fifth and sixth segments. Were two spellings of one idea, a raw hex
-    /// array inside `RiverFigure` and `.purple` / `.pink` inside
+    /// identity to borrow: a distribution's fifth and sixth segments. Were two
+    /// spellings of one idea, a raw hex array inside the theme river (deleted,
+    /// §833) and `.purple` / `.pink` inside
     /// `DistributionHero`; one palette now, read by index. FIXED for
     /// `neutralBadge`'s reason: they are fills and legend swatches that must
     /// read the same in both themes. Blue, purple, green, orange, pink.
@@ -847,8 +847,7 @@ enum DS {
         /// **It is the app's ONLY nested pair, and that is the design working
         /// rather than a gap.** Every other rounded-inside-rounded candidate
         /// turned out to be a standalone control sitting on a page or in a List
-        /// section (`AppsScreen`'s search field, `FollowImportSheet`'s filter,
-        /// `ChipPeek`'s figure well) — no rounded parent, so no concentric
+        /// section (`AppsScreen`'s search field, `FollowImportSheet`'s filter) — no rounded parent, so no concentric
         /// correction to make. §8's no-line rule is why: the app separates
         /// depth by TONE, so content sits directly on a card instead of inside
         /// a second box drawn on it. Expect this helper to stay rare.

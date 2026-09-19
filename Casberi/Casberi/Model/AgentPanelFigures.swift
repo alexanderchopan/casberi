@@ -1,17 +1,16 @@
 import Foundation
 
-/// The three CROSS-SOURCE figures (prd §337) — the ones no room can draw.
+/// The CROSS-SOURCE figures (prd §337) — the ones no room can draw.
 ///
 /// Every registry figure in `FeedInsight` is pure over ONE room's things by
 /// contract, which is exactly why the All feed has never had a hero: a chart
 /// of everything at once, composed that way, is a chart of nothing. These three
 /// are composed the other way round — they take the WHOLE corpus and find the
-/// axis all rooms genuinely share:
+/// axis all rooms genuinely share (the theme river went in §833 — nothing had
+/// drawn it since the panel):
 ///
 ///   • `dial`    — the clock. Every thing has an hour; nothing in the app has
 ///                 ever asked which one.
-///   • `river`   — the weeks. The topic maps already extract themes; this is
-///                 the same extraction shown as movement instead of state.
 ///   • `scatter` — meaning. §282's embeddings serve retrieval invisibly; this
 ///                 is the one surface that draws them.
 ///
@@ -21,7 +20,7 @@ enum AgentPanelFigures {
 
     // MARK: - Input
 
-    /// One thing, flattened to what these three read.
+    /// One thing, flattened to what these figures read.
     /// `Sendable` so the semantic map's projection can run OFF the main actor
     /// (PERF 2026-08-12): every field is a value type, and `scatter` is the
     /// one figure here whose cost is real arithmetic rather than a walk — see
@@ -99,63 +98,6 @@ enum AgentPanelFigures {
         return "\(h)\(hour < 12 ? "a" : "p")"
     }
 
-    // MARK: - 2 · The theme river
-
-    /// Themes as weekly bands, oldest week first.
-    ///
-    /// Bands are ordered by TOTAL volume descending and then by name, never by
-    /// when they peaked — a river whose bands re-stack between opens shimmers,
-    /// and the ordering has to be total for the same reason `AgentPanel.rank`
-    /// does (§332's per-process Dictionary hashing, one file over).
-    ///
-    /// A theme must appear in at least `minWeeks` distinct weeks to be a
-    /// current: a single burst is an event, and drawing it as a band claims a
-    /// trend that isn't there.
-    /// How far back the river reaches. Named rather than inlined so the
-    /// caller that BUILDS the entries can narrow to the same window without
-    /// the two drifting (`Composer.crossSourceCards`, PERF 2026-08-12) — this
-    /// is the widest window any cross-source figure reads, so it is the bound
-    /// on what is worth mapping at all.
-    static let riverWeeks = 10
-
-    static func river(_ entries: [Entry], now: Date = .now,
-                      weeks: Int = riverWeeks, maxBands: Int = 5,
-                      minWeeks: Int = 2) -> [AgentPanel.RiverBand] {
-        let cal = Calendar.current
-        guard let start = cal.date(byAdding: .day, value: -7 * weeks, to: now) else { return [] }
-        // term -> per-week counts
-        var buckets: [String: [Int]] = [:]
-        for entry in entries where entry.at >= start && entry.at <= now {
-            let elapsed = now.timeIntervalSince(entry.at)
-            let index = weeks - 1 - Int(elapsed / (7 * 86_400))
-            guard index >= 0, index < weeks else { continue }
-            // One credit per THING per term, so a term repeated inside one
-            // title can't outweigh the same term carried by several things
-            // (the `dominantTopic` lesson).
-            for term in Set(entry.terms.map { $0.lowercased() })
-            where term.count >= 3 && !nonSubject.contains(term) {
-                buckets[term, default: Array(repeating: 0, count: weeks)][index] += 1
-            }
-        }
-        var bands: [AgentPanel.RiverBand] = []
-        for (term, counts) in buckets {
-            let live = counts.reduce(0) { $1 > 0 ? $0 + 1 : $0 }
-            guard live >= minWeeks else { continue }
-            // A theme confined to the newest weeks is a BURST, not drift, and
-            // a river drawn from one is a flat line that flares at the right
-            // edge — technically true, and it claims a trend that isn't there
-            // (seen on the sim). It has to reach back past the halfway mark
-            // to count as movement.
-            let reachesBack = counts.prefix(counts.count / 2).contains { $0 > 0 }
-            guard reachesBack else { continue }
-            bands.append(AgentPanel.RiverBand(label: term, weeks: counts))
-        }
-        bands.sort { a, b in
-            a.total == b.total ? a.label < b.label : a.total > b.total
-        }
-        return Array(bands.prefix(maxBands))
-    }
-
     /// Words that name a SHAPE or a KIND, never a subject.
     ///
     /// `Thing.tags` carries the importers' facet tags (Post / Reply / Liked /
@@ -174,14 +116,14 @@ enum AgentPanelFigures {
         "message", "messages", "untitled", "document", "documents",
     ]
 
-    // MARK: - 3 · The semantic map
+    // MARK: - 2 · The semantic map
 
     /// The corpus projected into the unit square by embedding similarity.
     ///
     /// **A DETERMINISTIC projection, and that constraint picked the method.**
     /// t-SNE and UMAP give prettier separation and are both randomised — they
     /// would rearrange the map between two opens over identical data, which is
-    /// the exact failure `AgentPanel.rank`'s total ordering exists to prevent,
+    /// the exact failure a total ordering exists to prevent (§332),
     /// and far more glaring here since the whole picture moves. So: PCA onto
     /// its own first two components, computed by power iteration with a FIXED
     /// seed vector and a fixed iteration count. Same corpus in, same picture
