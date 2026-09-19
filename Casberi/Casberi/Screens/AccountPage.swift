@@ -282,7 +282,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 .minimumScaleFactor(0.7)
             HStack(spacing: DS.Space.s2) {
                 Circle().fill(stateTone).frame(width: 8, height: 8)
-                Text(AccountPageShape.stateLine(state))
+                Text(AccountPageShape.stateLine(state, lands: lands))
                     .dsText(.subhead12).fontWeight(.medium)
                     .foregroundStyle(stateTone)
             }
@@ -528,6 +528,12 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 
     @ViewBuilder private var exits: some View {
         if state.connected {
+            // No Pause on a seat that lands nothing (prd §835): there is no
+            // reading to pause, and pausing did not stop what the seat does
+            // (a key still answered; Apple Intelligence still answered in the
+            // cloud) — a control that changed a word and nothing else. A seat
+            // paused before this ruling keeps Resume, so it is never stuck.
+            if lands || seat?.status == .paused {
             Button {
                 store.togglePause(seatID)
                 DSHaptic.tap()
@@ -543,8 +549,10 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             .buttonStyle(.plain)
             .padding(.top, DS.Space.s4)
             .plainAccountRow()
+            }
             BridgeDisconnectSection(bridgeID: seatID, name: source,
                                     teardown: teardown, note: disconnectNote, plain: true)
+                .padding(.top, lands || seat?.status == .paused ? 0 : DS.Space.s4)
                 .plainAccountRow()
         } else if seat != nil {
             // The credential is gone but the seat is still registered — a
