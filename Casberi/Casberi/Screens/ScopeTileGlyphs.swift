@@ -63,6 +63,21 @@ enum ScopeTileGlyph {
     static let wallets      = "wallet.bifold"
     static let news         = "newspaper"
     static let revisions    = "arrow.triangle.2.circlepath"
+    /// The agent rooms' live half (prd §840) — the tile that turns the room
+    /// from the conversations you have HAD into the one you are having.
+    ///
+    /// **The bubble family here differs by what sits INSIDE the bubble**, and
+    /// that is what makes this free rather than a fifth generic one: a star is
+    /// a review, a line of text an annotation, a character Duolingo, an
+    /// exclamation Sentry — so an ellipsis is "it is answering". The plain
+    /// bubbles were all spoken for: `bubble.left` is the chat KIND and the
+    /// ChatGPT/Claude/Gemini seats, `bubble.left.and.bubble.right` is the
+    /// Social category chip and Stocktwits (user, 2026-09-19).
+    ///
+    /// `square.and.pencil` — Apple's own compose — was proposed and REFUSED
+    /// by the user, though it was free as a tile glyph and its five other uses
+    /// all mean compose. Do not re-propose it.
+    static let chat         = "ellipsis.bubble"
 }
 
 /// The rooms' kind tiles (prd §815, §816). Activity and Permissions are the
@@ -110,6 +125,18 @@ extension PrivyHomeFeed.Section: DSTileScope {
         switch self {
         case .apps:     return ScopeTileGlyph.apps
         case .activity: return ScopeTileGlyph.activity
+        }
+    }
+}
+
+/// The agent rooms' two halves (prd §840). Conformed here for the reason every
+/// other scope enum is — `AgentRoomScope` stays Foundation-only so a harness
+/// can compile it whole.
+extension AgentRoomScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all:  return ScopeTileGlyph.all
+        case .chat: return ScopeTileGlyph.chat
         }
     }
 }

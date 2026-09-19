@@ -108,6 +108,16 @@ struct RootShell: View {
     /// the landed row, so a second answer updates the first one's thing
     /// instead of leaving a row per turn.
     @State private var keyedConversationID: UUID?
+    /// WHOSE conversation `keyedHistory` is (prd §840).
+    ///
+    /// `keyedHistory` is one list and the ask path threads it into whatever
+    /// provider answers, which was harmless while every keyed ask came from
+    /// the one composer. It stops being harmless the moment each agent has a
+    /// room you can ask from: chat with Bankr, walk to Venice's room and ask
+    /// there, and Venice is handed Bankr's conversation as its own history —
+    /// one agent's words sent to another agent, which is a leak before it is
+    /// a bug. A provider change starts a new conversation instead.
+    @State private var keyedProvider: AgentProvider?
     /// iPad (2026-07-25). The floating agent cluster lives in THIS ZStack,
     /// which is deliberately outside `MainSurface`'s safe-area insets (ruling
     /// 6 — the bar rides every screen this app can push, not just the feed),
@@ -276,6 +286,33 @@ struct RootShell: View {
             }
         }
         #endif
+        // An agent's ROOM asked a question (prd §840). It is served here and
+        // not in the room because `keyedAnswerDocument` is private to the
+        // shell and is the one funnel every ask goes through — §377's lesson
+        // about a second door that drifts from the first.
+        //
+        // The room is given no answer back: the exchange LANDS (§839) and the
+        // row the chat surface already draws updates itself. `roomAskPending`
+        // is the only thing that returns, and it is cleared in a `defer` so a
+        // thrown or cancelled ask cannot strand the surface spinning — §83's
+        // rule about claiming work that has stopped.
+        .onChange(of: chrome.roomAsk) { _, ask in
+            guard let ask else { return }
+            chrome.roomAsk = nil
+            // A DIFFERENT AGENT IS A DIFFERENT CONVERSATION. Without this,
+            // asking Venice from its room hands it whatever you last said to
+            // Bankr as history (`keyedProvider`).
+            if keyedProvider != ask.provider {
+                keyedHistory = []
+                keyedConversationID = nil
+                keyedProvider = ask.provider
+            }
+            chrome.roomAskPending = true
+            Task { @MainActor in
+                defer { chrome.roomAskPending = false }
+                _ = await keyedAnswerDocument(ask.question, provider: ask.provider)
+            }
+        }
         // A surface requested an ask (the weekend cover) — open the composer;
         // it consumes the query once it mounts (prd 54).
         .onChange(of: chrome.askRequest) { _, request in
@@ -3964,6 +4001,7 @@ struct RootShell: View {
         if let provider {
             let id = keyedConversationID ?? UUID()
             keyedConversationID = id
+            keyedProvider = provider
             AgentConversationLanding.record(turns: keyedHistory, provider: provider,
                                             conversationID: id, in: modelContext)
         }

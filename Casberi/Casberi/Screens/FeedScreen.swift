@@ -1903,6 +1903,9 @@ struct FeedScreen: View {
     /// away, stamping a junk key) — this page never sees another room's name.
     @State private var newSince: Date?
     @State private var visitFrozen = false
+    /// The agent whose room this is, when its key is present (prd §840) —
+    /// resolved in `onAppear` by `resolveRoomAgent`, never in a body.
+    @State private var roomAgent: AgentProvider?
     /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
     /// same project detail door Home's map already opened.
     @State private var openProject: ProjectRoute?
@@ -3058,6 +3061,33 @@ struct FeedScreen: View {
     /// where it draws none, `kindTileSections` stands it under the cover. One
     /// construction for both, so a tile is the same control in either place.
     ///
+    /// The agent whose room this is, and whose key is present (prd §840).
+    ///
+    /// Held in `@State` and resolved in `onAppear`, never read in a body:
+    /// `AgentKey.configured` walks the Keychain on its first read per
+    /// `TokenVault.generation`, and a Keychain read inside a body is build
+    /// 525's defect (CLAUDE.md).
+    ///
+    /// **nil where there is no key, which is the §83 half.** An imported
+    /// ChatGPT export gives that room rows without giving it anything to ask
+    /// with, so the room draws no tiles at all and stays the list it already
+    /// was. A Chat tile over a seat that cannot answer is a dead control.
+    private func resolveRoomAgent() {
+        let configured = AgentKey.configured
+        roomAgent = configured.first { $0.agent == source }
+    }
+
+    /// The agent room's two tiles (prd §840). One tile is never drawn — the
+    /// grid's own rule (§752) and §83's: All alone offers no choice.
+    private var agentTiles: DSScopeTiles<AgentRoomScope>? {
+        guard roomAgent != nil else { return nil }
+        return DSScopeTiles(sections: AgentRoomScope.allCases,
+                            active: chrome.agentScope,
+                            attention: []) { picked in
+            withAnimation(DS.Motion.standard) { chrome.agentScope = picked }
+        }
+    }
+
     /// Before this visit's reading lands, the room draws the tiles it drew
     /// last time (`RoomKindTileMemory`, prd §830) — never the attention dot,
     /// which waits for the reading.
@@ -6001,6 +6031,7 @@ struct FeedScreen: View {
             }
             #endif
             if isActive { land() }
+            resolveRoomAgent()
         }
         .onDisappear { if visitFrozen { leave() } }
         .onChange(of: isActive) { _, now in
@@ -7134,6 +7165,8 @@ struct FeedScreen: View {
                 bundledSections(visible, nextEventID: nextEventID,
                                 heroShown: heroShown)
                 corpusFloorSection(visible)
+            } else if roomAgent != nil {
+                agentRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if RoomKindTiles.Room(source: source) != nil {
                 kindTileSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else {
@@ -7197,6 +7230,76 @@ struct FeedScreen: View {
     /// A room that DRAWS a head (prd §816: Safe, Stripe, PostHog) draws no
     /// cover and no tiles here — the head carries the tiles in its `scopes`
     /// slot, and this draws only the narrowed days under it.
+    /// An agent's room (prd §840): the cover, the two tiles, then either the
+    /// conversations you have had or the one you are having.
+    ///
+    /// It follows `kindTileSections`' geometry exactly rather than inventing
+    /// its own — cover, `contentGap`, tiles, `leadGap`, content — because the
+    /// tiles are one control in one place in every room that has them (§752,
+    /// user: *"that is a template. we follow it in all rooms, so the buttons
+    /// can't be in different places on each screen"*).
+    ///
+    /// **The cover stands on All only.** On Chat the room is the conversation,
+    /// and a lede card above it would draw the newest conversation twice —
+    /// once as a cover and once as the live turns underneath.
+    @ViewBuilder
+    private func agentRoomSections(_ visible: [Thing], nextEventID: UUID?,
+                                   heroShown: Bool) -> some View {
+        let chatting = chrome.agentScope == .chat
+        let days = chronoDays(visible)
+        let coverID = (heroShown || chatting) ? nil : ledeThingID(in: days)
+        let coverThing: Thing? = coverID.flatMap { id in
+            visible.first(where: { (thing: Thing) -> Bool in thing.isLive && thing.id == id })
+        }
+        if let coverThing {
+            Section {
+                ledeListRow(coverThing, top: 0,
+                            bottom: DSRoomChassis.contentGap, holdsLead: true)
+            }
+        }
+        if let agentTiles {
+            Section {
+                agentTiles
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: coverThing == nil ? DS.Space.s2 : 0,
+                                              leading: DSRoomChassis.inset,
+                                              bottom: DSRoomChassis.leadGap,
+                                              trailing: DSRoomChassis.inset))
+            }
+        }
+        if chatting, let roomAgent {
+            Section {
+                AgentChatView(source: source, provider: roomAgent)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: DS.Space.s3, trailing: DSRoomChassis.inset))
+            }
+        } else if visible.isEmpty {
+            // The tiles STAY over an empty list — `keepsChromeWhenEmpty`
+            // (§538, §769): the Chat tile is how this room stops being empty,
+            // so hiding it exactly when there is nothing here would take away
+            // the one control that helps.
+            Section {
+                DSSkeletonRows(label: Text("Nothing here yet."))
+                    .padding(.vertical, DS.Space.s2)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: 0, trailing: DSRoomChassis.inset))
+            }
+        } else {
+            let rest: [(String, [Thing])] = coverID.map { id in
+                days.map { label, rows in
+                    (label, rows.filter { (thing: Thing) -> Bool in !(thing.isLive && thing.id == id) })
+                }
+                .filter { !$0.1.isEmpty }
+            } ?? days
+            groupedSections(rest, nextEventID: nextEventID, boundary: boundaryThingID(in: rest))
+        }
+    }
+
     @ViewBuilder
     private func kindTileSections(_ visible: [Thing], nextEventID: UUID?,
                                   heroShown: Bool) -> some View {

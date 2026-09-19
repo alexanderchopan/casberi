@@ -1862,6 +1862,7 @@ harness "Work sheet self-test" "Work sheet self-test" "scripts/work-stage-selfte
 # chat must say what it is missing, and a chat that was never clamped must not
 # claim turns went missing that never existed.
 harness "Agent sheet self-test" "agent sheet self-test" "scripts/agent-sheet-selftest.sh" "the agent sheet self-test failed — run scripts/agent-sheet-selftest.sh"
+harness "Agent landing self-test" "agent landing self-test" "scripts/agent-landing-selftest.sh" "the agent landing self-test failed — run scripts/agent-landing-selftest.sh"
 
 # What a PURCHASE sheet says (prd §368, 2026-08-12) — the shopping category's
 # receipt, and the card behind a product you're only watching. Same class as

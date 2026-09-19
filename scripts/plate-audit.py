@@ -86,6 +86,9 @@ WELL_ALLOWED = {
     "DSRoomHead.swift": (1, "the room lead's well, `dsRoomHeadBlock` (prd §766)"),
     "DSRoomScopeChrome.swift": (1, "a room scope's figure well (prd §766)"),
     "Composer.swift": (2, "the composer's draft field and its live transcript — the floating layer"),
+    "AgentChatView.swift": (1, "the agent room's entry field — the one thing §782 "
+                               "leaves a well for, and the same shape the composer's "
+                               "own draft field takes (prd §840)"),
     "VibenetAuthorizeSheet.swift": (2, "two entry fields: the address and the scope picker"),
     "VibenetAccountSheet.swift": (1, "the note entry field"),
     "AddressBookViews.swift": (3, "the name entry field, the compact copy button's face, and an action tile's face"),

@@ -54,6 +54,16 @@ enum AgentConversationLanding {
     /// their history and then talked to it here has one Claude, not two.
     static func source(for provider: AgentProvider) -> String { provider.agent }
 
+    /// What a conversation had HERE is keyed by, and the one thing that tells
+    /// it apart from an imported one.
+    ///
+    /// A Claude export and a keyed Claude chat share a source on purpose
+    /// (§839: one agent, one room), so the source cannot separate them and the
+    /// ref must — the importers stamp `chatgpt:` / `claude:` / `claudecode:` /
+    /// `gemini:`. `AgentChatView` fences its query on this; without it the
+    /// Chat tile opens showing an imported conversation as the live one.
+    static let refPrefix = "agentchat:"
+
     /// Land or update the conversation `turns` belongs to.
     ///
     /// `@MainActor` because it is handed the main `ModelContext` — walking one
@@ -70,7 +80,10 @@ enum AgentConversationLanding {
               !opening.isEmpty else { return nil }
         let source = source(for: provider)
         let assistant = AgentSheet.assistant(for: source) ?? source
-        let ref = "agentchat:\(conversationID.uuidString)"
+        // Through the constant, never a second literal: the reader fences its
+        // query on it, and two spellings of one prefix is one of them silently
+        // matching nothing.
+        let ref = refPrefix + conversationID.uuidString
 
         // Flattened to the importers' own pair-per-turn shape. A trailing ask
         // with no answer yet is NOT written: the upsert runs after an answer

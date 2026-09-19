@@ -434,6 +434,42 @@ final class ShellChrome {
     /// and `RoomKindTiles.resolve` handles a pick whose kind has gone.
     var roomKind: RoomKindTile = .all
 
+    /// Which half of an AGENT room is standing (prd §840) — the conversations
+    /// you have had, or the one you are having.
+    ///
+    /// Here rather than in `FeedScreen.@State` for `personScope`'s reason: the
+    /// screen is destroyed on every room change (`.id(filter.source)`), so a
+    /// pick held inside it cannot survive the shell-mounted tiles that set it.
+    /// Cleared on every source change, because All is where a room opens —
+    /// arriving in a keyboard because you were last chatting to a different
+    /// agent is not a room you looked something up in.
+    var agentScope: AgentRoomScope = .all
+
+    /// A question asked from inside an agent's room, for `RootShell` to answer
+    /// (prd §840). The room cannot call the ask path itself: `answerDocument`
+    /// and `keyedAnswerDocument` are private to `RootShell` and injected into
+    /// the composer as closures, so a screen reaching them directly would be a
+    /// second door into the one funnel every ask goes through.
+    ///
+    /// **The room does not wait for the answer, and that is the design.** The
+    /// answer lands as a `Thing` (`AgentConversationLanding`), so the chat
+    /// surface renders from the corpus like every other room and needs no
+    /// answer state of its own — it re-renders when the row updates. `id`
+    /// makes two identical questions two separate asks.
+    var roomAsk: RoomAsk?
+
+    struct RoomAsk: Equatable {
+        let question: String
+        let provider: AgentProvider
+        let id = UUID()
+    }
+
+    /// True while a room-asked question is in flight, so the chat surface can
+    /// say so. It is NOT an answer channel — §83: a surface that showed a
+    /// spinner and no way to learn it had failed would claim work it stopped
+    /// doing.
+    var roomAskPending = false
+
     /// Which watched account a SOCIAL room is scoped to — nil = all of them
     /// (prd §362, 2026-08-11). The handle as the account's own store spells it
     /// (`SocialAccount.key`), matched against `Thing.authorHandle`.
