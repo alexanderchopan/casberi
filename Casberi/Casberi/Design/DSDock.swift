@@ -214,4 +214,50 @@ enum DSDock {
             content.padding(.bottom, DSDock.agentBottomInset(fold: chrome.fold))
         }
     }
+
+    /// **What a PUSHED screen leaves clear at its bottom edge, so nothing
+    /// comes to REST under the seat** (user report, 2026-09-19: *"the back
+    /// button is directly over disconnect for me… I'm afraid I'll
+    /// accidentally disconnect"*, iOS 27 / iPhone 17 Pro Max, on a bridge's
+    /// account page).
+    ///
+    /// The seat survives into every pushed screen on purpose — it is the face
+    /// on the root and the back door above it (prd §767, §796) — and it is
+    /// hosted on `RootShell`'s ZStack, which is OUTSIDE the stack's safe
+    /// area. So a pushed screen reserved nothing for it: the root feed pays
+    /// for the whole band with `MainSurface`'s bottom `safeAreaInset`, and
+    /// that inset is applied inside the stack, where a push covers it. Three
+    /// screens had noticed and each spelled its own `ShellMetrics.bottomInset`
+    /// by hand; every other pushed screen — every account page among them —
+    /// ended its last row under the seat's glass.
+    ///
+    /// That is the honesty law's own failure mode from the other side (§83):
+    /// not a dead control, but a live one hidden under a floating one, and the
+    /// row underneath here is `Disconnect`. Scrolling UNDER the seat is the
+    /// whole point of the glass and is untouched — this is about where the
+    /// content stops.
+    ///
+    /// **Derived from the seat, never a literal**, for the reason the rest of
+    /// this file exists: `agentSize` moved 44 → 46 once already, and a
+    /// hand-kept clearance drifts the moment it moves again.
+    ///
+    /// **Pinned to the UNFOLDED seat rather than following `fold`, and that is
+    /// prd §674 rather than laziness.** This is a scroll view's bottom
+    /// content inset; a height that tracked the fold would re-inset the scroll
+    /// view on every scroll tick, which is the bouncing screen §674 fixed. The
+    /// unfolded seat is the larger of the two, so the folded one clears too.
+    static var seatClearance: CGFloat {
+        agentBottomInset(minimized: false) + agentSize(minimized: false) + DS.Space.s3
+    }
+}
+
+extension View {
+    /// Leaves `DSDock.seatClearance` at the bottom edge — every pushed
+    /// screen, one line, applied where the push is resolved rather than
+    /// remembered screen by screen (see `DSDock.seatClearance`).
+    func dsSeatClearance() -> some View {
+        safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear.frame(height: DSDock.seatClearance)
+        }
+    }
 }

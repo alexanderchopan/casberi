@@ -602,6 +602,48 @@ grep -q 'guard !touchDriven' "$TMP/pager.nc" \
 grep -q 'DockCoach' "$TMP/root.nc" \
   && { echo "✗ RootShell mounts a dock coach again — ruled out 2026-09-06 (prd §630)."; fail=1; }
 
+# --- 9. a pushed screen leaves the seat's column clear (2026-09-19) ---------
+# The seat survives into every pushed screen ON PURPOSE (prd §767: it is the
+# back door there) and is hosted on `RootShell`'s ZStack, OUTSIDE the stack's
+# safe area — while the only thing that reserves room for it, `bandInset`, is a
+# `.safeAreaInset` applied INSIDE the stack, which a push covers. So a pushed
+# screen reserves nothing and its last row comes to rest under the seat's
+# glass. Reported on a bridge's account page, where that row is `Disconnect`
+# (user, iOS 27 / iPhone 17 Pro Max: "the back button is directly over
+# disconnect for me… I'm afraid I'll accidentally disconnect").
+#
+# Nothing else can see it: it builds, every screen paints, and the screen sweep
+# photographs a page that is entirely correct apart from its last 66 points.
+# Three screens had already noticed and each spelled its own clearance by hand,
+# which is exactly how a rule stays invisible — two of the three were right and
+# the sixty that never knew were wrong.
+strip_comments "$DOCK" > "$TMP/dock.nc"
+grep -q 'static var seatClearance' "$TMP/dock.nc" \
+  || { echo "✗ DSDock.seatClearance is gone — nothing states what a pushed screen owes the"; \
+       echo "  seat, and its last row comes to rest under the back door (2026-09-19)."; fail=1; }
+clearance=$(awk '/static var seatClearance/,/^    }/' "$TMP/dock.nc")
+print -r -- "$clearance" | grep -q 'agentSize(minimized: false)' \
+  && print -r -- "$clearance" | grep -q 'agentBottomInset(minimized: false)' \
+  || { echo "✗ DSDock.seatClearance no longer DERIVES from the seat — a hand-kept number"; \
+       echo "  drifts the moment agentSize moves, as it already did once (44 → 46)."; fail=1; }
+print -r -- "$clearance" | grep -q 'fold' \
+  && { echo "✗ DSDock.seatClearance follows the fold — it is a scroll view's bottom content"; \
+       echo "  inset, so a height that tracks the fold re-insets it on every scroll tick:"; \
+       echo "  the bouncing screen prd §674 fixed."; fail=1; }
+grep -q 'dsSeatClearance()' "$TMP/main.nc" \
+  || { echo "✗ MainSurface's pushed-screen resolver no longer leaves the seat's column clear"; \
+       echo "  (DSDock.seatClearance) — every pushed screen ends its last row under the"; \
+       echo "  back door again, Disconnect included."; fail=1; }
+# ON THE RESOLVER, not on a screen: the line has to sit inside the block that
+# resolves every push, beside the two modifiers that already make the seat the
+# back door. Applied to one screen instead, it is the hand-kept clearance this
+# check exists to retire.
+awk '/navigationDestination\(for: HomeRoute.Node.self\)/,/^        \}/' "$TMP/main.nc" \
+  | grep -q 'dsSeatClearance()' \
+  || { echo "✗ MainSurface's clearance has drifted out of the resolver that hides the top"; \
+       echo "  chevron — the two are one arrangement (prd §767) and belong together, or"; \
+       echo "  every screen has to remember the rule again."; fail=1; }
+
 if [ $fail -eq 0 ]; then
   echo "✓ dock self-test"
 else

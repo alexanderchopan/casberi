@@ -85,7 +85,6 @@ struct WalletConnectionScreen: View {
             // account page's exits (see this file's doc).
             DSFootnote("Read-only — watching can never trade or move funds. Activity is public, read across chains directly on \(DS.device).")
                 .padding(.top, DS.Space.s3)
-                .padding(.bottom, ShellMetrics.bottomInset)
                 .plainAccountRow()
         }
         .listStyle(.plain)

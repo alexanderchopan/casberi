@@ -6021,15 +6021,22 @@ struct FeedScreen: View {
                 chrome.pourHue = selectedWallet.map(WalletFace.tint)
             }
         }
+        // Both destinations below leave the seat's column clear
+        // (`DSDock.seatClearance`). These two pushes do not run through
+        // `HomeRoute.path`, so `MainSurface`'s resolver — where every other
+        // pushed screen gets this line — never sees them; the seat floats over
+        // them just the same, wearing the face rather than the back door.
         .navigationDestination(item: $openProject) { route in
             ProjectDetailScreen(projectName: route.name)
                 .navigationTransition(.zoom(sourceID: route.name, in: zoomNS))
+                .dsSeatClearance()
         }
         // The social roster's own door (item 2, 2026-07-27) — a face pushes
         // the person room, not the quick-glance tray `SocialProfileCard`
         // still serves everywhere else.
         .navigationDestination(item: $openPerson) { profile in
             PersonRoomScreen(profile: profile)
+                .dsSeatClearance()
         }
         // …asked for by the shell's face rail now (prd §362), which is where the
         // faces live since they became a filter. It hands the request down

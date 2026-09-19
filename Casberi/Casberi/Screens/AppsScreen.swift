@@ -170,7 +170,6 @@ struct AppsScreen: View {
                     }
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.vertical, DS.Space.s4)
-                    .padding(.bottom, ShellMetrics.bottomInset)
                 }
                 #if DEBUG
                 .onAppear {

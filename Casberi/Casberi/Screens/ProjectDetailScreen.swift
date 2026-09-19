@@ -60,7 +60,6 @@ struct ProjectDetailScreen: View {
                 GenRender(id: "root", els: stream.els)
             }
             .padding(.top, ShellMetrics.topInset)
-            .padding(.bottom, ShellMetrics.bottomInset)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollIndicators(.hidden)

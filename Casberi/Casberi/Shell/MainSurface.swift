@@ -3140,6 +3140,17 @@ struct MainSurface: View {
                     // UIKit's edge swipe, which `DSSwipeBack` turns back on.
                     .navigationBarBackButtonHidden(true)
                     .background(DSSwipeBack())
+                    // …AND THE SEAT IT PUTS THERE IS PAID FOR HERE. The band
+                    // above reserves the dock for the ROOT only — it is a
+                    // `.safeAreaInset` inside this stack, so a push covers it
+                    // — and the seat is hosted outside the stack entirely, so
+                    // a pushed screen used to end its last row under the
+                    // seat's glass. See `DSDock.seatClearance`: reported on an
+                    // account page, where the row under the back door is
+                    // `Disconnect`. One line here rather than a rule every
+                    // pushed screen has to remember, for the same reason
+                    // `dsRailColumn` is on this line and not in sixty files.
+                    .dsSeatClearance()
             }
         }
         // The connect form, raised over wherever the person is (prd §218) —
