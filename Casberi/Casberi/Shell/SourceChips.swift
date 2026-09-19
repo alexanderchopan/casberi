@@ -1169,18 +1169,6 @@ struct SourceChips: View {
             .dsHover()
         }
         .buttonStyle(.plain)
-        // The long-press peek (2026-08-14, prd §384): the room's head floats
-        // up without navigating. "All" sits it out — its room is the whole
-        // feed, and a peek that previews everything previews nothing.
-        // **RAIL ONLY since 2026-09-05.** On the phone a press on the strip
-        // is the scrub (`horizontalStrip`'s long-press-then-drag), which holds
-        // for the same beat a context menu would and takes the touch — so the
-        // peek could never fire there, and a modifier that never fires is left
-        // off rather than left claiming. The rail has a pointer and no
-        // scrub, and keeps it.
-        .modifier(ChipPeekModifier(label: label, venues: venues,
-                                   enabled: axis == .vertical && label != "All",
-                                   onOpen: { onTap(label) }))
         // Names the mark on hover (Mac only, see `dsTooltip`) and to
         // VoiceOver — ONE string, computed ONCE, in a leaf (prd §670). It was
         // built twice per chip per body, `ListFormatter` and localized

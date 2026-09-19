@@ -5826,8 +5826,7 @@ private struct GenDial: View {
                         Text(el.str(0)).dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                     }
-                    FigureView(figure: figure, slot: .band, hue: DS.tint,
-                               rising: nil, reduceMotion: reduceMotion)
+                    FigureView(figure: figure, reduceMotion: reduceMotion)
                         .frame(height: 150)
                         .frame(maxWidth: .infinity)
                 }

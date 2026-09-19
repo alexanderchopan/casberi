@@ -129,7 +129,7 @@ deliberately does not check are in `docs/verify.md`.
 - **App Store Connect self-test (scripts/appstoreconnect-selftest.sh, 2026-08-06)** → docs/verify.md · prd §323
 - **PRD index audit (scripts/prd-index-audit.py, 2026-08-11)** → docs/verify.md
 - **Setup-copy audit (scripts/setup-copy-audit.py, 2026-08-06)** → docs/verify.md · prd §315
-- **Figure self-test (scripts/agent-panel-selftest.sh, 2026-08-07) — the figure grammar behind the chip peek and the cluster map** → docs/verify.md · prd §334
+- **Figure self-test (scripts/agent-panel-selftest.sh, 2026-08-07) — the answer dial's floor and the one money formatter; the chip peek and its per-room figures are deleted (prd §836)** → docs/verify.md · prd §334 · §836
 - **Room-head self-test (scripts/room-heads-selftest.sh, 2026-08-04)** → docs/verify.md · prd §298
 - **The social rooms became ONE room (Model/SocialRoom.swift + SocialRoomSource.swift, scripts/social-room-selftest.sh, 2026-08-26)** → docs/hooks/social.md · prd §489
 - **Retriever self-test (scripts/retriever-selftest.sh, 2026-08-06)** → docs/verify.md · prd §318

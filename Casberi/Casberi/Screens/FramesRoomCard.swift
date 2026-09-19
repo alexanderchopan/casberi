@@ -253,8 +253,7 @@ struct FramesRoomFigure: View {
             // **THE CURVE, WHERE THERE IS ONE.** Two points is a line
             // between two facts and draws honestly; one point is a flat line
             // along the floor, which reads as "went to zero" — the most
-            // alarming possible way to say nothing happened, and the reason
-            // `AgentPanel.normalized` returns 0.5 for a flat series.
+            // alarming possible way to say nothing happened.
             // **THE SHARED ROOM CROWN (prd §683).** Same Home as the Wallet
             // and the other devnets — caption, number, change, line. The
             // `closes:` path, because this room's curve is derived from the
@@ -982,9 +981,8 @@ struct FramesBalanceCurve: View {
             for (i, value) in points.enumerated() {
                 // **A FLAT SERIES SITS IN THE MIDDLE, NEVER ON THE FLOOR.** A
                 // line along the bottom reads as "went to zero", which is the
-                // most alarming possible way to say nothing happened —
-                // `AgentPanel.normalized`'s rule, and it matters more here
-                // because a devnet balance genuinely does sit still for days.
+                // most alarming possible way to say nothing happened, and it
+                // matters more here because a devnet balance genuinely does sit still for days.
                 let t = span > 0 ? (value - lo) / span : 0.5
                 let point = CGPoint(x: inset + CGFloat(i) * stepX,
                                     y: inset + CGFloat(1 - t) * (size.height - inset * 2))

@@ -580,13 +580,6 @@ grep -q 'showsCount && !sizeCategory.isAccessibilityCategory' "$TMP/safequeue.sw
 grep -q 'sizeCategory.isAccessibilityCategory, entry.required > 0' "$TMP/safecard.swift" \
   || { echo "✗ the Safe card no longer carries the fraction when the ring stops drawing it — the count would be lost at an accessibility size"; exit 1; }
 
-# The chip's long-press peek must preview the room it opens. Safe's head is a
-# FIGURE (rings), not a text hero, so it belongs in this chain for X's exact
-# reason — without it the peek drew a blank.
-grep -q 'source == SafeRoomSource.source, let room = SafeRoomSource.compose' \
-  "Casberi/Casberi/Model/RoomFigure.swift" \
-  || { echo "✗ the Safe chip peek no longer previews the Safe head — long-pressing the chip would draw nothing"; exit 1; }
-
 # The widget half. A your-turn signature has NO due date, so it can never be a
 # WidgetDeadline without inventing one — and an invented date would sort among
 # real deadlines and draw itself late.

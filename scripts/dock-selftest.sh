@@ -278,9 +278,11 @@ grep -q 'mask { stripMelt }' "$TMP/chips.nc" \
        echo "  which flat chips do not have, and it renders the strip offscreen."; fail=1; }
 grep -q 'visualEffect { content, proxy in' "$TMP/chips.nc" \
   || { echo "✗ the melt is gone — chips would hit the agent bar as a hard line."; fail=1; }
-grep -q 'enabled: axis == .vertical && label != "All"' "$TMP/chips.nc" \
-  || { echo "✗ the chip peek is back on the phone strip, where the scrub's press cancels it"; \
-       echo "  before it can fire — a modifier that never fires, left claiming."; fail=1; }
+# The chip peek is DELETED (prd §836): on the phone the scrub's press cancelled
+# it before it could fire, and the iPad/Mac rail it survived on did not need it.
+grep -q 'ChipPeekModifier' "$TMP/chips.nc" \
+  && { echo "✗ the chip peek is back (prd §836) — a long-press preview of a room the"; \
+       echo "  person was about to open anyway."; fail=1; }
 grep -q 'minimized ? 40 : 46' "$DOCK" \
   || { echo "✗ DSDock.agentSize no longer matches SourceChips.iconSize (46 at rest, 40"; \
        echo "  folded) — the bar and the chip marks beside it are different sizes."; fail=1; }

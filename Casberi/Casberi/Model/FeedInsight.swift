@@ -21,8 +21,7 @@ import Foundation
 /// `merchant`, `domain`, `steamHours`, `repliedTo`), and `LeaderboardHero`.
 /// A room that led with a board now falls through this same chain to whatever
 /// ranks next — a distribution, a mosaic, its year heatmap — or draws no head
-/// at all, which is `RoomFigure`'s own standing ruling: an absent figure beats
-/// one that answers nothing.
+/// at all: an absent figure beats one that answers nothing.
 enum FeedInsight {
 
     // MARK: Distribution (stacked bar)
