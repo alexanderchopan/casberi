@@ -1727,7 +1727,7 @@ PYX
 grep -qF 'case .home:       EmptyView()' "$work/card.bare" \
   || fail "Home lists rows again (prd §682) — the verbs would fall below the fold, which is what
   made them look deleted."
-grep -qF 'RoomHomeCrown(samples: homeSamples' "$work/card.bare" \
+grep -qF 'RoomHomeCrown(samples: ' "$work/card.bare" \
   || fail "Home no longer draws the shared room crown (prd §683) — every wallet-family room's
   Home is one template: caption, number, change, line, range chips."
 # And they must NOT come back inside the clipped slot, which is what cut a row

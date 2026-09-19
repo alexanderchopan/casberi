@@ -1135,6 +1135,12 @@ check(!RoomValueHistory.belongs(stamp: nil, chain: "0xabc"),
 // upper-cases its genesis hash must not wipe the line on every read.
 check(RoomValueHistory.belongs(stamp: "0xABC", chain: "0xabc"),
       "casing is not a relaunch")
+
+// The gate above ran before the derived line and the fence were appended, so
+// every check below it counted a failure and exited 0 — its four fence
+// mutations all survived. Every check since answers to this one.
+if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
+print("  ok   the derived line and the fence")
 SWIFT
 
 # ONE compile line, written once and run by both the assertion build and every
