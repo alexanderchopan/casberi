@@ -131,7 +131,7 @@ import re, sys
 src = open(sys.argv[1]).read()
 out = ["import Foundation\n"]
 # TokenChartStyle's pure half — everything that does not touch Color.
-for name in ["isFlat", "isFresh", "readLine", "priceText", "changeText"]:
+for name in ["isFlat", "readsAsWipeout", "isFresh", "readLine", "priceText", "changeText"]:
     m = re.search(r"\n    static (?:let|func) " + name + r"\b", src)
     if not m:
         sys.stderr.write("could not extract %s\n" % name)
@@ -201,6 +201,34 @@ check(TokenChartStyle.changeText(0.0004) == "0.0%",
       "a flat change prints without a sign")
 check(TokenChartStyle.changeText(0.042).hasPrefix("+"),
       "a real gain keeps its sign")
+
+// MARK: the other end of the same scale — a wipeout the balance denies (§834)
+//
+// The Privacy devnet's reported header: 983,580 ETH down to 1 ETH is
+// -99.9999%, which the one decimal we print rounds to "-100.0%" — "all of it
+// is gone", over a crown reading 1.0000 ETH. `readsAsWipeout` is the caller's
+// gate on printing that ratio at all, and its threshold is `changeText`'s own
+// rounding, so the two can never drift apart.
+
+let nearTotal = (1.0 - 983_580.3489) / 983_580.3489
+check(TokenChartStyle.changeText(nearTotal) == "-100.0%",
+      "the ratio really does print as a total wipeout — the case this guards")
+check(TokenChartStyle.readsAsWipeout(nearTotal),
+      "a ratio that prints -100.0% is caught")
+check(TokenChartStyle.readsAsWipeout(-1.0),
+      "a line that ended at nothing is caught too — the caller decides, not this")
+// The boundary IS the printed form: anything this catches must print -100.0%,
+// and anything it lets through must not.
+check(TokenChartStyle.readsAsWipeout(-0.9995),
+      "-99.95% rounds to -100.0% and is caught")
+check(!TokenChartStyle.readsAsWipeout(-0.9994),
+      "-99.94% prints -99.9% and is left alone")
+check(TokenChartStyle.changeText(-0.9994) == "-99.9%",
+      "…and that is what it prints, so the threshold is not a guess")
+check(!TokenChartStyle.readsAsWipeout(-0.5), "half is not a wipeout")
+// ONE-SIDED on purpose: a doubling is exact and claims nothing checkable.
+check(!TokenChartStyle.readsAsWipeout(1.0), "+100.0% is a real doubling, not a wipeout")
+check(!TokenChartStyle.readsAsWipeout(0), "no move is not a wipeout")
 
 // MARK: price precision by magnitude
 

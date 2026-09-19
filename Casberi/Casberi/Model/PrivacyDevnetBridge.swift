@@ -250,8 +250,23 @@ final class PrivacyDevnetLiveState {
     /// Wallet's are. SAMPLED rather than derived because a Privacy move
     /// carries no wei — the amount is what the pool hides — which is also why
     /// a shield shows as a dip.
-    func noteBalances(_ accounts: [PrivacyDevnetAccount]) {
+    func noteBalances(_ accounts: [PrivacyDevnetAccount], chain: String?) {
         guard !DemoMode.isActive else { return }
+        // **FENCED BEFORE THE FIRST SAMPLE (prd §834).** A relaunch invalidates
+        // every reading this store holds — the balances belonged to a chain
+        // that no longer exists — and the crown goes on plotting them, because
+        // `RoomValueHistory` is `UserDefaults` and outlives the chain. It sits
+        // INSIDE this function, behind the same `DemoMode` guard as the writes
+        // it fences: `refresh` bails on demo entry, but a sweep already in
+        // flight when the demo opens still reaches `publish`, and a fence out
+        // there would drop the demo's own (unstamped) book and leave its Home
+        // with no line at all.
+        //
+        // Fencing HERE rather than at the moment the genesis changes is what
+        // repairs a device that crossed the relaunch weeks ago: the stamp is
+        // compared on every read, so a book written before this rule is
+        // dropped once.
+        if let chain { RoomValueHistory.fence(room: Self.historyRoom, chain: chain) }
         for account in accounts {
             guard account.reached, let wei = account.balanceWei else { continue }
             RoomValueHistory.note(room: Self.historyRoom, address: account.address,
@@ -262,7 +277,10 @@ final class PrivacyDevnetLiveState {
     static let historyRoom = "privacyDevnet"
 
     private func publish(accounts: [PrivacyDevnetAccount], head: UInt64?, cut: WalkCut?, genesis: String?) {
-        noteBalances(accounts)
+        // The genesis goes in with the balances, not after them: it is what
+        // fences the sample book (prd §834), and a fence that ran later would
+        // drop this pass's own reading with the dead chain's.
+        noteBalances(accounts, chain: genesis)
         if let head { headSlot = head }
         if let genesis { observedGenesis = genesis }
         if let cut { walkCut = cut }
@@ -360,6 +378,10 @@ final class PrivacyDevnetLiveState {
         accounts = []
         headSlot = 0
         observedGenesis = nil
+        // The LINE goes with the accounts (prd §834). Both callers are
+        // teardowns — a disconnect and the demo's — and a sampled line left
+        // behind is a crown drawn over addresses the seat no longer follows.
+        RoomValueHistory.forget(room: Self.historyRoom)
         readAt = nil
         walkCut = WalkCut()
         // The PENDING moments go; the once-ever ledger does NOT. Disconnecting

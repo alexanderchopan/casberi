@@ -24,6 +24,27 @@ enum TokenChartStyle {
     /// is its own state — no sign, quiet ink (2026-07-16).
     static func isFlat(_ c: Double) -> Bool { abs(c * 100) < 0.05 }
 
+    /// Whether a ratio would PRINT as a total wipeout — "-100.0%".
+    ///
+    /// **`isFlat`'s mirror at the other end of the scale (prd §834, §83).**
+    /// Flat exists because a change that rounds away has no direction to
+    /// report; this exists because a change that rounds to the whole of it
+    /// claims the balance is gone. Seen on the Privacy devnet: a line from
+    /// 983,580 ETH to 1 ETH is -99.99990%, which `changeText` prints at one
+    /// decimal as "-100.0%", directly under a crown reading 1.0000 ETH. The
+    /// arithmetic is right and the sentence it forms is false.
+    ///
+    /// The threshold is `changeText`'s own rounding and nothing else: a ratio
+    /// at or past -99.95% is where `%.1f` starts printing -100.0. Deliberately
+    /// one-sided — "+100.0%" from a doubling is exact, and there is no claim
+    /// in it that the reader can check against the number above.
+    ///
+    /// Whether it may be drawn is the CALLER's, not this function's: a line
+    /// that really did end at nothing has earned -100.0%. The caller tests the
+    /// end value in its own units (`WalletBalanceHeadline.moveLine`), because
+    /// only the caller knows how the number beside it is spelled.
+    static func readsAsWipeout(_ c: Double) -> Bool { c * 100 <= -99.95 }
+
     /// How recently a curve must have been read for the breathing endpoint to
     /// be an honest mark (2026-08-16). Two minutes: long enough that the halo
     /// survives a scrub and a scroll after the fetch that earned it, short

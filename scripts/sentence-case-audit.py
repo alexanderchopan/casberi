@@ -190,6 +190,11 @@ KNOWN_PHRASES: tuple[str, ...] = (
     # Apple's own feature names — lowercasing these renames Apple's feature.
     "Secure Enclave", "Face ID", "Touch ID", "Advanced Data Protection",
     "Private Relay", "Camera Uploads",
+    # Apple's name for the server side of Apple Intelligence (prd §833). It is
+    # what the seat and the answer badge say ran the ask, so re-casing it names
+    # something Apple does not offer. Exempted as the phrase so `Cloud` and
+    # `Compute` stay findings on their own.
+    "Private Cloud Compute",
     # NOT "Reading List". Safari capitalises it, but this app's own house
     # spelling is "Reading list" (`ShapedRows` draws it, and the sibling picker
     # row reads "All bookmarks") — exempting Apple's casing here would make the

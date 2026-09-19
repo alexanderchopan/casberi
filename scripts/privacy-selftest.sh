@@ -406,6 +406,61 @@ if case .relaunched = PrivacyDevnetRoom.head(accounts: moved, watching: 2, hasRe
     check(false, "a wiped chain still outranks the transactions it no longer holds")
 }
 
+// THE SENTENCE YIELDS TO THE FIGURE (§834, extending §606 from the ring to
+// the crown). Reported from a device: "Nothing on this chain from the 4
+// addresses you watch, yet." in three lines of heading type, over 1.0000 ETH
+// and a line with a year of history in it. The card tested the RING alone, so
+// §606 never reached the crown §683 added later. This is untestable from the
+// card — it renders perfectly — so the rule lives in the model.
+//
+// A reading of the money yields: the figure below is the same answer, louder.
+for yielding in [PrivacyDevnetRoom.Lede.quiet(watching: 4),
+                 .moved(count: 12),
+                 .spends(nullifiers: 2),
+                 .rootLive(remaining: 4096, sources: 1),
+                 .rootsAged(count: 3)] {
+    check(!PrivacyDevnetRoom.sentenceStands(yielding, figure: true),
+          "\(yielding) yields to the figure that states it better")
+    check(PrivacyDevnetRoom.sentenceStands(yielding, figure: false),
+          "\(yielding) still stands where nothing is drawn under it")
+}
+// A fact about the READ stands whatever is drawn — no figure can state it,
+// and a relaunch means the figure is describing a chain that is gone.
+for standing in [PrivacyDevnetRoom.Lede.relaunched,
+                 .reading(watching: 1),
+                 .unwatched] {
+    check(PrivacyDevnetRoom.sentenceStands(standing, figure: true),
+          "\(standing) is a fact about the read and stands over any figure")
+}
+
+// AND A LEDE THAT STANDS OWNS THE SLOT (§834). `DSRoomSlot` is a fixed box
+// that CLIPS — §602's paid-for defect — so a sentence that stands over a
+// figure does not share the box with it. `relaunched` is the one lede that
+// can collide in practice, and it is the one that must win: the crown and the
+// ring draw readings the relaunch already outranked in `head`, taken from a
+// chain that is gone. Without this, §834's own rule is a clipped crown.
+check(!PrivacyDevnetRoom.drawsFigure(.relaunched),
+      "a relaunch owns the slot — its sentence never sits on a figure in a box that clips")
+for drawing in [PrivacyDevnetRoom.Lede.quiet(watching: 4),
+                .moved(count: 12),
+                .spends(nullifiers: 2),
+                .rootLive(remaining: 4096, sources: 1),
+                .rootsAged(count: 3)] {
+    check(PrivacyDevnetRoom.drawsFigure(drawing),
+          "\(drawing) still lets Home draw the figure that states it")
+}
+// THE INVARIANT, and the reason `drawsFigure` is derived rather than a second
+// switch: nothing may both stand over a figure AND let one draw. Two tables
+// over one enum is how the halves come apart in a later pass with nothing to
+// notice — this holds for every case, including the ones that cannot collide.
+for lede in [PrivacyDevnetRoom.Lede.quiet(watching: 1), .moved(count: 1),
+             .spends(nullifiers: 1), .rootLive(remaining: 1, sources: 1),
+             .rootsAged(count: 1), .reading(watching: 1), .unwatched, .relaunched] {
+    check(PrivacyDevnetRoom.sentenceStands(lede, figure: true)
+            != PrivacyDevnetRoom.drawsFigure(lede),
+          "\(lede) does not put a standing sentence on top of a figure")
+}
+
 // THE NULLIFIER RULE. `0x0` is the default nonce channel every ordinary
 // transaction uses, so counting it lights the scope on an address that has
 // never touched the pool.
@@ -1096,6 +1151,24 @@ mutate "an unread receipt read as nothing spent" \
 mutate "Home promising a few moves and listing none again" \
   "$FIG" "static let homeMoveCap = 3" "static let homeMoveCap = 0"
 
+# ── prd §834: the sentence yields to the figure ───────────────────────
+# Each of these puts a sentence back over a drawing that states the same thing
+# better, or takes one away from a room whose entire content it is — and the
+# room renders perfectly for all three, which is why they are here and not in
+# a screen sweep.
+mutate "a reading of the money stated twice, in heading type over its own drawing" \
+  "$ROOM" "case .quiet, .moved, .spends, .rootLive, .rootsAged: return false" \
+  "case .quiet, .moved, .spends, .rootLive, .rootsAged: return true"
+mutate "a room with no figure left with nothing to say at all" \
+  "$ROOM" "guard figure else { return true }" "guard figure else { return false }"
+mutate "a relaunch yielding to a figure drawn from the chain it says is gone" \
+  "$ROOM" "case .reading, .unwatched, .relaunched: return true" \
+  "case .reading, .unwatched: return true; case .relaunched: return false"
+mutate "the slot's owner read the same way round as the sentence, so a relaunch sits on its own crown" \
+  "$ROOM" "        !sentenceStands(lede, figure: true)" "        sentenceStands(lede, figure: true)"
+mutate "Home drawing its figure whatever the lede (the clipped crown returns)" \
+  "$ROOM" "        !sentenceStands(lede, figure: true)" "        true"
+
 # ── the last mutation must precede the fan-out ───────────────────────────────
 # A `mutate` call BELOW the fan-out is silently never run and the pass still
 # goes green. It is a file-ORDER bug, so no care inside the block can catch it —
@@ -1364,6 +1437,55 @@ grep -qE "case +coins" "$work/section.bare" \
 # ── prd §593d: the room split, the acts, the notification ─────────────
 CARD="Casberi/Casberi/Screens/PrivacyDevnetRoomCard.swift"
 strip_comments "$CARD" > "$work/card.bare"
+
+# ── §834: the header the device reported ─────────────────────────────────────
+#
+# "Nothing on this chain from the 4 addresses you watch, yet." in three lines
+# of heading type, over "4 accounts / 1.0000 ETH / ▼ 983,579.3489 ETH
+# (-100.0%)" and a red line falling to the floor. Three separate rules, and the
+# room rendered PERFECTLY for all three — which is the whole reason they are
+# checked here and not by a build or a screen sweep.
+
+# 1. The sentence yields to the CROWN, not only to the ring — and a lede that
+#    OWNS the slot suppresses the figure rather than sitting on top of it,
+#    because `DSRoomSlot` clips and three lines of heading type over a crown
+#    sized for the whole box cuts the line and its chips off the bottom.
+grep -qF 'PrivacyDevnetRoom.sentenceStands(head.lede' "$work/card.bare" || fail "Home draws its sentence without asking sentenceStands — 606 stops at the ring again, and \"Nothing on this chain\" returns above the crown (834)"
+grep -qF 'figure: !ringMarks.isEmpty || samples.count >= 2' "$work/card.bare" || fail "the sentence's figure test no longer counts the crown's samples — the crown is a figure too (834)"
+grep -qF 'PrivacyDevnetRoom.drawsFigure(head.lede)' "$work/card.bare" || fail "Home no longer asks drawsFigure — a relaunch sentence would sit on a crown in a box that clips (834)"
+grep -qF 'RoomHomeCrown(samples: samples,' "$work/card.bare" || fail "the crown re-reads homeSamples instead of the value bound once — a body pass decodes the sample book twice and the two reads can disagree (834, 646)"
+grep -qF 'static func sentenceStands' "$work/room.bare" || fail "PrivacyDevnetRoom.sentenceStands is gone — the rule moved back into a view, where nothing can test it (834)"
+grep -qF 'static func drawsFigure' "$work/room.bare" || fail "PrivacyDevnetRoom.drawsFigure is gone — which lede owns the slot is a rule, not a view's guess (834)"
+
+# 2. The sampled line is FENCED to the chain it was sampled on. A relaunch
+#    takes the balances and leaves this store, which is `UserDefaults`, so the
+#    crown plots a dead chain's readings against the new one's forever. Only a
+#    SAMPLED room needs it: Hegotá and Frames derive their line from the moves,
+#    so a relaunch takes both together.
+grep -qF 'RoomValueHistory.fence(room: Self.historyRoom, chain: chain)' "$work/bridge.bare" \
+  || fail "the value history is no longer fenced to the observed genesis — a relaunched devnet's crown goes on plotting the chain that is gone (§834)"
+# The fence lives INSIDE noteBalances, behind the same DemoMode guard as the
+# writes it fences and ahead of the first one. Out in `publish` it would drop
+# the demo's own unstamped book when a sweep in flight lands after demo entry;
+# after the writes it would drop this pass's own reading with the dead chain's.
+python3 - "$work/bridge.bare" <<'PYCHK' || fail "the fence is not inside noteBalances between the DemoMode guard and the first write (§834)"
+import re, sys
+src = open(sys.argv[1]).read()
+m = re.search(r"func noteBalances\(.*?\n    \}", src, re.S)
+if not m: sys.exit(1)
+body = m.group(0)
+demo = body.find("DemoMode.isActive")
+fence = body.find("RoomValueHistory.fence(")
+write = body.find("RoomValueHistory.note(")
+sys.exit(0 if -1 < demo < fence < write else 1)
+PYCHK
+grep -qF 'RoomValueHistory.forget(room: Self.historyRoom)' "$work/bridge.bare"   || fail "clear() leaves the sampled line behind — a disconnect would draw a crown over addresses the seat no longer follows (§834)"
+
+# 3. The delta may not print a wipeout the crown denies. The rule and its
+#    threshold are `price-chart-selftest.sh`'s; this pins the CALLER, which is
+#    the only half that knows how its own number is spelled.
+grep -qF 'TokenChartStyle.readsAsWipeout(change)' "Casberi/Casberi/Screens/WalletFeedTiles.swift"   || fail "the crown's delta no longer guards a wipeout ratio — '-100.0%' returns under a balance that is not zero (§834, §83)"
+grep -qF 'ratioless || wipeoutDenied' "Casberi/Casberi/Screens/WalletFeedTiles.swift"   || fail "a denied wipeout still prints its percentage — the delta is the fact, the ratio is the lie (§834)"
 
 # **THE LIST LIVES OUTSIDE THE CLIPPED SLOT.** `DSRoomSlot` is a hard 300pt box
 # that clips, and this card drew the figure AND the scope's rows inside it — so

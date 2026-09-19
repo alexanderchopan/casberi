@@ -161,6 +161,58 @@ enum PrivacyDevnetRoom {
         }
     }
 
+    /// Whether the head's sentence STANDS above a figure (prd §834).
+    ///
+    /// **§606's rule, which had never reached the crown.** That ruling said the
+    /// sentence draws only where there is no figure under it, and the card
+    /// applied it to the ring alone — so when §683 gave this room the shared
+    /// Home crown, the sentence went on drawing above it. On a device that
+    /// produced "Nothing on this chain from the 4 addresses you watch, yet."
+    /// in three lines of heading type, directly over 1.0000 ETH and a line
+    /// with a year of history in it: §610's defect arriving a second time,
+    /// against a different source, because the sentence reads the live walk
+    /// and the crown reads the sampled book.
+    ///
+    /// **The split is between a fact about the READ and a reading of the
+    /// money.** A relaunch, a first sweep and an empty watch list are facts
+    /// about the read — a figure below cannot state them and may itself be
+    /// describing a chain that is gone, so they stand whatever is drawn. Every
+    /// other lede describes what the addresses did, which is what the figure
+    /// is for, and two accounts of that on one card is how a reader ends up
+    /// believing the wrong one.
+    static func sentenceStands(_ lede: Lede, figure: Bool) -> Bool {
+        guard figure else { return true }
+        switch lede {
+        case .reading, .unwatched, .relaunched: return true
+        case .quiet, .moved, .spends, .rootLive, .rootsAged: return false
+        }
+    }
+
+    /// Whether Home may draw its figure at all (prd §834).
+    ///
+    /// **The other half of `sentenceStands`, and without it that rule is a
+    /// layout bug.** A lede that stands over a figure does not SHARE the slot
+    /// with it: `DSRoomSlot` is a fixed box that CLIPS, so three lines of
+    /// `heading24` on top of a crown sized for the whole of it cuts the line
+    /// and its range chips off the bottom — §602's own paid-for defect,
+    /// arriving in the state this ruling exists to serve.
+    ///
+    /// **DERIVED from `sentenceStands`, never a second table.** The two are
+    /// one decision read from opposite ends — whatever owns the slot, owns it
+    /// — and a pair of switches over the same enum is how they come apart in
+    /// a later pass with nothing to notice. In practice `relaunched` is the
+    /// only lede that can collide, and it is the one that must win: the crown
+    /// and the ring draw readings the relaunch already outranked in `head`,
+    /// from a chain that is gone. `reading` and `unwatched` hold only with no
+    /// accounts, and both the samples and the marks are derived from
+    /// accounts, so there is no figure there to suppress.
+    ///
+    /// **One figure is exempt and is not asked**: §664's activity spine, which
+    /// is drawn UNDER the sentence by design and budgeted to share the box.
+    static func drawsFigure(_ lede: Lede) -> Bool {
+        !sentenceStands(lede, figure: true)
+    }
+
     /// The head's sentence.
     ///
     /// **No figure here is a price and none is a count of money** — test ETH

@@ -91,7 +91,10 @@ struct PrivacyDevnetRoomCard: View {
         // **THE CROWN OWNS THE NUMBER (prd §683).** Nil when Home draws the
         // shared crown, or the figure appears twice — seen on the simulator as
         // "2.2960 ETH" above "2.2960 ETH".
-        if section == .home, homeSamples.count >= 2 { return nil }
+        // **…AND ONLY WHERE THE CROWN ACTUALLY DRAWS (prd §834).** A lede
+        // that owns the slot suppresses it, and then the number is nobody's.
+        if section == .home, PrivacyDevnetRoom.drawsFigure(head.lede),
+           homeSamples.count >= 2 { return nil }
         switch section {
         // **HOME TAKES A HEADLINE WHEN A FIGURE DRAWS (prd §606, user: "isn't
         // it weird to have those sentences at the top of the charts?").**
@@ -111,7 +114,10 @@ struct PrivacyDevnetRoomCard: View {
         // when the sentence is all there is. `Frames` leads its Home with a
         // figure through the chassis for the same reason.
         case .home:
-            guard !marks.isEmpty else { return nil }
+            // **THE SAME GATE AS THE RING ITSELF (prd §834)** — a count of
+            // snapshots over a relaunch sentence, with no ring under it to
+            // count, is the figure's caption outliving the figure.
+            guard PrivacyDevnetRoom.drawsFigure(head.lede), !marks.isEmpty else { return nil }
             let n = accounts.reduce(0) { $0 + $1.roots.count }
             guard n > 0 else { return nil }
             return n == 1 ? String(localized: "1 snapshot")
@@ -199,11 +205,37 @@ struct PrivacyDevnetRoomCard: View {
     var moves: [PrivacyDevnetLiveState.Move] { pairs.map(\.move) }
 
     @ViewBuilder private var home: some View {
+        // **THE SLOT'S TWO OWNERS, RESOLVED ONCE (prd §834).**
+        //
+        // `homeSamples` is a `UserDefaults` read plus a JSON decode of the
+        // whole sample book, and the §834 gate needs the same answer the crown
+        // does — read twice, a body pass pays for the book twice and the two
+        // reads can disagree (§646's rule for a room's `@Query`, and §628's
+        // for a store read inside a body).
+        //
+        // Both yield to a lede that OWNS the slot (`drawsFigure`): `DSRoomSlot`
+        // clips, so a sentence on top of a crown sized for the whole box cuts
+        // the line and its range chips off the bottom. The one figure that is
+        // budgeted to share is §664's activity spine below, which is drawn
+        // UNDER the sentence by design and is left alone.
+        let ownsSlot = PrivacyDevnetRoom.drawsFigure(head.lede)
+        let samples = ownsSlot ? homeSamples : []
+        let ringMarks = ownsSlot ? marks : []
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             // The sentence stands only where there is no figure under it
             // (prd §606) — see `slotHeadline`. Where the ring draws, it was
             // the drawing restated in three lines of heading type above it.
-            if marks.isEmpty {
+            //
+            // **THE CROWN IS A FIGURE TOO (prd §834).** This tested `marks`
+            // alone, so §606 reached the ring and never the Home crown §683
+            // added later: the sentence drew above the line every time, and
+            // "Nothing on this chain from the 4 addresses you watch, yet."
+            // shipped over 1.0000 ETH and a year of history. Which ledes yield
+            // and which stand is `PrivacyDevnetRoom.sentenceStands` — in the
+            // model, where `privacy-selftest.sh` can drive it, because nothing
+            // about this renders wrong.
+            if PrivacyDevnetRoom.sentenceStands(head.lede,
+                                                figure: !ringMarks.isEmpty || samples.count >= 2) {
                 Text(PrivacyDevnetRoom.sentence(head))
                     .dsText(.heading24)
                     .fixedSize(horizontal: false, vertical: true)
@@ -236,14 +268,14 @@ struct PrivacyDevnetRoomCard: View {
             // The line is SAMPLED, not derived: a Privacy move carries no wei,
             // because the amount is what the pool hides (§682). A shield dips
             // it because value leaves the address for the pool.
-            if homeSamples.count >= 2 {
-                RoomHomeCrown(samples: homeSamples,
+            if samples.count >= 2 {
+                RoomHomeCrown(samples: samples,
                               caption: scopeCaption,
                               format: { PrivacyDevnetMoney.line(wei: Self.wei($0)) },
                               exactFormat: { PrivacyDevnetMoney.line(wei: Self.wei($0)) })
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            } else if !marks.isEmpty {
-                PrivacyDevnetRing(marks: marks, sets: setCount,
+            } else if !ringMarks.isEmpty {
+                PrivacyDevnetRing(marks: ringMarks, sets: setCount,
                                   remaining: freshestRemaining,
                                   readAt: readAt, diameter: Self.homeRingDiameter,
                                   reduceMotion: reduceMotion)

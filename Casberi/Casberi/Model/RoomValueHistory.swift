@@ -131,11 +131,61 @@ enum RoomValueHistory {
 
     static func forget(room: String) {
         UserDefaults.standard.removeObject(forKey: key(room))
+        UserDefaults.standard.removeObject(forKey: chainKey(room))
+    }
+
+    /// **A SAMPLED LINE BELONGS TO THE CHAIN IT WAS SAMPLED ON (prd §834).**
+    ///
+    /// A devnet is relaunched from genesis and the balances it held are gone —
+    /// but this store is `UserDefaults` and survives, so the crown goes on
+    /// plotting the dead chain's readings against the new one's. Reported from
+    /// a device on the Privacy devnet: "Nothing on this chain from the 4
+    /// addresses you watch, yet." over 1.0000 ETH and a red line falling
+    /// 983,579 ETH to the floor. The sentence read the live walk, the crown
+    /// read this book, and nothing reconciled them.
+    ///
+    /// **Only a SAMPLED room needs this.** Hegotá and Frames DERIVE their line
+    /// from the moves, so a relaunch takes the moves and the line together;
+    /// Privacy samples, because its moves carry no wei, and a sample outlives
+    /// the chain that produced it.
+    ///
+    /// **Stamped here rather than cleared at the relaunch, and that is the
+    /// repair.** A clear wired into the moment the genesis changes fixes every
+    /// future relaunch and no device that has already crossed one — and the
+    /// phone this was reported from crossed it weeks ago. A stamp is checked
+    /// on every read instead, so a book with no stamp is a book from before
+    /// this rule and is dropped once.
+    ///
+    /// `chain` is whatever identifies the chain to the caller — the Privacy
+    /// seat passes its observed genesis hash. Compared case-insensitively
+    /// because an RPC's hex casing is not a fact about the chain.
+    static func fence(room: String, chain: String) {
+        guard !belongs(stamp: UserDefaults.standard.string(forKey: chainKey(room)),
+                       chain: chain) else { return }
+        UserDefaults.standard.removeObject(forKey: key(room))
+        UserDefaults.standard.set(chain, forKey: chainKey(room))
+    }
+
+    /// Whether a stamped book belongs to the chain being read now.
+    ///
+    /// Split out of `fence` so it can be DRIVEN: the decision is the whole of
+    /// the rule and the rest is two `UserDefaults` calls, and a harness that
+    /// had to write defaults to reach it would not be run. Its two cases are
+    /// the ones that matter — **an absent stamp never belongs**, which is what
+    /// repairs a device that crossed the relaunch before this rule existed,
+    /// and casing is not a fact about a chain, because an RPC's hex is its own
+    /// choice.
+    static func belongs(stamp: String?, chain: String) -> Bool {
+        guard let stamp else { return false }
+        return stamp.caseInsensitiveCompare(chain) == .orderedSame
     }
 
     // MARK: - Storage
 
     private static func key(_ room: String) -> String { "room.value.history.\(room)" }
+    private static func chainKey(_ room: String) -> String {
+        "room.value.history.\(room).chain"
+    }
 
     private static func book(room: String) -> [String: [WalletStore.ValueSample]] {
         guard let data = UserDefaults.standard.data(forKey: key(room)),

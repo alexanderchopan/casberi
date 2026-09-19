@@ -544,6 +544,19 @@ struct WalletBalanceHeadline: View {
         // not a threshold, because what must not happen is a sign and a colour
         // beside a figure that reads 0.
         let roundsToZero = exactFormat(abs(delta)) == exactFormat(0)
+        // **A WIPEOUT THE NUMBER ABOVE DENIES (prd §834, §83).** `ratioless`
+        // and `roundsToZero` guard the small end of this scale; nothing
+        // guarded the large one. Shipped on the Privacy devnet: a line from
+        // 983,580 ETH to 1 ETH is -99.9999%, which prints "-100.0%" — "all of
+        // it is gone" — one line under a crown reading 1.0000 ETH. The delta
+        // is a fact and draws; the percentage is the lie and does not, which
+        // is `ratioless`' own shape and why it shares its branch below.
+        //
+        // The test is the formatted END value, not the ratio: a line that
+        // really did end at nothing has earned -100.0%, and only the caller's
+        // spelling can say whether it did.
+        let wipeoutDenied = !ratioless && TokenChartStyle.readsAsWipeout(change)
+            && exactFormat(abs(last)) != exactFormat(0)
         let flat = roundsToZero || (!ratioless && TokenChartStyle.isFlat(change))
         let ink = flat ? DS.textSecondary
                        : TokenChartStyle.accent(change: ratioless ? (delta > 0 ? 1 : -1) : change,
@@ -557,7 +570,7 @@ struct WalletBalanceHeadline: View {
             }
             Text(flat
                  ? String(localized: "No change")
-                 : (ratioless
+                 : (ratioless || wipeoutDenied
                     ? exactFormat(abs(delta))
                     : "\(exactFormat(abs(delta))) (\(TokenChartStyle.changeText(change)))"))
                 .dsText(.body17)

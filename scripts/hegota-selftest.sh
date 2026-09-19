@@ -1111,6 +1111,30 @@ check(RoomValueHistory.derived(balance: unit, undoNewestFirst: [(nil, walkT0)], 
       "an unreadable amount abandons the walk")
 check(RoomValueHistory.derived(balance: unit, undoNewestFirst: [(0, nil)], unit: unit, now: walkT0).isEmpty,
       "an undated move abandons the walk")
+
+// MARK: the fence — a sampled line belongs to the chain it was sampled on
+//
+// §834, and this file owns it because this file already compiles
+// `RoomValueHistory` whole. Hegotá DERIVES its line and is not exposed: a
+// relaunch takes its moves and its line together. The Privacy devnet SAMPLES,
+// because its moves carry no wei — so its readings outlive the chain that
+// produced them, and its crown plotted a dead chain's 983,580 ETH falling to
+// the floor under a sentence saying nothing had ever happened.
+//
+// `belongs` is the whole decision; `fence` is it plus two `UserDefaults` calls.
+
+check(RoomValueHistory.belongs(stamp: "0xabc", chain: "0xabc"),
+      "the same chain keeps its book")
+check(!RoomValueHistory.belongs(stamp: "0xabc", chain: "0xdef"),
+      "a relaunched chain does not inherit the old one's readings")
+// THE REPAIR. A device that crossed the relaunch before this rule existed has
+// a book and no stamp, and it is the only device the report came from.
+check(!RoomValueHistory.belongs(stamp: nil, chain: "0xabc"),
+      "a book with no stamp is from before this rule and is dropped once")
+// Hex casing is the RPC's choice, not a fact about the chain — a node that
+// upper-cases its genesis hash must not wipe the line on every read.
+check(RoomValueHistory.belongs(stamp: "0xABC", chain: "0xabc"),
+      "casing is not a relaunch")
 SWIFT
 
 # ONE compile line, written once and run by both the assertion build and every
@@ -1361,6 +1385,17 @@ mutate "the balance line adds back gas somebody ELSE paid (a sponsored move bend
 mutate "the balance line stops undoing the fee at all (it drifts by the gas this address spent)" \
   HegotaRoom.swift 's/if !move\.incoming, !move\.isSponsored, let fee = move\.feeWei \{ undo \+= fee \}//'
 
+# THE FENCE (§834). Each of these renders as a crown plotting a chain that no
+# longer exists, under a sentence saying nothing ever happened on it.
+mutate "an unstamped book is treated as belonging (the device this was reported from is never repaired)" \
+  RoomValueHistory.swift 's/guard let stamp else \{ return false \}/guard let stamp else { return true }/'
+mutate "the fence stops noticing a relaunch (a dead chain keeps its readings forever)" \
+  RoomValueHistory.swift 's/return stamp\.caseInsensitiveCompare\(chain\) == \.orderedSame/return true/'
+mutate "the fence drops the book on every read (a line that can never start)" \
+  RoomValueHistory.swift 's/return stamp\.caseInsensitiveCompare\(chain\) == \.orderedSame/return false/'
+mutate "genesis hex casing reads as a relaunch (a node that upper-cases wipes the line every pass)" \
+  RoomValueHistory.swift 's/return stamp\.caseInsensitiveCompare\(chain\) == \.orderedSame/return stamp == chain/'
+
 # ── the last mutation must precede the fan-out ───────────────────────────────
 # A `mutate` call BELOW the fan-out is silently never run and the pass still
 # goes green. It is a file-ORDER bug, so no care inside the block can catch it —
@@ -1469,6 +1504,26 @@ deny room.bare    "dollar" "HegotaRoom names dollars — test ETH has no price"
 deny account.bare "import SwiftUI" "HegotaAccount imports SwiftUI — it must stay compilable without it"
 deny account.bare "import Observation" "HegotaAccount imports Observation — the value types must stay Foundation-only or the room's rules leave the harness"
 deny account.bare "URLSession" "HegotaAccount reaches the network — it is value types only"
+
+# THE FENCE IS THE SHIPPED DECISION (§834). `belongs` is driven above and
+# mutated four ways; `fence` is what the app actually calls. If the two come
+# apart, every assertion here goes on passing while a relaunched devnet's
+# crown plots a chain that is gone.
+grep -qF 'guard !belongs(stamp:' "$HISTORY" \
+  || fail "RoomValueHistory.fence no longer decides through belongs — the predicate the harness drives is not the one the app runs (§834)"
+# …and it must still DROP the book. Grepping the file for the removal is not
+# enough: `forget(room:)` carries the same line, so a fence that stopped
+# dropping would leave this green. The check reads the fence's own body.
+python3 - "$HISTORY" <<'PYFENCE' || fail "RoomValueHistory.fence no longer drops the book it fences — a stamped mismatch that keeps its readings is the defect itself (§834)"
+import re, sys
+src = open(sys.argv[1], encoding="utf-8").read()
+m = re.search(r"    static func fence\(room: String, chain: String\) \{.*?\n    \}", src, re.S)
+if not m: sys.exit(1)
+body = m.group(0)
+drops = "removeObject(forKey: key(room))" in body
+stamps = "set(chain, forKey: chainKey(room))" in body
+sys.exit(0 if drops and stamps else 1)
+PYFENCE
 
 # THE THREE DEVICE-REPORTED FIXES, as guards rather than as memory. Each was
 # invisible to every check here and visible only by opening the room.
