@@ -4169,6 +4169,19 @@ enum ProbeHooks {
         // TWO metered `/positions` reads, not three, which is the point.
         // Pair with `-walletAddress`. `-holdingsWindow <seconds>` overrides the
         // window (0 disables it) for a probe that needs a genuinely live read.
+        // `-refusedForget YES` — forget every learned Alchemy chain refusal and
+        // drop the holdings window, so the very next read asks every selected
+        // chain again (prd §827b). A refusal stands a week, which is a trap at a
+        // desk: a chain marked because its network ID was misspelled would be
+        // invisible for seven days with no way back but a reinstall.
+        Hook(key: "refusedForget") { _, _ in
+            Task { @MainActor in
+                let before = await WalletIngest.refusedAlchemyNetworks()
+                await WalletIngest.forgetRefusedNetworks()
+                NSLog("[Casberi] refusedForget: cleared %@ — next read asks every chain",
+                      before.isEmpty ? "nothing" : before.joined(separator: ", "))
+            }
+        },
         Hook(key: "holdingsWindowProbe") { _, _ in
             Task { @MainActor in
                 NSLog("[Casberi] holdingsWindowProbe: read 1 (cold — expect MISS) → %@",

@@ -58223,3 +58223,9 @@ so a device can hold "this chain was seeded" beside a saved set that never conta
 `worldid-selftest.sh` check 5 pinned `worldchainSeeded.v1` literally and is now generation-agnostic (`\.v[0-9]+`): that check is about the ROW existing, never about which generation it names, and the next repair will bump again.
 
 **What is still not known, and the probe now separates it in one line.** Either the saved set never got Robinhood (the seed never persisted → `chains asked` will lack `robinhood-mainnet` on the old build and carry it on the new one), or it did and **Alchemy does not serve `robinhood-mainnet`** (→ `followed but unreadable` names it). Egress to Alchemy, Zerion and Blockscout is blocked from the authoring machine, so this is not guessed at again: `-portfolioProbe YES` answers it. Blockscout (§797's keyless pattern) is the alternative if Alchemy refuses, still deliberately unbuilt.
+
+## §827b — A learned chain refusal can be forgotten (`-refusedForget YES`, 2026-09-19)
+
+§825's `RefusedNetworks` holds a refusal for a WEEK, which is right in the field and a trap at a desk: a chain marked because our network ID was misspelled, or because one call went out malformed, is then invisible for seven days with no way back but a reinstall. `robinhood-mainnet` had never been sent on a request that could succeed (§826: the Alchemy body was built only when Zerion was unreached, and the chain was off by default), so its spelling was unproven — exactly the case that would otherwise cost a week to re-test.
+
+`-refusedForget YES` clears every learned refusal and drops the holdings window, so the very next read asks every selected chain again. It prints what it cleared.

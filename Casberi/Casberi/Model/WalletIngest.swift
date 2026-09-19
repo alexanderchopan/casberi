@@ -226,6 +226,22 @@ enum WalletIngest {
             persist()
         }
 
+        /// Forget every learned refusal — `-refusedForget YES` (prd §827b).
+        ///
+        /// A refusal stands for a WEEK, which is right in the field and wrong
+        /// at a desk: a chain marked because our network ID was misspelled, or
+        /// because one call went out malformed, is then invisible for seven
+        /// days with no way back but a reinstall. `robinhood-mainnet` has never
+        /// been sent on a request that could succeed (§826: the Alchemy body
+        /// was only built when Zerion was unreached, and the chain was off by
+        /// default), so its spelling is UNPROVEN — exactly the case that would
+        /// otherwise cost a week to re-test.
+        func forget() {
+            guard !at.isEmpty else { return }
+            at = [:]
+            DefaultsWrite.remove(Self.storeKey)
+        }
+
         private func persist() {
             guard let data = try? JSONEncoder().encode(at) else { return }
             DefaultsWrite.set(data, forKey: Self.storeKey)
@@ -237,6 +253,13 @@ enum WalletIngest {
     /// present it as a fact about the chain itself.
     static func refusedAlchemyNetworks() async -> [String] {
         await RefusedNetworks.shared.current().sorted()
+    }
+
+    /// Clears every learned Alchemy refusal so the next pass asks again — for
+    /// `-refusedForget YES` (prd §827b). See `RefusedNetworks.forget`.
+    static func forgetRefusedNetworks() async {
+        await RefusedNetworks.shared.forget()
+        await invalidateHoldingsCache()
     }
 
     /// The chains the person FOLLOWS that this pass could not read, by display
