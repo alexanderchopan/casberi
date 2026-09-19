@@ -6697,7 +6697,13 @@ struct FeedScreen: View {
         }
         switch shape {
         case .photos:
-            photoGridSection(visible)
+            // THE NEWEST SCREENSHOT LEADS, above the grid (prd §832): X's and
+            // Instagram's rule (§821). The room used to open on a wall of tiles
+            // with the newest one among them; the cover is lifted out first, so
+            // it draws once and the grid starts at the next one.
+            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
+            if let cover { Section { ledeListRow(cover) } }
+            if !uncovered.isEmpty { photoGridSection(uncovered) }
         case .snapchat:
             // The memories whose pictures actually came back lead as a grid;
             // everything else — saved chats, videos (never fetched, see
@@ -6773,11 +6779,16 @@ struct FeedScreen: View {
             // thumbnails a pass) hasn't reached yet — reads as rows until it
             // has pixels to show. Same honesty rule as above: a tile promises
             // a picture.
-            let (imageTiles, rest) = Self.splitTiles(visible.live, by: Self.isFileImageTile)
+            //
+            // The newest FILE leads, whatever it is, above the grid (prd §832).
+            // A grid used to decline the cover, so a PDF saved a minute ago sat
+            // under every picture in the folder.
+            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
+            if let cover { Section { ledeListRow(cover) } }
+            let (imageTiles, rest) = Self.splitTiles(uncovered, by: Self.isFileImageTile)
             if !imageTiles.isEmpty { photoGridSection(imageTiles) }
             let days = chronoGroups(rest)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
-                            cover: heroShown || !imageTiles.isEmpty ? nil : ledeThingID(in: days))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .wallet:
             // The reads first, then the stream (2026-07-20, the surface split):
             // balance + warnings side by side, the holdings treemap, DeFi, and

@@ -266,7 +266,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **On-device intelligence, the librarian half** (`-embeddingProbe`) → docs/hooks/system.md · prd §282
 - `-relatedProbe` — what the thing sheet shows UNDER a thing: relatedKept| (the earlier copy). The embedding neighbours are NOT drawn since prd §632 and are logged as a diagnostic count only → docs/hooks/system.md
 - **The sheet draws the words the app holds (`enrichedText`), never what a model wrote** → docs/reading-spec.md · prd §645
-- `-topicMapProbe` — the text treemap (prd §230, 2026-07-30; §247 widened it past Photos; §283 added Files), headless → docs/hooks/rooms.md · prd §230
+- `-topicMapProbe` — the text treemap, headless (bare `YES` = Obsidian). **Photos, Files and RSS draw no figure since prd §832: the newest thing leads, above the grid** → docs/hooks/rooms.md · prd §230 · §832
 - `-roomInsightProbe` — what a source's room LEADS with (prd §247, 2026-07-31) → docs/hooks/rooms.md · prd §247
 - `-stripeRoomProbe` `-posthogRoomProbe` — the two room heads' readings line by line (prd §298, 2026-08-04; one NSLog per line, the -todayProbe truncation → docs/hooks/rooms.md · prd §298
 - **The note THING SHEETS, past §366** → docs/hooks/rooms.md · prd §399

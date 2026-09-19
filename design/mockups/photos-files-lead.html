@@ -1,0 +1,209 @@
+<title>Photos and Files Lead</title>
+<style>
+/* Real parts only: FeedLedeCard's picture face (art 120pt, eyebrow, heading24,
+   LeadFooter) inside dsRoomHeadBlock's well at DSRoomChassis.inset (15),
+   leadHeight 316, leadGap 15 under it; photoGridSection's 2-up grid with
+   12pt gutters and a day pill on the first tile of each day. */
+:root {
+  color-scheme: light dark;
+  --ground:#f2f1f5; --ink:#15141a; --ink2:#56535f; --ink3:#85818e; --mark:#6d28d9;
+  --sheet:#ffffff; --text:#000; --text2:#3c3c4399; --text3:#3c3c434d;
+  --well:#00000008; --pill:#000000a0; --brandInk:#b8306b;
+  --phoneShadow:0 24px 70px #00000029;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:#0b0b0f; --ink:#eeecf3; --ink2:#a29ead; --ink3:#726e7c; --mark:#a78bfa;
+    --sheet:#000; --text:#fff; --text2:#ebebf599; --text3:#ebebf54d;
+    --well:#ffffff0f; --brandInk:#f5458f; --phoneShadow:0 24px 70px #00000080;
+  }
+}
+:root[data-theme="dark"] {
+  --ground:#0b0b0f; --ink:#eeecf3; --ink2:#a29ead; --ink3:#726e7c; --mark:#a78bfa;
+  --sheet:#000; --text:#fff; --text2:#ebebf599; --text3:#ebebf54d;
+  --well:#ffffff0f; --brandInk:#f5458f; --phoneShadow:0 24px 70px #00000080;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--ground); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+  -webkit-font-smoothing:antialiased; padding:48px 16px 80px; }
+.head { max-width:1560px; margin:0 auto 36px; }
+.head h1 { font-size:28px; font-weight:700; font-family:ui-rounded,-apple-system,sans-serif; margin-bottom:8px; }
+.head p { font-size:15px; color:var(--ink2); line-height:1.55; max-width:760px; }
+.grid { max-width:1560px; margin:0 auto; display:flex; gap:32px; flex-wrap:wrap; justify-content:center; }
+.col { width:360px; }
+.cap { padding:0 4px 14px; }
+.cap h2 { font-size:17px; font-weight:700; font-family:ui-rounded,-apple-system,sans-serif; }
+.cap h2 span { color:var(--ink3); font-weight:600; }
+.cap p { font-size:13px; color:var(--ink2); line-height:1.5; margin-top:6px; }
+
+.phone { background:var(--sheet); border-radius:44px; height:760px; overflow:hidden;
+  box-shadow:var(--phoneShadow); position:relative; padding-top:54px; }
+.status { position:absolute; top:18px; left:32px; right:32px; display:flex; justify-content:space-between;
+  font-size:15px; font-weight:600; color:var(--text); }
+.scroll { padding:0 15px 120px; }
+
+/* the lead: dsRoomHeadBlock's well, 316pt, s4 inside */
+.lead { background:var(--well); border-radius:12px; height:316px; padding:15px;
+  display:flex; flex-direction:column; margin:8px 0 15px; }
+.art { height:120px; border-radius:12px; overflow:hidden; margin-bottom:12px; position:relative; }
+.eyebrow { display:flex; align-items:center; gap:8px; }
+.disc { width:26px; height:26px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center; }
+.eyebrow .src { font-size:12px; font-weight:500; color:var(--text); }
+.eyebrow .t { font-size:12px; color:var(--text2); }
+.title { font-family:ui-rounded,-apple-system,sans-serif; font-size:24px; font-weight:700; line-height:29px;
+  color:var(--text); margin-top:8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.foot { margin-top:auto; padding-top:8px; font-size:12px; color:var(--text3); }
+
+/* photoGridSection */
+.tiles { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.tile { aspect-ratio:1; border-radius:12px; overflow:hidden; position:relative; }
+.pill { position:absolute; top:8px; left:8px; background:var(--pill); color:#fff;
+  font-size:12px; font-weight:500; padding:3px 8px; border-radius:999px; backdrop-filter:blur(8px); }
+
+/* day divider + DSFeedRow */
+.day { font-family:ui-rounded,-apple-system,sans-serif; font-size:24px; font-weight:700; color:var(--brandInk); margin:24px 0 8px; }
+.row { display:flex; gap:12px; padding:10px 0; }
+.row .lead26 { width:26px; height:26px; border-radius:7px; flex:none; display:flex; align-items:center; justify-content:center; }
+.row .body { flex:1; min-width:0; }
+.row .top { display:flex; justify-content:space-between; gap:8px; }
+.row .name { font-size:17px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.row .time { font-size:12px; color:var(--text2); flex:none; padding-top:4px; }
+.row .line { font-size:12px; color:var(--text2); margin-top:2px; }
+
+/* the dock */
+.dock { position:absolute; left:14px; right:14px; bottom:22px; height:70px; border-radius:26px;
+  background:color-mix(in srgb, var(--sheet) 70%, transparent); backdrop-filter:blur(20px);
+  box-shadow:0 6px 24px #0000002a, inset 0 0 0 0.5px #ffffff30; display:flex; align-items:center; gap:10px; padding:0 12px; }
+.chip { width:52px; height:52px; border-radius:14px; background:var(--well); }
+.chip.on { background:color-mix(in srgb, var(--mark) 22%, transparent); }
+
+/* fake screenshot contents */
+.shot { position:absolute; inset:0; padding:10px; display:flex; flex-direction:column; gap:6px; }
+.shot i { display:block; height:7px; border-radius:4px; background:#ffffff; opacity:.55; }
+.shot i.s { width:55%; } .shot i.m { width:75%; } .shot i.b { height:14px; width:45%; opacity:.9; }
+.shot i.card { height:34px; border-radius:8px; opacity:.28; }
+svg { display:block; }
+</style>
+
+<div class="head">
+  <h1>Photos and Files lead like every other room</h1>
+  <p>Today both rooms open on a wall of tiles, because the grid declines the cover. After: the
+     newest thing is lifted out first and drawn as the cover's picture face, the same one
+     X and Instagram have used since prd §821. Its tile leaves the grid, so it is drawn once.
+     Nothing else in the rooms changes.</p>
+</div>
+
+<div class="grid">
+
+<!-- ========== PHOTOS · BEFORE ========== -->
+<div class="col">
+  <div class="cap"><h2>Photos <span>· today</span></h2>
+    <p>No lead. The first thing you see is a grid, and the newest screenshot is one tile of it.</p></div>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+    <div class="scroll">
+      <div class="tiles" style="margin-top:8px">
+        <div class="tile" style="background:linear-gradient(160deg,#1d4ed8,#0f766e)"><div class="shot"><i class="b"></i><i class="m"></i><i class="card"></i><i class="card"></i><i class="s"></i></div><span class="pill">Today</span></div>
+        <div class="tile" style="background:linear-gradient(160deg,#7c3aed,#db2777)"><div class="shot"><i class="s"></i><i class="card"></i><i class="m"></i><i class="m"></i></div></div>
+        <div class="tile" style="background:linear-gradient(160deg,#334155,#0f172a)"><div class="shot"><i class="b"></i><i class="m"></i><i class="s"></i><i class="card"></i></div></div>
+        <div class="tile" style="background:linear-gradient(160deg,#ea580c,#b91c1c)"><div class="shot"><i class="card"></i><i class="card"></i><i class="s"></i></div><span class="pill">Yesterday</span></div>
+        <div class="tile" style="background:linear-gradient(160deg,#16a34a,#065f46)"><div class="shot"><i class="b"></i><i class="s"></i><i class="m"></i></div></div>
+        <div class="tile" style="background:linear-gradient(160deg,#0891b2,#1e3a8a)"><div class="shot"><i class="m"></i><i class="card"></i><i class="s"></i></div></div>
+        <div class="tile" style="background:linear-gradient(160deg,#a16207,#713f12)"><div class="shot"><i class="b"></i><i class="card"></i></div><span class="pill">Sep 16</span></div>
+        <div class="tile" style="background:linear-gradient(160deg,#be185d,#4c1d95)"><div class="shot"><i class="s"></i><i class="m"></i><i class="card"></i></div></div>
+      </div>
+    </div>
+    <div class="dock"><div class="chip"></div><div class="chip on"></div><div class="chip"></div><div class="chip"></div><div class="chip"></div></div>
+  </div>
+</div>
+
+<!-- ========== PHOTOS · AFTER ========== -->
+<div class="col">
+  <div class="cap"><h2>Photos <span>· proposed</span></h2>
+    <p>The newest screenshot leads: picture, then who and when, then the title its OCR heal wrote, then the room's foot. The grid starts under it, the next-newest first.</p></div>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+    <div class="scroll">
+      <div class="lead">
+        <div class="art" style="background:linear-gradient(160deg,#1d4ed8,#0f766e)"><div class="shot"><i class="b"></i><i class="m"></i><i class="card"></i><i class="card"></i><i class="s"></i></div></div>
+        <div class="eyebrow">
+          <span class="disc" style="background:linear-gradient(135deg,#f59e0b,#ec4899 45%,#6366f1)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="6" r="4"/><circle cx="18" cy="12" r="4" opacity=".8"/><circle cx="12" cy="18" r="4" opacity=".7"/><circle cx="6" cy="12" r="4" opacity=".85"/></svg>
+          </span>
+          <span class="src">Photos</span><span class="t">12m</span>
+        </div>
+        <div class="title">Flight UA 1532, SFO to JFK, seat 14C</div>
+        <div class="foot">1,284 things since Mar 2025</div>
+      </div>
+      <div class="tiles">
+        <div class="tile" style="background:linear-gradient(160deg,#7c3aed,#db2777)"><div class="shot"><i class="s"></i><i class="card"></i><i class="m"></i><i class="m"></i></div><span class="pill">Today</span></div>
+        <div class="tile" style="background:linear-gradient(160deg,#334155,#0f172a)"><div class="shot"><i class="b"></i><i class="m"></i><i class="s"></i><i class="card"></i></div></div>
+        <div class="tile" style="background:linear-gradient(160deg,#ea580c,#b91c1c)"><div class="shot"><i class="card"></i><i class="card"></i><i class="s"></i></div><span class="pill">Yesterday</span></div>
+        <div class="tile" style="background:linear-gradient(160deg,#16a34a,#065f46)"><div class="shot"><i class="b"></i><i class="s"></i><i class="m"></i></div></div>
+      </div>
+    </div>
+    <div class="dock"><div class="chip"></div><div class="chip on"></div><div class="chip"></div><div class="chip"></div><div class="chip"></div></div>
+  </div>
+</div>
+
+<!-- ========== FILES · BEFORE ========== -->
+<div class="col">
+  <div class="cap"><h2>Files <span>· today</span></h2>
+    <p>Images with a thumbnail lead as a grid. The cover declines whenever a single image tile exists, so a PDF saved a minute ago sits below every picture.</p></div>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+    <div class="scroll">
+      <div class="tiles" style="margin-top:8px">
+        <div class="tile" style="background:linear-gradient(160deg,#94a3b8,#475569)"><span class="pill">Yesterday</span></div>
+        <div class="tile" style="background:linear-gradient(160deg,#d6b58b,#8a6a45)"></div>
+        <div class="tile" style="background:linear-gradient(160deg,#60a5fa,#1e40af)"><span class="pill">Sep 15</span></div>
+        <div class="tile" style="background:linear-gradient(160deg,#a3e635,#3f6212)"></div>
+      </div>
+      <div class="day">Today</div>
+      <div class="row"><div class="lead26" style="background:#ef4444"><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M6 2h9l5 5v15H6z"/></svg></div>
+        <div class="body"><div class="top"><span class="name">Lease renewal 2026.pdf</span><span class="time">2m</span></div><div class="line">Documents · 12 pages</div></div></div>
+      <div class="row"><div class="lead26" style="background:#64748b"><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M6 2h9l5 5v15H6z"/></svg></div>
+        <div class="body"><div class="top"><span class="name">Packing list.txt</span><span class="time">1h</span></div><div class="line">Travel</div></div></div>
+    </div>
+    <div class="dock"><div class="chip"></div><div class="chip"></div><div class="chip on"></div><div class="chip"></div><div class="chip"></div></div>
+  </div>
+</div>
+
+<!-- ========== FILES · AFTER ========== -->
+<div class="col">
+  <div class="cap"><h2>Files <span>· proposed</span></h2>
+    <p>The newest file leads whatever it is. A PDF with a rendered page takes the picture face; a file with no pixels takes the words face. The images grid and the days follow.</p></div>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+    <div class="scroll">
+      <div class="lead">
+        <div class="art" style="background:#f5f5f4">
+          <div class="shot" style="padding:14px 70px">
+            <i class="b" style="background:#1c1917;opacity:.8"></i><i class="m" style="background:#1c1917;opacity:.25"></i>
+            <i class="m" style="background:#1c1917;opacity:.25"></i><i class="s" style="background:#1c1917;opacity:.25"></i>
+            <i class="m" style="background:#1c1917;opacity:.25"></i><i class="m" style="background:#1c1917;opacity:.25"></i>
+          </div>
+        </div>
+        <div class="eyebrow">
+          <span class="disc" style="background:#1d7cf2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/></svg>
+          </span>
+          <span class="src">Files</span><span class="t">2m</span>
+        </div>
+        <div class="title">Lease renewal 2026.pdf</div>
+        <div class="foot">412 things since Aug 2025</div>
+      </div>
+      <div class="tiles">
+        <div class="tile" style="background:linear-gradient(160deg,#94a3b8,#475569)"><span class="pill">Yesterday</span></div>
+        <div class="tile" style="background:linear-gradient(160deg,#d6b58b,#8a6a45)"></div>
+      </div>
+      <div class="day">Today</div>
+      <div class="row"><div class="lead26" style="background:#64748b"><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M6 2h9l5 5v15H6z"/></svg></div>
+        <div class="body"><div class="top"><span class="name">Packing list.txt</span><span class="time">1h</span></div><div class="line">Travel</div></div></div>
+    </div>
+    <div class="dock"><div class="chip"></div><div class="chip"></div><div class="chip on"></div><div class="chip"></div><div class="chip"></div></div>
+  </div>
+</div>
+
+</div>

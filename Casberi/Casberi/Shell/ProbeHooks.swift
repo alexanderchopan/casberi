@@ -5112,9 +5112,10 @@ enum ProbeHooks {
         // Takes an optional SOURCE (`-topicMapProbe Instagram`) since 2026-07-31
         // — the same treemap now maps an Instagram export's own captions and
         // comments ("What you write about"), whose terms come off `content` at
-        // import with no OCR to wait for. Bare `YES` still means Photos.
+        // import with no OCR to wait for. Bare `YES` means Obsidian since prd
+        // §832, when Photos and Files lost their maps to the newest-thing lead.
         Hook(key: "topicMapProbe") { spec, context in
-            let source = (spec == "YES" || spec.isEmpty) ? "Photos" : spec
+            let source = (spec == "YES" || spec.isEmpty) ? "Obsidian" : spec
             Task { @MainActor in
                 let filled = await ScreenshotTopics.healTopics(source: source, context: context,
                                                               limit: 500)

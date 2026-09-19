@@ -36,7 +36,6 @@ enum FeedHeatmap {
         "Apple Journal": Label(title: "Your journaling year", unit: "entry",      units: "entries"),
         "Obsidian":      Label(title: "Your writing year",    unit: "note",       units: "notes"),
         "Notion":        Label(title: "Your writing year",    unit: "page",       units: "pages"),
-        "Photos":        Label(title: "Your capture year",    unit: "screenshot", units: "screenshots"),
         "Apple Health":  Label(title: "Your training year",   unit: "workout",    units: "workouts"),
         "Strava":        Label(title: "Your training year",   unit: "activity",   units: "activities"),
         "Garmin":        Label(title: "Your training year",   unit: "activity",   units: "activities"),

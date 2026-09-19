@@ -212,7 +212,8 @@ enum FeedInsight {
         case "Podcasts":    title = "Latest episodes"; unit = ("episode", "episodes")
         case "Substack":    title = "Latest posts";   unit = ("post", "posts")
         case "Deals":       title = "Fresh deals";    unit = ("deal", "deals")
-        case "RSS":         title = "Latest stories"; unit = ("story", "stories")
+        // RSS had "Latest stories" here and lost it in prd §832: the room leads
+        // with its newest story as the cover, like every other reading room.
         default: return nil
         }
         let art = MediaShape.art(for: source)
@@ -253,13 +254,11 @@ enum FeedInsight {
         let cells: [Cell]
     }
 
-    /// The Photos feed's hero: a treemap of what the screenshots are ABOUT,
-    /// built from the terms OCR already lifted onto each shot's `ocrTopics`
-    /// (2026-07-30). It leads the Photos feed AHEAD of the calendar heatmap —
-    /// `FeedHeatmap` still registers "Your capture year" for Photos, so when
-    /// there isn't enough OCR text to say anything (a wordless library, or too
-    /// few shots), this returns nil and the feed falls back to that heatmap
-    /// gracefully rather than leading with nothing.
+    /// A room's hero: a treemap of what its writing is ABOUT, built from the
+    /// terms already lifted onto each thing's `ocrTopics` (2026-07-30, built
+    /// for Photos, which left it in prd §832). When there isn't enough text to
+    /// say anything this returns nil and the room falls back to its heatmap,
+    /// or to its newest thing.
     ///
     /// A pure count over stored fields — no NLTagger here (that ran once at
     /// heal time); this is the same cheap arithmetic shape as `leaderboard`.
@@ -279,19 +278,12 @@ enum FeedInsight {
         // a map entirely because its writing spans two — captions ride the
         // `.link` rows of your own videos, comments are `.note`s — and a map
         // over one kind would have covered half the writing while claiming all
-        // of it. `belongs` then narrows within those kinds, which is what keeps
-        // somebody else's video out of a map about your words.
+        // of it.
         let kinds: Set<ThingKind>
-        // What the count in the subtitle COUNTS, beyond the kind. Photos and
-        // Instagram never needed this (their kind IS the membership), but a
-        // Files room holds PDFs and text files under the same `.file` kind as
-        // its images, and the map only ever reads the images' OCR — so the
-        // subtitle counts images alone, or "214 files" would claim text the
-        // map never looked at.
-        var belongs: (Thing) -> Bool = { _ in true }
         switch source {
-        case "Photos":
-            title = "What you screenshot"; unit = ("screenshot", "screenshots"); kinds = [.screenshot]
+        // Photos and Files had cases here (2026-07-30, 2026-08-02) and lost
+        // them in prd §832: both rooms lead with their newest thing, the X and
+        // Instagram way (§821), so a map there is a figure no room draws (§723).
         // Instagram, X and TikTok had cases here (§247, 2026-08-05) and lost
         // them in prd §821: those rooms lead with their newest thing and carry
         // kind tiles, so a map there is a figure no room draws (§723).
@@ -310,7 +302,7 @@ enum FeedInsight {
         // somebody else's copy would be §83 in one word, and the room's other
         // heads (a wall of stills, a count of uploads) can't say it at all.
         //
-        // One kind, no `belongs`: every row a followed channel lands is a
+        // One kind: every row a followed channel lands is a
         // `.link`, and a Short is a video like any other — nothing in this
         // room belongs to anybody but the channels.
         // The two journal rooms, 2026-08-17 (prd §398). Obsidian's case exactly
@@ -339,28 +331,20 @@ enum FeedInsight {
         // asks and nothing else (see `GeminiImport.turns`), can honestly say
         // "ask".
         //
-        // One kind, no `belongs`: every row in these rooms is a `.chat` the
+        // One kind: every row in these rooms is a `.chat` the
         // person had, there is no somebody-else half to leave out, and the
         // import receipt is excluded by the loop below.
         case "ChatGPT", "Claude":
             title = "What your chats are about"; unit = ("chat", "chats"); kinds = [.chat]
         case "Gemini":
             title = "What you ask about"; unit = ("prompt", "prompts"); kinds = [.chat]
-        case "Files":
-            // The connected folder's images, read the Photos way (2026-08-02):
-            // `FilesIngest.heal` already OCRs them into `content` and
-            // `ScreenshotTopics.healTopics` lifts the same deterministic
-            // terms. "Images", not "screenshots" — a folder makes no claim
-            // about where its pictures came from.
-            title = "What your images say"; unit = ("image", "images"); kinds = [.file]
-            belongs = { FilesIngest.isImageRef($0.sourceRef) }
         default:
             return nil
         }
 
         var perShot: [[String]] = []
         var total = 0
-        for thing in things where kinds.contains(thing.kind) && belongs(thing) && !Corpus.isImportReceipt(thing) {
+        for thing in things where kinds.contains(thing.kind) && !Corpus.isImportReceipt(thing) {
             total += 1
             if !thing.ocrTopics.isEmpty { perShot.append(thing.ocrTopics) }
         }
