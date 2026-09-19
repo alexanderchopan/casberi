@@ -271,7 +271,10 @@ grep -q '("worldchain-mainnet", "World Chain")' "$CHAINS" \
 defaults=$(sed -n '/defaultNetworkIDs = \[/,/\]/p' "$CHAINS")
 echo "$defaults" | grep -q 'worldchain-mainnet' \
   || { echo "✗ World Chain is not ON by default (prd §788)"; exit 1; }
-grep -q '("worldchain-mainnet", *"wallet.chains.worldchainSeeded.v1")' "$CHAINS" \
+# GENERATION-AGNOSTIC (prd §827a bumped every seed key to .v2, and the next
+# repair will bump them again) — this check is about the ROW existing, never
+# about which generation it names.
+grep -qE '\("worldchain-mainnet", *"wallet\.chains\.worldchainSeeded\.v[0-9]+"\)' "$CHAINS" \
   || { echo "✗ World Chain is on by default with no seed row — only installs made after today would read it"; exit 1; }
 grep -q '"world": "worldchain-mainnet"' "$(dirname "$CHAINS")/ZerionAPI.swift" \
   || { echo "✗ World Chain is on by default but Zerion does not map it — every wallet pays an Alchemy chain for it"; exit 1; }

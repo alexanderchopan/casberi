@@ -123,22 +123,41 @@ final class WalletChainStore {
     /// state Solana was in before its own flag existed. Solana keeps its
     /// original key spelling so a device that already seeded it is not asked
     /// twice.
+    /// **EVERY KEY IS `.v2`, AND THAT IS THE REPAIR (prd §827a).** The `.v1`
+    /// flags are POISONED: the loop that wrote them ran `defaults.set(true,
+    /// forKey:)` BEFORE the guard that adds the chain, and the assignment that
+    /// would have added it could not persist from inside `init`. So a device can
+    /// hold "this chain was seeded" beside a saved set that never contained it —
+    /// and §827's rule, which correctly skips a RECORDED seed, would skip it
+    /// forever. Build 626 wrote `robinhoodSeeded.v1` on every phone it reached,
+    /// which is exactly how the third fix would have failed as the fourth.
+    ///
+    /// A fresh generation applies the seed once more, now that the mechanism
+    /// works (`effectiveIDs` is the one rule, and `init` persists explicitly).
+    /// The accepted cost is stated rather than hidden: somebody who
+    /// DELIBERATELY switched one of these off before today gets it back once,
+    /// and switching it off again now sticks. That is the trade `seeded` has
+    /// always named — a saved set predating an option means "never asked" — paid
+    /// a second time because the first payment never cleared. All six bump
+    /// together: the written-with-add and written-without-add cases are
+    /// indistinguishable on disk, so there is no per-chain judgement to get
+    /// wrong.
     private static let seeded: [(id: String, key: String)] = [
-        ("solana-mainnet",      "wallet.chains.solanaSeeded.v1"),
-        ("hyperliquid-mainnet", "wallet.chains.hyperevmSeeded.v1"),
-        ("monad-mainnet",       "wallet.chains.monadSeeded.v1"),
-        ("worldchain-mainnet",  "wallet.chains.worldchainSeeded.v1"),
+        ("solana-mainnet",      "wallet.chains.solanaSeeded.v2"),
+        ("hyperliquid-mainnet", "wallet.chains.hyperevmSeeded.v2"),
+        ("monad-mainnet",       "wallet.chains.monadSeeded.v2"),
+        ("worldchain-mainnet",  "wallet.chains.worldchainSeeded.v2"),
         // Arc (2026-09-17, user: "add Arc chain also to the app and have it on
         // by default") — free like World Chain: Zerion's one call per wallet
         // already carries it, and it rides no Alchemy request.
-        ("arc-mainnet",         "wallet.chains.arcSeeded.v1"),
+        ("arc-mainnet",         "wallet.chains.arcSeeded.v2"),
         // Robinhood (2026-09-18, prd §826) — it shipped OFF and its toggle
         // could not work, so every install that ever saw the picker has it
         // stored as off for a reason that was never true. The seed row is what
         // reaches those installs; without it this default would only ever
         // apply to phones set up after today, which is the exact state Solana
         // was in before its own flag existed.
-        ("robinhood-mainnet",   "wallet.chains.robinhoodSeeded.v1"),
+        ("robinhood-mainnet",   "wallet.chains.robinhoodSeeded.v2"),
     ]
 
     /// **THE ONE RULE FOR "WHICH CHAINS ARE ON" (prd §827).** Pure: it reads

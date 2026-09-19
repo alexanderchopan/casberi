@@ -58199,3 +58199,27 @@ Two smaller faults compounded it, both in the seeding code that never ran:
 `-portfolioProbe` now prints **`chains asked = …`** first. A chain ON in the picker but absent from that line is exactly this defect, and it is the first line to read when money is missing.
 
 **STILL UNMEASURED: whether Alchemy's Portfolio endpoint serves `robinhood-mainnet` at all.** Egress to `api.g.alchemy.com`, `api.zerion.io` and `robinhoodchain.blockscout.com` is blocked from the authoring machine. Robinhood has no Zerion mapping, so Alchemy is its only reader; if Alchemy refuses it, ruling 3 is what finally SAYS so instead of showing a quietly short number, and the next step is one measurement — `-portfolioProbe YES`, read `chains asked` and `followed but unreadable` — not a fourth guess. Blockscout is the known keyless alternative (§797's pattern) if that measurement comes back refused; it is deliberately NOT built on speculation.
+
+## §827a — The `.v1` seed flags are poisoned, so every key bumps to `.v2` (user: "the chain is there and on by default at least in the settings", and iOS is in App Store review, 2026-09-19)
+
+**The user's own observation is the proof of §827.** Robinhood reads ON in the chain picker and its money never arrives: the picker draws `isSelected`, off the singleton's in-memory `selected`, and every ingest reads the static `activeNetworkIDs()`. On in settings, never asked on the wire — the two copies §827 collapsed, seen from the outside.
+
+**And §827 alone would have failed as the fourth attempt.** The `.v1` flags are POISONED. The loop that wrote them ran
+
+```swift
+for seed in Self.seeded where !defaults.bool(forKey: seed.key) {
+    defaults.set(true, forKey: seed.key)      // ← recorded FIRST, unconditionally
+    guard !selected.contains(seed.id) else { continue }
+    selected = …                              // ← and this could not persist
+}
+```
+
+so a device can hold "this chain was seeded" beside a saved set that never contained it. §827's rule correctly skips a RECORDED seed — and would therefore skip it forever. **Build 626 wrote `robinhoodSeeded.v1` on every phone it reached**, which is precisely how yesterday's fix would have become today's third failure.
+
+**The repair:** a fresh generation on all six rows (`.v1` → `.v2`), now that the mechanism works — `effectiveIDs` is the one rule and `init` persists explicitly. `pending` subtracts `kept`, so a chain already in the saved set is not touched.
+
+**The cost, stated rather than hidden:** somebody who DELIBERATELY switched one of these six off before today gets it back once, and switching it off again now sticks. That is the trade `seeded` has always named — a saved set predating an option means "never asked", not "off" — paid a second time because the first payment never cleared. All six bump together because the written-with-add and written-without-add cases are **indistinguishable on disk**; there is no per-chain judgement available, so none is invented.
+
+`worldid-selftest.sh` check 5 pinned `worldchainSeeded.v1` literally and is now generation-agnostic (`\.v[0-9]+`): that check is about the ROW existing, never about which generation it names, and the next repair will bump again.
+
+**What is still not known, and the probe now separates it in one line.** Either the saved set never got Robinhood (the seed never persisted → `chains asked` will lack `robinhood-mainnet` on the old build and carry it on the new one), or it did and **Alchemy does not serve `robinhood-mainnet`** (→ `followed but unreadable` names it). Egress to Alchemy, Zerion and Blockscout is blocked from the authoring machine, so this is not guessed at again: `-portfolioProbe YES` answers it. Blockscout (§797's keyless pattern) is the alternative if Alchemy refuses, still deliberately unbuilt.
