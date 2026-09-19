@@ -153,6 +153,22 @@ enum AgentSheet {
         // assuming they match is how this whole parse returns nothing.
         case "Claude Code": return "Claude"
         case "Gemini":      return "Gemini"
+        // The KEYED seats (prd §839). A conversation you have here lands as a
+        // chat thing like an imported one, so these read back through exactly
+        // this switch. Each is its `AgentProvider.agent` spelling and must
+        // stay that way — `AgentConversationLanding.source(for:)` writes the
+        // source from the same property, and a label that disagrees with it by
+        // one character makes `turns` return nothing and the sheet draw the
+        // whole conversation as one turn under the reader's name.
+        //
+        // Anthropic, OpenAI and Google are ABSENT on purpose: their
+        // `agent` spellings are "Claude", "ChatGPT" and "Gemini", already
+        // answered above. That is the same agent whether its words arrived by
+        // export or by your own key, and one room for it is the point.
+        case "Bankr":       return "Bankr"
+        case "Venice":      return "Venice"
+        case "OpenRouter":  return "OpenRouter"
+        case "Grok":        return "Grok"
         default:            return nil
         }
     }

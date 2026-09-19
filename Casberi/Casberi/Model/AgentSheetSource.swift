@@ -25,13 +25,23 @@ enum AgentSheetSource {
     /// offers. Guarded against the catalog by `agent-sheet-selftest.sh`, so an
     /// `Agent` seat that starts landing chats fails the build rather than
     /// silently losing its anatomy.
-    static let chatSources: Set<String> = ["ChatGPT", "Claude", "Claude Code", "Gemini"]
+    /// The four keyed seats joined on 2026-09-19 (prd §839) — a conversation
+    /// you have in the composer lands as a chat thing, so its row wears the
+    /// chat anatomy exactly as an imported one does.
+    static let chatSources: Set<String> = ["ChatGPT", "Claude", "Claude Code", "Gemini",
+                                           "Bankr", "Venice", "OpenRouter", "Grok"]
 
     /// Seats whose rows GROW — a re-import appends to the same row rather than
     /// replacing it, so "this is everything" would be a claim with a shelf
     /// life. Claude Code alone: an export is finished by the time you have it,
     /// a session on your own disk is not.
-    static let growingSources: Set<String> = ["Claude Code"]
+    /// The keyed seats joined for the same reason from the other direction
+    /// (prd §839): a conversation in the composer is upserted on every answer,
+    /// so a row you are looking at can gain turns while you read it. "This is
+    /// everything" would be a claim with a shelf life — here, of seconds.
+    static let growingSources: Set<String> = ["Claude Code",
+                                              "Bankr", "Venice", "OpenRouter", "Grok",
+                                              "Claude", "ChatGPT", "Gemini"]
 
     // MARK: - Shape
 

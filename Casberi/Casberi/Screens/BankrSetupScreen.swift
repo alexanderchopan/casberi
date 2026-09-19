@@ -55,8 +55,11 @@ struct BankrSetupScreen: View {
                                        connected: configured, store: store),
             mode: .signIn,
             keyed: true,
-            // A KEY THAT ANSWERS LANDS NOTHING — see `AccountPage.lands`.
-            lands: false,
+            // A KEY THAT ANSWERS NOW LANDS ITS CONVERSATIONS (prd §839) — one
+            // chat thing per composer session — so this seat has a room, an
+            // Activity count and a corpus a reader can be shut out of, and
+            // `lands: false` would now hide all three (`AccountPage.lands`).
+            lands: true,
             cardSheet: { _ in
                 AnyView(BankrSignInSheet { key, fresh in
                     Task { await accept(key, newAccount: fresh) }

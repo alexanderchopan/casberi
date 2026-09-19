@@ -46,11 +46,12 @@ struct GrokSetupScreen: View {
                                        connected: configured, store: store),
             mode: .pasteKey,
             keyed: true,
-            // A KEY THAT ANSWERS LANDS NOTHING. There is no room, no count and
-            // nothing in the corpus to shut a reader out of — so the Activity
-            // row and "Who may read it" are absent rather than reading zero
-            // about a seat that is working (see `AccountPage.lands`).
-            lands: false,
+            // A KEY THAT ANSWERS NOW LANDS ITS CONVERSATIONS (prd §839) —
+            // one chat thing per composer session, upserted as it grows — so
+            // this seat has a room, an Activity count and a corpus a reader
+            // can be shut out of, and `lands: false` would now hide all three
+            // (see `AccountPage.lands`).
+            lands: true,
             teardown: {
                 AgentKey.clear(.grok)
                 configured = false

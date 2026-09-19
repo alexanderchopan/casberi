@@ -405,13 +405,41 @@ CHIP_SOURCE_RE = re.compile(r'AccountPage\((?:[^()]|\([^()]*\))*?source:\s*"([^"
                             re.S)
 
 
+# The agent seats' sources are COMPUTED, so no literal exists to find (prd
+# §839). `AgentConversationLanding.source(for:)` returns `AgentProvider.agent`,
+# so the set of sources it can land is exactly that switch's values — derived
+# here rather than hand-listed, because a hand list is what this very check
+# caught going stale the day the landing shipped. Add a provider and its source
+# is accounted for with nothing to remember.
+AGENT_NAME_RE = re.compile(r'var agent:\s*String\s*\{(.*?)\n    \}', re.S)
+
+
+def agent_landed_sources(model_dir: str) -> set:
+    """Sources `AgentConversationLanding` can stamp, read off `AgentProvider`.
+
+    Gated on the landing file EXISTING: delete it and these sources stop
+    counting as stamped, so the doors that rely on them fail rather than
+    silently pointing at rooms nothing fills any more.
+    """
+    if not os.path.exists(os.path.join(model_dir, "AgentConversationLanding.swift")):
+        return set()
+    path = os.path.join(model_dir, "AgentAnswer.swift")
+    if not os.path.exists(path):
+        return set()
+    m = AGENT_NAME_RE.search(strip_comments(open(path).read()))
+    if not m:
+        return set()
+    return set(re.findall(r'case\s+\.\w+:\s*"([^"]+)"', m.group(1)))
+
+
 def stamped_sources(model_dir: str) -> set:
     """Every string the bridges really stamp as `Thing.source`.
 
     Both spellings, because roughly half the bridges land through a literal
     and half through a `sourceName` constant — reading only one form reports
     perfectly correct doors (Railgun, Safe, L2BEAT) as broken, and a lint that
-    cries wolf gets turned off within a week.
+    cries wolf gets turned off within a week. Plus the agent seats, whose
+    source is computed and so has no spelling at all (`agent_landed_sources`).
     """
     found = set()
     for fn in sorted(os.listdir(model_dir)):
@@ -420,7 +448,7 @@ def stamped_sources(model_dir: str) -> set:
         body = strip_comments(open(os.path.join(model_dir, fn)).read())
         found |= set(SOURCE_LITERAL_RE.findall(body))
         found |= set(SOURCE_CONST_RE.findall(body))
-    return found
+    return found | agent_landed_sources(model_dir)
 
 
 # Screens whose seat LANDS NOTHING, so the account page draws no Activity row
@@ -439,22 +467,20 @@ def stamped_sources(model_dir: str) -> set:
 # in BOTH directions now — a page here must say `lands: false`, and a page
 # saying `lands: false` must be here with its reason.
 KNOWN_LANDS_NOTHING = {
-    # The four BYOK agent-key screens. These configure the AGENT, not a source:
-    # they store a key and register a seat, and land no `Thing` at all — there
-    # is no source string, so there is nothing for a room to hold. Verified: no
-    # `source: "Bankr"/"Grok"/"Venice"` literal exists anywhere in Model/.
-    "BankrSetupScreen.swift": "agent key — lands no rows, so there is no room",
-    "GrokSetupScreen.swift": "agent key — lands no rows, so there is no room",
-    "VeniceSetupScreen.swift": "agent key — lands no rows, so there is no room",
+    # THE FOUR BYOK AGENT-KEY SCREENS LEFT THIS LIST ON 2026-09-19 (prd §839).
+    # They landed no `Thing` for as long as a conversation was something that
+    # happened in the composer and then stopped existing — which is exactly why
+    # a keyed seat had no room, no dock chip, and no door but three taps into
+    # Accounts. `AgentConversationLanding` lands one chat thing per composer
+    # session under the provider's own `agent` name, so Bankr, Venice, Grok and
+    # OpenRouter all have rooms now and all pass `lands: true`.
+    #
+    # Their sources are absent from SOURCE_LITERALS for the reason that list
+    # documents: the source is `AgentProvider.agent`, computed, so no
+    # `source: "Bankr"` literal exists to find. They are hand-written there.
     # Apple Intelligence (prd §833) is a switch over WHICH model answers the
     # composer; an answer stores nothing, so there is no source to hold.
     "AppleIntelligenceScreen.swift": "a model switch — an answer lands no rows",
-    # OpenRouter is the near-miss and the reason this list carries reasons
-    # rather than names: `AgentSpend.drainPending` DOES land one `.reminder`
-    # under source "OpenRouter" — the credits-running-low alert. But that is
-    # the only producer, so the room is empty for the life of the install and
-    # then holds exactly one row. A count on that is a number about nothing.
-    "OpenRouterSetupScreen.swift": "agent key — its only row is a credits alert",
     # Apple Notes shares OUT of Notes and reads nothing back — a shared note
     # lands under source "You" (`Corpus.earnsRoom` refuses it), so this seat
     # has no room of its own and never will. Per-file, and the file's other
@@ -1218,6 +1244,44 @@ def self_test() -> bool:
         print("  ✗ missed a seat opening an unstamped source"); ok = False
     else:
         print("  ✓ catches a seat that opens a source no bridge stamps")
+
+    # `agent_landed_sources` (prd §839) — the agent seats' source is computed,
+    # so it is DERIVED off `AgentProvider.agent` rather than hand-listed. Both
+    # directions, because each failure is silent in its own way: miss the
+    # derivation and every agent room reports as unstamped, and read it while
+    # the landing is gone and dead doors pass forever.
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        answer = ('enum AgentProvider {\n'
+                  '    var agent: String {\n'
+                  '        switch self {\n'
+                  '        case .anthropic:  "Claude"\n'
+                  '        case .bankr:      "Bankr"\n'
+                  '        }\n'
+                  '    }\n'
+                  '    var company: String {\n'
+                  '        switch self {\n'
+                  '        case .anthropic:  "Anthropic"\n'
+                  '        }\n'
+                  '    }\n'
+                  '}\n')
+        open(os.path.join(d, "AgentAnswer.swift"), "w").write(answer)
+        if agent_landed_sources(d):
+            print("  ✗ derived agent sources with no landing file"); ok = False
+        else:
+            print("  ✓ no landing file means the agent sources are not stamped")
+        open(os.path.join(d, "AgentConversationLanding.swift"), "w").write("enum X {}\n")
+        got = agent_landed_sources(d)
+        if got != {"Claude", "Bankr"}:
+            print(f"  ✗ derived {sorted(got)}, wanted Bankr + Claude"); ok = False
+        else:
+            print("  ✓ derives the agent sources off AgentProvider.agent")
+        # The `company` switch below it must NOT bleed in — it names vendors,
+        # and "Anthropic" is not a source anything stamps.
+        if "Anthropic" in got:
+            print("  ✗ read the company switch as well as the agent one"); ok = False
+        else:
+            print("  ✓ stops at the agent switch and never reads company")
 
     # A typo in the seat id is not a crash and not an empty room — Open just
     # goes back to pushing the manager, which looks exactly like shipping.

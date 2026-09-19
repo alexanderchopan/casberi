@@ -2061,7 +2061,13 @@ struct FeedScreen: View {
             case "Railgun", "Privacy Pools": self = .ledger
             case "Calendar", "Cal.com", "Calendly": self = .calendar
             case "Gmail", "iCloud Mail": self = .gmail
-            case "ChatGPT", "Claude", "Gemini": self = .chat
+            // The keyed seats join the three import sources (prd §839): a
+            // conversation you have in the composer lands as a chat thing, so
+            // its room is a chat room. No new shape — the anatomy an imported
+            // conversation already wears is the one a live conversation wants,
+            // and a second shape would be two renderings of one thing.
+            case "ChatGPT", "Claude", "Gemini",
+                 "Bankr", "Venice", "OpenRouter", "Grok": self = .chat
             // Posts read as posts in their own room (2026-07-13) — split from
             // .chat: a saved conversation is a snippet row, a post is a card.
             // NOSTR JOINED 2026-08-26 (prd §489) — two years of this room

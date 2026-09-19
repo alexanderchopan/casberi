@@ -247,6 +247,44 @@ final class BridgeStore {
         // already registered one.)
     ]
 
+    /// Retire an Apple Intelligence seat this build can no longer honour
+    /// (prd §838). Build 633 shipped the seat reachable on any iOS 27 phone —
+    /// `cloudAvailable` asked Apple's `availability`, which answers about the
+    /// DEVICE and never about whether this build holds the managed
+    /// entitlement — so people turned it on and the first question crashed the
+    /// app. With `AskModel.entitled` false the seat leaves the catalogue, and
+    /// WITHOUT THIS it leaves behind exactly what §83 bans: a connected row
+    /// reading "Private Cloud Compute" over a build that reaches no cloud, on
+    /// a page no catalogue door can reach any more, so it cannot even be
+    /// turned off by hand.
+    ///
+    /// Both halves go, because either alone is a different lie: the seat's own
+    /// switch (`AskModel.enabled`, which nothing would read but which the page
+    /// shows as on) and the bridge row. Silent and idempotent — `remove`
+    /// returns untouched when the seat was never registered, so this costs a
+    /// dictionary lookup on every launch that has nothing to do.
+    ///
+    /// **It reads `entitled`, NOT `cloudAvailable`, and the difference is a
+    /// bug avoided rather than a detail.** `cloudAvailable` is also false when
+    /// Apple's model is merely `.systemNotReady` — still downloading after an
+    /// OS update, or not yet warm after a reboot — which is TRANSIENT. Retire
+    /// on that and the day `entitled` flips true this turns into a seat that
+    /// silently disconnects itself on an unlucky cold boot, asks to be
+    /// reconnected, and does it again next time: §83's dead control wearing a
+    /// self-healing disguise. `entitled` is a build constant and cannot
+    /// flicker, so a seat retired by it is one this binary genuinely cannot
+    /// honour. A seat stale for any other reason is the PAGE's problem, where
+    /// availability is already read live.
+    ///
+    /// Delete this on the day the entitlement lands, in that same commit: with
+    /// `entitled` true it can never fire, and a retirement nothing can reach
+    /// is one more thing to reason about for no reader.
+    func retireAppleIntelligenceIfUnavailable() {
+        guard !AskModel.entitled else { return }
+        if AskModel.enabled { AskModel.enabled = false }
+        remove("appleintelligence")
+    }
+
     /// Writes the wallet-riding seats' truth — the one place it's written.
     /// Call after any change to the watch list and once per foreground
     /// refresh. Idempotent (`registerConnected` reconnects an existing seat).

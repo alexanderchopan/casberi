@@ -103,6 +103,11 @@ struct RootShell: View {
     /// when the agent lowers (`onLowerAgent`), same lifecycle as every other
     /// per-conversation composer state.
     @State private var keyedHistory: [AgentTurn] = []
+    /// The conversation `keyedHistory` belongs to (prd §839) — minted on its
+    /// first answer, cleared wherever the history is. It is the identity of
+    /// the landed row, so a second answer updates the first one's thing
+    /// instead of leaving a row per turn.
+    @State private var keyedConversationID: UUID?
     /// iPad (2026-07-25). The floating agent cluster lives in THIS ZStack,
     /// which is deliberately outside `MainSurface`'s safe-area insets (ruling
     /// 6 — the bar rides every screen this app can push, not just the feed),
@@ -1988,6 +1993,11 @@ struct RootShell: View {
             defer { ShareTargetMemo.flush() }
             runForegroundWork()
         }
+        // Retire an Apple Intelligence seat this build can no longer honour
+        // (prd §838) — build 633 let people turn on a seat whose first
+        // question crashed the app, and the gate that fixes that would
+        // otherwise strand them on a connected row no door can reach.
+        bridges.retireAppleIntelligenceIfUnavailable()
         // Resnapshot hand-off state so the thing sheet's "Add to <app>"
         // verbs only show apps the person connected AND has installed.
         HandOffState.refresh(connected: Set(
@@ -2599,7 +2609,16 @@ struct RootShell: View {
                      sceneState.route.openCategory = BridgeCatalog.agentsCategory
                      sceneState.route.present(.apps)
                  },
-                 onLowerAgent: { composerOpen = false; keyedHistory = [] })
+                 // Lowering the composer ENDS the conversation (prd §839):
+                 // the next question opens a new one, so the id goes with the
+                 // history. The thing already landed — it is upserted on every
+                 // answer, not written here — so nothing is lost by a person
+                 // who swipes the app away instead of using this door.
+                 onLowerAgent: {
+                     composerOpen = false
+                     keyedHistory = []
+                     keyedConversationID = nil
+                 })
             .environment(\.genProjectTap) { name in
                 // The apps answer's catalog door: "@apps" routes to the Apps
                 // page here too (same marker the quiet-day invite uses on
@@ -3912,6 +3931,12 @@ struct RootShell: View {
             seedSystem = chrome.askSeedSystem ?? ""
             chrome.askSeedHistory = []
             chrome.askSeedSystem = nil
+            // Carrying an imported chat on starts a NEW conversation (prd
+            // §839), never an edit of the one handed over: those turns came
+            // out of somebody's export, this one is yours, and upserting onto
+            // the imported row would rewrite a record of what that export
+            // actually said.
+            keyedConversationID = UUID()
         }
         let outcome = await AgentAnswer.synthesize(
             query: query,
@@ -3926,6 +3951,22 @@ struct RootShell: View {
             return .failure(failure)
         }
         keyedHistory.append(AgentTurn(question: query, answer: result.text))
+        // THE CONVERSATION BECOMES A THING (prd §839) — what gives a keyed
+        // seat a room, and therefore a dock chip and a door that is not three
+        // taps into Accounts. Upserted on every answer against one id, so the
+        // row grows with the conversation rather than one row per turn.
+        //
+        // After `keyedHistory.append`, so the landing sees the turn that just
+        // settled; before the doc is composed, so a person who closes the app
+        // while reading still has it. `provider` is the one that ANSWERED —
+        // `explicitProvider ?? AgentKey.active`, resolved above — never the
+        // one that happened to be active when the composer opened.
+        if let provider {
+            let id = keyedConversationID ?? UUID()
+            keyedConversationID = id
+            AgentConversationLanding.record(turns: keyedHistory, provider: provider,
+                                            conversationID: id, in: modelContext)
+        }
         let picks = result.picks.filter { hits.indices.contains($0) }
         // Grounding rows now come from two places, and the tool hits LEAD: a
         // thing the model went and found is by construction one the local

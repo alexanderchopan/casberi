@@ -39,11 +39,37 @@ enum AskModel {
         set { UserDefaults.standard.set(newValue, forKey: enabledKey) }
     }
 
+    /// **The managed entitlement, and why this build knows it only as a
+    /// constant (prd §838).** Apple's `availability` answers about the DEVICE
+    /// and the SYSTEM — its cases are `.available`, `.deviceNotEligible`,
+    /// `.systemNotReady` — and says NOTHING about whether this build may call
+    /// Private Cloud Compute. So an unentitled build on an Apple Intelligence
+    /// phone reads `.available`, the seat draws, the person turns it on, and
+    /// the first question KILLS THE APP. §833 recorded the opposite ("shipped
+    /// dark, not dead") on the strength of the doc comment below, which
+    /// described an entitlement check that was never written: `cloudAvailable`
+    /// asked `isAvailable` and nothing else, so nothing was ever dark.
+    ///
+    /// Measured in production on 2026-09-19 (build 633, the user's own phone):
+    /// the seat was in the catalogue, turned on, and the crash landed AFTER
+    /// the question was sent, never on the tap — i.e. at the point the ask
+    /// path first uses the cloud session, not where it builds one. The ask
+    /// path's cloud fallback is a `catch` (`OnDeviceModel.compose`), which
+    /// answers a THROWN refusal on the phone; it cannot answer the process
+    /// going away, so the fallback §833 describes has never once run.
+    ///
+    /// There is no key to read. The entitlement is MANAGED — granted per
+    /// account at developer.apple.com/contact/request/private-cloud-compute —
+    /// and its key is not in the SDK, so nothing can be guessed into the
+    /// entitlements file and nothing at runtime can ask whether it is held.
+    /// What this build knows about itself is exactly this constant. Flip it in
+    /// the SAME commit that adds the granted entitlement to the app's
+    /// `.entitlements`, and never before.
+    static let entitled = false
+
     /// Whether Private Cloud Compute can answer on this device right now:
-    /// iOS 27, an Apple Intelligence device with it on, and the managed
-    /// entitlement on this build. Any one missing reads false — the seat is
-    /// then hidden from the catalogue (`BridgeCatalog.offers`), because a
-    /// seat that can never connect is a dead control (§83).
+    /// iOS 27, an Apple Intelligence device with it on, and `entitled`. Any
+    /// one missing reads false.
     ///
     /// Read by `BridgeCatalog.offers`, which runs in bodies, so the answer is
     /// held for `ttl` rather than asked of the framework on every pass —
@@ -65,11 +91,14 @@ enum AskModel {
         #if DEBUG
         // `-appleIntelligenceSeat YES` shows the seat where Private Cloud
         // Compute cannot answer (the simulator, a build without the
-        // entitlement), so its page can be looked at. Every ask it routes
-        // then fails in the cloud and answers on the phone — which is the
-        // fallback path, exercised.
+        // entitlement), so its page can be looked at. It moves the CATALOGUE
+        // only: `usesCloud` reads `entitled` separately, so a flagged build
+        // still answers on the phone. It used to claim it exercised the cloud
+        // fallback, which was never true — an unentitled cloud call does not
+        // fail, it takes the process with it (`entitled`).
         if UserDefaults.standard.bool(forKey: "appleIntelligenceSeat") { return true }
         #endif
+        guard entitled else { return false }
         #if canImport(FoundationModels)
         if #available(iOS 27.0, *) {
             return PrivateCloudComputeLanguageModel().isAvailable
@@ -98,7 +127,14 @@ enum AskModel {
     }
 
     /// True when the next ask should go to Private Cloud Compute.
-    static var usesCloud: Bool { enabled && cloudAvailable }
+    ///
+    /// `entitled` is read HERE as well as inside `cloudAvailable`, and the
+    /// repetition is the point: `cloudAvailable` is what the catalogue asks
+    /// and a DEBUG flag can move it, while this is what builds a session. The
+    /// two questions have different answers on a flagged build, and the one
+    /// that crashes the app must never be the one a launch argument can turn
+    /// on (prd §838).
+    static var usesCloud: Bool { enabled && entitled && cloudAvailable }
 
     /// What answered the LAST ask-path turn — set by the session's caller once
     /// it knows, read by the composer when the answer settles.
@@ -110,9 +146,20 @@ enum AskModel {
     /// `-appleIntelligenceProbe` (RootShell): what this device says, and one
     /// call made straight to Private Cloud Compute. Lines, never a value from
     /// the corpus — the prompt is the probe's own unless one is passed.
+    ///
+    /// **The call is made only when `entitled`.** A probe that ends the
+    /// process is not a reading — the `catch` below can report a refusal and
+    /// cannot report a kill (prd §838) — so an unentitled build prints what it
+    /// knows and stops. It does not read `usesCloud`: the seat being off is no
+    /// reason to refuse a measurement, and the entitlement is.
     static func probe(prompt: String?) async -> [String] {
         var lines = ["availability = \(availabilityLine)",
-                     "seat on = \(enabled)", "answers in cloud = \(usesCloud)"]
+                     "seat on = \(enabled)", "entitled = \(entitled)",
+                     "answers in cloud = \(usesCloud)"]
+        guard entitled else {
+            lines.append("no call made — this build holds no Private Cloud Compute entitlement")
+            return lines
+        }
         #if canImport(FoundationModels)
         if #available(iOS 27.0, *) {
             let model = PrivateCloudComputeLanguageModel()
