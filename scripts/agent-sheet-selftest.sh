@@ -7,8 +7,24 @@
 # Foundation-only BY DESIGN, so it is compiled WHOLE AND UNMODIFIED rather than
 # extracted — the strongest form of "the harness ran the shipped logic".
 # Everything touching `Thing`, SwiftData or the catalog lives in
-# `AgentSheetSource.swift`, which no harness can compile and which holds lookups
-# rather than judgement.
+# `AgentSheetSource.swift`.
+#
+# THAT FILE IS COMPILED WHOLE TOO, since 2026-09-19 (the SECOND harness below).
+# It was left out from §367 (2026-08-12) onwards on the reasoning that it
+# "holds lookups rather than judgement", and two defects shipped inside those
+# lookups for the five weeks since, from one cause: `Thing.init` PREPENDS the kind's `typeTag` to `tags`
+# (`Casberi/Shared/Thing.swift`), and both tag filters here were written
+# against the array their CALLER passes rather than the array that is stored.
+# `project(for:)` returned "Chat" for every agent row in the corpus, so the
+# conversation head read "in Chat" on every agent sheet ever drawn and Claude
+# Code's real project never reached it; `permissions(for:)` listed "Link" to
+# the reader as a verb a key had been granted.
+#
+# The lesson is the fixture, not the filter: every fixture in the FIRST
+# harness is built by hand, and a hand-built fixture is a statement of what
+# the author BELIEVES is stored. It cannot disagree with them. So the second
+# harness builds its things through the shipped `Thing.init` — the only thing
+# that knows what a row really carries.
 #
 # WHY A HARNESS. Every failure mode here is a SILENT WRONG ANSWER that renders
 # perfectly, and neither a build nor a screen sweep nor a probe can see any of
@@ -42,8 +58,9 @@ GPT="Casberi/Casberi/Model/ChatGPTImport.swift"
 CLAUDE="Casberi/Casberi/Model/ClaudeImport.swift"
 CODE="Casberi/Casberi/Model/ClaudeCodeImport.swift"
 GEMINI="Casberi/Casberi/Model/GeminiImport.swift"
+THING="Casberi/Shared/Thing.swift"
 for f in "$SHEET" "$SOURCE" "$VIEWS" "$VIEW" "$CONTENT" "$CATALOG" \
-         "$GPT" "$CLAUDE" "$CODE" "$GEMINI"; do
+         "$GPT" "$CLAUDE" "$CODE" "$GEMINI" "$THING"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -679,6 +696,266 @@ mutate "a clamped transcript stops saying so" \
 mutate "the runway is not clamped" \
   'return min(max(done, 0), 1)' \
   'return done'
+
+# ============================================================================
+# THE SECOND HARNESS — `AgentSheetSource`, against the REAL `Thing`
+# ============================================================================
+# Everything above builds its fixtures by hand: `facts(kind:turns:)`,
+# `convo(title:project:)`, `grant(permissions:)`. That is right for
+# `AgentSheet`, which only ever sees values somebody passes it — but it is
+# structurally blind to `AgentSheetSource`, whose whole job is deciding WHICH
+# values to pass. A hand-built fixture is the author's belief about what a row
+# carries, so it agrees with the reader by construction, and the two defects
+# this section exists for lived in that gap from §367 until 2026-09-19:
+#
+#   · `project(for:)` returned the string "Chat" for every agent row in the
+#     corpus, because `Thing.init` prepends `kind.typeTag` and the filter only
+#     excluded "Session". The conversation head read "in Chat" on every agent
+#     sheet ever drawn, and Claude Code's real project reached neither the head
+#     nor `stripProject`.
+#   · `permissions(for:)` listed "Link" as a verb the key had been granted,
+#     for the same reason.
+#
+# So these fixtures are built through the shipped `Thing.init` and read by the
+# shipped `AgentSheetSource`, both compiled WHOLE AND UNMODIFIED. Only
+# `SocialSheetSource` is stubbed — it is a different sheet's judgement with a
+# harness of its own, and all this file needs from it is the boolean.
+echo ""
+echo "AgentSheetSource — the shipped readers, over things built by Thing.init"
+
+mkdir -p "$TMP/src"
+cat > "$TMP/src/Stubs.swift" <<'SWIFT'
+import Foundation
+
+/// `SocialSheetSource`'s judgement belongs to `social-sheet-selftest.sh`.
+/// `AgentSheetSource` asks it one question — "does this row already have a
+/// social anatomy?" — and only the answer matters here, so the stub is a set
+/// of ids the fixtures opt into. Deliberately NOT keyed on source or kind: a
+/// stub that re-derived the real rule could drift away from it silently and
+/// would be testing itself.
+enum SocialSheetSource {
+    static var shaped: Set<UUID> = []
+    static func shape(for thing: Thing) -> Int? { shaped.contains(thing.id) ? 1 : nil }
+}
+SWIFT
+
+cat > "$TMP/src/main.swift" <<'SWIFT'
+import Foundation
+
+var failures = 0
+func check(_ name: String, _ ok: Bool) {
+    if ok { print("  ✓ \(name)") } else { print("  ✗ \(name)"); failures += 1 }
+}
+
+// The four seats, EXACTLY as their importers call the initializer. Nothing is
+// assembled by hand and nothing is assigned to `tags` afterwards — the point
+// of this whole section is that only `Thing.init` knows what is stored.
+//
+// ChatGPT, Claude and Gemini pass no tags at all; `ClaudeCodeImport` passes
+// `["Session", <project>]` (or `["Session"]` alone when the export names no
+// project). See `ClaudeCodeImport.swift`'s `tags:` argument.
+func chat(_ source: String, title: String, tags: [String] = []) -> Thing {
+    Thing(kind: .chat, title: title, source: source, tags: tags)
+}
+
+// THE MECHANISM, asserted before anything that depends on it. If this line
+// ever stops being true the two readings below are testing a fiction, and the
+// failure should say which fact moved rather than which reading broke.
+let plain = chat("ChatGPT", title: "SwiftData migration plan")
+check("Thing.init prepends the kind's type tag, so a no-tag chat stores [\"Chat\"]",
+      plain.tags == ["Chat"])
+let session = chat("Claude Code", title: "casberi · Chase the embedding race",
+                   tags: ["Session", "casberi"])
+check("…and a Claude Code session stores [\"Chat\", \"Session\", <project>]",
+      session.tags == ["Chat", "Session", "casberi"])
+
+print("")
+print("project(for:) — the tag that is neither the facet nor the type")
+
+// THE FIRST SHIPPED DEFECT. "Chat" is not a project, and a head that says
+// "in Chat" is §83's fake status: a fact stated with total confidence about a
+// row that carries no project at all.
+check("a ChatGPT chat has no project, and certainly not \"Chat\"",
+      AgentSheetSource.project(for: plain) == nil)
+check("a Claude chat has no project either",
+      AgentSheetSource.project(for: chat("Claude", title: "Espresso ratios")) == nil)
+check("a Gemini chat has no project either",
+      AgentSheetSource.project(for: chat("Gemini", title: "Summarise this paper")) == nil)
+// …and the row that DOES carry one gets it. Before the fix this returned
+// "Chat" here too, so the project never reached the head or `stripProject`.
+check("a Claude Code session's project is the project",
+      AgentSheetSource.project(for: session) == "casberi")
+check("a session whose export named no project has none",
+      AgentSheetSource.project(for: chat("Claude Code", title: "Chase the race",
+                                         tags: ["Session"])) == nil)
+
+// DERIVED FROM THE KIND, never matched against the literal "Chat" — which is
+// the half that keeps this from coming back. A seat that starts landing its
+// sessions under a different kind must not reintroduce the defect, and this
+// is the only fixture that can tell the two spellings apart.
+let noteSession = Thing(kind: .note, title: "casberi · a note-kind session",
+                        source: "Claude Code", tags: ["Session", "casberi"])
+check("the facet is the THING's own type tag, not the literal \"Chat\"",
+      noteSession.tags == ["Note", "Session", "casberi"]
+        && AgentSheetSource.project(for: noteSession) == "casberi")
+
+print("")
+print("permissions(for:) — the verbs, and nothing the initializer added")
+
+// THE SECOND SHIPPED DEFECT, same cause: a grant is a `.link`, so "Link" was
+// stored ahead of the verbs and listed to the reader as one of them — on the
+// single surface whose entire job is "what can this agent reach".
+let grantRow = Thing(kind: .link, title: "personal · openai/* · read, list",
+                     source: "1Claw", tags: ["Grant", "read", "list"],
+                     sourceRef: "1claw:policy:abc")
+check("a grant row stores [\"Link\", \"Grant\", <verbs…>]",
+      grantRow.tags == ["Link", "Grant", "read", "list"])
+check("…and the permissions are the verbs alone",
+      AgentSheetSource.permissions(for: grantRow) == ["read", "list"])
+check("the row is still recognised as a grant by its ref",
+      AgentSheetSource.isGrantRef(grantRow.sourceRef)
+        && AgentSheetSource.shape(for: grantRow) == .grant)
+// Derived from the kind here too.
+let notedGrant = Thing(kind: .note, title: "a note-kind grant", source: "1Claw",
+                       tags: ["Grant", "read"], sourceRef: "1claw:policy:def")
+check("the facet is the THING's own type tag, not the literal \"Link\"",
+      AgentSheetSource.permissions(for: notedGrant) == ["read"])
+
+print("")
+print("The consequence — the reading the head actually draws")
+
+// END TO END, and the reason both defects were worth a harness: every
+// assertion above is about a string, and this is about the sentence a person
+// reads. `AgentConversationHead` draws `reading.project` as "in <project>".
+let readCode = AgentSheetSource.conversation(for: session)
+check("the head names the real project", readCode.project == "casberi")
+check("…and it comes out of the headline, which needed the real project",
+      readCode.hero == "Chase the embedding race")
+let readGPT = AgentSheetSource.conversation(for: plain)
+check("a ChatGPT sheet names no project at all", readGPT.project == nil)
+check("…and its title is untouched", readGPT.hero == "SwiftData migration plan")
+
+// The grant's half of the same sentence: `AgentGrantView` draws
+// `grant.permissions` as the list of verbs the key holds, so this is the
+// surface where "Link" was being read as something an agent had been allowed
+// to do. `grant(for:)` is `@MainActor` and top-level code here is NOT
+// main-actor isolated (measured — it is a compile error), so the hop is
+// asserted rather than awaited: this runs on the main thread, and the sheet
+// it stands in for is a view body, which does too.
+let readGrant = MainActor.assumeIsolated {
+    AgentSheetSource.grant(for: grantRow, now: Date(timeIntervalSince1970: 1_786_000_000))
+}
+check("the grant view is handed the verbs alone",
+      readGrant.permissions == ["read", "list"])
+
+// The social hand-off, through the real reader: a row another sheet has
+// already shaped gets no agent anatomy, whatever its tags say.
+// Counted rather than transcribed on purpose: `AgentSheet.assistant` knows no
+// label for Snapchat, so a stored transcript would parse to nothing and the
+// row would have no shape for the social sheet to take away.
+let dm = chat("Snapchat", title: "a saved chat")
+dm.messageCount = 40
+check("a chat with a counted transcript is a conversation",
+      AgentSheetSource.shape(for: dm) == .conversation)
+SocialSheetSource.shaped.insert(dm.id)
+check("…until the social sheet claims it", AgentSheetSource.shape(for: dm) == nil)
+
+print("")
+if failures > 0 {
+    print("agent-sheet-selftest: ✗ \(failures) source assertion(s) failed"); exit(1)
+}
+print("agent-sheet-selftest: OK — AgentSheetSource reads real Thing rows correctly.")
+SWIFT
+
+SRC_UNITS=("$THING" "$SHEET" "$SOURCE" "$TMP/src/Stubs.swift" "$TMP/src/main.swift")
+if ! swiftc -Onone -o "$TMP/src-selftest" "${SRC_UNITS[@]}" 2>"$TMP/src-build.log"; then
+  echo "✗ the source harness failed to compile against the shipped source"
+  grep -E 'error:' "$TMP/src-build.log" | head -20
+  exit 1
+fi
+"$TMP/src-selftest"
+
+# --- mutations, over BOTH shipped files -------------------------------------
+# The first harness mutates `AgentSheet.swift` alone. These mutate the reader
+# and the initializer, because the defect lived in the RELATIONSHIP between
+# them: either file alone reads correctly.
+echo ""
+echo "Mutations — AgentSheetSource and Thing (each must break something)"
+
+mutate_src() {  # name, file-to-mutate, from, to
+  local name="$1" target="$2" from="$3" to="$4"
+  local work="$TMP/srcmut"
+  rm -rf "$work"; mkdir -p "$work"
+  cp "$THING" "$work/Thing.swift"
+  cp "$SHEET" "$work/AgentSheet.swift"
+  cp "$SOURCE" "$work/AgentSheetSource.swift"
+  local a
+  case "$target" in
+    thing)  a="$work/Thing.swift" ;;
+    source) a="$work/AgentSheetSource.swift" ;;
+    *) echo "  ✗ $name — unknown mutation target '$target'"; exit 1 ;;
+  esac
+  local rc=0
+  MUT_FROM="$from" MUT_TO="$to" python3 - "$a" <<'PY' || rc=$?
+import os, sys
+path = sys.argv[1]
+src = open(path).read()
+frm, to = os.environ["MUT_FROM"], os.environ["MUT_TO"]
+if src.count(frm) != 1:
+    sys.stderr.write("ANCHOR-%d\n" % src.count(frm)); sys.exit(2)
+open(path, "w").write(src.replace(frm, to, 1))
+PY
+  # A mutation that did not APPLY reports SURVIVED forever after the source
+  # moves under it, so the applier is pinned, not the detector.
+  if [[ $rc -ne 0 ]] || ! grep -qF -- "$to" "$a"; then
+    echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
+  fi
+  if ! swiftc -Onone -o "$work/mut" "$work/Thing.swift" "$work/AgentSheet.swift" \
+       "$work/AgentSheetSource.swift" "$TMP/src/Stubs.swift" "$TMP/src/main.swift" \
+       2>/dev/null; then
+    echo "  ✓ $name (rejected at compile)"; return
+  fi
+  if "$work/mut" > /dev/null 2>&1; then
+    echo "  ✗ $name — the harness still passed, so nothing was testing this"; exit 1
+  fi
+  echo "  ✓ $name"
+}
+
+# THE TWO SHIPPED DEFECTS, restored exactly. If either of these survives, this
+# whole section is decoration.
+mutate_src "project stops excluding the type tag (the shipped defect)" source \
+  '        let facet = thing.kind.typeTag
+        return thing.tags.first { $0 != "Session" && $0 != facet && !$0.isEmpty }' \
+  '        return thing.tags.first { $0 != "Session" && !$0.isEmpty }'
+mutate_src "permissions stop excluding the type tag (the shipped defect)" source \
+  '        let facet = thing.kind.typeTag
+        return thing.tags.filter { $0 != "Grant" && $0 != facet && !$0.isEmpty }' \
+  '        return thing.tags.filter { $0 != "Grant" && !$0.isEmpty }'
+
+# The literal spelling, which reads identically on every row shipping today
+# and is exactly how this class comes back.
+mutate_src "project hard-codes \"Chat\" instead of reading the kind" source \
+  '        let facet = thing.kind.typeTag
+        return thing.tags.first { $0 != "Session" && $0 != facet && !$0.isEmpty }' \
+  '        return thing.tags.first { $0 != "Session" && $0 != "Chat" && !$0.isEmpty }'
+mutate_src "permissions hard-code \"Link\" instead of reading the kind" source \
+  '        let facet = thing.kind.typeTag
+        return thing.tags.filter { $0 != "Grant" && $0 != facet && !$0.isEmpty }' \
+  '        return thing.tags.filter { $0 != "Grant" && $0 != "Link" && !$0.isEmpty }'
+
+# …and the other end of the relationship. This one proves the FIXTURES: if
+# removing the prepend leaves the harness green, the things are not going
+# through `Thing.init` at all and the section above proves nothing.
+mutate_src "Thing.init stops prepending the type tag" thing \
+  '        self.tags = ([kind.typeTag] + tags).reduced()' \
+  '        self.tags = tags.reduced()'
+
+# The hand-off itself: `AgentSheetSource` is the only place that asks the
+# social sheet first, so a row with two anatomies is a defect only this file
+# can introduce.
+mutate_src "the source stops asking the social sheet" source \
+  'socialShaped: SocialSheetSource.shape(for: thing) != nil,' \
+  'socialShaped: false,'
 
 echo ""
 echo "agent-sheet-selftest: OK — assertions and mutations both pass."

@@ -7,7 +7,16 @@ import SwiftData
 /// The split is the house pattern (`SocialSheet`/`SocialSheetSource`,
 /// `StripeRoom`/`StripeRoomSource`): the judgement is Foundation-only so a
 /// harness can compile it whole, and the reads that touch SwiftData and the
-/// catalog live here, where there is no judgement to test — only lookups.
+/// catalog live here.
+///
+/// "Only lookups, so there is nothing to test" is what this header said until
+/// 2026-09-19, and it was wrong twice over — a lookup that FILTERS carries a
+/// claim about what is in the field, and both filters here were reading tag
+/// arrays whose real shape `Thing.init` decides two files away (it prepends
+/// the kind's `typeTag`). Both shipped. `agent-sheet-selftest.sh` compiles
+/// this file whole now, against the real `Thing`, and builds its fixtures
+/// through `Thing.init` rather than by hand — a fixture assembled by hand
+/// cannot see anything the initializer does.
 enum AgentSheetSource {
 
     /// The catalog's `Agent` group, as a source test — but only the seats that
@@ -92,13 +101,25 @@ enum AgentSheetSource {
 
     /// The project this session ran in, off `ClaudeCodeImport`'s own tag.
     ///
-    /// The tags are `["Session", <project>]` — so the project is "the tag that
-    /// isn't the facet". Read from a STORED field and never sliced out of the
-    /// title, which is `WorkStage`'s central rule: a project guessed from a
-    /// separator lands in a labelled slab row, where being wrong is
-    /// indistinguishable from being right.
+    /// `ClaudeCodeImport` passes `["Session", <project>]` — but `Thing.init`
+    /// PREPENDS the kind's own type tag, so what is stored is
+    /// `["Chat", "Session", <project>]`, and for the three seats that pass no
+    /// tags at all it is `["Chat"]` alone. Reading "the tag that isn't the
+    /// facet" without excluding the type tag returned "Chat" for every agent
+    /// row in the corpus — the head said "in Chat" on every sheet and Claude
+    /// Code's real project never reached it or `stripProject`.
+    ///
+    /// The type tag is taken from the thing's OWN kind rather than matched
+    /// against the literal "Chat", so a seat that starts landing a different
+    /// kind cannot reintroduce this.
+    ///
+    /// Read from a STORED field and never sliced out of the title, which is
+    /// `WorkStage`'s central rule: a project guessed from a separator lands in
+    /// a labelled slab row, where being wrong is indistinguishable from being
+    /// right.
     static func project(for thing: Thing) -> String? {
-        thing.tags.first { $0 != "Session" && !$0.isEmpty }
+        let facet = thing.kind.typeTag
+        return thing.tags.first { $0 != "Session" && $0 != facet && !$0.isEmpty }
     }
 
     // MARK: - The grant reading
@@ -132,7 +153,14 @@ enum AgentSheetSource {
     /// "Grant" is the facet naming the SHAPE; every other tag on the row is a
     /// permission the API reported, stamped in the API's own words so nothing
     /// here has to translate a security decision.
+    ///
+    /// The kind's own type tag comes off too — `Thing.init` prepends it, so a
+    /// grant row (`.link`) stores `["Link", "Grant", <verbs…>]` and "Link" was
+    /// being listed to the reader as a permission the key holds. Derived from
+    /// the thing's kind, not matched against the literal "Link", so the same
+    /// row landed under a different kind cannot bring it back.
     static func permissions(for thing: Thing) -> [String] {
-        thing.tags.filter { $0 != "Grant" && !$0.isEmpty }
+        let facet = thing.kind.typeTag
+        return thing.tags.filter { $0 != "Grant" && $0 != facet && !$0.isEmpty }
     }
 }
