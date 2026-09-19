@@ -39,19 +39,6 @@ enum MediaShape {
             case .pin:     2.0 / 3.0
             }
         }
-
-        /// How the head shelf lays this medium out: how many across, and how
-        /// many rows at most. A wide form gets FEWER, LARGER tiles — eight
-        /// thumbnails engineered to shout individually read as noise in a
-        /// grid, where two big frames read as "here's what arrived".
-        var shelf: (columns: Int, maxRows: Int) {
-            switch self {
-            case .cover:   (4, 2)
-            case .still:   (2, 1)
-            case .capsule: (2, 1)
-            case .pin:     (4, 1)
-            }
-        }
     }
 
     /// The medium a source speaks, or nil for a source whose art carries no
@@ -70,7 +57,7 @@ enum MediaShape {
     /// Sources that take the media shape in their own room. Music keeps
     /// `MusicRow` (2026-07-11 named it Apple Music's own shape and it already
     /// leads with the cover), so it is NOT in this set even though it declares
-    /// `.cover` art above — the head shelf still reads that declaration.
+    /// `.cover` art above.
     static func isMediaFeed(_ source: String) -> Bool {
         switch source {
         case "YouTube", "Twitch", "Podcasts", "Steam", "Pinterest": true

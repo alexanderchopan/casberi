@@ -369,10 +369,9 @@ guard_has() {
 guard_has "the chain still asks topicMap first" "$COMPOSER" 'FeedInsight\.topicMap\(source:' || rc=1
 # "…then leaderboard" is DELETED (prd §723) — the ranked board is gone from
 # `RoomFigure`'s chain along with every room it headed, so a figure now goes
-# topic map → distribution → mosaic → heatmap.
+# topic map → distribution. The mosaic and the heatmap after it are DELETED
+# (prd §832) with the room figures they previewed.
 guard_has "…then distribution"  "$COMPOSER" 'FeedInsight\.distribution\(source:' || rc=1
-guard_has "…then mosaic"        "$COMPOSER" 'FeedInsight\.mosaic\(source:' || rc=1
-guard_has "…then the heatmap"   "$COMPOSER" 'FeedHeatmap\.label\(for:' || rc=1
 # Affinity is ChipMemory's weight, not a number invented here.
 guard_has "affinity rides ChipMemory" "$COMPOSER" 'ChipMemory\.weight\(for:' || rc=1
 # Import receipts are the app talking about itself.

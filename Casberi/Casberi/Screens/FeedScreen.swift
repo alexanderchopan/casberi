@@ -2553,7 +2553,7 @@ struct FeedScreen: View {
     /// The registry answers a room's head is chosen from (PERF 2026-08-21,
     /// prd §434 ruling 1).
     ///
-    /// None of these holds a `Thing` — `FeedInsight`'s four are plain value
+    /// None of these holds a `Thing` — `FeedInsight`'s are plain value
     /// types over counts and labels, and `SourceHead`'s cases carry room models
     /// whose own contract is that they hand back a value and let the VIEW do
     /// the lookup (see the `sourceHead` render below, which says so). That is
@@ -2564,7 +2564,6 @@ struct FeedScreen: View {
         let sourceHead: SourceHead?
         let topicMap: FeedInsight.TopicMap?
         let distribution: FeedInsight.Distribution?
-        let mosaic: FeedInsight.Mosaic?
         /// Whether the feeds behind a reading room are still answering
         /// (2026-08-23, prd §455). Cached HERE rather than in a task of its
         /// own because it has exactly this lifecycle — recompute when the
@@ -2926,7 +2925,6 @@ struct FeedScreen: View {
             sourceHead: quiet ? nil : head,
             topicMap: FeedInsight.topicMap(source: source, things: rows),
             distribution: FeedInsight.distribution(source: source, things: rows),
-            mosaic: FeedInsight.mosaic(source: source, things: rows),
             // Reads the follow stores and `FeedFreshness`, never `rows` — the
             // whole point is a feed that has stopped producing rows, so a
             // verdict derived from the room's contents could not see it.
@@ -6262,8 +6260,8 @@ struct FeedScreen: View {
         // comments are about. When there's too little text to say anything it
         // returns nil and the next card down takes the head.
         // X, Instagram and TikTok lead with their newest thing and nothing
-        // else (prd §821, `SocialRoom.leadsWithNewest`): none of the four
-        // registry figures below may claim them. Their registry entries are
+        // else (prd §821, `SocialRoom.leadsWithNewest`): neither registry
+        // figure below may claim them. Their registry entries are
         // deleted too; this keeps a re-added one from taking the slot back.
         let figuresMayLead = !SocialRoom.leadsWithNewest(source)
         let topicMap = figuresMayLead && liveStream == nil && sourceHead == nil && anniversary == nil
@@ -6272,25 +6270,13 @@ struct FeedScreen: View {
         let distribution = figuresMayLead && liveStream == nil && sourceHead == nil && anniversary == nil
             && topicMap == nil && rosterAccounts.isEmpty
             ? heads?.distribution : nil
-        let mosaic = figuresMayLead && liveStream == nil && sourceHead == nil && anniversary == nil
-            && topicMap == nil && distribution == nil && rosterAccounts.isEmpty
-            ? heads?.mosaic : nil
-        // The heatmap sits LAST (moved 2026-07-31), not third. It answers
-        // WHEN, which is the weakest thing a room can lead with — every card
-        // above it names a WHO or a WHAT — and its label comes from a static
-        // registry, so it can never decline the slot the way the derived cards
-        // do. Third, it silently owned every room it was registered for; the
-        // §219 social-roster bug was exactly that, caught late. Nothing
-        // changes for any source that shipped before this: no source in the
-        // registry qualifies for a distribution or mosaic (the
-        // sets don't intersect), so each still draws the one card it always
-        // drew. Instagram and Snapchat are the first sources with two facts
-        // to choose between, and for them the grid is the graceful fallback —
-        // the role it already plays for Photos under the treemap.
-        let heatmapLabel = figuresMayLead && liveStream == nil && rosterAccounts.isEmpty && anniversary == nil
-            && topicMap == nil && distribution == nil && mosaic == nil
-            && sourceHead == nil
-            ? FeedHeatmap.label(for: source) : nil
+        // The art wall (`FeedInsight.mosaic`) and the year heatmap
+        // (`FeedHeatmap`) stood here and were DELETED in prd §832: every room
+        // they led now leads with its newest thing, the one template (user:
+        // "we really want that to be our template we use on all screens").
+        // The heatmap had a second defect: its label set `heroShown` before
+        // the grid's own four-active-days floor, so a thin room drew no grid
+        // AND no cover.
         // **A ROOM THAT DRAWS NO HEAD GETS THE NEWEST THING AS A CARD**
         // (prd §723) — `memo.lede` is gated on exactly this flag, so the
         // fifteen rooms the deleted board used to head now fall through to
@@ -6311,8 +6297,7 @@ struct FeedScreen: View {
         // in the feed, and they left for the shell in §362, then for the dock's
         // own capsule in §753. The room went a month with an empty slot.
         let heroShown = liveStream != nil || anniversary != nil || topicMap != nil
-            || heatmapLabel != nil || sourceHead != nil
-            || distribution != nil || mosaic != nil
+            || sourceHead != nil || distribution != nil
         if let liveStream {
             insightSection { LiveStreamHero(thing: liveStream) { openThing(liveStream) } }
         } else if let sourceHead {
@@ -6663,33 +6648,6 @@ struct FeedScreen: View {
             insightSection { TopicMapHero(map: topicMap) }
         } else if let distribution {
             insightSection { DistributionHero(dist: distribution) }
-        } else if let mosaic {
-            insightSection { ImageMosaicHero(mosaic: mosaic) }
-        } else if let heatmapLabel {
-            calendarHeatmapSection(visible, label: heatmapLabel)
-        } else if !rosterAccounts.isEmpty {
-            // NOTHING is drawn here any more (prd §362, 2026-08-11), and the
-            // branch survives on purpose — `rosterAccounts` is now a
-            // SUPPRESSION term, not a card.
-            //
-            // The faces moved out of the room and onto the shell, as the pinned
-            // `FaceScopeRail` the wallets already wore. What they leave behind is
-            // an empty head slot, and the branch is what keeps it empty: delete
-            // it and the chain falls through to `FeedHeatmap`'s "Casting
-            // activity" density grid, which is precisely the card §219 removed
-            // when the roster was built ("a density grid says nothing a face with
-            // a ring doesn't already say better"). The faces still say it — one
-            // tier up, permanently — so the grid has no more claim on this room
-            // than it had yesterday, and a room that answers a ruling by growing
-            // a card back is the opposite of the simplification this was.
-            //
-            // **THE SLOT IS NOT EMPTY ANY MORE — IT HOLDS THE COVER (prd
-            // §755).** §723 gave a headless room its newest thing at size, and
-            // this term was still inside `heroShown`, so the one branch that
-            // draws nothing was also the one that refused the cover. Suppressing
-            // the density grid is this term's whole job and it keeps it; naming
-            // a head that isn't drawn was never part of it.
-            EmptyView()
         }
         switch shape {
         case .photos:
@@ -8756,36 +8714,6 @@ struct FeedScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets())
-        }
-    }
-
-    /// A source's own consistency heatmap (2026-07-18) — the same green-squares
-    /// grid the GitHub feed leads with, here derived from the feed's own things:
-    /// each thing's `capturedAt` bucketed into the trailing year. Synchronous,
-    /// off the SAME `visible` the rows draw from (no separate query). Renders
-    /// only once a few days are lit, so a near-empty grid can't read as a
-    /// loading skeleton.
-    @ViewBuilder
-    private func calendarHeatmapSection(_ visible: [Thing], label: FeedHeatmap.Label) -> some View {
-        // What the grid counts, which is not always the whole room (2026-07-31):
-        // a label may name one kind ("your memory year" must mean memories, not
-        // the chats sitting beside them), and the import receipt is never a day
-        // the person did something. The anniversary reads the SAME set, so the
-        // card can't reach back to something its own grid doesn't chart.
-        let counted = FeedHeatmap.counted(visible, label: label)
-        let year = ContributionYear.from(dates: counted.map(\.capturedAt), columns: label.columns)
-        if year.activeDays >= 4 {
-            let echo = OnThisDay.find(in: counted)
-            Section {
-                CalendarHeatmapHero(title: label.title,
-                                    subtitle: FeedHeatmap.subtitle(label, total: year.total),
-                                    year: year, minColumns: label.columns,
-                                    onThisDay: echo,
-                                    onTapOnThisDay: { feedSheet = echo.map { .thing($0.thing, walk: .none) } })
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets())
-            }
         }
     }
 

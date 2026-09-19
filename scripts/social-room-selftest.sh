@@ -50,9 +50,8 @@ cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+
 SHELL_="Casberi/Casberi/Shell/MainSurface.swift"
 RAIL="Casberi/Casberi/Shell/FaceScopeRail.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
-HEATMAP="Casberi/Casberi/Model/FeedHeatmap.swift"
 INSIGHT="Casberi/Casberi/Model/FeedInsight.swift"
-for f in "$ROOM" "$SOURCE" "$FEED" "$SHELL_" "$RAIL" "$CATALOG" "$HEATMAP" "$INSIGHT"; do
+for f in "$ROOM" "$SOURCE" "$FEED" "$SHELL_" "$RAIL" "$CATALOG" "$INSIGHT"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -153,37 +152,28 @@ present "Nostr resolves to the social room" \
   'case "Farcaster", "Bluesky", "Nostr": self = \.social' "$TMP/feed.nc"
 present "TikTok resolves to a room of its own" \
   'case "TikTok":              self = \.tiktok' "$TMP/feed.nc"
-# A room with one watched account draws no rail (the rail needs two), so
-# without this entry a single-account Nostr room has nothing above its rows at
-# all — no head, no board, no grid.
-present "Nostr has an activity grid to fall back to" \
-  '"Nostr": *Label\(' "$HEATMAP"
-# Telegram's "Which channels fill this" was a board, deleted with the rest
-# (§723), and its year grid went in prd §832: the room leads with its newest
-# thing, above the picture grid.
-absent "Telegram leads with a year grid again (prd §832)" \
-  '"Telegram": *Label\(' "$HEATMAP"
+# A single-account social room leaned on an activity grid, and Telegram on a
+# year grid, until prd §832 deleted the registry (`FeedHeatmap`): every room
+# with no head leads with its newest thing. `feed-reading-selftest.sh` holds
+# the registry's absence.
+# Telegram's "Which channels fill this" was a board, deleted with the rest (§723).
 absent "the channels board came back" \
   'title: "Which channels fill this"' "$INSIGHT"
 
 # --- the three rooms that lead with their newest thing (prd §821) ------------
-# X, Instagram and TikTok: no topic map, no year heatmap, and a picture grid
+# X, Instagram and TikTok: no topic map, and a picture grid
 # never declines the cover. One predicate names them; the figures' registry
-# entries are deleted and the four gates read the predicate once.
+# entries are deleted and the gates read the predicate once.
 present "X leads with its newest thing" \
   '"X": *Facts\(foldsThreads: true, *hasRoster: false, leadsWithNewest: true\)' "$ROOM"
 present "Instagram leads with its newest thing" \
   '"Instagram": Facts\(foldsThreads: false, hasRoster: false, leadsWithNewest: true\)' "$ROOM"
 present "TikTok leads with its newest thing" \
   '"TikTok": *Facts\(foldsThreads: false, hasRoster: false, leadsWithNewest: true\)' "$ROOM"
-absent "a year heatmap came back to a room that leads with its newest thing" \
-  '"(X|Instagram|TikTok)": *Label\(' "$HEATMAP"
 absent "a topic map came back to a room that leads with its newest thing" \
   'case "(X|Instagram|TikTok)":' "$INSIGHT"
-present "the four registry figures read the one predicate" \
+present "the registry figures read the one predicate" \
   'let figuresMayLead = !SocialRoom.leadsWithNewest\(source\)' "$TMP/feed.nc"
-present "the heatmap reads it too" \
-  'let heatmapLabel = figuresMayLead &&' "$TMP/feed.nc"
 absent "a picture grid declines the cover again" \
   'heroShown \|\| !photoTiles.isEmpty' "$TMP/feed.nc"
 present "the cover is lifted out before the grid" \

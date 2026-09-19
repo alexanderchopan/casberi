@@ -173,8 +173,9 @@ check "anniversary still derived in the body" \
 #     This is the cost removal itself; without it the memo is dead weight and
 #     every swipe pays exactly what it paid before, with a cache beside it
 #     saying otherwise.
-# `leaderboard` left this list with the ranked board itself (prd §723).
-for field in topicMap distribution mosaic; do
+# `leaderboard` left this list with the ranked board itself (prd §723), and
+# `mosaic` with the art wall (prd §832).
+for field in topicMap distribution; do
   check "shapedSections reads heads?.$field" \
         "$FEED" "heads\?\.$field" yes
   check "shapedSections no longer calls FeedInsight.$field inline" \

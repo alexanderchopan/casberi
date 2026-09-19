@@ -1558,67 +1558,6 @@ struct DistributionHero: View {
     }
 }
 
-/// A thumbnail mosaic — a 4-across wall of a source's own images (NFT art,
-/// pins, product shots, video thumbs). `Color.clear` carries the aspect ratio so
-/// the grid self-sizes; RemoteThumb handles caching and dead-image fallback.
-struct ImageMosaicHero: View {
-    let mosaic: FeedInsight.Mosaic
-    // NO WASH behind the art (prd §524). §219 averaged the newest piece's
-    // colour into a blurred glow behind the shelf; that colour said where the
-    // art came from, which the art directly above it already says at full
-    // strength.
-
-    /// How this medium lays out: how many across, how many rows, and the tile
-    /// aspect. A source with no declared medium keeps the square 4-across grid
-    /// this card has always drawn.
-    private var layout: (columns: Int, maxRows: Int, aspect: CGFloat) {
-        guard let art = mosaic.art else { return (4, 2, 1) }
-        return (art.shelf.columns, art.shelf.maxRows, art.aspect)
-    }
-
-    var body: some View {
-        let l = layout
-        InsightCard {
-            InsightHeader(title: mosaic.title, subtitle: mosaic.subtitle)
-            // THE WALL GROWS INTO THE LEAD'S BOX (prd §760): the medium's own
-            // tile at the width's size, and as many whole rows of it as the
-            // height holds from the tiles there are. `maxRows` no longer caps
-            // it; the box does.
-            Color.clear
-                .overlay(alignment: .top) {
-                    GeometryReader { geo in
-                        let gap: CGFloat = 4
-                        let tileW = (geo.size.width - gap * CGFloat(l.columns - 1)) / CGFloat(l.columns)
-                        let tileH = tileW / l.aspect
-                        let fit = max(1, Int((geo.size.height + gap) / (tileH + gap)))
-                        let rows = max(1, min(fit, mosaic.tiles.count / l.columns))
-                        let shown = Array(mosaic.tiles.prefix(l.columns * rows))
-                        let radius = min(DS.Radius.control, min(tileW, tileH) * 0.22)
-                        VStack(spacing: gap) {
-                            ForEach(0..<rows, id: \.self) { r in
-                                HStack(spacing: gap) {
-                                    ForEach(0..<l.columns, id: \.self) { c in
-                                        let idx = r * l.columns + c
-                                        if idx < shown.count {
-                                            RemoteArt(urlString: shown[idx].url,
-                                                      width: tileW, height: tileH,
-                                                      fallback: mosaic.fallback,
-                                                      freshness: shown[idx].freshness,
-                                                      cornerRadius: radius)
-                                        } else {
-                                            Color.clear.frame(width: tileW, height: tileH)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-        }
-    }
-}
-
-
 /// A treemap of what a screenshot library is ABOUT — the terms and names OCR
 /// lifts off the pixels (`Thing.ocrTopics`), sized by how many screenshots each
 /// covers (2026-07-30, the Photos feed's hero, ahead of the capture-year

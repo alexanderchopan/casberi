@@ -298,7 +298,7 @@ grep -q 'if let coverThing, coverThing.isLive { ledeListRow(coverThing) }' "$FEE
 #
 # Read off `heroShown`'s own expression, not the file: the term must still be
 # present in the gates above it, so a file-wide grep would prove nothing.
-_hero=$(awk '/let heroShown = /{f=1} f{print} f&&/mosaic != nil/{exit}' "$TMP/feed.nocomment")
+_hero=$(awk '/let heroShown = /{f=1} f{print} f&&/distribution != nil/{exit}' "$TMP/feed.nocomment")
 [ -n "$_hero" ] \
   || { echo "✗ could not read heroShown's expression — the §755 check below would"; \
        echo "  pass on nothing."; exit 1; }
@@ -307,15 +307,15 @@ case "$_hero" in
        echo "  have not drawn in the feed since §362, so this suppresses the cover in"; \
        echo "  every social room and puts nothing in its place."; exit 1;;
 esac
-# …and the term must STILL suppress the density grid, which is the job §362 kept
-# it alive for ("a density grid says nothing a face with a ring doesn't already
-# say better").
-_heat=$(awk '/let heatmapLabel = /{f=1} f{print} f&&/FeedHeatmap.label\(for: source\)/{exit}' "$TMP/feed.nocomment")
-case "$_heat" in
-  *rosterAccounts.isEmpty*) ;;
-  *) echo "✗ a social room can draw the density grid again (prd §219/§755) — the"; \
-     echo "  faces say what it says, one tier up."; exit 1;;
-esac
+# The density grid that term suppressed is DELETED (prd §832), with every
+# room figure that could stand in for the newest thing: the year-heatmap
+# registry and the art wall. A room with no head leads with its cover.
+[ -e Casberi/Casberi/Model/FeedHeatmap.swift ] \
+  && { echo "✗ the year-heatmap registry is back (prd §832) — it held the slot the newest thing leads"; exit 1; }
+grep -q 'static func mosaic(' Casberi/Casberi/Model/FeedInsight.swift \
+  && { echo "✗ the art wall is back (prd §832) — it held the slot the newest thing leads"; exit 1; }
+grep -qE 'ImageMosaicHero|calendarHeatmapSection|heatmapLabel' "$TMP/feed.nocomment" \
+  && { echo "✗ the room can draw a wall or a year grid in its lead again (prd §832)"; exit 1; }
 
 # ── 4. Feed health, in the room ────────────────────────────────────────────
 grep -q 'FeedRoomHealthSource.standing(for: source)' "$FEED" \

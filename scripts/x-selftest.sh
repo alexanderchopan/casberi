@@ -241,8 +241,8 @@ grep -q 'if !includeDomains {' "$TOPICS" \
 # can never decline the slot the way the derived heads do — and what it would
 # cover is the newest notice. The room's On This Day rode inside that card and
 # went with it, deliberately.
-grep -Eq '"X": *Label\(' Casberi/Casberi/Model/FeedHeatmap.swift \
-  && { echo "✗ X has a heatmap label again (prd §817) — the room leads with a year grid instead of the newest notification"; exit 1; }
+[ -e Casberi/Casberi/Model/FeedHeatmap.swift ] \
+  && { echo "✗ the year-heatmap registry is back (prd §817, §832) — the room leads with a year grid instead of the newest notification"; exit 1; }
 grep -qF '"X":         Facts(foldsThreads: true,  hasRoster: false, leadsWithNewest: true)' Casberi/Casberi/Model/SocialRoom.swift \
   || { echo "✗ X no longer leads with its newest thing (SocialRoom.leadsWithNewest, §821)"; exit 1; }
 grep -q 'connected("x")' Casberi/Casberi/Model/BridgeRefresh.swift \

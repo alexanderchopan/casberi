@@ -107,42 +107,10 @@ enum RoomFigure {
                                                count: $0.count)
                         }))
         }
-        if let wall = FeedInsight.mosaic(source: source, things: things) {
-            // `Mosaic.Tile` carries no per-item title, so every tile shares
-            // the room's own mosaic title as its loading/failed label (spec
-            // item 4) — "Your pins" while a Pinterest thumbnail is still
-            // fetching reads as content; a bare gray box reads as broken.
-            return card(wall.title, wall.subtitle,
-                        .wall(wall.tiles.prefix(4).map {
-                            AgentPanel.WallTile(url: $0.url, label: wall.title)
-                        }))
-        }
-        if let label = FeedHeatmap.label(for: source) {
-            // Only a HABIT earns the pulse tile (user, 2026-08-14, prd §386:
-            // the casts/screenshots/posts grids were "kinda useless"). The
-            // grid is a consistency-over-time reading, which is a real answer
-            // where the acts are YOURS — journaling, writing, training,
-            // chatting — and noise where the room is content that merely
-            // arrived: three identical activity smudges saying "when" about
-            // rooms whose whole point is WHO and WHAT. A content room whose
-            // better figures (topic map, mosaic) all declined
-            // now composes NO tile — an absent tile beats a tile that
-            // answers nothing — while its FEED keeps the year heatmap as the
-            // documented fallback (§247's chain, unchanged).
-            guard pulseWorthy.contains(source) else { return nil }
-            let counted = FeedHeatmap.counted(things, label: label)
-            // Twelve weeks, not the room's 53. A full year at tile scale is
-            // ~2.7pt cells — unreadable — while the windowed grid the social
-            // rooms already draw reads fine.
-            return card(label.title, label.units, .pulse(dailyCounts(counted, days: 7 * 12)))
-        }
+        // The art wall and the habit pulse stood here and went with the room
+        // figures they previewed (prd §832): the peek shows what the room draws.
         return nil
     }
-
-    static let pulseWorthy: Set<String> = [
-        "Day One", "Apple Journal", "Obsidian", "Notion",
-        "Apple Health", "Strava", "Garmin", "ChatGPT", "Claude", "Gemini",
-    ]
 
     static func toneIndex(_ tone: FeedInsight.Tone) -> Int {
         switch tone {
@@ -150,18 +118,5 @@ enum RoomFigure {
         case .negative: return 2
         default:        return 0
         }
-    }
-
-    static func dailyCounts(_ things: [Thing], days: Int) -> [Int] {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: .now)
-        var buckets = Array(repeating: 0, count: days)
-        for thing in things {
-            let d = cal.dateComponents([.day], from: cal.startOfDay(for: thing.capturedAt),
-                                       to: today).day ?? -1
-            guard d >= 0, d < days else { continue }
-            buckets[days - 1 - d] += 1
-        }
-        return buckets
     }
 }

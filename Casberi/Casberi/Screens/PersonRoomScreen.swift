@@ -234,20 +234,21 @@ struct PersonRoomScreen: View {
 
     /// Their rhythm (item 8 of the 2026-07-27 polish pass) — a person you've
     /// watched for months has a shape: when they post, when they went quiet.
-    /// The exact read `FeedHeatmap`/`ContributionYear` already perform for
+    /// The exact read `ContributionYear` already performs for
     /// GitHub and for the room itself, scoped down to one person's own
     /// `posts` instead of the whole room's `visible`. No new data, just a
     /// read — same 4-active-day floor `calendarHeatmapSection` uses, so a
     /// person with only a couple of posts doesn't draw a mostly-empty grid.
     @ViewBuilder private var cadenceSection: some View {
-        let label = FeedHeatmap.label(for: profile.source)
-        let columns = label?.columns ?? 14
+        // Fourteen weeks: a social feed is a rolling recent sample, so a full
+        // year would be one bright smudge (the room registry this read its
+        // width from was deleted in prd §832).
+        let columns = 14
         let year = ContributionYear.from(dates: posts.map(\.capturedAt), columns: columns)
         if year.activeDays >= 4 {
             CalendarHeatmapHero(
-                title: label?.title ?? String(localized: "Their posting rhythm"),
-                subtitle: label.map { FeedHeatmap.subtitle($0, total: year.total) }
-                    ?? "\(year.total.formatted()) \(year.total == 1 ? "post" : "posts")",
+                title: String(localized: "Their posting rhythm"),
+                subtitle: "\(year.total.formatted()) \(year.total == 1 ? "post" : "posts")",
                 year: year, minColumns: columns)
             .padding(.top, DS.Space.s1)
         }

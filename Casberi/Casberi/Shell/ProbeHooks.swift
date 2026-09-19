@@ -7888,27 +7888,10 @@ enum ProbeHooks {
         // fifteen rooms and answered a question nobody had. A room that drew
         // one now falls through this chain to whatever ranks next, or to no
         // head at all and the newest thing as a card.
-        // 5. the split bar, 6. the wall
+        // 5. the split bar. The wall and the year grid that followed it are
+        // DELETED (prd §832); a room with no head leads with its newest thing.
         note("distribution", FeedInsight.distribution(source: source, things: things)?.title)
-        note("mosaic", FeedInsight.mosaic(source: source, things: things)
-                .map { "\($0.title) · \($0.tiles.count) tiles" })
-        // 7. the grid — last, and reported with what it actually counts
-        if let label = FeedHeatmap.label(for: source) {
-            let counted = FeedHeatmap.counted(things, label: label)
-            let year = ContributionYear.from(dates: counted.map(\.capturedAt),
-                                             columns: label.columns)
-            // `activeDays >= 4` is the screen's own render gate.
-            note("heatmap", year.activeDays >= 4
-                 ? "\(label.title) · counted=\(counted.count) · activeDays=\(year.activeDays)"
-                 : nil)
-            if year.activeDays < 4 {
-                NSLog("[Casberi] roomInsight| heatmap registered but too sparse (counted=%d activeDays=%d)",
-                      counted.count, year.activeDays)
-            }
-        } else {
-            note("heatmap", nil)
-        }
-        NSLog("[Casberi] roomInsight: leads with %@", leader ?? "NOTHING (rows only)")
+        NSLog("[Casberi] roomInsight: leads with %@", leader ?? "its newest thing (cover)")
         return leader
     }
 }

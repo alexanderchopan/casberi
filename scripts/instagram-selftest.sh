@@ -28,11 +28,10 @@ FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
 cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 INSIGHT="Casberi/Casberi/Model/FeedInsight.swift"
-HEATMAP="Casberi/Casberi/Model/FeedHeatmap.swift"
 SOCIAL="Casberi/Casberi/Model/SocialRoom.swift"
 RETRIEVER="Casberi/Casberi/Model/Retriever.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
-for f in "$IMPORT" "$CAPTIONS" "$FEED" "$INSIGHT" "$HEATMAP" "$SOCIAL" "$RETRIEVER" "$REACH"; do
+for f in "$IMPORT" "$CAPTIONS" "$FEED" "$INSIGHT" "$SOCIAL" "$RETRIEVER" "$REACH"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -92,9 +91,8 @@ grep -qF 'InstagramRoomCard(' "$TMP/feed.nc" \
 # heatmap, and the picture grid never declines the cover.
 grep -qF '"Instagram": Facts(foldsThreads: false, hasRoster: false, leadsWithNewest: true)' "$SOCIAL" \
   || { echo "✗ Instagram no longer leads with its newest thing (SocialRoom.leadsWithNewest)"; exit 1; }
-if grep -qE '^\s*"Instagram":\s+Label\(' "$HEATMAP"; then
-  echo "✗ Instagram has a year heatmap again — the room leads with its newest thing (§821)"; exit 1
-fi
+# (The year heatmap's registry is deleted outright since prd §832, and
+# `feed-reading-selftest.sh` holds its absence for every room.)
 if grep -qE '^\s*case "Instagram":' "$INSIGHT"; then
   echo "✗ Instagram has a topic map again — the room leads with its newest thing (§821)"; exit 1
 fi
