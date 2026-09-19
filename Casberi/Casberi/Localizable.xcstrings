@@ -7865,6 +7865,40 @@
         }
       }
     },
+    "%@ on %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ on %2$@."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ en %2$@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ の %1$@。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@의 %1$@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 上的 %1$@。"
+          }
+        }
+      }
+    },
     "%@ on cards in the last 30 days" : {
       "localizations" : {
         "es" : {
@@ -20923,6 +20957,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "另有 %lld 个代币"
+          }
+        }
+      }
+    },
+    "%lld more values aren't shown here. Open it in your Safe app before signing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aquí no se muestran %lld valores más. Ábrelo en tu app de Safe antes de firmar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここには表示されていない値がさらに %lld 件あります。署名する前に Safe アプリで開いてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기에 표시되지 않은 값이 %lld개 더 있습니다. 서명하기 전에 Safe 앱에서 여세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此处还有 %lld 个值未显示。签名前请在你的 Safe 应用中打开。"
           }
         }
       }
@@ -42490,6 +42552,34 @@
         }
       }
     },
+    "Apple Intelligence · Private Cloud Compute%@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apple Intelligence · Private Cloud Compute%@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apple Intelligence · Private Cloud Compute%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apple Intelligence · Private Cloud Compute%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apple Intelligence · Private Cloud Compute%@"
+          }
+        }
+      }
+    },
     "Apple Wallet" : {
       "localizations" : {
         "es" : {
@@ -60174,6 +60264,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已弃用 · %@"
+          }
+        }
+      }
+    },
+    "Described by %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Descrito por %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ による説明"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 제공 설명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由 %@ 描述"
           }
         }
       }
@@ -83141,6 +83259,34 @@
         }
       }
     },
+    "Needs iOS 27" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Requiere iOS 27"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iOS 27 が必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iOS 27 필요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "需要 iOS 27"
+          }
+        }
+      }
+    },
     "Needs proof" : {
       "localizations" : {
         "es" : {
@@ -88960,6 +89106,34 @@
         }
       }
     },
+    "Not ready — check Apple Intelligence in Settings" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No está listo: revisa Apple Intelligence en Ajustes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "準備ができていません — 設定で Apple Intelligence を確認してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "준비되지 않음 — 설정에서 Apple Intelligence를 확인하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未就绪 — 请在“设置”中检查 Apple Intelligence"
+          }
+        }
+      }
+    },
     "Not replied" : {
       "localizations" : {
         "es" : {
@@ -93400,6 +93574,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "仍在此处的最早内容"
+          }
+        }
+      }
+    },
+    "On" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Activado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "オン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "켬"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "开"
           }
         }
       }
@@ -102578,6 +102780,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Privacy Pools 的 %@ 资金池中约有 %@ 笔已接受的存款 — 这是你的存款所隐藏在其中的匿名集合。"
+          }
+        }
+      }
+    },
+    "Private Cloud Compute" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Private Cloud Compute"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Private Cloud Compute"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Private Cloud Compute"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Private Cloud Compute"
           }
         }
       }
@@ -130221,6 +130451,34 @@
         }
       }
     },
+    "This device can't use it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este dispositivo no puede usarlo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このデバイスでは使用できません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 기기에서는 사용할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此设备无法使用"
+          }
+        }
+      }
+    },
     "This device has no Face ID or Touch ID set up. The key is only worth having behind one, so Casberi won't make it." : {
       "localizations" : {
         "es" : {
@@ -133847,6 +134105,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "UTXO"
+          }
+        }
+      }
+    },
+    "Unavailable" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No disponible"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "利用できません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사용할 수 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不可用"
           }
         }
       }
@@ -149442,6 +149728,34 @@
         }
       }
     },
+    "Your question and the saved things that answer it go to Apple's Private Cloud Compute, which Apple says keeps none of it. Everything else stays on this %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu pregunta y lo guardado que la responde van a Private Cloud Compute de Apple, que según Apple no conserva nada. Todo lo demás se queda en este %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "質問とそれに答える保存済みの項目は Apple の Private Cloud Compute に送られます。Apple はそれを一切保持しないとしています。それ以外はすべてこの %@ に残ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "질문과 그에 답하는 저장된 항목은 Apple의 Private Cloud Compute로 전송되며, Apple은 이를 전혀 보관하지 않는다고 밝힙니다. 그 밖의 모든 것은 이 %@에 남습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的问题及回答它的已存内容会发送到 Apple 的 Private Cloud Compute，Apple 表示不会保留其中任何内容。其他一切都保留在这台 %@ 上。"
+          }
+        }
+      }
+    },
     "Your reading keeps circling %@ — every read today but one." : {
       "localizations" : {
         "es" : {
@@ -164704,6 +165018,34 @@
         }
       }
     },
+    "this Safe" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "este Safe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この Safe"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Safe"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此 Safe"
+          }
+        }
+      }
+    },
     "this afternoon" : {
       "localizations" : {
         "es" : {
@@ -167437,6 +167779,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "“%@” 链接到 “%@” — 你已经保存过了"
+          }
+        }
+      }
+    },
+    "“%@” on %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "“%1$@” on %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "«%1$@» en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ の「%1$@」"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@의 “%1$@”"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 上的“%1$@”"
           }
         }
       }
