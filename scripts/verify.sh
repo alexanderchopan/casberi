@@ -1571,6 +1571,15 @@ harness "Row-window self-test" "row-window self-test" "scripts/row-window-selfte
 harness "Safe gate self-test" "safe gate self-test" "scripts/safe-gate-selftest.sh" "the Safe gate self-test failed — run scripts/safe-gate-selftest.sh"
 harness "Safe gateway self-test" "safe gateway self-test" "scripts/safe-gateway-selftest.sh" "the Safe Client Gateway self-test failed — run scripts/safe-gateway-selftest.sh"
 
+# ERC-7730 clear signing (prd §834). The sign block describes a call its own
+# reader cannot name in the words the call's protocol published — fluent by
+# construction, on the one screen where a fluent wrong summary costs money. So
+# the renderer is held to the registry's OWN test vectors (the display its
+# maintainers expect for real transactions) and to its refusals: hostile
+# calldata, a failed `mustMatch`, a shared selector, an unknown token inside a
+# sentence, and the Safe reader's own cases keeping priority.
+harness "Clear-signing self-test" "clear-signing self-test" "scripts/clearsign-selftest.sh" "the clear-signing self-test failed — run scripts/clearsign-selftest.sh --self-test"
+
 # "Is this address a feed?" — the discriminator every RSS follow hangs off
 # (2026-08-16), from a user report of following a site that publishes none.
 # Every failure it catches is invisible to a build, a screen sweep AND a landed

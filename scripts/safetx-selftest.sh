@@ -35,13 +35,17 @@ cd "$(dirname "$0")/.."
 
 TX="Casberi/Casberi/Model/SafeTransaction.swift"
 KECCAK="Casberi/Casberi/Model/Keccak256.swift"
+# `SafeCalldata.read` asks the clear-signing registry for a selector it cannot
+# name (prd §834), so the reader compiles with its describer — Foundation-only
+# too, and driven on its own by `clearsign-selftest.sh`.
+CLEARSIGN="Casberi/Casberi/Model/ClearSign.swift"
 SIGNER="Casberi/Casberi/Model/SafeSigner.swift"
 KEY="Casberi/Casberi/Model/SignerKey.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
 CARD="Casberi/Casberi/Screens/SafeQueueCard.swift"
 SCREEN="Casberi/Casberi/Screens/SafeScreen.swift"
 VECTORS="scripts/support/safetx-vectors.py"
-for f in "$TX" "$KECCAK" "$SIGNER" "$KEY" "$REACH" "$CARD" "$VECTORS"; do
+for f in "$TX" "$KECCAK" "$CLEARSIGN" "$SIGNER" "$KEY" "$REACH" "$CARD" "$VECTORS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -922,7 +926,7 @@ echo "safetx-selftest: compiling SafeTransaction + Keccak256 WHOLE and unmodifie
 # so this file was proven equivalent run-for-run by
 # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 5.1x faster).
 # Re-probe before trusting it again after adding mutations.
-swiftc -Onone -o "$TMP/run" "$TX" "$KECCAK" "$TMP/signer.swift" "$TMP/main.swift" \
+swiftc -Onone -o "$TMP/run" "$TX" "$KECCAK" "$CLEARSIGN" "$TMP/signer.swift" "$TMP/main.swift" \
   || { echo "✗ the shipped encoder does not compile Foundation-only — something reached the Keychain, the curve or SwiftData"; exit 1; }
 "$TMP/run" || exit 1
 
@@ -992,7 +996,7 @@ PY
   if [[ $? -ne 0 ]]; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$TMP/SafeTransaction.swift" "$KECCAK" "$TMP/signer.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$TMP/SafeTransaction.swift" "$KECCAK" "$CLEARSIGN" "$TMP/signer.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

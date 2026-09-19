@@ -934,3 +934,22 @@ failed**. `hegota-tx` and `vibenet-signer` pass on the vendored keccak,
 **Self-tested** with nine mutations, one per rule, each proven to change the file before it is asked to fail.
 
 **§826 widened it to the whole question.** The chain filter was only half of why one number was wrong, so the file now owns what the crown is MADE of as well as how it fails: no app-wallet money in the total (`portfolioRead` may not read `PrivyHomeStore`, and `walletHoldings`/`countsInWallet` may not return); the dust floor carried per candidate on the answering arm, never a flat `holdingFloor`; `collectCandidates` asking Alchemy for the chains Zerion cannot map; and — derived, not listed — every selectable chain with no Zerion mapping being in `defaultNetworkIDs` with a `seeded` row, because such a chain rides that union and is invisible to anyone who never finds its picker row. Fifteen mutations now, one per rule.
+
+## Clear-signing self-test (scripts/clearsign-selftest.sh, 2026-09-19, prd §834)
+
+**What it catches.** `ClearSign` turns calldata into the words its protocol published (ERC-7730). That is fluent by construction, and it is used on the Safe sign block, where a fluent wrong summary costs money. So the harness compiles `ClearSign.swift`, `SafeTransaction.swift` and `Keccak256.swift` whole and holds them to:
+- **The registry's own vectors.** Every test transaction the registry ships for a contract on the six Safe chains (530, extracted by `scripts/clearsign-registry.py` into `scripts/support/clearsign-vectors.json`) must produce the intent, sentence and labelled values its maintainers expect. 528 do. The other two are one allowance with its reason (the WCT descriptor names its own token; the fixture's data provider does not), and a stale allowance fails.
+- **The refusals.** Hostile offsets and lengths (up to `UInt64.max`) give no reading and no crash. A failed `mustMatch` withdraws the reading. Two formats sharing a selector describe nothing. An unknown token's amount stays out of a sentence and reads "base units of".
+- **The reader's priority.** A USDT `transfer` stays `.erc20Transfer` although USDT has a descriptor. With no chain, the reader never asks the registry.
+- **One commit.** The bundle and the vectors come from the same registry commit.
+
+**Measured while building it.** The first run matched 417 of 532. The gaps were real renderer bugs, each now fixed:
+- array fields render one line per element;
+- a group's `…Path` params are group-relative (Paraswap's `tokenPath: "srcToken"`);
+- constants in `value` are resolved;
+- a bool enum is keyed `True` by Python-authored descriptors;
+- an unsigned legacy transaction's chain id is `v` itself, not EIP-155 arithmetic.
+
+**Deliberately not checked.** The app style's wording (`…abcd`, "this Safe") is not a registry answer. That the snapshot is current is not checked either, because a refresh is a reviewed decision, not drift.
+
+**`--self-test`** applies seven mutations (sentence cleanliness, `mustMatch`, duplicate selector, the bytes-length bound, decimals, the unlimited threshold, a canonical type name), and each must fail the run. A mutation on the dynamic-offset bound was tried and dropped because it was EQUIVALENT: `word()` already bounds every read and offsets are capped at 32 bits, so no input can tell the two apart.

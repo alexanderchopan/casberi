@@ -449,6 +449,12 @@ enum SafeCalldata: Equatable {
     /// An EMPTY array means the payload did not walk — the honest fallback,
     /// and identical on screen to the sentence this case shipped with.
     case batch([BatchCall])
+    /// A call none of the cases above name, described by its protocol's own
+    /// ERC-7730 descriptor (prd §834) — decoded from these bytes on this
+    /// device against the descriptor's types, never from a service's
+    /// `dataDecoded`. Asked only where the reading would otherwise have been
+    /// `.undecoded`, so a call with no descriptor reads exactly as before.
+    case described(ClearSign.Reading)
     /// The selector is real, the meaning is not known. Carries the four bytes
     /// so the surface can show them.
     case undecoded(selector: String)
@@ -484,7 +490,13 @@ enum SafeCalldata: Equatable {
     /// Reads `data`. `to`/`value`/`safe` are needed only to recognise the
     /// rejection shape, which is defined by its destination rather than its
     /// (absent) calldata.
-    static func read(data: String, to: String, value: String, safe: String) -> SafeCalldata {
+    ///
+    /// `chainId` opens the clear-signing registry for a selector this enum
+    /// cannot name (prd §834); without one — or with no descriptor — such a
+    /// call stays `.undecoded`. `style` is how that description names
+    /// addresses and tokens.
+    static func read(data: String, to: String, value: String, safe: String,
+                     chainId: Int? = nil, style: ClearSign.Style = .canonical) -> SafeCalldata {
         let bytes = SafeABI.hexBytes(data) ?? []
         let isZeroValue = (SafeABI.word(uint256: value) ?? [1]).allSatisfy { $0 == 0 }
         if bytes.isEmpty {
@@ -536,9 +548,15 @@ enum SafeCalldata: Equatable {
             // `[]` when the payload does not walk — see `batchCalls`. It
             // renders as the sentence this case shipped with, so a payload
             // this decoder cannot follow fails toward the old behaviour.
-            return .batch(batchCalls(args: args, safe: safe))
+            return .batch(batchCalls(args: args, safe: safe, chainId: chainId, style: style))
         default:
-            break
+            // Nothing above names it: ask the call's own protocol. The Safe is
+            // the sender of every call it executes, so it is `@.from`.
+            if let chainId,
+               let reading = ClearSign.describe(chainId: chainId, to: to, data: bytes, value: value,
+                                                from: safe, style: style) {
+                return .described(reading)
+            }
         }
         // A KNOWN selector whose arguments did not read is still undecoded —
         // a truncated `transfer` must not be summarised as a transfer of an
@@ -581,7 +599,8 @@ enum SafeCalldata: Equatable {
     /// A nested batch terminates without a depth counter: an inner payload is
     /// contained in its parent's and each entry costs 85 bytes of header, so
     /// the length strictly decreases at every level.
-    static func batchCalls(args: [UInt8], safe: String) -> [BatchCall] {
+    static func batchCalls(args: [UInt8], safe: String, chainId: Int? = nil,
+                           style: ClearSign.Style = .canonical) -> [BatchCall] {
         // The offset word, then the length word it points at.
         //
         // **EVERY BOUND IS WRITTEN AS A SUBTRACTION, NEVER AN ADDITION**, and
@@ -623,7 +642,8 @@ enum SafeCalldata: Equatable {
                   dataLength <= payload.count - i - 85 else { return [] }
             let data = hex(Array(payload[(i + 85)..<(i + 85 + dataLength)]))
             calls.append(BatchCall(operation: operation, to: to, value: value,
-                                   reading: read(data: data, to: to, value: value, safe: safe)))
+                                   reading: read(data: data, to: to, value: value, safe: safe,
+                                                 chainId: chainId, style: style)))
             guard calls.count <= maxBatchCalls else { return [] }
             i += 85 + dataLength
         }
@@ -672,6 +692,19 @@ enum SafeCalldata: Equatable {
             out = String(remainder) + out
         }
         return out.isEmpty ? "0" : out
+    }
+
+    /// Every token contract a clear-signing description of this call (and of
+    /// every call inside it) would name an amount in — so the caller can read
+    /// their decimals from the chain first and describe once (prd §834).
+    static func tokensAsked(data: String, to: String, value: String, safe: String,
+                            chainId: Int) -> Set<String> {
+        final class Box { var asked = Set<String>() }
+        let box = Box()
+        var style = ClearSign.Style.canonical
+        style.token = { box.asked.insert($0.lowercased()); return nil }
+        _ = read(data: data, to: to, value: value, safe: safe, chainId: chainId, style: style)
+        return box.asked
     }
 
     /// Whether this reading is one the surface may state as fact. False for
