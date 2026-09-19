@@ -2937,6 +2937,7 @@ struct FeedScreen: View {
             let kinds = kindRoomReading(kindRoom, rows: rows)
             computed.kindTiles = kinds.tiles
             computed.kindAttention = kinds.attention
+            RoomKindTileMemory.remember(kinds.tiles, for: source)
         }
         Self.headMemo[headIdentity] = computed
         heads = computed
@@ -3052,8 +3053,14 @@ struct FeedScreen: View {
     /// `scopes` slot — `DSRoomChassis.Head`'s own geometry, the Privy pattern;
     /// where it draws none, `kindTileSections` stands it under the cover. One
     /// construction for both, so a tile is the same control in either place.
+    ///
+    /// Before this visit's reading lands, the room draws the tiles it drew
+    /// last time (`RoomKindTileMemory`, prd §830) — never the attention dot,
+    /// which waits for the reading.
     private var kindTilesInHead: DSScopeTiles<RoomKindTile>? {
-        guard let tiles = heads?.kindTiles, !tiles.isEmpty else { return nil }
+        let tiles = heads?.kindTiles
+            ?? (RoomKindTiles.Room(source: source) != nil ? RoomKindTileMemory.tiles(for: source) : nil)
+        guard let tiles, !tiles.isEmpty else { return nil }
         return DSScopeTiles(sections: tiles,
                             active: roomKindPick,
                             attention: heads?.kindAttention ?? []) { picked in
