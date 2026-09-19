@@ -368,21 +368,28 @@ enum ConversationModel {
     /// The instructions the live session was built with — a turn whose
     /// instructions differ (the other answer shape) starts a fresh session.
     private static var key: String?
+    /// Whether the live session runs on Private Cloud Compute (prd §833). Part
+    /// of the key: turning the seat on or off mid-conversation starts fresh,
+    /// so one transcript never spans both models.
+    private static var cloud = false
 
-    /// The session for a turn under `instructions`, and whether it was REUSED
-    /// (a continuing conversation) — the caller retries fresh on a reused
-    /// session's failure, but not on a brand-new one's (nothing to blame on
-    /// history there).
-    static func acquire(instructions: String) -> (session: LanguageModelSession, reused: Bool) {
-        if let s = session, key == instructions { return (s, true) }
-        let s = LanguageModelSession(instructions: instructions)
-        session = s; key = instructions
-        return (s, false)
+    /// The session for a turn under `instructions`, whether it was REUSED
+    /// (a continuing conversation), and whether it runs in the cloud — the
+    /// caller retries fresh on a reused session's failure, but not on a
+    /// brand-new one's (nothing to blame on history there), and retries on the
+    /// phone after a cloud one's (`forceDevice`).
+    static func acquire(instructions: String, forceDevice: Bool = false)
+        -> (session: LanguageModelSession, reused: Bool, cloud: Bool) {
+        let wantsCloud = !forceDevice && AskModel.usesCloud
+        if let s = session, key == instructions, cloud == wantsCloud { return (s, true, cloud) }
+        let made = AskModel.session(instructions: instructions, forceDevice: forceDevice)
+        session = made.session; key = instructions; cloud = made.cloud
+        return (made.session, false, made.cloud)
     }
 
     /// Drop the session so the next `acquire` builds fresh — on a new
     /// conversation (`reset`) or after a turn failed on a reused session.
-    static func reset() { session = nil; key = nil }
+    static func reset() { session = nil; key = nil; cloud = false }
 }
 
 /// What the model returns. It writes ONE sentence and lists which things answer,
@@ -455,14 +462,23 @@ enum FoundationAnswer {
         // is understood in context. A failure on a REUSED session (an overflowed
         // transcript, most likely) drops it and retries once fresh — so a long
         // conversation degrades to a stateless answer, never a broken one.
-        let (session, reused) = ConversationModel.acquire(instructions: instructions)
+        //
+        // A CLOUD failure (prd §833) — no network, the quota, the service —
+        // answers on the phone instead, fresh, and the turn is marked as the
+        // phone's so the badge names what actually wrote it.
+        let (session, reused, cloud) = ConversationModel.acquire(instructions: instructions)
         do {
-            return try await run(session)
+            let answer = try await run(session)
+            AskModel.markAnswered(cloud: cloud)
+            return answer
         } catch {
-            guard reused else { return nil }
+            guard reused || cloud else { return nil }
             ConversationModel.reset()
-            let (fresh, _) = ConversationModel.acquire(instructions: instructions)
-            return try? await run(fresh)
+            let (fresh, _, freshCloud) = ConversationModel.acquire(instructions: instructions,
+                                                                   forceDevice: cloud)
+            guard let answer = try? await run(fresh) else { return nil }
+            AskModel.markAnswered(cloud: freshCloud)
+            return answer
         }
     }
 
@@ -760,24 +776,30 @@ enum FoundationAnswer {
             // MainActor so the persistent conversation session is touched from
             // one thread only (the `WarmModel`/`ConversationModel` rule).
             let task = Task { @MainActor in
-                let (session, reused) = ConversationModel.acquire(instructions: instructions)
+                let (session, reused, cloud) = ConversationModel.acquire(instructions: instructions)
                 var yielded = false
                 do {
                     for try await partial in session.streamResponse(to: prompt) {
+                        if !yielded { AskModel.markAnswered(cloud: cloud) }
                         yielded = true
                         continuation.yield(partial.content)
                     }
                 } catch {
                     // A failure on a REUSED session before anything streamed is
                     // most likely an overflowed transcript — drop it and stream
-                    // once fresh, so a long conversation still answers. A refusal
-                    // or a mid-stream error just ends the stream; the caller
-                    // falls back to the scoring doc if nothing arrived.
-                    if reused && !yielded {
+                    // once fresh, so a long conversation still answers. A CLOUD
+                    // session that failed before a word arrived streams again on
+                    // the phone (prd §833). A refusal or a mid-stream error just
+                    // ends the stream; the caller falls back to the scoring doc
+                    // if nothing arrived.
+                    if (reused || cloud) && !yielded {
                         ConversationModel.reset()
-                        let (fresh, _) = ConversationModel.acquire(instructions: instructions)
+                        let (fresh, _, freshCloud) = ConversationModel.acquire(
+                            instructions: instructions, forceDevice: cloud)
                         do {
+                            var first = true
                             for try await partial in fresh.streamResponse(to: prompt) {
+                                if first { AskModel.markAnswered(cloud: freshCloud); first = false }
                                 continuation.yield(partial.content)
                             }
                         } catch { }

@@ -1533,6 +1533,19 @@ struct RootShell: View {
                     }
                 }
             }
+            // Debug hook: `-appleIntelligenceProbe YES|"<prompt>"` (prd §833) —
+            // Private Cloud Compute's availability, the seat's switch, and one
+            // real call straight to it, whatever the switch says. NSLogs
+            // `appleIntelligence|` lines; the call's error names the refusal
+            // (no entitlement, quota, network) where a composer answer would
+            // silently fall back to the phone.
+            if let raw = UserDefaults.standard.string(forKey: "appleIntelligenceProbe") {
+                Task { @MainActor in
+                    for line in await AskModel.probe(prompt: raw == "YES" ? nil : raw) {
+                        NSLog("[Casberi] appleIntelligence| %@", line)
+                    }
+                }
+            }
             // Debug hook: `-mcpProbe "<query>"` exercises the MCP tool layer
             // (PRD §34) against the real corpus — search + week synthesis run as
             // reads, and a save is requested (which lands as an approval in Feed,

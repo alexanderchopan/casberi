@@ -131,6 +131,10 @@ struct CasberiApp: App {
 
     init() {
         _ = LaunchClock.start   // stamp the earliest app-code moment
+        // The Apple Intelligence seat shows only where Private Cloud Compute
+        // answers (prd §833); the catalogue asks through a closure so its
+        // harnesses can compile it alone.
+        BridgeCatalog.privateCloudAvailable = { AskModel.cloudAvailable }
         // The store lives in the app group so the share extension writes to
         // the same corpus (S3: every capture surface routes here).
         // `containerWithFallback` degrades (CloudKit off, then in-memory)

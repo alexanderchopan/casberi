@@ -270,11 +270,17 @@ enum AnswerToolsModel {
         detail. If the tools find nothing, say so plainly. No preamble ("Here \
         are…", "I found…"), no markdown, no bullet or numbered lists.
         """ + LanguageStore.shared.llmLanguageDirective
+        // The same model the rest of the answer runs on (prd §833): the
+        // agent's tools read the corpus on the phone either way — only the
+        // question and what the tools return go to Private Cloud Compute.
+        // A cloud failure is NOT retried on the phone here: the caller already
+        // falls through to `compose`, which does its own fallback.
         do {
-            let session = LanguageModelSession(tools: tools, instructions: instructions)
+            let (session, cloud) = AskModel.session(tools: tools, instructions: instructions)
             let response = try await session.respond(to: "Question: \"\(query)\"")
             let prose = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !prose.isEmpty else { return nil }
+            await AskModel.markAnswered(cloud: cloud)
             return AnswerTools.Result(prose: prose, hitIDs: sink.ids)
         } catch {
             return nil

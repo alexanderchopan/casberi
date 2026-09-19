@@ -40,6 +40,9 @@ extension DS {
         case "x", "twitter":        return Color.fixed("#000000")
         case "notes", "apple notes": return Color.fixed("#ffcc00")
         case "apple journal":       return Color.fixed("#a06ee1")   // Journal's lavender
+        // Apple's own mark is a gradient we may not draw (prd §833); the
+        // system indigo is the nearest single hue and holds a white glyph.
+        case "apple intelligence":  return Color.fixed("#5e5ce6")
         case "day one":             return Color.fixed("#44c0ff")   // Day One blue
         case "bookmarks":           return Color.fixed("#8d6e63")   // a neutral bookmark-ribbon brown — no single brand here (Safari + Chrome, one file format)
         case "safari":              return Color.fixed("#1d9bf6")

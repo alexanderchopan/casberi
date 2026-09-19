@@ -158,6 +158,10 @@ struct Composer: View {
         /// Which AGENT (by its person-facing name) wrote it (2026-08-31) —
         /// what the leading mark draws. nil for the on-device answer.
         var agent: String? = nil
+        /// Apple's model on Private Cloud Compute wrote it (prd §833), not the
+        /// one on this iPhone — carried like the rest, so the badge on a turn
+        /// you scroll back to still says where the question went.
+        var cloud = false
         /// This turn is a failure notice, not an answer — so it wears NO
         /// provenance badge. Without this a keyed failure fell through to
         /// the on-device badge and claimed "Answered on this iPhone" over a
@@ -194,6 +198,10 @@ struct Composer: View {
     /// True when the current answer came from the person's own key — it wears
     /// the badge, and the retry verb retires (one keyed try per ask).
     @State private var keyedCurrent = false
+    /// Whether the CURRENT answer came from Private Cloud Compute (prd §833).
+    /// Read off `AskModel` once the answer settles — what answered, never what
+    /// the seat asked for.
+    @State private var cloudCurrent = false
     /// What the CURRENT keyed answer actually did (2026-07-21) — observed
     /// from the provider's own stream, so the badge reports rather than
     /// assumes. Reset per ask alongside `keyedCurrent`.
@@ -2126,7 +2134,8 @@ struct Composer: View {
                         } else if let turn = shownTurn {
                             turnBlock(question: turn.question, els: turn.els,
                                       failed: turn.failed, keyed: turn.keyed,
-                                      agent: turn.agent, found: turn.found,
+                                      agent: turn.agent, cloud: turn.cloud,
+                                      found: turn.found,
                                       searchedWeb: turn.searchedWeb,
                                       imagesSeen: turn.imagesSeen,
                                       pagesRead: turn.pagesRead,
@@ -2295,6 +2304,7 @@ struct Composer: View {
                       els: answerStream.els,
                       failed: answerFailed, keyed: keyedCurrent,
                       agent: (askProvider ?? AgentKey.active)?.agent,
+                      cloud: cloudCurrent,
                       found: foundCurrent,
                       searchedWeb: keyedSearchedWeb, imagesSeen: keyedImagesSeen,
                       pagesRead: keyedPagesRead, toolRounds: keyedToolRounds,
@@ -2312,7 +2322,8 @@ struct Composer: View {
     /// through `GenRender`, because there its rows ARE the answer.
     @ViewBuilder
     private func turnBlock(question: String, els: GenEls, failed: Bool, keyed: Bool,
-                           agent: String?, found: Bool, searchedWeb: Bool,
+                           agent: String?, cloud: Bool = false,
+                           found: Bool, searchedWeb: Bool,
                            imagesSeen: Int, pagesRead: Int, toolRounds: Int,
                            model: String?, waited: Int?, live: Bool) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -2339,7 +2350,7 @@ struct Composer: View {
                 provenanceBadge(keyed: keyed, agent: agent, searchedWeb: searchedWeb,
                                 imagesSeen: imagesSeen, pagesRead: pagesRead,
                                 toolRounds: toolRounds, model: model,
-                                found: found, waited: waited)
+                                cloud: cloud, found: found, waited: waited)
             }
             if live, !proseStreaming, !inFlight { keepVerbs }
         }
@@ -2832,6 +2843,7 @@ struct Composer: View {
         currentQuestion = ""
         keptCurrent = false
         keyedCurrent = false
+        cloudCurrent = false
         keyedSearchedWeb = false
         keyedImagesSeen = 0
         keyedPagesRead = 0
@@ -2963,6 +2975,7 @@ struct Composer: View {
                                        imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
                                        toolRounds: keyedToolRounds, model: keyedModel,
                                        agent: (askProvider ?? AgentKey.active)?.agent,
+                                       cloud: cloudCurrent,
                                        failed: answerFailed,
                                        found: foundCurrent))
             }
@@ -2971,6 +2984,7 @@ struct Composer: View {
             keptCurrent = false
             currentStreamed = false
             keyedCurrent = false
+            cloudCurrent = false
             keyedSearchedWeb = false
             keyedImagesSeen = 0
             keyedPagesRead = 0
@@ -3044,6 +3058,7 @@ struct Composer: View {
                                  searchedWeb: Bool = false,
                                  imagesSeen: Int = 0, pagesRead: Int = 0,
                                  toolRounds: Int = 0, model: String? = nil,
+                                 cloud: Bool = false,
                                  found: Bool = false,
                                  waited: Int? = nil) -> some View {
         var parts: [String] = []
@@ -3099,11 +3114,16 @@ struct Composer: View {
         // leads with the agent's own brand mark and name — never a key glyph
         // (user: "it should have no icon or bankr icon"). The on-device answer
         // keeps the locked phone, which is the promise, not a vendor.
-        let glyph = found ? "magnifyingglass" : "lock.iphone"
+        // A cloud answer (prd §833) names Apple Intelligence and Private
+        // Cloud Compute both: the first is the seat the person turned on, the
+        // second is the promise that it left this phone and where it went.
+        let cloudAnswer = cloud && !keyed && !found
+        let glyph = found ? "magnifyingglass" : (cloudAnswer ? "apple.intelligence" : "lock.iphone")
         let words = found ? String(localized: "Matched on \(DS.device) — nothing was written")
                           : (keyed ? ((agent.map { String(localized: "\($0) · with your key\(detail)") })
                                       ?? String(localized: "Answered with your key\(detail)"))
-                                   : String(localized: "On \(DS.device)"))
+                                   : (cloudAnswer ? String(localized: "Apple Intelligence · Private Cloud Compute\(detail)")
+                                                  : String(localized: "On \(DS.device)")))
         return HStack(spacing: DS.Space.s1 + 2) {
             if keyed, !found, let agent {
                 BridgeIcon(name: agent, size: DS.Face.badge, circular: true)
@@ -3284,6 +3304,7 @@ struct Composer: View {
             answerFailed = false
             currentStreamed = false
             keyedCurrent = false
+            cloudCurrent = false
             currentQuestion = ""
         }
         answerStream.paint([])
@@ -3368,6 +3389,7 @@ struct Composer: View {
                                        imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
                                        toolRounds: keyedToolRounds, model: keyedModel,
                                        agent: (askProvider ?? AgentKey.active)?.agent,
+                                       cloud: cloudCurrent,
                                        failed: answerFailed,
                                        found: foundCurrent))
             }
@@ -3875,6 +3897,7 @@ struct Composer: View {
                                        imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
                                        toolRounds: keyedToolRounds, model: keyedModel,
                                        agent: (askProvider ?? AgentKey.active)?.agent,
+                                       cloud: cloudCurrent,
                                        failed: answerFailed,
                                        found: foundCurrent))
             }
@@ -3903,6 +3926,7 @@ struct Composer: View {
                 keptCurrent = false
                 currentStreamed = false
                 keyedCurrent = stayKeyed
+                cloudCurrent = false
                 keyedSearchedWeb = false   // observed per answer
                 keyedImagesSeen = 0
                 keyedPagesRead = 0
@@ -3990,6 +4014,9 @@ struct Composer: View {
                     proseStreaming = true
                     answerStream.paint(partialDoc)
                 }
+                // Cleared before the answer runs, so an answer no model wrote
+                // (the scoring doc) never inherits the last turn's cloud badge.
+                AskModel.markAnswered(cloud: false)
                 let finalDoc: [String]
                 if stayKeyed {
                     // The follow-up stays on the agent that answered last. A
@@ -4028,6 +4055,9 @@ struct Composer: View {
                 // A newer ask (or close) overtook this one — its answer owns
                 // the stream now; this one retires silently.
                 guard gen == askGeneration else { return }
+                // What answered, read once (prd §833): a keyed answer is the
+                // key's, and only an on-device-path answer can be the cloud's.
+                cloudCurrent = !keyedCurrent && AskModel.lastAnsweredInCloud
                 // Prose already painted its way in; settle on the final text.
                 // A lookup or the fallback never streamed, so reveal it with
                 // the typewriter (unchanged behaviour).

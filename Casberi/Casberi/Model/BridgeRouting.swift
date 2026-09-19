@@ -84,6 +84,9 @@ enum BridgeRouter {
         case gemini
         case venice
         case bankr
+        /// Apple's model on Private Cloud Compute answering the composer
+        /// (prd §833) — a switch, not a key.
+        case appleIntelligence
         case openRouter
         case grok
         case bluesky
@@ -275,7 +278,7 @@ enum BridgeRouter {
                  // doc-comment says so) and was missed here when it landed
                  // 2026-07-31 — so a verified key left the raised sheet sitting
                  // there, alone among the agent seats (audit, 2026-07-31).
-                 .venice, .bankr, .openRouter, .grok,
+                 .venice, .bankr, .appleIntelligence, .openRouter, .grok,
                  .chatgpt, .claude, .claudeCode, .gemini,
                  .kindle, .dayOne, .appleJournal, .appleNotes, .bookmarks:
                 true
@@ -329,6 +332,7 @@ enum BridgeRouter {
             case .gemini:         "gemini"
             case .venice:         "venice"
             case .bankr:          "bankr"
+            case .appleIntelligence: "appleintelligence"
             case .openRouter:     "openrouter"
             case .grok:           "grok"
             case .bluesky:        "bsky"
@@ -449,6 +453,7 @@ enum BridgeRouter {
         Row(offer: "Gemini",    id: "gemini", destination: .gemini),
         Row(offer: "Venice",    id: "venice", destination: .venice),
         Row(offer: "Bankr",     id: "bankr",  destination: .bankr),
+        Row(offer: "Apple Intelligence", id: "appleintelligence", destination: .appleIntelligence),
         Row(offer: "OpenRouter", id: "openrouter", destination: .openRouter),
         Row(offer: "Grok",       id: "grok",   destination: .grok),
         Row(offer: "Bluesky",   id: "bsky",   destination: .bluesky),
@@ -666,6 +671,7 @@ struct BridgeDestinationView: View {
         case .gemini:         GeminiImportScreen()
         case .venice:         VeniceSetupScreen()
         case .bankr:          BankrSetupScreen()
+        case .appleIntelligence: AppleIntelligenceScreen()
         case .openRouter:     OpenRouterSetupScreen()
         case .grok:           GrokSetupScreen()
         case .exchange(let venue): ExchangeSetupScreen(venue: venue)

@@ -151,6 +151,10 @@ enum BridgeGlyph {
         case "photos":    return "photo"
         case "notes", "apple notes": return "note.text"
         case "apple journal": return "book.closed"
+        // The system's own symbol for the feature (prd §833) — never the Apple
+        // logo, which no third party may draw, and never a Siri orb: this seat
+        // is Apple's model, not Siri.
+        case "apple intelligence": return "apple.intelligence"
         case "day one":   return "1.circle"
         case "bookmarks": return "bookmark.fill"
         case "safari":    return "globe"

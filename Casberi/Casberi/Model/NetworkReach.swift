@@ -845,6 +845,17 @@ enum NetworkReach {
                  reach: .onTapWithKey,
                  purpose: "Only when you tap. Your question goes out prefixed answer only — never execute. Casberi sends Bankr nothing else and never sends it an instruction.",
                  hosts: ["api.bankr.bot"]),
+
+        // Apple Intelligence (prd §833). The one agent whose calls this app
+        // does not make: the system's Foundation Models framework carries
+        // them to Apple's Private Cloud Compute, so there is no host literal
+        // for the audit to find and the host is stated in words. Reached only
+        // while the seat is on — the on-device answer it replaces reached
+        // nothing.
+        Endpoint(service: "Apple Intelligence",
+                 reach: .whenConnected(bridge: "Apple Intelligence"),
+                 purpose: "While it's on, your question and the saved things that answer it go to Apple's Private Cloud Compute, through iOS itself. Apple says it keeps none of it.",
+                 hosts: ["Apple's Private Cloud Compute"]),
     ]
 
     /// The hosts this registry accounts for — the audit script checks every

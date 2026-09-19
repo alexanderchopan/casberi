@@ -196,7 +196,8 @@ listed = set(re.findall(r'"([^"]+)"', re.search(
     r'static let chatSources: Set<String> = \[(.*?)\]', source, re.S).group(1)))
 # The seats that deliberately land nothing (keys, not sources) and the one
 # already covered by the Work receipt. Each is a conscious ruling, not a gap.
-known = {"Venice", "OpenRouter", "Grok", "Bankr", "1Claw", "Cursor"}
+# Apple Intelligence (prd §833) switches which model answers; it lands nothing.
+known = {"Venice", "OpenRouter", "Grok", "Bankr", "1Claw", "Cursor", "Apple Intelligence"}
 missing = offers - listed - known
 if missing:
     print("  \u2717 catalog Agent seats in neither chatSources nor the ruled-out set: "

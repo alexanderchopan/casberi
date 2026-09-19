@@ -51,6 +51,13 @@ enum BridgeCatalog {
         /// this only ever narrows what a MAC session's `offers` returns.
         var unavailableOnMac: Bool = false
 
+        /// True for a seat that exists only where Apple's Private Cloud
+        /// Compute answers (prd §833): iOS 27, an Apple Intelligence device
+        /// with it on, and the managed entitlement on this build. `offers`
+        /// drops it everywhere else, for `unavailableOnMac`'s reason — a seat
+        /// nobody on this device can turn on is a dead control (§83).
+        var needsPrivateCloud: Bool = false
+
         /// True when this offer joined within the last week — the window the
         /// Discover deck reads for a "Just added" seat. Time-relative on
         /// purpose: a stamped offer stops being new on its own, no cleanup.
@@ -389,6 +396,14 @@ enum BridgeCatalog {
         // the strongest fact last, because it is the one that holds.
         Offer(name: "Bankr",       tagline: "An agent that knows the market", group: "Agent", connectable: true,
               needsSetup: true),
+        // Apple Intelligence (prd §833): Apple's own model on Private Cloud
+        // Compute answering the composer — no key, no account, no bill, so it
+        // is the one agent here a person can turn on in a tap, and the first
+        // chat most people will have. Named for what people recognise; never
+        // "Siri", which it is not, and never Apple's logo, which we may not
+        // draw (`BridgeGlyph` uses the system's `apple.intelligence` symbol).
+        Offer(name: "Apple Intelligence", tagline: "Ask your things — no key needed", group: "Agent", connectable: true,
+              needsSetup: true, added: day(2026, 9, 19), needsPrivateCloud: true),
         // 1Claw (the agents' vault, 2026-07-17, prd 111) left the catalog on
         // 2026-09-06 with the Markets seats (prd §638).
         // OpenRouter (2026-07-24): a sixth agent key, one API routed across
@@ -765,12 +780,19 @@ enum BridgeCatalog {
     /// rather than at each of the ten-odd call sites, so nothing can add a
     /// new consumer that forgets the platform check.
     static var offers: [Offer] {
+        let cloud = privateCloudAvailable()
         #if targetEnvironment(macCatalyst)
-        allOffers.filter { !$0.unavailableOnMac }
+        return allOffers.filter { !$0.unavailableOnMac && (cloud || !$0.needsPrivateCloud) }
         #else
-        allOffers
+        return allOffers.filter { cloud || !$0.needsPrivateCloud }
         #endif
     }
+
+    /// Whether Private Cloud Compute can answer here (prd §833). A closure the
+    /// app sets at launch to `AskModel.cloudAvailable`, rather than a direct
+    /// read, because the catalogue harnesses compile this file alone; their
+    /// default is true, so every offer stays visible to the checks.
+    nonisolated(unsafe) static var privateCloudAvailable: () -> Bool = { true }
 
     /// Group order for the catalog screen (insertion order of first member).
     static var groups: [(String, [Offer])] {
@@ -1156,5 +1178,7 @@ enum BridgeSetupMode {
         "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster", "Bluesky", "Nostr",
         "Telegram", "Shopify", "Deals", "Stocktwits", "Hugging Face", "Radicle",
         "npm", "PyPI", "Altana", "Walletbeat", "L2BEAT", "ENS", "Hegotá Frames", "Hegotá UTXO",
-        "Base Vibenet", "ETH Validators", "Hegotá Privacy", "NerdWallet"]
+        "Base Vibenet", "ETH Validators", "Hegotá Privacy", "NerdWallet",
+        // No key and no account — Apple's model, turned on (prd §833).
+        "Apple Intelligence"]
 }

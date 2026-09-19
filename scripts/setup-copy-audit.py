@@ -446,6 +446,9 @@ KNOWN_LANDS_NOTHING = {
     "BankrSetupScreen.swift": "agent key — lands no rows, so there is no room",
     "GrokSetupScreen.swift": "agent key — lands no rows, so there is no room",
     "VeniceSetupScreen.swift": "agent key — lands no rows, so there is no room",
+    # Apple Intelligence (prd §833) is a switch over WHICH model answers the
+    # composer; an answer stores nothing, so there is no source to hold.
+    "AppleIntelligenceScreen.swift": "a model switch — an answer lands no rows",
     # OpenRouter is the near-miss and the reason this list carries reasons
     # rather than names: `AgentSpend.drainPending` DOES land one `.reminder`
     # under source "OpenRouter" — the credits-running-low alert. But that is
