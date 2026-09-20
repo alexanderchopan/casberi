@@ -1191,7 +1191,13 @@ enum BridgeSetupMode {
     /// the wallets AND takes a key of its own, and the catalogue row asks
     /// `WalletSeatStanding` first either way.
     static let walletRidingSeats: Set<String> = ["Peer", "0xBow Privacy Pools", "Railgun", "Safe",
-        "Gnosis Pay", "ether.fi"]
+        // MetaMask Card belongs here for Gnosis Pay's exact reason, and
+        // leaving it out is not cosmetic (prd §857): `Offer.mode` falls
+        // through to `.pasteKey`, so the catalogue row offered **Add key** for
+        // a seat that takes no key and cannot be connected at all — §83's dead
+        // control, shipped by omission. `catalog-mode-audit.py` check F exists
+        // for exactly this fallthrough and caught it.
+        "Gnosis Pay", "MetaMask Card", "ether.fi"]
 
     /// A handle, an address, a feed URL — public reads, no key.
     static let noAccountSeats: Set<String> = ["Wallet", "Tokens", "Reddit", "YouTube",
