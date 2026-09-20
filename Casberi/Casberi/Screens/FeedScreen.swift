@@ -2070,7 +2070,8 @@ struct FeedScreen: View {
             // conversation already wears is the one a live conversation wants,
             // and a second shape would be two renderings of one thing.
             case "ChatGPT", "Claude", "Gemini",
-                 "Bankr", "Venice", "OpenRouter", "Grok", "NEAR AI": self = .chat
+                 "Bankr", "Venice", "OpenRouter", "Grok", "NEAR AI",
+                 "Muse": self = .chat
             // Posts read as posts in their own room (2026-07-13) — split from
             // .chat: a saved conversation is a snippet row, a post is a card.
             // NOSTR JOINED 2026-08-26 (prd §489) — two years of this room

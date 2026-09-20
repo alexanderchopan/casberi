@@ -59072,3 +59072,83 @@ Connect, Wise's profile), a **query** that returns the wrong set (all of the
 above), and a **scope** the setup screen never asked for (§851's PostHog and
 Polar). All three are machine-checkable against a spec nobody was reading, and
 all three render identically: a connected seat with nothing to report.
+
+
+## §853 — Dodo's dispute amount stays a major-unit decimal, and the naive "fix" would break it (code review flagged a possible 100× over-read, 2026-09-20)
+
+**TRANSCRIBED, not newly reasoned.** The ruling was written in full in commit `29ee74ea`'s message and in `DodoPaymentsBridge.swift`'s own doc comment, and simply never reached this ledger — so the citation at `DodoPaymentsBridge.swift:328` resolved to nothing and `prd-index-audit.py` failed the pass. Nothing below is decided here; it is the recorded reasoning moved to where its `§N` points.
+
+**The alarm.** A review flagged the dispute amount as possibly rendering 100× high, because Dodo states minor units everywhere it states anything: `total_amount` is "in the currency's smallest unit (e.g. cents for USD, yen for JPY, fils for KWD…)", with the same wording on `recurring_pre_tax_amount`. If disputes followed that convention, every dispute row in the room is a hundred times its real size. There is no key here to settle it by measurement.
+
+**The TYPE settles it further than the convention does.** Every field Dodo documents as minor units is an `int32`, `refunds.amount` included. The dispute amount is a **string**, and Dodo's stated reason is *"to accommodate precision"* — which an integer count of cents neither needs nor can lose. A string carrying that justification is the shape of a decimal. So the outlier type and the outlier unit are ONE fact rather than two independent risks, and the reading that already ships is the one the type supports.
+
+**Left as-is deliberately.** Flipping to a minor-unit divisor on the convention argument alone would break a reading the type supports, on a surface where being wrong is a figure somebody acts on. **Still UNMEASURED** — no key has ever been held against a real dispute — but no longer a coin-flip, and written down so the next session does not re-derive it and reach the other answer.
+## §854 — Muse: Meta's model, on the branch that was already there (user: "what besides mcp can we do w/ Meta's Muse" → "Yes lets do it!", 2026-09-20)
+
+**The question was what Meta's Muse offers this app beyond the MCP door §34
+already built.** Four answers, and only the first is shipped here: a keyed
+agent seat; prompt caching at roughly an eighth of input price, which is
+§415's saving on a different provider; web-search grounding that cites; and
+two separate endpoints for images and transcription. This entry is the seat.
+
+**It cost almost nothing to build, and that is the point.** Meta serves
+`POST /v1/chat/completions` at `api.meta.ai/v1` with a bearer token and the
+OpenAI request shape, so `AgentAnswer.makeRequest` reaches it through the
+branch that already carried OpenAI, Venice, OpenRouter, xAI and NEAR AI. No
+transport, no parser, no stream reader. The seat is the enum case, nine switch
+arms, a setup screen that is `GrokSetupScreen` with a different console, and
+the website's two cells.
+
+**The key check is the models list, and that is a MEASUREMENT, not the
+default.** §848 shipped four days of work on NEAR AI's because
+`cloud-api.near.ai/v1/models` answers **200 with no Authorization header** — so
+the obvious check would have accepted an empty string. The same curl was run
+here before writing the case: `api.meta.ai/v1/models` answers **401**
+`{"error":{"code":"invalid_api_key","type":"authentication_error"}}` with no
+header, and so does `/v1/chat/completions`. The obvious check is the right one
+here. **The lesson §848 taught was not "never use the models list" — it was
+"run the curl".**
+
+**What this seat does NOT claim, and why each one is a separate refusal.**
+
+- **Pictures.** Meta's own pages call Muse Spark fully multimodal — "images,
+  video, PDFs" — and `seesImages` is still **false**. What is undocumented is
+  whether this endpoint accepts the `image_url` content part
+  `openAIUserContent` builds, and no keyless read can answer it. The honesty
+  rule's one-way door decides: understating costs a screenshot going
+  text-only, overstating fails somebody's question. It flips by measurement
+  against a real key, never by reading more documentation — and unlike
+  OpenRouter and NEAR AI, `AgentModelFacts` cannot raise it, because those are
+  multi-vendor catalogues whose listings carry `architecture.input_modalities`
+  and Meta's first-party list has not been seen.
+- **Web search.** The Model API publishes search grounding as a feature, and
+  an answer that cites is the capability here worth wanting. Its wire shape on
+  this endpoint has not been read off Meta's protocol page, and this codebase
+  already holds what writing search code against an unread spec costs: Grok's
+  X-search verb, named in `AgentProvider`'s own doc comment on 2026-07-31 and
+  still unbuilt for that reason.
+- **Funding.** NEAR AI 402s after its check passes; xAI answers 200 for a
+  credit-less key. Two shipped versions of one trap, and Meta's error taxonomy
+  has not been seen from a real key — so the setup screen says the API is in
+  public preview and bills per token, rather than letting a passing check imply
+  an account that can pay. §848 spent a billed completion to close this on NEAR
+  AI *because a measurement said it was open*; here nothing says so, and
+  guessing in the other direction would spend somebody's tokens on a hunch.
+
+**The model pin is `muse-spark-1.3`, quoted from Meta's own curl example, and
+UNVERIFIED against a live list** — the list is key-gated, so the Grok exposure
+(`AgentModels`' whole reason for existing) is open until somebody pastes a key.
+The family also ships 1.2, 1.1 and two `-contributor` variants at roughly a
+twelfth of the price, which is a real librarian choice under §418's ask/
+librarian split.
+
+**`sam-` joins the picker's denylist.** Meta's Model API serves Segment
+Anything beside its chat models, and a segmentation model offered as an answer
+choice fails every question. Its two other non-chat families were already
+covered by substrings that predate this seat: `muse-image-1.0` by `image`,
+`muse-voice-transcribe-1.0` by `-transcribe`.
+
+**The tile takes the mark's own white field** (#ffffff, 77% of the bundled
+asset's pixels and all four corners), with the stroke's blue #046cef carrying
+the signal in `BridgeGlyph.tint` — the NEAR AI / ChatGPT / Notion case, and
+icon-sampled rather than taken from a palette.

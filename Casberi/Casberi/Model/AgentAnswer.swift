@@ -48,6 +48,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     case openrouter
     case grok
     case nearai
+    case meta
 
     var id: String { rawValue }
 
@@ -62,6 +63,9 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .openrouter: "OpenRouter"
         case .grok:       "Grok"
         case .nearai:     "NEAR AI"
+        // The agent the person knows is Muse; the company is Meta. Both
+        // names ship on the tile, and only this one reaches a transcript.
+        case .meta:       "Muse"
         }
     }
 
@@ -76,6 +80,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .openrouter: "OpenRouter"
         case .grok:       "xAI"
         case .nearai:     "NEAR AI"
+        case .meta:       "Meta"
         }
     }
 
@@ -96,6 +101,13 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // confirmable, and a wrong deep link is worse than the root.
         case .grok:       "console.x.ai"
         case .nearai:     "cloud.near.ai"
+        // The ROOT, not `dev.meta.ai/keys`, which is where Meta's own
+        // documentation says the API keys tab lives ("Model API dashboard →
+        // API keys → Create API key"). Every path under this host answers 200
+        // because it is a client-routed SPA, so a sub-path cannot be
+        // confirmed from here and Grok's rule applies: a wrong deep link is
+        // worse than the root (2026-09-20).
+        case .meta:       "dev.meta.ai"
         }
     }
 
@@ -108,7 +120,13 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .bankr:      "Paste your Bankr key"
         case .openrouter: "Paste your OpenRouter key"
         case .grok:       "xai-…"
+        // MEASURED off Meta's own authentication page (2026-09-20): a Model
+        // API key is prefixed `LLM|`, with the app id as its second field —
+        // documented, and shown in Meta's own example. The placeholder shows
+        // the prefix for the same reason `sk-ant-…` does: somebody pasting the
+        // wrong credential sees it before the check spends a round trip.
         case .nearai:     "Paste your NEAR AI key"
+        case .meta:       "LLM|…"
         }
     }
 
@@ -171,6 +189,18 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // capable one that is also verifiable, which is the trade this seat
         // exists to make.
         case .nearai:     "Qwen/Qwen3.8-27B"
+        // Meta's own documented current id (2026-09-20), quoted verbatim in
+        // the curl example on its Chat Completions page and named first in the
+        // model list: `muse-spark-1.3`. The family also ships 1.2, 1.1 and two
+        // `-contributor` variants at roughly a twelfth of the price — all of
+        // them real choices in the picker, which is the whole reason a pin is
+        // a fallback here rather than the answer.
+        //
+        // UNVERIFIED against a live `/v1/models` read — the list is key-gated
+        // (MEASURED: 401 with no Authorization header), so no keyless read can
+        // confirm it from this machine. This is the Grok exposure exactly, and
+        // the fix is the same: `-byokProbe` against a real key.
+        case .meta:       "muse-spark-1.3"
         }
     }
 
@@ -205,7 +235,22 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // declares `input_modalities` with images (the default pin,
         // `Qwen/Qwen3.8-27B`, does). Pinning it true here would silently drop
         // a photo the moment somebody picked a text-only enclave model.
-        case .venice, .bankr, .openrouter, .grok, .nearai: false
+        // Meta: false is a DELIBERATE UNDERSTATEMENT, not a reading of the
+        // documentation — which says the opposite. Meta's own pages describe
+        // Muse Spark as fully multimodal ("images, video, PDFs"), so this flag
+        // is very likely true; what has not been measured from here is whether
+        // THIS endpoint accepts the `image_url` content part `openAIUserContent`
+        // builds, and no keyless read can answer that (`/v1/chat/completions`
+        // 401s without a key, MEASURED 2026-09-20).
+        //
+        // The honesty rule's one-way door decides it: understating costs a
+        // screenshot going text-only, overstating fails somebody's question.
+        // `AgentModelFacts` cannot raise it here the way it does for OpenRouter
+        // and NEAR AI — those are multi-vendor catalogues whose listings carry
+        // `architecture.input_modalities`, and Meta's is a first-party list
+        // nobody here has seen. So this flips by MEASUREMENT against a real
+        // key, not by reading more documentation.
+        case .venice, .bankr, .openrouter, .grok, .nearai, .meta: false
         }
     }
 
@@ -237,7 +282,15 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // NEAR AI publishes no web-search extension on the chat body, and a
         // search would leave the enclave anyway — which is the one thing this
         // seat promises it does not do.
-        case .openai, .bankr, .grok, .nearai: false
+        // Meta: the Model API does publish web-search grounding as a product
+        // feature, and it is the one capability here worth wanting — an answer
+        // that cites. But the wire shape it takes on THIS endpoint (a tool
+        // declaration? a body field? a different endpoint entirely?) has not
+        // been read off Meta's own protocol page, and this codebase has a
+        // shipped example of what writing search code against an unread spec
+        // costs: Grok's entry above, unbuilt to this day for exactly that
+        // reason. Nothing here or on the setup screen claims it.
+        case .openai, .bankr, .grok, .nearai, .meta: false
         }
     }
 
@@ -264,7 +317,8 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     var fetchesLinks: Bool {
         switch self {
         case .anthropic: true
-        case .openai, .google, .venice, .bankr, .openrouter, .grok, .nearai: false
+        case .openai, .google, .venice, .bankr, .openrouter, .grok, .nearai,
+             .meta: false
         }
     }
 
@@ -302,6 +356,8 @@ enum AgentProvider: String, CaseIterable, Identifiable {
             // than discovered (prd §83). A streamed answer is signed by the
             // gateway and names no model — see `NearAICloud.answer`.
             "Runs on sealed hardware that signs its answer, and your phone checks the signature itself. The answer arrives all at once instead of a word at a time, because that is what can be signed."
+        case .meta:
+            "Remembers this chat's answers so far — screenshots and web search stay off for now."
         }
     }
 }
@@ -698,6 +754,26 @@ enum AgentAnswer {
             // billed. No `model` parameter, which keeps it to the gateway's own
             // attestation rather than spinning up a model's enclave.
             request = URLRequest(url: URL(string: "https://cloud-api.near.ai/v1/attestation/report?signing_algo=ecdsa")!)
+            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        case .meta:
+            // The models list, and here that IS the right check — MEASURED
+            // 2026-09-20, which is the whole point of measuring it. With no
+            // Authorization header at all, `api.meta.ai/v1/models` answers
+            // **401** `{"error":{"code":"invalid_api_key","type":
+            // "authentication_error"}}`, not the 200 NEAR AI's list gives. So
+            // a models read here cannot accept an empty string, and the trap
+            // one case above — a check that reports CONNECTED for a
+            // credential that cannot answer a question — is closed by the
+            // endpoint itself rather than by a second read.
+            //
+            // What it does NOT prove is funding. NEAR AI's 402 and Grok's
+            // credit-less 200 are both the same shipped lesson, and neither is
+            // ruled out here: Meta's error taxonomy has not been seen from a
+            // real key, so an unfunded Meta key might still pass this check
+            // and fail the first question. That is stated on the setup screen
+            // rather than guessed at with a billed completion, because unlike
+            // NEAR AI there is no measurement saying one is needed.
+            request = URLRequest(url: URL(string: "https://api.meta.ai/v1/models")!)
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
         request.timeoutInterval = 15
@@ -1271,7 +1347,7 @@ enum AgentAnswer {
             if !tools.isEmpty { body["tools"] = tools }
             request.httpBody = try? JSONSerialization.data(withJSONObject: body)
             parse = anthropicDelta
-        case .openai, .venice, .openrouter, .grok, .nearai:
+        case .openai, .venice, .openrouter, .grok, .nearai, .meta:
             // One OpenAI-compatible shape covers all four — Venice's,
             // OpenRouter's and xAI's APIs all speak it natively (MEASURED
             // 2026-07-31 for the endpoint's mere existence — `/v1/chat/
@@ -1288,6 +1364,15 @@ enum AgentAnswer {
             case .openrouter: base = "https://openrouter.ai/api/v1"
             case .grok:       base = "https://api.x.ai/v1"
             case .nearai:     base = "https://cloud-api.near.ai/v1"
+            // Meta's own documented base, quoted verbatim from its API
+            // reference: "Meta Model API is an HTTP API served at
+            // https://api.meta.ai/v1 and authenticated with a bearer token."
+            // The endpoint's existence is MEASURED (2026-09-20: a keyless
+            // POST-less GET answers 401 from a real JSON error envelope, so
+            // the host and path resolve); the streamed SSE shape is not, which
+            // is the same standing caveat this branch's opening comment
+            // already carries for Venice, OpenRouter and xAI.
+            case .meta:       base = "https://api.meta.ai/v1"
             default:          return nil
             }
             request = URLRequest(url: URL(string: "\(base)/chat/completions")!)

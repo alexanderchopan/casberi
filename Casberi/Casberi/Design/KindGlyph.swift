@@ -129,6 +129,11 @@ enum BridgeGlyph {
         // nothing from #f7f7f7. The blue of its own "AI" carries it instead,
         // icon-sampled from the bundled mark (2026-09-20).
         case "nearai", "near ai": return Color.fixed("#3e8dd6")
+        // Muse is the same shape as NEAR AI — a mark on a near-white ground —
+        // so a surface painting the brand hue as a signal gets nothing from
+        // #ffffff. The stroke's own blue carries it: icon-sampled mean of the
+        // mark's saturated pixels, #046cef (2026-09-20).
+        case "muse":         return Color.fixed("#046cef")
         default:       return nil
         }
     }
@@ -370,6 +375,9 @@ enum BridgeGlyph {
         // Defensive only — `brand-nearai` is bundled, so `BridgeIcon` never
         // reaches this. A seal, for the one seat whose answers carry one.
         case "nearai", "near ai": return "checkmark.seal"
+        // Defensive only — `brand-muse` is bundled, so `BridgeIcon` never
+        // reaches this.
+        case "muse":         return "scribble"
         // Base's own real mark is bundled now (`brand-base-vibenet`), so
         // `BridgeIcon` never reaches this fallback in practice — kept
         // defensive, in the neutral-letterform shape (the App Store Connect

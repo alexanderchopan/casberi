@@ -114,6 +114,11 @@ KNOWN_NON_REACH=(
   # `cloud-api.near.ai`, a different host, disclosed in NetworkReach on the
   # shared "Your agent key" endpoint with the other six.
   cloud.near.ai
+  # dev.meta.ai — where a Meta Model API key is minted (prd §854). Opened in
+  # the browser, never fetched. The host this seat actually READS is
+  # `api.meta.ai`, a different host, disclosed in NetworkReach on the shared
+  # "Your agent key" endpoint with the other seven.
+  dev.meta.ai
   # id.atlassian.com — where a Jira API token is minted. Never fetched: the
   # read is the person's own Jira site, a fully dynamic host disclosed in
   # NetworkReach as prose ("your Jira site"), a different host by construction.

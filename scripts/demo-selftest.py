@@ -924,7 +924,8 @@ KNOWN_BYOK_PROVIDER = {
     # at all — Apple's model on Private Cloud Compute answers the composer —
     # and unlike the rest it lands nothing and has NO room, so it is exempt
     # from O as well, deliberately (see O's own docstring).
-    "Apple Intelligence", "Bankr", "Grok", "NEAR AI", "OpenRouter", "Venice",
+    "Apple Intelligence", "Bankr", "Grok", "Muse", "NEAR AI", "OpenRouter",
+    "Venice",
 }
 KNOWN_BALANCE_ONLY = {
     # Merges into the Wallet room's holdings read (`WalletPortfolio`) and

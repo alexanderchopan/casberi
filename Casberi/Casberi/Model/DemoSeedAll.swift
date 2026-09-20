@@ -934,6 +934,7 @@ enum DemoSeedAll {
         switch provider {
         case .anthropic:  1
         case .nearai:     2
+        case .meta:       3
         case .openai:     4
         case .bankr:      5
         case .google:     8
@@ -987,6 +988,11 @@ enum DemoSeedAll {
                        answer: "Mostly one thread — the post about reading habits picked up eleven replies, and they split about evenly between people agreeing and people recommending the book you'd already quoted."),
              AgentTurn(question: "Anyone I should reply to?",
                        answer: "Two asked you a direct question and neither has an answer yet.")]
+        case .meta:
+            [AgentTurn(question: "What have I saved about the thing I keep coming back to?",
+                       answer: "Reading, and specifically how much of it you finish. Nine things over six weeks: four articles, the book highlights, two of your own notes and a screenshot of someone's reading log. The oldest and the newest make the same complaint."),
+             AgentTurn(question: "What's the complaint?",
+                       answer: "That you save more than you read. Your note from the 2nd puts it plainly, and the article you kept yesterday opens with the same sentence in different words.")]
         case .nearai:
             [AgentTurn(question: "What did I say I'd do this week and haven't?",
                        answer: "Three things you wrote down and left open: photograph the flat before the handover, cancel the standing order, and answer the two replies that asked you something directly. The van is the only one with a deadline attached."),

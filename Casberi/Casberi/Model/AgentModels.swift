@@ -164,6 +164,12 @@ enum AgentModels {
             // we want if NEAR AI ever scopes it.
             request = URLRequest(url: URL(string: "https://cloud-api.near.ai/v1/models")!)
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        case .meta:
+            // Key-gated, unlike NEAR AI's (MEASURED 2026-09-20: 401 with no
+            // header) — which is why `AgentAnswer.check` can use this same
+            // read as Meta's key check.
+            request = URLRequest(url: URL(string: "https://api.meta.ai/v1/models")!)
+            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
         request.timeoutInterval = 20
         NetworkLedger.shared.record(request)
@@ -258,7 +264,7 @@ enum AgentModels {
     private static func usable(_ models: [AgentModelInfo],
                                for provider: AgentProvider) -> [AgentModelInfo] {
         guard provider == .openai || provider == .venice || provider == .openrouter
-                || provider == .nearai else {
+                || provider == .nearai || provider == .meta else {
             return models
         }
         // `reranker` and `privacy-filter` join the list for NEAR AI, whose
@@ -273,7 +279,18 @@ enum AgentModels {
                         "moderation", "omni-moderation", "davinci", "babbage",
                         "codex", "-audio", "-realtime", "-transcribe", "-tts",
                         "upscal", "image", "stable-diffusion", "flux",
-                        "reranker", "privacy-filter"]
+                        "reranker", "privacy-filter", "sam-"]
+        // `sam-` joins for Meta, whose Model API serves Segment Anything
+        // (`sam-3.1`) beside its chat models — a segmentation model offered in
+        // an answer picker fails every question. Its two other non-chat
+        // families are already covered by substrings above: `muse-image-1.0`
+        // by `image`, `muse-voice-transcribe-1.0` by `-transcribe`.
+        //
+        // Documented ids, not a measured listing — the list is key-gated, so
+        // what Meta actually returns has not been seen from here. The denylist
+        // is the safe direction for that: a family nobody named still shows up
+        // (this list's own stated rule), and only an id matching one of these
+        // is hidden.
         return models.filter { model in
             let id = model.id.lowercased()
             return !excluded.contains { id.contains($0) }

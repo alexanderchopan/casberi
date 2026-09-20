@@ -136,6 +136,14 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
    the MARK's colours, not the field's, so neither is the background here. */
 .ai-nearai    { background: #f7f7f7; }
 .ai-nearai img { width: 100%; height: 100%; border-radius: inherit; }
+/* Muse is the NEAR AI case exactly: full-bleed square artwork carrying its
+   own white field, so the tile takes that field and the mark fills it.
+   #ffffff is ICON-SAMPLED — 77% of the bundled brand-muse asset's pixels and
+   all four of its corners — not a brand palette value. The stroke's blue
+   (#046cef) is the MARK's colour, not the field's, so it is not the
+   background here. */
+.ai-muse      { background: #ffffff; }
+.ai-muse img  { width: 100%; height: 100%; border-radius: inherit; }
 .ai-github    { background: #24292f; font-size: 16px; }
 .ai-linear    { background: #5e6ad2; }
 /* Hugging Face is the PostHog case exactly: full-bleed square artwork

@@ -168,6 +168,7 @@ enum AgentSheet {
         case "Bankr":       return "Bankr"
         case "Venice":      return "Venice"
         case "NEAR AI":     return "NEAR AI"
+        case "Muse":        return "Muse"
         case "OpenRouter":  return "OpenRouter"
         case "Grok":        return "Grok"
         default:            return nil

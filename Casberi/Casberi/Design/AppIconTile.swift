@@ -206,6 +206,12 @@ extension DS {
         // white field IS the identity, so the tile takes it rather than a
         // gray fallback, and the blue carries any signal.
         case "nearai", "near ai":   return Color.fixed("#f7f7f7")
+        // Muse's mark is a blue brushstroke M on a WHITE field — measured off
+        // the bundled art (2026-09-20): #ffffff is 77% of its pixels and all
+        // four corners. The NEAR AI / ChatGPT / Notion case again: the white
+        // field IS the identity, so the tile takes it and the blue carries any
+        // signal (`BridgeGlyph.tint`).
+        case "muse":                return Color.fixed("#ffffff")
         case "linear":              return Color.fixed("#5e6ad2")   // their documented indigo; the bundled mark samples #5060d0
         // Notion's mark is a black "N" block on a near-WHITE field — measured
         // (2026-08-24): dominant sample near-white, the ChatGPT/0xBow case
