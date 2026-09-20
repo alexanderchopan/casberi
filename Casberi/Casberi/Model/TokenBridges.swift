@@ -160,13 +160,22 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         //
         // The keys are Cloudflare's own documented spellings (`zone`,
         // `ssl_and_certificates`, `dns`); `account_settings` is for `/accounts`
-        // and is the only group the registrar read could fall under —
-        // **Cloudflare's permissions reference has no Registrar group at all**
-        // (measured 2026-09-20, zero matches across the page). So narrowing
-        // cannot cost the domain-renewal row: no template could ever have
-        // granted it, and its 403 may be permanent rather than the "not a
-        // registrar customer" skip `CloudflareFetch` reads it as. That is a
-        // live suspicion about a shipped row, not a claim — see the probe.
+        // and it carries the registrar read too.
+        //
+        // **That last part was MEASURED, against a token minted from this very
+        // URL (2026-09-20), because the docs say otherwise.** Cloudflare's
+        // permissions reference lists no Registrar group at all — zero matches
+        // across the page — which read as "the domain-renewal row can never
+        // have landed for anyone". It is wrong: `/accounts/{id}/registrar/
+        // domains` answers **200**, not 403, on a token holding only the four
+        // reads above. `CloudflareFetch`'s skip-on-403 is the right shape and
+        // the fourth deadline is reachable. A missing docs row is not a
+        // missing permission, and the only way to tell is to ask the endpoint.
+        //
+        // Proven narrow in the same pass: `billing/profile` and `r2/buckets`
+        // both 403 on this token. `pages/projects` 403s too — so a Pages deploy
+        // read would need `page:read` added here, deliberately NOT included
+        // while nothing reads it.
         case .cloudflare: URL(string: "https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22zone%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22ssl_and_certificates%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22dns%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%5D&accountId=%2A&zoneId=all&name=Casberi")
         // The dashboard ROOT, not the API-keys tab, and that is deliberate
         // imprecision: Cursor's current docs put the key at
