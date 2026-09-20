@@ -83,10 +83,20 @@ grep -q 'frame(height: DSRoomChassis.figureHeight)' Casberi/Casberi/Screens/Card
   || { echo "✗ the CardPointers rail no longer draws into the head's figure box (§751)"; exit 1; }
 grep -q 'static var markSize: CGFloat { 56 }' Casberi/Casberi/Screens/AssetRoster.swift \
   || { echo "✗ the metric disc's size moved — DSRoomChassis.figureHeight was taken from it (§751)"; exit 1; }
-for f in StripeRoomSource PolarRoomSource WalletbeatRoomSource L2beatRoomSource DodoPaymentsRoom GnosisPayRoomSource; do
+for f in StripeRoomSource PolarRoomSource WalletbeatRoomSource L2beatRoomSource DodoPaymentsRoom CardSpendRoom; do
   grep -qE 'static let rowCap = 8\b' "Casberi/Casberi/Model/$f.swift" \
     || { echo "✗ $f.rowCap is not DSRoomChassis.headRowCap (8) — a head is handed a different number of rows than the fit can choose from (§751, §760)"; exit 1; }
 done
+# §858 PUT THE ONCHAIN CARDS' CAP ON THE SHARED MODEL, and this loop was still
+# reading it off `GnosisPayRoomSource` — where the literal 8 had become
+# `CardSpendRoom.rowCap`. The cap never changed; the check was looking in the
+# file the ruling had just emptied, and went red on every push for it.
+#
+# The seat must READ the shared cap rather than spell a second 8 — two seats
+# with two literals is exactly the drift §858 exists to end, and a check that
+# only counted eights would not have seen it. So the delegation is asserted.
+grep -qE 'static let rowCap = CardSpendRoom\.rowCap\b' Casberi/Casberi/Model/GnosisPayRoomSource.swift \
+  || { echo "✗ GnosisPayRoomSource no longer reads CardSpendRoom.rowCap — two card seats can draw different row counts (§858)"; exit 1; }
 
 # The §219 failure inverted — see the probe's own comment.
 grep -q 'note("stripeHead"' "$PROBES" \

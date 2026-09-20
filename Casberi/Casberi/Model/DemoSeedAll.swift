@@ -174,6 +174,11 @@ enum DemoSeedAll {
                               // needs these two or they outlive the demo.
                               "fc:demo:", "bsky:demo:",
                               "import:receipt:", "cloudflare:cert:demo",
+                              // MetaMask Card's demo swipes (§857, §858).
+                              // `cards()` writes `metamaskcard:spend:demo\(i)`
+                              // and this list is what `teardown` sweeps, so
+                              // without the row those rows outlive the demo.
+                              "metamaskcard:spend:demo",
                               // The agent rooms' demo conversations (2026-09-20)
                               // carry the REAL `agentchat:` prefix, because
                               // `AgentChatView` fences its query on it and a

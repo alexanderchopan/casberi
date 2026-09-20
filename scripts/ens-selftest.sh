@@ -222,10 +222,24 @@ check("59 days lapsed is still grace (under the 90-day window)",
       ENSName.stage(expiry: ref.addingTimeInterval(-59 * day), now: ref) == .grace)
 check("91 days lapsed is past grace — premium",
       ENSName.stage(expiry: ref.addingTimeInterval(-91 * day), now: ref) == .premium)
-check("91 + 20 days lapsed is still premium (under the 21-day window)",
-      ENSName.stage(expiry: ref.addingTimeInterval(-(91 + 20) * day), now: ref) == .premium)
-check("91 + 22 days lapsed is released — the premium has decayed",
-      ENSName.stage(expiry: ref.addingTimeInterval(-(91 + 22) * day), now: ref) == .released)
+// DERIVED FROM THE SHIPPED CONSTANTS, AND NEVER ON THE BOUNDARY ITSELF.
+// `graceDays + premiumDays` days lapsed IS the release moment, and the two
+// fixtures here used to spell it `91 + 20` — 111 days, exactly that moment.
+// Whether it read as premium or released then depended on the MACHINE:
+// `stage` walks the ladder with `Calendar.current.date(byAddingDays:)`, so a
+// zone that crosses a DST fall-back inside the span gains an hour and lands
+// just short of `now` (premium), while UTC — every hosted runner — lands
+// exactly on it and reads released. Green on the laptop, red on CI, for days,
+// over a rule neither machine disagreed about.
+//
+// So each fixture sits two days INSIDE the window it names, which no DST
+// shift can cross, and both are spelled from `ENSName`'s own constants so a
+// change to either one moves the fixtures with it.
+let releaseDay = Double(ENSName.graceDays + ENSName.premiumDays)
+check("two days before the premium decays away it is still premium",
+      ENSName.stage(expiry: ref.addingTimeInterval(-(releaseDay - 2) * day), now: ref) == .premium)
+check("two days after it, the name is released — the premium has decayed",
+      ENSName.stage(expiry: ref.addingTimeInterval(-(releaseDay + 2) * day), now: ref) == .released)
 
 // ── nextCliff — what dueAt carries ──────────────────────────────────────────
 print("\nnextCliff — the NEXT moment, not the expiry forever")

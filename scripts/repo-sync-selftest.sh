@@ -22,8 +22,21 @@ trap 'rm -rf "$TMP"' EXIT
 # An "origin" with one commit, and a clone of it standing in for the working copy.
 fresh() {
   rm -rf "$TMP/up" "$TMP/wc"
-  git init -q --bare "$TMP/up"
-  git init -q "$TMP/seed" 2>/dev/null
+  # `-b main` ON BOTH, and it is the whole reason this harness was red on CI
+  # while green on the laptop. `git init` names the first branch from
+  # `init.defaultBranch`, which is set to `main` in the author's global config
+  # and is `master` on a stock runner. The seed pushes `main` either way, so on
+  # the runner the BARE repo's HEAD pointed at a `master` that never existed —
+  # `git clone` then warns "remote HEAD refers to nonexistent ref, unable to
+  # checkout" and leaves a working copy with NO HEAD. Every case that asks for
+  # `rev-parse HEAD` or `main..origin/main` then dies on
+  # `fatal: ambiguous argument`, and three of seven failed for a reason that
+  # has nothing to do with repo-sync.sh.
+  #
+  # Pinned rather than read from config on purpose: a fixture that inherits the
+  # machine's settings is a fixture that tests the machine.
+  git init -q --bare -b main "$TMP/up"
+  git init -q -b main "$TMP/seed" 2>/dev/null
   # TWO tracked files on purpose: `advance` only ever touches f.txt, so g.txt
   # is a tracked file an incoming commit leaves alone — which is what case 2
   # needs to test this script's guard rather than git's conflict refusal.

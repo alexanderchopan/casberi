@@ -59545,3 +59545,62 @@ the cover on All only — the same mistake this entry is a sequel to.
 **UNBUILT.** This session has no Swift toolchain: the twelve python audits and
 the harness guard pass, and nothing here has been compiled or seen on a
 simulator.
+
+## §859b — Four CI breaks, and only one of them was about the code (user: "yes fix all", 2026-09-20)
+
+**`main` was red on BOTH jobs before this branch existed**, and §859's PR inherited
+all of it: `static-checks` on `demo-selftest.py`, `logic-selftests` on
+`ens-selftest.sh`, `repo-sync-selftest.sh` and `room-heads-selftest.sh` — the
+identical set, on the identical base. Worth separating, because the four have
+almost nothing in common except the colour they turned.
+
+**1. A demo ref nothing swept.** §857/§858 gave MetaMask Card a demo seat
+writing `metamaskcard:spend:demo\(i)`, and the prefix never joined
+`DemoSeedAll.refPrefixes` — which is what `teardown` walks, so those rows would
+have outlived the demo. **The only one of the four that was a real defect in
+shipped behaviour**, and check K caught it exactly as designed.
+
+**2. A check reading a file the ruling had emptied.** §858 moved the onchain
+cards' `rowCap` onto `CardSpendRoom` and had the seat read it, which is the
+point of that ruling — two seats spelling two literals is the drift it exists to
+end. `room-heads-selftest.sh` still grepped `GnosisPayRoomSource.swift` for the
+literal `8`. The cap never changed. The loop now names `CardSpendRoom`, and the
+DELEGATION is asserted beside it — a check that only counted eights could not
+have told a shared cap from two copies of one.
+
+**3. A fixture that tested the machine's git config.** `repo-sync-selftest.sh`
+built its bare origin with `git init --bare`, taking the first branch name from
+`init.defaultBranch`: `main` in the author's global config, `master` on a stock
+runner. The seed pushed `main` either way, so on CI the bare repo's HEAD pointed
+at a `master` that never existed, `git clone` left a working copy with NO HEAD,
+and three of seven cases died on `fatal: ambiguous argument` over something
+`repo-sync.sh` never touched. `-b main` on both inits, pinned rather than read
+from config.
+
+**4. A boundary fixture standing ON the boundary.** `ens-selftest.sh` asserted
+that `91 + 20` days lapsed is still premium. That is 111 days — and
+`graceDays + premiumDays` is 90 + 21, so it named the release moment itself.
+`ENSName.stage` walks the ladder with `Calendar.current.date(byAddingDays:)`, so
+the verdict came down to the READER'S TIME ZONE: a zone crossing a DST fall-back
+inside the span gains an hour and lands just short of `now` (premium), while UTC
+— every hosted runner — lands exactly on it (released). Green on the laptop, red
+on CI, for days, over a rule neither machine disagreed about. Both fixtures now
+sit two days inside the window they name, spelled from `ENSName`'s own
+constants.
+
+**What 3 and 4 have in common is the finding.** Each passed locally for as long
+as it existed and could never pass on CI, because each asked the host a question
+it thought it was asking the code — one read `init.defaultBranch`, the other
+read the time zone. A fixture that inherits the machine's settings tests the
+machine. Neither is caught by running the suite again on the machine that wrote
+it, which is the only place they were ever run before `logic-selftests.yml`.
+
+**Verified here, one at a time:** `demo-selftest.py` goes from two failures to
+`✓` with its `--self-test` at exit 0; all six `room-heads` greps hit and the
+delegation grep with them; the `repo-sync` fixture was rebuilt end to end under
+a forced `master` default, where HEAD resolves and `main..origin/main` reports
+behind-by-1; and the ENS arithmetic was worked in both time-zone regimes, where
+the old fixture fails under UTC and passes under a DST zone — the observed
+split — and the new pair passes under both. Every python audit and its
+`--self-test` passes. The two zsh harnesses could not be RUN here: this session
+has neither zsh nor a Swift toolchain.
