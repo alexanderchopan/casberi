@@ -150,6 +150,13 @@ struct WiseTransfer: Equatable {
     var targetValue: Double?
     var targetCurrency: String?
     var created: Date?
+    /// Wise's own `hasActiveIssues` — "Are there any pending issues which stop
+    /// executing the transfer?" (prd §852). A pending transfer that is
+    /// actually STUCK read as an ordinary one in flight, which is §83's fake
+    /// status on the money bridge: the row said "Sending" while Wise was
+    /// waiting on you. Optional because a payload without the key must not be
+    /// read as "no issues" — absent means unknown, and unknown says nothing.
+    var hasActiveIssues: Bool?
 }
 
 // MARK: - The reads
@@ -161,6 +168,12 @@ enum WiseFetch {
     /// Rows per transfers call. A runaway guard, not a window — the window is
     /// `createdDateStart`.
     static let pageLimit = 100
+
+    /// Pages of transfers walked at most, per pass (prd §852). A ceiling, not
+    /// a target: the common case is one request, because a short page ends the
+    /// walk. It exists so an account with years of history cannot turn a
+    /// connect into an unbounded walk.
+    static let transferPageCap = 5
 
     private static func bearer(_ token: String) -> String { "Bearer \(token)" }
 
@@ -203,13 +216,34 @@ enum WiseFetch {
     /// `yyyy-MM-dd'T'HH:mm:ss.SSS'Z'` and is inclusive of the date given.
     static func transfers(token: String, profileID: String, since: Date)
         async -> [WiseTransfer]? {
+        // IT PAGES NOW (2026-09-20, prd §852). `offset` was hard-coded to 0
+        // with no loop, so a person with more than `pageLimit` transfers inside
+        // the 180-day first sight silently lost the remainder — on the money
+        // bridge, where a missing row is a payment you cannot find. Both
+        // `limit` and `offset` are documented; there was never a reason.
+        //
+        // Bounded by `transferPageCap`: this is a feed of recent movement, not
+        // an archive export, and an unbounded loop against someone's whole
+        // history is how a connect turns into a hang. A short page ends the
+        // walk, so the common case is still exactly one request.
         let start = requestDate.string(from: since)
-        let url = "\(api)/v1/transfers?profile=\(profileID)&offset=0&limit=\(pageLimit)"
-            + "&createdDateStart=\(start)"
-        let (json, status) = await IngestSupport.getJSONStatus(
-            url, auth: bearer(token), service: WiseShape.source)
-        guard status == 200, let rows = json as? [[String: Any]] else { return nil }
-        return rows.compactMap(transfer)
+        var out: [WiseTransfer] = []
+        for page in 0..<transferPageCap {
+            let url = "\(api)/v1/transfers?profile=\(profileID)"
+                + "&offset=\(page * pageLimit)&limit=\(pageLimit)"
+                + "&createdDateStart=\(start)"
+            let (json, status) = await IngestSupport.getJSONStatus(
+                url, auth: bearer(token), service: WiseShape.source)
+            // A failed FIRST page is a failed read (nil, so the caller can say
+            // so); a failed later page keeps what it already has rather than
+            // throwing away good rows over one hiccup.
+            guard status == 200, let rows = json as? [[String: Any]] else {
+                return page == 0 ? nil : out
+            }
+            out += rows.compactMap(transfer)
+            if rows.count < pageLimit { break }   // short page = the last page
+        }
+        return out
     }
 
     // MARK: Parsing
@@ -275,7 +309,8 @@ enum WiseFetch {
             sourceCurrency: row["sourceCurrency"] as? String,
             targetValue: number(row["targetValue"]),
             targetCurrency: row["targetCurrency"] as? String,
-            created: date(row["created"]))
+            created: date(row["created"]),
+            hasActiveIssues: row["hasActiveIssues"] as? Bool)
     }
 
     /// An id that may arrive as a JSON number or as a string. Wise sends
@@ -363,7 +398,16 @@ enum WiseShape {
         let reference = transfer.reference.map { " · \($0)" } ?? ""
         switch stage(transfer.status) {
         case .sent:     return String(localized: "Sent · \(amounts)\(reference)")
-        case .pending:  return String(localized: "Sending · \(amounts)\(reference)")
+        case .pending:
+            // A stuck transfer LEADS with being stuck (prd §852), for
+            // `ASCVersionState.headline`'s reason: `titleLine` clamps at 80
+            // characters and a reference is exactly the long tail that eats a
+            // trailing word. "Sending" over a payment Wise has halted is the
+            // §83 fake status — the money has not moved and it is waiting on
+            // you. Only on an explicit `true`; unknown keeps the plain wording.
+            return transfer.hasActiveIssues == true
+                ? String(localized: "Needs attention · \(amounts)\(reference)")
+                : String(localized: "Sending · \(amounts)\(reference)")
         case .returned: return String(localized: "Returned · \(amounts)\(reference)")
         }
     }

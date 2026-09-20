@@ -154,6 +154,12 @@ enum PagerDutyFetch {
     /// explicitly so their default moving can't change what a first sight sees.
     static let pageSize = 25
 
+    /// PagerDuty's documented ceiling on `since`: "Maximum range is 6 months."
+    /// A day under it, because the clamp is computed here and evaluated on
+    /// their side moments later, and a request that lands one second past the
+    /// boundary is the failure this constant exists to prevent.
+    static let sinceMaxDays: Double = 179
+
     /// PagerDuty's scheme is its own — `Token token=<key>`, not Bearer — and
     /// the versioned Accept header is REQUIRED, not optional politeness: v1 and
     /// v2 differ in the envelope, and omitting it means the shape you get back
@@ -188,12 +194,31 @@ enum PagerDutyFetch {
         if openOnly {
             url += "&statuses%5B%5D=triggered&statuses%5B%5D=acknowledged"
         }
+        // THE WINDOW, and both halves are fixes (2026-09-20, prd §852).
+        //
+        // PagerDuty's `since` documents "Maximum range is 6 months and default
+        // is 1 month" — a DEFAULT, not "everything". So first sight, which
+        // passes nil, was silently looking back one month, while this file's
+        // own doctrine promises it lands the incidents that are still OPEN. An
+        // incident burning for longer than a month was invisible on connect,
+        // which is the worst possible one to miss. `date_range=all` is the
+        // spec's own escape: "When set to all, the since and until parameters
+        // and defaults are ignored."
+        //
+        // And `since` is CLAMPED to that 6-month maximum. Past it PagerDuty
+        // rejects the call, `getJSON` returns nil on any non-200, `refresh`
+        // returns before reaching the cursor write — so the same doomed
+        // `since` is re-sent for ever. An app left unopened for half a year
+        // wedged this seat permanently, with no symptom but silence.
         if let since {
-            let stamp = ISO8601DateFormatter().string(from: since)
+            let floor = Date.now.addingTimeInterval(-sinceMaxDays * 86_400)
+            let stamp = ISO8601DateFormatter().string(from: max(since, floor))
             if let escaped = stamp.addingPercentEncoding(
                 withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-_.~"))) {
                 url += "&since=\(escaped)"
             }
+        } else {
+            url += "&date_range=all"
         }
         guard let root = await IngestSupport.getJSON(url, headers: headers(key)) as? [String: Any],
               let rows = root["incidents"] as? [[String: Any]] else { return nil }

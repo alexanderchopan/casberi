@@ -449,16 +449,12 @@ enum PolarFetch {
         }
     }
 
-    /// A single refund, by id — used to re-check a TRACKED disputed refund
-    /// that may have scrolled out of the newest-page window (see
-    /// `PolarIngest.diffDisputes`), rather than trusting the page walk alone
-    /// to ever see its resolution again.
-    static func refund(id: String, key: String) async -> [String: Any]? {
-        let (json, status) = await IngestSupport.getJSONStatus(
-            "\(PolarAccount.api)/refunds/\(id)", auth: auth(key), headers: PolarAccount.versionHeader)
-        guard status == 200 else { return nil }
-        return json as? [String: Any]
-    }
+    // `refund(id:)` deleted 2026-09-20 (prd §852): it requested
+    // `GET /v1/refunds/{id}`, a path Polar's spec does not have and which
+    // answers 404 live while `/v1/refunds/?limit=1` answers 401 — so it always
+    // returned nil and its one caller always skipped. Polar's per-object read
+    // for this feature is `/v1/disputes/{id}`, which arrives with the disputes
+    // rewrite.
 
     /// Subscriptions filtered SERVER-SIDE to the unhealthy statuses —
     /// Stripe's `types[]` trick applied to a `status[]` filter: reading only
@@ -467,8 +463,24 @@ enum PolarFetch {
     static let unhealthyStatuses = ["past_due", "canceled", "unpaid", "incomplete_expired"]
 
     static func unhealthySubscriptions(key: String) async -> [[String: Any]]? {
+        // `status=`, NOT `status[]=` (fixed 2026-09-20, prd §852). Polar's
+        // spec names the parameter `status` and types it `anyOf
+        // [SubscriptionStatus, array<SubscriptionStatus>, null]` — repeated
+        // `status=a&status=b` is how FastAPI binds the array form. `status[]`
+        // is simply an unknown key, which FastAPI IGNORES, so **no filter was
+        // ever applied** and this returned the 100 most recently started
+        // subscriptions of every status.
+        //
+        // That is not a silent drop, it is a false positive, which is why it
+        // matters: `diffSubscriptions`' recovery loop lands "Subscription
+        // recovered" for any tracked id that stops appearing, and its whole
+        // correctness argument is that an id absent from an unhealthy-FILTERED
+        // page must have got better. Unfiltered, every healthy subscription
+        // pushed off the newest-100 window by a newer signup produced a bogus
+        // recovery row. The file's own `sorting=-created_at` elsewhere is sent
+        // bracket-free, so it disagreed with itself.
         var url = "\(PolarAccount.api)/subscriptions/?sorting=-started_at&limit=100"
-        for status in unhealthyStatuses { url += "&status[]=\(status)" }
+        for status in unhealthyStatuses { url += "&status=\(status)" }
         let (items, status) = await envelope(url, key: key)
         return status == 200 ? items : nil
     }
@@ -804,15 +816,19 @@ enum PolarIngest {
                   let refundID = row["id"] as? String else { continue }
             seenDisputes.append((dispute, refundID))
         }
-        // Every OTHER tracked dispute not yet terminal gets re-read by id,
-        // so a resolution can never be missed just because newer refunds
-        // pushed it off the page.
-        for (refundID, item) in tracked where !terminal.contains(item.status) {
-            guard !seenDisputes.contains(where: { $0.refundID == refundID }) else { continue }
-            guard let row = await PolarFetch.refund(id: refundID, key: key),
-                  let dispute = row["dispute"] as? [String: Any] else { continue }
-            seenDisputes.append((dispute, refundID))
-        }
+        // THE RE-READ LOOP IS GONE, because it never ran (prd §852). It called
+        // `GET /v1/refunds/{id}` so a resolution could not be missed when newer
+        // refunds pushed a tracked dispute off the page — and **that path does
+        // not exist**. Polar's spec has only `/v1/refunds/`, and measured
+        // live, `/v1/refunds/{id}` answers 404 while `/v1/refunds/?limit=1`
+        // answers 401, so the 404 is the route missing and not the auth. Every
+        // iteration hit `else { continue }`.
+        //
+        // Deleting a no-op changes no behaviour; keeping it claimed a safety
+        // net that was never there, which is worse than having none. The
+        // re-read is genuinely owed and comes back with the disputes rewrite:
+        // `/v1/disputes/{id}` exists, on the endpoint this feature should have
+        // been reading all along (see the open ruling in §851).
 
         for (dispute, refundID) in seenDisputes {
             let status = (dispute["status"] as? String) ?? ""

@@ -379,15 +379,48 @@ enum SentryFetch {
     /// this a read about live problems rather than an archive walk. Nothing
     /// here asks for events, stack traces, or anything a user typed — an issue
     /// row is a title, a location in your code, and a timestamp.
+    /// TWO SORTS, merged — because the two landing rules want different pages
+    /// (2026-09-20, prd §852).
+    ///
+    /// Sentry's `sort` enum names them: `date` is **Last Seen**, `new` is
+    /// **First Seen**. This asked for `date` alone under a comment claiming
+    /// "newest first", and the two rules in `refresh` disagree about what that
+    /// means:
+    ///
+    ///   • Rule 1 lands an issue whose **firstSeen** is inside the lookback.
+    ///     Under `sort=date` a genuinely new issue that fired twice and went
+    ///     quiet is pushed off a 25-row page by noisy months-old issues, and
+    ///     never lands at all. It wants `new`.
+    ///   • Rule 2 lands a CROSSING into regressed or escalating, which it can
+    ///     only see for an issue present in the page. A crossing means recent
+    ///     activity. It wants `date`.
+    ///
+    /// So neither sort serves both, and picking one silently gives up a rule.
+    /// One extra GET per pass buys both; `refresh` already dedupes on
+    /// `sourceRef`, and the merge here is by issue id so a row in both pages
+    /// is parsed once. A failed FIRST read is a failed read; if the second
+    /// fails we keep what we have rather than losing a good page to a hiccup.
     static func issues(host: String, org: String, token: String) async -> [Issue]? {
         guard let escaped = org.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
         else { return nil }
-        let url = "https://\(host)/api/0/organizations/\(escaped)/issues/"
-            + "?query=is:unresolved&limit=\(pageSize)&sort=date"
-        guard let rows = await IngestSupport.getJSON(url, auth: auth(token),
-                                                    service: service) as? [[String: Any]]
-        else { return nil }
-        return rows.compactMap(parse)
+
+        func page(sort: String) async -> [[String: Any]]? {
+            let url = "https://\(host)/api/0/organizations/\(escaped)/issues/"
+                + "?query=is:unresolved&limit=\(pageSize)&sort=\(sort)"
+            return await IngestSupport.getJSON(url, auth: auth(token),
+                                               service: service) as? [[String: Any]]
+        }
+
+        guard let recent = await page(sort: "date") else { return nil }
+        let newest = await page(sort: "new") ?? []
+
+        var seen = Set<String>()
+        var out: [Issue] = []
+        for row in recent + newest {
+            guard let issue = parse(row) else { continue }
+            if seen.insert(issue.id).inserted { out.append(issue) }
+        }
+        return out
     }
 
     /// One issue row → the fields this bridge shapes on. Split out so the

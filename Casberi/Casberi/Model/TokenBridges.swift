@@ -2071,9 +2071,19 @@ enum TokenIngest {
     /// GitLab can hand back the same number for both).
     private static func gitlabThing(_ node: [String: Any], refPrefix: String) -> Thing? {
         guard let id = node["id"] as? Int,
-              let title = (node["title"] as? String)?
+              var title = (node["title"] as? String)?
                 .trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty,
               let url = node["web_url"] as? String else { return nil }
+        // A DRAFT merge request says so (prd §852). `draft` and
+        // `work_in_progress` are both REQUIRED on GitLab's
+        // `API_Entities_MergeRequestBasic` and neither was read, so an MR
+        // nobody is asking you to review looked exactly like one that is. Both
+        // names are checked because GitLab renamed the field and still serves
+        // the old one; an explicit `true` on either is enough, and an issue
+        // carries neither, so it is untouched.
+        let isDraft = (node["draft"] as? Bool == true)
+            || (node["work_in_progress"] as? Bool == true)
+        if isDraft { title = String(localized: "Draft · \(title)") }
         // `references.full` is GitLab's own identifier string — e.g.
         // "group/project#123" for an issue, "group/project!45" for an MR —
         // so the `#`/`!` already says which this is; no separate label is
