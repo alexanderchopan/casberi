@@ -291,26 +291,42 @@ struct RootShell: View {
         // shell and is the one funnel every ask goes through — §377's lesson
         // about a second door that drifts from the first.
         //
-        // The room is given no answer back: the exchange LANDS (§839) and the
-        // row the chat surface already draws updates itself. `roomAskPending`
-        // is the only thing that returns, and it is cleared in a `defer` so a
-        // thrown or cancelled ask cannot strand the surface spinning — §83's
-        // rule about claiming work that has stopped.
+        // The room is given no answer back when one ARRIVES: the exchange
+        // LANDS (§839) and the row the chat surface already draws updates
+        // itself. What does come back is `roomAskSource` while it is in
+        // flight — cleared in a `defer`, so a thrown or cancelled ask cannot
+        // strand the surface spinning — and `roomAskFailed` when it is
+        // refused, because §840 discarded the `Result` and ate the question
+        // in silence (§83, §841).
+        //
+        // A room asked to start fresh (prd §841). The history and the id live
+        // here, so this is the only place that can end a conversation — the
+        // same act `onLowerAgent` performs for the composer.
+        .onChange(of: chrome.roomNewConversation) { _, _ in
+            keyedHistory = []
+            keyedConversationID = nil
+        }
         .onChange(of: chrome.roomAsk) { _, ask in
             guard let ask else { return }
             chrome.roomAsk = nil
-            // A DIFFERENT AGENT IS A DIFFERENT CONVERSATION. Without this,
-            // asking Venice from its room hands it whatever you last said to
-            // Bankr as history (`keyedProvider`).
-            if keyedProvider != ask.provider {
-                keyedHistory = []
-                keyedConversationID = nil
-                keyedProvider = ask.provider
-            }
-            chrome.roomAskPending = true
+            // The provider reset lives in `keyedAnswerDocument` now (prd
+            // §841), so BOTH doors get it — §840 had it here only, and the
+            // composer's door went on handing one agent's turns to the next.
+            chrome.roomAskSource = ask.source
             Task { @MainActor in
-                defer { chrome.roomAskPending = false }
-                _ = await keyedAnswerDocument(ask.question, provider: ask.provider)
+                defer { chrome.roomAskSource = nil }
+                // `freshEvidence` because this ask did not come through
+                // `answer()`, so `lastAnswerHits` belongs to whatever the
+                // COMPOSER last asked — a different question entirely (§841).
+                let outcome = await keyedAnswerDocument(ask.question,
+                                                        provider: ask.provider,
+                                                        freshEvidence: true)
+                // A refusal is SAID and the question handed back. Discarding
+                // this was §840's silent-failure hole.
+                if case .failure(let why) = outcome {
+                    chrome.roomAskFailed = ask.source
+                    chrome.flash(why.line)
+                }
             }
         }
         // A surface requested an ask (the weekend cover) — open the composer;
@@ -2614,7 +2630,16 @@ struct RootShell: View {
     private var agentSurface: some View {
         Composer(isOpen: .constant(true), draft: $draft, embedded: true,
                  answer: answerDocument,
-                 answerWithKey: keyedAnswerDocument,
+                 // `freshEvidence: false` — the composer's ask IS the BYOK
+                 // retry (§67: the same question over the same evidence the
+                 // on-device answer saw), so reusing `lastAnswerHits` is the
+                 // point here. Only a ROOM ask asks for fresh evidence,
+                 // because it never went through `answer()` (prd §841).
+                 answerWithKey: { query, provider, onProse in
+                     await keyedAnswerDocument(query, provider: provider,
+                                               freshEvidence: false,
+                                               onProseDoc: onProse)
+                 },
                  knownSources: { bridges.bridges.map(\.name) },
                  // Fixed 2026-07-20 — this was hardcoded nil, silently
                  // dropping the "meets you where you are" lead chip since
@@ -3933,13 +3958,43 @@ struct RootShell: View {
     /// `modelDoc` — plain prose when it named none.
     private func keyedAnswerDocument(_ query: String,
                                      provider explicitProvider: AgentProvider? = nil,
+                                     freshEvidence: Bool = false,
                                      onProseDoc: @escaping ([String]) -> Void = { _ in })
     async -> Result<KeyedAnswer, AgentAnswerFailure> {
-        let hits = lastAnswerHits.isEmpty ? retrieve(query) : lastAnswerHits
         // Bankr answers from the wallet and live markets too, so an empty
         // corpus match still asks; every other agent only re-reads the same
         // evidence, so an empty match gets the honest line instead.
         let provider = explicitProvider ?? AgentKey.active
+        // **A DIFFERENT AGENT IS A DIFFERENT CONVERSATION, AND THIS IS THE
+        // PLACE THAT DECIDES IT (prd §841).** §840 put this reset on the ROOM's
+        // door only, which left the composer's door — this function, reached
+        // from `Composer.answerWithKey` with whatever key is active — handing
+        // the previous agent's turns to the next one and then UPSERTING the
+        // answer onto that agent's row. Chat in Bankr's room, raise the
+        // composer with Claude active, and Claude is sent Bankr's conversation
+        // and its reply written into a row whose `source` stays "Bankr": a row
+        // in Bankr's room full of "Claude:" lines, which `AgentSheet.turns`
+        // cannot attribute and renders under the READER's name (§363).
+        //
+        // It sits above the history read, which is the whole correction —
+        // §840's version assigned `keyedProvider` AFTER `synthesize` had
+        // already been handed `keyedHistory`.
+        if keyedProvider != provider {
+            keyedHistory = []
+            keyedConversationID = nil
+            keyedProvider = provider
+        }
+        // **THE EVIDENCE IS THIS QUESTION'S, or the last answer's, and a room
+        // ask must say which (prd §841).** `lastAnswerHits` is written by
+        // `answer()`, which has just retrieved for the SAME query — that is
+        // what makes reusing it the BYOK retry's whole point (§67: the same
+        // question over the same evidence). A room ask does not go through
+        // `answer()`, so it would inherit whatever the composer last looked
+        // at: ask Venice "summarise my week" after a composer ask about Sam
+        // and Venice is sent five of Sam's emails as the evidence — rows this
+        // question never selected, to a third party — and it never recovers,
+        // because the room path writes `lastAnswerHits` back to nothing.
+        let hits = (!freshEvidence && !lastAnswerHits.isEmpty) ? lastAnswerHits : retrieve(query)
         // The corpus tools (2026-08-06) — the whole corpus flattened, the same
         // snapshot the on-device tool path already builds. Bankr gets none: it
         // answers from the wallet and live markets rather than from the

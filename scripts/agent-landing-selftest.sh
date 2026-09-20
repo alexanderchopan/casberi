@@ -66,16 +66,88 @@ guard "lowering the composer ends the conversation" \
 guard "the room's ask is served by the shell" \
   'onChange\(of: chrome\.roomAsk\)' "$SHELL_"
 guard "the room's ask names its own provider" \
-  'keyedAnswerDocument\(ask\.question, provider: ask\.provider\)' "$SHELL_"
-# §840's leak: without this, asking Venice hands it Bankr's conversation.
-guard "a different agent starts a different conversation" \
-  'keyedProvider != ask\.provider' "$SHELL_"
-guard "the pending flag is cleared however the ask ends" \
-  'defer \{ chrome\.roomAskPending = false \}' "$SHELL_"
+  'keyedAnswerDocument\(ask\.question,' "$SHELL_"
+# §841's CORRUPTION bug. The provider reset must sit in the ONE funnel and
+# ABOVE the history read — §840 had it on the room's door only, so the
+# composer's door handed one agent's turns to the next and upserted the reply
+# onto the first agent's row, whose `source` never changes: a row in Bankr's
+# room full of "Claude:" lines, which the parser renders under YOUR name.
+guard "the provider reset is inside the ask funnel, not on one door" \
+  'if keyedProvider != provider \{' "$SHELL_"
+python3 - "$SHELL_" <<'ORDER' || fail=1
+import sys
+src = open(sys.argv[1]).read()
+i = src.find("private func keyedAnswerDocument")
+if i < 0:
+    print("  \u2717 keyedAnswerDocument is gone — this guard is blind"); sys.exit(1)
+body = src[i:i + 6000]
+reset = body.find("keyedProvider = provider")
+hist = body.find("history: keyedHistory")
+if reset < 0 or hist < 0:
+    print("  \u2717 could not find the reset and the history read together"); sys.exit(1)
+if reset > hist:
+    print("  \u2717 the provider reset runs AFTER the history is handed over — "
+          "the next agent is sent the previous agent's conversation (\u00a7841)")
+    sys.exit(1)
+print("  \u2713 the provider reset runs BEFORE the history is handed over")
+ORDER
+# §841's stale-evidence bug: a room ask never went through `answer()`, so
+# `lastAnswerHits` belongs to a different question entirely.
+guard "a room ask retrieves for its own question" \
+  'freshEvidence: true' "$SHELL_"
+guard "fresh evidence bypasses the last answer's hits" \
+  'freshEvidence && !lastAnswerHits\.isEmpty' "$SHELL_"
+guard "the composer keeps the last answer's evidence" \
+  'freshEvidence: false' "$SHELL_"
+guard "the pending room is cleared however the ask ends" \
+  'defer \{ chrome\.roomAskSource = nil \}' "$SHELL_"
+# §841: a refused ask is said out loud and the question handed back.
+guard "a refusal is worded" \
+  'chrome\.flash\(why\.line\)' "$SHELL_"
+guard "a refusal names the room that asked" \
+  'chrome\.roomAskFailed = ask\.source' "$SHELL_"
+guard "a room can end a conversation" \
+  'onChange\(of: chrome\.roomNewConversation\)' "$SHELL_"
+# §841: the scope dies with the room, which §840 documented and never wrote.
+guard "the agent scope is cleared on a source change" \
+  'chrome\.agentScope = \.all' "Casberi/Casberi/Shell/MainSurface.swift"
+# §841: without these the room is replaced wholesale when its last
+# conversation is deleted, taking the Chat tile — the only way to start
+# another — with it.
+guard "an agent room keeps its tiles when empty" \
+  '\|\| roomAgent != nil' "$FEED"
+guard "an agent room is not replaced by the generic empty state" \
+  'roomAgent == nil' "$FEED"
+# §841: Accounts is presented, not pushed, so onAppear never fires again.
+guard "a key added without leaving the room lights the tile" \
+  'onChange\(of: bridges\.bridges\.count\)' "$FEED"
 guard "the room draws the agent sections" \
   'agentRoomSections\(visible' "$FEED"
-guard "the chat surface is drawn on the chat tile" \
-  'AgentChatView\(source: source, provider: roomAgent\)' "$FEED"
+# The chat surface is TWO pieces in two of the room's slots (§841): the thread
+# where the cover sits, the entry below the tiles. One block replacing the list
+# is what put the tiles at the top of the screen on Chat and at 316pt on All.
+guard "the thread fills the room's lead slot" \
+  'AgentChatThread\(source: source\)' "$FEED"
+guard "the composer row is drawn below the tiles" \
+  'AgentChatEntry\(source: source, provider: roomAgent\)' "$FEED"
+python3 - "$FEED" <<'SLOTS' || fail=1
+import sys
+src = open(sys.argv[1]).read()
+i = src.find("private func agentRoomSections")
+if i < 0:
+    print("  \u2717 agentRoomSections is gone — this guard is blind"); sys.exit(1)
+body = src[i:i + 4000]
+thread = body.find("AgentChatThread(")
+tiles  = body.find("agentTiles")
+entry  = body.find("AgentChatEntry(")
+if min(thread, tiles, entry) < 0:
+    print("  \u2717 could not find all three slots"); sys.exit(1)
+if not (thread < tiles < entry):
+    print("  \u2717 the slots are out of order — the tiles must sit BETWEEN the "
+          "thread and the entry, or they move when you switch tile (\u00a7841)")
+    sys.exit(1)
+print("  \u2713 thread, then tiles, then entry — the tiles never move")
+SLOTS
 # The §83 half: a Chat tile over a seat with no key cannot answer.
 guard "the tiles stand only where a key is present" \
   'guard roomAgent != nil else \{ return nil \}' "$FEED"

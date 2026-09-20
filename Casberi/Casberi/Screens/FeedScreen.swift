@@ -5245,7 +5245,11 @@ struct FeedScreen: View {
             || (debouncedAllSnapshot.map { !$0.isEmpty } ?? false)
             || (sourceRoomFallbackSnapshot.map { !$0.isEmpty } ?? false)
             || Corpus.hasSurfaced(things, room: source)
-        if !roomHasContent && !LiveRoomSources.has(source) {
+        // `roomAgent != nil` joins the two liveness doors for §841's reason:
+        // an agent room with no conversation yet still has a Chat tile, which
+        // is the whole way to give it one. Without it the room is replaced
+        // before `keepsChromeWhenEmpty` is ever consulted.
+        if !roomHasContent && !LiveRoomSources.has(source) && roomAgent == nil {
             Group { emptyState }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -5502,6 +5506,16 @@ struct FeedScreen: View {
             // A picked kind tile is this room's navigation too (prd §815):
             // the tiles stay, and say "nothing here" under themselves.
             || roomKindPick != .all
+            // **AN AGENT ROOM'S TILES ARE HOW IT STOPS BEING EMPTY (prd §841).**
+            // Without this the generic state replaces the whole room the
+            // moment its last conversation is deleted, taking the Chat tile
+            // with it — so the one control that could start another is gone,
+            // and the room is the dead end §538 was written about. It is NOT
+            // covered by `roomKindPick` above: that returns `.all` for every
+            // room `RoomKindTiles.Room(source:)` does not know, which is every
+            // agent room by construction — the very condition that routes them
+            // to `agentRoomSections`.
+            || roomAgent != nil
     }
 
     /// The day sections of a room that has rows, plus its closing line.
@@ -6033,6 +6047,15 @@ struct FeedScreen: View {
             if isActive { land() }
             resolveRoomAgent()
         }
+        // A key added from Accounts must light the Chat tile without leaving
+        // the room (prd §841). Accounts is PRESENTED, not pushed (§796), so
+        // the feed never unmounts and `onAppear` does not fire again — add an
+        // OpenAI key and the ChatGPT room kept no Chat tile until you left and
+        // came back, and removing one left the tile live, which is the dead
+        // control §83 bans. `registerConnected` moves `bridges`, so that is
+        // the signal; `AgentKey.configured` is memoised on `TokenVault
+        // .generation`, so re-asking is a dictionary hit.
+        .onChange(of: bridges.bridges.count) { _, _ in resolveRoomAgent() }
         .onDisappear { if visitFrozen { leave() } }
         .onChange(of: isActive) { _, now in
             if now { land() } else { leave() }
@@ -7239,19 +7262,38 @@ struct FeedScreen: View {
     /// user: *"that is a template. we follow it in all rooms, so the buttons
     /// can't be in different places on each screen"*).
     ///
-    /// **The cover stands on All only.** On Chat the room is the conversation,
-    /// and a lede card above it would draw the newest conversation twice —
-    /// once as a cover and once as the live turns underneath.
+    /// **The cover stands on BOTH tiles, so the tiles never move** (user,
+    /// 2026-09-19: *"i think when you chat the buttons shouldn't have
+    /// moved"*). §840's first build drew it on All only, reasoning that on
+    /// Chat the room IS the conversation — which put the tiles at two
+    /// different heights depending on which one was picked, the exact thing
+    /// §752's template rule exists to prevent, and which every kind-tile room
+    /// already gets right: `kindTileSections` draws its cover whatever tile is
+    /// standing. The cost is that a conversation's opening question reads
+    /// twice on Chat, as a title card and as the first turn. That is the
+    /// cheaper of the two, because one is a repetition and the other is
+    /// furniture that walks.
     @ViewBuilder
     private func agentRoomSections(_ visible: [Thing], nextEventID: UUID?,
                                    heroShown: Bool) -> some View {
         let chatting = chrome.agentScope == .chat
         let days = chronoDays(visible)
-        let coverID = (heroShown || chatting) ? nil : ledeThingID(in: days)
+        let coverID = heroShown ? nil : ledeThingID(in: days)
         let coverThing: Thing? = coverID.flatMap { id in
             visible.first(where: { (thing: Thing) -> Bool in thing.isLive && thing.id == id })
         }
-        if let coverThing {
+        // THE LEAD SLOT. On Chat the thread fills it; on All the cover does.
+        // One slot, one height, so the tiles below never move (§841).
+        if chatting, roomAgent != nil {
+            Section {
+                AgentChatThread(source: source)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: DSRoomChassis.contentGap,
+                                              trailing: DSRoomChassis.inset))
+            }
+        } else if let coverThing {
             Section {
                 ledeListRow(coverThing, top: 0,
                             bottom: DSRoomChassis.contentGap, holdsLead: true)
@@ -7262,15 +7304,16 @@ struct FeedScreen: View {
                 agentTiles
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: coverThing == nil ? DS.Space.s2 : 0,
+                    .listRowInsets(EdgeInsets(top: (coverThing == nil && !chatting) ? DS.Space.s2 : 0,
                                               leading: DSRoomChassis.inset,
                                               bottom: DSRoomChassis.leadGap,
                                               trailing: DSRoomChassis.inset))
             }
         }
         if chatting, let roomAgent {
+            // The composer row, BELOW the tiles — where the list would be.
             Section {
-                AgentChatView(source: source, provider: roomAgent)
+                AgentChatEntry(source: source, provider: roomAgent)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,

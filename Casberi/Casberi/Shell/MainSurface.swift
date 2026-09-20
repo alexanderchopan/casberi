@@ -2154,6 +2154,13 @@ struct MainSurface: View {
             // A kind tile belongs to its room, and every room opens on All
             // (prd §815).
             chrome.roomKind = .all
+            // An agent's Chat tile belongs to that agent, for `roomKind`'s
+            // reason and one of its own (prd §841): carried across, swiping
+            // from Bankr into Claude's room lands you in a keyboard, which is
+            // not a room you opened to look something up in. §840 documented
+            // this reset and never wrote it — the comment was here, the line
+            // was not.
+            chrome.agentScope = .all
             chrome.pinterestScope = nil
             // Dies with the room like the person scope above, NOT spanning
             // its category the way the wallet scope deliberately does: a

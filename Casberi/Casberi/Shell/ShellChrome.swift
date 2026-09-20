@@ -461,14 +461,37 @@ final class ShellChrome {
     struct RoomAsk: Equatable {
         let question: String
         let provider: AgentProvider
+        /// The room that asked, so the pending state can be keyed to it.
+        let source: String
         let id = UUID()
     }
 
-    /// True while a room-asked question is in flight, so the chat surface can
-    /// say so. It is NOT an answer channel — §83: a surface that showed a
-    /// spinner and no way to learn it had failed would claim work it stopped
-    /// doing.
-    var roomAskPending = false
+    /// WHICH ROOM has a question in flight, so only that room says so
+    /// (prd §841). §840 had a plain `Bool`, which every agent room read: send
+    /// in Bankr's room, swipe to Claude's, and Claude drew "Asking Claude…"
+    /// with its send button disabled for a request Bankr was serving, then
+    /// cleared when Bankr's answer landed. A state that names the room cannot
+    /// be read by a room it is not about (§83).
+    var roomAskSource: String?
+
+    /// The room whose last ask FAILED, so its entry can hand the question back
+    /// (prd §841). Cleared by the entry that consumes it. §840 discarded the
+    /// `Result` entirely, so a question asked with no network was eaten in
+    /// silence — the surface snapped back to the turns it already had, with
+    /// nothing said and nothing to retry.
+    var roomAskFailed: String?
+
+    /// A room asking to START A FRESH CONVERSATION (prd §841) — bumped by the
+    /// chat surface, served by `RootShell`, which is where the history and the
+    /// conversation id live.
+    ///
+    /// §840 cited a `newConversation` in a doc comment and never wrote one, so
+    /// a person who only ever chats from a room could not end a conversation
+    /// at all: every ask upserted onto one ever-growing row, and the whole
+    /// transcript went back as `history` on every turn. The composer's own
+    /// door (`onLowerAgent`) was the only way, and §697b took the composer
+    /// off every surface but this one.
+    var roomNewConversation = 0
 
     /// Which watched account a SOCIAL room is scoped to — nil = all of them
     /// (prd §362, 2026-08-11). The handle as the account's own store spells it
