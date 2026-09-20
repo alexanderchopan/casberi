@@ -59219,3 +59219,65 @@ because it is the string in the code. Two further keys in that state
 turned out to have no call site at all, and `%lld of %lld positions idle` is
 grammatical because its own guards make both counts ≥ 2. The import screens'
 "1 chats in" family is real and NOT fixed here.
+
+## §856 — Muse's key check was wrong within the hour, and §854 said exactly where to look (user pasted a real key, 2026-09-20)
+
+**§854 listed three things the seat did not know, and named the unfunded key as
+one of them.** A real key arrived the same afternoon and settled it in two
+requests: `api.meta.ai/v1/models` answers **200**, and the first completion
+answers **402** `{"error":{"code":"billing_not_configured","message":"Billing
+verification failed. Please check your payment method."}}`. So the models read
+— which §854 correctly established cannot be fooled by an EMPTY key, and which
+is measured and still right about that — could be fooled by a REAL key on an
+account that cannot pay. The seat would have said CONNECTED and failed the
+person's first question, which is the fake status §83 forbids and the form of
+it that is worse than a refusal, because the failure surfaces later and looks
+like a bug in the app.
+
+**Three providers, one lesson, three unrelated endpoints.** xAI answers 200
+with `team_blocked` in the body (§242). NEAR AI 402s with `no_limit_configured`
+after its attestation read passes (§848). Meta 402s with
+`billing_not_configured` after its models read passes. **A key that IDENTIFIES
+is not a key that can SPEND, and only the spending endpoint knows** — the
+identity endpoint has now been wrong about this on three providers out of
+three, which makes it a rule rather than a coincidence.
+
+**`AgentAnswer.metaCanSpend`** is `nearAICanSpend`'s shape: a one-token
+completion, free when it fails because the 402 is raised before any model runs
+(the measured response carried no `usage` block at all), a fraction of a cent
+when it succeeds.
+
+**`AgentKeyCheck.needsBilling` is a new case, and the BODY raises it, never the
+status.** `.blocked` has to hedge — "usually no credits, or it's disabled" —
+because xAI's three flags cannot tell a blocked key from a blocked team. Meta
+states the cause, so the person gets the sentence that fixes it: *"Meta took
+the key, but the account has no payment method — add one at dev.meta.ai, then
+connect."* A 402 carrying any other code stays `.blocked`, because a spend
+limit and an account that was never set up are different problems.
+
+**The setup card now says to add the payment method BEFORE minting the key**,
+which is the order that works. Its second step states that Meta shows the key
+once and never again — a fact, not an instruction, after `setup-copy-audit`
+correctly refused the first wording for telling somebody to copy something the
+field below already holds out a Paste for (§729).
+
+**What the live key also settled, without being asked.** The list is eight
+models and the §854 pin `muse-spark-1.3` is real. Every entry carries
+`created`, `object` and `owned_by` and NOTHING else — no
+`architecture.input_modalities` — which confirms §854's reasoning that
+`AgentModelFacts` can never raise `seesImages` for this provider, since the
+field it reads is not in Meta's listing. The picker's denylist lands exactly
+right: `sam-3.1` by the `sam-` entry §854 added, `muse-image-1.0` by `image`,
+`muse-voice-transcribe-1.0` by `-transcribe`, leaving the five chat models.
+
+**Still unmeasured, and now blocked ON billing rather than on documentation:**
+whether the endpoint accepts an image part, and the streamed SSE shape. Both
+need one completion that is allowed to run.
+
+**A Muse SUBSCRIPTION does not fund an API key** (Meta's own subscriptions
+page: the credential "is for use with Muse Code only. Any additional API keys
+you create under your Meta Model API account will be billed through
+pay-as-you-go"). The person most likely to tap this seat is somebody already
+paying for Muse, and they will assume they are covered — the user did, in this
+very session. The setup screen was left as it is by their own ruling; recorded
+here so the next reader knows the assumption is wrong and that it was weighed.

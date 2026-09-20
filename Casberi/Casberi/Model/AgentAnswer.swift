@@ -656,6 +656,18 @@ enum AgentKeyCheck: Equatable {
     /// No other provider here exposes a comparable signal, so no other provider
     /// ever returns this — the honesty rule cuts both ways.
     case blocked
+    /// The provider took the key and the ACCOUNT has no payment method —
+    /// MEASURED on Meta 2026-09-20 against a real, brand-new key: the models
+    /// list answers 200 and the first completion answers **402**
+    /// `{"error":{"code":"billing_not_configured","type":"billing_error"}}`.
+    ///
+    /// Split from `.blocked` because that sentence has to hedge ("usually no
+    /// credits, or it's disabled") and here the provider states the cause
+    /// exactly. Raised ONLY on a body that names it, never inferred from the
+    /// status: a 402 saying something else is still `.blocked`, because a
+    /// spend limit and an account that was never set up are different problems
+    /// with different fixes.
+    case needsBilling
     /// The provider answered, but with nothing this could read — a 5xx, or a
     /// 200 whose body didn't parse.
     case providerError(Int)
@@ -678,6 +690,8 @@ enum AgentKeyCheck: Equatable {
             String(localized: "\(provider.company) is rate-limiting this key — try again in a minute.")
         case .blocked:
             String(localized: "\(provider.company) blocked this key — usually no credits, or it's disabled. Check \(provider.console).")
+        case .needsBilling:
+            String(localized: "\(provider.company) took the key, but the account has no payment method — add one at \(provider.console), then connect.")
         case .providerError(let status):
             String(localized: "\(provider.company) returned an unexpected HTTP \(status) — not your key. Try again.")
         case .unreachable:
@@ -766,13 +780,12 @@ enum AgentAnswer {
             // credential that cannot answer a question — is closed by the
             // endpoint itself rather than by a second read.
             //
-            // What it does NOT prove is funding. NEAR AI's 402 and Grok's
-            // credit-less 200 are both the same shipped lesson, and neither is
-            // ruled out here: Meta's error taxonomy has not been seen from a
-            // real key, so an unfunded Meta key might still pass this check
-            // and fail the first question. That is stated on the setup screen
-            // rather than guessed at with a billed completion, because unlike
-            // NEAR AI there is no measurement saying one is needed.
+            // What it does NOT prove is funding, and that is now MEASURED
+            // rather than suspected (2026-09-20, a real brand-new key): this
+            // read answers 200 while the first completion answers 402
+            // `billing_not_configured`. So it is a first read, not the whole
+            // check — `metaCanSpend` below runs on top of it, exactly as NEAR
+            // AI's does, and for the identical reason.
             request = URLRequest(url: URL(string: "https://api.meta.ai/v1/models")!)
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
@@ -836,6 +849,21 @@ enum AgentAnswer {
         if provider == .nearai, verdict == .accepted {
             return await nearAICanSpend(key: key)
         }
+        // Meta needs the same second read, and §854 shipped without it while
+        // SAYING so: "what an UNFUNDED key does" was listed there as neither
+        // measured nor documented. MEASURED hours later against a real key —
+        // the models list answers **200**, the first completion answers **402
+        // billing_not_configured** — so the gap was real and fell on the one
+        // side §83 forbids. The seat would have said CONNECTED and failed the
+        // person's first question.
+        //
+        // Three providers, one lesson, three different endpoints: xAI carries
+        // block flags in a 200 body, NEAR AI 402s with `no_limit_configured`,
+        // Meta 402s with `billing_not_configured`. A key that IDENTIFIES is
+        // not a key that can SPEND, and only the spending endpoint knows.
+        if provider == .meta, verdict == .accepted {
+            return await metaCanSpend(key: key)
+        }
         return verdict
     }
 
@@ -867,6 +895,40 @@ enum AgentAnswer {
         // attestation and too poor to answer is BLOCKED, not connected.
         if http.statusCode == 402 { return .blocked }
         return classify(status: http.statusCode)
+    }
+
+    /// Whether a Meta key's account can actually be billed (2026-09-20).
+    ///
+    /// Free when it fails, which is what makes it affordable to ask: the 402
+    /// is raised before any model runs, and the measured response carried no
+    /// `usage` block at all. On a funded account one token is a fraction of a
+    /// cent — the price `nearAICanSpend`'s own comment already argued is worth
+    /// paying for a connect screen that tells the truth.
+    ///
+    /// The BODY decides, not the status. Meta names the cause
+    /// (`billing_not_configured`), so the person gets the one sentence that
+    /// fixes it rather than `.blocked`'s hedge; any other 402 stays `.blocked`.
+    private static func metaCanSpend(key: String) async -> AgentKeyCheck {
+        var request = URLRequest(url: URL(string: "https://api.meta.ai/v1/chat/completions")!)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: [
+            "model": AgentProvider.meta.defaultModel,
+            "max_tokens": 1,
+            "stream": false,
+            "messages": [["role": "user", "content": "hi"]],
+        ])
+        request.timeoutInterval = 30
+        NetworkLedger.shared.record(request)
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse
+        else { return .unreachable }
+        guard http.statusCode == 402 else { return classify(status: http.statusCode) }
+        let code = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])
+            .flatMap { $0["error"] as? [String: Any] }
+            .flatMap { $0["code"] as? String }
+        return code == "billing_not_configured" ? .needsBilling : .blocked
     }
 
     /// The status codes every provider here speaks in common. 401/403 is the

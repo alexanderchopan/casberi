@@ -35,11 +35,15 @@ import SwiftData
 ///   is a different question, and `AgentProvider.seesImages` stays false until
 ///   somebody measures it);
 /// - the wire shape of Meta's web-search grounding;
-/// - what an UNFUNDED key does. NEAR AI 402s after the check passes and Grok
-///   answers 200 for a credit-less key — two shipped versions of the same trap
-///   — and Meta's error taxonomy has not been seen from a real key. The note
-///   below says the account needs to be set up rather than pretending the
-///   check proves it is.
+/// **MEASURED hours after §854 shipped, with a real key, and it changed this
+/// screen.** The unfunded case was listed above as unknown; it is not. The
+/// models list answers 200 for a key whose account has no payment method, and
+/// the first completion answers **402 `billing_not_configured`** — the exact
+/// trap NEAR AI's 402 and xAI's credit-less 200 are the other two versions of.
+/// So the check is two reads now (`AgentAnswer.metaCanSpend`), the failure has
+/// its own sentence (`AgentKeyCheck.needsBilling`) instead of `.blocked`'s
+/// hedge, and the step below says to add the payment method BEFORE minting the
+/// key, because that is the order that works.
 ///
 /// **ON `AccountPage` SINCE §639.** `lands: true` since §839 — a key that
 /// answers lands its conversations as chat things, so this seat has a room, an
@@ -84,7 +88,9 @@ struct MuseSetupScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             // Verb over address, the 2026-08-14 anatomy.
             // Unnumbered — the door did step one (ruling 2026-08-14).
-            BridgeSetupCard(steps: [], numbered: false) {
+            BridgeSetupCard(steps: ["Add a payment method under Billing",
+                                    "Meta shows the key once, then never again"],
+                            numbered: false) {
                 DSSlabButton(title: "Get your API key",
                              detail: "dev.meta.ai",
                              systemImage: "arrow.up.right",
@@ -97,9 +103,10 @@ struct MuseSetupScreen: View {
                         action: connect)
             BridgeSyncStatusRows(proof: result)
             // Two facts, both true and neither in the header's tagline: the
-            // API is in public preview, and Meta bills per token. Nothing here
-            // says the key check proves the account can pay — see this file's
-            // doc comment for why that would be a guess.
+            // API is in public preview, and Meta bills per token. The key
+            // check now PROVES the account can pay (see this file's doc
+            // comment), so this line no longer has to carry that warning — the
+            // step above does, in the one place it can still help.
             DSSlabNote(text: "Meta's Model API is in public preview, and bills this key per token.", plain: true)
         }
     }
