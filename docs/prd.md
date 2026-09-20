@@ -59384,3 +59384,54 @@ blocks — but their settlement addresses are UNMEASURED, and a settlement
 address is the entire filter. Immersve is MetaMask Card's second provider, with
 its own `cardImmersve*` flags and a `spenderAddress`, also unmeasured. None of
 the three ships on a guess.
+
+## §857b — MetaMask Card reads Base too, and Monad is measured, buildable and refused (user: "and yes measure base and monad" → "buidl them first!", 2026-09-20)
+
+**One settlement address serves every chain, and that was measured rather than
+assumed.** A real spend decoded on Linea, on Base and on Monad all settle to
+`0x8dfe562c…`; the US programme's `0x2baa8380…` is the same everywhere too. So
+the settlement pair stays a single global constant while hosts and token tables
+become per-chain — the shape the facts have, not a convenience.
+
+**Base ships. Monad does not, and the number is why.**
+
+| | best free host cap | block time | one request buys | 6-day backfill |
+|---|---|---|---|---|
+| Linea | 10,000 | 8.8s | 24 hours | 7 requests |
+| Base | 2,000 | 2.0s | 67 minutes | 130 requests |
+| Monad | **100** | **0.302s** | **30 seconds** | **17,166 requests** |
+
+On Base, `mainnet.base.org` is the only free host that answered a filtered read
+at all (Tenderly serves 100 and errors at 2,000; publicnode, 1rpc and drpc
+refused every window tried). 130 requests per wallet is not a thing to do on a
+phone for a card almost nobody watching a wallet holds — so **the window is
+sized down rather than the request count up**: a 1-day backfill, 43,200 blocks,
+22 requests at first sight, and ONE request per sweep afterwards, which is the
+cost that actually recurs.
+
+On Monad there is no window that works. One hour costs 120 requests, one day
+2,860. The seat would be CORRECT — its spenders are deployed, a real spend was
+decoded, it settles to the same address — and it is the reading cost that
+refuses. Shipping it with a window small enough to afford would be a seat that
+silently misses almost every spend, which is worse than no seat (§83). The
+remaining work is one `Chain` literal with `0x1c8a3360…` (VEDA, 6) and
+`0x754704bc…` (USDC, 6); `unreadableChains` holds the record so nobody
+re-derives the arithmetic.
+
+**`Chain` exists because Linea and Base agree about nothing.** One Linea
+request buys a day of history and one Base request buys an hour. Treating them
+as one chain with one window would either cost 130 requests or silently read
+six hours and call it six days — and the second failure is invisible, which is
+this seat's whole hazard class.
+
+**The cursor is keyed per CHAIN, and `card-spend-audit.py` now enforces it.**
+Base's head is ~51,000,000 and Linea's ~32,000,000, so a shared key lets one
+chain's cursor jump the other's nineteen million blocks ahead; the next pass
+reads nothing, forever, and the seat looks exactly like a wallet with no card.
+The check fires only for a bridge declaring more than one chain, so a
+single-chain seat keeps its simpler key.
+
+**One chain's outage is not the seat's** (§825's rule, one layer down). A chain
+that cannot be reached leaves its own cursor alone and the others still land;
+`sync` returns nil only when NONE answered, which is the difference between
+"nothing was spent" and "we could not ask".

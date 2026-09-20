@@ -3739,13 +3739,18 @@ enum DemoSeedAll {
                 t.walletAddress = demoWallet
             }
         }
-        // Dollars, not euros, because Linea's card list is dollar stablecoins
+        // Dollars, not euros, because the card's lists are dollar stablecoins
         // (USDC, USDT, mUSD, aUSDC, amUSD) plus EURe and GBPe — and `content`
         // names the chain and the token the way the real row's explorer link
-        // implies, so the demo says WHICH stablecoin paid.
+        // implies, so the demo says WHICH stablecoin paid, on WHICH chain.
+        //
+        // BOTH chains appear, because the seat reads both and a demo showing
+        // one would leave the other looking unbuilt — the §368 lesson about
+        // demo rows that skip a real branch.
         let metamask: [(Double, Double, String)] = [
-            (12.40, 1, "USDC"), (7.85, 6, "USDC"), (104.00, 17, "mUSD"),
-            (23.15, 33, "USDC"), (9.60, 47, "USDC"), (58.30, 64, "USDC"),
+            (12.40, 1, "Linea · USDC"), (7.85, 6, "Base · USDC"),
+            (104.00, 17, "Linea · mUSD"), (23.15, 33, "Base · USDC"),
+            (9.60, 47, "Linea · USDC"), (58.30, 64, "Linea · USDC"),
         ]
         out += metamask.enumerated().map { i, m in
             row(.transaction,
@@ -3759,10 +3764,11 @@ enum DemoSeedAll {
                 // 2026-08-17).
                 source: "MetaMask Card",
                 ref: "metamaskcard:spend:demo\(i)", days: m.1, hour: 11,
-                content: "Linea · \(m.2)") { t in
+                content: m.2) { t in
                 t.priceValue = m.0
                 t.priceCurrency = "USD"
-                t.transferAmount = "\(String(format: "%.2f", m.0)) \(m.2)"
+                t.transferAmount = "\(String(format: "%.2f", m.0)) "
+                    + (m.2.split(separator: "·").last.map { $0.trimmingCharacters(in: .whitespaces) } ?? "USDC")
                 t.transferDirection = "sent"
                 t.walletAddress = demoWallet
             }

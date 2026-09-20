@@ -1003,3 +1003,14 @@ the room.
 Thirteen self-test cases, each mutating one rule, including two that must NOT
 fire: a mixed-case address inside a comment, and a sweep call that exists only
 as a comment (which must fire, because a commented-out call sweeps nothing).
+
+### Check 5, added with Base (prd §857b, 2026-09-20)
+
+**A multi-chain card bridge keys its cursor on the CHAIN.** Block numbers from
+different chains are not comparable, and this fails in the worst direction:
+Base's head is ~51,000,000 and Linea's ~32,000,000, so one shared key lets one
+chain's cursor jump the other's nineteen million blocks ahead. The next pass
+reads nothing, forever, and the seat looks exactly like a wallet that holds no
+card — the same indistinguishable-from-healthy failure every other check here
+guards. It fires only for a bridge declaring more than one chain, so a
+single-chain seat keeps its simpler key and does not get a finding for it.

@@ -204,8 +204,8 @@ enum BridgeCatalog {
         // thing `KindGlyph`'s ether.fi/Gnosis Pay comment forbids in the other
         // direction. So this one names its own chain. `alsoReads` carries Linea
         // and Baanx so a search for either finds the seat that really reads it.
-        Offer(name: "MetaMask Card", tagline: "Every swipe, straight off Linea", group: "Wallet", connectable: true,
-              alsoReads: ["Linea", "Baanx"], needsSetup: true, added: day(2026, 9, 20)),
+        Offer(name: "MetaMask Card", tagline: "Every swipe, off Linea and Base", group: "Wallet", connectable: true,
+              alsoReads: ["Linea", "Base", "Baanx"], needsSetup: true, added: day(2026, 9, 20)),
         // Apple Wallet (prd §313, 2026-08-06) — FinanceKit, granted by Apple
         // for this bundle id on request QVDBMBPMJU. Wallet group beside Gnosis
         // Pay for that seat's own reason: a card feed belongs with the cards.

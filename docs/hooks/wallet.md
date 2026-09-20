@@ -156,3 +156,26 @@ fees, last four and pending/declined/reversed status live behind Baanx's
 MetaMask's own client id. Reaching it would mean presenting this app as
 MetaMask to a third party, which is not §701's cookie-session shape. The
 ceiling is permanent; the copy says amounts and timing only.
+
+### Base joined, Monad was refused (prd §857b, 2026-09-20)
+
+`-metamaskCardProbe` now NSLogs one `metamaskCardChain|` line per chain BEFORE
+it sweeps — the head, the range, the chunk count and the backfill — because the
+rewind spec is in BLOCKS and the chains do not agree on what a block is worth.
+10,000 is a day on Linea and under six hours on Base, so one number would read
+as one window and quietly mean two different things.
+
+The measurement that decided what ships:
+
+| | best free host cap | block time | one request buys | 6-day backfill |
+|---|---|---|---|---|
+| Linea | 10,000 | 8.8s | 24 hours | 7 requests |
+| Base | 2,000 | 2.0s | 67 minutes | 130 requests |
+| Monad | 100 | 0.302s | 30 seconds | 17,166 requests |
+
+Base ships with its window sized DOWN — one day, 43,200 blocks, 22 requests at
+first sight and one per sweep after. Monad does not ship at all: its seat would
+be correct (spenders deployed, a real spend decoded, same settlement address)
+and the reading cost refuses. `MetaMaskCardBridge.unreadableChains` holds that
+record with the token addresses already found, so re-opening it is one `Chain`
+literal the day a free Monad endpoint serves a real range.

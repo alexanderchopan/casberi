@@ -123,6 +123,31 @@ def check_price_pairing(name, text):
     return out
 
 
+def check_cursor_is_per_chain(name, text):
+    """A bridge that reads MORE THAN ONE chain must key its cursor on the
+    chain as well as the address.
+
+    Block numbers from different chains are not comparable, and this failure
+    is silent in the worst direction: Base's head is ~51,000,000 and Linea's
+    ~32,000,000, so a shared key lets one chain's cursor jump the other's
+    nineteen million blocks ahead. The next pass then reads nothing, forever,
+    and the seat looks exactly like a wallet that holds no card.
+    """
+    chains = re.search(r"static let chains: \[Chain\] = \[([^\]]*)\]", text)
+    if not chains or chains.group(1).count(",") < 1:
+        return []          # one chain (or none) — nothing to mix up
+    fn = re.search(r"func cursorKey\(([^)]*)\)[^{]*\{(.*?)\n    \}", text, re.S)
+    if not fn:
+        return [f"{name}: reads more than one chain and has no cursorKey(…) "
+                f"this check can read"]
+    args, body = fn.group(1), fn.group(2)
+    if "Chain" not in args:
+        return [f"{name}: reads more than one chain but cursorKey() takes no "
+                f"chain — one chain's head would overwrite the other's cursor "
+                f"and the seat would silently stop landing"]
+    return []
+
+
 def check_cursor_after_save(name, text):
     """`defaults.set(<cursor>, forKey:` must not precede the save."""
     cursor = re.search(r"defaults\.set\(\s*scanned\s*,\s*forKey:", text)
@@ -147,7 +172,8 @@ def audit_text(name, text):
     t = strip(text)
     return (check_lowercase(name, t)
             + check_price_pairing(name, t)
-            + check_cursor_after_save(name, t))
+            + check_cursor_after_save(name, t)
+            + check_cursor_is_per_chain(name, t))
 
 
 def audit_wiring(bridges, sweeper_text, unwatcher_text):
@@ -223,6 +249,30 @@ COMMENTED = CLEAN_BRIDGE.replace(
     '    // was "0x176211869cA2b568f2A7D4EE941E073a821EE1ff": before the rename\n'
     '    static let evidence = WalletSeatEvidence("acme.accounts")')
 
+TWO_CHAIN_OK = CLEAN_BRIDGE.replace(
+    "    static let evidence =",
+    """    static let chains: [Chain] = [linea, base]
+    static func cursorKey(_ chain: Chain, _ a: String) -> String {
+        "acme.cursor.\\(chain.name).\\(a)"
+    }
+    static let evidence =""")
+
+TWO_CHAIN_SHARED_CURSOR = CLEAN_BRIDGE.replace(
+    "    static let evidence =",
+    """    static let chains: [Chain] = [linea, base]
+    static func cursorKey(_ a: String) -> String {
+        "acme.cursor.\\(a)"
+    }
+    static let evidence =""")
+
+ONE_CHAIN_SHARED_CURSOR = CLEAN_BRIDGE.replace(
+    "    static let evidence =",
+    """    static let chains: [Chain] = [linea]
+    static func cursorKey(_ a: String) -> String {
+        "acme.cursor.\\(a)"
+    }
+    static let evidence =""")
+
 NON_CARD_MIXED = '''
 enum Somewhere {
     static let labels: [String: String] = [
@@ -241,6 +291,9 @@ def self_test():
         ("flags  a cursor with no save at all", "MetaMaskCardBridge.swift", NO_SAVE, 1),
         ("passes a mixed-case address in a COMMENT", "MetaMaskCardBridge.swift", COMMENTED, 0),
         ("flags  a mixed-case key in any file", "Somewhere.swift", NON_CARD_MIXED, 1),
+        ("passes two chains with a chain-keyed cursor", "MetaMaskCardBridge.swift", TWO_CHAIN_OK, 0),
+        ("flags  two chains sharing one cursor key", "MetaMaskCardBridge.swift", TWO_CHAIN_SHARED_CURSOR, 1),
+        ("passes ONE chain with an address-only cursor", "MetaMaskCardBridge.swift", ONE_CHAIN_SHARED_CURSOR, 0),
         ("passes an empty file", "MetaMaskCardBridge.swift", "", 0),
     ]
     ok = True
