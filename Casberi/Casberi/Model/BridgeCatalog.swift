@@ -430,6 +430,8 @@ enum BridgeCatalog {
         // belongs in the offer, not discovered after connecting.
         Offer(name: "Grok",        tagline: "Try it with your own key",            group: "Agent",     connectable: true,
               needsSetup: true, added: day(2026, 7, 31)),
+        Offer(name: "NEAR AI",     tagline: "Answers it can prove it wrote",       group: "Agent",     connectable: true,
+              needsSetup: true, added: day(2026, 9, 20)),
         Offer(name: "GitHub",      tagline: "Your work, and what you follow", group: "Work",      connectable: true,
               needsSetup: true),
         Offer(name: "GitLab",      tagline: "The issues and MRs assigned to you",     group: "Work",      connectable: true,

@@ -26,6 +26,10 @@ struct KeyedAnswer {
     /// fallback chain quietly recovers a retired pin by answering somewhere
     /// else. The badge names it only when it differs — see `provenanceBadge`.
     var model: String?
+    /// Whether the machine that wrote this signed it, and this phone checked
+    /// the signature (2026-09-20, prd §848, NEAR AI only). nil means no such
+    /// claim was made — never a claim that failed.
+    var verification: NearAIVerify.Outcome?
 }
 
 /// The composer — the hero (principle 4). Full width above the tab bar, glass.
@@ -155,6 +159,11 @@ struct Composer: View {
         /// scrolling back to a turn still says who answered rather than
         /// whichever model happens to be pinned now.
         var model: String?
+        /// Whether the hardware that wrote it signed it, and this phone
+        /// checked (2026-09-20, prd §848) — carried onto the settled turn like
+        /// the rest, so scrolling back to an answer still shows whether its
+        /// signature held. nil for every provider that never signs.
+        var verification: NearAIVerify.Outcome? = nil
         /// Which AGENT (by its person-facing name) wrote it (2026-08-31) —
         /// what the leading mark draws. nil for the on-device answer.
         var agent: String? = nil
@@ -215,6 +224,8 @@ struct Composer: View {
     /// §459), when it says. Reset with its siblings, so a fresh ask can never
     /// wear the previous answer's model.
     @State private var keyedModel: String?
+    /// The enclave signature verdict for the answer in flight (prd §848).
+    @State private var keyedVerification: NearAIVerify.Outcome?
     /// How many times the CURRENT keyed answer went back to the corpus with a
     /// tool (2026-08-06). Observed from the loop, never assumed — a model that
     /// answered from the evidence it was handed reports 0 and the badge stays
@@ -2140,7 +2151,8 @@ struct Composer: View {
                                       imagesSeen: turn.imagesSeen,
                                       pagesRead: turn.pagesRead,
                                       toolRounds: turn.toolRounds,
-                                      model: turn.model, waited: nil, live: false)
+                                      model: turn.model, verification: turn.verification,
+                                      waited: nil, live: false)
                             historyPager
                         }
                         Color.clear.frame(height: 1).id("bottom")
@@ -2308,7 +2320,8 @@ struct Composer: View {
                       found: foundCurrent,
                       searchedWeb: keyedSearchedWeb, imagesSeen: keyedImagesSeen,
                       pagesRead: keyedPagesRead, toolRounds: keyedToolRounds,
-                      model: keyedModel, waited: askWaitSeconds, live: true)
+                      model: keyedModel, verification: keyedVerification,
+                      waited: askWaitSeconds, live: true)
         }
     }
 
@@ -2325,7 +2338,8 @@ struct Composer: View {
                            agent: String?, cloud: Bool = false,
                            found: Bool, searchedWeb: Bool,
                            imagesSeen: Int, pagesRead: Int, toolRounds: Int,
-                           model: String?, waited: Int?, live: Bool) -> some View {
+                           model: String?, verification: NearAIVerify.Outcome?,
+                           waited: Int?, live: Bool) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if !question.isEmpty { AgentAskedCaption(question: question) }
             if live, inFlight, els.isEmpty {
@@ -2350,7 +2364,8 @@ struct Composer: View {
                 provenanceBadge(keyed: keyed, agent: agent, searchedWeb: searchedWeb,
                                 imagesSeen: imagesSeen, pagesRead: pagesRead,
                                 toolRounds: toolRounds, model: model,
-                                cloud: cloud, found: found, waited: waited)
+                                cloud: cloud, found: found,
+                                verification: verification, waited: waited)
             }
             if live, !proseStreaming, !inFlight { keepVerbs }
         }
@@ -2848,6 +2863,7 @@ struct Composer: View {
         keyedImagesSeen = 0
         keyedPagesRead = 0
         keyedModel = nil
+        keyedVerification = nil
         keyedToolRounds = 0
         answerFailed = false
         foundCurrent = false
@@ -2974,6 +2990,7 @@ struct Composer: View {
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
                                        imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
                                        toolRounds: keyedToolRounds, model: keyedModel,
+                                       verification: keyedVerification,
                                        agent: (askProvider ?? AgentKey.active)?.agent,
                                        cloud: cloudCurrent,
                                        failed: answerFailed,
@@ -2989,6 +3006,7 @@ struct Composer: View {
             keyedImagesSeen = 0
             keyedPagesRead = 0
             keyedModel = nil
+            keyedVerification = nil
             keyedToolRounds = 0
             answerFailed = false
             foundCurrent = true
@@ -3060,6 +3078,7 @@ struct Composer: View {
                                  toolRounds: Int = 0, model: String? = nil,
                                  cloud: Bool = false,
                                  found: Bool = false,
+                                 verification: NearAIVerify.Outcome? = nil,
                                  waited: Int? = nil) -> some View {
         var parts: [String] = []
         // HOW LONG IT TOOK (prd §577a). The clock is the only place this
@@ -3100,6 +3119,25 @@ struct Composer: View {
             parts.append(String(localized: "read \(pagesRead) saved pages"))
         }
         if searchedWeb { parts.append(String(localized: "searched the web")) }
+        // THE SIGNATURE (2026-09-20, prd §848). NEAR AI's enclave signs the
+        // exact bytes of the answer, and this phone recovered the signer and
+        // compared it to the attested address before this line was drawn.
+        //
+        // Three states, and only two of them say anything. `.verified` earns
+        // the words. `.mismatch` takes them too, and loudly. `.unchecked` —
+        // the signature was not served, or the attestation did not answer —
+        // says NOTHING, because it is not a claim that failed, it is a claim
+        // nobody made; wording it as a doubt would be the same fake status
+        // §83 forbids, pointed the other way. `nil` is every other provider,
+        // which never claimed to sign anything.
+        switch verification {
+        case .verified:
+            parts.append(String(localized: "signature checked on \(DS.device)"))
+        case .mismatch:
+            parts.append(String(localized: "signature did not match"))
+        case .unchecked, .none:
+            break
+        }
         if imagesSeen == 1 {
             parts.append(String(localized: "read 1 screenshot"))
         } else if imagesSeen > 1 {
@@ -3137,7 +3175,11 @@ struct Composer: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .dsText(.label12)
-        .foregroundStyle(DS.textTertiary)
+        // A failed signature is the one thing this line can say that is not a
+        // detail. It keeps the tertiary ramp everywhere else — the badge is
+        // furniture — and takes the warning ink only when a check actually RAN
+        // and disagreed, never when one could not run.
+        .foregroundStyle(verification?.isMismatch == true ? DS.destructive : DS.textTertiary)
         .padding(.horizontal, DS.Space.s4)
     }
 
@@ -3388,6 +3430,7 @@ struct Composer: View {
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
                                        imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
                                        toolRounds: keyedToolRounds, model: keyedModel,
+                                       verification: keyedVerification,
                                        agent: (askProvider ?? AgentKey.active)?.agent,
                                        cloud: cloudCurrent,
                                        failed: answerFailed,
@@ -3402,6 +3445,7 @@ struct Composer: View {
             keyedImagesSeen = 0
             keyedPagesRead = 0
             keyedModel = nil
+            keyedVerification = nil
             keyedToolRounds = 0
             answerFailed = false
             foundCurrent = false       // a keyed retry is an answer, not a find
@@ -3441,6 +3485,7 @@ struct Composer: View {
                 keyedImagesSeen = answer.imagesSeen
                 keyedPagesRead = answer.pagesRead
                 keyedModel = answer.model
+                keyedVerification = answer.verification
                 keyedToolRounds = answer.toolRounds
                 // From here a typed follow-up stays on the agent that just
                 // answered — it has the context the on-device model doesn't.
@@ -3896,6 +3941,7 @@ struct Composer: View {
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
                                        imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
                                        toolRounds: keyedToolRounds, model: keyedModel,
+                                       verification: keyedVerification,
                                        agent: (askProvider ?? AgentKey.active)?.agent,
                                        cloud: cloudCurrent,
                                        failed: answerFailed,
@@ -3931,6 +3977,7 @@ struct Composer: View {
                 keyedImagesSeen = 0
                 keyedPagesRead = 0
                 keyedModel = nil
+            keyedVerification = nil
                 keyedToolRounds = 0
                 answerFailed = false
                 foundCurrent = false       // this is an ANSWER, not a find
@@ -4032,6 +4079,7 @@ struct Composer: View {
                         keyedImagesSeen = keyed.imagesSeen
                         keyedPagesRead = keyed.pagesRead
                         keyedModel = keyed.model
+                        keyedVerification = keyed.verification
                         keyedToolRounds = keyed.toolRounds
                         finalDoc = keyed.doc
                         // Was already true for the pre-existing mid-

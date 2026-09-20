@@ -128,6 +128,14 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-appleintelligence { background: #5e5ce6; }
 .ai-openrouter { background: #0b0f11; }
 .ai-grok      { background: #000; }   /* xAI's own black, matching the mark's opaque plate */
+/* NEAR AI is the Hugging Face case exactly: full-bleed square artwork
+   carrying its own near-white field, so the tile takes that field and the
+   mark fills it. #f7f7f7 is ICON-SAMPLED — the dominant colour of the
+   bundled brand-nearai asset, and the colour of all four of its corners —
+   not a brand palette value. The mark's black N and blue #3e8dd6 AI are
+   the MARK's colours, not the field's, so neither is the background here. */
+.ai-nearai    { background: #f7f7f7; }
+.ai-nearai img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-github    { background: #24292f; font-size: 16px; }
 .ai-linear    { background: #5e6ad2; }
 /* Hugging Face is the PostHog case exactly: full-bleed square artwork

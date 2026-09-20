@@ -109,6 +109,11 @@ KNOWN_NON_REACH=(
   blockscan.com
   venice.ai bankr.bot www.kraken.com portal.cdp.coinbase.com
   www.binance.com exchange.gemini.com console.x.ai
+  # cloud.near.ai — where a NEAR AI key is minted (prd §848). Opened in the
+  # browser, never fetched. The host this seat actually READS is
+  # `cloud-api.near.ai`, a different host, disclosed in NetworkReach on the
+  # shared "Your agent key" endpoint with the other six.
+  cloud.near.ai
   # id.atlassian.com — where a Jira API token is minted. Never fetched: the
   # read is the person's own Jira site, a fully dynamic host disclosed in
   # NetworkReach as prose ("your Jira site"), a different host by construction.

@@ -167,6 +167,7 @@ enum AgentSheet {
         // export or by your own key, and one room for it is the point.
         case "Bankr":       return "Bankr"
         case "Venice":      return "Venice"
+        case "NEAR AI":     return "NEAR AI"
         case "OpenRouter":  return "OpenRouter"
         case "Grok":        return "Grok"
         default:            return nil

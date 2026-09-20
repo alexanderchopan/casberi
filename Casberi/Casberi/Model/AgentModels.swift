@@ -157,6 +157,13 @@ enum AgentModels {
         case .grok:
             request = URLRequest(url: URL(string: "https://api.x.ai/v1/models")!)
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        case .nearai:
+            // Answers keylessly (MEASURED 2026-09-20) — which is exactly why
+            // it is NOT this seat's key check; see `AgentAnswer.check`. The key
+            // is still sent, because a listing tied to the account is the one
+            // we want if NEAR AI ever scopes it.
+            request = URLRequest(url: URL(string: "https://cloud-api.near.ai/v1/models")!)
+            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
         request.timeoutInterval = 20
         NetworkLedger.shared.record(request)
@@ -191,8 +198,13 @@ enum AgentModels {
                 let label = entry["display_name"] as? String
                     ?? entry["name"] as? String
                     ?? id
+                // NEAR AI's listing carries the same `architecture.
+                // input_modalities` OpenRouter's does, and for the same reason:
+                // both are multi-vendor catalogues where the pinned model, not
+                // the provider, decides whether a screenshot can be seen.
+                let carriesFacts = provider == .openrouter || provider == .nearai
                 return AgentModelInfo(id: id, label: label,
-                                      facts: provider == .openrouter ? facts(from: entry, id: id) : nil)
+                                      facts: carriesFacts ? facts(from: entry, id: id) : nil)
             }
         }
         return dedupe(usable(models, for: provider))
@@ -245,13 +257,23 @@ enum AgentModels {
     /// exists to end.
     private static func usable(_ models: [AgentModelInfo],
                                for provider: AgentProvider) -> [AgentModelInfo] {
-        guard provider == .openai || provider == .venice || provider == .openrouter else {
+        guard provider == .openai || provider == .venice || provider == .openrouter
+                || provider == .nearai else {
             return models
         }
+        // `reranker` and `privacy-filter` join the list for NEAR AI, whose
+        // catalogue carries both beside its chat models (MEASURED 2026-09-20:
+        // `Qwen/Qwen3-Reranker-0.6B` and `openai/privacy-filter`, the latter
+        // with a 512-token context and no `supported_features` at all). Every
+        // other family it ships — whisper, embedding, FLUX — was already
+        // covered. Added as substrings on the same denylist rather than a
+        // NEAR-AI-only branch, because an offered model that cannot answer is
+        // the same failure whoever lists it.
         let excluded = ["whisper", "tts", "dall-e", "text-embedding", "embedding",
                         "moderation", "omni-moderation", "davinci", "babbage",
                         "codex", "-audio", "-realtime", "-transcribe", "-tts",
-                        "upscal", "image", "stable-diffusion", "flux"]
+                        "upscal", "image", "stable-diffusion", "flux",
+                        "reranker", "privacy-filter"]
         return models.filter { model in
             let id = model.id.lowercased()
             return !excluded.contains { id.contains($0) }

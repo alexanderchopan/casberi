@@ -89,6 +89,7 @@ enum BridgeRouter {
         case appleIntelligence
         case openRouter
         case grok
+        case nearAI
         case bluesky
         case farcaster
         /// Snapchat sits with the social seats but behaves like the ChatGPT
@@ -278,7 +279,7 @@ enum BridgeRouter {
                  // doc-comment says so) and was missed here when it landed
                  // 2026-07-31 — so a verified key left the raised sheet sitting
                  // there, alone among the agent seats (audit, 2026-07-31).
-                 .venice, .bankr, .appleIntelligence, .openRouter, .grok,
+                 .venice, .bankr, .appleIntelligence, .openRouter, .grok, .nearAI,
                  .chatgpt, .claude, .claudeCode, .gemini,
                  .kindle, .dayOne, .appleJournal, .appleNotes, .bookmarks:
                 true
@@ -335,6 +336,7 @@ enum BridgeRouter {
             case .appleIntelligence: "appleintelligence"
             case .openRouter:     "openrouter"
             case .grok:           "grok"
+            case .nearAI:         "nearai"
             case .bluesky:        "bsky"
             case .farcaster:      "fc"
             // Missing when Instagram landed (2026-07-31) — this switch has no
@@ -456,6 +458,7 @@ enum BridgeRouter {
         Row(offer: "Apple Intelligence", id: "appleintelligence", destination: .appleIntelligence),
         Row(offer: "OpenRouter", id: "openrouter", destination: .openRouter),
         Row(offer: "Grok",       id: "grok",   destination: .grok),
+        Row(offer: "NEAR AI",    id: "nearai", destination: .nearAI),
         Row(offer: "Bluesky",   id: "bsky",   destination: .bluesky),
         Row(offer: "Farcaster", id: "fc",     destination: .farcaster),
         Row(offer: "Snapchat",  id: "snapchat", destination: .snapchat),
@@ -674,6 +677,7 @@ struct BridgeDestinationView: View {
         case .appleIntelligence: AppleIntelligenceScreen()
         case .openRouter:     OpenRouterSetupScreen()
         case .grok:           GrokSetupScreen()
+        case .nearAI:         NearAISetupScreen()
         case .exchange(let venue): ExchangeSetupScreen(venue: venue)
         case .bluesky:        HandleSetupScreen(bridge: .bluesky)
         case .farcaster:      HandleSetupScreen(bridge: .farcaster)

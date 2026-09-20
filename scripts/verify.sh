@@ -2327,6 +2327,9 @@ harness "Agent-panel pure-logic self-test" "agent-panel self-test" "scripts/agen
 # to every later month: the ceiling fires on day one, forever, while the
 # settings row states a confident wrong figure.
 harness "Keyed-agent reach and budget self-test" "agent keyed self-test" "scripts/agent-keyed-selftest.sh" "the keyed-agent self-test failed — run scripts/agent-keyed-selftest.sh"
+# The one seat whose answer carries a proof (prd §848). Pure logic, no key,
+# no network — the curve operation itself is exercised in `CasberiTests`.
+harness "NEAR AI verification self-test" "nearai verify self-test" "scripts/nearai-verify-selftest.sh" "the NEAR AI verification self-test failed — run scripts/nearai-verify-selftest.sh"
 
 # Pure-logic self-test for the receipts screen's reach map (prd §300). The
 # card's whole job is to be checkable, so a silent wrong answer here is worse

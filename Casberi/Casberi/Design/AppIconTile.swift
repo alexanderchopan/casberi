@@ -200,6 +200,12 @@ extension DS {
         // with one vivid accent. The ground is the tile (sampled), and the lime
         // carries the signal from `glyphTint`.
         case "openrouter":          return Color.fixed("#000010")
+        // NEAR AI's mark is the black N beside a blue "AI" on a near-white
+        // field — measured off the bundled art (2026-09-20): #f7f7f7 dominant,
+        // then black, then #3e8dd6. The ChatGPT / 0xBow / Notion case: the
+        // white field IS the identity, so the tile takes it rather than a
+        // gray fallback, and the blue carries any signal.
+        case "nearai", "near ai":   return Color.fixed("#f7f7f7")
         case "linear":              return Color.fixed("#5e6ad2")   // their documented indigo; the bundled mark samples #5060d0
         // Notion's mark is a black "N" block on a near-WHITE field — measured
         // (2026-08-24): dominant sample near-white, the ChatGPT/0xBow case

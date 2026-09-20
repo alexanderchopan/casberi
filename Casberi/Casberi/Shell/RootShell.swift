@@ -4125,7 +4125,8 @@ struct RootShell: View {
                                     imagesSeen: result.imagesSeen,
                                     pagesRead: result.pagesRead,
                                     toolRounds: result.toolRounds,
-                                    model: result.model))
+                                    model: result.model,
+                                    verification: result.verification))
     }
 
     /// The corpus flattened to a plain `Sendable` snapshot for the tool-calling

@@ -124,6 +124,11 @@ enum BridgeGlyph {
         // shape again, so the signal comes from the glyph. Icon-sampled from
         // the bundled mark (2026-07-31).
         case "openrouter": return Color.fixed("#c0f000")
+        // NEAR AI is the inverse of that shape — a black mark on a near-WHITE
+        // ground — so a surface painting the brand hue as a signal gets
+        // nothing from #f7f7f7. The blue of its own "AI" carries it instead,
+        // icon-sampled from the bundled mark (2026-09-20).
+        case "nearai", "near ai": return Color.fixed("#3e8dd6")
         default:       return nil
         }
     }
@@ -362,6 +367,9 @@ enum BridgeGlyph {
         // really are one shape: "import your chats"; a BYOK key is not).
         case "grok":         return "bolt.circle"
         case "openrouter":   return "arrow.triangle.branch"
+        // Defensive only — `brand-nearai` is bundled, so `BridgeIcon` never
+        // reaches this. A seal, for the one seat whose answers carry one.
+        case "nearai", "near ai": return "checkmark.seal"
         // Base's own real mark is bundled now (`brand-base-vibenet`), so
         // `BridgeIcon` never reaches this fallback in practice — kept
         // defensive, in the neutral-letterform shape (the App Store Connect

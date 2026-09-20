@@ -47,6 +47,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     case bankr
     case openrouter
     case grok
+    case nearai
 
     var id: String { rawValue }
 
@@ -60,6 +61,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .bankr:      "Bankr"
         case .openrouter: "OpenRouter"
         case .grok:       "Grok"
+        case .nearai:     "NEAR AI"
         }
     }
 
@@ -73,6 +75,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .bankr:      "Bankr"
         case .openrouter: "OpenRouter"
         case .grok:       "xAI"
+        case .nearai:     "NEAR AI"
         }
     }
 
@@ -92,6 +95,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // a guessed sub-path — SPA routing under it isn't independently
         // confirmable, and a wrong deep link is worse than the root.
         case .grok:       "console.x.ai"
+        case .nearai:     "cloud.near.ai"
         }
     }
 
@@ -104,6 +108,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .bankr:      "Paste your Bankr key"
         case .openrouter: "Paste your OpenRouter key"
         case .grok:       "xai-…"
+        case .nearai:     "Paste your NEAR AI key"
         }
     }
 
@@ -158,6 +163,14 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // same reason), and 4.5's ".5" suffix suggests a faster cadence
         // than most. `-byokProbe` against a real key is the check.
         case .grok:       "grok-4.5"
+        // MEASURED 2026-09-20 off `cloud-api.near.ai/v1/models`, which answers
+        // keylessly: `owned_by: "nearai"` (so it runs in NEAR AI's own enclave
+        // and can be verified — the whole reason for this seat), `is_ready`
+        // true, tools and structured outputs, 262k context, and it takes
+        // images. Not the cheapest enclave model on the list; it is the
+        // capable one that is also verifiable, which is the trade this seat
+        // exists to make.
+        case .nearai:     "Qwen/Qwen3.8-27B"
         }
     }
 
@@ -187,7 +200,12 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // costs a screenshot going text-only, overstating one silently
         // drops a photo the person thought was seen. Re-measure before
         // flipping this.
-        case .venice, .bankr, .openrouter, .grok: false
+        // NEAR AI is a multi-vendor catalogue like OpenRouter, so the FLOOR is
+        // false and `AgentModelFacts` raises it for a model whose own listing
+        // declares `input_modalities` with images (the default pin,
+        // `Qwen/Qwen3.8-27B`, does). Pinning it true here would silently drop
+        // a photo the moment somebody picked a text-only enclave model.
+        case .venice, .bankr, .openrouter, .grok, .nearai: false
         }
     }
 
@@ -216,7 +234,10 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // about this?" verb — never silently appended to an ordinary keyed
         // answer the way Claude/Gemini/Venice's tool declarations are, since
         // it's billed per source and shouldn't fire on every routine answer.
-        case .openai, .bankr, .grok: false
+        // NEAR AI publishes no web-search extension on the chat body, and a
+        // search would leave the enclave anyway — which is the one thing this
+        // seat promises it does not do.
+        case .openai, .bankr, .grok, .nearai: false
         }
     }
 
@@ -243,7 +264,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     var fetchesLinks: Bool {
         switch self {
         case .anthropic: true
-        case .openai, .google, .venice, .bankr, .openrouter, .grok: false
+        case .openai, .google, .venice, .bankr, .openrouter, .grok, .nearai: false
         }
     }
 
@@ -275,6 +296,12 @@ enum AgentProvider: String, CaseIterable, Identifiable {
             "Routes to whichever model fits, or one you pick — and only ever to a provider that agrees not to keep your question. Remembers this chat's answers so far."
         case .grok:
             "Remembers this chat's answers so far — screenshots and web search stay off for now."
+        case .nearai:
+            // Both halves are load-bearing. The first is the seat's reason to
+            // exist; the second is the price paid for it, said plainly rather
+            // than discovered (prd §83). A streamed answer is signed by the
+            // gateway and names no model — see `NearAICloud.answer`.
+            "Runs on sealed hardware that signs its answer, and your phone checks the signature itself. The answer arrives all at once instead of a word at a time, because that is what can be signed."
         }
     }
 }
@@ -439,6 +466,13 @@ struct AgentAnswerResult: Sendable {
     /// The model the provider says actually answered, when it says. The only
     /// place a silently rotated pin becomes visible.
     var model: String?
+    /// Whether the machine that wrote this answer signed it, and this phone
+    /// checked the signature (2026-09-20, `NearAIVerify`). Nil for every
+    /// provider but NEAR AI — and nil means no such claim was made, never a
+    /// claim that failed. The badge reads `.isVerified` to praise and
+    /// `.isMismatch` to warn, never `!isVerified`, because a signature that
+    /// could not be fetched says nothing about the answer (prd §83).
+    var verification: NearAIVerify.Outcome?
 }
 
 /// Why a keyed answer didn't arrive (2026-07-21). The old path collapsed all
@@ -462,6 +496,12 @@ enum AgentAnswerFailure: Error, Sendable {
     case providerError(Int)
     /// A clean 200 that carried no words.
     case empty
+    /// The provider took the key and will not spend against it — HTTP 402
+    /// (MEASURED on NEAR AI, 2026-09-20: `no_limit_configured`). Split from
+    /// `providerError` because that case's own sentence ends "not your key.
+    /// Try again." — and retrying a 402 will never work. Nothing here is
+    /// broken and nothing will change until the account is funded.
+    case outOfCredit
     /// OpenRouter could not route the request at all (2026-08-23, prd §459) —
     /// a 404 raised while private routing is on.
     ///
@@ -507,6 +547,10 @@ enum AgentAnswerFailure: Error, Sendable {
             String(localized: "Your agent had trouble answering (error \(status)) — try again.")
         case .empty:
             String(localized: "Your agent came back with nothing. Try asking it another way.")
+        case .outOfCredit:
+            // Names the ONE thing that will fix it, and does not say "try
+            // again" — a 402 does not change on a retry.
+            String(localized: "Your agent won't spend against that key — the account has no credits or no spending limit set. Add credits with the provider, then ask again.")
         case .privacyUnroutable:
             String(localized: "OpenRouter couldn't route that. Either the model has been retired, or nobody serving it will agree not to keep your question — pick another model, or turn off private routing in Settings.")
         case .stillRunning(let jobID):
@@ -540,12 +584,21 @@ enum AgentKeyCheck: Equatable {
     case rejected
     /// 429 — the key is real and the provider is throttling it right now.
     case rateLimited
-    /// The provider took the key and then said it can't answer. Only Grok
-    /// reports this (MEASURED 2026-07-31, see `check`): xAI's key endpoint
-    /// answers 200 with `team_blocked`/`api_key_blocked`/`api_key_disabled`
-    /// for a real key whose team has no credits, while every actual request
-    /// from it 403s. No other provider here exposes a comparable signal, so
-    /// no other provider ever returns this — the honesty rule cuts both ways.
+    /// The provider took the key and then said it can't answer. TWO providers
+    /// report it, both MEASURED, and both for the same underlying reason — a
+    /// real key on an account that cannot pay:
+    ///
+    /// - **Grok** (2026-07-31): xAI's key endpoint answers 200 with
+    ///   `team_blocked`/`api_key_blocked`/`api_key_disabled` for a real key
+    ///   whose team has no credits, while every actual request from it 403s.
+    /// - **NEAR AI** (2026-09-20): the attestation report — this seat's own key
+    ///   check — answers **200** for a real key with no spending limit, and a
+    ///   401 only for a bogus one. The completion then answers **402**
+    ///   `no_limit_configured`. Found by pasting a genuine, brand-new key: the
+    ///   seat would have said CONNECTED and failed the first question.
+    ///
+    /// No other provider here exposes a comparable signal, so no other provider
+    /// ever returns this — the honesty rule cuts both ways.
     case blocked
     /// The provider answered, but with nothing this could read — a 5xx, or a
     /// 200 whose body didn't parse.
@@ -627,6 +680,25 @@ enum AgentAnswer {
             // shape once a real key exists.
             request = URLRequest(url: URL(string: "https://api.x.ai/v1/api-key")!)
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        case .nearai:
+            // NOT the models list, which is every other OpenAI-shaped seat's
+            // check here. MEASURED 2026-09-20: `cloud-api.near.ai/v1/models`
+            // answers **200 with no Authorization header at all** — so a
+            // models read accepts any string as a key, including an empty one,
+            // and would report CONNECTED for a credential that cannot answer a
+            // question. That is the fake status §83 forbids, and it is the
+            // same trap Grok's 200-with-no-credits was.
+            //
+            // The attestation report is the right check for two reasons: it
+            // answers 401 "Missing authorization header" with no key (measured
+            // the same day), and it is the exact read this seat's whole promise
+            // rests on. A key that cannot fetch an attestation cannot verify an
+            // answer, so a seat that connected on one would be claiming a
+            // capability it does not have. Free — no model runs, no tokens
+            // billed. No `model` parameter, which keeps it to the gateway's own
+            // attestation rather than spinning up a model's enclave.
+            request = URLRequest(url: URL(string: "https://cloud-api.near.ai/v1/attestation/report?signing_algo=ecdsa")!)
+            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
         request.timeoutInterval = 15
         NetworkLedger.shared.record(request)
@@ -667,7 +739,58 @@ enum AgentAnswer {
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             OpenRouterCredits.record(json: json)
         }
+        // NEAR AI needs a SECOND read, and it is the Grok lesson arriving by a
+        // different road (MEASURED 2026-09-20, against a genuine brand-new
+        // key). The attestation report above answers **200** for a real key on
+        // an account with no spending limit — it only 401s for a bogus one —
+        // so the check as written would have reported CONNECTED and then failed
+        // the person's very first question with a 402. That is the fake status
+        // §83 forbids, and the comment on `.blocked` says why it is worse than
+        // a plain rejection: the failure surfaces later, on an answer, looking
+        // like a bug in the app.
+        //
+        // There is no free way to ask. Every candidate credits endpoint 404s
+        // (`/v1/credits`, `/v1/usage`, `/v1/billing`, `/v1/balance`,
+        // `/v1/limits`, …, all measured) and `/v1/organizations` wants an OAuth
+        // access token, not an API key. So the check asks the only endpoint
+        // that knows: a ONE-token completion. On a funded account that is a
+        // fraction of a cent; on an unfunded one it is free, because the 402 is
+        // raised before any model runs. A connect screen that tells the truth
+        // is worth a token.
+        if provider == .nearai, verdict == .accepted {
+            return await nearAICanSpend(key: key)
+        }
         return verdict
+    }
+
+    /// Can this NEAR AI key actually buy an answer? (2026-09-20, prd §848.)
+    ///
+    /// One token, `max_tokens: 1`, on the cheapest enclave model — the point is
+    /// the status code, not the words. A 402 is the measured
+    /// `no_limit_configured` shape; anything else that is not a 200 is reported
+    /// as itself rather than folded into "no credits", because a 500 here is
+    /// NEAR AI's problem and telling somebody to go buy credits over it would
+    /// send them somewhere that cannot help.
+    private static func nearAICanSpend(key: String) async -> AgentKeyCheck {
+        var request = URLRequest(url: URL(string: "https://cloud-api.near.ai/v1/chat/completions")!)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: [
+            "model": AgentProvider.nearai.defaultModel,
+            "max_tokens": 1,
+            "stream": false,
+            "messages": [["role": "user", "content": "hi"]],
+        ])
+        request.timeoutInterval = 30
+        NetworkLedger.shared.record(request)
+        guard let (_, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse
+        else { return .unreachable }
+        // 402 is the one this exists for. A key real enough to fetch an
+        // attestation and too poor to answer is BLOCKED, not connected.
+        if http.statusCode == 402 { return .blocked }
+        return classify(status: http.statusCode)
     }
 
     /// The status codes every provider here speaks in common. 401/403 is the
@@ -821,6 +944,8 @@ enum AgentAnswer {
         var searchedWeb = false
         var pagesRead = 0
         var answeredModel: String?
+        var nearAIEvidence: (chatID: String, request: Data, response: Data)?
+        var nearAIModel: String?
         var rounds = 0
         // Prose from turns the API PAUSED. A resumed turn continues the same
         // answer, so what it already wrote has to be carried rather than
@@ -855,7 +980,14 @@ enum AgentAnswer {
             request.timeoutInterval = 90
 
             let streamed: StreamOutcome
-            switch await streamText(request, onPartial: liveOnPartial, parse: wire.parse) {
+            // NEAR AI reads whole, everything else streams — the one fork on
+            // this path, and it buys the model enclave's signature over the
+            // gateway's. See `wholeText`.
+            let round = provider == .nearai
+                ? await wholeText(request, key: key, model: wire.model,
+                                  onPartial: liveOnPartial)
+                : await streamText(request, onPartial: liveOnPartial, parse: wire.parse)
+            switch round {
             case .success(let outcome):
                 streamed = outcome
             case .failure(let failure):
@@ -877,6 +1009,14 @@ enum AgentAnswer {
             if streamed.searchedWeb { searchedWeb = true }
             pagesRead += streamed.pagesRead
             if let model = streamed.model { answeredModel = model }
+            // The LAST round's evidence, not the first: a tool loop sends
+            // several requests and the person reads the final answer. A round
+            // that carried none leaves the previous one alone rather than
+            // erasing it, and the check itself runs once, after the loop.
+            if let evidence = streamed.nearAIEvidence {
+                nearAIEvidence = evidence
+                nearAIModel = wire.model
+            }
             // What THIS round really cost, asked of OpenRouter after the fact
             // and off the answer's critical path entirely. Every round is
             // billed separately, so every round is asked about separately —
@@ -914,13 +1054,35 @@ enum AgentAnswer {
         guard !text.isEmpty else { return .failure(.empty) }
         let grounding = resolvePicks(from: finalText, candidateCount: candidates.count,
                                      surfaced: sink.ids)
+        // THE EVIDENCE, ONCE (prd §848). Awaited rather than fired and
+        // forgotten: a badge that lands after the answer has been read is a
+        // badge nobody saw. `nil` stays `nil` for every other provider, which
+        // never claimed to sign anything.
+        var verified: NearAIVerify.Outcome?
+        if provider == .nearai {
+            if let evidence = nearAIEvidence {
+                verified = await verifyNearAI(chatID: evidence.chatID,
+                                              // `wire.model` from the round that
+                                              // produced the evidence — never
+                                              // re-derived, so the signature is
+                                              // asked about the model that was
+                                              // actually sent.
+                                              model: nearAIModel ?? provider.model,
+                                              answeredModel: answeredModel, key: key,
+                                              requestBytes: evidence.request,
+                                              responseBytes: evidence.response)
+            } else {
+                verified = .unchecked(.noSignature)
+            }
+        }
         return .success(AgentAnswerResult(text: text, picks: grounding.picks,
                                           searchedWeb: searchedWeb,
                                           imagesSeen: images.count,
                                           pagesRead: pagesRead,
                                           toolHitIDs: grounding.toolHitIDs,
                                           toolRounds: rounds,
-                                          model: answeredModel))
+                                          model: answeredModel,
+                                          verification: verified))
     }
 
     /// A plain one-shot completion: a system prompt, a question, a string back
@@ -1072,7 +1234,7 @@ enum AgentAnswer {
                                     steps: [AgentStep], declareTools: Bool,
                                     offerFetch: Bool = false,
                                     task: AgentTask = .ask)
-    -> (request: URLRequest, parse: ([String: Any]) -> StreamDelta)? {
+    -> (request: URLRequest, parse: ([String: Any]) -> StreamDelta, model: String)? {
         var request: URLRequest
         let parse: ([String: Any]) -> StreamDelta
         switch provider {
@@ -1109,7 +1271,7 @@ enum AgentAnswer {
             if !tools.isEmpty { body["tools"] = tools }
             request.httpBody = try? JSONSerialization.data(withJSONObject: body)
             parse = anthropicDelta
-        case .openai, .venice, .openrouter, .grok:
+        case .openai, .venice, .openrouter, .grok, .nearai:
             // One OpenAI-compatible shape covers all four — Venice's,
             // OpenRouter's and xAI's APIs all speak it natively (MEASURED
             // 2026-07-31 for the endpoint's mere existence — `/v1/chat/
@@ -1125,6 +1287,7 @@ enum AgentAnswer {
             case .venice:     base = "https://api.venice.ai/api/v1"
             case .openrouter: base = "https://openrouter.ai/api/v1"
             case .grok:       base = "https://api.x.ai/v1"
+            case .nearai:     base = "https://cloud-api.near.ai/v1"
             default:          return nil
             }
             request = URLRequest(url: URL(string: "\(base)/chat/completions")!)
@@ -1211,6 +1374,16 @@ enum AgentAnswer {
             if provider == .venice {
                 body["venice_parameters"] = ["enable_web_search": "on"]
             }
+            // NEAR AI answers WHOLE, not streamed — the one seat here that
+            // does. A streamed body is rewritten by the gateway on its way
+            // out, so the gateway enclave signs it and its signed line names
+            // no model; a whole body is signed by the model enclave itself.
+            // The stronger signature is this seat's entire reason to exist, so
+            // it buys it with the streaming. `NearAICloud.answer` carries the
+            // full reasoning, and `capabilityLine` tells the person.
+            if provider == .nearai {
+                body["stream"] = false
+            }
             request.httpBody = try? JSONSerialization.data(withJSONObject: body)
             parse = openAIDelta
         case .google:
@@ -1253,7 +1426,11 @@ enum AgentAnswer {
         case .bankr:
             return nil // unreachable — bankr returns from `synthesize` above
         }
-        return (request, parse)
+        // The model is returned rather than re-derived by the caller: NEAR AI's
+        // verification asks the signature endpoint about a specific model, and
+        // a caller that computed its own `provider.model(for:)` would ask about
+        // the wrong one the first time anybody passed a non-default `task`.
+        return (request, parse, provider.model(for: task))
     }
 
     /// How many times one answer may be resumed after a `pause_turn`. A
@@ -1499,6 +1676,17 @@ enum AgentAnswer {
         /// by exactly one caller. Anthropic's message id lands here too and is
         /// never used.
         var generationID: String?
+        /// What it would take to check this round's signature — the chat id
+        /// plus the exact bytes, kept but NOT acted on (2026-09-20, prd §848).
+        ///
+        /// The verification deliberately does not happen here. A tool loop
+        /// sends several requests and only the last one is the answer somebody
+        /// reads, so checking inside the round would pay two network reads per
+        /// round — one of them a ~400KB attestation, the other retrying a 404
+        /// up to five times at 700ms, which is the DOCUMENTED ordinary case —
+        /// and then throw all but the last verdict away. The loop carries this
+        /// forward instead and checks once, after it settles.
+        var nearAIEvidence: (chatID: String, request: Data, response: Data)?
         /// The API paused this turn mid-server-tool and it must be resent.
         var paused = false
         /// Slot number → the call being assembled, in arrival order.
@@ -1613,12 +1801,119 @@ enum AgentAnswer {
         }
     }
 
+    /// **One whole answer, kept byte for byte — NEAR AI's path only.**
+    ///
+    /// Everything else here streams. This reads one body instead, because the
+    /// bytes have to be hashed exactly as they arrived to check the enclave's
+    /// signature over them, and `streamText` consumes `bytes.lines`, which
+    /// drops the separators it would take to rebuild them. `NearAICloud.answer`
+    /// carries the full reasoning, including why the whole-body signature is
+    /// the stronger one and not merely the easier one.
+    ///
+    /// Returns the same `StreamOutcome` every other provider produces, so the
+    /// round loop above — spend, tools, pauses, pick lines — is untouched. The
+    /// one addition is `verification`, and it is filled on the answer's own
+    /// path rather than after it, because a signature is fetched by chat id and
+    /// nothing else in the pipeline carries one.
+    private static func wholeText(_ request: URLRequest, key: String, model: String,
+                                  onPartial: ((String) -> Void)?)
+    async -> Result<StreamOutcome, AgentAnswerFailure> {
+        NetworkLedger.shared.record(request)
+        guard let body = request.httpBody else { return .failure(.unreachable) }
+        guard let (data, response) = try? await URLSession.shared.data(for: request) else {
+            return .failure(.unreachable)
+        }
+        guard let http = response as? HTTPURLResponse else { return .failure(.unreachable) }
+        // The same classification streamText makes, for the same reasons.
+        switch http.statusCode {
+        case 200: break
+        case 401, 403: return .failure(.rejectedKey)
+        case 402: return .failure(.outOfCredit)
+        case 429: return .failure(.rateLimited)
+        default: return .failure(.providerError(http.statusCode))
+        }
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return .failure(.providerError(http.statusCode))
+        }
+
+        var outcome = StreamOutcome()
+        outcome.generationID = json["id"] as? String
+        outcome.model = json["model"] as? String
+
+        if let usage = json["usage"] as? [String: Any] {
+            outcome.inputTokens = usage["prompt_tokens"] as? Int
+            outcome.outputTokens = usage["completion_tokens"] as? Int
+            outcome.cacheReadTokens = (usage["prompt_tokens_details"] as? [String: Any])?["cached_tokens"] as? Int
+        }
+
+        let message = (json["choices"] as? [[String: Any]])?.first?["message"] as? [String: Any]
+        if let refusal = message?["refusal"] as? String, !refusal.isEmpty {
+            outcome.refused = true
+        }
+        if let text = message?["content"] as? String {
+            outcome.text = text
+            // There was never a partial, but the caller's live sink still
+            // expects to be told what the answer says — otherwise the composer
+            // sits empty until the round loop returns.
+            onPartial?(text)
+        }
+        // A whole body carries each tool call complete, where a stream carries
+        // it in pieces. They are fed through the SAME fragment absorber rather
+        // than a second assembler, so one accumulator stays the only thing
+        // that knows how a call is put together.
+        if let calls = message?["tool_calls"] as? [[String: Any]], !calls.isEmpty {
+            for (position, call) in calls.enumerated() {
+                let function = call["function"] as? [String: Any]
+                outcome.absorb(ToolFragment(index: call["index"] as? Int ?? position,
+                                            id: call["id"] as? String,
+                                            name: function?["name"] as? String,
+                                            arguments: function?["arguments"] as? String))
+            }
+        }
+
+        // The evidence is CARRIED, not checked — see `nearAIEvidence`. A round
+        // that produced no chat id carries nothing, and the loop reads that as
+        // "not checked", never as a failure (prd §83).
+        if let chatID = outcome.generationID, !chatID.isEmpty {
+            outcome.nearAIEvidence = (chatID: chatID, request: body, response: data)
+        }
+        return .success(outcome)
+    }
+
+    /// Fetch the signature and the attestation, then check. Split out so the
+    /// reader above stays about reading.
+    private static func verifyNearAI(chatID: String, model: String,
+                                     answeredModel: String?, key: String,
+                                     requestBytes: Data, responseBytes: Data)
+    async -> NearAIVerify.Outcome {
+        let signature: NearAICloud.Signature
+        do { signature = try await NearAICloud.signature(chatID: chatID, model: model, key: key) }
+        catch { return .unchecked(.noSignature) }
+
+        let attestation: NearAICloud.Attestation
+        do { attestation = try await NearAICloud.attestation(model: model, key: key) }
+        catch { return .unchecked(.noAttestation) }
+
+        return NearAIVerify.check(.init(
+            text: signature.text,
+            signature: signature.signature,
+            declaredKind: signature.kind,
+            modelSigners: attestation.modelSigners,
+            gatewaySigners: attestation.gatewaySigners,
+            requestedModelID: model,
+            answeredModelID: answeredModel,
+            requestHash: NearAIVerify.hashHex(requestBytes),
+            responseHash: NearAIVerify.hashHex(responseBytes)))
+    }
+
     /// Reads one provider's SSE response line by line, accumulating text via
     /// `parse`'s per-line JSON and calling `onPartial` with the running
     /// total after each chunk. Returns the final accumulated text, or nil on
     /// a network failure, a non-200 status, or a `.refused` delta. One
     /// implementation for all three streaming providers (Anthropic,
     /// OpenAI-shaped, Gemini) — only `parse` differs.
+    ///
+    /// (`wholeText`, above, is the one path that does NOT come through here.)
     private static func streamText(_ request: URLRequest,
                                    onPartial: ((String) -> Void)?,
                                    parse: @escaping ([String: Any]) -> StreamDelta)

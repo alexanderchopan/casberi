@@ -833,7 +833,7 @@ enum NetworkReach {
                  reach: .onTapWithKey,
                  purpose: "Only when you tap \"Try with your key\", your question and the matched things go straight from \(DS.device) to the provider you chose. Never otherwise, never through us.",
                  hosts: ["api.anthropic.com", "api.openai.com", "generativelanguage.googleapis.com",
-                         "api.venice.ai", "openrouter.ai", "api.x.ai"]),
+                         "api.venice.ai", "openrouter.ai", "api.x.ai", "cloud-api.near.ai"]),
 
         // Bankr stays split out of the line above (2026-08-29, prd §529)
         // even now that its acting path is gone (2026-09-03), because the
