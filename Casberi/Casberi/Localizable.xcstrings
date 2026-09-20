@@ -10832,6 +10832,40 @@
         }
       }
     },
+    "%@ took the key, but the account has no payment method — add one at %@, then connect." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ took the key, but the account has no payment method — add one at %2$@, then connect."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ aceptó la clave, pero la cuenta no tiene método de pago — añade uno en %@ y vuelve a conectar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@はキーを受け取りましたが、アカウントに支払い方法が登録されていません — %@で追加してから接続してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@가 키를 받았지만 계정에 결제 수단이 없습니다 — %@에서 추가한 다음 연결하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 接受了此密钥，但账户没有付款方式 — 请在 %@ 添加后再连接。"
+          }
+        }
+      }
+    },
     "%@ transactions" : {
       "localizations" : {
         "es" : {
@@ -121405,6 +121439,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "通过 Gnosis Pay 花费了 %@"
+          }
+        }
+      }
+    },
+    "Spent %@ with MetaMask Card" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gastaste %@ con MetaMask Card"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "MetaMask Cardで%@を使用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "MetaMask Card로 %@ 지출"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过 MetaMask Card 花费了 %@"
           }
         }
       }
