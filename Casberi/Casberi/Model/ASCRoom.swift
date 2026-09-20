@@ -145,6 +145,7 @@ struct ASCRoom: Equatable {
              .processingForAppStore:      return String(localized: "Processing")
         case .readyForDistribution,
              .readyForSale:               return String(localized: "Live")
+        case .preorderReadyForSale:       return String(localized: "Pre-order")
         case .accepted:                   return String(localized: "Approved")
         case .rejected:                   return String(localized: "Rejected")
         case .metadataRejected:           return String(localized: "Metadata rejected")

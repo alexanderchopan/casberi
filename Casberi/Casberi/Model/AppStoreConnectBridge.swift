@@ -360,6 +360,13 @@ enum ASCVersionState: String, CaseIterable {
     case processingForAppStore       = "PROCESSING_FOR_APP_STORE"
     case readyForDistribution        = "READY_FOR_DISTRIBUTION"
     case readyForSale                = "READY_FOR_SALE"
+    // The 20th value of Apple's `AppStoreVersionState`, missed until the enum
+    // was diffed against the spec (2026-09-20, prd §849). Without it `parse`
+    // returned nil and `versionThing`'s guard dropped the row — a release going
+    // live for pre-order customers, silently absent. Only reachable through the
+    // deprecated `appStoreState` fallback, since `AppVersionState` has no
+    // equivalent, which is why it never showed up in practice.
+    case preorderReadyForSale        = "PREORDER_READY_FOR_SALE"
     case accepted                    = "ACCEPTED"
     case rejected                    = "REJECTED"
     case metadataRejected            = "METADATA_REJECTED"
@@ -401,6 +408,10 @@ enum ASCVersionState: String, CaseIterable {
         case .pendingAppleRelease:        String(localized: "Approved — Apple is releasing it")
         case .readyForSale, .readyForDistribution:
                                           String(localized: "Live on the App Store")
+        // Its OWN clause, not folded in with the two above: a pre-order is
+        // buyable and not yet installable, and saying "Live on the App Store"
+        // about it would overclaim (§83).
+        case .preorderReadyForSale:       String(localized: "Live for pre-order")
         // The four verdicts you need to see, and the reason the clause LEADS.
         case .rejected:                   String(localized: "Rejected")
         case .metadataRejected:           String(localized: "Metadata rejected")
@@ -755,8 +766,30 @@ enum ASCFetch {
                    token: token)
     }
 
+    /// The TOP-LEVEL builds collection filtered to one app — **not**
+    /// `/apps/{id}/builds` (fixed 2026-09-20, prd §849).
+    ///
+    /// The relationship route accepts exactly two parameters, `fields[builds]`
+    /// and `limit`; Apple's own OpenAPI spec (4.4.1) lists no `sort` on it, and
+    /// passing one is **rejected outright** — HTTP 400
+    /// `PARAMETER_ERROR.ILLEGAL`, "The parameter 'sort' can not be used with
+    /// this request". `rows` turns that into nil, and every caller reads
+    /// `?? []`, so **this arm landed nothing from the day it shipped**: no app
+    /// icon on a version row, no "Ready to test", no "Failed processing", and
+    /// no TestFlight expiry row — which is the deadline `NotifySweep` exists to
+    /// raise. Three sibling reads answered 200, so the seat looked connected
+    /// and the room drew a healthy account (§83's exact failure).
+    ///
+    /// Deleting `sort=` would NOT have fixed it. The relationship route
+    /// documents no ordering and does not supply one: a measured `limit=10`
+    /// came back 374, 372, 383, 377, 370, 410, 396, 392, 381, 429 — newest
+    /// LAST, and on an account with 600+ builds the real newest was not in the
+    /// window at all. `sort` on the top-level collection is documented
+    /// (`uploadedDate`, `-uploadedDate`, …) and answers 200.
     static func builds(appID: String, token: String) async -> [[String: Any]]? {
-        await rows(at: "\(base)/apps/\(appID)/builds?limit=10&sort=-uploadedDate",
+        // Brackets are percent-encoded: `URL(string:)` is not guaranteed to
+        // accept them raw, and a nil URL here would read as another empty arm.
+        await rows(at: "\(base)/builds?filter%5Bapp%5D=\(appID)&sort=-uploadedDate&limit=10",
                    token: token)
     }
 
@@ -882,14 +915,33 @@ enum ASCIngest {
                 landed.append(thing)
             }
 
-            // ONLY THE NEWEST BUILD MAY CARRY AN EXPIRY ROW (2026-08-06). The
-            // read is `sort=-uploadedDate`, so index 0 is it. Before this,
-            // every build inside the window landed one, and a superseded
-            // build's death sat in the feed beside the live one's — noise
-            // dressed as a deadline, since the answer to both is the same
+            // ONLY THE NEWEST BUILD MAY CARRY AN EXPIRY ROW (2026-08-06).
+            // Before this, every build inside the window landed one, and a
+            // superseded build's death sat in the feed beside the live one's —
+            // noise dressed as a deadline, since the answer to both is the same
             // single upload. The older ones are not silently dropped: the room
             // head's runway shows the whole shelf.
-            let builds = buildRows ?? []
+            //
+            // **Which one is newest is decided HERE, not by the server**
+            // (2026-09-20, prd §849). This used to read "the read is
+            // `sort=-uploadedDate`, so index 0 is it" — and that sort was being
+            // rejected with a 400, so the array was empty and the sentence was
+            // never tested. It is the same reasoning `standingFor` already
+            // applies to versions: an ordering nobody sorted is not an
+            // ordering, and picking by position reports the wrong build. The
+            // request asks for `-uploadedDate` now and it is honoured, so this
+            // is belt and braces — which is the point, because the cost of the
+            // server changing its mind is silently warning about the wrong
+            // upload.
+            let builds = (buildRows ?? []).sorted {
+                let l = IngestSupport.isoDate(ASCFetch.attributes($0)["uploadedDate"])
+                let r = IngestSupport.isoDate(ASCFetch.attributes($1)["uploadedDate"])
+                switch (l, r) {
+                case let (l?, r?): return l > r
+                case (.some, .none): return true   // an undated row never leads
+                default: return false
+                }
+            }
             for (index, row) in builds.enumerated() {
                 let shaped = buildThings(row, appID: appID, app: app,
                                          seen: &buildSeen, firstSight: firstSight,
@@ -965,25 +1017,24 @@ enum ASCIngest {
             // history one row that silently rewrote itself.
             sourceRef: "asc:version:\(id):\(state.rawValue)"
         )
-        // What's New, IF this account's shape carries it on the version itself.
+        // NO RELEASE NOTES, and that is now a decision rather than a hope
+        // (2026-09-20, prd §849). This read `attributes["releaseNotes"]`
+        // "opportunistically", justified by a comment claiming Apple serves it
+        // beside the state on some accounts — "one payload, two shapes in the
+        // wild", borrowed from the genuine `appVersionState`/`appStoreState`
+        // split below. **There is no such shape.** `releaseNotes` occurs ZERO
+        // times in Apple's OpenAPI spec (4.4.1), and `AppStoreVersion`'s
+        // attributes are exactly: appStoreState, appVersionState, copyright,
+        // createdDate, downloadable, earliestReleaseDate, platform,
+        // releaseType, reviewType, usesIdfa, versionString.
         //
-        // Read opportunistically and never asked for, which is the whole point:
-        // Apple's documented home for release notes is `whatsNew` on the
-        // version's `appStoreVersionLocalizations` relationship, and reaching a
-        // relationship needs either `include=` or a request per version —
-        // `ASCFetch`'s no-projection rule and `ASCShape.buildLabel`'s note both
-        // refuse the first, and the second would multiply a pass that already
-        // costs three requests per app. So this lands the text on an account
-        // that happens to serve it beside the state (the `appVersionState` /
-        // `appStoreState` situation: one payload, two shapes in the wild) and
-        // lands nothing otherwise. It never guesses and never costs a request.
-        //
-        // DISPLAY copy when it does arrive — it is what the developer wrote for
-        // the store, which is the substance of a release; the retrieval-only
-        // `enrichedText` ruling (2026-07-15) would make it invisible on every
-        // screen (the customer-review body rule below, same reasoning).
-        let notes = ASCFetch.string(attributes, "releaseNotes")
-        if !notes.isEmpty { thing.summary = notes }
+        // The comment's OTHER half was right and is why nothing replaces it:
+        // release notes live on `whatsNew`, on the version's
+        // `appStoreVersionLocalizations` relationship, which needs `include=`
+        // (refused by `ASCFetch`'s no-projection rule) or a request per version
+        // (multiplying a pass that already costs three per app). So a version
+        // row carries no summary — the honest outcome, reached without a line
+        // of code that could never run.
         return (thing, state)
     }
 

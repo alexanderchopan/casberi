@@ -58662,3 +58662,179 @@ The machine-readable schema is free, needs no credential, and is diffable —
 it before writing the harness, because the harness will happily certify logic
 operating on keys that do not exist. Measuring reach (§846) proved the endpoint
 answers; it said nothing about whether we could read the answer.
+
+## §848 — The seat whose answers can be PROVED, and the four things that had to be measured before it could say so (user: "what could we do with near protocol", "BYOK is not out... signing is only out if we store funds or transfer them", "ok lets do it", 2026-09-20)
+
+NEAR AI Cloud runs open-weight models inside hardware enclaves and signs each
+answer. That sentence is a marketing claim until a phone checks it, so this seat
+is built around the check rather than around the catalogue: the badge under an
+answer says "signature checked on iPhone" only because this device recovered
+the signer from the enclave's own signature and compared it to the address the
+attestation report published. No server, nobody's word, no trust in NEAR AI's
+website — the whole point is that the claim is falsifiable here.
+
+**The scheme, measured end to end** (`near-examples/nearai-cloud-verification-example`,
+read 2026-09-20 — not the docs page, which omits the field names):
+
+1. `GET /v1/attestation/report?model=&nonce=` → `signing_address`, a secp256k1
+   address, per enclave node, plus the gateway's own.
+2. The completion is sent and the EXACT request and response bytes are kept.
+3. `GET /v1/signature/{chat_id}?model=&signing_algo=ecdsa` → `text`,
+   `signature`, `signature_kind`.
+4. `text` is `{model}:{sha256(req)}:{sha256(resp)}` when the model enclave
+   signed, `{sha256(req)}:{sha256(resp)}` when the gateway did.
+5. Recover with EIP-191 `personal_sign` and compare to the right address set.
+
+Every primitive already existed here for the wallet — CryptoKit's SHA-256, the
+vendored secp256k1, `Keccak256`, `EIP55`. The verification is `NearAIVerify`,
+about a hundred lines, and it is the first time this app checks a cryptographic
+claim about somebody ELSE's machine.
+
+**FOUR THINGS HAD TO BE MEASURED, and all four contradicted the obvious answer.**
+Each one would have shipped a lie:
+
+- **The models list is NOT a key check.** `cloud-api.near.ai/v1/models` answers
+  **200 with no Authorization header at all**. Every other OpenAI-shaped seat
+  here checks a key by listing models; doing that would have reported CONNECTED
+  for an empty string. The check is the attestation read, which 401s — and which
+  is the capability this seat actually promises, so a key that cannot fetch one
+  cannot honestly connect. The same trap as Grok's 200-with-no-credits (§83).
+- **Verifiability cannot be READ OFF the catalogue.** `owned_by` looks decisive
+  (`nearai` for the enclave models, `anthropic`/`openai`/`google` for proxied
+  ones) and is not: there is an `attested 3p` tier and vendor-named entries that
+  are ambiguous. NEAR AI's own docs list the enclave models by subdomain and
+  that list is ALREADY STALE (`glm-5-1.completions.near.ai` does not resolve;
+  `qwen3-8-27b` does). So nothing is classified in advance. The badge is earned
+  per answer or it does not appear — which cannot go stale, and cannot promise
+  what a given model will not deliver.
+- **THIS SEAT DOES NOT STREAM, and that is the proof talking, not laziness.** A
+  streamed body is rewritten by the gateway for OpenAI-compatible usage
+  accounting, so the GATEWAY signs it and its line names no model. Only a whole
+  body carries the model enclave's own signature naming the model. The stronger
+  claim is the entire reason this seat exists, so it buys it with the streaming
+  — and `capabilityLine` and the setup page both SAY so, because a seat that
+  pauses where others stream reads as broken unless you know why. (The second
+  reason is narrower and worth keeping: `streamText` consumes `bytes.lines`,
+  which drops the separators, so rebuilding the SSE text to hash it would be a
+  guess about `\n` versus `\n\n` — and a wrong guess fails every check looking
+  exactly like tampering. If streaming is ever wanted here the fix is a reader
+  that accumulates raw bytes while parsing, never a reconstruction.)
+- **The hardware half is NOT verified, and the wording admits it.** The report
+  carries an Intel TDX quote and a 98KB NVIDIA Hopper payload; checking those
+  means Intel's DCAP verifier and a 98KB POST to NVIDIA per answer. Neither is a
+  thing a phone does per answer. So the claim is exactly "the bytes you got are
+  the bytes the attested key signed" — not "the silicon is genuine" — and
+  `NearAIVerify`'s doc comment states the gap rather than leaving it to be
+  inferred from what the code happens not to do.
+
+**THE OUTCOME HAS THREE CASES, NOT A BOOL — the §83 rule with teeth.** A
+signature that was not served says NOTHING about an answer: a model runs on
+several enclave nodes and the signature lives on whichever one answered, so a
+lookup lands elsewhere and finds nothing. `Outcome.unchecked` is that, and a
+surface may never draw it as a doubt; `.mismatch` means a check RAN and
+disagreed, and it takes `DS.destructive` and says "signature did not match".
+The badge reads `isVerified` to praise and `isMismatch` to warn, never
+`!isVerified` — which is the same discipline `SafeServiceGate` needed (§789)
+arriving at the same answer from the other direction.
+
+**The downgrade is the attack the harness exists for.** Since the two kinds are
+checked against DIFFERENT address sets, a gateway signature presented as
+`provider_tee` would be checked against the model's addresses and the badge
+would overstate what is known. So a declared kind that the line's own shape
+contradicts is refused before any curve work, a 3-part line naming a model we
+did not ask for is refused, and a model line is never rescued by the gateway's
+address. `scripts/nearai-verify-selftest.sh` compiles `NearAIVerify.swift` WHOLE
+(which is why the one curve call lives in `NearAIRecover.swift` — this file is
+Foundation-only so a harness with no libsecp256k1 can compile it unmodified),
+checks the EIP-191 preamble against an INDEPENDENT keccak including a non-ASCII
+line where the byte count and the character count differ, and was
+mutation-probed with eight mutations, all eight caught and none dead.
+
+Not built, and each for a reason: the NVIDIA/Intel hardware verification (two
+more hosts, 98KB per check); OHTTP relaying, which the report advertises
+(`ohttp_key_config`) and which would hide the caller's IP but needs a relay;
+and any write path — NEAR AI is an agent seat, not a wallet, and §83's line
+about storing or moving funds is untouched by it.
+
+Files: `Model/NearAIVerify.swift`, `Model/NearAIRecover.swift`,
+`Model/NearAICloud.swift`, `Screens/NearAISetupScreen.swift` (all new);
+`Model/AgentAnswer.swift` (the `.nearai` case across ten switches, the
+attestation key check, `wholeText`, `verifyNearAI`, `verification` on
+`StreamOutcome` and `AgentAnswerResult`, and `makeRequest` now returning the
+model it chose so the signature is asked about the right one);
+`Model/AgentModels.swift`; `Model/BridgeCatalog.swift`;
+`Model/BridgeRouting.swift`; `Model/NetworkReach.swift`;
+`Model/AgentSheet.swift`; `Model/AgentSheetSource.swift`;
+`Screens/FeedScreen.swift`; `Shell/Composer.swift`; `Shell/RootShell.swift`;
+`Design/AppIconTile.swift`; `Design/KindGlyph.swift`;
+`Assets.xcassets/brand-nearai.imageset`; `scripts/nearai-verify-selftest.sh`;
+`scripts/verify.sh`; `scripts/network-reach-audit.sh`; `website/`.
+
+
+## §849 — App Store Connect's build read has answered 400 since the day it shipped, and four features died behind it (2026-09-20)
+
+**Found by the §847 sweep, and confirmed against the live account.** The pass
+asked `/v1/apps/{id}/builds?limit=10&sort=-uploadedDate`. Apple's own OpenAPI
+spec (4.4.1) lists exactly two parameters on that relationship route —
+`fields[builds]` and `limit`. Sending `sort` is rejected outright:
+
+    HTTP 400  PARAMETER_ERROR.ILLEGAL
+    "The parameter 'sort' can not be used with this request"
+
+`ASCFetch.rows` turns any non-200 into nil, and every caller reads `?? []`, so
+the builds arm has landed **nothing, ever**:
+
+- no app icon on a version row (§714's lock-screen picture),
+- no "Ready to test", no "Failed processing",
+- **no TestFlight expiry row** — so `NotifySweep`'s `deadlineNear` has never
+  fired for a build about to stop working for testers, which is the bridge
+  header's own headline feature,
+- `ASCRoom`'s rank 2 ("a build is about to stop working for your testers")
+  unreachable, because `standing.build` was permanently empty.
+
+**The other three reads answer 200.** So the seat looked connected, the room
+drew, and the failure presented as an account with nothing to report — §83's
+exact shape, and the same rendering as §847's registrar bug.
+
+**Deleting `sort=` would NOT have fixed it, and that is the more useful half.**
+The relationship route documents no ordering and supplies none: a measured
+`limit=10` returned 374, 372, 383, 377, 370, 410, 396, 392, 381, 429 — newest
+LAST, and on an account with 600+ builds the true newest (639) was not in the
+window at all. So `mayExpire: index == 0` and `builds.first` would have warned
+about a build from August. **An ordering nobody sorted is not an ordering.**
+This file already knew that — `standingFor` sorts versions by `createdDate`
+itself, with a comment saying picking by position "would silently report last
+year's release" — and the builds path trusted a sort parameter the endpoint
+rejects instead. The read is now `/v1/builds?filter[app]=…&sort=-uploadedDate`
+(documented, answers 200) AND the array is sorted in Swift, because the cost of
+the server changing its mind is warning about the wrong upload.
+
+**`releaseNotes` never existed.** The version row read it "opportunistically",
+justified as "one payload, two shapes in the wild" — borrowed from the real
+`appVersionState`/`appStoreState` split. The string occurs **zero times** in
+Apple's spec, and `AppStoreVersion.attributes` is exactly `appStoreState,
+appVersionState, copyright, createdDate, downloadable, earliestReleaseDate,
+platform, releaseType, reviewType, usesIdfa, versionString`. Deleted. The
+comment's other half was right and is kept: notes live on
+`AppStoreVersionLocalization.whatsNew`, which needs `include=` or a request per
+version. A version row carries no summary, and now says so.
+
+**`PREORDER_READY_FOR_SALE` was the 20th value of `AppStoreVersionState` and
+had no case**, so `parse` returned nil and the row was dropped. It gets its own
+clause — "Live for pre-order" — rather than folding into "Live on the App
+Store", because a pre-order is buyable and not yet installable.
+
+**Why the harness passed every night.** `appstoreconnect-selftest.sh` tested
+shaping — which verdicts are news, how a rating clamps, how the card ranks —
+and asserted **nothing about the request**. It confirmed the diff it shipped
+with, never the URL the API would accept. Four guards now pin the request
+shape, each mutation-proven. Two of the five mutations initially NO-OPPED on a
+bad regex and reported nothing; re-run with plain string replacement, both
+caught. **A mutation that did not apply is not a passing guard**, and the only
+way to know the difference is to assert the edit landed.
+
+**The class, extending §847.** That ruling said to check field NAMES against
+the machine-readable schema. This one adds the REQUEST: parameters, their
+allowed values, and whether the route supports the ordering the code depends
+on. Both bugs rendered identically — a healthy, empty room — and neither was
+visible to a harness that only ran the shaping.

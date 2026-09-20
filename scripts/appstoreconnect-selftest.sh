@@ -97,6 +97,33 @@ done
 # …and the positive half: the only transport it may use.
 grep -qE 'IngestSupport\.(getJSON|getJSONStatus)\(' "$ASC" \
   || { echo "✗ AppStoreConnectBridge.swift no longer reads through IngestSupport's GET funnel"; exit 1; }
+
+# --- the REQUEST, pinned against Apple's OpenAPI spec (prd §849) ------------
+# This harness tested shaping and asserted nothing about the URLs, which is why
+# a build read that had NEVER succeeded passed it every night for six weeks.
+# Apple's spec (4.4.1) lists exactly two parameters on the relationship route
+# `/v1/apps/{id}/builds` — `fields[builds]` and `limit`. Sending `sort` is a
+# 400 PARAMETER_ERROR.ILLEGAL, `rows` returns nil, every caller reads `?? []`,
+# and the room draws a healthy account: no app icon, no "Ready to test", no
+# TestFlight expiry row, no notification. The top-level `/v1/builds` collection
+# takes `filter[app]` and a documented `sort` enum including `-uploadedDate`.
+#
+# The negative halves read `$CODE`, the comment-stripped copy this file already
+# builds — the header's own lesson, re-earned: every name below appears in the
+# comment explaining why it is wrong, so a guard grepping the raw source fails
+# on its own explanation. (First draft used a line-comment grep, which misses
+# block and trailing comments; `$CODE` is a real lexer.)
+grep -qF 'apps/\(appID)/builds' "$CODE" \
+  && { echo "✗ the builds read is back on /apps/{id}/builds — that route takes no sort, and with one it answers 400 and this arm lands NOTHING"; exit 1; }
+grep -qF 'builds?filter%5Bapp%5D=' "$CODE" \
+  || { echo "✗ the builds read no longer uses /v1/builds?filter[app]= — only the top-level collection accepts sort=-uploadedDate"; exit 1; }
+# Deleting `sort` would not have been a fix: the relationship route supplies no
+# ordering (measured: 374, 372, 383, … newest LAST), so newest-first is decided
+# here, in Swift, exactly as `standingFor` already does for versions.
+grep -qF 'uploadedDate' "$CODE" \
+  || { echo "✗ nothing sorts the builds by uploadedDate — 'the newest build' would be whichever row Apple returned first"; exit 1; }
+grep -qF 'releaseNotes' "$CODE" \
+  && { echo "✗ a releaseNotes read is back — the string occurs ZERO times in Apple's spec; release notes live on AppStoreVersionLocalization.whatsNew"; exit 1; }
 # An App Store Connect key carries a ROLE, not scopes, and no role is
 # read-only for what this bridge reads: the narrowest that works can also
 # upload a build and submit a version. So the promise is kept by this file
