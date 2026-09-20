@@ -58511,3 +58511,23 @@ Only a SAMPLED room can reach this state. Hegotá and Frames DERIVE their line b
 **Apple Intelligence keeps its two, and the asymmetry is correct.** That seat is dark (`AskModel.entitled`), lands nothing, and has no room, so its page IS its only door. It rejoins this rule on the day it gets a room (§842's note).
 
 **One agent, one way in.** The standing shape after this: a keyed agent's chip comes from the key, its room holds what it has said, and its Chat tile is where you say something. No second door, and nothing in Accounts that a room does better.
+
+## §845 — An agent room with no conversation rendered a BLACK SCREEN, because §842 took it out of one arm without putting it into another (user: "i connected to bankr and there is now an agents folder in the dock with a bankr tile. but when i press the bankr tile i just see a black screen", 2026-09-20)
+
+**The dock fix worked, and that is what exposed this.** §842 gave a keyed agent its chip from the key, so Bankr finally had a tile. The tile led nowhere: `roomBody`'s chain is
+
+    if !roomHasContent && !LiveRoomSources.has(source) && roomAgent == nil  → emptyState
+    } else if Frames … } else if PrivacyDevnet … } else if Hegotá …
+    } else if roomHasContent                                                → the room
+
+and a connected agent with no conversation yet fails the first (its `roomAgent` is non-nil), is none of the three named seats, and fails the last (it has no rows). **It matched no arm at all, and SwiftUI drew nothing.**
+
+**§842 added exactly half a move.** `roomAgent == nil` was put into the escape arm so an agent room would stop being replaced by the generic empty state — correct, and useless alone, because nothing was added to an arm that DRAWS. `|| roomAgent != nil` on the final arm is the other half; the two clauses are one move and must be read together.
+
+**`LiveRoomSources`' own doc names this exact shape twice** — once as Hegotá's black screen, once as Frames' — and that is why those three seats each have a named arm in this chain rather than a flag. §842 read that file carefully enough to stay OUT of `all` for the right reason, and still reproduced the failure it documents, by reasoning about the set membership and not about the chain.
+
+**The guard is the PAIRING, not either clause.** `agent-landing-selftest.sh` asserts both spellings and then asserts them together: anything that can exclude a room from `emptyState` must also appear in the final `else if`. A guard on either clause alone would have passed on the broken build — §842's own guard did.
+
+**The class.** A condition that removes a case from one branch is not a fix; it is half of one. The question to ask of every such edit is not "is this branch now correct" but **"which branch does this case land in instead"** — and if the answer is none, the screen is empty and nothing in a build, an audit or a review will say so.
+
+**Caught by the person, on a device, within minutes of the previous fix working** — the fourth defect in this feature found that way, and none of them by the four verify passes it shipped on.

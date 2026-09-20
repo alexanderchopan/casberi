@@ -149,6 +149,29 @@ guard "an agent room keeps its tiles when empty" \
   '\|\| roomAgent != nil' "$FEED"
 guard "an agent room is not replaced by the generic empty state" \
   'roomAgent == nil' "$FEED"
+# §845: taking a room OUT of the empty-state arm without putting it INTO a
+# drawing one renders NOTHING — the black screen LiveRoomSources' own doc names
+# twice. The two clauses are one move and must be read together.
+guard "an agent room reaches the room body with no rows" \
+  'roomHasContent \|\| roomAgent != nil' "$FEED"
+python3 - "$FEED" <<'ARMS' || fail=1
+import sys
+src = "\n".join("" if l.strip().startswith("//") else l
+                 for l in open(sys.argv[1]).read().splitlines())
+# The escape arm must not run without a matching entry arm. Anything that can
+# exclude a room from `emptyState` has to appear in the final `else if`, or
+# that room matches no arm at all.
+esc = "!roomHasContent && !LiveRoomSources.has(source) && roomAgent == nil"
+body = "} else if roomHasContent || roomAgent != nil {"
+if esc not in src:
+    print("  \u2717 the empty-state arm's shape changed — this guard is blind")
+    sys.exit(1)
+if body not in src:
+    print("  \u2717 roomAgent escapes the empty state but never reaches the "
+          "room body — every arm falls through and the room is BLACK (\u00a7845)")
+    sys.exit(1)
+print("  \u2713 every room excluded from the empty state has an arm that draws it")
+ARMS
 # §841: Accounts is presented, not pushed, so onAppear never fires again.
 guard "a key added without leaving the room lights the tile" \
   'onChange\(of: bridges\.bridges\.count\)' "$FEED"

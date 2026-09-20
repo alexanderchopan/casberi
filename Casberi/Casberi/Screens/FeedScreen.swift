@@ -5453,7 +5453,17 @@ struct FeedScreen: View {
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
-        } else if roomHasContent {
+        // **`|| roomAgent != nil` OR THIS CHAIN FALLS THROUGH BOTH ARMS AND
+        // RENDERS A BLACK SCREEN (prd §845).** §842 added `roomAgent == nil`
+        // to the first arm so an agent room would stop being replaced by the
+        // generic empty state — and that is only half a move: it took the room
+        // OUT of the empty arm without putting it INTO a drawing one, so a
+        // connected agent with no conversation yet matched nothing here at all.
+        // Reported the moment the dock fix worked: *"i press the bankr tile i
+        // just see a black screen"*. `LiveRoomSources`' own doc names this
+        // exact shape twice — it is why Hegotá, Frames and the Privacy devnet
+        // each have an arm above rather than a flag.
+        } else if roomHasContent || roomAgent != nil {
             // Derived ONCE per render and threaded into everything below
             // — the day groups, ledes, and per-row hint/next-event ids
             // all share this one filter pass instead of each re-deriving
