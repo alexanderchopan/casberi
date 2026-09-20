@@ -1148,6 +1148,20 @@ enum ProbeHooks {
         // these seats "nothing" is usually the HEALTHY answer — most wallets
         // have never touched Peer, never deposited into a pool, and hold no
         // Gnosis Pay card — and only one or two causes per room are bugs.
+        // `-metamaskCardRoomProbe` (prd §858) — the second onchain card's head,
+        // line by line. Same shape as `-gnosisPayRoomProbe` because the head is
+        // the SAME TYPE; what differs is the source it filters and the six
+        // causes of an empty head that its own `probeLines` names.
+        Hook(key: "metamaskCardRoomProbe") { _, context in
+            let source = MetaMaskCardRoomSource.source
+            var descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == source })
+            descriptor.fetchLimit = 500
+            let rows = (try? context.fetch(descriptor)) ?? []
+            for line in MetaMaskCardRoomSource.probeLines(things: rows) {
+                NSLog("[Casberi] %@", line)
+            }
+        },
         Hook(key: "peerRoomProbe") { _, context in
             let source = PeerRoomSource.source
             var descriptor = FetchDescriptor<Thing>(
@@ -7770,7 +7784,15 @@ enum ProbeHooks {
              } : nil)
         note("gnosisPayHead", source == GnosisPayRoomSource.source
              ? GnosisPayRoomSource.compose(things: things).map {
-                "\(GnosisPayRoom.headline($0)) · \($0.currencies.count) currencies"
+                "\(CardSpendRoom.headline($0)) · \($0.currencies.count) currencies"
+             } : nil)
+        // The same head on the second onchain card (prd §858). Censused
+        // separately from Gnosis Pay's on purpose: they share a TYPE, so a
+        // single row would go green off whichever seat happened to have rows
+        // and say nothing about the other.
+        note("metamaskCardHead", source == MetaMaskCardRoomSource.source
+             ? MetaMaskCardRoomSource.compose(things: things).map {
+                "\(CardSpendRoom.headline($0)) · \($0.currencies.count) currencies"
              } : nil)
         // Privy (prd §803c) — composed from its store, not the rows.
         note("privyHead", source == PrivyHomeFeed.source

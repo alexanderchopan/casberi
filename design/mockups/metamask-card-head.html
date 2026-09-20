@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MetaMask Card head</title>
+<style>
+  :root {
+    --ink:#f5f5f7; --ink2:#a1a1a6; --ink3:#6e6e73;
+    --page:#0a0a0c; --well:#141417;
+    --mark:#f6851b;          /* MetaMask's orange — DS.legibleCardFill("MetaMask Card") */
+    --gnosis:#4830c0;        /* Gnosis Pay's indigo, for the side-by-side */
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:32px 16px 64px; background:var(--page); color:var(--ink);
+    font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:430px; margin:0 auto; }
+  h1 { font-size:22px; font-weight:600; margin:0 0 4px; letter-spacing:-0.2px; }
+  .sub { color:var(--ink3); font-size:12px; margin:0 0 28px; }
+
+  /* DSRoomChassis.Head — one recessed well, three zones (prd §766) */
+  .well {
+    background:var(--well); border-radius:22px; padding:20px 20px 16px;
+    min-height:316px; display:flex; flex-direction:column;
+  }
+  .lede { font-size:40px; font-weight:600; letter-spacing:-1px; line-height:1.05; }
+  .lede .cap { display:block; font-size:15px; font-weight:400; color:var(--ink2);
+               letter-spacing:0; margin-top:6px; }
+  .note { font-size:12px; color:var(--ink2); margin-top:10px; }
+
+  .body { flex:1; margin-top:20px; }
+
+  /* DSRoomChassis.SpanStrip — 56pt figure, one column per month */
+  .strip { display:flex; align-items:flex-end; gap:4px; height:56px; }
+  .strip i { flex:1; background:var(--mark); border-radius:3px; display:block; opacity:.9; }
+  .stripLabels { display:flex; justify-content:space-between; font-size:11px;
+                 color:var(--ink3); margin-top:6px; }
+  .caption { font-size:12px; color:var(--ink3); margin-top:8px; }
+
+  /* DSRoomChassis.Rows — currency rows, ranked by spend COUNT */
+  .rows { margin-top:18px; display:flex; flex-direction:column; gap:12px; }
+  .row { display:flex; align-items:center; gap:10px; }
+  .glyph { width:26px; color:var(--ink3); font-size:13px; text-align:center; }
+  .rowMain { flex:1; min-width:0; }
+  .rowTitle { font-size:17px; }
+  .rowLine { font-size:12px; color:var(--ink2); margin-top:1px; }
+  .bar { height:3px; background:#2a2a2e; border-radius:2px; margin-top:6px; }
+  .bar i { display:block; height:100%; background:var(--mark); border-radius:2px; opacity:.75; }
+
+  .foot { font-size:12px; color:var(--ink3); margin-top:auto; padding-top:14px; }
+
+  .gnosis .strip i, .gnosis .bar i { background:var(--gnosis); }
+  .pair { display:grid; gap:22px; margin-top:34px; }
+  .label { font-size:11px; color:var(--ink3); text-transform:none; margin:0 0 8px 2px; }
+  .caveat { font-size:12px; color:var(--ink3); margin-top:26px; line-height:1.5; }
+  .caveat b { color:var(--ink2); font-weight:600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MetaMask Card head</h1>
+  <p class="sub">Same <code>CardSpendRoom</code> as Gnosis Pay — only the mark differs. Real strings, real geometry.</p>
+
+  <p class="label">MetaMask Card · furnished</p>
+  <div class="well">
+    <div class="lede">$215.30<span class="cap">on your card in 30 days</span></div>
+    <div class="note">6 spends · 18% more than the 30 days before</div>
+
+    <div class="body">
+      <div class="strip">
+        <i style="height:38%"></i><i style="height:61%"></i><i style="height:44%"></i>
+        <i style="height:88%"></i><i style="height:52%"></i><i style="height:100%"></i>
+      </div>
+      <div class="stripLabels"><span>Apr</span><span>Sep</span></div>
+      <div class="caption">USD · 6 months</div>
+
+      <div class="rows">
+        <div class="row">
+          <div class="glyph">▤</div>
+          <div class="rowMain">
+            <div class="rowTitle">USD</div>
+            <div class="rowLine">$215.30 · 6 spends</div>
+            <div class="bar"><i style="width:100%"></i></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="glyph">▤</div>
+          <div class="rowMain">
+            <div class="rowTitle">EUR</div>
+            <div class="rowLine">€48.00 · 2 spends</div>
+            <div class="bar"><i style="width:33%"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot">14 spends since April</div>
+  </div>
+
+  <div class="pair">
+    <div>
+      <p class="label">Gnosis Pay today — the template it now shares</p>
+      <div class="well gnosis">
+        <div class="lede">€196.45<span class="cap">on your card in 30 days</span></div>
+        <div class="note">5 spends · about the same as the 30 days before</div>
+        <div class="body">
+          <div class="strip">
+            <i style="height:55%"></i><i style="height:72%"></i><i style="height:40%"></i>
+            <i style="height:95%"></i><i style="height:64%"></i><i style="height:81%"></i>
+          </div>
+          <div class="stripLabels"><span>Apr</span><span>Sep</span></div>
+          <div class="caption">EUR · 6 months</div>
+        </div>
+        <div class="foot">23 spends since March</div>
+      </div>
+    </div>
+
+    <div>
+      <p class="label">MetaMask Card · fresh connection (the common case)</p>
+      <div class="well">
+        <div class="lede">$41.85<span class="cap">on your card in 30 days</span></div>
+        <div class="note">3 spends · not watching long enough to compare</div>
+        <div class="body"></div>
+        <div class="foot">3 spends since Thursday</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="caveat">
+    <b>No strip on a fresh connection, and that is the design.</b> The backfill is
+    six days on Linea and one on Base, so a new install cannot know a prior
+    30-day window. <code>knowsPriorWindow</code> refuses the comparison instead
+    of estimating it — the note says so in words rather than showing a percentage
+    the room never observed.<br><br>
+    <b>No colour on the change, no arrow.</b> Spending more is not a failure and
+    spending less is not a win; the app has no idea which the person wanted.<br><br>
+    <b>No merchants.</b> Structurally impossible — the merchant never reaches the
+    chain. This is the one card a payment card cannot draw.<br><br>
+    <b>Currency rows only when there is more than one.</b> A legend of one row is
+    a restatement, so a single-currency card gets the headline and the strip alone.<br><br>
+    <b>A WETH spend has no currency</b>, so it lands in <code>unpriced</code> and is
+    counted rather than summed as zero.
+  </p>
+</div>
+</body>
+</html>

@@ -1,7 +1,13 @@
 import SwiftUI
 
-/// THE GNOSIS PAY ROOM'S HEAD (2026-08-10, prd §349) — what the card cost you
-/// this month, and whether that's more than usual.
+/// AN ONCHAIN CARD ROOM'S HEAD (2026-08-10 as `GnosisPayRoomCard`, prd §349;
+/// generalised 2026-09-20, prd §858) — what the card cost you this month, and
+/// whether that's more than usual.
+///
+/// Shared by Gnosis Pay and MetaMask Card. Only ONE thing here was ever
+/// seat-specific — the mark's fill — so it is a parameter, and everything else
+/// reads `CardSpendRoom`. A second copy of this view would be a second place
+/// for the no-colour rule and the one-currency rule to drift.
 ///
 /// ## No green, no red, no arrow
 ///
@@ -23,29 +29,32 @@ import SwiftUI
 ///
 /// ## Liveness
 ///
-/// Stores no `Thing` — only value types out of `GnosisPayRoom`, filtered at the
+/// Stores no `Thing` — only value types out of `CardSpendRoom`, filtered at the
 /// boundary by `GnosisPayRoomSource`. The tap hands back a `Currency` and the
 /// section that owns the sheet does the lookup (corollary 5).
 ///
 /// Composed through `DSRoomChassis.Head`, its `SpanStrip` and its ranked `Row`.
-struct GnosisPayRoomCard: View {
-    let room: GnosisPayRoom
+struct CardSpendRoomCard: View {
+    let room: CardSpendRoom
+    /// The seat this head belongs to — its catalogue name, used for the mark's
+    /// fill and nothing else. The room's judgements never vary by seat.
+    let seat: String
     /// Hands back the CURRENCY, not a `Thing` — a currency owns many spends, so
     /// the honest landing is its most recent one.
-    var onOpen: (GnosisPayRoom.Currency) -> Void
+    var onOpen: (CardSpendRoom.Currency) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private static let mark = DS.legibleCardFill(for: "Gnosis Pay")
+    private var mark: Color { DS.legibleCardFill(for: seat) }
 
-    private var drawn: [GnosisPayRoom.Currency] {
-        Array(room.currencies.prefix(GnosisPayRoomSource.rowCap))
+    private var drawn: [CardSpendRoom.Currency] {
+        Array(room.currencies.prefix(CardSpendRoom.rowCap))
     }
 
     /// The busiest currency's spend count — the bar's full width, so every bar
     /// is on one scale. By COUNT, never by amount: the totals are in different
     /// currencies and drawing them on one axis would state a conversion nobody
-    /// made (`GnosisPayRoom.share`'s own rule).
+    /// made (`CardSpendRoom.share`'s own rule).
     private var top: Int { room.lead?.spends ?? 0 }
 
     var body: some View {
@@ -54,17 +63,17 @@ struct GnosisPayRoomCard: View {
         // as the string.
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         DSRoomChassis.Head(
-            lead: .figure(GnosisPayRoom.lede(room, mask: mask),
-                          otherwise: GnosisPayRoom.headline(room, mask: mask)),
+            lead: .figure(CardSpendRoom.lede(room, mask: mask),
+                          otherwise: CardSpendRoom.headline(room, mask: mask)),
             door: room.lead.map { lead in
                 DSRoomChassis.Door(hint: Text("Opens this currency")) { onOpen(lead) }
             },
-            notes: [.note(GnosisPayRoom.note(room))],
-            footnotes: [.quiet(GnosisPayRoom.footnote(room))]) {
+            notes: [.note(CardSpendRoom.note(room))],
+            footnotes: [.quiet(CardSpendRoom.footnote(room))]) {
             if !room.months.isEmpty {
                 DSRoomChassis.Block {
                     monthStrip
-                    if let caption = GnosisPayRoom.historyNote(room) {
+                    if let caption = CardSpendRoom.historyNote(room) {
                         DSRoomChassis.LineText(line: DSRoomChassis.Line(text: caption, tone: .quiet))
                             .padding(.top, DS.Space.s1)
                     }
@@ -76,14 +85,14 @@ struct GnosisPayRoomCard: View {
             if drawn.count > 1 {
                 DSRoomChassis.Block {
                     DSRoomChassis.Rows(items: drawn) { index, currency in
-                        let line = GnosisPayRoom.currencyLine(currency, mask: mask)
+                        let line = CardSpendRoom.currencyLine(currency, mask: mask)
                         DSRoomChassis.Row(
                             title: currency.code,
                             glyph: "banknote",
                             line: line,
                             index: index,
                             action: { onOpen(currency) }) {
-                            ShareBar(fraction: GnosisPayRoom.share(spends: currency.spends, of: top),
+                            ShareBar(fraction: CardSpendRoom.share(spends: currency.spends, of: top),
                                      index: index,
                                      reduceMotion: reduceMotion)
                         }
@@ -107,11 +116,11 @@ struct GnosisPayRoomCard: View {
             columns: room.months.enumerated().map { index, month in
                 DSRoomChassis.SpanStrip.Column(
                     id: index,
-                    share: GnosisPayRoom.monthShare(total: month.total, of: top))
+                    share: CardSpendRoom.monthShare(total: month.total, of: top))
             },
-            fill: Self.mark,
-            first: room.months.first.map { GnosisPayRoom.monthLabel($0.start) },
-            last: room.months.last.map { GnosisPayRoom.monthLabel($0.start) },
-            spoken: GnosisPayRoom.historyNote(room) ?? "")
+            fill: mark,
+            first: room.months.first.map { CardSpendRoom.monthLabel($0.start) },
+            last: room.months.last.map { CardSpendRoom.monthLabel($0.start) },
+            spoken: CardSpendRoom.historyNote(room) ?? "")
     }
 }

@@ -511,7 +511,7 @@ enum PeerBridge {
                     .joined(separator: " ").nilIfEmpty
             }
             // The settled amount as DATA (2026-08-11), the same generic
-            // `priceValue`/`priceCurrency` meaning `GnosisPayRoom` already
+            // `priceValue`/`priceCurrency` meaning `CardSpendRoom` already
             // established — "this row's amount, in this currency, never
             // summed across currencies". No new field; see `PeerRoom.Token`.
             if let symbol = story.token?.symbol, story.token?.decimals != nil {

@@ -36,7 +36,7 @@ import Foundation
 ///
 /// ## What it may NOT draw
 ///
-///   · **No cross-currency total.** `GnosisPayRoom`'s rule, and Stripe's, and
+///   · **No cross-currency total.** `CardSpendRoom`'s rule, and Stripe's, and
 ///     Polar's: three currencies are three readings and never one sum. They
 ///     rank by payment COUNT, the only ordering that does not compare
 ///     magnitudes across codes.
@@ -45,7 +45,7 @@ import Foundation
 ///     payment occasionally rather than constantly, so a window is a handful
 ///     of points and a line drawn through them states a trend the data cannot
 ///     support.
-///   · **No comparison against an unobserved window.** `GnosisPayRoom`'s
+///   · **No comparison against an unobserved window.** `CardSpendRoom`'s
 ///     refusal, biting harder here — the bridge reads a rolling window every
 ///     pass and keeps no cursor, so on a first connect the previous window is
 ///     UNOBSERVED rather than quiet, and "up 400%" against it is a confident
@@ -175,7 +175,7 @@ struct DodoPaymentsRoom: Equatable {
     var leadsWithTrouble: Bool { !disputes.isEmpty || retryTotal > 0 }
 
     /// Nothing worth a card. Keyed on the ROOM rather than on the window
-    /// (`GnosisPayRoom`'s rule): an account that was busy last quarter and
+    /// (`CardSpendRoom`'s rule): an account that was busy last quarter and
     /// quiet this month has a real thing to say, and hiding the head would
     /// leave the room looking as though it had never been used.
     var isEmpty: Bool { allTime == 0 && disputes.isEmpty && retryTotal == 0 }

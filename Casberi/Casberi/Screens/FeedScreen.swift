@@ -6659,9 +6659,9 @@ struct FeedScreen: View {
                                 chrome.privacyPoolsSection = picked
                             }
                         })
-                case .gnosisPay(let room):
-                    GnosisPayRoomCard(room: room) { currency in
-                        openNewest(source: GnosisPayRoomSource.source, in: visible) { thing in
+                case .cardSpend(let room, let seat):
+                    CardSpendRoomCard(room: room, seat: seat) { currency in
+                        openNewest(source: seat, in: visible) { thing in
                             thing.priceCurrency == currency.code
                         }
                     }
@@ -8595,7 +8595,11 @@ struct FeedScreen: View {
         // was drawn only on the setup screen, which you visit once.
         case vibenet(VibenetRoom)
         case privacyPools(PrivacyPoolsRoom)
-        case gnosisPay(GnosisPayRoom)
+        // ONE case for every onchain card (prd §858, was `gnosisPay`). The
+        // seat rides along because `CardSpendRoomCard` needs it for the mark
+        // and `openNewest` needs it for the lookup — the room itself is
+        // seat-agnostic and must stay that way.
+        case cardSpend(CardSpendRoom, seat: String)
         // A fourth wallet-riding seat (2026-08-11) — grouped by TOKEN rather
         // than by rail, since Railgun has no funding platform to rank.
         case railgun(RailgunRoom)
@@ -8655,9 +8659,9 @@ struct FeedScreen: View {
                 return room.entries.isEmpty && SafeRoom.note(room) == nil
                     && SafeRoom.guardNote(room) == nil && SafeRoom.stateNote(room) == nil
                     ? SafeRoom.headline(room) : nil
-            case .gnosisPay(let room):
+            case .cardSpend(let room, _):
                 return room.months.isEmpty && room.currencies.count <= 1
-                    ? GnosisPayRoom.headline(room, mask: mask) : nil
+                    ? CardSpendRoom.headline(room, mask: mask) : nil
             case .posthog, .walletbeat, .l2beat, .vibenet, .privacyPools:
                 return nil
             }
@@ -8742,7 +8746,14 @@ struct FeedScreen: View {
         case PrivacyPoolsRoomSource.source:
             return PrivacyPoolsRoomSource.compose(things: visible).map { .privacyPools($0) }
         case GnosisPayRoomSource.source:
-            return GnosisPayRoomSource.compose(things: visible).map { .gnosisPay($0) }
+            return GnosisPayRoomSource.compose(things: visible)
+                .map { .cardSpend($0, seat: GnosisPayRoomSource.source) }
+        // The second onchain card (prd §858). Same head, same judgements — the
+        // only thing that differs is which rows it reads and whose mark it
+        // wears.
+        case MetaMaskCardRoomSource.source:
+            return MetaMaskCardRoomSource.compose(things: visible)
+                .map { .cardSpend($0, seat: MetaMaskCardRoomSource.source) }
         case RailgunRoomSource.source:
             return RailgunRoomSource.compose(things: visible).map { .railgun($0) }
         case PrivyHomeFeed.source:

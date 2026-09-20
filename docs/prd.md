@@ -59435,3 +59435,62 @@ single-chain seat keeps its simpler key.
 that cannot be reached leaves its own cursor alone and the others still land;
 `sync` returns nil only when NONE answered, which is the difference between
 "nothing was spent" and "we could not ask".
+
+## §858 — The onchain card head is SHARED, and the rename is the feature (user: "can you clarify that metamask card gets a room like gnosis pay does" → "yes do it for metamask", 2026-09-20)
+
+**The answer to the question was no, and that is how this started.** MetaMask
+Card had a ROOM — `BridgeRouting.roomSource` resolved it, rows landed under its
+source, the seat's Open reached it — but no HEAD. Head cards are an explicit
+switch in `FeedScreen` with cases for Peer, Privacy Pools, Gnosis Pay, Railgun,
+Privy and Safe; anything else falls to `default: nil` and leads with its newest
+thing. ether.fi Cash sits there too. So the honest answer was "a room like
+ether.fi Cash's, not like Gnosis Pay's" — and the fix was asked for
+immediately.
+
+**Nothing in `GnosisPayRoom` was ever Gnosis-specific.** A `Sighting` is an
+amount, a currency and a moment; every judgement in its 519 lines — currencies
+never summed, an unreadable amount counted rather than zeroed, a month-on-month
+claim refused against a window the room never observed, no merchant board
+because the merchant never reaches the chain — is true of any card that settles
+onchain. `MetaMaskCardBridge` stamps `priceValue`/`priceCurrency` for the same
+reason `GnosisPayBridge` does. So the type is now `CardSpendRoom` and both
+seats read it.
+
+**Copying would have been the cheaper edit and the wrong one.** Two copies of
+that file means a fix applied to one reaches neither the other — §720's rule,
+which this repo has paid for more than once. What is genuinely per-seat is
+small and stays per-seat, in each room's own source: the `Thing.source` to
+filter on and the probe prefixes. That matches how Peer, Privacy Pools, Railgun
+and Safe are already built.
+
+Also shared: `CardSpendRoomCard` (was `GnosisPayRoomCard`) takes a `seat` for
+the mark's fill and nothing else, and `FeedScreen`'s case is one
+`.cardSpend(CardSpendRoom, seat: String)` instead of one per card. `rowCap`
+moved onto the model, because two seats reading two caps would make the same
+head draw a different number of rows for no reason anyone chose.
+
+**The refused comparison matters MORE on this seat than on the one it was
+written for.** `MetaMaskCardBridge` backfills about six days on Linea and one
+on Base (§857b — Base's only usable host serves 2,000 blocks a call), so a
+fresh connection cannot know a prior 30-day window at all.
+`knowsPriorWindow` returns false and the note says "not watching long enough to
+compare" rather than showing a percentage against an unobserved window. That is
+the common case here for weeks, not an edge.
+
+**A WETH spend reaches the head as an unreadable amount, on purpose.** §857
+writes no `priceValue` for it, because the chain carries no price at the moment
+of the swipe. The head counts it in `unpriced` rather than dropping it or
+summing it as zero — so a window with real WETH spending and no total says so
+instead of reading as a quiet month.
+
+**Three harness assertions, because the sharing is what can break silently.**
+`wallet-rooms-selftest.sh` now requires the `MetaMaskCardRoomSource` case in the
+feed's switch, the card drawn with its seat, and the source taken from the
+bridge rather than spelled again. A rename that quietly dropped one seat would
+leave that room leading with its newest row and nothing else would fail — the
+§83 silence this harness exists to break.
+
+**Not done here:** ether.fi Cash still has no head, and it is the third seat on
+this exact shape. It would now cost a source file and a switch case. Left out
+because it was not asked for and its spend fields have not been checked against
+the head's needs.

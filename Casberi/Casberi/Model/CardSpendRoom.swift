@@ -1,7 +1,23 @@
 import Foundation
 
-/// THE GNOSIS PAY ROOM'S HEAD (2026-08-10, prd §349) — what the card actually
-/// costs you.
+/// AN ONCHAIN CARD ROOM'S HEAD (2026-08-10 as `GnosisPayRoom`, prd §349;
+/// generalised 2026-09-20, prd §858) — what the card actually costs you.
+///
+/// **It was Gnosis Pay's and is now every onchain card's, and the rename is
+/// the point rather than tidying.** Nothing in this type was ever
+/// Gnosis-specific: a `Sighting` is an amount, a currency and a moment, and
+/// every judgement below — currencies never summed, an unreadable amount
+/// counted rather than zeroed, a comparison refused against a window the room
+/// never observed — is true of any card that settles onchain. MetaMask Card
+/// stamps the same two fields for the same reason, so it reads this head
+/// rather than a copy of it. Copying would have meant 519 lines where a fix
+/// applied to one reaches neither the other (§720's rule, which this repo has
+/// paid for more than once).
+///
+/// The SEAT-specific half lives in each room's own source
+/// (`GnosisPayRoomSource`, `MetaMaskCardRoomSource`): the `Thing.source` to
+/// filter on, and the probe prefixes. Nothing else differs, and if something
+/// starts to, it belongs there and not here.
 ///
 /// §222 landed every card settlement as its own row and the room led with a
 /// list of them, which for a spending card is the §247 gap at its widest: a
@@ -51,7 +67,7 @@ import Foundation
 ///
 /// Foundation-only by design so `scripts/wallet-rooms-selftest.sh` can compile
 /// it WHOLE and unmodified.
-struct GnosisPayRoom: Equatable {
+struct CardSpendRoom: Equatable {
 
     // MARK: - Values
 
@@ -92,6 +108,14 @@ struct GnosisPayRoom: Equatable {
         let total: Double
         let spends: Int
     }
+
+    /// The card draws at most this many currency rows. The set is closed and
+    /// small on every onchain card — Gnosis Pay settles in three (EURe, GBPe,
+    /// USDCe), MetaMask Card in up to seven — so the cap is deliberately all of
+    /// them and there is nothing to hide behind a "1 more". It lives HERE, not
+    /// on a seat's source, because two seats reading two caps would make the
+    /// same head draw a different number of rows for no reason anyone chose.
+    static let rowCap = 8   // DSRoomChassis.headRowCap (prd §760)
 
     /// How far back the card reads, in days. Thirty rather than a calendar
     /// month on purpose: month boundaries make the first week of any month
@@ -152,7 +176,7 @@ struct GnosisPayRoom: Equatable {
     /// `now` is taken rather than read, so the harness and the probe compose
     /// against a fixed clock.
     static func compose(spends sightings: [Sighting], now: Date = .now,
-                        calendar: Calendar = .current) -> GnosisPayRoom {
+                        calendar: Calendar = .current) -> CardSpendRoom {
         let start = windowStart(now, back: 1, calendar: calendar)
         let priorStart = windowStart(now, back: 2, calendar: calendar)
 
@@ -218,7 +242,7 @@ struct GnosisPayRoom: Equatable {
         // The strip follows whichever currency the HEADLINE states, so the two
         // can never be about different money on one card.
         let strip = history(monthly: monthly, code: ranked.first?.code, calendar: calendar)
-        return GnosisPayRoom(currencies: ranked, unpriced: unpriced,
+        return CardSpendRoom(currencies: ranked, unpriced: unpriced,
                              allTime: sightings.count, oldest: oldest, newest: newest,
                              months: strip.months, monthsHidden: strip.hidden,
                              monthsOtherCurrency: strip.otherCurrency)
@@ -295,7 +319,7 @@ struct GnosisPayRoom: Equatable {
 
     /// What the strip is: which currency, how many months, and what that choice
     /// left out. Nil when there is no strip to caption.
-    static func historyNote(_ room: GnosisPayRoom) -> String? {
+    static func historyNote(_ room: CardSpendRoom) -> String? {
         guard !room.months.isEmpty, let code = room.lead?.code else { return nil }
         var line = String(localized: "\(code) · \(room.months.count) months")
         if room.monthsHidden > 0 {
@@ -439,7 +463,7 @@ struct GnosisPayRoom: Equatable {
     /// number reads first — and it is never summed across currencies (§349's
     /// standing rule here: a total spanning EUR and GBP is a number that means
     /// nothing). The caption carries what the headline says about the others.
-    static func lede(_ room: GnosisPayRoom, locale: Locale = .current,
+    static func lede(_ room: CardSpendRoom, locale: Locale = .current,
                      mask: String? = nil) -> RoomLede? {
         guard let lead = room.lead else { return nil }
         let amount = mask ?? money(lead.total, code: lead.code, locale: locale)
@@ -456,7 +480,7 @@ struct GnosisPayRoom: Equatable {
                         numeric: mask == nil ? lead.total : nil)
     }
 
-    static func headline(_ room: GnosisPayRoom, locale: Locale = .current,
+    static func headline(_ room: CardSpendRoom, locale: Locale = .current,
                          mask: String? = nil) -> String {
         guard let lead = room.lead else {
             // A quiet window on a room with real history — the honest reading,
@@ -478,7 +502,7 @@ struct GnosisPayRoom: Equatable {
     /// The line under it. Never a restatement: the headline carries the money,
     /// so this carries how it MOVED — against the window before, when that is
     /// knowable, and otherwise how often the card was used.
-    static func note(_ room: GnosisPayRoom) -> String {
+    static func note(_ room: CardSpendRoom) -> String {
         guard let lead = room.lead else {
             guard room.allTime > 0 else { return String(localized: "No settlements have landed") }
             return String(localized: "\(spendsLabel(room.allTime)) before that")
@@ -496,7 +520,7 @@ struct GnosisPayRoom: Equatable {
     /// The quiet line at the foot: spends we could not price, and how long the
     /// card has been unused. The unpriced clause is not politeness — such a
     /// spend is money missing from the total directly above it.
-    static func footnote(_ room: GnosisPayRoom, now: Date = .now) -> String? {
+    static func footnote(_ room: CardSpendRoom, now: Date = .now) -> String? {
         var parts: [String] = []
         if room.unpriced > 0 {
             parts.append(room.unpriced == 1

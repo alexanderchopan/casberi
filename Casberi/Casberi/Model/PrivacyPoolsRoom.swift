@@ -23,7 +23,7 @@ import Foundation
 ///     amount lived only inside each row's title. It does not any more:
 ///     `PrivacyPoolsBridge` stamps `priceValue`/`priceCurrency` at landing
 ///     (2026-08-17), the same structured pair `RailgunRoom` and
-///     `GnosisPayRoom` already read. Never summed across assets.
+///     `CardSpendRoom` already read. Never summed across assets.
 ///  3. **Cover became a number.** See `Cover`.
 ///
 /// ## It spends nothing per open

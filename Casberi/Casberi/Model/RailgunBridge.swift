@@ -557,7 +557,7 @@ enum RailgunBridge {
             thing.transferAmount = amountLine
             thing.transferDirection = direction == .shield ? "sent" : "received"
             // The move as DATA (2026-08-11) — the same generic
-            // `priceValue`/`priceCurrency` meaning `GnosisPayRoom` and
+            // `priceValue`/`priceCurrency` meaning `CardSpendRoom` and
             // `PeerRoom` already read: this row's amount, in this token,
             // never summed across tokens. Only when BOTH a real symbol (not
             // the `shortAddress` fallback) and a real decimals were read —

@@ -29,7 +29,7 @@ import Foundation
 /// back into arithmetic is the thing `Thing`'s own doc argues against, and it
 /// would be worse here than most: the token differs per fill, so a sum over
 /// parsed numbers would add USDC to ETH and print the result as one figure.
-/// `GnosisPayRoom` states money because its bridge lands `priceValue` and
+/// `CardSpendRoom` states money because its bridge lands `priceValue` and
 /// `priceCurrency`; this one cannot, so it does not.
 ///
 /// ## What it may NOT draw: a date for a fall-through
@@ -102,7 +102,7 @@ struct PeerRoom: Equatable {
         let rail: String?
         let at: Date
         /// `Thing.priceCurrency` — the settled TOKEN's symbol, as data
-        /// (2026-08-11). Reused rather than a new field: `GnosisPayRoom`
+        /// (2026-08-11). Reused rather than a new field: `CardSpendRoom`
         /// already establishes the meaning "this row's amount, in this
         /// currency, never summed across currencies" for `priceValue` +
         /// `priceCurrency`, and a Peer fill's token is exactly that kind of

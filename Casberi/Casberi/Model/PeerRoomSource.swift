@@ -50,7 +50,7 @@ enum PeerRoomSource {
                           at: thing.capturedAt,
                           // priceValue/priceCurrency (2026-08-11) — the SAME
                           // generic "amount, in this currency, never summed
-                          // across currencies" meaning `GnosisPayRoom` reads,
+                          // across currencies" meaning `CardSpendRoom` reads,
                           // reused rather than a new field. Nil on any fill
                           // whose token decimals couldn't be read.
                           token: thing.priceCurrency,

@@ -633,7 +633,7 @@ enum AppleWalletRoom {
     ///
     /// §374's mask is applied by the CALLER here rather than taken as a
     /// parameter, because this room's card already resolves it — see
-    /// `GnosisPayRoom.lede` for the version that takes it, and the reason the
+    /// `CardSpendRoom.lede` for the version that takes it, and the reason the
     /// mask must suppress `numeric` as well as the string.
     static func lede(merchants: [MerchantRow], total: Double,
                      currency: String) -> RoomLede? {

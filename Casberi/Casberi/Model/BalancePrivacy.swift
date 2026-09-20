@@ -113,7 +113,7 @@ final class BalancePrivacy {
     }
 
     /// A whole sentence built around a value — the room heads compose these
-    /// (`GnosisPayRoom.headline`, the composition strip's mover line), so the
+    /// (`CardSpendRoom.headline`, the composition strip's mover line), so the
     /// number cannot be intercepted on its own.
     ///
     /// Returns nil while hiding, and the CALLER decides what to do with that:

@@ -5,7 +5,7 @@ import Foundation
 ///
 /// Railgun was the one wallet-riding seat (`RailgunBridge`, prd §268) with no
 /// room head at all, unlike its three siblings (`PeerRoom`, `PrivacyPoolsRoom`,
-/// `GnosisPayRoom`, prd §349) — a plain list of shields and unshields with no
+/// `CardSpendRoom`, prd §349) — a plain list of shields and unshields with no
 /// standing answer to "what am I actually moving through this". This is that
 /// answer, grouped the way Railgun's own doc already reasons about it: there is
 /// no "rail" here (no funding platform, no maker/taker), so the one axis worth
@@ -16,7 +16,7 @@ import Foundation
 /// Every fact is on a landed row — the `sourceRef` prefix `RailgunBridge`
 /// stamps (`railgun:shield:…` / `railgun:unshield:…`) and, since 2026-08-11,
 /// `priceValue`/`priceCurrency`: the SAME generic "amount, in this currency,
-/// never summed across currencies" meaning `GnosisPayRoom` and `PeerRoom`
+/// never summed across currencies" meaning `CardSpendRoom` and `PeerRoom`
 /// already read. No request, no new `Thing` property, no CloudKit deploy.
 ///
 /// ## What it may NOT draw: a sender, or the pool's inside

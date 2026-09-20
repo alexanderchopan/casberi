@@ -30,7 +30,7 @@ import Foundation
 /// harness (`scripts/money-receipt-selftest.sh`) exists for exactly this:
 /// nothing else in the tree can tell a true sentence from a fluent one.
 ///
-/// **Foundation-only by design**, the `GnosisPayRoom` split: everything that can
+/// **Foundation-only by design**, the `CardSpendRoom` split: everything that can
 /// be wrong in a way that still renders perfectly lives here, where the harness
 /// compiles it whole and unmodified. `MoneyReceiptSource` holds the half that
 /// touches `Thing`.
