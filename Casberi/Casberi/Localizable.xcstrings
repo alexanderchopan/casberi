@@ -43899,6 +43899,34 @@
         }
       }
     },
+    "Ask something now" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pregunta algo ahora"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今すぐ質問する"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금 질문하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "现在提问"
+          }
+        }
+      }
+    },
     "Ask the bar at the bottom about anything you've saved." : {
       "localizations" : {
         "es" : {
@@ -44349,6 +44377,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在询问 %@：%@"
+          }
+        }
+      }
+    },
+    "Asking %@…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Preguntando a %@…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@に質問中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에게 묻는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在询问 %@…"
           }
         }
       }
@@ -49750,6 +49806,34 @@
         }
       }
     },
+    "Chat" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Chat"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チャット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "채팅"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "聊天"
+          }
+        }
+      }
+    },
     "Chat with %@" : {
       "localizations" : {
         "es" : {
@@ -52091,6 +52175,34 @@
         }
       }
     },
+    "Connected to a new Bankr account. Find Bankr in Agents." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conectado a una cuenta nueva de Bankr. Encuentra Bankr en Agentes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいBankrアカウントに接続しました。Bankrはエージェントにあります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 Bankr 계정에 연결되었습니다. 에이전트에서 Bankr를 찾으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已连接到新的 Bankr 账户。在“代理”中找到 Bankr。"
+          }
+        }
+      }
+    },
     "Connected to your account · %@" : {
       "localizations" : {
         "es" : {
@@ -52955,6 +53067,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "对话"
+          }
+        }
+      }
+    },
+    "Conversations you have had" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conversaciones que has tenido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これまでの会話"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금까지 나눈 대화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你进行过的对话"
           }
         }
       }
@@ -65993,6 +66133,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "查找%@，也可搜索你的"
+          }
+        }
+      }
+    },
+    "Find Bankr in Agents, in the dock." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encuentra Bankr en Agentes, en el dock."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankrはドックのエージェントにあります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "독의 에이전트에서 Bankr를 찾으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在程序坞的“代理”中找到 Bankr。"
           }
         }
       }
@@ -89636,6 +89804,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Walletbeat 对 %@ 检查的项目均未不合格"
+          }
+        }
+      }
+    },
+    "Nothing asked yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no has preguntado nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ質問はありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 질문이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还没有提问"
           }
         }
       }
@@ -121470,6 +121666,34 @@
         }
       }
     },
+    "Start a new conversation" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Iniciar una conversación nueva"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しい会話を始める"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 대화 시작"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "开始新对话"
+          }
+        }
+      }
+    },
     "Start again from the new chain" : {
       "localizations" : {
         "es" : {
@@ -148447,6 +148671,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的验证码"
+          }
+        }
+      }
+    },
+    "Your conversation with %@ appears here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu conversación con %@ aparece aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@との会話がここに表示されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@와의 대화가 여기에 표시됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你与 %@ 的对话会显示在这里"
           }
         }
       }
