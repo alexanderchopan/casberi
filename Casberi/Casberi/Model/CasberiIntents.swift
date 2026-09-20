@@ -74,8 +74,16 @@ struct WeekSynthesisIntent: AppIntent {
 
         if let top, top.value >= 2 {
             let sources = Set(things.filter { $0.tags.contains(top.key) }.map(\.source)).count
-            return .result(dialog:
-                IntentDialog(LocalizedStringResource("\(top.key) fills your week — \(top.value) things across \(sources) app.")))
+            // TWO strings, not one with a number in it (prd §855). Siri SPEAKS
+            // this line, and the single string it used to be had no English
+            // localization at all — so English fell back to the key and said
+            // "7 things across 3 app." out loud. `things` is guaranteed plural
+            // by the guard above; only `sources` can be one, so one branch
+            // covers it, in every language, with no plural table to keep.
+            let line: LocalizedStringResource = sources == 1
+                ? "\(top.key) fills your week — \(top.value) things in one app."
+                : "\(top.key) fills your week — \(top.value) things across \(sources) apps."
+            return .result(dialog: IntentDialog(line))
         }
         return .result(dialog:
             "Your things are landing — \(things.count) so far.")

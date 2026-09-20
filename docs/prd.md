@@ -59152,3 +59152,70 @@ covered by substrings that predate this seat: `muse-image-1.0` by `image`,
 asset's pixels and all four corners), with the stroke's blue #046cef carrying
 the signal in `BridgeGlyph.tint` — the NEAR AI / ChatGPT / Notion case, and
 icon-sampled rather than taken from a palette.
+
+## §855 — What an outside agent can reach: a structured Find, and three sentences Siri was saying wrong (user: "what if anything can we do with this new agent project called Instinct" → "do the app intents check" → "yes do both", 2026-09-20)
+
+**Instinct gets NO SEAT, and the reason is worth recording so nobody
+re-proposes one.** It is an invite-only personal assistant reached by text and
+phone call (Spear Street Technology), with no public API, no export format,
+and no web app with a feed behind a session cookie. All three of this app's
+seat patterns need one of those — a BYO key against an OpenAI-shaped endpoint
+(§854), a cookie read of a page (§701 · §726 · §731 · §776), or a file import
+(§245 · §279 · §280). With none of them there is no host for `NetworkReach`
+and nothing the page could honestly say, which is not §780b's "ship ahead of
+the evidence" but ship with **no** evidence. Re-open only if Spear Street
+publishes an API; the seat would then be §854-shaped and cheap.
+
+**What the question actually exposed is the INVERSE direction, and it was
+already half built.** A third-party app cannot invoke another app's App
+Intents. The callers are Siri, Spotlight, the Shortcuts app, the Action
+Button, Control Center, Focus filters and Apple Intelligence — so any
+phone-level agent reaches this app through a Shortcut the person built, or by
+driving the screen. That makes the Shortcuts actions the whole surface, and
+they were free-text only: `ThingEntityQuery` was an `EntityStringQuery`, so a
+query could ask for a word and nothing else.
+
+**`ThingEntityQuery` is now an `EntityPropertyQuery` too, which is what puts a
+"Find Things" action in Shortcuts.** Four members of `ThingEntity` are
+`@Property` — title, app, kind, date — so a filter can say *kind is
+Screenshot, app is Gmail, date is after Monday, newest first*: the composition
+an agent needs and free text cannot express. `ThingKind` conforms to `AppEnum`
+so kind is a picker rather than a spelling; `caseDisplayRepresentations` must
+name every case or it does not compile, which is the guard a hand-kept table
+does not have (§831). Filtering runs in Swift over the fetched corpus, not as
+a `#Predicate` — the comparators compose arbitrarily, and a `#Predicate` using
+`.contains` on the `tags` array crashes at runtime anyway.
+
+**This is the only App Intents work here that helps every iOS this app
+supports.** Assistant schemas and onscreen context (`.appEntityIdentifier`,
+`.userActivity`) are iOS 27's Siri and stay unadopted for the reason already
+ruled: an iOS 27-only feature reaches a minority at launch.
+
+**Two traps paid for in the build.** A `@Property` member is written through
+the wrapper's setter, which is a call on a fully-initialized `self`, so every
+plain `let` must be assigned FIRST or the initializer will not compile. And
+`AppEnum` requires `Sendable`, which must be declared in the type's own file —
+retroactively it is a Swift 6 error — so `ThingKind` spells that one word in
+`Shared/Thing.swift` while the `AppEnum` extension stays in the app target,
+where the share extension never has to import App Intents.
+
+**Three shipped sentences did not agree with their own numbers, and one of
+them was SPOKEN.** `WeekSynthesisIntent` said, out loud, "Design fills your
+week — 7 things across 3 app." The string had no English localization at all:
+English fell back to the key, and the key was written with a singular noun.
+The same string was translated into ja, ko and zh-Hans with its two `%lld`
+arguments SWAPPED — non-positional specifiers do not reorder, so those three
+read "7 apps holding 3 things". Both halves are fixed by branching in Swift on
+the count that can be one, which needs no plural table and is right in every
+language; the three translations were rewritten in the correct order.
+`SafeScreen.signsForLine` had the same shape ("Signing for 2 Safe.") and took
+the same fix.
+
+**The rule this leaves: ask who READS a string, then check that English is
+IN the catalogue.** A key with translations and no `en` entry looks finished
+in Xcode and is broken only in the source language — the one nobody reviews,
+because it is the string in the code. Two further keys in that state
+(`%@ needs %lld of its %lld owners…`, `%lld entries in · %lld already here`)
+turned out to have no call site at all, and `%lld of %lld positions idle` is
+grammatical because its own guards make both counts ≥ 2. The import screens'
+"1 chats in" family is real and NOT fixed here.

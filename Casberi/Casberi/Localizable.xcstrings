@@ -4136,7 +4136,7 @@
         }
       }
     },
-    "%@ fills your week — %lld things across %lld app." : {
+    "%@ fills your week — %lld things across %lld apps." : {
       "extractionState" : "manual",
       "localizations" : {
         "es" : {
@@ -4148,19 +4148,48 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今週は%@が中心 — %lld個のアプリにまたがる%lld件のアイテム。"
+            "value" : "今週は%@が中心 — %lld件のアイテムが%lld個のアプリにまたがっています。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@이(가) 이번 주를 채워요 — 앱 %lld개에 걸쳐 항목 %lld개."
+            "value" : "%@이(가) 이번 주를 채워요 — 항목 %lld개가 앱 %lld개에 걸쳐 있어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ 填满了你这周 — %lld 个应用里的 %lld 条内容。"
+            "value" : "%@ 填满了你这周 — %lld 条内容，来自 %lld 个应用。"
+          }
+        }
+      }
+    },
+    "%@ fills your week — %lld things in one app." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ llena tu semana — %lld elementos en una sola app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今週は%@が中心 — 1つのアプリから%lld件のアイテム。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@이(가) 이번 주를 채워요 — 앱 한 개에서 항목 %lld개."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 填满了你这周 — 来自一个应用的 %lld 条内容。"
           }
         }
       }
@@ -119321,30 +119350,58 @@
         }
       }
     },
-    "Signing for %lld Safe. Losing this phone would still leave enough owners to change that (%lld to spare)." : {
+    "Signing for %lld Safes. Losing this phone would still leave enough owners to change that (%lld to spare)." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Firmando para %lld Safe. Perder este teléfono dejaría propietarios suficientes para cambiarlo (%lld de margen)."
+            "state" : "translated",
+            "value" : "Firmando para %lld Safes. Perder este teléfono dejaría propietarios suficientes para cambiarlo (%lld de margen)."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "%lld 件の Safe に署名しています。この端末を失っても、変更に足りるだけのオーナーが残ります（余裕 %lld 人）。"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Safe %lld개에 서명하고 있습니다. 이 기기를 잃어도 변경에 필요한 소유자는 남습니다(여유 %lld명)."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "正在为 %lld 个 Safe 签名。即使丢失这台手机，剩余所有者仍足以做出更改（余量 %lld 位）。"
+          }
+        }
+      }
+    },
+    "Signing for one Safe. Losing this phone would still leave enough owners to change that (%lld to spare)." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Firmando para un Safe. Perder este teléfono dejaría propietarios suficientes para cambiarlo (%lld de margen)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 件の Safe に署名しています。この端末を失っても、変更に足りるだけのオーナーが残ります（余裕 %lld 人）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safe 한 개에 서명하고 있습니다. 이 기기를 잃어도 변경에 필요한 소유자는 남습니다(여유 %lld명)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在为 1 个 Safe 签名。即使丢失这台手机，剩余所有者仍足以做出更改（余量 %lld 位）。"
           }
         }
       }

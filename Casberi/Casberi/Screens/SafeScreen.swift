@@ -298,7 +298,13 @@ struct SafeScreen: View {
 
     private func signsForLine(_ report: SafeSigner.StandingReport) -> String {
         let spare = report.safes.map(\.spareOwners).min() ?? 0
-        return String(localized: "Signing for \(report.safes.count) Safe. Losing this phone would still leave enough owners to change that (\(spare) to spare).")
+        // Two strings so English agrees with its own number (prd §855): the
+        // one this replaced had no English localization, so it fell back to
+        // the key and read "Signing for 2 Safe."
+        let count = report.safes.count
+        return count == 1
+            ? String(localized: "Signing for one Safe. Losing this phone would still leave enough owners to change that (\(spare) to spare).")
+            : String(localized: "Signing for \(count) Safes. Losing this phone would still leave enough owners to change that (\(spare) to spare).")
     }
 
     private func makeSigner() {

@@ -3,7 +3,10 @@ import SwiftData
 
 /// The kind of a thing. Build brief §3 — v1 kinds; the schema leaves room for
 /// the Alice kinds (job, run, output, skill) as load on this same model.
-enum ThingKind: String, Codable, CaseIterable {
+// `Sendable` is spelled HERE, not on the `AppEnum` extension in the app
+// target's `ThingEntity.swift`, because a Sendable conformance must live in
+// the type's own file — retroactively is a Swift 6 error (prd §855).
+enum ThingKind: String, Codable, CaseIterable, Sendable {
     // v1 (Bob)
     case note, screenshot, chat, event, link, reminder, mail, file, voice
     // A person from Contacts — a search-only reference thing (2026-07-12): it
