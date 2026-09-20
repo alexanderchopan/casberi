@@ -57,7 +57,7 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 6
+    static let version = 7
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -174,6 +174,13 @@ enum DemoSeedAll {
                               // needs these two or they outlive the demo.
                               "fc:demo:", "bsky:demo:",
                               "import:receipt:", "cloudflare:cert:demo",
+                              // The agent rooms' demo conversations (2026-09-20)
+                              // carry the REAL `agentchat:` prefix, because
+                              // `AgentChatView` fences its query on it and a
+                              // `demo:` ref would land a row the Chat tile
+                              // cannot see. The `demo-` infix keeps teardown off
+                              // a conversation the developer actually had.
+                              "agentchat:demo-",
                               // The GitHub feed's demo rows (prd §674 — one
                               // feed, a tag per row) carry the real bridge's
                               // `gh:` shape so `GitHubRoom` recognises them,
@@ -861,6 +868,133 @@ enum DemoSeedAll {
     /// One seeded row. `tune` sets the fields that make a room's hero draw —
     /// they are all post-init properties on `Thing`, which is why this takes a
     /// closure rather than growing thirty parameters.
+
+    // MARK: - The agent rooms
+
+    /// **One conversation per keyed agent, so every agent room is FURNISHED
+    /// (2026-09-20).**
+    ///
+    /// §839 gave a keyed agent a room by landing its conversations and §842
+    /// gave it a chip for holding a key, but the demo holds no keys and seeded
+    /// no conversations — so every one of these rooms was the empty state §845
+    /// had to stop drawing as a black screen. A person entering the demo saw
+    /// the agent template only if they had already connected an agent
+    /// themselves, which is precisely the audience the demo is not for.
+    ///
+    /// **An exhaustive `switch`, never `allCases` plus a table.** A dictionary
+    /// keyed by provider compiles perfectly with a provider missing, and the
+    /// room it furnishes nothing for is the one nobody looks at — this file's
+    /// own opening rule, that a seed which sets too little renders as a plain
+    /// `BandRow` list, with the failure moved one level up. Adding a ninth
+    /// agent now fails to compile here, which is the same guarantee
+    /// `AgentAnswer.makeRequest` buys with its explicit case.
+    ///
+    /// **The ref joins the REAL namespace** (`AgentConversationLanding.refPrefix`,
+    /// never a second literal), for the reason the GitHub and vibenet rows give
+    /// above: `AgentChatView` fences its query on that prefix, so a `demo:` ref
+    /// would land a row the Chat tile cannot see. The `demo-` infix keeps it
+    /// scoped to rows this file wrote, so `clear` can never reach a
+    /// conversation the developer actually had.
+    ///
+    /// **No answer here claims to be signed.** NEAR AI's verified badge reads
+    /// `AgentAnswerResult.verification`, which lives in the composer and is
+    /// never stored on a `Thing` — so a landed conversation cannot carry the
+    /// claim and this seed does not invent one in prose either. A fabricated
+    /// "signature checked" would be the §83 fake status wearing the one badge
+    /// in the app whose whole value is that it cannot be faked (prd §848).
+    private static func agentChats() -> [Thing] {
+        AgentProvider.allCases.compactMap { provider in
+            let turns = demoTurns(for: provider)
+            guard let opening = turns.first?.question else { return nil }
+            // Flattened exactly as `AgentConversationLanding` flattens a real
+            // one — through `ChatTranscript.make`, so the demo and the live
+            // landing can never disagree about what a transcript looks like.
+            var lines: [(speaker: String, text: String)] = []
+            for turn in turns {
+                lines.append((AgentSheet.readerLabel, turn.question))
+                lines.append((provider.agent, turn.answer))
+            }
+            let transcript = ChatTranscript.make(lines)
+            let title = IngestSupport.titleLine(opening)
+            return row(.chat, title,
+                       source: AgentConversationLanding.source(for: provider),
+                       ref: AgentConversationLanding.refPrefix + "demo-\(provider.rawValue)",
+                       days: agentChatAge(provider), hour: 9,
+                       content: title == opening ? "" : String(opening.prefix(200))) { thing in
+                thing.enrichedText = transcript.text
+                thing.messageCount = transcript.messages
+            }
+        }
+    }
+
+    /// Spread across a fortnight so the agent folder does not read as eight
+    /// conversations had in one minute, and so the rooms sort into a believable
+    /// order rather than whatever `allCases` happens to be.
+    private static func agentChatAge(_ provider: AgentProvider) -> Double {
+        switch provider {
+        case .anthropic:  1
+        case .nearai:     2
+        case .openai:     4
+        case .bankr:      5
+        case .google:     8
+        case .openrouter: 11
+        case .venice:     13
+        case .grok:       16
+        }
+    }
+
+    /// What each agent was asked, and what it said.
+    ///
+    /// Each conversation is about the corpus THIS demo actually holds — the
+    /// wallet rows, the saved reading, the GitHub feed — because an agent
+    /// answering from things that are not there is the one thing the room
+    /// cannot demonstrate. Two exchanges each: one is a snippet, three is a
+    /// scroll, and the template's two halves read clearly at two.
+    private static func demoTurns(for provider: AgentProvider) -> [AgentTurn] {
+        switch provider {
+        case .anthropic:
+            [AgentTurn(question: "What did I save about attention and reading this month?",
+                       answer: "Three things, and they disagree with each other. The Substack piece argues long reading is a habit you rebuild deliberately; the Readwise highlights you kept are mostly from a book making the opposite case, that attention follows interest and can't be trained directly. The third is your own note from the 4th, which sides with the book."),
+             AgentTurn(question: "Which one did I keep the most from?",
+                       answer: "The book — eleven highlights against the article's one. You kept nothing from the second half of the article.")]
+        case .openai:
+            [AgentTurn(question: "What was in that screenshot of the pricing page?",
+                       answer: "Three tiers: $0, $20 and $99 a month, with the middle one marked most popular. The annual toggle takes about 17% off. The footnote says seats are billed per active user, not per invited one."),
+             AgentTurn(question: "Did I save anything else from that site?",
+                       answer: "One link, from two days earlier — their changelog.")]
+        case .google:
+            [AgentTurn(question: "Summarise the receipts I saved this week.",
+                       answer: "Seven, totalling $284.19. The largest is the $180 flight; the rest are under $30 and mostly groceries. Two are duplicates of the same coffee order — the same amount, the same minute."),
+             AgentTurn(question: "Anything I'd want to expense?",
+                       answer: "The flight and the $24 airport lunch. Nothing else looks like work.")]
+        case .venice:
+            [AgentTurn(question: "What's in my notes about the move?",
+                       answer: "Four notes. The lease ends on the 30th, the deposit is £1,800 and you've written twice that you want to photograph the flat before handing the keys back. There's no date set for the van."),
+             AgentTurn(question: "What haven't I booked yet?",
+                       answer: "The van, and the standing-order cancellation. Both are still unticked.")]
+        case .bankr:
+            [AgentTurn(question: "How's my wallet doing this week?",
+                       answer: "Up 4.1% across the addresses you follow, mostly from ETH. Your largest position is still the Base stablecoin balance, which hasn't moved. One approval you granted in March is still open on a contract you haven't touched since."),
+             AgentTurn(question: "What's that open approval?",
+                       answer: "An unlimited USDC spend on a router you last used six months ago. It's the kind of thing worth revoking, and the wallet room's approvals card has the door.")]
+        case .openrouter:
+            [AgentTurn(question: "Which repos have open pull requests waiting on me?",
+                       answer: "Two. One has been open eleven days with a review requested from you on the first day; the other you opened yourself and CI has been red on it since Tuesday."),
+             AgentTurn(question: "What's failing on mine?",
+                       answer: "The same test, four runs running — a timeout, not an assertion.")]
+        case .grok:
+            [AgentTurn(question: "What have people replied to me about lately?",
+                       answer: "Mostly one thread — the post about reading habits picked up eleven replies, and they split about evenly between people agreeing and people recommending the book you'd already quoted."),
+             AgentTurn(question: "Anyone I should reply to?",
+                       answer: "Two asked you a direct question and neither has an answer yet.")]
+        case .nearai:
+            [AgentTurn(question: "What did I say I'd do this week and haven't?",
+                       answer: "Three things you wrote down and left open: photograph the flat before the handover, cancel the standing order, and answer the two replies that asked you something directly. The van is the only one with a deadline attached."),
+             AgentTurn(question: "Which is most urgent?",
+                       answer: "The van. The lease ends on the 30th and everything else can happen after you've moved.")]
+        }
+    }
+
     private static func row(_ kind: ThingKind, _ title: String,
                             source: String, ref: String,
                             days: Double, hour: Int = 10,
@@ -1443,6 +1577,7 @@ enum DemoSeedAll {
         out += ens()
         out += l2beat()
         out += cardPointers()
+        out += agentChats()
         out += vibenet()
         out += appleWallet()
         out += cards()
