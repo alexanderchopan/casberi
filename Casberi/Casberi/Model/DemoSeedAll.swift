@@ -3711,8 +3711,19 @@ enum DemoSeedAll {
         }
     }
 
-    /// The two onchain cards lead with `cardMonths` — spend by month, which
+    /// The three onchain cards lead with `cardMonths` — spend by month, which
     /// needs `priceValue` across at least two calendar months.
+    ///
+    /// **MetaMask Card's rows name NO MERCHANT, and that is the seat's own
+    /// ceiling shown rather than papered over (prd §857).** Its two siblings
+    /// below title their rows "Supermarket · €42.80", which the real bridges
+    /// cannot land either — the merchant is not on the chain for any of the
+    /// three. Leaving that inherited liberty in place for a seat whose whole
+    /// documented boundary is "amounts and timing only" would make the demo
+    /// advertise a statement the app cannot produce, which is §83 arriving
+    /// through the one surface anyone can see without an account. So these
+    /// read exactly as the shipped bridge writes them: "Spent $12.40 with
+    /// MetaMask Card".
     private static func cards() -> [Thing] {
         var out: [Thing] = []
         let gnosis: [(String, Double, Double)] = [
@@ -3725,6 +3736,34 @@ enum DemoSeedAll {
                 content: "Gnosis Chain · EURe") { t in
                 t.priceValue = g.1
                 t.priceCurrency = "EUR"
+                t.walletAddress = demoWallet
+            }
+        }
+        // Dollars, not euros, because Linea's card list is dollar stablecoins
+        // (USDC, USDT, mUSD, aUSDC, amUSD) plus EURe and GBPe — and `content`
+        // names the chain and the token the way the real row's explorer link
+        // implies, so the demo says WHICH stablecoin paid.
+        let metamask: [(Double, Double, String)] = [
+            (12.40, 1, "USDC"), (7.85, 6, "USDC"), (104.00, 17, "mUSD"),
+            (23.15, 33, "USDC"), (9.60, 47, "USDC"), (58.30, 64, "USDC"),
+        ]
+        out += metamask.enumerated().map { i, m in
+            row(.transaction,
+                "Spent $\(String(format: "%.2f", m.0)) with MetaMask Card",
+                // A STRING LITERAL, not `MetaMaskCardBridge.source`, and the
+                // reason is a check rather than a style: `demo-parity-audit.py`
+                // keys every row on a literal `source:` and cannot resolve a
+                // constant, so a row written through one is not audited — it
+                // passes by being invisible. That exact miss is recorded in
+                // that script's own comments (a row written `source: f.source`,
+                // 2026-08-17).
+                source: "MetaMask Card",
+                ref: "metamaskcard:spend:demo\(i)", days: m.1, hour: 11,
+                content: "Linea · \(m.2)") { t in
+                t.priceValue = m.0
+                t.priceCurrency = "USD"
+                t.transferAmount = "\(String(format: "%.2f", m.0)) \(m.2)"
+                t.transferDirection = "sent"
                 t.walletAddress = demoWallet
             }
         }
@@ -5660,6 +5699,7 @@ enum DemoSeedAll {
         GnosisPayBridge.evidence, WalletDeFi.evidence, MorphoDeFi.evidence,
         HyperliquidDeFi.evidence, AerodromeDeFi.evidence, UniswapLiquidity.evidence,
         EtherFiUnstake.evidence, EtherFiCash.evidence,
+        MetaMaskCardBridge.evidence,
     ]
 
     // MARK: - Seats
@@ -5736,6 +5776,7 @@ enum DemoSeedAll {
         ("Hegotá Frames", "An account on this phone", "Reads what each frame of a transaction did."),
         ("Hegotá Privacy", "1 address watched", "Reads the one-time spend keys an address used, and which snapshot each proof named."),
         ("Gnosis Pay", "Rides your wallet", "Reads what the card settled onchain."),
+        ("MetaMask Card", "Rides your wallet", "Reads what the card settled onchain."),
         ("ether.fi", "Rides your wallet", "Reads what the card settled onchain."),
         // (Aave, Morpho, Uniswap, Hyperliquid and Aerodrome were claimed here
         // from §484 until §515 retired their seats. They are not seats any

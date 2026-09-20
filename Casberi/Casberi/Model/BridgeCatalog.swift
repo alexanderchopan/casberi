@@ -190,6 +190,22 @@ enum BridgeCatalog {
         // reads like a statement, and this one can't.
         Offer(name: "Gnosis Pay",  tagline: "Card spending, straight off the chain", group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 7, 26)),
+        // MetaMask Card (2026-09-20) — the same object as Gnosis Pay one chain
+        // over, so the same group for the same reason: the money is in your own
+        // wallet until the swipe, which is what puts it beside the wallets and
+        // not in Shopping with Privacy.com's receipts.
+        //
+        // The TAGLINE must not promise a statement, and must not REPEAT Gnosis
+        // Pay's. Both constraints are load-bearing: the merchant is not on the
+        // chain and cannot be (it lives behind Baanx's OAuth API under
+        // MetaMask's own client id — see `MetaMaskCardBridge`'s header for why
+        // that door stays shut), and two adjacent Wallet rows sharing one
+        // sentence would read as one thing listed twice, which is the very
+        // thing `KindGlyph`'s ether.fi/Gnosis Pay comment forbids in the other
+        // direction. So this one names its own chain. `alsoReads` carries Linea
+        // and Baanx so a search for either finds the seat that really reads it.
+        Offer(name: "MetaMask Card", tagline: "Every swipe, straight off Linea", group: "Wallet", connectable: true,
+              alsoReads: ["Linea", "Baanx"], needsSetup: true, added: day(2026, 9, 20)),
         // Apple Wallet (prd §313, 2026-08-06) — FinanceKit, granted by Apple
         // for this bundle id on request QVDBMBPMJU. Wallet group beside Gnosis
         // Pay for that seat's own reason: a card feed belongs with the cards.

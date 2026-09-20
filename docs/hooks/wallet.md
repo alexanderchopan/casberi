@@ -120,3 +120,39 @@ So on any install that had ever saved a chain set, a seeded chain was ON in the 
 **Two more:** a one-chain Alchemy body that is rejected now marks that chain (§825 only marked when a sibling answered, which left the union pass's lone unmapped chain re-asked every pass forever, unrecorded). And `unreadableNetworks()` + the crown's `note:` state which followed chain didn't answer — §83, and the reason this recurred: the room drew what it could read and said nothing about what it could not, so "you hold nothing there" and "we never got an answer" looked identical.
 
 **Unmeasured:** whether Alchemy serves `robinhood-mainnet` at all (egress blocked from the authoring machine; Robinhood has no Zerion mapping, so Alchemy is its only reader). `-portfolioProbe YES` answers it in two lines — `chains asked` and `followed but unreadable`. Blockscout (§797's keyless pattern) is the alternative if refused, deliberately not built on speculation.
+
+## MetaMask Card, the third seat on Gnosis Pay's shape (prd §857, 2026-09-20)
+
+`-metamaskCardProbe <blocksBack|YES>` runs the card-spend sweep over the
+watched wallets headlessly. A numeric spec rewinds every cursor that many
+blocks below the Linea head first, so real past spends land instead of waiting
+for someone to buy something; pair it with `-walletAddress <a cardholder>`. It
+NSLogs the landed count, `accountSummary()` (which watched wallets turned out
+to hold a card), and then **one line per row** — `metamaskCardRow| <time> |
+<title> | <price> <currency> | <url>`. The per-row dump is not verbosity: a
+count cannot tell a correct amount from one off by twelve decimal places, which
+is precisely the trap the token table exists to avoid.
+
+**Read the probe's ceiling the opposite way round from `-gnosisPayProbe`.**
+Gnosis Chain returns an empty list for a too-large range, so an over-large spec
+there reads as "no spends". Linea's primary host ERRORS instead
+(`range 20000 exceeds limit of 10000`), so an over-large spec fails loudly and
+the sweep simply chunks. What a huge spec really costs here is TIME: a Linea
+block is ~8.8s, so 60,000 blocks is only six days, and a spec in the millions
+is asking for years of history the seat deliberately does not backfill.
+
+**Where the constants come from.** Every address in `MetaMaskCardBridge` is
+read out of MetaMask's own repo — `metamask-mobile`,
+`app/selectors/featureFlagController/card/defaults.ts` — which is the fallback
+for a REMOTE flag. Re-read that file before trusting a stale constant, and
+treat a seat that suddenly lands nothing as that first, ahead of anything in
+this app. The bridge's own header carries the full measurement record: the two
+settlement addresses, the host elimination, the block time, and the decimals
+verified against each contract's `decimals()`.
+
+**What the seat cannot do, and will not learn to.** The merchant, MCC category,
+fees, last four and pending/declined/reversed status live behind Baanx's
+`GET /v1/card/transactions`, which authenticates with OAuth + PKCE against
+MetaMask's own client id. Reaching it would mean presenting this app as
+MetaMask to a third party, which is not §701's cookie-session shape. The
+ceiling is permanent; the copy says amounts and timing only.

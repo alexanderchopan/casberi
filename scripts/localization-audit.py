@@ -87,6 +87,7 @@ APPSHORTCUTS_CATALOG = ROOT / "Casberi/Casberi/AppShortcuts.xcstrings"
 KNOWN_EXEMPT = {
     "ProbeHooks.swift",       # -*Probe NSLog output — developer diagnostics only
     "GnosisPayBridge.swift",  # accountSummary() is the probe's status line
+    "MetaMaskCardBridge.swift",  # same accountSummary(), same -metamaskCardProbe line
     "RailgunBridge.swift",    # accountSummary() is the probe's status line
     "SafeBridge.swift",       # probe() is -safeProbe's NSLog output
     "MCPTools.swift",         # MCP tool text is consumed by an LLM client, not the app UI

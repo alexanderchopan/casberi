@@ -59281,3 +59281,106 @@ pay-as-you-go"). The person most likely to tap this seat is somebody already
 paying for Muse, and they will assume they are covered — the user did, in this
 very session. The setup screen was left as it is by their own ruling; recorded
 here so the next reader knows the assumption is wrong and that it was weighed.
+
+## §857 — MetaMask Card: the third card that settles onchain, and the file that named its addresses (user: "what could we do with crypto wallets? like say metamask, ambire, rainbow could we do something more with them somehow?" → "metamask card spending would be cool can you check it? any crypto card spending is something we'd want to add" → "HELL YES LETS DO IT", 2026-09-20)
+
+**A MetaMask Card swipe is a public ERC-20 transfer, and this app has read that
+exact shape twice already.** A cardholder grants an allowance to Baanx's
+"foxConnect" spender on Linea; every purchase is that spender calling
+`transferFrom`, moving a stablecoin out of the person's own wallet into one
+settlement address. `GnosisPayBridge` proved the pattern on Gnosis Chain (§222)
+and `EtherFiCash` proved it generalised to Optimism, so the seat is the third
+instance of a shape rather than a new idea: a filtered log read, a cursor, an
+evidence mark and a money formatter.
+
+**The addresses were not guessed, and the question of where to get them is the
+interesting half.** They come from MetaMask's own repo —
+`metamask-mobile`, `app/selectors/featureFlagController/card/defaults.ts`, the
+fallback for the `cardFeature` remote flag — which names the spender per chain
+and the exact supported-token list. Hunting a contract address through
+explorers and label registries found nothing (revoke.cash's `whois` has no card
+label on Linea at all); reading the client that TALKS to the contract found
+everything in one file. **It is a REMOTE flag**, so MetaMask can move these
+without shipping a build, which is recorded in the bridge's header: a seat that
+suddenly lands nothing should be checked against that file before anything
+else.
+
+**Measured live before a line was written** (2026-09-20, Linea):
+
+- Settlement addresses: `0x8dfe562c…` (global), `0x2baa8380…` (US). Both are
+  read in ONE call through an OR-array in the `to` topic, and the OR count
+  equals the two separate reads summed — 1,006 = 970 + 36 — on both hosts.
+- Volume, ~9,000 blocks: 973 spends from 444 distinct wallets on the global
+  programme, 36 on the US one. Every token seen was on MetaMask's own list.
+- A sample spend decoded end to end: USDC `0x3445b7` = $3.43, from the
+  cardholder, to the settlement address, in a transaction sent by a relayer to
+  the foxConnect spender.
+- Decimals verified against each contract's `decimals()` rather than trusted
+  from the flag file: USDC/USDT/aUSDC/mUSD/amUSD are 6, WETH/EURe/GBPe are 18.
+  All eight matched, and the table was re-diffed against the live flag file
+  after it was written: 8/8, no additions, no omissions.
+- A Linea block is **~8.8s**, not the ~2s the chain is usually described with.
+  Measured at 200, 2,000 and 20,000-block spans (8.54, 7.57, 8.93) and again at
+  60,000 blocks = 6.1 days. Every block-count constant is derived from that.
+
+**The hosts are the hostile part, and the survivors were found by elimination.**
+`linea.drpc.org` caps `eth_getLogs` at 10k on its free plan and refused every
+range tried; `linea-rpc.publicnode.com` calls a 2,000-block lookback an
+"archive request" needing a token; `1rpc.io/linea` caps at **50 blocks**;
+`linea.blockpi.network` 521s; blastapi, onfinality and therpc.io did not answer
+at all. What survived is `rpc.linea.build` and `linea.gateway.tenderly.co`,
+which agree exactly (239 / 971 / 1114 logs at 2k / 9k / 10k) and both answer
+batched JSON-RPC.
+
+**The range ceiling is HONEST here, which inverts §222's central trap.** Gnosis
+Chain's cliff returns `[]` rather than an error, so a too-large window is
+indistinguishable from "this card was never used" — the defect that shaped
+`GnosisPayBridge`'s chunking. `rpc.linea.build` errors instead
+(`range 20000 exceeds limit of 10000`) and Tenderly has no cap at all,
+answering 100,000 blocks. `maxRange` still sits at 9,000, under the STRICTER
+host's cap, because a host pair that answers different questions is worse than
+a pair that answers one.
+
+**The merchant is not reachable, and that ceiling is permanent rather than
+pending.** Merchant name, MCC category, fees, the card's last four and the
+pending/declined/reversed status all live behind Baanx's
+`GET /v1/card/transactions`, which authenticates with OAuth + PKCE **against
+MetaMask's own client id**. That is not §701's shape — a session cookie the
+person owns, handed over by the person — it is this app presenting itself as
+MetaMask to a third party. There is no version of that we would ship. §222
+recorded Gnosis Pay's API as declined-for-now because Casberi forbids in-app
+SIWE; this one is declined outright, and the catalog copy says amounts and
+timing only.
+
+**WETH breaks the sibling's money rule, and the break is the ruling.** Gnosis
+Pay's three tokens are all fiat stablecoins, so the token amount IS the money
+and `Spendable.currency` could be non-optional. MetaMask Card can spend WETH,
+and the chain carries no price at the moment of the swipe. So `currency` is
+optional, a WETH row shows the token amount, and **`priceValue` is written only
+inside that unwrap** — a number with no currency reads as dollars everywhere
+downstream, which is §83 in the most expensive place this app has.
+
+**`card-spend-audit.py` guards the family, not the diff.** Four failures that
+compile, render and look right: a lookup key carrying one capital letter (the
+addresses arrive in EIP-55 mixed case and are hand-lowercased, and a miss makes
+the seat read as "no card" — which is the healthy answer for almost every
+wallet, so nobody can tell); a `priceValue` written outside a currency unwrap;
+a cursor advanced before its save, which skips those blocks forever; and a
+bridge nothing sweeps or whose `clearState` unwatch never calls. Measured when
+written: 54 hex lookup keys in the app, 0 mixed-case. It covers all three card
+seats, so the rule outlives the seat that prompted it.
+
+**The tagline had to differ from Gnosis Pay's.** Both are "card spending,
+straight off the chain" as a sentence, and two adjacent Wallet rows sharing one
+line read as one thing listed twice — which is what `KindGlyph`'s
+ether.fi/Gnosis Pay comment forbids in the other direction. So this one names
+its chain: *"Every swipe, straight off Linea"*. The GLYPH is deliberately the
+same `creditcard` as its two siblings, for that comment's own reason: these are
+not similar products, they are the same object.
+
+**Not built, and why.** Base (`0xDaBDaFC4…`) and Monad (chain 143) carry
+foxConnect spenders in the same flag file and Base is live — 25 events in 2,000
+blocks — but their settlement addresses are UNMEASURED, and a settlement
+address is the entire filter. Immersve is MetaMask Card's second provider, with
+its own `cardImmersve*` flags and a `spenderAddress`, also unmeasured. None of
+the three ships on a guess.

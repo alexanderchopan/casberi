@@ -237,6 +237,12 @@ enum BridgeGlyph {
         // settles onchain), and picking a different glyph for one would say
         // they were different kinds of thing.
         case "ether.fi cash": return "creditcard"
+        // And the same again for the third one (2026-09-20). The rule is worth
+        // restating rather than inferring: these three seats are not similar,
+        // they are the SAME OBJECT — a card whose swipe settles onchain — so a
+        // distinct glyph for each would say they were different kinds of thing
+        // and make the wallet group read as three unrelated products.
+        case "metamask card": return "creditcard"
         // A multisig is a signature queue — the same mark `WalletWarning.Kind`
         // already uses for a pending Safe signature, so the catalog tile and
         // the Worth-a-look row can't pick different glyphs for one thing.

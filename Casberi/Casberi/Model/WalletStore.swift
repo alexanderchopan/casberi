@@ -176,6 +176,8 @@ final class WalletStore {
                 // (prd §222) — same back-fill reason, plus a stale mark would
                 // keep the seat lit for a card whose wallet is gone.
                 GnosisPayBridge.clearState(address: old.address)
+                // MetaMask Card's leave for the same reason (2026-09-20).
+                MetaMaskCardBridge.clearState(address: old.address)
                 // Morpho's activity cursor and risk buckets leave too
                 // (2026-07-21) — same back-fill reason, plus a stale
                 // "at-risk" bucket would suppress a real alert on re-watch.
@@ -242,6 +244,7 @@ final class WalletStore {
                     PrivacyPoolsBridge.clearState(address: hex)
                     RailgunBridge.clearState(address: hex)
                     GnosisPayBridge.clearState(address: hex)
+                    MetaMaskCardBridge.clearState(address: hex)
                     MorphoDeFi.clearState(address: hex)
                     UniswapLiquidity.clearState(address: hex)
                     HyperliquidDeFi.clearState(address: hex)

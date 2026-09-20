@@ -437,6 +437,14 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads your Gnosis Pay card spending off Gnosis Chain's public chain, for the wallets you watch — the amount and the moment, which is all the chain carries. Also asks a Gnosis Chain Safe for its own hash of a transaction before this phone will sign it.",
                  hosts: ["rpc.gnosischain.com", "rpc.gnosis.gateway.fm"]),
+        // Reach is WALLET, not "MetaMask Card" — Gnosis Pay's reason directly
+        // above, and the same shape: the seat only appears once a card spend
+        // has been seen, but the read that discovers one runs for every
+        // watched wallet.
+        Endpoint(service: "MetaMask Card",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Reads your MetaMask Card spending off Linea's public chain, for the wallets you watch — the amount, the token and the moment, which is all the chain carries. The merchant is never on the chain, so it is never read. Read-only: nothing here spends, tops up, or changes a card's spending cap.",
+                 hosts: ["rpc.linea.build", "linea.gateway.tenderly.co"]),
         // Both ether.fi entries reach under WALLET, not their own seats, for
         // Gnosis Pay's reason above: each seat appears only once there's
         // evidence (an unstake request / a Cash account), but the read that

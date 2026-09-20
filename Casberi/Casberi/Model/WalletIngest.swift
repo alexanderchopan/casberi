@@ -779,6 +779,15 @@ enum WalletIngest {
                                                         addresses: evmAddresses,
                                                         existing: existing)
         added += gnosisPayAdded ?? 0
+        // MetaMask Card spends ride the same pass (2026-09-20) — the third
+        // seat on Gnosis Pay's shape: one filtered settlement-transfer read per
+        // wallet on Linea, both card programmes in the same call, landing
+        // "Spent $12.40 with MetaMask Card" things. No-ops for a wallet that
+        // holds no card, which is almost all of them.
+        let metamaskCardAdded = await MetaMaskCardBridge.sync(context: context,
+                                                              addresses: evmAddresses,
+                                                              existing: existing)
+        added += metamaskCardAdded ?? 0
         // Rows landed before this seat had a room of its own move ONCE, here,
         // so the first sync after updating leaves nothing behind in Wallet
         // (prd §311). Cheap and self-terminating — see `moveToOwnRoomOnce`.

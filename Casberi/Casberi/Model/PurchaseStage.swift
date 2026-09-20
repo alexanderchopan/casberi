@@ -242,6 +242,12 @@ enum PurchaseStage {
     static let purchaseRefs = [
         "privacy:txn:", "bitrefill:order:",
         "applewallet:txn:", "gnosispay:spend:", "etherficash:spend:",
+        // The third onchain card (prd §857). Its real refs are
+        // `metamaskcard:spend:<tx>:<logIndex>`, so the prefix catches both the
+        // shipped row and the demo's — the §368 lesson, which found every
+        // seeded card row falling past the receipt because the demo invented a
+        // ref shape no real row ever wears.
+        "metamaskcard:spend:",
     ]
 
     /// Money moving the other way, onto a balance you spend from later. Its

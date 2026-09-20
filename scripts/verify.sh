@@ -624,6 +624,25 @@ python3 "$ROOT/scripts/wallet-total-audit.py" \
   || fail "the wallet crown counts the wrong money, or one chain can empty it — see above"
 print -P "%F{green}✓ wallet-total audit%f"
 
+# The three onchain-card seats (2026-09-20) — Gnosis Pay, ether.fi Cash and
+# MetaMask Card read the same object on three chains, and every way they break
+# is a way that COMPILES AND LOOKS RIGHT. A lookup key carrying one capital
+# letter never matches the lowercased log address, so the seat lands nothing
+# and reads as "this wallet holds no card" — which is the healthy answer for
+# almost every wallet, so nobody can tell. A `priceValue` written for a token
+# with no currency (MetaMask Card can spend WETH, and the chain carries no
+# price) publishes a bare number every surface downstream reads as dollars.
+# A cursor advanced before the save skips those blocks FOREVER on a failed
+# save. And a bridge nothing sweeps, or whose `clearState` unwatch never calls,
+# is a seat that can only be empty or one that stays lit for a wallet that is
+# gone. None of the four can be seen by reading the feed.
+step "Card-spend audit"
+python3 "$ROOT/scripts/card-spend-audit.py" --self-test >/dev/null \
+  || fail "the card-spend audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/card-spend-audit.py" \
+  || fail "an onchain-card seat can silently land nothing, or claim money it cannot know — see above"
+print -P "%F{green}✓ card-spend audit%f"
+
 # A lead that would draw AIR (prd §772). §766 ruled that a room's lead is a
 # statement, a body and a foot and that "nothing in it is air it could honestly
 # fill" — and the body zone shipped with one possible filler, `summary`, which

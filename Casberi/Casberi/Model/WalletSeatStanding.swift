@@ -43,7 +43,7 @@ enum WalletSeatStanding {
         let thing: String
     }
 
-    /// The seven, by catalog seat id. Anything not here is an ordinary bridge
+    /// The eight, by catalog seat id. Anything not here is an ordinary bridge
     /// with a connection of its own, and keeps its Connect.
     static let seats: [Seat] = [
         Seat(id: "peer",         thing: "Peer trade"),
@@ -52,6 +52,12 @@ enum WalletSeatStanding {
         Seat(id: "safe",         thing: "Safe"),
         Seat(id: "altana",       thing: "Altana key"),
         Seat(id: "gnosispay",    thing: "Gnosis Pay card"),
+        // The noun is the CARD, not the spend, and the difference matters here
+        // more than for its siblings: the sweep looks for a purchase, but what
+        // the person has or hasn't got is a card, and "No MetaMask Card spend
+        // seen yet" would read as a complaint about their spending rather than
+        // a statement about what we found.
+        Seat(id: "metamaskcard", thing: "MetaMask Card"),
         Seat(id: "etherfi",      thing: "ether.fi stake or card"),
     ]
 

@@ -953,3 +953,53 @@ failed**. `hegota-tx` and `vibenet-signer` pass on the vendored keccak,
 **Deliberately not checked.** The app style's wording (`…abcd`, "this Safe") is not a registry answer. That the snapshot is current is not checked either, because a refresh is a reviewed decision, not drift.
 
 **`--self-test`** applies seven mutations (sentence cleanliness, `mustMatch`, duplicate selector, the bytes-length bound, decimals, the unlimited threshold, a canonical type name), and each must fail the run. A mutation on the dynamic-offset bound was tried and dropped because it was EQUIVALENT: `word()` already bounds every read and offsets are capped at 32 bits, so no input can tell the two apart.
+
+## Card-spend audit (scripts/card-spend-audit.py, 2026-09-20, prd §857)
+
+Three seats read a card whose swipe settles on a public chain — Gnosis Pay on
+Gnosis Chain, ether.fi Cash on Optimism, MetaMask Card on Linea. They are the
+same object read three times, and **every way they break is a way that
+compiles, renders and looks right.** That is the whole reason this check
+exists: a card seat that is subtly wrong does not crash, it says you did not
+spend anything — and for almost every wallet on earth that IS the healthy
+answer, so no screenshot, no reviewer and no other check can tell.
+
+**(1) A hex lookup key is LOWERCASE.** These tables are keyed by contract
+address and looked up with the log's own `address` lowercased, so a key
+carrying one capital letter never matches anything. The addresses arrive from
+vendor sources in EIP-55 mixed case (MetaMask's `defaults.ts` writes them that
+way), so hand-lowercasing eight entries is a real step a person really
+performs. Measured when written: 54 such keys in the app, 0 mixed-case — so
+this rule is applied to every file, not just the card bridges, because nothing
+about a silently-missing lookup is specific to a card.
+
+**(2) An amount with no currency claims no money.** MetaMask Card can spend
+WETH and the chain carries no price at the moment of the swipe, so
+`Spendable.currency` is optional there. In any file whose token type declares
+`currency: String?`, a `priceValue` assignment must sit inside that currency's
+unwrap — a bare number is read as dollars by every surface downstream, which is
+§83's fake status in the most expensive place this app has.
+
+**(3) The cursor advances AFTER the save.** The `WalletApprovals` rule. A
+cursor written before a failed save skips those blocks forever: the spends are
+not late, they are gone, and the only symptom is a gap in a feed nobody is
+diffing against a block explorer.
+
+**(4) Every seat is swept and cleared.** Each bridge must be called from
+`WalletIngest` or it never runs, and its `clearState` from `WalletStore` or
+unwatching leaves a cursor ahead of unread blocks plus an evidence mark that
+keeps the seat lit for a card whose wallet is gone. Evidence keys must also be
+distinct: two seats sharing one would light each other, and a copy-pasted
+sibling bridge is exactly how that arrives.
+
+**What it deliberately does not check.** That any address is CORRECT — a
+settlement address, a spender or a token contract can only be proved by reading
+the chain, and a wrong-but-lowercase address passes here and lands nothing.
+That is why each bridge's header names the numbers it was verified against.
+Nor the decimals, for the same reason: check 2 guards the currency/price
+pairing, not the scale. Nor anything about how a row READS, which belongs to
+the room.
+
+Thirteen self-test cases, each mutating one rule, including two that must NOT
+fire: a mixed-case address inside a comment, and a sweep call that exists only
+as a comment (which must fire, because a commented-out call sweeps nothing).

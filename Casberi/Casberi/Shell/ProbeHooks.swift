@@ -3815,6 +3815,27 @@ enum ProbeHooks {
                       GnosisPayBridge.accountSummary())
             }
         },
+        // `-metamaskCardProbe <blocksBack|YES>` is the same probe one chain
+        // over (2026-09-20) — the MetaMask Card sweep across the watched
+        // wallets, NSLogging the landed count, which wallets turned out to
+        // hold a card, and one line per row so a decimals bug is visible as
+        // money rather than hidden in a count.
+        //
+        // The ceiling here is the OPPOSITE of Gnosis Pay's above, which is why
+        // it is spelled out: Linea's primary host ERRORS on a range over
+        // 10,000 instead of returning an empty list, so an over-large spec
+        // fails loudly and the sweep just chunks. What a huge spec really
+        // costs is time — ~8.8s per Linea block means 60,000 blocks is only
+        // six days, so a spec in the millions is asking for years of history
+        // that the seat deliberately does not backfill.
+        Hook(key: "metamaskCardProbe") { spec, context in
+            Task { @MainActor in
+                let n = await MetaMaskCardBridge.probe(context: context, blocksBack: Int(spec))
+                NSLog("MetaMask Card probe: %@ landed; %@",
+                      n.map(String.init) ?? "FAILED",
+                      MetaMaskCardBridge.accountSummary())
+            }
+        },
         // `-bitcoinHalvingHorizon <days>` widens the window in which the
         // halving row is allowed to land. The real next halving is ~90,000
         // blocks out — well past the shipped 180-day horizon — so without

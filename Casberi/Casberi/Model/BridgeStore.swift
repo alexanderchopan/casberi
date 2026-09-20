@@ -205,6 +205,16 @@ final class BridgeStore {
                    can: ["Reads your Gnosis Pay card spending from Gnosis Chain, for the wallets you watch.",
                          "Amounts and timing only — the merchant never reaches the chain.",
                          "Read-only — never spends, tops up, or freezes a card."]),
+        // Counted in CARDS like Gnosis Pay, not wallets: one watched wallet is
+        // one card here, because the allowance that makes a card is granted by
+        // the wallet itself. The second line is not boilerplate — the merchant
+        // is genuinely unreachable (it lives behind an OAuth API belonging to
+        // MetaMask), so a person reading this row must not expect a statement.
+        WalletSeat(id: "metamaskcard", name: "MetaMask Card",
+                   count: { MetaMaskCardBridge.evidence.count(in: $0) }, noun: "card",
+                   can: ["Reads your MetaMask Card spending from Linea, for the wallets you watch.",
+                         "Amounts and timing only — the merchant never reaches the chain.",
+                         "Read-only — never spends, tops up, or changes a spending cap."]),
         WalletSeat(id: "safe", name: "Safe",
                    count: { _ in SafeBridge.detectedCount() }, noun: "Safe",
                    can: ["Reads the pending signature queue for any Safe you watch, or that watches you as a signer.",

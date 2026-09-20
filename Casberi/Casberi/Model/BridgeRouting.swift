@@ -418,6 +418,12 @@ enum BridgeRouter {
         // comes here at all: the spends live in the feed, where every other
         // landed thing lives, so it opens that room (`roomSource(forID:)`).
         Row(offer: "Gnosis Pay", id: "gnosispay", destination: .wallet),
+        // MetaMask Card routes exactly like Gnosis Pay above, for every one of
+        // that comment's reasons (2026-09-20): no screen of its own, Connect
+        // to the wallet manager because watching the wallet is the only real
+        // action, never the generic detail screen with its Remove button, and
+        // Open to the room its rows land in.
+        Row(offer: "MetaMask Card", id: "metamaskcard", destination: .wallet),
         // (Aave, Morpho, Uniswap, Hyperliquid and Aerodrome had rows here
         // until prd §515. They are not seats any more: all five land under
         // `source: "Wallet"`, so this table pointed Connect at the wallet
@@ -615,6 +621,7 @@ enum BridgeRouter {
         // check 7e: a catalog seat lands rows under a source of its own, or it
         // is not a seat.
         case "gnosispay": GnosisPayBridge.sourceName
+        case "metamaskcard": MetaMaskCardBridge.source
         case "etherfi":   EtherFiCash.source
         default: nil
         }
