@@ -149,7 +149,25 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // carry the key you just pasted, so `TokenSetupScreen` builds it from
         // `TrelloAuth.authorizeURL(key:)` instead. See `TrelloAuth`.
         case .trello:    URL(string: "https://trello.com/power-ups/admin")
-        case .cloudflare: URL(string: "https://dash.cloudflare.com/profile/api-tokens")
+        // A TEMPLATE URL, not the bare tokens page (2026-09-20). Cloudflare's
+        // `permissionGroupKeys` pre-ticks the create-token form, so the door
+        // carries the four reads this bridge makes instead of sending you to
+        // pick "Read all resources" — which mints a key that can read your
+        // Workers, your billing and your R2 buckets to serve a bridge that
+        // reads four dates. It only PRE-FILLS: the token is still yours to
+        // create, which is why this narrows reach without touching consent.
+        // `doorHost` shows the host alone, so the query never reaches a label.
+        //
+        // The keys are Cloudflare's own documented spellings (`zone`,
+        // `ssl_and_certificates`, `dns`); `account_settings` is for `/accounts`
+        // and is the only group the registrar read could fall under —
+        // **Cloudflare's permissions reference has no Registrar group at all**
+        // (measured 2026-09-20, zero matches across the page). So narrowing
+        // cannot cost the domain-renewal row: no template could ever have
+        // granted it, and its 403 may be permanent rather than the "not a
+        // registrar customer" skip `CloudflareFetch` reads it as. That is a
+        // live suspicion about a shipped row, not a claim — see the probe.
+        case .cloudflare: URL(string: "https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22zone%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22ssl_and_certificates%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22dns%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%5D&accountId=%2A&zoneId=all&name=Casberi")
         // The dashboard ROOT, not the API-keys tab, and that is deliberate
         // imprecision: Cursor's current docs put the key at
         // `cursor.com/dashboard/api` while an older revision of the same page
@@ -301,16 +319,15 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // the note under the field says so once (§220 — a step never re-types
         // what is already on screen).
         case .trello: []
-        // The permissions ARE named here, unlike PostHog's and Stripe's, and
-        // that is not a §220 slip: those two own their own screens and render a
-        // `DSCheckList` under the step, so naming them twice would be the thing
-        // §220 forbids. A `.token` bridge renders `TokenSetupScreen`, which has
-        // no checklist — so the step is the only place this can be said, and
-        // leaving it unsaid means someone mints a token with the wrong reach.
-        // Cloudflare's own template is named rather than four permission rows
-        // spelled out, because a template is one click and cannot be mistyped.
-        case .cloudflare: [
-            "Use the Read all resources template"]
+        // NO STEP, since 2026-09-20 — and the deletion is this table's own rule
+        // applied, not an omission. A step survives only when it names "a
+        // choice made on the provider's site that nothing on this page can
+        // make for you". "Use the Read all resources template" was exactly
+        // that until `setupURL` became a template URL that pre-ticks the four
+        // reads; now the app makes the choice, so re-typing it would be §220's
+        // step that was already on screen — and worse, it would name the WRONG
+        // template, sending someone to widen a token the door just narrowed.
+        case .cloudflare: []
         // No scope to choose, and the steps deliberately don't pretend there
         // is one: Cursor's keys carry no permissions at all (see
         // `CursorFetch`). What that means is said once, in `NetworkReach`'s Cursor
