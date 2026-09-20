@@ -181,6 +181,11 @@ enum DemoSeedAll {
                               // cannot see. The `demo-` infix keeps teardown off
                               // a conversation the developer actually had.
                               "agentchat:demo-",
+                              // The MetaMask Card head's demo spends (prd §858)
+                              // wear the real seat's `metamaskcard:spend:` shape
+                              // so `MetaMaskCardRoomSource` counts them; the
+                              // `demo` infix keeps teardown off a real swipe.
+                              "metamaskcard:spend:demo",
                               // The GitHub feed's demo rows (prd §674 — one
                               // feed, a tag per row) carry the real bridge's
                               // `gh:` shape so `GitHubRoom` recognises them,
