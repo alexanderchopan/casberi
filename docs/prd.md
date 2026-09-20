@@ -58531,3 +58531,74 @@ and a connected agent with no conversation yet fails the first (its `roomAgent` 
 **The class.** A condition that removes a case from one branch is not a fix; it is half of one. The question to ask of every such edit is not "is this branch now correct" but **"which branch does this case land in instead"** — and if the answer is none, the screen is empty and nothing in a build, an audit or a review will say so.
 
 **Caught by the person, on a device, within minutes of the previous fix working** — the fourth defect in this feature found that way, and none of them by the four verify passes it shipped on.
+
+
+## §846 — The Cloudflare door mints a NARROW token, and the docs were wrong about what it can reach (user: "what more can we do with cloudflare and can we do anythign with the cloudflare wallets (new thing they released)", then "ok do it", 2026-09-20)
+
+**The setup step asked for a key that could read everything.** "Use the Read all
+resources template" was one click and could not be mistyped — §296's reasoning,
+and right at the time — but what it mints can read your Workers, your billing
+and your R2 buckets, to serve a bridge that reads **four dates**. The door is now
+a Cloudflare TEMPLATE URL carrying exactly those four reads (Zone, SSL and
+Certificates, DNS, Account Settings — all Read), pre-naming the token Casberi.
+
+**A template only PRE-FILLS.** The token is still the person's to create, so this
+narrows reach without touching consent — which is why it is a door change and
+not a new promise.
+
+**The step is DELETED, not reworded**, and that is this table's own rule applied
+rather than an omission: a step survives only when it names "a choice made on
+the provider's site that nothing on this page can make for you". The door makes
+it now. Re-typing it would be §220's step already on screen, and worse would
+name the WRONG template — sending someone to widen the key the door just
+narrowed.
+
+**MEASURED on a live account, signed out and then in.** All four keys resolve,
+the name pre-fills, and **the query survives the login redirect** — the case that
+decides it, because a door tapped from the app usually starts signed out. Had it
+not survived, deleting the step would have left a bare token page with no
+permissions and no instruction, which is worse than what shipped.
+
+**The docs said the fourth deadline was unreachable, and the docs were wrong.**
+Cloudflare's permissions reference lists **no Registrar group at all** — zero
+matches across the page — which reads as: `/accounts/{id}/registrar/domains`
+was never reachable by any scoped token, including "Read all resources", so
+the domain-renewal row §296 built can never have landed for anyone. That was
+recorded as a suspicion and it is FALSE. On a token holding only the four reads
+above the endpoint answers **200**. Account Settings carries it.
+`CloudflareFetch`'s skip-on-403 is the right shape. **A missing docs row is not
+a missing permission, and the only way to tell them apart is to ask the
+endpoint.** The suspicion was committed before it was checked; the check took
+one request.
+
+**The narrowing is proven, not asserted.** In the same pass `billing/profile`
+and `r2/buckets` both 403. `pages/projects` 403s too, so a Pages deploy read
+would need `page:read` added here — deliberately left out while nothing reads
+it, because a permission granted ahead of a reader is exactly the over-ask this
+ruling removes.
+
+**What is still UNMEASURED, and why no amount of tokens here will fix it.** This
+account holds **zero zones and zero registrar domains** — casberi.app runs on
+Namecheap and cPanel, not Cloudflare. So the three reads that need a zone
+(certificate packs, zone status, DNS diff) have nothing to answer with, and the
+payload shapes `CloudflareBridge` derived from published docs on 2026-08-03 are
+still derived from published docs. The bridge's own header says so and must keep
+saying so. **Connecting a seat is not measuring it**; what was measured here is
+reach and auth, which is a different fact from shape.
+
+**Held, not built: Pages deploy rows.** A deploy that SUCCEEDED is activity, and
+landing it is the analytics drift §296 refused one step less obviously — an
+active project deploys several times a day and would bury the deadlines this
+bridge exists for, inverting a room whose healthy state is empty. A deploy that
+FAILED is "something you own stopped working", costs one request
+(`latest_deployment` rides the projects list), and reconciles through the
+existing absence rule. It stays unbuilt because this account has no Pages
+project to measure it against, and shipping a second unmeasured read into a
+bridge that already carries four is not a trade worth making.
+
+**Cloudflare Wallets: nothing to build (2026-08-04 announcement).** Only handle
+reservation is live; funding, Virtual Wallets and x402 spending are future
+tense in Cloudflare's own copy, and the announcement names no API, chain, asset
+or custody model. Re-open when there are docs. If the Account Wallet turns out
+to be an on-chain address, `Follow address` already reads it with no seat at
+all.
