@@ -59575,6 +59575,13 @@ sweep prices what is new within minutes. What the figure IS: the dollar value
 that left the wallet, not Baanx's charge — the two differ by whatever rate and
 fee Baanx applies, which is behind its API.
 
+**Probed end to end (`-metamaskCardProbe YES` on the cardholder above, fresh
+simulator):** `Monad | indexed via monad-mainnet`, 40 Monad rows landed, the
+week's priced. And the priced figures land on RETAIL prices — 1.962103 vmUSD
+reads $1.99, 0.976147 reads $0.99, three separate spends read $4.11 — which is
+the evidence the sentence above lacked: the Accountant's rate is, to the cent,
+the rate the card charges at.
+
 **The tagline stops naming chains** (user: "change it"): "Every swipe, off
 Linea and Base" is "Every swipe, straight off the chain" — Gnosis Pay's
 phrasing — in `BridgeCatalog` and both website copies. A list of chains in a
