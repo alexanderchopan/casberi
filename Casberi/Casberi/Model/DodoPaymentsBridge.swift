@@ -383,6 +383,13 @@ enum DodoPaymentsShape {
         case "failed":    verb = "Subscription payment failed"; facet = "Failed"; stillRecoverable = true
         case "on_hold":   verb = "Subscription on hold";  facet = "OnHold";    stillRecoverable = true
         case "paused":    verb = "Subscription paused";   facet = "Paused";    stillRecoverable = true
+        // The EIGHTH value of Dodo's `SubscriptionStatus`, missed because this
+        // switch was written from the seven statuses the author had seen
+        // (prd §851). `past_due` is dunning — a payment has failed and the
+        // subscription is in its retry window — so it was the one unhealthy
+        // state being treated as healthy. Recoverable by definition: that is
+        // what the retry window is for.
+        case "past_due":  verb = "Subscription payment overdue"; facet = "PastDue"; stillRecoverable = true
         default: return nil
         }
         let customer = row["customer"] as? [String: Any]

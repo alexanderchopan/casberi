@@ -58900,3 +58900,69 @@ and the Zerion money path — quantities are already-scaled decimals, the price
 multiply is dimensionally right, the chain-id join holds, and positions are
 unpaginated so the wallet crown's total is complete in one call. Six providers
 checked, four defects, two of them features that had never worked once.
+
+
+## §851 — Two setup screens told you to mint a key that could not work, and the wallet crown ignored Zerion's own "don't count this" flag (user: "re the things open not yet touched why wouldn't we make those changes", 2026-09-20)
+
+**The question was right and the answer was mostly "no good reason".** The
+§847 sweep's leftovers had been set aside for pacing, not judgement. Sorted
+properly, most were defects with obvious fixes; two are genuine calls and stay
+open, named at the end.
+
+**PostHog's seat could never connect on the scopes its own screen names.** The
+checklist said `query:read`, `annotation:read`, `event_definition:read` "and
+nothing else". The only endpoint that resolves a project is
+`GET /api/users/@me/`, and PostHog's spec declares
+`security: [{PersonalAPIKeyAuth: ["user:read"]}]` on it — with no `@me`
+exemption in their server. Without that scope the call 403s, `PostHogFetch`
+swallows it, `projects()` returns nil, the picker is empty, `configured` stays
+false. The seat worked only for someone who ignored the instructions and
+minted all-access. `user:read` added, first.
+
+**Polar's MRR could never load, the same way.** `/v1/metrics/` declares
+"**Scopes**: metrics:read"; the screen listed four scopes and not that one;
+`PolarFetch.metrics` swallows the 403. So the room head's MRR and the seat's
+"$N/mo recurring" proof never rendered and the seat read "Connected" with no
+number. Metrics added, for the reason Orders were added in §537.
+
+**One class, and it is worth naming.** Both checklists were written from the
+endpoints the author remembered calling, not from the `**Scopes**:` /
+`security:` field the spec attaches to every operation. Both specs are
+machine-readable and state the requirement per endpoint. A gate that resolves
+every URL a bridge builds back to its operation's declared scopes and diffs
+that against the `DSCheckList` on its setup screen would close this
+permanently — the strongest argument yet for the standing schema tool.
+
+**The wallet crown ignored `flags.displayable`.** Zerion declares it REQUIRED
+and describes it as whether a position "should be displayable **and calculated
+in the wallet**" — a different axis from `is_trash`, which is the only flag the
+bridge read. A position Zerion says not to count was being summed into the
+total. Now excluded on an EXPLICIT `false` only, mirroring `is_trash`'s
+explicit-`true` rule: absent or unreadable keeps the position, because a total
+that silently drops real money is worse than one carrying something Zerion
+would have hidden, and **a missing key is never a verdict** (§83).
+
+**And it threw away a value Zerion had already computed.** `price` is optional
+in the schema; `value` is the sibling published beside it. An unpriced position
+fell to the DeFiLlama backstop and, failing that, was DROPPED — so a position
+Zerion had priced could leave the total on a third party's miss. `value /
+amount` now fills that hole, derived and never preferred, guarded finite and
+positive.
+
+**Dodo's `past_due` was the one unhealthy status treated as healthy.**
+`SubscriptionStatus` has eight values; `subscriptionAlarm` switched on seven
+and let dunning fall through `default`. Added, recoverable by definition.
+
+**Still open, and these two are real calls rather than defects.** Polar's
+dispute feature reads `Refund.dispute`, on the premise that Polar has no
+disputes endpoint — `/v1/disputes/` exists, and `Refund.dispute` is explicitly
+only the "we prevented a dispute by issuing a refund" case, so a dispute in
+`needs_response` (the one with a live `evidence_due_by`, the whole point of the
+row) never appears at all. Fixing it means a new endpoint, a new tracked key
+and a `disputes:read` scope — a rewrite of the feature, not a field rename.
+PagerDuty's resolution rows need `POST /analytics/raw/incidents`, and a POST in
+a bridge whose conduct guard forbids writes is a ruling, not a patch.
+
+**The method's own limit, restated from §850.** Every fix above is a field or a
+scope the spec DECLARES — the half a schema is authoritative about. None of
+them changes a request path on the strength of the spec's silence.

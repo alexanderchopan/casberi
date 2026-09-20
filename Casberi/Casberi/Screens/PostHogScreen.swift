@@ -148,7 +148,16 @@ struct PostHogScreen: View {
             // three physically cannot write, whatever the app does. The
             // list IS the read-only promise, so the gray note that restated
             // it is gone.
-            DSCheckList(lines: ["query:read", "annotation:read", "event_definition:read"])
+            // `user:read` is FIRST and is not optional (prd §851). The only
+            // endpoint that resolves a project is `GET /api/users/@me/`, and
+            // PostHog's spec declares `security: [{PersonalAPIKeyAuth:
+            // ["user:read"]}]` on it — there is no `@me` exemption in their
+            // server either. Without it that call 403s, `projects()` returns
+            // nil, the picker is empty and `configured` never becomes true, so
+            // a key minted from exactly this list **could never connect**. It
+            // is still read-only: none of the four can write.
+            DSCheckList(lines: ["user:read", "query:read", "annotation:read",
+                                "event_definition:read"])
             // The host has no verb of its own — SAVE below commits both.
             // A `BridgeFieldRow` with an empty label still paints its
             // capsule, and a pre-filled host made it read as a live,

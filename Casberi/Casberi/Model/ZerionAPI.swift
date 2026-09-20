@@ -183,6 +183,20 @@ enum ZerionAPI {
             if let flags = attrs["flags"] as? [String: Any],
                flags["is_trash"] as? Bool == true { continue }
 
+            // ZERION'S OWN "don't count this" FLAG (prd §851). `displayable` is
+            // REQUIRED in Zerion's schema and described as whether the position
+            // "should be displayable AND CALCULATED IN THE WALLET" — a
+            // different axis from `is_trash`, and it was being ignored, so a
+            // position Zerion says not to count was summed into the crown.
+            //
+            // Excluded only on an EXPLICIT `false`, exactly as `is_trash` is
+            // only honoured on an explicit `true`. Absent or unreadable keeps
+            // the position: a total that silently drops real money is worse
+            // than one that includes something Zerion would have hidden, and a
+            // missing key must never be read as a verdict (§83).
+            if let flags = attrs["flags"] as? [String: Any],
+               flags["displayable"] as? Bool == false { continue }
+
             guard let chainId = ((item["relationships"] as? [String: Any])?["chain"]
                     as? [String: Any])?["data"] as? [String: Any],
                   let zid = chainId["id"] as? String,
@@ -203,8 +217,23 @@ enum ZerionAPI {
             // reads from a missing `tokenAddress`.
             let contract = implementationAddress(info?["implementations"], chainId: zid)
 
+            // `price` is OPTIONAL in Zerion's schema; `value` (the position's
+            // worth in the requested currency) is the sibling it publishes
+            // alongside it, and we were ignoring it (prd §851). An unpriced
+            // position falls to the DeFiLlama backstop and, failing that, is
+            // DROPPED by `WalletIngest` — so a position Zerion had already
+            // valued could leave the total on a third party's miss.
+            //
+            // Derived, never preferred: `price` wins whenever it is there, and
+            // this only fills a hole. Guarded on a finite, positive result
+            // because `amount` is the divisor.
+            let price = doubleValue(attrs["price"])
+                ?? doubleValue(attrs["value"]).flatMap { value -> Double? in
+                    let derived = value / amount   // `amount > 0`, guarded above
+                    return derived.isFinite && derived > 0 ? derived : nil
+                }
             out.append(Holding(symbol: clean(symbol), contract: contract, network: network,
-                               amount: amount, price: doubleValue(attrs["price"]), owner: owner))
+                               amount: amount, price: price, owner: owner))
         }
         return out
     }

@@ -105,10 +105,17 @@ struct PolarScreen: View {
             // cannot refund, cancel, or create anything. Orders joined
             // them in §537; a token minted before that has three, which
             // costs the sales half and nothing else (see `PolarFetch.orders`).
+            // Metrics joined in §851, for the reason Orders joined in §537: the
+            // bridge already calls `/v1/metrics/`, whose spec says
+            // "**Scopes**: metrics:read", and `PolarFetch.metrics` swallows the
+            // 403 — so the room head's MRR and the seat's "$N/mo recurring"
+            // proof simply never appeared, and the seat read "Connected" with
+            // no number. Read-only like the rest; none of these can write.
             DSCheckList(lines: ["Orders — read",
                                 "Refunds — read",
                                 "Subscriptions — read",
-                                "Organizations — read"])
+                                "Organizations — read",
+                                "Metrics — read"])
             DSSlabField(placeholder: TokenBridge.polar.placeholder,
                         text: $tokenField, actionLabel: "Save", secure: true,
                         action: saveToken)
