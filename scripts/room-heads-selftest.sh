@@ -83,9 +83,15 @@ grep -q 'frame(height: DSRoomChassis.figureHeight)' Casberi/Casberi/Screens/Card
   || { echo "✗ the CardPointers rail no longer draws into the head's figure box (§751)"; exit 1; }
 grep -q 'static var markSize: CGFloat { 56 }' Casberi/Casberi/Screens/AssetRoster.swift \
   || { echo "✗ the metric disc's size moved — DSRoomChassis.figureHeight was taken from it (§751)"; exit 1; }
-for f in StripeRoomSource PolarRoomSource WalletbeatRoomSource L2beatRoomSource DodoPaymentsRoom GnosisPayRoomSource; do
+for f in StripeRoomSource PolarRoomSource WalletbeatRoomSource L2beatRoomSource DodoPaymentsRoom CardSpendRoom; do
   grep -qE 'static let rowCap = 8\b' "Casberi/Casberi/Model/$f.swift" \
     || { echo "✗ $f.rowCap is not DSRoomChassis.headRowCap (8) — a head is handed a different number of rows than the fit can choose from (§751, §760)"; exit 1; }
+done
+# The onchain card head is shared (prd §858): the literal lives on CardSpendRoom,
+# and each seat's source must take it from there rather than spell its own.
+for f in GnosisPayRoomSource MetaMaskCardRoomSource; do
+  grep -qE 'static let rowCap = CardSpendRoom\.rowCap\b' "Casberi/Casberi/Model/$f.swift" \
+    || { echo "✗ $f.rowCap is not CardSpendRoom.rowCap — a card seat's head is capped apart from the shared one (§858, §760)"; exit 1; }
 done
 
 # The §219 failure inverted — see the probe's own comment.
