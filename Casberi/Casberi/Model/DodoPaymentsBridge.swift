@@ -323,10 +323,28 @@ enum DodoPaymentsShape {
     }
 
     /// Dispute AMOUNT arrives as a STRING ("to accommodate precision", per
-    /// Dodo's own docs) with no confirmation of whether it's already a
-    /// major-unit decimal or needs `StripeMoney`'s minor-unit divisor. This
-    /// assumes the former — a plain decimal — which is the more common shape
-    /// for a string-typed money field; UNMEASURED, see the type doc.
+    /// Dodo's own docs) with no stated unit, and this reads it as a major-unit
+    /// decimal. Still UNMEASURED — but no longer a coin-flip, and the reasoning
+    /// is recorded because the naive "fix" is wrong (2026-09-20, prd §853).
+    ///
+    /// **The case FOR minor units** is that Dodo states them everywhere it
+    /// states anything: `total_amount` is "in the currency's smallest unit
+    /// (e.g. cents for USD, yen for JPY, fils for KWD…)", same wording on
+    /// `recurring_pre_tax_amount`. If disputes followed suit, every row here
+    /// renders 100× high — which is why this looked alarming on review.
+    ///
+    /// **The case AGAINST is the TYPE, and it is stronger.** Every field Dodo
+    /// documents as minor units is an INTEGER (`total_amount` and
+    /// `refunds.amount` are both `int32`). This one is a `string`, and the
+    /// stated reason is precision — which an integer count of cents does not
+    /// need and cannot lose. A string carrying "to accommodate precision" is
+    /// the shape of a DECIMAL. So the outlier type and the outlier unit are
+    /// the same fact, not two independent risks.
+    ///
+    /// Left as-is deliberately: flipping to a minor-unit divisor on the
+    /// convention argument alone would break the reading the type supports,
+    /// and there is no Dodo key on this machine to settle it. Run
+    /// `-dodoPaymentsProbe YES` against a real key before changing either way.
     private static func disputeAmount(_ row: [String: Any]) -> (major: Double, text: String)? {
         guard let raw = row["amount"] as? String, let decimal = Decimal(string: raw),
               let currency = row["currency"] as? String, !currency.isEmpty
