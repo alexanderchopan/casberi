@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §857b (Monad is refused) | Monad's card spends are correct to read and refused on cost — 100-block log cap against 0.302s blocks is 2,860 requests a day per wallet — recorded in `unreadableChains` | superseded by §860 (the arithmetic stands and the conclusion does not: Alchemy's index answers a wallet's whole Monad history in one call, so Monad is a third `Chain`; `unreadableChains` is deleted) |
 | §384 / §386p (the chip peek) | a long press on a source chip floats the room's figure up without navigating — rail-only since 2026-09-05, so iPad and Mac | deleted by §836 (user: "i don't think we need that on ipad and mac") — the peek, `RoomFigure`, and every `AgentPanel.Figure` it alone produced (treemap, bars, rail, pulse, curve, wall, flow, runway, worth, river) with the ranking between them; the answer's dial and semantic map stand |
 | §700 (the catalogue is a bare mark) | the strip's tail catalogue is a grid glyph in a `chipSize` frame, never a captioned tile, and `categoryCell` counts it as one more mark | reversed by §793 (it is a tile named "Accounts", `categoryTile`'s anatomy in a `categoryCell`, and counts as a cell only when it rests on screen); its seat at the tail stands |
 | §700 (the catalogue sits at the strip's tail) | the grid door is the strip's LAST item, after the last category, because the catalogue is a place and the places scroll | reversed by §798 (it is not a place but a screen, and the face opens it — the tail seat is deleted, and `categoryCell` reserves nothing past the last category) |
@@ -59515,3 +59516,71 @@ refused out loud (`AgentAnswerFailure.noKey`), with the question handed back.
 it. Neither is an `AgentProvider` — no seat takes a key for them, and a
 conversation lands under `provider.agent`, so a chat from Claude Code's room
 would land in Claude's. That is a ruling about who answers, not a demo defect.
+
+## §860 — MetaMask Card reads Monad through an index, and §857b asked the wrong door (user: "so with metamask card we don't read monad transactions?" → "how else would someone else be reading it then?" → "metamask can't be doing that many requests a day" → "yes, we want to make sure we can read monad", 2026-09-20)
+
+**Supersedes §857b's refusal of Monad.** The arithmetic there stands — every free
+Monad RPC caps `eth_getLogs` at 100 blocks of 0.302s, so a log walk costs 2,860
+requests per wallet per day — and the conclusion drawn from it was wrong. The
+user's question found the gap: nobody reads Monad that way. MetaMask reads
+Baanx's ledger (closed to us, §857); everyone else asks an INDEXER, which walks
+the head once for all its users. §857b measured one door and recorded "refused"
+about the chain.
+
+**Measured, against a live cardholder (`0xe8ee9f…`, found by asking Alchemy for
+transfers into the settlement address):**
+
+| Door | Answer |
+|---|---|
+| `alchemy_getAssetTransfers` on `monad-mainnet` — `fromAddress` = wallet, the two card tokens as `contractAddresses`, `erc20` | ONE call, 0.6s, the wallet's whole history: 42 rows, 39 to a settlement address, eleven days back. Every row carries `metadata.blockTimestamp` (§790's trap does not apply). `uniqueId` is `<hash>:log:<index>`, the same pair the walked chains key a row on |
+| Zerion, `filter[chain_ids]=monad` | the same spends, correctly marked `send` — but no price for vmUSD, and it spends the shared 300-a-day key (33 left when measured) |
+
+So Monad is a third `MetaMaskCardBridge.Chain`, with `alchemyNetwork:
+"monad-mainnet"` and empty RPC fields, read by `syncIndexed` beside the log
+walk. It stays in the ONE `chains` list so the per-chain cursor key,
+`clearState` and the one-chain's-outage rule reach it unasked. `toAddress`
+takes one address, so both programmes are filtered client-side; the token
+filter keeps the page to card tokens. First sight reads from block zero — the
+walked chains' windows are a request budget, and here the whole history is one
+request, so the newest 1,000-row page is the bound. A spend the index cannot
+date holds the cursor rather than being dated now (§790). The host was already
+disclosed (`monad-mainnet.g.alchemy.com`, under Wallet); the seat's purpose
+line now names Monad and Alchemy. `unreadableChains` is deleted.
+
+**Monad is not a footnote.** 475 distinct wallets spent there in ~28 hours
+against Linea's 444 in ~23. The cardholder chooses which token on which chain
+funds the card, so a Monad-funded card read as "no card" on the other two.
+
+**vmUSD is not a dollar, and it is 98% of Monad's spending** (1,971 of 2,000
+settlement transfers sampled; USDC the rest). It is a Veda vault share over
+mUSD: the measured wallet deposited 23.926019 mUSD for 23.544781 vmUSD, ~$1.016
+a share and drifting. The contract is not ERC-4626 — `convertToAssets` and
+`asset()` revert — so the rate is on Veda's ACCOUNTANT, found by following the
+chain: vmUSD's `hook()` is its Teller (`0xb30755c7…`), whose `accountant()` is
+`0x98a45d90e81849a5743241d3ff765f9fd788206a`. That contract's `vault()` answers
+vmUSD, `base()` mUSD, `decimals()` 6, and `getRate()` read 1016199 — the
+deposit above to five figures. Selectors computed with
+`scripts/support/keccak.py`, never typed (§795).
+
+**The rate is the HEAD's, so it prices only a recent spend
+(`MetaMaskCardBridge.Share`).** Neither `rpc.monad.xyz` nor Alchemy serves
+`eth_call` at a block eleven days back ("Block requested not found"), so a
+spend cannot be priced at its own moment. The rate creeps (1016198 → 1016199
+over a few hours; ~1.6% over the vault's life), so: read once per sweep, lazily,
+from the same Alchemy host; a vmUSD spend under SEVEN DAYS old is `amount ×
+rate` in USD; an older one, or a rate outside 1.0–1.5, or no answer, takes
+WETH's rule (§857) — token amount, no `priceValue`, `unpriced` in the head,
+never summed (§83). Only a first sight's older history is affected; every later
+sweep prices what is new within minutes. What the figure IS: the dollar value
+that left the wallet, not Baanx's charge — the two differ by whatever rate and
+fee Baanx applies, which is behind its API.
+
+**The tagline stops naming chains** (user: "change it"): "Every swipe, off
+Linea and Base" is "Every swipe, straight off the chain" — Gnosis Pay's
+phrasing — in `BridgeCatalog` and both website copies. A list of chains in a
+tagline is wrong again the day a fourth is measured. Linea and
+Base keep their log walks; the same `fromAddress` call would give them whole
+history too, and that is a separate measurement.
+
+**The class:** "refused on cost" is a fact about a DOOR. Before recording a
+chain as unreadable, ask how the people who visibly do read it are reading it.

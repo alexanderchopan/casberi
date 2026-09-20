@@ -179,3 +179,23 @@ be correct (spenders deployed, a real spend decoded, same settlement address)
 and the reading cost refuses. `MetaMaskCardBridge.unreadableChains` holds that
 record with the token addresses already found, so re-opening it is one `Chain`
 literal the day a free Monad endpoint serves a real range.
+
+### Monad reads through Alchemy's index (prd §860, 2026-09-20)
+
+§857b's table above is right and its conclusion was not: the 17,166 is the cost
+of a LOG WALK on a public RPC, and nobody reads Monad that way.
+`alchemy_getAssetTransfers` (`fromAddress` = wallet, the two card tokens,
+`erc20`) answers a wallet's whole Monad history in one 0.6s call, with
+timestamps. Monad is a third `Chain` with `alchemyNetwork: "monad-mainnet"`;
+`unreadableChains` is deleted. The probe prints `metamaskCardChain| Monad |
+indexed via monad-mainnet`, and a numeric spec CLEARS Monad's cursor rather
+than rewinding it (there is no head to rewind from; the re-read is one call).
+
+**vmUSD is a share, priced through Veda's Accountant.** It is 98% of Monad's
+card spending and not a dollar (~$1.016, drifting); the contract is not
+ERC-4626, so `getRate()` is read off `0x98a45d90…` (vmUSD `hook()` → Teller →
+`accountant()`), once per sweep, from the same Alchemy host. Historical
+`eth_call` is refused on Monad, so the head's rate prices only a spend under
+seven days old; older ones land like WETH — token amount, no `priceValue`. In
+the probe, a priced row reads `3.08 USD` and an old one `— —`. A cardholder to probe against:
+`0xe8ee9fe4d7b8b0cc70c8b07508f6a4c8d53efd71` (39 spends, 9–20 Sep).

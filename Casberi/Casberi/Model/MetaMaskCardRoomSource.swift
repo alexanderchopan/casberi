@@ -17,6 +17,9 @@ import SwiftData
 /// handles it.** `MetaMaskCardBridge` backfills about six days on Linea and
 /// one on Base (prd §857b — Base's only usable host serves 2,000 blocks at a
 /// time), so a fresh connection cannot know a prior 30-day window at all.
+/// Monad reads whole history through an index (prd §860) — but almost all of
+/// it is vmUSD, a vault share priced only while under a week old, so a first
+/// sight's older Monad spends are `unpriced` and never enter a window's sum.
 /// `CardSpendRoom.knowsPriorWindow` refuses the comparison rather than
 /// estimating it, which is exactly the case it was written for; nothing extra
 /// is needed here, and nothing here may work around it.
@@ -27,7 +30,7 @@ enum MetaMaskCardRoomSource {
     static let source = MetaMaskCardBridge.source
 
     /// Forwards to the shared cap, like its sibling. MetaMask Card can settle
-    /// in seven currencies across its two chains (USD via five stablecoins,
+    /// in seven currencies across its three chains (USD via five stablecoins,
     /// plus EUR and GBP on Linea), which is still inside it.
     static let rowCap = CardSpendRoom.rowCap
 

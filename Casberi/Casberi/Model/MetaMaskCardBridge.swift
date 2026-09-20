@@ -15,8 +15,9 @@ import SwiftData
 /// Linea's 8.8s — so one Linea request buys a day of history and one Base
 /// request buys an hour. Treating them as one chain with one window would
 /// either cost 130 requests per wallet or silently read six hours and call it
-/// six days. Monad runs the card too and is deliberately NOT here; see
-/// `unreadableChains` for the arithmetic that refused it.
+/// six days. **Monad is read through Alchemy's index instead** (prd §860):
+/// its public RPCs cap a log read at 100 blocks of 0.302s, which no phone can
+/// walk, but an indexer has already walked it — see `monad`.
 ///
 /// This is the THIRD seat on the same shape, and the shape is the reason it is
 /// buildable at all: `GnosisPayBridge` proved the pattern, `EtherFiCash`
@@ -146,11 +147,17 @@ enum MetaMaskCardBridge {
         /// is the card's, but a token outside the card's own list arriving
         /// there is something this seat has not measured and must not name.
         let spendable: [String: Spendable]
+        /// Set when the chain is read through ALCHEMY'S INDEX rather than a
+        /// log walk (`alchemy_getAssetTransfers`, one call per wallet). The
+        /// RPC fields above are then unused — `rpcs` is empty and the ranges
+        /// are zero, so a log walk on such a chain cannot even start.
+        var alchemyNetwork: String? = nil
     }
 
-    /// The chains this seat reads. **Monad is measured and deliberately
-    /// absent** — see `unreadableChains` below for the arithmetic.
-    static let chains: [Chain] = [linea, base]
+    /// The chains this seat reads. Monad rides a different reader — see
+    /// `monad` — but the SAME list, so the cursor key, `clearState` and the
+    /// one-chain's-outage rule all reach it without being told.
+    static let chains: [Chain] = [linea, base, monad]
 
     /// LINEA — the reference implementation. `rpc.linea.build` caps at 10,000
     /// and ERRORS past it; `linea.gateway.tenderly.co` has no cap at all and
@@ -221,26 +228,57 @@ enum MetaMaskCardBridge {
                 Spendable(symbol: "WETH", decimals: 18, currency: nil),
         ])
 
-    /// **MONAD IS MEASURED AND NOT BUILT, and this constant is the record so
-    /// nobody re-derives it** (2026-09-20). Its foxConnect spenders are in the
-    /// same flag file and deployed (`0x40A695…` global, `0x144c1c…` US), a
-    /// real spend was decoded there, and it settles to the same global address
-    /// as the other two — so the seat would be CORRECT. It is the reading cost
-    /// that refuses.
+    /// MONAD — read through an INDEX, because the chain itself refuses a walk
+    /// (prd §860, 2026-09-20; §857b had refused the chain outright).
     ///
     /// Every free Monad host caps `eth_getLogs` at **100 blocks**
     /// (`rpc.monad.xyz`, `monad.rpc.thirdweb.com`; drpc and the `/mainnet`
-    /// path refuse even that), and a Monad block is **0.302s**. So one request
-    /// buys 30 seconds of history: one hour costs 120 requests, one day 2,860,
-    /// and Linea's six-day window 17,166 — per wallet, per first sight. There
-    /// is no window size that makes that a phone doing a background sweep, and
-    /// shipping it with a window small enough to afford would be a seat that
-    /// silently misses almost every spend, which is worse than no seat (§83).
+    /// path refuse even that), and a Monad block is **0.302s**. One request
+    /// buys 30 seconds of history: one day is 2,860 requests per wallet. That
+    /// arithmetic stands and is why `rpcs` is empty. What §857b missed is that
+    /// nobody reads Monad that way — an indexer walks the head once for
+    /// everyone, and this app already holds a door to one.
     ///
-    /// Re-open this when a free Monad endpoint serves a real range. The rest
-    /// of the work is done: add a `Chain` with `0x1c8a3360…` (VEDA, 6) and
-    /// `0x754704bc…` (USDC, 6) and it reads.
-    static let unreadableChains = ["Monad"]
+    /// MEASURED against a live cardholder (`0xe8ee9f…`):
+    /// `alchemy_getAssetTransfers` with `fromAddress` = the wallet, the two
+    /// card tokens as `contractAddresses` and category `erc20` answered the
+    /// wallet's WHOLE history in one 0.6s call — 42 rows, 39 to a settlement
+    /// address, back eleven days — and every row carried
+    /// `metadata.blockTimestamp` (§790's missing-time trap is HyperEVM's and
+    /// World Chain's, not Monad's). `internal` is never asked for: Monad
+    /// refuses the whole call with it (`WalletIngest.Chain.internalTransfers`).
+    /// Zerion reads the same spends but has no price for vmUSD and spends the
+    /// shared 300-a-day key, so it is not the door.
+    ///
+    /// `toAddress` takes ONE address, so the two programmes are filtered here
+    /// rather than on the wire; the token filter keeps the page to card tokens,
+    /// so the three non-settlement rows above are the whole cost of that.
+    ///
+    /// **vmUSD IS NOT A DOLLAR, and it is 98% of Monad's card spending**
+    /// (1,971 of 2,000 settlement transfers sampled; USDC is the rest). It is
+    /// a Veda vault SHARE over mUSD, and the contract is not ERC-4626
+    /// (`convertToAssets` and `asset()` revert). The rate lives on Veda's
+    /// ACCOUNTANT, found by following the chain rather than a docs page:
+    /// vmUSD's `hook()` is its Teller (`0xb30755c7…`), whose `accountant()` is
+    /// `0x98a45d90…`; that contract's `vault()` answers vmUSD, its `base()` is
+    /// mUSD, its `decimals()` 6, and `getRate()` read 1016199 — which is the
+    /// measured wallet's own deposit to five figures (23.926019 mUSD for
+    /// 23.544781 vmUSD). See `Share` for how the rate is allowed to be used.
+    /// Both token decimals verified against `decimals()` on chain.
+    static let monad = Chain(
+        name: "Monad",
+        explorer: "https://monadscan.com/tx/",
+        rpcs: [], maxRange: 0, maxChunks: 0, backfillBlocks: 0,
+        spendable: [
+            "0x1c8a336051d2024e318a229d01f9f6cf96efd316":
+                Spendable(symbol: "vmUSD", decimals: 6, currency: "USD",
+                          share: Share(
+                            accountant: "0x98a45d90e81849a5743241d3ff765f9fd788206a",
+                            rateDecimals: 6)),
+            "0x754704bc059f8c67012fed69bc8a327a5aafb603":
+                Spendable(symbol: "USDC", decimals: 6, currency: "USD"),
+        ],
+        alchemyNetwork: "monad-mainnet")
 
     /// `Transfer(address indexed from, address indexed to, uint256 value)`.
     private static let transferTopic =
@@ -261,6 +299,33 @@ enum MetaMaskCardBridge {
         /// `priceValue` — a row that says nothing about dollars rather than
         /// one that says something false about them.
         let currency: String?
+        /// Set when the token is a vault SHARE rather than the money itself:
+        /// its amount is worth `currency` only after multiplying by a rate.
+        var share: Share? = nil
+    }
+
+    /// A Veda vault share's price, and the limit on using it (prd §860).
+    ///
+    /// The rate is read ONCE PER SWEEP, at the head — neither Monad's public
+    /// RPC nor Alchemy serves `eth_call` at a block eleven days back (measured:
+    /// "Block requested not found"), so a spend cannot be priced at its own
+    /// moment. The rate only creeps (1016198 → 1016199 across a few hours;
+    /// ~1.6% over the vault's whole life), so the head's rate is true to the
+    /// cent for a RECENT spend and quietly wrong for an old one. Hence
+    /// `freshness`: a share spend older than that lands with the token amount
+    /// and no `priceValue`, exactly like WETH, rather than a dollar figure
+    /// quoted off a rate it never traded at (§83). In practice only a first
+    /// sight's older history is affected — every later sweep prices what is
+    /// new within minutes of it happening.
+    struct Share {
+        /// Lowercased. `getRate()` on it answers base-per-share.
+        let accountant: String
+        let rateDecimals: Int
+        static let freshness: TimeInterval = 7 * 86_400
+        /// A share over a dollar stablecoin is worth a little over a dollar.
+        /// Anything outside this is a wrong contract or a broken read, and
+        /// lands unpriced rather than multiplied in.
+        static let plausible = 1.0...1.5
     }
 
     // MARK: - The seat (automatic — rides the watched wallets)
@@ -342,6 +407,10 @@ enum MetaMaskCardBridge {
     private static func syncChain(_ chain: Chain, context: ModelContext,
                                   addresses: [String],
                                   existing: Set<String>) async -> Int? {
+        if let network = chain.alchemyNetwork {
+            return await syncIndexed(chain, network: network, context: context,
+                                     addresses: addresses, existing: existing)
+        }
         guard let latest = await blockNumber(chain) else { return nil }
         let defaults = UserDefaults.standard
         var added = 0
@@ -376,8 +445,10 @@ enum MetaMaskCardBridge {
             // spend by construction.
             if !logs.isEmpty { evidence.remember(address) }
 
-            let landed = await things(chain, from: logs, wallet: address,
-                                      existing: existing)
+            let found = spends(chain, from: logs)
+            let times = await blockTimes(chain, blocks: found.map(\.block))
+            let landed = things(chain, from: found, times: times, rates: [:],
+                                wallet: address, existing: existing)
             if !landed.isEmpty {
                 for thing in landed {
                     context.insert(thing)
@@ -392,6 +463,88 @@ enum MetaMaskCardBridge {
             defaults.set(scanned, forKey: key)
         }
         return added
+    }
+
+    /// The indexed chains' pass — one `alchemy_getAssetTransfers` per wallet.
+    /// Same contract as the log walk above: evidence keys on spends FOUND,
+    /// land and SAVE before the cursor moves, and nil only when the index
+    /// answered for nobody.
+    ///
+    /// FIRST SIGHT READS FROM BLOCK ZERO, where the walked chains read days.
+    /// Their windows are a request budget; here the whole history is one
+    /// request, so the newest page (1,000 card-token transfers) is the bound.
+    @MainActor
+    private static func syncIndexed(_ chain: Chain, network: String,
+                                    context: ModelContext, addresses: [String],
+                                    existing: Set<String>) async -> Int? {
+        let defaults = UserDefaults.standard
+        var added = 0
+        var answered = false
+        // Read lazily and once: most wallets hold no card, and a pass that
+        // finds no share spend never asks.
+        var rates: [String: Double]?
+
+        for address in addresses {
+            let key = cursorKey(chain, address)
+            let cursor = (defaults.object(forKey: key) as? Int) ?? -1
+            guard let transfers = await fetchTransfers(chain, network: network,
+                                                       wallet: address,
+                                                       from: cursor + 1)
+            else { continue }   // transient — keep the cursor, retry next pass
+            answered = true
+
+            var spends: [Spend] = []
+            var times: [Int: Date] = [:]
+            var scanned = cursor
+            var undated = false
+            for t in transfers {
+                guard let blockHex = t["blockNum"] as? String else { continue }
+                let block = WalletIngest.hexToInt(blockHex)
+                scanned = max(scanned, block)
+                guard let to = (t["to"] as? String)?.lowercased(),
+                      settlements.contains(to),
+                      let raw = t["rawContract"] as? [String: Any],
+                      let contract = (raw["address"] as? String)?.lowercased(),
+                      let token = chain.spendable[contract],
+                      let value = raw["value"] as? String,
+                      let txHash = t["hash"] as? String,
+                      // `<hash>:log:<index>` — the same (hash, log index) pair
+                      // the walked chains key a row on.
+                      let logIndex = (t["uniqueId"] as? String)
+                          .flatMap({ Int($0.split(separator: ":").last ?? "") })
+                else { continue }
+                // A spend the index cannot date is NOT dated now (§790): the
+                // whole read is treated as transient, so the cursor stays and
+                // the next pass asks again.
+                guard let when = IngestSupport.isoDate(
+                    (t["metadata"] as? [String: Any])?["blockTimestamp"])
+                else { undated = true; break }
+                times[block] = when
+                spends.append(Spend(token: token,
+                                    raw: WalletIngest.hexToDouble(value),
+                                    block: block, txHash: txHash,
+                                    logIndex: logIndex))
+            }
+            guard !undated, scanned > cursor else { continue }
+            if !spends.isEmpty { evidence.remember(address) }
+
+            if rates == nil, spends.contains(where: { $0.token.share != nil }) {
+                rates = await shareRates(chain, network: network)
+            }
+            let landed = things(chain, from: spends, times: times,
+                                rates: rates ?? [:],
+                                wallet: address, existing: existing)
+            if !landed.isEmpty {
+                for thing in landed {
+                    context.insert(thing)
+                    SpotlightIndex.index([thing])
+                }
+                guard context.saveHonestly() else { continue }
+                added += landed.count
+            }
+            defaults.set(scanned, forKey: key)
+        }
+        return answered || addresses.isEmpty ? added : nil
     }
 
     /// `-metamaskCardProbe <blocksBack|YES>` — runs the sweep over the watched
@@ -415,6 +568,20 @@ enum MetaMaskCardBridge {
         let addresses = await WalletIngest.resolvedAddresses(watched)
             .filter { ENS.isHexAddress($0) }
         for chain in chains {
+            if let network = chain.alchemyNetwork {
+                // No head to rewind from and no need: a rewind on an indexed
+                // chain is "forget the cursor", which re-reads the whole page.
+                NSLog("[Casberi] metamaskCardChain| %@ | indexed via %@%@",
+                      chain.name, network,
+                      blocksBack == nil ? "" : " | cursor cleared")
+                if blocksBack != nil {
+                    for address in addresses {
+                        UserDefaults.standard.removeObject(
+                            forKey: cursorKey(chain, address))
+                    }
+                }
+                continue
+            }
             guard let latest = await blockNumber(chain) else {
                 NSLog("[Casberi] metamaskCardChain| %@ | UNREACHABLE", chain.name)
                 continue
@@ -480,10 +647,8 @@ enum MetaMaskCardBridge {
         let logIndex: Int
     }
 
-    @MainActor
-    private static func things(_ chain: Chain, from logs: [[String: Any]],
-                               wallet: String,
-                               existing: Set<String>) async -> [Thing] {
+    private static func spends(_ chain: Chain,
+                               from logs: [[String: Any]]) -> [Spend] {
         var spends: [Spend] = []
         for log in logs {
             guard (log["removed"] as? Bool) != true,
@@ -500,6 +665,14 @@ enum MetaMaskCardBridge {
                                 txHash: txHash,
                                 logIndex: WalletIngest.hexToInt(indexHex)))
         }
+        return spends
+    }
+
+    @MainActor
+    private static func things(_ chain: Chain, from spends: [Spend],
+                               times: [Int: Date], rates: [String: Double],
+                               wallet: String,
+                               existing: Set<String>) -> [Thing] {
         guard !spends.isEmpty else { return [] }
 
         // NO `suffix(N)` cap here — Gnosis Pay's divergence, for its reason.
@@ -508,7 +681,6 @@ enum MetaMaskCardBridge {
         // not rare, so capping would silently discard most of a person's
         // history the cursor then skips forever. The chain's own backfill
         // window is what bounds the first landing instead.
-        let times = await blockTimes(chain, blocks: spends.map(\.block))
         var out: [Thing] = []
         var seen = Set<String>()
 
@@ -519,10 +691,23 @@ enum MetaMaskCardBridge {
             let amount = spend.raw / pow(10, Double(spend.token.decimals))
             let tokenAmount = "\(WalletIngest.format(amount)) \(spend.token.symbol)"
             // The fiat rendering is the honest one for the stablecoins — a
-            // card spend in USDC was a dollar spend. WETH has no currency, so
-            // it keeps the token amount and claims nothing about money.
-            let money = spend.token.currency
-                .flatMap { PriceFormat.string(amount, currency: $0) } ?? tokenAmount
+            // card spend in USDC was a dollar spend. WETH and vmUSD have no
+            // currency, so they keep the token amount and claim nothing about
+            // money.
+            //
+            // A SHARE is money only through its rate, and only while that rate
+            // is fresh for this spend (`Share`). No rate, or a spend too old
+            // for it, and the token falls back to WETH's rule.
+            var rate: Double? = 1
+            if let share = spend.token.share {
+                let fresh = times[spend.block].map {
+                    Date.now.timeIntervalSince($0) <= Share.freshness } ?? false
+                rate = fresh ? rates[share.accountant] : nil
+            }
+            let value = amount * (rate ?? 1)
+            let currency = rate == nil ? nil : spend.token.currency
+            let money = currency
+                .flatMap { PriceFormat.string(value, currency: $0) } ?? tokenAmount
             let thing = Thing(
                 kind: .transaction,
                 title: String(localized: "Spent \(money) with MetaMask Card"),
@@ -537,8 +722,8 @@ enum MetaMaskCardBridge {
             // re-formatted or compared — but a WETH spend has no currency to
             // set, and a `priceValue` with no `priceCurrency` reads as dollars
             // everywhere downstream.
-            if let currency = spend.token.currency {
-                thing.priceValue = amount
+            if let currency = currency {
+                thing.priceValue = value
                 thing.priceCurrency = currency
             }
             out.append(thing)
@@ -584,6 +769,53 @@ enum MetaMaskCardBridge {
         ]
         return await call(chain, method: "eth_getLogs",
                           params: [params]) as? [[String: Any]]
+    }
+
+    /// One wallet's outbound card-token transfers on an INDEXED chain, newest
+    /// first, from `from` to the head. `erc20` only — see `monad` for why
+    /// `internal` is never asked for. nil when the index did not answer; an
+    /// empty array is a real "nothing since the cursor".
+    private static func fetchTransfers(_ chain: Chain, network: String,
+                                       wallet: String,
+                                       from: Int) async -> [[String: Any]]? {
+        let params: [String: Any] = [
+            "fromBlock": hex(from), "toBlock": "latest",
+            "fromAddress": wallet,
+            "contractAddresses": Array(chain.spendable.keys),
+            "category": ["erc20"], "order": "desc",
+            "maxCount": "0x3e8", "withMetadata": true,
+        ]
+        let body: [String: Any] = ["id": 1, "jsonrpc": "2.0",
+                                   "method": "alchemy_getAssetTransfers",
+                                   "params": [params]]
+        let url = "https://\(network).g.alchemy.com/v2/\(IngestSupport.alchemyKey)"
+        guard let root = await IngestSupport.postJSON(url, body: body) as? [String: Any],
+              let result = root["result"] as? [String: Any]
+        else { return nil }
+        return result["transfers"] as? [[String: Any]]
+    }
+
+    /// `getRate()` for every share token on an indexed chain, keyed by
+    /// accountant. Asked of the SAME Alchemy host the transfers came from, so
+    /// it adds no host to what this seat reaches. The selector is
+    /// `keccak256("getRate()")[:4]`, computed with `scripts/support/keccak.py`
+    /// and proved by the read above — never typed from memory (§795).
+    private static func shareRates(_ chain: Chain,
+                                   network: String) async -> [String: Double] {
+        let url = "https://\(network).g.alchemy.com/v2/\(IngestSupport.alchemyKey)"
+        var out: [String: Double] = [:]
+        for share in chain.spendable.values.compactMap(\.share) {
+            let body: [String: Any] = [
+                "id": 1, "jsonrpc": "2.0", "method": "eth_call",
+                "params": [["to": share.accountant, "data": "0x679aefce"], "latest"]]
+            guard let root = await IngestSupport.postJSON(url, body: body) as? [String: Any],
+                  let hexRate = root["result"] as? String, hexRate.count == 66
+            else { continue }
+            let rate = WalletIngest.hexToDouble(hexRate)
+                / pow(10, Double(share.rateDecimals))
+            if Share.plausible.contains(rate) { out[share.accountant] = rate }
+        }
+        return out
     }
 
     /// Block timestamps, BATCHED — one HTTP request for every block in the
