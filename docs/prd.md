@@ -58602,3 +58602,63 @@ tense in Cloudflare's own copy, and the announcement names no API, chain, asset
 or custody model. Re-open when there are docs. If the Account Wallet turns out
 to be an on-chain address, `Follow address` already reads it with no seat at
 all.
+
+
+## §847 — Three of §296's four deadlines were reading fields Cloudflare does not return, and the fourth had NEVER landed (user: "so does this mean nothing will change in our cloudflare experience for users?", 2026-09-20)
+
+**The question was fair and the answer was no.** §846 narrowed the token and
+changed nothing a person would notice. Checking the bridge against Cloudflare's
+machine-readable schema — `cloudflare/api-schemas`, 2,215 paths, which needs no
+account and had never been done — found four wrong field reads in the shipped
+pass, one of them load-bearing.
+
+**The registration deadline has never landed for anyone.** The pass called
+`/accounts/{id}/registrar/domains` and guarded on `domain["name"]`. That item
+has **no `name` field** — `available, can_register, created_at,
+current_registrar, expires_at, id, locked, registrant_contact,
+registry_statuses, supported_tld, transfer_in, updated_at` — so the guard
+`continue`d on every domain and the loop landed nothing, every pass, since
+2026-08-03. Cloudflare has a SECOND registrar endpoint,
+`/registrar/registrations`, and it is the one carrying every field this row is
+built out of: `domain_name`, `expires_at`, `auto_renew`. The pass reads that now.
+
+**`auto_renew` does not exist on the old endpoint either, and `?? false` turned
+that silence into an alarm.** Every registration row would have read "Auto-renew
+is off. Nothing will renew this for you." about domains that renew themselves —
+§83's fake status, reached by defaulting a fact nobody stated. It is `Bool?` the
+whole way down now (the runway's `Item.autoRenews` already was), unknown takes
+the neutral wording, and the summary says to check rather than claiming either
+way. **A default is a claim.** `?? false` reads as caution and is not.
+
+**Two certificate reads could never fire, and a comment argued for keeping
+them.** A pack has no `expires_on`, and `primary_certificate` is a **string**,
+so `as? [String: Any]` always failed. The surviving line —
+`certificates[].expires_on` — was the correct one all along, so nothing was
+broken; what was broken is that a doc-comment asserted Cloudflare "has also
+returned it at pack level" and offered the two dead branches as robustness.
+**A fallback that cannot fire does not harden a feature. It hides which line is
+load-bearing and stops anyone checking the one that is** — and here it sat
+directly above the one field name worth verifying, for six weeks.
+
+**Why nothing caught this.** `cloudflare-selftest.sh` compiles the pure logic
+whole and runs eleven mutations, and every one of them still passes on the
+broken code: a wrong key is a silent `nil`, and a silent `nil` in this bridge
+renders as a healthy account with nothing expiring — which is the exact lie
+§296 says the bridge exists to avoid. The harness was strong about JUDGEMENT
+and had no opinion at all about SHAPE.
+
+**The fix is pinned, because it cannot be re-measured here.** Six drift guards
+now assert the schema reading against the shipped source, each mutation-proven.
+They read CODE ONLY — every name appears in the comment explaining why it is
+wrong, and the first draft of the guard failed on its own explanation. The
+account reachable from this machine holds no zones and no registrations
+(§846), so the schema is the only evidence there will be, and it belongs in the
+repo rather than in a session.
+
+**The class, and it is the one worth keeping.** Reading an API "against the
+published reference" means reading PROSE, and prose omits, renames and lags.
+The machine-readable schema is free, needs no credential, and is diffable —
+**check a bridge's field names against the schema, not the docs page**, and do
+it before writing the harness, because the harness will happily certify logic
+operating on keys that do not exist. Measuring reach (§846) proved the endpoint
+answers; it said nothing about whether we could read the answer.

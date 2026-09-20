@@ -79,6 +79,40 @@ grep -q 'CloudflareRunway.quietHeadline' Casberi/Casberi/Screens/CloudflareRunwa
 grep -q 'CloudflareRunwaySource.compose' Casberi/Casberi/Screens/FeedScreen.swift \
   || { echo "✗ the Cloudflare room no longer composes the runway at all"; exit 1; }
 
+# --- field names, pinned against Cloudflare's OpenAPI schema (prd §847) ------
+# These four shipped WRONG for six weeks and nothing here could see it: the
+# harness compiles the pure logic, and a wrong key name is a silent nil that
+# renders as a healthy account. They cannot be re-measured on this machine —
+# the only account reachable from here holds no zones and no registrations —
+# so the schema reading is pinned in the repo or it drifts straight back.
+#
+# Checked 2026-09-20 against cloudflare/api-schemas (2,215 paths):
+#   /registrar/domains       item has NO `name`, NO `auto_renew`
+#   /registrar/registrations item has `domain_name`, `expires_at`, `auto_renew`
+#   certificate_packs        item has NO `expires_on`; the date is on
+#                            `certificates[].expires_on`, and
+#                            `primary_certificate` is a STRING, so
+#                            `as? [String: Any]` can never succeed.
+#
+# The negative guards read CODE ONLY. Every one of these names appears in the
+# comments that explain why it is wrong, so a plain grep over the file fails on
+# the explanation — which is how this guard was first written, and it reported
+# the bug it had just fixed.
+CF_CODE="$(grep -v '^[[:space:]]*//' "$CF")"
+
+grep -q 'registrar/registrations' "$CF" \
+  || { echo "✗ the registrar read left /registrar/registrations — /registrar/domains carries no name and no auto_renew, so every domain is discarded and this deadline never lands"; exit 1; }
+print -r -- "$CF_CODE" | grep -q 'registrar/domains' \
+  && { echo "✗ /registrar/domains is back — its item has no \`name\` field, so the guard discards every domain silently"; exit 1; }
+grep -q 'domain\["domain_name"\] as? String' "$CF" \
+  || { echo "✗ the registration's name is no longer read from \`domain_name\` — /registrar/registrations has no \`name\` key"; exit 1; }
+print -r -- "$CF_CODE" | grep -q 'domain\["auto_renew"\] as? Bool) ?? false' \
+  && { echo "✗ auto_renew defaulted to false again — silence would print \"Auto-renew is off. Nothing will renew this for you.\" about a domain that renews itself (§83 fake status)"; exit 1; }
+print -r -- "$CF_CODE" | grep -q 'pack\["expires_on"\]' \
+  && { echo "✗ a pack-level expires_on read is back — the schema has no such field; it reads as a fallback and can never fire"; exit 1; }
+print -r -- "$CF_CODE" | grep -q 'primary_certificate' \
+  && { echo "✗ primary_certificate is read as a dictionary again — the schema types it as a STRING, so the cast always fails"; exit 1; }
+
 TMP=$(mktemp -d /tmp/cf-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
 

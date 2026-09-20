@@ -190,24 +190,40 @@ enum CloudflareFetch {
                                  auth: "Bearer \(token)")
         }
 
-        // 4. Registrar domains. Most Cloudflare accounts do not use Cloudflare
-        // as their registrar, and that account answers 403 here — a SKIP, not a
-        // failure, and deliberately not covered, so nothing resolves off it.
+        // 4. Registrar domains. An account that registers nothing with
+        // Cloudflare answers **200 with an empty list** — MEASURED 2026-09-20,
+        // where this comment used to predict a 403. A 403 is still possible (a
+        // token without Account Settings:Read) and is still a SKIP, and this
+        // read is still deliberately not covered, so nothing resolves off it
+        // either way: absence here never means a registration went away.
         if let accountsBody = await IngestSupport.getJSON("\(api)/accounts",
                                                           auth: "Bearer \(token)") as? [String: Any],
            let accounts = accountsBody["result"] as? [[String: Any]] {
             for account in accounts.prefix(3) {
                 guard let accountID = account["id"] as? String else { continue }
+                // `/registrar/registrations`, NOT `/registrar/domains` (fixed
+                // 2026-09-20 against Cloudflare's OpenAPI schema, prd §847).
+                // Both exist; only this one carries the two fields this row is
+                // built out of. `/registrar/domains` has no `name` and no
+                // `auto_renew` — so the guard below discarded every domain and
+                // **this deadline had never landed for anyone**.
                 guard let body = await IngestSupport.getJSON(
-                        "\(api)/accounts/\(accountID)/registrar/domains",
+                        "\(api)/accounts/\(accountID)/registrar/registrations",
                         auth: "Bearer \(token)") as? [String: Any],
                       let domains = body["result"] as? [[String: Any]]
                 else { continue }
                 for domain in domains {
-                    guard let name = domain["name"] as? String, !name.isEmpty else { continue }
+                    guard let name = domain["domain_name"] as? String, !name.isEmpty else { continue }
                     covered.insert("cloudflare:domain:\(name)")
-                    estate.autoRenew[name] = (domain["auto_renew"] as? Bool) ?? false
-                    if let expiry = IngestSupport.isoDate(domain["expires_at"] ?? domain["expires_on"]) {
+                    // Recorded ONLY when the account said so. `?? false` used
+                    // to turn silence into "auto-renew is off — nothing will
+                    // renew it for you", which is §83's fake status: a sentence
+                    // alarming a person about a domain that renews itself.
+                    // `autoRenews` is `Bool?` the whole way down for this.
+                    if let auto = domain["auto_renew"] as? Bool {
+                        estate.autoRenew[name] = auto
+                    }
+                    if let expiry = IngestSupport.isoDate(domain["expires_at"]) {
                         estate.consider(expiry, name: name, kind: .registration)
                     }
                     if let due = domainRow(domain, name: name, accountID: accountID) {
@@ -305,23 +321,25 @@ enum CloudflareFetch {
     /// snapshot records it regardless (prd §296: the runway's quiet state names
     /// a date no row holds, because a healthy account has no rows).
     ///
-    /// The pack shape is handled two ways on purpose. Cloudflare documents the
-    /// expiry on the certificates INSIDE a pack, but has also returned it at
-    /// pack level; reading both costs one `??` and makes the difference between
-    /// a working feature and a silently empty one, which is not a trade worth
-    /// thinking about twice.
+    /// **The expiry lives on the certificates INSIDE a pack, and nowhere else**
+    /// — checked against Cloudflare's OpenAPI schema 2026-09-20 (prd §847).
+    ///
+    /// Two other readings used to sit here, defended by a comment claiming
+    /// Cloudflare "has also returned it at pack level". The schema says
+    /// otherwise: a pack has no `expires_on` at all, and `primary_certificate`
+    /// is a **string**, so `as? [String: Any]` could never succeed. Both were
+    /// dead, and the comment argued for keeping them. A fallback that cannot
+    /// fire does not make a feature robust — it hides which line is load-bearing
+    /// and stops anyone checking the one that is.
     static func earliestActiveExpiry(_ packs: [[String: Any]]) -> Date? {
         var earliest: Date?
         for pack in packs {
             if let status = pack["status"] as? String,
                status.lowercased() != "active" { continue }
             var packDates: [Date] = []
-            if let top = IngestSupport.isoDate(pack["expires_on"]) { packDates.append(top) }
             for cert in (pack["certificates"] as? [[String: Any]]) ?? [] {
                 if let d = IngestSupport.isoDate(cert["expires_on"]) { packDates.append(d) }
             }
-            if let primary = pack["primary_certificate"] as? [String: Any],
-               let d = IngestSupport.isoDate(primary["expires_on"]) { packDates.append(d) }
             if let soonest = packDates.min() {
                 earliest = min(earliest ?? soonest, soonest)
             }
@@ -335,16 +353,17 @@ enum CloudflareFetch {
     /// domains set to renew automatically that lapse, because the card behind
     /// them expired and nobody was told.
     static func domainRow(_ domain: [String: Any], name: String, accountID: String) -> Thing? {
-        let raw = domain["expires_at"] ?? domain["expires_on"]
-        guard let expiry = IngestSupport.isoDate(raw),
+        guard let expiry = IngestSupport.isoDate(domain["expires_at"]),
               let days = daysUntil(expiry), days <= domainWindow else { return nil }
-        let auto = (domain["auto_renew"] as? Bool) ?? false
+        // `Bool?`, never defaulted — see the read. Unknown takes the neutral
+        // wording, which is true whichever way the account is actually set.
+        let auto = domain["auto_renew"] as? Bool
         let thing = Thing(
             kind: .reminder,
             title: days <= 0
                 ? String(localized: "\(name) has expired")
-                : (auto ? String(localized: "\(name) renews in \(days) days")
-                        : String(localized: "\(name) expires in \(days) days")),
+                : (auto == true ? String(localized: "\(name) renews in \(days) days")
+                                : String(localized: "\(name) expires in \(days) days")),
             content: "https://dash.cloudflare.com/\(accountID)/domains/\(name)",
             source: "Cloudflare",
             capturedAt: .now,
@@ -352,9 +371,16 @@ enum CloudflareFetch {
         )
         thing.dueAt = expiry
         thing.mark = .todo
-        thing.summary = auto
-            ? String(localized: "Set to renew automatically — which still fails if the card behind it has expired.")
-            : String(localized: "Auto-renew is off. Nothing will renew this for you.")
+        switch auto {
+        case .some(true):
+            thing.summary = String(localized: "Set to renew automatically — which still fails if the card behind it has expired.")
+        case .some(false):
+            thing.summary = String(localized: "Auto-renew is off. Nothing will renew this for you.")
+        case .none:
+            // Says the date and stops. Neither sentence above is safe to write
+            // about an account that did not state its setting (§83).
+            thing.summary = String(localized: "Check whether this one is set to renew before the date passes.")
+        }
         return thing
     }
 
@@ -595,12 +621,9 @@ enum CloudflareFetch {
             // Packs that carried a date, vs packs that existed. The gap between
             // these two numbers is the only visible symptom of a field rename.
             let dated = packs.filter { pack in
-                if IngestSupport.isoDate(pack["expires_on"]) != nil { return true }
-                if ((pack["certificates"] as? [[String: Any]]) ?? []).contains(where: {
-                    IngestSupport.isoDate($0["expires_on"]) != nil }) { return true }
-                if let p = pack["primary_certificate"] as? [String: Any],
-                   IngestSupport.isoDate(p["expires_on"]) != nil { return true }
-                return false
+                ((pack["certificates"] as? [[String: Any]]) ?? []).contains {
+                    IngestSupport.isoDate($0["expires_on"]) != nil
+                }
             }.count
             NSLog("[Casberi] cloudflareCert| %@ HTTP %d packs=%d withDate=%d%@",
                   name, resp.status, packs.count, dated,
@@ -645,17 +668,19 @@ enum CloudflareFetch {
         for account in accounts.prefix(3) {
             guard let id = account["id"] as? String else { continue }
             let resp = await IngestSupport.getJSONStatus(
-                "\(api)/accounts/\(id)/registrar/domains", auth: auth)
+                "\(api)/accounts/\(id)/registrar/registrations", auth: auth)
             let domains = ((resp.json as? [String: Any])?["result"] as? [[String: Any]]) ?? []
-            // 403 here is the EXPECTED answer for the many accounts that don't
-            // use Cloudflare as a registrar — a skip, never a failure.
+            // MEASURED 2026-09-20 on a real account holding no domains: **200
+            // with an empty list**, not 403. An account with the four narrow
+            // reads can reach this, so 403 here means the token, never "you are
+            // not a registrar customer" — which is what this line used to say.
             NSLog("[Casberi] cloudflareRegistrar| account=%@ HTTP %d domains=%d%@",
                   id, resp.status, domains.count,
-                  resp.status == 403 ? " (not a Registrar account, or token lacks the permission — expected for most)" : "")
+                  resp.status == 403 ? " (token lacks Account Settings:Read — an account with no domains answers 200 and an empty list)" : "")
             for domain in domains {
-                NSLog("[Casberi] cloudflareDomain| name=%@ expires=%@ auto_renew=%@",
-                      (domain["name"] as? String) ?? "MISSING",
-                      String(describing: domain["expires_at"] ?? domain["expires_on"] ?? "MISSING"),
+                NSLog("[Casberi] cloudflareDomain| domain_name=%@ expires_at=%@ auto_renew=%@",
+                      (domain["domain_name"] as? String) ?? "MISSING",
+                      String(describing: domain["expires_at"] ?? "MISSING"),
                       String(describing: domain["auto_renew"] ?? "MISSING"))
             }
         }
