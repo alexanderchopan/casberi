@@ -58838,3 +58838,65 @@ the machine-readable schema. This one adds the REQUEST: parameters, their
 allowed values, and whether the route supports the ordering the code depends
 on. Both bugs rendered identically — a healthy, empty room — and neither was
 visible to a harness that only ran the shaping.
+
+
+## §850 — Wise's profile name and Vercel's blocked build: two more reads that could never match (2026-09-20)
+
+**The §847 sweep, third and fourth confirmations.** Both found the same way —
+diffing the keys the Swift reads against the vendor's own machine-readable
+schema — and both had shipped looking like nothing was wrong.
+
+**Wise: the profile name was always nil.** `WiseFetch.profile` read
+`details.firstName`, `details.lastName` and `details.name`. Wise's OpenAPI, in
+BOTH the current bundle and the legacy one, has **no `details` object on a
+profile**: `personal-profile` carries top-level `firstName`, `lastName`,
+`fullName`; `business-profile` carries `businessName` and `fullName`, and
+never `name`. So the name was nil on every pass — the connect proof fell
+through to a bare "Connected", `standing.profileName` stayed empty, and the
+name never reached `enrichedText`. Now read flat, with `fullName` as the
+fallback and `businessName` for a business profile.
+
+**Vercel: a BLOCKED deploy never landed.** `VercelState` declared six cases;
+the spec enumerates eight for both `readyState` and `state` —
+BLOCKED · BUILDING · CANCELED · DELETED · ERROR · INITIALIZING · QUEUED ·
+READY. `BLOCKED` and `DELETED` were missing, so `state(of:)` returned nil,
+`lands` returned false, and a build Vercel REFUSED — a seat or spend policy,
+which the spec models with a whole `seatBlock` object — was silently absent.
+That is the same news as `ERROR` and arguably more actionable: nothing else
+tells you a deploy was refused rather than broken. It lands on any target now,
+with its own clause ("Blocked", not "Build failed" — nothing broke, and the fix
+is an account change). `DELETED` is terminal but deliberately does NOT land:
+a removed deployment is housekeeping.
+
+**`VercelShape.lands` predicted this in a comment** — the redundant `terminal`
+guard was "kept for the day someone adds a case here and forgets that a
+deployment has to be OVER before it can be news". Adding two cases hit exactly
+that, and the guard did its job: both new states passed `terminal` and fell to
+`default: false` until the editorial decision was made explicitly.
+
+**Two findings deliberately NOT acted on, and the reason is the Vercel
+contrast.** Wise's `GET /v1/profiles` is undocumented — the vendor's spec gives
+`/v1/profiles` only `post` and `put`, and documents the list as
+`GET /v2/profiles`. That call gates the entire seat. But **undocumented is not
+dead**: measured the same afternoon, Vercel's `/v6/deployments` is absent from
+Vercel's spec and answers 200 anyway, while `v8` and `v14` answer 400. So a
+spec's silence about a path proves nothing about whether it routes, and
+swapping a call that may be working for one that is merely documented, with no
+token to measure either, risks breaking a live seat to fix a theoretical one.
+The schema is authoritative about **what a response CONTAINS** and only
+suggestive about **what a request will be ACCEPTED**. §849's App Store Connect
+fix is not a counterexample: there the 400 was measured, not inferred.
+
+**Also left, as judgement rather than defect:** Wise transfers never paginate
+past 100 across a 180-day first sight; Wise's `hasActiveIssues` is unread, so a
+row can read "Sending · £100.00" while Wise is flagging a blocker (§83's
+shape); and the file's claim that card spending is reachable only behind SCA is
+contradicted by the documented `/v1/profiles/{id}/activities`, though its
+amounts are pre-formatted strings the spec says not to treat as numbers.
+
+**Clean, and worth recording as such:** GitLab (every field, every query
+parameter, both entities), PagerDuty and Sentry (every name and nesting level),
+and the Zerion money path — quantities are already-scaled decimals, the price
+multiply is dimensionally right, the chain-id join holds, and positions are
+unpaginated so the wallet crown's total is complete in one call. Six providers
+checked, four defects, two of them features that had never worked once.

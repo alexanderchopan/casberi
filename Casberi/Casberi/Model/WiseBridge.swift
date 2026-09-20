@@ -214,15 +214,36 @@ enum WiseFetch {
 
     // MARK: Parsing
 
+    /// **The profile's name is FLAT on the row, not nested under `details`**
+    /// (fixed 2026-09-20, prd §850).
+    ///
+    /// This read `details.firstName` / `details.lastName` / `details.name`, and
+    /// Wise's own OpenAPI — in both the current and the legacy bundle — has no
+    /// `details` object on a profile at all. `personal-profile` carries
+    /// top-level `firstName`, `lastName`, `fullName`; `business-profile`
+    /// carries `businessName` and `fullName`, and never `name`. So
+    /// `WiseProfile.name` was **always nil**: the proof line fell through to a
+    /// bare "Connected", `standing.profileName` was empty, and the name never
+    /// reached `enrichedText`. Nothing looked broken, which is the §847/§849
+    /// shape for the third time.
+    ///
+    /// `fullName` is the fallback rather than the lead: the spec carries it on
+    /// both profile kinds, but a person's own first and last name is what the
+    /// rest of this file says out loud, so it is preferred where present.
     static func profile(_ row: [String: Any]) -> WiseProfile? {
         guard let id = identifier(row["id"]) else { return nil }
-        let details = row["details"] as? [String: Any]
-        let first = details?["firstName"] as? String
-        let last = details?["lastName"] as? String
-        let business = details?["name"] as? String
-        let personal = [first, last].compactMap { $0 }
-            .filter { !$0.isEmpty }.joined(separator: " ")
-        let name = personal.isEmpty ? business : personal
+        func text(_ key: String) -> String? {
+            guard let s = row[key] as? String else { return nil }
+            let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            return t.isEmpty ? nil : t
+        }
+        let personal = [text("firstName"), text("lastName")]
+            .compactMap { $0 }.joined(separator: " ")
+        // `businessName` for a business profile, `fullName` for either — both
+        // are the spec's own spellings, and the old `name` was neither.
+        let name = personal.isEmpty
+            ? (text("businessName") ?? text("fullName"))
+            : personal
         return WiseProfile(id: id,
                            type: (row["type"] as? String) ?? "",
                            name: name.flatMap { $0.isEmpty ? nil : $0 })

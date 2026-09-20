@@ -60,12 +60,22 @@ enum VercelState: String {
     case building     = "BUILDING"
     case queued       = "QUEUED"
     case initializing = "INITIALIZING"
+    // The two values Vercel's own spec declares that this enum was missing
+    // (2026-09-20, prd §850). Both `readyState` and `state` enumerate
+    // BLOCKED · BUILDING · CANCELED · DELETED · ERROR · INITIALIZING · QUEUED ·
+    // READY. Without these, `state(of:)` returned nil and `lands` was false —
+    // so a build **blocked** by a seat or spend policy never landed, which is
+    // the same news as ERROR and arguably more actionable, since nothing else
+    // tells you a deploy was refused rather than broken.
+    case blocked      = "BLOCKED"
+    case deleted      = "DELETED"
 
     /// Whether the deployment is OVER.
     var terminal: Bool {
         switch self {
-        case .ready, .error, .canceled:            true
-        case .building, .queued, .initializing:    false
+        // BLOCKED and DELETED are both end states: neither proceeds on its own.
+        case .ready, .error, .canceled, .blocked, .deleted:  true
+        case .building, .queued, .initializing:              false
         }
     }
 
@@ -78,6 +88,9 @@ enum VercelState: String {
         switch self {
         case .error:    String(localized: "Build failed")
         case .canceled: String(localized: "Canceled")
+        // Not "failed": nothing broke. Vercel refused to run it — a seat or
+        // spend policy — and the fix is an account change, not a code change.
+        case .blocked:  String(localized: "Blocked")
         default:        nil
         }
     }
@@ -100,8 +113,12 @@ enum VercelShape {
     static func lands(state: VercelState?, target: String?) -> Bool {
         guard let state, state.terminal else { return false }
         switch state {
-        case .error, .canceled:
-            // Any target. A preview build that broke is the reason to look.
+        case .error, .canceled, .blocked:
+            // Any target. A preview build that broke is the reason to look —
+            // and `.blocked` joins them (prd §850) because a deploy Vercel
+            // REFUSED is news for the same reason: you pushed, and nothing
+            // shipped. `.deleted` deliberately does not: a removed deployment
+            // is housekeeping, and it falls through the `default` below.
             return true
         case .ready:
             // Production only. A successful preview is the firehose.
