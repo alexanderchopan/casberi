@@ -126,6 +126,9 @@ DEMO_FILES = {
     "FeedScreen": CASBERI / "Screens/FeedScreen.swift",
     "MediaShape": CASBERI / "Model/MediaShape.swift",
     "AppStoreConnectBridge": CASBERI / "Model/AppStoreConnectBridge.swift",
+    # Read-only reference for check O — the keyed agents, read off the shipped
+    # `AgentProvider.agent` switch rather than hand-listed here.
+    "AgentAnswer": CASBERI / "Model/AgentAnswer.swift",
     # Read-only reference for checks A/H — Safe is the first bridge to own
     # its demo seed in its own file rather than in DemoSeedAll (2026-08-11),
     # since `SafeRoomSource` reads only this file's `private` state.
@@ -788,6 +791,95 @@ def check_f_shape_coverage(files_text):
         check(f'F · Shape.{shape} has a seeded source among {sources}', present, True)
 
 
+def check_o_keyed_agents_have_demo_chats(files_text):
+    """Check O — every KEYED AGENT has a demo conversation with turns in it
+    (prd §847).
+
+    **Check F cannot catch this and never could.** It asserts every
+    `FeedScreen.Shape` CASE has a seeded source. Four keyed agents joined the
+    existing `.chat` case in prd §839 — a case ChatGPT already satisfied — so
+    F passed green while Bankr, Venice, Grok and OpenRouter had rooms the demo
+    could not show at all. A per-CASE check can never see the fifth room added
+    to a case already covered; the question has to be asked per SOURCE.
+
+    **It does NOT look for source names.** `agentChats()` writes
+    `source: AgentConversationLanding.source(for: provider)` — computed, so no
+    `"Bankr"` literal exists to find, and a check that grepped for one would
+    fail on correct code. (That is the same computed-value trap
+    `setup-copy-audit.py` hit the same week.) What is checkable is the two ways
+    this seeding can silently drop an agent:
+
+    1. **The seed must be DERIVED**, iterating `AgentProvider.allCases`. A
+       hand-written list of rows would reproduce check F's own gap one level
+       up: a ninth agent simply would not be in it.
+    2. **Every provider's turns must be non-empty.** The exhaustive switch in
+       `demoTurns` makes a MISSING case a compile error — but a case returning
+       `[]` compiles perfectly, and `agentChats`' `compactMap` +
+       `guard let opening = turns.first?.question else { return nil }` then
+       drops that agent in silence. That is the failure this check exists for:
+       green build, green compile-time exhaustiveness, empty room.
+
+    **Apple Intelligence is deliberately absent and must stay so.** It is a
+    switch over which Apple model answers the composer, not a keyed agent: not
+    an `AgentProvider`, never reaches `AgentConversationLanding`, no room.
+    Seeding it would furnish a room that does not exist.
+    """
+    agent_src = strip_comments(files_text["AgentAnswer"])
+    m = re.search(r"var agent: String \{(.*?)\n    \}", agent_src, re.S)
+    if m is None:
+        check("O · AgentProvider.agent found", False, True)
+        return
+    providers = [c for c, _ in re.findall(r"case \.(\w+):\s*\"([^\"]+)\"", m.group(1))]
+    if len(providers) < 5:
+        check(f"O · read {len(providers)} providers — the switch shape changed",
+              False, True)
+        return
+    demo = strip_comments(files_text["DemoSeedAll"])
+
+    check("O · the demo seeds agent chats at all", "agentChats()" in demo, True)
+    # SCOPED TO `agentChats`, not searched across the file. `ChatTranscript
+    # .make` appears twice in `DemoSeedAll` (the chat imports use it too), so
+    # a file-wide `in` test passes while `agentChats` hand-rolls its own — the
+    # fixture for this caught exactly that on its first run.
+    fn = re.search(r"func agentChats\(\) -> \[Thing\] \{(.*?)\n    \}",
+                   demo, re.S)
+    if fn is None:
+        check("O · agentChats found", False, True)
+        return
+    seed = fn.group(1)
+    check("O · agent chats are derived from AgentProvider, not hand-listed",
+          "AgentProvider.allCases" in seed, True)
+    # One transcript format for the demo and the live path, or the sheet that
+    # renders real conversations parses the demo's into one turn under the
+    # reader's name.
+    check("O · the demo transcript goes through ChatTranscript.make",
+          "ChatTranscript.make" in seed, True)
+    check("O · the demo ref uses the landing's own prefix constant",
+          "AgentConversationLanding.refPrefix" in seed, True)
+
+    turns_m = re.search(r"func demoTurns\(for provider: AgentProvider\)"
+                        r" -> \[AgentTurn\] \{(.*?)\n    \}", demo, re.S)
+    if turns_m is None:
+        check("O · demoTurns found", False, True)
+        return
+    body = turns_m.group(1)
+    # Split the switch into its cases so an EMPTY one is visible. A case with
+    # no `AgentTurn(` before the next `case` seeds nothing and is dropped.
+    parts = re.split(r"\n        case \.", body)
+    seen = {}
+    for part in parts[1:]:
+        names = re.match(r"([\w, .]+):", part)
+        if not names:
+            continue
+        for n in re.findall(r"\w+", names.group(1)):
+            seen[n] = "AgentTurn(" in part
+    for prov in sorted(set(providers)):
+        if prov not in seen:
+            check(f"O · {prov} has a demoTurns case", False, True)
+        else:
+            check(f"O · {prov}'s demo conversation is not empty", seen[prov], True)
+
+
 # Check G is the INVERSE of D/E: D/E ask "does what the demo claims have real
 # backing" (catalog -> demo, forward); this asks "does everything the
 # catalog offers have a demo seat" (demo -> catalog, reverse). Neither
@@ -808,17 +900,31 @@ def check_f_shape_coverage(files_text):
 # bridge source before adding — never a guess, and never a bare "seems
 # unused":
 KNOWN_BYOK_PROVIDER = {
-    # Agent-group BYOK key providers (`Model/AgentAnswer.swift` family) —
-    # "connecting" one only stores a key that powers "Try with your key" on
-    # an ANSWER already composed elsewhere. None lands a `Thing`, so none
-    # has a source, a room, or a chip to seed. ("Gemini" is NOT here — the
-    # catalog's "Gemini" offer is the chat-IMPORT bridge, which does land
-    # rows; Google's Gemini Apps is not itself a BYOK provider in this
-    # catalog.) "Apple Intelligence" (prd §833) holds no key at all — Apple's
-    # model on Private Cloud Compute answers the composer — but it is the
-    # same shape: an agent seat that answers and lands no `Thing`, so there
-    # is no room or chip to seed.
-    "Apple Intelligence", "Bankr", "Grok", "OpenRouter", "Venice",
+    # Agent-group BYOK key providers (`Model/AgentAnswer.swift` family).
+    #
+    # **THE OLD REASON HERE WAS "none lands a `Thing`, so none has a source, a
+    # room, or a chip to seed", AND IT STOPPED BEING TRUE AT prd §839.** A
+    # keyed agent's conversation lands as a `.chat` thing under the provider's
+    # own name, it earns a room, and since §842 it earns a dock chip from
+    # holding the key. The exemption survived that change reading as a
+    # statement of fact about the app, which it no longer was — the same way
+    # check F went on passing over four unfurnished rooms.
+    #
+    # What is still true, and is the actual reason: these are exempt from
+    # check G specifically, because G asks for a `seatTable` entry and an
+    # agent seat is not a bridge seat — it has no sync, no proof line and no
+    # "last checked". Their demo coverage is CHECK O's job, which asks the
+    # question per provider and fails on an empty conversation. Removing a
+    # name from here without adding it to O's reach would leave a room nothing
+    # checks.
+    #
+    # ("Gemini" is NOT here — the catalog's "Gemini" offer is the chat-IMPORT
+    # bridge, which does land rows; Google's Gemini Apps is not itself a BYOK
+    # provider in this catalog.) "Apple Intelligence" (prd §833) holds no key
+    # at all — Apple's model on Private Cloud Compute answers the composer —
+    # and unlike the rest it lands nothing and has NO room, so it is exempt
+    # from O as well, deliberately (see O's own docstring).
+    "Apple Intelligence", "Bankr", "Grok", "NEAR AI", "OpenRouter", "Venice",
 }
 KNOWN_BALANCE_ONLY = {
     # Merges into the Wallet room's holdings read (`WalletPortfolio`) and
@@ -1302,6 +1408,7 @@ def run_checks(files_text):
     check_m_rowless_seats_are_furnished(files_text)
     check_n_retired_protocols_still_draw(files_text)
     check_f_shape_coverage(files_text)
+    check_o_keyed_agents_have_demo_chats(files_text)
     check_g_catalog_offers_have_demo_seats(files_text)
     check_k_legacy_seats_match_their_rows(files_text)
     check_h_state_owning_bridges_seed_themselves(files_text)
@@ -1443,6 +1550,37 @@ def self_test():
         lambda f: f.__setitem__("WalletWarnings", f["WalletWarnings"].replace(
             "s.uniswap = UniswapLiquidity.Book(", "s.uniswapX = UniswapLiquidity.Book(", 1)),
         check_n_retired_protocols_still_draw, True)
+
+    # Check O's two silent-drop paths (prd §847). An EMPTY switch case is the
+    # one the compiler cannot see: `demoTurns` is exhaustive, so a missing case
+    # fails the build — a case returning `[]` compiles, and `agentChats`'
+    # `compactMap` then drops that agent without a word.
+    ok &= verify_fixture(
+        "an agent whose demo conversation is empty is caught",
+        lambda f: f.__setitem__("DemoSeedAll", re.sub(
+            r"(\n        case \.bankr:\n)(.*?)(\n        case \.)",
+            r"\1            []\3", f["DemoSeedAll"], count=1, flags=re.S)),
+        check_o_keyed_agents_have_demo_chats, True)
+
+    ok &= verify_fixture(
+        "hand-listing the agent chats instead of deriving them is caught",
+        # A list cannot grow a case for a provider nobody added it to — check
+        # F's own gap, one level up.
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            "AgentProvider.allCases.compactMap", "[AgentProvider.bankr].compactMap", 1)),
+        check_o_keyed_agents_have_demo_chats, True)
+
+    ok &= verify_fixture(
+        "a demo transcript built by hand instead of ChatTranscript.make is caught",
+        # Two spellings of one transcript format is how the demo's rows stop
+        # parsing in the sheet that renders the real ones.
+        # The CALL, not the name: `agentChats` also MENTIONS
+        # `ChatTranscript.make` in the comment explaining why it uses it, and
+        # mutating that left the real call intact and the check green — caught
+        # by this fixture's own first run, which is what fixtures are for.
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            "= ChatTranscript.make(", "= DemoSeedAll.handRolled(", 1)),
+        check_o_keyed_agents_have_demo_chats, True)
 
     ok &= verify_fixture(
         "an unseated protocol creeping back into the seat table is caught",
