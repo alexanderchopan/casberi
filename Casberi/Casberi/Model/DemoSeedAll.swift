@@ -3711,8 +3711,18 @@ enum DemoSeedAll {
         }
     }
 
-    /// The three onchain cards lead with `cardMonths` — spend by month, which
-    /// needs `priceValue` across at least two calendar months.
+    /// The three onchain cards. The spends are spread across at least two
+    /// calendar months on purpose, though the reason is now HISTORY rather
+    /// than a live requirement: these rows were shaped for
+    /// `FeedInsight.cardMonths`, a spend-by-month leaderboard that was deleted
+    /// with the rest of the ranked boards ("we were trying to add
+    /// visualization data just for the sake of it"). Gnosis Pay's own head
+    /// superseded it and survives; ether.fi Cash and MetaMask Card have no
+    /// head at all and lead with their newest thing.
+    ///
+    /// The spread is kept because a card feed that all lands in one month
+    /// reads as a burst rather than a habit, which is the wrong impression of
+    /// what this seat is for — not because anything still ranks it.
     ///
     /// **MetaMask Card's rows name NO MERCHANT, and that is the seat's own
     /// ceiling shown rather than papered over (prd §857).** Its two siblings
