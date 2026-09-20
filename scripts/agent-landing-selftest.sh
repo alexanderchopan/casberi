@@ -96,7 +96,38 @@ ORDER
 guard "a room ask retrieves for its own question" \
   'freshEvidence: true' "$SHELL_"
 guard "fresh evidence bypasses the last answer's hits" \
-  'freshEvidence && !lastAnswerHits\.isEmpty' "$SHELL_"
+  'freshEvidence && sameQuestion' "$SHELL_"
+# §843: the REAL guard. §841 fixed the room door by declaring intent, which
+# left the composer door — a typed ask on a keyed seat goes straight to
+# `answerWithKey` and `answer()` never runs, so the agent was handed whatever
+# the PREVIOUS question retrieved. Measured on a device: "what is my balance"
+# answered about who is around.
+guard "the reused evidence must belong to this question" \
+  'let sameQuestion = lastAnswerQuery == query' "$SHELL_"
+guard "the query is stamped where the hits are gathered" \
+  'lastAnswerQuery = query' "$SHELL_"
+python3 - "$SHELL_" <<'STAMP' || fail=1
+import sys
+# COMMENTS STRIPPED FIRST. The first version of this guard matched the literal
+# `lastAnswerHits = …` inside the comment that explains the stamp, and
+# reported the stamp as late — a guard failing on the prose that documents it.
+src = "\n".join("" if l.strip().startswith("//") else l
+                 for l in open(sys.argv[1]).read().splitlines())
+i = src.find("private func answerDocument")
+if i < 0:
+    print("  \u2717 answerDocument is gone — this guard is blind"); sys.exit(1)
+body = src[i:i + 3000]
+stamp = body.find("lastAnswerQuery = query")
+first = body.find("lastAnswerHits =")
+if stamp < 0:
+    print("  \u2717 the query is not stamped inside answerDocument (\u00a7843)")
+    sys.exit(1)
+if first >= 0 and stamp > first:
+    print("  \u2717 the query is stamped AFTER hits are written — those hits "
+          "would carry the previous question's name (\u00a7843)")
+    sys.exit(1)
+print("  \u2713 the query is stamped before any hits are written")
+STAMP
 guard "the composer keeps the last answer's evidence" \
   'freshEvidence: false' "$SHELL_"
 guard "the pending room is cleared however the ask ends" \
@@ -121,6 +152,31 @@ guard "an agent room is not replaced by the generic empty state" \
 # §841: Accounts is presented, not pushed, so onAppear never fires again.
 guard "a key added without leaving the room lights the tile" \
   'onChange\(of: bridges\.bridges\.count\)' "$FEED"
+# §842's chicken-and-egg: adding a key landed nothing, so there was no row, so
+# no chip, so no room, so no Chat tile — and the only way to have the first
+# conversation was the account page's "Ask Bankr", the buried door this whole
+# feature replaces (user: "i shouldn't have to go into ask bankr in accounts
+# to do it").
+SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
+LIVE="Casberi/Casberi/Model/LiveRoomSources.swift"
+guard "a keyed agent is recognised without a landed row" \
+  'static func keyedAgent' "$LIVE"
+guard "the dock gives a connected agent its chip" \
+  'LiveRoomSources\.keyedAgent\(bridge\.name\)' "$SURFACE"
+python3 - "$LIVE" <<'NOTALL' || fail=1
+import sys, re
+src = open(sys.argv[1]).read()
+m = re.search(r"static let all: Set<String> = \[(.*?)\]", src, re.S)
+if not m:
+    print("  \u2717 LiveRoomSources.all is gone — this guard is blind"); sys.exit(1)
+body = m.group(1)
+if "AgentProvider" in body or "agent" in body.lower():
+    print("  \u2717 a keyed agent is inside LiveRoomSources.all — that set means "
+          "\"never lands a Thing\", which is false for an agent room and is the "
+          "mistake that file records twice (\u00a7842)")
+    sys.exit(1)
+print("  \u2713 keyed agents stay OUT of LiveRoomSources.all")
+NOTALL
 guard "the room draws the agent sections" \
   'agentRoomSections\(visible' "$FEED"
 # The chat surface is TWO pieces in two of the room's slots (§841): the thread

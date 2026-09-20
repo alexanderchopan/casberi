@@ -42,6 +42,31 @@ enum LiveRoomSources {
     static let all: Set<String> = [HegotaIdentity.source, FramesIdentity.source,
                                    PrivacyDevnetIdentity.source]
 
+    /// **A KEYED AGENT EARNS ITS CHIP BY HOLDING A KEY (prd §842).**
+    ///
+    /// §839 gave an agent a room by landing its conversations, which earns a
+    /// chip the ordinary way — and left a chicken-and-egg nobody could get out
+    /// of: adding a Bankr key lands nothing, so there is no row, so there is no
+    /// chip, so there is no room, so there is no Chat tile, so the only way to
+    /// have the first conversation is still the account page's "Ask Bankr" —
+    /// the buried door this whole feature exists to replace. Reported the day
+    /// it shipped (user: *"i just added key to bankr and it didn't create a
+    /// bankr room or an agent folder in the dock"*).
+    ///
+    /// **It is SEPARATE from `all` above, and that separation is load-bearing.**
+    /// `all` means "this room has live content and must not draw the corpus
+    /// empty state", which for the three devnets is true forever because they
+    /// land no `Thing` ever. An agent room is the opposite: it lands rows, it
+    /// just has none YET. Folding these names into `all` would tell the feed
+    /// this room never has rows, which is the mistake that file's own doc
+    /// records twice — and `FeedScreen` already handles the empty agent room
+    /// through `roomAgent` (§841), which draws the tiles over nothing.
+    ///
+    /// Read only by the dock's connected-seat door.
+    static func keyedAgent(_ source: String) -> Bool {
+        AgentProvider.allCases.contains { $0.agent == source }
+    }
+
     /// **The prediction venues, and ONLY them — now EMPTY, and kept.**
     ///
     /// Kalshi and Polymarket, its only two members, were deleted on 2026-09-06.

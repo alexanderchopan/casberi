@@ -92,6 +92,16 @@ struct RootShell: View {
     /// The last answer's grounding — a follow-up ("which ones were from
     /// Sam?") searches inside it instead of the whole corpus (2026-07-10).
     @State private var lastAnswerHits: [Thing] = []
+    /// WHICH QUESTION `lastAnswerHits` was retrieved for (prd §843).
+    ///
+    /// Reusing those hits is §67's whole point — the BYOK retry asks the SAME
+    /// question over the SAME evidence the on-device answer saw. It stops
+    /// being that the moment the question differs, and a typed ask on a keyed
+    /// seat never runs `answer()` at all (`stayKeyed` calls `answerWithKey`
+    /// directly), so the agent was handed whatever the LAST question had
+    /// retrieved. Measured: "what is my balance" answered about who is around,
+    /// because the previous ask had pulled rows about people.
+    @State private var lastAnswerQuery = ""
     /// Whether the last answer was a NAMED ask, and if so whether it
     /// synthesized (2026-07-22, §176) — enables the "and bbc?" ellipsis
     /// follow-up to re-run the same shape with a new entity. nil = the last
@@ -3071,6 +3081,11 @@ struct RootShell: View {
         // both instruments — two would be the second-copy drift this codebase
         // keeps paying for, and here the copies would disagree about which
         // channel painted first.
+        // WHOSE EVIDENCE THIS IS, stamped ONCE at the top (prd §843). Every
+        // one of the twenty-odd `lastAnswerHits = …` writes below happens
+        // inside this call and therefore belongs to THIS query — stamping
+        // them individually is the list that goes stale on the twenty-first.
+        lastAnswerQuery = query
         AppSignposts.beginAsk()
         defer { AppSignposts.endAsk() }
         #if DEBUG
@@ -3994,7 +4009,16 @@ struct RootShell: View {
         // and Venice is sent five of Sam's emails as the evidence — rows this
         // question never selected, to a third party — and it never recovers,
         // because the room path writes `lastAnswerHits` back to nothing.
-        let hits = (!freshEvidence && !lastAnswerHits.isEmpty) ? lastAnswerHits : retrieve(query)
+        // **AND IT MUST BE THIS QUESTION'S EVIDENCE (prd §843).** The query
+        // match is the real guard and `freshEvidence` is the room's explicit
+        // one: §841 fixed the room door by declaring intent, which left the
+        // COMPOSER door — where a typed ask on a keyed seat goes straight to
+        // `answerWithKey` without `answer()` ever running — reusing the
+        // previous question's rows. Both doors are safe now for one reason
+        // rather than two.
+        let sameQuestion = lastAnswerQuery == query
+        let hits = (!freshEvidence && sameQuestion && !lastAnswerHits.isEmpty)
+            ? lastAnswerHits : retrieve(query)
         // The corpus tools (2026-08-06) — the whole corpus flattened, the same
         // snapshot the on-device tool path already builds. Bankr gets none: it
         // answers from the wallet and live markets rather than from the

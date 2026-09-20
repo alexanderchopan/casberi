@@ -1490,8 +1490,13 @@ struct MainSurface: View {
         // retired seat (`Corpus.retiredSources`, prd §638) that is still
         // connected on an older install must not earn a chip by this door
         // after losing it by the other.
+        // A KEYED AGENT joins by the same door (prd §842): its room is real
+        // the moment the key is, because the Chat tile is what fills it — and
+        // waiting for the first conversation meant waiting for a door that
+        // only exists inside the room you could not reach.
         for bridge in store.bridges where bridge.status == .connected
-            && LiveRoomSources.has(bridge.name) && Corpus.earnsRoom(bridge.name)
+            && (LiveRoomSources.has(bridge.name) || LiveRoomSources.keyedAgent(bridge.name))
+            && Corpus.earnsRoom(bridge.name)
             && seen.insert(bridge.name).inserted {
             ordered.append(bridge.name)
         }
