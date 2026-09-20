@@ -109,13 +109,25 @@ grep -q 'BankrAgent.forget()' "$WORK/answer.nocomment" \
 grep -q 'bankr.canAct' "$WORK/agent.nocomment" \
   || { echo "✗ forget() no longer removes the stale bankr.canAct default"; exit 1; }
 
-# 5. There is ONE chat, and it is the fab (2026-08-31). The separate Bankr chat
-#    screen is deleted — it duplicated the composer's whole surface to hold a
-#    second send button.
+# 5. There is ONE chat, and since prd §844 it is the ROOM's (was: the fab's,
+#    2026-08-31). The separate Bankr chat screen stays deleted — it duplicated
+#    the composer's whole surface to hold a second send button.
 [ -e "Casberi/Casberi/Screens/BankrChatScreen.swift" ] \
-  && { echo "✗ a second Bankr conversation screen is back — the fab is the only chat"; exit 1; }
+  && { echo "✗ a second Bankr conversation screen is back — the room is the only chat"; exit 1; }
+#    THE ASSERTION FLIPPED (§844). It required `composerRequest` on the setup
+#    screen, because §697b kept "Ask Bankr" as its one live ask surface — a
+#    seat whose whole function is asking would otherwise have been a dead
+#    room. §842 ended that: signing in earns the dock chip, the room is one tap
+#    from the strip, and its Chat tile is the door. Two doors onto one
+#    conversation, with the weaker three taps inside Accounts, is what the
+#    person who reported it objected to. So the setup screen must now raise
+#    NOTHING, and the room must carry the entry.
 grep -q 'composerRequest' "$WORK/setup.nocomment" \
-  || { echo "✗ the Bankr door no longer raises the one composer"; exit 1; }
+  && { echo "✗ an ask door is back on the Bankr account page — the room is the door (§844)"; exit 1; }
+grep -q 'AgentChatEntry' "Casberi/Casberi/Screens/FeedScreen.swift" \
+  || { echo "✗ the room carries no chat entry — removing the account page's door left Bankr unreachable (§844)"; exit 1; }
+grep -q 'keyedAgent' "Casberi/Casberi/Shell/MainSurface.swift" \
+  || { echo "✗ a keyed agent earns no dock chip — the room it needs has no door either (§842)"; exit 1; }
 grep -q 'canAct' "$WORK/setup.nocomment" \
   && { echo "✗ an acting switch is back in the setup screen"; exit 1; }
 

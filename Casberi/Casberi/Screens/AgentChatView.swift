@@ -181,6 +181,9 @@ struct AgentChatEntry: View {
             }
             .buttonStyle(.plain)
             .disabled(!canSend)
+            // The glyph is 28pt, so the TARGET was 28pt — under the 44pt
+            // floor, on the one control this surface exists to press.
+            .dsTapTarget()
             .accessibilityLabel(String(localized: "Send"))
         }
         .dsWell()
