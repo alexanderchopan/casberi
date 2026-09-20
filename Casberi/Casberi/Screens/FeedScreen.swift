@@ -7228,6 +7228,40 @@ struct FeedScreen: View {
         }
     }
 
+    /// **THE LEAD SLOT, HELD WHEN THERE IS NOTHING TO COVER (prd §859).**
+    ///
+    /// A room whose tiles stand over an EMPTY list had nothing above them, so
+    /// the tiles landed at the top of the screen — the one thing §752 bans
+    /// outright, and the half of §841 that pass did not finish: it gave the
+    /// Chat tile a thread to sit under and left All with nothing to sit under
+    /// when the room holds no rows. Reported on Bankr's room the day after
+    /// §845 finally made that room reachable with zero conversations in it.
+    ///
+    /// So the room's own empty state holds the lead instead — the rows that
+    /// would fill it, drawn empty (§769, §771) — in `FeedLedeCard`'s exact
+    /// geometry (`leadHeight - 2 × s4` inside `dsRoomHeadBlock`), so the box
+    /// is the cover's to the point and the tiles below land where they land
+    /// in every other room. It also REPLACES the skeleton rows those rooms
+    /// drew under the tiles: one empty state per empty room, not two.
+    ///
+    /// **Only over an empty list.** A room with rows but nothing coverable —
+    /// every row of its newest day declines the cover (§763) — keeps its lead
+    /// unheld, because an empty state over a full list is the §83 lie. The
+    /// honest fix for that case is a cover, not a skeleton.
+    private func emptyLeadRow(words: Text) -> some View {
+        DSEmptyState(headline: Text("Nothing here yet."), words: words,
+                     scale: .list(rows: 3))
+            .frame(maxWidth: .infinity,
+                   minHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4,
+                   maxHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4)
+            .dsRoomHeadBlock()
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                      bottom: DSRoomChassis.contentGap,
+                                      trailing: DSRoomChassis.inset))
+    }
+
     /// THE NEWEST THING, LIFTED OUT OF A MIXED ROOM (prd §821).
     ///
     /// X's and Instagram's rooms draw a picture grid above their days, and a
@@ -7293,8 +7327,10 @@ struct FeedScreen: View {
         let coverThing: Thing? = coverID.flatMap { id in
             visible.first(where: { (thing: Thing) -> Bool in thing.isLive && thing.id == id })
         }
-        // THE LEAD SLOT. On Chat the thread fills it; on All the cover does.
-        // One slot, one height, so the tiles below never move (§841).
+        // THE LEAD SLOT. On Chat the thread fills it; on All the cover does,
+        // or — with no conversation to cover — the room's own empty state
+        // (§859). One slot, one height, so the tiles below never move (§841).
+        let leadHeld = chatting || coverThing != nil || visible.isEmpty
         if chatting, roomAgent != nil {
             Section {
                 AgentChatThread(source: source)
@@ -7309,13 +7345,15 @@ struct FeedScreen: View {
                 ledeListRow(coverThing, top: 0,
                             bottom: DSRoomChassis.contentGap, holdsLead: true)
             }
+        } else if visible.isEmpty {
+            Section { emptyLeadRow(words: Text(chrome.agentScope.summary)) }
         }
         if let agentTiles {
             Section {
                 agentTiles
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: (coverThing == nil && !chatting) ? DS.Space.s2 : 0,
+                    .listRowInsets(EdgeInsets(top: leadHeld ? 0 : DS.Space.s2,
                                               leading: DSRoomChassis.inset,
                                               bottom: DSRoomChassis.leadGap,
                                               trailing: DSRoomChassis.inset))
@@ -7330,20 +7368,14 @@ struct FeedScreen: View {
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                               bottom: DS.Space.s3, trailing: DSRoomChassis.inset))
             }
-        } else if visible.isEmpty {
+        } else if !visible.isEmpty {
             // The tiles STAY over an empty list — `keepsChromeWhenEmpty`
             // (§538, §769): the Chat tile is how this room stops being empty,
             // so hiding it exactly when there is nothing here would take away
-            // the one control that helps.
-            Section {
-                DSSkeletonRows(label: Text("Nothing here yet."))
-                    .padding(.vertical, DS.Space.s2)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: 0, trailing: DSRoomChassis.inset))
-            }
-        } else {
+            // the one control that helps. What is NOT here any more is the
+            // skeleton that used to draw under them: since §859 the lead
+            // above the tiles carries the empty state, and drawing it twice
+            // said the same nothing on both sides of one control.
             let rest: [(String, [Thing])] = coverID.map { id in
                 days.map { label, rows in
                     (label, rows.filter { (thing: Thing) -> Bool in !(thing.isLive && thing.id == id) })
@@ -7366,6 +7398,11 @@ struct FeedScreen: View {
         let coverThing: Thing? = coverID.flatMap { id in
             visible.first(where: { (thing: Thing) -> Bool in thing.isLive && thing.id == id })
         }
+        // THE LEAD SLOT, held wherever the tiles stand (§859): the cover when
+        // there is one, the room's own empty state when the pick holds
+        // nothing. Without it the tiles sat at the top of the screen — §752's
+        // one outright ban — on any room emptied by its own pick.
+        let leadHeld = coverThing != nil || (scopeTiles != nil && visible.isEmpty)
         if let coverThing {
             Section {
                 ledeListRow(coverThing,
@@ -7373,13 +7410,15 @@ struct FeedScreen: View {
                             bottom: scopeTiles == nil ? DSRoomChassis.leadGap : DSRoomChassis.contentGap,
                             holdsLead: true)
             }
+        } else if scopeTiles != nil, visible.isEmpty {
+            Section { emptyLeadRow(words: Text(roomKindPick.summary)) }
         }
         if let scopeTiles {
             Section {
                 scopeTiles
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: coverThing == nil ? DS.Space.s2 : 0,
+                    .listRowInsets(EdgeInsets(top: leadHeld ? 0 : DS.Space.s2,
                                               leading: DSRoomChassis.inset,
                                               bottom: DSRoomChassis.leadGap,
                                               trailing: DSRoomChassis.inset))
@@ -7388,14 +7427,20 @@ struct FeedScreen: View {
         if visible.isEmpty {
             // A tile and a face together can hold nothing (the GitHub rail
             // combines with the tile) — said under the tiles, which stay, the
-            // `keepsChromeWhenEmpty` reasoning (prd §538, §769).
-            Section {
-                DSSkeletonRows(label: Text("Nothing here yet."))
-                    .padding(.vertical, DS.Space.s2)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: 0, trailing: DSRoomChassis.inset))
+            // `keepsChromeWhenEmpty` reasoning (prd §538, §769). Where the
+            // tiles stand, the LEAD says it instead (§859) and this draws
+            // nothing: a room said the same nothing twice, once on each side
+            // of one control. This arm is what is left — a room whose head is
+            // drawn above, which has no tiles here to hold a lead for.
+            if !leadHeld {
+                Section {
+                    DSSkeletonRows(label: Text("Nothing here yet."))
+                        .padding(.vertical, DS.Space.s2)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                                  bottom: 0, trailing: DSRoomChassis.inset))
+                }
             }
         } else {
             let rest: [(String, [Thing])] = coverID.map { id in

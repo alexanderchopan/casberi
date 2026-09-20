@@ -138,6 +138,42 @@ sys.exit(1 if bad else 0)
 PY
 grep -qF 'let scopeTiles = heroShown ? nil : kindTilesInHead' "$FEED" \
   || { echo "✗ the cover path draws the tiles under a drawn head — a head room would show them twice"; exit 1; }
+# NOTHING STANDS AT THE TOP OF THE SCREEN (prd §859, §752). A cover holds the
+# lead between the picks that HAVE one — and a pick that holds no rows had
+# nothing above the tiles at all, so they rose to the top edge, which is the
+# one thing §752 bans outright. The empty state holds the lead instead, and
+# it is gated on an empty list: over a full one it would be the §83 lie.
+python3 - "$FEED" <<'LEAD'
+import sys
+src = "\n".join("" if l.strip().startswith("//") else l
+                 for l in open(sys.argv[1]).read().splitlines())
+fails = []
+for fn, tiles in (("private func kindTileSections", "if let scopeTiles {"),
+                  ("private func agentRoomSections", "if let agentTiles {")):
+    i = src.find(fn)
+    if i < 0:
+        fails.append(f"{fn} is gone — this guard is blind"); continue
+    body = src[i:i + 4000]
+    t = body.find(tiles)
+    lead = body.find("emptyLeadRow(")
+    if t < 0:
+        fails.append(f"{fn}: the tiles' own block moved — this guard is blind"); continue
+    if lead < 0 or lead > t:
+        fails.append(f"{fn}: nothing holds the lead when the pick is empty — "
+                     "the tiles stand at the top of the screen (\u00a7846)")
+        continue
+    arm = body[max(0, lead - 260):lead]
+    if "visible.isEmpty" not in arm:
+        fails.append(f"{fn}: the empty lead is not gated on an empty list — "
+                     "it would draw a skeleton over a full one (\u00a783)")
+for f in fails:
+    print("  \u2717 " + f)
+if fails:
+    sys.exit(1)
+print("  \u2713 the lead slot is held wherever the tiles stand, and only over an empty list")
+LEAD
+grep -qF 'minHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4' "$FEED" \
+  || { echo "✗ the empty lead no longer holds FeedLedeCard's own box — the tiles would sit at two heights"; exit 1; }
 grep -qF 'self.scopes = tiles' Casberi/Casberi/Design/DSRoomHead.swift \
   || { echo "✗ DSRoomChassis.Head no longer takes optional tiles — nil must draw the head alone"; exit 1; }
 # Every tile glyph is a ScopeTileGlyph name, never a literal in the switch.

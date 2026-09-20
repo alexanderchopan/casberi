@@ -59494,3 +59494,54 @@ leave that room leading with its newest row and nothing else would fail — the
 this exact shape. It would now cost a source file and a switch case. Left out
 because it was not asked for and its spend fields have not been checked against
 the head's needs.
+
+## §859 — An empty room put its tiles at the top of the screen, which is the half of §841 that pass did not finish (user: "bankr room has tiles in wrong place", 2026-09-20)
+
+**Reported against a Bankr room holding nothing.** The screenshot is the whole
+finding: `All | Chat` sitting against the status bar, three skeleton rows under
+it, `That's everything from Bankr so far · 0 things` under those. A control at
+the top edge is the one thing §752 bans outright, and §841 had already fixed
+this exact failure once — on Chat.
+
+**Why the fix was half.** §841's shape is right: *the LEAD SLOT holds the cover
+on All and the THREAD on Chat, the tiles sit unmoved between.* On Chat the
+thread always exists, so that slot is always held. On All the cover is the
+room's newest coverable thing — and a room with no rows has none, so the slot
+was simply skipped and the tiles became the first thing in the list. §845 is
+what made this reachable at all: until that pass an agent room with no
+conversation drew a black screen, so nobody had ever seen the empty one.
+
+`kindTileSections` had the same defect and it was never Bankr-specific: Safe,
+GitHub, Stripe, App Store Connect, Hugging Face, PostHog, L2BEAT, Walletbeat
+and Splits all stand their tiles under a cover, and all of them can be emptied
+by their own pick. §752's rule reads *the buttons can't be in different places
+on each screen*, so the fix is one and both rooms take it.
+
+**The lead is held by the room's own empty state.** `emptyLeadRow` draws
+`DSEmptyState` — the rows that would fill the room, drawn empty (§769, §771) —
+in `FeedLedeCard`'s exact geometry: `leadHeight - 2 × s4` inside
+`dsRoomHeadBlock`. Spelled from the card's own two terms rather than measured,
+so the tiles land at one y whether the room is full or empty, which is the
+property being bought.
+
+**And it REPLACES the skeleton those rooms drew under the tiles.** Both rooms
+already had an empty state; it was just on the wrong side of the control. An
+empty room now says nothing once, above the tiles, instead of twice with a
+picker between the two halves of it.
+
+**It is gated on an empty list, and that is a §83 gate, not an optimisation.**
+A room can hold rows and still have no cover — every row of its newest day
+declines one (§763) — and a skeleton drawn over a full list is a lie about the
+room. That case keeps its lead unheld and its tiles where they were; the honest
+fix for it is a cover, not a placeholder, and it is left open rather than
+papered over.
+
+**The guard asserts the ORDER, not the presence.** `room-kind-tiles-selftest.sh`
+walks both functions and requires the empty lead to appear before the tiles'
+own block and to be gated on `visible.isEmpty`, plus the box to be spelled from
+`leadHeight`. Presence alone would have passed §841's first version, which drew
+the cover on All only — the same mistake this entry is a sequel to.
+
+**UNBUILT.** This session has no Swift toolchain: the twelve python audits and
+the harness guard pass, and nothing here has been compiled or seen on a
+simulator.
