@@ -59494,3 +59494,24 @@ leave that room leading with its newest row and nothing else would fail — the
 this exact shape. It would now cost a source file and a switch case. Left out
 because it was not asked for and its spend fields have not been checked against
 the head's needs.
+
+## §859 — The demo stands every agent's room as a keyed one (user: "how come chatgpt doesn't have the all and chat button the other agents do" → "the demo needs to show the all and chat button on everything that would in real life", 2026-09-20)
+
+§840's tiles stand only where the room's agent has a key, read from the real
+Keychain. The demo pours the ROWS of a connected account and never a key, so
+inside the demo the tiles drew on whichever room the device happened to hold a
+key for — Claude, on the reporting simulator — and on no other. The demo is a
+picture of connected accounts, and a connected agent's room has these tiles.
+
+**The rule.** In demo mode `resolveRoomAgent` resolves the room's agent from
+every `AgentProvider`, not from `AgentKey.configured`. Outside the demo nothing
+changes: no key, no tiles (§83). Measured on the simulator: Claude, ChatGPT,
+Gemini, Venice, Bankr, Muse, Grok, OpenRouter and NEAR AI all draw All and Chat.
+
+**The tile is not dead.** A send with no key goes through the one funnel and is
+refused out loud (`AgentAnswerFailure.noKey`), with the question handed back.
+
+**Not done here:** Claude Code and Cursor draw no tiles, in the demo or out of
+it. Neither is an `AgentProvider` — no seat takes a key for them, and a
+conversation lands under `provider.agent`, so a chat from Claude Code's room
+would land in Claude's. That is a ruling about who answers, not a demo defect.

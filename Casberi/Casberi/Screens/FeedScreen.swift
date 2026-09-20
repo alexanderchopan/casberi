@@ -3073,9 +3073,16 @@ struct FeedScreen: View {
     /// ChatGPT export gives that room rows without giving it anything to ask
     /// with, so the room draws no tiles at all and stays the list it already
     /// was. A Chat tile over a seat that cannot answer is a dead control.
+    ///
+    /// **The demo stands every agent's room as a keyed one.** It pours the
+    /// rows of a connected account, and a connected agent's room has these
+    /// tiles; reading the real Keychain there drew them on whichever room the
+    /// device happened to hold a key for and on no other. A send with no key
+    /// is refused out loud (`AgentAnswerFailure.noKey`), so the tile is not
+    /// dead.
     private func resolveRoomAgent() {
-        let configured = AgentKey.configured
-        roomAgent = configured.first { $0.agent == source }
+        let candidates = DemoMode.isActive ? AgentProvider.allCases : AgentKey.configured
+        roomAgent = candidates.first { $0.agent == source }
     }
 
     /// The agent room's two tiles (prd §840). One tile is never drawn — the
