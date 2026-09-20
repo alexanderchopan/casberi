@@ -122,24 +122,25 @@ struct BankrSetupScreen: View {
         }
     }
 
-    /// The conversation. Only once a key exists: a door onto an agent nobody
-    /// has a credential for is the dead control §83 bans.
+    /// **THE CHAT DOOR IS THE ROOM'S, AND THIS BLOCK IS EMPTY (prd §844.)**
+    ///
+    /// It carried "Ask Bankr", which raised the composer. That was the right
+    /// answer for as long as a keyed seat had no room: §697b took every ask
+    /// surface dark and made exactly this exception, reasoning that *"a seat
+    /// whose whole function is asking would otherwise be a dead room"*.
+    ///
+    /// §842 ended that condition — signing in earns the dock chip, so the room
+    /// is one tap away and its Chat tile is the door. Keeping this one would
+    /// leave the app with TWO doors onto one conversation, the weaker of them
+    /// three taps into a settings screen, which is the arrangement the person
+    /// who reported it was objecting to (*"i shouldn't have to go into ask
+    /// bankr in accounts to do it"*, *"there should be no 'ask bankr' on the
+    /// account page"*).
+    ///
+    /// Kept as an empty block rather than deleted so the page's section list
+    /// is untouched; `AccountPage` draws nothing for it.
     @ViewBuilder private var conversationBlock: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            // THE FAB IS THE ONLY CHAT (user, 2026-08-31: "the only place
-            // to chat with any agent is in the fab"). This used to push a
-            // SECOND conversation screen, which duplicated the composer's
-            // whole surface — its own turn renderer, its own history, its
-            // own field — so the two never knew what you had said in the
-            // other. It raises the one composer now, exactly as the berry
-            // does, and Bankr is a chip in it like every other key.
-            DSSlabButton(title: "Ask Bankr",
-                         detail: "Ask about your wallets and live markets",
-                         systemImage: "bubble.left.and.bubble.right") {
-                DSHaptic.tap()
-                chrome.composerRequest += 1
-            }
-        }
+        EmptyView()
     }
 
     /// A pasted key.
@@ -175,9 +176,13 @@ struct BankrSetupScreen: View {
         // or sign up" makes a new account for a method the person never used
         // before, and a second, empty Bankr account is not something to find
         // out about later.
+        // WHERE TO GO NEXT, not what appears somewhere else (prd §844): the
+        // chip is in the dock the moment this returns (§842), and the room
+        // behind it is where you ask. The old line pointed at the composer's
+        // chip strip, which is no longer how anyone reaches this agent.
         result = .connected(newAccount
-            ? String(localized: "Connected to a new Bankr account.")
-            : String(localized: "\"Ask Bankr\" now appears when you type."))
+            ? String(localized: "Connected to a new Bankr account. Find Bankr in Agents.")
+            : String(localized: "Find Bankr in Agents, in the dock."))
         store.registerConnected(id: "bankr", name: "Bankr",
                                 proof: String(localized: "Key in the Keychain"),
                                 // Three reads and no writes, which is

@@ -58499,3 +58499,15 @@ Only a SAMPLED room can reach this state. Hegotá and Frames DERIVE their line b
 **So the guard is the question itself.** `lastAnswerQuery` is stamped ONCE at the top of `answerDocument`, before any of the twenty-odd `lastAnswerHits = …` writes below it — stamping them individually is the list that goes stale on the twenty-first — and the reuse now requires `lastAnswerQuery == query`. `freshEvidence` stays as the room's explicit statement, but both doors are safe for one reason rather than two.
 
 **The harness guard failed on its own explanation first**, which is worth recording: it searched the function body for `lastAnswerHits =` and matched the literal inside the COMMENT that documents the stamp, reporting the stamp as late. Comments are stripped now. A guard that reads prose as code is a guard that fails on good work and passes on bad.
+
+## §844 — "Ask Bankr" leaves the account page: the room is the door (user: "there should be no 'ask bankr' on the account page, it sould have a folder for agents and a icon for bankr in it", 2026-09-19)
+
+**§697b's exception has expired, on its own terms.** That pass took every ask surface dark and kept exactly one: *"'Ask Bankr' on a connected seat still raises it: a key the person went and got is not a feature being pushed at them, and a seat whose whole function is asking would otherwise be a dead room."* The second clause was the load-bearing one, and §842 ended it — signing in earns the dock chip, so the room is one tap from the strip and its Chat tile is the door. Keeping the slab would leave TWO doors onto one conversation with the weaker of them three taps inside a settings screen, which is the arrangement being objected to.
+
+**The connect line points at the dock now.** It said *"'Ask Bankr' now appears when you type"* — a sentence about the composer's chip strip, which is not how anyone reaches this agent any more and has not been since §697b. It names where to go instead: *"Find Bankr in Agents, in the dock."*
+
+**Bankr was the only seat that had one, and that is the more interesting half.** Venice, Grok and OpenRouter never carried an ask control at all, so from §697b until §839 those three seats were **doorless**: a key you could add, verified, connected, and no surface in the app that would ask it anything. Nobody reported it because nobody had reached for them. The room is what fixes those three, and removing Bankr's slab is what makes all four seats work the same way.
+
+**Apple Intelligence keeps its two, and the asymmetry is correct.** That seat is dark (`AskModel.entitled`), lands nothing, and has no room, so its page IS its only door. It rejoins this rule on the day it gets a room (§842's note).
+
+**One agent, one way in.** The standing shape after this: a keyed agent's chip comes from the key, its room holds what it has said, and its Chat tile is where you say something. No second door, and nothing in Accounts that a room does better.
