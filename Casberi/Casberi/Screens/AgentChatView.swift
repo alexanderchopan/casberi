@@ -169,7 +169,12 @@ struct AgentChatEntry: View {
                 .onSubmit(send)
             Button(action: send) {
                 Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 26))
+                    // `.feature` (28), not a frozen `.system(size: 26)` — §762:
+                    // a glyph takes a rung so it scales with the field beside
+                    // it. A send button pinned at 26 stays 26 while the text
+                    // it sits next to grows with Dynamic Type, which is the
+                    // one reader that change is for (§206).
+                    .dsGlyph(.feature)
                     // A hand-painted control swaps its face when it cannot act
                     // (§83) — it never just ignores the tap.
                     .foregroundStyle(canSend ? DS.tint : DS.textTertiary)
