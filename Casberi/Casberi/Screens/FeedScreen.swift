@@ -8033,14 +8033,13 @@ struct FeedScreen: View {
         if live.count >= 8, let oldest = live.last?.capturedAt,
            Date.now.timeIntervalSince(oldest) > 7 * 86_400 {
             Section {
-                Text("This is where it starts · \(oldest.formatted(.dateTime.month(.abbreviated).day()))")
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.textTertiary)
-                    .frame(maxWidth: .infinity)
+                // The mark draws itself here (prd §866) — `CorpusFloor` holds
+                // both the line and the gesture, so the gate above stays the
+                // one place that decides whether a floor is honest at all.
+                CorpusFloor(oldest: oldest)
                     .padding(.vertical, DS.Space.s6)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .accessibilityLabel("The oldest thing you kept is from \(oldest.formatted(.dateTime.month(.wide).day().year()))")
             }
         }
     }

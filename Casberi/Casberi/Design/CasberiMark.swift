@@ -155,10 +155,23 @@ struct CasberiMark: View {
     ]
 }
 
-/// The mark's silhouette as one strokeable path — head plus the small cut's
-/// three arms, so it can be drawn on with `.trim` (§5 polish). The suckers and
-/// the inner arms are left out on purpose: a trim animation reads as one line
-/// being drawn, and thirteen rings appearing mid-stroke is not that.
+/// The mark's silhouette as one strokeable path — head plus arms, so it can be
+/// drawn on with `.trim` (§5 polish). The suckers are left out on purpose: a
+/// trim animation reads as one line being drawn, and thirteen rings appearing
+/// mid-stroke is not that. They fill in on the settle, which reads as interior
+/// detail arriving rather than the creature changing shape.
+///
+/// **IT TAKES THE FULL ARMS, BECAUSE IT HAS TO END AS THE MARK IT DRAWS (prd
+/// §866, 2026-09-21).** This used `armsSmall` — the three-arm cut — from the
+/// day it was written, which was invisible for two months because the one
+/// caller §5 gave it was cut and left this shape with none at all. The first
+/// real caller draws at `DS.Mark.tile` (44), where `CasberiMark` is well past
+/// `smallCutBelow` and paints FIVE arms: a three-armed outline settling into a
+/// five-armed mark grows two limbs at the crossfade. The suckers may arrive;
+/// the silhouette may not change. A caller that genuinely wants the small
+/// cut's outline should say so rather than have it be the default here — it
+/// would have to be drawing under 16pt, where a 2pt stroke is most of the
+/// creature.
 struct CasberiMarkShape: Shape {
     func path(in rect: CGRect) -> Path {
         let s = min(rect.width, rect.height) / 100
@@ -177,7 +190,7 @@ struct CasberiMarkShape: Shape {
 
 extension CasberiMark {
     fileprivate static var silhouetteHead: Path { head }
-    fileprivate static var silhouetteArms: [Path] { armsSmall }
+    fileprivate static var silhouetteArms: [Path] { armsFull }
 }
 
 /// The mark on its own field, avatar-shaped — the app's face sitting where a

@@ -1218,6 +1218,12 @@ extension View {
             guard active else { return }
             let moving = phase != .idle
             if chrome.scrolling != moving { chrome.scrolling = moving; GestureGate.set(scrolling: moving) }
+            // The hand, as distinct from the motion (prd §866). `scrolling`
+            // above spans the fling too; the feed's day seam is felt only
+            // while the finger is actually on the glass, so it needs the
+            // narrower fact — and this observer already runs, so taking it
+            // here costs nothing.
+            FeedSeam.set(dragging: phase == .tracking || phase == .interacting)
             guard phase == .idle else { return }
             chrome.settleFold()
         }
@@ -1226,6 +1232,10 @@ extension View {
         // that set it, and every later room waits the whole cap.
         .onDisappear {
             if active, chrome.scrolling { chrome.scrolling = false; GestureGate.set(scrolling: false) }
+            // Same reasoning, and the stakes are lower but the shape is the
+            // same: a hand flag left true would let the next screen's first
+            // seam tick with nothing touching the glass.
+            if active { FeedSeam.set(dragging: false) }
         }
     }
 }

@@ -2135,6 +2135,19 @@ harness "World ID pure-logic self-test" "worldid self-test" "scripts/worldid-sel
 # timed transfer rewritten from the cache, and `fetchAlchemy` bypassing the fill.
 harness "Transfer-times self-test" "transfer times self-test" "scripts/transfer-times-selftest.sh" "the transfer-times self-test failed — run scripts/transfer-times-selftest.sh"
 
+# The feed's day seam and the corpus floor (prd §866). Every failure here is
+# FELT and never seen, which is the one category the screen sweep, the demo
+# census and every room probe are blind to. Catches the four guards that each
+# read like a line you could simplify away — a tick for a divider that merely
+# MOUNTED (the rattle), a tick through a fling with no finger on the glass, an
+# unbounded rate during a fast drag, and a parked divider's jitter read as a
+# crossing every frame — plus the drift no assertion can see: the divider no
+# longer observing, the hand flag never written or never cleared, a counter
+# bumped with no `.sensoryFeedback` mapping behind it (a haptic that compiles,
+# runs and is never felt), and the floor's mark losing its draw-on or its
+# Reduce Motion guard.
+harness "Feed-seam self-test" "feed seam self-test" "scripts/feed-seam-selftest.sh" "the feed-seam self-test failed — run scripts/feed-seam-selftest.sh"
+
 # World App (prd §795). Every read answers with the same silence when wrong: a
 # mistyped selector reverts (this file's first draft had two), a vault balance
 # over 18.4 WLD overflows a UInt64 into nothing, an off-by-one grant month

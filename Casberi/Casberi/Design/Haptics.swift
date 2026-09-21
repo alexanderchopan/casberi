@@ -41,6 +41,8 @@ final class HapticBus {
     var spring = 0
     var fly = 0
     var pour = 0
+    /// The feed's day seam (prd §866) — see `DSHaptic.seam`.
+    var seam = 0
     private init() {}
 }
 
@@ -82,6 +84,17 @@ enum DSHaptic {
     static func fly() { HapticBus.shared.fly += 1 }
     /// The refresh rain dealt.
     static func pour() { HapticBus.shared.pour += 1 }
+
+    /// A day seam passed under the finger (prd §866) — the ONE verb here that
+    /// names something the person did not do. Every other feel in this grammar
+    /// answers an act: a choice, a toggle, a write, a fold, a fling. This one
+    /// answers a POSITION — the feed crossing from one day into the next while
+    /// the hand is still on it — so it is the lightest thing the phone says,
+    /// under the pour, which is at least an event.
+    ///
+    /// Its whole discipline is in `FeedSeam`: finger down only, and never
+    /// faster than a seam can mean anything.
+    static func seam() { HapticBus.shared.seam += 1 }
 }
 
 /// `dsSensoryFeedback()` behind a condition, for a view that is sometimes the
@@ -123,6 +136,9 @@ struct SheetHaptics: ViewModifier {
             }
             .sensoryFeedback(trigger: HapticBus.shared.pour) { _, _ in
                 active ? .impact(flexibility: .soft, intensity: 0.5) : nil
+            }
+            .sensoryFeedback(trigger: HapticBus.shared.seam) { _, _ in
+                active ? .impact(flexibility: .soft, intensity: 0.4) : nil
             }
     }
 }
@@ -169,5 +185,7 @@ extension View {
                              trigger: HapticBus.shared.fly)
             .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.5),
                              trigger: HapticBus.shared.pour)
+            .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.4),
+                             trigger: HapticBus.shared.seam)
     }
 }
