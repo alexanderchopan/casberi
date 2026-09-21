@@ -620,17 +620,28 @@ struct BandRow: View {
     /// crossing already have exactly one definition in this app
     /// (`NotifySweep.classify`), and the row shouldn't disagree with the
     /// lock screen about which of its own things are alarms.
-    private var isAlarmClass: Bool {
-        newSinceLastSeen && NotifySweep.classify(thing, now: .now)?.cls == .alarm
+    ///
+    /// TAKES `isNew` RATHER THAN READING IT (PERF, prd §626). As a computed
+    /// property this was read twice per row per body evaluation — once through
+    /// `timeInk`, once for the spoken label — and each read re-entered
+    /// `newSinceLastSeen` as well. `liveBody` binds both facts once and hands
+    /// them down; the short-circuit is unchanged, so a row that is not new
+    /// still never reaches the classifier.
+    private func isAlarmClass(isNew: Bool) -> Bool {
+        isNew && NotifySweep.classify(thing, now: .now)?.cls == .alarm
     }
 
     /// The trailing time's ink: ordinary tertiary, `DS.tint` when new (the
     /// same slot the next-event countdown already tints), `DS.destructive`
     /// when the new arrival is also alarm-class — one more state in the row's
     /// existing color-carries-state vocabulary, not a new visual language.
-    private var timeInk: Color {
-        guard newSinceLastSeen else { return DS.textTertiary }
-        return isAlarmClass ? DS.destructive : DS.tint
+    ///
+    /// Takes both facts for `isAlarmClass`'s reason above: the weight, the
+    /// animation and the spoken label all need them too, so reading them here
+    /// made this the third of six reads rather than the first of one.
+    private func timeInk(isNew: Bool, isAlarm: Bool) -> Color {
+        guard isNew else { return DS.textTertiary }
+        return isAlarm ? DS.destructive : DS.tint
     }
 
 
@@ -649,6 +660,14 @@ struct BandRow: View {
         // the spoken label read it (the row-cost discipline, prd §626).
         let project = self.project
         let leader = self.leader
+        // Bound once for the same reason, and this pair is the more expensive
+        // of the three (PERF, prd §626). Read as computed properties they cost
+        // SIX `SharedStore.groupDefaults` reads and TWO `NotifySweep.classify`
+        // passes per row per body evaluation: `timeInk` reads both, the weight
+        // and the animation read `newSinceLastSeen` twice more, and the spoken
+        // label reads both again. One read and one classify now.
+        let isNew = newSinceLastSeen
+        let isAlarm = isAlarmClass(isNew: isNew)
         // ONE ANATOMY (prd §744). The title leads; the line says who and
         // where. `sourceBadge` still means "this room mixes sources" — what it
         // used to draw as a 17pt badge over the lead is now the line's first
@@ -683,9 +702,10 @@ struct BandRow: View {
                 } else if let countdown {
                     Text(countdown).dsText(.label12).foregroundStyle(DS.tint)
                 } else {
-                    LiveTimeText(date: thing.capturedAt, color: timeInk)
-                        .fontWeight(newSinceLastSeen ? .medium : .regular)
-                        .animation(DS.Motion.standard, value: newSinceLastSeen)
+                    LiveTimeText(date: thing.capturedAt,
+                                 color: timeInk(isNew: isNew, isAlarm: isAlarm))
+                        .fontWeight(isNew ? .medium : .regular)
+                        .animation(DS.Motion.standard, value: isNew)
                 }
             }
         } below: {
@@ -727,8 +747,8 @@ struct BandRow: View {
                                                 title: eventClock.map { "\(titleText), \($0)" } ?? titleText,
                                                 project: project, live: live,
                                                 countdown: countdown,
-                                                isNew: newSinceLastSeen,
-                                                isAlarm: isAlarmClass))
+                                                isNew: isNew,
+                                                isAlarm: isAlarm))
     }
 
     /// The lead, in the ladder `leader` resolves. Always inside the anatomy's

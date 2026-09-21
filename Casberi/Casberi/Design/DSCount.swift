@@ -11,8 +11,13 @@ import Foundation
 /// through `String(gas)` — the same defect, two rooms over (prd §605).
 ///
 /// These are quantities, never the hex the chain speaks, so they group. The
-/// Privacy figures' copy is left in place for the session mid-work on those
-/// files; fold it here when that lands.
+/// Privacy figures' copy has now been folded in and deleted (PERF, prd §628) —
+/// it had lost its last caller and was still building a formatter per call.
+///
+/// A file compiled Foundation-only by a harness (`PrivacyPoolsRoom`,
+/// `FramesReading`, `WalletApprovalExposure`) keeps its OWN static formatter
+/// and says so: reaching `Design/` from there breaks the harness, which is a
+/// different constraint from the drift this helper exists to prevent.
 enum DSCount {
     /// ONE formatter (prd §628): constructing a `NumberFormatter` is one of
     /// the most expensive things Foundation does per call, and the devnet

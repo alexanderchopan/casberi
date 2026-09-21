@@ -233,9 +233,23 @@ struct WalletApprovalExposure: Equatable, Sendable {
     /// stack into a file whose whole value is that it has no dependencies.
     static func number(_ v: Double) -> String {
         guard v.isFinite else { return "0" }
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.maximumFractionDigits = abs(v) >= 1000 ? 0 : (abs(v) >= 1 ? 2 : 4)
+        let f = abs(v) >= 1000 ? whole : (abs(v) >= 1 ? places2 : places4)
         return f.string(from: v as NSNumber) ?? String(format: "%.0f", v)
     }
+
+    /// ONE formatter per magnitude band, not one per call (PERF, prd §628).
+    /// `number` is reached from the permissions card's body and from
+    /// `Grant.stateLine`, which the address book draws per grant — so this
+    /// built a `NumberFormatter` per row per render. Three bands, three
+    /// statics: the thresholds above are this file's rule, not a parameter.
+    /// Thread-safe for formatting since iOS 7 and never mutated after this.
+    private static func decimal(max: Int) -> NumberFormatter {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.maximumFractionDigits = max
+        return f
+    }
+    private static let whole = decimal(max: 0)
+    private static let places2 = decimal(max: 2)
+    private static let places4 = decimal(max: 4)
 }

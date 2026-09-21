@@ -267,8 +267,15 @@ enum WalletApprovalAge {
         if days <= 0 { return String(localized: "today") }
         if days == 1 { return String(localized: "yesterday") }
         if days < 14 { return String(localized: "\(days) days ago") }
+        return monthYear.string(from: date)
+    }
+
+    /// ONE formatter, not one per call (PERF, prd §628): this is read from the
+    /// card's own `detail(_:)`, so it ran per approval per render.
+    /// Thread-safe for formatting since iOS 7, never mutated after this.
+    private static let monthYear: DateFormatter = {
         let f = DateFormatter()
         f.setLocalizedDateFormatFromTemplate("MMM y")
-        return f.string(from: date)
-    }
+        return f
+    }()
 }

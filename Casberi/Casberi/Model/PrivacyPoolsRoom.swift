@@ -833,10 +833,22 @@ struct PrivacyPoolsRoom: Equatable {
         let digits = String(n).count
         let unit = Int(pow(10.0, Double(digits - 2)))
         let rounded = (n / unit) * unit
+        return setCount.string(from: NSNumber(value: rounded)) ?? "\(rounded)"
+    }
+
+    /// ONE formatter, not one per call (PERF, prd §628): `coverLine` below
+    /// reaches `roundedSet` up to three times to build one sentence, and that
+    /// sentence is read from the card's body.
+    ///
+    /// Its own copy rather than `DSCount.grouped`, the shared spelling a view
+    /// would use: this file is compiled Foundation-only against stubs by
+    /// `wallet-rooms-selftest.sh`, and a `Design/` dependency breaks that
+    /// harness. Same rule as `WalletApprovalExposure.number`'s own note.
+    private static let setCount: NumberFormatter = {
         let f = NumberFormatter()
         f.numberStyle = .decimal
-        return f.string(from: NSNumber(value: rounded)) ?? "\(rounded)"
-    }
+        return f
+    }()
 
     /// "Your ETH hides among about 3,900 accepted deposits — up from 2,400
     /// when you first deposited." Nil when there is no reading.

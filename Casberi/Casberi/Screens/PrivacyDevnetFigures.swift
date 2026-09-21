@@ -646,10 +646,8 @@ struct PrivacyDevnetKindMix: View {
 // and the per-step budgets are still on the frame sheet.
 
 
-/// One spelling of a count somebody reads, shared by this room's figures.
-enum PrivacyDevnetFigures {
-    static func grouped(_ value: UInt64) -> String {
-        let f = NumberFormatter(); f.numberStyle = .decimal
-        return f.string(from: NSNumber(value: value)) ?? String(value)
-    }
-}
+// **`PrivacyDevnetFigures.grouped` IS DELETED (PERF, prd §628).** It was the
+// second of the two copies §602 warned about and §605 folded into
+// `DSCount.grouped` — left standing only because a sibling session held this
+// file mid-work. That landed; every sheet in this room reads `DSCount` now, and
+// this had no callers at all while still building a `NumberFormatter` per call.

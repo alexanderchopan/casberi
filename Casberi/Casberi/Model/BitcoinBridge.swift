@@ -297,16 +297,24 @@ enum BitcoinBridge {
     /// the truth more plainly at that magnitude, not about which is cuter.
     static let satsThreshold = 1_000_000   // 0.01 BTC
 
+    /// ONE formatter, not one per call (PERF, prd §628): `formatAmount` is
+    /// read from the address book's vintage line, so it ran per row per
+    /// render. Thread-safe for formatting since iOS 7, never mutated after
+    /// this.
+    private static let satsCount: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.maximumFractionDigits = 0
+        return f
+    }()
+
     /// "0.05 BTC" or "42,000 sats" — the unit that reads as an amount at
     /// this magnitude. Its own formatter, never `WalletIngest.format`, whose
     /// 4-decimal cap would round a typical sub-0.0001 BTC receipt to
     /// "0.0000" and read as nothing arriving at all.
     static func formatAmount(sats: Int) -> String {
         guard abs(sats) >= satsThreshold else {
-            let f = NumberFormatter()
-            f.numberStyle = .decimal
-            f.maximumFractionDigits = 0
-            let grouped = f.string(from: NSNumber(value: sats)) ?? String(sats)
+            let grouped = satsCount.string(from: NSNumber(value: sats)) ?? String(sats)
             return String(localized: "\(grouped) sats")
         }
         return "\(formatBTC(sats)) BTC"

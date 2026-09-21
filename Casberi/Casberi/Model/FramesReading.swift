@@ -819,6 +819,29 @@ enum FramesFormat {
         return String(localized: "\(String(weeks / 52))y ago")
     }
 
+    /// TWO shared formatters, not two built per call (PERF, prd §628).
+    /// `stamp` is read from a sheet's head, so it built a `NumberFormatter`
+    /// AND a `DateFormatter` on every render of it — the most expensive pair
+    /// in the survey.
+    ///
+    /// Its own copy rather than `DSCount.grouped`, which is the shared spelling
+    /// for a count everywhere a view can reach: this file is compiled
+    /// Foundation-only against stubs by `frames-tx-selftest.sh`, and a
+    /// `Design/` dependency breaks that harness. Same rule as
+    /// `WalletApprovalExposure.number`'s own note, one seat over.
+    private static let stampCount: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        return f
+    }()
+
+    private static let stampDay: DateFormatter = {
+        let d = DateFormatter()
+        d.dateStyle = .medium
+        d.timeStyle = .short
+        return d
+    }()
+
     /// A sheet's dateline.
     ///
     /// **The block is always said and the time only when it was read** — which
@@ -828,16 +851,11 @@ enum FramesFormat {
     /// somebody else; the date is the only form of it a person can read. So
     /// both where both exist, and the exact one alone where they do not.
     static func stamp(_ date: Date?, block: UInt64) -> String {
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
         // Grouped: block 60,258 rather than 60258 — this is a COUNT of blocks
         // and reads as one. (An identifier would not be grouped; this is not
         // an identifier, it is a height.)
-        let number = f.string(from: NSNumber(value: block)) ?? String(block)
+        let number = stampCount.string(from: NSNumber(value: block)) ?? String(block)
         guard let date else { return String(localized: "Block \(number)") }
-        let d = DateFormatter()
-        d.dateStyle = .medium
-        d.timeStyle = .short
-        return String(localized: "\(d.string(from: date)) · block \(number)")
+        return String(localized: "\(stampDay.string(from: date)) · block \(number)")
     }
 }

@@ -2841,6 +2841,49 @@ struct HegotaFrameSheet: View {
 /// so a figure here is a QUANTITY — there is no price to convert with, and
 /// inventing one would be §83's fake status where a reader cannot check us.
 enum HegotaFormat {
+    /// ONE formatter per shape, not one per call (PERF, prd §628).
+    ///
+    /// `eth` is read from about fourteen body sites in this file alone, plus
+    /// the feed's own row, and `crown` from three more — so every figure in
+    /// this room built a `NumberFormatter` at render, which is among the most
+    /// expensive things Foundation does. Formatters are thread-safe for
+    /// formatting since iOS 7 and none of these is mutated after it is built.
+    ///
+    /// Spelled as explicit shapes rather than a keyed cache because there are
+    /// only five: the precisions below are the ones this room's own rules
+    /// name, not a free parameter. `.decimal` already defaults
+    /// `minimumFractionDigits` to 0, so passing it changes nothing and says
+    /// what each shape is.
+    private static func decimal(min: Int = 0, max: Int) -> NumberFormatter {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.minimumFractionDigits = min
+        f.maximumFractionDigits = max
+        return f
+    }
+    /// Wei below ETH's display floor — a whole count, never fractional.
+    private static let weiWhole = decimal(max: 0)
+    /// Enough places to keep a fee visible (see `eth`).
+    private static let places6 = decimal(max: 6)
+    private static let places4 = decimal(max: 4)
+    private static let places2 = decimal(max: 2)
+    /// The crown's scaled figure, `1.2B`.
+    private static let places1 = decimal(max: 1)
+
+    private static let dayOnly: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        return f
+    }()
+
+    private static let dayAndTime: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
+
     /// **A UTXO that exists must never render as zero.** Found by seeding the
     /// demo from the real chain rather than invented numbers: one watched
     /// address genuinely holds UTXOs of 1 and 2 WEI beside coins of 0.005 ETH,
@@ -2850,18 +2893,12 @@ enum HegotaFormat {
     static func eth(_ wei: Decimal) -> String {
         let value = HegotaCoins.eth(wei)
         if wei > 0, value < Decimal(string: "0.000001")! {
-            let f = NumberFormatter()
-            f.numberStyle = .decimal
-            f.maximumFractionDigits = 0
-            let text = f.string(from: wei as NSDecimalNumber) ?? "0"
+            let text = weiWhole.string(from: wei as NSDecimalNumber) ?? "0"
             return wei == 1 ? String(localized: "1 wei") : String(localized: "\(text) wei")
         }
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 0
         // Enough places to keep a fee visible: the real spend measured on this
         // chain paid 0.000059 ETH, which four places would round away to zero.
-        f.maximumFractionDigits = value < 1 ? 6 : 4
+        let f = value < 1 ? places6 : places4
         let text = f.string(from: value as NSDecimalNumber) ?? "0"
         return String(localized: "\(text) ETH")
     }
@@ -2910,10 +2947,7 @@ enum HegotaFormat {
     /// The day absorbs that; a minute would not.
     static func approximate(_ date: Date?) -> String? {
         guard let date else { return nil }
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .none
-        return String(localized: "around \(f.string(from: date))")
+        return String(localized: "around \(dayOnly.string(from: date))")
     }
 
     /// A sheet's dateline. The block is the chain's own identity for the
@@ -2930,10 +2964,7 @@ enum HegotaFormat {
             }
             return String(localized: "\(about) · block \(String(block))")
         }
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .short
-        return String(localized: "\(f.string(from: date)) · block \(String(block))")
+        return String(localized: "\(dayAndTime.string(from: date)) · block \(String(block))")
     }
 
     /// A lane label's figure: the number alone, no unit, four places at most.
@@ -2946,10 +2977,7 @@ enum HegotaFormat {
     static func compact(_ wei: Decimal) -> String {
         let value = HegotaCoins.eth(wei)
         guard value >= Decimal(string: "0.0001")! else { return eth(wei) }
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 0
-        f.maximumFractionDigits = value < 1 ? 4 : 2
+        let f = value < 1 ? places4 : places2
         return f.string(from: value as NSDecimalNumber) ?? "0"
     }
 
@@ -2959,9 +2987,6 @@ enum HegotaFormat {
     static func crown(_ wei: Decimal) -> String {
         let value = HegotaCoins.eth(wei)
         guard value >= 1000 else { return eth(wei) }
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.maximumFractionDigits = 1
         // Thresholds sit just under the round number, or 999,999,899 rounds to
         // one decimal and prints "1,000M" — a bigger unit's worth of digits in
         // the smaller unit.
@@ -2969,7 +2994,7 @@ enum HegotaFormat {
             value >= 999_950_000 ? (value / 1_000_000_000, "B")
             : value >= 999_950 ? (value / 1_000_000, "M")
             : (value / 1_000, "K")
-        let text = f.string(from: scaled as NSDecimalNumber) ?? "0"
+        let text = places1.string(from: scaled as NSDecimalNumber) ?? "0"
         return String(localized: "\(text)\(suffix) ETH")
     }
 
@@ -2987,14 +3012,11 @@ enum HegotaFormat {
             let spelled = eth(wei)
             return spelled.hasSuffix(" ETH") ? String(spelled.dropLast(4)) : spelled
         }
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.maximumFractionDigits = 1
         let (scaled, suffix): (Decimal, String) =
             value >= 999_950_000 ? (value / 1_000_000_000, "B")
             : value >= 999_950 ? (value / 1_000_000, "M")
             : (value / 1_000, "K")
-        let text = f.string(from: scaled as NSDecimalNumber) ?? "0"
+        let text = places1.string(from: scaled as NSDecimalNumber) ?? "0"
         return "\(text)\(suffix)"
     }
 }

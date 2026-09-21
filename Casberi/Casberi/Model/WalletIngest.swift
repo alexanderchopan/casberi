@@ -3357,12 +3357,22 @@ enum WalletIngest {
     static func format(_ v: Double) -> String {
         if v == 0 { return "0" }
         if v >= 1000 {
-            let f = NumberFormatter(); f.numberStyle = .decimal; f.maximumFractionDigits = 0
             // `%.0f`, not `Int(v)`: the formatter returns nil exactly for
             // NaN/inf, and `Int(v)` would then trap on that same value.
-            return f.string(from: NSNumber(value: v)) ?? String(format: "%.0f", v)
+            return whole.string(from: NSNumber(value: v)) ?? String(format: "%.0f", v)
         }
         if v >= 1 { return String(format: "%.2f", v) }
         return String(format: "%.4f", v)
     }
+
+    /// ONE formatter, not one per call (PERF, prd §628): `format` titles every
+    /// wallet and Solana row in the feed, so this ran per row per render for
+    /// any amount over a thousand. Thread-safe for formatting since iOS 7,
+    /// never mutated after this.
+    private static let whole: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.maximumFractionDigits = 0
+        return f
+    }()
 }

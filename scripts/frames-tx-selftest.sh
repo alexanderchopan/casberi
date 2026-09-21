@@ -2349,21 +2349,9 @@ mutate "a movement of nothing given a direction" $F2 \
   'let sign = wei < 0 ? "\u{2212}" : "+"'
 mutate "the receipt hero rounded to the balance line's four places" $F2 \
   'NSDecimalRound(&rounded, &quotient, 6, .down)
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 6
-        formatter.maximumFractionDigits = 6
-        formatter.usesGroupingSeparator = true
-        let text = formatter.string(from: rounded as NSDecimalNumber) ?? "0"
-        // A movement of exactly nothing has no direction' \
+        let text = places6.string(from: rounded as NSDecimalNumber) ?? "0"' \
   'NSDecimalRound(&rounded, &quotient, 4, .down)
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 4
-        formatter.maximumFractionDigits = 4
-        formatter.usesGroupingSeparator = true
-        let text = formatter.string(from: rounded as NSDecimalNumber) ?? "0"
-        // A movement of exactly nothing has no direction'
+        let text = places4.string(from: rounded as NSDecimalNumber) ?? "0"'
 
 mutate "the deadline written little-endian" FramesTransaction.swift \
   'var bigEndian = deadline.bigEndian' 'var bigEndian = deadline.littleEndian'

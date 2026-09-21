@@ -156,12 +156,36 @@ struct ThingContentView: View {
 
     /// A product's stated price, formatted in its own currency — nil (never
     /// a guess) when the record doesn't carry one.
+    @MainActor
     static func productPrice(_ thing: Thing) -> String? {
         guard let value = thing.priceValue else { return nil }
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = thing.priceCurrency ?? "USD"
-        return formatter.string(from: NSNumber(value: value))
+        return Self.currencyFormat(thing.priceCurrency ?? "USD")
+            .string(from: NSNumber(value: value))
+    }
+
+    /// ONE formatter per currency, not one per call (PERF, prd §628). This is
+    /// read from `kindSwitch`, a body, so a product row rebuilt a `.currency`
+    /// `NumberFormatter` on every render.
+    ///
+    /// KEYED, unlike the fixed-precision caches elsewhere in this pass: a
+    /// currency code is real data off the record, not a vocabulary this file
+    /// chooses, so it cannot be spelled out. Bounded by the number of
+    /// currencies the person has actually saved a price in — a handful — and
+    /// nothing evicts because there is nothing to evict.
+    ///
+    /// `@MainActor` because the cache is MUTATED on fill, unlike the
+    /// never-written statics elsewhere here. Its one caller is a view body, so
+    /// no call site moves.
+    @MainActor private static var currencyFormats: [String: NumberFormatter] = [:]
+
+    @MainActor
+    private static func currencyFormat(_ code: String) -> NumberFormatter {
+        if let hit = currencyFormats[code] { return hit }
+        let f = NumberFormatter()
+        f.numberStyle = .currency
+        f.currencyCode = code
+        currencyFormats[code] = f
+        return f
     }
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI

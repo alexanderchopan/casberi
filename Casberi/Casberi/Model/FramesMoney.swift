@@ -66,6 +66,39 @@ enum FramesMoney {
         return total
     }
 
+    /// ONE formatter per precision, not one per call (PERF, prd §628). Every
+    /// function below is read from a send sheet's body or a move row, so each
+    /// built a `NumberFormatter` at render — among the most expensive things
+    /// Foundation does. Thread-safe for formatting since iOS 7 and never
+    /// mutated after it is built, so no isolation is needed and no caller has
+    /// to move.
+    ///
+    /// Spelled as the three precisions the call sites actually use rather than
+    /// as a mutable cache: a dictionary filled on demand would need a lock or
+    /// an actor, and `places` is a fixed vocabulary here, not a free number.
+    /// The default arm keeps a fourth precision CORRECT (it just pays the old
+    /// cost) rather than silently rounding to one of these.
+    private static func fixedFormatter(places: Int) -> NumberFormatter {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.minimumFractionDigits = places
+        f.maximumFractionDigits = places
+        f.usesGroupingSeparator = true
+        return f
+    }
+    private static let places3 = fixedFormatter(places: 3)
+    private static let places4 = fixedFormatter(places: 4)
+    private static let places6 = fixedFormatter(places: 6)
+
+    private static func fixed(places: Int) -> NumberFormatter {
+        switch places {
+        case 3: return places3
+        case 4: return places4
+        case 6: return places6
+        default: return fixedFormatter(places: places)
+        }
+    }
+
     /// Wei as ETH, to `places` decimals, rounded DOWN.
     ///
     /// Down rather than to-nearest, deliberately: a balance rounded up reads
@@ -76,12 +109,7 @@ enum FramesMoney {
         var quotient = wei / weiPerETH
         var rounded = Decimal()
         NSDecimalRound(&rounded, &quotient, places, .down)
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = places
-        formatter.maximumFractionDigits = places
-        formatter.usesGroupingSeparator = true
-        return formatter.string(from: rounded as NSDecimalNumber)
+        return fixed(places: places).string(from: rounded as NSDecimalNumber)
     }
 
     /// A fee, in ETH, from a raw wei `Decimal`.
@@ -100,12 +128,7 @@ enum FramesMoney {
         var quotient = wei / weiPerETH
         var rounded = Decimal()
         NSDecimalRound(&rounded, &quotient, 6, .down)
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 6
-        formatter.maximumFractionDigits = 6
-        formatter.usesGroupingSeparator = true
-        return formatter.string(from: rounded as NSDecimalNumber)
+        return places6.string(from: rounded as NSDecimalNumber)
     }
 
     /// The same figure wearing its noun, for a line that has no label of its
@@ -142,12 +165,7 @@ enum FramesMoney {
         var quotient = magnitude / weiPerETH
         var rounded = Decimal()
         NSDecimalRound(&rounded, &quotient, 6, .down)
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 6
-        formatter.maximumFractionDigits = 6
-        formatter.usesGroupingSeparator = true
-        let text = formatter.string(from: rounded as NSDecimalNumber) ?? "0"
+        let text = places6.string(from: rounded as NSDecimalNumber) ?? "0"
         // A movement of exactly nothing has no direction — the flat-percent
         // rule (§83): no sign, no arrow, no colour.
         let sign = wei < 0 ? "\u{2212}" : (wei > 0 ? "+" : "")

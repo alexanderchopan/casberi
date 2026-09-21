@@ -154,13 +154,21 @@ enum DevnetTokens {
     /// Grouped, and trimmed rather than padded: a whole number of tokens
     /// prints whole. Four places matches the coin's spelling on these chains.
     static func quantity(_ amount: Double) -> String {
+        quantityFormat.string(from: NSNumber(value: amount)) ?? String(amount)
+    }
+
+    /// ONE formatter, not one per call (PERF, prd §628): `quantity` is read
+    /// from the holdings cell builder and the feed's own send-asset list, so
+    /// it ran per row per render. Thread-safe for formatting since iOS 7,
+    /// never mutated after this.
+    private static let quantityFormat: NumberFormatter = {
         let f = NumberFormatter()
         f.numberStyle = .decimal
         f.usesGroupingSeparator = true
         f.minimumFractionDigits = 0
         f.maximumFractionDigits = 4
-        return f.string(from: NSNumber(value: amount)) ?? String(amount)
-    }
+        return f
+    }()
 
     /// A contract's own `symbol()` and `decimals()`, for a token an address
     /// MOVED but no longer holds — `holdings` skips a zero balance, so a room

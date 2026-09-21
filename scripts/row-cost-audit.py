@@ -188,6 +188,19 @@ CHECKS = [
         "an 8-step binary search recomputing luminance at each step, per row "
         "carrying a project label",
     ),
+    (
+        "Casberi/Casberi/Screens/ShapedRows.swift",
+        "let isAlarm = isAlarmClass(isNew: isNew)",
+        # Both must stay FUNCTIONS taking the facts. As computed properties
+        # nothing stops a fourth reader appearing, and each one re-enters the
+        # whole chain: the shape is the guard.
+        r"private var (isAlarmClass: Bool|timeInk: Color)",
+        "ThingRow.isAlarmClass / timeInk as computed properties",
+        "`timeInk` read both, the weight and the animation read "
+        "`newSinceLastSeen` twice more, and the spoken label read both again — "
+        "six app-group reads and TWO NotifySweep.classify passes per row per "
+        "body evaluation, for two facts that cannot change within one pass",
+    ),
 ]
 
 # `previewImageData` + `UIImage(data:)` in one statement is only allowed where
@@ -398,6 +411,16 @@ def self_test():
         ("the share menu detects per row again",
          "Casberi/Casberi/Screens/ThingContent.swift",
          lambda t: t.replace("ShareTargetMemo.url(for: thing)", "Capture.detectURL(in: shareText)")),
+        ("the row's new/alarm facts go back to computed properties",
+         "Casberi/Casberi/Screens/ShapedRows.swift",
+         lambda t: t.replace(
+             "    private func isAlarmClass(isNew: Bool) -> Bool {\n        isNew &&",
+             "    private var isAlarmClass: Bool {\n        newSinceLastSeen &&")),
+        ("the row's time ink reads the facts itself again",
+         "Casberi/Casberi/Screens/ShapedRows.swift",
+         lambda t: t.replace(
+             "    private func timeInk(isNew: Bool, isAlarm: Bool) -> Color {\n        guard isNew else",
+             "    private var timeInk: Color {\n        guard newSinceLastSeen else")),
     ]
 
     failures = 0
