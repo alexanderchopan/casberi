@@ -122408,6 +122408,34 @@
         }
       }
     },
+    "Start here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Empieza aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここから始める"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기서 시작하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从这里开始"
+          }
+        }
+      }
+    },
     "Start with my own things" : {
       "localizations" : {
         "es" : {
@@ -149451,6 +149479,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Tu conversación con %@ aparece aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@との会話がここに表示されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@와의 대화가 여기에 표시됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你与 %@ 的对话会显示在这里"
+          }
+        }
+      }
+    },
+    "Your conversations with %@ appear here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tus conversaciones con %@ aparecen aquí"
           }
         },
         "ja" : {
