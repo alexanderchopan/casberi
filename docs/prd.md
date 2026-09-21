@@ -59592,58 +59592,50 @@ history too, and that is a separate measurement.
 **The class:** "refused on cost" is a fact about a DOOR. Before recording a
 chain as unreadable, ask how the people who visibly do read it are reading it.
 
-## §861 — An empty room put its tiles at the top of the screen, which is the half of §841 that pass did not finish (user: "bankr room has tiles in wrong place", 2026-09-20)
+## §861 — An empty agent room still holds the lead slot (user: "the buttons are on the top until you press chat", 2026-09-20)
 
-**Reported against a Bankr room holding nothing.** The screenshot is the whole
-finding: `All | Chat` sitting against the status bar, three skeleton rows under
-it, `That's everything from Bankr so far · 0 things` under those. A control at
-the top edge is the one thing §752 bans outright, and §841 had already fixed
-this exact failure once — on Chat.
+§841 fixed the tiles between a lead and the list: the cover on All, the thread on Chat. It never drew the state §842 made the common one — a keyed agent with NO conversations. With nothing to cover, All drew no lead at all, so the All | Chat tiles stood at the top edge (§752's banned control) and dropped 316pt the moment Chat was pressed (§841's walking furniture). An empty room now fills the slot with the same well at `DSRoomChassis.leadHeight`, holding `DSEmptyState` ("Nothing asked yet", §769); the skeleton rows that stood under the tiles are deleted, so the state is drawn once. `agent-landing-selftest.sh` asserts the empty lead exists and sits above the tiles. **Built, not run on a simulator.**
 
-**Why the fix was half.** §841's shape is right: *the LEAD SLOT holds the cover
-on All and the THREAD on Chat, the tiles sit unmoved between.* On Chat the
-thread always exists, so that slot is always held. On All the cover is the
-room's newest coverable thing — and a room with no rows has none, so the slot
-was simply skipped and the tiles became the first thing in the list. §845 is
-what made this reachable at all: until that pass an agent room with no
-conversation drew a black screen, so nobody had ever seen the empty one.
+## §862 — §861 fixed the agent room; the same defect was in nine others, and the box was 30pt too tall (user: "WHY IS IT STILL MESSED UP", 2026-09-21)
 
-`kindTileSections` had the same defect and it was never Bankr-specific: Safe,
-GitHub, Stripe, App Store Connect, Hugging Face, PostHog, L2BEAT, Walletbeat
-and Splits all stand their tiles under a cover, and all of them can be emptied
-by their own pick. §752's rule reads *the buttons can't be in different places
-on each screen*, so the fix is one and both rooms take it.
+**§861 is right and shipped, and this is the rest of it.** That pass held the
+agent room's lead with an empty state, which is the correct move and the one
+this branch had made independently. Two things it did not reach.
 
-**The lead is held by the room's own empty state.** `emptyLeadRow` draws
-`DSEmptyState` — the rows that would fill the room, drawn empty (§769, §771) —
-in `FeedLedeCard`'s exact geometry: `leadHeight - 2 × s4` inside
-`dsRoomHeadBlock`. Spelled from the card's own two terms rather than measured,
-so the tiles land at one y whether the room is full or empty, which is the
-property being bought.
+**THE BOX WAS THE WRONG HEIGHT, which is the defect the fix exists to remove.**
+§861's arm spells the well as `.frame(height: DSRoomChassis.leadHeight)` and
+then applies `.dsRoomHeadBlock()`, which adds `2 × s4` of its own padding — so
+the empty lead stands 30pt TALLER than the cover it stands in for (`s4` is 15 on
+iOS). `FeedLedeCard` subtracts that padding for exactly this reason:
+`box = leadHeight - 2 * s4`, then the same block. So the tiles still moved
+between an empty room and one holding a conversation — by 30pt instead of 316,
+which is harder to see and no more correct. Both leads now go through one
+helper, `emptyLeadRow`, which is the only place either of them says how tall the
+box is.
 
-**And it REPLACES the skeleton those rooms drew under the tiles.** Both rooms
-already had an empty state; it was just on the wrong side of the control. An
-empty room now says nothing once, above the tiles, instead of twice with a
-picker between the two halves of it.
+**AND `kindTileSections` HAS THE SAME DEFECT.** Safe, GitHub, Stripe, App Store
+Connect, Hugging Face, PostHog, L2BEAT, Walletbeat and Splits all stand their
+kind tiles under a cover, and every one can be emptied by its own pick — at
+which point the tiles ride to the top edge exactly as the agent room's did.
+§752's rule is *the buttons can't be in different places on each screen*, so one
+room fixed is the fix half-applied. The same helper holds the lead there.
 
-**It is gated on an empty list, and that is a §83 gate, not an optimisation.**
-A room can hold rows and still have no cover — every row of its newest day
-declines one (§763) — and a skeleton drawn over a full list is a lie about the
-room. That case keeps its lead unheld and its tiles where they were; the honest
-fix for it is a cover, not a placeholder, and it is left open rather than
-papered over.
+**Gated on an empty list, in both.** A room can hold rows and still have no
+cover — every row of its newest day declines one (§763) — and a skeleton over a
+full list is the §83 lie. That case keeps its lead unheld; the honest fix for it
+is a cover, not a placeholder.
 
-**The guard asserts the ORDER, not the presence.** `room-kind-tiles-selftest.sh`
-walks both functions and requires the empty lead to appear before the tiles'
-own block and to be gated on `visible.isEmpty`, plus the box to be spelled from
-`leadHeight`. Presence alone would have passed §841's first version, which drew
-the cover on All only — the same mistake this entry is a sequel to.
+**The guards.** `room-kind-tiles-selftest.sh` walks BOTH functions and requires
+the empty lead before the tiles' own block and gated on `visible.isEmpty`, and
+pins the box to `leadHeight - 2 × s4` so the 30pt can't come back.
+`agent-landing-selftest.sh`'s §861 guard is kept and pointed at the helper,
+since the height it was asserting now lives there.
 
-**UNBUILT.** This session has no Swift toolchain: the twelve python audits and
-the harness guard pass, and nothing here has been compiled or seen on a
-simulator.
+**UNBUILT.** No Swift toolchain in this session; the python audits pass and the
+two zsh harnesses could not be run.
 
-## §861b — Two fixtures that tested the MACHINE, not the code (user: "yes fix all", 2026-09-20; two of the four landed on `main` first, 2026-09-21)
+
+## §862b — Two fixtures that tested the MACHINE, not the code (user: "yes fix all", 2026-09-20; two of the four landed on `main` first, 2026-09-21)
 
 **FOUR CHECKS WERE RED ON `main` when §861's branch was cut**, and that branch
 inherited every one: `static-checks` on `demo-selftest.py`, `logic-selftests` on

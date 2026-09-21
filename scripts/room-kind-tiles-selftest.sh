@@ -138,7 +138,7 @@ sys.exit(1 if bad else 0)
 PY
 grep -qF 'let scopeTiles = heroShown ? nil : kindTilesInHead' "$FEED" \
   || { echo "✗ the cover path draws the tiles under a drawn head — a head room would show them twice"; exit 1; }
-# NOTHING STANDS AT THE TOP OF THE SCREEN (prd §861, §752). A cover holds the
+# NOTHING STANDS AT THE TOP OF THE SCREEN (prd §862, §752). A cover holds the
 # lead between the picks that HAVE one — and a pick that holds no rows had
 # nothing above the tiles at all, so they rose to the top edge, which is the
 # one thing §752 bans outright. The empty state holds the lead instead, and
@@ -172,8 +172,14 @@ if fails:
     sys.exit(1)
 print("  \u2713 the lead slot is held wherever the tiles stand, and only over an empty list")
 LEAD
+# THE BOX IS `FeedLedeCard`'s, PADDING SUBTRACTED. `dsRoomHeadBlock` adds
+# `2 × s4` of its own, so a well framed at a bare `leadHeight` stands 30pt
+# taller than the cover it stands in for and the tiles move anyway — which is
+# how §861's agent-room arm shipped, and why this is pinned rather than trusted.
 grep -qF 'minHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4' "$FEED" \
-  || { echo "✗ the empty lead no longer holds FeedLedeCard's own box — the tiles would sit at two heights"; exit 1; }
+  || { echo "✗ the empty lead no longer holds FeedLedeCard's own box — the tiles would sit at two heights (§862)"; exit 1; }
+grep -qE '\.frame\(height: DSRoomChassis\.leadHeight\)[[:space:]]*$' "$FEED" \
+  && { echo "✗ a lead well is framed at a bare leadHeight inside dsRoomHeadBlock — that is 2 × s4 too tall (§862)"; exit 1; }
 grep -qF 'self.scopes = tiles' Casberi/Casberi/Design/DSRoomHead.swift \
   || { echo "✗ DSRoomChassis.Head no longer takes optional tiles — nil must draw the head alone"; exit 1; }
 # Every tile glyph is a ScopeTileGlyph name, never a literal in the switch.
