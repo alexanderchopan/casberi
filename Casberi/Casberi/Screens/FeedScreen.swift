@@ -7316,13 +7316,32 @@ struct FeedScreen: View {
                 ledeListRow(coverThing, top: 0,
                             bottom: DSRoomChassis.contentGap, holdsLead: true)
             }
+        } else if roomAgent != nil, visible.isEmpty {
+            // AN EMPTY ROOM STILL HOLDS THE LEAD SLOT (user, 2026-09-20: "the
+            // buttons are on the top until you press chat"). With no cover the
+            // tiles rode up to the top edge on All and dropped 316pt on Chat —
+            // §841's walking furniture and §752's banned top control, through
+            // the one state §841 never drew. Same well, same height as the
+            // thread, holding what would fill it (§769).
+            Section {
+                DSEmptyState(headline: Text("Nothing asked yet"),
+                             words: Text("Your conversations with \(source) appear here"),
+                             scale: .list(rows: 3))
+                    .frame(height: DSRoomChassis.leadHeight)
+                    .dsRoomHeadBlock()
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: DSRoomChassis.contentGap,
+                                              trailing: DSRoomChassis.inset))
+            }
         }
         if let agentTiles {
             Section {
                 agentTiles
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: (coverThing == nil && !chatting) ? DS.Space.s2 : 0,
+                    .listRowInsets(EdgeInsets(top: (coverThing == nil && !chatting && !visible.isEmpty) ? DS.Space.s2 : 0,
                                               leading: DSRoomChassis.inset,
                                               bottom: DSRoomChassis.leadGap,
                                               trailing: DSRoomChassis.inset))
@@ -7342,14 +7361,8 @@ struct FeedScreen: View {
             // (§538, §769): the Chat tile is how this room stops being empty,
             // so hiding it exactly when there is nothing here would take away
             // the one control that helps.
-            Section {
-                DSSkeletonRows(label: Text("Nothing here yet."))
-                    .padding(.vertical, DS.Space.s2)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: 0, trailing: DSRoomChassis.inset))
-            }
+            // The lead slot above draws the empty state, once.
+            EmptyView()
         } else {
             let rest: [(String, [Thing])] = coverID.map { id in
                 days.map { label, rows in

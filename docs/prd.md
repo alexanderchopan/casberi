@@ -59591,3 +59591,7 @@ history too, and that is a separate measurement.
 
 **The class:** "refused on cost" is a fact about a DOOR. Before recording a
 chain as unreadable, ask how the people who visibly do read it are reading it.
+
+## §861 — An empty agent room still holds the lead slot (user: "the buttons are on the top until you press chat", 2026-09-20)
+
+§841 fixed the tiles between a lead and the list: the cover on All, the thread on Chat. It never drew the state §842 made the common one — a keyed agent with NO conversations. With nothing to cover, All drew no lead at all, so the All | Chat tiles stood at the top edge (§752's banned control) and dropped 316pt the moment Chat was pressed (§841's walking furniture). An empty room now fills the slot with the same well at `DSRoomChassis.leadHeight`, holding `DSEmptyState` ("Nothing asked yet", §769); the skeleton rows that stood under the tiles are deleted, so the state is drawn once. `agent-landing-selftest.sh` asserts the empty lead exists and sits above the tiles. **Built, not run on a simulator.**

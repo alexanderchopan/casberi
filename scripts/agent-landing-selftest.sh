@@ -215,7 +215,7 @@ src = open(sys.argv[1]).read()
 i = src.find("private func agentRoomSections")
 if i < 0:
     print("  \u2717 agentRoomSections is gone — this guard is blind"); sys.exit(1)
-body = src[i:i + 4000]
+body = src[i:i + 6000]
 thread = body.find("AgentChatThread(")
 tiles  = body.find("agentTiles")
 entry  = body.find("AgentChatEntry(")
@@ -226,6 +226,14 @@ if not (thread < tiles < entry):
           "thread and the entry, or they move when you switch tile (\u00a7841)")
     sys.exit(1)
 print("  \u2713 thread, then tiles, then entry — the tiles never move")
+# An EMPTY room has no cover, so without its own lead the tiles ride to the top
+# edge on All and drop on Chat — the one state \u00a7841 never drew (2026-09-20).
+empty = body.find("roomAgent != nil, visible.isEmpty")
+if not (0 <= empty < tiles) or "DSRoomChassis.leadHeight" not in body[empty:tiles]:
+    print("  \u2717 an empty agent room holds no lead slot — the tiles stand at "
+          "the top of the screen until Chat is pressed (\u00a7752, \u00a7841)")
+    sys.exit(1)
+print("  \u2713 an empty room still holds the lead slot")
 SLOTS
 # The §83 half: a Chat tile over a seat with no key cannot answer.
 guard "the tiles stand only where a key is present" \
