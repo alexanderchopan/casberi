@@ -64,3 +64,25 @@ measuring the content's right edge per frame, then adding a four-level width pro
 by reasoning about the layout. Reasoning had three plausible wrong answers ready
 (`dsAdaptiveContentWidth`, the pager's `pagerFrame`, a room snapshot). The same recording,
 re-run after the fix, is the proof: zero narrow frames, the `List` born at 402.
+
+## `onAppear`/`onDisappear` in a `List` track CELL RECYCLING, not the viewport (prd §864, 2026-09-20)
+
+A row's lifecycle callbacks fire when the collection view creates and releases its cell,
+which lags the viewport by roughly a screen in each direction. **Anything that means "is
+this row being LOOKED at" must use `onScrollVisibilityChange`** (iOS 18+), which answers
+that question and no other.
+
+**What it cost.** §864's demo lead and the demo capsule are mutually exclusive: while the
+lead is on screen it IS the marking and the capsule stands down. The flag was written from
+`onAppear`/`onDisappear`, so scrolling the lead just out of sight left it true — the capsule
+stayed down over a fake $12,480 crown and 68 rooms of somebody else's life, with **no
+marking anywhere on screen**. That is §83's continuous marking failing in exactly the place
+the feature exists to fix, and nothing could see it: it builds, it renders, and both states
+are correct in isolation.
+
+**The general shape.** A lifecycle callback answers "does this view exist", and a lot of
+code wants "can the person see it". They agree at rest and diverge under a finger, which is
+why this reads as an intermittent bug rather than a wrong API. `demo-marking-audit.py`
+check two fails a flag raised from `onAppear`, with the mutation to prove it.
+
+Found by review, not by running it.
