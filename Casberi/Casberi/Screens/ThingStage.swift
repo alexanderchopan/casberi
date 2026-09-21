@@ -113,6 +113,16 @@ struct VerbDial: View {
     /// were not verbs at all.
     var onPin: (() -> Void)?
 
+    /// The copy disc's own beat. A copy is the one verb on this dial whose
+    /// whole effect is INVISIBLE — nothing opens, nothing moves, and the
+    /// pasteboard is somewhere else entirely — so until now the only answer
+    /// to the press was a line of text under the strip, six discs away from
+    /// the finger. The glyph becomes a checkmark for a beat, where the tap
+    /// landed. It is a statement of fact rather than an optimistic guess at
+    /// an outcome the parent is still computing (§83): `DSPasteboard.copy`
+    /// cannot fail, which is why this is the one verb that gets it.
+    @State private var copied: Verb.ID?
+
     /// Six discs fit a phone at the resting size; a seventh (four verbs, Name,
     /// Pin and Share — the wallet's fullest dial) takes the tighter cut rather
     /// than overflowing the sheet.
@@ -134,30 +144,51 @@ struct VerbDial: View {
     @ViewBuilder private var liveBody: some View {
         HStack(alignment: .top, spacing: tight ? DS.Space.s2 : DS.Space.s4 + 2) {
             ForEach(verbs) { verb in
-                Button { onVerb(verb) } label: {
-                    disc(icon: verb.icon, label: Self.dialLabel(for: verb))
+                Button { press(verb) } label: {
+                    disc(icon: copied == verb.id ? "checkmark" : verb.icon,
+                         label: Self.dialLabel(for: verb))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
             }
             if let onName {
                 Button(action: onName) {
                     disc(icon: "square.and.pencil", label: "Name")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
             }
             if let onPin {
                 let pinned = Pinboard.isPinned(thing)
                 Button(action: onPin) {
                     disc(icon: pinned ? "pin.slash" : "pin", label: pinned ? "Unpin" : "Pin")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
             }
             ThingShareLink(thing: thing) {
                 disc(icon: "square.and.arrow.up", label: "Share")
             }
-            .buttonStyle(.plain)
+            // `PressSpring`, not `.plain`, for the same reason as the five
+            // discs beside it — and it satisfies `sharelink-style-audit.py`
+            // for the reason that audit exists: any style but the automatic
+            // one takes the button out of a `List` row's hands (prd §693).
+            .buttonStyle(PressSpring())
         }
         .frame(maxWidth: .infinity)
+        // Bound to `copied`, so SwiftUI cancels it when the sheet goes and
+        // restarts it when a second copy lands before the first has cleared.
+        .task(id: copied) {
+            guard copied != nil else { return }
+            try? await Task.sleep(for: .milliseconds(1200))
+            guard !Task.isCancelled else { return }
+            copied = nil
+        }
+    }
+
+    /// One verb press. Everything routes to the caller unchanged; a copy also
+    /// marks its own disc, which is local because the fact is local — the
+    /// parent's `verbResult` names what happened, this says WHERE.
+    private func press(_ verb: Verb) {
+        onVerb(verb)
+        if case .copyText = verb.action { copied = verb.id }
     }
 
     /// The word under a disc. `shortLabel` alone collapses every hand-off to
@@ -189,6 +220,12 @@ struct VerbDial: View {
                     Image(systemName: icon)
                         .dsGlyph(.body, weight: .regular)
                         .foregroundStyle(DS.textPrimary)
+                        // A disc whose glyph CHANGES morphs into the new one
+                        // instead of hard-cutting — Pin ⇄ Unpin, and Copy's
+                        // beat as a checkmark. A disc whose icon is constant
+                        // never animates, so the other four pay nothing for
+                        // it. Reduce Motion is handled inside the modifier.
+                        .dsSymbolSwap(icon)
                 }
             Text(LocalizedStringKey(label))
                 .dsText(.label12)

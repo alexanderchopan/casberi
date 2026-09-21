@@ -2447,6 +2447,13 @@ struct ThingSheetView: View {
             Text(verbResult)
                 .dsText(.subhead12)
                 .foregroundStyle(verbResultIsError ? DS.attention : DS.confirm)
+                // The line ARRIVES rather than blinking into place. The `.id`
+                // is what makes that true for the second one as well: without
+                // it "Pinned" → "Unpinned" reuses the same `Text`, `SettleIn`
+                // never sees another `onAppear`, and only the first outcome
+                // of a sheet's life would have settled.
+                .settleIn()
+                .id(verbResult)
         }
     }
 
@@ -2811,7 +2818,15 @@ struct ThingSheetView: View {
             } catch { verbResult = error.localizedDescription; verbResultIsError = true }
         case .copyText:
             DSPasteboard.copy(thing.content.isEmpty ? thing.title : thing.content)
-            verbResult = "Copied"
+            // The word and the buzz in one place, which is the property
+            // `DSHaptic.success`'s "fired only by `ShellChrome.flash`" rule
+            // exists to protect: no felt outcome with nothing on screen to
+            // explain it. A copy's outcome is this line under the dial, not a
+            // toast, so routing it through the flash would put the same word
+            // on screen twice. It was also the only pasteboard write in the
+            // app that was felt by nothing at all.
+            verbResult = String(localized: "Copied")
+            DSHaptic.success()
         case .markDone:
             // Rung-1 local mark only — app-owned things (a note turned to-do,
             // demo seeds). A real reminder's done-state is READ-ONLY, mirrored
@@ -2820,7 +2835,7 @@ struct ThingSheetView: View {
             thing.mark = .done
             modelContext.saveHonestly()
             CorpusSignal.shared.bump()
-            verbResult = "Done"
+            verbResult = String(localized: "Done")
         case .translate:
             verbResult = nil
             translateText = thing.postText ?? thing.content

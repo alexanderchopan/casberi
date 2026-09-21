@@ -80,7 +80,17 @@ SHARE_NAMES = ("ShareLink", "ThingShareLink")
 
 # A style that takes the button out of the row's hands. `.borderless` does it
 # too, and is the older spelling of the same intent, so both pass.
-OK_STYLE = re.compile(r"\.buttonStyle\(\s*\.(plain|borderless)\s*\)")
+#
+# `PressSpring` joined them on 2026-09-21, when the thing sheet's Share disc
+# was given the same press feel as the five discs beside it. The rule this
+# audit enforces is about ROW CAPTURE, and every style but the automatic one
+# satisfies it — `.plain` was simply the only one the tree happened to use.
+# Named explicitly rather than widened to "any custom style": the app has one
+# press style, so a second spelling arriving here should be a decision
+# somebody writes down, not a regex that already covers it. Self-test
+# mutations 7 and 8 hold both halves — this one accepted, `.automatic` (the
+# style that really does hand the row the action) still reported.
+OK_STYLE = re.compile(r"\.buttonStyle\(\s*(?:\.(?:plain|borderless)\s*\)|PressSpring\(\s*\)\s*\))")
 
 # An enclosing `{` whose opener says "this is a menu, not content".
 MENU_OPENER = re.compile(
@@ -494,11 +504,27 @@ def self_test() -> int:
             failures.append("a menu view raised as content was still carved out")
         room.write_text(kept_r)
 
+        # MUTATION 7: `PressSpring()` is accepted (the thing sheet's Share
+        # disc, 2026-09-21) — a custom style takes the row out of it just as
+        # `.plain` does.
+        handles.write_text(kept_h.replace(".buttonStyle(.plain)", ".buttonStyle(PressSpring())"))
+        if flagged("Handles.swift"):
+            failures.append("PressSpring was not accepted")
+        handles.write_text(kept_h)
+
+        # MUTATION 8: and the widening did not become "any style at all" —
+        # `.automatic` is the one that really does hand the row the action,
+        # so it must still be reported.
+        handles.write_text(kept_h.replace(".buttonStyle(.plain)", ".buttonStyle(.automatic)"))
+        if not flagged("Handles.swift"):
+            failures.append(".automatic was accepted — the style check is now a rubber stamp")
+        handles.write_text(kept_h)
+
         if failures:
             for f in failures:
                 print(f"self-test FAILED: {f}", file=sys.stderr)
             return 1
-        print("sharelink style audit self-test: ok (6 mutations)")
+        print("sharelink style audit self-test: ok (8 mutations)")
         return 0
 
 

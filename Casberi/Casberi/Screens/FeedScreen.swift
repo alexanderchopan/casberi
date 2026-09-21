@@ -11261,7 +11261,13 @@ struct FeedScreen: View {
             }
         case .copyText:
             DSPasteboard.copy(thing.content.isEmpty ? thing.title : thing.content)
-            chrome.flash("Copied")
+            // The row's copy and the sheet's copy are the same act and now
+            // feel the same (prd §867). `flash` defaults to `.neutral`, which
+            // fires nothing, so this was the app's other silent pasteboard
+            // write — and a bare String is not localized by `Text`, while the
+            // `.addToReminders` arm four lines up already passes through the
+            // catalog. Both keys exist there; neither needed adding.
+            chrome.flash(String(localized: "Copied"), tone: .success)
         case .markDone:
             // Rung-1 local mark only — app-owned things (a note turned to-do,
             // demo seeds). A real reminder's done-state is READ-ONLY, mirrored
