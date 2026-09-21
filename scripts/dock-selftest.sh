@@ -84,7 +84,13 @@ strip_comments "$CHIPS" > "$TMP/chips.nc"
 strip_comments "$DOORS" > "$TMP/doors.nc"
 
 # --- 1. the band is a BOTTOM inset -----------------------------------------
-grep -q 'safeAreaInset(edge: .bottom, spacing: 0) { bandInset }' "$TMP/main.nc" \
+# Reads the MOUNT and its content across a line break: §865a put the keyboard
+# gate inside this inset's builder, so the one-line spelling this used to match
+# is gone while the fact it checks — the band is mounted on the BOTTOM edge —
+# is unchanged. Matching a formatting rather than a fact is what made that a
+# two-guard change instead of one.
+tr '\n' '\001' < "$TMP/main.nc" \
+  | grep -q 'safeAreaInset(edge: \.bottom, spacing: 0) {[^}]*bandInset' \
   || { echo "✗ MainSurface no longer applies bandInset to the BOTTOM edge — the whole of §591"; \
        echo "  is that the app's primary navigation sits in the thumb zone."; fail=1; }
 grep -q 'safeAreaInset(edge: .top, spacing: 0) { bandInset }' "$TMP/main.nc" \
@@ -653,62 +659,86 @@ grep -q 'dsSeatClearance()' "$TMP/resolver.nc" \
        echo "  every screen has to remember the rule again."; fail=1; }
 
 # --- 10. the keyboard COVERS the dock, it never lifts it (2026-09-21) -------
-# prd §865. SwiftUI inflates the bottom safe area for the keyboard and every
-# layer in the window rises unless it opts out. The dock's two halves rose onto
-# the entry field of an agent room's Chat page and came to rest on the line
-# being typed — the send button clear above the glass, the words behind it.
+# prd §865, AMENDED the same day after the first run on a simulator — the
+# original was written on a machine with neither Xcode nor a device, and it
+# shipped a fix that compiled, passed every guard here, and changed nothing at
+# all on any of the four fields it named.
 #
-# Three failures, none of which a build or a screen sweep can see, since the
-# app is entirely usable in all three and only a screenshot WITH A KEYBOARD UP
-# shows any of them:
+# What the measurement showed, and what this now pins instead:
 #
-#   • ONE HALF OPTS OUT. The band is a `safeAreaInset` inside the stack and the
-#     seat is hosted on RootShell's ZStack (the whole reason DSDock exists), so
-#     a keyboard that lifted one and not the other parts the face from the row
-#     it leads. Neither file can see the other.
-#   • THE EDGE WIDENS. `.keyboard` without `edges: .bottom`, or applied to the
-#     room's scroll view, stops the CONTENT rising too — and then the field
-#     this fix exists to reveal sits under the keyboard instead of under the
-#     dock. The fix inverts and still compiles.
-#   • THE FLAG COMES BACK. The first design was a `keyboardUp` flag on
-#     ShellChrome fed by the will-show/will-hide notices, a hide value beside
-#     the fold, a re-show when a screen left, and a height floor so an iPad
-#     shortcut bar could not count as a keyboard. Four moving parts for what
-#     the keyboard already does to anything that stays put.
+#   • THE SEAT NEEDS A FRAME, NOT JUST AN OPT-OUT. The cluster is a layer of
+#     RootShell's `ZStack(alignment: .bottom)`. `ignoresSafeArea` on a CHILD
+#     does not undo a parent whose bounds the keyboard already compressed, so
+#     bottom-alignment kept placing it at the top of the keyboard. It stays put
+#     only with a full-height frame beneath the opt-out.
+#   • THE BAND CANNOT USE A MODIFIER AT ALL. It is the content of a
+#     `.safeAreaInset(edge: .bottom)`, which both RESERVES its height and
+#     POSITIONS it. Inside the content the opt-out cannot move it; at the mount
+#     it strips the scroll view's keyboard inset too and the focused field's
+#     baseline lands UNDER the keyboard (§865's own "edge widens", from the
+#     other side — also measured). The reserved HEIGHT is what yields.
+#   • SO THE FLAG IS BACK, FOR ONE HALF, WITH A FLOOR. `ShellChrome.keyboardUp`
+#     is the band's and only the band's. An iPad hardware keyboard posts the
+#     same notices for its ~55pt shortcut bar, so a floor is not optional:
+#     without it that strip folds the dock away on every tap into a field.
 strip_comments "$DOCK" > "$TMP/dock.nc"
 grep -q 'func dsStaysUnderKeyboard()' "$TMP/dock.nc" \
   || { echo "✗ DSDock.dsStaysUnderKeyboard is gone — nothing states that the keyboard covers"; \
-       echo "  the dock, and both halves rise onto the line being typed (prd §865)."; fail=1; }
+       echo "  the dock, and the seat rises onto the line being typed (prd §865)."; fail=1; }
 awk '/func dsStaysUnderKeyboard\(\)/,/^    }/' "$TMP/dock.nc" > "$TMP/kbd.nc"
 grep -q 'ignoresSafeArea(.keyboard, edges: .bottom)' "$TMP/kbd.nc" \
   || { echo "✗ dsStaysUnderKeyboard no longer ignores the keyboard on the BOTTOM EDGE ALONE —"; \
        echo "  a wider opt-out stops the scroll view rising too, so the field it exists to"; \
        echo "  reveal goes under the keyboard instead of under the dock (prd §865)."; fail=1; }
-# BOTH HALVES OR NEITHER.
-[ "$(grep -c 'dsStaysUnderKeyboard()' "$TMP/main.nc")" = "1" ] \
-  || { echo "✗ MainSurface's band does not opt out of the keyboard exactly once — the strip"; \
-       echo "  rises onto the entry field it is supposed to sit below (prd §865)."; fail=1; }
+# THE PIN. Without it the opt-out is a no-op: measured, the shipped §865 moved
+# nothing on any of its four fields.
+grep -q 'frame(maxHeight: .infinity, alignment: .bottom)' "$TMP/kbd.nc" \
+  || { echo "✗ dsStaysUnderKeyboard no longer pins the seat to the TRUE bottom. An opt-out"; \
+       echo "  on a child does not undo a parent the keyboard already compressed, so the"; \
+       echo "  seat lands on top of the keyboard again — the shipped §865 exactly (prd §865)."; fail=1; }
+# THE SEAT'S HALF: exactly one caller, and it is RootShell's.
 [ "$(grep -c 'dsStaysUnderKeyboard()' "$TMP/root.nc")" = "1" ] \
   || { echo "✗ RootShell's seat does not opt out of the keyboard exactly once — the face"; \
-       echo "  rises while the band beside it stays, which parts the dock in two (prd §865)."; fail=1; }
-# NOWHERE ELSE. Applied to a room's scroll view it inverts the fix (above), and
-# it is not a general-purpose modifier: it names the DOCK's arrangement.
+       echo "  rises onto the content while the band beside it stays (prd §865)."; fail=1; }
+# NOT ON THE BAND. It is a `safeAreaInset`, where this modifier is either a
+# no-op (in the content) or an inversion (at the mount). Both measured.
+grep -q 'dsStaysUnderKeyboard()' "$TMP/main.nc" \
+  && { echo "✗ MainSurface calls dsStaysUnderKeyboard. The band is a safeAreaInset: inside"; \
+       echo "  its content the modifier cannot move it, and at its mount it strips the"; \
+       echo "  scroll view's keyboard inset and drops the focused field's baseline under"; \
+       echo "  the keyboard. The band collapses on keyboardUp instead (prd §865)."; fail=1; }
+# NOWHERE ELSE.
 stray=$(grep -rl 'dsStaysUnderKeyboard()' Casberi --include='*.swift' \
-        | grep -v -e "$DOCK" -e "$MAIN" -e "$ROOTS" || true)
+        | grep -v -e "$DOCK" -e "$ROOTS" || true)
 [ -z "$stray" ] \
-  && : || { echo "✗ dsStaysUnderKeyboard has a caller outside the dock's own three files:"; \
+  && : || { echo "✗ dsStaysUnderKeyboard has a caller outside the dock's own two files:"; \
        echo "$stray" | sed 's/^/    /'; \
        echo "  On a scroll view it stops the CONTENT rising, so the focused field lands"; \
        echo "  under the keyboard — the fix inverted, still compiling (prd §865)."; fail=1; }
-# THE FLAG STAYS RETIRED. Narrow on purpose: another surface may legitimately
-# need to know about the keyboard one day. The DOCK may not drive itself off a
-# flag again — that is the four-part mechanism one modifier replaced.
-if grep -q 'var keyboardUp' "$TMP/chrome.nc"; then
-  grep -q 'keyboardUp' "$TMP/main.nc" "$TMP/root.nc" "$TMP/dock.nc" \
-    && { echo "✗ the dock drives itself off a ShellChrome keyboard flag again (prd §865) —"; \
-         echo "  a flag needs a re-show on every screen change and a height floor so an"; \
-         echo "  iPad shortcut bar is not a keyboard. Staying put needs neither."; fail=1; }
-fi
+# THE BAND'S HALF: the flag exists, the band reads it, and it has a floor.
+grep -qE 'var keyboardUp[ :=]' "$TMP/chrome.nc" \
+  || { echo "✗ ShellChrome.keyboardUp is gone — the band reserves its height under a"; \
+       echo "  keyboard, so the field sits a dock's height above it (prd §865)."; fail=1; }
+grep -q 'static let keyboardFloor:' "$TMP/chrome.nc" \
+  || { echo "✗ ShellChrome.keyboardFloor is gone — an iPad hardware keyboard posts the same"; \
+       echo "  notices for its ~55pt shortcut bar, which would fold the dock away on every"; \
+       echo "  tap into a field (prd §865)."; fail=1; }
+grep -q 'if !chrome.keyboardUp { bandInset }' "$TMP/main.nc" \
+  || { echo "✗ MainSurface's band is not gated on keyboardUp AT ITS MOUNT — it keeps reserving its height"; \
+       echo "  — the .safeAreaInset line is what reserves the height, so the gate has to"; \
+       echo "  be there. Otherwise the band keeps reserving under a keyboard, which is the"; \
+       echo "  gap §865 was warned about (prd §865)."; fail=1; }
+grep -q 'ShellChrome.keyboardFloor' "$TMP/main.nc" \
+  || { echo "✗ MainSurface writes keyboardUp without the height floor — an iPad shortcut"; \
+       echo "  bar then counts as a keyboard and folds the dock away (prd §865)."; fail=1; }
+# THE SEAT DOES NOT USE THE FLAG. It is structural, and a flag there would need
+# a re-show on every screen change — the failure ShellChrome.scrolling has been
+# fixed for twice.
+grep -q 'keyboardUp' "$TMP/root.nc" \
+  && { echo "✗ RootShell's seat drives itself off the keyboard flag. The seat's half is"; \
+       echo "  structural (dsStaysUnderKeyboard); a flag there needs a re-show on every"; \
+       echo "  screen change, which is how ShellChrome.scrolling stuck twice (prd §865)."; fail=1; }
+
 
 if [ $fail -eq 0 ]; then
   echo "✓ dock self-test"

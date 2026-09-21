@@ -73,6 +73,48 @@ final class ShellChrome {
     /// reads as. Bounded by the same cap, so a hand that never leaves the
     /// dock still gets its head.
     @ObservationIgnored var dockBusy = false
+
+    /// **Whether a real SOFTWARE keyboard is over the bottom edge** (prd §865
+    /// amendment, 2026-09-21 — measured on the simulator, which §865 was
+    /// written without).
+    ///
+    /// §865 ruled that one `ignoresSafeArea(.keyboard, edges: .bottom)` on
+    /// each of the dock's two layers replaced the flag this is. **On the
+    /// SEAT it does** — that half is a layer of `RootShell`'s ZStack, and
+    /// pinning it to the true bottom (`dsStaysUnderKeyboard`) needs nothing
+    /// else. **On the BAND it cannot**, and the reason is structural rather
+    /// than a spelling:
+    ///
+    ///   * The band is the content of a `.safeAreaInset(edge: .bottom)`. That
+    ///     inset both RESERVES its height on the content and POSITIONS it, so
+    ///     an opt-out applied inside the content cannot move it — the mount
+    ///     has already been compressed by the keyboard. That is why the
+    ///     shipped §865 changed nothing at all: the band rose onto the entry
+    ///     field exactly as reported, on all four fields.
+    ///   * Applied at the MOUNT instead, it strips the keyboard inset from the
+    ///     whole surface — the scroll view included. Measured: the agent
+    ///     room's chat entry then came to rest at the true bottom edge with
+    ///     its baseline UNDER the keyboard. That is §865's own "THE EDGE
+    ///     WIDENS" failure, reached from the other side.
+    ///
+    /// So the band's height is what has to yield: while a keyboard is up the
+    /// band reserves NOTHING and draws nothing, which is indistinguishable
+    /// from being covered and is what makes the field sit directly on the
+    /// keyboard rather than a dock's height above it.
+    ///
+    /// **The height floor is load-bearing, not a precaution.** An iPad
+    /// hardware keyboard posts the same notices for its shortcut bar, which is
+    /// a strip ~55pt tall over the bottom edge; without the floor that strip
+    /// would fold the dock away on every tap into a field. `keyboardFloor` is
+    /// deliberately above it and well below any software keyboard.
+    ///
+    /// **Not written on Mac**, which posts no keyboard notices at all — the
+    /// rail replaces the dock there and nothing in this reaches it.
+    var keyboardUp = false
+
+    /// Above an iPad shortcut bar, below any software keyboard (see
+    /// `keyboardUp`).
+    static let keyboardFloor: CGFloat = 120
     /// One chip's height: the scroll distance that folds the dock completely.
     static let foldTravel: CGFloat = 56
     /// Under this offset the dock is always open — the top of a room keeps

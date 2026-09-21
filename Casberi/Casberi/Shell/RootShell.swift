@@ -2395,7 +2395,9 @@ struct RootShell: View {
                 // the dock or neither: this cluster is hosted here and the
                 // band is a `safeAreaInset` inside the stack, so a keyboard
                 // that lifted one and not the other would part the face from
-                // the row it leads. See `dsStaysUnderKeyboard`.
+                // the row it leads. The full-height pin that makes this work
+                // is INSIDE the modifier — see `dsStaysUnderKeyboard`, which
+                // says why the opt-out alone was not enough.
                 .dsStaysUnderKeyboard()
                 .transition(.opacity)
             }

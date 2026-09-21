@@ -263,50 +263,45 @@ extension View {
 
     /// **THE KEYBOARD COVERS THE DOCK; IT NEVER LIFTS IT** (prd §865,
     /// 2026-09-21, user: *"you can barely see what you're entering"*, on an
-    /// agent room's Chat page).
+    /// agent room's Chat page — **amended 2026-09-21 after the first run on a
+    /// simulator, which the original was written without**).
     ///
     /// The dock was not drawn over the entry field by a stacking mistake. It
     /// was LIFTED onto it: SwiftUI inflates the bottom safe area for the
     /// keyboard, every layer in the window rises by default, and this app
-    /// opted out nowhere. So the band and the seat travelled up with the
-    /// content and came to rest on the one line the person was typing — the
-    /// send button clear above the glass and the words behind it, which is
-    /// the wrong half of a control to keep.
+    /// opted out nowhere.
     ///
-    /// **One line beats the flag it replaces, and that is the whole ruling.**
-    /// The first design for this was a `keyboardUp` flag on `ShellChrome`,
-    /// written from the will-show and will-hide notices, feeding a hide value
-    /// beside the fold, with a re-show when a screen left and a height floor
-    /// so an iPad shortcut bar could not count as a keyboard. Four moving
-    /// parts to arrive at "the dock is not on screen while you type", which
-    /// is what the keyboard already does to anything that stays put.
+    /// **This is the SEAT's half, and it is the half a modifier can carry.**
+    /// The seat cluster is a layer of `RootShell`'s `ZStack(alignment:
+    /// .bottom)`, so two things have to be true for it to stay put, and the
+    /// first shipped without the second:
     ///
-    /// What it buys, none of it written:
-    ///   * **Every page, by construction.** The dock is the shell's, not a
-    ///     screen's, so this reaches chat, the address book's paste field,
-    ///     Accounts' search and every bridge form without a rule each screen
-    ///     has to remember (`dsSeatClearance`'s own argument).
-    ///   * **Nothing to put back.** No flag to clear on a room change or a
-    ///     pop, which is the failure `ShellChrome.scrolling` has already been
-    ///     fixed for twice.
-    ///   * **A hardware keyboard and an undocked iPad one leave it alone**,
-    ///     because there is nothing over the bottom edge to cover it — the
-    ///     height floor the flag needed is a question that stops being asked.
-    ///   * **No inset moves, so no screen bounces** (prd §674). The band's
-    ///     height is untouched; only its seat in the window is. A flag that
-    ///     unmounted the band would re-inset the scroll view mid-keyboard,
-    ///     which is the bouncing screen §674 fixed.
+    ///   * it must not inherit the keyboard's safe area — `ignoresSafeArea`;
+    ///   * it must be laid out against the TRUE bottom — the full-height
+    ///     frame. Without it the ZStack's own bounds have already been
+    ///     compressed by the keyboard and bottom-alignment places the cluster
+    ///     at the compressed bottom, which is the top of the keyboard. **A
+    ///     child opting out does not undo a parent whose bounds already
+    ///     shrank**, which is why the first version of this changed nothing
+    ///     measurable on any of the four fields it was written for.
+    ///
+    /// The frame adds no background and no `contentShape`, so the empty column
+    /// above the seat takes no touch — the feed under it scrolls and its rows
+    /// tap as before.
     ///
     /// **`.bottom` alone, and `.container` is deliberately not touched**: the
     /// scroll view above must still rise, or the field this exists to reveal
-    /// goes under the keyboard instead of under the dock.
+    /// goes under the keyboard instead of under the dock. Measured, not
+    /// assumed — applied one layer wider, at the band's `.safeAreaInset`
+    /// mount, it dropped the chat entry's baseline under the keyboard.
     ///
-    /// **UNVERIFIED ON DEVICE at the time of writing** — see prd §865. Written
-    /// on a machine with no simulator, so the failure to watch for on the
-    /// first run is the opposite one: a band that stays put while the scroll
-    /// view still reserves its height would leave the field floating a dock's
-    /// height above the keyboard rather than against it.
+    /// **The BAND's half is not here and cannot be**: that layer is a
+    /// `safeAreaInset`, whose reserved HEIGHT is what has to yield, so it
+    /// collapses on `ShellChrome.keyboardUp` instead. Both halves still end up
+    /// invisible under a keyboard, which is the whole ruling; see
+    /// `ShellChrome.keyboardUp` for why one fact could not serve both.
     func dsStaysUnderKeyboard() -> some View {
-        ignoresSafeArea(.keyboard, edges: .bottom)
+        frame(maxHeight: .infinity, alignment: .bottom)
+            .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }

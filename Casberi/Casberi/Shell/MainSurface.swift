@@ -362,11 +362,6 @@ struct MainSurface: View {
             .frame(maxWidth: showsRail ? PadLayout.readingMaxWidth : .infinity,
                    alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
-            // THE KEYBOARD COVERS THIS BAND; IT DOES NOT LIFT IT (prd §865).
-            // Applied INSIDE `bandInset` rather than at the `.safeAreaInset`
-            // that mounts it, so the one line the dock self-test reads for
-            // §591's bottom edge is untouched. See `dsStaysUnderKeyboard`.
-            .dsStaysUnderKeyboard()
     }
 
     /// What the top band actually stacks. Split out of `topInset` only so that
@@ -2908,7 +2903,46 @@ struct MainSurface: View {
             // inset is applied to the STACK rather than in here, because the
             // two differ on exactly one thing: this strip is allowed to
             // vanish into a pushed room and the rail is not.
-            .safeAreaInset(edge: .bottom, spacing: 0) { bandInset }
+            // **A KEYBOARD COVERS THE DOCK, SO THE BAND RESERVES NOTHING WHILE
+            // ONE IS UP** (prd §865 amendment, 2026-09-21 — measured).
+            //
+            // The band's half of §865 is a HEIGHT, not the opt-out that half
+            // shipped with, and the conditional belongs HERE rather than
+            // inside `bandInset` because this line is what reserves the space.
+            // `.safeAreaInset(edge: .bottom)` both reserves its content's
+            // height on the content above and positions it, so
+            // `ignoresSafeArea` in the content could never move it — the mount
+            // is already compressed — and on the mount it strips the scroll
+            // view's keyboard inset too, dropping the focused field's baseline
+            // under the keyboard. Both measured on the simulator; see
+            // `ShellChrome.keyboardUp`, which also carries the height floor
+            // that keeps an iPad shortcut bar from counting as a keyboard.
+            //
+            // Nothing drawn and nothing reserved reads exactly as "the
+            // keyboard covers it", and leaves the field sitting directly on
+            // the keyboard rather than a dock's height above it. The SEAT's
+            // half needs none of this and stays structural
+            // (`dsStaysUnderKeyboard`).
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if !chrome.keyboardUp { bandInset }
+            }
+            // THE ONE WRITER OF `keyboardUp` (prd §865 amendment). Here rather
+            // than in a leaf because the band mounted on this line is its only
+            // reader, and on the notices rather than a `@FocusState` because no
+            // screen has to remember a rule for it to reach every field. The
+            // height floor is in `ShellChrome.keyboardFloor`; Mac posts neither
+            // notice, so the rail is untouched.
+            .onReceive(NotificationCenter.default.publisher(
+                for: UIResponder.keyboardWillShowNotification)) { note in
+                let frame = (note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey]
+                             as? NSValue)?.cgRectValue ?? .zero
+                let up = frame.height >= ShellChrome.keyboardFloor
+                if chrome.keyboardUp != up { chrome.keyboardUp = up }
+            }
+            .onReceive(NotificationCenter.default.publisher(
+                for: UIResponder.keyboardWillHideNotification)) { _ in
+                if chrome.keyboardUp { chrome.keyboardUp = false }
+            }
             .safeAreaInset(edge: .top, spacing: 0) { demoBannerInset }
             // THE ROOM'S OWN SETTINGS DOOR (2026-08-21) — see `RoomGear` for
             // why a bare gear is legible here and why the room needed one.
