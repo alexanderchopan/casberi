@@ -93,10 +93,25 @@ enum DayBrief {
         }
     }
 
-    static func whisper(things: [Thing], now: Date = .now) -> Whisper? {
+    /// `since` OVERRIDES THE BOUNDARY, and it exists because a caller that
+    /// prints this line under a header of its own has to be able to say what
+    /// span that header names (2026-09-21). The default (nil = `windowStart`)
+    /// is the away window, which is right for every caller that speaks for
+    /// itself — the whisper capsule, the kept pill, the pane brief: those ARE
+    /// "while you were away". The All feed's day header is not: it says
+    /// "Today", and `momentSplit` renames it "Since you left" only when the
+    /// split actually fires. In the one case the split refuses — the boundary
+    /// predates EVERY row, so `rest` is empty and a divider at the very top
+    /// would mark nothing — the header stayed "Today" while this window kept
+    /// running back to that old boundary, and the sentence counted things
+    /// sitting under Yesterday and further back. Measured on the demo: "68
+    /// transactions" over a Today holding a site visit and an alarm.
+    static func whisper(things: [Thing], now: Date = .now,
+                        since: Date? = nil) -> Whisper? {
         let move = walletMove(now: now)
         let wallet = move.map { String(format: "wallet %+.1f%%", $0.pct) }
-        guard let subject = lead(landed(things, now: now)) ?? wallet.map({ Lead(full: $0, short: $0) })
+        guard let subject = lead(landed(things, now: now, since: since))
+                ?? wallet.map({ Lead(full: $0, short: $0) })
         else { return nil }
         // The wallet fragment leads on its own only when nothing landed —
         // otherwise it's the tail, and must not be printed twice.

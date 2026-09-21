@@ -7788,7 +7788,19 @@ struct FeedScreen: View {
         // changing, and it is a filter-plus-scan over an already-bounded
         // array — cheap enough to stay time-fresh. Nil composes to no line
         // (honesty law: a day with nothing to say says nothing).
-        let dayLine = DayBrief.whisper(things: visible)
+        //
+        // BOUNDED TO THE HEADER IT IS PRINTED ON (2026-09-21). The whisper's
+        // own window is the away window, and the header below is "Today"
+        // unless `momentSplit` fired — so when the split DECLINES because the
+        // boundary predates every row (`rest` empty: a divider at the very top
+        // marks nothing), the line kept counting from that boundary while
+        // sitting under a calendar day. Same clock on both sides is not
+        // enough; the span has to be the one the label names. `moment` true
+        // means the header IS "Since you left", so the away window is right
+        // and the default stands.
+        let dayLine = DayBrief.whisper(
+            things: visible,
+            since: split.moment ? nil : Calendar.current.startOfDay(for: .now))
         #if DEBUG
         // `-allFeedProbe YES` — the All room's own census (2026-08-17), and the
         // only demo-parity check that can see this room AT ALL.
