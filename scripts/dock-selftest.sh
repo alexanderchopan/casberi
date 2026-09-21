@@ -335,15 +335,15 @@ grep -q 'route.toggle(.apps)' "$TMP/root.nc" \
 grep -q 'route.toggle(.apps)' "$TMP/main.nc" \
   || { echo "✗ the iPad rail's avatar no longer toggles Accounts — the two seats are"; \
        echo "  one door and must behave identically."; fail=1; }
-# Settings is the third SECTION of the Accounts screen (prd §796): Manage |
-# Connect | Settings, one switcher, and the list below swaps — no push, no
+# Settings is the third SECTION of the Accounts screen (prd §796): Connect |
+# Manage | Settings (the order is §863's), one switcher, and the list below swaps — no push, no
 # second screen, so the face toggles ONE screen in and out. `HomeRoute.Node`
 # has no `settings` case any more; the three direct doors (⌘,,
 # `casberi://settings`, `-openSettings YES`) present `.apps` and leave
 # `openSettings`, which the screen consumes on appear. Without that consume,
 # every one of them lands on Manage and reads as a broken link.
 strip_comments "Casberi/Casberi/Screens/AppsScreen.swift" > "$TMP/apps.nc"
-grep -q 'case yours, all, settings' "$TMP/apps.nc" \
+grep -q 'case all, yours, settings' "$TMP/apps.nc" \
   || { echo "✗ the Accounts switcher lost its Settings section (prd §796)."; fail=1; }
 grep -q 'SettingsRows()' "$TMP/apps.nc" \
   || { echo "✗ the Accounts screen no longer draws SettingsRows under its switcher (prd §796)."; fail=1; }

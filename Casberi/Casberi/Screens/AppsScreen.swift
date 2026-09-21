@@ -637,7 +637,10 @@ struct AppsScreen: View {
     /// screen, the list below swaps — so the dock's face toggles one screen in
     /// and out, and nothing is pushed.
     private enum AccountsHeld: String, CaseIterable, DSSectionScope {
-        case yours, all, settings
+        // Connect, Manage, Settings (user, 2026-09-20): read left to right
+        // it is the journey, and the first word cues the first act. Where the
+        // screen OPENS is still the seed's — this is only the reading order.
+        case all, yours, settings
         var id: String { rawValue }
         var label: String {
             // "Manage" and "Connect" (user, 2026-09-16, prd §793): what you do
@@ -863,11 +866,67 @@ struct AppsScreen: View {
         ranked.sorted { $0.offer.name.localizedStandardCompare($1.offer.name) == .orderedAscending }
     }
 
+    /// The three a first run leads with (user, 2026-09-20): the one-tap grant
+    /// that always has rows, the one that brings pictures, and builders'
+    /// money. Files was weighed for Photos and declined on the phone — a
+    /// folder pick there is a vague ask and a poor pick is an empty room.
+    /// ALPHABETICAL, like the directory under it: an order nobody has to
+    /// defend, and it happens to put the two one-tap grants ahead of the one
+    /// that wants an address pasted.
+    private static let startHere = ["Calendar", "Photos", "Wallet"]
+
+    /// Drawn ONLY while nothing is connected — the same fact that seeds this
+    /// screen to Connect, so there is no counter and no dismissal to keep. The
+    /// first connect spends it, and a finished row is never refilled: a block
+    /// that tops itself up is a promo shelf (the carousel §738 removed).
+    /// Resolved through `ranked`, so a name this platform's catalogue lacks
+    /// draws no row rather than a dead one (§83).
+    private var startHereRows: [Ranked] {
+        guard section == .all, connectedCount == 0 else { return [] }
+        return Self.startHere.compactMap { name in ranked.first { $0.offer.name == name } }
+    }
+
     private var flatCatalogList: some View {
-        VStack(spacing: DS.Space.s1) {
-            ForEach(Array(allAppsSorted.enumerated()), id: \.element.id) { i, entry in
-                appRow(entry).modifier(StockEntrance(index: i))
+        let lead = startHereRows
+        return VStack(alignment: .leading, spacing: DS.Space.s6) {
+            if !lead.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    listHeader(Text("Start here"), count: nil)
+                    VStack(spacing: DS.Space.s1) {
+                        ForEach(lead) { entry in appRow(entry) }
+                    }
+                }
             }
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                // The directory is named only while something stands above
+                // it, in the chip's own word; alone, Connect already says it. Air
+                // and a second header separate the two — nothing draws a line.
+                if !lead.isEmpty {
+                    listHeader(Text("A–Z"), count: allAppsSorted.count)
+                }
+                VStack(spacing: DS.Space.s1) {
+                    ForEach(Array(allAppsSorted.enumerated()), id: \.element.id) { i, entry in
+                        appRow(entry).modifier(StockEntrance(index: i))
+                    }
+                }
+            }
+        }
+    }
+
+    /// `categorySection`'s header, without the shelf flash: a name, then what
+    /// it holds.
+    private func listHeader(_ name: Text, count: Int?) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            name
+                .dsText(.heading17)
+                .foregroundStyle(DS.textPrimary)
+            if let count {
+                Text(count.formatted())
+                    .dsText(.subhead12)
+                    .monospacedDigit()
+                    .foregroundStyle(DS.textTertiary)
+            }
+            Spacer(minLength: 0)
         }
     }
 

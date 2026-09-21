@@ -128,10 +128,12 @@ struct DemoBanner: View {
         }
     }
 
-    /// Land on the FEED, not a question (2026-08-31): the catalogue answers
-    /// "which of MY things?" better and is one tap away.
+    /// Land on ACCOUNTS (user, 2026-09-20, reversing 2026-08-31's "land on
+    /// the feed"): the exit is the one moment somebody has seen what the app
+    /// becomes and owns none of it, and the empty feed asked nothing of them.
+    /// With nothing connected the screen seeds itself to Connect.
     ///
-    /// Resetting the stack first is not tidiness — a pushed room whose rows
+    /// Replacing the stack is not tidiness — a pushed room whose rows
     /// have just been deleted is a screen about nothing, and on this codebase
     /// it is also the SwiftData liveness class (a held `Thing` read after a
     /// delete), so leaving someone standing in one is the one landing that
@@ -146,7 +148,7 @@ struct DemoBanner: View {
             DemoMode.exit(context: modelContext, store: store)
             filter.source = "All"
             filter.tag = "All"
-            route.path = []
+            route.present(.apps)
             chrome.demoLeaving = false
         }
     }

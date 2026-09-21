@@ -59686,3 +59686,17 @@ arithmetic was worked in both time-zone regimes, where the old fixture fails
 under UTC and passes under a DST zone — exactly the split observed between CI
 and the laptop — and the new pair passes under both. That is weaker than running
 them and is stated as such.
+
+## §863 — The demo's Exit lands on Accounts, Connect leads the switcher, and a first run is shown three rows (user: "for sure the demo exit needs to go to the accounts page", "connect manage settings is a user journey and seems a sequence", "if we have connect first it also cues the reader to connect", "lets use those three", 2026-09-20)
+
+**Exit lands on Accounts.** `DemoBanner.leave()` ends in `route.present(.apps)`, reversing 2026-08-31's "land on the feed, not a question". The exit is the one moment somebody has seen what the app becomes and owns none of it; the empty feed asked nothing of them. With nothing connected `AppsScreen` already seeds itself to Connect, so no new state. The fork (§527) and the intro CTA (§620) were refused for standing BEFORE the demo; this stands after it, on a screen the app already has.
+
+**The switcher reads Connect | Manage | Settings** (amends §796's order, nothing else in it). Read left to right it is the journey, and the first word cues the first act. Where the screen OPENS is unchanged — the seed decides — so this is reading order only. `dock-selftest.sh` pins the new case order.
+
+**"Start here": Calendar, Photos, Wallet** — alphabetical, like the directory under it (user: "why that order instead of them alphabetized"; it also puts the two one-tap grants ahead of the one that wants an address pasted) — as three ordinary `appRow`s under a `heading17` header, leading Connect's A–Z list. Drawn only while `connectedCount == 0` — the same fact that seeds the section — so the FIRST connect spends the block (user: "keeping three there may be annoying"); there is no counter, no dismissal, and a finished row is never refilled, because a block that tops itself up is the promo shelf §738 removed. Hidden under a category chip and under search (it lives in `flatCatalogList`). The three stay in the A–Z list too: the directory stays whole.
+
+**The separation is air and a second header, not a line.** A dotted rule was asked for and declined against "no hairlines — zero exceptions": while the block stands, the directory below is named `A–Z` (the chip's own word) with its count, `s6` under the block — `categorySection`'s grammar.
+
+**Why these three.** Wallet is who the app is for; Calendar is the one-tap grant that always has rows; Photos is the one that brings pictures. Files was weighed for Photos ("we are for builders") and declined on the phone: a folder pick there is a vague ask and a poor pick is an empty room, the worst first connect. A Mac-only swap to Files was offered and not taken.
+
+**Not verified:** parsed and `dock-selftest.sh` green; not built, not run on a simulator.
