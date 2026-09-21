@@ -36,6 +36,14 @@ struct DemoBanner: View {
     /// follows it is the glyph's own (see `body`).
     @State private var settled = false
     @State private var explaining = false
+    /// Set by the sheet's Exit, consumed by its `onDismiss` — the landing
+    /// must wait until the tray is fully DOWN. `present(.apps)` is a
+    /// `navigationDestination` PUSH, and SwiftUI intermittently drops one
+    /// made under a presented cover (the drop class `RootShell` documents at
+    /// length: "Browse the catalog sometimes doesn't work"). The old landing
+    /// was immune by accident — `path = []` is a clear, not a push — so §863
+    /// inherited the trap the moment it gave the exit somewhere to go.
+    @State private var leavingOnDismiss = false
 
     /// **A STATUS, NOT A BAR (2026-09-05, user: "we could improve the banner
     /// … user can tap it and figure it out").** The full-width glass pill —
@@ -123,8 +131,12 @@ struct DemoBanner: View {
             if reduceMotion { settled = true }
             else { withAnimation(DS.Motion.standard.delay(0.35)) { settled = true } }
         }
-        .sheet(isPresented: $explaining) {
-            DemoExplainSheet(leave: { explaining = false; leave() })
+        .sheet(isPresented: $explaining, onDismiss: {
+            guard leavingOnDismiss else { return }
+            leavingOnDismiss = false
+            leave()
+        }) {
+            DemoExplainSheet(leave: { leavingOnDismiss = true; explaining = false })
         }
     }
 

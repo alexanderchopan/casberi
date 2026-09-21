@@ -59699,4 +59699,8 @@ them and is stated as such.
 
 **Why these three.** Wallet is who the app is for; Calendar is the one-tap grant that always has rows; Photos is the one that brings pictures. Files was weighed for Photos ("we are for builders") and declined on the phone: a folder pick there is a vague ask and a poor pick is an empty room, the worst first connect. A Mac-only swap to Files was offered and not taken.
 
-**Not verified:** parsed and `dock-selftest.sh` green; not built, not run on a simulator.
+**The landing had to wait for the tray to be DOWN.** The first draft called `route.present(.apps)` inside `leave()`, which runs 420ms after the explain sheet starts dismissing — a `navigationDestination` push made under a presented cover, the drop class `RootShell` documents from a user report ("Browse the catalog sometimes doesn't work"). The old landing was immune BY ACCIDENT: `path = []` is a clear, not a push, so §863 inherited the trap the moment it gave the exit somewhere to go. The sheet's Exit sets a flag and dismisses; `onDismiss` calls `leave()` (`FarcasterPackSheet`'s pattern). Found by review, not by running it.
+
+**Two stale comments went with it.** `HomeRoute.Node` still carried the deleted onboarding fork's doc — "It exists because leaving the demo lands HERE … Landing in the catalog instead was considered and declined" — orphaned above `walletbeatDirectory` and now contradicted outright; and the new header comment called `A–Z` "the chip\'s own word" when that chip\'s label is `All`.
+
+**Not verified:** built clean on the iOS simulator before the push fix; the three edited files parse and `dock-selftest.sh`, `dead-closure-audit.py`, `ds-template-audit.py` and the prd index are green after it. Not run on a simulator — the dropped-push failure is intermittent by nature, so a green launch would not have proven the fix either way.

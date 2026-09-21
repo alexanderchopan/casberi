@@ -899,7 +899,8 @@ struct AppsScreen: View {
             }
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 // The directory is named only while something stands above
-                // it, in the chip's own word; alone, Connect already says it. Air
+                // it — `A–Z` because the category chip's own word is already
+                // `All`; alone, Connect already says what it holds. Air
                 // and a second header separate the two — nothing draws a line.
                 if !lead.isEmpty {
                     listHeader(Text("A–Z"), count: allAppsSorted.count)
