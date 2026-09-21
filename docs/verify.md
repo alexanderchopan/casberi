@@ -1014,3 +1014,19 @@ reads nothing, forever, and the seat looks exactly like a wallet that holds no
 card — the same indistinguishable-from-healthy failure every other check here
 guards. It fires only for a bridge declaring more than one chain, so a
 single-chain seat keeps its simpler key and does not get a finding for it.
+
+## Demo-marking audit (scripts/demo-marking-audit.py, 2026-09-20)
+
+**Why it exists.** A real person landed in the demo and did not realise (user, 2026-09-20). The capsule had been restyled four times by then — the marking was never the wrong colour, it was in the wrong place. §864 moved it into the reading path: the first-launch cover spells the word in four falling letter tiles, the All feed leads with `DemoLead`, and the capsule keeps every other screen.
+
+That shape has four ways to quietly stop being true, and **none of them breaks a build, moves a pixel on a screen the sweep opens, or shows in a demo census.** Two of the four were defects in the first cut, caught by review rather than by running it.
+
+1. **The way out is one implementation.** `DemoMode.exit(` is reached from exactly one place outside `DemoMode` — `DemoLeave.run`. The leave is not one call: fade, delete in one transaction, reset source and tag, land on Accounts (§863), clear `demoLeadVisible`. A second copy at a new door would look right and drop one step, and the one with no visible symptom is the last — a flag left true hides the capsule for the whole of the NEXT demo.
+2. **The two markings are mutually exclusive, both directions — and the flag comes from the VIEWPORT.** It must be driven by `onScrollVisibilityChange`, never `onAppear`: in a `List` the lifecycle callbacks track cell recycling and lag the viewport by most of a screen, so the first cut left the lead scrolled out of sight with the capsule still standing down — a fake crown and somebody else's rooms with no marking anywhere. Dropping a CLEAR is the other half: the capsule is then gone from every room, and a continuous marking is §83's price for the demo existing.
+3. **The cover's word comes from the catalog.** `IntroCover.demoLetters` reads `String(localized: "Demo")`, so the Japanese cover drops デ and モ. A hardcoded `"demo"` compiles, passes every other check, and spells Latin letters across a cover whose every other word is translated — on the one screen where the word is the whole message.
+
+4. **Both markings answer the capture door.** `-hideDemoBanner YES` takes the marking out of an App Store still or preview. §864 put a second marking on screen, and the first cut gated only the capsule — so every shot of the All feed carried the lead, with a preview video unable to be painted out at all. `DemoCapture.hidesMarking` is the one definition; reading the raw key anywhere else fails too.
+
+**What it deliberately does not check.** That the lead is drawn, or drawn only in All — that is asserting the diff, which `guards-assert-what-you-built` says not to spend a harness on. The letters' timing against `autoLift` — both are constants in one file, the fall is CoreAnimation, and nothing static can measure a frame (record frames and count them). The capsule's own words — §813, in the catalog, where `setup-copy-audit.py` reads them.
+
+Seven mutations, each applied to a temp fixture tree (never the working copy) with a pinned anchor, so a drifted anchor fails the self-test instead of printing a passing line.

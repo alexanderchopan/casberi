@@ -57,6 +57,10 @@ struct TileDrop: Equatable {
     /// Layer order at rest — lower rows in front, so the heap shingles the
     /// way a heap does.
     let depth: Double
+    /// A LETTER TILE (the cover's "demo"): when set, the tile's face is this
+    /// character on the demo's amber instead of `name`'s brand asset. It
+    /// falls, bounces and leaves by the same physics as every other tile.
+    var glyph: String? = nil
 }
 
 /// The rain's host: an untouchable overlay that owns the layers and deals the
@@ -85,6 +89,17 @@ struct TileDropLayer: UIViewRepresentable {
     /// left the screen. One way: it never re-deals after this.
     var leaving: Bool = false
     var onDroppedOut: (() -> Void)? = nil
+    /// The drop that defines gravity, when this layer is NOT the whole deal.
+    /// `g` is chosen so the longest drop takes `longestFall`; a second layer
+    /// holding four tiles near the top of the screen would otherwise get a
+    /// gentler gravity of its own and float down beside a heap that fell.
+    ///
+    /// ARRIVAL ONLY, on purpose: `dropOut` keeps its own g, so a layer high on
+    /// the screen leaves faster than the heap below it. That is what a body
+    /// that has been falling longer does, and the lift is 0.45s of everything
+    /// leaving at once — a shared exit gravity would be a second constant to
+    /// keep in step for a difference nobody can see.
+    var gravityDrop: CGFloat? = nil
 
     func makeUIView(context: Context) -> TileDropView { TileDropView() }
 
@@ -92,6 +107,7 @@ struct TileDropLayer: UIViewRepresentable {
         view.onFirstDeal = onFirstDeal
         view.onSettled = onSettled
         view.onDroppedOut = onDroppedOut
+        view.gravityDrop = gravityDrop
         if leaving {
             view.dropOut(animated: !reduceMotion)
         } else {
@@ -116,6 +132,7 @@ final class TileDropView: UIView {
     var onFirstDeal: (() -> Void)?
     var onSettled: (() -> Void)?
     var onDroppedOut: (() -> Void)?
+    var gravityDrop: CGFloat?
     private var firedFirstDeal = false
     private var settleWork: DispatchWorkItem?
     private var leaving = false
@@ -193,7 +210,7 @@ final class TileDropView: UIView {
 
         // One gravity for the whole deal: the longest drop lands in
         // `longestFall`, and every shorter one follows from the same g.
-        let longest = tiles.map { $0.rest.y + $0.size / 2 + Self.startAbove }.max() ?? 1
+        let longest = gravityDrop ?? Self.longestDrop(of: tiles) ?? 1
         let g = 2 * Double(max(longest, 1)) / (Self.longestFall * Self.longestFall)
 
         for tile in tiles {
@@ -310,6 +327,15 @@ final class TileDropView: UIView {
 
     // MARK: - The physics
 
+    /// How far the furthest of these tiles has to fall, bottom edge to bottom
+    /// edge. ONE SPELLING, because `gravityDrop` exists so a second layer can
+    /// borrow the heap's: a caller re-deriving this would silently hand over a
+    /// different number the day this measurement changes, which is the very
+    /// defect that parameter was added to prevent.
+    static func longestDrop(of tiles: [TileDrop]) -> CGFloat? {
+        tiles.map { $0.rest.y + $0.size / 2 + startAbove }.max()
+    }
+
     /// Returns the absolute times of this tile's first impact and its rest.
     @discardableResult
     private func add(fallOf tile: TileDrop, to tileLayer: CALayer,
@@ -394,8 +420,24 @@ final class TileDropView: UIView {
     }
 
     private func image(for tile: TileDrop) -> CGImage? {
-        let key = "\(tile.name)@\(tile.size)"
+        // The style is part of the key: `DS.attention` is a dynamic colour,
+        // and a letter rendered once would keep the old appearance's amber
+        // across a light/dark switch.
+        let key = "\(tile.glyph ?? tile.name)@\(tile.size)@\(traitCollection.userInterfaceStyle.rawValue)"
         if let cached = imageCache[key] { return cached }
+        if let glyph = tile.glyph {
+            // RESOLVED against this view's traits, not handed to the renderer
+            // as an environment value: `DS.attention` is `UIColor`-backed, and
+            // `ImageRenderer` resolves those through a trait collection it does
+            // not inherit from us — an unresolved dynamic colour renders as the
+            // light variant on a dark cover.
+            let amber = Color(UIColor(DS.attention).resolvedColor(with: traitCollection))
+            let renderer = ImageRenderer(content: TileDropGlyph(glyph: glyph, size: tile.size, amber: amber))
+            renderer.scale = traitCollection.displayScale
+            let image = renderer.uiImage?.cgImage
+            imageCache[key] = image
+            return image
+        }
         let icon = BridgeIcon(name: tile.name, size: tile.size)
         let image: CGImage?
         if let asset = UIImage(named: icon.assetName)?.cgImage {
@@ -407,5 +449,28 @@ final class TileDropView: UIView {
         }
         imageCache[key] = image
         return image
+    }
+}
+
+/// A letter tile's face: one character on the demo's amber (`DS.attention`,
+/// the capsule's own signal, prd §679), at the lead's words rung. Rendered
+/// once into a `CALayer`'s contents — never mounted as a view.
+private struct TileDropGlyph: View {
+    let glyph: String
+    let size: CGFloat
+    let amber: Color
+
+    var body: some View {
+        Text(verbatim: glyph)
+            .dsText(.heading40)
+            // The tile is a fixed brand shape, as the heap's are: an
+            // accessibility type size may not push the letter out of it. The
+            // whole rain is `accessibilityHidden` and the cover speaks its own
+            // sentence, so nothing is lost by holding this to one line.
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .foregroundStyle(Color.black.opacity(0.85))
+            .frame(width: size, height: size)
+            .background(amber)
     }
 }

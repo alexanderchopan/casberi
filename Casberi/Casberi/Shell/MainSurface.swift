@@ -103,13 +103,9 @@ struct MainSurface: View {
     /// user's screen: the pill was painted out of every shot by hand until
     /// this door, and a video cannot be painted frame by frame past the rain.
     /// DEBUG only, so no shipped build can ever read it.
-    private var hideDemoBanner: Bool {
-        #if DEBUG
-        return UserDefaults.standard.string(forKey: "hideDemoBanner") != nil
-        #else
-        return false
-        #endif
-    }
+    /// ONE definition, in `DemoCapture` — §864 put a second marking on screen
+    /// and both have to answer the same door.
+    private var hideDemoBanner: Bool { DemoCapture.hidesMarking }
 
     /// iPad (2026-07-25). `regular` alone decides the RAIL; the detail pane
     /// additionally needs real width (see `PadLayout.minWidthForPane`), so

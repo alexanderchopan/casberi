@@ -64822,6 +64822,34 @@
         }
       }
     },
+    "Exit the demo" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Salir de la demo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "デモを終了"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "데모 종료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退出演示"
+          }
+        }
+      }
+    },
     "Exited" : {
       "localizations" : {
         "es" : {
@@ -71148,6 +71176,35 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你好，%@"
+          }
+        }
+      }
+    },
+    "Here's a" : {
+      "comment" : "Lead-in on the first-launch cover; the word 'demo' follows it, spelled out in falling letter tiles. Translate only the lead-in, so lead-in + the translation of 'Demo' reads as one caption.",
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esto es una"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これは"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이것은"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这是一个"
           }
         }
       }

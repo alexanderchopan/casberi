@@ -134,6 +134,28 @@ struct IntroCover: View {
     /// The floor's reserved height — the two-button block's own footprint, kept
     /// so the pile's band is the one the fall was tuned against. See its use.
     private static let floorHeight: CGFloat = 96
+
+    // MARK: - The word
+    //
+    // "demo", spelled in tiles. The catalog's own "Demo" (the capsule's word,
+    // translated since §679), lowercased, one tile per character — so the
+    // Japanese cover drops デ and モ.
+    private static var demoLetters: [String] {
+        String(localized: "Demo").lowercased().map(String.init)
+    }
+    private static let demoTile: CGFloat = 60
+    private static let demoGap: CGFloat = DS.Space.s2
+    private static var demoRowWidth: CGFloat {
+        let n = CGFloat(demoLetters.count)
+        return n * demoTile + max(0, n - 1) * demoGap
+    }
+    /// Each letter's resting tilt, degrees — the heap's own jitter range.
+    private static let demoTilt: [Double] = [-7, 4, -3, 6]
+    /// The letters let go one after another while the heap's top rows are
+    /// still arriving, and are at rest a full second before `autoLift` — the
+    /// word has to be READ, not just seen landing.
+    private static let demoReleaseBase: Double = 1.4
+    private static let demoReleaseStep: Double = 0.13
     /// Seconds from appear to the cover lifting on its own — the fall's last
     /// landing (≈2.5s) plus a beat at rest.
     private static let autoLift: Double = 3.4
@@ -283,6 +305,9 @@ struct IntroCover: View {
             // Reduce Motion: no fall. The tiles are simply already in the
             // pile — the pile is the thing being said and the fall was only
             // ever how it got there.
+            // One gravity for both layers: the heap's longest drop, measured
+            // by the engine that uses it — never re-spelled here.
+            let heapDrop = TileDropView.longestDrop(of: tiles)
             TileDropLayer(tiles: tiles, armed: rainFell, reduceMotion: reduceMotion,
                           onFirstDeal: { dealt = true },
                           // The fall's ending, felt once.
@@ -302,6 +327,24 @@ struct IntroCover: View {
                         .init(color: .clear, location: 1),
                     ], startPoint: .leading, endPoint: .trailing)
                 }
+            // THE WORD, on its own layer: the heap's edge fade above would
+            // eat the first letter, which rests 16pt from the leading edge.
+            if let seat = bounds.letters.map({ geo[$0] }) {
+                let letters: [TileDrop] = Self.demoLetters.enumerated().map { i, letter in
+                    let x = seat.minX + Self.demoTile / 2
+                        + CGFloat(i) * (Self.demoTile + Self.demoGap)
+                    return TileDrop(name: "demo.\(i)",
+                                    rest: CGPoint(x: x, y: seat.midY),
+                                    size: Self.demoTile,
+                                    restTilt: Self.demoTilt[i % Self.demoTilt.count],
+                                    drift: Self.jitter[i % Self.jitter.count] * 0.6,
+                                    release: Self.demoReleaseBase + Double(i) * Self.demoReleaseStep,
+                                    depth: Double(i),
+                                    glyph: letter)
+                }
+                TileDropLayer(tiles: letters, armed: rainFell, reduceMotion: reduceMotion,
+                              leaving: leaving, gravityDrop: heapDrop)
+            }
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -319,11 +362,13 @@ struct IntroCover: View {
     /// form drifts from a drawn one. Every piece here is already in the
     /// catalog with all four translations, so composing costs nothing.
     private var coverSpoken: String {
+        // The demo half is the LEAD-IN plus the word the tiles spell, which
+        // is what the screen draws — not `This is a demo.`, which is the feed
+        // lead's string and would drift from this cover the first time the
+        // lead-in is revised (the drift this property was written to stop).
         [String(localized: "One inbox for all your accounts."),
-         AskSurface.enabled
-            ? String(localized: "Read it all together, or one app at a time. Ask your agents about any of it.")
-            : String(localized: "Read it all together, or one app at a time."),
-         String(localized: "This is a demo.")].joined(separator: " ")
+         String(localized: "Here's a") + " " + String(localized: "Demo").lowercased() + "."]
+            .joined(separator: " ")
     }
 
     var body: some View {
@@ -369,16 +414,31 @@ struct IntroCover: View {
                         .dsText(.heading40)
                         .foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
-                    // The ask is off behind one flag (prd §697b), so the first
-                    // sentence a new person reads stops promising it (prd §718).
-                    // Flip the flag and the old sentence returns with it.
-                    (AskSurface.enabled
-                        ? Text("Read it all together, or one app at a time. Ask your agents about any of it.")
-                        : Text("Read it all together, or one app at a time."))
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
+                    // THE DEMO IS SAID HERE, AND THE RAIN SAYS IT (user,
+                    // 2026-09-20: a person landed in the demo and did not
+                    // realise; "the line about demo should be dynamic and
+                    // fun"). The subtext this replaces restated the headline
+                    // and the demo shows it anyway. The line is static like
+                    // every word on this cover; the WORD is four letter tiles
+                    // `demoRain` drops into the seat below — CoreAnimation,
+                    // so it cannot stutter under the launch.
+                    Text("Here's a", comment: "Lead-in on the first-launch cover. The word 'demo' follows it, spelled out in falling letter tiles, so translate only the lead-in.")
+                        .dsText(.heading24)
+                        .foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, DS.Space.s2)
+                        .padding(.top, DS.Space.s6)
+                    // The letters' seat. A fixed box, so the copy block — the
+                    // pile's ceiling — never moves when they land.
+                    Color.clear
+                        .frame(width: Self.demoRowWidth, height: Self.demoTile)
+                        // The anchor is on the BOX, not the padded box — the
+                        // letters rest on its midY, and asymmetric padding
+                        // inside the anchor would sit the word off its seat.
+                        .anchorPreference(key: PileBoundsKey.self, value: .bounds) {
+                            PileBounds(letters: $0)
+                        }
+                        .padding(.top, DS.Space.s3)
+                        .padding(.bottom, DS.Space.s2)
                 }
                 // A fixed seat, not "whatever is above the heap" (spec
                 // 2026-09-05): the copy block starts a tenth of the way
@@ -542,6 +602,7 @@ struct IntroCover: View {
 private struct PileBounds {
     var copy: Anchor<CGRect>?
     var floor: Anchor<CGRect>?
+    var letters: Anchor<CGRect>?
 }
 
 private struct PileBoundsKey: PreferenceKey {
@@ -550,6 +611,7 @@ private struct PileBoundsKey: PreferenceKey {
         let next = nextValue()
         if let copy = next.copy { value.copy = copy }
         if let floor = next.floor { value.floor = floor }
+        if let letters = next.letters { value.letters = letters }
     }
 }
 
