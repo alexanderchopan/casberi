@@ -2391,6 +2391,12 @@ struct RootShell: View {
                 // shared bottom padding leaves the bar sitting 6pt low, and why
                 // the number has to follow the fold.
                 .modifier(DSDock.SeatInset())
+                // THE KEYBOARD COVERS THE SEAT TOO (prd §865). Both halves of
+                // the dock or neither: this cluster is hosted here and the
+                // band is a `safeAreaInset` inside the stack, so a keyboard
+                // that lifted one and not the other would part the face from
+                // the row it leads. See `dsStaysUnderKeyboard`.
+                .dsStaysUnderKeyboard()
                 .transition(.opacity)
             }
 

@@ -260,4 +260,53 @@ extension View {
             Color.clear.frame(height: DSDock.seatClearance)
         }
     }
+
+    /// **THE KEYBOARD COVERS THE DOCK; IT NEVER LIFTS IT** (prd §865,
+    /// 2026-09-21, user: *"you can barely see what you're entering"*, on an
+    /// agent room's Chat page).
+    ///
+    /// The dock was not drawn over the entry field by a stacking mistake. It
+    /// was LIFTED onto it: SwiftUI inflates the bottom safe area for the
+    /// keyboard, every layer in the window rises by default, and this app
+    /// opted out nowhere. So the band and the seat travelled up with the
+    /// content and came to rest on the one line the person was typing — the
+    /// send button clear above the glass and the words behind it, which is
+    /// the wrong half of a control to keep.
+    ///
+    /// **One line beats the flag it replaces, and that is the whole ruling.**
+    /// The first design for this was a `keyboardUp` flag on `ShellChrome`,
+    /// written from the will-show and will-hide notices, feeding a hide value
+    /// beside the fold, with a re-show when a screen left and a height floor
+    /// so an iPad shortcut bar could not count as a keyboard. Four moving
+    /// parts to arrive at "the dock is not on screen while you type", which
+    /// is what the keyboard already does to anything that stays put.
+    ///
+    /// What it buys, none of it written:
+    ///   * **Every page, by construction.** The dock is the shell's, not a
+    ///     screen's, so this reaches chat, the address book's paste field,
+    ///     Accounts' search and every bridge form without a rule each screen
+    ///     has to remember (`dsSeatClearance`'s own argument).
+    ///   * **Nothing to put back.** No flag to clear on a room change or a
+    ///     pop, which is the failure `ShellChrome.scrolling` has already been
+    ///     fixed for twice.
+    ///   * **A hardware keyboard and an undocked iPad one leave it alone**,
+    ///     because there is nothing over the bottom edge to cover it — the
+    ///     height floor the flag needed is a question that stops being asked.
+    ///   * **No inset moves, so no screen bounces** (prd §674). The band's
+    ///     height is untouched; only its seat in the window is. A flag that
+    ///     unmounted the band would re-inset the scroll view mid-keyboard,
+    ///     which is the bouncing screen §674 fixed.
+    ///
+    /// **`.bottom` alone, and `.container` is deliberately not touched**: the
+    /// scroll view above must still rise, or the field this exists to reveal
+    /// goes under the keyboard instead of under the dock.
+    ///
+    /// **UNVERIFIED ON DEVICE at the time of writing** — see prd §865. Written
+    /// on a machine with no simulator, so the failure to watch for on the
+    /// first run is the opposite one: a band that stays put while the scroll
+    /// view still reserves its height would leave the field floating a dock's
+    /// height above the keyboard rather than against it.
+    func dsStaysUnderKeyboard() -> some View {
+        ignoresSafeArea(.keyboard, edges: .bottom)
+    }
 }

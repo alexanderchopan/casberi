@@ -362,6 +362,11 @@ struct MainSurface: View {
             .frame(maxWidth: showsRail ? PadLayout.readingMaxWidth : .infinity,
                    alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
+            // THE KEYBOARD COVERS THIS BAND; IT DOES NOT LIFT IT (prd §865).
+            // Applied INSIDE `bandInset` rather than at the `.safeAreaInset`
+            // that mounts it, so the one line the dock self-test reads for
+            // §591's bottom edge is untouched. See `dsStaysUnderKeyboard`.
+            .dsStaysUnderKeyboard()
     }
 
     /// What the top band actually stacks. Split out of `topInset` only so that
