@@ -3073,9 +3073,16 @@ struct FeedScreen: View {
     /// ChatGPT export gives that room rows without giving it anything to ask
     /// with, so the room draws no tiles at all and stays the list it already
     /// was. A Chat tile over a seat that cannot answer is a dead control.
+    ///
+    /// **The demo stands every agent's room as a keyed one.** It pours the
+    /// rows of a connected account, and a connected agent's room has these
+    /// tiles; reading the real Keychain there drew them on whichever room the
+    /// device happened to hold a key for and on no other. A send with no key
+    /// is refused out loud (`AgentAnswerFailure.noKey`), so the tile is not
+    /// dead.
     private func resolveRoomAgent() {
-        let configured = AgentKey.configured
-        roomAgent = configured.first { $0.agent == source }
+        let candidates = DemoMode.isActive ? AgentProvider.allCases : AgentKey.configured
+        roomAgent = candidates.first { $0.agent == source }
     }
 
     /// The agent room's two tiles (prd §840). One tile is never drawn — the
@@ -7228,7 +7235,7 @@ struct FeedScreen: View {
         }
     }
 
-    /// **THE LEAD SLOT, HELD WHEN THERE IS NOTHING TO COVER (prd §859).**
+    /// **THE LEAD SLOT, HELD WHEN THERE IS NOTHING TO COVER (prd §861).**
     ///
     /// A room whose tiles stand over an EMPTY list had nothing above them, so
     /// the tiles landed at the top of the screen — the one thing §752 bans
@@ -7329,7 +7336,7 @@ struct FeedScreen: View {
         }
         // THE LEAD SLOT. On Chat the thread fills it; on All the cover does,
         // or — with no conversation to cover — the room's own empty state
-        // (§859). One slot, one height, so the tiles below never move (§841).
+        // (§861). One slot, one height, so the tiles below never move (§841).
         let leadHeld = chatting || coverThing != nil || visible.isEmpty
         if chatting, roomAgent != nil {
             Section {
@@ -7373,7 +7380,7 @@ struct FeedScreen: View {
             // (§538, §769): the Chat tile is how this room stops being empty,
             // so hiding it exactly when there is nothing here would take away
             // the one control that helps. What is NOT here any more is the
-            // skeleton that used to draw under them: since §859 the lead
+            // skeleton that used to draw under them: since §861 the lead
             // above the tiles carries the empty state, and drawing it twice
             // said the same nothing on both sides of one control.
             let rest: [(String, [Thing])] = coverID.map { id in
@@ -7398,7 +7405,7 @@ struct FeedScreen: View {
         let coverThing: Thing? = coverID.flatMap { id in
             visible.first(where: { (thing: Thing) -> Bool in thing.isLive && thing.id == id })
         }
-        // THE LEAD SLOT, held wherever the tiles stand (§859): the cover when
+        // THE LEAD SLOT, held wherever the tiles stand (§861): the cover when
         // there is one, the room's own empty state when the pick holds
         // nothing. Without it the tiles sat at the top of the screen — §752's
         // one outright ban — on any room emptied by its own pick.
@@ -7428,7 +7435,7 @@ struct FeedScreen: View {
             // A tile and a face together can hold nothing (the GitHub rail
             // combines with the tile) — said under the tiles, which stay, the
             // `keepsChromeWhenEmpty` reasoning (prd §538, §769). Where the
-            // tiles stand, the LEAD says it instead (§859) and this draws
+            // tiles stand, the LEAD says it instead (§861) and this draws
             // nothing: a room said the same nothing twice, once on each side
             // of one control. This arm is what is left — a room whose head is
             // drawn above, which has no tiles here to hold a lead for.

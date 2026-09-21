@@ -138,7 +138,7 @@ sys.exit(1 if bad else 0)
 PY
 grep -qF 'let scopeTiles = heroShown ? nil : kindTilesInHead' "$FEED" \
   || { echo "✗ the cover path draws the tiles under a drawn head — a head room would show them twice"; exit 1; }
-# NOTHING STANDS AT THE TOP OF THE SCREEN (prd §859, §752). A cover holds the
+# NOTHING STANDS AT THE TOP OF THE SCREEN (prd §861, §752). A cover holds the
 # lead between the picks that HAVE one — and a pick that holds no rows had
 # nothing above the tiles at all, so they rose to the top edge, which is the
 # one thing §752 bans outright. The empty state holds the lead instead, and

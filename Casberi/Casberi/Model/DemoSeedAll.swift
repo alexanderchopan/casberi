@@ -174,11 +174,6 @@ enum DemoSeedAll {
                               // needs these two or they outlive the demo.
                               "fc:demo:", "bsky:demo:",
                               "import:receipt:", "cloudflare:cert:demo",
-                              // MetaMask Card's demo swipes (§857, §858).
-                              // `cards()` writes `metamaskcard:spend:demo\(i)`
-                              // and this list is what `teardown` sweeps, so
-                              // without the row those rows outlive the demo.
-                              "metamaskcard:spend:demo",
                               // The agent rooms' demo conversations (2026-09-20)
                               // carry the REAL `agentchat:` prefix, because
                               // `AgentChatView` fences its query on it and a
@@ -186,6 +181,11 @@ enum DemoSeedAll {
                               // cannot see. The `demo-` infix keeps teardown off
                               // a conversation the developer actually had.
                               "agentchat:demo-",
+                              // The MetaMask Card head's demo spends (prd §858)
+                              // wear the real seat's `metamaskcard:spend:` shape
+                              // so `MetaMaskCardRoomSource` counts them; the
+                              // `demo` infix keeps teardown off a real swipe.
+                              "metamaskcard:spend:demo",
                               // The GitHub feed's demo rows (prd §674 — one
                               // feed, a tag per row) carry the real bridge's
                               // `gh:` shape so `GitHubRoom` recognises them,

@@ -87,16 +87,12 @@ for f in StripeRoomSource PolarRoomSource WalletbeatRoomSource L2beatRoomSource 
   grep -qE 'static let rowCap = 8\b' "Casberi/Casberi/Model/$f.swift" \
     || { echo "✗ $f.rowCap is not DSRoomChassis.headRowCap (8) — a head is handed a different number of rows than the fit can choose from (§751, §760)"; exit 1; }
 done
-# §858 PUT THE ONCHAIN CARDS' CAP ON THE SHARED MODEL, and this loop was still
-# reading it off `GnosisPayRoomSource` — where the literal 8 had become
-# `CardSpendRoom.rowCap`. The cap never changed; the check was looking in the
-# file the ruling had just emptied, and went red on every push for it.
-#
-# The seat must READ the shared cap rather than spell a second 8 — two seats
-# with two literals is exactly the drift §858 exists to end, and a check that
-# only counted eights would not have seen it. So the delegation is asserted.
-grep -qE 'static let rowCap = CardSpendRoom\.rowCap\b' Casberi/Casberi/Model/GnosisPayRoomSource.swift \
-  || { echo "✗ GnosisPayRoomSource no longer reads CardSpendRoom.rowCap — two card seats can draw different row counts (§858)"; exit 1; }
+# The onchain card head is shared (prd §858): the literal lives on CardSpendRoom,
+# and each seat's source must take it from there rather than spell its own.
+for f in GnosisPayRoomSource MetaMaskCardRoomSource; do
+  grep -qE 'static let rowCap = CardSpendRoom\.rowCap\b' "Casberi/Casberi/Model/$f.swift" \
+    || { echo "✗ $f.rowCap is not CardSpendRoom.rowCap — a card seat's head is capped apart from the shared one (§858, §760)"; exit 1; }
+done
 
 # The §219 failure inverted — see the probe's own comment.
 grep -q 'note("stripeHead"' "$PROBES" \

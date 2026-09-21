@@ -443,7 +443,7 @@ enum NetworkReach {
         // watched wallet.
         Endpoint(service: "MetaMask Card",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads your MetaMask Card spending off the public chains it settles on — Linea and Base — for the wallets you watch. The amount, the token and the moment, which is all the chain carries; the merchant is never on the chain, so it is never read. Read-only: nothing here spends, tops up, or changes a card's spending cap.",
+                 purpose: "Reads your MetaMask Card spending off the public chains it settles on — Linea, Base and Monad — for the wallets you watch. Monad is read through Alchemy's index, the same host the Wallet's own reads use. The amount, the token and the moment, which is all the chain carries; the merchant is never on the chain, so it is never read. Read-only: nothing here spends, tops up, or changes a card's spending cap.",
                  hosts: ["rpc.linea.build", "linea.gateway.tenderly.co",
                          // Base's pair. `mainnet.base.org` is the only free
                          // host that answered a filtered read; Tenderly is the

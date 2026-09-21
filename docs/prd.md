@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §857b (Monad is refused) | Monad's card spends are correct to read and refused on cost — 100-block log cap against 0.302s blocks is 2,860 requests a day per wallet — recorded in `unreadableChains` | superseded by §860 (the arithmetic stands and the conclusion does not: Alchemy's index answers a wallet's whole Monad history in one call, so Monad is a third `Chain`; `unreadableChains` is deleted) |
 | §384 / §386p (the chip peek) | a long press on a source chip floats the room's figure up without navigating — rail-only since 2026-09-05, so iPad and Mac | deleted by §836 (user: "i don't think we need that on ipad and mac") — the peek, `RoomFigure`, and every `AgentPanel.Figure` it alone produced (treemap, bars, rail, pulse, curve, wall, flow, runway, worth, river) with the ranking between them; the answer's dial and semantic map stand |
 | §700 (the catalogue is a bare mark) | the strip's tail catalogue is a grid glyph in a `chipSize` frame, never a captioned tile, and `categoryCell` counts it as one more mark | reversed by §793 (it is a tile named "Accounts", `categoryTile`'s anatomy in a `categoryCell`, and counts as a cell only when it rests on screen); its seat at the tail stands |
 | §700 (the catalogue sits at the strip's tail) | the grid door is the strip's LAST item, after the last category, because the catalogue is a place and the places scroll | reversed by §798 (it is not a place but a screen, and the face opens it — the tail seat is deleted, and `categoryCell` reserves nothing past the last category) |
@@ -59495,7 +59496,103 @@ this exact shape. It would now cost a source file and a switch case. Left out
 because it was not asked for and its spend fields have not been checked against
 the head's needs.
 
-## §859 — An empty room put its tiles at the top of the screen, which is the half of §841 that pass did not finish (user: "bankr room has tiles in wrong place", 2026-09-20)
+## §859 — The demo stands every agent's room as a keyed one (user: "how come chatgpt doesn't have the all and chat button the other agents do" → "the demo needs to show the all and chat button on everything that would in real life", 2026-09-20)
+
+§840's tiles stand only where the room's agent has a key, read from the real
+Keychain. The demo pours the ROWS of a connected account and never a key, so
+inside the demo the tiles drew on whichever room the device happened to hold a
+key for — Claude, on the reporting simulator — and on no other. The demo is a
+picture of connected accounts, and a connected agent's room has these tiles.
+
+**The rule.** In demo mode `resolveRoomAgent` resolves the room's agent from
+every `AgentProvider`, not from `AgentKey.configured`. Outside the demo nothing
+changes: no key, no tiles (§83). Measured on the simulator: Claude, ChatGPT,
+Gemini, Venice, Bankr, Muse, Grok, OpenRouter and NEAR AI all draw All and Chat.
+
+**The tile is not dead.** A send with no key goes through the one funnel and is
+refused out loud (`AgentAnswerFailure.noKey`), with the question handed back.
+
+**Not done here:** Claude Code and Cursor draw no tiles, in the demo or out of
+it. Neither is an `AgentProvider` — no seat takes a key for them, and a
+conversation lands under `provider.agent`, so a chat from Claude Code's room
+would land in Claude's. That is a ruling about who answers, not a demo defect.
+
+## §860 — MetaMask Card reads Monad through an index, and §857b asked the wrong door (user: "so with metamask card we don't read monad transactions?" → "how else would someone else be reading it then?" → "metamask can't be doing that many requests a day" → "yes, we want to make sure we can read monad", 2026-09-20)
+
+**Supersedes §857b's refusal of Monad.** The arithmetic there stands — every free
+Monad RPC caps `eth_getLogs` at 100 blocks of 0.302s, so a log walk costs 2,860
+requests per wallet per day — and the conclusion drawn from it was wrong. The
+user's question found the gap: nobody reads Monad that way. MetaMask reads
+Baanx's ledger (closed to us, §857); everyone else asks an INDEXER, which walks
+the head once for all its users. §857b measured one door and recorded "refused"
+about the chain.
+
+**Measured, against a live cardholder (`0xe8ee9f…`, found by asking Alchemy for
+transfers into the settlement address):**
+
+| Door | Answer |
+|---|---|
+| `alchemy_getAssetTransfers` on `monad-mainnet` — `fromAddress` = wallet, the two card tokens as `contractAddresses`, `erc20` | ONE call, 0.6s, the wallet's whole history: 42 rows, 39 to a settlement address, eleven days back. Every row carries `metadata.blockTimestamp` (§790's trap does not apply). `uniqueId` is `<hash>:log:<index>`, the same pair the walked chains key a row on |
+| Zerion, `filter[chain_ids]=monad` | the same spends, correctly marked `send` — but no price for vmUSD, and it spends the shared 300-a-day key (33 left when measured) |
+
+So Monad is a third `MetaMaskCardBridge.Chain`, with `alchemyNetwork:
+"monad-mainnet"` and empty RPC fields, read by `syncIndexed` beside the log
+walk. It stays in the ONE `chains` list so the per-chain cursor key,
+`clearState` and the one-chain's-outage rule reach it unasked. `toAddress`
+takes one address, so both programmes are filtered client-side; the token
+filter keeps the page to card tokens. First sight reads from block zero — the
+walked chains' windows are a request budget, and here the whole history is one
+request, so the newest 1,000-row page is the bound. A spend the index cannot
+date holds the cursor rather than being dated now (§790). The host was already
+disclosed (`monad-mainnet.g.alchemy.com`, under Wallet); the seat's purpose
+line now names Monad and Alchemy. `unreadableChains` is deleted.
+
+**Monad is not a footnote.** 475 distinct wallets spent there in ~28 hours
+against Linea's 444 in ~23. The cardholder chooses which token on which chain
+funds the card, so a Monad-funded card read as "no card" on the other two.
+
+**vmUSD is not a dollar, and it is 98% of Monad's spending** (1,971 of 2,000
+settlement transfers sampled; USDC the rest). It is a Veda vault share over
+mUSD: the measured wallet deposited 23.926019 mUSD for 23.544781 vmUSD, ~$1.016
+a share and drifting. The contract is not ERC-4626 — `convertToAssets` and
+`asset()` revert — so the rate is on Veda's ACCOUNTANT, found by following the
+chain: vmUSD's `hook()` is its Teller (`0xb30755c7…`), whose `accountant()` is
+`0x98a45d90e81849a5743241d3ff765f9fd788206a`. That contract's `vault()` answers
+vmUSD, `base()` mUSD, `decimals()` 6, and `getRate()` read 1016199 — the
+deposit above to five figures. Selectors computed with
+`scripts/support/keccak.py`, never typed (§795).
+
+**The rate is the HEAD's, so it prices only a recent spend
+(`MetaMaskCardBridge.Share`).** Neither `rpc.monad.xyz` nor Alchemy serves
+`eth_call` at a block eleven days back ("Block requested not found"), so a
+spend cannot be priced at its own moment. The rate creeps (1016198 → 1016199
+over a few hours; ~1.6% over the vault's life), so: read once per sweep, lazily,
+from the same Alchemy host; a vmUSD spend under SEVEN DAYS old is `amount ×
+rate` in USD; an older one, or a rate outside 1.0–1.5, or no answer, takes
+WETH's rule (§857) — token amount, no `priceValue`, `unpriced` in the head,
+never summed (§83). Only a first sight's older history is affected; every later
+sweep prices what is new within minutes. What the figure IS: the dollar value
+that left the wallet, not Baanx's charge — the two differ by whatever rate and
+fee Baanx applies, which is behind its API.
+
+**Probed end to end (`-metamaskCardProbe YES` on the cardholder above, fresh
+simulator):** `Monad | indexed via monad-mainnet`, 40 Monad rows landed, the
+week's priced. And the priced figures land on RETAIL prices — 1.962103 vmUSD
+reads $1.99, 0.976147 reads $0.99, three separate spends read $4.11 — which is
+the evidence the sentence above lacked: the Accountant's rate is, to the cent,
+the rate the card charges at.
+
+**The tagline stops naming chains** (user: "change it"): "Every swipe, off
+Linea and Base" is "Every swipe, straight off the chain" — Gnosis Pay's
+phrasing — in `BridgeCatalog` and both website copies. A list of chains in a
+tagline is wrong again the day a fourth is measured. Linea and
+Base keep their log walks; the same `fromAddress` call would give them whole
+history too, and that is a separate measurement.
+
+**The class:** "refused on cost" is a fact about a DOOR. Before recording a
+chain as unreadable, ask how the people who visibly do read it are reading it.
+
+## §861 — An empty room put its tiles at the top of the screen, which is the half of §841 that pass did not finish (user: "bankr room has tiles in wrong place", 2026-09-20)
 
 **Reported against a Bankr room holding nothing.** The screenshot is the whole
 finding: `All | Chat` sitting against the status bar, three skeleton rows under
@@ -59546,61 +59643,54 @@ the cover on All only — the same mistake this entry is a sequel to.
 the harness guard pass, and nothing here has been compiled or seen on a
 simulator.
 
-## §859b — Four CI breaks, and only one of them was about the code (user: "yes fix all", 2026-09-20)
+## §861b — Two fixtures that tested the MACHINE, not the code (user: "yes fix all", 2026-09-20; two of the four landed on `main` first, 2026-09-21)
 
-**`main` was red on BOTH jobs before this branch existed**, and §859's PR inherited
-all of it: `static-checks` on `demo-selftest.py`, `logic-selftests` on
-`ens-selftest.sh`, `repo-sync-selftest.sh` and `room-heads-selftest.sh` — the
-identical set, on the identical base. Worth separating, because the four have
-almost nothing in common except the colour they turned.
+**FOUR CHECKS WERE RED ON `main` when §861's branch was cut**, and that branch
+inherited every one: `static-checks` on `demo-selftest.py`, `logic-selftests` on
+`ens-selftest.sh`, `repo-sync-selftest.sh` and `room-heads-selftest.sh`. Two
+were fixed on `main` while this branch was in review and are recorded there —
+the demo's MetaMask Card prefix (`24fbc94`) and the room-head cap guard
+(`8519fab`). **`main`'s version of the second is better than this branch's and
+won the merge**: it holds BOTH card seats to `CardSpendRoom.rowCap`, where this
+branch only named Gnosis Pay's. The two left are the ones below, and they are
+the pair worth recording, because they share a failure mode neither of the
+others has.
 
-**1. A demo ref nothing swept.** §857/§858 gave MetaMask Card a demo seat
-writing `metamaskcard:spend:demo\(i)`, and the prefix never joined
-`DemoSeedAll.refPrefixes` — which is what `teardown` walks, so those rows would
-have outlived the demo. **The only one of the four that was a real defect in
-shipped behaviour**, and check K caught it exactly as designed.
-
-**2. A check reading a file the ruling had emptied.** §858 moved the onchain
-cards' `rowCap` onto `CardSpendRoom` and had the seat read it, which is the
-point of that ruling — two seats spelling two literals is the drift it exists to
-end. `room-heads-selftest.sh` still grepped `GnosisPayRoomSource.swift` for the
-literal `8`. The cap never changed. The loop now names `CardSpendRoom`, and the
-DELEGATION is asserted beside it — a check that only counted eights could not
-have told a shared cap from two copies of one.
-
-**3. A fixture that tested the machine's git config.** `repo-sync-selftest.sh`
+**1. A fixture that tested the machine's git config.** `repo-sync-selftest.sh`
 built its bare origin with `git init --bare`, taking the first branch name from
 `init.defaultBranch`: `main` in the author's global config, `master` on a stock
 runner. The seed pushed `main` either way, so on CI the bare repo's HEAD pointed
 at a `master` that never existed, `git clone` left a working copy with NO HEAD,
 and three of seven cases died on `fatal: ambiguous argument` over something
-`repo-sync.sh` never touched. `-b main` on both inits, pinned rather than read
+`repo-sync.sh` never touches. `-b main` on both inits, pinned rather than read
 from config.
 
-**4. A boundary fixture standing ON the boundary.** `ens-selftest.sh` asserted
+**2. A boundary fixture standing ON the boundary.** `ens-selftest.sh` asserted
 that `91 + 20` days lapsed is still premium. That is 111 days — and
 `graceDays + premiumDays` is 90 + 21, so it named the release moment itself.
 `ENSName.stage` walks the ladder with `Calendar.current.date(byAddingDays:)`, so
 the verdict came down to the READER'S TIME ZONE: a zone crossing a DST fall-back
 inside the span gains an hour and lands just short of `now` (premium), while UTC
-— every hosted runner — lands exactly on it (released). Green on the laptop, red
-on CI, for days, over a rule neither machine disagreed about. Both fixtures now
-sit two days inside the window they name, spelled from `ENSName`'s own
-constants.
+— every hosted runner — lands exactly on it (released). Both fixtures now sit
+two days inside the window they name, spelled from `ENSName`'s own constants, so
+a change to either constant moves them with it.
 
-**What 3 and 4 have in common is the finding.** Each passed locally for as long
-as it existed and could never pass on CI, because each asked the host a question
-it thought it was asking the code — one read `init.defaultBranch`, the other
-read the time zone. A fixture that inherits the machine's settings tests the
-machine. Neither is caught by running the suite again on the machine that wrote
-it, which is the only place they were ever run before `logic-selftests.yml`.
+**THE FINDING IS WHAT THE TWO SHARE.** Each passed locally for as long as it
+existed and could never pass on CI, because each asked the HOST a question it
+thought it was asking the code — one read `init.defaultBranch`, the other read
+the time zone. A fixture that inherits the machine's settings tests the machine.
+Neither is catchable by running the suite again on the machine that wrote it,
+which is the only place either was ever run before `logic-selftests.yml` existed
+— and the suite's own rule, that a check which cannot demonstrate it catches
+anything certifies nothing, does not reach this class at all: both checks caught
+things, on one machine.
 
-**Verified here, one at a time:** `demo-selftest.py` goes from two failures to
-`✓` with its `--self-test` at exit 0; all six `room-heads` greps hit and the
-delegation grep with them; the `repo-sync` fixture was rebuilt end to end under
-a forced `master` default, where HEAD resolves and `main..origin/main` reports
-behind-by-1; and the ENS arithmetic was worked in both time-zone regimes, where
-the old fixture fails under UTC and passes under a DST zone — the observed
-split — and the new pair passes under both. Every python audit and its
-`--self-test` passes. The two zsh harnesses could not be RUN here: this session
-has neither zsh nor a Swift toolchain.
+**Verified without being run.** This session has neither zsh nor a Swift
+toolchain, so neither harness could be executed. What was proved instead: the
+`repo-sync` fixture was rebuilt end to end in plain git under a forced `master`
+default, where the old form yields "remote HEAD refers to nonexistent ref" and
+no HEAD, and the fixed form resolves HEAD and reports behind-by-1; and the ENS
+arithmetic was worked in both time-zone regimes, where the old fixture fails
+under UTC and passes under a DST zone — exactly the split observed between CI
+and the laptop — and the new pair passes under both. That is weaker than running
+them and is stated as such.
