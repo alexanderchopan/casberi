@@ -113,8 +113,13 @@ told anything but "share the note to Casberi".
 
 ## 6. Measure first — the four curls, in order
 
-1. **Is the page readable?** `curl -sL https://notes.granola.ai/<a shared note> | grep -c "<p"` —
-   a server-rendered note makes Door D free and true today.
+1. **Is the page readable?** `scripts/granola-readable-probe.py https://notes.granola.ai/<a note you shared>`
+   — it walks the page the way `ReadableParse` does (same content-region markers, same
+   `<p>`/`<h2>`/`<h3>` pass, same 24-character floor, prose test, 200-paragraph cap and
+   8,000-character bound), prints what the sheet would draw, and says **DRAWS**,
+   **EMPTY** (a JS shell — Door D is shut) or **UNREAD** (the host could not be reached,
+   which is not an answer about the page). `--self-test` proves it still catches both.
+   A server-rendered note makes Door D free and true today.
 2. **Is the key gate real for this account?** Open Granola → Settings → Connectors → API
    keys. Either the key mints or the screen names the plan. This is the only fact that
    decides A vs B, and it takes a minute.
