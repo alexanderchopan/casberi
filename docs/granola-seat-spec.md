@@ -7,7 +7,10 @@
 > reverse-engineering write-ups — none of it off the wire. Anything marked **UNMEASURED**
 > has not been run by anyone here. A session with a Mac closes that in an afternoon; §6
 > is the list of what to curl first.
-> No prd ruling has been written. When one is, the next free number is **§865**.
+> No prd ruling has been written, and this file cites no number for one: a `§N`
+> citation with no heading behind it fails `prd-index-audit.py`, which is how this
+> document first broke CI. Take the number from `prd-index-audit.py --next` at commit
+> time and say it out loud (it read 865 on 2026-09-21, in this checkout only).
 
 Granola is an AI notepad for meetings: it records the room from the machine's own audio
 (no bot joins the call), keeps the handwritten notes you typed, and writes a summary and
@@ -152,5 +155,6 @@ The seat is not done when it fetches. The full list, from how Duolingo (§776) a
 - Website: marquee tile, `#catalog` shelf cell in the **Notes** row, `.ai-granola`
   background, the `docs.html` list, then the `?v=` bump — same session, per the rule.
   `catalog-sync.sh` fails otherwise.
-- `docs/hooks/bridges.md` entry, the `CLAUDE.md` index line, and the prd ruling (**§865**).
+- `docs/hooks/bridges.md` entry, the `CLAUDE.md` index line, and the prd ruling, whose
+  number comes from `prd-index-audit.py --next` on the day it is written.
 - A `-granolaProbe` launch hook that prints the chain link by link, like `-spotifyProbe`.
