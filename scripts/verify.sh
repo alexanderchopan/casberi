@@ -605,6 +605,26 @@ step "Dead-closure audit"
 "$ROOT/scripts/dead-closure-audit.py" || fail "a control calls a closure nothing supplies — see the output above"
 print -P "%F{green}✓ dead-closure audit%f"
 
+# THE DEMO SAYS SO WHERE PEOPLE READ, AND THE TWO MARKINGS NEVER COLLIDE
+# (prd §864). A real person landed in the demo without realising, after the
+# capsule had been restyled four times — it was in the wrong place, not the
+# wrong colour. So the cover spells the word in falling letter tiles and the
+# All feed leads with `DemoLead`, while the capsule marks every other screen.
+# Four ways that quietly stops being true, none of which breaks a build, moves
+# a pixel on a screen the sweep opens, or shows in a demo census: a second
+# copy of the exit that drops a step of the leave; the two markings shown at
+# once, or NEITHER shown — the flag must come from `onScrollVisibilityChange`,
+# because a `List`'s `onAppear` tracks cell recycling and lags the viewport by
+# most of a screen; a hardcoded `"demo"` spelling Latin letters across a
+# translated cover; and `-hideDemoBanner` reaching only one of the two, which
+# puts the lead into every App Store still of the All feed.
+step "Demo-marking audit"
+python3 "$ROOT/scripts/demo-marking-audit.py" --self-test >/dev/null \
+  || fail "the demo-marking audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/demo-marking-audit.py" \
+  || fail "the demo's marking has drifted — see the output above"
+print -P "%F{green}✓ demo-marking audit%f"
+
 # WHAT THE WALLET ROOM'S CROWN IS MADE OF, AND HOW IT FAILS (prd §825, §826).
 # The user opened the Wallet room and saw "$6" — a Privy app wallet's stored
 # figure, Zora's — with their own wallets under-read or missing, on "All" and on
