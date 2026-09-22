@@ -457,6 +457,65 @@ fi
 quit_app
 ok "connect form opens (RSS)"
 
+# ── 2d. Every account detail sheet opens without crashing (2026-09-21) ─────
+# Tapping ANY row in Accounts → Settings that opens an `AccountDetailSheet`
+# killed the Mac app instantly — Notifications, Agents on this Mac, Data —
+# on the shipped 1.0.30 (631) as well as on a dev build. EXC_BREAKPOINT on
+# the main thread, and the message under it is 2c's, word for word: "No
+# Observable object of type BridgeStore found".
+#
+# It is the SAME class as the connect form above and it still shipped, which
+# is the part worth keeping. Two reasons nothing here could see it:
+#
+#   • **iOS is unaffected**, so every gate that runs on the simulator is
+#     green. `verify.sh`'s screen sweep opens `-accountDetail data` and
+#     passes. On Catalyst the sheet's own `PresentationHostingController`
+#     evaluates the content's presentation preference (`bridgedPresentation`
+#     — which nested sheet or dialog the content wants) in a graph the
+#     presenter's `.environment(…)` has not reached, and the required read
+#     traps there. A platform-only crash needs a platform-only gate.
+#   • **`-accountDetail` appeared in neither verify script.** It has existed
+#     as a screenshot hook since the sheet did; nothing ever asserted with it.
+#
+# Every case, derived from the enum rather than remembered — a fourth case
+# added tomorrow fails this step until it is swept, which is the whole point
+# of listing them here instead of trusting a comment.
+step "Account detail sheets open without crashing"
+DETAIL_FILE="$ROOT/Casberi/Casberi/Screens/AccountDetailSheet.swift"
+DETAIL_SWEPT=(data mcp notifications)
+DETAIL_DECLARED=($(awk '/^enum AccountDetail/{f=1} f && /^    case /{print $2} f && /^}/{exit}' "$DETAIL_FILE"))
+if [[ "${(j:,:)${(o)DETAIL_SWEPT}}" != "${(j:,:)${(o)DETAIL_DECLARED}}" ]]; then
+  fail "AccountDetail cases swept here (${(j:, :)DETAIL_SWEPT}) do not match the enum (${(j:, :)DETAIL_DECLARED}) — add the new case to DETAIL_SWEPT in this script"
+fi
+for DETAIL_CASE in $DETAIL_SWEPT; do
+  DETAIL_LOG="$OUT/detail-$DETAIL_CASE.log"
+  # `casberi://settings` is the door a person takes; the hook then opens the
+  # row's sheet from `SettingsRows`' own onAppear, which is the presentation
+  # that broke. The marker is logged by the SHEET (`AccountDetailSheet`'s
+  # onAppear), so it cannot be produced by a flag that was set and never drawn.
+  launch "$DETAIL_LOG" -deeplink casberi://settings -accountDetail "$DETAIL_CASE"
+  if ! wait_for "$DETAIL_LOG" "accountDetail\| $DETAIL_CASE" 20; then
+    if grep -q "Fatal error" "$DETAIL_LOG"; then
+      quit_app
+      fail "the '$DETAIL_CASE' detail sheet crashed the app: $(grep -m1 'Fatal error' "$DETAIL_LOG")"
+    fi
+    quit_app
+    fail "account detail '$DETAIL_CASE' never mounted in 20s (see $DETAIL_LOG)"
+  fi
+  # The trap is synchronous with the presentation, so a moment after the
+  # mount is enough — and the process being GONE is the finding.
+  sleep 2
+  if [[ -z "$(app_pid)" ]]; then
+    fail "app DIED opening the '$DETAIL_CASE' detail sheet — that row in Accounts → Settings is a crash (see $DETAIL_LOG)"
+  fi
+  if grep -q "Fatal error" "$DETAIL_LOG"; then
+    quit_app
+    fail "the '$DETAIL_CASE' detail sheet raised a Swift fatal error: $(grep -m1 'Fatal error' "$DETAIL_LOG")"
+  fi
+  quit_app
+  ok "account detail sheet: $DETAIL_CASE"
+done
+
 # ── 3. Screen sweep ────────────────────────────────────────────────────────
 # The app renders its own key window (see the `-macSnapshot` rationale above)
 # into its container tmp; we copy each PNG out and prove it's a real frame.

@@ -19,6 +19,8 @@ struct SettingsRows: View {
     @Environment(\.openURL) private var openURL
     @Environment(BridgeStore.self) private var bridgeStore
     @Environment(HomeRoute.self) private var route
+    /// Re-injected into every sheet these rows raise — see `presented(_:)`.
+    @Environment(ShellChrome.self) private var chrome
     @Environment(\.scenePhase) private var scenePhase
     /// Drives the Data tile's badge: a green lock on device, a blue cloud once
     /// the person turns iCloud sync on.
@@ -67,12 +69,22 @@ struct SettingsRows: View {
             // family's own chassis, which adds the presented corner these
             // three were missing along with the sizing they already had.
             .sheet(isPresented: $diagnosticsOpen) {
-                NavigationStack { DiagnosticsScreen() }.dsNavSheet()
+                presented(NavigationStack { DiagnosticsScreen() }.dsNavSheet())
             }
-            .sheet(item: $detail) { AccountDetailSheet(detail: $0) }
-            .sheet(isPresented: $languageOpen) { LanguagePickerSheet() }
+            // `onDismiss` because two of this screen's facts are MIRRORED
+            // `@State` (`mcpOn`/`mcpRunning`, prd §628) and the tray that
+            // opens from their own row is what changes them — so without
+            // this the row said "Off" over a listener the person had just
+            // switched on (§83's fake status). The rows beside it are
+            // computed properties and were always live; these two cannot be,
+            // because reading them is a `UserDefaults` hit and a class
+            // SwiftUI does not observe.
+            .sheet(item: $detail, onDismiss: { readCounts() }) {
+                presented(AccountDetailSheet(detail: $0))
+            }
+            .sheet(isPresented: $languageOpen) { presented(LanguagePickerSheet()) }
             .sheet(isPresented: $chipOrderOpen) {
-                NavigationStack { CategoryOrderSheet() }.dsNavSheet()
+                presented(NavigationStack { CategoryOrderSheet() }.dsNavSheet())
             }
             .photosPicker(isPresented: $avatarPickerOpen,
                           selection: $avatarSelection, matching: .images)
@@ -143,6 +155,52 @@ struct SettingsRows: View {
         .tint(DS.tint)
     }
 
+    /// **EVERY SHEET THESE ROWS RAISE CARRIES THE SHELL'S ENVIRONMENT WITH
+    /// IT** (prd §872, 2026-09-21) — `RootShell.rootPresented`'s rule, and
+    /// `MainSurface`'s copy of it for the connect form, reaching the third
+    /// place that never went through either.
+    ///
+    /// A sheet is hosted in its OWN `PresentationHostingController`, and on
+    /// Catalyst that host evaluates the presented content's *presentation*
+    /// preference (`bridgedPresentation` — what nested sheet or dialog the
+    /// content wants) in a graph the presenter's `.environment(…)` has not
+    /// reached. So `AccountDetailSheet`'s required
+    /// `@Environment(BridgeStore.self)` read a value that was not there and
+    /// trapped before a frame was drawn: *"No Observable object of type
+    /// BridgeStore found"*, EXC_BREAKPOINT on the main thread, every case of
+    /// the sheet, on the shipped Mac build as well as a dev one. Tapping
+    /// Notifications, or Agents on this Mac, or Data in Accounts → Settings
+    /// killed the app.
+    ///
+    /// **Why iOS never saw it, which is what made it invisible for so long.**
+    /// There the same sheet inherits the presenter's environment and the
+    /// preference read finds it; `verify.sh`'s screen sweep opens these very
+    /// cases and passes. The platform difference is real, and it is why the
+    /// gate for this lives in `verify-mac.sh` (its "Account detail sheets"
+    /// step) rather than beside the iOS sweep.
+    ///
+    /// **And why only SOME sheets fell over**, so the next reader doesn't
+    /// re-derive it: the trap needs the content to BOTH read a non-optional
+    /// Observable environment AND carry a nested presentation of its own (the
+    /// thing `bridgedPresentation` is being asked about). `CategoryOrderSheet`
+    /// reads `ShellChrome` and survives because it presents nothing;
+    /// `AccountDetailSheet` has a sub-page sheet, a file importer and three
+    /// confirmation dialogs hanging off its tray. `DiagnosticsScreen` already
+    /// names half of this rule from the other side — it holds
+    /// `@Environment(FeedFilter.self)` OPTIONAL "because this screen is
+    /// presented as a SHEET". That is a view defending itself; this is the
+    /// presenter doing its job, and it is the half that scales.
+    ///
+    /// Applied to all four sheets, not only the one that crashed: a rule that
+    /// covers the sheet you remember is the rule that fails on the fifth.
+    private func presented(_ content: some View) -> some View {
+        content
+            .environment(bridgeStore)
+            .environment(chrome)
+            .environment(route)
+            .environment(\.locale, LanguageStore.shared.locale)
+    }
+
     private struct RowSpec {
         let title: String
         let value: String
@@ -179,26 +237,22 @@ struct SettingsRows: View {
     /// it needs the count when the screen opens, and again when the app comes
     /// back to it.
     @State private var thingCount = 0
-    /// Same rule for the Keychain: `AgentKey.active` is a `SecItemCopyMatching`
-    /// round trip to securityd, and `secondaryRows` read it per evaluation.
-    @State private var keyedAgent: AgentProvider?
-    /// Whether "Your key" is drawn at all (prd §718). With the ask off, a key
-    /// on a phone that runs the on-device model does NOTHING: the librarian
-    /// only spends a key where the device cannot organize for itself. A row
-    /// that opens a paste field for a key that would sit unused is §83's dead
-    /// control. It stays for anyone who already saved one (so they can remove
-    /// it), on a device without the model, and on the Mac, where the same
-    /// sheet holds the MCP listener that App Review was pointed at.
-    @State private var keyRowShown = true
-
+    #if targetEnvironment(macCatalyst)
+    /// The MCP listener's two facts, mirrored at appearance for the same
+    /// reason every other non-observable fact on this screen is (prd §628):
+    /// `MCPServer.shared` is a plain `@MainActor` class SwiftUI does not
+    /// observe, and `isEnabled` is a `UserDefaults` read. The row states the
+    /// two apart because they differ — a listener switched on that failed to
+    /// bind is not off, and "Listening" over a dead socket is §83's fake
+    /// status.
+    @State private var mcpOn = false
+    @State private var mcpRunning = false
+    #endif
     private func readCounts() {
         thingCount = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
-        keyedAgent = AgentKey.active
         #if targetEnvironment(macCatalyst)
-        keyRowShown = true
-        #else
-        keyRowShown = AskSurface.enabled || keyedAgent != nil
-            || !AgentLibrarian.deviceCanDoIt
+        mcpOn = MCPServer.isEnabled
+        mcpRunning = MCPServer.shared.running
         #endif
     }
 
@@ -263,10 +317,7 @@ struct SettingsRows: View {
 
     /// Group two — the app itself: housekeeping, rarely visited. A–Z.
     private var secondaryRows: [RowSpec] {
-        // Read once per appearance into `keyedAgent` (see `readCounts`) —
-        // this used to be a Keychain round trip per body evaluation.
-        let keyed = keyedAgent != nil
-        return [
+        let rows: [RowSpec] = [
             // The category chips' order (prd §533) — the ONE thing about the
             // source strip that was never earned by anything the person did.
             // The categories sat in a hand-authored constant, so this hands
@@ -318,29 +369,25 @@ struct SettingsRows: View {
                     value: LanguageStore.shared.summary,
                     badge: ("globe", DS.textPrimary),
                     action: { languageOpen = true }),
-            // Your key (prd §67) — the BYO escape hatch: on-device by default,
-            // your own agent key adds a per-answer "Try with your key".
-            // Ruling 2026-07-14: it's an AGENT key — name the agents, never
-            // "the Anthropic key". Keyed, the fact earns the badge's green —
-            // a live connection states itself in the connected color.
-            // The unkeyed value used to name all six providers, which broke
-            // twice over (2026-07-31): it TRUNCATED at row width — and it had
-            // already gone stale, since Grok made seven and this string still
-            // said six. Naming them is the detail sheet's job (it lists every
-            // provider, with state); this row only has to invite. §243 fixed
-            // the same hand-listing in the key card's console line by deriving
-            // it — here the honest fix is to stop listing at all.
-            RowSpec(title: "Your key",
-                    // With the ask off (prd §697b) a key answers nothing, so
-                    // the keyed fact is just whose key it is (prd §718).
-                    value: keyedAgent.map {
-                       AskSurface.enabled
-                           ? String.localizedStringWithFormat(
-                               String(localized: "%@ answers on tap"), $0.agent)
-                           : $0.agent
-                    } ?? String(localized: "Bring your own agent"),
-                    badge: ("key.fill", DS.textPrimary),
-                    action: { detail = .key }),
+            // "YOUR KEY" IS GONE FROM THIS SCREEN (prd §871, user: "we have a
+            // setting in settings for 'your key'. why do we really need it
+            // there? For every other thing, the user goes and connects on the
+            // accounts page, so it just seems confusing").
+            //
+            // It was the ask's row (prd §67), and the ask has been dark since
+            // §697b — but the reason it survived §718's hiding rule is that it
+            // was the ONLY door to three keys: Anthropic, OpenAI and Google
+            // had no seat of their own, because the catalog tiles of those
+            // names are the chat importers. Those three pages carry the key
+            // now (`ClaudeImportScreen` and its two siblings, §871), which
+            // leaves this row saying a second time what nine account pages
+            // already say, in the one place the app connects nothing else.
+            //
+            // The two things it alone held went with it rather than being
+            // dropped: `AgentLibrarianRow` moved onto the ACTIVE key's own
+            // page, and the Mac's MCP listener is the row below — it was never
+            // a key, and sat in that sheet only because the sheet was the
+            // nearest thing about agents.
             // "What you can do" (2026-07-11 as "How it works") sat here until
             // 2026-09-10 — a sheet holding one sentence, reached from a row
             // saying "New here? Start here". Deleted with the sheet (user: "it's
@@ -371,8 +418,29 @@ struct SettingsRows: View {
                         }
                     }),
         ]
-        .filter { $0.title != "Your key" || keyRowShown }
-        .sorted { $0.title < $1.title }
+        #if targetEnvironment(macCatalyst)
+        // Mac only, because it is the only build that is a real desktop
+        // process sitting on the same machine as the agent that wants to read
+        // the corpus (`MCPServer`). Its own row since prd §871; App Review was
+        // pointed at this switch inside the key sheet, so it keeps a door.
+        //
+        // Appended rather than written into the literal with an `#if` inside
+        // it, so the iOS build resolves one array and not a conditional
+        // element — and `rows` stays a `let` on both platforms.
+        let macRow = RowSpec(title: "Agents on this Mac",
+                             // Three states, because a listener switched on
+                             // that failed to bind is not off, and "Listening"
+                             // over a dead socket is §83's fake status.
+                             value: mcpRunning
+                                 ? String(localized: "Listening")
+                                 : (mcpOn ? String(localized: "Not listening")
+                                          : String(localized: "Off")),
+                             badge: ("terminal", DS.textPrimary),
+                             action: { detail = .mcp })
+        return (rows + [macRow]).sorted { $0.title < $1.title }
+        #else
+        return rows.sorted { $0.title < $1.title }
+        #endif
     }
 
     /// Whether "See the demo" belongs on screen — the demo mode's re-entry

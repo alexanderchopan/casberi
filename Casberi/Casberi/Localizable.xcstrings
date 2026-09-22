@@ -2424,34 +2424,6 @@
         }
       }
     },
-    "%@ answers on tap" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ responde al tocar"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "タップで%@が回答"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "탭하면 %@가 답변"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "点按后由 %@ 回答"
-          }
-        }
-      }
-    },
     "%@ are both in your feed strip. Tap a chip to browse markets. When the two prices differ, you'll see by how much." : {
       "localizations" : {
         "es" : {
@@ -47153,34 +47125,6 @@
         }
       }
     },
-    "Bring your own agent" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Trae tu propio agente"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "自分のエージェントを持ち込む"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "직접 에이전트 가져오기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "使用你自己的代理"
-          }
-        }
-      }
-    },
     "Brings in your chats." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -87070,34 +87014,6 @@
         }
       }
     },
-    "No key saved — add one in Settings to ask an agent." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No hay ninguna clave guardada — agrega una en Configuración para preguntarle a un agente."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "キーが保存されていません — エージェントに質問するには設定でキーを追加してください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "저장된 키가 없습니다 — 에이전트에게 질문하려면 설정에서 키를 추가하세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "尚未保存密钥——请在设置中添加密钥以便向智能体提问。"
-          }
-        }
-      }
-    },
     "No key was found." : {
       "localizations" : {
         "es" : {
@@ -104557,34 +104473,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "快速查看"
-          }
-        }
-      }
-    },
-    "Quiet hours" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Horas de silencio"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "おやすみ時間"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "방해 금지 시간"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "免打扰时段"
           }
         }
       }
@@ -150238,34 +150126,6 @@
         }
       }
     },
-    "Your key was turned down — check it in Settings." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tu clave fue rechazada — revísala en Ajustes."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "キーが拒否されました — 設定で確認してください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "키가 거부되었습니다 — 설정에서 확인해 주세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "你的密钥被拒绝了 — 请在设置中查看。"
-          }
-        }
-      }
-    },
     "Your key · stored in %@'s Keychain" : {
       "localizations" : {
         "es" : {
@@ -169127,6 +168987,398 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每个区块约 %lld 秒"
+          }
+        }
+      }
+    },
+    "Add your Anthropic key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade tu clave de Anthropic"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Anthropicのキーを追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Anthropic 키 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加你的 Anthropic 密钥"
+          }
+        }
+      }
+    },
+    "Chat here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Habla aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここで話す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기서 대화하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在这里对话"
+          }
+        }
+      }
+    },
+    "Anthropic bills you directly." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Anthropic te cobra directamente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Anthropicから直接請求されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Anthropic이(가) 직접 청구합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Anthropic 直接向你收费。"
+          }
+        }
+      }
+    },
+    "Claude answers on this key now." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Claude ahora responde con esta clave."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今後はこのキーでClaudeが応答します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이제 이 키로 Claude이(가) 답합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "现在 Claude 使用这把密钥回答。"
+          }
+        }
+      }
+    },
+    "Add your OpenAI key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade tu clave de OpenAI"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "OpenAIのキーを追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "OpenAI 키 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加你的 OpenAI 密钥"
+          }
+        }
+      }
+    },
+    "OpenAI bills you directly." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "OpenAI te cobra directamente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "OpenAIから直接請求されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "OpenAI이(가) 직접 청구합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "OpenAI 直接向你收费。"
+          }
+        }
+      }
+    },
+    "ChatGPT answers on this key now." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ChatGPT ahora responde con esta clave."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今後はこのキーでChatGPTが応答します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이제 이 키로 ChatGPT이(가) 답합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "现在 ChatGPT 使用这把密钥回答。"
+          }
+        }
+      }
+    },
+    "Add your Google key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade tu clave de Google"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Googleのキーを追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Google 키 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加你的 Google 密钥"
+          }
+        }
+      }
+    },
+    "Google bills you directly." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Google te cobra directamente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Googleから直接請求されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Google이(가) 직접 청구합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Google 直接向你收费。"
+          }
+        }
+      }
+    },
+    "Gemini answers on this key now." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gemini ahora responde con esta clave."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今後はこのキーでGeminiが応答します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이제 이 키로 Gemini이(가) 답합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "现在 Gemini 使用这把密钥回答。"
+          }
+        }
+      }
+    },
+    "Agents on this Mac" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Agentes en este Mac"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このMacのエージェント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Mac의 에이전트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这台 Mac 上的智能体"
+          }
+        }
+      }
+    },
+    "No key saved — connect an agent in Accounts to ask one." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay ninguna clave guardada: conecta un agente en Cuentas para preguntarle."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キーが保存されていません。アカウントでエージェントを接続すると質問できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "저장된 키가 없습니다 — 계정에서 에이전트를 연결하면 질문할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未保存密钥——在“账户”中连接一个智能体即可提问。"
+          }
+        }
+      }
+    },
+    "Your key was turned down — check it on the agent's account page." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu clave fue rechazada: revísala en la página de la cuenta del agente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キーが拒否されました。エージェントのアカウントページで確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키가 거부되었습니다 — 에이전트의 계정 페이지에서 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的密钥被拒绝——请在该智能体的账户页面检查。"
+          }
+        }
+      }
+    },
+    "OpenRouter couldn't route that. Either the model has been retired, or nobody serving it will agree not to keep your question — pick another model, or turn off private routing on OpenRouter's account page." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "OpenRouter no pudo enrutar eso. O el modelo se ha retirado, o nadie que lo sirva aceptará no guardar tu pregunta: elige otro modelo o desactiva el enrutamiento privado en la página de la cuenta de OpenRouter."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "OpenRouterはそれをルーティングできませんでした。モデルが提供終了になったか、質問を保存しないことに同意する提供者がいません。別のモデルを選ぶか、OpenRouterのアカウントページでプライベートルーティングをオフにしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "OpenRouter가 이를 라우팅하지 못했습니다. 모델이 중단되었거나, 질문을 보관하지 않겠다고 동의하는 제공자가 없습니다 — 다른 모델을 고르거나 OpenRouter 계정 페이지에서 비공개 라우팅을 끄세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "OpenRouter 无法路由该请求。要么模型已下线，要么没有服务方愿意承诺不保留你的问题——换一个模型，或在 OpenRouter 的账户页面关闭私密路由。"
           }
         }
       }

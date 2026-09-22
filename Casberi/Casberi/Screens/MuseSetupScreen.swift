@@ -4,7 +4,8 @@ import SwiftData
 /// Muse, connected — by key (2026-09-20, prd §854). Meta's own model, through
 /// the Meta Model API, on the same BYO-key contract every agent here keeps:
 /// checked with the provider before it saves, stored in the Keychain via the
-/// same vault, listed in Settings → Your key beside the rest.
+/// same vault. Connected HERE and nowhere else since prd §871 deleted the
+/// Settings key card.
 ///
 /// Structurally this is `GrokSetupScreen` — a plain OpenAI-compatible seat
 /// with a different name and console — and that is the whole reason it was
@@ -146,6 +147,10 @@ struct MuseSetupScreen: View {
             AgentActiveStatusRow(provider: .meta)
             AgentModelRow(provider: .meta)
             AgentSpendRow(provider: .meta)
+            // The librarian's switch, moved off Settings with the key card
+            // (prd §871). It draws only on the ACTIVE key's page, so it
+            // cannot read as a per-seat setting.
+            AgentLibrarianRow(provider: .meta)
         }
     }
 }

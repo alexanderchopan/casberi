@@ -230,6 +230,11 @@ KNOWN_PROPER: set[str] = {
     # nouns are derived from), leaving four sentences that name the network
     # itself — "Sent test ETH on Hegotá" — with nothing to vouch for them.
     "Hegotá",
+    # The three agent COMPANIES whose seats are named for the agent instead
+    # (prd §871): the catalog tiles are "Claude", "ChatGPT" and "Gemini", so
+    # the companies that issue the keys are derived from nothing and the key
+    # doors on those pages name them ("Add your Anthropic key").
+    "Anthropic", "OpenAI", "Google",
     "Rabby", "SafePal", "Trezor", "Raycast", "Takeout", "SteamID", "Venmo",
     "BNB", "SegWit", "MyActivity", "AuthKey", "Siri", "Mac", "Safari",
     "Spotlight", "Keychain",

@@ -7,7 +7,8 @@ import SwiftData
 /// straight from this iPhone, only on the tap. The key is checked with
 /// Venice before it saves (no dead key claiming a capability — honesty
 /// rule), lands in the Keychain via the same vault every agent key uses,
-/// and appears in Settings → Your key alongside the rest.
+/// and is connected HERE and nowhere else since prd §871 deleted the
+/// Settings key card.
 ///
 /// **ON `AccountPage` SINCE §639 (2026-09-06).** The connected state was
 /// `BridgeConnectedState`'s identity card with the form retired behind a
@@ -125,6 +126,10 @@ struct VeniceSetupScreen: View {
             AgentActiveStatusRow(provider: .venice)
             AgentModelRow(provider: .venice)
             AgentSpendRow(provider: .venice)
+            // The librarian's switch, moved off Settings with the key card
+            // (prd §871). It draws only on the ACTIVE key's page, so it
+            // cannot read as a per-seat setting.
+            AgentLibrarianRow(provider: .venice)
         }
     }
 

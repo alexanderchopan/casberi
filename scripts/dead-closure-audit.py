@@ -166,10 +166,12 @@ def properties(path: Path, text: str):
 def constructed_with_trailing_closure(name: str, texts) -> bool:
     """`T(…) { … }` or `T { … }` anywhere — Swift's trailing closure fills the
     LAST function-typed parameter with no label to grep for, which is how
-    `AgentKeyPicker(selection: $p) { … }` supplies `onSelect` invisibly. Missed
-    on this check's first run against the real tree; it reported that call site
-    as a dead control, which would have been a false alarm shipped into the
-    pass."""
+    `DSScopeTiles(sections:active:attention:) { picked in … }` supplies its
+    `onPick` invisibly. Missed on this check's first run against the real tree;
+    it reported such a call site as a dead control, which would have been a
+    false alarm shipped into the pass. (The example was `AgentKeyPicker` until
+    prd §871 deleted it with the Settings key card — a docstring naming a type
+    that no longer exists is the same staleness this audit exists to catch.)"""
     head = re.compile(r"(?<![\w.])%s\s*(\(|\{)" % re.escape(name))
     for text in texts.values():
         for m in head.finditer(text):

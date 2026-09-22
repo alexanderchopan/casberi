@@ -625,6 +625,28 @@ python3 "$ROOT/scripts/demo-marking-audit.py" \
   || fail "the demo's marking has drifted — see the output above"
 print -P "%F{green}✓ demo-marking audit%f"
 
+# The app icon's three luminosity variants (prd §869). The light PNG had been a
+# BYTE-FOR-BYTE COPY of the dark one — same md5 — so everyone on the light or
+# default appearance saw the dark drawing, hot pink on a black tile, on a light
+# home screen. Nothing here could see it: the asset compiler ships the same
+# bytes twice without complaint, the build is green, and the screen sweep only
+# photographs surfaces the APP draws. The home screen is composited by the
+# system and is outside every check this pass owns, which is precisely why the
+# icon README could carry a note saying the light and tinted PNGs had never
+# been opened, and have that note fail nothing for as long as it sat there.
+#
+# It also pins the rule that makes the fix cheap: all three variants carry ONE
+# coverage mask. The eyes and suckers are knocked OUT of the mark rather than
+# painted on it, so a variant redrawn by hand loses them and the arms stop
+# reading at small sizes; a variant DERIVED from the dark art keeps them for
+# free (design/app-icon/make-light-icon.py).
+step "App-icon audit"
+python3 "$ROOT/scripts/app-icon-audit.py" --self-test >/dev/null \
+  || fail "the app-icon audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/app-icon-audit.py" \
+  || fail "an app-icon variant is wrong — see the output above"
+print -P "%F{green}✓ app-icon audit%f"
+
 # WHAT THE WALLET ROOM'S CROWN IS MADE OF, AND HOW IT FAILS (prd §825, §826).
 # The user opened the Wallet room and saw "$6" — a Privy app wallet's stored
 # figure, Zora's — with their own wallets under-read or missing, on "All" and on
@@ -2255,8 +2277,8 @@ harness "Apple Wallet pure-logic self-test" "apple wallet self-test" "scripts/ap
 # this feature can have: the simulator never runs a BGAppRefreshTask, so the
 # pass that decides what fires cannot be exercised there by any means, and on a
 # device the wrong answer arrives hours later on a lock screen with nobody
-# watching. A 3am buzz because quiet hours failed to wrap past midnight, a
-# dispute that never fires, eleven alarms where there should be one and a count.
+# watching. A like claiming the level that breaks a Sleep Focus, a dispute that
+# never fires, eleven alarms where there should be one and a count.
 harness "Notification pure-logic self-test" "notify self-test" "scripts/notify-selftest.sh" "the notification logic self-test failed — run scripts/notify-selftest.sh"
 
 # The wallet room's SCOPE rules (prd §483) — which of its six readings is on
@@ -2960,6 +2982,16 @@ print -P "%F{green}✓ unit tests%f"
 # full iOS pass to hear about. `SKIP_MAC=1` restores the early gate for a
 # session that is deliberately chasing Catalyst.
 if [[ -z "${SKIP_CATALYST:-}" && -n "$MACPID" ]]; then
+  # The Catalyst build this pass actually performs is the parallel Mac leg's,
+  # and it writes `CasberiMacDD` — NOT `CasberiCatalystDD`, which step 1b
+  # owned and which nothing has written since this deferral landed. The
+  # localization coverage gate below reads a Catalyst stringsdata dir, so
+  # leaving that default in place fed it a DerivedData frozen at whatever
+  # commit last ran step 1b: every string deleted since then reported as
+  # "in source but NOT in the catalog" (five phantoms on 2026-09-21, all of
+  # them §870/§871 deletions), and a genuinely missing Mac-only translation
+  # would have passed unseen. Name the dir the build wrote.
+  CATDD="$HOME/Library/Developer/CasberiMacDD"
   print -P "%F{green}✓ mac parity (deferred to the parallel Mac verify, which builds and RUNS Catalyst)%f"
 elif [[ -z "${SKIP_CATALYST:-}" ]]; then
   CATDD="$HOME/Library/Developer/CasberiCatalystDD"

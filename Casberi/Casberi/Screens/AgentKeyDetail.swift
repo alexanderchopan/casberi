@@ -301,7 +301,19 @@ struct OpenRouterRoutingRow: View {
 /// threads at no cost, and offering to pay for the same work would be a
 /// control that makes the app worse when used — which the honesty rule treats
 /// the same as a dead one.
+///
+/// **IT LIVES ON A SEAT NOW, NOT IN SETTINGS (prd §871).** It used to have one
+/// caller, the Settings key card, and that card is gone: every key is
+/// connected on its own account page, so the switch that spends a key belongs
+/// on the page for the key it would spend. `provider` is what makes that safe
+/// — the switch is ONE app-wide flag, so it may be drawn on ONE page, and the
+/// guard names which: the seat whose key is active. Drawn on every keyed page
+/// it would read as a per-seat setting and three of them would contradict
+/// each other.
 struct AgentLibrarianRow: View {
+    /// The seat drawing it. The row appears only when this is the provider
+    /// `AgentKey.active` names — see the note above.
+    let provider: AgentProvider
     @Environment(\.modelContext) private var modelContext
     @State private var enabled = AgentLibrarian.isEnabled
     @State private var working = false
@@ -312,7 +324,7 @@ struct AgentLibrarianRow: View {
     @State private var tick = 0
 
     var body: some View {
-        if AgentKey.isConfigured, AgentKey.active != .bankr, !AgentLibrarian.deviceCanDoIt {
+        if AgentKey.active == provider, provider != .bankr, !AgentLibrarian.deviceCanDoIt {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSToggleRow(title: AskSurface.enabled
                                 ? Text("Let your key organize too")
@@ -354,9 +366,9 @@ struct AgentLibrarianRow: View {
                     // pointed at a different task — one list read, one shape,
                     // and the two choices can never drift apart in how they
                     // resolve.
-                    if let provider = AgentKey.active {
-                        AgentModelRow(provider: provider, task: .librarian)
-                    }
+                    // `provider` IS `AgentKey.active` — the guard above says
+                    // so — which is why this no longer re-reads it.
+                    AgentModelRow(provider: provider, task: .librarian)
                 }
             }
             .dsListRow()

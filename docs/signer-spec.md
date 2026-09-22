@@ -45,7 +45,7 @@ The product sentence: **"Your computer can't spend without your phone's yes."**
 | EIP-55 checksum | `Model/Keccak256.swift` (`EIP55.checksum`) | shipped, harnessed |
 | Per-chain `eth_call` over public RPC | `WalletApprovals.rpcRead(network:…)` | shipped, measured |
 | Money receipt anatomy, torn vs flat edge | `Model/MoneyReceipt.swift` | shipped, harnessed |
-| Alarm notifications, quiet hours, time-sensitive | `Model/NotifySweep.swift` | shipped, harnessed |
+| Alarm notifications, time-sensitive | `Model/NotifySweep.swift` | shipped, harnessed |
 | Address book with kinds | `Model/AddressBook.swift` | shipped |
 | Device-only Keychain policy + audit | `TokenVault`, `scripts/keychain-audit.py` | shipped |
 

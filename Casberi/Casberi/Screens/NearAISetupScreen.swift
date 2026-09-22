@@ -121,6 +121,10 @@ struct NearAISetupScreen: View {
             AgentActiveStatusRow(provider: .nearai)
             AgentModelRow(provider: .nearai)
             AgentSpendRow(provider: .nearai)
+            // The librarian's switch, moved off Settings with the key card
+            // (prd §871). It draws only on the ACTIVE key's page, so it
+            // cannot read as a per-seat setting.
+            AgentLibrarianRow(provider: .nearai)
         }
     }
 }

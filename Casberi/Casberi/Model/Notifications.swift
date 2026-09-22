@@ -20,9 +20,9 @@ enum Notifications {
 
     // MARK: - Settings
 
-    /// One switch per CATEGORY, and quiet hours (prd §770). Stored in the app
-    /// group so the background task reads the same values the settings screen
-    /// writes.
+    /// One switch per CATEGORY, and nothing else (prd §770, §870). Stored in
+    /// the app group so the background task reads the same values the settings
+    /// screen writes.
     ///
     /// **On means the digest, for every category, Wallet included.** Nothing a
     /// category holds is delivered on its own except the four kinds in
@@ -39,10 +39,10 @@ enum Notifications {
     /// arrives switched on like every other. The two class switches
     /// (`notify.alarms`, `notify.arrivals`) are read once, only to carry an
     /// install that had BOTH off into all-off; nothing writes them now. The
-    /// daily whisper's keys (§706) stay unread as before.
+    /// daily whisper's keys (§706) and quiet hours' three (§870) stay unread
+    /// as before.
     struct Settings: Sendable, Equatable {
         var off: Set<String> = []
-        var quiet = NotifyRules.Quiet.default
 
         static var categories: [String] { BridgeCatalog.categories.map(\.name) }
 
@@ -71,17 +71,11 @@ enum Notifications {
                 // said "nothing", and a new layout must not overrule that.
                 s.off = Set(Settings.categories)
             }
-            if d.object(forKey: "notify.quietOn") != nil { s.quiet.enabled = d.bool(forKey: "notify.quietOn") }
-            if d.object(forKey: "notify.quietStart") != nil { s.quiet.startMinute = d.integer(forKey: "notify.quietStart") }
-            if d.object(forKey: "notify.quietEnd") != nil { s.quiet.endMinute = d.integer(forKey: "notify.quietEnd") }
             return s
         }
         set {
             let d = store
             d.set(newValue.off.sorted(), forKey: "notify.offCategories")
-            d.set(newValue.quiet.enabled, forKey: "notify.quietOn")
-            d.set(newValue.quiet.startMinute, forKey: "notify.quietStart")
-            d.set(newValue.quiet.endMinute, forKey: "notify.quietEnd")
         }
     }
 
@@ -211,14 +205,14 @@ enum Notifications {
         let next = NotifyDigest.advance(previous,
                                         adding: eligible.filter { !$0.kind.standsAlone }.map(digestItem),
                                         allowed: { s.allows(category: $0.category) },
-                                        now: now, quiet: s.quiet, calendar: .current,
+                                        now: now, calendar: .current,
                                         slots: NotifyDigest.readingSlots(opens: opens, now: now,
                                                                          calendar: .current))
         let digest = NotifyDigest.plans(next.queue)
         guard !dryRun else { return alone + digest }
 
         for plan in alone {
-            await schedule(plan, photo: photos[plan.id], now: now, quiet: s.quiet)
+            await schedule(plan, photo: photos[plan.id], now: now)
         }
         await scheduleDigest(next, previous: previous, now: now)
         return alone + digest
@@ -369,24 +363,26 @@ enum Notifications {
         }
     }
 
+    /// Delivered when the sweep finds it — there is no hold (prd §870).
+    ///
+    /// The app used to run quiet hours of its own, and it was both unexplained
+    /// and wrong twice over: it held `positionAtRisk` and `safeSignatureNeeded`
+    /// until morning, the two kinds §770 stands alone precisely BECAUSE they
+    /// cannot keep; and iOS already does this better than an app can, per
+    /// person and system-wide. A Sleep Focus silences everything below
+    /// `.timeSensitive`, which is every plan but a dispute and a deadline.
     private static func schedule(_ plan: NotifyPlan,
                                  photo: Data?,
-                                 now: Date,
-                                 quiet: NotifyRules.Quiet) async {
-        // Quiet hours HOLD rather than drop — the news keeps, and a like that
-        // wakes someone is worth less than nothing.
-        let hold = NotifyRules.holdUntil(plan: plan, now: now, quiet: quiet, calendar: .current)
-
+                                 now: Date) async {
         let content = UNMutableNotificationContent()
         content.title = plan.title
         content.body = plan.body
         // The subtitle is WHERE and, when delivery lags the event, WHEN (prd
-        // §712). The when is computed against the moment this will actually
-        // be delivered — the quiet-hours hold, not now — because a body is
-        // frozen at scheduling and a like held until 08:00 must say "last
-        // night", not "an hour ago" as of 23:52.
+        // §712). Nothing is held any more, so the moment of delivery is `now` —
+        // but the lag is still real, because iOS decides when the background
+        // task runs and an event can be hours old before this line sees it.
         let dateline = NotifyRules.datelinePhrase(
-            occurredAt: plan.occurredAt, deliveredAt: hold ?? now, calendar: .current)
+            occurredAt: plan.occurredAt, deliveredAt: now, calendar: .current)
         content.subtitle = [plan.place, dateline].compactMap { $0 }.joined(separator: " · ")
         // Sound rides the class: an alarm sounds, an arrival never does (prd
         // §712). The passive level below already keeps an arrival off the lit
@@ -399,9 +395,10 @@ enum Notifications {
         // HONOURED as of 2026-08-14: `Casberi.entitlements` and its Catalyst
         // twin now carry `com.apple.developer.usernotifications.time-sensitive`
         // (prd §306 amendment's "to finish it"), so a 3am dispute really does
-        // break a Focus and the quiet-hours copy says so again. This line is
-        // unchanged — it was always correct; what changed is that iOS stopped
-        // silently capping it to `.active`.
+        // break a Focus. This line is unchanged — it was always correct; what
+        // changed is that iOS stopped silently capping it to `.active`. Since
+        // §870 it carries more weight: it is now the ONE thing deciding what
+        // may reach a sleeping person, with iOS's Focus on the other side.
         // The failure mode if that key is ever dropped is the reason this is
         // spelled out: nothing fails, no log line appears, and the
         // notification arrives looking exactly right — it just stops piercing
@@ -419,14 +416,11 @@ enum Notifications {
         if let link = plan.link { content.userInfo = ["link": link] }
         if let art = await attachment(for: plan, photo: photo) { content.attachments = [art] }
 
-        var trigger: UNNotificationTrigger?
-        if let hold {
-            trigger = UNTimeIntervalNotificationTrigger(
-                timeInterval: max(1, hold.timeIntervalSince(now)), repeats: false)
-        }
-        let request = UNNotificationRequest(identifier: plan.id, content: content, trigger: trigger)
+        // A nil trigger means "as soon as this is added", which is the whole
+        // rule now: the sweep found it, so it goes.
+        let request = UNNotificationRequest(identifier: plan.id, content: content, trigger: nil)
         try? await UNUserNotificationCenter.current().add(request)
-        rememberSent(plan, at: hold ?? now)
+        rememberSent(plan, at: now)
     }
 
     // MARK: - The last thing sent (prd §713)

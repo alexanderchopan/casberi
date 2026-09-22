@@ -734,7 +734,7 @@ A control then calls it. The compiler is content, every other check here is cont
 **The check**, static, no build: a view property whose default is a no-op closure, and which the declaring file mentions, must be supplied by some call site. Two subtleties, both found by running it against the real tree rather than reasoned out:
 
 * **A forward under the property's own name is not a supply.** `VibenetDetailContextMenu(onRename: onRename)` is in the tree and is what made this bug look wired to a grep. Written the obvious way — `name\s*:\s*(?!name\b)` — the regex engine backtracks the `\s*` to nothing and matches anyway; the "not itself" test has to live inside one lookahead. Its own self-test caught that on the first run.
-* **A trailing closure IS a supply.** `AgentKeyPicker(selection: $p) { … }` fills the last closure property with no label anywhere to grep for, and the first cut reported that call site as a dead control. So the check resolves each type's property order and balances a construction's parens to see whether a `{` follows.
+* **A trailing closure IS a supply.** `DSScopeTiles(sections:active:attention:) { picked in … }` fills the last closure property with no label anywhere to grep for, and the first cut reported such a call site as a dead control. (The worked example was `AgentKeyPicker` until prd §871 deleted it with the Settings key card.) So the check resolves each type's property order and balances a construction's parens to see whether a `{` follows.
 
 **What it deliberately does not check**, so it stays honest about its reach: an OPTIONAL closure (`var onX: ((String) -> Void)? = nil`) — the honest form, whose `nil` is readable at the declaration and which every caller here gates its control on; whether a supplied closure does the right thing (a call site passing `{ _ in }` out loud is at least a decision a reader can see); and `GenUI/`, carved out for the reason `primary-verb-audit.py` and the ramp audit both carve it out.
 
@@ -1030,3 +1030,53 @@ That shape has four ways to quietly stop being true, and **none of them breaks a
 **What it deliberately does not check.** That the lead is drawn, or drawn only in All — that is asserting the diff, which `guards-assert-what-you-built` says not to spend a harness on. The letters' timing against `autoLift` — both are constants in one file, the fall is CoreAnimation, and nothing static can measure a frame (record frames and count them). The capsule's own words — §813, in the catalog, where `setup-copy-audit.py` reads them.
 
 Seven mutations, each applied to a temp fixture tree (never the working copy) with a pinned anchor, so a drifted anchor fails the self-test instead of printing a passing line.
+
+## Account-detail sheet gate (`scripts/verify-mac.sh` step 2d, 2026-09-21) → prd §872
+
+**What it catches.** A sheet raised from `SettingsRows` whose content needs an
+Observable environment object the presenter never re-injects. On Mac Catalyst
+the sheet's own `PresentationHostingController` evaluates the content's
+presentation preference (`bridgedPresentation` — what nested sheet or dialog
+the content wants) in a graph the presenter's `.environment(…)` has not
+reached, so `AccountDetailSheet`'s required `@Environment(BridgeStore.self)`
+trapped before a frame was drawn. Tapping Data, Agents on this Mac or
+Notifications in Accounts → Settings killed the app — on the shipped
+`/Applications/Casberi.app` 1.0.30 (631) as much as on a dev build.
+
+**Why nothing saw it.** Two reasons, both worth keeping:
+
+- **iOS is unaffected**, so every simulator gate is green. `verify.sh`'s screen
+  sweep opens `-accountDetail data` and passes. A platform-only crash needs a
+  platform-only gate, which is why this lives beside 2c (the connect form)
+  rather than in `verify.sh`.
+- **`-accountDetail` was in neither verify script.** `grep -n accountDetail
+  scripts/verify*.sh` returned nothing. It had existed as a screenshot hook for
+  as long as the sheet had, and nothing ever asserted with it — the same shape
+  as every hook that is a camera and never a check.
+
+**How it asserts.** One launch per case (`casberi://settings -accountDetail
+<case>`), then: wait up to 20s for `accountDetail| <case> mounted`, assert
+`app_pid` is non-empty, assert the captured stderr holds no `Fatal error`. The
+marker is logged by **the sheet's own `onAppear`**, never by the launch hook
+that set the flag — a flag set and never drawn must not read as a pass. A
+crash is reported as a crash (the `Fatal error` line is quoted), not as a
+timeout.
+
+**Completeness is derived, not remembered.** `DETAIL_SWEPT` is compared with
+the `AccountDetail` cases read out of `AccountDetailSheet.swift` by `awk`, so a
+fourth case fails this step until it is swept. Proven in both directions
+before landing (a case added to the enum fails; a case removed fails).
+
+**Proven against the defect.** Green on the fix; on a build with the single
+`presented(…)` call removed from `.sheet(item: $detail)` it fails with *"the
+'data' detail sheet crashed the app: … No Observable object of type
+BridgeStore found"*.
+
+**What it deliberately does NOT check.** It sweeps the three sheets behind
+these rows and nothing else. The same two-halves shape — content that reads a
+non-optional Observable environment AND presents something of its own — exists
+at other sheet sites outside the shell (`ThingSheetView` from
+`PersonRoomScreen` and `WalletHistoryScreen`, `AddressCard` from
+`ThingSheetView`, `FollowImportSheet` from `SocialPostViews`). None was
+reproduced in that pass. The general form wants a static audit pairing those
+two facts, which is the rule prd §872 states.

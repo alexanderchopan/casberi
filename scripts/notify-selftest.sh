@@ -16,7 +16,9 @@
 # hours later on a lock screen, where nobody is holding a debugger. Every
 # failure in this file is a silent wrong notification that renders perfectly:
 #
-#   · a 3am buzz for a like, because quiet hours failed to wrap past midnight
+#   · a like that claims the level which breaks a Sleep Focus, because a kind
+#     drifted into `isTimeSensitive` — the app runs no night rule of its own
+#     since §870, so that level is the WHOLE of what may wake somebody
 #   · a dispute that never fires, because the deadline window rejected it
 #   · a deadline that fires forever after it passed — the worst possible time
 #     to be told about it
@@ -89,7 +91,7 @@ guard "time-sensitive is claimed by the deadline alarms alone" \
       'self == \.disputeOpened \|\| self == \.deadlineNear' "$PLAN"
 guard "the deadline window rejects the past (> 0, not just <= window)" \
       'delta > 0 && delta <= deadlineWindow' "$PLAN"
-guard "quiet hours HOLD rather than drop (a trigger, not a return)" \
+guard "the digest still schedules for a future slot (a trigger, not a fire-now)" \
       'UNTimeIntervalNotificationTrigger' "$NOTIFY"
 # The daily whisper was cut (prd §706) — a pending one from an older install
 # must be pulled, or it fires once more with a tap that lands nowhere.
@@ -179,11 +181,33 @@ fi
 # This is the half a person can SEE, so it is the half that lies loudest.
 promises=$(grep -cE 'break through' "$SETTINGS" || true)
 if [[ "$promises" -gt 0 ]] && ! ts_key_present "$ENT_IOS"; then
-  printf '  ✗ DRIFT: the quiet-hours row promises break-through with no entitlement (§83)\n'; fail=1
+  printf '  ✗ DRIFT: the settings copy promises break-through with no entitlement (§83)\n'; fail=1
 elif [[ "$promises" -gt 0 ]]; then
-  printf '  ✓ the quiet-hours promise is backed by the entitlement\n'
+  printf '  ✓ the break-through promise is backed by the entitlement\n'
 else
-  printf '  ✓ the quiet-hours row claims no break-through\n'
+  printf '  ✓ the settings copy claims no break-through\n'
+fi
+
+# §870 deleted quiet hours — switch, window and hold. It may not creep back in
+# as an unswitched internal rule, which is the shape it would take: a `Quiet`
+# window nobody can see, holding the two standsAlone kinds that have no clock
+# (a liquidation, a Safe signature) until a morning that is hours too late.
+# iOS's own Focus is the night rule now, and `.timeSensitive` is the one lever
+# into it — guarded above, against the entitlement.
+back=0
+for f in "$PLAN" "$NOTIFY" "$SETTINGS"; do
+  # The identifiers only, and `quiet:` ANCHORED to an argument position — a
+  # bare `quiet:` matches ordinary prose ("payments went quiet: …", which this
+  # tree already writes elsewhere) and would red a ship gate over a comment.
+  if grep -nE 'holdUntil|NotifyRules\.Quiet|quiet(On|Start|End)"|[(,][[:space:]]*quiet:' "$f" >/dev/null 2>&1; then
+    printf '  ✗ DRIFT: quiet hours are back in %s (§870 deleted them)\n' "$f"; fail=1; back=1
+  fi
+done
+# An `&&` list rather than an `if` would return non-zero when drift IS found,
+# and `set -e` would take the whole script down there — the right verdict by
+# the wrong door, with every later check skipped.
+if [[ "$back" -eq 0 ]]; then
+  printf '  ✓ no quiet-hours hold anywhere (§870)\n'
 fi
 
 # ── the two devnets (prd §522) ──────────────────────────────────────────────
@@ -424,32 +448,6 @@ ok(!NotifyRules.deadlineIsNear(now.addingTimeInterval(73 * 3600), now: now), "73
 ok(!NotifyRules.deadlineIsNear(now.addingTimeInterval(-60), now: now), "a passed deadline never fires")
 ok(!NotifyRules.deadlineIsNear(now, now: now), "this instant is not ahead of us")
 
-// ── quiet hours, including the wrap that is the NORMAL case ─────────────────
-let night = NotifyRules.Quiet(startMinute: 22 * 60, endMinute: 8 * 60, enabled: true)
-ok(night.contains(minute: 23 * 60), "23:00 is inside a 22→08 window")
-ok(night.contains(minute: 3 * 60), "03:00 is inside a 22→08 window (past midnight)")
-ok(night.contains(minute: 22 * 60), "22:00 exactly is inside")
-ok(!night.contains(minute: 8 * 60), "08:00 exactly is outside — the window is half-open")
-ok(!night.contains(minute: 12 * 60), "midday is outside")
-let day = NotifyRules.Quiet(startMinute: 9 * 60, endMinute: 17 * 60, enabled: true)
-ok(day.contains(minute: 12 * 60), "a NON-wrapping window still works")
-ok(!day.contains(minute: 20 * 60), "…and excludes what is outside it")
-var off = night; off.enabled = false
-ok(!off.contains(minute: 23 * 60), "disabled quiet hours contain nothing")
-
-// ── holding, and the exemption that is the point of time-sensitive ──────────
-ok(NotifyRules.holdUntil(plan: plan(.disputeOpened), now: at(3), quiet: night, calendar: cal) == nil,
-   "a dispute at 03:00 is NEVER held")
-ok(NotifyRules.holdUntil(plan: plan(.deadlineNear), now: at(3), quiet: night, calendar: cal) == nil,
-   "a deadline at 03:00 is never held")
-ok(NotifyRules.holdUntil(plan: plan(.moneyIn), now: at(12), quiet: night, calendar: cal) == nil,
-   "midday needs no hold")
-let heldEarly = NotifyRules.holdUntil(plan: plan(.likesReceived), now: at(3), quiet: night, calendar: cal)
-ok(heldEarly == at(8), "a 03:00 like waits until 08:00 TODAY, not tomorrow")
-let heldLate = NotifyRules.holdUntil(plan: plan(.likesReceived), now: at(23), quiet: night, calendar: cal)
-ok(heldLate == cal.date(byAdding: .day, value: 1, to: at(8)),
-   "a 23:00 like waits until 08:00 TOMORROW")
-
 // ── batching: the worst alarm, and an honest count of the rest ──────────────
 let one = [plan(.poolCleared, id: "a")]
 ok(NotifyRules.collapse(one).count == 1, "one alarm passes through untouched")
@@ -589,7 +587,7 @@ func utc(_ d: Int, _ h: Int, _ m: Int = 0) -> Date {
 ok(NotifyRules.datelinePhrase(occurredAt: utc(5, 9, 0), deliveredAt: utc(5, 9, 40), calendar: gmt) == nil,
    "inside an hour the OS's own stamp is enough — no dateline")
 ok(NotifyRules.datelinePhrase(occurredAt: utc(4, 23, 52), deliveredAt: utc(5, 8, 0), calendar: gmt) == "last night at 11:52",
-   "a like held by quiet hours says last night, not now")
+   "a like found by a late-running background task says last night, not now")
 ok(NotifyRules.datelinePhrase(occurredAt: utc(5, 9, 14), deliveredAt: utc(5, 13, 0), calendar: gmt) == "this morning at 9:14",
    "a same-day lag names the part of the day")
 ok(NotifyRules.datelinePhrase(occurredAt: utc(4, 15, 5), deliveredAt: utc(5, 8, 0), calendar: gmt) == "yesterday afternoon at 3:05",
@@ -615,20 +613,28 @@ ok(NotifyKind.digest.cls == .arrival && !NotifyKind.digest.standsAlone,
 ok(NotifyDigest.slots.count == 1, "one slot a day, and no second")
 
 func tomorrow(_ d: Date) -> Date { cal.date(byAdding: .day, value: 1, to: d)! }
-ok(NotifyDigest.nextSlot(after: at(7), quiet: night, calendar: cal) == at(18),
+ok(NotifyDigest.nextSlot(after: at(7), calendar: cal) == at(18),
    "the morning waits for the evening slot")
-ok(NotifyDigest.nextSlot(after: at(18), quiet: night, calendar: cal) == tomorrow(at(18)),
+ok(NotifyDigest.nextSlot(after: at(18), calendar: cal) == tomorrow(at(18)),
    "a slot that is now has passed, so tomorrow evening is next")
-ok(NotifyDigest.nextSlot(after: at(19), quiet: night, calendar: cal) == tomorrow(at(18)),
+ok(NotifyDigest.nextSlot(after: at(19), calendar: cal) == tomorrow(at(18)),
    "after the evening slot, tomorrow evening")
-let evening = NotifyRules.Quiet(startMinute: 17 * 60, endMinute: 20 * 60, enabled: true)
-ok(NotifyDigest.nextSlot(after: at(12), quiet: evening, calendar: cal) == at(20),
-   "a slot inside quiet hours waits for the window's own end, never inside it")
-let wide = NotifyRules.Quiet(startMinute: 17 * 60, endMinute: 10 * 60, enabled: true)
-ok(NotifyDigest.nextSlot(after: at(12), quiet: wide, calendar: cal) == tomorrow(at(10)),
-   "a window covering the slot every day waits for its own end")
-ok(NotifyDigest.nextSlot(after: at(3), quiet: wide, calendar: cal) == at(10),
-   "…today's end, when it is still ahead")
+// The learned reading hour (§770) is the only thing that moves a slot since
+// §870, and it is handed in — so the walk must honour a slot that is not the
+// default, on both sides of it.
+ok(NotifyDigest.nextSlot(after: at(12), calendar: cal, slots: [17 * 60]) == at(17),
+   "a learned earlier hour is the slot, not the default 18:00")
+ok(NotifyDigest.nextSlot(after: at(19), calendar: cal, slots: [17 * 60]) == tomorrow(at(17)),
+   "…and once it has passed, tomorrow's")
+// Every slot this file can choose is inside the evening window, which is the
+// reason §870's deletion costs nothing: a digest cannot land at night.
+ok(NotifyDigest.slots.allSatisfy { NotifyDigest.readingWindow.contains($0) },
+   "the fixed slot is inside the evening window")
+// Unreachable today, and it may not fail LOUD if it ever becomes reachable:
+// the caller schedules on `slot - now`, so a `now` here would fire the digest
+// on the spot.
+ok(NotifyDigest.nextSlot(after: at(12), calendar: cal, slots: []) > at(23),
+   "no slot at all waits a day rather than buzzing now")
 
 func item(_ id: String, _ seat: String, at when: Date, category: String = "Work") -> NotifyDigest.Item {
     NotifyDigest.Item(id: id, seat: seat, name: seat, category: category,
@@ -638,31 +644,36 @@ func item(_ id: String, _ seat: String, at when: Date, category: String = "Work"
 let everything: (NotifyDigest.Item) -> Bool = { _ in true }
 let s0 = NotifyDigest.State()
 let s1 = NotifyDigest.advance(s0, adding: [item("a", "Stripe", at: at(10))], allowed: everything,
-                              now: at(10), quiet: night, calendar: cal)
+                              now: at(10), calendar: cal)
 ok(s1.queue.count == 1 && s1.slot == at(18), "the first arrival queues for the evening slot")
 let s2 = NotifyDigest.advance(s1, adding: [item("b", "GitHub", at: at(12))], allowed: everything,
-                              now: at(12), quiet: night, calendar: cal)
+                              now: at(12), calendar: cal)
 ok(s2.queue.count == 2 && s2.slot == at(18), "a second arrival joins the same slot")
 var grown = item("a", "Stripe", at: at(13)); grown.title = "grown"
 let s2b = NotifyDigest.advance(s2, adding: [grown], allowed: everything,
-                               now: at(13), quiet: night, calendar: cal)
+                               now: at(13), calendar: cal)
 ok(s2b.queue.count == 2 && s2b.queue.contains { $0.title == "grown" },
    "the same id REPLACES its queued item, so a growing like is one line")
 let s3 = NotifyDigest.advance(s2, adding: [], allowed: everything,
-                              now: at(19), quiet: night, calendar: cal)
+                              now: at(19), calendar: cal)
 ok(s3.queue.isEmpty && s3.slot == nil, "after its slot, a delivered digest is never announced again")
 let s4 = NotifyDigest.advance(s2, adding: [item("c", "X", at: at(19))], allowed: everything,
-                              now: at(19), quiet: night, calendar: cal)
+                              now: at(19), calendar: cal)
 ok(s4.queue.map(\.id) == ["c"] && s4.slot == tomorrow(at(18)),
    "an arrival after the evening slot starts tomorrow's digest on its own")
 let s5 = NotifyDigest.advance(s2, adding: [], allowed: { $0.category != "Work" },
-                              now: at(12), quiet: night, calendar: cal)
+                              now: at(12), calendar: cal)
 ok(s5.queue.isEmpty && s5.slot == nil, "switching a category off takes its queued items with it")
-let s6 = NotifyDigest.advance(NotifyDigest.State(queue: [item("a", "Stripe", at: at(9))], slot: at(23)),
-                              adding: [], allowed: everything, now: at(12), quiet: night, calendar: cal)
-ok(s6.slot == at(18), "a pending slot that quiet hours now cover is chosen again")
+// A slot still ahead of us is KEPT, learned hour and all: the queue grew, but
+// the evening it waits for did not move. `at(17)` is a slot only the learned
+// reading hour can produce, so a re-chosen one would read as 18:00 and be
+// caught.
+let s6 = NotifyDigest.advance(NotifyDigest.State(queue: [item("a", "Stripe", at: at(9))], slot: at(17)),
+                              adding: [item("b", "GitHub", at: at(12))], allowed: everything,
+                              now: at(12), calendar: cal)
+ok(s6.slot == at(17) && s6.queue.count == 2, "a slot still ahead of us is kept, not re-chosen")
 let big = (0..<(NotifyDigest.cap + 5)).map { item("n\($0)", "RSS", at: at(10)) }
-let s7 = NotifyDigest.advance(s0, adding: big, allowed: everything, now: at(10), quiet: night, calendar: cal)
+let s7 = NotifyDigest.advance(s0, adding: big, allowed: everything, now: at(10), calendar: cal)
 ok(s7.queue.count == NotifyDigest.cap && s7.queue.first?.id == "n5",
    "the queue is bounded, oldest dropped first")
 
@@ -807,11 +818,17 @@ ok(NotifyDigest.readingSlots(opens: Array(habit.prefix(2)), now: at(12), calenda
 ok(NotifyDigest.readingSlots(opens: [evening(1, 16, 5), evening(2, 16, 10), evening(3, 16, 0)],
                              now: at(12), calendar: cal) == [NotifyDigest.readingWindow.lowerBound],
    "an early reader still gets the digest in the evening")
+// The window's OTHER edge, untested until §870 and the reason that deletion
+// costs nothing: no slot this file can choose lands at night, so the app needs
+// no night rule of its own on top of iOS's Focus.
+ok(NotifyDigest.readingSlots(opens: [evening(1, 21, 30), evening(2, 21, 40), evening(3, 21, 30)],
+                             now: at(12), calendar: cal) == [NotifyDigest.readingWindow.upperBound],
+   "a late reader is still read to in the evening — 21:30 learns 21:00, not 21:15")
 ok(NotifyDigest.readingSlots(opens: [evening(20, 20, 0), evening(21, 20, 0), evening(22, 20, 0)],
                              now: at(12), calendar: cal) == NotifyDigest.slots,
    "a habit older than the lookback no longer counts")
 let learned = NotifyDigest.advance(NotifyDigest.State(), adding: [item("x", "Stripe", at: at(10))],
-                                   allowed: everything, now: at(10), quiet: night, calendar: cal,
+                                   allowed: everything, now: at(10), calendar: cal,
                                    slots: [19 * 60 + 45])
 ok(learned.slot == cal.date(bySettingHour: 19, minute: 45, second: 0, of: at(10)),
    "the learned hour is the slot the digest is scheduled for")
@@ -910,10 +927,6 @@ mutate "a passed deadline still fires" \
        's/delta > 0 && delta <= deadlineWindow/delta <= deadlineWindow/'
 mutate "the deadline window widens to a month" \
        's/72 \* 3600/720 * 3600/'
-mutate "quiet hours stop wrapping past midnight" \
-       's/minute >= startMinute \|\| minute < endMinute/minute >= startMinute \&\& minute < endMinute/'
-mutate "a time-sensitive alarm gets held until morning" \
-       's/guard !plan\.isTimeSensitive else \{ return nil \}//'
 mutate "the batch keeps every alarm instead of the worst" \
        's/guard group\.count > alarmsPerSweep else \{ return plans \}/return plans/'
 mutate "the batch picks the LEAST urgent alarm" \
@@ -928,8 +941,6 @@ mutate "the ledger re-claims ids it already spent" \
        's/for id in ids where !seen\.contains\(id\)/for id in ids/'
 mutate "money arriving claims the time-sensitive level" \
        's/self == \.disputeOpened \|\| self == \.deadlineNear/self != .likesReceived/'
-mutate "a held notification waits a full day too long" \
-       's/return today > now \? today : cal/return cal/'
 # The two boundaries of §422's rank, each mutated on its own — moving it to the
 # top of the ladder is as wrong as burying it, and one fixture cannot say both.
 mutate "a wallet incident sinks below a revocable approval" \
@@ -977,8 +988,6 @@ mutate "every category folds into one digest again" \
        's/Dictionary\(grouping: queue, by: \\\.category\)/Dictionary(grouping: queue, by: { _ in "" })/'
 mutate "two categories' app digests share one id and replace each other" \
        's/requestPrefix \+ newest\.category \+ ":app"/requestPrefix + ":app"/'
-mutate "a digest lands inside quiet hours" \
-       's/for minute in slots\.sorted\(\) where !quiet\.contains\(minute: minute\)/for minute in slots.sorted()/'
 mutate "a delivered digest is announced again at the next slot" \
        's/if let slot = state\.slot, slot <= now \{ queue = \[\] \}//'
 mutate "a growing like queues a second line instead of replacing its own" \
@@ -1024,7 +1033,12 @@ mutate "the reading hour counts every open, not each evening's first" \
 mutate "the learned hour leaves the evening" \
        's/return \[min\(max\(slot, readingWindow\.lowerBound\), readingWindow\.upperBound\)\]/return [slot]/'
 mutate "the digest ignores the learned hour" \
-       's/slot: nextSlot\(after: now, quiet: quiet, calendar: calendar, slots: slots\)/slot: nextSlot(after: now, quiet: quiet, calendar: calendar)/'
+       's/slot: nextSlot\(after: now, calendar: calendar, slots: slots\)/slot: nextSlot(after: now, calendar: calendar)/'
+# §870: the two halves of the simplified slot walk, each on its own.
+mutate "a slot still ahead of us is thrown away and re-chosen" \
+       's/if let slot = state\.slot, slot > now \{ return State\(queue: queue, slot: slot\) \}//'
+mutate "a slot already past today is scheduled anyway" \
+       's/second: 0, of: day\), when > now else \{ continue \}/second: 0, of: day) else { continue }/'
 mutate "the card draws every row, however many" \
        's/ordered\(group\)\.prefix\(cardRowCap\)/ordered(group).prefix(999)/'
 mutate "the card and the banner read in different orders" \
@@ -1033,7 +1047,7 @@ mutate "the card and the banner read in different orders" \
 # ── NotifySweep.classify() — the actual bridge-specific dispatch ───────────
 #
 # Everything above tests NotifyPlan.swift's PURE judgement (severity, batching,
-# quiet hours) — it has never once exercised NotifySweep.swift's classify(),
+# the digest slot) — it has never once exercised NotifySweep.swift's classify(),
 # the function that decides WHICH rows become notifications at all. That gap
 # is real: classify() depends on the real `Thing` (a SwiftData @Model class)
 # plus ASCVersionState/WalletIngest/StripeWatch/AppleWalletBridge, none of
