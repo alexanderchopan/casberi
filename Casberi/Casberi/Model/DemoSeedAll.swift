@@ -186,6 +186,14 @@ enum DemoSeedAll {
                               // so `MetaMaskCardRoomSource` counts them; the
                               // `demo` infix keeps teardown off a real swipe.
                               "metamaskcard:spend:demo",
+                              // The ether.fi Cash head's demo spends (prd §868),
+                              // for the same reason one line up: they left the
+                              // blanket `demo:` family to wear the real seat's
+                              // `etherficash:spend:` shape, which is what
+                              // `CardSpendSeat` tells a card purchase from the
+                              // unstake and risk rows sharing that room. The
+                              // `demo` infix keeps teardown off a real swipe.
+                              "etherficash:spend:demo",
                               // The GitHub feed's demo rows (prd §674 — one
                               // feed, a tag per row) carry the real bridge's
                               // `gh:` shape so `GitHubRoom` recognises them,
@@ -3813,9 +3821,16 @@ enum DemoSeedAll {
         // One row is on CREDIT: this seat is the only card that can borrow to
         // pay, the bridge says which in the title, and a demo of five debits
         // would leave the feature's own sentence undrawn.
+        // The oldest row is 62 days back, PAST the 60-day bar
+        // `CardSpendRoom.knowsPriorWindow` sets — as its two siblings' oldest
+        // rows already were (61 and 64). It stopped at 52 while nothing read
+        // these dates, so the newest seat's head would have been the only one
+        // of the three saying "not watching long enough to compare", from an
+        // accident rather than a decision. Two rows sit in the prior window so
+        // the comparison is a proportion and not a leap from almost nothing.
         let etherfi: [(Double, Double, Bool)] = [
             (4.20, 2, false), (88.10, 12, true), (39.60, 27, false),
-            (4.20, 35, false), (17.00, 52, false),
+            (54.00, 38, false), (22.50, 47, false), (17.00, 62, false),
         ]
         out += etherfi.enumerated().map { i, e in
             let money = "$\(String(format: "%.2f", e.0))"
