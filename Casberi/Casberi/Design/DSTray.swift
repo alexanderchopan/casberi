@@ -28,6 +28,33 @@ struct DSTray<Content: View>: View {
     var detents: Set<PresentationDetent>?
     @ViewBuilder var content: () -> Content
 
+    /// **THE MAC'S WAY OUT (2026-09-22, user: "when i click language in
+    /// settings, i don't have a way to close it out and tapping outside the
+    /// screen doesn't clear it. also the other screens have a 'done' or
+    /// somethign and it should be consistent w/ them").**
+    ///
+    /// `DSNavSheet`'s own doc states the family rule this tray was relying on:
+    /// "a tray exits by its grabber and carries no button; a nav sheet exits
+    /// by its button and carries no grabber. One exit affordance per family."
+    /// That is a sound rule on touch and it has no meaning on Catalyst, where
+    /// `presentationDragIndicator` draws nothing, there is no drag-to-dismiss,
+    /// and a modal with no `.cancellationAction` is a form sheet with no
+    /// chrome at all. So the one exit affordance was the one Catalyst discards,
+    /// and every tray in this app — ~30 of them, not just Language — was a dead
+    /// end on the Mac. Escape still dismissed it; nothing on screen said so,
+    /// which is the same thing as no way out.
+    ///
+    /// It says **Done** and it is **trailing**, because that is what the nav
+    /// sheets reachable from the same screens say (`dsSheetDismiss`), and the
+    /// user's whole report was that the two families did not agree. Declared
+    /// here, once, for the same reason `dsSensoryFeedback()` is: design law
+    /// says every tray in this app is a `DSTray`, so a tray built tomorrow
+    /// cannot be born without an exit.
+    ///
+    /// Touch is untouched — the grabber is still the affordance there, and a
+    /// phone tray gains no second control.
+    @Environment(\.dismiss) private var dismiss
+
     /// **A TITLE WRAPS, IT DOES NOT TRUNCATE** (2026-09-02, user: "in hegota we
     /// have sheets w/ titles that are clipped now that we use bigger font").
     ///
@@ -59,18 +86,30 @@ struct DSTray<Content: View>: View {
         let tray = VStack(alignment: .leading, spacing: DS.Space.s4) {
             // The title doubles as its own catalog key — a title that isn't a
             // key just renders verbatim, so dynamic titles stay safe.
-            Text(LocalizedStringKey(title))
-                // THE HEAD RUNG (prd §532) — a tray is a place, and at the
-                // card-title rung it read as a taller card. 40 against the
-                // 12pt caption inside it is 3.3×.
-                .dsText(.heading40)
-                .foregroundStyle(DS.textPrimary)
-                .multilineTextAlignment(.leading)
-                // …and therefore it WRAPS. See `titleHeight` above.
-                .fixedSize(horizontal: false, vertical: true)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
-                    titleHeight = $0
-                }
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                Text(LocalizedStringKey(title))
+                    // THE HEAD RUNG (prd §532) — a tray is a place, and at the
+                    // card-title rung it read as a taller card. 40 against the
+                    // 12pt caption inside it is 3.3×.
+                    .dsText(.heading40)
+                    .foregroundStyle(DS.textPrimary)
+                    .multilineTextAlignment(.leading)
+                    // …and therefore it WRAPS. See `titleHeight` above.
+                    .fixedSize(horizontal: false, vertical: true)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                        titleHeight = $0
+                    }
+                #if targetEnvironment(macCatalyst)
+                // See `dismiss` above. The measurement is unchanged: this sits
+                // on the title's own line and the title still reports its own
+                // height, so `titleOverflow` reads exactly what it did before.
+                Spacer(minLength: DS.Space.s3)
+                Button(String(localized: "Done")) { dismiss() }
+                    .buttonStyle(.plain)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.tint)
+                #endif
+            }
             // **THE TRAY HAS SPENT THE HEAD RUNG, AND SAYS SO** (2026-09-02).
             // Read by `DSSheetHead`, which takes the next rung down rather than
             // drawing a second `heading40` four points under this one — see its

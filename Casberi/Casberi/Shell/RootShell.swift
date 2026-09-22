@@ -380,18 +380,34 @@ struct RootShell: View {
         // observable store here means picking a language repaints every `Text`
         // from its `.lproj` live, no relaunch (LanguageStore).
         .environment(\.locale, LanguageStore.shared.locale)
-        // Mode is the person's; a chosen photo implies the dark treatment.
-        // Mac follows the SYSTEM'S appearance instead (2026-07-28, user
-        // ruling): forcing a mode is right on iOS, where there's no system
-        // convention pulling the other way, but a light-mode Mac opening to
-        // a forced-dark window is exactly the jarring "doesn't feel native"
-        // gap Mac users notice first. `nil` means "inherit" — every
-        // `Color.adaptive` call reads the ACTUAL rendered
-        // `userInterfaceStyle` trait already (not this flag directly), so
-        // the whole app's color system follows along with no other change.
+        // **Mode is the person's, on BOTH platforms (2026-09-22, user ruling —
+        // reverses the Catalyst half of 2026-07-28).**
+        //
+        // Mac used to pass `nil` here so the window followed the SYSTEM'S
+        // appearance, on the reasoning that a forced-dark window on a
+        // light-mode Mac is the "doesn't feel native" gap Mac users notice
+        // first. The line under it claimed the rest followed along for free:
+        // "every `Color.adaptive` call reads the ACTUAL rendered
+        // `userInterfaceStyle` trait already … so the whole app's color
+        // system follows with no other change."
+        //
+        // That was true of every `Color.adaptive` token and FALSE of the one
+        // that paints the page. `DS.themedPage` is not adaptive — it reads
+        // `ThemeStore.shared.isLight` directly, because it also has to answer
+        // for the background photo and the six chosen hues, which no trait
+        // knows about. So the app had two sources of truth for "is it light",
+        // and on a dark-appearance Mac with the app's Theme set to Light they
+        // disagreed: the page painted LIGHT from the store while every word on
+        // it resolved WHITE from the trait. Reported as "light mode is messed
+        // up" — a settings screen of white text on a white page.
+        //
+        // Following the system was also quietly making the Theme row a dead
+        // control on Mac (§83): it moved the page and nothing else.
+        //
+        // The fix is one source of truth, and the person's own choice is the
+        // one that wins — the same sentence on both platforms.
         .preferredColorScheme(
-            ProcessInfo.processInfo.isMacCatalystApp ? nil
-                : (ThemeStore.shared.isLight && ThemeStore.shared.backgroundPhoto == nil ? .light : .dark)
+            ThemeStore.shared.isLight && ThemeStore.shared.backgroundPhoto == nil ? .light : .dark
         )
         // casberi:// deep links — widgets and App Intents route through these.
         // casberi://home|feed|account switch tabs; casberi://thing/latest opens

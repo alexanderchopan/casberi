@@ -59956,3 +59956,61 @@ The light variant is the dark art's own coverage mask composited over white inst
 **The gate (verify-mac.sh step 2d).** `-accountDetail` has existed as a screenshot hook for as long as the sheet has, and it appeared in NEITHER verify script — `grep -n accountDetail scripts/verify*.sh` returned nothing. The step now launches `casberi://settings` once per case, waits for a marker the SHEET logs from its own `onAppear` (never the launch hook that asked for it — a flag set and never drawn must not read as a pass), then asserts the process is alive and the log holds no `Fatal error`, in the exact shape of 2c. The case list is compared against the `AccountDetail` enum read out of the source, so a fourth case fails this step until it is swept. Proven both ways before landing: green on the fix, and on a build with the one `presented(…)` call removed it fails naming the crash — "the 'data' detail sheet crashed the app: … No Observable object of type BridgeStore found".
 
 **Still exposed, named rather than fixed here:** the same two-halves shape exists at a handful of other sheet sites outside the shell (`ThingSheetView` raised from `PersonRoomScreen` and `WalletHistoryScreen`, `AddressCard` from `ThingSheetView`, `FollowImportSheet` from `SocialPostViews`). None was reproduced in this pass, and a re-injection applied blind is a change nothing measured — they want their own pass, or a static audit that pairs "requires an Observable environment" with "presents something", which is the rule this entry states.
+
+## §873 — A wider window widens the detail pane, not the list (user: "expanding the mac window makes the all feed wider, but really should expand the side panel shoudln't it?", 2026-09-22)
+
+`PadLayout.paneWidth(for:)` was `total × 0.38` clamped to 400…560. Past a ~1,474pt window the pane stopped at 560 and every added point went to the list — which caps at `readingMaxWidth` (700) and centres, so a wide window bought a longer feed row and then gutters, while the thing you opened stayed at 560. Mail and Notes do the opposite: the list holds its width and the reading pane takes the rest.
+
+The ruling: the list column holds at `PadLayout.listColumnWidth` (560) and the pane is everything else, `max(total − railWidth − listColumnWidth, 400)`. The 400 floor keeps the narrowest pane shell (980, the Mac's window floor) at the same ~492pt list it had. What it moves: the Mac default 1120 goes 426/606 → 472/560 (pane/list); a 13" iPad landscape 523/765 → 728/560; a full-screen 16" Mac 560/1080 → 1080/560. The pane's reading rung already caps an article's line length (`ThingSheetView.readingMeasure`), so a wide pane does not mean long lines. Every caller (`PadShellInsets`, `pinnedRoomWidth`, the pane frame) reads the one function, so nothing else moved.
+
+## §874 — The Mac honours the app's Theme, and every tray has a way out (user, 2026-09-22)
+
+Two Mac defects reported in one sitting, on the shipped 1.0.30 (631), alongside
+the three `AccountDetailSheet` crashes §872 fixed.
+
+**"light mode is messed up."** A settings screen of white text on a white page.
+The cause is two sources of truth for one fact. `RootShell` passed
+`preferredColorScheme(nil)` on Catalyst — the 2026-07-28 ruling that Mac follows
+the SYSTEM'S appearance, on the reasoning that a forced-dark window on a
+light-mode Mac is the "doesn't feel native" gap Mac users notice first. The line
+under it claimed the rest came for free: *"every `Color.adaptive` call reads the
+ACTUAL rendered `userInterfaceStyle` trait already … so the whole app's color
+system follows along with no other change."*
+
+That was true of every `Color.adaptive` token and FALSE of the one that paints
+the page. `DS.themedPage` is not adaptive and cannot be: it answers for the
+background photo and the six chosen hues, which no trait knows about, so it
+reads `ThemeStore.shared.isLight` directly. On a dark-appearance Mac with the
+app's Theme set to Light the two disagreed — page LIGHT from the store, every
+word on it WHITE from the trait.
+
+**The person's choice wins, on both platforms.** One `preferredColorScheme`, the
+same sentence everywhere. The alternative — teach `themedPage` to follow the
+trait — was weighed and refused: it resolves the contradiction by making the
+Theme row a control that moves nothing on Mac, which is §83's dead control, and
+it answers a person who picked Light with a dark window.
+
+**"when i click language in settings, i don't have a way to close it out and
+tapping outside the screen doesn't clear it. also the other screens have a
+'done' or somethign and it should be consistent w/ them."**
+
+`DSNavSheet`'s own doc states the family rule this rested on: *"a tray exits by
+its grabber and carries no button; a nav sheet exits by its button and carries
+no grabber. One exit affordance per family."* Sound on touch, and meaningless on
+Catalyst, where `presentationDragIndicator` draws nothing, there is no
+drag-to-dismiss, and a modal with no `.cancellationAction` is a form sheet with
+no chrome at all. The one exit affordance was the one Catalyst discards, so
+**every tray in this app — ~30 of them, not the Language picker alone — was a
+dead end on the Mac.** Escape still dismissed it and nothing on screen said so,
+which is the same as no way out.
+
+It says **Done**, it is **trailing**, and it is declared once in `DSTray` — the
+word and the side the nav sheets reachable from the same screens already use
+(`dsSheetDismiss`), because the whole report was that the two families did not
+agree. Declared in the component for `dsSensoryFeedback()`'s reason: design law
+says every tray is a `DSTray`, so a tray built tomorrow cannot be born without
+an exit. Touch is untouched.
+
+Verified on the Catalyst build, not reasoned: the Data tray opens in light mode,
+black on the light page, with Done in the tint at the head; all three
+`AccountDetail` cases launch and survive.
