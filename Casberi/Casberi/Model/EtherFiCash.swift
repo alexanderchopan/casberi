@@ -75,6 +75,17 @@ enum EtherFiCash {
     /// needed nothing.
     static let source = "ether.fi"
 
+    /// The namespace every CARD SPEND lands under — `etherficash:spend:<tx>:<logIndex>`.
+    ///
+    /// Named rather than spelled at each use because it is the rule for which
+    /// rows in this room are purchases, and this room is SHARED: the unstake
+    /// queue (`etherfi:unstake:`) and this seat's own risk crossings
+    /// (`etherficash:risk:`) land here too. `CardSpendSeat` reads it, so the
+    /// room head and the door under it decide by the same string the bridge
+    /// writes, and `PurchaseStage.purchaseRefs` already carries this exact
+    /// prefix (prd §868).
+    static let spendRefPrefix = "etherficash:spend:"
+
     private static let roomMoveKey = "etherfi.roomMove.v1"
 
     /// Moves rows landed BEFORE this seat had a room of its own (prd §311).
@@ -364,7 +375,7 @@ enum EtherFiCash {
         var seen = Set<String>()
 
         for spend in spends {
-            let ref = "etherficash:spend:\(spend.txHash.lowercased()):\(spend.logIndex)"
+            let ref = spendRefPrefix + "\(spend.txHash.lowercased()):\(spend.logIndex)"
             guard !existing.contains(ref), seen.insert(ref).inserted else { continue }
             let money = PriceFormat.string(spend.usd, currency: "USD")
                 ?? "$\(WalletIngest.format(spend.usd))"

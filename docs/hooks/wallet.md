@@ -199,3 +199,53 @@ ERC-4626, so `getRate()` is read off `0x98a45d90…` (vmUSD `hook()` → Teller 
 seven days old; older ones land like WETH — token amount, no `priceValue`. In
 the probe, a priced row reads `3.08 USD` and an old one `— —`. A cardholder to probe against:
 `0xe8ee9fe4d7b8b0cc70c8b07508f6a4c8d53efd71` (39 spends, 9–20 Sep).
+
+## ether.fi Cash gets the shared card head (prd §868, 2026-09-21)
+
+`-etherfiCashRoomProbe` — the third onchain card's head, line by line. Pair with
+`-etherfiCashProbe <blocksBack>` to land some spends first.
+
+**The seat needed a head, not a new head.** `CardSpendRoom` (§858) already held
+every judgement: currencies never summed, an unreadable amount counted rather
+than zeroed, a month-on-month claim refused against a window the room never
+observed. ether.fi Cash passes the membership test outright — `EtherFiCash`
+stamps `priceValue`/`priceCurrency` on every spend in USD, and there is no
+per-token decimals trap here because `totalUsdAmt` rides the `Spend` event in
+fixed 6-decimal dollars.
+
+**What made it more than a copy: the room is SHARED.** `EtherFiCash.source` is
+one seat covering two products, so the room holds three row families:
+
+| ref namespace | what it is | a spend? |
+|---|---|---|
+| `etherficash:spend:` | a card purchase, `.transaction`, priced | yes |
+| `etherficash:risk:` | a credit-line crossing, `.link`, no price | no |
+| `etherfi:unstake:` | the withdrawal queue, `.link`, no price | no |
+
+A sibling source's `$0.source == source` filter would put the bottom two in
+`allTime` and in the footnote's *"N spends have no readable amount"*. Note the
+second row shares the first's namespace up to the colon — a prefix written one
+segment short (`"etherficash:"`) accepts it, which is why
+`CardSpendSeatTests.etherFiRiskRowIsNotASpend` exists.
+
+**`CardSpendSeat` is the one rule**, read by all three sources and by
+`FeedScreen`'s `.cardSpend` door. The door previously matched `priceCurrency`
+alone — correct only because no unstake row happens to carry a currency today,
+which is a coincidence and not a rule.
+
+**Its logic is in `CasberiTests`, not a `swiftc` harness.** It reads a `Thing`.
+And `compose` filters `things.live` first, where `isLive` is
+`modelContext != nil && !isDeleted` — so a test on bare `Thing()`s hands
+`compose` an empty array, watches it return nil, and passes while proving
+nothing. The tests insert into an in-memory `ModelContainer` and assert
+`allSatisfy(\.isLive)` before composing.
+
+**Two things found next door.** `Corpus.cardSpendSources` had been missing
+MetaMask Card since §857, so *"what did I spend?"* totalled a set with a whole
+card left out; and the demo's ether.fi rows wore `demo:etherfi:<n>`, matching
+neither `PurchaseStage.purchaseRefs` (§368's miss, fixed for its siblings and
+left standing here) nor the spend prefix the new head filters on.
+
+**Unchanged and not re-derivable:** no merchant board (§222's ceiling is this
+seat's too — the merchant never reaches the chain for any of the three cards),
+no refund arithmetic, and no comparison against the ~6-day backfill window.

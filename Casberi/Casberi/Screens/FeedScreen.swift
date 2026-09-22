@@ -6683,8 +6683,16 @@ struct FeedScreen: View {
                         })
                 case .cardSpend(let room, let seat):
                     CardSpendRoomCard(room: room, seat: seat) { currency in
+                        // A currency owns many spends, so the honest landing is
+                        // its most recent one — and it must be a SPEND, asked
+                        // through the same rule the head composed with (prd
+                        // §868). Matching on `priceCurrency` alone was right
+                        // only by coincidence: ether.fi's room also holds
+                        // unstake and risk rows, and none of them happens to
+                        // carry a currency today.
                         openNewest(source: seat, in: visible) { thing in
-                            thing.priceCurrency == currency.code
+                            CardSpendSeat.isSpend(thing, seat: seat)
+                                && thing.priceCurrency == currency.code
                         }
                     }
                 case .privy(let room):
@@ -8850,6 +8858,13 @@ struct FeedScreen: View {
         case MetaMaskCardRoomSource.source:
             return MetaMaskCardRoomSource.compose(things: visible)
                 .map { .cardSpend($0, seat: MetaMaskCardRoomSource.source) }
+        // The third and last onchain card (prd §868). Same head again — what
+        // differs is that this room is SHARED with the staking half of the
+        // seat, so its source declines the unstake and risk rows rather than
+        // counting them as spends it could not price (`CardSpendSeat`).
+        case EtherFiCashRoomSource.source:
+            return EtherFiCashRoomSource.compose(things: visible)
+                .map { .cardSpend($0, seat: EtherFiCashRoomSource.source) }
         case RailgunRoomSource.source:
             return RailgunRoomSource.compose(things: visible).map { .railgun($0) }
         case PrivyHomeFeed.source:

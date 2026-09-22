@@ -384,6 +384,65 @@ grep -q 'CardSpendRoomCard(room: room, seat: seat)' "$FEED" \
   || { echo "✗ the shared card is no longer drawn with its seat — the mark would be wrong"; exit 1; }
 grep -q 'static let source = MetaMaskCardBridge.source' "Casberi/Casberi/Model/MetaMaskCardRoomSource.swift" \
   || { echo "✗ MetaMaskCardRoomSource spells its own source instead of taking the bridge's"; exit 1; }
+
+# --- prd §868 (2026-09-21): the THIRD onchain card, and the room it shares ---
+# ether.fi Cash sat on this shape with no head for seven weeks while its two
+# siblings led with what the card cost. The same silence as above: a room that
+# leads with its newest row looks finished.
+SEAT="Casberi/Casberi/Model/CardSpendSeat.swift"
+SRC_ETHERFI="Casberi/Casberi/Model/EtherFiCashRoomSource.swift"
+for f in "$SEAT" "$SRC_ETHERFI"; do
+  [[ -f "$f" ]] || { echo "✗ $f not found — the ether.fi Cash head is gone (§868)"; exit 1; }
+done
+grep -q 'case EtherFiCashRoomSource.source:' "$FEED" \
+  || { echo "✗ the sourceHead switch no longer claims the ether.fi Cash room (§868)"; exit 1; }
+grep -q 'static let source = EtherFiCash.source' "$SRC_ETHERFI" \
+  || { echo "✗ EtherFiCashRoomSource spells its own source instead of taking the bridge's"; exit 1; }
+
+# THE RULE ITSELF, and the whole reason this seat needed more than a copy.
+# `EtherFiCash.source` is ONE seat covering two products, so its room also holds
+# `EtherFiUnstake`'s queue rows and this seat's risk crossings — both `.link`
+# rows with no price. A bare `$0.source == source` filter (right for the other
+# two seats, and what a third copy would have said) counts them in `allTime` and
+# in the footnote's "spends with no readable amount": a sentence about money
+# describing rows that are not purchases (§83). The rule lives in ONE place so
+# the head and the door under it can never disagree about what a spend is; its
+# LOGIC is proven in `CasberiTests/CardSpendSeatTests.swift`, because it reads a
+# `Thing` and no Foundation-only harness can compile it.
+grep -qF 'EtherFiCash.spendRefPrefix' "$SEAT" \
+  || { echo "✗ CardSpendSeat no longer names the spend namespace — the ether.fi room's unstake and risk rows would count as unpriced spends (§868)"; exit 1; }
+grep -qF 'spendRefPrefix + ' "Casberi/Casberi/Model/EtherFiCash.swift" \
+  || { echo "✗ EtherFiCash builds a spend ref without its own prefix constant — the room's filter and the bridge's writes could drift (§868)"; exit 1; }
+for f in "$SRC_ETHERFI" "$SRC_GNOSIS" "Casberi/Casberi/Model/MetaMaskCardRoomSource.swift"; do
+  grep -qF 'CardSpendSeat.isSpend($0, seat: source)' "$f" \
+    || { echo "✗ $(basename "$f") filters its room by something other than CardSpendSeat.isSpend — two card seats would decide what a spend is apart (§868)"; exit 1; }
+  if grep -qF 'things.live.filter { $0.source == source }' "$f"; then
+    echo "✗ $(basename "$f") still carries a bare source filter — a shared room's non-spend rows would reach the head (§868)"; exit 1
+  fi
+done
+# The DOOR asks the same question the head composed with. It used to match on
+# `priceCurrency` alone, which was right only by coincidence: no unstake row
+# happens to carry a currency today.
+grep -qF 'CardSpendSeat.isSpend(thing, seat: seat)' "$FEED" \
+  || { echo "✗ the card head's door no longer asks CardSpendSeat whether the row is a spend (§868)"; exit 1; }
+
+# The demo pours this room, and its rows must wear the REAL namespace — else
+# the one surface anyone sees without an account shows a card seat with no card.
+# §368's miss, left standing for this seat alone until §868.
+grep -qF 'ref: "etherficash:spend:demo' "$DEMO" \
+  || { echo "✗ the demo's ether.fi rows do not wear the shipped spend ref — the head would compose nothing and the money receipt would skip them (§368, §868)"; exit 1; }
+# Matched as the `ref:` ARGUMENT, never as the bare string: the block's own
+# comment explains what `demo:etherfi:<n>` broke, and a guard that greps for the
+# prose fails on the record of the fix. A guard asserts the USE.
+if grep -qF 'ref: "demo:etherfi:' "$DEMO"; then
+  echo "✗ the demo's ether.fi rows are back on an invented ref shape (§368)"; exit 1
+fi
+
+# MetaMask Card was missing from the money set for a month (§857 landed the
+# seat, §858 its head, neither joined it here) — so "what did I spend?" answered
+# with a total that silently left a card out.
+grep -qF '"MetaMask Card", "ether.fi"' "Casberi/Shared/Thing.swift" \
+  || { echo "✗ Corpus.cardSpendSources no longer holds every onchain card — a spend answer would omit one (§868)"; exit 1; }
 grep -q 'room.tokens.prefix(RailgunRoomSource.rowCap)' "$CARD_RAILGUN" \
   || { echo "✗ the Railgun card no longer honours the token cap"; exit 1; }
 

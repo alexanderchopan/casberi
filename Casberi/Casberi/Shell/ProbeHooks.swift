@@ -1162,6 +1162,22 @@ enum ProbeHooks {
                 NSLog("[Casberi] %@", line)
             }
         },
+        // `-etherfiCashRoomProbe` (prd §868) — the third onchain card's head.
+        // It fetches the WHOLE room rather than the spends, on purpose: the
+        // gap between the two is this seat's own cause of an empty head (the
+        // unstake queue and the risk crossings share this room), and a fetch
+        // that pre-filtered them out could not show it. `probeLines` counts
+        // both. Pair with `-etherfiCashProbe` to land some spends first.
+        Hook(key: "etherfiCashRoomProbe") { _, context in
+            let source = EtherFiCashRoomSource.source
+            var descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == source })
+            descriptor.fetchLimit = 2000
+            let rows = (try? context.fetch(descriptor)) ?? []
+            for line in EtherFiCashRoomSource.probeLines(things: rows) {
+                NSLog("[Casberi] %@", line)
+            }
+        },
         Hook(key: "peerRoomProbe") { _, context in
             let source = PeerRoomSource.source
             var descriptor = FetchDescriptor<Thing>(

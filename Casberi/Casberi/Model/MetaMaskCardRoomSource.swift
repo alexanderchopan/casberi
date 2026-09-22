@@ -38,8 +38,12 @@ enum MetaMaskCardRoomSource {
     @MainActor
     static func compose(things: [Thing] = [], now: Date = .now) -> CardSpendRoom? {
         // Live at the BOUNDARY, before any stored property is read
-        // (corollary 4).
-        let rows = things.live.filter { $0.source == source }
+        // (corollary 4). Through `CardSpendSeat` rather than a bare source
+        // test, so the three card seats and the door under the card decide
+        // what a spend is in one place (prd §868). For this seat it answers
+        // the same thing the bare test did — every row in this room IS a
+        // spend — and that is now stated rather than assumed.
+        let rows = things.live.filter { CardSpendSeat.isSpend($0, seat: source) }
         guard !rows.isEmpty else { return nil }
         let room = CardSpendRoom.compose(spends: rows.map(sighting), now: now)
         return room.isEmpty ? nil : room
@@ -91,7 +95,7 @@ enum MetaMaskCardRoomSource {
     ///      spend from every total with nothing on screen to say so.
     @MainActor
     static func probeLines(things: [Thing], now: Date = .now) -> [String] {
-        let rows = things.live.filter { $0.source == source }
+        let rows = things.live.filter { CardSpendSeat.isSpend($0, seat: source) }
         let sightings = rows.map(sighting)
         var out: [String] = [
             "metamaskCardRoom| source=\(source) handed=\(things.count) mmRows=\(rows.count)"

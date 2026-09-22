@@ -87,9 +87,10 @@ for f in StripeRoomSource PolarRoomSource WalletbeatRoomSource L2beatRoomSource 
   grep -qE 'static let rowCap = 8\b' "Casberi/Casberi/Model/$f.swift" \
     || { echo "✗ $f.rowCap is not DSRoomChassis.headRowCap (8) — a head is handed a different number of rows than the fit can choose from (§751, §760)"; exit 1; }
 done
-# The onchain card head is shared (prd §858): the literal lives on CardSpendRoom,
-# and each seat's source must take it from there rather than spell its own.
-for f in GnosisPayRoomSource MetaMaskCardRoomSource; do
+# The onchain card head is shared (prd §858, and all three seats since §868):
+# the literal lives on CardSpendRoom, and each seat's source must take it from
+# there rather than spell its own.
+for f in GnosisPayRoomSource MetaMaskCardRoomSource EtherFiCashRoomSource; do
   grep -qE 'static let rowCap = CardSpendRoom\.rowCap\b' "Casberi/Casberi/Model/$f.swift" \
     || { echo "✗ $f.rowCap is not CardSpendRoom.rowCap — a card seat's head is capped apart from the shared one (§858, §760)"; exit 1; }
 done

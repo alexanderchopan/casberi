@@ -1335,8 +1335,20 @@ enum KeptAskComposers {
                 : String(localized: "\(inbound.count) in through Peer, via \(rails.joined(separator: " and "))"))
         }
         if !cards.isEmpty {
-            // One currency only — see `FeedInsight.cardMonths` for why.
-            let currency = cards.first?.priceCurrency
+            // One currency only — see `FeedInsight.cardMonths` for why. Taken
+            // from the whole set rather than from `cards.first`, which is an
+            // arbitrary row in corpus order (prd §868): a card may land a
+            // spend carrying NO price at all — MetaMask Card's WETH does, on
+            // purpose, since the chain has no price at the moment of the swipe
+            // (prd §857) — and drawing the currency from that row made the
+            // total sum a set of rows that all had nil amounts, i.e. zero,
+            // which `PriceFormat` then declined and the count line covered.
+            // Nothing failed; the flow just quietly stopped stating money.
+            // And when the cards really do span several currencies there is no
+            // one total to state, so this yields to the count rather than
+            // labelling one currency's sum "out on cards".
+            let codes = Set(cards.compactMap(\.priceCurrency))
+            let currency = codes.count == 1 ? codes.first : nil
             // Refunds SUBTRACT. Neither onchain card seat lands one (Gnosis
             // Pay's refunds settle off-chain, which its own copy states), so
             // this line summed raw amounts safely for as long as those two

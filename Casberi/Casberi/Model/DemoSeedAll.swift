@@ -3721,13 +3721,20 @@ enum DemoSeedAll {
     /// than a live requirement: these rows were shaped for
     /// `FeedInsight.cardMonths`, a spend-by-month leaderboard that was deleted
     /// with the rest of the ranked boards ("we were trying to add
-    /// visualization data just for the sake of it"). Gnosis Pay's own head
-    /// superseded it and survives; ether.fi Cash and MetaMask Card have no
-    /// head at all and lead with their newest thing.
+    /// visualization data just for the sake of it").
     ///
-    /// The spread is kept because a card feed that all lands in one month
+    /// **The spread is a live requirement again, for all three (prd §868).**
+    /// Gnosis Pay's own head superseded that board and survives; MetaMask Card
+    /// joined it in §858 and ether.fi Cash in §868, so every one of these
+    /// seats now leads with `CardSpendRoom`'s head — whose history strip draws
+    /// nothing below TWO calendar months, deliberately, because a one-column
+    /// history is not a history. A demo whose spends all landed in one month
+    /// would show three heads with the strip silently missing, which reads as
+    /// an unbuilt feature rather than as a young room.
+    ///
+    /// It also still reads better: a card feed that all lands in one month
     /// reads as a burst rather than a habit, which is the wrong impression of
-    /// what this seat is for — not because anything still ranks it.
+    /// what these seats are for.
     ///
     /// **MetaMask Card's rows name NO MERCHANT, and that is the seat's own
     /// ceiling shown rather than papered over (prd §857).** Its two siblings
@@ -3788,16 +3795,42 @@ enum DemoSeedAll {
                 t.walletAddress = demoWallet
             }
         }
-        let etherfi: [(String, Double, Double)] = [
-            ("Coffee", 4.20, 2), ("Hardware store", 88.10, 12), ("Groceries", 39.60, 27),
-            ("Coffee", 4.20, 35), ("Cinema", 17.00, 52),
+        // ether.fi Cash, read exactly as the shipped bridge writes it — the
+        // same correction MetaMask Card's rows above carry, applied to the
+        // seat that still had the inherited liberty (prd §868). The merchant
+        // is not on the chain for any of the three cards, so a demo row
+        // titled "Coffee · $4.20" advertised a statement this app cannot
+        // produce, in the one surface anyone can see without an account.
+        //
+        // **The ref is the REAL namespace now, and that was load-bearing
+        // twice.** `demo:etherfi:<n>` matched neither
+        // `PurchaseStage.purchaseRefs` — so every seeded row fell past the
+        // money receipt and kept the generic sheet, §368's miss left standing
+        // for this one seat — nor `EtherFiCash.spendRefPrefix`, which is how
+        // `EtherFiCashRoomSource` tells a card spend from the unstake and risk
+        // rows sharing this room, so the demo would have shown no head at all.
+        //
+        // One row is on CREDIT: this seat is the only card that can borrow to
+        // pay, the bridge says which in the title, and a demo of five debits
+        // would leave the feature's own sentence undrawn.
+        let etherfi: [(Double, Double, Bool)] = [
+            (4.20, 2, false), (88.10, 12, true), (39.60, 27, false),
+            (4.20, 35, false), (17.00, 52, false),
         ]
         out += etherfi.enumerated().map { i, e in
-            row(.transaction, "\(e.0) · $\(String(format: "%.2f", e.1))",
-                source: "ether.fi", ref: "demo:etherfi:\(i)", days: e.2, hour: 16,
-                content: "ether.fi Cash") { t in
-                t.priceValue = e.1
+            let money = "$\(String(format: "%.2f", e.0))"
+            return row(.transaction,
+                       e.2 ? "Spent \(money) with ether.fi Cash — on credit"
+                           : "Spent \(money) with ether.fi Cash",
+                       // A STRING LITERAL for `demo-parity-audit.py`'s sake,
+                       // exactly as MetaMask Card's rows above explain.
+                       source: "ether.fi",
+                       ref: "etherficash:spend:demo\(i)", days: e.1, hour: 16,
+                       content: "USD · Optimism") { t in
+                t.priceValue = e.0
                 t.priceCurrency = "USD"
+                t.transferAmount = money
+                t.transferDirection = "sent"
                 t.walletAddress = demoWallet
             }
         }

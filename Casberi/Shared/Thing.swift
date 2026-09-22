@@ -379,7 +379,17 @@ enum Corpus {
     /// takings into "what did I spend?" would answer that question with the
     /// opposite sign. A revenue seat's own figure belongs on its own room head
     /// (`DodoPaymentsRoom`), never in this set.
-    static let cardSpendSources: Set<String> = ["Apple Wallet", "Gnosis Pay", "ether.fi"]
+    /// **MetaMask Card was MISSING until 2026-09-21 (prd §868)** — §857 landed
+    /// the seat, §858 gave it the shared room head, and neither joined it here.
+    /// It passes the data test above outright (`.transaction` rows carrying a
+    /// real `priceValue` and `priceCurrency`), so its absence was an omission
+    /// rather than one of the reasoned exclusions below, and it failed the way
+    /// this whole set exists to prevent: "what did I spend?" answered with a
+    /// total that silently left a card out, and a money-flow card leg that did
+    /// the same. Found while giving ether.fi Cash the same head — the third
+    /// seat was in the set and the second was not.
+    static let cardSpendSources: Set<String> =
+        ["Apple Wallet", "Gnosis Pay", "MetaMask Card", "ether.fi"]
 
     /// The stable ref of a source's import receipt. Stable ON PURPOSE: a
     /// second import must UPDATE the one receipt rather than stack another,
