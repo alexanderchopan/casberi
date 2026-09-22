@@ -1080,3 +1080,50 @@ at other sheet sites outside the shell (`ThingSheetView` from
 `ThingSheetView`, `FollowImportSheet` from `SocialPostViews`). None was
 reproduced in that pass. The general form wants a static audit pairing those
 two facts, which is the rule prd §872 states.
+
+## One simulator, by udid (`scripts/sim-device.py`, 2026-09-21)
+
+**A ship verify died at second 30**, in `xcodebuild`, before any check had run:
+
+```
+xcodebuild: error: Unable to find a device matching the provided destination specifier:
+    { platform:iOS Simulator, OS:latest, name:iPhone 17 Pro }
+  The requested device could not be found because multiple devices matched the request. (
+    SimDevice: Casberi Shots 27 (iOS 27.0)
+    SimDevice: Casberi AI Seat (iOS 27.0)
+  )
+```
+
+`verify.sh` built with `-destination "platform=iOS Simulator,name=$DEVICE"` and **no OS**, so xcodebuild resolved against the LATEST runtime and matched by **device type**. Two simulators whose type is iPhone 17 Pro but whose names are custom lived on iOS 27.0; the plainly-named `iPhone 17 Pro` existed only on 26.5, which xcodebuild never looked at. It found two and refused.
+
+**The workaround that unblocked the ship was additive** — `xcrun simctl create "iPhone 17 Pro" …iPhone-17-Pro …iOS-27-0` — and that is precisely the defect, not the fix: the pass then depends on which simulators happen to exist on the machine. It is CLAUDE.md's recorded `booted`-is-ambiguous class ("Pin the udid on every call") one layer up, at the step that had never obeyed it.
+
+**And the `simctl` half was already broken and unnoticed.** Two devices carry the exact name `iPhone 17 Pro` (26.5 and 27.0), so all ~60 of `verify.sh`'s `xcrun simctl … "$DEVICE"` calls — boot, install, launch, screenshot, `log stream` — were picking one by a rule written down nowhere. A screen sweep could have run on a different runtime than the build targeted, and nothing would have said so.
+
+**So both passes resolve a UDID once and pass `id=<udid>` everywhere.** An id is exact: no device-type matching, no runtime guessing, and a sibling simulator a concurrent session creates on any runtime cannot touch it. `$DEVICE` survives only as prose in a step line.
+
+**The runtime FOLLOWS LATEST, with a lever.** Pinning `OS=26.5` — which CLAUDE.md's old "iOS 26 runtime" line would suggest — buys determinism the wrong way round: the pass stops seeing the newest OS the app ships onto, and hard-fails the day Xcode drops that runtime, putting a doc edit between a machine and a green pass. So it picks the **newest runtime carrying a device of the exact name**, PRINTS which one it chose on every run, and takes `VERIFY_SIM_OS=26.5` when a ship wants the older one nailed down. Determinism comes from the udid and from saying the runtime out loud, not from freezing the number. `VERIFY_SIM_UDID` pins the device outright; `VERIFY_SIM_NAME` / `VERIFY_SIM_TYPE` change what is looked for.
+
+**Matching is by exact name, never by device type** — that is the whole fix. `Casberi Shots 27` is an iPhone 17 Pro and is none of this pass's business.
+
+**The guard.** Two devices with the same exact name on the SAME runtime is a genuine ambiguity no rule can break, so it is reported as one — every candidate with its udid and runtime, three lines — instead of a 40-line destination dump:
+
+```
+✗ two simulators match the destination — the pass cannot pick one for you.
+  'iPhone 17 Pro' exists more than once on the same runtime:
+  116C2657-…  iPhone 17 Pro  (iOS 27.0)
+  2AD9E0EA-…  iPhone 17 Pro  (iOS 27.0)
+  Rename or delete one (it may be another session's), or pin this run with VERIFY_SIM_UDID=<udid>.
+```
+
+The same-name-**different**-runtime case is not an error (the newest wins) but it is printed — `(ignoring the same name on iOS 26.5)` — because a stale twin is exactly what makes a later "but it worked yesterday" unreadable.
+
+**It creates the device if absent**, on the newest runtime offering the type, so a fresh machine and a machine whose runtime just moved both work with no hand step: the same `simctl create` that unblocked the ship, run by the pass instead of by a person. **It never deletes anything** — concurrent sessions own simulators here.
+
+**Where it runs.** `verify.sh` resolves at second 0, before the DerivedData sweep and the audits, because an ambiguity you cannot resolve should cost a second rather than a build. `perf.sh` resolves the same way and treats failure as fatal (it runs `set -uo pipefail`, no `-e`, so the check is by hand) — a perf number measured on the wrong runtime is worse than no number. `verify-mac.sh` needs none of this: its only destination is `platform=macOS,variant=Mac Catalyst`, which names no simulator.
+
+**Its `--self-test` runs inline at the resolution point, not in the harness list** — the harness phase invokes scripts BARE, and a bare run of this one resolves and may create a real device. Ten checks over fixtures, ~40ms: the 2026-09-21 census verbatim (the 27.0 device wins, the custom-named siblings are invisible), the pre-workaround census (26.5 only → the 26.5 device, not a failure), same-name-same-runtime raising rather than picking, the pin overriding latest and a pin with no device failing rather than falling back, an unavailable device skipped, non-iOS runtimes ignored, numeric version ordering (26.10 > 26.5, `iOS-27` < `iOS-27-1`), every pin spelling, and exact-name matching refusing `iPhone 17 Pro Max`.
+
+**Eleven mutations, all caught** — and the eleventh is why check 9 asserts two versions: a `normalize_pin` returning the constant `(26, 5)` for every input survived the first draft, because every asserted pin value was 26.5.
+
+**What it deliberately does not check.** That the device BOOTS, or that the runtime is installed correctly — a resolvable destination is not a working one. Which device is `booted`: that question is gone, because every caller passes a udid. Non-iOS runtimes at all.

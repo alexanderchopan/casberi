@@ -37,7 +37,7 @@ From the canonical `~/Developer/casberi` copy, a plain build codesigns cleanly �
 
 ```sh
 xcodebuild -project Casberi/Casberi.xcodeproj -scheme Casberi \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+  -destination "id=$(scripts/sim-device.py)" build
 ```
 
 Or just run `scripts/verify.sh` (build + install + screen sweep + answer probe).
@@ -144,7 +144,7 @@ deliberately does not check are in `docs/verify.md`.
 - **The Mac nightly was red on ELEVEN of the last TWELVE nights, and every one resolves green on today's tree** → docs/verify.md
 - **Mac nightly (scripts/nightly-mac.sh + scripts/com.casberi.nightly-mac.plist)** → docs/verify.md
 
-- Test device: **iPhone 17 Pro** simulator, iOS 26 runtime.
+- Test device: **iPhone 17 Pro** sim, BY UDID — `scripts/sim-device.py`, never `name=` → docs/verify.md
 - FoundationModels (on-device LLM) is iOS 26-only at **runtime** — `#if canImport` is not enough, use `if #available(iOS 26.0, *)`. `@Generable` schema types MUST be file-scope (nesting one in a private enum emits broken keypaths → heap corruption crashing on unrelated threads).
 - **There IS a test target, `CasberiTests`, and `verify.sh` runs it.** It is the pass's only door to `@testable import`: every `swiftc` harness in `scripts/` compiles Foundation-only files against stubs, so anything needing a real `ModelContext` belongs in this target → docs/verify.md
 - **Schema versioning (RULE):** `Casberi/Shared/ThingSchemaVersioning.swift`. An additive `Thing` change (a new optional property or attribute) needs nothing. A breaking change (rename, type change, removed property) needs a new `ThingSchemaVN` and a `.lightweight` stage; CloudKit supports lightweight migration only, so anything else is a new field plus a backfill. `SharedStore.containerWithFallback()` is a safety net, not a substitute.
