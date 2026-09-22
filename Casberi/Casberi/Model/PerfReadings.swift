@@ -162,7 +162,11 @@ enum PerfReadings {
         switch span {
         case "Launch": return "Open → first screen"
         case "LaunchStore": return "  of which: store opened"
-        case "ChipsWalk": return "  of which: source strip resolved"
+        // Not "of which": since 2026-09-08 the walk runs on a `ModelActor`
+        // and the first frame paints from `ChipOrderCache`, so it is no part of
+        // open → first screen (the phone showed a 2.9s walk beside a 779ms
+        // worst launch).
+        case "ChipsWalk": return "Source strip walk (off main)"
         case "ForegroundSweep": return "Foreground sweep"
         case "AskFirstPaint": return "Ask → first paint"
         case "AskSettled": return "Ask → settled"

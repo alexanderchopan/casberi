@@ -1233,7 +1233,10 @@ struct MainSurface: View {
             }
             let walkT0 = Date()
             guard let walk = await ChipWalker.walk(seeds: seeds) else { return }
-            PerfReadings.record("ChipsWalk", ms: Date().timeIntervalSince(walkT0) * 1000)
+            // Recorded for a FREEZE only — launch and foreground, one per
+            // event, the reading's contract. The debounced refreshes ride a
+            // bridge burst's saves and are not the same measurement.
+            if freeze { PerfReadings.record("ChipsWalk", ms: Date().timeIntervalSince(walkT0) * 1000) }
             await FirstPaint.painted()
             // Drop a result OLDER than the last one applied — never one merely
             // older than the last one REQUESTED. The first cut did the latter,

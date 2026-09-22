@@ -60125,3 +60125,45 @@ Verified on the simulator's widget gallery at all three Home Screen sizes, over
 the seeded corpus: late dentist, the Safe signature, a GitHub assignment with
 its real title, a like roll, Calendar rows with their badge. The Lock Screen
 families compile and are unseen, as they were before (§382).
+
+## §878 — The phone's perf readout, read: launch is solved, and three of its instruments were lying (2026-09-22)
+
+**The reading.** Diagnostics on the user's iPhone 17 Pro, build 654, iOS 27.0:
+**open → first screen 310ms median, worst 779ms, over 20 launches**, down from
+§628's 1,311ms. Store open 36ms. Launch is no longer the cost, and P5.4 (the
+chunked launch walks, `df49fc1c`, 2026-09-01) had already shipped before
+§628's number was taken, so it was never the pending fix it was described as.
+
+**Three instruments were wrong, and each fix is to the instrument.**
+
+- **`SweepClock`'s "worst stall" read 679.8s.** Its heartbeat slept across the
+  app going to the background and woke eleven minutes later. Both clocks keep
+  running while a process is suspended, so no clock choice fixes it: a sample
+  that spans `willResignActive` is now dropped, not clamped.
+- **`HitchMeter` kept one tally for the display link's life**, reset only when
+  the link started. A gesture that began while another was open reported the
+  running total since the first: a 516ms tap with "1,536 frames" (120Hz gives
+  ~62), and one 518ms worst frame on every tap, dock and swipe line under a
+  16.7s dock gesture. Each open gesture now keeps its own tally. **Every hitch
+  number recorded before this build is suspect**, including the 1,454ms scroll
+  frame — re-read the phone before aiming a scroll pass.
+- **"of which: source strip resolved" was not "of which".** Since 2026-09-08
+  the walk runs on a `ModelActor` and the first frame paints from
+  `ChipOrderCache`; the phone showed a 2.9s walk beside a 779ms worst launch.
+  Relabelled `Source strip walk (off main)`, and recorded for a freeze only,
+  because the debounced refreshes are a different measurement.
+
+**The one real cost it named: `feeds.articleText`**, the slot most stalls were
+charged to (~600ms worst per sweep — concurrent-with, never caused-by, but it
+was real main-thread work). It ran four predicated fetches on the MAIN context
+on every foreground, fully materialising every recent feed row with no body —
+and a row whose summary is already substance (`thinSummary`) keeps
+`enrichedText` nil forever, so the same rows were hydrated to be thrown away
+every time. The scan is now `ArticleScout`, a `@ModelActor` (§617's shape,
+`ChipWalker`'s precedent) handing back refs, URLs and sources; the main actor
+re-finds each row by indexed `sourceRef` after its fetch and waits for
+`GestureGate.idle()` before the save. Same rule, same order, same bound.
+
+**Not touched, and why:** the 19 Sep FoundationModels trap (1.0.30, iOS 27) is
+all system frames and cannot be symbolicated here; the scroll hitch waits on a
+reading from a meter that tells the truth.

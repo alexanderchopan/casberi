@@ -132,7 +132,7 @@ PY
     echo "  screen under a bridge they may not have connected"
     return 1
   fi
-  grep -q 'return (ref, url, thing.source)' "$nc" || {
+  grep -qF 'Candidate(ref: ref, url: url, service: thing.source)' "$nc" || {
     echo "✗ ${label}: the sweep no longer carries each row's own source into"
     echo "  the fetch loop"; return 1; }
   return 0
@@ -535,8 +535,8 @@ mutate_article "YouTube back in the source list" \
 
 # 11. The receipts label back to a fallback, which mislabels a bookmark's host.
 mutate_article "the receipts label back to a fallback" \
-  'return (ref, url, thing.source)' \
-  'return (ref, url, "RSS")'
+  'Candidate(ref: ref, url: url, service: thing.source)' \
+  'Candidate(ref: ref, url: url, service: "RSS")'
 
 echo
 echo "✓ readable-body self-test: assertions and mutations all passed"

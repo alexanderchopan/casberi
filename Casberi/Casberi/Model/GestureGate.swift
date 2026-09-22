@@ -95,9 +95,15 @@ final class HitchMeter: NSObject {
     private var link: CADisplayLink?
     private var open: [Kind: Date] = [:]
     private var lastTimestamp: CFTimeInterval?
-    private var worst: Double = 0
-    private var hitches = 0
-    private var frames = 0
+    /// One tally PER OPEN GESTURE, started at its own `begin` (2026-09-22).
+    /// The meter kept one tally for the link's whole life, reset only when the
+    /// link started — so a gesture that began while another was open reported
+    /// the running total since the FIRST one. The phone's Diagnostics showed
+    /// it: a 516ms tap with "1,536 frames" (120Hz gives ~62), and one 518ms
+    /// "worst frame" repeated across every tap, dock and swipe line, because a
+    /// 16.7s dock gesture was open under all of them.
+    private struct Tally { var worst: Double = 0; var hitches = 0; var frames = 0 }
+    private var tallies: [Kind: Tally] = [:]
     private let signposter = OSSignposter(subsystem: "com.casberi.app", category: "Gestures")
     private var states: [Kind: OSSignpostIntervalState] = [:]
 
@@ -110,14 +116,17 @@ final class HitchMeter: NSObject {
     func begin(_ kind: Kind) {
         guard open[kind] == nil else { return }
         open[kind] = Date()
+        tallies[kind] = Tally()
         states[kind] = signposter.beginInterval("Gesture", id: signposter.makeSignpostID(), "\(kind.rawValue)")
         if link == nil { start() }
     }
 
     func end(_ kind: Kind) {
         guard let began = open.removeValue(forKey: kind) else { return }
+        let t = tallies.removeValue(forKey: kind) ?? Tally()
+        let (worst, hitches, frames) = (t.worst, t.hitches, t.frames)
         if let state = states.removeValue(forKey: kind) {
-            signposter.endInterval("Gesture", state, "worst \(Int(self.worst))ms hitches \(self.hitches)")
+            signposter.endInterval("Gesture", state, "worst \(Int(worst))ms hitches \(hitches)")
         }
         let sample = Sample(kind: kind, at: began,
                             durationMs: Date().timeIntervalSince(began) * 1000,
@@ -178,7 +187,7 @@ final class HitchMeter: NSObject {
     }
 
     private func start() {
-        lastTimestamp = nil; worst = 0; hitches = 0; frames = 0
+        lastTimestamp = nil
         let l = CADisplayLink(target: self, selector: #selector(tick(_:)))
         l.preferredFrameRateRange = CAFrameRateRange(minimum: 80, maximum: 120, preferred: 120)
         l.add(to: .main, forMode: .common)
@@ -197,8 +206,11 @@ final class HitchMeter: NSObject {
         // The budget is the link's own frame, so a 60Hz fallback is judged at
         // 16.7ms and a 120Hz frame at 8.3ms — a missed frame is a missed frame.
         let budget = l.duration * 1000
-        frames += 1
-        if delta > budget * 1.5 { hitches += 1 }
-        if delta > worst { worst = delta }
+        let missed = delta > budget * 1.5
+        for kind in tallies.keys {
+            tallies[kind]!.frames += 1
+            if missed { tallies[kind]!.hitches += 1 }
+            if delta > tallies[kind]!.worst { tallies[kind]!.worst = delta }
+        }
     }
 }

@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Where a FOREGROUND SWEEP's time goes — the class `perf.sh` structurally
 /// cannot see (2026-08-06).
@@ -185,14 +188,42 @@ enum SweepClock {
     /// running for the life of the process.
     private static let passCeiling = Duration.seconds(90)
 
+    /// Bumped every time the app resigns active. A heartbeat that slept
+    /// across one did not measure a stall — it measured the app being away.
+    /// The phone's own Diagnostics recorded a "worst stall" of **679.8s**
+    /// (build 654, 2026-09-22): a pass that was open when the app went to the
+    /// background, and a sleep that woke eleven minutes later on return. Both
+    /// clocks keep running while a process is suspended, so no choice of clock
+    /// fixes this; only knowing the app left does.
+    private static var departures = 0
+    private static var watchingLifecycle = false
+
+    private static func watchLifecycle() {
+        guard !watchingLifecycle else { return }
+        watchingLifecycle = true
+        #if canImport(UIKit)
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.willResignActiveNotification,
+            object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated { departures &+= 1 }
+        }
+        #endif
+    }
+
     private static func startMonitor() {
+        watchLifecycle()
         monitor?.cancel()
         monitor = Task { @MainActor in
             let began = ContinuousClock.now
             while !Task.isCancelled {
                 let t0 = ContinuousClock.now
+                let epoch = departures
                 try? await Task.sleep(for: tick)
                 if Task.isCancelled { return }
+                // Slept across a departure: the lateness is time away, not a
+                // stall. Dropped, not clamped — no part of it is a reading.
+                if departures != epoch { continue }
                 let lateMs = ms((ContinuousClock.now - t0) - tick)
                 if lateMs >= hitchFloorMs {
                     hitches += 1

@@ -172,6 +172,16 @@ enum FeedArticleText {
         !((thing.enrichedText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 
+    /// The one live row carrying `ref` that still has no body, on `context`.
+    @MainActor
+    private static func liveRow(ref: String, context: ModelContext) -> Thing? {
+        var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> {
+            $0.sourceRef == ref && $0.enrichedText == nil
+        })
+        d.fetchLimit = 4
+        return ((try? context.fetch(d)) ?? []).first { $0.isLive && sources.contains($0.source) }
+    }
+
     // MARK: - The ledger
 
     private static func ledger() -> [String: Int] {
@@ -296,56 +306,28 @@ enum FeedArticleText {
         // again, so the whole cost of losing an entry is one extra attempt on
         // a later foreground — and the tap deliberately does not read it.
         var attempts = ledger()
-        let cutoff = Date.now.addingTimeInterval(-window)
-        // One fetch per source rather than one over the whole recent corpus:
-        // the source is a plain string column with a predicate that pushes
-        // down to SQL, where `sources.contains(…)` would drag every recent
-        // note, screenshot and transfer into memory to throw nearly all of
-        // them away.
-        var rows: [Thing] = []
-        for source in sources.sorted() {
-            let descriptor = FetchDescriptor<Thing>(
-                predicate: #Predicate<Thing> {
-                    $0.source == source && $0.enrichedText == nil && $0.capturedAt > cutoff
-                },
-                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-            // `.live` at the boundary (CLAUDE.md corollary 4) — this array is
-            // held across every await below, and a foreground heal deletes
-            // under it.
-            rows.append(contentsOf: ((try? context.fetch(descriptor)) ?? []).filter(\.isLive))
-        }
-        rows.sort { $0.capturedAt > $1.capturedAt }
-
-        // Keyed by REF, not by row: a CloudKit merge or a re-follow can hand
-        // the same article a new `Thing`, and re-fetching a publisher's page
-        // for a story we already read is exactly what the ledger prevents.
-        let pending = rows.compactMap { thing -> (ref: String, url: URL, service: String)? in
-            // `readableURL` is the shared rule (2026-08-23) — see its doc for
-            // why the tap and this pass must agree on WHAT is readable while
-            // disagreeing about when. The ledger check stays here: it is the
-            // one bound that is this pass's alone, since a person's tap is not
-            // a robot re-asking.
-            guard let ref = thing.sourceRef,
-                  (attempts[ref] ?? 0) < maxAttempts,
-                  let url = readableURL(for: thing)
-            else { return nil }
-            // The SOURCE travels with the row, read here while it is certainly
-            // live (prd §645 pass 5 item 4). It named the service for the
-            // receipts screen by re-finding the row after the fetch, falling
-            // back to "RSS" when it had been deleted — harmless while every
-            // member of `sources` was a feed, and a WRONG DISCLOSURE now that
-            // a bookmark is one: a reach to somebody's saved page filed under
-            // a bridge they may not even have connected.
-            return (ref, url, thing.source)
-        }
+        // The SCAN runs off the main thread (PERF 2026-09-22, the phone's own
+        // Diagnostics: "most in feeds.articleText", ~600ms worst stall per
+        // sweep). It was four predicated fetches on the main context, every
+        // recent feed row with no body, fully materialised — and a row whose
+        // summary is already substance (`thinSummary`) keeps `enrichedText`
+        // nil for good, so the same few hundred rows were hydrated on main on
+        // every foreground to be thrown away by `readableURL`. `ArticleScout`
+        // is a `@ModelActor` (the `ChipWalker` shape, prd §617: never the
+        // main context off main) and hands back plain values.
+        guard let candidates = await ArticleScout.scan(window: window) else { return report }
+        let pending = candidates.filter { (attempts[$0.ref] ?? 0) < maxAttempts }
         report.considered = pending.count
         var failRun = 0
 
-        for (ref, url, service) in pending.prefix(limit ?? perPass) {
+        for candidate in pending.prefix(limit ?? perPass) {
+            let (ref, url, service) = (candidate.ref, candidate.url, candidate.service)
             let body = await LinkTitle.fetchReadable(url, as: service)
-            // Up to eight seconds passed. The row is re-found by ref rather
-            // than held across the suspension (CLAUDE.md corollary 6).
-            guard let thing = rows.first(where: { $0.isLive && $0.sourceRef == ref }) else { continue }
+            // Up to eight seconds passed. The row is re-found by ref on the
+            // main context — never held across the suspension (CLAUDE.md
+            // corollary 6), and nothing model-shaped crossed from the scout.
+            // `sourceRef` is indexed (perf-spec P5.1), so this is one row.
+            guard let thing = liveRow(ref: ref, context: context) else { continue }
             guard let body, !body.isEmpty else {
                 report.failed += 1
                 failRun += 1
@@ -375,9 +357,65 @@ enum FeedArticleText {
         }
 
         if report.enriched > 0 {
+            // A save re-runs every mounted `@Query`; not under a moving finger.
+            await GestureGate.idle()
             context.saveHonestly()
         }
         writeLedger(attempts)
         return report
+    }
+}
+
+/// `FeedArticleText.sweep`'s store read, off the main thread (PERF 2026-09-22).
+///
+/// Same fetch, same rule, same order as the main-context walk it replaces —
+/// one predicated read per source, newest first, `readableURL` deciding — but
+/// on its own context against the shared container, so materialising a few
+/// hundred feed rows costs the main thread nothing. Only names and URLs cross
+/// back. The ledger stays with the caller: it is `UserDefaults`, and the
+/// attempt count is the caller's to read and write in one place.
+@ModelActor
+actor ArticleScout {
+    struct Candidate: Sendable {
+        let ref: String
+        let url: URL
+        let service: String
+    }
+
+    static func scan(window: TimeInterval) async -> [Candidate]? {
+        guard let container = SharedStore.live else { return nil }
+        return await ArticleScout(modelContainer: container).perform(window: window)
+    }
+
+    private func perform(window: TimeInterval) -> [Candidate] {
+        let cutoff = Date.now.addingTimeInterval(-window)
+        var rows: [(at: Date, candidate: Candidate)] = []
+        // One fetch per source rather than one over the whole recent corpus:
+        // the source is a plain string column with a predicate that pushes
+        // down to SQL, where `sources.contains(…)` would drag every recent
+        // note, screenshot and transfer into memory to throw nearly all of
+        // them away.
+        for source in FeedArticleText.sources.sorted() {
+            let descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate<Thing> {
+                    $0.source == source && $0.enrichedText == nil && $0.capturedAt > cutoff
+                },
+                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            for thing in (try? modelContext.fetch(descriptor)) ?? [] where thing.isLive {
+                // `readableURL` is the shared rule (2026-08-23) — see its doc
+                // for why the tap and this pass must agree on WHAT is readable
+                // while disagreeing about when.
+                //
+                // The SOURCE travels with the row, read here while it is
+                // certainly live (prd §645 pass 5 item 4): it names the service
+                // on the receipts screen, and a reach to somebody's saved page
+                // filed under a bridge they never connected is a WRONG
+                // DISCLOSURE.
+                guard let ref = thing.sourceRef,
+                      let url = FeedArticleText.readableURL(for: thing) else { continue }
+                rows.append((thing.capturedAt, Candidate(ref: ref, url: url, service: thing.source)))
+            }
+        }
+        return rows.sorted { $0.at > $1.at }.map(\.candidate)
     }
 }
