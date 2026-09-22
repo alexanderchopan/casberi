@@ -60258,3 +60258,20 @@ scan's cost is off main, but its size is not read anywhere); whether 12
 screenshot names a pass is felt on an Apple Intelligence phone. The cover's
 new case could not be drawn on the demo, whose live Twitch hero takes the one
 cover slot by rule (§591b) — its logic is in the tests above.
+
+## §880 — "Since you left" wears the primary ink; the days inside it keep the pink (user, 2026-09-22)
+
+§879 put day names inside the away section, and the section's own header sat
+directly above "Today" in the same pink at nearly the same weight: two brand
+lines stacked, neither the frame. The user asked whether the header should be
+white. Yes, and it is the rule the app already had: the pink names a DATE
+(§740, §742), and a group named by something other than time takes
+`dated: false` and the primary ramp — the rooms' named groups have done so
+since §740. "Since you left" names a span measured from you, not a day.
+
+`FeedDayDivider` gains `daySection`'s `dated: Bool = true` and the one caller
+passes `label != momentLabel`. Size and weight are unchanged, so the section
+still leads; a short absence with no day names inside shows its first pink at
+"Earlier today", which is the first place a date is named. The seam still
+ticks as it passes (§866) — it is a boundary in time even though it is not a
+date. Checked on the simulator in both themes; `day-divider-audit.py` clean.

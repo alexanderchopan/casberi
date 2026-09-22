@@ -7970,7 +7970,8 @@ struct FeedScreen: View {
                 // THE CLAUSE RIDES THE NAME'S BASELINE when it fits (prd §767),
                 // the shape a room's divider already had with its count.
                 FeedDayDivider(label: label,
-                               weight: coarse.contains(label) ? .semibold : .bold) {
+                               weight: coarse.contains(label) ? .semibold : .bold,
+                               dated: label != Self.momentLabel) {
                     // What the group was mostly about (prd §379) — coarse
                     // groups only, and only when a term actually recurs, so
                     // the recent days keep their bare date and nothing is

@@ -23,6 +23,11 @@ import SwiftUI
 struct FeedDayDivider<Clause: View>: View {
     let label: String
     var weight: Font.Weight = .bold
+    /// Whether the label names a DATE (prd §740). "Since you left" names a
+    /// span measured from you, not a day, so it wears the primary ink and the
+    /// day names inside it keep the pink (prd §880) — `daySection`'s own
+    /// `dated:` rule, the one the rooms' named groups already follow.
+    var dated: Bool = true
     @ViewBuilder var clause: Clause
 
     /// The seam this divider IS, felt as it passes (prd §866) — see
@@ -63,6 +68,6 @@ struct FeedDayDivider<Clause: View>: View {
         Text(label)
             .dsText(.heading24)
             .fontWeight(weight)
-            .foregroundStyle(DS.brandInk)
+            .foregroundStyle(dated ? DS.brandInk : DS.textPrimary)
     }
 }
