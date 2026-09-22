@@ -284,5 +284,12 @@ echo "$floor" | grep -q '7 \* 86_400' \
   || { echo "✗ the floor's age minimum is gone (prd §218) — 'this is where it starts · today'"; exit 1; }
 echo "$floor" | grep -q 'filter(\\.isLive)' \
   || { echo "✗ the floor reads capturedAt off a derived array without an isLive filter (the build-150 class)"; exit 1; }
+# NOT OVER A `Show older` DOOR (prd §866a). The window draws 30 rows and a door
+# to the rest, and this section renders below that door — so without the gate
+# the feed claims a start date under a button holding the other 122 days, with
+# the app's mark drawn over it. `olderRow`'s own doc already states the rule for
+# `caughtUpFooter`; this is the same claim at the other end of the feed.
+echo "$floor" | grep -q '!memo.windowHasMore' \
+  || { echo "✗ the floor draws while 'Show older' is on screen — 'this is where it starts' over a door to the rest of the corpus (§83)"; exit 1; }
 
 echo "✓ feed-seam-selftest passed"

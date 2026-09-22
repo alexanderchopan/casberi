@@ -8038,7 +8038,25 @@ struct FeedScreen: View {
         // its oldest member, and a reconciliation or CloudKit delete can land
         // in the same graph update (CLAUDE.md, the dead-Thing rule).
         let live = visible.filter(\.isLive)
-        if live.count >= 8, let oldest = live.last?.capturedAt,
+        // NOT WHILE `Show older` IS ON SCREEN (prd §866a). The window (§264)
+        // draws 30 rows and a door to the rest, and this section renders
+        // BELOW that door — so on the demo's 559 rows the feed said "This is
+        // where it starts · Jul 23" one gap under a button holding 122 more
+        // days, and drew the app's own mark over it to celebrate. The date is
+        // read from `visible`, the WHOLE corpus, so it was never the oldest
+        // thing you could see; it named one two months past the last row on
+        // screen.
+        //
+        // The rule already existed one control away: `olderRow`'s own doc
+        // says "while this is on screen the room is NOT whole, so
+        // `caughtUpFooter` stands down", for the §83 fake-status reason.
+        // "You're all caught up" and "this is where it starts" are the same
+        // claim pointing at opposite ends of the feed, and only one of them
+        // was gated. Read exactly as `caughtUpFooter` reads it — written
+        // during `bundledSections`' body, which a `ViewBuilder` evaluates
+        // before this.
+        if live.count >= 8, !memo.windowHasMore,
+           let oldest = live.last?.capturedAt,
            Date.now.timeIntervalSince(oldest) > 7 * 86_400 {
             Section {
                 // The mark draws itself here (prd §866) — `CorpusFloor` holds

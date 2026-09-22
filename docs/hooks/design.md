@@ -23,3 +23,46 @@ Verbatim. CLAUDE.md now carries a one-line index entry for each, pointing here.
 - **The Mac's walked row can be TAKEN: ⌘C, Space (Quick Look), and drag-out (prd §631, `Shell/MacRowHandoff.swift`).** One resolver behind all three — the URL comes from `ShareTargetMemo`, so a row cannot copy one link and share another. ⌘C is safe because every `textSelection(.enabled)` site is in a sheet, a pushed room or the composer, all of which set `canWalk` false (measured, not assumed). Space is enabled only for screenshots and files, so on a link row it stays the scroll key. Drag is Mac-only on purpose: `.draggable` on touch IS the long-press the context menu already owns, and the pager claims every horizontal drag (2026-07-16). `KeyboardWalk` split into the RING and `WalkRowVerbs` because nine observers on one chain exceeded the type checker.
 
 - **A row that names a place is a BUTTON, or it is deleted, prd §736, 2026-09-15 (user: "can we apply that same principle to all the things that say from something / why even have them say from, why not just have an open button").** Asked the day after §735 made the thing sheet's "From — in your inbox" row a door, and it is the right question about that ruling. **The finding is that the open button already existed**: `VerbDerivation` gives a `.event` "Open in Calendar", a Files `.file` "Show in Files", a social `.chat` "Open thread", a `.transaction` "Explorer", a `.product` "Open in store", a `.screenshot` "Zoom" and "Open in Photos", an Obsidian `.note` "Open in Obsidian", a Reminders row its hand-off — and, since §735, a `.mail` "Open in Mail"/"Open in Gmail". So the row was never a door waiting to be wired; it was the same fact a second time, stated weaker, sitting above the disc that already did it. **§634 had set the test and stopped halfway.** It deleted four `PlaceWords` arms for saying something true of every row in the corpus and kept the rest on the grounds that they "name a real place" — but "in your photos" is true of every screenshot, "in your contacts" of every contact, "in your home" of every accessory, "from your machines" of every run; "awaiting your call" is a state wearing the label "From"; and `.mail` and `.file` shared one arm, so **every Dropbox file in the corpus read "in your inbox"**, which is not thin but false (the Files carve-out for §408 went in above it and nobody re-read the arm underneath). **Two arms passed** — "in Receipts" and "in Main", the only two that said WHICH one — **and both are now the word on a button that goes there**, following `walletVerbs`' 2026-08-04 ruling that a disc's glyph says it opens something and its word says where you land: `Show in Receipts` (from `FilesLocation.folderName` off the ref the verb already parses, plus `FilesStore.shared.folderName` — an in-memory string, the `ObsidianStore.shared.vaultName` precedent, never the `folderURL()` disk read that arm's own comment refuses), and the wallet's own name on a new **`Verb.Action.openAddress`** — the only destination in that enum that never leaves the app, because the place a wallet row comes from is a screen Casberi draws. `WalletStore.displayName(forStored:)` is the word and the gate both (it carries the ENS-vs-hex matching and answers nil for an address that is not a watched wallet, so a stranger's transaction grows no disc); `isAutoName` decides between "Main" and "Wallet …4f4f". The stage sheets have had that door since §369 via the receipt's subject face — a mint, a card spend or a DeFi move gets no stage, so it held the fact and had nowhere to go, which is §408's shape one kind over. **`dialLabel` gains `"Show in "`**: without it "Show in Receipts" is 16 characters, falls past the 12-char gate to `shortLabel`, and reads "Files" — the whole ruling undone by a length check. **Deleted from the MODEL, not just the surface (§723)**: `PlaceWords`, `walletPlace`, `hasFrom` and `fromRow` are all gone, and nothing composes a place phrase anywhere now. The spec table holds Landed, Site, Also saved from, By, Who — every one a fact about this thing. **Four harnesses inverted with it.** `social-sheet`, `agent-sheet` and `purchase-stage` each guarded a stand-down (§363, §367, §364 — four passes each adding a conjunct saying "not on my sheet either"); §736 read that as the answer rather than the fifth conjunct, so each now guards that the row stays deleted, read from a COMMENT-STRIPPED copy because the view carries a tombstone naming what went (the Obsidian/Cursor lesson). **§408 and §735 are absorbed, not reversed**: both were right that people press that row — twice, two different moments, which is evidence — and they press it because it makes a claim about a place. The claim now lives on the control that honours it. **UNBUILT: authored on Linux with no Xcode and no Swift toolchain.**
+
+## The All feed's day seam and the corpus floor (prd §866, §866a)
+
+`FeedSeam` ticks once as a day divider crosses the top of the feed's viewport.
+Four guards, each of which reads like a line a later pass could delete:
+
+- **Finger down only** — `ScrollPhase.tracking`/`.interacting`, taken in
+  `minimizesChrome`'s existing phase observer. A fling crosses six days in half
+  a second, and the deceleration after you let go is silent on purpose: the days
+  going by then are the phone's doing, not yours.
+- **First placement is not a crossing.** Without `was != 0` every divider the
+  `List` mounts ticks — landing on the feed buzzes, and so does any scroll that
+  brings a new day into the window. This is the guard that separates a texture
+  from a rattle.
+- **A 300ms gap**, doing velocity's job without measuring velocity. Two seams
+  inside it were ONE motion; the second is dropped, never queued.
+- **A ±8pt dead band**, because the line is a place a divider can park and
+  sub-point jitter would read as a crossing every frame.
+
+It rides `FeedDayDivider`, whose only caller is `bundledSections`, so it is
+All-only by construction rather than by a flag. `DSHaptic.seam` is the one verb
+in the grammar naming something the person did not DO, so it is the lightest
+feel — under `pour`, which is at least an event. It is deliberately NOT in
+`GestureGate` (§666), whose every flag feeds `busy` and `HitchMeter`.
+
+`CorpusFloor` keeps §218's line and strokes `CasberiMarkShape` on above it
+before settling into the solid mark. That shape was built for §5's draw-on in
+2026-07-06 and had sat at ZERO callers since that screen was cut — **grep for
+the shape before building a motion**. Its silhouette also had to move from the
+three-arm small cut to `armsFull`: the floor draws at `DS.Mark.tile` (44), well
+past `smallCutBelow`, so a three-armed outline was settling into a five-armed
+mark and growing two limbs at the crossfade.
+
+**§866a — it stands down while `Show older` is up.** §264 windows the feed at 30
+drawn rows with a door to the rest, and this section renders BELOW that door, so
+the feed read `Show older`, then the mark, then "This is where it starts ·
+Jul 23" with 122 more days behind the button above it. The date comes from
+`visible` — the whole corpus — so it was never the oldest thing on screen. The
+rule already existed one control away: `olderRow`'s own doc says
+`caughtUpFooter` stands down while it shows, for §83's fake-status reason.
+"You're all caught up" and "this is where it starts" are the same claim at
+opposite ends of one list, and only one was gated. **When a guard exists for one
+end of a range, ask what the other end says.**
