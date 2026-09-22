@@ -148,7 +148,7 @@ struct ChatGPTImportScreen: View {
                 AgentLibrarianRow(provider: .openai)
             } else {
                 DSSlabDoor(title: "Add your OpenAI key",
-                           detail: String(localized: "Chat with ChatGPT here"),
+                           detail: String(localized: "Chat here"),
                            systemImage: "key") { sheet = .key }
             }
         }

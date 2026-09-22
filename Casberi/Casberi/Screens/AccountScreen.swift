@@ -69,7 +69,15 @@ struct SettingsRows: View {
             .sheet(isPresented: $diagnosticsOpen) {
                 NavigationStack { DiagnosticsScreen() }.dsNavSheet()
             }
-            .sheet(item: $detail) { AccountDetailSheet(detail: $0) }
+            // `onDismiss` because two of this screen's facts are MIRRORED
+            // `@State` (`mcpOn`/`mcpRunning`, prd §628) and the tray that
+            // opens from their own row is what changes them — so without
+            // this the row said "Off" over a listener the person had just
+            // switched on (§83's fake status). The rows beside it are
+            // computed properties and were always live; these two cannot be,
+            // because reading them is a `UserDefaults` hit and a class
+            // SwiftUI does not observe.
+            .sheet(item: $detail, onDismiss: { readCounts() }) { AccountDetailSheet(detail: $0) }
             .sheet(isPresented: $languageOpen) { LanguagePickerSheet() }
             .sheet(isPresented: $chipOrderOpen) {
                 NavigationStack { CategoryOrderSheet() }.dsNavSheet()

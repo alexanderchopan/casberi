@@ -145,7 +145,7 @@ struct ClaudeImportScreen: View {
                 AgentLibrarianRow(provider: .anthropic)
             } else {
                 DSSlabDoor(title: "Add your Anthropic key",
-                           detail: String(localized: "Chat with Claude here"),
+                           detail: String(localized: "Chat here"),
                            systemImage: "key") { sheet = .key }
             }
         }

@@ -169019,30 +169019,30 @@
         }
       }
     },
-    "Chat with Claude here" : {
+    "Chat here" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Habla con Claude aquí"
+            "value" : "Habla aquí"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "ここでClaudeと話す"
+            "value" : "ここで話す"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "여기서 Claude와 대화하기"
+            "value" : "여기서 대화하기"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "在这里与 Claude 对话"
+            "value" : "在这里对话"
           }
         }
       }
@@ -169131,34 +169131,6 @@
         }
       }
     },
-    "Chat with ChatGPT here" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Habla con ChatGPT aquí"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ここでChatGPTと話す"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "여기서 ChatGPT와 대화하기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在这里与 ChatGPT 对话"
-          }
-        }
-      }
-    },
     "OpenAI bills you directly." : {
       "localizations" : {
         "es" : {
@@ -169239,34 +169211,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "添加你的 Google 密钥"
-          }
-        }
-      }
-    },
-    "Chat with Gemini here" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Habla con Gemini aquí"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ここでGeminiと話す"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "여기서 Gemini와 대화하기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在这里与 Gemini 对话"
           }
         }
       }

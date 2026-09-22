@@ -148,7 +148,7 @@ struct GeminiImportScreen: View {
                 AgentLibrarianRow(provider: .google)
             } else {
                 DSSlabDoor(title: "Add your Google key",
-                           detail: String(localized: "Chat with Gemini here"),
+                           detail: String(localized: "Chat here"),
                            systemImage: "key") { sheet = .key }
             }
         }

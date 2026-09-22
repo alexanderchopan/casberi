@@ -2982,6 +2982,16 @@ print -P "%F{green}✓ unit tests%f"
 # full iOS pass to hear about. `SKIP_MAC=1` restores the early gate for a
 # session that is deliberately chasing Catalyst.
 if [[ -z "${SKIP_CATALYST:-}" && -n "$MACPID" ]]; then
+  # The Catalyst build this pass actually performs is the parallel Mac leg's,
+  # and it writes `CasberiMacDD` — NOT `CasberiCatalystDD`, which step 1b
+  # owned and which nothing has written since this deferral landed. The
+  # localization coverage gate below reads a Catalyst stringsdata dir, so
+  # leaving that default in place fed it a DerivedData frozen at whatever
+  # commit last ran step 1b: every string deleted since then reported as
+  # "in source but NOT in the catalog" (five phantoms on 2026-09-21, all of
+  # them §870/§871 deletions), and a genuinely missing Mac-only translation
+  # would have passed unseen. Name the dir the build wrote.
+  CATDD="$HOME/Library/Developer/CasberiMacDD"
   print -P "%F{green}✓ mac parity (deferred to the parallel Mac verify, which builds and RUNS Catalyst)%f"
 elif [[ -z "${SKIP_CATALYST:-}" ]]; then
   CATDD="$HOME/Library/Developer/CasberiCatalystDD"

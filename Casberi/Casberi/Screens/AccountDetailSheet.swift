@@ -335,7 +335,7 @@ struct AccountDetailSheet: View {
     /// constant is where it quietly starts clipping its last row.
     ///
     /// **The constant it replaces was sized for a card that no longer exists**
-    /// (§871). 525/600 was tuned when this card held THREE switches — two
+    /// (§870). 525/600 was tuned when this card held THREE switches — two
     /// classes and quiet hours — and §770 replaced those with one switch per
     /// category you have an account in. `BridgeCatalog.categories` has NINE, so
     /// a well-connected account has been six switches over its budget for a
@@ -636,7 +636,7 @@ struct AccountDetailSheet: View {
     /// digest, for all of them, and the settings page stays a column of
     /// switches.
     ///
-    /// And nothing else (prd §871, user: "nobody understands what it means and
+    /// And nothing else (prd §870, user: "nobody understands what it means and
     /// less is more"). The quiet-hours switch is gone: iOS's own Focus already
     /// decides what may reach a sleeping person, per person and system-wide,
     /// and it does it better than a switch in here can.
