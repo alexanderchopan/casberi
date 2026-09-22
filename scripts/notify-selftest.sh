@@ -18,7 +18,7 @@
 #
 #   · a like that claims the level which breaks a Sleep Focus, because a kind
 #     drifted into `isTimeSensitive` — the app runs no night rule of its own
-#     since §869, so that level is the WHOLE of what may wake somebody
+#     since §870, so that level is the WHOLE of what may wake somebody
 #   · a dispute that never fires, because the deadline window rejected it
 #   · a deadline that fires forever after it passed — the worst possible time
 #     to be told about it
@@ -188,7 +188,7 @@ else
   printf '  ✓ the settings copy claims no break-through\n'
 fi
 
-# §869 deleted quiet hours — switch, window and hold. It may not creep back in
+# §870 deleted quiet hours — switch, window and hold. It may not creep back in
 # as an unswitched internal rule, which is the shape it would take: a `Quiet`
 # window nobody can see, holding the two standsAlone kinds that have no clock
 # (a liquidation, a Safe signature) until a morning that is hours too late.
@@ -200,14 +200,14 @@ for f in "$PLAN" "$NOTIFY" "$SETTINGS"; do
   # bare `quiet:` matches ordinary prose ("payments went quiet: …", which this
   # tree already writes elsewhere) and would red a ship gate over a comment.
   if grep -nE 'holdUntil|NotifyRules\.Quiet|quiet(On|Start|End)"|[(,][[:space:]]*quiet:' "$f" >/dev/null 2>&1; then
-    printf '  ✗ DRIFT: quiet hours are back in %s (§869 deleted them)\n' "$f"; fail=1; back=1
+    printf '  ✗ DRIFT: quiet hours are back in %s (§870 deleted them)\n' "$f"; fail=1; back=1
   fi
 done
 # An `&&` list rather than an `if` would return non-zero when drift IS found,
 # and `set -e` would take the whole script down there — the right verdict by
 # the wrong door, with every later check skipped.
 if [[ "$back" -eq 0 ]]; then
-  printf '  ✓ no quiet-hours hold anywhere (§869)\n'
+  printf '  ✓ no quiet-hours hold anywhere (§870)\n'
 fi
 
 # ── the two devnets (prd §522) ──────────────────────────────────────────────
@@ -620,14 +620,14 @@ ok(NotifyDigest.nextSlot(after: at(18), calendar: cal) == tomorrow(at(18)),
 ok(NotifyDigest.nextSlot(after: at(19), calendar: cal) == tomorrow(at(18)),
    "after the evening slot, tomorrow evening")
 // The learned reading hour (§770) is the only thing that moves a slot since
-// §869, and it is handed in — so the walk must honour a slot that is not the
+// §870, and it is handed in — so the walk must honour a slot that is not the
 // default, on both sides of it.
 ok(NotifyDigest.nextSlot(after: at(12), calendar: cal, slots: [17 * 60]) == at(17),
    "a learned earlier hour is the slot, not the default 18:00")
 ok(NotifyDigest.nextSlot(after: at(19), calendar: cal, slots: [17 * 60]) == tomorrow(at(17)),
    "…and once it has passed, tomorrow's")
 // Every slot this file can choose is inside the evening window, which is the
-// reason §869's deletion costs nothing: a digest cannot land at night.
+// reason §870's deletion costs nothing: a digest cannot land at night.
 ok(NotifyDigest.slots.allSatisfy { NotifyDigest.readingWindow.contains($0) },
    "the fixed slot is inside the evening window")
 // Unreachable today, and it may not fail LOUD if it ever becomes reachable:
@@ -818,7 +818,7 @@ ok(NotifyDigest.readingSlots(opens: Array(habit.prefix(2)), now: at(12), calenda
 ok(NotifyDigest.readingSlots(opens: [evening(1, 16, 5), evening(2, 16, 10), evening(3, 16, 0)],
                              now: at(12), calendar: cal) == [NotifyDigest.readingWindow.lowerBound],
    "an early reader still gets the digest in the evening")
-// The window's OTHER edge, untested until §869 and the reason that deletion
+// The window's OTHER edge, untested until §870 and the reason that deletion
 // costs nothing: no slot this file can choose lands at night, so the app needs
 // no night rule of its own on top of iOS's Focus.
 ok(NotifyDigest.readingSlots(opens: [evening(1, 21, 30), evening(2, 21, 40), evening(3, 21, 30)],
@@ -1034,7 +1034,7 @@ mutate "the learned hour leaves the evening" \
        's/return \[min\(max\(slot, readingWindow\.lowerBound\), readingWindow\.upperBound\)\]/return [slot]/'
 mutate "the digest ignores the learned hour" \
        's/slot: nextSlot\(after: now, calendar: calendar, slots: slots\)/slot: nextSlot(after: now, calendar: calendar)/'
-# §869: the two halves of the simplified slot walk, each on its own.
+# §870: the two halves of the simplified slot walk, each on its own.
 mutate "a slot still ahead of us is thrown away and re-chosen" \
        's/if let slot = state\.slot, slot > now \{ return State\(queue: queue, slot: slot\) \}//'
 mutate "a slot already past today is scheduled anyway" \

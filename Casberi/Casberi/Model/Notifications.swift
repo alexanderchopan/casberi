@@ -20,7 +20,7 @@ enum Notifications {
 
     // MARK: - Settings
 
-    /// One switch per CATEGORY, and nothing else (prd §770, §869). Stored in
+    /// One switch per CATEGORY, and nothing else (prd §770, §870). Stored in
     /// the app group so the background task reads the same values the settings
     /// screen writes.
     ///
@@ -39,7 +39,7 @@ enum Notifications {
     /// arrives switched on like every other. The two class switches
     /// (`notify.alarms`, `notify.arrivals`) are read once, only to carry an
     /// install that had BOTH off into all-off; nothing writes them now. The
-    /// daily whisper's keys (§706) and quiet hours' three (§869) stay unread
+    /// daily whisper's keys (§706) and quiet hours' three (§870) stay unread
     /// as before.
     struct Settings: Sendable, Equatable {
         var off: Set<String> = []
@@ -363,7 +363,7 @@ enum Notifications {
         }
     }
 
-    /// Delivered when the sweep finds it — there is no hold (prd §869).
+    /// Delivered when the sweep finds it — there is no hold (prd §870).
     ///
     /// The app used to run quiet hours of its own, and it was both unexplained
     /// and wrong twice over: it held `positionAtRisk` and `safeSignatureNeeded`
@@ -397,7 +397,7 @@ enum Notifications {
         // (prd §306 amendment's "to finish it"), so a 3am dispute really does
         // break a Focus. This line is unchanged — it was always correct; what
         // changed is that iOS stopped silently capping it to `.active`. Since
-        // §869 it carries more weight: it is now the ONE thing deciding what
+        // §870 it carries more weight: it is now the ONE thing deciding what
         // may reach a sleeping person, with iOS's Focus on the other side.
         // The failure mode if that key is ever dropped is the reason this is
         // spelled out: nothing fails, no log line appears, and the

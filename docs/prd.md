@@ -89,7 +89,7 @@ at all.
 | §705 (the face opens Settings) | the dock's avatar opens Settings and, pressed again, closes it | amended by §796 (the toggle stands; the face opens ACCOUNTS, and Settings is that screen's third section) |
 | §793 (the scope reads Manage \| Connect) | the catalogue's switcher is the pair Manage and Connect | amended by §796 (a third section, Settings, on the same switcher; the two words stand) |
 | §764/§767 (the settings row is a push row) | `AccountRow` draws the push row's anatomy — a 26pt disc, the fact trailing | superseded by §796 (the app row's anatomy: a 44pt tile, the fact under the title) |
-| §306 (quiet hours) / §770 (its switch) | notifications outside 22:00–08:00 are held until morning unless they are time-sensitive, and a switch in settings turns the window off | deleted by §869 (user: "nobody understands what it means"; it held `positionAtRisk` and `safeSignatureNeeded` until 08:00, the two kinds §770 stands alone BECAUSE they cannot keep, and iOS's own Focus is the night rule) |
+| §306 (quiet hours) / §770 (its switch) | notifications outside 22:00–08:00 are held until morning unless they are time-sensitive, and a switch in settings turns the window off | deleted by §870 (user: "nobody understands what it means"; it held `positionAtRisk` and `safeSignatureNeeded` until 08:00, the two kinds §770 stands alone BECAUSE they cannot keep, and iOS's own Focus is the night rule) |
 | §644 (only alarms default on) | `arrivals` defaults off and `alarms` on, so a grant earned by a dispute is not spent on likes | superseded by §770 (the class switches are deleted; one switch per category, every category on, and on means one digest at most twice a day) |
 | §306 (two classes, and the batch keeps the worst alarm and counts money arrivals) | every alarm and arrival is its own notification, collapsed per sweep | amended by §770 (only `NotifyKind.standsAlone` is sent on its own; everything else waits for `NotifyDigest`, and the money collapse is deleted with the path that fed it) |
 | §713 (arrivals are passive) | an arrival lands silently in Notification Center without lighting the screen | amended by §770 (arrivals reach the lock screen only inside the digest, which lights the screen and makes no sound) |
@@ -59870,7 +59870,37 @@ So the rule for which rows are spends is a type of its own, `CardSpendSeat`, rea
 
 **A guard of this pass's own fired on this pass's own comment.** The check for the retired demo ref grepped the bare string `demo:etherfi:`, and the block's comment explaining what that ref broke matched it — the harness went red on the record of the fix. It matches the `ref:` ARGUMENT now. Same lesson as §866's floor checks, one week later: **a guard asserts the USE, not the spelling.**
 
-## §869 — Quiet hours are deleted (user: "let's remove it. nobody understands what it means and less is more", 2026-09-22)
+## §869 — The icon colour setting is declined, and the light icon was the dark one (user: "is it useful to offer users a setting to change the app icon color? like black or white or pink?", then "ok fix it", 2026-09-22)
+
+**No setting. iOS already has the control, and ours would fight it.** Since iOS 18 the person picks Light, Dark, Tinted or Clear for every icon on the Home Screen, from the Home Screen editor, once, for their whole phone. `AppIcon.appiconset` has declared all three luminosities for some time. An in-app picker would duplicate a system control with no way to stay in step with it: somebody who set Dark system-wide and White in our settings gets a white tile alone on a dark grid, and neither control is wrong.
+
+**The colours asked for are not three equal options.** The mark is ONE ink, and the eyes and suckers are knocked OUT of it — they are the ground, not a painted colour (`design/app-icon/README.md`). Black and white are therefore grounds, and free. **Pink is not**: a pink ground needs the mark and all thirteen suckers to flip to something else, which is a second drawing to keep in step, and it spends the brand hue on the tile. §742 already rules that the hue is the app's own voice and stays off things that are not the app speaking.
+
+**Alternate icons cost more than the art.** `setAlternateIconName` raises a system alert on every switch, and each option is a full art set carried forever. Colour alone is the one axis the system tint already covers.
+
+### The defect found while answering
+
+**The light PNG was a byte-for-byte copy of the dark one.** Same md5. Every person on the light or default appearance had been getting the dark drawing — hot pink on a black tile — on a light home screen.
+
+**Nothing in the pass could see it, and the reason generalises.** The asset compiler ships the same bytes twice without complaint. The build is green. The screen sweep photographs surfaces the APP draws, and the home screen is composited by the SYSTEM, so it is outside every check this repo owns. The icon README had even carried an `## Unverified` note saying the light and tinted PNGs had never been opened — a written admission of the exact gap, failing nothing, for as long as it sat there. **A note that records a risk is not a check.** That is the same lesson as the undisclosed host that shipped because two audits were run by hand: what is not mechanical is not enforced.
+
+### The fix: derived, never redrawn
+
+The light variant is the dark art's own coverage mask composited over white instead of black (`design/app-icon/make-light-icon.py`, pure stdlib, `--self-test`). Measured on the shipped dark PNG first, because the transform is only valid if the art is what the README says it is: it is exactly `#FF2D87` over `#000000`, a clean 101-step alpha ramp, **max deviation 1.59/255** across all 286 distinct colours. So coverage is recoverable per pixel by least-squares projection onto the ink, and re-compositing is lossless.
+
+**Deriving rather than redrawing is what keeps the knockouts.** Because the eyes and suckers are ground, they turn white for free — there is no second drawing to maintain, and the measured result proves it: the ground pixel count is **identical** to the dark art's (886,006), so the mask travelled exactly.
+
+**The script reads the SHIPPED art on purpose.** The berry-era generator was deleted for emitting art the app had stopped shipping; a script whose input is the shipped PNG cannot drift that way.
+
+**The tinted variant was the other file flagged unverified, and it is correct** — the same mask, white on black, which is what the system wants before it maps luminance to the person's tint. It needed nothing.
+
+### The guard
+
+`scripts/app-icon-audit.py` (wired into `verify.sh`; `verify-mac.sh` discovers it by name). Six rules: all three luminosities declared, every declared file present and 1024 square, **no two variants byte-identical**, the light ground light and the dark and tinted grounds dark, tinted greyscale, and **one coverage mask across all three** — the last being what fails a variant redrawn by hand instead of derived. Tolerance 0.5%; measured worst pair on the shipped three is 0.079%, so ~6x headroom against the many-percent a different drawing costs. Nine self-test cases, including the shipped defect itself and a near-identical pair that must still PASS, or the mask rule is only noise. Its fixtures run at 128px rather than 1024 — the checks are side-agnostic and the shipped size is itself under test — which took the self-test from 4.8s to 0.11s.
+
+**CEILING, stated rather than left to be found: none of the three PNGs has been seen on a physical device.** They were decoded as pixels and rendered to a contact sheet on a Linux session with no rasterizer and no Xcode, so `verify.sh` was NOT run for this change. The squircle in that preview is a superellipse approximation; iOS applies its own. What is proven is the bytes; what is unproven is the tile.
+
+## §870 — Quiet hours are deleted (user: "let's remove it. nobody understands what it means and less is more", 2026-09-22)
 
 **The switch said two words and explained none of them.** "Quiet hours" sat under the category switches with no window, no times and no footnote: there was no way, from the screen, to learn that it meant 22:00 to 08:00, that it held news rather than dropping it, or that a dispute came through anyway. A control nobody can read is a control nobody can decide about, which is the whole of the user's ruling and enough on its own.
 
@@ -59891,3 +59921,4 @@ So the rule for which rows are spends is a type of its own, `CardSpendSeat`, rea
 **Not done, and deliberately.** No per-category schedule, no "deliver at" picker, no second attempt at a window with a time control attached. The ask was less, not a better version of the same thing; the honest answer to "when may this wake me" is the Focus the person already set.
 
 **Verified:** `prd-index-audit`, `plate-audit`, `footnote-audit`, `ds-template-audit`, `dead-closure-audit`, `setup-copy-audit`, `harness-exists-audit`, `mutation-liveness-audit`, `swiftdata-liveness-audit`, `query-read-audit`, `defaults-lock-audit` and `redaction-coverage-audit` all green. **Not built or run** — this session has no Swift toolchain and no simulator, so the tray's new height is reasoned from the constant it replaces and has not been looked at. The edits are mechanical deletions plus three signature changes, every call site of which is named above, and `notify-selftest.sh` is the gate that must be green before this ships.
+

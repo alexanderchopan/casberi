@@ -1121,7 +1121,7 @@ enum NotifyDigest {
     /// category a day"): an evening read, once the day's news is in. Every
     /// slot this file can choose lives inside `readingWindow` (17:00 to
     /// 21:00), so a digest can never land at night — which is why the app
-    /// needs no night rule of its own (prd §869).
+    /// needs no night rule of its own (prd §870).
     static let slots = [18 * 60]
 
     /// A bound on the queue, oldest dropped first. One slot a day and a
