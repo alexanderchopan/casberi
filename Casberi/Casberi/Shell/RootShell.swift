@@ -1534,6 +1534,26 @@ struct RootShell: View {
                     NSLog("LinkTitle probe: %@", title ?? "FAILED")
                 }
             }
+            // Debug hook: `-linkHealProbe "<url>[,<url>…]"` (2026-09-22) —
+            // lands each URL as a link YOU saved whose enrichment never ran
+            // (the URL as its title, no picture: the offline-at-capture
+            // shape), then runs `LinkHeal`'s pass over it and NSLogs one
+            // `linkHeal|` line per row plus the report. The rows stay, so the
+            // feed shows what the pass gave them. A URL already saved is left.
+            if let raw = UserDefaults.standard.string(forKey: "linkHealProbe") {
+                Task { @MainActor in
+                    for url in raw.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces) })
+                    where URL(string: url) != nil {
+                        let taken = FetchDescriptor<Thing>(predicate: #Predicate { $0.content == url })
+                        guard ((try? modelContext.fetchCount(taken)) ?? 0) == 0 else { continue }
+                        modelContext.insert(Thing(kind: .link, title: url, content: url, source: "You"))
+                    }
+                    modelContext.saveHonestly()
+                    let r = await LinkHeal.sweep(context: modelContext, limit: 20, trace: true)
+                    NSLog("[Casberi] linkHealProbe considered=%d healed=%d missed=%d",
+                          r.considered, r.healed, r.missed)
+                }
+            }
             // Debug hook: `-linkBodyProbe <url>` exercises the readable-body
             // fetch headlessly — NSLogs the lede that would land in a saved
             // link's `enrichedText` for the answer path to reach.

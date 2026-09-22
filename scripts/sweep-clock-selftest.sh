@@ -49,7 +49,7 @@ guard "the foreground sweep opens a pass" \
 # The heavy post-271 sweeps, each named. A slot that quietly loses its timer
 # does not fail a build and does not fail any other check — it just stops
 # appearing in the report, which reads as "that one is fine now".
-for label in photos.topics x.topics x.healRoom feeds.articleText youtube.shorts; do
+for label in photos.topics x.topics x.healRoom feeds.articleText links.heal youtube.shorts; do
   guard "slot instrumented: $label" \
     "Casberi/Casberi/Model/BridgeRefresh.swift" "sweepTimed\\(\"$label\"\\)"
 done

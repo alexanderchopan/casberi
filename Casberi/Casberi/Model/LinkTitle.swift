@@ -90,10 +90,7 @@ enum LinkTitle {
         // Entry: the task was scheduled, not run, and the row may already be
         // gone. This is the crashing read.
         guard thing.isLive else { return }
-        guard thing.kind == .link,
-              let url = URL(string: thing.content.trimmingCharacters(in: .whitespacesAndNewlines))
-                ?? firstURL(in: thing.content),
-              thing.title.contains(url.host() ?? "") || thing.title == thing.content
+        guard thing.kind == .link, let url = address(of: thing), looksUnnamed(thing, url: url)
         else { return }
         // An allowlisted host answers what a link IS directly, keylessly, in
         // one request (`OEmbed`) — and it beats the page fetch below on
@@ -111,6 +108,7 @@ enum LinkTitle {
         // A product's page is a store listing, not an article, so it gets no
         // readable-body pass.
         var namedFromMeta = false
+        var pictured = false
         let meta = await ProductMeta.fetch(url)
         // The product fetch is an await, and this row can be deleted under it.
         guard thing.isLive else { return }
@@ -126,13 +124,21 @@ enum LinkTitle {
                 thing.title = title
                 namedFromMeta = true
             }
+            // The page's own preview picture. It was read on every link and
+            // kept only for a product, so an ordinary article never had a
+            // face. Never over art the row already carries (an oEmbed poster,
+            // a Bluesky card's thumb).
+            if thing.previewImageURL == nil, let image = meta.image {
+                thing.previewImageURL = image
+                pictured = true
+            }
         }
         // One fetch pulls the page's title and its readable lede.
         let page = await fetchPage(url)
         // The longest await in this function — up to 8 seconds, and every
         // write below touches the row.
         guard thing.isLive else { return }
-        var changed = namedFromMeta
+        var changed = namedFromMeta || pictured
         // Take the raw <title> only when meta didn't already give a cleaner
         // name — meta's og:title beats "Article — SiteName" (review 2026-07-15).
         if !namedFromMeta, let title = page.title, title != thing.title {
@@ -152,6 +158,27 @@ enum LinkTitle {
         thing.embedding = nil
         context.saveHonestly()
         SpotlightIndex.index([thing])
+    }
+
+    /// The picture alone, for a link that is already NAMED — one enriched
+    /// before its page's preview picture was kept, or a share that arrived
+    /// titled. The same page request `enrich` makes (`ProductMeta.fetch`), and
+    /// it never touches the title. An oEmbed host answers with its own art
+    /// (a TikTok poster), so it is asked first, as `enrich` does.
+    @MainActor
+    static func picture(_ thing: Thing, context: ModelContext) async {
+        guard thing.isLive, thing.kind == .link,
+              (thing.previewImageURL ?? "").isEmpty,
+              let url = address(of: thing) else { return }
+        var art: String?
+        if OEmbed.handles(url) {
+            art = await OEmbed.resolve(url)?.thumbnailURL
+        } else {
+            art = await ProductMeta.fetch(url)?.image
+        }
+        guard thing.isLive, (thing.previewImageURL ?? "").isEmpty, let art else { return }
+        thing.previewImageURL = art
+        context.saveHonestly()
     }
 
     /// Names a link from its own site's oEmbed answer: the caption (or, for a
@@ -206,6 +233,25 @@ enum LinkTitle {
         // pill matches the new kind.
         thing.tags = ([ThingKind.product.typeTag] + thing.tags.filter { $0 != ThingKind.link.typeTag }).reduced()
         if let image = meta.image { thing.previewImageURL = image }
+    }
+
+    /// The address a link row points at.
+    static func address(of thing: Thing) -> URL? {
+        URL(string: thing.content.trimmingCharacters(in: .whitespacesAndNewlines))
+            ?? firstURL(in: thing.content)
+    }
+
+    /// Whether a link row still wears the face it was born with rather than a
+    /// name — the ONE test for "enrichment has not landed". The URL itself, or
+    /// a title containing the host, or the bare host the share extension falls
+    /// back to (`nytimes.com` never contains `www.nytimes.com`, so a link
+    /// shared from another app was never renamed).
+    static func looksUnnamed(_ thing: Thing, url: URL) -> Bool {
+        if thing.title == thing.content { return true }
+        guard let host = url.host(), !host.isEmpty else { return false }
+        if thing.title.contains(host) { return true }
+        let bare = host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+        return thing.title.trimmingCharacters(in: .whitespacesAndNewlines) == bare
     }
 
     private static func firstURL(in text: String) -> URL? {

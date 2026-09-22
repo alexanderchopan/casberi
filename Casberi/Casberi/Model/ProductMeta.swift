@@ -76,10 +76,14 @@ struct ProductMeta {
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         let html = String(decoding: data.prefix(400_000), as: UTF8.self)
-        return parse(html)
+        return parse(html, base: response.url ?? url)
     }
 
-    static func parse(_ html: String) -> ProductMeta? {
+    /// `base` resolves a RELATIVE picture address (`/images/cover.jpg`) against
+    /// the page it came from — plenty of sites write `og:image` that way, and
+    /// `IngestSupport.imageURL` rightly refuses anything that is not already an
+    /// absolute https address. nil keeps the old behaviour: relative is dropped.
+    static func parse(_ html: String, base: URL? = nil) -> ProductMeta? {
         // 1 — JSON-LD Product (the richest, most reliable source).
         var value: Double?
         var currency: String?
@@ -103,6 +107,18 @@ struct ProductMeta {
         if title == nil { title = meta(html, ["og:title"]) }
         if title == nil { title = htmlTitle(html) }
         if image == nil { image = meta(html, ["og:image"]) }
+        // Asked separately, not in one key list: `meta` returns the first tag
+        // matching ANY key in document order, and a page's `og:image` is the
+        // one it chose for a preview.
+        if image == nil { image = meta(html, ["og:image:secure_url", "twitter:image", "twitter:image:src"]) }
+        // `&amp;` inside a query string is the page's HTML escaping, not
+        // part of the address — a CDN URL left encoded 404s.
+        image = image.map(IngestSupport.decodeHTMLEntities)
+        if let raw = image, let base,
+           !raw.hasPrefix("http"), !raw.hasPrefix("//"),
+           let resolved = URL(string: raw, relativeTo: base)?.absoluteURL {
+            image = resolved.absoluteString
+        }
 
         guard value != nil || title != nil else { return nil }
         return ProductMeta(title: title.map { IngestSupport.decodeHTMLEntities($0) },

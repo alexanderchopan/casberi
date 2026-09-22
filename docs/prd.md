@@ -60167,3 +60167,94 @@ re-finds each row by indexed `sourceRef` after its fetch and waits for
 **Not touched, and why:** the 19 Sep FoundationModels trap (1.0.30, iOS 27) is
 all system frames and cannot be symbolicated here; the scroll hitch waits on a
 reading from a meter that tells the truth.
+
+## §879 — Things get their faces, and "Since you left" tells the truth about itself (user: "lets fix 1, 3, 4, 5, 6, 7", 2026-09-22)
+
+A read of the reading loop (the core loop is capture → read) found the feed
+losing faces it already had, and the away section saying things that were not
+so. The user took six of the findings. Each is below with what it cost.
+
+**1 — A link's picture was read and thrown away.** `ProductMeta.fetch` reads
+the page's `og:image` on every link it enriches, and `LinkTitle` kept it only
+when the page was a PRODUCT, so an ordinary article landed text-only. It keeps
+it now, never over art the row already carries (an oEmbed poster, a Bluesky
+card's thumb). `ProductMeta.parse` also falls back to `twitter:image`,
+decodes `&amp;` in the address (a CDN URL left escaped 404s), and resolves a
+relative picture against the page it came from — `IngestSupport.imageURL`
+rightly refuses anything not already absolute https, so those were dropped
+too. No new reach: "Saved links" already says the page is fetched "for its
+title and preview". `LinkTitle.looksUnnamed` is now the one test for "not
+named yet", and it adds the bare host the share extension falls back to
+(`nytimes.com` never contains `www.nytimes.com`, so a link shared from another
+app was never renamed).
+
+**3 — Enrichment ran once, and a miss was forever.** Offline at capture, a page
+past its 8-second cap, a phone locked mid-fetch — the row wore its URL for
+good. `LinkHeal` asks again, on the foreground sweep (`links.heal`), for
+exactly the rows `enrich` is called on at landing (You, Shortcuts, Farcaster,
+Bluesky) and no others, so a retry widens nothing about what the app reaches.
+It also gives a picture to links named before (1) (`LinkTitle.picture`, the
+same page request, title untouched). `FeedArticleText`'s discipline: 30 days,
+6 rows a pass, 1.2s apart, two tries each, then left alone. **The scan runs off
+main (`LinkScout`, a `@ModelActor`), for §878's reason the same day** —
+four sources' month of rows, every Farcaster and Bluesky post among them, is
+the shape of the main-context fetch §878 measured as the sweep's worst slot.
+
+**4 — Screenshots were named 3 per foreground.** That bound priced a free
+on-device inference like a paid key call: a burst of twenty read
+"Screenshot" across seven opens. On the phone's own model it is 12
+(`ScreenshotNaming.onDevicePerPass`); on a key it stays 3 (`keyedPerPass`).
+Every inference now waits for a still hand (`GestureGate.idle()`).
+
+**5 — "You're caught up" drew over rows it was hiding.** The away section is
+windowed like everything else (30 rows, prd §264), and a section longer than
+the window was cut with "Show older" under it — but the seam still said
+"caught up — everything below, you've seen", above the rows it had just
+withheld. §866a's floor fixed the same lie at the bottom; this is the other
+end. The seam draws only when the window holds the WHOLE section
+(`momentWhole`); a cut section ends at its door. Measured on the demo with a
+72-hour away window: `momentWhole=0`, the section ends at "Show older", no
+seam.
+
+**6 — After days away, "Since you left" was one flat run.** Rows from every day
+since you left were one list, so the same source's two daily folds sat back to
+back reading as one row twice, and nothing said where yesterday ended. When the
+section spans more than one day, each day's first row carries that day's name
+(`momentSplit`'s `days`, `momentDayDivider`) — the day divider's own view, one
+weight cooler, felt as it passes like every seam in time (§866). A section of
+one day stays unlabelled: a day name under "Since you left" would only restate
+it.
+
+**7 — The cover left on the opens with the most news.** §389 gave the All
+feed's cover a 24-hour bound because a week-old top row under a cover "lies by
+implication", and that stands. But away two days, yesterday's arrivals ARE the
+news, and the bound took the cover away exactly then. The rule is now news to
+YOU, not only to the clock: under 24 hours, or landed after you last left
+(`FeedScreen.isCoverFresh`, reading `AppVisit.away`, the window "Since you
+left" is cut on, so the cover and the section always agree). A quiet week with
+nothing new still gets no cover. The derivation memo keys on the away window
+(to the minute, because DEBUG's `-awayGap` slides with the clock).
+
+**Not taken:** #2 (a link shared from Safari is never named) — the user: "no one
+shares a link from safari to casberi". The bare-host rule in (1) fixes it in
+passing anyway. #8 (walking 40 folded transactions one by one) and #9 (muting a
+source from All) were not asked for.
+
+**Guards.** `CasberiTests/FeedFaceTests.swift` (12): a relative picture
+resolves, a relative picture with no page is dropped, `&amp;` is decoded,
+`twitter:image` falls back and loses to `og:image` whatever the order, the bare
+host counts as unnamed and a real title does not, and the cover's four cases —
+the last one §389's own quiet week. `sweep-clock-selftest.sh` pins the
+`links.heal` slot's timer.
+
+**Hooks.** `-linkHealProbe "<url>[,<url>…]"` lands each URL as a link you saved
+whose enrichment never ran, runs the pass, and prints one `linkHeal|` line per
+row. `-feedWindowSteps <n>` opens the feed's window n steps on arrival, because
+a section longer than the budget otherwise needs a tap no headless run can
+make. The `allFeed|` census prints `momentDays=` and `momentWhole=`.
+
+**Unmeasured:** the heal against a real phone's month of Farcaster rows (the
+scan's cost is off main, but its size is not read anywhere); whether 12
+screenshot names a pass is felt on an Apple Intelligence phone. The cover's
+new case could not be drawn on the demo, whose live Twitch hero takes the one
+cover slot by rule (§591b) — its logic is in the tests above.

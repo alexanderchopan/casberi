@@ -384,6 +384,16 @@ enum BridgeRefresh {
                 _ = await sweepTimed("feeds.articleText") { await FeedArticleText.sweep(context: context) }
             }
         }
+        // A link whose name or picture never landed, asked again (2026-09-22,
+        // `LinkHeal`). Unconditional: a dropped or shared link needs no
+        // connection. Self-retiring like the pass above — bounded to recent
+        // rows, two tries each.
+        do {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await sweepTimed("links.heal") { await LinkHeal.sweep(context: context) }
+            }
+        }
         if BlueskyStore.shared.connected {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)

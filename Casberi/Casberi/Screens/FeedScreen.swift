@@ -3701,6 +3701,22 @@ struct FeedScreen: View {
     /// old, which is exactly when a cover would be lying by implication.
     private static let ledeMaxAge: TimeInterval = 24 * 3600
 
+    /// Whether the All feed's newest thing is still news (prd §389, §879).
+    ///
+    /// NEWS TO YOU, not only news to the clock. §389's objection stands: open
+    /// the app after a quiet week and a week-old top row under a cover lies by
+    /// implication. But when that row landed AFTER you last left, it is
+    /// exactly what the cover is for — the first thing you have not seen —
+    /// and the 24-hour bound alone took the cover away on precisely the opens
+    /// with the most news on them (away two days, and yesterday's arrivals
+    /// are the story). `away` is `AppVisit.away`, the same window "Since you
+    /// left" is cut on, so the cover and the section always agree.
+    static func isCoverFresh(_ date: Date, away: Range<Date>?, now: Date = .now) -> Bool {
+        if now.timeIntervalSince(date) <= ledeMaxAge { return true }
+        guard let away else { return false }
+        return date > away.lowerBound
+    }
+
     /// A cover over a two-row feed IS the feed. Same minority discipline
     /// `wideArtIDs` states as its own floor, for the same reason.
     private static let ledeMinRows = 3
@@ -3785,7 +3801,7 @@ struct FeedScreen: View {
             guard thing.isLive else { continue }
             // Newest-first, so the first one past the age bound means every
             // later one is too.
-            guard isRoom || Date.now.timeIntervalSince(thing.capturedAt) <= Self.ledeMaxAge
+            guard isRoom || Self.isCoverFresh(thing.capturedAt, away: AppVisit.away)
             else { return nil }
             // **A ROOM COVERS ITS NEWEST COVERABLE THING (prd §763).** A newest
             // row that declines — a consent card, a token pulse, a takeaway —
@@ -3851,16 +3867,26 @@ struct FeedScreen: View {
     /// FOLD spanning the boundary lands whole on the fresh side, since a bundle
     /// dates itself by its newest member — the same place the inline divider
     /// has always put it, so nothing moves that wasn't already there.
+    ///
+    /// `days` names the rows that open each DAY inside the away section when
+    /// it spans more than one (prd §879) — row id → that day's own label. The
+    /// section used to be one flat run across however many days you were
+    /// gone, so the same source's two daily folds sat back to back reading as
+    /// one row twice, and nothing said where yesterday ended. Empty when the
+    /// section is a single day, which is most opens: a day name under "Since
+    /// you left" would only restate the obvious.
     private func momentSplit(_ groups: [(String, [FeedRow])])
-        -> (groups: [(String, [FeedRow])], moment: Bool) {
+        -> (groups: [(String, [FeedRow])], moment: Bool, days: [String: String]) {
         guard let since = newSince,
               let first = groups.first?.1.first, first.date > since
-        else { return (groups, false) }
+        else { return (groups, false, [:]) }
         var fresh: [FeedRow] = []
         var rest: [(String, [FeedRow])] = []
+        var days: [String: String] = [:]
         for (label, rows) in groups {
             let new = rows.prefix { $0.date > since }
             let old = rows.dropFirst(new.count)
+            if let opener = new.first { days[opener.id] = label }
             fresh.append(contentsOf: new)
             guard !old.isEmpty else { continue }
             // A day the boundary cut through keeps its rows under a name that
@@ -3869,8 +3895,8 @@ struct FeedScreen: View {
             let cut = !new.isEmpty && label == String(localized: "Today")
             rest.append((cut ? String(localized: "Earlier today") : label, Array(old)))
         }
-        guard !fresh.isEmpty, !rest.isEmpty else { return (groups, false) }
-        return ([(Self.momentLabel, fresh)] + rest, true)
+        guard !fresh.isEmpty, !rest.isEmpty else { return (groups, false, [:]) }
+        return ([(Self.momentLabel, fresh)] + rest, true, days.count > 1 ? days : [:])
     }
 
     /// The away section's name. A constant so the header's whisper gate and
@@ -7632,6 +7658,8 @@ struct FeedScreen: View {
                                   hasCover: Bool,
                                   boundary: String?,
                                   moment: Bool,
+                                  momentDays: [String: String] = [:],
+                                  momentWhole: Bool = true,
                                   imageOnly: Set<UUID>,
                                   wideArt: Set<UUID>,
                                   coarse: Set<String>,
@@ -7663,6 +7691,7 @@ struct FeedScreen: View {
             "imageOnly=\(imageOnly.count) wideArt=\(wideArt.count)",
             "coarse=\(coarse.count)",
             "newSince=\(boundary == nil ? 0 : 1) moment=\(moment ? 1 : 0)",
+            "momentDays=\(Set(momentDays.values).sorted().joined(separator: "/")) momentWhole=\(momentWhole ? 1 : 0)",
             "window=\(more ? "open" : "whole")",
             "dayLine=\(dayLine == nil ? 0 : 1)",
             "ambient=\(ambient)",
@@ -7701,6 +7730,13 @@ struct FeedScreen: View {
         // the next write, which is the exact stacking the gate exists to stop.
         var key = derivationKey(visible)
         key = key &* 31 &+ (heroShown ? 1 : 0)
+        // The cover's freshness reads the away window (`isCoverFresh`), which
+        // moves at a foreground without `visible` moving. To the minute:
+        // DEBUG's `-awayGap` slides the window with the clock, and a key that
+        // changed every second would re-derive the feed on every render.
+        if source == "All" {
+            key = key &* 31 &+ Int((AppVisit.away?.lowerBound.timeIntervalSince1970 ?? 0) / 60)
+        }
         if memo.key != key {
             memo.key = key
             memo.days = perfAccum("dayGrouping") { recentDaysThenCoarseTail(visible) }
@@ -7774,6 +7810,14 @@ struct FeedScreen: View {
         // Suppressed under a moment split: the section header IS the boundary
         // there, and two seams for one fact is worse than either alone.
         let boundary = split.moment ? nil : boundaryID(in: split.groups)
+        // The away section's day openers (prd §879) — see `momentSplit`.
+        let momentDays = split.days
+        // Whether the window drew the WHOLE away section (prd §879). A section
+        // cut at the row budget ends in "Show older", and the seam under it
+        // may not say "caught up" over rows it is hiding — §866a's floor,
+        // at the other end.
+        let momentWhole = split.moment
+            && (groups.first?.1.count ?? 0) == (split.groups.first?.1.count ?? 0)
         // The cover is already OUT of `memo.groups` (prd §389c), so it is
         // resolved from the day it came from rather than searched for among the
         // rows. `.isLive` before the id read: `memo.days` is held across
@@ -7865,7 +7909,8 @@ struct FeedScreen: View {
             // property of the whole composed feed; whether the window is open
             // is reported separately, as its own fact.
             logAllFeedCensus(groups: memo.groups, hasCover: ledeThing != nil, boundary: boundary,
-                             moment: split.moment, imageOnly: imageOnly, wideArt: wideArt,
+                             moment: split.moment, momentDays: momentDays,
+                             momentWhole: momentWhole, imageOnly: imageOnly, wideArt: wideArt,
                              coarse: coarse, more: window.more,
                              dayLine: dayLine,
                              tailDays: tailDayGroups.count, tailDrawn: tailDrawn)
@@ -7892,7 +7937,7 @@ struct FeedScreen: View {
                        let thing = item.live { return standsAlone(thing) }
                     return false
                 },
-                isBoundary: { rows[$0].id == boundary })
+                isBoundary: { rows[$0].id == boundary || momentDays[rows[$0].id] != nil })
             Section {
                 // UNPINNED (2026-08-29) — the day label is a ROW, not a `header:`.
                 //
@@ -7970,6 +8015,9 @@ struct FeedScreen: View {
                 if let cover, cover.isLive { ledeListRow(cover) }
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     if row.id == boundary { newSinceDivider }
+                    if label == Self.momentLabel, let day = momentDays[row.id] {
+                        momentDayDivider(day)
+                    }
                     switch row.kind {
                     case .single(let item):
                         // `live` before ANY read (corollary 3, build 176 —
@@ -8013,7 +8061,7 @@ struct FeedScreen: View {
                 // date to be understood; from below, under a section already
                 // named "Since you left", the only fact left to state is that
                 // this is where you can stop.
-                if split.moment && label == Self.momentLabel { caughtUpSeam }
+                if split.moment && momentWhole && label == Self.momentLabel { caughtUpSeam }
             }
         }
         if window.more { olderRow }
@@ -8122,6 +8170,20 @@ struct FeedScreen: View {
             .frame(maxWidth: .infinity)
             .padding(.top, DS.Space.s4)
             .padding(.bottom, DS.Space.s2)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+    }
+
+    /// A day's name INSIDE the away section (prd §879), when it spans more
+    /// than one. The day divider's own view, one weight cooler — the section's
+    /// name above it is the louder claim — so it is felt as it passes like
+    /// every other seam in time (`FeedDayDivider`, §866).
+    private func momentDayDivider(_ day: String) -> some View {
+        FeedDayDivider(label: day, weight: .semibold) { EmptyView() }
+            .padding(.leading, DS.Space.s4 + DS.Space.s3)
+            .padding(.top, DS.Space.s3)
+            .padding(.bottom, DS.Space.s1)
+            .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
     }
@@ -11190,7 +11252,19 @@ struct FeedScreen: View {
     /// Each step opens another target's worth. Monotonic for the life of the
     /// screen: it must not collapse when a thing lands, or scrolling back would
     /// undo itself every sync.
-    @State private var windowSteps = 0
+    @State private var windowSteps = Self.initialWindowSteps
+
+    /// `-feedWindowSteps <n>` (DEBUG, 2026-09-22) opens the window n steps on
+    /// arrival, so a probe can see rows past the first screenful — a section
+    /// longer than the budget (the away section after days gone) otherwise
+    /// needs a tap on "Show older" that a headless run cannot make.
+    private static var initialWindowSteps: Int {
+        #if DEBUG
+        return max(0, UserDefaults.standard.integer(forKey: "feedWindowSteps"))
+        #else
+        return 0
+        #endif
+    }
 
     /// One more screenful per step, deliberately linear (user ruling,
     /// 2026-08-01: "most people won't be scrolling back to previous history").

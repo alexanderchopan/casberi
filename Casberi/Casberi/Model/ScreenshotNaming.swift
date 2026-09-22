@@ -93,10 +93,21 @@ enum ScreenshotNaming {
     /// that cost, while this needs only the `content` an earlier pass already
     /// wrote — the same split, and the same reasoning, as
     /// `ScreenshotTopics.healTopics`.
+    /// Rows per foreground when the KEY would answer — each is a paid call.
+    static let keyedPerPass = 3
+
+    /// Rows per foreground when the phone's own model answers (2026-09-22).
+    /// It was 3 for both, which priced a free, on-device inference like a
+    /// paid one: a burst of twenty screenshots read "Screenshot" across seven
+    /// opens of the app. Every inference waits for a still hand
+    /// (`GestureGate`), so a larger batch costs no scroll.
+    static let onDevicePerPass = 12
+
     @MainActor
     @discardableResult
-    static func sweep(context: ModelContext, limit: Int = 3) async -> Int {
+    static func sweep(context: ModelContext, limit: Int? = nil) async -> Int {
         guard AgentLibrarian.available, !sweeping else { return 0 }
+        let limit = limit ?? (onDeviceNames ? onDevicePerPass : keyedPerPass)
         sweeping = true
         defer { sweeping = false }
 
@@ -119,6 +130,7 @@ enum ScreenshotNaming {
         var reindex: [Thing] = []
         var askedNow: [String] = []
         for thing in rows {
+            await GestureGate.idle()
             guard thing.isLive else { continue }
             let text = thing.content
             askedNow.append(thing.id.uuidString)
@@ -151,6 +163,9 @@ enum ScreenshotNaming {
     /// spending money to make the app worse. The key is reached only where
     /// there is no local model at all — which is the whole case
     /// `AgentLibrarian` exists for.
+    /// Whether `name` answers on the phone rather than on the key.
+    static var onDeviceNames: Bool { OnDeviceModel.isAvailable }
+
     static func name(text: String) async -> String? {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *), OnDeviceModel.isAvailable {
@@ -175,6 +190,9 @@ struct ScreenshotNameLayout {
 @available(iOS 26.0, *)
 enum ScreenshotNameModel {
     @MainActor
+    /// Whether `name` answers on the phone rather than on the key.
+    static var onDeviceNames: Bool { OnDeviceModel.isAvailable }
+
     static func name(text: String) async -> String? {
         guard OnDeviceModel.isAvailable else { return nil }
         let excerpt = String(text.prefix(1_500))
