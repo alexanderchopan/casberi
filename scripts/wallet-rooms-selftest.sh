@@ -662,9 +662,10 @@ grep -q 'enum WidgetSafe {' "Casberi/Shared/WidgetPayload.swift" \
 grep -q 'static let freshness: TimeInterval = 6 \* 3600' "Casberi/Shared/WidgetPayload.swift" \
   || { echo "✗ the Safe call no longer carries the READING freshness window — a stale count would sit on the Home Screen for 36 hours"; exit 1; }
 # "Nothing due" while a signature waits is the bug this payload exists to fix.
-grep -q 'var isEmpty: Bool { rows.isEmpty && (safe?.awaitsYou ?? 0) == 0 }' \
-  "Casberi/CasberiWidgets/NeedsYouWidget.swift" \
-  || { echo "✗ the Needs-you tile can say 'Nothing due' while a signature is waiting on you"; exit 1; }
+# Since prd §877 the Today plan draws the signature as a needs-you row of its
+# own, so a tile with a waiting signature is never empty.
+grep -q 'kind: .signature(count: signing.awaitsYou)' "Casberi/Shared/WidgetPayload.swift" \
+  || { echo "✗ the Today tile no longer draws a waiting signature — it could say nothing while one waits on you"; exit 1; }
 
 # The brief's rung — the ONLY surface that can re-raise a your-turn signature,
 # since §306's news window forbids a second notification forever after.

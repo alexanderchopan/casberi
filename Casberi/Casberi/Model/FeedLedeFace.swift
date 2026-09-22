@@ -16,7 +16,7 @@ import Foundation
 /// that one object, which is the whole of the user's "isn't everywhere".
 ///
 /// **PURE, and separated from the gathering so it can be tested** —
-/// `WidgetDayLead.kind`'s shape exactly, and for the same reason: the ladder is
+/// the widget's old day-lead ladder's shape exactly (deleted in §877), and for the same reason: the ladder is
 /// the part that goes silently wrong (a money arrival drawn as the words face
 /// renders perfectly and says far less than it could), while the gathering
 /// needs `@MainActor` and a `Thing`.

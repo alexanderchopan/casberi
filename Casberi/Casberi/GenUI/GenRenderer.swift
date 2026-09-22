@@ -2322,7 +2322,7 @@ private struct GenClusterMap: View {
 /// three of the brief's slots to say one thing.
 ///
 /// The pictures lead because they ARE the day rather than an abstraction of
-/// it (`WidgetDayLead`'s own ladder makes the same call); the people and the
+/// it (the widget's old day lead made the same call); the people and the
 /// rooms share the line beneath, since both are "who and where", and the
 /// subline carries every remainder so nothing is silently dropped.
 private struct GenDayFold: View {

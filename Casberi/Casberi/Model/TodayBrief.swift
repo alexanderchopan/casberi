@@ -1,6 +1,5 @@
 import Foundation
 import SwiftData
-import WidgetKit
 
 /// The Today brief (prd §166, user: "lets build b2 with b3 synthesis card") —
 /// the screen the whisper capsule opens, and a keepable ask in its own right
@@ -554,46 +553,6 @@ enum TodayBrief {
             mark("lede")
             lines.append("lede = DayLede(\"\(genSafe(lede.text))\", \"\(genSafe(dateline(now: now)))\", \"\(genSafe(lede.figure))\", \"\(lede.direction)\", \"\(genSafe(monument.figure))\", \"\(genSafe(monument.word))\", \"\(monument.tone)\")")
         }
-        // The home/Lock Screen widget carries this SAME sentence (2026-07-25).
-        // Published here rather than at a display route so it refreshes on
-        // every foreground — `KeptAskStore.refreshDigests` composes the brief
-        // for anyone who has kept this ask, and the widget should not have to
-        // wait for someone to actually open the brief to stop being stale.
-        // Publishing is NOT recording: the ledger's `presenting` discipline is
-        // about claiming "I already told you this", and a widget line is the
-        // telling, not a claim about it.
-        //
-        // SKIPPED for a scoped brief (`category != nil`): the widget's whole
-        // promise is the DAY'S lede/themes, and a "What's going on with Work?"
-        // ask overwriting that with a Work-only sentence would make the
-        // Lock Screen lie about the rest of the corpus the next time it's
-        // glanced at, unrelated to whether anyone actually opened the widget.
-        //
-        // AND skipped for the draft pass (`skipLiveReads`, 2026-08-14). That
-        // pass exists to paint the corpus half instantly and composes its lede
-        // WITHOUT the risk rung and without live holdings — so leaving it
-        // ungated published a knowingly-incomplete sentence to the Home
-        // Screen and then overwrote it a few seconds later. Two real writes,
-        // because the values genuinely differ, which is two `reloadTimelines`
-        // out of a budget the system meters; and for the window between them
-        // the most-glanced surface in the OS carried the lesser of two ledes
-        // we already knew how to compute. The background/digest compose is
-        // untouched — it does not set `skipLiveReads`, so the widget still
-        // refreshes without anyone opening the brief.
-        //
-        // SECOND CONSEQUENCE, intended and worth naming: `skipLiveReads` is
-        // force-ORed with `DemoMode.isActive`, so the demo no longer publishes
-        // its lede to the Home Screen either. That is the §217 demo doctrine
-        // already applied everywhere else — `BridgeRefresh` returns instantly
-        // and `Notifications.submit` returns `[]` under demo, so that a fake
-        // £240 dispute can never reach a real surface — and a widget is the
-        // most public surface the OS has. Previously a demo lede was published
-        // and, since `DemoMode.exit` unwinds by NAME, nothing was named to
-        // take it back down again.
-        if category == nil, !skipLiveReads {
-            publishLedeToWidget(lede.text)
-            publishThemesToWidget(things: things, now: now)
-        }
 
         // 1b. What NEEDS YOU (2026-08-10) — above the crown, and the only
         // module ranked purely by urgency rather than by what the scope is
@@ -745,7 +704,7 @@ enum TodayBrief {
         // pictures, the people, the rooms — and they cost three of the
         // brief's slots to say "here is what your day was". `DayFold` says it
         // once: pictures lead (they ARE the day rather than an abstraction of
-        // it — `WidgetDayLead`'s own ladder makes the same call), people and
+        // it — the widget's old day lead made the same call), people and
         // rooms share the line beneath, and the subline carries every
         // remainder so nothing is silently dropped.
         //
@@ -2067,7 +2026,7 @@ enum TodayBrief {
     /// The survivor is the one due SOONEST, so the earlier clock is never lost.
     ///
     /// Ordering is preserved: the caller's sort still decides what leads.
-    private static func dedupeDeadlines(_ things: [Thing]) -> [Thing] {
+    static func dedupeDeadlines(_ things: [Thing]) -> [Thing] {
         let window: TimeInterval = 7 * 86_400
         var kept: [Thing] = []
         for thing in things.sorted(by: { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }) {
@@ -3706,63 +3665,6 @@ enum TodayBrief {
         s.replacingOccurrences(of: "\"", with: "")
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    // MARK: - Widget publication
-
-    /// Hands the lede to the widget through the app group, and asks it to
-    /// re-read. The widget extension can't call into this file (app target
-    /// only) and must not recompose the brief anyway — it runs in a ~30MB
-    /// budget where the brief's live wallet reads are impossible. So the app
-    /// publishes the finished sentence and the widget mirrors it.
-    ///
-    /// An EMPTY lede clears the key rather than leaving the last one standing:
-    /// the brief itself opens on the hero when the ladder yields nothing, and a
-    /// widget still showing yesterday's sentence would be the fake-status the
-    /// honesty rule forbids. The widget's own fallback takes over.
-    private static func publishLedeToWidget(_ text: String) {
-        guard let group = UserDefaults(suiteName: SharedStore.appGroup) else { return }
-        let previous = group.string(forKey: WidgetLede.textKey) ?? ""
-        if text.isEmpty {
-            group.removeObject(forKey: WidgetLede.textKey)
-            group.removeObject(forKey: WidgetLede.stampKey)
-        } else {
-            group.set(text, forKey: WidgetLede.textKey)
-            group.set(Date.now.timeIntervalSince1970, forKey: WidgetLede.stampKey)
-        }
-        // Only when the SENTENCE changed — the brief recomposes on every
-        // foreground and on every composer open for anyone who kept the ask,
-        // and a reload per compose would spend the widget's refresh budget on
-        // writing the same words back.
-        if previous != text {
-            WidgetCenter.shared.reloadTimelines(ofKind: WidgetLede.kind)
-        }
-    }
-
-    /// Mirrors `themesMap`'s own clustering (same 30-day horizon, same
-    /// two-cluster floor) into the App Group as plain cells — never the
-    /// `TagMap(...)` doc-string `themesMap` composes, which is GenUI's
-    /// format, not the widget's. Recomputed independently rather than
-    /// threading `themesMap`'s result through: it's a pure, cheap read
-    /// (`HomeComposition.projectClusters`, no async/NLTagger dependency),
-    /// and the two callers wanting different shapes of the same clustering
-    /// is cheaper than one contorting its return type for the other.
-    private static func publishThemesToWidget(things: [Thing], now: Date) {
-        guard let group = UserDefaults(suiteName: SharedStore.appGroup) else { return }
-        let horizon = Calendar.current.date(byAdding: .day, value: -30, to: now) ?? now
-        let clusters = HomeComposition.projectClusters(things: things.filter { $0.capturedAt >= horizon })
-        guard clusters.count >= 2 else {
-            group.removeObject(forKey: WidgetLede.themesKey)
-            group.removeObject(forKey: WidgetLede.themesStampKey)
-            return
-        }
-        // Three, not `themesMap`'s six — the medium widget has room for
-        // three legible cells before a fourth reads as clutter (mockup,
-        // 2026-08-03).
-        let cells = clusters.prefix(3).map { WidgetThemeCell(name: $0.name, weight: $0.things.count) }
-        guard let data = try? JSONEncoder().encode(Array(cells)) else { return }
-        group.set(data, forKey: WidgetLede.themesKey)
-        group.set(Date.now.timeIntervalSince1970, forKey: WidgetLede.themesStampKey)
     }
 }
 

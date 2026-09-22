@@ -60052,3 +60052,76 @@ On the Mac, Accounts was a single column ~1,300pt wide with chevrons at the far 
 The phone is untouched: no pane, so `paneHostsPushes` is always false. A regular-width iPad with a pane gets the same split.
 
 Verified on the Catalyst build: Settings → Notifications, Diagnostics and an account page each draw in the pane beside the list, with the back arrow at the seat.
+
+## §877 — "Your day" and "Needs you" become one widget, Today (user, 2026-09-22)
+
+**"i really like our wallet widgets but hate the non wallet ones. they don't look
+good and don't seem helpful."** An inventory of the iPhone set found why. The
+wallet draws one subject, one number and one shape, the same way every time.
+"Your day" chose among the brief's sentence and four leads (today's thumbnails,
+money, a posts line, a monogram source mix) or a three-word themes map, so it
+could never be learned at a glance, and its headline came from the brief, which
+went dark with the ask (§697b). Its rows were 12pt words with no picture,
+because the widget target cannot reach the app's brand marks. "Needs you" read
+`dueAt`, which only a handful of seats write, so it said "Nothing due" on most
+phones. The user's verdict on the mockups: *"the ones for 'your day' only have
+one line item on them. and 'needs you' is mostly empty. they could likely be
+combined"*; then *"Today and Wallet and Replies are good but Replies could be
+part of Today"*, GitHub reviews in, the account, reading and inbox proposals out.
+
+**Two widgets: Today and Wallet.** Today is one list, ordered by how much each
+thing is already a problem, decided in one pure function
+(`WidgetTodayPlan.make`, `Shared/WidgetPayload.swift`):
+
+1. **Needs you** — late deadlines, a Safe signature waiting on you, GitHub
+   review requests and assignments, then deadlines inside the week.
+2. **Replies** — replies to your own posts in the last day, newest first, and
+   the newest like roll (`SocialLikeRoll.line`, names first, §330).
+3. **Landed** — the newest things, read from the store by the widget itself so
+   a thing saved while the app is closed still arrives. A reply already shown
+   is not shown again.
+
+Half the tile, at most two rows, is held for sections 2 and 3 when they have
+something: two deadlines and the two people who answered you say more than four
+deadlines. With nothing inside the week, the tile names the next deadline on its
+own line ("Next: casberi.eth renews · Oct 30") instead of standing empty.
+
+**A request says when it was ASKED, never that it is waiting.** GitHub drops a
+notification once it is read on github.com, but the landed row stays, so the
+app cannot know a review is still open. It draws "asked 2d", stops at a week,
+and is not counted in the header. "Waiting" and "to sign" belong to the Safe
+call alone, whose count is a live reading (`WidgetSafe`, six hours).
+
+**Every lead is a picture.** The app writes small PNGs into the app group
+(`WidgetImages`, `Model/WidgetLeadImages.swift`): the bundled brand mark, or the
+app's own `BridgeIcon` badge for a source with none (Calendar and Reminders
+showed letters on the first simulator run), and reply faces fetched on the
+notification ladder's three-second budget with the host named to the ledger.
+Keys are FNV-1a of the source or URL, because Swift's `hashValue` is seeded per
+process and would give the app and the widget two names for one file. A
+picture not yet written draws a monogram, never a hole.
+
+**The kind is the hero's (`casberi.hero`)**, so a placed "Your day" tile becomes
+Today. "Needs you" had its own kind and its placements go to the system's
+"unable to load" placeholder — the accepted cost of two tiles becoming one.
+
+**No ring on the circular Lock Screen tile** (user: *"it's unnecessary and
+doesn't mean anything"*). It shows the most pressing thing's mark and its clock
+("2h late"); a count of open items is not a fraction of anything.
+
+**Deleted with it (§723):** `HeroWidget`, `NeedsYouWidget`, `HeroLeads.swift`,
+`WidgetDueRow`, `WidgetLede` (the lede and themes payloads),
+`WidgetDayLead`/`WidgetSourceCell`, and the brief's two publishers
+(`publishLedeToWidget`, `publishThemesToWidget`). Twin deadlines are now
+collapsed before publishing with the brief's own `dedupeDeadlines` ("Book
+dentist" from Reminders and "Book the dentist" from Todoist both showed on the
+first run).
+
+**Not built:** an Account widget (only GitHub mattered, and it is inside Today
+now), Up next, an inbox grid, and deleting `KeptAskWidget.swift`, which §697b
+keeps compiling so it returns with the ask flag.
+
+Verified on the simulator's widget gallery at all three Home Screen sizes, over
+the seeded corpus: late dentist, the Safe signature, a GitHub assignment with
+its real title, a like roll, Calendar rows with their badge. The Lock Screen
+families compile and are unseen, as they were before (§382).

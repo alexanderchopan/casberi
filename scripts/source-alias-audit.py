@@ -117,7 +117,7 @@ RESOLVERS = [
     ("Casberi/Casberi/Design/KindGlyph.swift", "static func symbol(for name: String) -> String {"),
     ("Casberi/Casberi/Design/KindGlyph.swift", "static func glyphTint(for name: String) -> Color? {"),
     ("Casberi/Casberi/Design/AppIconTile.swift", "static func brandHue(for source: String) -> Color? {"),
-    ("Casberi/Casberi/Model/Notifications.swift", "private static func brandAsset(_ name: String) -> UIImage? {"),
+    ("Casberi/Casberi/Model/Notifications.swift", "static func brandAsset(_ name: String) -> UIImage? {"),
 ]
 
 

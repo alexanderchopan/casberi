@@ -449,9 +449,9 @@ grep -q 'KeptAskWidget()' "Casberi/CasberiWidgets/CasberiWidgets.swift" \
   && { echo "✗ the kept-ask widget is back in the bundle — every tile on it opens an ask."; fail=1; }
 grep -q 'BriefControl()' "Casberi/CasberiWidgets/CasberiWidgets.swift" \
   && { echo "✗ the brief's Control Center button is back."; fail=1; }
-grep -q 'WidgetAskLink.url' "Casberi/CasberiWidgets/NeedsYouWidget.swift" \
-  && { echo "✗ the deadlines widget taps through to an ask again — it reads dueAt, which"; \
-       echo "  is a corpus field, so it keeps its seat and opens the FEED."; fail=1; }
+grep -q 'WidgetAskLink.url' "Casberi/CasberiWidgets/TodayWidget.swift" \
+  && { echo "✗ the Today widget taps through to an ask again — it reads corpus fields,"; \
+       echo "  so it opens the FEED and the things themselves (prd §877)."; fail=1; }
 grep -q 'guard AskSurface.enabled else { return }' "$TMP/root.nc" \
   || { echo "✗ RootShell no longer gates the ask's deep links (casberi://ask, ://brief)"; \
        echo "  and the quick action's landing."; fail=1; }

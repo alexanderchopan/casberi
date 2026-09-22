@@ -19,7 +19,7 @@ import Foundation
 /// ignored:
 ///
 ///  1. **Two grammars for one figure drift.** The runway is drawn in three
-///     places (`GenRunway`, `WalletRunwayRail`, the widget's `HeroRunway`).
+///     places (`GenRunway`, `WalletRunwayRail`, the Today widget's `TodayRunway`).
 ///     Written three times it would be described three ways, and
 ///     the §418 lesson — a duplicate parser that reads the same bytes worse
 ///     than the original — is exactly this shape.
@@ -29,7 +29,7 @@ import Foundation
 ///     the one reading its own user can never check against the drawing, which
 ///     makes it MORE deserving of a harness than the visible ones, not less.
 ///  3. **The widget target needs the same words.** `Casberi/Shared/` is what
-///     both targets compile, so `HeroRunway` and `ThemesTreemap` say what their
+///     both targets compile, so the widget's figures say what their
 ///     in-app twins say without a second copy crossing a process boundary.
 ///
 /// **THE RULE THESE ALL FOLLOW: say the figure's CLAIM, not its contents.**
@@ -96,7 +96,7 @@ enum FigureVoice {
     /// reasoning), plus the one fact the drawing carries in HUE ALONE.
     ///
     /// **Overdue is the load-bearing half.** `GenRunway` and the widget's
-    /// `HeroRunway` both colour a late dot `DS.attention` and say nothing else
+    /// `TodayRunway` both colour a late dot `DS.attention` and say nothing else
     /// about it — on iOS there is no tooltip and no text equivalent anywhere on
     /// the figure, so lateness was carried by colour and by nothing else. That
     /// is the one place in this app where the 2026-07-16 colour law was

@@ -2,7 +2,7 @@ import Foundation
 
 /// What the app publishes for the widgets to draw (2026-08-14, prd §382).
 ///
-/// `WidgetLede` established the shape for one payload and this generalizes it
+/// The hero's lede (deleted in §877) established the shape for one payload; this generalizes it
 /// to the rest. The constraint is the same and it is not negotiable: the widget
 /// extension runs in a ~30MB budget and cannot make a network read, so it can
 /// never RECOMPUTE any of this. Every reading a tile shows was computed by the
@@ -197,92 +197,6 @@ enum WidgetAskLink {
     }
 }
 
-// MARK: - What the hero leads with
-
-/// One app's share of the day, as a `SourceMix` cell.
-///
-/// `share` is a fraction of the day's rows, and it sizes the cell's AREA and
-/// nothing else — no cell ever prints its count (§213). The name is the app's
-/// own, and the tile draws a monogram rather than a brand mark: `Design/` is
-/// app-target only, so the extension has no access to the bundled icons, and
-/// `AssetMark`'s rule for a name we don't bundle is a neutral monogram rather
-/// than an invented hue.
-struct WidgetSourceCell: Codable, Equatable {
-    let name: String
-    let share: Double
-}
-
-/// What the hero tile leads with today (2026-08-14, prd §382 amendment).
-///
-/// It used to be the themes treemap, always — three abstract cells carrying
-/// three WORDS, which is the weakest thing the brief draws and the only one
-/// you have to read before it tells you anything. The brief's own vocabulary is
-/// far richer, so the tile now leads with whichever of those modules the day
-/// actually earns, in the order the mockup settled on:
-///
-///   1. **Pictures.** A contact sheet of the day's own thumbnails. The
-///      strongest lead there is, because its cells are the day itself rather
-///      than an abstraction of it — and it costs no new published bytes: the
-///      extension already reads the shared store, so it fetches the thumbnails
-///      the same way it fetches the newest rows.
-///   2. **Money**, when the wallet moved and there are no pictures.
-///   3. **The source mix**, one big cell and two stacked (§194), each wearing
-///      its app's monogram — the same information the treemap was reaching for,
-///      readable without reading.
-///   4. **Nothing.** A day with none of the above draws no frame at all rather
-///      than an empty one, which is the same "decline rather than fill" rule
-///      every room head in the app already follows.
-struct WidgetDayLead: Codable, Equatable {
-    enum Kind: String, Codable { case pictures, money, posts, sources, none }
-    var kind: Kind
-    /// What happened to YOUR posts today, as the one line the overview's own
-    /// card leads with (2026-08-14, prd §386d) — "Liked by @mel and 9 others",
-    /// "@sara replied to you". Names, never a bare count (§330's rule, which
-    /// is also what makes this worth a tile: a number is a tally, a name is a
-    /// person). Empty on every day the inbound reads landed nothing, which is
-    /// most days for most people.
-    var postsLine: String = ""
-    /// How many of the day's things carry a picture. The BYTES are not
-    /// published — the widget fetches those from the store itself — but the
-    /// count is, because it is what decides the lead, and that decision belongs
-    /// to the app (the widget computes nothing).
-    var pictures: Int = 0
-    var sources: [WidgetSourceCell] = []
-    /// The apps the mix leaves out, for the residual line ("and 4 other apps").
-    var otherSources: Int = 0
-}
-
-extension WidgetDayLead {
-    /// PURE, and separated from the gathering so it can be tested: the day's
-    /// lead is decided here and nowhere else.
-    ///
-    /// `pictureFloor` exists because three thumbnails do not read as a contact
-    /// sheet — they read as a row that failed to fill. Below it the day falls
-    /// through to whatever it can honestly say instead.
-    static let pictureFloor = 4
-    /// Two cells is the fewest that can show a SHARE. One cell is not a mix, it
-    /// is a title with a box around it.
-    static let sourceFloor = 2
-
-    /// `posts` defaults to false so every existing caller — and the harness's
-    /// own six assertions — reads exactly as it did before the rung existed.
-    ///
-    /// WHERE IT SITS, and why not higher: the overview ranks people above the
-    /// source mix and below the money, and this ladder now says the same
-    /// thing. It is deliberately NOT at the top even though "needs you" leads
-    /// the overview — needs-you owns a widget of its own (`NeedsYouWidget`),
-    /// and a hero that repeats a dedicated tile is a duplicate on the one
-    /// surface where duplicates are most visible: a Home Screen holding both.
-    static func kind(pictures: Int, moneyMoved: Bool, sources: Int,
-                     posts: Bool = false) -> Kind {
-        if pictures >= pictureFloor { return .pictures }
-        if moneyMoved { return .money }
-        if posts { return .posts }
-        if sources >= sourceFloor { return .sources }
-        return .none
-    }
-}
-
 // MARK: - The flow band
 
 /// A week of money in against money out (2026-08-14, prd §382b) —
@@ -440,12 +354,13 @@ enum WidgetRunway {
 }
 
 enum WidgetDeadlines {
-    static let kind = "casberi.needsyou"
+    // No `kind` of its own since prd §877: the deadlines ride the Today tile,
+    // which reloads under `WidgetToday.kind`.
     static let key = "widget.deadlines"
     static let stampKey = "widget.deadlinesAt"
 
     /// Dates don't rot, but the SET does — something gets marked done, a
-    /// dispute closes. A day and a half is the same window `WidgetLede` uses
+    /// dispute closes. A day and a half is the same window the hero's lede used
     /// and for the same reason: it survives a night, not a weekend away.
     static let freshness: TimeInterval = 36 * 3600
 
@@ -620,5 +535,310 @@ enum WidgetWallet {
     -> WidgetWalletLine? {
         WidgetPayload.read(WidgetWalletLine.self, key: key, stampKey: stampKey,
                            freshness: freshness, now: now, defaults: defaults)
+    }
+}
+
+// MARK: - Today (prd §877)
+
+/// Something a person asked of you with NO due date — a GitHub review request
+/// or an assignment (prd §877).
+///
+/// Its own payload, never a `WidgetDeadline`, for the reason `WidgetSafeCall`
+/// gives: a request carries when it was ASKED, not when it is due, and a made-up
+/// due date would sort among real ones and draw itself late.
+///
+/// The row cannot know the request is still open — GitHub's notification list
+/// drops a request once it is read on github.com, but a landed row stays — so
+/// the tile says when it was asked ("asked 2d"), never "waiting", and stops
+/// drawing it past `WidgetToday.requestWindow`. "Waiting" is reserved for the
+/// Safe call, whose count is a reading of the live queue.
+struct WidgetRequest: Codable, Equatable {
+    let id: String
+    /// "Review: Feed seam haptics", composed by the app.
+    let title: String
+    let source: String
+    let askedAt: Date
+}
+
+/// Someone who answered one of YOUR posts (prd §877). `words` is the reply
+/// itself (`SocialRoomSource.words`), never the row's clamped title.
+struct WidgetReply: Codable, Equatable {
+    let id: String
+    let who: String
+    let words: String
+    let source: String
+    let at: Date
+    /// The replier's face as a `WidgetImages` key, or nil when the row has none.
+    let face: String?
+}
+
+/// The newest like roll on your posts — `SocialLikeRoll.line`, names first,
+/// never a bare count (§330).
+struct WidgetLikes: Codable, Equatable {
+    let line: String
+    let source: String
+    let at: Date
+    /// The liked post, when it is in the corpus.
+    let id: String?
+}
+
+struct WidgetPeople: Codable, Equatable {
+    var replies: [WidgetReply]
+    var likes: WidgetLikes?
+}
+
+/// One thing that landed, as the widget fetched it from the shared store.
+/// Not published — the widget reads the store itself, so a thing saved while
+/// the app is closed still reaches the tile.
+struct WidgetLanded: Equatable {
+    let id: String
+    let title: String
+    let source: String
+    let at: Date
+    /// A face key, when the row names a person with a picture.
+    let face: String?
+}
+
+enum WidgetToday {
+    /// The hero's kind, kept on purpose: a "Your day" tile already on a Home
+    /// Screen becomes a Today tile instead of the system's "unable to load"
+    /// placeholder. "Needs you" had its own kind and its placements do go to
+    /// that placeholder — the accepted cost of two tiles becoming one.
+    static let kind = "casberi.hero"
+
+    static let requestsKey = "widget.requests"
+    static let requestsStampKey = "widget.requestsAt"
+    static let peopleKey = "widget.people"
+    static let peopleStampKey = "widget.peopleAt"
+
+    /// Both payloads are SETS that change while the app is closed (a request
+    /// answered, a reply deleted), so they take the deadlines' day and a half.
+    /// Each row also has its own draw-time window below.
+    static let freshness: TimeInterval = 36 * 3600
+
+    /// A request older than a week is history, not a request.
+    static let requestWindow: TimeInterval = 7 * 24 * 3600
+    /// Replies and likes are news for a day.
+    static let peopleWindow: TimeInterval = 24 * 3600
+    /// A deadline this close belongs in "needs you". A later one is named on
+    /// the quiet line instead ("Next: …"), and only when nothing nearer is.
+    static let soonWindow: TimeInterval = 7 * 24 * 3600
+
+    static func requests(now: Date = .now,
+                         defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
+    -> [WidgetRequest] {
+        (WidgetPayload.read([WidgetRequest].self, key: requestsKey, stampKey: requestsStampKey,
+                            freshness: freshness, now: now, defaults: defaults) ?? [])
+            .filter { now.timeIntervalSince($0.askedAt) < requestWindow }
+    }
+
+    static func people(now: Date = .now,
+                       defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
+    -> WidgetPeople {
+        let stored = WidgetPayload.read(WidgetPeople.self, key: peopleKey, stampKey: peopleStampKey,
+                                        freshness: freshness, now: now, defaults: defaults)
+        let fresh = { (at: Date) in now.timeIntervalSince(at) < peopleWindow }
+        return WidgetPeople(replies: (stored?.replies ?? []).filter { fresh($0.at) },
+                            likes: stored?.likes.flatMap { fresh($0.at) ? $0 : nil })
+    }
+}
+
+/// One line on the Today tile. The VIEW words it; this carries only facts, so
+/// the ordering and the clocks can be tested without a widget.
+struct WidgetTodayRow: Equatable {
+    enum Section: Equatable { case needs, people, landed }
+    enum Kind: Equatable {
+        case deadline
+        /// A Safe transaction waiting on your signature; `count` of them.
+        case signature(count: Int)
+        case request
+        case reply(who: String)
+        case likes
+        case landed
+    }
+    /// What the right-hand clock reads — resolved to words at DRAW time.
+    enum Clock: Equatable {
+        case due(Date)
+        /// Whole days a signature has waited; nil when the wire had no date.
+        case waiting(Int?)
+        case asked(Date)
+        case at(Date)
+    }
+    enum Lead: Equatable {
+        case mark(source: String)
+        case face(key: String, source: String)
+    }
+
+    let id: String?
+    let section: Section
+    let kind: Kind
+    let title: String
+    let lead: Lead
+    let clock: Clock
+}
+
+/// What the Today tile draws, decided in one pure function (prd §877): what
+/// wants you first, then who answered you, then what landed — so the tile is
+/// full on a quiet day and never a single line.
+struct WidgetTodayPlan: Equatable {
+    var rows: [WidgetTodayRow]
+    /// The nearest deadline past `soonWindow`, named on its own line — set
+    /// only when NOTHING needs you, so the top of the tile is never empty
+    /// silence on a day with a real date ahead.
+    var next: WidgetDeadline?
+    var late: Int
+    /// Safe transactions waiting on your signature — a live reading. Requests
+    /// are NOT counted here: one may already be answered (`WidgetRequest`).
+    var toSign: Int
+    /// Up to four reply faces, newest first, for the small tile's pile.
+    var faces: [String]
+    var repliers: [String]
+
+    var isEmpty: Bool { rows.isEmpty && next == nil }
+}
+
+extension WidgetTodayPlan {
+    /// `capacity` is how many rows the family has room for. When `next` is
+    /// set its line takes one of them.
+    static func make(deadlines: [WidgetDeadline], safe: WidgetSafeCall?,
+                     requests: [WidgetRequest], people: WidgetPeople,
+                     landed: [WidgetLanded], capacity: Int, now: Date) -> WidgetTodayPlan {
+        let byDue = deadlines.sorted { $0.due < $1.due }
+        let overdue = byDue.filter { $0.isOverdue(now: now) }
+        let soon = byDue.filter { !$0.isOverdue(now: now) && $0.due.timeIntervalSince(now) <= WidgetToday.soonWindow }
+        let asks = requests.filter { now.timeIntervalSince($0.askedAt) < WidgetToday.requestWindow }
+            .sorted { $0.askedAt > $1.askedAt }
+        let signing = (safe?.awaitsYou ?? 0) > 0 ? safe : nil
+
+        // Needs you, in the order each is already a problem: late, then
+        // somebody blocked on your signature, then a request, then what is
+        // coming. A signature outranks a request because the Safe count is a
+        // live reading and a request may already be answered.
+        var needs: [WidgetTodayRow] = overdue.map(deadlineRow)
+        if let signing {
+            needs.append(WidgetTodayRow(id: signing.id, section: .needs,
+                                        kind: .signature(count: signing.awaitsYou),
+                                        title: signing.subject, lead: .mark(source: "Safe"),
+                                        clock: .waiting(signing.waitingDays)))
+        }
+        needs += asks.map {
+            WidgetTodayRow(id: $0.id, section: .needs, kind: .request, title: $0.title,
+                           lead: .mark(source: $0.source), clock: .asked($0.askedAt))
+        }
+        needs += soon.map(deadlineRow)
+
+        let next = needs.isEmpty ? byDue.first { !$0.isOverdue(now: now) } : nil
+
+        var said: [WidgetTodayRow] = people.replies.sorted { $0.at > $1.at }.map { reply in
+            WidgetTodayRow(id: reply.id, section: .people, kind: .reply(who: reply.who),
+                           title: reply.words,
+                           lead: reply.face.map { .face(key: $0, source: reply.source) }
+                               ?? .mark(source: reply.source),
+                           clock: .at(reply.at))
+        }
+        if let likes = people.likes {
+            said.append(WidgetTodayRow(id: likes.id, section: .people, kind: .likes,
+                                         title: likes.line, lead: .mark(source: likes.source),
+                                         clock: .at(likes.at)))
+        }
+
+        let shown = Set((needs + said).compactMap(\.id))
+        let fresh = landed.sorted { $0.at > $1.at }.filter { !shown.contains($0.id) }.map { thing in
+            WidgetTodayRow(id: thing.id, section: .landed, kind: .landed, title: thing.title,
+                           lead: thing.face.map { .face(key: $0, source: thing.source) }
+                               ?? .mark(source: thing.source),
+                           clock: .at(thing.at))
+        }
+
+        // Room: needs you may take everything, EXCEPT that half the tile (at
+        // most two rows) is held back for the other sections when they have
+        // something — a tile of four deadlines says less than two deadlines
+        // and the two people who answered you.
+        let room = max(0, capacity - (next == nil ? 0 : 1))
+        let others = said.count + fresh.count
+        let held = min(others, room / 2)
+        let needsTaken = Array(needs.prefix(max(0, room - held)))
+        var left = room - needsTaken.count
+        let peopleTaken = Array(said.prefix(left))
+        left -= peopleTaken.count
+        let landedTaken = Array(fresh.prefix(left))
+
+        let replies = said.filter {
+            if case .reply = $0.kind { return true } else { return false }
+        }
+        return WidgetTodayPlan(
+            rows: needsTaken + peopleTaken + landedTaken,
+            next: next,
+            late: overdue.count,
+            toSign: signing?.awaitsYou ?? 0,
+            faces: Array(replies.compactMap {
+                if case .face(let key, _) = $0.lead { return key } else { return nil }
+            }.prefix(4)),
+            repliers: replies.compactMap {
+                if case .reply(let who) = $0.kind { return who } else { return nil }
+            })
+    }
+
+    private static func deadlineRow(_ d: WidgetDeadline) -> WidgetTodayRow {
+        WidgetTodayRow(id: d.id, section: .needs, kind: .deadline, title: d.title,
+                       lead: .mark(source: d.source), clock: .due(d.due))
+    }
+}
+
+/// A span said the way a row's clock says it: minutes under an hour, hours
+/// under a day, then days — with the hours kept beside the days only while
+/// they still matter ("1d 6h", never "12d 3h").
+struct WidgetSpan: Equatable {
+    let days: Int
+    let hours: Int
+    let minutes: Int
+
+    init(_ seconds: TimeInterval) {
+        let s = max(0, Int(seconds))
+        if s < 3600 {
+            days = 0; hours = 0; minutes = max(1, s / 60)
+        } else if s < 86_400 {
+            days = 0; hours = s / 3600; minutes = 0
+        } else {
+            days = s / 86_400
+            hours = days < 3 ? (s % 86_400) / 3600 : 0
+            minutes = 0
+        }
+    }
+}
+
+/// Where the Today tile's lead pictures live: small PNGs the APP writes into
+/// the app group (brand marks it bundles, faces it downloads) and the widget
+/// reads by key. The widget can neither reach the app's asset catalog nor
+/// fetch a URL, and this is the one channel between them for pixels.
+///
+/// Keys are FNV-1a hashes of the source name or the picture URL, computed the
+/// same way on both sides — Swift's `hashValue` is seeded per process, so it
+/// would give the app and the widget two different names for one picture.
+enum WidgetImages {
+    static let folder = "WidgetLeads"
+    /// Past this many FACES the oldest go. Marks are a few dozen and stay.
+    static let fileCap = 160
+
+    static func markKey(source: String) -> String { "mark-" + fnv(source) }
+    static func faceKey(url: String) -> String { "face-" + fnv(url) }
+
+    static func fnv(_ text: String) -> String {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in text.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x0000_0100_0000_01b3
+        }
+        return String(hash, radix: 16)
+    }
+
+    static func directory() -> URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroup)?
+            .appendingPathComponent(folder, isDirectory: true)
+    }
+
+    static func file(_ key: String) -> URL? {
+        directory()?.appendingPathComponent(key + ".png")
     }
 }

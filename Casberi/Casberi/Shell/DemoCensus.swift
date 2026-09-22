@@ -204,16 +204,20 @@ enum DemoCensus {
         // The widgets are COMPOSED here and never published: nothing the demo
         // makes reaches a Home Screen (§217 doctrine, `WidgetPublish.publishAll`
         // returns under the demo). What is judged is what each tile WOULD draw.
-        out.append(Surface(name: "widget.lede", gate: .required) {
-            .skipped("the Today lede never publishes under the demo (§217 doctrine)")
-        })
         out.append(Surface(name: "widget.asks", gate: .required) {
             let kinds = KeptAskStore.shared.order
             return kinds.isEmpty ? .empty("no kept ask for the asks tile") : .ok(kinds.joined(separator: ","))
         })
-        out.append(Surface(name: "widget.dayLead", gate: .required) {
-            WidgetPublish.dayLead(things: surfaced).map { .ok("\($0.kind.rawValue) pictures=\($0.pictures)") }
-                ?? .empty("no day lead")
+        // Today's asks and people are windowed to the last week and the last
+        // day, so an aged pour empties them honestly — ranked, not required.
+        out.append(Surface(name: "widget.requests", gate: .ranked) {
+            let r = WidgetPublish.requests(things: surfaced) ?? []
+            return r.isEmpty ? .empty("no GitHub request inside the week") : .ok("\(r.count) requests")
+        })
+        out.append(Surface(name: "widget.people", gate: .ranked) {
+            WidgetPublish.people(things: surfaced).map {
+                .ok("\($0.replies.count) replies likes=\($0.likes == nil ? "no" : "yes")")
+            } ?? .empty("no reply or like inside the day")
         })
         out.append(Surface(name: "widget.flow", gate: .required) {
             WidgetPublish.flow(things: surfaced) != nil ? .ok("composed") : .empty("no flow band")

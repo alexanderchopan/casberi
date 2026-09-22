@@ -367,7 +367,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 
 Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (internal, no UI produces it, prd §269), `casberi://account`, `casberi://settings`, `casberi://thing/<id>`, `casberi://person/<Bluesky|Farcaster>/<handle>`, `casberi://ask?q=<question>` (the widgets' door, prd §382), `casberi://frames/sponsor?r=` (a payment request, prd §728c).
 
-- **The widgets** → docs/hooks/system.md · prd §382
+- **The widgets are Today and Wallet (prd §877).** Today is one list — needs you, replies, landed — ordered by `WidgetTodayPlan.make` in `Shared/`; its lead pictures are PNGs the app writes into the app group (`WidgetImages`), because the widget reaches neither the asset catalog nor a URL. `-widgetProbe YES` prints the plan → docs/hooks/system.md · prd §382 · §877
 
 ## SwiftUI/UIKit gotchas already paid for
 

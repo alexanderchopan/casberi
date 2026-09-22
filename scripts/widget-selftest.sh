@@ -49,19 +49,15 @@ cd "$(dirname "$0")/.."
 
 PAYLOAD="Casberi/Shared/WidgetPayload.swift"
 MONEY="Casberi/Shared/MoneyFormat.swift"
-# The lede's keys and freshness window live here, and the day's LEAD shares
-# them — a lead that outlived the sentence above it would put yesterday's mix
-# under today's headline. Foundation-only, so it compiles beside the others.
-LEDE="Casberi/Shared/WidgetLede.swift"
 PUBLISH="Casberi/Casberi/Model/WidgetPublish.swift"
 BUNDLE="Casberi/CasberiWidgets/CasberiWidgets.swift"
 WALLETW="Casberi/CasberiWidgets/WalletWidget.swift"
 KEPTW="Casberi/CasberiWidgets/KeptAskWidget.swift"
-NEEDSW="Casberi/CasberiWidgets/NeedsYouWidget.swift"
+TODAYW="Casberi/CasberiWidgets/TodayWidget.swift"
 ROOT="Casberi/Casberi/Shell/RootShell.swift"
 COMMIT="Casberi/Casberi/Model/ImportCommit.swift"
 PANEL="Casberi/Casberi/Model/AgentPanel.swift"
-for f in "$PAYLOAD" "$MONEY" "$LEDE" "$PUBLISH" "$BUNDLE" "$WALLETW" "$KEPTW" "$NEEDSW" \
+for f in "$PAYLOAD" "$MONEY" "$PUBLISH" "$BUNDLE" "$WALLETW" "$KEPTW" "$TODAYW" \
          "$ROOT" "$COMMIT" "$PANEL"; do
   [[ -f "$f" ]] || { print -u2 "missing $f"; exit 1; }
 done
@@ -96,7 +92,7 @@ strip_comments "$PUBLISH" > "$TMP/publish.nc"
 strip_comments "$BUNDLE"  > "$TMP/bundle.nc"
 strip_comments "$WALLETW" > "$TMP/walletw.nc"
 strip_comments "$KEPTW"   > "$TMP/keptw.nc"
-strip_comments "$NEEDSW"  > "$TMP/needsw.nc"
+strip_comments "$TODAYW"  > "$TMP/todayw.nc"
 strip_comments "$ROOT"    > "$TMP/root.nc"
 strip_comments "$COMMIT"  > "$TMP/commit.nc"
 strip_comments "$PANEL"   > "$TMP/panel.nc"
@@ -124,8 +120,23 @@ fi
 # already carries this note for the hero; these are the same rule.
 grep -q 'kind: WidgetAsks.kind' "$TMP/keptw.nc" \
   || { print -u2 "✗ the kept-ask widget no longer uses WidgetAsks.kind — reloads would never reach it"; exit 1; }
-grep -q 'kind: WidgetDeadlines.kind' "$TMP/needsw.nc" \
-  || { print -u2 "✗ the Needs you widget no longer uses WidgetDeadlines.kind"; exit 1; }
+grep -q 'kind: WidgetToday.kind' "$TMP/todayw.nc" \
+  || { print -u2 "✗ the Today widget no longer uses WidgetToday.kind"; exit 1; }
+# prd §877: Today KEEPS the hero's kind, so a "Your day" tile already on a Home
+# Screen becomes Today instead of the system's "unable to load" placeholder.
+grep -q 'static let kind = "casberi.hero"' "$PAYLOAD" \
+  || { print -u2 "✗ WidgetToday.kind is no longer the hero's — every placed Your day tile would break"; exit 1; }
+# Every payload the tile reads must reload the tile's OWN kind. Needs you's kind
+# is not registered any more, so a reload aimed at it reaches nothing.
+[[ "$(grep -c 'stale.append(WidgetToday.kind)' "$TMP/publish.nc")" -ge 4 ]] \
+  || { print -u2 "✗ requests, people, deadlines and the Safe call must each reload WidgetToday.kind"; exit 1; }
+# Lead pictures reach the tile only as files the APP writes; the widget reads
+# them by key. A face fetched on a bare URLSession with no ledger entry is a
+# host nothing discloses.
+grep -q 'NetworkLedger.shared.record(host: host, as: service)' "Casberi/Casberi/Model/WidgetLeadImages.swift" \
+  || { print -u2 "✗ the Today face fetch no longer names its host to the ledger"; exit 1; }
+grep -q 'WidgetLeadImages.refresh(' "$TMP/publish.nc" \
+  || { print -u2 "✗ nothing writes the Today tile's lead pictures — every row would be a monogram"; exit 1; }
 grep -q 'kind: WidgetWallet.kind' "$TMP/walletw.nc" \
   || { print -u2 "✗ the wallet widget no longer uses WidgetWallet.kind"; exit 1; }
 
@@ -138,7 +149,7 @@ grep -q 'kind: WidgetWallet.kind' "$TMP/walletw.nc" \
        print -u2 "  every tile would be stale in whichever configuration is missing it."; exit 1; }
 
 # Reload only what changed. See `WidgetPayload.write`'s own note.
-grep -q 'for kind in stale' "$TMP/publish.nc" \
+grep -qE 'for kind in (Set\()?stale' "$TMP/publish.nc" \
   || { print -u2 "✗ publishAll no longer reloads only the changed kinds — it would spend the"; \
        print -u2 "  system's refresh budget rewriting identical bytes on every foreground."; exit 1; }
 
@@ -174,7 +185,7 @@ grep -qE '\$%\.1fK' "$TMP/panel.nc" \
 
 # Every tile the bundle declares must actually be in the bundle. A widget
 # struct that compiles and is never listed is invisible with no error anywhere.
-for w in HeroWidget NeedsYouWidget WalletWidget ComposeControl; do
+for w in TodayWidget WalletWidget ComposeControl; do
   grep -q "        $w()" "$TMP/bundle.nc" \
     || { print -u2 "✗ $w is not in the widget bundle — it would never appear in the gallery"; exit 1; }
 done
@@ -188,13 +199,13 @@ for w in KeptAskWidget BriefControl; do
     && { print -u2 "✗ $w is back in the bundle — the ask is deprecated (prd §697b)"; exit 1; }
 done
 
-# THE SIZE THE USER ASKED FOR. The hero is the tile with room for the sentence,
-# the themes AND what landed; dropping large collapses it back to the medium
-# family's forced choice.
-grep -q '.systemLarge' "$TMP/bundle.nc" \
-  || { print -u2 "✗ the hero widget no longer offers the large family"; exit 1; }
-grep -q '.systemLarge' "$TMP/needsw.nc" \
-  || { print -u2 "✗ Needs you no longer offers the large family"; exit 1; }
+# The large family is the only one with room for all three sections.
+grep -q '.systemLarge' "$TMP/todayw.nc" \
+  || { print -u2 "✗ Today no longer offers the large family"; exit 1; }
+# No ring on the circular lock-screen tile (user, 2026-09-22: "it's unnecessary
+# and doesn't mean anything") — a count of open items is not a fraction.
+grep -qE 'Gauge\(|accessoryCircularCapacity|stroke-dasharray' "$TMP/todayw.nc" \
+  && { print -u2 "✗ the Today circular tile draws a gauge ring again"; exit 1; }
 
 print "widget-selftest: drift guards OK"
 
@@ -349,35 +360,100 @@ _ = WidgetPayload.write(hidden, key: WidgetWallet.key, stampKey: WidgetWallet.st
 check(WidgetWallet.published(now: now, defaults: d)?.total == nil,
       "the withheld figure is still absent after a round trip")
 
-// ── what the hero leads with ────────────────────────────────────────────────
-// The ranking lives here and nowhere else. The treemap used to hold this slot
-// unconditionally; it is now the LAST resort, below three modules that are
-// legible before they are read.
-eq(WidgetDayLead.kind(pictures: 6, moneyMoved: true, sources: 3), .pictures,
-   "pictures outrank everything — the cells ARE the day")
-eq(WidgetDayLead.kind(pictures: 3, moneyMoved: true, sources: 3), .money,
-   "three pictures is not a contact sheet, it is a row that failed to fill")
-eq(WidgetDayLead.kind(pictures: 0, moneyMoved: true, sources: 3), .money,
-   "money leads when the wallet actually moved")
-eq(WidgetDayLead.kind(pictures: 0, moneyMoved: false, sources: 3), .sources,
-   "a flat wallet never leads — the tile would say the wallet did nothing")
-eq(WidgetDayLead.kind(pictures: 0, moneyMoved: false, sources: 1), WidgetDayLead.Kind.none,
-   "one source is not a mix, it is a title with a box around it")
-eq(WidgetDayLead.kind(pictures: 0, moneyMoved: false, sources: 0), WidgetDayLead.Kind.none,
-   "a day with nothing draws NO frame rather than an empty one")
-check(WidgetDayLead.pictureFloor >= 4, "the picture floor is a real sheet, not a strip")
+// ── Today (prd §877) ────────────────────────────────────────────────────────
+// One list: what needs you, then who answered you, then what landed.
+let dLate = WidgetDeadline(id: "late", title: "Dispute evidence", source: "Stripe",
+                           due: now.addingTimeInterval(-2 * 3600))
+let dSoon = WidgetDeadline(id: "soon", title: "Launch review", source: "Linear",
+                           due: now.addingTimeInterval(30 * 3600))
+let dFar = WidgetDeadline(id: "far", title: "casberi.eth renews", source: "Wallet",
+                          due: now.addingTimeInterval(12 * 86_400))
+let tSign = WidgetSafeCall(id: "safe", subject: "move 2 ETH to ops", awaitsYou: 1, ready: 0,
+                          waitingDays: 2)
+let ask = WidgetRequest(id: "req", title: "Review: Feed seam", source: "GitHub",
+                        askedAt: now.addingTimeInterval(-3600))
+let oldAsk = WidgetRequest(id: "old", title: "Review: tStale", source: "GitHub",
+                           askedAt: now.addingTimeInterval(-8 * 86_400))
+let r1 = WidgetReply(id: "r1", who: "ana", words: "where's the data from?", source: "Farcaster",
+                     at: now.addingTimeInterval(-600), face: "face-a")
+let r2 = WidgetReply(id: "r2", who: "mia", words: "saving this", source: "Bluesky",
+                     at: now.addingTimeInterval(-3000), face: nil)
+let crowd = WidgetPeople(replies: [r2, r1], likes: nil)
+let things = (0..<6).map { i in
+    WidgetLanded(id: "t\(i)", title: "thing \(i)", source: "Gmail",
+                 at: now.addingTimeInterval(Double(-i * 900)), face: nil)
+}
 
-let lead = WidgetDayLead(kind: .sources, pictures: 0,
-                         sources: [WidgetSourceCell(name: "RSS", share: 0.5),
-                                   WidgetSourceCell(name: "Wallet", share: 0.3)],
-                         otherSources: 4)
-_ = WidgetPayload.write(lead, key: WidgetLede.leadKey,
-                        stampKey: WidgetLede.leadStampKey, defaults: d)
-eq(WidgetLede.lead(now: now, defaults: d)?.sources.count, 2, "a lead round-trips")
-eq(WidgetLede.lead(now: now, defaults: d)?.otherSources, 4,
-   "…including what the mix leaves out, for the residual line")
-check(WidgetLede.lead(now: now.addingTimeInterval(WidgetLede.freshness + 60), defaults: d) == nil,
-      "a lead shares the lede's freshness window — yesterday's mix never sits under today's headline")
+let tFull = WidgetTodayPlan.make(deadlines: [dSoon, dLate, dFar], safe: tSign, requests: [ask],
+                                people: crowd, landed: things, capacity: 8, now: now)
+eq(tFull.rows.map(\.id), ["late", "safe", "req", "soon", "r1", "r2", "t0", "t1"],
+   "late, then the signature, then a request, then what is coming; then replies newest first; then landed")
+check(tFull.next == nil, "a tile with something due this week names no 'Next'")
+eq(tFull.late, 1, "one late")
+eq(tFull.toSign, 1, "the Safe count is what waits on you — a request is not counted, it may be answered")
+eq(tFull.faces, ["face-a"], "only replies WITH a face join the pile, newest first")
+eq(tFull.repliers, ["ana", "mia"], "every replier is named, newest first")
+if case .mark(let source) = tFull.rows[5].lead { eq(source, "Bluesky", "a face-less reply leads with its network's mark") }
+else { check(false, "a face-less reply leads with its network's mark") }
+
+// Half the tile is held for the other sections when they have something.
+let medium = WidgetTodayPlan.make(deadlines: [dSoon, dLate], safe: tSign, requests: [ask],
+                                  people: crowd, landed: things, capacity: 4, now: now)
+eq(medium.rows.map(\.id), ["late", "safe", "r1", "r2"],
+   "a medium tile keeps two rows for the people who answered you")
+let onlyNeeds = WidgetTodayPlan.make(deadlines: [dSoon, dLate], safe: tSign, requests: [ask],
+                                     people: WidgetPeople(replies: [], likes: nil), landed: [],
+                                     capacity: 4, now: now)
+eq(onlyNeeds.rows.count, 4, "with nothing else to show, what needs you takes the whole tile")
+
+// A quiet day: nothing inside the week, so the next deadline is named on its
+// own line, which takes one row.
+let quiet = WidgetTodayPlan.make(deadlines: [dFar], safe: nil, requests: [oldAsk],
+                                 people: crowd, landed: things, capacity: 4, now: now)
+eq(quiet.next?.id, "far", "a quiet tile names the next deadline past the week")
+eq(quiet.rows.count, 3, "…and that line takes one of the four rows")
+check(!quiet.rows.contains { $0.id == "old" }, "a request older than a week is not drawn")
+check(!quiet.rows.contains { $0.id == "far" }, "a deadline past the week is not a row")
+
+// A Safe with nothing awaiting you is no row; a thing already shown as a reply
+// is not shown again as landed.
+let calm = WidgetTodayPlan.make(
+    deadlines: [], safe: WidgetSafeCall(id: "s", subject: "x", awaitsYou: 0, ready: 1, waitingDays: nil),
+    requests: [], people: crowd,
+    landed: [WidgetLanded(id: "r1", title: "dup", source: "Farcaster", at: now, face: nil)] + things,
+    capacity: 8, now: now)
+check(!calm.rows.contains { $0.id == "s" }, "a Safe that waits on nobody draws no row")
+eq(calm.rows.filter { $0.id == "r1" }.count, 1, "a reply is not repeated as a landed row")
+check(WidgetTodayPlan.make(deadlines: [], safe: nil, requests: [], people: WidgetPeople(replies: [], likes: nil),
+                           landed: [], capacity: 4, now: now).isEmpty, "nothing at all is an empty plan")
+
+// The readers apply each row's own window at DRAW time.
+_ = WidgetPayload.write([ask, oldAsk], key: WidgetToday.requestsKey,
+                        stampKey: WidgetToday.requestsStampKey, defaults: d)
+eq(WidgetToday.requests(now: now, defaults: d).map(\.id), ["req"],
+   "the request reader drops one asked more than a week ago")
+let tStale = WidgetReply(id: "r0", who: "old", words: "yesterday", source: "X",
+                        at: now.addingTimeInterval(-26 * 3600), face: nil)
+_ = WidgetPayload.write(WidgetPeople(replies: [r1, tStale],
+                                     likes: WidgetLikes(line: "Liked by @mia", source: "Bluesky",
+                                                        at: now.addingTimeInterval(-30 * 3600), id: nil)),
+                        key: WidgetToday.peopleKey, stampKey: WidgetToday.peopleStampKey, defaults: d)
+let readBack = WidgetToday.people(now: now, defaults: d)
+eq(readBack.replies.map(\.id), ["r1"], "a reply older than a day is not news")
+check(readBack.likes == nil, "…and neither is a like roll")
+
+// The clock's span.
+eq(WidgetSpan(20).minutes, 1, "under a minute reads as one minute, never zero")
+eq(WidgetSpan(59 * 60).minutes, 59, "minutes under an hour")
+eq(WidgetSpan(2 * 3600 + 50 * 60).hours, 2, "hours under a day")
+eq([WidgetSpan(30 * 3600).days, WidgetSpan(30 * 3600).hours], [1, 6], "a day and hours while they matter")
+eq(WidgetSpan(4 * 86_400 + 5 * 3600).hours, 0, "past three days the hours go")
+
+// The picture keys must be the same in both processes: FNV-1a, never hashValue.
+eq(WidgetImages.fnv(""), "cbf29ce484222325", "FNV-1a's offset basis for the empty string")
+eq(WidgetImages.fnv("a"), "af63dc4c8601ec8c", "FNV-1a's published vector for \"a\"")
+check(WidgetImages.markKey(source: "GitHub") != WidgetImages.faceKey(url: "GitHub"),
+      "a mark and a face never share a file")
 
 // ── the runway ──────────────────────────────────────────────────────────────
 // THE INVARIANT: the window always CONTAINS now. Get it wrong and late items
@@ -513,7 +589,7 @@ print "widget-selftest: the shipped files, compiled whole…"
 # so this file was proven equivalent run-for-run by
 # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 1.8x faster).
 # Re-probe before trusting it again after adding mutations.
-xcrun swiftc -Onone -o "$TMP/run" "$PAYLOAD" "$MONEY" "$LEDE" "$TMP/stub.swift" "$TMP/main.swift" 2>&1 \
+xcrun swiftc -Onone -o "$TMP/run" "$PAYLOAD" "$MONEY" "$TMP/stub.swift" "$TMP/main.swift" 2>&1 \
   | grep -v "^$" || true
 [[ -x "$TMP/run" ]] || { print -u2 "✗ compile failed"; exit 1; }
 "$TMP/run" || exit 1
@@ -525,7 +601,6 @@ mutate() {
   local dir="$TMP/mut"; rm -rf "$dir"; mkdir -p "$dir"
   cp "$PAYLOAD" "$dir/WidgetPayload.swift"
   cp "$MONEY" "$dir/MoneyFormat.swift"
-  cp "$LEDE" "$dir/WidgetLede.swift"
   python3 - "$dir/$file" "$expr" <<'PY' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys
 path, expr = sys.argv[1], sys.argv[2]
@@ -536,7 +611,7 @@ if old not in src:
 open(path, "w").write(src.replace(old, new, 1))
 PY
   if xcrun swiftc -Onone -o "$dir/run" "$dir/WidgetPayload.swift" "$dir/MoneyFormat.swift" \
-       "$dir/WidgetLede.swift" "$TMP/stub.swift" "$TMP/main.swift" >/dev/null 2>&1 \
+       "$TMP/stub.swift" "$TMP/main.swift" >/dev/null 2>&1 \
      && "$dir/run" >/dev/null 2>&1; then
     print "  ✗ mutation SURVIVED: $label"
     return 1
@@ -588,22 +663,39 @@ mutate "isOverdue is frozen to the publish moment instead of read at draw time" 
   WidgetPayload.swift \
   'func isOverdue(now: Date = .now) -> Bool { due < now }|||func isOverdue(now: Date = .now) -> Bool { false }' || mfail=1
 
-# The hero's lead.
-mutate "the treemap's replacement ranks money above pictures" \
+# Today (prd §877).
+mutate "a signature outranks something already late" \
   WidgetPayload.swift \
-  'if pictures >= pictureFloor { return .pictures }
-        if moneyMoved { return .money }|||if moneyMoved { return .money }
-        if pictures >= pictureFloor { return .pictures }' || mfail=1
-mutate "three pictures are drawn as a contact sheet — a row that failed to fill" \
+  'var needs: [WidgetTodayRow] = overdue.map(deadlineRow)
+        if let signing {|||var needs: [WidgetTodayRow] = []
+        if let signing {' || mfail=1
+mutate "what needs you takes the whole tile even when people answered you" \
   WidgetPayload.swift \
-  'static let pictureFloor = 4|||static let pictureFloor = 1' || mfail=1
-mutate "a flat wallet leads with money — the tile says the wallet did nothing" \
+  'let held = min(others, room / 2)|||let held = 0' || mfail=1
+mutate "the Next line is drawn even when something is due this week" \
   WidgetPayload.swift \
-  'if moneyMoved { return .money }|||if true { return .money }' || mfail=1
-mutate "a day with nothing draws an empty source mix instead of no frame" \
+  'let next = needs.isEmpty ? byDue.first|||let next = true ? byDue.first' || mfail=1
+mutate "a request older than a week still draws" \
   WidgetPayload.swift \
-  'if sources >= sourceFloor { return .sources }
-        return .none|||return .sources' || mfail=1
+  'let asks = requests.filter { now.timeIntervalSince($0.askedAt) < WidgetToday.requestWindow }|||let asks = requests.filter { _ in true }' || mfail=1
+mutate "a reply is drawn again as a landed row" \
+  WidgetPayload.swift \
+  '.filter { !shown.contains($0.id) }|||.filter { _ in true }' || mfail=1
+mutate "requests are counted as waiting on you" \
+  WidgetPayload.swift \
+  'toSign: signing?.awaitsYou ?? 0,|||toSign: (signing?.awaitsYou ?? 0) + asks.count,' || mfail=1
+mutate "the people reader keeps yesterday's replies" \
+  WidgetPayload.swift \
+  'let fresh = { (at: Date) in now.timeIntervalSince(at) < peopleWindow }|||let fresh = { (at: Date) in true }' || mfail=1
+mutate "a span under a minute reads as zero" \
+  WidgetPayload.swift \
+  'days = 0; hours = 0; minutes = max(1, s / 60)|||days = 0; hours = 0; minutes = s / 60' || mfail=1
+mutate "the hours ride beside the days forever" \
+  WidgetPayload.swift \
+  'hours = days < 3 ? (s % 86_400) / 3600 : 0|||hours = (s % 86_400) / 3600' || mfail=1
+mutate "the picture key uses a different hash — the app and the widget name one file two ways" \
+  WidgetPayload.swift \
+  'hash = hash &* 0x0000_0100_0000_01b3|||hash = hash &* 0x0000_0100_0000_01b5' || mfail=1
 
 # The runway. Its whole invariant is that the window contains now.
 mutate "the runway window excludes now — overdue items draw AHEAD of the marker" \

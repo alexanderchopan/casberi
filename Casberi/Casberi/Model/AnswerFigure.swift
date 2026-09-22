@@ -31,7 +31,7 @@ import Foundation
 ///
 ///   • PICTURES (`contactSheetLine`) leads because when the matches are
 ///     photographs the matches ARE the answer: a grid of the things themselves
-///     outranks any abstraction over them. `WidgetDayLead.kind` already ranks
+///     outranks any abstraction over them. The widget's old day lead ranked
 ///     its own ladder this way for the Home Screen tile.
 ///   • TIME (`runwayAxis`) is next, and only the rows carrying a real `dueAt`
 ///     reach it. The rows can show four dates; only the rail shows the SPREAD,

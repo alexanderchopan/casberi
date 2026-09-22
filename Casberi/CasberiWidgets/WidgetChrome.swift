@@ -139,61 +139,6 @@ struct WidgetSpark: Shape {
     }
 }
 
-/// One thing with a deadline, as a row.
-///
-/// The trailing time is `Text(_:style:.relative)` — a self-updating label the
-/// system re-renders on its own clock, so the row keeps counting down between
-/// timeline refreshes instead of freezing at whatever it said when the entry was
-/// made. The OVERDUE state is decided by the view from the date at draw time
-/// (`WidgetDeadline.isOverdue`), never read from a published flag — see
-/// `WidgetDeadline`'s own note for why a boolean about "now" must not be stored
-/// in a timeline entry.
-struct WidgetDueRow: View {
-    let row: WidgetDeadline
-    /// Whether to name the app it came from. The large family has the room and
-    /// a deadline with no provenance is a demand from nowhere; the medium
-    /// family spends that line on the title instead.
-    var showsSource = true
-
-    private var overdue: Bool { row.isOverdue() }
-
-    var body: some View {
-        // Read ONCE per row, not once per use — `WidgetField` states this rule
-        // for its own gradient stops and it matters more here, since the large
-        // family draws four of these and each was costing two UserDefaults
-        // lookups and two Scanner passes to paint one dot and one timestamp.
-        let accent = WidgetChrome.accent
-        return HStack(alignment: .firstTextBaseline, spacing: 6) {
-            // A dot, not an exclamation glyph: the accent already carries
-            // urgency and a warning triangle on a Home Screen reads as an app
-            // error rather than as your own task being late.
-            Circle()
-                .fill(overdue ? accent : Color.white.opacity(0.35))
-                .frame(width: 5, height: 5)
-                .alignmentGuide(.firstTextBaseline) { $0[.bottom] + 1 }
-            VStack(alignment: .leading, spacing: 0) {
-                Text(row.title)
-                    .dsText(.widgetLabel12)
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                if showsSource {
-                    Text(row.source)
-                        .dsText(.widgetSubline11)
-                        .foregroundStyle(.white.opacity(0.55))
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 4)
-            Text(row.due, style: .relative)
-                .dsText(.widgetSubline11)
-                .foregroundStyle(overdue ? accent : .white.opacity(0.6))
-                .lineLimit(1)
-                .monospacedDigit()
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
 /// A week of money in against money out, as two bars (2026-08-14, prd §382b).
 ///
 /// `GenWalletFlow` at widget scale, minus the counterparty lanes — the room

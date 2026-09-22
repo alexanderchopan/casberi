@@ -636,8 +636,9 @@ enum Notifications {
     }
 
     /// The same `brand-<name>` convention `BridgeIcon` uses, so the mark on the
-    /// lock screen is byte-identical to the one in the Apps catalog.
-    private static func brandAsset(_ name: String) -> UIImage? {
+    /// lock screen is byte-identical to the one in the Apps catalog. Internal
+    /// since prd §877: the Today widget's leads are the same marks.
+    static func brandAsset(_ name: String) -> UIImage? {
         // DIACRITICS ARE FOLDED (2026-08-29, prd §522). Asset names in this
         // catalog are plain ASCII — "Ethrex Hegotá" (the seat's name until §629) was filed as
         // `brand-ethrex-hegota` — so a source whose name carries an accent

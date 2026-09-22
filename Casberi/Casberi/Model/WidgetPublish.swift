@@ -49,22 +49,31 @@ enum WidgetPublish {
         // every foreground and reloading a kind nothing registers is work for
         // no tile. Returns with the flag, like the widget.
         if AskSurface.enabled, writeAsks(to: group) { stale.append(WidgetAsks.kind) }
-        if WidgetPayload.write(dayLead(things: things), key: WidgetLede.leadKey,
-                               stampKey: WidgetLede.leadStampKey, defaults: group) {
-            stale.append(WidgetLede.kind)
+        // Today (prd §877): the asks and the people are the tile's own; the
+        // deadlines and the Safe call below ride it too, so every one of the
+        // four reloads the same kind.
+        let requests = requests(things: things)
+        let people = people(things: things)
+        if WidgetPayload.write(requests, key: WidgetToday.requestsKey,
+                               stampKey: WidgetToday.requestsStampKey, defaults: group) {
+            stale.append(WidgetToday.kind)
+        }
+        if WidgetPayload.write(people, key: WidgetToday.peopleKey,
+                               stampKey: WidgetToday.peopleStampKey, defaults: group) {
+            stale.append(WidgetToday.kind)
         }
         if WidgetPayload.write(flow(things: things), key: WidgetWallet.flowKey,
                                stampKey: WidgetWallet.flowStampKey, defaults: group) {
             stale.append(WidgetWallet.kind)
         }
-        if WidgetPayload.write(deadlines(context: context), key: WidgetDeadlines.key,
+        let deadlines = deadlines(context: context)
+        if WidgetPayload.write(deadlines, key: WidgetDeadlines.key,
                                stampKey: WidgetDeadlines.stampKey, defaults: group) {
-            stale.append(WidgetDeadlines.kind)
+            stale.append(WidgetToday.kind)
         }
-        // Rides the same tile, so it reloads the same kind — see `safeCall`.
         if WidgetPayload.write(safeCall(things: things), key: WidgetSafe.key,
                                stampKey: WidgetSafe.stampKey, defaults: group) {
-            stale.append(WidgetDeadlines.kind)
+            stale.append(WidgetToday.kind)
         }
         if WidgetPayload.write(wallet(), key: WidgetWallet.key,
                                stampKey: WidgetWallet.stampKey, defaults: group) {
@@ -76,7 +85,32 @@ enum WidgetPublish {
         // writer for one key is how the two spellings of a colour start
         // disagreeing about which is current.
 
-        for kind in stale { WidgetCenter.shared.reloadTimelines(ofKind: kind) }
+        for kind in Set(stale) { WidgetCenter.shared.reloadTimelines(ofKind: kind) }
+
+        // The pictures the Today rows lead with. Off the main actor and after
+        // the reloads: a mark or a face that arrives a moment later reloads
+        // the tile once more, and a tile drawn before it falls back to a
+        // monogram, never to an empty slot.
+        let sources = Set(things.prefix(WidgetLeadImages.landedScan).map(\.source))
+            .union((deadlines ?? []).map(\.source))
+            .union((requests ?? []).map(\.source))
+            .union((people?.replies ?? []).map(\.source))
+            .union([people?.likes?.source, "Safe"].compactMap { $0 })
+        // Faces: every reply the tile may draw (a reply from this morning is
+        // rarely among the eight newest things), then the newest things.
+        let replyFloor = Date.now.addingTimeInterval(-WidgetToday.peopleWindow)
+        let faced = things.filter { $0.socialContext == "reply" && $0.capturedAt > replyFloor }
+            .prefix(replyCap) + things.prefix(WidgetLeadImages.landedScan)
+        let faces = faced
+            .compactMap { t in t.authorAvatarURL.flatMap { $0.isEmpty ? nil : (url: $0, service: t.source) } }
+        WidgetLeadImages.refresh(sources: sources, faces: Array(faces.prefix(WidgetLeadImages.faceCap)))
+
+        // The hero's payloads have no reader since §877. Cleared rather than
+        // left in the app group forever; a no-op once they are gone.
+        for key in ["widget.lede", "widget.ledeAt", "widget.themes", "widget.themesAt",
+                    "widget.dayLead", "widget.dayLeadAt"] where group.object(forKey: key) != nil {
+            group.removeObject(forKey: key)
+        }
     }
 
     /// Publishes the kept asks ALONE, and reloads them if they changed.
@@ -138,58 +172,88 @@ enum WidgetPublish {
     /// choose between, and the payload is read on every widget refresh.
     static let askCap = 12
 
-    // MARK: - What the hero leads with
+    // MARK: - Today (prd §877)
 
-    /// Which of the brief's modules the hero tile leads with today.
+    /// GitHub's asks — a review requested or an issue assigned — that landed
+    /// inside `WidgetToday.requestWindow`, newest first.
     ///
-    /// The DECISION is `WidgetDayLead.kind` — pure, tested, and the only place
-    /// the ranking lives. This function's whole job is to hand it three honest
-    /// measurements. The thumbnails themselves are NOT published: the extension
-    /// already reads the shared store, so it fetches those bytes itself, and
-    /// publishing eight JPEGs into UserDefaults on every foreground to save it a
-    /// read it is already making would be the worse half of both worlds.
-    static func dayLead(things: [Thing], now: Date = .now) -> WidgetDayLead? {
-        let dayStart = Calendar.current.startOfDay(for: now)
-        let today = things.filter { $0.capturedAt >= dayStart }
-
-        // Counted from fields already in hand — `previewImageData` is
-        // deliberately NOT touched: it is external storage, so reading it
-        // materializes real bytes off disk, and this only needs to know HOW
-        // MANY. The widget fetches the bytes themselves, and only when the
-        // pictures lead actually won.
-        let pictures = today.reduce(into: 0) { count, thing in
-            if thing.previewImageURL != nil || thing.kind == .screenshot { count += 1 }
-        }
-
-        // Money leads only on a move worth mentioning — the §83 flat rule,
-        // reused so the tile can't lead with "the wallet did nothing".
-        let line = wallet(now: now)
-        let moneyMoved = (line?.changePct).map { !MoneyFormat.isFlatPercent($0) } ?? false
-
-        var counts: [String: Int] = [:]
-        for thing in today where Corpus.showsInAll(thing) {
-            counts[thing.source, default: 0] += 1
-        }
-        let total = counts.values.reduce(0, +)
-        let ranked = counts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
-        let cells = total > 0
-            ? ranked.prefix(3).map { WidgetSourceCell(name: $0.key,
-                                                      share: Double($0.value) / Double(total)) }
-            : []
-
-        // What happened to your posts (prd §386d) — the brief's own line, so
-        // the tile and the overview can never say different things about the
-        // same day. Windowed to the day this gather already scoped to.
-        let postsLine = TodayBrief.postsLine(today,
-                                             windowStart: Calendar.current.startOfDay(for: now)) ?? ""
-
-        let kind = WidgetDayLead.kind(pictures: pictures, moneyMoved: moneyMoved,
-                                      sources: cells.count, posts: !postsLine.isEmpty)
-        guard kind != .none else { return nil }
-        return WidgetDayLead(kind: kind, postsLine: postsLine,
-                             pictures: pictures, sources: Array(cells),
-                             otherSources: max(0, ranked.count - cells.count))
+    /// Read off the row's TAG (`GitHubFeeds.notificationAsk`), never its title,
+    /// and only on a notification row (`gh:notif:`): App Store Connect wears a
+    /// "Review" tag too, for a different thing. "Mentioned" is left out on
+    /// purpose — it asks for nothing, it is news.
+    static func requests(things: [Thing], now: Date = .now) -> [WidgetRequest]? {
+        let floor = now.addingTimeInterval(-WidgetToday.requestWindow)
+        let rows = things.live
+            .filter { ($0.sourceRef ?? "").hasPrefix("gh:notif:") && $0.mark != .done
+                        && $0.capturedAt > floor }
+            .compactMap { thing -> WidgetRequest? in
+                let subject = requestSubject(thing)
+                let title: String
+                if thing.tags.contains("Review") {
+                    title = String(localized: "Review: \(subject)")
+                } else if thing.tags.contains("Assigned") {
+                    title = String(localized: "Assigned: \(subject)")
+                } else {
+                    return nil
+                }
+                return WidgetRequest(id: thing.id.uuidString, title: title,
+                                     source: thing.source, askedAt: thing.capturedAt)
+            }
+            .sorted { $0.askedAt > $1.askedAt }
+            .prefix(requestCap)
+        return rows.isEmpty ? nil : Array(rows)
     }
+
+    static let requestCap = 4
+
+    /// The pull request's or issue's own title. The row's title is
+    /// "<reason> · <owner/repo> · <subject>", and the reason is LOCALIZED, so
+    /// the cut is made after the repo, which is read off the row's URL — data,
+    /// not display copy. A row whose title does not carry that seam keeps its
+    /// whole title.
+    static func requestSubject(_ thing: Thing) -> String {
+        guard let url = URL(string: thing.content), url.host == "github.com" else { return thing.title }
+        let parts = url.path.split(separator: "/")
+        guard parts.count >= 2 else { return thing.title }
+        let seam = " · \(parts[0])/\(parts[1]) · "
+        guard let range = thing.title.range(of: seam) else { return thing.title }
+        let subject = thing.title[range.upperBound...].trimmingCharacters(in: .whitespaces)
+        return subject.isEmpty ? thing.title : subject
+    }
+
+    /// Replies to your posts inside `WidgetToday.peopleWindow`, newest first,
+    /// and the newest like roll. `socialContext == "reply"` is set only on the
+    /// inbound read of your OWN posts (§804), and a like roll exists only for
+    /// a post that read asked about, which is only ever yours.
+    static func people(things: [Thing], now: Date = .now) -> WidgetPeople? {
+        let floor = now.addingTimeInterval(-WidgetToday.peopleWindow)
+        let replies = things.live
+            .filter { $0.socialContext == "reply" && $0.capturedAt > floor }
+            .sorted { $0.capturedAt > $1.capturedAt }
+            .prefix(replyCap)
+            .map { thing in
+                WidgetReply(id: thing.id.uuidString,
+                            who: SocialRoomSource.author(of: thing),
+                            words: SocialRoomSource.words(of: thing)
+                                .replacingOccurrences(of: "\n", with: " "),
+                            source: thing.source, at: thing.capturedAt,
+                            face: thing.authorAvatarURL.flatMap { $0.isEmpty ? nil : WidgetImages.faceKey(url: $0) })
+            }
+        let byRef = Dictionary(things.live.compactMap { t in t.sourceRef.map { ($0, t) } },
+                               uniquingKeysWith: { first, _ in first })
+        let likes = SocialLikers.shared.rolls
+            .filter { $0.value.when > floor && byRef[$0.key] != nil }
+            .max { $0.value.when < $1.value.when }
+            .flatMap { entry -> WidgetLikes? in
+                guard let line = entry.value.line, let post = byRef[entry.key] else { return nil }
+                return WidgetLikes(line: line, source: post.source, at: entry.value.when,
+                                   id: post.id.uuidString)
+            }
+        guard !replies.isEmpty || likes != nil else { return nil }
+        return WidgetPeople(replies: Array(replies), likes: likes)
+    }
+
+    static let replyCap = 4
 
     // MARK: - The flow band
 
@@ -269,11 +333,14 @@ enum WidgetPublish {
 
         let floor = Calendar.current.date(byAdding: .day, value: -overdueHorizonDays, to: now) ?? now
         let ceiling = Calendar.current.date(byAdding: .day, value: aheadHorizonDays, to: now) ?? now
-        let rows = dated.live
+        // DEDUPED (prd §877, seen on the sim: "Book dentist" from Reminders
+        // and "Book the dentist" from Todoist as two rows). The brief's own
+        // pass, so the tile and the brief collapse the same errands.
+        let rows = TodayBrief.dedupeDeadlines(dated.live
             .filter { thing in
                 guard thing.mark != .done, let due = thing.dueAt else { return false }
                 return due >= floor && due <= ceiling
-            }
+            })
             .sorted { ($0.dueAt ?? now) < ($1.dueAt ?? now) }
             .prefix(WidgetDeadlines.publishCap)
             .map { WidgetDeadline(id: $0.id.uuidString, title: $0.title,
@@ -371,28 +438,33 @@ enum WidgetPublish {
         publishAll(things: things, context: context)
 
         let asks = WidgetAsks.published(defaults: group)
-        NSLog("[Casberi] widgetProbe| lede=%@ themes=%d asks=%d",
-              WidgetLede.current(defaults: group).map { "\"\($0)\"" } ?? "none",
-              WidgetLede.themes(defaults: group)?.count ?? 0, asks.count)
+        NSLog("[Casberi] widgetProbe| asks=%d", asks.count)
         for cell in asks {
             NSLog("[Casberi] widgetAsk| kind=%@ changed=%@ reading=%@ title=\"%@\"",
                   cell.kind, cell.changed ? "YES" : "no",
                   cell.reading ?? "(none — question stands alone)", cell.title)
         }
 
-        // Which module the hero leads with, and the three measurements that
-        // decided it. An empty tile and a tile leading with the wrong module
-        // look nothing alike, but "why did it pick THAT" has no other answer:
-        // the ranking is a pure function of these three numbers.
-        if let lead = WidgetLede.lead(defaults: group) {
-            NSLog("[Casberi] widgetLead| kind=%@ pictures=%d sources=%d other=%d",
-                  lead.kind.rawValue, lead.pictures, lead.sources.count, lead.otherSources)
-            for cell in lead.sources {
-                NSLog("[Casberi] widgetLeadCell| %@ share=%.2f", cell.name, cell.share)
-            }
-        } else {
-            NSLog("[Casberi] widgetLead| none — under the picture floor, wallet flat, fewer than two sources")
+        // Today (prd §877): what each section was handed, then the rows the
+        // medium tile would draw — the plan the widget runs, over the same
+        // payloads read back through the widget's own readers.
+        let requests = WidgetToday.requests(defaults: group)
+        let people = WidgetToday.people(defaults: group)
+        NSLog("[Casberi] widgetToday| requests=%d replies=%d likes=%@",
+              requests.count, people.replies.count, people.likes == nil ? "no" : "yes")
+        let plan = WidgetTodayPlan.make(
+            deadlines: WidgetDeadlines.published(defaults: group),
+            safe: WidgetSafe.published(defaults: group),
+            requests: requests, people: people, landed: [], capacity: 4, now: .now)
+        NSLog("[Casberi] widgetToday| late=%d toSign=%d next=%@ faces=%d",
+              plan.late, plan.toSign, plan.next?.title ?? "none", plan.faces.count)
+        for row in plan.rows {
+            NSLog("[Casberi] widgetTodayRow| %@ %@ \"%@\"", "\(row.section)", "\(row.kind)", row.title)
         }
+        let dir = WidgetImages.directory()
+        let files = dir.flatMap { try? FileManager.default.contentsOfDirectory(atPath: $0.path) } ?? []
+        NSLog("[Casberi] widgetToday| images marks=%d faces=%d",
+              files.filter { $0.hasPrefix("mark-") }.count, files.filter { $0.hasPrefix("face-") }.count)
 
         let due = WidgetDeadlines.published(defaults: group)
         NSLog("[Casberi] widgetProbe| deadlines=%d", due.count)
