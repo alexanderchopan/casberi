@@ -29,18 +29,40 @@ The suckers **taper outward** — r 2.6 nearest the mantle, then 1.9, then 1.3 a
 | Role | Value |
 |------|-------|
 | Mark | `#FF2D87` |
-| Eyes and suckers | `#000` — knocked out of the mark, not painted over it |
-| Ground (dark) | `#000000` |
+| Eyes and suckers | **the ground** — knocked out of the mark, not painted over it |
+| Ground (dark, tinted) | `#000000` |
+| Ground (light) | `#FFFFFF` |
 
 The eyes and suckers being the GROUND rather than a colour is what keeps the mark to one ink. It also means the mark cannot be recoloured by swapping a single fill: the negative shapes have to travel with it.
 
 ### Small sizes
 `casberi-mark-small.svg` (29pt) is a **deliberately different drawing**, not the same file scaled. Five arms and thirteen suckers turn to mud below about 40pt, so the small mark drops to **three arms, no suckers**, with the eyes enlarged to r **5** and the arm stroke thickened to **9**. Reach for it whenever the mark is rendered under ~40pt; scaling the full mark down instead is the failure this file exists to prevent.
 
+## The three variants
+iOS picks one of these by the appearance the person chose in the Home Screen editor. All three carry the SAME coverage mask; only the ground changes.
+
+| Variant | Mark | Ground | Note |
+|---------|------|--------|------|
+| light | `#FF2D87` | `#FFFFFF` | derived from the dark art — see below |
+| dark | `#FF2D87` | `#000000` | the drawing everything else comes from |
+| tinted | `#FFFFFF` | `#000000` | greyscale; the system maps luminance to the person's tint |
+
+**The light PNG was a byte-for-byte copy of the dark one until 2026-09-22** (prd §869), so every person on the light or default appearance saw the dark drawing — pink on black — on a light home screen. The two files had the same md5.
+
+`make-light-icon.py` derives the light variant by recovering the mark's per-pixel coverage out of the dark art and compositing it over white instead of black. It reads the SHIPPED dark PNG, which is the point: the berry-era generator was deleted for emitting art the app had stopped shipping, and a script whose input is the shipped art cannot drift that way. It has a `--self-test` (the ground inverts, the mark holds, coverage round-trips, a knocked-out eye lands on white, and the transform is not the identity).
+
+```sh
+python3 design/app-icon/make-light-icon.py --self-test
+python3 design/app-icon/make-light-icon.py
+```
+
+Because the eyes and suckers are GROUND, they turn white for free — there is no second drawing to keep in step.
+
 ## Files
 - `casberi-mark.svg` — the full mark, 1024 (geometry source).
 - `casberi-mark-small.svg` — the 29pt mark: three arms, no suckers, heavier stroke.
+- `make-light-icon.py` — derives the light PNG from the dark one; pure stdlib, `--self-test`.
 - Shipped art lives in `Casberi/Casberi/Assets.xcassets/AppIcon.appiconset/` — `casberi-octopus-1024-{light,dark,tinted}.png`, wired in `Contents.json` as the universal iOS icon plus its dark and tinted luminosity variants.
 
 ## Unverified
-The **light** and **tinted** PNGs were not opened during this rewrite — only the dark one was, and the geometry above is read from `casberi-mark.svg`. Apple's tinted variant is greyscale-mapped by the system, so if it ever reads wrong it is that PNG rather than anything documented here.
+All three PNGs have now been decoded and read (2026-09-22): the dark art is exactly `#FF2D87` composited over black with a clean 101-step alpha ramp, the tinted art is the same mask in white on black, and the light art is that mask over white. **None of the three has been seen on a physical device** — they were read as pixels and rendered to a contact sheet, not installed. The squircle in any preview is an approximation; iOS applies its own.

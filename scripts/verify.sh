@@ -625,6 +625,28 @@ python3 "$ROOT/scripts/demo-marking-audit.py" \
   || fail "the demo's marking has drifted — see the output above"
 print -P "%F{green}✓ demo-marking audit%f"
 
+# The app icon's three luminosity variants (prd §869). The light PNG had been a
+# BYTE-FOR-BYTE COPY of the dark one — same md5 — so everyone on the light or
+# default appearance saw the dark drawing, hot pink on a black tile, on a light
+# home screen. Nothing here could see it: the asset compiler ships the same
+# bytes twice without complaint, the build is green, and the screen sweep only
+# photographs surfaces the APP draws. The home screen is composited by the
+# system and is outside every check this pass owns, which is precisely why the
+# icon README could carry a note saying the light and tinted PNGs had never
+# been opened, and have that note fail nothing for as long as it sat there.
+#
+# It also pins the rule that makes the fix cheap: all three variants carry ONE
+# coverage mask. The eyes and suckers are knocked OUT of the mark rather than
+# painted on it, so a variant redrawn by hand loses them and the arms stop
+# reading at small sizes; a variant DERIVED from the dark art keeps them for
+# free (design/app-icon/make-light-icon.py).
+step "App-icon audit"
+python3 "$ROOT/scripts/app-icon-audit.py" --self-test >/dev/null \
+  || fail "the app-icon audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/app-icon-audit.py" \
+  || fail "an app-icon variant is wrong — see the output above"
+print -P "%F{green}✓ app-icon audit%f"
+
 # WHAT THE WALLET ROOM'S CROWN IS MADE OF, AND HOW IT FAILS (prd §825, §826).
 # The user opened the Wallet room and saw "$6" — a Privy app wallet's stored
 # figure, Zora's — with their own wallets under-read or missing, on "All" and on
