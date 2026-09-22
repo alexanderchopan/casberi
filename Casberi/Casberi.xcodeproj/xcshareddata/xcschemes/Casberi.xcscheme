@@ -52,6 +52,16 @@
                ReferencedContainer = "container:Casberi.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "D20000000000000000000003"
+               BuildableName = "CasberiUITests.xctest"
+               BlueprintName = "CasberiUITests"
+               ReferencedContainer = "container:Casberi.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
