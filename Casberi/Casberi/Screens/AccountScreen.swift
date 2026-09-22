@@ -179,26 +179,22 @@ struct SettingsRows: View {
     /// it needs the count when the screen opens, and again when the app comes
     /// back to it.
     @State private var thingCount = 0
-    /// Same rule for the Keychain: `AgentKey.active` is a `SecItemCopyMatching`
-    /// round trip to securityd, and `secondaryRows` read it per evaluation.
-    @State private var keyedAgent: AgentProvider?
-    /// Whether "Your key" is drawn at all (prd §718). With the ask off, a key
-    /// on a phone that runs the on-device model does NOTHING: the librarian
-    /// only spends a key where the device cannot organize for itself. A row
-    /// that opens a paste field for a key that would sit unused is §83's dead
-    /// control. It stays for anyone who already saved one (so they can remove
-    /// it), on a device without the model, and on the Mac, where the same
-    /// sheet holds the MCP listener that App Review was pointed at.
-    @State private var keyRowShown = true
-
+    #if targetEnvironment(macCatalyst)
+    /// The MCP listener's two facts, mirrored at appearance for the same
+    /// reason every other non-observable fact on this screen is (prd §628):
+    /// `MCPServer.shared` is a plain `@MainActor` class SwiftUI does not
+    /// observe, and `isEnabled` is a `UserDefaults` read. The row states the
+    /// two apart because they differ — a listener switched on that failed to
+    /// bind is not off, and "Listening" over a dead socket is §83's fake
+    /// status.
+    @State private var mcpOn = false
+    @State private var mcpRunning = false
+    #endif
     private func readCounts() {
         thingCount = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
-        keyedAgent = AgentKey.active
         #if targetEnvironment(macCatalyst)
-        keyRowShown = true
-        #else
-        keyRowShown = AskSurface.enabled || keyedAgent != nil
-            || !AgentLibrarian.deviceCanDoIt
+        mcpOn = MCPServer.isEnabled
+        mcpRunning = MCPServer.shared.running
         #endif
     }
 
@@ -263,10 +259,7 @@ struct SettingsRows: View {
 
     /// Group two — the app itself: housekeeping, rarely visited. A–Z.
     private var secondaryRows: [RowSpec] {
-        // Read once per appearance into `keyedAgent` (see `readCounts`) —
-        // this used to be a Keychain round trip per body evaluation.
-        let keyed = keyedAgent != nil
-        return [
+        let rows: [RowSpec] = [
             // The category chips' order (prd §533) — the ONE thing about the
             // source strip that was never earned by anything the person did.
             // The categories sat in a hand-authored constant, so this hands
@@ -318,29 +311,25 @@ struct SettingsRows: View {
                     value: LanguageStore.shared.summary,
                     badge: ("globe", DS.textPrimary),
                     action: { languageOpen = true }),
-            // Your key (prd §67) — the BYO escape hatch: on-device by default,
-            // your own agent key adds a per-answer "Try with your key".
-            // Ruling 2026-07-14: it's an AGENT key — name the agents, never
-            // "the Anthropic key". Keyed, the fact earns the badge's green —
-            // a live connection states itself in the connected color.
-            // The unkeyed value used to name all six providers, which broke
-            // twice over (2026-07-31): it TRUNCATED at row width — and it had
-            // already gone stale, since Grok made seven and this string still
-            // said six. Naming them is the detail sheet's job (it lists every
-            // provider, with state); this row only has to invite. §243 fixed
-            // the same hand-listing in the key card's console line by deriving
-            // it — here the honest fix is to stop listing at all.
-            RowSpec(title: "Your key",
-                    // With the ask off (prd §697b) a key answers nothing, so
-                    // the keyed fact is just whose key it is (prd §718).
-                    value: keyedAgent.map {
-                       AskSurface.enabled
-                           ? String.localizedStringWithFormat(
-                               String(localized: "%@ answers on tap"), $0.agent)
-                           : $0.agent
-                    } ?? String(localized: "Bring your own agent"),
-                    badge: ("key.fill", DS.textPrimary),
-                    action: { detail = .key }),
+            // "YOUR KEY" IS GONE FROM THIS SCREEN (prd §871, user: "we have a
+            // setting in settings for 'your key'. why do we really need it
+            // there? For every other thing, the user goes and connects on the
+            // accounts page, so it just seems confusing").
+            //
+            // It was the ask's row (prd §67), and the ask has been dark since
+            // §697b — but the reason it survived §718's hiding rule is that it
+            // was the ONLY door to three keys: Anthropic, OpenAI and Google
+            // had no seat of their own, because the catalog tiles of those
+            // names are the chat importers. Those three pages carry the key
+            // now (`ClaudeImportScreen` and its two siblings, §871), which
+            // leaves this row saying a second time what nine account pages
+            // already say, in the one place the app connects nothing else.
+            //
+            // The two things it alone held went with it rather than being
+            // dropped: `AgentLibrarianRow` moved onto the ACTIVE key's own
+            // page, and the Mac's MCP listener is the row below — it was never
+            // a key, and sat in that sheet only because the sheet was the
+            // nearest thing about agents.
             // "What you can do" (2026-07-11 as "How it works") sat here until
             // 2026-09-10 — a sheet holding one sentence, reached from a row
             // saying "New here? Start here". Deleted with the sheet (user: "it's
@@ -371,8 +360,29 @@ struct SettingsRows: View {
                         }
                     }),
         ]
-        .filter { $0.title != "Your key" || keyRowShown }
-        .sorted { $0.title < $1.title }
+        #if targetEnvironment(macCatalyst)
+        // Mac only, because it is the only build that is a real desktop
+        // process sitting on the same machine as the agent that wants to read
+        // the corpus (`MCPServer`). Its own row since prd §871; App Review was
+        // pointed at this switch inside the key sheet, so it keeps a door.
+        //
+        // Appended rather than written into the literal with an `#if` inside
+        // it, so the iOS build resolves one array and not a conditional
+        // element — and `rows` stays a `let` on both platforms.
+        let macRow = RowSpec(title: "Agents on this Mac",
+                             // Three states, because a listener switched on
+                             // that failed to bind is not off, and "Listening"
+                             // over a dead socket is §83's fake status.
+                             value: mcpRunning
+                                 ? String(localized: "Listening")
+                                 : (mcpOn ? String(localized: "Not listening")
+                                          : String(localized: "Off")),
+                             badge: ("terminal", DS.textPrimary),
+                             action: { detail = .mcp })
+        return (rows + [macRow]).sorted { $0.title < $1.title }
+        #else
+        return rows.sorted { $0.title < $1.title }
+        #endif
     }
 
     /// Whether "See the demo" belongs on screen — the demo mode's re-entry

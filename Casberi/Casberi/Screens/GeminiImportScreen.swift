@@ -2,11 +2,16 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-/// Gemini, connected — by import, the same grade as ChatGPT and Claude. The
-/// steps to get the export are stated plainly (they happen on Google's side;
-/// there is no live read to offer), then one button picks `MyActivity.json`
-/// and the history lands as chat things. Safe to re-run: prompts dedupe on
-/// their timestamp + text.
+/// Gemini, connected — TWO FACETS ON ONE SEAT (prd §871), the same grade as
+/// ChatGPT and Claude.
+///
+/// **By import**: the steps to get the export are stated plainly (they happen
+/// on Google's side; there is no live read to offer), then one button picks
+/// `MyActivity.json` and the history lands as chat things. Safe to re-run:
+/// prompts dedupe on their timestamp + text.
+///
+/// **By key**: a Google key, pasted on this page rather than in Settings.
+/// See `keyConfigured` for why the two are one seat and not two.
 struct GeminiImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
@@ -17,6 +22,25 @@ struct GeminiImportScreen: View {
     @State private var held = 0
     /// The page's one presentation (`AccountPage.sheet`).
     @State private var sheet: AccountPageSheet?
+    /// THE SEAT'S SECOND FACET — a Google key (prd §871).
+    ///
+    /// Gemini is one of the three providers that had no seat of its own: the
+    /// catalog tile of this name is an importer, so a Google key could
+    /// only be pasted in Settings → Your key, which was the one account in
+    /// the app connected somewhere other than its own page. It is the same
+    /// agent either way — `AgentConversationLanding.source(for:)` returns
+    /// `AgentProvider.agent`, so a conversation had on this key lands in
+    /// this room beside an imported one (§839), and `FeedScreen`'s
+    /// `resolveRoomAgent` matches the same string, so the key alone earns
+    /// the room's Chat tile.
+    ///
+    /// Mirrored rather than read in a body: `AgentKey.isConfigured` is a
+    /// `SecItemCopyMatching` round trip to securityd, and a Keychain read in
+    /// a body is what build 525 paid for (CLAUDE.md, prd §628).
+    @State private var keyConfigured = AgentKey.isConfigured(.google)
+    @State private var keyDraft = ""
+    @State private var keyChecking = false
+    @State private var keyResult: BridgeProof?
 
 
     var body: some View {
@@ -25,11 +49,18 @@ struct GeminiImportScreen: View {
             // An import has no live connection, so "is anything here" is the
             // only honest test of whether this seat is connected at all.
             state: AccountPageState.of(name: "Gemini", seatID: "gemini",
-                                       connected: held > 0, store: store),
+                                       connected: held > 0 || keyConfigured, store: store),
             mode: .oneTimeImport,
-            teardown: {},
+            keyed: keyConfigured,
+            teardown: {
+                // The seat's only removable half. An import's things are the
+                // person's own and stay; `ImportUpkeepSection` is where they
+                // go.
+                AgentKey.clear(.google)
+                keyConfigured = false
+            },
             sheet: $sheet,
-            act: { setupBlock },
+            act: { actBlock },
             more: {
                 ImportUpkeepSection(source: "Gemini", held: held,
                                     staleness: staleness, plain: true) { gone in
@@ -37,7 +68,7 @@ struct GeminiImportScreen: View {
                     result = .says(String(localized: "\(gone) removed"))
                 }
             },
-            keySheet: { EmptyView() }
+            keySheet: { keyBlock }
         )
         .onAppear { reread() }
         .fileImporter(isPresented: $importing,
@@ -96,5 +127,82 @@ struct GeminiImportScreen: View {
             : String(localized: "Synced just now")
         store.registerConnected(id: "gemini", name: "Gemini", proof: proof,
                                 can: ["Imports the activity you export."])
+    }
+
+    /// The page's act — the import, then the key.
+    ///
+    /// Two facets in one column, and the key half changes shape rather than
+    /// doubling: with no key it is the door onto the "Your key" sheet, which
+    /// is where the field lives for every other keyed seat; with one saved
+    /// the chassis draws that door as the `Your key` row, so what stands
+    /// here instead is what the key is DOING — the same three rows
+    /// `VeniceSetupScreen` draws, plus the librarian's switch where it is
+    /// this key that would be spent.
+    @ViewBuilder private var actBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            setupBlock
+            if keyConfigured {
+                AgentActiveStatusRow(provider: .google)
+                AgentModelRow(provider: .google)
+                AgentSpendRow(provider: .google)
+                AgentLibrarianRow(provider: .google)
+            } else {
+                DSSlabDoor(title: "Add your Google key",
+                           detail: String(localized: "Chat with Gemini here"),
+                           systemImage: "key") { sheet = .key }
+            }
+        }
+    }
+
+    /// The "Your key" sheet — one block for a first key and for a
+    /// replacement, the family's shape (`VeniceSetupScreen`).
+    ///
+    /// The door is the console ROOT, not the keys sub-path. Every path under
+    /// it answers from a client-routed app, so a sub-path cannot be confirmed
+    /// from here, and Grok's own rule applies: a wrong deep link is worse
+    /// than the root.
+    @ViewBuilder private var keyBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            BridgeSetupCard(steps: [], numbered: false) {
+                DSSlabButton(title: "Get your API key",
+                             detail: AgentProvider.google.console,
+                             systemImage: "arrow.up.right",
+                             url: URL(string: "https://\(AgentProvider.google.console)"))
+            }
+            DSSlabField(placeholder: AgentProvider.google.placeholder, text: $keyDraft,
+                        actionLabel: keyChecking ? "Checking…" : (keyConfigured ? "Update" : "Connect"),
+                        secure: true,
+                        isArmed: !keyChecking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
+                        action: saveKey)
+            BridgeSyncStatusRows(proof: keyResult)
+            DSSlabNote(text: "Google bills you directly.", plain: true)
+        }
+    }
+
+    /// Saves only after Google accepts the key — no dead key in the
+    /// Keychain claiming a capability it cannot deliver (the honesty rule).
+    private func saveKey() {
+        let candidate = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !candidate.isEmpty else { return }
+        keyChecking = true
+        keyResult = nil
+        Task { @MainActor in
+            let outcome = await AgentAnswer.check(candidate, provider: .google)
+            keyChecking = false
+            guard outcome == .accepted else {
+                // Four ways this can fail and four sentences for them
+                // (`AgentKeyCheck`) — a rate limit, a blocked account and a
+                // dropped connection are not the key.
+                keyResult = .failed(outcome.line(for: .google))
+                return
+            }
+            AgentKey.set(candidate, for: .google)
+            keyConfigured = true
+            keyDraft = ""
+            DSHaptic.success()
+            keyResult = .connected(String(localized: "Gemini answers on this key now."))
+            store.registerConnected(id: "gemini", name: "Gemini",
+                                    proof: String(localized: "Key in the Keychain"))
+        }
     }
 }

@@ -6,8 +6,8 @@ import SwiftData
 /// so unlike the other key seats its answers can weigh what you hold and what
 /// the market is doing, not only what you saved. The key is checked with Bankr
 /// before it saves (no dead key claiming a capability — honesty rule), lands
-/// in the Keychain via the same vault every agent key uses, and appears in
-/// Settings → Your key alongside the rest.
+/// in the Keychain via the same vault every agent key uses, and is connected
+/// HERE and nowhere else since prd §871 deleted the Settings key card.
 ///
 /// ## SIGN IN, AND THE KEY IS MADE FOR YOU (prd §800, reverses §529's "only
 /// Bankr can remove that last step")

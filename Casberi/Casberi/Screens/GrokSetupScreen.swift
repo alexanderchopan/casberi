@@ -3,8 +3,8 @@ import SwiftData
 
 /// Grok, connected — by key (2026-07-31, prd §242). Same BYO-key contract
 /// every agent here keeps: checked with the provider before it saves, lands
-/// in the Keychain via the same vault, appears in Settings → Your key
-/// alongside the rest.
+/// in the Keychain via the same vault, and connected HERE and nowhere else
+/// since prd §871 deleted the Settings key card.
 ///
 /// The reason to eventually WANT this seat is bigger than "a seventh
 /// model" — it would be the only agent that could see X, which none of this
@@ -139,6 +139,10 @@ struct GrokSetupScreen: View {
             AgentActiveStatusRow(provider: .grok)
             AgentModelRow(provider: .grok)
             AgentSpendRow(provider: .grok)
+            // The librarian's switch, moved off Settings with the key card
+            // (prd §871). It draws only on the ACTIVE key's page, so it
+            // cannot read as a per-seat setting.
+            AgentLibrarianRow(provider: .grok)
         }
     }
 

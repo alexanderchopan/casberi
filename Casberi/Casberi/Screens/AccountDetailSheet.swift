@@ -10,7 +10,14 @@ import CloudKit
 /// pricing that doesn't exist yet.
 enum AccountDetail: String, Identifiable {
     case data
-    case key
+    /// The Mac's local MCP listener (prd §871). It used to ride inside the
+    /// "Your key" sheet, on the reasoning that it was the same subject seen
+    /// from the other side — your key lets Casberi ask somebody else's agent,
+    /// this lets an agent on this Mac ask Casberi. With that sheet gone (every
+    /// key is connected on its own account page now) the listener is what it
+    /// always was on its own terms: a switch about this Mac, not about a key.
+    /// Mac-only, and `AccountScreen` draws no row for it anywhere else.
+    case mcp
     case notifications
     var id: String { rawValue }
 }
@@ -55,21 +62,6 @@ struct AccountDetailSheet: View {
     /// it sits beside the at-rest half (on device / iCloud) instead of
     /// competing as a second privacy row.
     @State private var privacyPage: PrivacySubPage?
-    /// Your key (prd §67) — draft, outcome line, and a mirrored configured
-    /// flag (AgentKey isn't observable; actions refresh it by hand). The
-    /// picker chooses which agent the key belongs to (ruling 2026-07-14:
-    /// it's an agent key — Claude, ChatGPT, Gemini, or Venice).
-    @State private var keyDraft = ""
-    @State private var keyResult: String?
-    /// A rejected key must READ as a failure — same muted gray as success
-    /// would look like it saved (honesty rule).
-    @State private var keyResultIsError = false
-    @State private var keyChecking = false
-    @State private var keyProvider: AgentProvider = AgentKey.active ?? .anthropic
-    @State private var keyConfigured = AgentKey.isConfigured(AgentKey.active ?? .anthropic)
-    /// Bumped whenever a key is saved or removed so `AgentSpendRow` re-reads
-    /// the ledger, which is a static store SwiftUI cannot observe.
-    @State private var keyTick = 0
     /// Mirrored rather than read live: `Notifications.settings` is a computed
     /// UserDefaults pair, which SwiftUI cannot observe, so a toggle bound
     /// straight to it would not redraw its own switch.
@@ -85,9 +77,9 @@ struct AccountDetailSheet: View {
     // read would pay both on every re-render of a tray whose toggles re-render
     // it constantly.
 
-    /// The agent a keyed ask would actually reach, if any. Distinct from
-    /// `keyProvider`, which is the "Your key" picker's selection and follows
-    /// the person's browsing, not what is configured.
+    /// The agent a keyed ask would actually reach, if any — read by the
+    /// privacy home's readers line. It is the only key fact this sheet still
+    /// holds: the key card moved out to the account pages (prd §871).
     @State private var keyedAgent: AgentProvider?
     /// Whether the librarian is allowed to spend that key on the app's own
     /// schedule — which changes the honest sentence from "when you tap" to
@@ -106,8 +98,8 @@ struct AccountDetailSheet: View {
             case .data:
                 dataCard
                 controls
-            case .key:
-                keyCard
+            case .mcp:
+                mcpCard
             case .notifications:
                 notifyCard
             }
@@ -180,7 +172,7 @@ struct AccountDetailSheet: View {
         // `AccountScreen`'s row title by hand: the row is what you tap and
         // this is the sheet it opens, so the two must never disagree.
         case .data: "Data"
-        case .key: "Your key"
+        case .mcp: "Agents on this Mac"
         case .notifications: "Notifications"
         }
     }
@@ -307,7 +299,10 @@ struct AccountDetailSheet: View {
         // text line vs three 44pt slabs), and the ADP nudge lost its 50pt
         // badge indent so it wraps one line fewer.
         case .data: privacyHeight
-        case .key: 500   // +40 for the per-agent capability line (2026-07-21)
+        // The toggle, its two-line detail, the endpoint row, the copy verb
+        // and its one footnote — `MCPServerRow` whole, with nothing else in
+        // the tray (prd §871).
+        case .mcp: 380
         case .notifications: notifyHeight
         }
     }
@@ -340,7 +335,7 @@ struct AccountDetailSheet: View {
     /// constant is where it quietly starts clipping its last row.
     ///
     /// **The constant it replaces was sized for a card that no longer exists**
-    /// (§870). 525/600 was tuned when this card held THREE switches — two
+    /// (§871). 525/600 was tuned when this card held THREE switches — two
     /// classes and quiet hours — and §770 replaced those with one switch per
     /// category you have an account in. `BridgeCatalog.categories` has NINE, so
     /// a well-connected account has been six switches over its budget for a
@@ -600,160 +595,24 @@ struct AccountDetailSheet: View {
                   subtitleTone: subtitleTone, action: action)
     }
 
-    /// Your key (prd §67) — the BYO escape hatch, stated honestly: answers run
-    /// on this iPhone by default; your own agent key adds a "Try with your
-    /// key" you tap per answer. The key goes to the Keychain and to the
-    /// provider itself — never to us (there is no us to send it to). It's an
-    /// AGENT key (ruling 2026-07-14): Claude, ChatGPT, Gemini, Venice, or
-    /// Bankr — the picker names the agent, the small print names the company.
-    /// Bankr's key could also trade (it's a wallet agent) — the small print
-    /// says to mint it read-only, and the answer path prompts "answer only"
-    /// regardless (2026-07-16).
-    private var keyCard: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            // The SUMMARY — who answers, app-wide. It used to describe
-            // whichever provider the picker had selected ("Claude saved in
-            // the Keychain …3kQA"), which every row of `AgentKeyPicker` now
-            // states for itself; keeping it would be prd §208's "one thing
-            // said twice". What the rows CAN'T say from any single row is
-            // which one wins, so that's what this says now.
-            aliveRow("key.fill", AgentKey.isConfigured ? DS.confirm : DS.textSecondary,
-                     "Agent API key",
-                     AskSurface.enabled
-                        ? (AgentKey.active.map { String(localized: "Answers run on \($0.agent) when you tap") }
-                            ?? String(localized: "Answers run on \(DS.device) until you add one"))
-                        // prd §718: with the ask off nothing "answers", so the
-                        // summary states only whose key is saved.
-                        : (AgentKey.active.map { String(localized: "\($0.agent) key saved") }
-                            ?? String(localized: "No key saved")))
-            DSFootnote(AskSurface.enabled
-                ? Text("The question and its matched things go straight to the provider. They bill you directly.")
-                : Text("What you send goes straight to the provider. They bill you directly."))
-            // What THIS agent adds beyond a plain text answer — changes with
-            // the picker below it, so the choice is informed before a key is
-            // even saved (honesty rule: capability copy per agent, not one
-            // line pretending they're all the same).
-            // Every capability line describes ANSWERING (a chat's memory, web
-            // search), so it goes dark with the ask (prd §718).
-            if AskSurface.enabled, let capability = keyProvider.capabilityLine {
-                Text(capability)
-                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            // A list, not a segmented control (prd §243) — see
-            // `AgentKeyPicker` for why seven providers broke the old one in
-            // three ways, of which width was only the most visible.
-            AgentKeyPicker(selection: $keyProvider) {
-                keyConfigured = AgentKey.isConfigured(keyProvider)
-                keyResult = nil
-                keyDraft = ""
-            }
-            // Which model it answers with, and what it has been spent on
-            // (2026-08-06). Both render nothing until this provider is
-            // configured, so an unconfigured pick shows the field alone,
-            // exactly as before.
-            // The ask's model picker; the librarian's own picker lives in
-            // `AgentLibrarianRow` and stays (prd §718).
-            if AskSurface.enabled {
-                AgentModelRow(provider: keyProvider)
-            }
-            // Who may serve the request, and whether it may go looking
-            // (2026-08-23, prd §459) — OpenRouter alone, since it is the only
-            // seat here that routes rather than answers.
-            OpenRouterRoutingRow(provider: keyProvider)
-            AgentSpendRow(provider: keyProvider, tick: keyTick)
-            AgentLibrarianRow()
-            #if targetEnvironment(macCatalyst)
-            // Mac only — the local MCP listener (2026-08-06). It sits with the
-            // key because it is the same subject from the other side: your key
-            // lets Casberi ask somebody else's agent, this lets an agent on
-            // this Mac ask Casberi.
-            MCPServerRow()
-            #endif
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                // The entry well is a box you put something in — the one
-                // thing here that may be boxed (§729's grammar), and a rounded
-                // well rather than a capsule since prd §746.
-                SecureField(LocalizedStringKey(keyProvider.placeholder), text: $keyDraft)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .dsText(.body17)
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(minHeight: 44)
-                    .background(DS.fillFaint,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-                // Save is a VERB, so a row under the field (prd §746) — it was
-                // a filled capsule beside it. The §83 corollary still holds and
-                // is simpler now: `.disabled` dims a plain-style button's label,
-                // and there is no hand-painted fill left to swap.
-                let keySaveOff = keyChecking
-                    || keyDraft.trimmingCharacters(in: .whitespaces).isEmpty
-                DSDoorRow(icon: keyChecking ? "hourglass" : "checkmark",
-                          label: keyChecking ? "Checking…" : "Save") { saveKey() }
-                    .armedPop(!keySaveOff)
-                    .disabled(keySaveOff)
-            }
-            if keyConfigured {
-                Button {
-                    DSHaptic.tap()
-                    AgentKey.clear(keyProvider)
-                    keyConfigured = false
-                    keyTick += 1
-                    keyResultIsError = false
-                    keyResult = !AskSurface.enabled
-                        ? String(localized: "Key removed.")
-                        : AgentKey.isConfigured
-                        ? "Removed — answers run on \(AgentKey.active?.agent ?? "") now."
-                        : "Removed — answers stay on \(DS.device)."
-                } label: {
-                    actionLabel("Remove key", icon: "trash", destructive: true)
-                }
-                .buttonStyle(.plain)
-                .dsHover()
-            }
-            if let keyResult {
-                Text(keyResult)
-                    .dsText(.body17)
-                    .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
-                    .settleIn()
-            }
-            // No sentence under the key field (prd §748). "From the agent's
-            // own console. It stays in Keychain and goes only to that
-            // provider." said where the card's one disclosure above already
-            // says it goes straight to the provider, in §729's banned
-            // Keychain-reassurance shape.
-        }
-    }
-
-    /// Saves the key only after its provider accepts it — no dead key sitting
-    /// in the Keychain claiming a capability it can't deliver (honesty rule).
-    private func saveKey() {
-        let candidate = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !candidate.isEmpty else { return }
-        keyChecking = true
-        keyResult = nil
-        Task { @MainActor in
-            // The same differentiated check the four agent setup screens use
-            // (audit, 2026-07-31) — this sheet is the SEVEN-provider door, so
-            // it was the widest place a rate limit, a blocked key and a dead
-            // connection all read as "check it and try again". The wording
-            // lives on `AgentKeyCheck` so this door and those four screens
-            // can't drift apart.
-            let outcome = await AgentAnswer.check(candidate, provider: keyProvider)
-            keyChecking = false
-            if outcome == .accepted {
-                AgentKey.set(candidate, for: keyProvider)
-                keyTick += 1
-                keyConfigured = true
-                keyDraft = ""
-                DSHaptic.success()
-                keyResultIsError = false
-                keyResult = "Saved — answers now offer \"Try with your key\" on \(keyProvider.agent)."
-            } else {
-                keyResultIsError = true
-                keyResult = outcome.line(for: keyProvider)
-            }
-        }
+    /// The Mac's local MCP listener (prd §871, `MCPServer`) — the whole tray.
+    ///
+    /// `MCPServerRow` carries its own state, its own honesty copy and its own
+    /// `dsListRow`, so this is the row and nothing else. It was the last
+    /// thing standing in the "Your key" sheet that had no account page to go
+    /// to: it is not a key, it is a switch about this machine.
+    ///
+    /// Mac-only in the same `#if` the row is, so the iOS build has no case to
+    /// resolve — `AccountScreen` draws no row that reaches it there either,
+    /// and the enum case being unreachable on iOS is the same shape the
+    /// `#if targetEnvironment(macCatalyst)` around `MCPServerRow` already had
+    /// inside the key card.
+    @ViewBuilder private var mcpCard: some View {
+        #if targetEnvironment(macCatalyst)
+        MCPServerRow()
+        #else
+        EmptyView()
+        #endif
     }
 
     /// The colored squircle badge — the Apps-page glyph in a solid tone
@@ -777,7 +636,7 @@ struct AccountDetailSheet: View {
     /// digest, for all of them, and the settings page stays a column of
     /// switches.
     ///
-    /// And nothing else (prd §870, user: "nobody understands what it means and
+    /// And nothing else (prd §871, user: "nobody understands what it means and
     /// less is more"). The quiet-hours switch is gone: iOS's own Focus already
     /// decides what may reach a sleeping person, per person and system-wide,
     /// and it does it better than a switch in here can.

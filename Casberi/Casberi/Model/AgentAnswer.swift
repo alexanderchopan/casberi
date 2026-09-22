@@ -84,7 +84,21 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Where a key comes from — the settings small print.
+    /// Where a key comes from.
+    ///
+    /// It was the settings small print; since prd §871 it is also the ADDRESS
+    /// under each seat's "Get your API key" door and the URL behind it, both
+    /// derived from here so the two can never disagree (§311's rule: one
+    /// constant read by both, never a second literal).
+    ///
+    /// **Opened, never fetched.** Every host here is a page the in-app Safari
+    /// sheet shows; the host a key is actually READ against is a different one
+    /// (`api.anthropic.com`, `api.openai.com`, …), disclosed on
+    /// `NetworkReach`'s shared "Your agent key" endpoint. Because the doors
+    /// interpolate this property rather than spelling a literal,
+    /// `network-reach-audit.sh` files them under its runtime-built bucket and
+    /// cannot check them by name — the same standing Apple Intelligence's
+    /// hostless entry has, stated here rather than left to be rediscovered.
     var console: String {
         switch self {
         case .anthropic:  "console.anthropic.com"
@@ -590,9 +604,13 @@ enum AgentAnswerFailure: Error, Sendable {
     var line: String {
         switch self {
         case .noKey:
-            String(localized: "No key saved — add one in Settings to ask an agent.")
+            // NAMES THE ACCOUNT PAGE, NOT SETTINGS (prd §871). Settings held
+            // the only key field until every provider got a seat; sending
+            // somebody there now is advice that lands on a screen with no key
+            // on it.
+            String(localized: "No key saved — connect an agent in Accounts to ask one.")
         case .rejectedKey:
-            String(localized: "Your key was turned down — check it in Settings.")
+            String(localized: "Your key was turned down — check it on the agent's account page.")
         case .rateLimited:
             String(localized: "Your agent is rate-limiting this key — try again in a minute.")
         case .refused:
@@ -608,7 +626,7 @@ enum AgentAnswerFailure: Error, Sendable {
             // again" — a 402 does not change on a retry.
             String(localized: "Your agent won't spend against that key — the account has no credits or no spending limit set. Add credits with the provider, then ask again.")
         case .privacyUnroutable:
-            String(localized: "OpenRouter couldn't route that. Either the model has been retired, or nobody serving it will agree not to keep your question — pick another model, or turn off private routing in Settings.")
+            String(localized: "OpenRouter couldn't route that. Either the model has been retired, or nobody serving it will agree not to keep your question — pick another model, or turn off private routing on OpenRouter's account page.")
         case .stillRunning(let jobID):
             // The id is NAMED when there is one (prd §577b). "Check Bankr for
             // the outcome" is advice you cannot follow across a page of jobs
