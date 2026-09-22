@@ -825,8 +825,15 @@ mutate "the gate's cap shrinks back to a hand's length"  gate \
   's/static let stuckFlagCapMs = 8000/static let stuckFlagCapMs = 3000/' || mfails=$((mfails + 1))
 mutate "a room change no longer clears the scroll flag (it sticks for every later room)"  main \
   's/\n        chrome\.scrolling = false\n//' || mfails=$((mfails + 1))
+# Deletes the SCROLL CLAUSE, not the whole `.onDisappear`. It used to take the
+# modifier entire, which stopped changing anything the moment prd §866 added a
+# second clause (`FeedSeam.set(dragging: false)`) inside it — so from that
+# commit on this mutation reported nothing and tested the shipped code. Caught
+# by its own STALE MUTATION report the next time the file was verified, which
+# is the `dead-mutations-print-a-passing-line` class doing its job. Scoped to
+# the one line it is about, so a third clause landing here cannot kill it again.
 mutate "the scroll flag outlives the screen that set it"  chrome \
-  's/\.onDisappear \{\n\s*if active, chrome\.scrolling \{ chrome\.scrolling = false; GestureGate\.set\(scrolling: false\) \}\n\s*\}\n//' || mfails=$((mfails + 1))
+  's/\n\s*if active, chrome\.scrolling \{ chrome\.scrolling = false; GestureGate\.set\(scrolling: false\) \}//' || mfails=$((mfails + 1))
 mutate "scrolling becomes a body dependency (a rebuild per scroll phase)"  chrome \
   's/\@ObservationIgnored var scrolling = false/var scrolling = false/' || mfails=$((mfails + 1))
 mutate "the dock flag outlives the strip that set it"  chips \

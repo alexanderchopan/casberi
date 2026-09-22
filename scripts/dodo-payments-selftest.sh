@@ -174,9 +174,30 @@ grep -q 'currency: thing.priceCurrency' "$SOURCE" \
 # money fields, so it PASSES `Corpus.cardSpendSources`' stated data test and
 # joining it looks correct. It must not: money arriving is not money spent, and
 # folding it in answers "what did I spend?" with the opposite sign.
+#
+# It asserts the RULING rather than a snapshot of the set (amended prd §868).
+# Pinning the exact literal made every legitimate addition read as a §558
+# breach: adding MetaMask Card — an onchain card that had been missing from the
+# set since §857, so "what did I spend?" was answering with a whole card left
+# out — failed this check, which is a correct fix reported as a revenue leak.
+# A guard that cannot tell the two apart sends you to the wrong file. So: the
+# two revenue seats must be ABSENT, and the members that carry the rule must
+# still be present, which is what keeps this from passing over a gutted set.
 strip_comments "$THING" "$TMP/thing-code.swift"
-grep -qE 'cardSpendSources: Set<String> = \["Apple Wallet", "Gnosis Pay", "ether.fi"\]' "$TMP/thing-code.swift" \
-  || { echo "✗ Corpus.cardSpendSources changed — if Dodo Payments or Polar joined it, revenue is now being counted as spending (prd §558)"; exit 1; }
+SET_LINE="$(tr '\n' ' ' < "$TMP/thing-code.swift" \
+  | grep -oE 'cardSpendSources: Set<String> =[^]]*\]')" \
+  || { echo "✗ Corpus.cardSpendSources not found — the spend answer's source set is gone (prd §558)"; exit 1; }
+for seat in "Dodo Payments" "Polar" "Stripe"; do
+  case "$SET_LINE" in
+    *"\"$seat\""*) echo "✗ $seat joined Corpus.cardSpendSources — revenue is now counted as spending (prd §558)"; exit 1;;
+  esac
+done
+for seat in "Apple Wallet" "Gnosis Pay" "MetaMask Card" "ether.fi"; do
+  case "$SET_LINE" in
+    *"\"$seat\""*) ;;
+    *) echo "✗ $seat left Corpus.cardSpendSources — the spend answer now omits a real card (prd §558, §868)"; exit 1;;
+  esac
+done
 
 # --- compile DodoPaymentsRoom.swift WHOLE, unmodified ------------------------
 cat > "$TMP/main.swift" <<'SWIFT'
