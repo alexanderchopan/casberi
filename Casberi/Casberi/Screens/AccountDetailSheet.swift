@@ -308,12 +308,7 @@ struct AccountDetailSheet: View {
         // badge indent so it wraps one line fewer.
         case .data: privacyHeight
         case .key: 500   // +40 for the per-agent capability line (2026-07-21)
-        // Status row + two class toggles + quiet hours + the ceiling footnote
-        // (prd §306; −110 with the whisper row and its time picker gone, §706).
-        // §713: +34 for the two class subtitles that now say how each
-        // interrupts (one more subhead12 line apiece), and +17 more when
-        // authorized for the "Last sent …" clause. UNSEEN on a device.
-        case .notifications: notifyAuthorized ? 600 : 525
+        case .notifications: notifyHeight
         }
     }
 
@@ -338,6 +333,31 @@ struct AccountDetailSheet: View {
         // The keyed line, which the librarian's fork wraps one line further.
         if keyedAgent != nil { height += librarianOn ? 76 : 54 }
         return height
+    }
+
+    /// DERIVED from the switch count, for `privacyHeight`'s own reason one
+    /// property up: a tray is a single detent that does not scroll, so a
+    /// constant is where it quietly starts clipping its last row.
+    ///
+    /// **The constant it replaces was sized for a card that no longer exists**
+    /// (§869). 525/600 was tuned when this card held THREE switches — two
+    /// classes and quiet hours — and §770 replaced those with one switch per
+    /// category you have an account in. `BridgeCatalog.categories` has NINE, so
+    /// a well-connected account has been six switches over its budget for a
+    /// week, and the row that falls off the bottom of a fixed detent is a
+    /// control you cannot reach (§83). Deleting quiet hours moved that
+    /// threshold by one and is the reason it was looked at, not its cause.
+    ///
+    /// The terms: a `DSToggleRow` is its 31pt switch plus the stack's `s4`,
+    /// and the base is the 525 above with its three switches taken back out —
+    /// the status row, the footnote, the tray's own chrome, rounded UP, because
+    /// a tray with air at the bottom reads as a tray and a tray that is short
+    /// eats a control. At nine it asks for more than the screen, which iOS
+    /// clamps to full height — the honest answer for a list that long.
+    private var notifyHeight: CGFloat {
+        400 + CGFloat(notifyCategories.count) * (31 + DS.Space.s4)
+            // The "Last sent …" clause and the taller status row under it.
+            + (notifyAuthorized ? 75 : 0)
     }
 
     // MARK: - iCloud sync status (2026-07-27)
@@ -756,6 +776,11 @@ struct AccountDetailSheet: View {
     /// the catalog does. Never a level per category either: on means the
     /// digest, for all of them, and the settings page stays a column of
     /// switches.
+    ///
+    /// And nothing else (prd §869, user: "nobody understands what it means and
+    /// less is more"). The quiet-hours switch is gone: iOS's own Focus already
+    /// decides what may reach a sleeping person, per person and system-wide,
+    /// and it does it better than a switch in here can.
     private var notifyCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             // A fixed accent regardless of what's actually on — the badge
@@ -773,11 +798,6 @@ struct AccountDetailSheet: View {
                                               saveNotify()
                                           }))
             }
-            // Restored 2026-08-14 with the time-sensitive entitlement (prd
-            // §306 amendment's "to finish it").
-            DSToggleRow(title: Text("Quiet hours"),
-                        isOn: Binding(get: { notifySettings.quiet.enabled },
-                                      set: { notifySettings.quiet.enabled = $0; saveNotify() }))
             // The cadence and the exceptions, which no switch can say (§748).
             // The four named are `NotifyKind.standsAlone`, word for word.
             DSFootnote("One digest per category each evening, not a ping for every event. A dispute, a deadline, a liquidation or a Safe signature comes at once.")

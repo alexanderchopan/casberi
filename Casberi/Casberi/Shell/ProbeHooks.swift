@@ -1735,8 +1735,8 @@ enum ProbeHooks {
         // Runs the real sweep over the real corpus in `dryRun`, so it needs no
         // permission grant and fires nothing: one `notifyPlan|` line per plan
         // naming its class, kind, the id it dedupes on, whether the ledger has
-        // already spent it, what the right-hand slot resolved to, and whether
-        // quiet hours would hold it. Then the whisper line, then the settings.
+        // already spent it, and what the right-hand slot resolved to. Then the
+        // whisper line, then the settings.
         //
         // It exists because an empty lock screen has SIX causes that all look
         // identical from outside — permission never asked, a class switched
@@ -1794,10 +1794,7 @@ enum ProbeHooks {
                     NSLog("[Casberi] notifyDevnet| %@", line)
                 }
                 let ledger = Notifications.ledger
-                let cal = Calendar.current
                 for plan in plans {
-                    let hold = NotifyRules.holdUntil(plan: plan, now: .now,
-                                                     quiet: s.quiet, calendar: cal)
                     // Which rung of the ladder the right-hand slot landed on.
                     // `photo` means real bytes are in hand; `remote` means a
                     // URL we would try and may still fall back from; `mark`
@@ -1808,12 +1805,11 @@ enum ProbeHooks {
                     case .remote: art = "remote→\(plan.source ?? "none")"
                     case .none: art = plan.source.map { "mark:\($0)" } ?? "none"
                     }
-                    NSLog("[Casberi] notifyPlan| %@ %@ %@ spent=%@ ts=%@ hold=%@ art=%@ mark=%@ id=%@ · %@",
+                    NSLog("[Casberi] notifyPlan| %@ %@ %@ spent=%@ ts=%@ art=%@ mark=%@ id=%@ · %@",
                           plan.cls.rawValue, plan.kind.rawValue,
                           plan.kind.standsAlone ? "alone" : "digest:" + Notifications.category(of: plan),
                           ledger.hasFired(plan.id) ? "YES" : "no",
                           plan.isTimeSensitive ? "YES" : "no",
-                          hold.map { "\($0)" } ?? "no",
                           art, plan.mark ?? "source", plan.id, plan.title)
                 }
                 // What `submit` would REALLY schedule — after the settings

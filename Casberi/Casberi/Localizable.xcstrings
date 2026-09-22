@@ -104561,34 +104561,6 @@
         }
       }
     },
-    "Quiet hours" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Horas de silencio"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "おやすみ時間"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "방해 금지 시간"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "免打扰时段"
-          }
-        }
-      }
-    },
     "Quiet · %lld" : {
       "localizations" : {
         "es" : {

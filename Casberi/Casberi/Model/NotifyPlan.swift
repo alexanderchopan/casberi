@@ -21,7 +21,7 @@ import Foundation
 /// The two classes, and there is no third (§306; the once-a-day whisper was
 /// the third until prd §706 cut it — its tap had led nowhere since §697b, and
 /// a line about a day you already scrolled says nothing). A class decides
-/// interruption, batching and whether quiet hours may hold it.
+/// interruption and batching.
 enum NotifyClass: String, Sendable, CaseIterable {
     /// Something needs you.
     case alarm
@@ -416,51 +416,6 @@ enum NotifyRules {
     /// dropped silently — see `collapse`.
     static let alarmsPerSweep = 1
 
-    /// Default quiet window, overridable in settings. Stored as minutes from
-    /// midnight so it survives a timezone change without meaning something
-    /// different.
-    struct Quiet: Sendable, Equatable {
-        var startMinute: Int   // 22:00
-        var endMinute: Int     // 08:00
-        var enabled: Bool
-
-        static let `default` = Quiet(startMinute: 22 * 60, endMinute: 8 * 60, enabled: true)
-
-        /// True while the clock is inside the window. Handles the wrap across
-        /// midnight, which is the normal case — a window that does NOT wrap
-        /// (say 09:00–17:00) is the unusual one and still has to work.
-        func contains(minute: Int) -> Bool {
-            guard enabled else { return false }
-            if startMinute == endMinute { return false }
-            if startMinute < endMinute {           // 09:00 → 17:00, same day
-                return minute >= startMinute && minute < endMinute
-            }
-            return minute >= startMinute || minute < endMinute   // 22:00 → 08:00
-        }
-    }
-
-    /// When a plan may be delivered. Nil means "now".
-    ///
-    /// A time-sensitive alarm is never held — that is the entire point of the
-    /// level, and iOS's Focus rules already govern it. Everything else that
-    /// lands in quiet hours is HELD UNTIL MORNING rather than dropped: the news
-    /// keeps, and a like you are told about at 08:00 is still worth having,
-    /// while one that wakes you is worth less than nothing.
-    static func holdUntil(plan: NotifyPlan, now: Date, quiet: Quiet, calendar: Calendar) -> Date? {
-        guard !plan.isTimeSensitive else { return nil }
-        let parts = calendar.dateComponents([.hour, .minute], from: now)
-        let minute = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
-        guard quiet.contains(minute: minute) else { return nil }
-        // The next time the clock reads `endMinute`. Adding a day first and
-        // then setting the time would land wrong on the morning side of the
-        // window (00:30 must wait until 08:00 TODAY, not tomorrow).
-        let endHour = quiet.endMinute / 60, endMin = quiet.endMinute % 60
-        guard let today = calendar.date(bySettingHour: endHour, minute: endMin, second: 0, of: now) else {
-            return nil
-        }
-        return today > now ? today : calendar.date(byAdding: .day, value: 1, to: today)
-    }
-
     /// The batching rule (§306), and the reason the feature stays likeable.
     ///
     /// **Alarms** are ranked and only the worst is sent, with the rest COUNTED
@@ -500,10 +455,10 @@ enum NotifyRules {
 
     /// The event's own time, in words, for the subtitle — and ONLY when
     /// delivery lags it (prd §713). iOS stamps every banner with the moment it
-    /// was delivered, so a like held by quiet hours and delivered at 08:00
-    /// reads "now" — and the settings footer had promised for five weeks that
-    /// "each says when the thing happened, not when it arrived" while nothing
-    /// rendered `occurredAt` at all. Inside an hour the OS's own stamp is close
+    /// was delivered, and **iOS decides when the background task runs**, so an
+    /// event found hours late reads "now" — and the settings footer had promised
+    /// for five weeks that "each says when the thing happened, not when it
+    /// arrived" while nothing rendered `occurredAt` at all. Inside an hour the OS's own stamp is close
     /// enough and this is nil; past a week the hour is noise and only the date
     /// is said. Composed from twelve-hour numerals and a period word so it
     /// reads the same in a 24-hour locale without an AM/PM it never shows.
@@ -1163,8 +1118,10 @@ enum NotifyDigest {
     }
 
     /// Minutes from midnight. One, and the count is the ruling ("one per
-    /// category a day"): an evening read, once the day's news is in, outside
-    /// the default quiet window (22:00 to 08:00).
+    /// category a day"): an evening read, once the day's news is in. Every
+    /// slot this file can choose lives inside `readingWindow` (17:00 to
+    /// 21:00), so a digest can never land at night — which is why the app
+    /// needs no night rule of its own (prd §869).
     static let slots = [18 * 60]
 
     /// A bound on the queue, oldest dropped first. One slot a day and a
@@ -1196,26 +1153,29 @@ enum NotifyDigest {
     /// digest replaces another's, nor yesterday's still in Notification Center.
     static let requestPrefix = "digest:"
 
-    /// The next slot strictly after `now` that quiet hours do not cover.
+    /// The next slot strictly after `now`.
     ///
-    /// A custom quiet window can cover both slots, and then the digest waits
-    /// for the window's own end, the same place `NotifyRules.holdUntil` would
-    /// have put it.
-    static func nextSlot(after now: Date, quiet: NotifyRules.Quiet, calendar: Calendar,
-                         slots: [Int] = slots) -> Date {
+    /// Walks forward day by day rather than assuming today has one left, so an
+    /// evening sweep lands on tomorrow's slot instead of a time already past.
+    ///
+    /// With any slot at all the walk always lands on day 0 or day 1, so the
+    /// three-day bound and the fallback below are only reachable through an
+    /// EMPTY `slots`, which nothing can hand in today (`readingSlots` returns
+    /// the fixed one or a learned one). It waits a day anyway rather than
+    /// returning `now`: the caller schedules on `slot - now`, so a `now` here
+    /// would buzz the digest out immediately — the loudest possible answer to
+    /// "I could not work out when this should go".
+    static func nextSlot(after now: Date, calendar: Calendar, slots: [Int] = slots) -> Date {
         let today = calendar.startOfDay(for: now)
         for offset in 0...2 {
             guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
-            for minute in slots.sorted() where !quiet.contains(minute: minute) {
+            for minute in slots.sorted() {
                 guard let when = calendar.date(bySettingHour: minute / 60, minute: minute % 60,
                                                second: 0, of: day), when > now else { continue }
                 return when
             }
         }
-        let end = calendar.date(bySettingHour: quiet.endMinute / 60, minute: quiet.endMinute % 60,
-                                second: 0, of: now) ?? now
-        if end > now { return end }
-        return calendar.date(byAdding: .day, value: 1, to: end) ?? end
+        return calendar.date(byAdding: .day, value: 1, to: now) ?? now
     }
 
     /// One sweep's step: forget what a passed slot delivered, fold the new
@@ -1226,7 +1186,7 @@ enum NotifyDigest {
     /// like count replace itself; filtering LAST is what makes a category
     /// switched off take its queued items with it on the very next sweep.
     static func advance(_ state: State, adding new: [Item], allowed: (Item) -> Bool,
-                        now: Date, quiet: NotifyRules.Quiet, calendar: Calendar,
+                        now: Date, calendar: Calendar,
                         slots: [Int] = slots) -> State {
         var queue = state.queue
         if let slot = state.slot, slot <= now { queue = [] }
@@ -1236,15 +1196,10 @@ enum NotifyDigest {
         queue = queue.filter(allowed)
         if queue.count > cap { queue.removeFirst(queue.count - cap) }
         guard !queue.isEmpty else { return State(queue: [], slot: nil) }
-        // Keep a slot still ahead of us, unless quiet hours now cover it (the
-        // window was changed since it was chosen).
-        if let slot = state.slot, slot > now {
-            let parts = calendar.dateComponents([.hour, .minute], from: slot)
-            if !quiet.contains(minute: (parts.hour ?? 0) * 60 + (parts.minute ?? 0)) {
-                return State(queue: queue, slot: slot)
-            }
-        }
-        return State(queue: queue, slot: nextSlot(after: now, quiet: quiet, calendar: calendar, slots: slots))
+        // Keep a slot still ahead of us: the queue grew, but the evening it is
+        // waiting for did not move.
+        if let slot = state.slot, slot > now { return State(queue: queue, slot: slot) }
+        return State(queue: queue, slot: nextSlot(after: now, calendar: calendar, slots: slots))
     }
 
     /// The apps in the order the body names them: seats with no lock screen of

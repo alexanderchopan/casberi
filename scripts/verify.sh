@@ -2255,8 +2255,8 @@ harness "Apple Wallet pure-logic self-test" "apple wallet self-test" "scripts/ap
 # this feature can have: the simulator never runs a BGAppRefreshTask, so the
 # pass that decides what fires cannot be exercised there by any means, and on a
 # device the wrong answer arrives hours later on a lock screen with nobody
-# watching. A 3am buzz because quiet hours failed to wrap past midnight, a
-# dispute that never fires, eleven alarms where there should be one and a count.
+# watching. A like claiming the level that breaks a Sleep Focus, a dispute that
+# never fires, eleven alarms where there should be one and a count.
 harness "Notification pure-logic self-test" "notify self-test" "scripts/notify-selftest.sh" "the notification logic self-test failed — run scripts/notify-selftest.sh"
 
 # The wallet room's SCOPE rules (prd §483) — which of its six readings is on
