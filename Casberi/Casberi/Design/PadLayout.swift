@@ -92,11 +92,20 @@ enum PadLayout {
     /// the middle of a layout, never on its edge.
     static let macIdealWindowSize = CGSize(width: 1120, height: 760)
 
-    /// The detail pane's width for a given total. Proportional so a 13" in
-    /// landscape gives the pane real room, clamped so it can never crush the
-    /// list beside it or stretch into a second full screen.
+    /// The list column's cap beside a pane (prd §873). Past this, a wider
+    /// window widens the PANE, not the list — Mail's and Notes' shape.
+    static let listColumnWidth: CGFloat = 560
+
+    /// The detail pane's width for a given total (the whole surface, rail
+    /// included). The pane takes everything the rail and the list column leave
+    /// (prd §873, user: "expanding the mac window makes the all feed wider,
+    /// but really should expand the side panel"). It was `total * 0.38`
+    /// clamped to 400…560, so past ~1,474pt every added point went to the
+    /// list, which caps at `readingMaxWidth` and centres — a wide window bought
+    /// gutters. Floored at 400 so the narrowest pane shell (980) keeps its
+    /// ~492pt list; the pane's own reading rung caps its line length.
     static func paneWidth(for total: CGFloat) -> CGFloat {
-        min(max(total * 0.38, 400), 560)
+        max(total - railWidth - listColumnWidth, 400)
     }
 
     /// The reading column — a single file of rows or form fields (Settings,
