@@ -121,7 +121,11 @@ struct CardSpendSeatTests {
         // Held so the container outlives the compose — a released container
         // deletes its context and every row with it.
         _ = container
-        #expect(rows.allSatisfy(\.isLive))
+        // Computed OUTSIDE the macro: `allSatisfy(\.isLive)` passes a key path
+        // where a `throws` closure is expected, so `#expect`'s expansion wraps
+        // a call it must then mark `try` — and the test target stops compiling.
+        let allLive = rows.allSatisfy { $0.isLive }
+        #expect(allLive)
         #expect(EtherFiCashRoomSource.compose(things: rows) == nil)
     }
 
