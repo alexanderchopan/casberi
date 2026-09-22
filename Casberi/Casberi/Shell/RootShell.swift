@@ -2374,9 +2374,20 @@ struct RootShell: View {
                     // with the tile.
                     // On a pushed screen the seat is the way back (prd §767),
                     // so no screen needs a back chevron at its top edge.
-                    DockDoors(onAccounts: { sceneState.route.toggle(.apps) },
-                              onBack: sceneState.route.path.isEmpty
-                                  ? nil : { sceneState.route.goBack() })
+                    //
+                    // **Where the rail stands, this seat is ONLY the way back
+                    // (prd §875, user: "we can't have two account faces so
+                    // make the bottom one the back button").** The rail heads
+                    // itself with the face (`SourceChips(onAccounts:)`), so a
+                    // resting seat here drew a second door to Accounts in the
+                    // same frame. With nothing pushed there is nowhere to go
+                    // back to, and a seat that did nothing would be §83's
+                    // dead control — so it is not mounted at all.
+                    if padShell.railInset == 0 || !sceneState.route.path.isEmpty {
+                        DockDoors(onAccounts: { sceneState.route.toggle(.apps) },
+                                  onBack: sceneState.route.path.isEmpty
+                                      ? nil : { sceneState.route.goBack() })
+                    }
                 }
                 }
                 // Pinned to the trailing edge (2026-08-07). The iPad cap the

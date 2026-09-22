@@ -60028,3 +60028,11 @@ an exit. Touch is untouched.
 Verified on the Catalyst build, not reasoned: the Data tray opens in light mode,
 black on the light page, with Done in the tint at the head; all three
 `AccountDetail` cases launch and survive.
+
+## §875 — Where the rail stands, the dock's seat is only the way back (user: "we can't have two account faces so make the bottom one the back button", 2026-09-22)
+
+The Mac and a regular-width iPad drew the Accounts face TWICE in one frame: the rail heads itself with the face (`SourceChips(onAccounts:)`), and `DockDoors` — the phone dock's leading seat, hosted on `RootShell` so it survives a push — stood its own face at the bottom-left, over the list. Both toggled Accounts. §798 made the face the one door to Accounts; on the phone it is, and on the rail layout it was two.
+
+The ruling: while the rail shows (`padShell.railInset > 0`), `DockDoors` mounts ONLY when something is pushed, and then it is the back arrow (§767). At rest it is not mounted at all — a seat with nowhere to go back to would be §83's dead control. The phone is untouched: no rail, so the seat is the face as before. The rail itself does not change (user, same session: the rail is the app's own, "everyone else has a sidebar").
+
+Verified on the Catalyst build: the All feed shows one face (the rail's) and no seat; Accounts shows the rail's face and the back arrow at the bottom-left. `dock-selftest.sh` green.
