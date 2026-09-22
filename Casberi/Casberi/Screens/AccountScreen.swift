@@ -19,6 +19,8 @@ struct SettingsRows: View {
     @Environment(\.openURL) private var openURL
     @Environment(BridgeStore.self) private var bridgeStore
     @Environment(HomeRoute.self) private var route
+    /// Re-injected into every sheet these rows raise — see `presented(_:)`.
+    @Environment(ShellChrome.self) private var chrome
     @Environment(\.scenePhase) private var scenePhase
     /// Drives the Data tile's badge: a green lock on device, a blue cloud once
     /// the person turns iCloud sync on.
@@ -67,7 +69,7 @@ struct SettingsRows: View {
             // family's own chassis, which adds the presented corner these
             // three were missing along with the sizing they already had.
             .sheet(isPresented: $diagnosticsOpen) {
-                NavigationStack { DiagnosticsScreen() }.dsNavSheet()
+                presented(NavigationStack { DiagnosticsScreen() }.dsNavSheet())
             }
             // `onDismiss` because two of this screen's facts are MIRRORED
             // `@State` (`mcpOn`/`mcpRunning`, prd §628) and the tray that
@@ -77,10 +79,12 @@ struct SettingsRows: View {
             // computed properties and were always live; these two cannot be,
             // because reading them is a `UserDefaults` hit and a class
             // SwiftUI does not observe.
-            .sheet(item: $detail, onDismiss: { readCounts() }) { AccountDetailSheet(detail: $0) }
-            .sheet(isPresented: $languageOpen) { LanguagePickerSheet() }
+            .sheet(item: $detail, onDismiss: { readCounts() }) {
+                presented(AccountDetailSheet(detail: $0))
+            }
+            .sheet(isPresented: $languageOpen) { presented(LanguagePickerSheet()) }
             .sheet(isPresented: $chipOrderOpen) {
-                NavigationStack { CategoryOrderSheet() }.dsNavSheet()
+                presented(NavigationStack { CategoryOrderSheet() }.dsNavSheet())
             }
             .photosPicker(isPresented: $avatarPickerOpen,
                           selection: $avatarSelection, matching: .images)
@@ -149,6 +153,52 @@ struct SettingsRows: View {
             }
             #endif
         .tint(DS.tint)
+    }
+
+    /// **EVERY SHEET THESE ROWS RAISE CARRIES THE SHELL'S ENVIRONMENT WITH
+    /// IT** (prd §872, 2026-09-21) — `RootShell.rootPresented`'s rule, and
+    /// `MainSurface`'s copy of it for the connect form, reaching the third
+    /// place that never went through either.
+    ///
+    /// A sheet is hosted in its OWN `PresentationHostingController`, and on
+    /// Catalyst that host evaluates the presented content's *presentation*
+    /// preference (`bridgedPresentation` — what nested sheet or dialog the
+    /// content wants) in a graph the presenter's `.environment(…)` has not
+    /// reached. So `AccountDetailSheet`'s required
+    /// `@Environment(BridgeStore.self)` read a value that was not there and
+    /// trapped before a frame was drawn: *"No Observable object of type
+    /// BridgeStore found"*, EXC_BREAKPOINT on the main thread, every case of
+    /// the sheet, on the shipped Mac build as well as a dev one. Tapping
+    /// Notifications, or Agents on this Mac, or Data in Accounts → Settings
+    /// killed the app.
+    ///
+    /// **Why iOS never saw it, which is what made it invisible for so long.**
+    /// There the same sheet inherits the presenter's environment and the
+    /// preference read finds it; `verify.sh`'s screen sweep opens these very
+    /// cases and passes. The platform difference is real, and it is why the
+    /// gate for this lives in `verify-mac.sh` (its "Account detail sheets"
+    /// step) rather than beside the iOS sweep.
+    ///
+    /// **And why only SOME sheets fell over**, so the next reader doesn't
+    /// re-derive it: the trap needs the content to BOTH read a non-optional
+    /// Observable environment AND carry a nested presentation of its own (the
+    /// thing `bridgedPresentation` is being asked about). `CategoryOrderSheet`
+    /// reads `ShellChrome` and survives because it presents nothing;
+    /// `AccountDetailSheet` has a sub-page sheet, a file importer and three
+    /// confirmation dialogs hanging off its tray. `DiagnosticsScreen` already
+    /// names half of this rule from the other side — it holds
+    /// `@Environment(FeedFilter.self)` OPTIONAL "because this screen is
+    /// presented as a SHEET". That is a view defending itself; this is the
+    /// presenter doing its job, and it is the half that scales.
+    ///
+    /// Applied to all four sheets, not only the one that crashed: a rule that
+    /// covers the sheet you remember is the rule that fails on the fifth.
+    private func presented(_ content: some View) -> some View {
+        content
+            .environment(bridgeStore)
+            .environment(chrome)
+            .environment(route)
+            .environment(\.locale, LanguageStore.shared.locale)
     }
 
     private struct RowSpec {

@@ -105,6 +105,15 @@ struct AccountDetailSheet: View {
             }
         }
         .onAppear {
+            #if DEBUG
+            // The gate's marker (prd §872). It is logged from the SHEET's own
+            // appearance, not from the launch hook that asked for it, because
+            // the failure this exists to catch happens while the presentation
+            // is being built — before a frame, and long before a flag being
+            // set in `SettingsRows` would prove anything. A line here means
+            // this case of the tray actually mounted.
+            NSLog("accountDetail| \(detail.rawValue) mounted")
+            #endif
             thingCount = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
             guard detail == .data else { return }
             exportURL = buildExport()
@@ -128,6 +137,12 @@ struct AccountDetailSheet: View {
                 }
             }
             .dsNavSheet()
+            // THE SAME RE-INJECTION THIS SHEET ITSELF NEEDED (prd §872) —
+            // `NetworkReachScreen` holds a required
+            // `@Environment(BridgeStore.self)`, and a sheet raised from a
+            // sheet is hosted no differently from one raised from a screen.
+            // See `SettingsRows.presented(_:)` for the whole finding.
+            .environment(store)
         }
         // The export's other half — the file comes back in whole (dedupe by id).
         .fileImporter(isPresented: $importing,

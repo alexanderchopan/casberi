@@ -72,6 +72,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Mac parity gate (verify.sh step 1b, 2026-08-12)** → docs/verify.md
 - **verify.sh runs verify-mac.sh IN PARALLEL and gates on it (user rule, 2026-08-21 — the two passes being separate was discovered, not chosen)** → docs/verify.md
 - **Mac parity audit (scripts/mac-parity-audit.py, 2026-08-12)** → docs/verify.md
+- **Account-detail sheet gate (verify-mac.sh step 2d, 2026-09-21) — a Catalyst sheet does NOT inherit the presenter's environment, and the shipped Mac build died on every Accounts → Settings row that raises one** → docs/verify.md · prd §872
 - **The two verify scripts each ran checks the other didn't, and both are now provably complete** → docs/verify.md
 - **The pure-logic harnesses run at once, and an unchanged one is not re-run (PERF, 2026-08-19). Measured on full green passes: 32.8min → 15.2min → 3.6min** → docs/verify.md
 - **The pass ran every harness TWICE for eleven days (PERF, 2026-09-01). Measured on the 08-31 runs: 38–57min for a green pass, 154 and 161min for two overlapping sessions, against the 3.6min recorded above** → docs/verify.md
