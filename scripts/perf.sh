@@ -26,20 +26,32 @@ MEM_CEIL=450;      MEM_RATIO=140
 ANSWER_CEIL=12000; ANSWER_RATIO=160
 
 step() { print -P "%F{cyan}▶ $1%f"; }
+
+# Two simulators carry the exact name `iPhone 17 Pro` on this machine (26.5 and
+# 27.0), so every `simctl … "$DEVICE"` below was picking one by a rule nobody
+# wrote down — the same ambiguity that killed a ship verify at the build step on
+# 2026-09-21. One udid, resolved once; the reasoning is in
+# `scripts/sim-device.py`. Under `set -uo pipefail` (no `-e` here) the failure
+# has to be checked by hand, and it is fatal: a perf number measured on the
+# wrong runtime is worse than no number.
+DEVICE_ID="$(python3 "$ROOT/scripts/sim-device.py" "$DEVICE")" || {
+  print -P "%F{red}✗ could not resolve a simulator for \"$DEVICE\" — see above%f"
+  exit 1
+}
 mkdir -p "$OUT"
 
 # ── Ensure booted + installed (verify.sh usually did both already) ──────
-xcrun simctl bootstatus "$DEVICE" -b >/dev/null 2>&1 || xcrun simctl boot "$DEVICE" 2>/dev/null || true
-xcrun simctl bootstatus "$DEVICE" -b >/dev/null 2>&1 || true
-if ! xcrun simctl get_app_container "$DEVICE" "$BUNDLE" >/dev/null 2>&1; then
+xcrun simctl bootstatus "$DEVICE_ID" -b >/dev/null 2>&1 || xcrun simctl boot "$DEVICE_ID" 2>/dev/null || true
+xcrun simctl bootstatus "$DEVICE_ID" -b >/dev/null 2>&1 || true
+if ! xcrun simctl get_app_container "$DEVICE_ID" "$BUNDLE" >/dev/null 2>&1; then
   APP="$DD/Build/Products/Debug-iphonesimulator/Casberi.app"
-  [[ -d "$APP" ]] && xcrun simctl install "$DEVICE" "$APP" >/dev/null 2>&1 || true
+  [[ -d "$APP" ]] && xcrun simctl install "$DEVICE_ID" "$APP" >/dev/null 2>&1 || true
 fi
 
 # ── One cold launch drives all three metrics ────────────────────────────
 LOG="$OUT/perf-stream.log"
 step "Cold launch + probe"
-xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
 # Stream the timing lines the app emits during THIS launch.
 #
 # `launchPerf` joined the predicate on 2026-07-31 and is the reason this pass
@@ -51,7 +63,7 @@ xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
 # 293ms → 763ms with no breakdown of what grew, and the spans had to be
 # re-measured by hand to act on it. A stream is the cheap half of a perf
 # pass; discarding it to keep the log tidy costs the whole diagnosis.
-xcrun simctl spawn "$DEVICE" log stream \
+xcrun simctl spawn "$DEVICE_ID" log stream \
   --predicate 'process == "Casberi" AND (eventMessage CONTAINS "launchTimer" OR eventMessage CONTAINS "answerProbe(" OR eventMessage CONTAINS "launchPerf" OR eventMessage CONTAINS "askPerf|" OR eventMessage CONTAINS "risePhase|" OR eventMessage CONTAINS "swipePerf|" OR eventMessage CONTAINS "sweepPass|" OR eventMessage CONTAINS "sweepSlot|")' \
   --style compact > "$LOG" 2>/dev/null &
 LOGPID=$!
@@ -63,7 +75,7 @@ sleep 1
 # every real regression in the perf record slipped past while launch/RSS/
 # answer read clean (docs/perf-spec.md P4). Same Release-capable gate the
 # phone's "Measure stalls" switch flips (prd §623).
-PID=$(xcrun simctl launch "$DEVICE" "$BUNDLE" \
+PID=$(xcrun simctl launch "$DEVICE_ID" "$BUNDLE" \
   -onboarded YES -deeplink casberi://home -sweepTimer YES \
   -answerProbe "what did I save about work" -probeDelay 5 2>/dev/null | awk -F': ' '{print $NF}')
 
@@ -94,7 +106,7 @@ for i in {1..20}; do
   sleep 1
 done
 kill $LOGPID 2>/dev/null || true
-xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
 
 # ── Parse the two logged latencies (empty → n/a) ────────────────────────
 num() { grep -o '[0-9]\+ms' | grep -o '[0-9]\+' | head -1; }
@@ -135,7 +147,7 @@ SHA=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
 TS=$(date +%Y-%m-%dT%H:%M:%S)
 {
   print -r -- "Casberi perf pass — $TS (build $SHA)"
-  print -r -- "device: $DEVICE"
+  print -r -- "device: $DEVICE ($DEVICE_ID)"
   print -r -- ""
   line "launch (init→ready)" "ms" "$LAUNCH_MS" "$PREV_LAUNCH" "$LAUNCH_CEIL" "$LAUNCH_RATIO"
   line "memory (RSS)"        "MB" "$MEM_MB"    "$PREV_MEM"    "$MEM_CEIL"    "$MEM_RATIO"

@@ -60,6 +60,31 @@ _step_report() {
 }
 fail() { print -P "%F{red}✗ $1%f"; exit 1; }
 
+# ── ONE SIMULATOR, BY UDID (2026-09-21) ────────────────────────────
+# A ship verify died at second 30 on `-destination "...,name=$DEVICE"` with no
+# OS: xcodebuild resolved against the LATEST runtime, matched by DEVICE TYPE,
+# and found two iPhone 17 Pro device types NAMED something else
+# (`Casberi Shots 27`, `Casberi AI Seat`) while the plainly-named one existed
+# only on iOS 26.5. `xcrun simctl boot "iPhone 17 Pro"` was ambiguous for the
+# same reason one layer down — two devices carry that exact name. So the whole
+# pass, build destinations included, runs on a UDID resolved ONCE here, which
+# is CLAUDE.md's recorded "pin the udid on every call" applied to the step that
+# had never obeyed it. The reasoning, the runtime policy (newest carrying the
+# exact name; `VERIFY_SIM_OS` pins it) and the ambiguity report live in
+# `scripts/sim-device.py`; `$DEVICE` survives only as prose in a step line.
+#
+# FIRST, before the DerivedData sweep and the audits: an ambiguity you cannot
+# resolve should cost a second, not a build.
+# Its own `--self-test` first, and inline rather than in the harness list,
+# because the harness phase runs scripts BARE and a bare run of this one
+# resolves (and may create) a real device. Ten checks over fixtures, the
+# 2026-09-21 census among them: ~40ms for the rule that everything below
+# trusts.
+python3 "$ROOT/scripts/sim-device.py" --self-test >/dev/null \
+  || fail "the simulator resolver's own checks do not hold — run scripts/sim-device.py --self-test"
+DEVICE_ID="$(python3 "$ROOT/scripts/sim-device.py" "$DEVICE")" \
+  || fail "could not resolve a simulator for \"$DEVICE\" — see the message above"
+
 # ── Stale DerivedData sweep (2026-09-02) ───────────────────────────
 # Every concurrent Claude session mints its OWN one-off `-derivedDataPath`
 # dir under ~/Library/Developer/ or /private/tmp, and Xcode mints a
@@ -206,7 +231,7 @@ fi
 BUILDPID=""
 BUILDLOG="$OUT/ios-build.log"
 xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
-  -destination "platform=iOS Simulator,name=$DEVICE" \
+  -destination "id=$DEVICE_ID" \
   -derivedDataPath "$DD" build -quiet >"$BUILDLOG" 2>&1 &
 BUILDPID=$!
 
@@ -2928,7 +2953,7 @@ print -P "%F{green}✓ build%f"
 # belongs here.
 step "Unit tests (CasberiTests)"
 xcodebuild test -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
-  -destination "platform=iOS Simulator,name=$DEVICE" \
+  -destination "id=$DEVICE_ID" \
   -derivedDataPath "$DD" -only-testing:CasberiTests -quiet \
   || fail "unit tests failed — run the same xcodebuild test line for the output"
 print -P "%F{green}✓ unit tests%f"
@@ -3066,12 +3091,12 @@ print -P "%F{green}✓ localization coverage%f"
 
 # ── 2. Boot sim + install ──────────────────────────────────────────
 step "Booting $DEVICE"
-xcrun simctl bootstatus "$DEVICE" -b >/dev/null 2>&1 || xcrun simctl boot "$DEVICE" 2>/dev/null || true
-xcrun simctl bootstatus "$DEVICE" -b >/dev/null
+xcrun simctl bootstatus "$DEVICE_ID" -b >/dev/null 2>&1 || xcrun simctl boot "$DEVICE_ID" 2>/dev/null || true
+xcrun simctl bootstatus "$DEVICE_ID" -b >/dev/null
 
 APP="$DD/Build/Products/Debug-iphonesimulator/Casberi.app"
 [[ -d "$APP" ]] || fail "app bundle not found at $APP"
-xcrun simctl install "$DEVICE" "$APP" || fail "install failed"
+xcrun simctl install "$DEVICE_ID" "$APP" || fail "install failed"
 print -P "%F{green}✓ installed%f"
 
 mkdir -p "$OUT"
@@ -3092,15 +3117,15 @@ if (( CYCLES > 0 )); then
   CRASHDIR="$HOME/Library/Logs/DiagnosticReports"
   IPS_BEFORE=$(find "$CRASHDIR" -maxdepth 1 -name 'Casberi-*.ips' 2>/dev/null | wc -l | tr -d ' ')
   # One stream for the whole loop; cycle i waits for the i-th marker line.
-  xcrun simctl spawn "$DEVICE" log stream \
+  xcrun simctl spawn "$DEVICE_ID" log stream \
     --predicate 'process == "Casberi" AND eventMessage CONTAINS "launchTimer"' \
     --style compact > "$SURV" 2>/dev/null &
   SURVPID=$!
   sleep 1
   for (( i=1; i<=CYCLES; i++ )); do
-    xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-    xcrun simctl install "$DEVICE" "$APP" || { kill $SURVPID 2>/dev/null; fail "reinstall failed (cycle $i)"; }
-    PID=$(xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES 2>/dev/null | awk -F': ' '{print $NF}')
+    xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
+    xcrun simctl install "$DEVICE_ID" "$APP" || { kill $SURVPID 2>/dev/null; fail "reinstall failed (cycle $i)"; }
+    PID=$(xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES 2>/dev/null | awk -F': ' '{print $NF}')
     READY=""
     for (( t=0; t<15; t++ )); do
       sleep 1
@@ -3126,11 +3151,11 @@ fi
 
 # ── 3. Screen sweep via deeplink hook ───────────────────────────────
 sweep() {  # sweep <name> <casberi-url>
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   # -onboarded YES skips first-launch onboarding so the sweep sees the real screens
-  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -deeplink "$2" >/dev/null || fail "launch failed ($1)"
+  xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -deeplink "$2" >/dev/null || fail "launch failed ($1)"
   sleep 4
-  xcrun simctl io "$DEVICE" screenshot "$OUT/$1.png" >/dev/null || fail "screenshot failed ($1)"
+  xcrun simctl io "$DEVICE_ID" screenshot "$OUT/$1.png" >/dev/null || fail "screenshot failed ($1)"
   print -P "%F{green}✓ $1%f"
 }
 step "Screen sweep"
@@ -3144,18 +3169,18 @@ sweep settings "casberi://settings"
 
 # ── 4. Answer-path probe (headless, logs to console) ────────────────
 step "Answer probe"
-xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
 # Stream the app's log DURING the probe (log show --last is unreliable for
 # fresh lines); on-device inference can take ~15s cold, so give it 25.
-xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "answerProbe"' \
+xcrun simctl spawn "$DEVICE_ID" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "answerProbe"' \
   --style compact > "$OUT/answer-probe.log" 2>/dev/null &
 LOGPID=$!
-xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -answerProbe "what did I save about work" -probeDelay 2 >/dev/null
+xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -answerProbe "what did I save about work" -probeDelay 2 >/dev/null
 for i in {1..25}; do
   sleep 1
   grep -q "answerProbe(" "$OUT/answer-probe.log" 2>/dev/null && break
 done
-xcrun simctl io "$DEVICE" screenshot "$OUT/answer-probe.png" >/dev/null
+xcrun simctl io "$DEVICE_ID" screenshot "$OUT/answer-probe.png" >/dev/null
 kill $LOGPID 2>/dev/null || true
 if [[ -s "$OUT/answer-probe.log" ]]; then
   print -P "%F{green}✓ answer probe logged%f"
@@ -3163,7 +3188,7 @@ else
   print -P "%F{yellow}⚠ no probe log lines captured (model may be unavailable on this host) — check $OUT/answer-probe.png%f"
 fi
 
-xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
 
 # ── 6. Demo room-head coverage (headless, HARD FAIL) ─────────────────
 # Extends the same "does the demo have parity" question (2026-08-08 ruling)
@@ -3257,13 +3282,13 @@ xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
 # retired takes only itself.
 step "Demo pour"
 POUR_LOG="$OUT/demo-pour.log"
-xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-xcrun simctl spawn "$DEVICE" log stream \
+xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
+xcrun simctl spawn "$DEVICE_ID" log stream \
   --predicate 'process == "Casberi" AND eventMessage CONTAINS "demoMode:"' \
   --style compact > "$POUR_LOG" 2>/dev/null &
 POURPID=$!
 sleep 1
-xcrun simctl launch "$DEVICE" "$BUNDLE" -fresh YES -onboarded YES -demoEnter YES >/dev/null 2>&1 || true
+xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -fresh YES -onboarded YES -demoEnter YES >/dev/null 2>&1 || true
 POURED=""
 for i in {1..25}; do
   sleep 1
@@ -3282,7 +3307,7 @@ ROOMHEAD_LOG="$OUT/demo-roomhead-coverage.log"
 if [[ -z "$POURED" ]]; then
   print -P "%F{yellow}⚠ demo never finished pouring (see the Demo pour step above) — skipping room-head coverage%f"
 else
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   typeset -A ROOM_HEADS=(
     runway            "Cloudflare"
     stripeHead        "Stripe"
@@ -3325,18 +3350,18 @@ else
     [[ -n "$SWEEP_SPEC" ]] && SWEEP_SPEC="$SWEEP_SPEC|"
     SWEEP_SPEC="$SWEEP_SPEC${ROOM_HEADS[$name]}"
   done
-  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "roomInsight"' \
+  xcrun simctl spawn "$DEVICE_ID" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "roomInsight"' \
     --style compact > "$ROOMHEAD_LOG" 2>/dev/null &
   RHPID=$!
   sleep 1
-  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -roomInsightSweep "$SWEEP_SPEC" >/dev/null 2>&1 || true
+  xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -roomInsightSweep "$SWEEP_SPEC" >/dev/null 2>&1 || true
   SWEEP_DONE=""
   for i in {1..90}; do
     sleep 1
     if grep -q "roomInsightSweep: done" "$ROOMHEAD_LOG" 2>/dev/null; then SWEEP_DONE=1; break; fi
   done
   kill $RHPID 2>/dev/null || true
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   if [[ -z "$SWEEP_DONE" ]]; then
     fail "the room-head sweep never finished — see $ROOMHEAD_LOG (a partial log would report every unreached room as a gap)"
   fi
@@ -3392,18 +3417,18 @@ VIBE_LOG="$OUT/vibenet-cards.log"
 if [[ -z "$POURED" ]]; then
   print -P "%F{yellow}⚠ demo never finished pouring (see the Demo pour step above) — skipping vibenet cards%f"
 else
-  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "vibenetCard"' \
+  xcrun simctl spawn "$DEVICE_ID" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "vibenetCard"' \
     --style compact > "$VIBE_LOG" 2>/dev/null &
   VBPID=$!
   sleep 1
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -vibenetRoomProbe YES >/dev/null 2>&1 || true
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -vibenetRoomProbe YES >/dev/null 2>&1 || true
   for i in {1..10}; do
     sleep 1
     grep -q "vibenetCard| linked" "$VIBE_LOG" 2>/dev/null && break
   done
   kill $VBPID 2>/dev/null || true
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   MISSING_CARDS=()
   for card in balance holdings keys linked; do
     grep -q "vibenetCard| $card DRAWS" "$VIBE_LOG" 2>/dev/null || MISSING_CARDS+=("$card")
@@ -3441,7 +3466,7 @@ REACH_LOG="$OUT/demo-reaches-nothing.log"
 if [[ -z "$POURED" ]]; then
   print -P "%F{yellow}⚠ demo never finished pouring (see the panel-coverage step above) — skipping the reach check%f"
 else
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   # CLEAR THE LEDGER FIRST (2026-08-15). `NetworkLedger` is cumulative and
   # persisted — correct for the screen it serves, fatal for a check that asks
   # "did the demo reach anything?", because without a baseline the answer covers
@@ -3451,9 +3476,9 @@ else
   # Measured immediately after, on a wiped container: the demo reaches ZERO.
   # A check that reports someone else's traffic as the demo's is worse than no
   # check, so the baseline is now established rather than assumed.
-  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -receiptsForget YES >/dev/null 2>&1 || true
+  xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -receiptsForget YES >/dev/null 2>&1 || true
   sleep 2
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   # Walk the rooms most likely to reach: the token room (the prediction books,
   # whose per-view fetch started this, left the catalog on 2026-09-06 — prd
   # §638 — and the drops room went with the OpenSea seat the same day, under
@@ -3461,16 +3486,16 @@ else
   # a thing sheet (the page scrape). Each is a separate launch, because the
   # reach we are hunting is one a ROOM makes when it opens.
   for room in Tokens; do
-    xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES \
+    xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES \
       -deeplink "casberi://feed/source/$room" >/dev/null 2>&1 || true
     sleep 4
-    xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+    xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   done
-  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "receipt|"' \
+  xcrun simctl spawn "$DEVICE_ID" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "receipt|"' \
     --style compact > "$REACH_LOG" 2>/dev/null &
   RPID=$!
   sleep 1
-  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -receiptsProbe YES >/dev/null 2>&1 || true
+  xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -receiptsProbe YES >/dev/null 2>&1 || true
   sleep 6
   # A plain `kill` (SIGTERM) only SIGNALS the background `log stream` — it
   # does not wait for it to die, and a killed process's buffered writes are
@@ -3491,7 +3516,7 @@ else
   # already buffered — bounded beats correct-but-hangs here.
   kill -9 $RPID 2>/dev/null || true
   sleep 1
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   # This capture has now produced FOUR different malformed shapes across
   # four separate runs, and every single one was this SCRIPT dying, never a
   # real reach: an empty extraction (pipefail killing the script before
@@ -3547,19 +3572,19 @@ FLOOR_LOG="$OUT/demo-floor-coverage.log"
 if [[ -z "$POURED" ]]; then
   print -P "%F{yellow}⚠ demo never finished pouring — skipping floor coverage%f"
 else
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "floor|"' \
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl spawn "$DEVICE_ID" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "floor|"' \
     --style compact > "$FLOOR_LOG" 2>/dev/null &
   FPID=$!
   sleep 1
-  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -floorProbe YES >/dev/null 2>&1 || true
+  xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -floorProbe YES >/dev/null 2>&1 || true
   for i in {1..12}; do
     sleep 1
     grep -q "controls checked" "$FLOOR_LOG" 2>/dev/null && break
   done
   sleep 2
   kill $FPID 2>/dev/null || true
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   # See the reach check above for the full story: `grep -c` PRINTS "0" and
   # EXITS 1 on zero matches, so `|| echo 0` appends a SECOND "0" and the
   # value becomes the literal two-line "0\n0" — which fails the `== "0"`
@@ -3643,19 +3668,19 @@ else
     work.words work.code work.money work.stars
     money.receipt life.facts
   )
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "sheetShape"' \
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl spawn "$DEVICE_ID" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "sheetShape"' \
     --style compact > "$SHEET_LOG" 2>/dev/null &
   SHPID=$!
   sleep 1
-  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -sheetShapeProbe YES >/dev/null 2>&1 || true
+  xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -sheetShapeProbe YES >/dev/null 2>&1 || true
   for i in {1..15}; do
     sleep 1
     grep -q "sheetShape| corpus=" "$SHEET_LOG" 2>/dev/null && break
   done
   sleep 2
   kill $SHPID 2>/dev/null || true
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   MISSING_SHAPES=()
   for shape in "${EXPECTED_SHAPES[@]}"; do
     # `= 0` can't appear (the probe only emits shapes it counted), so the
@@ -3741,19 +3766,19 @@ else
   # `cover`/`strip`/`bundle` are the load-bearing three: without them the
   # opening screen is a flat chronological list.
   ALLFEED_REQUIRED=(strip bundle imageOnly)
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "allFeed|"' \
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl spawn "$DEVICE_ID" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "allFeed|"' \
     --style compact > "$ALLFEED_LOG" 2>/dev/null &
   AFPID=$!
   sleep 1
-  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -allFeedProbe YES >/dev/null 2>&1 || true
+  xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -allFeedProbe YES >/dev/null 2>&1 || true
   for i in {1..15}; do
     sleep 1
     grep -q "allFeed| census complete" "$ALLFEED_LOG" 2>/dev/null && break
   done
   sleep 2
   kill $AFPID 2>/dev/null || true
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   if ! grep -q "allFeed| census complete" "$ALLFEED_LOG" 2>/dev/null; then
     # A census that never ran and a room that drew nothing look identical from
     # outside — the terminator is the only thing separating them, which is why
@@ -3819,12 +3844,12 @@ CENSUS_LOG="$OUT/demo-census.log"
 if [[ -z "$POURED" ]]; then
   print -P "%F{yellow}⚠ demo never finished pouring (see the Demo pour step above) — skipping the census%f"
 else
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "demoCensus"' \
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl spawn "$DEVICE_ID" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "demoCensus"' \
     --style compact > "$CENSUS_LOG" 2>/dev/null &
   CSPID=$!
   sleep 1
-  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -demoCensus YES >/dev/null 2>&1 || true
+  xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -demoCensus YES >/dev/null 2>&1 || true
   CENSUS_DONE=""
   for i in {1..180}; do
     sleep 1
@@ -3832,7 +3857,7 @@ else
   done
   sleep 1
   kill $CSPID 2>/dev/null || true
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   if [[ -z "$CENSUS_DONE" ]]; then
     fail "the demo census never finished — see $CENSUS_LOG (a partial census would pass by silence, so it fails instead)"
   fi
@@ -3919,21 +3944,21 @@ if [[ "${DEMO_SHOTS:-0}" == "1" && -n "$POURED" ]]; then
   INDEX="$SHOTS/index.html"
   print '<!doctype html><meta charset="utf-8"><title>Demo room shots</title><style>body{font:13px -apple-system;margin:16px}figure{display:inline-block;margin:6px;text-align:center}img{width:220px;border-radius:12px}</style>' > "$INDEX"
   for theme in light dark; do
-    xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-    xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -theme.light $([[ "$theme" == light ]] && echo YES || echo NO) >/dev/null 2>&1 || true
+    xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
+    xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -theme.light $([[ "$theme" == light ]] && echo YES || echo NO) >/dev/null 2>&1 || true
     sleep 3
     print "<h2>$theme</h2>" >> "$INDEX"
     while IFS= read -r room; do
       [[ -z "$room" ]] && continue
       enc=$(python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' "$room")
-      xcrun simctl openurl "$DEVICE" "casberi://feed/source/$enc" >/dev/null 2>&1 || true
+      xcrun simctl openurl "$DEVICE_ID" "casberi://feed/source/$enc" >/dev/null 2>&1 || true
       sleep 1.4
       safe=$(print -r -- "$room" | tr -c 'A-Za-z0-9' '_')
-      xcrun simctl io "$DEVICE" screenshot "$SHOTS/$theme-$safe.png" >/dev/null 2>&1 || true
+      xcrun simctl io "$DEVICE_ID" screenshot "$SHOTS/$theme-$safe.png" >/dev/null 2>&1 || true
       print "<figure><img src=\"$theme-$safe.png\"><figcaption>$room</figcaption></figure>" >> "$INDEX"
     done <<< "$ROOM_LIST"
   done
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   print -P "%F{green}✓ demo room shots → $INDEX%f"
 fi
 
