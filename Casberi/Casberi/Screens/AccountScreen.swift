@@ -51,6 +51,14 @@ struct SettingsRows: View {
     @State private var nameEditorOpen = false
     @State private var nameDraft = ""
 
+    /// A row's page: in the Accounts pane where the shell has one (prd §876),
+    /// else the sheet it has always raised. One decision, read by six rows.
+    private func open(_ page: SettingsPage, sheet: () -> Void) {
+        guard route.paneHostsPushes else { sheet(); return }
+        DSHaptic.tap()
+        route.fromAccountsList { route.push(.settingsPage(page)) }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // One parcel, no group headers — every row in one A–Z field. (A
@@ -140,15 +148,18 @@ struct SettingsRows: View {
             // Debug hook: `simctl launch ... -deeplink casberi://account
             // -accountDetail data` opens that detail sheet for screenshots.
             .onAppear {
+                // Through `open` like a click, so on the Mac the hooks prove
+                // the PANE path the person takes (prd §876), not a sheet.
                 if UserDefaults.standard.bool(forKey: "openDiagnostics") {
-                    diagnosticsOpen = true
+                    open(.diagnostics) { diagnosticsOpen = true }
                 }
                 if UserDefaults.standard.bool(forKey: "openChipOrder") {
-                    chipOrderOpen = true
+                    open(.dockOrder) { chipOrderOpen = true }
                 }
                 if let raw = UserDefaults.standard.string(forKey: "accountDetail"),
-                   let which = AccountDetail(rawValue: raw) {
-                    detail = which
+                   let which = AccountDetail(rawValue: raw),
+                   let page = SettingsPage(rawValue: raw) {
+                    open(page) { detail = which }
                 }
             }
             #endif
@@ -311,7 +322,7 @@ struct SettingsRows: View {
                     badge: icloudSync ? ("icloud.fill", DS.textPrimary) : ("lock.iphone", DS.textPrimary),
                     countsUp: true,
                     bounce: rungBounce,
-                    action: { detail = .data }),
+                    action: { open(.data) { detail = .data } }),
         ].sorted { $0.title < $1.title }
     }
 
@@ -335,7 +346,7 @@ struct SettingsRows: View {
             RowSpec(title: "Dock order",
                     value: CategoryOrder.current.prefix(3).joined(separator: ", "),
                     badge: ("arrow.up.arrow.down", DS.textPrimary),
-                    action: { chipOrderOpen = true }),
+                    action: { open(.dockOrder) { chipOrderOpen = true } }),
             // A binary choice earns a tap, not a tray with one empty screen's
             // worth of nothing below two chips (report 2026-07-09) — the row
             // itself flips, and the icon states which way.
@@ -361,14 +372,14 @@ struct SettingsRows: View {
                     // badge previews no state here, so it takes the neutral
                     // tone (2026-08-10, was DS.tint).
                     badge: ("bell.badge.fill", DS.textPrimary),
-                    action: { detail = .notifications }),
+                    action: { open(.notifications) { detail = .notifications } }),
             // The app's own language — an override that switches Casberi live,
             // on top of the device language (LanguageStore). One tap opens the
             // tray; the trailing fact states the language in force.
             RowSpec(title: "Language",
                     value: LanguageStore.shared.summary,
                     badge: ("globe", DS.textPrimary),
-                    action: { languageOpen = true }),
+                    action: { open(.language) { languageOpen = true } }),
             // "YOUR KEY" IS GONE FROM THIS SCREEN (prd §871, user: "we have a
             // setting in settings for 'your key'. why do we really need it
             // there? For every other thing, the user goes and connects on the
@@ -401,7 +412,7 @@ struct SettingsRows: View {
                     // The instrument, not the trace — the ECG line is the
                     // Feed tab's glyph (ruled 2026-07-10: Feed keeps it).
                     badge: ("stethoscope", DS.textPrimary),
-                    action: { diagnosticsOpen = true }),
+                    action: { open(.diagnostics) { diagnosticsOpen = true } }),
             // Support returns (2026-07-28) now that a real channel exists
             // behind it — privacy@casberi.app is a monitored inbox, not the
             // unread mailbox the 2026-07-05 removal ruling objected to. One
@@ -436,7 +447,7 @@ struct SettingsRows: View {
                                  : (mcpOn ? String(localized: "Not listening")
                                           : String(localized: "Off")),
                              badge: ("terminal", DS.textPrimary),
-                             action: { detail = .mcp })
+                             action: { open(.mcp) { detail = .mcp } })
         return (rows + [macRow]).sorted { $0.title < $1.title }
         #else
         return rows.sorted { $0.title < $1.title }

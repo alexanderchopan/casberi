@@ -1002,7 +1002,14 @@ struct AppsScreen: View {
 
     /// What tapping this row does — the SAME call the capsule makes, shared so
     /// the two halves cannot drift apart again.
+    /// Wrapped in `fromAccountsList` (prd §876): where Accounts has a pane, a
+    /// row REPLACES the page beside the list rather than stacking onto it.
     private func rowAction(_ entry: Ranked) -> (() -> Void)? {
+        guard let open = rowOpen(entry) else { return nil }
+        return { route.fromAccountsList(open) }
+    }
+
+    private func rowOpen(_ entry: Ranked) -> (() -> Void)? {
         if let id = roomSeat(entry) {
             return { DSHaptic.tap(); BridgeRouter.open(seatID: id, route: route, chrome: chrome) }
         }

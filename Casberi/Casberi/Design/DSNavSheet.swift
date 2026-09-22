@@ -73,8 +73,19 @@ extension View {
     /// exit but its own CTA (one door, the connect screen's rule), so it
     /// passes nil rather than growing a second shape.
     func dsSheetDismiss(_ dismiss: (() -> Void)?) -> some View {
-        toolbar {
-            if let dismiss {
+        modifier(DSSheetDismiss(dismiss: dismiss))
+    }
+}
+
+/// `dsSheetDismiss`'s body, a modifier so it can read `dsInPane` (prd §876):
+/// a page drawn in the Accounts pane was never presented, so it has no Done.
+private struct DSSheetDismiss: ViewModifier {
+    let dismiss: (() -> Void)?
+    @Environment(\.dsInPane) private var inPane
+
+    func body(content: Content) -> some View {
+        content.toolbar {
+            if let dismiss, !inPane {
                 ToolbarItem(placement: .confirmationAction) {
                     // No `dsText` override. A toolbar button is the one place
                     // in this app that should read as the system's, because it
@@ -88,7 +99,9 @@ extension View {
             }
         }
     }
+}
 
+extension View {
     /// **The READING sheet's presentation, drawn once (prd §715).** A thing,
     /// a token and a post each opened at medium-with-a-large-detent with the
     /// same four modifiers, copied by hand — the third sheet family, and the

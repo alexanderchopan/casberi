@@ -80,8 +80,55 @@ final class HomeRoute {
         // `vibenetAddressBook` was HERE and is deleted with its screen
         // (prd §545) — the roster's verbs live on the Accounts scope's
         // own rows, and the shared book is still `addressBook`.
+        /// One page of Settings, drawn in the Accounts pane (prd §876). Only
+        /// ever placed in `accountsPane`: on a layout with no pane the same
+        /// rows raise their sheets, as they always have.
+        case settingsPage(SettingsPage)
     }
-    var path: [Node] = []
+    var path: [Node] = [] {
+        // Leaving Accounts takes its pane with it, so the next visit opens
+        // on the list rather than on a page chosen last week.
+        didSet { if !path.contains(.apps) { accountsPane = [] } }
+    }
+
+    /// **Accounts is two columns where the shell has a pane (prd §876).** The
+    /// list keeps `PadLayout.listColumnWidth` and whatever a row opens — an
+    /// account page, a setup page, a Settings page — is drawn beside it
+    /// instead of being pushed over it, the way the feed's pane shows a thing.
+    /// Its own small stack, because an account page can push onward inside
+    /// itself and the seat's Back has to walk that first.
+    var accountsPane: [Node] = []
+
+    /// Written by `MainSurface` from its measured width — true whenever the
+    /// shell draws a detail pane. Nothing else should derive the breakpoint.
+    var accountsSplit = false
+
+    /// True while pushes land in the Accounts pane rather than on `path`.
+    var paneHostsPushes: Bool { accountsSplit && path.last == .apps }
+
+    /// The frame the person is actually looking at: the pane's top while it
+    /// hosts pushes, else the stack's. `ConnectPushWatcher` asks this, so a
+    /// finished connect form closes where it was drawn.
+    var topNode: Node? { paneHostsPushes && !accountsPane.isEmpty ? accountsPane.last : path.last }
+
+    /// Set only for the length of a call from the Accounts LIST, so a row
+    /// REPLACES what the pane shows while a push from inside a page stacks.
+    private var paneReplaces = false
+
+    /// A row on the Accounts list opening something: its push replaces the
+    /// pane's page. Everywhere else a push is a step deeper, as before.
+    @MainActor func fromAccountsList(_ open: () -> Void) {
+        paneReplaces = true
+        open()
+        paneReplaces = false
+    }
+
+    /// Every push goes through here, so the pane cannot be skipped by one
+    /// caller that spelled `path.append` itself.
+    @MainActor private func place(_ node: Node) {
+        guard paneHostsPushes else { path.append(node); return }
+        if paneReplaces { accountsPane = [node] } else { accountsPane.append(node) }
+    }
 
     /// Open a shell door (Apps / Settings) so it lands there fresh —
     /// replacing whatever was on the stack, not stacking a second door on
@@ -125,19 +172,25 @@ final class HomeRoute {
     /// capture an honest forward-history from — a fake or unreliable
     /// "forward" would be worse than none.
     @MainActor func goBack() {
+        // The pane's page is a step the person took, so Back closes it
+        // before it leaves Accounts (prd §876).
+        if paneHostsPushes, !accountsPane.isEmpty {
+            accountsPane.removeLast()
+            return
+        }
         guard !path.isEmpty else { return }
         path.removeLast()
     }
 
     @MainActor func pushBridge(_ dest: BridgeRouter.Destination?) {
         guard let dest else { return }
-        path.append(.bridge(dest))
+        place(.bridge(dest))
     }
 
     /// Push any node on top of wherever the stack sits — the general form of
     /// `pushBridge`, for a destination that is not one.
     @MainActor func push(_ node: Node) {
-        path.append(node)
+        place(node)
     }
 
     /// The connect FORM, raised over whatever the person was looking at (prd
@@ -158,7 +211,7 @@ final class HomeRoute {
         if dest.raisedByConnect {
             connectForm = dest
         } else {
-            path.append(.bridge(dest))
+            place(.bridge(dest))
         }
     }
 
@@ -199,4 +252,11 @@ final class HomeRoute {
     // the singleton's own guard against a second instance, and a second
     // instance is exactly what a second window is.
     init() {}
+}
+
+/// The Settings rows that open a page of their own (prd §876). On a layout
+/// with a pane each is drawn there; without one, the row raises the sheet it
+/// always did, and this enum is never read.
+enum SettingsPage: String, Hashable {
+    case data, notifications, mcp, diagnostics, language, dockOrder
 }

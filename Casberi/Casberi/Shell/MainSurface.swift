@@ -915,7 +915,35 @@ struct MainSurface: View {
             // The face opens this screen now, and it is a fixed seat that
             // stays put on top of what it opens — a zoom out of a mark that
             // does not move would be a flourish about nothing.
-            AppsScreen()
+            //
+            // **Two columns wherever the shell has a pane (prd §876).** The
+            // list keeps the feed's column and what a row opens is drawn
+            // beside it (`HomeRoute.accountsPane`) — the same split the feed
+            // makes for a thing, at the same widths.
+            if showsPane {
+                HStack(spacing: 0) {
+                    AppsScreen()
+                        .frame(maxWidth: .infinity)
+                    accountsPane
+                        .frame(width: PadLayout.paneWidth(for: surfaceWidth))
+                }
+            } else {
+                AppsScreen()
+            }
+        default:
+            leafRoom(node)
+        }
+    }
+
+    /// Every pushed screen but Accounts itself — split out so the Accounts
+    /// pane can draw them without `pushedRoom` calling itself.
+    @ViewBuilder
+    private func leafRoom(_ node: HomeRoute.Node) -> some View {
+        switch node {
+        case .apps:
+            EmptyView()
+        case .settingsPage(let page):
+            SettingsPageView(page: page)
         case .bridge(let dest):
             // Mac's connect form is PUSHED, not raised (see
             // `Destination.raisedByConnect`), so the one behaviour the sheet
@@ -930,6 +958,25 @@ struct MainSurface: View {
         case .l2beatDirectory:
             L2beatDirectoryScreen()
         }
+    }
+
+    /// The Accounts pane (prd §876): the page a row opened, or nothing at
+    /// rest. It says nothing at rest on purpose — the list beside it is the
+    /// whole invitation, and a sentence telling you to pick a row is the
+    /// explanation §748 asks a screen to earn.
+    @ViewBuilder
+    private var accountsPane: some View {
+        Group {
+            if let node = route.accountsPane.last {
+                leafRoom(node)
+                    .id(node)
+                    .transition(.opacity)
+            } else {
+                Color.clear
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(DS.inkGround.ignoresSafeArea())
     }
 
     /// The rail: the same source strip turned 90° down the leading edge of
@@ -2064,6 +2111,13 @@ struct MainSurface: View {
         // whether a pane exists rather than re-deriving the breakpoint.
         .onChange(of: showsPane, initial: true) { _, now in
             detail.paneActive = now
+            // …and Accounts reads the same fact (prd §876). A window dragged
+            // narrow past the pane's floor pushes whatever the pane held.
+            route.accountsSplit = now
+            if !now, !route.accountsPane.isEmpty {
+                route.path.append(contentsOf: route.accountsPane)
+                route.accountsPane = []
+            }
             // Rotating a mini into a shape that can't hold a pane must
             // not strand a selection nothing renders. On Mac this same
             // transition fires on an ordinary window drag rather than a

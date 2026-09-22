@@ -60036,3 +60036,19 @@ The Mac and a regular-width iPad drew the Accounts face TWICE in one frame: the 
 The ruling: while the rail shows (`padShell.railInset > 0`), `DockDoors` mounts ONLY when something is pushed, and then it is the back arrow (§767). At rest it is not mounted at all — a seat with nowhere to go back to would be §83's dead control. The phone is untouched: no rail, so the seat is the face as before. The rail itself does not change (user, same session: the rail is the app's own, "everyone else has a sidebar").
 
 Verified on the Catalyst build: the All feed shows one face (the rail's) and no seat; Accounts shows the rail's face and the back arrow at the bottom-left. `dock-selftest.sh` green.
+
+## §876 — Accounts and Settings open in the pane (user: "accounts in the pane yes", then "we should put all settings in the pane too", 2026-09-22)
+
+On the Mac, Accounts was a single column ~1,300pt wide with chevrons at the far edge, and every row pushed a page over it; every Settings row raised a sheet. The feed already had the answer — a list column and a detail pane (§873's widths) — and Accounts did not use it.
+
+**The ruling: wherever the shell draws a pane, Accounts is two columns.** The list takes the feed's column; what a row opens — an account page, a setup page, a Settings page — is drawn in the pane beside it. The rail is unchanged (§875's session: the rail is the app's own).
+
+- **One stack for the pane, in the route.** `HomeRoute.accountsPane: [Node]`. Every push goes through `place(_:)`: while `paneHostsPushes` (`accountsSplit && path.last == .apps`) it lands in the pane, else on `path` as before. A row on the list wraps its open in `fromAccountsList`, so a row REPLACES the pane's page and a push from inside a page stacks. `goBack()` closes the pane's page before it leaves Accounts, so the seat's Back walks what the person did. Leaving Accounts empties the pane (`path.didSet`). `ConnectPushWatcher` asks `topNode`, so a finished connect form closes where it was drawn.
+- **`accountsSplit` is written once, by `MainSurface`, from `showsPane`** — the fact the feed's pane already reads. A window dragged narrow past the pane's floor moves the pane's pages onto `path`, so nothing open is dropped (the §873-era `displaced` rule, for Accounts).
+- **Settings pages are the same views, told they are in a pane.** `HomeRoute.Node.settingsPage(SettingsPage)` — six cases, one per row that opened a sheet (Data, Notifications, Agents on this Mac, Diagnostics, Language, Dock order). `SettingsRows.open(_:sheet:)` is the one decision: the pane where there is one, the sheet everywhere else. `\.dsInPane` tells a `DSTray` to drop its Done, take `heading24` (the pushed screen's rung, `DSScreenHead`) and scroll as a page, and tells `dsSheetDismiss` to add no toolbar exit — nothing was presented, so there is nothing to dismiss. Diagnostics and Dock order had their names in a navigation bar the pane does not have, so `SettingsPageView` heads them with `DSScreenHead`. Avatar and Name stay as their dialog and alert. The DEBUG hooks (`-accountDetail`, `-openDiagnostics`, `-openChipOrder`) go through `open` too, so verify-mac's §872 gate proves the pane path.
+- **At rest the pane draws nothing.** The list beside it is the invitation; a sentence telling you to pick a row is the explanation §748 asks a screen to earn.
+- **`dock-selftest.sh` check 11**: the seat's rail rule (§875), one `path.append` in `HomeRoute` (inside `place`), rows wrapped in `fromAccountsList`, and every `SettingsPage` case opened by a row. The §796 guard now matches only a bare `case settings` (the screen), not `settingsPage(…)`.
+
+The phone is untouched: no pane, so `paneHostsPushes` is always false. A regular-width iPad with a pane gets the same split.
+
+Verified on the Catalyst build: Settings → Notifications, Diagnostics and an account page each draw in the pane beside the list, with the back arrow at the seat.

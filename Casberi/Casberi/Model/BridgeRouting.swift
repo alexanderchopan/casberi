@@ -842,7 +842,9 @@ private struct ConnectPushWatcher: ViewModifier {
             guard isLive, destination.finishesOnConnect else { return }
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(700))
-                guard route.path.last == .bridge(destination) else { return }
+                // `topNode`, not `path.last`: in the Accounts pane (prd §876)
+                // the form is the pane's top, and `path.last` is `.apps`.
+                guard route.topNode == .bridge(destination) else { return }
                 route.goBack()
             }
         }

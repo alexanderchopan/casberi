@@ -54,6 +54,7 @@ struct DSTray<Content: View>: View {
     /// Touch is untouched — the grabber is still the affordance there, and a
     /// phone tray gains no second control.
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dsInPane) private var inPane
 
     /// **A TITLE WRAPS, IT DOES NOT TRUNCATE** (2026-09-02, user: "in hegota we
     /// have sheets w/ titles that are clipped now that we use bigger font").
@@ -91,7 +92,7 @@ struct DSTray<Content: View>: View {
                     // THE HEAD RUNG (prd §532) — a tray is a place, and at the
                     // card-title rung it read as a taller card. 40 against the
                     // 12pt caption inside it is 3.3×.
-                    .dsText(.heading40)
+                    .dsText(inPane ? .heading24 : .heading40)
                     .foregroundStyle(DS.textPrimary)
                     .multilineTextAlignment(.leading)
                     // …and therefore it WRAPS. See `titleHeight` above.
@@ -103,11 +104,15 @@ struct DSTray<Content: View>: View {
                 // See `dismiss` above. The measurement is unchanged: this sits
                 // on the title's own line and the title still reports its own
                 // height, so `titleOverflow` reads exactly what it did before.
-                Spacer(minLength: DS.Space.s3)
-                Button(String(localized: "Done")) { dismiss() }
-                    .buttonStyle(.plain)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.tint)
+                // Not in the Accounts pane (prd §876): nothing was presented,
+                // so there is nothing to dismiss — the seat's Back closes it.
+                if !inPane {
+                    Spacer(minLength: DS.Space.s3)
+                    Button(String(localized: "Done")) { dismiss() }
+                        .buttonStyle(.plain)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.tint)
+                }
                 #endif
             }
             // **THE TRAY HAS SPENT THE HEAD RUNG, AND SAYS SO** (2026-09-02).
@@ -200,7 +205,16 @@ struct DSTray<Content: View>: View {
         // and a tray built tomorrow can't be born silent.
         .dsSensoryFeedback()
 
-        if ink {
+        if inPane {
+            // A PAGE, not a sheet (prd §876): the Accounts pane gives the
+            // tray a column of its own, so its height is the column's and
+            // the body scrolls there. The presentation modifiers above are
+            // inert outside a presentation; the ground is the pane's.
+            ScrollView { tray }
+                .scrollBounceBehavior(.basedOnSize)
+                .background(DS.surfaceSheet.ignoresSafeArea())
+                .dsColorScheme()
+        } else if ink {
             tray.dsInk()
         } else {
             tray.presentationBackground(DS.surfaceSheet).dsColorScheme()
@@ -370,4 +384,12 @@ extension EnvironmentValues {
         get { self[DSSurfaceHasHeadKey.self] }
         set { self[DSSurfaceHasHeadKey.self] = newValue }
     }
+}
+
+
+extension EnvironmentValues {
+    /// True for a surface drawn in the Accounts pane rather than presented
+    /// (prd §876). A tray there drops its Done and scrolls as a page; a nav
+    /// sheet drops its toolbar exit. One flag, set once by `SettingsPageView`.
+    @Entry var dsInPane: Bool = false
 }

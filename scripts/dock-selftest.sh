@@ -359,7 +359,9 @@ grep -q 'route.openSettings = false' "$TMP/apps.nc" \
 [ "$(grep -c 'route.openSettings = true' "$TMP/root.nc")" -ge 2 ] \
   || { echo "✗ RootShell's settings doors (the deep link, -openSettings) no longer ask for"; \
        echo "  the Settings section (prd §796)."; fail=1; }
-grep -q 'case settings' "Casberi/Casberi/Shell/HomeRoute.swift" \
+# A bare `case settings` — the SCREEN. `case settingsPage(…)` is one page drawn in
+# the Accounts pane (prd §876), which is exactly the section §796 asked for.
+grep -qE '^[[:space:]]*case settings[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
   && { echo "✗ HomeRoute.Node has a settings case again — Settings is a section of Accounts,"; \
        echo "  not a screen (prd §796)."; fail=1; }
 # THE CATALOGUE DOOR IS DELETED (prd §798, 2026-09-17, user: "you forgot to
@@ -738,6 +740,29 @@ grep -q 'keyboardUp' "$TMP/root.nc" \
   && { echo "✗ RootShell's seat drives itself off the keyboard flag. The seat's half is"; \
        echo "  structural (dsStaysUnderKeyboard); a flag there needs a re-show on every"; \
        echo "  screen change, which is how ShellChrome.scrolling stuck twice (prd §865)."; fail=1; }
+
+
+# --- 11. THE RAIL LAYOUT DRAWS ONE FACE, AND ACCOUNTS HAS A PANE (prd §875, §876) --
+# The seat on the rail layout is only Back: mounted when something is pushed or
+# when there is no rail, never beside the rail's own face.
+grep -q 'padShell.railInset == 0 || !sceneState.route.path.isEmpty' "$TMP/root.nc" \
+  || { echo "✗ RootShell mounts the dock seat at rest beside the rail's face — two"; \
+       echo "  Accounts faces in one frame (prd §875)."; fail=1; }
+strip_comments "Casberi/Casberi/Shell/HomeRoute.swift" > "$TMP/route.nc"
+# Every push goes through `place`, or one caller skips the pane.
+[ "$(grep -c 'path.append(' "$TMP/route.nc")" -eq 1 ] \
+  || { echo "✗ HomeRoute appends to path outside place(_:) — that push skips the"; \
+       echo "  Accounts pane (prd §876)."; fail=1; }
+grep -q 'route.fromAccountsList(open)' "$TMP/apps.nc" \
+  || { echo "✗ an Accounts row no longer REPLACES the pane's page — rows would stack"; \
+       echo "  pages behind each other (prd §876)."; fail=1; }
+# Every SettingsPage case is opened by a row, or it is a page nothing reaches.
+strip_comments "Casberi/Casberi/Screens/AccountScreen.swift" > "$TMP/settings.nc"
+for page in data notifications mcp diagnostics language dockOrder; do
+  grep -q "open(.$page)" "$TMP/settings.nc" \
+    || { echo "✗ no Settings row opens .$page through open(_:sheet:) — on the Mac it"; \
+         echo "  would still raise a sheet over the pane (prd §876)."; fail=1; }
+done
 
 
 if [ $fail -eq 0 ]; then
