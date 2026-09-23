@@ -38,8 +38,8 @@ means one stopped opting out, which puts the brand hue on a label like
 nowhere else. `CasberiMark` reads `DS.brand`.
 
 **(5) The sheet heads' day word (prd §882, §884).** A sheet has no divider, so
-`ArticleSheetHead`'s eyebrow and `PostSheetHead`'s name line name the day in
-the divider's pink. It must read
+`ArticleSheetHead`'s eyebrow, `PostSheetHead`'s name line and
+`PictureSheetHead`'s eyebrow name the day in the divider's pink (§885). It must read
 `FeedScreen.dayWord` — the divider's own function, which `dayLabel` must
 still delegate to — so the second pink in the app can only ever say a DAY,
 never "4d" or a clock time; and the head may take `DS.brandInk` exactly
@@ -69,6 +69,7 @@ TOKENS = "Casberi/Casberi/Design/DesignTokens.swift"
 SHEET_HEADS = (
     "Casberi/Casberi/Screens/ArticleSheetHead.swift",
     "Casberi/Casberi/Screens/PostSheetHead.swift",   # prd §884
+    "Casberi/Casberi/Screens/PictureSheetHead.swift",   # prd §885
 )
 BRAND_HEX = "FF2D87"
 MIN_OPT_OUTS = 9

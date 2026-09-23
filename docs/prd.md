@@ -60409,3 +60409,55 @@ re-derived) is unchanged.
 Checked on the iPhone 17 Pro simulator (iOS 27, dark) on two demo posts: Sam's
 quote post ("44 likes · 3 replies", the quote under the words) and Uma's
 two-picture post.
+
+## §885 — A screenshot's sheet shows the picture big, its moment under its title, and no Zoom (user, from the screenshot-sheet mocks, 2026-09-23)
+
+The third kind in the one-at-a-time pass (§882, §884). Three directions were
+mocked — the picture big, the picture whole on the room's mat, the picture beside
+its words — and Claude recommended the mat for consistency with the article and
+post sheets. The user took the big picture instead, and the reason is the ruling:
+"the screenshot is already small in their feed, and presumably in their own
+photos app". The sheet is the one place it can be seen at size.
+
+**The picture spans the column at its own shape** (`SheetPicture`), up to
+`SheetPicture.tallest` (560pt, which leaves the head and the dial on the first
+screen of a 6.1-inch phone); a taller one keeps its TOP and the tap opens the
+whole of it. It drew at `maxHeight: 280`, aspect-fit and flush left, so a phone
+screenshot was a 130pt-wide sliver. The frame's height is decided in one layout
+pass from the proposed width (`SheetPictureFrame`), and the shape comes from the
+Photos asset's own pixel size, read with the fetch before the pixels arrive, so
+the frame never changes shape while open — the stored copy is a centre crop
+(§877) and is only the fallback. The asset is now requested at the column's width
+at 3×; the old 800×800 box drew a phone screenshot 369 pixels wide. Folder-picked
+pictures take the same frame. The floating shadow is gone: it lifted a thumbnail,
+and a picture the column's width is the page.
+
+**The head goes under the picture** (`PictureSheetHead`): the source's mark, what
+it is, the day in the divider's pink (`FeedScreen.dayWord`, §882), then the title.
+`day-divider-audit.py` check 5 now covers it, beside the article and post heads.
+
+**The moment the picture names sits under the title, and the dial stands alone**
+(the user: "why not have it after the title", "the dials would be alone"). It is
+the DATE only — "Thursday, Oct 1 at 6:40 PM" — because the title is directly
+above it, and because the moment's name is the model's and arrives seconds late:
+under the title it first drew the whole title again on two lines, then shrank to
+the model's label and moved the dial. `ScreenshotFacts.datedFacts` draws the
+dates on the first frame; the label still rides the clipboard into Calendar,
+which is all it was ever for. It still never writes an event.
+
+**Zoom is deleted** (the user: "wtf is zoom", then "drop it"). It opened the same
+full-screen viewer as a tap on the picture, and a picture the column's width says
+it can be opened. §723's rule takes the verb out of the model with the disc:
+`Verb.Action.viewImage`, its label and its three handlers are gone. The viewer
+itself stays — it exists because "Open in Photos" cannot open one asset
+(2026-08-02), and that is still true.
+
+**How tall the sheet opens is unchanged, and was asked about.** A screenshot opens
+near-full; this one's content (~540pt) does not fit the half detent (~437pt), so
+the two fixed heights leave black under it. Opening at exactly the content's
+height is possible but must be known before the sheet rises or it jumps — a
+separate pass across every sheet, not part of this one.
+
+Checked on the iPhone 17 Pro simulator (iOS 27, dark) on the demo's Lisbon and
+Figma screenshots, early and late in the model's labelling. The demo's pictures
+are a bundled stand-in (only four sample screenshots ship).

@@ -4955,7 +4955,6 @@ enum ProbeHooks {
                     let destination: String
                     switch verb.action {
                     case .openURL(let url): destination = url.absoluteString
-                    case .viewImage:        destination = "in-app viewer"
                     default:                destination = "\(verb.action)"
                     }
                     NSLog("[Casberi] photoVerbDisc| %@ → %@",

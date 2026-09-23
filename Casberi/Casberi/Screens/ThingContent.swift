@@ -635,16 +635,16 @@ private struct ScreenshotContent: View {
     /// feed row it opened from happily drew the stored thumbnail.
     let stored: Data?
     @State private var image: UIImage?
+    /// The picture's own shape (height over width), read off the Photos asset
+    /// before its pixels arrive so the frame never changes shape (prd §885).
+    @State private var aspect: CGFloat?
 
     var body: some View {
         Group {
-            if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxHeight: 280)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            if image != nil || aspect != nil {
+                // BIG (prd §885): the column's width at the picture's own
+                // shape, capped — see `SheetPicture`.
+                SheetPicture(image: image, aspect: aspect)
             } else {
                 RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
                     .fill(DS.fillFaint)
@@ -703,7 +703,15 @@ private struct ScreenshotContent: View {
         // media — a placeholder box on a sample thing reads as broken).
         if let assetID, assetID.hasPrefix("sample:") {
             image = UIImage.demoSample(for: assetID)
+            if let image { aspect = image.size.height / max(image.size.width, 1) }
             return
+        }
+        // The asset's shape first — its pixel size is on the fetched record,
+        // so the frame is right before either image lands. The stored copy is
+        // a centre crop (prd §877), so its own shape is only the fallback.
+        let asset = Self.asset(assetID)
+        if let asset, asset.pixelWidth > 0 {
+            aspect = CGFloat(asset.pixelHeight) / CGFloat(asset.pixelWidth)
         }
         // The corpus's own copy first — instant, and it outlives both the
         // Photos original and the grant. Same order as `PhotoWell` and
@@ -712,21 +720,21 @@ private struct ScreenshotContent: View {
             let saved = await Task.detached(priority: .userInitiated) {
                 UIImage(data: stored)?.preparingForDisplay() ?? UIImage(data: stored)
             }.value
-            if let saved { image = saved }
+            if let saved {
+                image = saved
+                if aspect == nil { aspect = saved.size.height / max(saved.size.width, 1) }
+            }
         }
-        guard let assetID,
-              PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
-                || PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited,
-              let asset = PHAsset.fetchAssets(
-                withLocalIdentifiers: [assetID.replacingOccurrences(of: "phasset:", with: "")],
-                options: nil).firstObject
-        else { return }
+        guard let asset else { return }
         let options = PHImageRequestOptions()
         options.deliveryMode = .highQualityFormat
         options.isNetworkAccessAllowed = true   // iCloud-optimized originals
+        // The column's width at 3× — the picture now fills it, and the old
+        // 800×800 box drew a phone screenshot 369 pixels wide (prd §885).
+        let width: CGFloat = 1200
         PHImageManager.default().requestImage(
             for: asset,
-            targetSize: CGSize(width: 800, height: 800),
+            targetSize: CGSize(width: width, height: width * (aspect ?? 1)),
             contentMode: .aspectFit,
             options: options
         ) { result, info in
@@ -739,6 +747,17 @@ private struct ScreenshotContent: View {
             if let result { image = result }
         }
     }
+
+    /// The Photos record behind a ref, when access allows reading it.
+    private static func asset(_ assetID: String?) -> PHAsset? {
+        guard let assetID,
+              PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
+                || PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited
+        else { return nil }
+        return PHAsset.fetchAssets(
+            withLocalIdentifiers: [assetID.replacingOccurrences(of: "phasset:", with: "")],
+            options: nil).firstObject
+    }
 }
 
 /// A folder-picked image's own picture (2026-07-27) — Files things carry
@@ -748,12 +767,9 @@ private struct ScreenshotContent: View {
 private struct FilePictureContent: View {
     let image: UIImage
     var body: some View {
-        Image(uiImage: image)
-            .resizable()
-            .scaledToFit()
-            .frame(maxHeight: 280)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        // The same big frame a screenshot takes (prd §885).
+        SheetPicture(image: image,
+                     aspect: image.size.height / max(image.size.width, 1))
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s3)
     }

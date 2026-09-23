@@ -16,7 +16,6 @@ struct Verb: Identifiable {
         case approve                  // S10: the person's yes — IS the consent
         case deny                     // S10: the person's no
         case translate                // read: system Translation sheet over the thing's own text
-        case viewImage                // read: the picture itself, full screen and zoomable
         case showInFiles              // read hand-off: the Files app, at the folder this file is in
         /// The address card for one of YOUR watched wallets (prd §736) — the
         /// only destination in this enum that never leaves the app, and the
@@ -45,7 +44,6 @@ struct Verb: Identifiable {
         case .approve:        return "Approve"
         case .deny:           return "Deny"
         case .translate:      return "Translate"
-        case .viewImage:      return "Zoom"
         case .showInFiles:    return "Files"
         case .openAddress:    return "Wallet"
         }
@@ -286,31 +284,11 @@ enum VerbDerivation {
                                 action: .openAddress(stored)))
             }
         case .screenshot:
-            // The picture itself, full screen and zoomable, IN the app
-            // (2026-08-02 — user: tapping Photos "doesn't go to the Photos app
-            // or actual photo").
-            //
-            // "Open in Photos" was the only verb here, and it could never do
-            // what its name promised. iOS publishes no URL that opens a
-            // SPECIFIC asset, so `photos-redirect://` lands on the Photos app's
-            // root at best; and when nothing claims that scheme the tap does
-            // nothing at all, silently, because neither `UIApplication.open`'s
-            // completion nor SwiftUI's `openURL` reports a refusal (the same
-            // blindness the WalletConnect `wc:` read paid for — see the
-            // measured note in CLAUDE.md). A disc that reads live and is inert
-            // is the dead control the honesty rule bans.
-            //
-            // The app already holds the pixels — the corpus's own healed copy
-            // and the asset behind it — so the photo opens where it cannot
-            // fail. `sourceRef` is the cheap gate: it's a plain string column
-            // every real screenshot carries, and reading `previewImageData`
-            // here instead would fault an externalStorage blob per row, in a
-            // function the feed already calls from a non-escaping context-menu
-            // builder (prd §260).
-            if thing.sourceRef != nil {
-                out.append(Verb(label: "Zoom", icon: "arrow.up.left.and.arrow.down.right",
-                                action: .viewImage))
-            }
+            // NO ZOOM DISC (prd §885). The picture fills the sheet's column and
+            // IS the door to the full-screen viewer (the sheet's own tap), so a
+            // disc that opened the same viewer was the same fact twice. The
+            // viewer came in 2026-08-02 because "Open in Photos" cannot open a
+            // specific asset — that reason stands, and the viewer stays.
             // The hand-off stays for the people who want the library — but only
             // when something actually claims the scheme, so it can't be a disc
             // that does nothing. It opens the Photos app, never this photo, and
@@ -320,25 +298,8 @@ enum VerbDerivation {
                 out.append(Verb(label: "Open in Photos", icon: "photo", action: .openURL(url)))
             }
         case .file:
-            // A folder-picked image gets the same Zoom the screenshot above
-            // does (2026-08-12, prd §365). It had NO case here at all, so a
-            // Files/Dropbox picture drew its pixels in the sheet and nothing
-            // in the app could open them — the same bytes as a screenshot,
-            // one bridge over, behaving differently.
-            //
-            // The gate is a string test on the ref, deliberately: this
-            // function runs off the main actor inside GenUI composition and is
-            // called per row by the feed's context-menu builder (prd §260), so
-            // reading `previewImageData` here would fault an externalStorage
-            // blob per row. `FilesIngest.isStoredPicture` says the same thing
-            // the screenshot branch's `sourceRef != nil` says, one level more
-            // precisely — and the viewer falls back to the stored bytes when
-            // the ref names no asset, so an image whose heal hasn't produced a
-            // thumbnail yet opens to the loader rather than to nothing.
-            if FilesIngest.isStoredPicture(thing.sourceRef) {
-                out.append(Verb(label: "Zoom", icon: "arrow.up.left.and.arrow.down.right",
-                                action: .viewImage))
-            }
+            // A folder-picked picture opens its viewer from the picture itself,
+            // as a screenshot does — no Zoom disc (prd §885).
             // The folder it is saved in, in the Files app (2026-08-19, prd
             // §408 — user: "would be great to be able to press here and it
             // takes you to folder where the file is saved").

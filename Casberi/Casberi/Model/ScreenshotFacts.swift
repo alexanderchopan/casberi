@@ -76,16 +76,26 @@ enum ScreenshotFacts {
     /// back immediately; the naming is one model call for the whole set (not
     /// one per date), and the deterministic titles stand if it declines.
     static func facts(for thing: Thing) async -> [Fact] {
-        guard thing.isLive else { return [] }
-        let text = thing.content
-        let dates = dates(in: text)
-        guard !dates.isEmpty else { return [] }
-        let fallback = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        var facts = dates.map { Fact(date: $0, label: fallback.isEmpty ? "Saved moment" : fallback) }
-        if let named = await label(for: text), !named.isEmpty {
+        var facts = datedFacts(for: thing)
+        guard !facts.isEmpty else { return [] }
+        if let named = await label(for: thing.content), !named.isEmpty {
             for i in facts.indices { facts[i].label = named }
         }
         return facts
+    }
+
+    /// The same moments, named by the thing's own title, with no model call —
+    /// what the sheet draws the instant it opens (prd §885). The row sits
+    /// under the title now, so it must be there from the first frame: arriving
+    /// with the model's words seconds later pushed the dial down. The model's
+    /// label then replaces the words in place; the date is the row's identity,
+    /// so the row itself never moves.
+    static func datedFacts(for thing: Thing) -> [Fact] {
+        guard thing.isLive else { return [] }
+        let dates = dates(in: thing.content)
+        guard !dates.isEmpty else { return [] }
+        let fallback = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return dates.map { Fact(date: $0, label: fallback.isEmpty ? "Saved moment" : fallback) }
     }
 
     /// The on-device model's few words for what this screenshot's upcoming

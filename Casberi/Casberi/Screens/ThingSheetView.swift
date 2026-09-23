@@ -352,7 +352,7 @@ struct ThingSheetView: View {
                 let postHead = isSocialPost
                     && SocialSheetSource.eyebrowLeadsWithPerson(thing, shape: socialShape)
                     && moneyReceipt == nil && !framedShot
-                let ownHead = articleHead || postHead
+                let ownHead = articleHead || postHead || framedShot
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.
@@ -485,9 +485,10 @@ struct ThingSheetView: View {
                     // the Zoom disc reaches. Not a `Button`: the frame is
                     // content, not a control, so it takes the tap without
                     // gaining a button's press styling.
+                    // Big and unlifted (prd §885): the shadow floated a
+                    // thumbnail; a picture the column's width is the page.
                     ThingContentView(thing: thing)
-                        .shadow(color: DS.cardShadow, radius: 18, y: 10)
-                        .padding(.top, DS.Space.s3)
+                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             if thing.sourceRef != nil { zoomingPhoto = true }
@@ -500,13 +501,19 @@ struct ThingSheetView: View {
                         // can ask. Same sentence as the hint above it.
                         .dsTooltip(String(localized: "Opens the photo full screen"))
                         .settleIn(delay: 0.06)
-                    Text(thing.title)
-                        .dsText(.heading24).foregroundStyle(DS.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .textSelection(.enabled)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s2)
+                    // What it is, the pink day, the title — under the
+                    // picture, the article and post heads' order (§885).
+                    PictureSheetHead(thing: thing,
+                                     onSource: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil)
+                        .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.1)
+                    // A moment the picture names sits with its title, not
+                    // under the dial — the dial stands alone (user, §885).
+                    if !facts.isEmpty {
+                        VStack(alignment: .leading, spacing: 0) { factRows }
+                            .padding(.top, DS.Space.s3)
+                            .settleIn(delay: 0.12)
+                    }
                     VerbDial(thing: thing, verbs: sheetVerbs,
                              onVerb: runVerb, onName: nil, onPin: togglePin)
                         .padding(.top, DS.Space.s6)
@@ -1110,6 +1117,8 @@ struct ThingSheetView: View {
             // never looked at by a person: a note you typed needs no help
             // finding its own date.
             if thing.kind == .screenshot {
+                // The dates now, the model's words when they come (prd §885).
+                facts = ScreenshotFacts.datedFacts(for: thing)
                 Task { facts = await ScreenshotFacts.facts(for: thing) }
             }
             // `CrossSourceEcho.find` itself gates on `.link` (returns nil
@@ -2710,7 +2719,7 @@ struct ThingSheetView: View {
 
     private var relatedShelf: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            factRows
+            // `factRows` moved under the picture's title (prd §885).
             keptBeforeRow
             if !relatedStream.els.isEmpty {
                 Text(LocalizedStringKey(relatedTitle))
@@ -2753,7 +2762,13 @@ struct ThingSheetView: View {
                         .accessibilityHidden(true)
                         .dsGlyph(.caption)
                         .foregroundStyle(DS.textTertiary)
-                    Text("\(fact.label) · \(fact.date.formatted(date: .abbreviated, time: .shortened))")
+                    // THE DATE ALONE (prd §885). The row sits under the title
+                    // now, so naming the moment again said the title twice —
+                    // and the name is the model's, arriving seconds late, which
+                    // resized the row and moved the dial. The label still rides
+                    // the clipboard into Calendar; only the screen stops
+                    // waiting for it. No year: a fact is within the next one.
+                    Text(fact.date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().hour().minute()))
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
@@ -2762,8 +2777,10 @@ struct ThingSheetView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityHint(Text("Opens Calendar on this day"))
             .dsHover()
-            .padding(.horizontal, DS.Space.s4)
+            // The words' column, under the title it belongs to (§885).
+            .padding(.horizontal, DSRoomChassis.leadInset)
             .padding(.bottom, DS.Space.s2)
         }
     }
@@ -2906,9 +2923,6 @@ struct ThingSheetView: View {
             verbResult = nil
             translateText = thing.postText ?? thing.content
             showTranslate = true
-        case .viewImage:
-            verbResult = nil
-            zoomingPhoto = true
         case .showInFiles:
             do {
                 // No success line: the Files app is now in front of the

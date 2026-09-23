@@ -11390,15 +11390,8 @@ struct FeedScreen: View {
                 do { try await HandOff.showInFiles(thing) }
                 catch { chrome.flash(error.localizedDescription, tone: .failure) }
             }
-        case .viewImage:
-            // The full-screen viewer lives in the thing sheet, which is where
-            // this row's tap already goes — the feed's own menu never offers
-            // this verb (it picks out the open and translate verbs by hand), so
-            // this arm exists for completeness, not as a second door.
-            openThing(thing)
         case .openAddress:
-            // `.viewImage`'s rule directly above, and for its reason: an
-            // in-app destination the feed cannot present itself opens the
+            // An in-app destination the feed cannot present itself opens the
             // sheet that can. The address card is a `FaceTarget` on
             // `ThingSheetView`, which is where this row's tap already goes.
             openThing(thing)
