@@ -312,6 +312,8 @@ marks chronological position within the pair.
 | §377 | A folded run of screenshots or posts is drawn as its members — the tiles fill the row's LEADING seat ("the tiles grow the leading seat and nothing else"), at `Mark.list` since the same day's amendment | overturned in part by §719 (the SEAT is the source's mark, as on every other row; the tiles are the text column's third line at `Mark.row`. The fold, the cap and the dedupe stand) |
 | §378 (a row recedes when it is ambient or already read) | an arrived row, or any row older than the last visit, draws at 0.68 in the All feed whatever its day | amended by §773 — nothing from today recedes; `isQuiet` returns false for a row whose date is today, before either reason is asked |
 | §529 §4 (Bankr's key comes back by paste; the sign-in is `SFSafariViewController`, deliberately NOT `WKWebView`; "Casberi reads nothing") | a person signs in at bankr.bot in a Safari sheet, mints a read-only key by hand and pastes it back; only Bankr could remove that step | reversed by §800 (Connect signs in on bankr.bot inside a non-persistent `WKWebView` and asks bankr.bot's own key endpoint for the key from that page; the cookie is sent by WebKit and never read; paste stays in the "Your key" sheet) |
+| §809 (a digest's title is the place and its most telling number; two body lines of short facts) | `Farcaster: 5 replies +2` over two lines built from a ladder of candidates fitted to 28/32 characters | replaced by §883 — the title is the place alone and the body one line; the budgets and ladders are deleted |
+| §881 (a digest's title is its lead fact, the body what the title left out and the next facts) | `Work: App Review said no` / the row's words / `+$1,950 from Stripe` | amended by §883 — the banner is the place and ONE line (`25 new`, `+$1,240`, `App Review said no · 3 more`); §881's ranking and card stand |
 
 ## 1. Thesis
 
@@ -60347,3 +60349,14 @@ headline.
 Checked on the iPhone 17 Pro simulator (iOS 27, dark) with the demo's whole
 article: the picture in the well, "Monday, Sep 21" in pink, the headline, "Dana
 Cole · 2 min read", the dial under it, the body, and no dial at the end.
+
+## §883 — A digest is the place and a count; only what needs you and money are not (user: "wdyt if we really just simplifed this and for each category tallied up the total numbers of actions… We could still use the icons and images", "ok, do it that way", 2026-09-23)
+
+**Supersedes §881's banner and §809's body ladders; keeps §881's ranking and card.** A digest of several things is now the PLACE (the app when there is one, otherwise the category) and ONE line:
+- `Social` / `25 new` — people and news are a count. The thumbnail's faces and app tiles already say who, and the long press says what.
+- `Wallet` / `+$1,240` — money says how much arrived, because that number IS the news (§809's "use numbers more"); unpriced, `3 transfers in`.
+- `Work` / `App Review said no · 3 more` — something that needs you names itself (`NotifyKind.brief`) however outnumbered, because a count would hide the one thing in the digest that should not be counted.
+
+Which of the three a digest is comes from §881's `NotifyDigest.facts` (by `digestRank`), which still orders the long press: a row per thing that needs you, per transfer (who, then how much, largest first) and per reply; one row for follows and one for likes. A lone item still reads as itself.
+
+**The word is "new", not "actions"** (the user's draft): nobody calls a like an action. **Deleted, because nothing is left to fit**: §809's `titleBudget`, `lineBudget`, `bodyLineCap` and `fitted`, and §881's per-fact `leads`/`detail`/`lines` and `named`. No ellipsis holds by construction now; `notify-selftest.sh` keeps the measured widths (28, 32) as the property it checks over every fixture, with three new mutations (what needs you folded into the count, money folded into the count, the named thing hiding what came with it).

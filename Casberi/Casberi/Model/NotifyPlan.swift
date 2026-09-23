@@ -282,8 +282,8 @@ enum NotifyKind: String, Sendable, CaseIterable {
         }
     }
 
-    /// The kind after a digest title's colon ("Work: App Review said no"),
-    /// short enough to follow any place name on one line (prd §881). Like the
+    /// The kind in a few words, for the one line a digest gives something
+    /// that needs you ("App Review said no · 4 more", prd §881, §883). Like the
     /// headline it says what the row cannot, never the row's own verdict word.
     var brief: String {
         switch self {
@@ -932,27 +932,14 @@ enum NotifyDigest {
         return out
     }
 
-    // MARK: - Words that fit (prd §809)
+    // MARK: - A count, and the one thing that is not (prd §809, §881, §883)
 
-    /// What fits on one line without iOS cutting it with an ellipsis, in
-    /// characters (user, 2026-09-17: "no truncation ellipsis in the title or
-    /// the bodies"). Measured against the lock screen's own geometry: a
-    /// 390pt phone leaves about 228pt for a title at 15pt semibold beside the
-    /// icon, the time and the thumbnail, and about 240pt for a body line.
-    /// Characters are an ESTIMATE of width, so both are set below the
-    /// average: a line of wide letters can still reach the edge.
-    static let titleBudget = 28
-    static let lineBudget = 32
-    /// The unlocked banner shows two body lines, Notification Center four;
-    /// two is the count that is whole on both.
-    static let bodyLineCap = 2
-
-    /// The first candidate that fits, or the last one, which every caller
-    /// makes short enough to fit on its own.
-    static func fitted(_ candidates: [String?], budget: Int) -> String {
-        let present = candidates.compactMap { $0 }.filter { !$0.isEmpty }
-        return present.first { $0.count <= budget } ?? present.last ?? ""
-    }
+    /// Nothing a digest says is cut with an ellipsis (user, 2026-09-17), and
+    /// since §883 that holds by construction: the title is a place name and
+    /// the body one short line — a count, a total, or a kind's `brief` and
+    /// how many more. §809's character budgets and fitting ladders had
+    /// nothing left to fit, so they are deleted; `notify-selftest.sh` keeps
+    /// the measured lock-screen widths (28 and 32) as the property it checks.
 
     /// The dollars that arrived, when every money item says how much. Nil
     /// if any one does not: a sum of the ones we know is not the total.
@@ -967,35 +954,15 @@ enum NotifyDigest {
         usd.formatted(.currency(code: "USD").precision(.fractionLength(usd >= 100 ? 0 : 2)))
     }
 
-    // MARK: - What a digest says, most urgent first (prd §881)
-
-    /// One thing a digest can state. A digest used to rank what it said by
-    /// how MANY of each kind arrived, so an App Review rejection sat behind
-    /// "And 2 more" under a payout, an approval that can move your funds sat
-    /// under the money total, and a reply asking you a question sat under
-    /// nine like counts — each line restating its kind's verb ("Liked by",
-    /// "Received") beneath a title that had already said it (user,
-    /// 2026-09-22: "they repeat words like 'wallet' or 'liked'").
-    ///
-    /// Now a digest reads in three tiers, by `NotifyKind.digestRank`: what
-    /// needs you (every alarm that waits for the evening, each one its own
-    /// fact, never folded into a count), the money that moved (one fact: the
-    /// total and WHO sent it), then people (a reply keeps its words because
-    /// you may answer it; follows name the people; likes are one number).
-    /// The title is the lead fact; the body is what the title left out, then
-    /// the next facts; no line repeats the title's verb.
+    /// One thing a digest can state, ranked by `NotifyKind.digestRank` (prd
+    /// §881): every alarm that waits for the evening is its own fact, the
+    /// money that moved is one, and each other kind is one. The body names
+    /// only the first; the card walks them all in this order.
     struct Fact: Sendable, Equatable {
         var kind: NotifyKind
         var items: [Item]
         var rank: Int
-        /// What follows "Place: " when this fact is the title, best first.
-        var leads: [String]
-        /// What that title leaves out: the specifics under it. Nil when the
-        /// title already says it all.
-        var detail: String?
-        /// The fact on a body line of its own, best first.
-        var lines: [String]
-        /// The fact as one clause of a shared line ("45 likes").
+        /// The fact in a few words, when it is the one the body names.
         var brief: String
     }
 
@@ -1026,11 +993,6 @@ enum NotifyDigest {
         }
     }
 
-    /// "linda, jesse and 3 more replied", shrinking the names until it fits.
-    static func named(_ people: [String], verb: String) -> [String] {
-        listed(people, total: people.count).map { $0 + " " + verb }
-    }
-
     /// Everyone who acted, newest first, each once.
     private static func people(_ items: [Item]) -> [String] {
         var out: [String] = []
@@ -1045,72 +1007,37 @@ enum NotifyDigest {
 
     /// Every fact the items state, most urgent first: by `digestRank`, then an
     /// app with no lock screen of its own ahead of one that has, then the
-    /// newest. `multi` is a digest of several apps, where money with no
-    /// sender says which app paid it.
+    /// newest. Money is ordered largest first, so the card leads with it.
     static func facts(_ items: [Item]) -> [Fact] {
         let order = apps(items)
-        let multi = order.count > 1
+        let appRank = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { a, _ in a })
         var out: [Fact] = []
         var money: [Item] = []
         for group in byKind(items) {
-            let kind = group.kind, all = group.items
-            if isMoney(kind) { money += all; continue }
-            let n = all.count, counted = kind.counted(n)
-            switch kind {
-            case _ where kind.cls == .alarm:
+            let kind = group.kind
+            if isMoney(kind) { money += group.items; continue }
+            if kind.cls == .alarm {
                 // Each thing that needs you is its own fact: two approvals are
                 // two decisions, and a count would hide which.
-                for item in all {
-                    out.append(Fact(kind: kind, items: [item], rank: kind.digestRank,
-                                    leads: [kind.brief], detail: item.line,
-                                    lines: [item.line, capitalized(kind.brief)], brief: capitalized(kind.brief)))
-                }
-            case .repliesReceived:
-                // A question waits on you; of several replies, one asking
-                // something is the one worth the line.
-                let pick = all.first { $0.line.contains("?") } ?? all[0]
-                let who = people(all)
-                let said = pick.who.map { $0 + ": " + pick.line }
-                let one = n == 1 ? pick.who.map { $0 + " " + String(localized: "replied") } : nil
-                out.append(Fact(kind: kind, items: all, rank: kind.digestRank,
-                                leads: [one, counted].compactMap { $0 },
-                                detail: fitted(n == 1 ? [pick.line] : [said] + listed(who, total: n).map {
-                                    String(localized: "From \($0)") }, budget: lineBudget),
-                                lines: [said].compactMap { $0 } + named(who, verb: String(localized: "replied"))
-                                    + [capitalized(counted)],
-                                brief: one ?? capitalized(counted)))
-            case .followersGained:
-                let who = people(all)
-                let named = named(who, verb: String(localized: "followed you"))
-                out.append(Fact(kind: kind, items: all, rank: kind.digestRank,
-                                leads: n == 1 ? named + [counted] : [counted],
-                                detail: n == 1 ? nil : listed(who, total: n).first { $0.count <= lineBudget },
-                                lines: named + [capitalized(counted)],
-                                brief: n == 1 ? (named.first ?? capitalized(counted)) : capitalized(counted)))
-            case .likesReceived:
-                let tally = all.reduce(0) { $0 + max($1.tally ?? 1, 1) }
-                let who = people(all)
-                let verb = n == 1 ? String(localized: "liked your post") : String(localized: "liked your posts")
-                out.append(Fact(kind: kind, items: all, rank: kind.digestRank,
-                                leads: [likes(tally)],
-                                detail: listed(who, total: tally).map { String(localized: "From \($0)") }
-                                    .first { $0.count <= lineBudget },
-                                lines: listed(who, total: tally).map { $0 + " " + verb } + [capitalized(likes(tally))],
-                                brief: capitalized(likes(tally))))
-            default:
-                let lone = n == 1 && all[0].line != kind.headline ? all[0].line : nil
-                out.append(Fact(kind: kind, items: all, rank: kind.digestRank,
-                                leads: n == 1 && kind == .appWalletMade
-                                    ? [String(localized: "new app wallet"), counted] : [counted],
-                                detail: n == 1 ? lone : nil,
-                                lines: [lone.map { n == 1 && kind == .appWalletMade
-                                    ? String(localized: "New app wallet: \($0)") : $0 }, lone,
-                                        capitalized(counted)].compactMap { $0 },
-                                brief: capitalized(counted)))
+                out += group.items.map { Fact(kind: kind, items: [$0], rank: kind.digestRank,
+                                              brief: capitalized(kind.brief)) }
+            } else {
+                out.append(Fact(kind: kind, items: group.items, rank: kind.digestRank,
+                                brief: capitalized(kind.counted(group.items.count))))
             }
         }
-        let appRank = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { a, _ in a })
-        if !money.isEmpty { out.append(moneyFact(money, multi: multi, appRank: appRank)) }
+        if !money.isEmpty {
+            let sorted = money.sorted { a, b in
+                if (a.usd ?? -1) != (b.usd ?? -1) { return (a.usd ?? -1) > (b.usd ?? -1) }
+                let ra = appRank[a.name] ?? .max, rb = appRank[b.name] ?? .max
+                if ra != rb { return ra < rb }
+                return (a.occurredAt, a.id) > (b.occurredAt, b.id)
+            }
+            let kind: NotifyKind = sorted.allSatisfy { $0.kind == NotifyKind.payoutPaid.rawValue } ? .payoutPaid : .moneyIn
+            out.append(Fact(kind: kind, items: sorted, rank: kind.digestRank,
+                            brief: moneyTotal(money).map { "+" + dollars($0) }
+                                ?? capitalized(kind.counted(money.count))))
+        }
         func appOf(_ f: Fact) -> Int { f.items.map { appRank[$0.name] ?? .max }.min() ?? .max }
         func newest(_ f: Fact) -> Date { f.items.map(\.occurredAt).max() ?? .distantPast }
         return out.sorted { a, b in
@@ -1121,111 +1048,23 @@ enum NotifyDigest {
         }
     }
 
-    /// The money that moved, as one fact: the total when every transfer is
-    /// priced, and who sent it, largest first. The sender is the news; "3
-    /// transfers in" under "+$1,240" said nothing the title had not.
-    private static func moneyFact(_ items: [Item], multi: Bool, appRank: [String: Int]) -> Fact {
-        // Largest first; between equals, an app with no lock screen of its own
-        // first, then the newest.
-        let sorted = items.sorted { a, b in
-            if (a.usd ?? -1) != (b.usd ?? -1) { return (a.usd ?? -1) > (b.usd ?? -1) }
-            let ra = appRank[a.name] ?? .max, rb = appRank[b.name] ?? .max
-            if ra != rb { return ra < rb }
-            return (a.occurredAt, a.id) > (b.occurredAt, b.id)
-        }
-        let kind: NotifyKind = sorted.allSatisfy { $0.kind == NotifyKind.payoutPaid.rawValue } ? .payoutPaid : .moneyIn
-        let counted = kind.counted(items.count)
-        let total = moneyTotal(items).map { "+" + dollars($0) }
-        // Who sent it: the counterparty, or — in a digest of several apps —
-        // the app that paid, so "+$1,820" never stands without a source.
-        let sender: (Item) -> String? = { $0.who ?? (multi ? $0.name : nil) }
-        var senders: [String] = []
-        for s in sorted.compactMap(sender) where !senders.contains(s) { senders.append(s) }
-        let from: [String] = senders.isEmpty ? [] : (1...min(3, senders.count)).reversed().map { k in
-            let shown = Array(senders.prefix(k))
-            let rest = sorted.filter { !shown.contains(sender($0) ?? "") }.count
-            return rest > 0
-                ? shown.joined(separator: ", ") + " " + String(localized: "and \(rest) more")
-                : ListFormatter.localizedString(byJoining: shown)
-        }
-        // With no sender, the amounts themselves, largest first.
-        let amounts = sorted.compactMap(\.amount)
-        let moved: [String] = amounts.count == sorted.count && !amounts.isEmpty
-            ? (1...min(3, amounts.count)).reversed().map { k in
-                let rest = amounts.count - k
-                return amounts.prefix(k).joined(separator: ", ")
-                    + (rest > 0 ? " " + String(localized: "and \(rest) more") : "")
-            } : []
-        let detail = fitted(from.map { String(localized: "From \($0)") } + moved + [nil], budget: lineBudget)
-        let lines: [String] = total.map { t in
-            from.map { t + " " + String(localized: "from \($0)") } + (items.count > 1 ? [t + " · " + counted] : []) + [t]
-        }
-            ?? (from.map { capitalized(counted) + " " + String(localized: "from \($0)") } + [capitalized(counted)])
-        return Fact(kind: kind, items: sorted, rank: kind.digestRank,
-                    leads: [total, counted].compactMap { $0 },
-                    detail: detail.isEmpty || detail.count > lineBudget ? nil : detail,
-                    lines: lines, brief: total ?? capitalized(counted))
-    }
-
-    /// The title of a digest of several things: the place, a colon, and its
-    /// most urgent fact (`facts`).
-    static func title(place: String, _ items: [Item]) -> String {
-        let leads = facts(items).first?.leads ?? []
-        return fitted(leads.map { place + ": " + $0 } + [place + ": " + String(localized: "\(items.count) new")],
-                      budget: titleBudget)
-    }
-
-    /// A fact's own body line. In a digest of several apps a line names its
-    /// app when it fits, so "+$1,820" says Stripe paid it.
-    private static func line(_ fact: Fact, multi: Bool) -> String {
-        let apps = Set(fact.items.map(\.name))
-        guard multi, apps.count == 1, let app = apps.first else { return fitted(fact.lines, budget: lineBudget) }
-        // Each line with its app when it does not already say it, then bare.
-        let named = fact.lines.map { $0.contains(app) || $0.contains(": ") ? $0 : app + ": " + $0 }
-        return fitted(zip(named, fact.lines).flatMap { [$0, $1] }, budget: lineBudget)
-    }
-
-    /// The body of a digest of several things, never more than `bodyLineCap`
-    /// lines and never one that runs past the edge: what the title left out,
-    /// then the next facts, most urgent first. Facts past the cap share the
-    /// last line as clauses ("vitalik followed you · 45 likes"), and whatever
-    /// even that cannot hold is counted.
+    /// The body of a digest of several things: ONE line, and a count (user,
+    /// 2026-09-23: "for each category tallied up the total numbers", "we
+    /// could still use the icons and images"). The title is the place alone;
+    /// the thumbnail's faces and app tiles say who; the long press says what.
+    ///
+    /// Two things are not a count, because a count would hide them (prd
+    /// §883): something that needs you names itself (`App Review said no ·
+    /// 4 more`), and money says how much arrived (`+$1,240`), since that
+    /// number IS the news. Everything else is `25 new`.
     static func body(_ items: [Item]) -> String {
-        let all = facts(items)
-        guard let lead = all.first else { return "" }
-        let multi = apps(items).count > 1
-        var lines: [String] = []
-        if let detail = lead.detail, detail.count <= lineBudget,
-           !lead.leads.contains(where: { $0 == detail }) {
-            lines.append(detail)
+        guard let lead = facts(items).first else { return "" }
+        let more = items.count - lead.items.count
+        let tail = more > 0 ? " · " + String(localized: "\(more) more") : ""
+        guard lead.kind.cls == .alarm || isMoney(lead.kind) else {
+            return String(localized: "\(items.count) new")
         }
-        let rest = Array(all.dropFirst())
-        // A lead with nothing to add and nothing after it: its things' own
-        // words, when each fits, otherwise the newest and how many more.
-        if lines.isEmpty, rest.isEmpty {
-            // `items` is already the fact's order: newest first, and money
-            // largest first, so its first line is the one worth keeping.
-            let own = lead.items.map(\.line)
-            if own.count <= bodyLineCap, own.allSatisfy({ $0.count <= lineBudget }) {
-                return own.joined(separator: "\n")
-            }
-            let first = own.first ?? ""
-            return fitted([first + " " + String(localized: "and \(own.count - 1) more"),
-                           isMoney(lead.kind) ? String(localized: "Largest: \(first)") : nil, ""],
-                          budget: lineBudget)
-        }
-        let room = bodyLineCap - lines.count
-        guard rest.count > room else { return (lines + rest.map { line($0, multi: multi) }).joined(separator: "\n") }
-        lines += rest.prefix(room - 1).map { line($0, multi: multi) }
-        let left = Array(rest.dropFirst(room - 1))
-        let shared: [String] = (1...left.count).reversed().map { k in
-            let unsaid = left.dropFirst(k).reduce(0) { $0 + $1.items.count }
-            return left.prefix(k).map(\.brief).joined(separator: " · ")
-                + (unsaid > 0 ? " · " + String(localized: "\(unsaid) more") : "")
-        }
-        let unsaid = left.reduce(0) { $0 + $1.items.count }
-        lines.append(fitted(shared + [String(localized: "And \(unsaid) more")], budget: lineBudget))
-        return lines.joined(separator: "\n")
+        return lead.brief + tail
     }
 
     // MARK: - The card (prd §809, §881)
@@ -1460,12 +1299,9 @@ enum NotifyDigest {
     /// One item is simply that item: its own headline, words and door, so a
     /// quiet day with one arrival reads like any notification.
     ///
-    /// Several items are written to FIT (user, 2026-09-17: "no truncation
-    /// ellipsis in the title or the bodies", "not repeat 'wallet:'
-    /// 'wallet:'"): a title that is the place and its most telling number
-    /// (`title`), and at most two body lines built from short facts — the
-    /// people who acted, a count, a sum — rather than pasted titles that run
-    /// past the edge (`body`). The whole of the day is the long press's.
+    /// Several items are the place and a count (prd §883): the title is the
+    /// app when there is one, otherwise the category, and the body is one
+    /// line (`body`). The thumbnail says who and the long press says what.
     static func plan(_ queue: [Item]) -> NotifyPlan? {
         guard let newest = queue.max(by: { $0.occurredAt < $1.occurredAt }) else { return nil }
         if queue.count == 1 {
@@ -1479,13 +1315,13 @@ enum NotifyDigest {
         if names.count == 1 {
             let path = newest.name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? newest.name
             return NotifyPlan(id: requestPrefix + newest.category + ":app", kind: .digest,
-                              title: title(place: names[0], queue),
+                              title: names[0],
                               body: body(queue),
                               link: "casberi://feed/source/" + path,
                               occurredAt: newest.occurredAt, source: newest.source)
         }
         return NotifyPlan(id: requestPrefix + newest.category + ":apps", kind: .digest,
-                          title: title(place: newest.category, queue),
+                          title: newest.category,
                           body: body(queue),
                           link: "casberi://feed",
                           occurredAt: newest.occurredAt)
