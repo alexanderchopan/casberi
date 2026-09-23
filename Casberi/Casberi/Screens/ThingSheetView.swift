@@ -369,6 +369,8 @@ struct ThingSheetView: View {
                 let transcriptHead = socialShape == .transcript
                 let talkHead = agentConversation != nil || mailHead || transcriptHead
                 let ownHead = articleHead || postHead || framedShot || moneyReceipt != nil
+                    || workReading != nil
+                    || (purchaseReading.map { $0.archetype != .watch } ?? false)
                     || vibenetEventFacts != nil || momentHead || noteShape != nil || talkHead
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
@@ -570,10 +572,28 @@ struct ThingSheetView: View {
                     // receipt does: the headline it draws IS the subject, and
                     // on a receipt that subject is the merchant the title's
                     // own head was already saying.
+                    // A PURCHASE takes the money sheet's shape (prd §895, §887):
+                    // the merchant leads, the amount is the head rung.
+                    if purchaseReading.archetype != .watch {
+                        SheetPartyHead(name: purchaseReading.subject, day: thing.capturedAt,
+                                       line: [purchaseReading.verb, thing.source]
+                                           .compactMap { $0 }.joined(separator: " · ")) {
+                            if let art = thing.previewImageURL, !art.isEmpty {
+                                RemoteThumb(urlString: art, size: DS.Face.shelf,
+                                            fallback: thing.source, circular: true)
+                            } else {
+                                SenderInitial(sender: purchaseReading.subject, size: DS.Face.shelf)
+                            }
+                        }
+                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                        .settleIn(delay: 0.04)
+                    }
                     PurchaseStageView(thing: thing, reading: purchaseReading,
-                                      recurrence: purchaseRecurrence)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s3)
+                                      recurrence: purchaseRecurrence,
+                                      headDrawn: purchaseReading.archetype != .watch)
+                        .padding(.horizontal, purchaseReading.archetype != .watch
+                                 ? DSRoomChassis.leadInset : DS.Space.s4)
+                        .padding(.top, purchaseReading.archetype != .watch ? DS.Space.s6 : DS.Space.s3)
                         .settleIn(delay: 0.06)
                 } else if let workReading {
                     // The Work receipt (2026-08-12) — the §302 ledger's
@@ -581,11 +601,21 @@ struct ThingSheetView: View {
                     // rather than sitting above it: the headline it draws IS
                     // the title, minus the clause the status line is already
                     // saying, so keeping both would print the row twice.
+                    // WORK leads with where it lives (prd §895): the source's
+                    // mark and the pink day, the project on the line under it.
+                    SheetPartyHead(name: thing.source, day: thing.capturedAt,
+                                   line: workReading.project,
+                                   onFace: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil) {
+                        BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
+                    }
+                    .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                    .settleIn(delay: 0.04)
                     WorkStageView(thing: thing, reading: workReading,
                                   detail: WorkStage.statusDetail(
-                                    workRow, clause: workReading.statusWord))
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s3)
+                                    workRow, clause: workReading.statusWord),
+                                  projectInHead: true)
+                        .padding(.horizontal, DSRoomChassis.leadInset)
+                        .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.06)
                 } else if let agentGrant {
                     // A PERMISSION, not a bookmark (prd §367). The title slot
@@ -2086,7 +2116,8 @@ struct ThingSheetView: View {
         // has. The project is NOT repeated here — `WorkStageView` draws it
         // directly under the headline, where it reads as part of the sentence
         // rather than as a field.
-        let hasLanded = isWork
+        // The pink day in the work head says when it landed (prd §895).
+        let hasLanded = false
         let hasEcho = crossSourceEcho != nil
         let hasAgent = thing.provenance.agent != nil
         // "From" WAS COMPUTED HERE and is DELETED (2026-09-15, prd §736).

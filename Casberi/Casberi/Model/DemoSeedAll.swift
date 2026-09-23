@@ -4502,6 +4502,9 @@ enum DemoSeedAll {
                 // Found by the room-head coverage check's own first run
                 // (2026-08-10): all three seeded runs were missing it.
                 t.authorHandle = "alexanderchopan/casberi"
+                // The tags `CursorBridge` stamps (prd §895) — without them no
+                // demo run ever read as finished or failed.
+                t.tags = i == 2 ? ["Agent run", "Failed"] : ["Agent run"]
             }
         }
         // `ops` rows carry the tag their bridge stamps (2026-08-12), because

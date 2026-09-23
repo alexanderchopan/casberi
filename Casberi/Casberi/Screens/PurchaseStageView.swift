@@ -20,6 +20,8 @@ struct PurchaseStageView: View {
     /// How often you've paid this merchant. Passed in rather than read here so
     /// the view stays free of SwiftData — and nil is the common answer.
     var recurrence: PurchaseStageSource.Recurrence?
+    /// The sheet's head draws the verb, the merchant and its picture (prd §895).
+    var headDrawn = false
 
     /// Liveness guard (build 188, corollary 5 — `ThingRowKeying.swift`).
     /// SwiftUI re-evaluates a leaf view's body on the model's OWN observation,
@@ -42,7 +44,7 @@ struct PurchaseStageView: View {
     // MARK: - Receipt
 
     @ViewBuilder private var receiptBody: some View {
-        if let verb = reading.verb {
+        if !headDrawn, let verb = reading.verb {
             Text(verbatim: verb)
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
@@ -54,7 +56,8 @@ struct PurchaseStageView: View {
         // not a loss state and colouring it would editorialize.
         if let amount = reading.amount {
             Text(verbatim: amount)
-                .dsText(.price40)
+                // The head rung, as a money receipt's (prd §895, §887).
+                .dsText(headDrawn ? .price64 : .price40)
                 .monospacedDigit()
                 .foregroundStyle(reading.state?.tone == .good && reading.archetype == .receipt
                                  ? DS.confirm
@@ -64,12 +67,14 @@ struct PurchaseStageView: View {
                 .truncationMode(.tail)
                 .padding(.top, 2)
         }
-        Text(verbatim: reading.subject)
-            .dsText(.heading24)
-            .foregroundStyle(DS.textPrimary)
-            .fixedSize(horizontal: false, vertical: true)
-            .textSelection(.enabled)
-            .padding(.top, DS.Space.s1)
+        if !headDrawn {
+            Text(verbatim: reading.subject)
+                .dsText(.heading24)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+                .padding(.top, DS.Space.s1)
+        }
         if let party = reading.seller {
             partyLine(party).padding(.top, DS.Space.s2)
         }
@@ -79,7 +84,7 @@ struct PurchaseStageView: View {
         // The product's own artwork — stored by Bitrefill since it shipped and
         // only ever drawn as a 140pt link-card banner, which for an order with
         // no gift link was a banner scraped off a shared account page.
-        if let art = thing.previewImageURL, !art.isEmpty {
+        if !headDrawn, let art = thing.previewImageURL, !art.isEmpty {
             RemoteThumb(urlString: art, size: 132, fallback: thing.source)
                 .padding(.top, DS.Space.s4)
         }

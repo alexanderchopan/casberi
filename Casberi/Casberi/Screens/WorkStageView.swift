@@ -23,6 +23,8 @@ struct WorkStageView: View {
     /// status word does — PagerDuty's "Resolved after 2 hours". Passed in
     /// rather than recomputed so the view never touches the title.
     let detail: String?
+    /// The sheet's head names the project (prd §895), so the line here stands down.
+    var projectInHead = false
 
     /// Liveness guard (build 188, corollary 5 — `ThingRowKeying.swift`).
     /// SwiftUI re-evaluates a leaf view's body on the model's OWN observation,
@@ -36,7 +38,7 @@ struct WorkStageView: View {
         VStack(alignment: .leading, spacing: 0) {
             statusLine
             headline.padding(.top, DS.Space.s1 - 2)
-            if let project = reading.project {
+            if !projectInHead, let project = reading.project {
                 projectLine(project).padding(.top, DS.Space.s1 + 2)
             }
             // Always, and always amber (user ruling 2026-08-12: "those don't
@@ -98,7 +100,7 @@ struct WorkStageView: View {
         // so the words beside them are a caption, not a claim — one rung down.
         case .stars:  wordsHeadline(.heading24)
         case .code:   codeHeadline
-        case .words:  wordsHeadline(.stat24)
+        case .words:  wordsHeadline(.heading24)
         }
     }
 

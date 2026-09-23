@@ -60714,3 +60714,33 @@ stands down for all three.
 
 Checked on the iPhone 17 Pro simulator on "Designing a bento panel", "Design
 review moved to Thursday" and "Chat with Ada".
+
+## §895 — Work items and purchases take the shared head (user, approving the second batch of mocks — "ok do it", 2026-09-23)
+
+The second batch (work, purchases, media, charts) was mocked together and approved
+as drawn. This entry is its first half.
+
+**A work item** (`WorkStageView`: Linear, Jira, Trello, GitLab, Vercel, Cursor,
+Sentry, PagerDuty and the rest `WorkStage` reads) leads with the shared head
+(`SheetPartyHead`, §892): the source's mark, the pink day, the project on the line
+under it; then its status in its tone, the title at `heading24` (it was `stat24`),
+the deadline strip, the stamps. The project line inside the receipt and the
+"Landed" spec row stand down, because the head says both.
+
+**A purchase** (`PurchaseStageView`: Bitrefill orders and refills, MetaMask Card)
+takes the money sheet's shape (§887): the merchant leads — its picture as the face
+where there is one — with "Paid · Bitrefill" under it, and the amount is at
+`price64`. A watched product (a Shopify listing) is not a purchase and keeps its
+own sheet.
+
+**What could not be built, stated so it is not re-proposed on the mock's word.**
+The mock showed a GitHub pull request reading "Merged". No GitHub row stores a
+state — only the demo's own title said "Merged" — so a GitHub row keeps the generic
+sheet rather than a status it cannot know (§83). The demo's Cursor runs carried no
+tags, so none ever read as finished or failed; they carry `CursorBridge`'s
+"Agent run" (and "Failed") now. **A device that poured the demo before this keeps
+the old rows until it is poured again.**
+
+Checked on the iPhone 17 Pro simulator, after a fresh demo pour, on "CAS-412 Panel
+reshuffles between opens", "Failed · casberi · migrate the schema" and
+"Amazon.com · €25".
