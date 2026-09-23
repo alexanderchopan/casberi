@@ -60461,3 +60461,27 @@ separate pass across every sheet, not part of this one.
 Checked on the iPhone 17 Pro simulator (iOS 27, dark) on the demo's Lisbon and
 Figma screenshots, early and late in the model's labelling. The demo's pictures
 are a bundled stand-in (only four sample screenshots ship).
+
+## §886 — A thing sheet opens at its content's height (user: "why is there empty black space bottom half of the sheet, why doesn't it resize to contents", 2026-09-23)
+
+A thing sheet opened at one of two heights — half, or nearly full — chosen from
+the record's shape before anything was drawn (a picture, a quote or a long body
+meant full). Most sheets are neither: §885's screenshot sheet is ~540pt, too tall
+for the half detent (~437pt on a 6.1-inch phone) and far short of the full one,
+so it opened with the bottom half black.
+
+**The sheet measures itself.** The scroll view reports its content's height,
+safe area included (`onScrollGeometryChange`), and that height becomes the
+sheet's detent (`dsReadSheet(detent:fit:)` → `[.height(fit), .large]`), which
+the system caps at its full height. Until the first measurement the old half/full
+guess stands, and the first layout pass replaces it before the sheet has risen.
+The full height stays a drag away.
+
+**It follows the content, never the person.** While the sheet is at its fitted
+height, a body that lands or a row that arrives refits it; once the person drags
+it to full, it stays there. A change under 8pt (a line re-wrapping) does not move
+it. A sheet pushed inside another presentation (`onBack`) or rendered in place
+(`inlineRest`) is not fitted, because its detents would resize its host.
+
+Checked on the iPhone 17 Pro simulator on §885's Lisbon screenshot and §884's
+quote post: each opens where its content ends, with the room visible above it.

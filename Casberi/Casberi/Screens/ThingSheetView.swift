@@ -210,6 +210,9 @@ struct ThingSheetView: View {
     /// earned it. A short record opens `.medium` instead of one card of
     /// content over a screen of black. Both detents stay a drag away.
     @State private var detent: PresentationDetent
+    /// The content's measured height (prd §886) — the sheet opens exactly this
+    /// tall, capped by the system at its full height. nil until measured.
+    @State private var fittedHeight: CGFloat?
     /// HOW IT LANDED (prd §363, 2026-08-12) — the block that replaced the spec
     /// table's one social row. Composed on open and again when the live
     /// engagement read answers, so the numbers are the freshest the app has.
@@ -982,6 +985,15 @@ struct ThingSheetView: View {
             .padding(.bottom, DS.Space.s6)
         }
         .scrollIndicators(.hidden)
+        // THE SHEET FITS ITS CONTENT (prd §886). The two fixed heights left a
+        // screenshot's sheet half empty: ~540pt of content is too tall for the
+        // half detent and far short of the full one. The scroll view knows its
+        // content's height including the safe area, so that IS the detent.
+        .onScrollGeometryChange(for: CGFloat.self) { geo in
+            geo.contentSize.height + geo.contentInsets.top + geo.contentInsets.bottom
+        } action: { _, height in
+            fitSheet(to: height)
+        }
         // The source's hue wash that once poured down the crown is gone (user
         // ruling 2026-07-18: full ink, matching the feed). The wash read as
         // borrowed identity — and on a plain sheet it flooded the spec table,
@@ -1021,7 +1033,7 @@ struct ThingSheetView: View {
         // the default ~540x620 form card. It is the fallback door for a thing
         // (a row tap fills the detail pane instead), but every deep link,
         // Spotlight hand-off and pane-less state still arrives here.
-        .dsReadSheet(detent: $detent)
+        .dsReadSheet(detent: $detent, fit: fittedHeight)
         // Only when pushed (`onBack` set): the eyebrow carries its own back
         // chevron now, so the system's default pushed-view nav bar (and the
         // back button it would ALSO draw) is redundant chrome on top of it.
@@ -1536,6 +1548,19 @@ struct ThingSheetView: View {
     /// `thing.source` as a URL path component — a source name can carry
     /// spaces ("Apple Music", "iCloud Mail"), so the eyebrow's door needs
     /// this before handing it to `casberi://feed/source/…`.
+    /// Fit the sheet to its content (prd §886). It follows the content while
+    /// the person has not moved it — a body that lands, a row that arrives —
+    /// and never overrides a drag to full height. A change under 8pt (a line
+    /// re-wrapping) does not move the sheet.
+    private func fitSheet(to height: CGFloat) {
+        guard onBack == nil, !inlineRest, height > 0 else { return }
+        let fit = height.rounded(.up)
+        if let old = fittedHeight, abs(old - fit) < 8 { return }
+        let stillFitted = fittedHeight.map { detent == .height($0) } ?? true
+        fittedHeight = fit
+        if stillFitted { detent = .height(fit) }
+    }
+
     /// Leave for this thing's source room — the eyebrow's door, and the
     /// article head's publication line (prd §882).
     private func openSourceRoom() {

@@ -109,8 +109,17 @@ extension View {
     /// sheet moves itself. Ink is NOT folded in: the thing sheet paints its
     /// own ground.
     @ViewBuilder
-    func dsReadSheet(detent: Binding<PresentationDetent>? = nil) -> some View {
-        if let detent {
+    func dsReadSheet(detent: Binding<PresentationDetent>? = nil,
+                     fit: CGFloat? = nil) -> some View {
+        // A FITTED sheet (prd §886) opens at its content's own height, with
+        // the full height a drag away; the half/full pair is the fallback until
+        // the content has been measured, and for every sheet that is not fitted.
+        if let detent, let fit {
+            presentationDetents([.height(fit), .large], selection: detent)
+                .dsPageSheet()
+                .presentationDragIndicator(.visible)
+                .dsSheetCorner()
+        } else if let detent {
             presentationDetents([.medium, .large], selection: detent)
                 .dsPageSheet()
                 .presentationDragIndicator(.visible)
