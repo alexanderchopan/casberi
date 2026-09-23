@@ -76,7 +76,9 @@ enum ScreenshotFacts {
     /// The upcoming moments in a thing's own text, each named. The dates come
     /// back immediately; the naming is one model call for the whole set (not
     /// one per date), and the deterministic titles stand if it declines.
+    @MainActor
     static func facts(for thing: Thing) async -> [Fact] {
+        guard thing.isLive else { return [] }
         var facts = datedFacts(for: thing)
         guard !facts.isEmpty else { return [] }
         // Read while the row is known live, before any `await` — the fetch
