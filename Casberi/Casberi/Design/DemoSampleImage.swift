@@ -1,11 +1,21 @@
 import UIKit
 
 extension UIImage {
-    /// Sample things carry bundled photos. Each demo shot has its own asset
-    /// (sample:demo-shot-2 → sample-screenshot-2), so the demo photo grid
-    /// shows four different images, never one repeated. Unnumbered or
-    /// unknown refs fall back to the original sample.
+    /// Sample things carry bundled pictures. Each demo shot has its own asset
+    /// (sample:demo-shot-5 → sample-screenshot-5), and every other picture the
+    /// demo shows is keyed by its SUBJECT (sample:pic-ig-save-3 →
+    /// sample-pic-ig-save-3), so no two rows ever draw the same image.
+    /// An unknown ref resolves to nothing — a missing picture is a bug
+    /// `DemoPictureTests` names, never a stand-in photo.
     static func demoSample(for ref: String) -> UIImage? {
+        // One drawn picture per subject (2026-09-23, prd §890). Every picture
+        // the furnished demo showed used to be one of four bundled football
+        // photos, handed out by `DemoSeedAll.art(n % 4)` — so a Lisbon tram
+        // timetable, a Radiohead song and a Notion page all wore the same
+        // luchador mask. Drawn by `scripts/demo-art/render.py`.
+        if ref.hasPrefix("sample:pic-") {
+            return UIImage(named: ref.replacingOccurrences(of: "sample:", with: "sample-"))
+        }
         // The demo cast's faces (2026-08-11). Farcaster and Bluesky hydrate a
         // real `avatarURL` for every watched account and every landed post, so
         // a demo without them draws the source's brand glyph where the real
@@ -66,8 +76,8 @@ extension UIImage {
             let n = ref.replacingOccurrences(of: "sample:product-", with: "")
             return UIImage(named: "sample-product-\(n)")
         }
+        guard ref.hasPrefix("sample:demo-shot-") else { return nil }
         let n = ref.replacingOccurrences(of: "sample:demo-shot-", with: "")
         return UIImage(named: "sample-screenshot-\(n)")
-            ?? UIImage(named: "sample-screenshot")
     }
 }

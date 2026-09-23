@@ -650,6 +650,20 @@ python3 "$ROOT/scripts/demo-marking-audit.py" \
   || fail "the demo's marking has drifted — see the output above"
 print -P "%F{green}✓ demo-marking audit%f"
 
+# One drawn picture per demo subject (prd §890). Every picture the demo showed
+# was one of four football photos cycled by `art(n % 4)` across thirty rooms,
+# and the prd had filed the repetition as "by design" (§344). The poured rows'
+# half — no two rows share a picture, by ref or by bytes — is
+# `CasberiTests/DemoPictureTests`; this is the files' half: the table, the
+# seed's `art("…")` literals and the asset catalog agree, nothing bundled is
+# orphaned, the index cycle cannot return, and the pictures fit a budget.
+step "Demo-picture audit"
+python3 "$ROOT/scripts/demo-picture-audit.py" --self-test >/dev/null \
+  || fail "the demo-picture audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/demo-picture-audit.py" \
+  || fail "the demo's pictures and their table disagree — see the output above"
+print -P "%F{green}✓ demo-picture audit%f"
+
 # The app icon's three luminosity variants (prd §869). The light PNG had been a
 # BYTE-FOR-BYTE COPY of the dark one — same md5 — so everyone on the light or
 # default appearance saw the dark drawing, hot pink on a black tile, on a light

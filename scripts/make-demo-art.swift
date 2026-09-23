@@ -70,6 +70,13 @@ let products: [Still] = [
           bottom: rgb(0xCEC0B4), ink: rgb(0x4A3A2E), note: "Coffee grinder"),
     .init(symbols: ["airpodspro", "headphones"], top: rgb(0xE6E9EE),
           bottom: rgb(0xCCD3DB), ink: rgb(0x303640), note: "AirPods Pro"),
+    // Bitrefill — the two orders (2026-09-23). They read `productArt(i + 3)`,
+    // so an Amazon gift card wore the Shopify mug and an Uber ride its
+    // chopping board: the same two stills twice, on the wrong things.
+    .init(symbols: ["giftcard.fill", "creditcard.fill"], top: rgb(0xF3E6D0),
+          bottom: rgb(0xE0CBA6), ink: rgb(0x5C4520), note: "Amazon.com gift card"),
+    .init(symbols: ["car.fill", "car"], top: rgb(0xDCE3EA), bottom: rgb(0xC0CAD5),
+          ink: rgb(0x1F2830), note: "Uber ride credit"),
 ]
 
 let side: CGFloat = 640
@@ -283,6 +290,12 @@ let coins: [Coin] = [
     .init(symbol: "aero", initial: "A", top: rgb(0x5B8DEF), bottom: rgb(0x2E5BC0)),
     .init(symbol: "brett", initial: "B", top: rgb(0x4CC2C0), bottom: rgb(0x1F8A88)),
     .init(symbol: "jup", initial: "J", top: rgb(0xC97BE8), bottom: rgb(0x8A3FB0)),
+    // The watched STOCKS (2026-09-23). `DemoSeedAll` stamps `sample:coin-aapl`
+    // and friends on the Stocktwits rows and none was ever bundled, so the
+    // rows drew nothing — found by `DemoPictureTests.everyNamedPictureIsBundled`.
+    .init(symbol: "aapl", initial: "A", top: rgb(0x9AA3AD), bottom: rgb(0x5E6670)),
+    .init(symbol: "nvda", initial: "N", top: rgb(0x7FBF3F), bottom: rgb(0x4B8A1C)),
+    .init(symbol: "tsla", initial: "T", top: rgb(0xE8605A), bottom: rgb(0xB22A25)),
 ]
 
 let coinSide: CGFloat = 320

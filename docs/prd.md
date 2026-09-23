@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §344 (the four demo photos are by design) | `DemoSeedAll.art(_:)` cycling every image-seeding room through the same four bundled files is "by design, not a rendering defect" | superseded by §890 (user: "that is really bad") — every demo picture is its own drawn asset, keyed by subject, and no two rows may share one |
 | §857b (Monad is refused) | Monad's card spends are correct to read and refused on cost — 100-block log cap against 0.302s blocks is 2,860 requests a day per wallet — recorded in `unreadableChains` | superseded by §860 (the arithmetic stands and the conclusion does not: Alchemy's index answers a wallet's whole Monad history in one call, so Monad is a third `Chain`; `unreadableChains` is deleted) |
 | §384 / §386p (the chip peek) | a long press on a source chip floats the room's figure up without navigating — rail-only since 2026-09-05, so iPad and Mac | deleted by §836 (user: "i don't think we need that on ipad and mac") — the peek, `RoomFigure`, and every `AgentPanel.Figure` it alone produced (treemap, bars, rail, pulse, curve, wall, flow, runway, worth, river) with the ranking between them; the answer's dial and semantic map stand |
 | §700 (the catalogue is a bare mark) | the strip's tail catalogue is a grid glyph in a `chipSize` frame, never a captioned tile, and `categoryCell` counts it as one more mark | reversed by §793 (it is a tile named "Accounts", `categoryTile`'s anatomy in a `categoryCell`, and counts as a cell only when it rests on screen); its seat at the tail stands |
@@ -60597,3 +60598,20 @@ nothing here claims that yet. The real reading is a device with a real library.
 caught): both gates on `available`, an `Attachment(` outside an iOS 27 gate, the
 text-only branch deleted, the rail bypassed, the picture handed to the keyed
 librarian, and the loader taking a `Thing`.
+
+## §890 — Every picture in the demo is its own (user: "in the demo we have places where we use the same screenshots. that is really bad", 2026-09-23)
+
+**What it was.** `DemoSeedAll.art(n)` returned `sample:demo-shot-\((n % 4) + 1)`, and `pixels(n)` the same four files as bytes, so EVERY picture the furnished demo drew — about 45 call sites across Instagram, TikTok, Snapchat, X, Telegram, YouTube, Files, Substack, RSS, Apple Music, Spotify, Podcasts, Steam, Reddit, Raindrop, Pinterest, the three social rooms, GitHub, Trello, Hugging Face, Day One, Apple Journal and Notion — was one of four football stock photos (the base corpus's World Cup set, 2026-07-07). A Lisbon tram timetable, a Radiohead song and a Notion page wore the same luchador mask; the Photos room's ten screenshots fell back to it in the sheet because `sample-screenshot-5…14` never existed. §344 had noticed the repetition and filed it "by design"; this entry supersedes §344: **no two demo rows draw the same picture.**
+
+**What it is.** One DRAWN picture per subject — 147 of them — keyed by what the row is about: `art("ig-save-3")` → `sample:pic-ig-save-3` → the `sample-pic-ig-save-3` imageset. Drawn, not photographed, for `make-demo-art.swift`'s reason (the demo reaches nothing, and a generated still is honest about being a stand-in): `scripts/demo-art/pictures.py` is the table (key, size, and the subject the picture must show), five `fam_*.py` modules draw each as HTML/SVG, and `render.py` screenshots them with headless Chrome into JPEG imagesets (`--preview DIR` writes contact sheets and touches no asset). The Photos screenshots keep their `sample:demo-shot-N` identity and their row bytes now come from their own ref, so the row and the sheet show the same screen. ~6.7 MB for all of them.
+
+**Changes to the table that the rule forced, each because a real room would honestly repeat:**
+- Songs that shared an ALBUM were swapped for another album's (Pyramid Song, Unfinished Sympathy, Kid for Today), because a cover belongs to a record.
+- TikTok's two notices name videos NEWER than the export, not two export posts, so they no longer redraw the export's covers in the same room; Instagram's notices already were newer and now carry their own pictures.
+- GitHub's four rows lost their picture: the "repository social preview" the seed claimed `GitHubFeeds` stamps is not stamped on a pull request or a notification, and all four were one repository's.
+- Bitrefill's orders take their own product stills (9, 10) instead of two Shopify arrivals'.
+- `demoSample` no longer falls back to the user-supplied `sample-screenshot` photo (2026-07-07); an unknown ref draws nothing and the test names it. That asset is deleted.
+
+**What still repeats, on purpose:** a book's cover on each of its highlights, a token's mark on each row about that token, a person's face. Each names one thing that recurs.
+
+**Guarded twice.** `CasberiTests/DemoPictureTests` pours `DemoSeedAll.rooms()` and fails on two rows sharing a picture BY REF or BY BYTES (two keys whose assets are one image are a repeat too), and on any `sample:` picture that is not bundled. `scripts/demo-picture-audit.py` (verify.sh) holds the files: every table key bundled, no orphan imageset, every `art("…")` literal matching a key and every key named, no index-shaped `art(i)` call, and a size budget (160 KB each, 9 MB total). **Neither can see that two DIFFERENT drawings look alike** — that is the contact sheet's job, and a new picture is looked at before it ships. `DemoSeedAll.version` is 8.

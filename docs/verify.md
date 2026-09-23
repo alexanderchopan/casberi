@@ -1015,6 +1015,10 @@ card — the same indistinguishable-from-healthy failure every other check here
 guards. It fires only for a bridge declaring more than one chain, so a
 single-chain seat keeps its simpler key and does not get a finding for it.
 
+## Demo-picture audit (scripts/demo-picture-audit.py, 2026-09-23)
+
+**Why it exists.** Every picture the demo drew was one of four football photos, cycled by `DemoSeedAll.art(n % 4)` across ~45 call sites (prd §890). Each room rendered exactly what it was handed, so no check could see it. Every picture is now its own drawn asset (`scripts/demo-art/`). This audit holds the FILES: every `pictures.py` key is bundled, no `sample-pic-*` imageset is orphaned, every `art("…")`/`pixels("…")` literal in the seed matches a key and every key is named, no index-shaped `art(i)` call exists, and the pictures fit a budget (160 KB each, 9 MB total). The POURED rows' half — no two rows share a picture by ref or by bytes, and every named `sample:` picture resolves — is `CasberiTests/DemoPictureTests`. **Ceiling:** neither sees that two different drawings look alike; `render.py --preview DIR` writes contact sheets for the eye.
+
 ## Demo-marking audit (scripts/demo-marking-audit.py, 2026-09-20)
 
 **Why it exists.** A real person landed in the demo and did not realise (user, 2026-09-20). The capsule had been restyled four times by then — the marking was never the wrong colour, it was in the wrong place. §864 moved it into the reading path: the first-launch cover spells the word in four falling letter tiles, the All feed leads with `DemoLead`, and the capsule keeps every other screen.

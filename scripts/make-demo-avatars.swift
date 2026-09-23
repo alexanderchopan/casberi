@@ -84,6 +84,22 @@ let cast: [Face] = [
           query: "topType=ShortHairShaggyMullet&accessoriesType=Blank&hairColor=Auburn&facialHairType=BeardMedium&facialHairColor=Auburn&clotheType=ShirtCrewNeck&clotheColor=Blue01&eyeType=Default&eyebrowType=DefaultNatural&mouthType=Serious&skinColor=Light"),
     .init(handle: "mira", note: "Contacts — Mira Novak",
           query: "topType=LongHairFroBand&accessoriesType=Prescription02&hairColor=Black&facialHairType=Blank&clotheType=Overall&clotheColor=Gray01&eyeType=Happy&eyebrowType=RaisedExcited&mouthType=Smile&skinColor=Brown"),
+    // The live notices' actors (prd §832 added the rows, 2026-09-23 the faces).
+    // `InstagramLive`/`TikTokLive` make the person who ACTED the row's face,
+    // and none of these six was ever drawn — so the notices showed no one.
+    // Found by `DemoPictureTests.everyNamedPictureIsBundled`.
+    .init(handle: "lena", note: "Instagram — liked your photo",
+          query: "topType=LongHairFrida&accessoriesType=Blank&hairColor=Brown&facialHairType=Blank&clotheType=ShirtScoopNeck&clotheColor=PastelYellow&eyeType=Happy&eyebrowType=Default&mouthType=Smile&skinColor=Light"),
+    .init(handle: "tomas", note: "Instagram — commented",
+          query: "topType=ShortHairShortCurly&accessoriesType=Blank&hairColor=Black&facialHairType=BeardMajestic&facialHairColor=Black&clotheType=ShirtVNeck&clotheColor=PastelRed&eyeType=Default&eyebrowType=Default&mouthType=Twinkle&skinColor=Tanned"),
+    .init(handle: "ines", note: "Instagram — followed you",
+          query: "topType=LongHairStraight&accessoriesType=Kurt&hairColor=Black&facialHairType=Blank&clotheType=BlazerShirt&eyeType=Default&eyebrowType=DefaultNatural&mouthType=Default&skinColor=Light"),
+    .init(handle: "rui", note: "TikTok — liked your video",
+          query: "topType=ShortHairShortRound&accessoriesType=Blank&hairColor=BrownDark&facialHairType=Blank&clotheType=Hoodie&clotheColor=PastelGreen&eyeType=Wink&eyebrowType=RaisedExcited&mouthType=Smile&skinColor=Light"),
+    .init(handle: "dana", note: "TikTok — commented",
+          query: "topType=LongHairCurvy&accessoriesType=Prescription01&hairColor=Blonde&facialHairType=Blank&clotheType=CollarSweater&clotheColor=PastelBlue&eyeType=Default&eyebrowType=UpDownNatural&mouthType=Default&skinColor=Pale"),
+    .init(handle: "kofi", note: "TikTok — followed you",
+          query: "topType=ShortHairShortFlat&accessoriesType=Blank&hairColor=Black&facialHairType=BeardLight&facialHairColor=Black&clotheType=GraphicShirt&clotheColor=Heather&eyeType=Happy&eyebrowType=Default&mouthType=Smile&skinColor=DarkBrown"),
 ]
 
 /// Regenerating every face on every run rewrites thirteen imagesets to add one,
