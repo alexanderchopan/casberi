@@ -664,6 +664,20 @@ python3 "$ROOT/scripts/demo-picture-audit.py" \
   || fail "the demo's pictures and their table disagree — see the output above"
 print -P "%F{green}✓ demo-picture audit%f"
 
+# The screenshot VISION pass (prd §889). On iOS 27 the naming and facts passes
+# hand the model the shot itself beside its OCR text. No simulator has the
+# on-device model, so this is the only check on its shape: the picture is gated
+# on iOS 27 AND an Apple Intelligence device, the text-only branch survives for
+# every older phone, `grounded` still rejects words the OCR text lacks, the
+# keyed librarian is never handed the picture, and the loader takes a ref, never
+# a `Thing` (docs/liveness.md).
+step "Screenshot-vision audit"
+python3 "$ROOT/scripts/screenshot-vision-audit.py" --self-test >/dev/null \
+  || fail "the screenshot-vision audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/screenshot-vision-audit.py" \
+  || fail "the screenshot vision pass lost a gate, its text branch or its honesty rail — see the output above"
+print -P "%F{green}✓ screenshot-vision audit%f"
+
 # The app icon's three luminosity variants (prd §869). The light PNG had been a
 # BYTE-FOR-BYTE COPY of the dark one — same md5 — so everyone on the light or
 # default appearance saw the dark drawing, hot pink on a black tile, on a light
