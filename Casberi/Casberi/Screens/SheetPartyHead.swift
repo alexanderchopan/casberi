@@ -30,9 +30,12 @@ struct SheetPartyHead<Face: View>: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    // A name is words here (a show, a book, a sender), so it
+                    // wraps rather than losing its middle (prd §897).
                     Text(verbatim: name)
                         .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1).truncationMode(.middle)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: DS.Space.s2)
                     if let day {
                         Text(FeedScreen.dayWord(day))

@@ -345,7 +345,12 @@ struct ThingSheetView: View {
                 // title block would have been, so every shape ahead of it in
                 // the chain below still wins, and the content view is told to
                 // leave the picture to the head.
-                let articleHead = ThingContentView.readsAsArticle(thing)
+                // MEDIA (prd §897) — a track, a video, an episode; it wins over
+                // the article head, which a video with a stored description met.
+                let mediaHead = MediaSheetHead.isMedia(thing) && ThingChart.kind(for: thing) == nil
+                    && moneyReceipt == nil && !framedShot
+                let chartHead = ThingChart.kind(for: thing) != nil
+                let articleHead = !mediaHead && ThingContentView.readsAsArticle(thing)
                     && moneyReceipt == nil && !framedShot && !isSocialPost
                     && socialShape != .person && purchaseReading == nil
                     && workReading == nil && agentGrant == nil
@@ -369,6 +374,7 @@ struct ThingSheetView: View {
                 let transcriptHead = socialShape == .transcript
                 let talkHead = agentConversation != nil || mailHead || transcriptHead
                 let ownHead = articleHead || postHead || framedShot || moneyReceipt != nil
+                    || mediaHead || chartHead
                     || workReading != nil
                     || (purchaseReading.map { $0.archetype != .watch } ?? false)
                     || vibenetEventFacts != nil || momentHead || noteShape != nil || talkHead
@@ -677,18 +683,16 @@ struct ThingSheetView: View {
                         .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                         .settleIn(delay: 0.06)
                 } else if ThingChart.kind(for: thing) != nil {
-                    // A CHARTED row draws no title (prd §369 amendment). The
-                    // price object below states the asset's name and symbol, so
-                    // leaving this on printed "Aerodrome · $AERO" at
-                    // `heading40` immediately above a card saying the same two
-                    // words — the label-for-a-label failure the object exists
-                    // to end, and the same stand-down the note and Work
-                    // anatomies above already make.
-                    //
-                    // Gated on the CHART rather than a source name, so it
-                    // covers tokens, trending rows and stocks alike and cannot
-                    // drift the way the Site row did.
-                    EmptyView()
+                    // A CHARTED row draws no title (prd §369 amendment); since
+                    // §897 it leads with the shared head — the asset's name, the
+                    // pink day, what it is — and the price below drops its own
+                    // name and symbol and takes the head rung.
+                    SheetPartyHead(name: Self.chartParts(thing.title).name, day: thing.capturedAt,
+                                   line: Self.chartLine(thing)) {
+                        BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
+                    }
+                    .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                    .settleIn(delay: 0.04)
                 } else if vibenetEventFacts != nil {
                     // A VIBENET EVENT IS ITS OWN HEAD (prd §495). The card
                     // below opens with the event's own words at the display
@@ -775,6 +779,11 @@ struct ThingSheetView: View {
                     titleBlock
                         .padding(.horizontal, DSRoomChassis.leadInset)
                         .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.06)
+                } else if mediaHead {
+                    MediaSheetHead(thing: thing,
+                                   onSource: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil)
+                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                         .settleIn(delay: 0.06)
                 } else if articleHead {
                     // The dial rides UNDER the head (prd §882): on a sheet
@@ -890,10 +899,11 @@ struct ThingSheetView: View {
                     || (!linkOnlyBody && thing.kind != .event
                     && thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
                         != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)))
-                if contentShown {
+                if contentShown && !mediaHead {
                     ThingContentView(thing: thing, agent: agentConversation,
                                      articleArt: !articleHead,
                                      mailSender: !mailHead)
+                        .environment(\.priceHeadDrawn, chartHead)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.12)
                 }
@@ -1967,6 +1977,25 @@ struct ThingSheetView: View {
               first.caseInsensitiveCompare(title.trimmingCharacters(in: .whitespaces)) == .orderedSame
         else { return text }
         return split.rest
+    }
+
+    /// "Ethereum · $ETH" as the name and the symbol (prd §897).
+    static func chartParts(_ title: String) -> (name: String, symbol: String?) {
+        let split = title.components(separatedBy: " · ")
+        guard split.count >= 2 else { return (title, nil) }
+        return (split[0], split.dropFirst().joined(separator: " · "))
+    }
+
+    /// "Token · $ETH", "Stock · $AAPL", "Metric".
+    static func chartLine(_ thing: Thing) -> String {
+        let kind: String
+        switch ThingChart.kind(for: thing) {
+        case .stock: kind = String(localized: "Stock")
+        case .postHogMetric: kind = String(localized: "Metric")
+        default: kind = String(localized: "Token")
+        }
+        guard let symbol = chartParts(thing.title).symbol else { return kind }
+        return "\(kind) · \(symbol)"
     }
 
     /// "Conversation · 9 turns" (prd §894).

@@ -22,6 +22,8 @@ struct PriceObjectCard<Evidence: View>: View {
     /// a price is fetched, and the two live in different layers.
     @ViewBuilder var evidence: () -> Evidence
     @Environment(\.colorScheme) private var scheme
+    /// The thing sheet's head names the asset (prd §897).
+    @Environment(\.priceHeadDrawn) private var headDrawn
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -35,18 +37,21 @@ struct PriceObjectCard<Evidence: View>: View {
             }
 
             VStack(alignment: .leading, spacing: 0) {
-                if let name = object.name, !name.isEmpty {
+                if !headDrawn, let name = object.name, !name.isEmpty {
                     Text(verbatim: name)
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }
-                Text(verbatim: object.symbol)
-                    .dsText(.heading24).foregroundStyle(DS.textPrimary)
-                    .lineLimit(1).truncationMode(.tail)
+                if !headDrawn {
+                    Text(verbatim: object.symbol)
+                        .dsText(.heading24).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1).truncationMode(.tail)
+                }
 
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text(verbatim: object.price)
-                        .dsText(.price40)
+                        // The head rung under a sheet's own head (prd §897).
+                        .dsText(headDrawn ? .price64 : .price40)
                         .monospacedDigit()
                         .foregroundStyle(DS.textPrimary)
                         .contentTransition(.numericText())
@@ -139,4 +144,16 @@ struct PriceObjectCard<Evidence: View>: View {
             .foregroundStyle(ink)
     }
 
+}
+
+
+/// Whether a thing sheet's own head already names the asset (prd §897), so the
+/// price below it drops its name and symbol and takes the head rung.
+private struct PriceHeadDrawnKey: EnvironmentKey { static let defaultValue = false }
+
+extension EnvironmentValues {
+    var priceHeadDrawn: Bool {
+        get { self[PriceHeadDrawnKey.self] }
+        set { self[PriceHeadDrawnKey.self] = newValue }
+    }
 }

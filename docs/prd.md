@@ -60771,3 +60771,36 @@ trailing edge. The title truncates first, so the count always shows.
 `DSFeedRow` gained `lineTail`, a clause that never truncates, drawn only on a
 row that has one so every single-thing row keeps its flat tree (§744).
 `DSFeed.more(_:)` is the one spelling, on the catalog's existing "+%lld more".
+
+## §897 — Media leads with its art, a chart with its asset (user, approving the second batch of mocks — "ok do it", 2026-09-23)
+
+The second half of §895's batch.
+
+**A track, a video or an episode** (Spotify, Apple Music, YouTube, Podcasts, Twitch)
+had no anatomy of its own: "Link · 3d ago", the raw "Song — Artist" title and a
+140pt banner. `MediaSheetHead` puts the art in the lead's well (a video at its own
+16:9, capped at the well), then the shared head — the channel or show where the
+row stamps one, else the service, with the pink day — then the song alone as the
+title, with "Boards of Canada · The Campfire Headphase (2005)" under it, read from
+the title's artist and Spotify's own album line. The content view's own art and
+summary stand down. **Media wins over the article head**: the demo's YouTube video
+carried a stored description and read as an article; a video is watched.
+
+**A chart** (a token, a stock, a PostHog metric) keeps the §369 stand-down of the
+title block and adds the shared head — "Ethereum", the pink day, "Token · $ETH" —
+and the price below it drops its own name and symbol and takes the head rung
+(`price64`), left-aligned under the head, in both the price card and the hero
+layout. One environment value (`priceHeadDrawn`) carries that from the sheet, so
+every other use of the price card is untouched.
+
+**`SheetPartyHead`'s name wraps** to two lines instead of losing its middle —
+"Signals a…Threads" — because the names it carries are words (a show, a book, a
+sender), not addresses.
+
+**Not built from the mock:** the demo's Apple stock is still not a chart. Its row
+carries no quote link, and a demo chart for it would need a price history the demo
+does not have; giving it a real link would send the demo to a live service.
+
+Checked on the iPhone 17 Pro simulator on "Dayvan Cowboy — Boards of Canada",
+"How a compiler actually reads your code", "The one about compilers" and
+"Ethereum · $ETH".

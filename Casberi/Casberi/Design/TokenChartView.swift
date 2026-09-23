@@ -565,6 +565,8 @@ private struct GhostShimmer: View {
 /// watched stock (StockRange/Yahoo) wears the exact anatomy a token does;
 /// the token init below keeps every existing call site unchanged.
 struct TokenChartView<R: PriceRange, Fallback: View>: View {
+    /// A thing sheet's own head names the asset (prd §897).
+    @Environment(\.priceHeadDrawn) private var headDrawn
     /// The UserDefaults key the chosen range persists under.
     let memoryKey: String
     /// One range's curve — nil means this range can't be answered.
@@ -787,9 +789,11 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     }
 
     private var heroHeader: some View {
-        VStack(spacing: DS.Space.s2) {
+        // Under a sheet's own head the price leads its column at the head rung
+        // (prd §897), as the price card's does.
+        VStack(alignment: headDrawn ? .leading : .center, spacing: DS.Space.s2) {
             Text(TokenChartStyle.priceText(displayPrice))
-                .dsText(.price40)
+                .dsText(headDrawn ? .price64 : .price40)
                 .foregroundStyle(DS.textPrimary)
                 .monospacedDigit()
                 .lineLimit(1)
@@ -807,7 +811,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                 TokenDeltaPill(change: displayChange, label: range.label, solid: true)
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: headDrawn ? .leading : .center)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(spokenPrice))
     }
