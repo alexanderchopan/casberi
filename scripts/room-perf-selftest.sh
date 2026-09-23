@@ -419,11 +419,11 @@ if [[ -f "$GATE" ]]; then
 else
   fail "GestureGate.swift is missing"
 fi
-# The resting snapshot is a synchronous `drawHierarchy` of the whole window,
-# 900ms after a landing — when a finger is on the strip. It waits for every
-# gesture and skips rather than draw under one that outlived the cap.
-checkm "the resting snapshot waits for a still hand and skips a busy one" \
-       "$MAIN" 'private func captureRestingLook\(\) async \{(?:(?!\n    \}).)*await GestureGate\.idle\(\)(?:(?!\n    \}).)*guard !Task\.isCancelled, !GestureGate\.busy,(?:(?!\n    \}).)*!chrome\.dockBusy else \{ return \}' yes
+# The resting snapshot (`captureRestingLook`, a synchronous `drawHierarchy`
+# of the whole window 900ms after a landing) is DELETED with its only reader
+# (prd §898): the swipe's cover draws the next room's name on the brand
+# ground, not a picture of the room. Nothing else may bring the draw back.
+check "no resting snapshot is taken (prd §898)" "$MAIN" 'drawHierarchy|RoomSnapshots\.capture' no
 checkm "a room change clears the scroll flag for the arriving room" \
        "$MAIN" 'private func land\(_ target: String[^)]*\) \{(?:(?!\n    \}).)*chrome\.scrolling = false' yes
 if [[ -f "$CHROME" ]]; then
@@ -486,8 +486,8 @@ checkm "the row's verbs are derived when the menu rises, not when the row builds
 # brace and its first closing brace runs per row per body build.
 checkm "nothing in the menu builder derives verbs inline" \
        "$FEED" '\.contextMenu \{[^}]*VerbDerivation\.verbs' no
-check "the resting look is not captured while the feed is moving" \
-      "$MAIN" 'chrome\.fold == 0, !chrome\.scrolling, !chrome\.dockBusy else \{ return \}' yes
+# "the resting look is not captured while the feed is moving" (prd §661) is
+# retired with the capture itself (prd §898) — see the §898 negative above.
 
 # ------------------------------------------------------------ the instrument
 
@@ -817,8 +817,13 @@ mutate "the lift stops waiting on the dock in hand"  main \
 # shape, the freeze as reported.
 mutate "the dock's hold on the lift is capped at the feed's three seconds"  main \
   's/while chrome\.dockBusy \|\| \(chrome\.scrolling && waited < Self\.stillnessCapMs\),/while chrome.scrolling || chrome.dockBusy, waited < Self.stillnessCapMs,/' || mfails=$((mfails + 1))
-mutate "the resting snapshot draws under a moving hand again"  main \
-  's/        await GestureGate\.idle\(\)\n        guard !Task\.isCancelled, !GestureGate\.busy,\n/        guard !Task.isCancelled,\n/' || mfails=$((mfails + 1))
+# §898: the capture is deleted with its reader. These two put a window
+# snapshot back — the one thing left for the §898 negative to refuse — one as
+# the old capture call, one as a bare `drawHierarchy` under another name.
+mutate "a resting snapshot capture comes back (prd §898)"  main \
+  's/    private func dragMove\(_ t: CGFloat\) \{\n/    private func dragMove(_ t: CGFloat) {\n        RoomSnapshots.capture(source: filter.source, frame: chrome.pagerFrame)\n/' || mfails=$((mfails + 1))
+mutate "a window drawHierarchy comes back under another name (prd §898)"  main \
+  's/^import SwiftUI$/import SwiftUI\nlet reDrawn = UIGraphicsImageRenderer(size: .zero).image { _ in UIView().drawHierarchy(in: .zero, afterScreenUpdates: false) }/m' || mfails=$((mfails + 1))
 mutate "a cancelled waiter spins the gate for the whole cap"  gate \
   's/while busy, !Task\.isCancelled, ContinuousClock\.now < deadline/while busy, ContinuousClock.now < deadline/' || mfails=$((mfails + 1))
 mutate "the gate's cap shrinks back to a hand's length"  gate \
@@ -850,8 +855,6 @@ mutate "a wave bump stops stamping its time"  feed \
   's/(shapeWave \+= 1)\n(\s*)shapeWaveAt = Date\.timeIntervalSinceReferenceDate/$1/' || mfails=$((mfails + 1))
 mutate "the menu derives its verbs per row build again"  feed \
   's/RowVerbMenu\(thing: thing, room: source\) \{ run\(\$0, on: \$1\) \}/let verbs = VerbDerivation.verbs(for: thing)\n                if let v = verbs.first { Button { run(v, on: thing) } label: { Text(v.label) } }/' || mfails=$((mfails + 1))
-mutate "the resting look is captured mid-scroll again"  main \
-  's/chrome\.fold == 0, !chrome\.scrolling, !chrome\.dockBusy else \{ return \}/chrome.fold == 0, !chrome.dockBusy else { return }/' || mfails=$((mfails + 1))
 
 # Section D (prd §600). Each of these builds green and renders a room that
 # looks entirely correct while making a false claim about it, or pays back the

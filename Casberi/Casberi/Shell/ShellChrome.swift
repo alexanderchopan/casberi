@@ -192,7 +192,8 @@ final class ShellChrome {
     /// the rest of the way to rest instead of tracking a finger that is gone.
     var pageDragCommitted = false
     /// The pager's frame in window space — where a room's last look is
-    /// captured from (`RoomSnapshots`). Layout, not state: written on
+    /// measured for the cover's travel (`RoomSnapshots`, its other reader,
+    /// is deleted since prd §898). Layout, not state: written on
     /// geometry change, never a reason to re-render.
     @ObservationIgnored var pagerFrame: CGRect = .zero
 

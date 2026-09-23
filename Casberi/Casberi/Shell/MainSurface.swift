@@ -2696,51 +2696,6 @@ struct MainSurface: View {
     /// finger — a pull that meets nothing must still answer the hand, or the
     /// swipe reads as broken rather than as the last room — and the ring
     /// stays put, since there is no chip for it to lean toward.
-    /// A room's last look, taken AT REST — never on a gesture (PERF
-    /// 2026-09-08).
-    ///
-    /// It was taken on the FIRST MOVE of every swipe (and on a chip tap):
-    /// `drawHierarchy` over the whole window, synchronously, on the one frame
-    /// the gesture has to start smoothly on — §632's second amendment halved
-    /// its resolution and left it on that frame. Now it runs from a task
-    /// keyed on the room, ~0.9s after arrival, when the room has drawn its
-    /// rows and its head: nothing is moving, nobody is waiting, and a
-    /// 20–40ms draw is invisible.
-    ///
-    /// **Skipped, not deferred, when it would be wrong or felt.** A drag in
-    /// flight or a card underneath (a picture of the cover would be filed
-    /// as this room — the 2026-09-06 double-text report), a pushed room or a
-    /// sheet over the pager (the capture would be of them), the scene not
-    /// active, or a feed already scrolled (`chrome.fold > 0` — the draw
-    /// would land mid-scroll as a hitch, and a snapshot of the top of a room
-    /// the person has left the top of is stale on arrival anyway) **or still
-    /// moving (`chrome.scrolling`, 2026-09-09, prd §661)** — the fold has a
-    /// 60pt floor, so a scroll begun inside the first 0.9s and still under
-    /// it at the tick read as "at the top" and admitted a 20–40ms
-    /// `drawHierarchy` into the frames of the scroll it was meant to avoid.
-    /// A room with no look shows its mark on the page, which is the
-    /// carousel's documented fallback.
-    ///
-    /// The 2026-09-06 "two sets of text" guard (capture only after the room
-    /// has been on screen half a second) is kept by construction: the sleep
-    /// is longer than that, and a source change cancels the task.
-    private func captureRestingLook() async {
-        try? await Task.sleep(for: .milliseconds(900))
-        // …and never under a moving hand (prd §725): `drawHierarchy` renders
-        // the whole window synchronously on main, and 900ms after a chip tap
-        // is when a finger is flicking the strip to the next room. §661
-        // guarded the feed's scroll and left the dock's; this waits for all
-        // three gestures and, if the cap ran out on a still-busy hand, skips
-        // — the snapshot is a nicety and is retaken on the next room change.
-        await GestureGate.idle()
-        guard !Task.isCancelled, !GestureGate.busy,
-              scenePhase == .active, route.path.isEmpty,
-              chrome.pageDragX == 0, chrome.pageDragTarget == nil,
-              !chrome.walkModalOpen, !chrome.walkSheetOpen,
-              chrome.fold == 0, !chrome.scrolling, !chrome.dockBusy else { return }
-        RoomSnapshots.capture(source: filter.source, frame: chrome.pagerFrame)
-    }
-
     private func dragMove(_ t: CGFloat) {
         // A finger arriving mid-flight lands the pending room as a cut and
         // starts this drag from it (2026-09-08) — see `deal(to:)`.
@@ -2904,8 +2859,8 @@ struct MainSurface: View {
                 guard chrome.openFolder != nil else { return }
                 withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
             })
-            // Where the pager is, in window space — `RoomSnapshots` crops the
-            // window to this.
+            // Where the pager is, in window space — the cover's travel and a
+            // deal's flight are measured against its width.
             .background {
                 GeometryReader { g in
                     Color.clear
@@ -2921,9 +2876,6 @@ struct MainSurface: View {
                 GitHubWatchStore.shared.refresh(context: modelContext)
             }
             .task(id: filter.source) { await releaseSwipeBudget() }
-            // The room's last look for the carousel, taken at rest — see
-            // `captureRestingLook`. A source change cancels a pending one.
-            .task(id: filter.source) { await captureRestingLook() }
             // The room's own width, stated (prd §805 — see `body`). This is
             // the shell's width MINUS the two columns that are reserved
             // outside this frame: the rail's leading padding
@@ -3058,6 +3010,13 @@ struct MainSurface: View {
             .background {
                 ZStack(alignment: .top) {
                     DS.themedPage
+                    // The table a swipe is dealt on (prd §898) — here, on
+                    // the shell's own coat, so it reaches the status bar
+                    // and the band, not just the pager's frame: the whole
+                    // ground goes to the brand hue while a card is in the
+                    // air (user: "it would need to make the entire
+                    // background pink").
+                    SwipeGround()
                 }
                 .ignoresSafeArea()
             }
@@ -3373,10 +3332,14 @@ private struct PagerDrag<Content: View>: View {
             //
             // A room paints NO ground of its own — §159 moved the page coat up
             // to the shell, so a `FeedScreen` is transparent rows and nothing
-            // else. `PagerCover` sits between that shell ground and this card,
+            // else. `PagerCover` sat between that shell ground and this card
             // holding a PICTURE of the room being turned to, so its rows were
             // showing straight through the live room's own: the same list
             // twice, offset by whatever the two scroll positions differed by.
+            // The picture is gone (prd §898) and the ground beneath is the
+            // brand hue while this card is in the air, which is the same
+            // reason twice over: an opaque card is the only kind that does
+            // not tint.
             // The 2026-09-06 capture guard (`captureCurrentLook`) fixed a
             // different cause of the same symptom — pictures filed under the
             // wrong room — and could not touch this one, which is why it was
@@ -3444,10 +3407,25 @@ private struct PagerDrag<Content: View>: View {
 // no fade (a card being dealt off a stack does not turn to glass), and it
 // runs before the room swaps rather than beside the build.
 
-/// The next room's cover, under the card being dragged (2026-09-06). Its
-/// mark and word on the page, growing from 0.92 to 1 as the drag commits,
-/// so the destination is seen before the finger lets go. Reads only the
-/// drag's own values, in a body of its own.
+/// The next room's NAME, on the table under the card being dragged (prd
+/// §898, 2026-09-23 — from 2026-09-06 to here this was a CARD: the room's
+/// last look under a wash, with the mark on top). Its mark and word at the
+/// entering edge, growing from 0.94 to 1 as the drag commits, so the
+/// destination is seen before the finger lets go, and riding with the finger
+/// so it is legible from the first move (centred, it sat in the off-screen
+/// middle of a card for half of every drag — 2026-09-06). It draws NO ground:
+/// the ground under a swipe is `SwipeGround`, the shell's coat in the brand
+/// hue, and a cover that painted a page or a picture over it would hide the
+/// one thing §898 put there. The picture went with the ruling — a pink table
+/// cannot also be a preview — and its capture (`RoomSnapshots`,
+/// `captureRestingLook`) went with the picture, §723's rule. The mark stays
+/// through the flight and leaves under the landed room, which is opaque
+/// (`PagerDrag`), so nothing double-exposes. Reads only the drag's own
+/// values, in a body of its own.
+///
+/// The word is `DS.brandGroundInk` on the table (white in both themes,
+/// 8.4:1) and the page's own primary where the table stands down (a vivid
+/// page or a photo, `DS.brandGround == nil`).
 private struct PagerCover: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -3456,81 +3434,59 @@ private struct PagerCover: View {
         if let label = chrome.pageDragTarget {
             let p = min(1, abs(chrome.pageDragProgress))
             let width = max(chrome.pagerFrame.width, 1)
-            // The next card comes from the side the finger is pulling from:
-            // a leftward pull (progress > 0) brings it in from the right.
+            // The name comes from the side the finger is pulling from: a
+            // leftward pull (progress > 0) brings it in from the right.
             let side: CGFloat = chrome.pageDragProgress >= 0 ? 1 : -1
             let venues = chrome.categoryVenues[label] ?? []
             let landing = CategoryFold.isCategory(label)
                 ? (CategoryFold.landing(category: label, present: venues) ?? label)
                 : label
-            // **THE MARK IS ON EVERY CARD (user, 2026-09-06: "i think you
-            // should see the icon anytime you are switching").** It used to be
-            // the snapshot OR the mark — a room you had visited showed its
-            // last look, one you hadn't showed its icon — so the icon appeared
-            // only sometimes, which read as inconsistency rather than as two
-            // cases. Now the room's last look is the card's GROUND and the
-            // mark rides on top of it, so a page turn always names where it is
-            // going and still looks like the room it is bringing in.
-            //
-            // The mark still leaves the instant the room lands (§632
-            // amendment): over a snapshot it is a label on a picture, over the
-            // arriving live room it would be the double exposure that started
-            // all this.
-            ZStack {
-                if let look = RoomSnapshots.image(for: landing) {
-                    Image(uiImage: look)
-                        .resizable()
-                        .scaledToFill()
-                        // A card of rows is busy; the mark needs its own
-                        // ground to read against, and a wash is what a card
-                        // being handed over should look like anyway.
-                        .overlay(Color.black.opacity(chrome.pageDragCommitted ? 0 : 0.45))
+            let ink = DS.brandGround == nil ? DS.textPrimary : DS.brandGroundInk
+            let edge: Alignment = side >= 0 ? .leading : .trailing
+            VStack(alignment: side >= 0 ? .leading : .trailing,
+                   spacing: DS.Space.s3) {
+                if label == "All" {
+                    Text("All").dsText(.heading40).foregroundStyle(ink)
                 } else {
-                    Color.clear.dsPageBackground()
-                }
-                if !chrome.pageDragCommitted {
-                    // ON THE EDGE THE CARD ENTERS FROM, and this time for a
-                    // measured reason (2026-09-06). Centred, the mark sits in
-                    // the middle of a full-width card that is mostly off
-                    // screen, so it is invisible for the first half of every
-                    // drag and arrives only as the turn completes — which is
-                    // why "not all of the screens do you see an icon" survived
-                    // putting the mark on every card. The card enters from
-                    // `side`, so its leading portion is what you can see
-                    // first; the mark rides there and is legible from the
-                    // moment the card appears, which is what "see the icon
-                    // anytime you are switching" asks for.
-                    let edge: Alignment = side >= 0 ? .leading : .trailing
-                    VStack(alignment: side >= 0 ? .leading : .trailing,
-                           spacing: DS.Space.s3) {
-                        if label == "All" {
-                            Text("All").dsText(.heading40).foregroundStyle(DS.textPrimary)
-                        } else {
-                            BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
-                            Text(label)
-                                .dsText(.heading24)
-                                .foregroundStyle(DS.textPrimary)
-                        }
-                    }
-                    .padding(.horizontal, DS.Space.s6)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: edge)
+                    // Bare, as the dock draws it — no rim, no disc (user:
+                    // a white one "looks accidental", a black one too, and
+                    // the word beneath already frames it).
+                    BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
+                    Text(label)
+                        .dsText(.heading24)
+                        .foregroundStyle(ink)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: reduceMotion ? 0 : 28 * (1 - p), style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 28 * (1 - p), style: .continuous)
-                    .strokeBorder(.white.opacity(reduceMotion ? 0 : 0.18 * (1 - p)), lineWidth: 1)
-                    .allowsHitTesting(false)
-            }
+            .padding(.horizontal, DS.Space.s6)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: edge)
             .scaleEffect(reduceMotion ? 1 : 0.94 + 0.06 * p)
-            // BOTH CARDS MOVE (2026-09-06): the next card slides in from its
-            // edge as the current one leaves, page beside page, and on commit
-            // it finishes the trip to rest while the real room fades in over
-            // it. Under Reduce Motion it stays put and only fades.
+            // It moves with the card it is under (2026-09-06): in from its
+            // edge as the current card leaves, and on commit the rest of the
+            // way to rest while the real room lands over it. Under Reduce
+            // Motion it stays put and only fades.
             .offset(x: reduceMotion || chrome.pageDragCommitted
                        ? 0 : chrome.pageDragX + side * width)
             .transition(.opacity)
+        }
+    }
+}
+
+/// The table under the swipe (prd §898): the shell's ground in the brand
+/// hue while a card is in the air, gone at rest. Rides `pageDragProgress` —
+/// the ramp the card's own cardness rides (§648), so the table is fully lit
+/// at the turn, holds through the flight (`deal` animates the progress to
+/// ±1) and fades back over the landing spring (`land` brings it home inside
+/// `DS.Motion.standard`), never a cut. A rubber-band pull at the strip's end
+/// has no neighbour and a progress of 0, so no table lights for a card that
+/// is not there (§648's honest-motion rule). A leaf with a body of its own,
+/// because the progress is written on every touch move. Draws nothing on a
+/// vivid page or a photo (`DS.brandGround`).
+private struct SwipeGround: View {
+    @Environment(ShellChrome.self) private var chrome
+
+    var body: some View {
+        if let ground = DS.brandGround {
+            ground.opacity(min(1, abs(chrome.pageDragProgress)))
         }
     }
 }

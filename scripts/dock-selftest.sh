@@ -765,6 +765,40 @@ for page in data notifications mcp diagnostics language dockOrder; do
 done
 
 
+# --- 12. THE SWIPE IS DEALT ON THE BRAND GROUND, AND THE COVER DRAWS NO GROUND (prd §898) --
+# The ground under a room swipe is the shell's own coat in the brand hue
+# (`SwipeGround`, `DS.brandGround`), lit on the turn's ramp and gone at rest;
+# the cover is the next room's bare mark and name and paints nothing behind
+# them. Three drifts a build cannot see: the ground mounted inside the pager
+# (it stops at the status bar and the band — "you have black in the
+# background still"); the cover painting a page or a picture again, which
+# hides the table; and a snapshot capture coming back for a reader that no
+# longer exists (§723).
+grep -q 'SwipeGround()' "$TMP/main.nc" \
+  || { echo "✗ the shell's coat no longer mounts SwipeGround — the swipe is dealt on"; \
+       echo "  the page colour again (prd §898)."; fail=1; }
+grep -q 'ground.opacity(min(1, abs(chrome.pageDragProgress)))' "$TMP/main.nc" \
+  || { echo "✗ SwipeGround is off the turn's ramp — the table and the card would disagree"; \
+       echo "  about when a turn is a turn (§648's cause, again)."; fail=1; }
+awk '/^private struct PagerCover/,/^}/' "$TMP/main.nc" > "$TMP/cover.nc"
+[ -s "$TMP/cover.nc" ] \
+  || { echo "✗ PagerCover is gone or renamed — the swipe no longer names its destination."; fail=1; }
+grep -qE 'dsPageBackground|RoomSnapshots|Image\(uiImage|themedPage|clipShape' "$TMP/cover.nc" \
+  && { echo "✗ PagerCover paints a ground, a picture or a card again — over the brand"; \
+       echo "  ground that is a black rectangle sliding in (prd §898)."; fail=1; }
+grep -q 'DS.brandGroundInk' "$TMP/cover.nc" \
+  || { echo "✗ the cover's word is not brandGroundInk — textPrimary is black on the light"; \
+       echo "  page and reads at 2.5:1 on the ground (prd §898)."; fail=1; }
+grep -q 'drawHierarchy' "$TMP/main.nc" \
+  && { echo "✗ a window snapshot is back in MainSurface — nothing reads one since §898."; fail=1; }
+[ ! -f "Casberi/Casberi/Shell/RoomSnapshots.swift" ] \
+  || { echo "✗ RoomSnapshots.swift is back — a store with no reader (prd §723, §898)."; fail=1; }
+strip_comments "Casberi/Casberi/Design/DesignTokens.swift" > "$TMP/tokens.nc"
+awk '/static var brandGround: Color\?/,/^    }/' "$TMP/tokens.nc" > "$TMP/ground.nc"
+grep -q 'if vividBackground { return nil }' "$TMP/ground.nc" \
+  || { echo "✗ brandGround no longer stands down on a vivid page or a photo — a pink table"; \
+       echo "  on the pink page is a table you cannot see (prd §898, §740's rule)."; fail=1; }
+
 if [ $fail -eq 0 ]; then
   echo "✓ dock self-test"
 else

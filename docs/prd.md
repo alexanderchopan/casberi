@@ -60804,3 +60804,83 @@ does not have; giving it a real link would send the demo to a live service.
 Checked on the iPhone 17 Pro simulator on "Dayvan Cowboy — Boards of Canada",
 "How a compiler actually reads your code", "The one about compilers" and
 "Ethereum · $ETH".
+
+## §898 — The swipe is dealt on the brand ground (user: "you know how when you swipe between rooms it's like a card and it's swiping on a black background? What if that background was pink and the icon for the room it's about to go into was on a white circle or something?" → "do it", 2026-09-23)
+
+**The report, and what the black was.** The ground behind a room swipe was two
+black layers: the next room's cover (`PagerCover` — its last look under a 45%
+wash, or the bare page where no look was held) sliding in beside the card
+being dragged, over the shell's own black coat. §648 keyed every card signal
+to the turn, and every one of them was a black card on a black ground, so the
+whole vocabulary — corners, tilt, scale, shadow — hung on a 1pt lit edge.
+
+**Mocked, in seven rounds, before a line was written.** The first mock put the
+pink on the incoming card as a card BACK; the user's screenshot of it ("you
+have black in the background still") ruled that out: the pink is the TABLE,
+the shell's whole ground, status bar to dock. Then the colour: full-chroma
+`DS.brand` refused as a flash on every swipe (six rooms, six flashes, an OLED
+at night); `brandInk`'s dark register too bright still; the user's own
+reading — "it's like it's shadowed … make it more shadowed to tone it down" —
+fixed it at the hue in shadow. Then the mark: a white disc ("giant circle"),
+a thin white rim ("looks accidental"), a black rim ("also looks accidental"),
+a wide black coin ("unless we made it larger on purpose") — and the ruling is
+NONE, the bare mark as the dock draws it, because the name beneath already
+frames it. Then the alternative colours, every one the app already owns: the
+accent blue (the lit chip's own), graphite (a table only needs contrast), the
+room's OWN colour (Farcaster goes purple), and the vivid pages. Purple was
+declined on the mock beside a swipe into X: X, ChatGPT, Privacy Pools,
+ether.fi and Apple Wallet are black or white in `brandHue(for:)`, so the rule
+dies on a third of the dock — and §524 had already taken source hue off every
+ground ("colour that says where it came from goes"). Pink is the only one
+that says Casberi.
+
+**The ruling.**
+
+- **`DS.brandGround` — the mark's hue in shadow, `#8c2451`**: hue 334° held,
+  saturation at `brandInk`'s notch (74), brightness 55. A third register of
+  the one pink, after `brand` (the mark) and `brandInk` (the day divider);
+  `brand` stays the only spelling of the mark's value. FIXED across themes,
+  like the mark. **Nil on a vivid page or a photo**, `brandInk`'s own rule
+  (§740): a ground the person coloured is louder than the app's voice, and a
+  pink table on the pink page is a table you cannot see. The fallback if it
+  reads too dim on a device is `brandInk`'s light-page value (`#b8306b`).
+- **`SwipeGround` sits on the SHELL's coat** (`MainSurface`'s `.background`
+  ZStack beside `DS.themedPage`), not in the pager, so it reaches the status
+  bar and the band. It paints the ground at `min(1, abs(pageDragProgress))`
+  — §648's ramp, so the table and the card agree about when a turn is a
+  turn: full at the commit, held through the flight (`deal` animates the
+  progress to ±1), faded back over the landing spring (`land` brings it home
+  inside `DS.Motion.standard`), and 0 for a rubber-band pull at the strip's
+  end, where there is no card to light a table for. A leaf with its own body,
+  because the progress is written on every touch move.
+- **The cover draws NO ground and NO picture.** The bare mark at `DS.Mark.hero`
+  and the name at the entering edge, riding the finger as since 2026-09-06.
+  The word is `DS.brandGroundInk` — white in BOTH themes, 8.4:1 on the ground
+  (7:1 is the enhanced bar, so Increase Contrast needs no second value) —
+  because `textPrimary` is black on the light page and black on this ground
+  is 2.5:1. Where the ground stands down the word takes `textPrimary`.
+- **`RoomSnapshots` and `captureRestingLook` are DELETED** with their only
+  reader, §723's rule. A pink table cannot also be a preview of the next
+  room, and a `drawHierarchy` of the whole window that nothing reads is
+  20–40ms on the main thread for nothing, 900ms after every landing.
+  `room-perf-selftest.sh`'s two snapshot guards (§661, §725) are retired with
+  the capture and replaced by a negative that refuses one coming back.
+
+**What it costs, stated.** The preview is gone — a turn names the destination
+and stops showing it. The 2026-09-06 argument for the picture ("looks like the
+room it is bringing in") was already weak under a 45% wash, and the mark is
+what was read. The landing is a CUT inside the pager (the room lands whole,
+§632's rule against materialising) while the strips above and below fade —
+the table going dark after the card lands.
+
+**Guards.** `dock-selftest.sh` section 12: `SwipeGround` mounted on the shell,
+on the turn's ramp; `PagerCover` free of any page, picture, clip or
+`themedPage`; the word in `brandGroundInk`; no `drawHierarchy` in
+`MainSurface`; `RoomSnapshots.swift` absent; `brandGround` nil on vivid.
+`room-perf-selftest.sh`: the capture stays gone, with two mutations that put
+a snapshot back under both spellings.
+
+**UNSEEN on a device.** Built on a Linux host from the mocks, against the
+self-tests and the static audits only — no simulator run. First things to
+watch: the landing's cut-and-fade, the deeper pink at night, and the light
+theme's white card on the ground.
