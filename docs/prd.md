@@ -60691,3 +60691,26 @@ bottom dial stands down for every note shape.
 Checked on the iPhone 17 Pro simulator, after a fresh demo pour, on "Weekly review
 — week 32", "Slow morning, long walk" and "The beauty of the house is
 immeasurable."
+
+## §894 — Chats and mail lead with who they are from, the dial under the head (user, approving the batched mocks — "chats and mail: ok", 2026-09-23)
+
+The last of the three approved kinds. Each takes the shared head (`SheetPartyHead`,
+§892) and, being read for pages, the dial under it (§882, §893); the bottom dial
+stands down for all three.
+
+- **An AI conversation** (a ChatGPT or Claude import) leads with the agent — its
+  mark, the pink day, "Conversation · 9 turns", and "in <project>" for a Claude
+  Code session, as the old head said. The conversation's own title stays its
+  headline. `AgentConversationHead` is deleted, and `agent-sheet-selftest.sh`
+  guards the new head's line instead. The turns stand in the words' column.
+- **A mail** leads with its SENDER — their initial, their name, "address ·
+  Gmail" — and the subject is the headline. `MailContentView` stops drawing the
+  sender row, since the head does, and its body stands in the words' column.
+- **A chat** (a Telegram or Snapchat transcript) leads with the PERSON. "Chat with
+  Ada" is the name said twice, so the name stands alone, with "Telegram · 6,310
+  messages" under it. Each message draws its speaker over its words ("Ada: …"
+  was one line with the speaker inside it), yours on the trailing side, as the AI
+  conversation's are. The demo's chats hold no messages, so this half is unseen.
+
+Checked on the iPhone 17 Pro simulator on "Designing a bento panel", "Design
+review moved to Thursday" and "Chat with Ada".

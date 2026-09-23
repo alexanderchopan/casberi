@@ -362,8 +362,14 @@ struct ThingSheetView: View {
                 let momentHead = (thing.kind == .event || thing.kind == .reminder)
                     && moneyReceipt == nil && vibenetEventFacts == nil
                     && ThingChart.kind(for: thing) == nil && !articleHead && !postHead
+                // A CONVERSATION, A MAIL, A CHAT (prd §894): the shared head,
+                // the dial under it, the words after — they are read for pages.
+                let mailHead = thing.kind == .mail && moneyReceipt == nil
+                    && !articleHead && !postHead && !momentHead && noteShape == nil
+                let transcriptHead = socialShape == .transcript
+                let talkHead = agentConversation != nil || mailHead || transcriptHead
                 let ownHead = articleHead || postHead || framedShot || moneyReceipt != nil
-                    || vibenetEventFacts != nil || momentHead || noteShape != nil
+                    || vibenetEventFacts != nil || momentHead || noteShape != nil || talkHead
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.
@@ -592,10 +598,24 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.06)
                 } else if let agentConversation {
-                    AgentConversationHead(reading: agentConversation)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s3)
+                    // The agent is who it is from; the conversation's own
+                    // title stays its headline (prd §894).
+                    SheetPartyHead(name: thing.source, day: thing.capturedAt,
+                                   line: Self.turnsLine(agentConversation),
+                                   onFace: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil) {
+                        BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
+                    }
+                    .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                    .settleIn(delay: 0.04)
+                    Text(agentConversation.hero)
+                        .dsText(Self.titleRung(for: agentConversation.hero).style)
+                        .foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                        .padding(.horizontal, DSRoomChassis.leadInset)
+                        .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.06)
+                    noteDial
                 } else if let l2beatShape {
                 l2beatHead(l2beatShape)
                     .padding(.horizontal, DS.Space.s4)
@@ -652,6 +672,43 @@ struct ThingSheetView: View {
                     // an object that states its own subject does not want a
                     // label over it.
                     EmptyView()
+                } else if mailHead {
+                    // The SENDER leads (prd §894): a mail is from someone, and
+                    // the subject is its headline.
+                    let sender = Self.mailSender(thing)
+                    SheetPartyHead(name: sender.map { SenderInitial.displayName(of: $0) } ?? thing.source,
+                                   day: thing.capturedAt,
+                                   line: [sender.flatMap(Self.mailAddress), thing.source]
+                                       .compactMap { $0 }.joined(separator: " · ")) {
+                        if let sender {
+                            SenderInitial(sender: sender, size: DS.Face.shelf)
+                        } else {
+                            BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
+                        }
+                    }
+                    .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                    .settleIn(delay: 0.04)
+                    titleBlock
+                        .padding(.horizontal, DSRoomChassis.leadInset)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.06)
+                    noteDial
+                } else if transcriptHead {
+                    // The PERSON leads a chat; its "Chat with Ada" title is the
+                    // name said twice, so the name stands alone (prd §894).
+                    let name = Self.chatName(thing.title)
+                    SheetPartyHead(name: name, day: thing.capturedAt,
+                                   line: Self.chatLine(thing)) {
+                        Text(verbatim: String(name.prefix(1)).uppercased())
+                            .dsText(.badgeInitial12)
+                            .foregroundStyle(DS.textPrimary)
+                            .frame(width: DS.Face.shelf, height: DS.Face.shelf)
+                            .background(Circle().fill(DS.fillLine))
+                            .accessibilityHidden(true)
+                    }
+                    .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                    .settleIn(delay: 0.04)
+                    noteDial
                 } else if momentHead {
                     SheetPartyHead(name: thing.source, day: momentStart,
                                    line: momentLine,
@@ -805,7 +862,8 @@ struct ThingSheetView: View {
                         != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)))
                 if contentShown {
                     ThingContentView(thing: thing, agent: agentConversation,
-                                     articleArt: !articleHead)
+                                     articleArt: !articleHead,
+                                     mailSender: !mailHead)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.12)
                 }
@@ -895,7 +953,7 @@ struct ThingSheetView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
                 }
-                if moneyReceipt == nil && !framedShot && !articleHead && noteShape == nil {
+                if moneyReceipt == nil && !framedShot && !articleHead && noteShape == nil && !talkHead {
                     // The disc dial, standardized across every sheet
                     // (2026-07-23) — it was B1-only (the wallet stage, the
                     // framed screenshot) and everything else kept the older
@@ -1879,6 +1937,46 @@ struct ThingSheetView: View {
               first.caseInsensitiveCompare(title.trimmingCharacters(in: .whitespaces)) == .orderedSame
         else { return text }
         return split.rest
+    }
+
+    /// "Conversation · 9 turns" (prd §894).
+    static func turnsLine(_ c: AgentSheet.Conversation) -> String {
+        let n = c.counted ?? c.turns.count
+        let line = String(localized: "Conversation · \(n) turns")
+        // A Claude Code session names its project, as the old head did.
+        guard let project = c.project, !project.isEmpty else { return line }
+        return line + " · " + String(localized: "in \(project)")
+    }
+
+    /// A mail's sender, as `MailContentView` reads it.
+    static func mailSender(_ thing: Thing) -> String? {
+        if let from = thing.authorHandle, !from.isEmpty { return from }
+        if thing.content.hasPrefix("From ") {
+            let from = String(thing.content.dropFirst("From ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return from.isEmpty ? nil : from
+        }
+        return nil
+    }
+
+    /// "uma@studio.example" out of "Uma Patel <uma@studio.example>".
+    static func mailAddress(_ sender: String) -> String? {
+        if let open = sender.firstIndex(of: "<"), let close = sender.firstIndex(of: ">"), open < close {
+            return String(sender[sender.index(after: open)..<close])
+        }
+        return sender.contains("@") ? sender : nil
+    }
+
+    /// "Ada" out of "Chat with Ada"; a group's own name stands as it is.
+    static func chatName(_ title: String) -> String {
+        let prefix = String(localized: "Chat with ")
+        return title.hasPrefix(prefix) ? String(title.dropFirst(prefix.count)) : title
+    }
+
+    /// "Telegram · 6,310 messages".
+    static func chatLine(_ thing: Thing) -> String {
+        guard let n = thing.messageCount, n > 0 else { return thing.source }
+        return "\(thing.source) · " + String(localized: "\(n) messages")
     }
 
     /// "Piranesi — Susanna Clarke" as its two parts.

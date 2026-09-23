@@ -122,6 +122,8 @@ struct ThingContentView: View {
     /// `ArticleSheetHead` draws an article's picture as the lead, so the sheet
     /// passes `false` wherever that head is drawn; every other caller keeps it.
     var articleArt: Bool = true
+    /// Whether a mail draws its sender (prd §894) — the sheet's head does now.
+    var mailSender: Bool = true
 
     /// True when the `.link` branch below resolves to the LinkPreviewCard,
     /// whose footer already names the host — ThingSheetView's Site row keys
@@ -448,7 +450,8 @@ struct ThingContentView: View {
                 if !agent.turns.isEmpty {
                     AgentTurnsView(turns: agent.turns, cut: agent.cut,
                                    oneSided: agent.oneSided, source: thing.source)
-                        .padding(.horizontal, DS.Space.s4)
+                        // The words' column, under the sheet's head (§894).
+                        .padding(.horizontal, DSRoomChassis.leadInset)
                         .padding(.bottom, DS.Space.s3)
                 } else if !thing.content.isEmpty,
                           thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -524,7 +527,7 @@ struct ThingContentView: View {
             // no sender field at all — MailContentView shows whichever facts
             // the record actually has, never both when they'd say the same
             // thing.
-            MailContentView(thing: thing)
+            MailContentView(thing: thing, showsSender: mailSender)
         case .reminder:
             if let due = thing.dueAt {
                 // The same stub an event gets (prd §365), keeping the one
@@ -1140,9 +1143,21 @@ private struct ChatBubbles: View {
         let hiddenCount = paragraphs.count - shown.count
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             ForEach(Array(shown.enumerated()), id: \.offset) { _, line in
-                Text(ProseLinks.rendered(String(line)))
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                // WHO SAID IT, over what they said (prd §894): "Ada: …" was
+                // one line with the speaker inside it. Yours stand on the
+                // trailing side, as the AI conversation's do.
+                let said = Self.speaker(of: String(line))
+                let mine = said.name.map(Self.isMine) ?? false
+                VStack(alignment: mine ? .trailing : .leading, spacing: DS.Space.s1) {
+                    if let name = said.name {
+                        Text(verbatim: name)
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    }
+                    Text(ProseLinks.rendered(said.words))
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .multilineTextAlignment(mine ? .trailing : .leading)
+                }
+                .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
             }
             if hiddenCount > 0 {
                 Button {
@@ -1155,8 +1170,22 @@ private struct ChatBubbles: View {
                 .dsHover()
             }
         }
-        .padding(.horizontal, DS.Space.s4)
+        .padding(.horizontal, DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s3)
+    }
+
+    /// "Ada: see you at 7" → ("Ada", "see you at 7"). A line with no short
+    /// speaker before a colon is words alone.
+    static func speaker(of line: String) -> (name: String?, words: String) {
+        guard let colon = line.firstIndex(of: ":") else { return (nil, line) }
+        let name = line[..<colon].trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty, name.count <= 32, !name.contains("http") else { return (nil, line) }
+        let words = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+        return (name, words)
+    }
+
+    static func isMine(_ name: String) -> Bool {
+        ["you", "me"].contains(name.lowercased())
     }
 }
 
@@ -1584,6 +1613,7 @@ private struct FileChip: View {
 /// same fact restated.
 private struct MailContentView: View {
     let thing: Thing
+    var showsSender = true
 
     /// New rows carry the sender in `authorHandle`; older rows stored it only
     /// as the content's "From …" prefix — the same fallback the feed row uses,
@@ -1612,7 +1642,7 @@ private struct MailContentView: View {
 
     @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            if let sender {
+            if showsSender, let sender {
                 HStack(spacing: DS.Space.s3) {
                     SenderInitial(sender: sender, size: 38)
                     VStack(alignment: .leading, spacing: 1) {
@@ -1648,7 +1678,8 @@ private struct MailContentView: View {
                 DSFootnote("The header only — the message is still in Mail.")
             }
         }
-        .padding(.horizontal, DS.Space.s4)
+        // The words' column under the sheet's head (prd §894).
+        .padding(.horizontal, showsSender ? DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s3)
     }
 }

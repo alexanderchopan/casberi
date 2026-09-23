@@ -17,56 +17,6 @@ import SwiftUI
 
 // MARK: - Conversation head
 
-/// The hero of a chat sheet: what it was called, where it ran, and how big it
-/// is — which is the fact a sheet that showed one line of a 61-turn session
-/// could never state.
-struct AgentConversationHead: View {
-    let reading: AgentSheet.Conversation
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(verbatim: reading.hero)
-                .dsText(.stat24)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
-            if let project = reading.project {
-                // The project as a rung of its own rather than a prefix inside
-                // the headline — `WorkStageView`'s line, and drawn only because
-                // a stored tag carries it.
-                Text("in \(project)")
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .padding(.top, DS.Space.s1 + 2)
-            }
-            if let meta {
-                Text(verbatim: meta)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.top, DS.Space.s2)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// "12 turns · 4 Aug at 09:41". Absent halves are simply not printed — a
-    /// chat with no counted turns says when it happened and nothing about its
-    /// size, rather than a zero standing in for an unknown.
-    private var meta: String? {
-        var parts: [String] = []
-        if let turns = reading.counted {
-            parts.append(turns == 1
-                ? String(localized: "1 turn")
-                : String(localized: "\(turns) turns"))
-        }
-        if let opened = reading.opened {
-            parts.append(opened.formatted(
-                .dateTime.day().month(.abbreviated).hour().minute()))
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-}
-
 // MARK: - Turns
 
 /// The conversation itself — the thing that was in the record all along.
