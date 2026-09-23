@@ -84,7 +84,9 @@ grep -q 'thing.embedding = nil' "Casberi/Casberi/Model/ThreadDigest.swift" \
 # stack names only Apple's frameworks — nothing in the source looks wrong, and
 # a "fix" that unwraps either call site restores it silently while every other
 # check stays green (xcodebuild is happy, the audits are static, and the
-# simulator ships no on-device model).
+# simulator shipped no on-device model until iOS 26; the iOS 27 sim DOES
+# report one — measured 2026-09-22, prd §889 — so a model path can be
+# exercised there now, while this harness still covers the pure logic).
 #
 # The negative sweep reads a COMMENT-STRIPPED copy: the source DOCUMENTS this
 # rule by naming the very methods it governs, so a guard grepping raw source

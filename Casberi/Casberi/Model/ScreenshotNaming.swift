@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import SwiftData
 #if canImport(FoundationModels)
@@ -133,8 +134,12 @@ enum ScreenshotNaming {
             await GestureGate.idle()
             guard thing.isLive else { continue }
             let text = thing.content
+            let ref = thing.sourceRef
             askedNow.append(thing.id.uuidString)
-            guard let title = await name(text: text) else { continue }
+            // The REF is read here, on the main actor, while the row is known
+            // live; the fetch that follows never touches the `Thing` again.
+            let picture = await ScreenshotVision.image(forAssetRef: ref)
+            guard let title = await name(text: text, image: picture) else { continue }
             // The rail: only words the screenshot actually shows.
             guard grounded(title, in: text) else { continue }
             guard thing.isLive, isWeak(thing.title) else { continue }
@@ -166,10 +171,14 @@ enum ScreenshotNaming {
     /// Whether `name` answers on the phone rather than on the key.
     static var onDeviceNames: Bool { OnDeviceModel.isAvailable }
 
-    static func name(text: String) async -> String? {
+    /// `image` is the screenshot itself, shown to the model alongside its text
+    /// on iOS 27 (`ScreenshotVision`). nil everywhere else, and nil is the old
+    /// behaviour exactly — the keyed librarian never sees it either, since a
+    /// picture posted to somebody's API is a different promise from a title.
+    static func name(text: String, image: CGImage? = nil) async -> String? {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *), OnDeviceModel.isAvailable {
-            return await ScreenshotNameModel.name(text: text)
+            return await ScreenshotNameModel.name(text: text, image: image)
         }
         #endif
         return await AgentLibrarian.name(text: text)
@@ -193,9 +202,10 @@ enum ScreenshotNameModel {
     /// Whether `name` answers on the phone rather than on the key.
     static var onDeviceNames: Bool { OnDeviceModel.isAvailable }
 
-    static func name(text: String) async -> String? {
+    static func name(text: String, image: CGImage? = nil) async -> String? {
         guard OnDeviceModel.isAvailable else { return nil }
         let excerpt = String(text.prefix(1_500))
+        let shown = image != nil
         // Throwaway session — never the composer's `ConversationModel`.
         let session = LanguageModelSession(instructions: """
         You name a screenshot from the text read out of it, so its owner can \
@@ -207,11 +217,27 @@ enum ScreenshotNameModel {
         the text is only interface chrome — buttons, times, battery, menu \
         labels — and says nothing about a subject, reply with exactly the \
         single word NONE. NONE is the right answer more often than not.
-        """ + LanguageStore.shared.llmLanguageDirective)
+        """
+        + (shown ? """
+        You are also shown the screenshot itself. Use it to work out which of \
+        the words on screen actually name the subject — what the app is, which \
+        line is the heading, what fills the picture. The picture may not add a \
+        word the text does not contain.
+        """ : "")
+        + LanguageStore.shared.llmLanguageDirective)
         do {
-            let response = try await session.respond(
-                to: "Text read out of the screenshot:\n\(excerpt)\n\nName it in a few plain words, or NONE.",
-                generating: ScreenshotNameLayout.self)
+            let response: LanguageModelSession.Response<ScreenshotNameLayout>
+            if #available(iOS 27.0, *), let image {
+                response = try await session.respond(generating: ScreenshotNameLayout.self) {
+                    "Text read out of the screenshot:\n\(excerpt)"
+                    Attachment(image)
+                    "Name it in a few plain words, or NONE."
+                }
+            } else {
+                response = try await session.respond(
+                    to: "Text read out of the screenshot:\n\(excerpt)\n\nName it in a few plain words, or NONE.",
+                    generating: ScreenshotNameLayout.self)
+            }
             let title = response.content.title
                 .trimmingCharacters(in: CharacterSet(charactersIn: ".!\"' \n"))
             guard !title.isEmpty, title.uppercased() != "NONE",

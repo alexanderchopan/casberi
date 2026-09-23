@@ -4580,6 +4580,62 @@ enum ProbeHooks {
             let n = ScreenshotIngest.ingest(context: context)
             NSLog("Photos re-ingest probe: %d new", n)
         },
+        // `-visionProbe YES` — DOES THE MODEL ACTUALLY TAKE A PICTURE
+        // (2026-09-22). The screenshot passes hand the model the shot itself
+        // on iOS 27 (`ScreenshotVision`), and nothing else here can exercise
+        // that: the naming sweep needs a real `PHAsset` with OCR text, and the
+        // demo's seeds carry `sample:` refs, so a poured demo takes the
+        // text-only branch forever. This renders a screenshot-shaped image
+        // whose words are known, names it BOTH ways, and logs each answer with
+        // the rail's verdict — so "the multimodal call works on this runtime"
+        // is measured rather than assumed, and a regression in either branch
+        // shows as one line.
+        Hook(key: "visionProbe") { _, _ in
+            Task { @MainActor in
+                NSLog("visionProbe: available=%@ model=%@",
+                      ScreenshotVision.available ? "yes" : "no",
+                      OnDeviceModel.availabilityLine)
+                let text = """
+                9:41
+                TAP Air Portugal
+                NYC to LIS  Sat 14 Sep 21:40
+                Passenger A. Chopan
+                Gate B32   Seat 14A   Boards 20:55
+                """
+                let size = CGSize(width: 390, height: 844)
+                let format = UIGraphicsImageRendererFormat.default()
+                format.scale = 1   // never the device scale (CLAUDE.md)
+                let shot = UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+                    UIColor.white.setFill()
+                    ctx.fill(CGRect(origin: .zero, size: size))
+                    UIColor(red: 0.04, green: 0.36, blue: 0.84, alpha: 1).setFill()
+                    ctx.fill(CGRect(x: 0, y: 0, width: size.width, height: 210))
+                    ("NYC to LIS" as NSString).draw(
+                        at: CGPoint(x: 22, y: 110),
+                        withAttributes: [.font: UIFont.systemFont(ofSize: 34, weight: .heavy),
+                                         .foregroundColor: UIColor.white])
+                    (text as NSString).draw(
+                        in: CGRect(x: 22, y: 240, width: 340, height: 420),
+                        withAttributes: [.font: UIFont.systemFont(ofSize: 15),
+                                         .foregroundColor: UIColor.black])
+                }
+                let t0 = Date()
+                let blind = await ScreenshotNaming.name(text: text)
+                let blindMs = Int(Date().timeIntervalSince(t0) * 1000)
+                let t1 = Date()
+                let seeing = await ScreenshotNaming.name(text: text, image: shot.cgImage)
+                let seeingMs = Int(Date().timeIntervalSince(t1) * 1000)
+                NSLog("visionProbe: textOnly=%@ (%dms)", blind ?? "—", blindMs)
+                NSLog("visionProbe: withPicture=%@ (%dms)", seeing ?? "—", seeingMs)
+                for (label, title) in [("textOnly", blind), ("withPicture", seeing)] {
+                    guard let title else { continue }
+                    NSLog("visionProbe: %@ grounded=%@", label,
+                          ScreenshotNaming.grounded(title, in: text) ? "yes" : "no")
+                }
+                let fact = await ScreenshotFacts.label(for: text, image: shot.cgImage)
+                NSLog("visionProbe: factLabel=%@", fact ?? "—")
+            }
+        },
         // ── The on-device intelligence pass (prd §282, 2026-08-02) ──────────
         //
         // `-embeddingProbe YES` — the semantic index's LANGUAGE census. The

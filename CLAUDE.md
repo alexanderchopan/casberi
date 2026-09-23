@@ -266,7 +266,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-likersProbe` — Who liked your post (2026-08-07, prd §330, Model/SocialLikers.swift, -likersProbe YES) → docs/hooks/social.md · prd §330
 - `-followsProbe` — Follow import (2026-07-16, prd 87) → docs/hooks/social.md
 - `-bskyMentions` `-bskyReplies` — Bluesky mirrored the keyless parity set (2026-07-14, AT Protocol AppView): profiles + replies + mentions → docs/hooks/social.md
-- **Screenshot OCR reads STRUCTURE on iOS 26** → docs/hooks/system.md · prd §282
+- **Screenshot OCR reads STRUCTURE on iOS 26, and SEES the shot on iOS 27 (`-visionProbe YES`)** → docs/hooks/system.md · prd §282 · §889
 - `-photoHealProbe` `-reingestPhotos` — run the Photos HEAL directly (the pass that OCRs, thumbnails, RETITLES and prunes) and NSLog photoHeal → docs/hooks/system.md
 - `-photoVerbProbe` — what a screenshot's thing sheet OFFERS, and whether each offer can LAND (prd §275, 2026-08-02) → docs/hooks/system.md · prd §275
 - **On-device intelligence, the librarian half** (`-embeddingProbe`) → docs/hooks/system.md · prd §282

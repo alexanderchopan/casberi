@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 #if canImport(FoundationModels)
 import FoundationModels
@@ -78,7 +79,12 @@ enum ScreenshotFacts {
     static func facts(for thing: Thing) async -> [Fact] {
         var facts = datedFacts(for: thing)
         guard !facts.isEmpty else { return [] }
-        if let named = await label(for: thing.content), !named.isEmpty {
+        // Read while the row is known live, before any `await` — the fetch
+        // that follows never touches the `Thing` (docs/liveness.md).
+        let text = thing.content
+        let ref = thing.sourceRef
+        let picture = await ScreenshotVision.image(forAssetRef: ref)
+        if let named = await label(for: text, image: picture), !named.isEmpty {
             for i in facts.indices { facts[i].label = named }
         }
         return facts
@@ -102,10 +108,10 @@ enum ScreenshotFacts {
     /// moment is for. nil when the model is unavailable or declines — and it
     /// is told, in as many words, that declining is allowed, because "an
     /// appointment" is worse than the screenshot's own title.
-    static func label(for text: String) async -> String? {
+    static func label(for text: String, image: CGImage? = nil) async -> String? {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
-            return await ScreenshotFactModel.label(for: text)
+            return await ScreenshotFactModel.label(for: text, image: image)
         }
         #endif
         return nil
@@ -127,9 +133,10 @@ struct ScreenshotFactLayout {
 @available(iOS 26.0, *)
 enum ScreenshotFactModel {
     @MainActor
-    static func label(for text: String) async -> String? {
+    static func label(for text: String, image: CGImage? = nil) async -> String? {
         guard OnDeviceModel.isAvailable else { return nil }
         let excerpt = String(text.prefix(1200))
+        let shown = image != nil
         // A throwaway session, never the composer's `ConversationModel`: this
         // is not a turn in anybody's conversation, and letting it into that
         // transcript would leak a screenshot's text into the next Ask.
@@ -141,11 +148,26 @@ enum ScreenshotFactModel {
         No preamble, no punctuation at the end. If the text does not clearly \
         describe an upcoming appointment or event, reply with exactly the \
         single word NONE — that is a better answer than a guess.
-        """ + LanguageStore.shared.llmLanguageDirective)
+        """
+        + (shown ? """
+        You are also shown the screenshot itself, which often says what kind \
+        of thing this is — a ticket, a booking, an invite — where the text \
+        alone does not. It may not add a word the text does not contain.
+        """ : "")
+        + LanguageStore.shared.llmLanguageDirective)
         do {
-            let response = try await session.respond(
-                to: "Text from the screenshot:\n\(excerpt)\n\nName what the upcoming appointment or event is, in a few plain words, or NONE.",
-                generating: ScreenshotFactLayout.self)
+            let response: LanguageModelSession.Response<ScreenshotFactLayout>
+            if #available(iOS 27.0, *), let image {
+                response = try await session.respond(generating: ScreenshotFactLayout.self) {
+                    "Text from the screenshot:\n\(excerpt)"
+                    Attachment(image)
+                    "Name what the upcoming appointment or event is, in a few plain words, or NONE."
+                }
+            } else {
+                response = try await session.respond(
+                    to: "Text from the screenshot:\n\(excerpt)\n\nName what the upcoming appointment or event is, in a few plain words, or NONE.",
+                    generating: ScreenshotFactLayout.self)
+            }
             let line = response.content.label
                 .trimmingCharacters(in: CharacterSet(charactersIn: ".!\"' \n"))
             guard !line.isEmpty, line.uppercased() != "NONE", line.count <= 60 else { return nil }

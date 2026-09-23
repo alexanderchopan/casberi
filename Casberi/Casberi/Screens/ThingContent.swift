@@ -708,7 +708,7 @@ private struct ScreenshotContent: View {
         }
         // The asset's shape first — its pixel size is on the fetched record,
         // so the frame is right before either image lands. The stored copy is
-        // a centre crop (prd §877), so its own shape is only the fallback.
+        // a centre crop (prd §889), so its own shape is only the fallback.
         let asset = Self.asset(assetID)
         if let asset, asset.pixelWidth > 0 {
             aspect = CGFloat(asset.pixelHeight) / CGFloat(asset.pixelWidth)

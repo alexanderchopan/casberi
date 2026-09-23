@@ -89,3 +89,31 @@ Verbatim. CLAUDE.md now carries a one-line index entry for each, pointing here.
 - `-hideDemoBanner YES` — leave the demo's standing mark unmounted (`MainSurface.demoBannerInset`), for App Store stills and previews over the poured demo (2026-09-08). DEBUG only; §83's price is owed to a real user, not a capture. Pair with `-demoEnter YES`; a re-pour is exit + enter, because `pourIfNeeded` lands only refs the store lacks.
 Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (INTERNAL — the kind filter has no user-facing control since 2026-08-01, prd §269: no app UI produces this link, and the "× Tag" chip that cleared it is gone; the agent still sets the same state for a kind ask like "show my links", and any source chip tap — a re-tap included — clears it), `casberi://account` (→ apps; the tab bar is gone — this pushes the Apps door), `casberi://settings` (→ the Accounts screen landed on its Settings section, prd §796; the reliable route since `-openSettings` broke), `casberi://thing/<id>`, `casberi://person/<Bluesky|Farcaster>/<handle>` (the profile card), `casberi://ask?q=<question>` (2026-08-14, prd §382 — any ask by its own words, minted by the widgets; hands `q` to the SAME `chrome.askRequest` door `casberi://brief` uses, so a tile can only ever open an answer the app itself would produce; no `q` returns early).
 - `-linkHealProbe "<url>[,<url>…]"` — land each URL as a link you saved whose enrichment never ran (URL as title, no picture), run `LinkHeal`'s pass over it, NSLog one `linkHeal| OK|MISS | source | title` line per row and a `considered/healed/missed` report. A URL already in the store is left alone. `-feedWindowSteps <n>` — open the feed's row window n steps on arrival (a section longer than the budget otherwise needs a "Show older" tap). The `allFeed|` census prints `momentDays=` (the away section's day names) and `momentWhole=` → prd §879
+
+
+## The screenshot passes see the screenshot (`-visionProbe YES`, prd §889, 2026-09-22)
+
+`ScreenshotNaming` and `ScreenshotFacts` attach the shot itself beside its OCR
+text on iOS 27, through `Model/ScreenshotVision.swift`.
+
+- **Two gates, both real.** Multimodal prompts are iOS 27; the on-device model
+  needs an Apple Intelligence device with it on. `ScreenshotVision.available` is
+  the single place that answers, and every other phone runs the text-only branch
+  unchanged.
+- **The picture is `ScreenshotOCR.image(for:)`** — 1600pt `aspectFit`, the same
+  render OCR reads. The stored `previewImageData` cannot stand in: 480pt
+  `aspectFill` is a centre CROP, and on a tall screenshot it discards most of the
+  screen.
+- **The honesty rail does not move.** `grounded` still rejects a title whose
+  words are absent from the OCR text (§218), so the picture helps the model
+  choose among what the screenshot really shows and never licenses an invention.
+  `AgentLibrarian.name` is never handed the picture.
+- **The loader takes the asset REF, never a `Thing`** (docs/liveness.md).
+- **Measured on the iOS 27 simulator**, which — contrary to the long-standing
+  caveat — reports `SystemLanguageModel` Available: one synthetic boarding pass
+  named "Air Portugal NYC LIS" text-only (2,447ms) and "TAP Air Portugal" with
+  the picture (1,639ms), both passing the rail; the facts pass read "Flight to
+  Lisbon". The call works and is not slower. One synthetic case says nothing
+  about whether titles get BETTER — that reading needs a device with a real
+  library.
+- Guarded by `scripts/screenshot-vision-audit.py` (seven mutations).

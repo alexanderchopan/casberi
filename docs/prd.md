@@ -60551,3 +60551,49 @@ their facts (the movement, the run, the origin) were composed by
 one needs a live devnet transaction. `money-receipt-selftest.sh` passes; the
 devnet arm has no harness case yet. The events' party-led head (the post sheet's
 shape) is the next step, not this one.
+
+## §889 — The screenshot passes see the screenshot (iOS 27 multimodal prompts, 2026-09-22)
+
+`ScreenshotNaming` and `ScreenshotFacts` have handed the on-device model OCR
+TEXT since §282, because text was all iOS 26's model could read. iOS 27 takes an
+image in the same prompt, so both now attach the shot itself
+(`Model/ScreenshotVision.swift`).
+
+**Why it is the right place for it.** §282 recorded two failures, and both are
+failures OF TEXT: a settings pane, a chart, a map or a receipt in columns has no
+line worth quoting, and the first three-word line is often a nav header or a
+cookie banner. What is a heading, which app this is, what fills the screen — a
+picture carries those and a line list cannot.
+
+**The honesty rail does not move.** `ScreenshotNaming.grounded` still rejects a
+title whose words are not in the OCR text (§218). The picture may help the model
+CHOOSE among the words the screenshot really shows; it may never license one it
+invented, because fluency is exactly what makes a wrong title unnoticeable. The
+keyed librarian is not handed the picture either: a title is one promise, a
+screenshot posted to somebody's API is another.
+
+**Two gates, both real.** iOS 27 for multimodal prompts, and an Apple
+Intelligence device for the model at all; `ScreenshotVision.available` is the one
+place that answers, and every other phone runs the text-only branch exactly as
+before. The loader takes the asset REF, never a `Thing`, so nothing walks a model
+inside an `async` function (docs/liveness.md).
+
+**The picture is the 1600pt `aspectFit` render, not the row thumbnail.** The
+stored `previewImageData` is 480pt `aspectFill` — a centre CROP, which on a tall
+screenshot throws away most of the screen, i.e. the part a picture is passed for.
+`ScreenshotOCR.image(for:)` stopped being private and serves both readers.
+
+**MEASURED on the iOS 27 simulator (`-visionProbe YES`), and the surprise is
+that it runs there at all**: `SystemLanguageModel` reports Available on the iOS
+27 sim, so the standing "no model on the simulator" caveat is now false for 27 —
+`scripts/ondevice-selftest.sh`'s header said so and is corrected. Over one
+synthetic boarding-pass shot: text-only named it "Air Portugal NYC LIS"
+(2,447ms), with the picture "TAP Air Portugal" (1,639ms), both passing the rail,
+and the facts pass read "Flight to Lisbon". So the multimodal call WORKS and is
+not slower — but one synthetic case is not evidence the titles get better, and
+nothing here claims that yet. The real reading is a device with a real library.
+
+**Guarded** by `scripts/screenshot-vision-audit.py` (seven mutations, each
+caught): both gates on `available`, an `Attachment(` outside an iOS 27 gate, the
+text-only branch deleted, the rail bypassed, the picture handed to the keyed
+librarian, and the loader taking a `Thing`.

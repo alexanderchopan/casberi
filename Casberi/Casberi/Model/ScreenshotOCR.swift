@@ -14,7 +14,7 @@ enum ScreenshotOCR {
     /// image couldn't load). Runs off the main actor — Vision's accurate pass
     /// takes real milliseconds.
     static func text(for asset: PHAsset) async -> String? {
-        guard let cg = await load(asset) else { return nil }
+        guard let cg = await image(for: asset) else { return nil }
         return await text(for: cg)
     }
 
@@ -86,9 +86,16 @@ enum ScreenshotOCR {
         }.value
     }
 
-    /// The asset's pixels at OCR size — bigger than the row thumbnail (small
-    /// text needs the resolution), still bounded.
-    private static func load(_ asset: PHAsset) async -> CGImage? {
+    /// The asset's pixels at READING size — bigger than the row thumbnail
+    /// (small text needs the resolution), still bounded.
+    ///
+    /// Not private since 2026-09-22: `ScreenshotVision` shows this same image
+    /// to the model, and the row thumbnail cannot stand in for it. That one is
+    /// 480pt `aspectFill`, i.e. a centre CROP — on a tall screenshot it throws
+    /// away most of the screen, which is exactly the part a picture is being
+    /// passed for. `aspectFit` at 1600 is the whole screen, once, for both
+    /// readers.
+    static func image(for asset: PHAsset) async -> CGImage? {
         let image: UIImage? = await withCheckedContinuation { cont in
             let opts = PHImageRequestOptions()
             opts.isNetworkAccessAllowed = true
