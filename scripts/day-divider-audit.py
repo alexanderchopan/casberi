@@ -37,8 +37,9 @@ means one stopped opting out, which puts the brand hue on a label like
 **(4) One spelling of the hex.** `#FF2D87` lives in `DesignTokens.swift` and
 nowhere else. `CasberiMark` reads `DS.brand`.
 
-**(5) The article sheet's day word (prd §882).** The sheet has no divider, so
-`ArticleSheetHead`'s eyebrow names the day in the divider's pink. It must read
+**(5) The sheet heads' day word (prd §882, §884).** A sheet has no divider, so
+`ArticleSheetHead`'s eyebrow and `PostSheetHead`'s name line name the day in
+the divider's pink. It must read
 `FeedScreen.dayWord` — the divider's own function, which `dayLabel` must
 still delegate to — so the second pink in the app can only ever say a DAY,
 never "4d" or a clock time; and the head may take `DS.brandInk` exactly
@@ -65,7 +66,10 @@ from pathlib import Path
 FEED = "Casberi/Casberi/Screens/FeedScreen.swift"
 DIVIDER = "Casberi/Casberi/Screens/FeedDayDivider.swift"
 TOKENS = "Casberi/Casberi/Design/DesignTokens.swift"
-SHEET_HEAD = "Casberi/Casberi/Screens/ArticleSheetHead.swift"
+SHEET_HEADS = (
+    "Casberi/Casberi/Screens/ArticleSheetHead.swift",
+    "Casberi/Casberi/Screens/PostSheetHead.swift",   # prd §884
+)
 BRAND_HEX = "FF2D87"
 MIN_OPT_OUTS = 9
 
@@ -78,7 +82,7 @@ def strip_comments(text: str) -> str:
     return "\n".join(re.sub(r"//.*$", "", line) for line in text.splitlines())
 
 
-def audit(feed: str, tokens: str, mark: str, head: str) -> list:
+def audit(feed: str, tokens: str, mark: str, heads: dict) -> list:
     out = []
     code = strip_comments(feed)
 
@@ -121,23 +125,23 @@ def audit(feed: str, tokens: str, mark: str, head: str) -> list:
             "mark and the dividers cannot drift to two pinks (prd §740)"
         )
 
-    # (5) the article sheet's day word: the divider's function, in the ink, once
-    head_code = strip_comments(head)
-    if not re.search(
-        r"Text\(FeedScreen\.dayWord\([^)]*\)\)\s*\.dsText\([^)]*\)\s*"
-        r"\.foregroundStyle\(DS\.brandInk\)", head_code
-    ):
-        out.append(
-            "ArticleSheetHead's day word is not `FeedScreen.dayWord` in "
-            "DS.brandInk — the sheet's pink must name a day the divider's way "
-            "(prd §882)"
-        )
-    inks = len(re.findall(r"DS\.brandInk", head_code))
-    if inks != 1:
-        out.append(
-            f"ArticleSheetHead takes DS.brandInk {inks} times, expected 1 — "
-            "the day word is the sheet's only pink (prd §882)"
-        )
+    # (5) each sheet head's day word: the divider's function, in the ink, once
+    for name, head in heads.items():
+        head_code = strip_comments(head)
+        if not re.search(
+            r"Text\(FeedScreen\.dayWord\([^)]*\)\)\s*\.dsText\([^)]*\)\s*"
+            r"\.foregroundStyle\(DS\.brandInk\)", head_code
+        ):
+            out.append(
+                f"{name}'s day word is not `FeedScreen.dayWord` in DS.brandInk — "
+                "a sheet's pink must name a day the divider's way (prd §882)"
+            )
+        inks = len(re.findall(r"DS\.brandInk", head_code))
+        if inks != 1:
+            out.append(
+                f"{name} takes DS.brandInk {inks} times, expected 1 — the day "
+                "word is a sheet head's only pink (prd §882)"
+            )
     if not re.search(r"func dayLabel\([^)]*\)[^{]*\{\s*Self\.dayWord\(", code):
         out.append(
             "FeedScreen.dayLabel no longer delegates to dayWord — the divider "
@@ -230,7 +234,7 @@ def self_test() -> bool:
     for case in cases:
         name, feed, tokens, mark, want = case[:5]
         head = case[5] if len(case) > 5 else good_head
-        got = len(audit(feed, tokens, mark, head))
+        got = len(audit(feed, tokens, mark, {"ArticleSheetHead": head, "PostSheetHead": good_head}))
         verdict = "ok  " if (got >= want if want else got == 0) else "FAIL"
         if verdict == "FAIL":
             ok = False
@@ -262,8 +266,11 @@ def main() -> int:
     mark = (root / "Casberi/Casberi/Design/CasberiMark.swift").read_text(
         encoding="utf-8", errors="replace"
     )
-    head = (root / SHEET_HEAD).read_text(encoding="utf-8", errors="replace")
-    findings = audit(feed, tokens, mark, head)
+    heads = {
+        Path(f).stem: (root / f).read_text(encoding="utf-8", errors="replace")
+        for f in SHEET_HEADS
+    }
+    findings = audit(feed, tokens, mark, heads)
     if findings:
         print(f"day-divider-audit: {len(findings)} finding(s)")
         for f in findings:

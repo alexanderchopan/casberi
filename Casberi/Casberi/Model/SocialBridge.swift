@@ -38,6 +38,9 @@ struct SocialCount: Equatable {
 
     /// "42", or "100+" when the page capped.
     var text: String { atLeast ? "\(value)+" : "\(value)" }
+    /// Exactly one — the count a singular noun is for ("1 reply", never
+    /// "1+ reply").
+    var isOne: Bool { value == 1 && !atLeast }
 }
 
 /// A post's engagement at read time. A count the source didn't report stays
@@ -221,6 +224,16 @@ enum SocialThread {
     /// not the rule.
     static func recastWord(_ source: String) -> String {
         source == "Farcaster" ? String(localized: "Recast") : String(localized: "Reposted")
+    }
+
+    /// The count's noun under a number ("12 recasts", "3 reposts") — a
+    /// PLURAL, where `recastWord` is a row's label. The sheet lowercased that
+    /// label, so every count read "12 recast" and "3 reposted" (prd §884).
+    static func repostNoun(_ source: String, one: Bool = false) -> String {
+        if source == "Farcaster" {
+            return one ? String(localized: "recast") : String(localized: "recasts")
+        }
+        return one ? String(localized: "repost") : String(localized: "reposts")
     }
 
     /// The same fact as a CLAUSE, for the sheet's eyebrow — where it sits in a

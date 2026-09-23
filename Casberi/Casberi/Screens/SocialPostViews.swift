@@ -48,18 +48,22 @@ struct SocialPostContent: View {
         if !thing.isLive {
             Color.clear
         } else {
+        // Pictures stand at the well's edge and the words beside them in the
+        // rows' column (prd §884), where the post head sets the post.
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             photos
+                .padding(.horizontal, DS.Space.s4)
             if let quote = thing.quote {
                 SocialQuoteCard(card: quote, source: thing.source)
+                    .padding(.horizontal, DSRoomChassis.leadInset)
             }
             if let rest = SocialSheet.threadRest(enriched: thing.enrichedText,
                                                  words: SocialSheetSource.words(for: thing),
                                                  count: thing.messageCount) {
                 SocialThreadRest(parts: rest, total: thing.messageCount ?? 0)
+                    .padding(.horizontal, DSRoomChassis.leadInset)
             }
         }
-        .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
         }
     }
@@ -94,7 +98,9 @@ struct SocialPostContent: View {
                     }
                 }
         } else if images.count == 1 {
-            SocialPhoto(urlString: images[0], height: 280)
+            // One picture fills the lead's well, as an article's does (§884).
+            SocialPhoto(urlString: images[0], height: DSRoomChassis.leadHeight,
+                        cornerRadius: DS.Radius.widget)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else if images.count > 1 {
             ScrollView(.horizontal) {
@@ -149,6 +155,7 @@ struct SocialPhoto: View {
     let urlString: String
     var height: CGFloat
     var width: CGFloat? = nil
+    var cornerRadius: CGFloat = DS.Radius.card
     @State private var image: UIImage?
     @State private var failed = false
 
@@ -159,9 +166,9 @@ struct SocialPhoto: View {
                     .frame(width: width, height: height)
                     .overlay(Image(uiImage: image).resizable().scaledToFill())
                     .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             } else if !failed {
-                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(DS.fillFaint)
                     .frame(width: width, height: height)
             }

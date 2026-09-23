@@ -91,7 +91,7 @@ guard "the receipt card is drawn" \
 # The reading is computed ONCE and handed down. Two derivations are two places
 # that can disagree about how many turns a chat had.
 guard "the content view is handed the reading, not left to re-derive it" \
-  'ThingContentView\(thing: thing, agent: agentConversation\)' "$VIEW"
+  'ThingContentView\(thing: thing, agent: agentConversation[,)]' "$VIEW"
 guard "the chat branch draws the turns" \
   'AgentTurnsView\(turns: agent\.turns' "$CONTENT"
 # The two rows this pass takes with it. Deliberately tolerant of extra

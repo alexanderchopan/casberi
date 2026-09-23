@@ -454,6 +454,11 @@ check("an unreported count has no cell",
         .readings.count == 2)
 // The honesty valve survives the trip: a full page is "97+", not a total
 // nobody counted.
+// A reported ZERO draws no cell (prd §884) — "0 recasts" says nothing.
+check("a zero count has no cell",
+      SocialReception.compose(input(likes: like,
+                                    reposts: .init(text: "0", noun: "recasts")))?
+        .readings.map(\.noun) == ["likes"])
 check("a capped count keeps its plus",
       SocialReception.compose(input(likes: capped))?.readings.first?.text == "97+")
 
@@ -589,11 +594,16 @@ mutate "the archive sentence drops its date" \
   'return String(localized:
                 "From your \(i.source) archive — you \(act.verb) this on \(day(when)).")' \
   'return String(localized: "From your \(i.source) archive — you \(act.verb) this.")'
-# Absent readings zeroed instead of excluded — the honesty rule that makes
-# every other number on the card trustworthy.
-mutate "an unreported count becomes a zero" \
+# Absent readings invented instead of excluded — the honesty rule that makes
+# every other number on the card trustworthy. (A zero is dropped since prd
+# §884, so the invented reading has to be a number the network never sent.)
+mutate "an unreported count is invented" \
   'out.readings = [i.likes, i.reposts, i.replies].compactMap { $0 }' \
-  'out.readings = [i.likes ?? .init(text: "0", noun: "likes"), i.reposts, i.replies].compactMap { $0 }'
+  'out.readings = [i.likes, i.reposts ?? .init(text: "1", noun: "recasts"), i.replies].compactMap { $0 }'
+# A zero drawn as a cell (prd §884).
+mutate "a zero count is drawn" \
+  '            .filter { $0.text != "0" }' \
+  ''
 # The thread slice repeating the post under itself.
 mutate "the thread keeps its own head" \
   'return Array(parts.dropFirst())' \

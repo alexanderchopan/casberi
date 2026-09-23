@@ -60360,3 +60360,52 @@ Cole · 2 min read", the dial under it, the body, and no dial at the end.
 Which of the three a digest is comes from §881's `NotifyDigest.facts` (by `digestRank`), which still orders the long press: a row per thing that needs you, per transfer (who, then how much, largest first) and per reply; one row for follows and one for likes. A lone item still reads as itself.
 
 **The word is "new", not "actions"** (the user's draft): nobody calls a like an action. **Deleted, because nothing is left to fit**: §809's `titleBudget`, `lineBudget`, `bodyLineCap` and `fitted`, and §881's per-fact `leads`/`detail`/`lines` and `named`. No ellipsis holds by construction now; `notify-selftest.sh` keeps the measured widths (28, 32) as the property it checks over every fixture, with three new mutations (what needs you folded into the count, money folded into the count, the named thing hiding what came with it).
+
+## §884 — A post's sheet leads with the person, the article head's shape (user, from the post-sheet mocks, 2026-09-23)
+
+The second kind in the one-at-a-time pass §882 began. Three directions were
+mocked — the room's cover kept in a well, the person leading, the post as a
+conversation — and the user took the person, with four changes of Claude's that
+they approved.
+
+**The head is `PostSheetHead`.** The 56pt face (`DS.Face.shelf`, still the door
+to the profile card), the handle as the name at `heading17`, the day in the
+divider's pink on the name's line, and under it where the post is from:
+"Farcaster · in /design", in `SocialThread.contextPhrase`'s own words. The
+eyebrow it replaces put the person in one tertiary 12pt line with a 20pt face.
+The handle stands as the name because a post stores no display name. A reply's
+"Replying to" card moves under the person, above the words.
+
+**The four changes.**
+- The words keep the sheet's ladder (≤32 characters `heading40`, ≤280
+  `heading24`, longer `reading17`), in the rows' column (`leadInset`).
+- A reported zero draws no cell: "0 recasts" said nothing (§83), and a post with
+  only zeros draws no counts at all. `SocialReception.compose` filters it, so
+  the rule is in the harnessed model (`social-sheet-selftest.sh`: a new check,
+  and a mutation that draws the zero).
+- The nouns agree with their numbers. The sheet lowercased a row's LABEL, so
+  every count read "12 recast" or "3 reposted", and every single answer read
+  "1 replies"; `SocialThread.repostNoun` and `SocialCount.isOne` give "recasts",
+  "reposts", "1 reply", "1 like".
+- One picture fills the lead's well (`leadHeight`, `DS.Radius.widget`), as an
+  article's does; several keep their sideways strip. Pictures stand at the
+  well's edge, the quote and the thread's rest in the words' column.
+
+**Where the dial goes is unchanged.** On a post it follows the counts, which sit
+just under the words, so it is already on the first screen; the article's move
+(§882) was for a sheet whose words run for pages.
+
+**A demo defect, fixed in passing.** The demo's Farcaster casts stored "/design"
+where `FarcasterIngest` stores "design", so the phrase and the row label (which
+add the slash themselves) read "in //design". A device that poured the demo
+before this keeps the old rows until the demo is poured again.
+
+**And §882's own miss.** `agent-sheet-selftest.sh` pinned the exact call
+`ThingContentView(thing: thing, agent: agentConversation)`, and §882 added an
+argument to it, so that guard was red on main from 00263f75 to this commit. It
+now accepts further arguments; what it guards (the reading is handed down, not
+re-derived) is unchanged.
+
+Checked on the iPhone 17 Pro simulator (iOS 27, dark) on two demo posts: Sam's
+quote post ("44 likes · 3 replies", the quote under the words) and Uma's
+two-picture post.

@@ -2999,7 +2999,10 @@ enum DemoSeedAll {
                 ref: c.2 == "you" ? "fc:demo:\(i)" : "demo:fc:\(i)", days: c.4,
                 hour: 13 - (i % 4)) { t in
                 t.postText = c.0
-                t.channelName = c.1
+                // The channel's bare name, as `FarcasterIngest` stores it: the
+                // phrase and the row label add the "/" themselves, so the
+                // demo's "/design" read "in //design" (prd §884).
+                t.channelName = String(c.1.drop(while: { $0 == "/" }))
                 t.authorHandle = c.2
                 t.authorAvatarURL = avatarArt(c.2)
                 t.likeCount = c.3

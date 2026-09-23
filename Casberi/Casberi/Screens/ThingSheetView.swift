@@ -347,10 +347,16 @@ struct ThingSheetView: View {
                     && agentConversation == nil && l2beatShape == nil
                     && privyApp == nil && walletbeatShape == nil
                     && noteShape == nil && vibenetEventFacts == nil
+                // THE POST HEAD (prd §884) — a post that leads with its person
+                // gets the article head's shape: who, the pink day, the words.
+                let postHead = isSocialPost
+                    && SocialSheetSource.eyebrowLeadsWithPerson(thing, shape: socialShape)
+                    && moneyReceipt == nil && !framedShot
+                let ownHead = articleHead || postHead
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.
-                if !articleHead || onBack != nil {
+                if !ownHead || onBack != nil {
                 HStack(spacing: DS.Space.s3) {
                     if let onBack {
                         Button(action: onBack) {
@@ -370,13 +376,13 @@ struct ThingSheetView: View {
                         .dsTooltip(String(localized: "Back"))
                     }
                     // The article head carries its own eyebrow (prd §882).
-                    if !articleHead { eyebrow }
+                    if !ownHead { eyebrow }
                 }
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                     .settleIn()
                 }
-                if let parent = thing.parent {
+                if !postHead, let parent = thing.parent {
                     replyingToRow(parent)
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s2)
@@ -624,6 +630,22 @@ struct ThingSheetView: View {
                     // an object that states its own subject does not want a
                     // label over it.
                     EmptyView()
+                } else if postHead {
+                    // Who, then what they were answering, then the words — the
+                    // reply context sits under the person, not above them.
+                    PostSheetHead(thing: thing, onFace: facesAreDoors ? openAuthorProfile : nil)
+                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                        .settleIn(delay: 0.04)
+                    if let parent = thing.parent {
+                        replyingToRow(parent)
+                            .padding(.horizontal, DSRoomChassis.leadInset)
+                            .padding(.top, DS.Space.s4)
+                            .settleIn(delay: 0.05)
+                    }
+                    titleBlock
+                        .padding(.horizontal, DSRoomChassis.leadInset)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.06)
                 } else if articleHead {
                     // The dial rides UNDER the head (prd §882): on a sheet
                     // that is mostly reading, the verbs were a whole article
@@ -765,7 +787,7 @@ struct ThingSheetView: View {
                 // with it, so the two can never say the same thing twice.
                 if let reception {
                     SocialReceptionCard(reception: reception)
-                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.horizontal, postHead ? DSRoomChassis.leadInset : DS.Space.s4)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.16)
                 }
@@ -1452,9 +1474,7 @@ struct ThingSheetView: View {
             // The face is a door to the person (2026-07-16) — tap it and you
             // can watch them, wherever you met them.
             Button {
-                faceTarget = .person(SocialProfile(
-                    source: thing.source, handle: thing.authorHandle ?? "",
-                    displayName: nil, bio: nil, avatarURL: thing.authorAvatarURL))
+                openAuthorProfile()
             } label: {
                 faceMark
             }
@@ -1466,6 +1486,14 @@ struct ThingSheetView: View {
         } else {
             faceMark
         }
+    }
+
+    /// The author's profile card — the eyebrow face's door, and the post
+    /// head's (prd §884).
+    private func openAuthorProfile() {
+        faceTarget = .person(SocialProfile(
+            source: thing.source, handle: thing.authorHandle ?? "",
+            displayName: nil, bio: nil, avatarURL: thing.authorAvatarURL))
     }
 
     @ViewBuilder private var faceMark: some View {

@@ -139,12 +139,16 @@ enum SocialSheetSource {
             act: act(for: thing),
             phrase: SocialThread.contextPhrase(for: thing),
             eyebrowNamesIt: eyebrowLeadsWithPerson(thing, shape: shape),
+            // The noun agrees with its number (prd §884): "1 replies" was the
+            // sheet's reading for every post with one answer.
             likes: shown?.likes.map {
-                .init(text: $0.text, noun: String(localized: "likes")) },
+                .init(text: $0.text, noun: $0.isOne ? String(localized: "like")
+                                                    : String(localized: "likes")) },
             reposts: shown?.reposts.map {
-                .init(text: $0.text, noun: SocialThread.recastWord(thing.source).lowercased()) },
+                .init(text: $0.text, noun: SocialThread.repostNoun(thing.source, one: $0.isOne)) },
             replies: shown?.replies.map {
-                .init(text: $0.text, noun: String(localized: "replies")) },
+                .init(text: $0.text, noun: $0.isOne ? String(localized: "reply")
+                                                    : String(localized: "replies")) },
             likers: SocialLikers.shared.roll(for: thing.sourceRef)?.line,
             ceiling: ceiling(for: thing, shape: shape)))
     }

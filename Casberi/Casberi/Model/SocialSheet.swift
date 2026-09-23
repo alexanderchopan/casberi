@@ -306,7 +306,10 @@ struct SocialReception: Equatable {
         // Fixed order, absent excluded. Likes lead because they are the one
         // reading every network reports; replies trail because the sheet's own
         // Replies section states that number again, better, with the words.
+        // A ZERO is dropped (prd §884): "0 recasts" says nothing, and a change
+        // that rounds to nothing earns no mark (§83). Absent stays absent too.
         out.readings = [i.likes, i.reposts, i.replies].compactMap { $0 }
+            .filter { $0.text != "0" }
         out.likers = i.likers
         out.provenance = sentence(i)
         out.ceiling = i.ceiling
