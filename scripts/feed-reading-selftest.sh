@@ -184,7 +184,7 @@ grep -q 'memo.lede = heroShown ? nil : ledeThingID' "$FEED" \
 # would have taken the cover off exactly the quiet rooms it was added for.
 grep -q 'let isRoom = source != "All"' "$FEED" \
   || { echo "✗ ledeThingID no longer distinguishes a room from the All feed"; exit 1; }
-grep -q 'guard isRoom || Date.now.timeIntervalSince(thing.capturedAt) <= Self.ledeMaxAge' "$FEED" \
+grep -q 'guard isRoom || Self.isCoverFresh(thing.capturedAt, away: AppVisit.away)' "$FEED" \
   || { echo "✗ a room's cover is gated on ledeMaxAge again — a room whose newest"; \
        echo "  item is a day old would draw no head at all"; exit 1; }
 grep -q 'if memo.lede != nil, source == "All",' "$FEED" \

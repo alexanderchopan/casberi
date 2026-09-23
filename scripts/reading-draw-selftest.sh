@@ -327,12 +327,12 @@ mutate "the fetch arm dropped" ThingContent.swift \
 
 # 5. The body hoisted above the art.
 mutate "the body drawn above the art" ThingContent.swift \
-  '                if let door {
+  '                if articleArt, let door {
                     LinkPreviewCard(url: door, storedImageURL: thing.previewImageURL, artOnly: true)
                 }
                 ArticleBody(thing: thing)' \
   '                ArticleBody(thing: thing)
-                if let door {
+                if articleArt, let door {
                     LinkPreviewCard(url: door, storedImageURL: thing.previewImageURL, artOnly: true)
                 }'
 
