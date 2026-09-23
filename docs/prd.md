@@ -60744,3 +60744,30 @@ the old rows until it is poured again.**
 Checked on the iPhone 17 Pro simulator, after a fresh demo pour, on "CAS-412 Panel
 reshuffles between opens", "Failed · casberi · migrate the schema" and
 "Amazon.com · €25".
+
+## §896 — A fold says its newest thing, and counts the rest on the line's tail (user: "do you think the all feed would be better if instead of saying the amount of things each source has, it showed the most recent one and then said plus N amount of items", then, off the mock, "build it, keep the open item to open the room. and use 'more' instead of the other words", "with the count on the line like you proposed", 2026-09-23)
+
+A fold's line said "14 transactions": how many, and nothing you could decide on.
+It says the newest member's title now, with "+13 more" pinned to the line's
+trailing edge. The title truncates first, so the count always shows.
+`BundleRow` and `StripRow` both take it; a strip keeps its tiles under the name.
+
+- **The newest member IS the fold's own row.** The fold already stands where its
+  newest member would have stood (compression, not ranking, §377), so a fold
+  now reads as that row with a count beside it, and the All feed's column scans
+  one way from top to bottom. Nothing is reordered or scored.
+- **"more" replaces every unit word.** "transactions", "screenshots" and
+  "things" are gone from the All feed: the title in front of the count already
+  says the kind, and a mixed run no longer has to say "things". The Wallet
+  room's own fold (`walletStreamRows`) still says "14 transfers" — it is a
+  different surface with its own door (§747), and it has no title to lead with.
+- **The tap still opens the source's room (§377's one gesture).** Opening the
+  newest item, with the walk running through the fold's members, was proposed
+  and declined by the user. The row shows one thing and opens its list.
+- **The count sits at the line's end, not as a "+N" tile.** Wallet and mail runs
+  have no pictures, so a tile would need a second shape for them, and the tile
+  would take the place of a member's picture.
+
+`DSFeedRow` gained `lineTail`, a clause that never truncates, drawn only on a
+row that has one so every single-thing row keeps its flat tree (§744).
+`DSFeed.more(_:)` is the one spelling, on the catalog's existing "+%lld more".

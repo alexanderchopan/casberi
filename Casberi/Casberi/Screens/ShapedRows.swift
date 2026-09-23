@@ -1724,20 +1724,25 @@ struct SenderInitial: View {
 struct BundleRow: View {
     let source: String
     let count: Int
-    /// The kind's plural when the bundle is uniform ("transactions"),
-    /// "things" when mixed.
-    let word: String
+    /// The newest member's title — the line says WHAT arrived, and the count
+    /// rides its tail as "+N more" (prd §896). "14 transactions" said how many
+    /// and nothing you could decide on; the unit word went with it, because
+    /// the title already names the kind.
+    let lead: String
     let newest: Date
     /// Up to three member preview images, newest first — [] falls back to
     /// the brand glyph.
     var art: [String] = []
 
     var body: some View {
-        // ONE ANATOMY (prd §744): the count leaves its trailing figure for the
-        // line, the time takes the trailing slot every row gives it, and the
-        // stacked art in the lead becomes tiles under the name.
+        // ONE ANATOMY (prd §744): the time takes the trailing slot every row
+        // gives it, and the stacked art in the lead becomes tiles under the
+        // name. The line is the newest member with the rest counted on its
+        // tail (prd §896), so a fold reads as the row its newest thing would
+        // have been, plus how many came with it.
         DSFeedRow(name: source, nameLines: 1,
-                  line: Text(verbatim: "\(count) \(word)")) {
+                  line: DSFeed.line(lead),
+                  lineTail: DSFeed.more(count - 1)) {
             BridgeIcon(name: source, size: DS.Mark.row)
         } trailing: {
             LiveTimeText(date: newest)
@@ -1789,9 +1794,9 @@ struct BundleRow: View {
 struct StripRow: View {
     let source: String
     let count: Int
-    /// The kind's plural when the run is uniform ("screenshots"), "things"
-    /// when mixed.
-    let word: String
+    /// The newest member's title, with the rest counted on the line's tail
+    /// (prd §896) — `BundleRow.lead`.
+    let lead: String
     let newest: Date
     /// Up to `FeedFold.stripCap` members, newest first.
     let tiles: [StripTile]
@@ -1831,10 +1836,12 @@ struct StripRow: View {
     private static let tile: CGFloat = DS.Mark.tile
 
     var body: some View {
-        // ONE ANATOMY (prd §744): the count moves into the line and the time
-        // into the trailing slot; the tiles already sat under the name (§719).
+        // ONE ANATOMY (prd §744): the time sits in the trailing slot and the
+        // tiles under the name (§719); the line is the newest member, the
+        // count its tail (prd §896).
         DSFeedRow(name: source, nameLines: 1,
-                  line: Text(verbatim: "\(count) \(word)")) {
+                  line: DSFeed.line(lead),
+                  lineTail: DSFeed.more(count - 1)) {
             BridgeIcon(name: source, size: DS.Mark.row)
         } trailing: {
             LiveTimeText(date: newest)

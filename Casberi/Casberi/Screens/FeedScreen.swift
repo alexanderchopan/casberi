@@ -3416,29 +3416,35 @@ struct FeedScreen: View {
             /// `art`: up to three member preview-image URLs, newest first — the
             /// bundle's own pictures (2026-07-21), so "Shopify · 100 products"
             /// can show what actually arrived instead of one brand glyph.
-            case bundle(source: String, word: String, count: Int, newest: Date, art: [String])
+            ///
+            /// `lead` is the newest member's title, the line the row draws
+            /// before "+N more" (prd §896); `word` is the kind's plural, which
+            /// only the Wallet room's own fold still says ("14 transfers").
+            case bundle(source: String, word: String, lead: String, count: Int,
+                        newest: Date, art: [String])
             /// A run folded into its MEMBERS rather than into a sentence about
             /// them (prd §377): screenshots and file images as their pictures,
             /// posts as their authors' faces, songs as their covers. Same
             /// one-row compression as `.bundle`, drawn side by side instead of
             /// as an overlapped fan.
-            case strip(source: String, word: String, count: Int, newest: Date, tiles: [StripTile])
+            case strip(source: String, lead: String, count: Int, newest: Date, tiles: [StripTile])
         }
         static func single(_ t: Thing) -> FeedRow {
             FeedRow(id: t.id.uuidString, date: t.capturedAt, kind: .single(KeyedThing(t)),
                     ambient: FeedFold.tier(t) == .arrived)
         }
-        static func bundle(source: String, word: String, count: Int,
-                           newest: Date, art: [String], ambient: Bool) -> FeedRow {
+        static func bundle(source: String, word: String = "", lead: String = "",
+                           count: Int, newest: Date, art: [String],
+                           ambient: Bool) -> FeedRow {
             FeedRow(id: "bundle-\(source)-\(newest.timeIntervalSince1970)", date: newest,
-                    kind: .bundle(source: source, word: word, count: count,
+                    kind: .bundle(source: source, word: word, lead: lead, count: count,
                                   newest: newest, art: art),
                     ambient: ambient)
         }
-        static func strip(source: String, word: String, count: Int,
+        static func strip(source: String, lead: String, count: Int,
                           newest: Date, tiles: [StripTile], ambient: Bool) -> FeedRow {
             FeedRow(id: "strip-\(source)-\(newest.timeIntervalSince1970)", date: newest,
-                    kind: .strip(source: source, word: word, count: count,
+                    kind: .strip(source: source, lead: lead, count: count,
                                  newest: newest, tiles: tiles),
                     ambient: ambient)
         }
@@ -3616,9 +3622,11 @@ struct FeedScreen: View {
                 }
                 guard seen.insert(t.source).inserted else { continue }
                 let members = bySource[t.source] ?? []
-                let kinds = Set(members.map(\.kind))
-                let word = kinds.count == 1
-                    ? kinds.first!.typeTagPlural.lowercased() : "things"
+                // The line names the newest member and counts the rest (prd
+                // §896). `t` IS the newest: the fold stands where its first
+                // member in the day's order stands. Read here, while the
+                // model is live — the row value carries a string, never it.
+                let lead = t.title
                 // A fold recedes only if EVERY member would — one transaction
                 // or one clock inside a mixed run keeps the whole row at full
                 // weight, since the row is the only thing standing in for it.
@@ -3633,11 +3641,11 @@ struct FeedScreen: View {
                     let tiles = choices.map {
                         StripTile(members[$0.index], remote: $0.remote, circular: $0.circular)
                     }
-                    rows.append(.strip(source: t.source, word: word,
+                    rows.append(.strip(source: t.source, lead: lead,
                                        count: members.count, newest: t.capturedAt,
                                        tiles: tiles, ambient: ambient))
                 case .bundle(let art):
-                    rows.append(.bundle(source: t.source, word: word,
+                    rows.append(.bundle(source: t.source, lead: lead,
                                         count: members.count, newest: t.capturedAt,
                                         art: art, ambient: ambient))
                 }
@@ -7675,7 +7683,7 @@ struct FeedScreen: View {
                 switch row.kind {
                 case .single: single += 1
                 case .strip(_, _, _, _, let tiles): strip += 1; stripTiles += tiles.count
-                case .bundle(_, _, _, _, let art): bundle += 1; bundleArt += art.count
+                case .bundle(_, _, _, _, _, let art): bundle += 1; bundleArt += art.count
                 }
             }
         }
@@ -8046,12 +8054,12 @@ struct FeedScreen: View {
                                           wideArt: anchor)
                                 .opacity(!anchor && isQuiet(row) ? Self.quietRow : 1)
                         }
-                    case .bundle(let source, let word, let count, let newest, let art):
-                        bundleListRow(source: source, word: word, count: count,
+                    case .bundle(let source, _, let lead, let count, let newest, let art):
+                        bundleListRow(source: source, lead: lead, count: count,
                                       newest: newest, art: art, index: i, position: positions[i])
                             .opacity(isQuiet(row) ? Self.quietRow : 1)
-                    case .strip(let source, let word, let count, let newest, let tiles):
-                        stripListRow(source: source, word: word, count: count,
+                    case .strip(let source, let lead, let count, let newest, let tiles):
+                        stripListRow(source: source, lead: lead, count: count,
                                      newest: newest, tiles: tiles, index: i,
                                      position: positions[i])
                             .opacity(isQuiet(row) ? Self.quietRow : 1)
@@ -8402,11 +8410,11 @@ struct FeedScreen: View {
     /// A bundle in the list: same card treatment as a thing row; the tap
     /// opens the source's own shape (where volume is designed to live) —
     /// no swipes, nothing here is a single thing to pin or open.
-    private func bundleListRow(source: String, word: String, count: Int,
+    private func bundleListRow(source: String, lead: String, count: Int,
                                newest: Date, art: [String] = [], index: Int,
                                position: RunPosition = .only) -> some View {
         let skin = rowSkin(forSource: source)
-        return BundleRow(source: source, count: count, word: word, newest: newest, art: art)
+        return BundleRow(source: source, count: count, lead: lead, newest: newest, art: art)
             .environment(\.colorScheme, skin?.ink ?? colorScheme)
             .modifier(rowEntrance(index))
             .contentShape(Rectangle())
@@ -8443,11 +8451,11 @@ struct FeedScreen: View {
     /// target on a row is also the shape that made five sibling `.sheet`
     /// modifiers self-dismiss (2026-07-28), and it is not a change worth
     /// making unseen.
-    private func stripListRow(source: String, word: String, count: Int,
+    private func stripListRow(source: String, lead: String, count: Int,
                               newest: Date, tiles: [StripTile], index: Int,
                               position: RunPosition = .only) -> some View {
         let skin = rowSkin(forSource: source)
-        return StripRow(source: source, count: count, word: word, newest: newest, tiles: tiles)
+        return StripRow(source: source, count: count, lead: lead, newest: newest, tiles: tiles)
             .environment(\.colorScheme, skin?.ink ?? colorScheme)
             .modifier(rowEntrance(index))
             .contentShape(Rectangle())

@@ -1463,7 +1463,7 @@ extension FeedScreen {
                             shapedListRow(thing, index: i, nextEventID: nextEventID,
                                           position: positions[i])
                         }
-                    case .bundle(_, let word, let count, let newest, _):
+                    case .bundle(_, let word, _, let count, let newest, _):
                         // The fold's door is the history screen, NOT
                         // `bundleListRow`'s source-filter tap: this room IS
                         // the Wallet source, so filtering to it would be a
@@ -1485,7 +1485,7 @@ extension FeedScreen {
                                              leading: DS.Space.s4 + DS.Space.s3,
                                              bottom: DS.Space.s2,
                                              trailing: DS.Space.s4 + DS.Space.s3))
-                    case .strip(_, let word, let count, let newest, _):
+                    case .strip(_, _, let count, let newest, _):
                         // Drawn like `.bundle` above, and for that case's own
                         // reason rather than by copying it: the generic
                         // `stripListRow` opens the source filter, and this room
@@ -1493,13 +1493,15 @@ extension FeedScreen {
                         // that does nothing. The door is the history screen.
                         // The tiles are dropped with it — a strip earns its
                         // picture row by having pictures, and a run of
-                        // transactions has none to show.
+                        // transactions has none to show. A strip carries no
+                        // unit word since prd §896, so this names the room's
+                        // own ("transfers"), as `walletStreamRows` does.
                         Button {
                             DSHaptic.selection()
                             route.pushBridge(.walletHistory(scope: selectedWallet))
                         } label: {
                             WalletRow(mark: .symbol("arrow.left.arrow.right", tint: DS.tint),
-                                      title: String(localized: "\(count) \(word)"),
+                                      title: String(localized: "\(count) \(String(localized: "transfers"))"),
                                       subtitle: Self.foldSubline(newest))
                         }
                         .buttonStyle(.plain)

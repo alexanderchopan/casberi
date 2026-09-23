@@ -49,6 +49,10 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     /// one of into a one-word column — `WalletRow.subtitleText`'s lesson (§588).
     var line: Text? = nil
     var lineLines = 1
+    /// A clause pinned to the line's trailing edge that never truncates — a
+    /// fold's "+13 more" (prd §896). The line gives way before it does, so the
+    /// count survives a long title. Nil for every row that is one thing.
+    var lineTail: Text? = nil
     @ViewBuilder var lead: Lead
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var below: Below
@@ -73,11 +77,23 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     trailing
                 }
-                if let line {
-                    line
-                        .dsText(.subhead12)
-                        .foregroundStyle(done ? DS.textTertiary : DS.textSecondary)
-                        .lineLimit(lineLines)
+                // The tail's HStack is built only for a row that has one, so
+                // every single-thing row keeps the flat tree it had.
+                if let lineTail {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        if let line {
+                            styledLine(line)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        lineTail
+                            .dsText(.subhead12)
+                            .monospacedDigit()
+                            .foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                } else if let line {
+                    styledLine(line)
                 }
                 below
             }
@@ -85,6 +101,12 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
         .padding(.vertical, DS.Space.s2)
     }
 
+    private func styledLine(_ line: Text) -> some View {
+        line
+            .dsText(.subhead12)
+            .foregroundStyle(done ? DS.textTertiary : DS.textSecondary)
+            .lineLimit(lineLines)
+    }
 }
 
 /// THE LEAD FOR A ROW THAT COUNTS A KIND OF THING rather than showing one
@@ -126,6 +148,13 @@ enum DSFeed {
             .filter { !$0.isEmpty }
         guard !kept.isEmpty else { return nil }
         return Text(kept.joined(separator: " · "))
+    }
+
+    /// A fold's line tail — the members its line does not name (prd §896).
+    /// One word for every kind: the line's own title already says what they
+    /// are.
+    static func more(_ others: Int) -> Text {
+        Text("+\(others) more")
     }
 }
 
