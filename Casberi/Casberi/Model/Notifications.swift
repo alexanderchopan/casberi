@@ -273,7 +273,9 @@ enum Notifications {
                                  picture: picture,
                                  mark: plan.mark,
                                  who: plan.who,
-                                 usd: plan.usd)
+                                 usd: plan.usd,
+                                 amount: plan.amount,
+                                 tally: plan.tally)
     }
 
     private static func digestRequestID(_ slot: Date, _ category: String) -> String {
@@ -347,8 +349,8 @@ enum Notifications {
                 }
                 if var card = NotifyDigest.card(group) {
                     if !attachments.isEmpty { card.head = NotifyCard.headAttachment }
-                    let faced = await withFaces(card, items: Array(NotifyDigest.ordered(group)
-                        .prefix(NotifyDigest.cardRowCap)), id: plan.id)
+                    let faced = await withFaces(card, items: NotifyDigest.cardEntries(group).map(\.item),
+                                                id: plan.id)
                     attachments += faced.files
                     if let data = faced.card.encoded() { info[NotifyCard.userInfoKey] = data }
                     content.categoryIdentifier = NotifyCard.category
@@ -725,7 +727,8 @@ enum Notifications {
             source: source,
             art: avatarURL.map { NotifyArt.remote($0) } ?? .none,
             place: String(localized: "Your post on \(source)"),
-            who: lead)
+            who: lead,
+            tally: count)
         await submit([plan])
     }
 

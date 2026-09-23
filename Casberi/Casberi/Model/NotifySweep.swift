@@ -64,8 +64,12 @@ enum NotifySweep {
                 art: art(for: thing),
                 place: thing.source,
                 mark: mark(for: thing),
-                who: thing.authorHandle,
-                usd: thing.transferUSD))
+                // A received transfer's "who" is its counterparty (prd §881),
+                // the name the title already resolved, so the digest can say
+                // who sent the money. Nil when the title named nobody.
+                who: thing.transferDirection == "received" ? thing.transferCounterparty : thing.authorHandle,
+                usd: thing.transferUSD,
+                amount: thing.transferAmount))
         }
 
         // Deadlines are a WINDOW scan, not a landing scan — the row that

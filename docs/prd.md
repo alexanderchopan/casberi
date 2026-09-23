@@ -60275,3 +60275,20 @@ still leads; a short absence with no day names inside shows its first pink at
 "Earlier today", which is the first place a date is named. The seam still
 ticks as it passes (§866) — it is a boundary in time even though it is not a
 date. Checked on the simulator in both themes; `day-divider-audit.py` clean.
+
+## §881 — A digest reads by what needs you, and says each verb once (user: "our notifications repeat words like 'wallet' or 'liked'", "think deeply about this… different types of things a user would want to know", "one is fine", 2026-09-22)
+
+**What was measured.** §809 stopped a digest repeating a word INSIDE a line, but it still ranked its news by how MANY of each kind arrived, and each line restated its kind's verb under a title that had already said it. Driving the shipped composer over three ordinary days: an App Review rejection sat behind "And 2 more" under `Work: +$1,820`; "Something new can move your funds" sat under `Wallet: +$1,240`, whose body named the SMALLEST transfer because it was the newest; and a reply asking a question sat under `Farcaster: 9 liked posts +2` / `9 liked posts`, with the long press spending six rows on "Liked by user8 and 8 others" beside user8's own face.
+
+**The rule: three tiers, by `NotifyKind.digestRank`, and the title is the lead fact.** `NotifyDigest.facts` states the queue as facts, most urgent first (then an app with no lock screen of its own, then the newest):
+- **Needs you** — every alarm that waits for the evening, EACH its own fact, never folded into a count. The title is `Place: <brief>` (`NotifyKind.brief`, written like `headline` to say what the row cannot: `Work: App Review said no`, `Wallet: new approval`); the first body line is the row's own words.
+- **Money** — ONE fact: the total when every transfer is priced, and WHO sent it, largest first (`From mira.eth and 2 more`). The sender is a received transfer's `transferCounterparty` (the name the title already resolved), carried as `who`; in a several-app digest a payout with no sender names the app that paid (`+$1,950 from Stripe`). With no sender, the amounts (`transferAmount`, now carried as `amount`).
+- **People** — a reply keeps its words, because you may answer it, and of several the one asking something (`?`) is quoted; follows name the people; likes are ONE number counting PEOPLE across posts (`45 likes`, from `Notifications.likes`' total, carried as `tally`), never "3 liked posts".
+
+**No line repeats the title's verb.** The body is what the title left out (`detail`), then the next facts on their own lines; facts past the two-line cap share the last line as clauses (`vitalik followed you · 45 likes`), and only what even that cannot hold is counted. A several-app line names its app only when it does not already say it.
+
+**The long press follows the same order**, one row per thing that needs you, per transfer (who, then `0.42 ETH · $980`) and per reply (who, then the words); ONE row for the day's follows and ONE for its likes, led by the app, never a liker's face over a count that is not theirs. `NotifyDigest.cardEntries` pairs each row with the item its face comes from, so the scheduler's faces can never drift off their rows.
+
+**Unchanged**: one slot a day (asked, "one is fine"), §809's fit budgets and ladders, the thumbnail, a lone item reading as itself. **Considered and not built**: a "known person" flag (address book or someone you follow) so a known follower beats a stranger count — no follow lookup exists to read at queue time; it is the next lever if a stranger's name is ever the one shown.
+
+**Guarded by** `notify-selftest.sh`: the three measured days as fixtures (a rejection outnumbered by payouts leads, an approval leads the money, a question leads nine like counts), no body line repeating the title's verb, likes as one card row with no liker's face, the fit property over every new plan, and six new mutations (the most numerous kind leading again, an app named twice, the question not preferred, likes counting posts, the sender forgotten, likes a row per post).

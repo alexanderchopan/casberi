@@ -692,12 +692,12 @@ let four = NotifyDigest.plan([item("s", "Stripe", at: at(10)), item("g", "GitHub
 ok(four.title == "Work: 4 transfers in",
    "several apps say their category, a colon, and how many")
 ok(four.link == "casberi://feed", "…and open All")
-ok(four.body == "Wallet: 1 transfer in\nAnd 3 more",
-   "several apps are a line each, an app with no lock screen of its own first, and past the cap the rest is counted")
+ok(four.body == "From Wallet, X and 2 more",
+   "money from several apps is ONE fact naming who paid, an app with no lock screen of its own first (prd §881)")
 let six = NotifyDigest.plan(["A", "B", "C", "D", "E", "F"].enumerated().map {
     item("i\($0.offset)", $0.element, at: at(8 + $0.offset))
 })!
-ok(six.body.components(separatedBy: "\n").count == NotifyDigest.bodyLineCap,
+ok(six.body.components(separatedBy: "\n").count <= NotifyDigest.bodyLineCap,
    "however many apps, the body holds no more lines than the banner shows")
 
 ok(NotifyDigest.plans([]).isEmpty, "no category queued, no notification")
@@ -754,10 +754,10 @@ let replies = people.enumerated().map {
 } + [kinded("f0", "Farcaster", .followersGained, body: "mira.eth followed you", who: "mira.eth", at: at(7)),
      kinded("f1", "Farcaster", .followersGained, body: "kai followed you", who: "kai", at: at(6))]
 let social = NotifyDigest.plan(replies)!
-ok(social.title == "Farcaster: 5 replies +2",
-   "the title steps down to the top kind and how many more when both kinds do not fit")
-ok(social.body == "linda, jesse and 3 more replied\nmira.eth and kai followed you",
-   "a kind with people says who, as many names as fit, instead of pasting a reply that runs past the edge")
+ok(social.title == "Farcaster: 5 replies",
+   "replies outrank follows, so they are the title (prd §881)")
+ok(social.body == "From linda, jesse and 3 more\nmira.eth and kai followed you",
+   "a kind with people says who, as many names as fit, instead of pasting a reply that runs past the edge — and never repeats the title's verb")
 ok(NotifyDigest.named(["a", "b"], verb: "replied").first == "a and b replied",
    "two names are joined as a list, not counted")
 let liked = kinded("l", "Bluesky", .likesReceived, title: "Liked by linda and 4 others", body: "my post", at: at(9))
@@ -789,8 +789,76 @@ let apps4 = NotifyDigest.plan(long)!.body
 let appLinesOnly = apps4.components(separatedBy: "\n").filter { $0.contains(":") }
 ok(Set(appLinesOnly.compactMap { $0.components(separatedBy: ":").first }).count == appLinesOnly.count,
    "no app is named on two lines")
-ok(NotifyDigest.plan(long)!.title == "Work: 9 new",
-   "a top kind that is a sliver of the day does not lead the title")
+ok(NotifyDigest.plan(long)!.title == "Work: money challenged",
+   "the most urgent thing leads the title, however few of it arrived (prd §881)")
+
+// ── ranked by what needs you, and no verb twice (prd §881) ──────────────────
+// "They repeat words like 'wallet' or 'liked'" (user, 2026-09-22). Measured on
+// the §809 composer: an App Review rejection behind "And 2 more" under a
+// payout, an approval under the money total, a reply asking a question under
+// nine like counts, and "Liked by" on every card row under "3 liked posts".
+func worked(_ id: String, _ seat: String, _ kind: NotifyKind, body: String, usd: Double? = nil, at h: Int) -> NotifyDigest.Item {
+    kinded(id, seat, kind, body: body, usd: usd, at: at(h), category: "Work")
+}
+let outnumbered = NotifyDigest.plan([
+    worked("p1", "Stripe", .payoutPaid, body: "Payout $1,820.00", usd: 1820, at: 10),
+    worked("p2", "Stripe", .payoutPaid, body: "Payout $90.00", usd: 90, at: 11),
+    worked("p3", "Stripe", .payoutPaid, body: "Payout $40.00", usd: 40, at: 12),
+    worked("r", "App Store Connect", .appRejected, body: "Metadata rejected · Casberi 2.0", at: 9),
+])!
+ok(outnumbered.title == "Work: App Review said no",
+   "what needs you leads the title, even outnumbered by money")
+ok(outnumbered.body == "Metadata rejected · Casberi 2.0\n+$1,950 from Stripe",
+   "…the body says what it was, then the money and which app paid it")
+var sentBy = paid
+sentBy[0].who = "mira.eth"; sentBy[0].amount = "0.42 ETH"
+sentBy[1].who = "coinbase.eth"; sentBy[1].amount = "250 USDC"
+sentBy[2].amount = "10 USDC"
+let fromWhom = NotifyDigest.plan(sentBy)!
+ok(fromWhom.title == "Wallet: +$1,240" && fromWhom.body == "From mira.eth and 2 more",
+   "money names who sent it, largest first, never \"Received\" under a total that already said so")
+let approval = kinded("a", "Wallet", .approvalGranted, body: "Unlimited USDC to 0x9f…c1", at: at(8), category: "Wallet")
+let guarded = NotifyDigest.plan(sentBy + [approval])!
+ok(guarded.title == "Wallet: new approval" && guarded.body.hasPrefix("Unlimited USDC to 0x9f…c1\n+$1,240"),
+   "an approval that can move your funds leads the money that arrived")
+let fcDay = [
+    kinded("l1", "Farcaster", .likesReceived, title: "Liked by linda and 11 others", body: "gm", who: "linda", at: at(9)),
+    kinded("l2", "Farcaster", .likesReceived, title: "Liked by jesse and 29 others", body: "rooms", who: "jesse", at: at(10)),
+    kinded("l3", "Farcaster", .likesReceived, title: "Liked by anna and 2 others", body: "hi", who: "anna", at: at(11)),
+    kinded("q", "Farcaster", .repliesReceived, body: "can you share the build?", who: "jesse", at: at(8)),
+    kinded("n", "Farcaster", .repliesReceived, body: "nice one", who: "rafa", at: at(12)),
+    kinded("v", "Farcaster", .followersGained, body: "New follower", who: "vitalik", at: at(7)),
+].map { i -> NotifyDigest.Item in
+    var i = i; i.tally = ["l1": 12, "l2": 30, "l3": 3][i.id]; return i
+}
+let fc = NotifyDigest.plan(fcDay)!
+ok(fc.title == "Farcaster: 2 replies", "people you can answer lead nine like counts")
+ok(fc.body == "jesse: can you share the build?\nvitalik followed you · 45 likes",
+   "the reply asking something is the one quoted, and likes count PEOPLE across posts")
+let longHandle = NotifyDigest.plan([
+    kinded("h", "Farcaster", .repliesReceived, body: "ok", who: "averyveryverylonghandle.eth", at: at(9)),
+    kinded("k", "Farcaster", .followersGained, body: "New follower", who: "kai", at: at(8)),
+])!
+ok(longHandle.title == "Farcaster: 1 reply",
+   "a name too long for the title steps down to the count, never past the edge")
+ok(!fc.body.contains("Liked") && !fc.body.contains("replied"), "no body line repeats the title's verb")
+for p in [outnumbered, fromWhom, guarded, fc, longHandle] {
+    ok(p.title.count <= NotifyDigest.titleBudget
+       && p.body.components(separatedBy: "\n").allSatisfy { $0.count <= NotifyDigest.lineBudget }
+       && p.body.components(separatedBy: "\n").count <= NotifyDigest.bodyLineCap,
+       "a ranked digest still fits the lock screen: \(p.title) / \(p.body)")
+}
+let fcCard = NotifyDigest.card(fcDay)!
+ok(fcCard.rows.filter { $0.line.contains("like") }.count == 1
+   && fcCard.rows.last?.line == "45 likes on 3 posts · anna, jesse, linda and 42 more"
+   && fcCard.rows.last?.who == nil,
+   "the day's likes are ONE card row led by the app, never \"Liked by\" per post under a liker's name")
+ok(NotifyDigest.cardEntries(fcDay).count == fcCard.rows.count
+   && NotifyDigest.cardEntries(fcDay).last?.item.picture == nil,
+   "every card row has the item its face comes from, and the likes row draws no liker's face")
+let moneyCard = NotifyDigest.card(sentBy)!
+ok(moneyCard.rows.first?.who == "mira.eth" && moneyCard.rows.first?.line == "0.42 ETH · $980",
+   "a transfer's card row leads with who sent it, then how much")
 
 ok(NotifyKind.repliesReceived.counted(1) == "1 reply" && NotifyKind.repliesReceived.counted(3) == "3 replies",
    "one is singular and more is plural, spelled out rather than inflected")
@@ -1014,10 +1082,18 @@ mutate "a partial sum is stated as the money that arrived" \
        's/money\.allSatisfy\(\{ \$0\.usd != nil \}\)/money.contains(where: { \$0.usd != nil })/'
 mutate "names never shrink to fit, so the fewest are always shown" \
        's/\(1\.\.\.min\(3, people\.count\)\)\.reversed\(\)/(1...min(3, people.count))/'
-mutate "a sliver of the day leads the title" \
-       's/guard first\.items\.count >= rest else \{ return nil \}//'
-mutate "every app is named on every line again" \
-       's/parts = names\.map \{ app in/parts = items.map { \$0.name }.map { app in/'
+mutate "the most numerous kind leads the digest again, burying what needs you" \
+       's/if a\.rank != b\.rank \{ return a\.rank > b\.rank \}/if a.items.count != b.items.count { return a.items.count > b.items.count }/'
+mutate "a line names its app even when it already says it" \
+       's/\$0\.contains\(app\) \|\| \$0\.contains\(": "\) \? \$0 : app \+ ": " \+ \$0/app + ": " + \$0/'
+mutate "a reply asking nothing is quoted over one asking something" \
+       's/all\.first \{ \$0\.line\.contains\("\?"\) \} \?\? all\[0\]/all[0]/'
+mutate "likes count posts, not people" \
+       's/max\(\$1\.tally \?\? 1, 1\)/min(\$1.tally ?? 1, 1)/g'
+mutate "a transfer forgets who sent it" \
+       's/\{ \$0\.who \?\? \(multi \? \$0\.name : nil\) \}/{ multi ? \$0.name : nil }/'
+mutate "likes are a card row per post again" \
+       's/case \.likesReceived:\n                \/\/ The app leads/case .digest where false:\n                \/\/ The app leads/'
 mutate "the digest lists every row's generic headline again" \
        's/return generic && !body\.isEmpty \? body : title/return title/'
 mutate "the digest ranks by its least urgent thing" \
@@ -1040,9 +1116,7 @@ mutate "a slot still ahead of us is thrown away and re-chosen" \
 mutate "a slot already past today is scheduled anyway" \
        's/second: 0, of: day\), when > now else \{ continue \}/second: 0, of: day) else { continue }/'
 mutate "the card draws every row, however many" \
-       's/ordered\(group\)\.prefix\(cardRowCap\)/ordered(group).prefix(999)/'
-mutate "the card and the banner read in different orders" \
-       's/\(rank\[\$0\.element\.name\] \?\? \.max, \$0\.offset\) < \(rank\[\$1\.element\.name\] \?\? \.max, \$1\.offset\)/\$0.offset < \$1.offset/'
+       's/return Array\(out\.prefix\(cardRowCap\)\)/return out/'
 
 # ── NotifySweep.classify() — the actual bridge-specific dispatch ───────────
 #
@@ -1093,6 +1167,7 @@ final class Thing {
     var previewImageURL: String?
     var imageURLs: [String] = []
     var transferAmount: String?
+    var transferCounterparty: String?
 }
 
 // COMPILE-ONLY stand-ins for the four other types classify() names — real
