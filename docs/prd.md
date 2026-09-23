@@ -60516,3 +60516,38 @@ rows do not store an amount or a counterparty where a receipt reads them.
 
 Checked on the iPhone 17 Pro simulator on the demo's "Received 0.42 ETH from
 Coinbase" and the Uber card spend.
+
+## §888 — The devnets' money draws as money (user: "yes lets fold devnets into money sheet. but they also have more than just transfers", 2026-09-23)
+
+§887's money sheet reached every wallet row and no devnet row. Measured first:
+**Hegotá Frames and the Hegotá Privacy devnet land no rows at all** — their rooms
+are live chain reads — so there is nothing of theirs to fold. Hegotá UTXO and Base
+Vibenet land three kinds: money (a send, a faucet claim, a watched account's token
+transfer), account and key events (an account made, a key authorized or revoked,
+locked and unlocking, a policy key run), and nothing else.
+
+**Money becomes a receipt.** `MoneyReceipt.sources` takes "Hegotá UTXO" and
+"Base Vibenet" through a `devnet` arm, which draws only a row that stamped a
+direction. The rows did not stamp one, so the landings now write the money fields
+the receipt reads: a Hegotá send its direction, the amount the person typed (it was
+signed as wei and thrown away) and the recipient; a vibenet send its direction, its
+amount with a unit, and its recipient; a claim "received" from the faucet, with no
+amount, because the faucet decides it and none is invented; a watched account's
+token transfer its direction, amount, counterparty and account. A watched transfer
+is an `.event` row, so the receipt's gate admits a vibenet event that stamped a
+direction, and that row no longer also draws the event card. The line under the
+amount says "on Base Vibenet, a test network" — no fiat, ever (§83). A collectible
+(a token id) stays an event. **Rows landed before this change stamped nothing and
+keep the sheet they had.**
+
+**Account and key events stay events**, because nothing moved. And a defect
+underneath them is fixed: the sheet read a vibenet event's kind from its ref and
+knew four segments, so a transfer, a policy run and an account-created event all
+fell through to `.authorized` — a stamp reading "Authorized" on a transfer — and
+their facts (the movement, the run, the origin) were composed by
+`VibenetEventFacts` and never handed over. Both are fixed.
+
+**Not seen on screen.** The demo's devnet rows carry no money fields, and a real
+one needs a live devnet transaction. `money-receipt-selftest.sh` passes; the
+devnet arm has no harness case yet. The events' party-led head (the post sheet's
+shape) is the next step, not this one.

@@ -1396,7 +1396,7 @@ struct FeedScreen: View {
             }
             let hash = try await HegotaSend.sendValue(to: target, valueWei: valueWei,
                                                       nonceSequence: sequence)
-            HegotaSend.landReceipt(txHash: hash, kind: .sent(to: to), in: modelContext)
+            HegotaSend.landReceipt(txHash: hash, kind: .sent(to: to, amount: amount), in: modelContext)
             await HegotaLiveState.shared.refresh()
             return nil
         } catch let f as HegotaSend.Failure {

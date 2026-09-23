@@ -2599,7 +2599,8 @@ enum VibenetEvents {
         var landed = 0
 
         func insert(kind: VibenetEventKind, txHash: String, logIndex: Int, at: Date?,
-                    detail: String?, extraTags: [String] = []) {
+                    detail: String?, extraTags: [String] = [],
+                    money: VibenetTransfer? = nil) {
             let ref = "vibenet:\(kind.refSegment):\(txHash):\(logIndex)"
             guard existing[ref] == nil else { return }
             // NO DATE, NO ROW. Every other landing in this file falls back to
@@ -2618,6 +2619,14 @@ enum VibenetEvents {
             thing.authorHandle = item.address
             thing.summary = kind.phrase(keyLabel: nil, detail: detail)
             thing.tags = kind.facetTags + extraTags
+            // A token transfer is money (prd §888): the sheet draws it as a
+            // receipt. A collectible (a token id) stays an event.
+            if let money, money.tokenID == nil {
+                thing.transferDirection = money.direction == .incoming ? "received" : "sent"
+                thing.transferAmount = money.display
+                thing.counterpartyAddress = money.counterparty
+                thing.walletAddress = item.address
+            }
             context.insert(thing)
             landed += 1
         }
@@ -2632,7 +2641,8 @@ enum VibenetEvents {
                    txHash: transfer.txHash, logIndex: transfer.logIndex, at: transfer.at,
                    detail: transfer.direction == .incoming
                        ? String(localized: "\(transfer.display) from \(other)")
-                       : String(localized: "\(transfer.display) to \(other)"))
+                       : String(localized: "\(transfer.display) to \(other)"),
+                   money: transfer)
         }
         for run in item.policyRuns {
             insert(kind: .policyRun, txHash: run.txHash, logIndex: run.logIndex, at: run.at,

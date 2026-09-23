@@ -341,6 +341,9 @@ enum VibenetSend {
             sourceRef: ref)
         thing.walletAddress = "0x" + VibenetTransaction.hex(account)
         thing.summary = String(localized: "Requested for this phone's account. No signature was needed \u{2014} the faucet gives it freely.")
+        // Money fields (prd §888): from the faucet; the amount is the faucet's.
+        thing.transferDirection = "received"
+        thing.transferCounterparty = String(localized: "The vibenet faucet")
         context.insert(thing)
         try? context.save()
     }
@@ -787,7 +790,10 @@ enum VibenetSend {
             tags: sent.payer == nil ? ["Send"] : ["Send", "Sponsored"],
             sourceRef: ref)
         thing.walletAddress = "0x" + VibenetTransaction.hex(sent.account)
-        thing.transferAmount = VibenetExecute.decimalEther(weiBigEndian: valueWei)
+        // The unit rides the amount, as every money row's does (prd §888).
+        thing.transferAmount = "\(VibenetExecute.decimalEther(weiBigEndian: valueWei)) ETH"
+        thing.transferDirection = "sent"
+        thing.counterpartyAddress = recipientHex
         thing.summary = sent.payer == nil
             ? String(localized: "Sent to \(recipientHex), signed by this phone's key.")
             : String(localized: "Sent to \(recipientHex), signed by this phone's key. The devnet's faucet paid the gas.")

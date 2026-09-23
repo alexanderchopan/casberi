@@ -98,7 +98,9 @@ enum HegotaSend {
     /// money in an account you hold, which is the same "you are its source"
     /// reasoning §523 used, not a weaker one.
     enum ReceiptKind {
-        case sent(to: String)
+        /// `amount` is the decimal ETH the person typed (prd §888) — it was
+        /// signed as wei and thrown away, so the receipt had no number.
+        case sent(to: String, amount: String)
         case claimed
 
         var refTag: String {
@@ -119,7 +121,7 @@ enum HegotaSend {
         let title: String
         let summary: String
         switch kind {
-        case .sent(let to):
+        case .sent(let to, _):
             title = String(localized: "Sent test ETH on Hegotá")
             summary = String(localized: "Signed by this phone's key, to \(WalletStore.shortAddress(to)).")
         case .claimed:
@@ -137,6 +139,16 @@ enum HegotaSend {
             sourceRef: ref)
         thing.walletAddress = account
         thing.summary = summary
+        // Money fields, so the sheet draws it as money (prd §888).
+        switch kind {
+        case .sent(let to, let amount):
+            thing.transferDirection = "sent"
+            thing.transferAmount = "\(amount) ETH"
+            thing.counterpartyAddress = to
+        case .claimed:
+            thing.transferDirection = "received"
+            thing.transferCounterparty = String(localized: "The Hegotá faucet")
+        }
         context.insert(thing)
         try? context.save()
     }

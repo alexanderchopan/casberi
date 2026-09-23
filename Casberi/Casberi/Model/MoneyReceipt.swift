@@ -296,6 +296,9 @@ struct MoneyReceipt: Equatable {
     static let sources: Set<String> = [
         "Wallet", "Apple Wallet", "Gnosis Pay", "ether.fi", "Privacy",
         "Peer", "Privacy Pools", "Railgun", "Safe",
+        // The devnets that land rows (prd §888). Frames and the Privacy
+        // devnet land none — their rooms are live chain reads.
+        "Hegotá UTXO", "Base Vibenet",
     ]
 
     // MARK: - Composition
@@ -310,6 +313,7 @@ struct MoneyReceipt: Equatable {
         case "Privacy Pools":                return pools(f)
         case "Railgun":                      return railgun(f)
         case "Safe":                         return safe(f)
+        case "Hegotá UTXO", "Base Vibenet":  return devnet(f)
         default:                             return wallet(f)
         }
     }
@@ -349,6 +353,40 @@ struct MoneyReceipt: Equatable {
                            tone: received ? .gain : .plain),
             secondary: worthLine(f.usd),
             sentence: transferSentence(f, received: received),
+            stamp: .settled,
+            finality: .torn,
+            hue: .wallet)
+    }
+
+    /// A DEVNET's money (prd §888): a send, a faucet claim, a watched account's
+    /// transfer. Only a row that stamped a direction gets a receipt — an
+    /// account made, a key authorized or revoked moves no value and keeps its
+    /// own sheet, and so does every row landed before this ruling (they
+    /// stamped nothing). A claim knows its sender (the faucet) and not its
+    /// amount, which the faucet decides, so it carries no number rather than
+    /// an invented one. The value is test money, and the line says so — no
+    /// fiat, ever (§83).
+    private static func devnet(_ f: Facts) -> MoneyReceipt? {
+        guard let direction = f.direction,
+              direction == "sent" || direction == "received" else { return nil }
+        let received = direction == "received"
+        let parts = split(f.amount)
+        let party = f.partyLabel ?? f.counterparty
+        let amount: Amount? = (f.amount ?? "").isEmpty ? nil
+            : Amount(number: (received ? "+" : "−") + parts.number,
+                     unit: parts.unit, tone: received ? .gain : .plain)
+        return MoneyReceipt(
+            subject: subject(address: f.counterpartyAddress, name: party,
+                             fallbackAsset: parts.unit),
+            mine: f.walletAddress,
+            lead: received ? String(localized: "Received from")
+                           : String(localized: "Sent to"),
+            party: party,
+            titleFallback: amount == nil ? f.title : nil,
+            amount: amount,
+            secondary: String(localized: "on \(f.source), a test network"),
+            sentence: placeSentence(received ? String(localized: "Landed")
+                                             : String(localized: "Left"), f),
             stamp: .settled,
             finality: .torn,
             hue: .wallet)

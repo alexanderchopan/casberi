@@ -334,7 +334,9 @@ struct ThingSheetView: View {
                 let agentShape = self.agentShape
                 let agentConversation = agentShape == .conversation ? self.agentConversation : nil
                 let agentGrant = agentShape == .grant ? self.agentGrant : nil
-                let vibenetEventFacts = self.vibenetEventFacts
+                // A vibenet transfer that is a receipt draws as money, never
+                // also as an event card (prd §888).
+                let vibenetEventFacts = moneyReceipt == nil ? self.vibenetEventFacts : nil
                 let linkOnlyBody = self.linkOnlyBody
                 let framedShot = moneyReceipt == nil
                     && (thing.kind == .screenshot
@@ -2490,6 +2492,13 @@ struct ThingSheetView: View {
             kind = .locked
         } else if ref.hasPrefix("vibenet:unlocking") {
             kind = .unlocking
+        } else if ref.hasPrefix("vibenet:in:") || ref.hasPrefix("vibenet:out:") {
+            // prd §888: these fell through to `.authorized` and read as a key.
+            kind = .moved
+        } else if ref.hasPrefix("vibenet:policy:") {
+            kind = .policy
+        } else if ref.hasPrefix("vibenet:created:") {
+            kind = .created
         } else if thing.tags.contains("Revoked") {
             kind = .revoked
         } else {
@@ -2502,7 +2511,11 @@ struct ThingSheetView: View {
             actors: item?.actors ?? [],
             dueAt: thing.dueAt,
             kind: kind,
-            sourceRef: thing.sourceRef)
+            sourceRef: thing.sourceRef,
+            // The facts each kind reads were composed and never handed over.
+            transfers: item?.transfers ?? [],
+            policyRuns: item?.policyRuns ?? [],
+            origin: item?.origin)
     }
 
     /// Opening the address behind the receipt's subject face (prd §369

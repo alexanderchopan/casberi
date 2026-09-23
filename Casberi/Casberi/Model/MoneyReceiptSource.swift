@@ -25,7 +25,13 @@ enum MoneyReceiptSource {
     @MainActor
     static func receipt(for thing: Thing,
                         safe: SafeBridge.Check? = nil) -> MoneyReceipt? {
-        guard thing.isLive, thing.kind == .transaction else { return nil }
+        guard thing.isLive else { return nil }
+        // A watched vibenet account's transfer lands as an `.event` beside its
+        // key events; one that stamped a direction is money (prd §888).
+        let devnetTransfer = thing.kind == .event
+            && thing.source == VibenetIdentity.source
+            && thing.transferDirection != nil
+        guard thing.kind == .transaction || devnetTransfer else { return nil }
         return MoneyReceipt.compose(facts(for: thing, safe: safe))
     }
 
