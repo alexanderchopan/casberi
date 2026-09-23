@@ -78,7 +78,9 @@ struct ArticleBody: View {
                           headings: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, DS.Space.s4)
+            // The rows' column (prd §882), where `ArticleSheetHead` sets the
+            // headline, so the words start under the words.
+            .padding(.horizontal, DSRoomChassis.leadInset)
             .padding(.bottom, DS.Space.s3)
         } else {
             // THE LEDE STANDS IN (2026-09-12, prd §709). The article arm owns

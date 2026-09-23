@@ -60292,3 +60292,58 @@ date. Checked on the simulator in both themes; `day-divider-audit.py` clean.
 **Unchanged**: one slot a day (asked, "one is fine"), §809's fit budgets and ladders, the thumbnail, a lone item reading as itself. **Considered and not built**: a "known person" flag (address book or someone you follow) so a known follower beats a stranger count — no follow lookup exists to read at queue time; it is the next lever if a stranger's name is ever the one shown.
 
 **Guarded by** `notify-selftest.sh`: the three measured days as fixtures (a rejection outnumbered by payouts leads, an approval leads the money, a question leads nine like counts), no body line repeating the title's verb, likes as one card row with no liker's face, the fit property over every new plan, and six new mutations (the most numerous kind leading again, an app named twice, the question not preferred, likes counting posts, the sender forgotten, likes a row per post).
+
+## §882 — An article's sheet opens like its room: the picture in the well, a pink day, the dial under the head (user, from the article-sheet mocks, 2026-09-23)
+
+The thing sheets were designed all at once, so an article opened with the head a
+note or a task gets: a source line, a title sized by length, a 140pt picture
+inside the body, and the dial at the end of the article. The user asked for the
+sheets to be redesigned one kind at a time, starting with articles, looking like
+their room feeds and with no automated summary. Three directions were mocked;
+the user took the one where the picture leads, with two changes of their own.
+
+**The head is `ArticleSheetHead`.** In order: the picture filling the lead's
+well (`DSRoomChassis.leadHeight`, the box every room cover stands in, drawn by
+the cover's own `PhotoWell`/`RemoteArt`), then the publication with the day,
+the headline at `heading40` (past 64 characters, `heading24`), and the byline:
+the author's initial disc, their name and "N min read". It is drawn exactly
+where the generic title block would have been, so every shape ahead of it in the
+sheet's chain still wins, and `ThingContentView.readsAsArticle` is the one
+answer the head and the body share; the content view is told
+`articleArt: false` so the picture is drawn once. An article opens `.large`.
+
+**No picture, no well.** On the mock, a 316pt box with only the headline at its
+foot read as a picture that failed to load (the user). So a thing with no art
+starts at the publication line — §772's give-way, applied to the sheet. It is
+decided from the record before layout (stored pixels, or a stored URL not known
+dead), never from a fetch, so the head cannot change shape while open. The
+LinkPresentation scrape the old 140pt picture fell back to is not used by the
+head: §879 already keeps a page's `og:image` on the row, which is the source
+the rooms read too.
+
+**The dial rides under the head.** At the end of an article the verbs were a
+whole article away (the user: "i would think they were at the top somehow").
+They sit under the byline — in the content, under the head, which is where
+§752 allows a control; never at the top edge. The bottom dial is not drawn on
+an article; "Read on …" and the walk doors stay after the words.
+
+**The day is pink — the second line of brand ink in the app, and this AMENDS
+§740's "the one line".** The sheet has no day divider, so its eyebrow's day
+does the divider's job. It reads `FeedScreen.dayWord`, which is the divider's
+own function (`dayLabel` now delegates to it), so it can only ever name a day —
+"Yesterday", "Monday, September 21" — never an age like "4d" or a clock time.
+It stays off the room covers, which sit above pink dividers already, and it is
+the only brand ink on the sheet. `day-divider-audit.py` check 5 guards all
+three: the function, the ink, and a count of one (five new mutations).
+
+**Nothing on the head was written by a model.** The headline, publication and
+byline are the publisher's. The reading time counts the words the sheet draws
+(230 a minute) and is shown only at 200 words or more, so a feed's one-line
+stand-in never claims a minute. The article's text column moves to
+`DSRoomChassis.leadInset`, the rows' column, so the words start under the
+headline.
+
+**Not seen on screen:** the no-picture head — every demo article carries art.
+Checked on the iPhone 17 Pro simulator (iOS 27, dark) with the demo's whole
+article: the picture in the well, "Monday, Sep 21" in pink, the headline, "Dana
+Cole · 2 min read", the dial under it, the body, and no dial at the end.

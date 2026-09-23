@@ -37,6 +37,13 @@ means one stopped opting out, which puts the brand hue on a label like
 **(4) One spelling of the hex.** `#FF2D87` lives in `DesignTokens.swift` and
 nowhere else. `CasberiMark` reads `DS.brand`.
 
+**(5) The article sheet's day word (prd §882).** The sheet has no divider, so
+`ArticleSheetHead`'s eyebrow names the day in the divider's pink. It must read
+`FeedScreen.dayWord` — the divider's own function, which `dayLabel` must
+still delegate to — so the second pink in the app can only ever say a DAY,
+never "4d" or a clock time; and the head may take `DS.brandInk` exactly
+once, so the hue does not spread to its title or byline.
+
 **STATED CEILINGS, because a check that oversells itself is worse than none.**
 
   • It cannot see COLOUR. `brandInk` resolving to the wrong pink, or the
@@ -58,6 +65,7 @@ from pathlib import Path
 FEED = "Casberi/Casberi/Screens/FeedScreen.swift"
 DIVIDER = "Casberi/Casberi/Screens/FeedDayDivider.swift"
 TOKENS = "Casberi/Casberi/Design/DesignTokens.swift"
+SHEET_HEAD = "Casberi/Casberi/Screens/ArticleSheetHead.swift"
 BRAND_HEX = "FF2D87"
 MIN_OPT_OUTS = 9
 
@@ -70,7 +78,7 @@ def strip_comments(text: str) -> str:
     return "\n".join(re.sub(r"//.*$", "", line) for line in text.splitlines())
 
 
-def audit(feed: str, tokens: str, mark: str) -> list:
+def audit(feed: str, tokens: str, mark: str, head: str) -> list:
     out = []
     code = strip_comments(feed)
 
@@ -112,6 +120,29 @@ def audit(feed: str, tokens: str, mark: str) -> list:
             f"CasberiMark re-spells #{BRAND_HEX} — it reads DS.brand, so the "
             "mark and the dividers cannot drift to two pinks (prd §740)"
         )
+
+    # (5) the article sheet's day word: the divider's function, in the ink, once
+    head_code = strip_comments(head)
+    if not re.search(
+        r"Text\(FeedScreen\.dayWord\([^)]*\)\)\s*\.dsText\([^)]*\)\s*"
+        r"\.foregroundStyle\(DS\.brandInk\)", head_code
+    ):
+        out.append(
+            "ArticleSheetHead's day word is not `FeedScreen.dayWord` in "
+            "DS.brandInk — the sheet's pink must name a day the divider's way "
+            "(prd §882)"
+        )
+    inks = len(re.findall(r"DS\.brandInk", head_code))
+    if inks != 1:
+        out.append(
+            f"ArticleSheetHead takes DS.brandInk {inks} times, expected 1 — "
+            "the day word is the sheet's only pink (prd §882)"
+        )
+    if not re.search(r"func dayLabel\([^)]*\)[^{]*\{\s*Self\.dayWord\(", code):
+        out.append(
+            "FeedScreen.dayLabel no longer delegates to dayWord — the divider "
+            "and the sheet would name a day two ways (prd §882)"
+        )
     return out
 
 
@@ -133,12 +164,39 @@ def self_test() -> bool:
         Text(label).foregroundStyle(dated ? DS.brandInk : DS.textPrimary)
     }
     func bundled() -> some View { Text(label).foregroundStyle(DS.brandInk) }
+    func dayLabel(_ date: Date) -> String { Self.dayWord(date) }
     """ + "\n".join(f"    call{i}(dated: false)" for i in range(MIN_OPT_OUTS))
     good_tokens = 'static let brand = Color.fixed("#FF2D87")'
     good_mark = "static let pink = DS.brand"
+    good_head = """
+    Text(verbatim: publication).dsText(.label12).foregroundStyle(DS.textSecondary)
+    Text(FeedScreen.dayWord(thing.capturedAt))
+        .dsText(.label12)
+        .foregroundStyle(DS.brandInk)
+    """
 
     cases = [
         ("healthy tree is clean", good_feed, good_tokens, good_mark, 0),
+        (
+            "the sheet's day word lost the ink",
+            good_feed, good_tokens, good_mark, 1,
+            good_head.replace(".foregroundStyle(DS.brandInk)", ".foregroundStyle(DS.textTertiary)"),
+        ),
+        (
+            "the sheet's day word is an age, not the divider's day",
+            good_feed, good_tokens, good_mark, 1,
+            good_head.replace("FeedScreen.dayWord(thing.capturedAt)", "shortTime(thing.capturedAt)"),
+        ),
+        (
+            "the pink spread to a second line of the head",
+            good_feed, good_tokens, good_mark, 1,
+            good_head + "Text(thing.title).foregroundStyle(DS.brandInk)",
+        ),
+        (
+            "dayLabel re-spelled instead of delegating",
+            good_feed.replace("{ Self.dayWord(date) }", "{ date.formatted() }"),
+            good_tokens, good_mark, 1,
+        ),
         (
             "a header slid back to the primary ramp",
             good_feed.replace("Text(label).foregroundStyle(DS.brandInk)",
@@ -169,8 +227,10 @@ def self_test() -> bool:
         ),
     ]
     ok = True
-    for name, feed, tokens, mark, want in cases:
-        got = len(audit(feed, tokens, mark))
+    for case in cases:
+        name, feed, tokens, mark, want = case[:5]
+        head = case[5] if len(case) > 5 else good_head
+        got = len(audit(feed, tokens, mark, head))
         verdict = "ok  " if (got >= want if want else got == 0) else "FAIL"
         if verdict == "FAIL":
             ok = False
@@ -202,7 +262,8 @@ def main() -> int:
     mark = (root / "Casberi/Casberi/Design/CasberiMark.swift").read_text(
         encoding="utf-8", errors="replace"
     )
-    findings = audit(feed, tokens, mark)
+    head = (root / SHEET_HEAD).read_text(encoding="utf-8", errors="replace")
+    findings = audit(feed, tokens, mark, head)
     if findings:
         print(f"day-divider-audit: {len(findings)} finding(s)")
         for f in findings:

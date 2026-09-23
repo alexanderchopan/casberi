@@ -268,6 +268,9 @@ struct ThingSheetView: View {
             // same "tall thing" the detent rule was written for, so it opens
             // full-height rather than starting its verbs below the fold.
             || thing.quote != nil
+            // An article opens near-full like the page it is (prd §882): its
+            // head is the room's cover and its words start under it.
+            || ThingContentView.readsAsArticle(thing)
         // A social post's `content` is its permalink — always short — so the
         // length test has to read the POST, else a 900-character cast opened
         // half-height with its own words below the fold (2026-07-16).
@@ -330,9 +333,24 @@ struct ThingSheetView: View {
                 let agentGrant = agentShape == .grant ? self.agentGrant : nil
                 let vibenetEventFacts = self.vibenetEventFacts
                 let linkOnlyBody = self.linkOnlyBody
+                let framedShot = moneyReceipt == nil
+                    && (thing.kind == .screenshot
+                        || FilesIngest.isStoredPicture(thing.sourceRef))
+                // THE ARTICLE HEAD (prd §882) — drawn exactly where the generic
+                // title block would have been, so every shape ahead of it in
+                // the chain below still wins, and the content view is told to
+                // leave the picture to the head.
+                let articleHead = ThingContentView.readsAsArticle(thing)
+                    && moneyReceipt == nil && !framedShot && !isSocialPost
+                    && socialShape != .person && purchaseReading == nil
+                    && workReading == nil && agentGrant == nil
+                    && agentConversation == nil && l2beatShape == nil
+                    && privyApp == nil && walletbeatShape == nil
+                    && noteShape == nil && vibenetEventFacts == nil
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.
+                if !articleHead || onBack != nil {
                 HStack(spacing: DS.Space.s3) {
                     if let onBack {
                         Button(action: onBack) {
@@ -351,11 +369,13 @@ struct ThingSheetView: View {
                         // same word VoiceOver reads, so the two can't drift.
                         .dsTooltip(String(localized: "Back"))
                     }
-                    eyebrow
+                    // The article head carries its own eyebrow (prd §882).
+                    if !articleHead { eyebrow }
                 }
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                     .settleIn()
+                }
                 if let parent = thing.parent {
                     replyingToRow(parent)
                         .padding(.horizontal, DS.Space.s4)
@@ -373,9 +393,7 @@ struct ThingSheetView: View {
                 // image is the same picture as a screenshot and used to draw
                 // unframed and untappable. `FilesIngest.isStoredPicture` says
                 // why the test is on the ref rather than on the bytes.
-                let framedShot = moneyReceipt == nil
-                    && (thing.kind == .screenshot
-                        || FilesIngest.isStoredPicture(thing.sourceRef))
+                // (`framedShot` is read above, where the article head needs it.)
                 if let altanaKey {
                     AltanaKeyCard(model: altanaKey) {
                         if let url = URL(string: AltanaKeystore.explorerURL(address: altanaKey.address)) {
@@ -606,6 +624,19 @@ struct ThingSheetView: View {
                     // an object that states its own subject does not want a
                     // label over it.
                     EmptyView()
+                } else if articleHead {
+                    // The dial rides UNDER the head (prd §882): on a sheet
+                    // that is mostly reading, the verbs were a whole article
+                    // away. Under the head, never at the top edge (§752).
+                    ArticleSheetHead(thing: thing,
+                                     onSource: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil)
+                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                        .settleIn(delay: 0.06)
+                    VerbDial(thing: thing, verbs: sheetVerbs,
+                             onVerb: runVerb, onName: nil, onPin: togglePin)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.1)
+                    dialResult
                 } else {
                     titleBlock
                         .padding(.horizontal, DS.Space.s4)
@@ -706,7 +737,8 @@ struct ThingSheetView: View {
                     && thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
                         != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)))
                 if contentShown {
-                    ThingContentView(thing: thing, agent: agentConversation)
+                    ThingContentView(thing: thing, agent: agentConversation,
+                                     articleArt: !articleHead)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.12)
                 }
@@ -796,7 +828,7 @@ struct ThingSheetView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
                 }
-                if moneyReceipt == nil && !framedShot {
+                if moneyReceipt == nil && !framedShot && !articleHead {
                     // The disc dial, standardized across every sheet
                     // (2026-07-23) — it was B1-only (the wallet stage, the
                     // framed screenshot) and everything else kept the older
@@ -1396,11 +1428,7 @@ struct ThingSheetView: View {
                 if Corpus.earnsRoom(thing.source) {
                     Button {
                         DSHaptic.tap()
-                        dismissWhenSettled {
-                            if let url = URL(string: "casberi://feed/source/\(sourcePathComponent)") {
-                                openURL(url)
-                            }
-                        }
+                        openSourceRoom()
                     } label: {
                         sourceLine
                             .contentShape(Rectangle())
@@ -1471,6 +1499,16 @@ struct ThingSheetView: View {
     /// `thing.source` as a URL path component — a source name can carry
     /// spaces ("Apple Music", "iCloud Mail"), so the eyebrow's door needs
     /// this before handing it to `casberi://feed/source/…`.
+    /// Leave for this thing's source room — the eyebrow's door, and the
+    /// article head's publication line (prd §882).
+    private func openSourceRoom() {
+        dismissWhenSettled {
+            if let url = URL(string: "casberi://feed/source/\(sourcePathComponent)") {
+                openURL(url)
+            }
+        }
+    }
+
     private var sourcePathComponent: String {
         thing.source.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? thing.source
     }

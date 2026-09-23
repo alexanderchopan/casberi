@@ -118,6 +118,11 @@ struct ThingContentView: View {
     /// places that can disagree about how many turns a chat had.
     var agent: AgentSheet.Conversation? = nil
 
+    /// Whether the article arm draws its picture (prd §882). The sheet's
+    /// `ArticleSheetHead` draws an article's picture as the lead, so the sheet
+    /// passes `false` wherever that head is drawn; every other caller keeps it.
+    var articleArt: Bool = true
+
     /// True when the `.link` branch below resolves to the LinkPreviewCard,
     /// whose footer already names the host — ThingSheetView's Site row keys
     /// off this exact fact (not a lookalike condition) so the two views
@@ -246,7 +251,17 @@ struct ThingContentView: View {
     /// and `readableURL` keeps `FeedArticleText.sources` internally, so the
     /// fetch stays two sources wide. `reading-draw-selftest.sh` slices this
     /// condition by its own opening and pins both halves.
-    private var linkShape: LinkShape {
+    private var linkShape: LinkShape { Self.linkShape(for: thing) }
+
+    /// Whether a thing reads as an ARTICLE (prd §882) — the one answer the
+    /// sheet and this view share, so the sheet's article head can never be
+    /// drawn over a body this view would draw as something else.
+    static func readsAsArticle(_ thing: Thing) -> Bool {
+        guard thing.kind == .link, case .article = linkShape(for: thing) else { return false }
+        return true
+    }
+
+    private static func linkShape(for thing: Thing) -> LinkShape {
         if let chart = ThingChart.kind(for: thing) {
             return .chart(chart)
         } else if thing.source == "GitHub", thing.sourceRef?.hasPrefix("gh:release:") == true {
@@ -266,10 +281,7 @@ struct ThingContentView: View {
     }
 
     /// Whether the article arm draws this row, and therefore its lede.
-    private var readsAsArticle: Bool {
-        guard thing.kind == .link, case .article = linkShape else { return false }
-        return true
-    }
+    private var readsAsArticle: Bool { Self.readsAsArticle(thing) }
 
     /// The source's own abstract — a feed item's summary, a task's notes, a
     /// Linear issue's body, the rest of a clamped Readwise highlight. Follows
@@ -355,7 +367,7 @@ struct ThingContentView: View {
                 // `ArticleBody` owns the fetch, the "reading the article"
                 // line, the Listen control — and the lede, when there is no
                 // body to draw.
-                if let door {
+                if articleArt, let door {
                     LinkPreviewCard(url: door, storedImageURL: thing.previewImageURL, artOnly: true)
                 }
                 ArticleBody(thing: thing)

@@ -11592,7 +11592,12 @@ struct FeedScreen: View {
     /// inside `dayGroups`/`agendaSplit`, which the feed re-derives per paint.
     static let groupingCalendar = Calendar.current
 
-    func dayLabel(_ date: Date) -> String {
+    func dayLabel(_ date: Date) -> String { Self.dayWord(date) }
+
+    /// The day a thing landed, in the day divider's own words (prd §882). The
+    /// article sheet's pink day word reads THIS, so the two pinks in the app
+    /// always name a day the same way — never "4d", never a clock time.
+    static func dayWord(_ date: Date) -> String {
         if Self.groupingCalendar.isDateInToday(date) { return String(localized: "Today") }
         if Self.groupingCalendar.isDateInYesterday(date) { return String(localized: "Yesterday") }
         // Only the agenda ever labels a day ahead (every other feed drops
