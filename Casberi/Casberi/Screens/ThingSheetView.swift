@@ -363,7 +363,7 @@ struct ThingSheetView: View {
                     && moneyReceipt == nil && vibenetEventFacts == nil
                     && ThingChart.kind(for: thing) == nil && !articleHead && !postHead
                 let ownHead = articleHead || postHead || framedShot || moneyReceipt != nil
-                    || vibenetEventFacts != nil || momentHead
+                    || vibenetEventFacts != nil || momentHead || noteShape != nil
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.
@@ -624,8 +624,7 @@ struct ThingSheetView: View {
                     // passage's title is an 80-character clamp of words the
                     // shape below sets in full.
                     noteHead(noteShape)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s3)
+                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                         .settleIn(delay: 0.06)
                 } else if ThingChart.kind(for: thing) != nil {
                     // A CHARTED row draws no title (prd §369 amendment). The
@@ -896,7 +895,7 @@ struct ThingSheetView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
                 }
-                if moneyReceipt == nil && !framedShot && !articleHead {
+                if moneyReceipt == nil && !framedShot && !articleHead && noteShape == nil {
                     // The disc dial, standardized across every sheet
                     // (2026-07-23) — it was B1-only (the wallet stage, the
                     // framed screenshot) and everything else kept the older
@@ -1745,47 +1744,148 @@ struct ThingSheetView: View {
     /// The head each shape leads with, in place of the title block.
     @ViewBuilder
     private func noteHead(_ shape: NoteSheet.Shape) -> some View {
+        // THE NOTE HEADS (prd §893) — the shared head (`SheetPartyHead`, §892):
+        // who or what it is from, the pink day, what it is; then the words,
+        // with the dial under the head as an article's is (§882), because a
+        // note, like an article, is read for pages.
         let tags = NoteSheetSource.tags(for: thing)
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
+        VStack(alignment: .leading, spacing: 0) {
             switch shape {
             case .entry:
-                NoteDateline(dateline: NoteSheet.dateline(
-                    thing.capturedAt, act: NoteSheetSource.act(for: thing), now: .now))
-                // THE ENTRY'S OWN PHOTOGRAPH (prd §399). §398 landed both
-                // journal exports' pictures and nothing drew them — an entry's
-                // photograph appeared only as a 92pt tile on a DIFFERENT
-                // entry's day shelf, never on the sheet that owns it.
-                NoteEntryPhoto(thing: thing) { zoomingPhoto = true }
-                // A voice note's words belong to its recording, and
-                // `VoiceContent` below draws the two together — player, real
-                // amplitude envelope, transcript. Setting the transcript here
-                // as well would print it twice and separate it from the audio
-                // it transcribes.
+                // The entry's own photograph fills the lead's well (§882's
+                // picture, the article's); an entry without one starts at its
+                // head. The dateline is gone: the day is the pink word.
+                if thing.previewImageData != nil {
+                    NoteEntryPhoto(thing: thing) { zoomingPhoto = true }
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.bottom, DS.Space.s6)
+                }
+                SheetPartyHead(name: thing.source, day: thing.capturedAt, line: entryLine,
+                               onFace: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil) {
+                    BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
+                }
                 if thing.kind != .voice {
-                    noteProse
+                    let split = Self.entrySplit(NoteSheetSource.prose(for: thing).text)
+                    // An entry's first line IS its title (why it had none:
+                    // it would print twice) — so it leads, and the prose
+                    // continues from the line after it.
+                    if let first = split.first {
+                        Text(first)
+                            .dsText(Self.titleRung(for: first).style)
+                            .foregroundStyle(DS.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                            .padding(.horizontal, DSRoomChassis.leadInset)
+                            .padding(.top, DS.Space.s4)
+                    }
+                    noteDial
+                    if !split.rest.isEmpty {
+                        noteProse(text: split.rest)
+                            .padding(.horizontal, DSRoomChassis.leadInset)
+                            .padding(.top, DS.Space.s6)
+                    }
+                } else {
+                    noteDial
                 }
             case .note:
-                // A vault note's title IS a name the person chose, so unlike
-                // an entry's it leads and is not a repetition of anything.
+                SheetPartyHead(name: thing.source, day: thing.capturedAt,
+                               line: thing.kind.typeTag,
+                               onFace: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil) {
+                    BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
+                }
                 Text(thing.title)
-                    // The same ladder as every other title — a long note
-                    // name is a title, not a head (`titleRung`).
                     .dsText(Self.titleRung(for: thing.title).style)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
-                noteProse
+                    .padding(.horizontal, DSRoomChassis.leadInset)
+                    .padding(.top, DS.Space.s6)
+                noteDial
+                // A vault note's body opens with its own title line; the head
+                // just set it, so the prose starts after it (prd §893).
+                noteProse(text: Self.droppingTitleLine(NoteSheetSource.prose(for: thing).text,
+                                                       title: thing.title))
+                    .padding(.horizontal, DSRoomChassis.leadInset)
+                    .padding(.top, DS.Space.s6)
             case .passage:
-                NotePassageContent(
-                    passage: NoteSheetSource.passage(for: thing),
-                    citation: NoteSheetSource.citation(for: thing) ?? thing.source,
-                    locator: thing.summary)
+                // The BOOK is who it is from; the passage is the headline.
+                // The locator it drew ("Marked while reading Piranesi —
+                // Susanna Clarke.") restated the book where a page belonged.
+                let cite = Self.citationParts(NoteSheetSource.citation(for: thing) ?? thing.source)
+                // The importer's locator ("page 42") rides the line.
+                let locator = (thing.summary ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                SheetPartyHead(name: cite.work, day: thing.capturedAt,
+                               line: [cite.author, thing.source,
+                                      locator.count <= 24 && !locator.isEmpty ? locator : nil]
+                                   .compactMap { $0 }
+                                   .joined(separator: " · ")) {
+                    Image(systemName: "book.closed")
+                        .dsGlyph(.title)
+                        .foregroundStyle(DS.textPrimary)
+                        .frame(width: DS.Face.shelf, height: DS.Face.shelf)
+                        .background(Circle().fill(DS.fillLine))
+                        .accessibilityHidden(true)
+                }
+                Text("\u{201C}\(NoteSheetSource.passage(for: thing))\u{201D}")
+                    .dsText(.heading24)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .padding(.horizontal, DSRoomChassis.leadInset)
+                    .padding(.top, DS.Space.s6)
+                noteDial
             }
             if !tags.isEmpty {
                 NoteTagRow(tags: tags)
+                    .padding(.horizontal, DSRoomChassis.leadInset)
+                    .padding(.top, DS.Space.s4)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The dial, under a note's head (prd §893).
+    @ViewBuilder private var noteDial: some View {
+        VerbDial(thing: thing, verbs: sheetVerbs,
+                 onVerb: runVerb, onName: nil, onPin: togglePin)
+            .padding(.top, DS.Space.s6)
+        dialResult
+    }
+
+    /// "Journal · written 9:00 PM" — what it is and when in the day (§893).
+    private var entryLine: String {
+        let what = thing.kind == .voice ? String(localized: "Voice note") : String(localized: "Journal")
+        let clock = thing.capturedAt.formatted(date: .omitted, time: .shortened)
+        let act = thing.kind == .voice ? String(localized: "recorded \(clock)")
+                                       : String(localized: "written \(clock)")
+        return "\(what) · \(act)"
+    }
+
+    /// An entry's first line and the rest of it. A markdown heading mark on
+    /// the first line is not part of its words.
+    static func entrySplit(_ text: String) -> (first: String?, rest: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return (nil, "") }
+        let parts = trimmed.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+        let first = String(parts[0]).trimmingCharacters(in: CharacterSet(charactersIn: "# ").union(.whitespaces))
+        let rest = parts.count > 1 ? String(parts[1]).trimmingCharacters(in: .whitespacesAndNewlines) : ""
+        return (first.isEmpty ? nil : first, rest)
+    }
+
+    /// The body without a first line that only restates the title.
+    static func droppingTitleLine(_ text: String, title: String) -> String {
+        let split = entrySplit(text)
+        guard let first = split.first,
+              first.caseInsensitiveCompare(title.trimmingCharacters(in: .whitespaces)) == .orderedSame
+        else { return text }
+        return split.rest
+    }
+
+    /// "Piranesi — Susanna Clarke" as its two parts.
+    static func citationParts(_ citation: String) -> (work: String, author: String?) {
+        let parts = citation.components(separatedBy: " \u{2014} ")
+        guard parts.count >= 2 else { return (citation, nil) }
+        return (parts[0], parts.dropFirst().joined(separator: " \u{2014} "))
     }
 
     /// The body, with the two per-source facts the renderer needs (prd §399):
@@ -1798,9 +1898,9 @@ struct ThingSheetView: View {
     /// honest: `NoteLinks.resolve` never invents a destination for a link whose
     /// note has not synced (or never existed).
     @ViewBuilder
-    private var noteProse: some View {
+    private func noteProse(text: String?) -> some View {
         let prose = NoteSheetSource.prose(for: thing)
-        NoteProse(text: prose.text,
+        return NoteProse(text: text ?? prose.text,
                   markdown: prose.markdown,
                   wikilinks: prose.wikilinks) { target in
             guard let match = NoteLinks.resolve([target], context: modelContext).first

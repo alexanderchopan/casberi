@@ -2594,8 +2594,11 @@ enum DemoSeedAll {
             ("Piranesi — Susanna Clarke", "I am the beloved child of the house.", 49),
         ]
         out += kindle.enumerated().map { i, k in
+            // The passage on `content`, as `KindleImport` writes it (prd §893):
+            // the demo wrote the WORK there, so the sheet drew the book's name
+            // as the passage.
             row(.note, k.1, source: "Kindle", ref: "demo:kindle:\(i)", days: k.2, hour: 22,
-                content: k.0) { t in
+                content: k.1) { t in
                 // The work, on `authorHandle` — where §366's importer stamps
                 // it and where a room can rank it. `NoteSheetSource.citation`
                 // still reads `content` as its legacy fallback, so the
@@ -2606,7 +2609,9 @@ enum DemoSeedAll {
                 // §366's importer stamps a passage's note onto `summary`, and
                 // the demo set none — so the room showed passages with no
                 // reader in them (2026-08-17).
-                t.summary = "Marked while reading \(k.0)."
+                // A locator, as the importer's `summary` is ("page 42") — the
+                // old stand-in restated the book (prd §893).
+                t.summary = "page \(40 + i * 37)"
             }
         }
         // Substack and RSS lead with the BYLINE (`postAuthor`) when enough

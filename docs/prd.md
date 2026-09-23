@@ -60662,3 +60662,32 @@ covers the new file. `FactRows` stops being private to the content view.
 
 Checked on the iPhone 17 Pro simulator on the demo's "Design review", "Book
 dentist" and "Run · 5.2 km".
+
+## §893 — A note's sheet leads with where it is from, the words under the dial (user, approving the batched mocks — "notes: ok", 2026-09-23)
+
+The note heads take the shared head (`SheetPartyHead`, §892), and because a note
+is read for pages, like an article, the dial rides under the head (§882) and the
+bottom dial stands down for every note shape.
+
+- **A vault note** leads with its source (Obsidian's mark, the door to its room),
+  the pink day and "Note"; the title at the sheet's ladder; the dial; the prose.
+  A vault body opens with its own title line, which printed the title twice —
+  the prose now starts after it.
+- **A journal entry** puts its photograph in the lead's well (the article's
+  picture, `leadHeight`, `DS.Radius.widget`), then the source, the pink day
+  and "Journal · written 9:57 PM". Its first line is its title — the reason it
+  had none was that it would print twice — so the first line leads and the prose
+  continues from the line after it. `NoteDateline` (the day at `heading40`) is
+  deleted: the day is the pink word.
+- **A book passage** makes the BOOK the head ("Piranesi", "Susanna Clarke ·
+  Kindle · page 40") and the passage the headline, in quotes. `NotePassageContent`
+  and its locator line are deleted. The demo stored the WORK on `content`, where
+  `KindleImport` stores the passage, so the sheet drew "Piranesi — Susanna
+  Clarke" as the passage and its siblings; and its stand-in locator ("Marked while
+  reading Piranesi…") restated the book where the importer writes "page 42". Both
+  are the importer's shape now. **A device that poured the demo before this keeps
+  the old rows until it is poured again.**
+
+Checked on the iPhone 17 Pro simulator, after a fresh demo pour, on "Weekly review
+— week 32", "Slow morning, long walk" and "The beauty of the house is
+immeasurable."

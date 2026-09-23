@@ -12,39 +12,6 @@ import SwiftUI
 
 // MARK: - Entry: the date is the identity
 
-/// The hero of a dated piece of writing.
-///
-/// A journal entry's title was cut out of its own first line, so leading with
-/// it printed that line twice and named nothing — while the entry's date, the
-/// one fact that actually identifies it and the only fact every source in this
-/// category carries, appeared nowhere on the sheet at all beyond the eyebrow's
-/// "3y ago".
-///
-/// The day is the headline; the year, the act and the time are the quiet line
-/// under it. The year drops out when it is this one (`NoteSheet.dateline`) —
-/// stating "2026" over something written this morning is the obvious said in
-/// the loudest slot on the screen.
-struct NoteDateline: View {
-    let dateline: NoteSheet.Dateline
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(dateline.headline)
-                .dsText(.heading40)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
-            Text(dateline.detail)
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        }
-        // The day and its clause are one fact; read apart they are a bare
-        // date and a loose fragment.
-        .accessibilityElement(children: .combine)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
 // MARK: - The body
 
 /// A note's own words, at the tier writing is read in.
@@ -284,53 +251,6 @@ struct NoteTagRow: View {
 }
 
 // MARK: - Passage: somebody else's words
-
-/// A marked passage, and the work it came from.
-///
-/// The record had these two the wrong way round — the (truncated) passage in
-/// the title slot and the book's name as the body — so the sheet drew a
-/// quotation at display size as though it were a headline. The passage is the
-/// hero here and the work is the identity beneath it, which is also the order
-/// a person would write a quotation down in.
-///
-/// The rail is a 2pt shape marking a quoted block, not a divider: the
-/// no-hairlines law is about DIVIDERS, and this divides nothing (the same
-/// reasoning `ReplyingToCard`'s rail already carries).
-struct NotePassageContent: View {
-    let passage: String
-    /// "Piranesi — Susanna Clarke", exactly as the clippings file wrote it.
-    let citation: String
-    /// "page 42" / "location 611-612", or nil on a file we can't read a
-    /// locator out of.
-    let locator: String?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                RoundedRectangle(cornerRadius: 1, style: .continuous)
-                    .fill(DS.fillFaint)
-                    .frame(width: 2)
-                NoteProse(text: passage, foldable: false)
-            }
-            HStack(spacing: DS.Space.s3) {
-                KindGlyph(kind: .note, size: DS.Face.list)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(citation)
-                        .dsText(.heading17)
-                        .foregroundStyle(DS.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if let locator, !locator.isEmpty {
-                        Text(locator)
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textTertiary)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            .accessibilityElement(children: .combine)
-        }
-    }
-}
 
 /// The other passages you marked in the same work.
 ///
@@ -593,13 +513,14 @@ struct NoteEntryPhoto: View {
                 // honours `redactionReasons` — a private photograph at this size
                 // surviving into the app-switcher snapshot is exactly the leak
                 // that guard exists to stop.
+                // The lead's well, as an article's picture (prd §893).
                 PhotoWell(thing: thing, size: nil)
-                    .frame(height: 220)
+                    .frame(height: DSRoomChassis.leadHeight)
                     .frame(maxWidth: .infinity)
                     .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card,
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget,
                                                 style: .continuous))
-                    .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card,
+                    .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget,
                                                    style: .continuous))
             }
             .buttonStyle(DSTileButtonStyle())
