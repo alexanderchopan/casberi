@@ -358,6 +358,7 @@ struct ThingSheetView: View {
                     && SocialSheetSource.eyebrowLeadsWithPerson(thing, shape: socialShape)
                     && moneyReceipt == nil && !framedShot
                 let ownHead = articleHead || postHead || framedShot || moneyReceipt != nil
+                    || vibenetEventFacts != nil
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.

@@ -92,21 +92,62 @@ struct VibenetEventCard: View {
             //
             // The disc is the ACCOUNT's face — the event's subject — matching
             // the receipt, where the disc is the counterparty and is a door.
-            DSSheetHead(disc: {
+            // THE ACCOUNT LEADS (prd §891), the post and money heads' shape
+            // (§884, §887): its face (the door to the account), its name with
+            // the day in the divider's pink, then what happened. It drew on
+            // `DSSheetHead`, which other sheets share, so the card composes
+            // its own head rather than moving that one.
+            VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: DS.Space.s3) {
                 Button { onAccount(facts.account) } label: {
                     WalletFace(address: facts.account, size: DS.Face.shelf, circular: true)
                 }
                 .buttonStyle(.plain)
                 .dsHover()
-            },
-                        stamp: verbStamp,
-                        stampWeight: facts.kind == .locked ? .urgent : .quiet,
-                        lead: happenedAt.map {
-                            $0.formatted(.dateTime.day().month().hour().minute())
-                        },
-                        title: title,
-                        secondary: subtitle,
-                        sentence: consequence(now: now))
+                .accessibilityLabel(Text("Open account"))
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text(verbatim: facts.accountName)
+                            .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1).truncationMode(.middle)
+                        Spacer(minLength: DS.Space.s2)
+                        if let happenedAt {
+                            Text(FeedScreen.dayWord(happenedAt))
+                                .dsText(.label12)
+                                .foregroundStyle(DS.brandInk)
+                                .lineLimit(1)
+                        }
+                    }
+                    Text(verbatim: whereLine)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: title)
+                    .dsText(.heading24).foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let subtitle {
+                    Text(verbatim: subtitle)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 2)
+                }
+                if let sentence = consequence(now: now) {
+                    Text(verbatim: sentence)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, DS.Space.s3)
+                }
+                DSStamp(word: verbStamp,
+                        weight: facts.kind == .locked ? .urgent : .quiet)
+                    .padding(.top, DS.Space.s3)
+            }
+            .padding(.top, DS.Space.s6)
+            }
+            // No inset of its own: the sheet already insets this card, and a
+            // second one stepped the head in from its own rows (prd §891).
+            .padding(.top, DS.Space.s4)
 
             // WHAT THIS KEY MAY DO — chips, the shape the design settled on
             // after a grid was drawn and refused ("the chips look better, the
@@ -182,6 +223,13 @@ struct VibenetEventCard: View {
     /// The state word the head stamps, top-right — the receipt's own stamp
     /// slot. A verb rather than a noun, because what a key event records is
     /// something that HAPPENED to the account.
+    /// Where and when, under the name: "Base Vibenet · 2:20 PM" (prd §891) —
+    /// the day is the pink word on the line above.
+    private var whereLine: String {
+        guard let happenedAt else { return "Base Vibenet" }
+        return "Base Vibenet · \(happenedAt.formatted(date: .omitted, time: .shortened))"
+    }
+
     private var verbStamp: String {
         switch facts.kind {
         case .authorized: String(localized: "Authorized")

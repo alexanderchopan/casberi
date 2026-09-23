@@ -60615,3 +60615,23 @@ librarian, and the loader taking a `Thing`.
 **What still repeats, on purpose:** a book's cover on each of its highlights, a token's mark on each row about that token, a person's face. Each names one thing that recurs.
 
 **Guarded twice.** `CasberiTests/DemoPictureTests` pours `DemoSeedAll.rooms()` and fails on two rows sharing a picture BY REF or BY BYTES (two keys whose assets are one image are a repeat too), and on any `sample:` picture that is not bundled. `scripts/demo-picture-audit.py` (verify.sh) holds the files: every table key bundled, no orphan imageset, every `art("…")` literal matching a key and every key named, no index-shaped `art(i)` call, and a size budget (160 KB each, 9 MB total). **Neither can see that two DIFFERENT drawings look alike** — that is the contact sheet's job, and a new picture is looked at before it ships. `DemoSeedAll.version` is 8.
+
+## §891 — A devnet event's sheet leads with the account (user, approving the three-step devnet plan, 2026-09-23)
+
+The third of §888's steps. A vibenet account or key event — an account made, a key
+authorized or revoked, locked and unlocking, a policy key run — moves no value, so
+it stays an event (§888), and its head takes the post and money heads' shape
+(§884, §887): the account's face (still the door to the account card), its name
+with the day in the divider's pink, and "Base Vibenet · 11:07 AM" under it; then
+what happened at `heading24`, the key's own line, the consequence sentence ("It
+expires on Dec 31, 2099."), and the state stamp.
+
+`VibenetEventCard` composed that head through `DSSheetHead`, which other sheets
+share, so it builds its own rather than moving the shared one. Two things it
+shed on the way: the sheet's old top line ("Event · 1d ago") stands down as it
+did for the other heads, and the head no longer carries `DSSheetHead`'s block
+inset inside the sheet's own, which had stepped it in 12pt from its own rows.
+`day-divider-audit.py` check 5 covers the card's pink day.
+
+Checked on the iPhone 17 Pro simulator on the demo's "New secp256k1 key
+authorized".
