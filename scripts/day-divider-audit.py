@@ -70,6 +70,7 @@ SHEET_HEADS = (
     "Casberi/Casberi/Screens/ArticleSheetHead.swift",
     "Casberi/Casberi/Screens/PostSheetHead.swift",   # prd §884
     "Casberi/Casberi/Screens/PictureSheetHead.swift",   # prd §885
+    "Casberi/Casberi/Screens/MoneyReceiptCard.swift",   # prd §887
 )
 BRAND_HEX = "FF2D87"
 MIN_OPT_OUTS = 9

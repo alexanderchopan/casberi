@@ -355,7 +355,7 @@ struct ThingSheetView: View {
                 let postHead = isSocialPost
                     && SocialSheetSource.eyebrowLeadsWithPerson(thing, shape: socialShape)
                     && moneyReceipt == nil && !framedShot
-                let ownHead = articleHead || postHead || framedShot
+                let ownHead = articleHead || postHead || framedShot || moneyReceipt != nil
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.
@@ -431,6 +431,8 @@ struct ThingSheetView: View {
                     // paper's edge hid that; without it the step is the first
                     // thing you see, which is how it was caught.
                     MoneyReceiptCard(receipt: moneyReceipt,
+                                     landed: thing.capturedAt,
+                                     kindWord: moneyKindWord,
                                      onSubject: openAddressCard)
                         .settleIn(delay: 0.06)
                     // The poisoning flag rides EVERY wallet stage now, not just
@@ -448,12 +450,6 @@ struct ThingSheetView: View {
                     // already read the evidence under it. nil is the healthy
                     // answer for most rows (a first transfer, a one-off
                     // merchant), and then the receipt simply stands alone.
-                    if let moneySays {
-                        MoneyCommentaryCard(commentary: moneySays)
-                            .padding(.horizontal, DS.Space.s4)
-                            .padding(.top, DS.Space.s3)
-                            .settleIn(delay: 0.1)
-                    }
                     // A record still in the machine can be watched from the
                     // lock screen (prd §369 amendment). THE FLAT EDGE EARNS THE
                     // CONTROL: it appears only while `finality == .open`, and
@@ -475,6 +471,15 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.12)
                     dialResult
+                    // THE HISTORY FOLLOWS THE DIAL, flat (prd §887) — the words
+                    // above it are the receipt, this is what the app read
+                    // around it. nil is the healthy answer for most rows.
+                    if let moneySays {
+                        MoneyCommentaryCard(commentary: moneySays)
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.top, DS.Space.s6)
+                            .settleIn(delay: 0.14)
+                    }
                 } else if framedShot {
                     // The framed exception (B1c): facts stand bare on the wash;
                     // pixels recess into a frame that floats on it — the image
@@ -1548,6 +1553,12 @@ struct ThingSheetView: View {
     /// `thing.source` as a URL path component — a source name can carry
     /// spaces ("Apple Music", "iCloud Mail"), so the eyebrow's door needs
     /// this before handing it to `casberi://feed/source/…`.
+    /// The word under a money head's name (prd §887): "Card" for a card spend,
+    /// else the kind's own tag.
+    private var moneyKindWord: String {
+        thing.tags.contains("Card") ? String(localized: "Card") : thing.kind.typeTag
+    }
+
     /// Fit the sheet to its content (prd §886). It follows the content while
     /// the person has not moved it — a body that lands, a row that arrives —
     /// and never overrides a drag to full height. A change under 8pt (a line

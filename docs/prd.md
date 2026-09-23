@@ -60485,3 +60485,34 @@ it. A sheet pushed inside another presentation (`onBack`) or rendered in place
 
 Checked on the iPhone 17 Pro simulator on §885's Lisbon screenshot and §884's
 quote post: each opens where its content ends, with the room visible above it.
+
+## §887 — A money sheet leads with the party, the amount at the head rung (user, from the money-sheet mocks, 2026-09-23)
+
+The fourth kind in the one-at-a-time pass (§882, §884, §885). Three directions
+were mocked — the amount leading, the party leading, the room's row made big in a
+well. The user wanted the first ("A is what i want") and took the second: "B looks
+cleaner b/c all the text is in the same place". So the party leads, and the
+amount is the biggest thing on the sheet.
+
+**`MoneyReceiptCard` is the post sheet's shape (§884).** The subject disc (still
+the door to the address card), the party's name at `heading17` with the day in
+the divider's pink on its line, and under it what happened ("Received from ·
+Transaction", "Spent at · Card"); then the amount at `price64` (it was
+`price40`; a long figure still shrinks to fit), its worth, the sentence, and the
+stamp, which moves from the corner to under the sentence. A receipt with no party
+(a swap, a card spend with no merchant) names itself by its own lead. The sheet's
+old top eyebrow ("Transaction · 2d ago") stands down, as it did for the other
+three heads. `day-divider-audit.py` check 5 covers the card's pink day.
+
+**The history follows the dial, flat.** `MoneyCommentaryCard` ("You usually
+spend about $24.92 at Uber.", its bars) drew on a tinted plate, indented, above
+the dial. It stands in the receipt's column under the dial now, with no plate —
+the words above are the receipt, this is what the app read around it. Its words
+are the app's own arithmetic, never a model's, as before.
+
+**The devnets fold in next** (the user: "yes lets fold devnets into money sheet.
+but they also have more than just transfers") — a separate change, because their
+rows do not store an amount or a counterparty where a receipt reads them.
+
+Checked on the iPhone 17 Pro simulator on the demo's "Received 0.42 ETH from
+Coinbase" and the Uber card spend.

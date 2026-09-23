@@ -33,6 +33,10 @@ import Accessibility
 /// `isLive`.
 struct MoneyReceiptCard: View {
     let receipt: MoneyReceipt
+    /// When it landed — the pink day (prd §887). A value, like everything here.
+    let landed: Date
+    /// What kind of record this is ("Transaction", "Card"), under the name.
+    let kindWord: String
     /// Opening the address behind the subject face (prd §369 amendment).
     ///
     /// A closure over a plain `String`, never a `Thing` — the liveness rule at
@@ -53,7 +57,12 @@ struct MoneyReceiptCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 0) {
+            // THE PARTY LEADS (prd §887), the post sheet's shape (§884): who,
+            // the day in the divider's pink, and what happened under the name
+            // — then the amount at the head rung. All the words stand in one
+            // column (the user, choosing this over the amount-first mock:
+            // "B looks cleaner b/c all the text is in the same place").
+            HStack(alignment: .center, spacing: DS.Space.s3) {
                 MoneySubjectDisc(subject: receipt.subject, mine: receipt.mine,
                                  // The ring punches out the PAPER, and the
                                  // paper is ink since §542 — a `surfaceRaised`
@@ -61,11 +70,22 @@ struct MoneyReceiptCard: View {
                                  // disc, which is the gray this ruling killed
                                  // wearing a 1.5pt disguise.
                                  ring: DS.inkGround, onOpen: onSubject)
-                Spacer(minLength: DS.Space.s3)
-                if let stamp = receipt.stamp {
-                    DSStamp(word: stamp.word, weight: stamp.weight.stampWeight)
-                        // Spoken in the composed value below, so hearing it
-                        // here as well would say the state twice.
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text(verbatim: nameLine)
+                            .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1).truncationMode(.middle)
+                            // Spoken in the composed label below.
+                            .accessibilityHidden(true)
+                        Spacer(minLength: DS.Space.s2)
+                        Text(FeedScreen.dayWord(landed))
+                            .dsText(.label12)
+                            .foregroundStyle(DS.brandInk)
+                            .lineLimit(1)
+                    }
+                    Text(verbatim: whatLine)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
                         .accessibilityHidden(true)
                 }
             }
@@ -74,19 +94,7 @@ struct MoneyReceiptCard: View {
             // wrapped around the whole card: the subject disc is a door now,
             // and `children: .ignore` on the outer stack would swallow it.
             VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(verbatim: receipt.lead)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    if let party = receipt.party, !party.isEmpty {
-                        Text(verbatim: party)
-                            .dsText(.heading24).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1).truncationMode(.middle)
-                    }
-                }
-                .padding(.top, DS.Space.s3)
-
                 amountBlock
-                    .padding(.top, DS.Space.s3)
 
                 if let secondary = receipt.secondary {
                     Text(verbatim: secondary)
@@ -98,8 +106,17 @@ struct MoneyReceiptCard: View {
                 Text(verbatim: receipt.sentence)
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s4)
+                    .padding(.top, DS.Space.s3)
+
+                if let stamp = receipt.stamp {
+                    DSStamp(word: stamp.word, weight: stamp.weight.stampWeight)
+                        .padding(.top, DS.Space.s3)
+                        // Spoken in the composed value below, so hearing it
+                        // here as well would say the state twice.
+                        .accessibilityHidden(true)
+                }
             }
+            .padding(.top, DS.Space.s6)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(receipt.spokenLabel))
             .accessibilityValue(Text(receipt.spokenValue))
@@ -152,7 +169,9 @@ struct MoneyReceiptCard: View {
         if let amount = receipt.amount {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2 - 2) {
                 Text(verbatim: amount.number)
-                    .dsText(.price40)
+                    // The head rung (prd §887): the amount is what the sheet
+                    // was opened to see. A long figure still shrinks to fit.
+                    .dsText(.price64)
                     .monospacedDigit()
                     // A pending authorization that settles at a different
                     // amount COUNTS to it (prd §369 amendment) — the one place
@@ -181,6 +200,22 @@ struct MoneyReceiptCard: View {
                 .dsText(.heading24).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// The name the head leads with: the party, else the receipt's own lead
+    /// ("In your wallet" on a swap), so the line is never empty.
+    private var nameLine: String {
+        if let party = receipt.party, !party.isEmpty { return party }
+        return receipt.lead
+    }
+
+    /// What happened, under the name: "Received from · Transaction". When the
+    /// lead IS the name, the kind alone.
+    private var whatLine: String {
+        if let party = receipt.party, !party.isEmpty {
+            return "\(receipt.lead) · \(kindWord)"
+        }
+        return kindWord
     }
 
     private func tone(_ tone: MoneyReceipt.Tone) -> Color {
@@ -317,11 +352,6 @@ extension MoneyReceipt.Stamp.Weight {
 struct MoneyCommentaryCard: View {
     let commentary: MoneyCommentary
 
-    /// How far the note is inset from the paper's leading edge (prd §417).
-    /// Enough that the step is unmistakable at a glance; short enough that a
-    /// two-line sentence doesn't start wrapping to buy it.
-    private static let indent: CGFloat = DS.Space.s6
-
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             Text(verbatim: commentary.headline)
@@ -334,33 +364,10 @@ struct MoneyCommentaryCard: View {
             }
             evidence
         }
-        .padding(DS.Space.s4)
+        // FLAT (prd §887): no tinted plate and no indent — it stands in the
+        // receipt's own column under the dial, the words above the evidence.
+        .padding(.horizontal, DS.Space.s3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        // A NOTE ON THE RECORD, NOT A SECOND RECORD (2026-08-20, prd §417).
-        // This drew as `DS.fillFaint` at the paper's own width and the paper's
-        // own corner radius, so the sheet showed two slabs of equal authority —
-        // and they are not equal: the receipt is EVIDENCE, stamped from what a
-        // bridge landed, while this is the app's own reading of it. Same words,
-        // same evidence strip; what changed is who is visibly speaking.
-        //
-        // Three things carry that, and each is a grammar the app already owns.
-        // The INDENT is the margin — a note sits beside the thing it annotates,
-        // never squarely on top of it. The TINT is Casberi's own voice, the
-        // same `DS.tint` wash `AddressCard` pours for machinery because "a
-        // contract has no identity of its own to borrow"; the app talking about
-        // somebody else's transaction is exactly that case. And the top-leading
-        // corner is SQUARED — a speech corner, pointing back up at the paper it
-        // is about. No hairline, no arrow, no glyph: the §8 no-lines law holds
-        // with no exception, and the shape does the pointing.
-        .background(DS.tint.opacity(0.08),
-                    in: .rect(topLeadingRadius: 0,
-                              bottomLeadingRadius: DS.Radius.card,
-                              bottomTrailingRadius: DS.Radius.card,
-                              topTrailingRadius: DS.Radius.card,
-                              style: .continuous))
-        // The indent is OUTSIDE the background, so the note's own corners stay
-        // put and only the whole note steps in from the paper's edge.
-        .padding(.leading, Self.indent)
     }
 
     private var subline: String? {
