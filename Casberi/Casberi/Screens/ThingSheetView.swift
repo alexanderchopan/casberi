@@ -357,8 +357,13 @@ struct ThingSheetView: View {
                 let postHead = isSocialPost
                     && SocialSheetSource.eyebrowLeadsWithPerson(thing, shape: socialShape)
                     && moneyReceipt == nil && !framedShot
+                // A MOMENT (prd §892): an event, a workout, a reminder — its
+                // head, its title, and WHEN, which the sheet never drew.
+                let momentHead = (thing.kind == .event || thing.kind == .reminder)
+                    && moneyReceipt == nil && vibenetEventFacts == nil
+                    && ThingChart.kind(for: thing) == nil && !articleHead && !postHead
                 let ownHead = articleHead || postHead || framedShot || moneyReceipt != nil
-                    || vibenetEventFacts != nil
+                    || vibenetEventFacts != nil || momentHead
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.
@@ -648,6 +653,27 @@ struct ThingSheetView: View {
                     // an object that states its own subject does not want a
                     // label over it.
                     EmptyView()
+                } else if momentHead {
+                    SheetPartyHead(name: thing.source, day: momentStart,
+                                   line: momentLine,
+                                   onFace: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil) {
+                        BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
+                            .coinFlip(trigger: thing.id)
+                    }
+                    .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                    .settleIn(delay: 0.04)
+                    titleBlock
+                        .padding(.horizontal, DSRoomChassis.leadInset)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.06)
+                    if let start = momentStart {
+                        MomentSheetBlock(start: start, end: thing.endAt,
+                                         overdue: thing.kind == .reminder && start < .now,
+                                         isReminder: thing.kind == .reminder,
+                                         facts: thing.factList)
+                            .padding(.top, DS.Space.s4)
+                            .settleIn(delay: 0.08)
+                    }
                 } else if postHead {
                     // Who, then what they were answering, then the words — the
                     // reply context sits under the person, not above them.
@@ -772,6 +798,8 @@ struct ThingSheetView: View {
                     && socialShape != .person && noteShape == nil
                     && walletbeatShape == nil && l2beatShape == nil && privyApp == nil
                     && agentShape != .grant && purchaseReading == nil
+                    // A reminder with a due date says it in its head (§892).
+                    && !(momentHead && thing.kind == .reminder && thing.dueAt != nil)
                     && (drawsSocialBody || agentShape == .conversation
                     || (!linkOnlyBody && thing.kind != .event
                     && thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1560,6 +1588,22 @@ struct ThingSheetView: View {
     /// else the kind's own tag.
     private var moneyKindWord: String {
         thing.tags.contains("Card") ? String(localized: "Card") : thing.kind.typeTag
+    }
+
+    /// When a moment is (prd §892): an event's start, a reminder's due.
+    private var momentStart: Date? {
+        thing.kind == .reminder ? thing.dueAt : thing.capturedAt
+    }
+
+    /// What a moment is, under its source's name: "Event · Work",
+    /// "Workout", "Reminder · Lisbon trip".
+    private var momentLine: String {
+        let workout = thing.factList.contains { $0.action == .metric }
+        let kind = workout ? String(localized: "Workout") : thing.kind.typeTag
+        guard !workout,
+              let tag = thing.tags.first(where: { $0 != thing.kind.typeTag && $0 != "Workout" })
+        else { return kind }
+        return "\(kind) · \(tag)"
     }
 
     /// Fit the sheet to its content (prd §886). It follows the content while

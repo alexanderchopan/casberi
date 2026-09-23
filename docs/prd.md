@@ -60635,3 +60635,30 @@ inset inside the sheet's own, which had stepped it in 12pt from its own rows.
 
 Checked on the iPhone 17 Pro simulator on the demo's "New secp256k1 key
 authorized".
+
+## §892 — A moment's sheet says when: events, reminders and workouts (user, approving the batched mocks — "events: LOOKS GREAT!", 2026-09-23)
+
+The first of three kinds the user approved together (notes, chats and mail,
+events), after asking for mocks in batches rather than one kind at a time.
+
+**An event's sheet never said when it was.** `contentShown` has excluded
+`.event` since the "When" row was retired (2026-08-12), on the promise that the
+content view spoke for the clock — and that exclusion is exactly what switched
+the content view off. So "Design review" opened to its title and nothing about
+its time, its length or its room. Now `MomentSheetBlock` sits under the title:
+the clock at the head rung ("2:58 PM – 3:58 PM"), then how far off and how long
+("Tomorrow · 1 hr"), then the content view's own fact rows (the place, a door
+to Maps). A workout leads with what it measured, as figures, with its clock
+beneath; a reminder states its due — "Overdue since Monday, Sep 21, 12:00 PM"
+in the destructive ink once it has passed — and its content view stands down
+so the due is said once.
+
+**`SheetPartyHead` is the shared head** — the face, the name, the day in the
+divider's pink, a quiet line under it — which §884, §887 and §891 each drew on
+their own. A moment's face is its source's mark (the door to its room), its line
+what it is ("Event · Work", "Workout", "Reminder"). A future event's pink day is
+"Tomorrow" (`FeedScreen.dayWord` names it). `day-divider-audit.py` check 5
+covers the new file. `FactRows` stops being private to the content view.
+
+Checked on the iPhone 17 Pro simulator on the demo's "Design review", "Book
+dentist" and "Run · 5.2 km".

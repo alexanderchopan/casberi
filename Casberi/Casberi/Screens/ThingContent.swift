@@ -1807,7 +1807,8 @@ private struct MomentStub: View {
 ///
 /// No dividers between rows: §8 bans hairlines outright, so rows separate by
 /// their own spacing.
-private struct FactRows: View {
+/// Shared with `MomentSheetBlock` (prd §892).
+struct FactRows: View {
     let facts: [ThingFact]
     @Environment(\.openURL) private var openURL
 
