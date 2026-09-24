@@ -15,6 +15,37 @@
 # question, and a harness on a Mac has no Enclave. If this passes, the Enclave
 # key differs only in where the private half lives.
 #
+# ## WHAT IT FOUND (2026-09-24), and the error progression IS the finding
+#
+# Three runs, three different refusals, each one a step further into the node:
+#
+#   1. "Invalid frame transaction signature"
+#      The first cut signed with CryptoKit's `signature(for: some DataProtocol)`,
+#      which runs SHA-256 over what you hand it — so it signed
+#      SHA256(keccak(preimage)) instead of the keccak digest. Well-formed, and
+#      authorising nothing. Fixed with `SecKeyCreateSignature` and the DIGEST
+#      algorithm, which signs the 32 bytes as given.
+#
+#   2. "Frame transaction validation-prefix simulation failed: validation
+#      prefix frame reverted"
+#      THE SIGNATURE NOW VERIFIES. The node got past signature checking and
+#      began executing the mode-1 `self_verify` prefix, which asks the SENDER's
+#      own account code to approve. A plain address with no code runs the
+#      chain's default logic, and that accepts **secp256k1 only** — so a P-256
+#      signature cannot authorise a bare address here, however correct it is.
+#
+# So the question this harness was written to answer is answered, in both
+# directions: scheme 0x2 decodes AND verifies on Hegotá, and a passkey account
+# still needs an ACCOUNT CONTRACT whose code says "a P-256 signature from this
+# key approves me" — exactly the reasoning behind `FramesPasskeyAccount`
+# (§728d), which exists for this same wall on the sibling chain.
+#
+# NEXT, and it is the real M2 deliverable: port that account — CREATE2 through
+# the deterministic deployment proxy, address fixed before the code exists,
+# code installed by the account's own first transaction as a deploy-prefix
+# frame. Whether Hegotá's deployment proxy is at the same address as Frames'
+# is UNMEASURED and is the first thing to check.
+#
 # Spends nothing real: Hegotá's faucet mints worthless test ETH by construction.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -28,6 +59,7 @@ mkdir -p "$WORK/m"; cp "$TX" "$RLPF" "$KECCAK" "$WORK/"
 cat > "$WORK/m/main.swift" <<'SWIFT'
 import Foundation
 import CryptoKit
+import Security
 
 func hex(_ d: Data) -> String { d.map { String(format: "%02x", $0) }.joined() }
 
@@ -79,7 +111,46 @@ var f = HegotaTransaction.Fields(
     maxFeePerBlobGas: 0, blobVersionedHashes: [], recentRootReferences: [])
 
 let digest = Data(Keccak256.hash([UInt8](HegotaTransaction.signingPreimage(f))))
-let raw = try! signer.signature(for: digest)   // CryptoKit pre-hashes; see note below
+
+// SIGN THE DIGEST, DO NOT RE-HASH IT. CryptoKit's `signature(for: some
+// DataProtocol)` runs SHA-256 over what you hand it, so signing the keccak
+// digest that way signs SHA256(keccak(...)) — well-formed, and authorising
+// nothing the chain will recognise. That is the first thing this harness got
+// wrong, and it failed as "Invalid frame transaction signature", which says
+// nothing about the cause. `SecKeyCreateSignature` with the DIGEST algorithm
+// signs the 32 bytes as given.
+let attrs: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
+                            kSecAttrKeyClass as String: kSecAttrKeyClassPrivate,
+                            kSecAttrKeySizeInBits as String: 256]
+var secErr: Unmanaged<CFError>?
+guard let secKey = SecKeyCreateWithData(
+        (signer.x963Representation as CFData), attrs as CFDictionary, &secErr) else {
+    print("SIGNERR=\(secErr.debugDescription)"); exit(1)
+}
+guard let der = SecKeyCreateSignature(secKey, .ecdsaSignatureDigestX962SHA256,
+                                      digest as CFData, &secErr) as Data? else {
+    print("SIGNERR=\(secErr.debugDescription)"); exit(1)
+}
+// X9.62 DER: SEQUENCE { INTEGER r, INTEGER s } → the raw 64 bytes the wire wants.
+func derToRaw(_ d: Data) -> Data? {
+    var i = d.startIndex
+    guard d.count > 8, d[i] == 0x30 else { return nil }
+    i += 2                                   // SEQUENCE, length
+    var out = Data()
+    for _ in 0..<2 {
+        guard i < d.endIndex, d[i] == 0x02 else { return nil }
+        i += 1
+        let len = Int(d[i]); i += 1
+        var v = d[i..<min(i+len, d.endIndex)]; i += len
+        while v.first == 0x00 { v = v.dropFirst() }          // strip sign padding
+        guard v.count <= 32 else { return nil }
+        out += Data(repeating: 0, count: 32 - v.count) + v   // left-pad to 32
+    }
+    return out.count == 64 ? out : nil
+}
+guard let rs = derToRaw(der) else { print("SIGNERR=der"); exit(1) }
+struct Raw { let rawRepresentation: Data }
+let raw = Raw(rawRepresentation: rs)
 // `rawRepresentation` is r ‖ s, 64 bytes. EIP-8141 names a P-256 signer by its
 // public key, and this entry's `signer` is empty ("the sender"), so the key has
 // to travel with the signature: r ‖ s ‖ qx ‖ qy, the layout Frames measured.
