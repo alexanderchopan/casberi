@@ -280,25 +280,19 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
-            HStack(spacing: DS.Space.s2) {
-                Circle().fill(stateTone).frame(width: 8, height: 8)
-                Text(AccountPageShape.stateLine(state, lands: lands))
-                    .dsText(.subhead12).fontWeight(.medium)
-                    .foregroundStyle(stateTone)
-            }
-            .accessibilityElement(children: .combine)
+            // Words alone: the tone carries the state, and a dot beside
+            // them was a second mark saying the same thing (user, 2026-09-24).
+            Text(AccountPageShape.stateLine(state, lands: lands))
+                .dsText(.subhead12).fontWeight(.medium)
+                .foregroundStyle(stateTone)
             if let meta = metaLine {
                 Text(meta)
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                     .multilineTextAlignment(.center)
             }
             if !state.connected, let mode {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: mode.glyph).dsGlyph(.caption)
-                    Text(mode.label).dsText(.label12)
-                }
-                .foregroundStyle(DS.textTertiary)
-                .accessibilityElement(children: .combine)
+                Text(mode.label)
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
             }
         }
         .frame(maxWidth: .infinity)

@@ -1151,17 +1151,6 @@ enum BridgeSetupMode {
         }
     }
 
-    var glyph: String {
-        switch self {
-        case .oneTimeImport:  return "arrow.down.doc"
-        case .noAccount:      return "globe"
-        case .signIn:         return "person.badge.key"
-        case .pasteKey:       return "key"
-        case .watchedWallets: return "wallet.bifold"
-        case .onThisDevice:   return "iphone"
-        }
-    }
-
     // MARK: - Which seat is which (the screens' own `mode:` literals, gathered)
 
     /// A sign-in on the provider's page — the OAuth seats, and GitHub while
