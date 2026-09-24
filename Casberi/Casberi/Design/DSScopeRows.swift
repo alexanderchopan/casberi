@@ -77,22 +77,17 @@ struct DSScopeRows<Scope: DSTileScope>: View {
         let wants = attention.contains(section)
         DSPushRow(title: Text(section.label),
                   fact: reading(section).map { Text($0) },
+                  tint: wants ? DS.attention : DS.textPrimary,
                   action: { onPick(section) }) {
             // **THE TILE'S GLYPH LEADS THE ROW** (prd §752b, user: "the list
             // items for the sections should also share the glyph so
             // indentation is the same"). The same 26pt disc `DevnetVerbRow`
             // and the Follow address row wear, so Actions and Readings share
             // one leading column, and the same symbol the section's tile
-            // wears above them. The attention dot rides the disc's corner.
-            ZStack(alignment: .topTrailing) {
-                DSGlyphLead(glyph: section.glyph)
-                if wants {
-                    Circle()
-                        .fill(DS.attention)
-                        .frame(width: DS.Space.s2 - 2, height: DS.Space.s2 - 2)
-                        .offset(x: 1, y: -1)
-                }
-            }
+            // wears above them. A section that wants you says so in its
+            // WORD's tone, never a dot (user, 2026-09-24: "if we want yellow
+            // just make the word Risk yellow").
+            DSGlyphLead(glyph: section.glyph)
         }
         .dsScopeRow()
         // The word and its reading are one announcement; the summary says

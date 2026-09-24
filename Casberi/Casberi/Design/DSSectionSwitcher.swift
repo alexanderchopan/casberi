@@ -197,14 +197,10 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
             onPick(section)
         } label: {
             HStack(spacing: DS.Space.s1 + 2) {
-                if wants {
-                    Circle()
-                        .fill(DS.attention)
-                        .frame(width: 6, height: 6)
-                }
+                // The word carries the attention, never a dot (user, 2026-09-24).
                 Text(section.label)
                     .dsText(.label12)
-                    .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
+                    .foregroundStyle(wants ? DS.attention : isOn ? DS.textPrimary : DS.textSecondary)
                     .lineLimit(1)
                     // **A CHIP'S WORD NEVER ACCEPTS A NARROWER WIDTH (prd §724,
                     // 2026-09-13).** This strip sits in a `List` row, and a

@@ -112,24 +112,18 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                 // dock's (user, 2026-09-17). A room's scope grid stays still.
                 CategoryGlyph(name: section.glyph, size: Self.glyphSize,
                               isActive: strip && isOn)
+                // A section that wants you says so in its WORD's tone, never
+                // a dot (user, 2026-09-24: "if we want yellow just make the
+                // word Risk yellow"). The picked tile stays white on its tint.
                 Text(section.label)
                     .dsText(.dockCaption10)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
+                    .foregroundStyle(isOn ? Color.white : wants ? DS.attention : DS.textPrimary)
             }
             .foregroundStyle(isOn ? Color.white : DS.textPrimary)
             .frame(maxWidth: .infinity, minHeight: Self.tileHeight)
             .background { shape.fill(isOn ? DS.tint : (strip ? Color.clear : DS.surfaceRaised)) }
-            // The dot the strip and the rows carry, at the tile's corner: the
-            // same 6pt mark saying the same thing.
-            .overlay(alignment: .topTrailing) {
-                if wants {
-                    Circle()
-                        .fill(DS.attention)
-                        .frame(width: DS.Space.s2 - 4, height: DS.Space.s2 - 4)
-                        .padding(DS.Space.s2)
-                }
-            }
             .contentShape(shape)
         }
         .buttonStyle(.plain)

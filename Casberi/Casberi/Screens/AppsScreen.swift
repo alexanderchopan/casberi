@@ -1053,23 +1053,11 @@ struct AppsScreen: View {
         return HStack(spacing: DS.Space.s3) {
             catalogTap(destination: destination, action: rowAction(entry)) {
                 HStack(spacing: DS.Space.s3) {
+                    // No status dot on the icon (user, 2026-09-24): the
+                    // subline says the state, in the state's own tone.
                     BridgeIcon(name: entry.offer.name, size: DS.Mark.tile)
                         .saturation(soon ? 0 : 1)
                         .opacity(soon ? 0.5 : 1)
-                        .overlay(alignment: .topTrailing) {
-                            // Drawn only when something is OFF (prd §783): a green
-                            // dot on every connected row said nothing.
-                            if isConnected, let bridge = entry.bridge, bridge.status != .connected {
-                                Circle()
-                                    .fill(bridge.status.color)
-                                    .frame(width: 11, height: 11)
-                                    .overlay(Circle().strokeBorder(DS.themedPage, lineWidth: 2))
-                                    // One soft blink when the seat's proof
-                                    // updates — "just checked", without words.
-                                    .pulseOnChange(of: bridge.statusLine)
-                                    .offset(x: 3, y: -3)
-                            }
-                        }
                     VStack(alignment: .leading, spacing: 2) {
                         // Regular, as every row title is (prd §764).
                         Text(entry.offer.name)
@@ -1144,7 +1132,7 @@ struct AppsScreen: View {
     private func sublineColor(_ entry: Ranked) -> Color {
         switch entry.tier {
         case 0:  DS.attention
-        case 2:  DS.confirm
+        case 2:  entry.bridge?.status.color ?? DS.confirm
         default: DS.textTertiary
         }
     }
