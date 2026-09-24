@@ -47,7 +47,7 @@ enum SafePeerRequest {
         let ask: Ask
     }
 
-    enum Refusal: Equatable {
+    enum Refusal: Error, Equatable {
         /// Named so the refusal row can say what was asked; the method string
         /// is the app's, and this file never spells one itself.
         case methodNotOffered(String)

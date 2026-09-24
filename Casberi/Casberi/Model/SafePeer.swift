@@ -186,7 +186,7 @@ enum SafePeer {
         } catch let error as AutoNamespacesError {
             try? await Sign.instance.rejectSession(proposalId: proposal.id, reason: RejectionReason(from: error))
             let required = proposal.requiredNamespaces.values.flatMap { $0.methods }.sorted()
-            landRefusal(app: proposal.proposer.name, id: proposal.pairingTopic,
+            landRefusal(app: proposal.proposer.name, url: proposal.proposer.url, id: proposal.pairingTopic,
                         what: String(localized: "asked for more than a signature (\(required.joined(separator: ", ")))"))
         } catch {
             try? await Sign.instance.rejectSession(proposalId: proposal.id, reason: .userRejected)
@@ -196,16 +196,18 @@ enum SafePeer {
     // MARK: - The request
 
     private static func handle(request: Request) async {
-        let app = state.sessions.first { $0.topic == request.topic }?.name
-            ?? Sign.instance.getSessions().first { $0.topic == request.topic }?.peer.name
-            ?? String(localized: "A paired app")
+        let session = state.sessions.first { $0.topic == request.topic }
+            ?? Sign.instance.getSessions().first { $0.topic == request.topic }
+                .map { PeerSession(topic: $0.topic, name: $0.peer.name, url: $0.peer.url, expires: $0.expiryDate) }
+        let app = session?.name ?? String(localized: "A paired app")
+        let appURL = session?.url ?? ""
         let chainId = Int(request.chainId.reference)
         switch SafePeerRequest.parse(method: request.method, params: request.params.value, chainId: chainId) {
         case .success(let parsed):
             let identities = await SafeSigner.identities(chainId: parsed.ask.chainId)
             guard identities.contains(where: { $0.address.lowercased() == parsed.address.lowercased() }) else {
                 await respondError(request, code: 5000, message: "Not this phone's address")
-                landRefusal(app: app, id: request.id.string,
+                landRefusal(app: app, url: appURL, id: request.id.string,
                             what: String(localized: "asked for a signature from \(WalletStore.shortAddress(parsed.address)), which isn't this phone"))
                 return
             }
@@ -213,7 +215,7 @@ enum SafePeer {
                                          address: parsed.address, ask: parsed.ask))
         case .failure(let refusal):
             await respondError(request, code: 5101, message: "Unsupported method")
-            landRefusal(app: app, id: request.id.string, what: sentence(for: refusal, method: request.method))
+            landRefusal(app: app, url: appURL, id: request.id.string, what: sentence(for: refusal, method: request.method))
         }
     }
 
@@ -267,7 +269,8 @@ enum SafePeer {
 
     /// A refused ask is a row where the person looks (prd §913): the app
     /// that tried to send a transaction through this phone is not a toast.
-    private static func landRefusal(app: String, id: String, what: String) {
+    /// Its door is that app, by the URL it gave when it paired (§912).
+    private static func landRefusal(app: String, url: String, id: String, what: String) {
         guard let context = contextProvider?() else { return }
         let ref = "wallet:saferefused:\(id)"
         var descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
@@ -275,7 +278,7 @@ enum SafePeer {
         if let existing = try? context.fetch(descriptor), !existing.isEmpty { return }
         let thing = Thing(kind: .note,
                           title: String(localized: "\(app) \(what) — Casberi refused"),
-                          source: SafeBridge.sourceName, sourceRef: ref)
+                          content: url, source: SafeBridge.sourceName, sourceRef: ref)
         context.insert(thing)
         SpotlightIndex.index([thing])
         state.lastRefusal = thing.title

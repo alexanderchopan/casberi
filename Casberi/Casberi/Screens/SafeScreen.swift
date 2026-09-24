@@ -570,8 +570,9 @@ struct SafeScreen: View {
                     DSPushRow(title: Text(verbatim: WalletIngest.knownLabel(for: guardStanding.wallet)
                                           ?? WalletStore.shortAddress(guardStanding.wallet)),
                               subtitle: Text(verbatim: guardLine(guardStanding)),
+                              fact: Text("Forget"), factTone: DS.textTertiary,
                               subtitleTone: guardStanding.isLoneGuardian ? DS.destructive : DS.textTertiary,
-                              fact: Text("Forget"), factTone: DS.textTertiary, opens: false) {
+                              opens: false) {
                         confirmForgetGuard = GuardianLedger.Entry(chainId: guardStanding.chainId,
                                                                   module: guardStanding.module,
                                                                   wallet: guardStanding.wallet)

@@ -67,6 +67,15 @@ HAND_DISCONNECT = re.compile(
     r'Button\(\s*"(Disconnect[^"]*|Remove (?:key|token|vault|folder|account)[^"]*)"'
     r'\s*,\s*role:\s*\.destructive')
 
+# A destructive "Disconnect" that ends ONE item on the page, not the seat.
+# Each entry names its file and the exact confirm-dialog title it sits under,
+# so a seat-level hand-rolled disconnect in the same file is still caught.
+ITEM_DISCONNECT = {
+    ("SafeScreen.swift", "Disconnect this app?"): (
+        "one paired app's WalletConnect session (prd §913); the Safe seat's "
+        "own disconnect is the account page's"),
+}
+
 # A `says` that a real case already covers.
 SAYS_CANONICAL = re.compile(
     r'\.says\(\s*(?:String\(localized:\s*)?"'
@@ -245,6 +254,11 @@ def audit(files):
 
         # --- E. hand-rolled disconnect -------------------------------------
         for m in HAND_DISCONNECT.finditer(text):
+            # The nearest dialog title above the button decides whether it is
+            # one item's disconnect (ITEM_DISCONNECT) or the seat's.
+            titles = re.findall(r'confirmationDialog\(\s*"([^"]+)"', text[:m.start()])
+            if titles and (name, titles[-1]) in ITEM_DISCONNECT:
+                continue
             findings.append((name, line_of(text, m.start()), 'E',
                              'hand-rolled disconnect — use BridgeDisconnectSection'))
 

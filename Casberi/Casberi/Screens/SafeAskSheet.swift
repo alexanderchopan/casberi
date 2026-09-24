@@ -217,8 +217,7 @@ struct SafeStatementBlock: View {
             if ready.required > 0 {
                 line(String(localized: "Signatures"), String(localized: "\(ready.have) of \(ready.required)"))
             }
-            DSActVerb(title: signing ? String(localized: "Signing…") : String(localized: "Sign"),
-                      glyph: "faceid", busy: signing) {
+            SafeSignVerb(verb: String(localized: "Sign"), signing: signing) {
                 Task { await sign(ready) }
             }
             DSFootnote("A statement, not a transaction — nothing moves. Casberi signs only what it can name.")
@@ -422,8 +421,7 @@ struct SafeRecoveryBlock: View {
                     .dsText(.subhead12).foregroundStyle(DS.attention)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            DSActVerb(title: signing ? String(localized: "Signing…") : String(localized: "Approve"),
-                      glyph: "faceid", busy: signing) {
+            SafeSignVerb(verb: String(localized: "Approve"), signing: signing) {
                 Task { await sign(ready) }
             }
             DSFootnote("An approval, not a transaction. The module waits out its delay, and the current owners can cancel until then.")
@@ -510,5 +508,19 @@ struct SafeRecoveryBlock: View {
             phase = .refused(.noKey)
             chrome.flash(String(localized: "Face ID didn't unlock the vault-chip key."), tone: .failure)
         }
+    }
+}
+
+/// The one hero tile on the ask sheet. A statement and a recovery never share
+/// the sheet, so their verbs are one call site (`hero-tint-audit.py`), and a
+/// second tile can only arrive by drawing a second of these.
+private struct SafeSignVerb: View {
+    let verb: String
+    let signing: Bool
+    let action: () -> Void
+
+    var body: some View {
+        DSActVerb(title: signing ? String(localized: "Signing…") : verb,
+                  glyph: "faceid", busy: signing, act: action)
     }
 }

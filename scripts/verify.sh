@@ -3563,8 +3563,27 @@ else
   # Measured immediately after, on a wiped container: the demo reaches ZERO.
   # A check that reports someone else's traffic as the demo's is worse than no
   # check, so the baseline is now established rather than assumed.
+  # WAIT for the clear, never a fixed sleep (2026-09-24). The first launch
+  # after a pour builds a heavy feed and had not reached its hooks by 2s, so
+  # the forget never ran and a receipt from hours before the pour (measured:
+  # api.ensideas.com, stamped 11:30 on a 14:19 pour) was reported as the
+  # demo's. That was the "time-windowed ENS flake": a slow launch, not a leak.
   xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -receiptsForget YES >/dev/null 2>&1 || true
-  sleep 2
+  # Wait for the key to leave the plist the next launch reads — the removal
+  # LANDING, not the hook running. It rides DefaultsWrite's queue and then
+  # cfprefsd, and a terminate 1s after the hook's log line still lost it.
+  # (A log-stream wait was tried first and was vacuous: `log stream` prints
+  # its own predicate as a header, so grepping the file for the message
+  # matched before the app had launched.)
+  PREFS="$(xcrun simctl get_app_container "$DEVICE_ID" "$BUNDLE" data 2>/dev/null)/Library/Preferences/$BUNDLE.plist"
+  for _ in {1..40}; do
+    python3 -c "import plistlib,sys; sys.exit('network.receipts.v1' in plistlib.load(open(sys.argv[1],'rb')))" "$PREFS" 2>/dev/null && break
+    sleep 0.5
+  done
+  if ! python3 -c "import plistlib,sys; sys.exit('network.receipts.v1' in plistlib.load(open(sys.argv[1],'rb')))" "$PREFS" 2>/dev/null; then
+    print -P "%F{red}✗ the receipts ledger is still on disk 20s after its clear — the reach check would read a stale ledger%f"
+    exit 1
+  fi
   xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   # Walk the rooms most likely to reach: the token room (the prediction books,
   # whose per-view fetch started this, left the catalog on 2026-09-06 — prd

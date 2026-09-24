@@ -30,6 +30,8 @@ the import receipts, which are outside `Model/` or are not landed rows.
 Usage:  scripts/empty-door-audit.py [--self-test]
 Exit 0 = clean.
 """
+from __future__ import annotations
+
 import re
 import sys
 import tempfile

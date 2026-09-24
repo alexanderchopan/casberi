@@ -84,12 +84,17 @@ struct SIWEMessage: Equatable {
     let requestId: String?
     let resources: [String]
 
-    static func parse(_ text: String) -> SIWEMessage? {
-        // A paste ends with the newline the clipboard kept, and a browser
-        // spells its line ends `\r\n`; neither is part of the message.
+    /// A paste ends with the newline the clipboard kept, and a browser
+    /// spells its line ends `\r\n`; neither is part of the message, so
+    /// the hash and the parse both read THIS text.
+    static func canonical(_ text: String) -> String {
         var body = text.replacingOccurrences(of: "\r\n", with: "\n")
         while body.hasSuffix("\n") { body.removeLast() }
-        let lines = body.components(separatedBy: "\n")
+        return body
+    }
+
+    static func parse(_ text: String) -> SIWEMessage? {
+        let lines = canonical(text).components(separatedBy: "\n")
         guard lines.count >= 6 else { return nil }
         // Line 1: `[scheme://]domain wants you to sign in with your Ethereum account:`
         let suffix = " wants you to sign in with your Ethereum account:"
@@ -192,7 +197,8 @@ enum SafeStatement: Equatable {
     /// matching it is how the phone knows the words it was shown are the
     /// words it is being asked about.
     static func read(message: Any, safe: String) -> (statement: SafeStatement, hash: [UInt8])? {
-        if let text = message as? String {
+        if let raw = message as? String {
+            let text = SIWEMessage.canonical(raw)
             let hash = EIP191.hash(text: text)
             guard let siwe = SIWEMessage.parse(text) else {
                 return (.unreadable(why: "This is free-form text, which Casberi won't sign for a Safe."), hash)

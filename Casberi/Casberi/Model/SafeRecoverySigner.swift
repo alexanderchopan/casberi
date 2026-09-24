@@ -218,7 +218,9 @@ enum SafeRecoverySigner {
         descriptor.fetchLimit = 1
         if let existing = try? context.fetch(descriptor), !existing.isEmpty { return }
         let title = String(localized: "You approved a recovery of \(WalletStore.shortAddress(ready.request.wallet)) from this phone")
-        let thing = Thing(kind: .note, title: title, source: SafeBridge.sourceName, sourceRef: ref)
+        let thing = Thing(kind: .note, title: title,
+                          content: "https://app.safe.global/home?safe=\(ready.seg):\(EIP55.checksum(ready.request.wallet))",
+                          source: SafeBridge.sourceName, sourceRef: ref)
         thing.walletAddress = ready.request.wallet
         context.insert(thing)
         SpotlightIndex.index([thing])
