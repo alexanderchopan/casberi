@@ -133,8 +133,14 @@ guards() {
     && echo "a fold draws a price — beside '+N more' it reads as the total"
   grep -q -- 'MoneyClause.stripped(lead)' <<< "$R" \
     || echo "FoldName no longer strips a money clause from the fold's name"
-  grep -q -- 'DSFoldLead(source: source)' <<< "$bundle" \
-    || echo "BundleRow no longer leads with the fold's stacked mark"
+  # A fold's lead is the bare mark (prd §903): the stacked plate read as an
+  # error, and on a busy source it stood every day, so it said nothing.
+  grep -q -- 'BridgeIcon(name: source, size: DS.Mark.row)' <<< "$bundle" \
+    || echo "BundleRow no longer leads with the source's bare mark (prd §903)"
+  grep -q -- 'BridgeIcon(name: source, size: DS.Mark.row)' <<< "$strip" \
+    || echo "StripRow no longer leads with the source's bare mark (prd §903)"
+  grep -q -- 'DSFoldLead' <<< "$R" \
+    && echo "a fold's lead stands on a plate again (prd §903 deleted DSFoldLead)"
 
   # Blue is for what you tap. The age itself left the row in prd §902; the one
   # that stays is an alarm-class arrival's, in the state's red.
@@ -225,6 +231,8 @@ mutate "the head lost its floor (prd §902)" template \
   's/\.frame\(minHeight: Self\.headHeight\)\n//'
 mutate "the lead back at the top of the head (prd §902)" template \
   's/HStack\(alignment: \.center, spacing: DS\.Space\.s3\)/HStack(alignment: .top, spacing: DS.Space.s3)/'
+mutate "a fold's lead back on its plate (prd §903)" rows \
+  's/(struct BundleRow.*?)BridgeIcon\(name: source, size: DS\.Mark\.row\)/$1DSFoldLead(source: source)/s'
 mutate "a fold names itself by its source again" rows \
   's/(struct StripRow.*?)DSFeedRow\(name: FoldName\.of\(lead, source: source\)/$1DSFeedRow(name: source/s'
 mutate "title money ungated" rows \

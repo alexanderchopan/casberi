@@ -920,8 +920,8 @@ struct RootShell: View {
             // MOVE its title in place (the second cycle). Both NSLog. The
             // source needs a dock category ("You" has none and would not turn)
             // and must land as ONE row: Calendar was tried first and folded
-            // with the demo's other events (§896), and a fold's lead is
-            // `DSFoldLead`, which never cycles.
+            // with the demo's other events (§896), and a fold's lead never
+            // cycles.
             let cycleDelay = UserDefaults.standard.double(forKey: "leadCycleProbe")
             if cycleDelay > 0 {
                 Task { @MainActor in
