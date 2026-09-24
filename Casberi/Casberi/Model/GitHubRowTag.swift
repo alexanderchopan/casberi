@@ -66,9 +66,11 @@ enum GitHubRowTag {
             case .gist:        return String(localized: "Gist")
             // NOT "Push". An events-feed row may be a push, a fork, a branch
             // created, a release published or somebody starring something —
-            // `GitHubFeedFetch.contributionLine` words all six — so the tag
-            // takes the feed's own word rather than naming the commonest case
-            // and being wrong about the rest.
+            // `GitHubEventShape.row` words all of them — so the tag takes the
+            // feed's own word rather than naming the commonest case and being
+            // wrong about the rest. A pull request or issue EVENT never
+            // reaches here: since prd §909 its URL is the object's own, and
+            // the URL is read first.
             case .activity:    return String(localized: "Activity")
             case .watching:    return String(localized: "Watching")
             }

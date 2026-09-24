@@ -69,13 +69,13 @@ Or just run `scripts/verify.sh` (build + install + screen sweep + answer probe).
 **The checks themselves** — one line each; what each catches, why it exists and what it
 deliberately does not check are in `docs/verify.md`.
 
-- **Mac parity gate (verify.sh step 1b, 2026-08-12)** → docs/verify.md
-- **verify.sh runs verify-mac.sh IN PARALLEL and gates on it (user rule, 2026-08-21 — the two passes being separate was discovered, not chosen)** → docs/verify.md
-- **Mac parity audit (scripts/mac-parity-audit.py, 2026-08-12)** → docs/verify.md
+- **Mac parity gate (verify.sh step 1b)** → docs/verify.md
+- **verify.sh runs verify-mac.sh IN PARALLEL and gates on it (user rule, 2026-08-21 — the split was discovered, not chosen)** → docs/verify.md
+- **Mac parity audit (scripts/mac-parity-audit.py)** → docs/verify.md
 - **Account-detail sheet gate (verify-mac.sh step 2d, 2026-09-21) — a Catalyst sheet does NOT inherit the presenter's environment, and the shipped Mac build died on every Accounts → Settings row that raises one** → docs/verify.md · prd §872
 - **The two verify scripts each ran checks the other didn't, and both are now provably complete** → docs/verify.md
-- **The pure-logic harnesses run at once, and an unchanged one is not re-run (PERF, 2026-08-19). Measured on full green passes: 32.8min → 15.2min → 3.6min** → docs/verify.md
-- **The pass ran every harness TWICE for eleven days (PERF, 2026-09-01). Measured on the 08-31 runs: 38–57min for a green pass, 154 and 161min for two overlapping sessions, against the 3.6min recorded above** → docs/verify.md
+- **The pure-logic harnesses run at once, and an unchanged one is not re-run (PERF, 2026-08-19). Full green passes: 32.8min → 15.2min → 3.6min** → docs/verify.md
+- **The pass ran every harness TWICE for eleven days (PERF, 2026-09-01). Measured 08-31: 38–57min green, 154 and 161min for two overlapping sessions, against the 3.6min above** → docs/verify.md
 
 - **The pass was mostly IDLE CORES — time every step before optimising it (PERF)** → docs/verify.md · prd §612
 
@@ -107,11 +107,11 @@ deliberately does not check are in `docs/verify.md`.
 - **Design-template audit (scripts/ds-template-audit.py, 2026-09-13) — reach for `DSSpinner`, `dsReadSheet`, `DSPushRow`/`DSChevron`/`DSMoreLink`, `DSToggleRow`, `DSEmptyState`, `DSCopyRow` and `Chip` before drawing one by hand** → prd §715
 - **Secret-scan self-test (scripts/secret-scan-selftest.py, 2026-08-02)** → docs/verify.md · prd §277
 - **On-device self-test (scripts/ondevice-selftest.sh, 2026-08-02)** → docs/verify.md · prd §282
-- **CI, at last (.github/workflows/static-checks.yml, 2026-08-19)** → docs/verify.md
-- **The logic self-tests could never pass on a hosted runner, three causes deep (2026-09-16): two harnesses imported `pysha3` (now `scripts/support/keccak.py`, vendored, self-proving, still not the app's keccak), one assertion measured a zero where only a PROPORTION survives a contended machine, and the log artifact was never uploaded because `.selftest-out` is a dot directory** → docs/verify.md
+- **CI, at last (.github/workflows/static-checks.yml)** → docs/verify.md
+- **The logic self-tests could never pass on a hosted runner, three causes deep (2026-09-16): two harnesses imported `pysha3` (now `scripts/support/keccak.py`, vendored, self-proving, not the app's keccak), one assertion measured a zero where only a PROPORTION survives a contended machine, and the log artifact was never uploaded because `.selftest-out` is a dot directory** → docs/verify.md
 - **verify.sh's audit list is provably complete now** → docs/verify.md
-- **Live-integrations heartbeat (scripts/live-integrations.sh, 2026-07-17)** → docs/verify.md
-- **Demo census — every other surface, one launch (Shell/DemoCensus.swift + verify.sh "Demo census", 2026-09-05; `DEMO_SHOTS=1` for the room screenshots)** → docs/verify.md · prd §617
+- **Live-integrations heartbeat (scripts/live-integrations.sh)** → docs/verify.md
+- **Demo census — every other surface, one launch (Shell/DemoCensus.swift + verify.sh "Demo census"; `DEMO_SHOTS=1` for room screenshots)** → docs/verify.md · prd §617
 - **Row-window self-test (scripts/row-window-selftest.sh, 2026-09-08)** → docs/verify.md · prd §657
 - **Every account page is a `List` inside a draggable sheet, and its roster is bounded through `RowWindow` (`row-window-selftest.sh`, `row-cost-audit.py`)** → docs/hooks/system.md · prd §710
 - **RULE: a feature deleted from the surface is deleted from the model**, or it is §83's dead control one layer down where no screen sweep sees it (the ranked board and `roomScoped`) → docs/hooks/system.md · prd §723
@@ -125,7 +125,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Health-riders self-test (scripts/health-riders-selftest.sh, 2026-09-06) — the Strava/Garmin seats and the activity dedupe** → docs/verify.md
 - **MetricKit self-test (scripts/metrics-selftest.sh, 2026-09-05) — the one check for logic no machine here can exercise, because no machine here can make a payload** → docs/verify.md · prd §622
 
-- **live-integrations.sh covers YouTube since 2026-08-06, and RUNS NIGHTLY (nightly-live.sh)** → docs/verify.md · prd §312 · §654
+- **live-integrations.sh covers YouTube and RUNS NIGHTLY (nightly-live.sh)** → docs/verify.md · prd §312 · §654
 - **Hero-tint audit (scripts/hero-tint-audit.py, 2026-09-02)** → docs/verify.md · prd §563
 - **Design-motion audit (scripts/design-motion-audit.py, 2026-08-04)** → docs/verify.md · prd §299
 - **Design-ramp audit (scripts/design-ramp-audit.py, 2026-08-11; check 5 added 2026-09-06 — every `widget*` rung must declare `macScales: false`)** → docs/verify.md · prd §631
@@ -138,10 +138,10 @@ deliberately does not check are in `docs/verify.md`.
 - **Retriever self-test (scripts/retriever-selftest.sh, 2026-08-06)** → docs/verify.md · prd §318
 - **Ranking sweep (-rankSweep "q1|q2|…", 2026-08-06 amendment)** (`-rankSweep` `-semanticFloor` `-expandDistance`) → docs/verify.md · prd §318
 - **Perf pass (scripts/perf.sh)** (`-Onone`) → docs/verify.md · prd §257
-- **Mac verify (scripts/verify-mac.sh, 2026-08-01)** → docs/verify.md
-- **The Mac verify's cleanup is BOUNDED, and that bound is a fix not a precaution** → docs/verify.md
+- **Mac verify (scripts/verify-mac.sh)** → docs/verify.md
+- **The Mac verify's cleanup is BOUNDED — a fix, not a precaution** → docs/verify.md
 - **iCloud sync on the Mac, and the four things no check could see** → docs/verify.md · prd §607
-- **The Mac nightly was red on ELEVEN of the last TWELVE nights, and every one resolves green on today's tree** → docs/verify.md
+- **The Mac nightly was red ELEVEN of TWELVE nights, and every one resolves green on today's tree** → docs/verify.md
 - **Mac nightly (scripts/nightly-mac.sh + scripts/com.casberi.nightly-mac.plist)** → docs/verify.md
 
 - Test device: **iPhone 17 Pro** sim, BY UDID — `scripts/sim-device.py`, never `name=` → docs/verify.md
@@ -218,10 +218,10 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **The keyed agent stopped re-paying for its own prompt, learned to read a saved page, and got a ceiling** → docs/hooks/agent.md · prd §415
 - **The agent rooms, past §367 — and the fold that already existed** → docs/hooks/agent.md · prd §418
 - **External agents got two doors, and neither is a server** → docs/hooks/agent.md · prd §34
-- `-ghWatchPerson` `-ghPeopleProbe` — Watching a PERSON on GitHub (prd §519, 2026-08-29): -ghWatchPerson "<username|@username|profile URL>" watches → docs/hooks/bridges.md · prd §519
+- `-ghWatchPerson "<login|@login|profile URL>"` `-ghPeopleProbe` — watch a PERSON on GitHub → docs/hooks/bridges.md · prd §519
 - `-framesProbe` `-framesTxProbe` `-framesKeyProbe` `-framesPendingProbe` `-framesPasskeyProbe` — The Frames devnet (prd §548) → docs/hooks/devnets.md · prd §548 · §728 · §728d
 - **A wallet-family room's Actions ride EVERY page (prd §774, supersedes §747's All-only): All acts for the current account, your own account's page for itself, a stranger's page keeps only the room verb (`Create account`, `Follow address`).** Frames/Hegotá/Privacy hold N keys per phone and `address()` is the CURRENT one (`-framesKeyProbe`/`-privacyKeyProbe` print `held=`) → docs/hooks/devnets.md · prd §774
-- `-ghClientID <id>` — override the GitHub device-flow client id; `-ghDeviceProbe YES` — run the device-flow start and NSLog the user code (`Model/GitHubDeviceFlow.swift`).
+- `-ghClientID <id>` — override the GitHub device-flow client id; `-ghDeviceProbe YES` — start the device flow, NSLog the user code (`Model/GitHubDeviceFlow.swift`).
 - `-intentProbe "<query>"` — run the Shortcuts intents' shared matcher (`IntentCorpus.match` in `Model/CasberiIntents.swift`, grounding Search Casberi / Ask Casberi) and NSLog the hits.
 - `-viProbe` — run the Visual Intelligence label→corpus matcher headlessly (VisualCorpusMatch → docs/hooks/system.md
 - `-awayGap <hours>` — fake the librarian's away window (`Model/AppVisit.swift`); pair with `-answerProbe "while I was away"`.
@@ -304,7 +304,8 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - PostHog (2026-07-27, prd §223, Model/PostHogBridge.swift, Screens/PostHogScreen.swift) → docs/hooks/bridges.md · prd §223
 - `-for` — Stripe (2026-07-31, prd §250, Model/StripeBridge.swift, Screens/StripeScreen.swift) → docs/hooks/bridges.md · prd §250
 - Cursor (2026-08-04, prd §303, Model/CursorBridge.swift) — the cloud agents you launched, landing → docs/hooks/bridges.md · prd §303
-- **The GitHub room is ONE FEED: row types are tags (`Model/GitHubRowTag.swift`), and watched repos and people scope it from a face rail (`github-rowtag-selftest.sh`)** → docs/hooks/bridges.md · prd §699
+- **The GitHub room is ONE FEED: row types are tags (`Model/GitHubRowTag.swift`), watched repos and people scope it from a face rail (`github-rowtag-selftest.sh`)** → docs/hooks/bridges.md · prd §699
+- **A GitHub events row names its OBJECT, opens it and carries its words — a PR's title and body, a push's commit, a branch named — off the payload, no request (`GitHubEventShape`, `github-event-selftest.sh`); a notification reads its subject's body, capped at 10** → docs/hooks/bridges.md · prd §909
 - **The App Store Connect ROOM** → docs/hooks/bridges.md · prd §324
 - App Store Connect (2026-08-06, prd §323, Model/AppStoreConnectBridge.swift, screen → docs/hooks/bridges.md · prd §323
 - Apple Wallet (2026-08-06, prd §313 + §317, Model/AppleWalletBridge.swift / AppleWalletRoom.swift / → docs/hooks/bridges.md · prd §313

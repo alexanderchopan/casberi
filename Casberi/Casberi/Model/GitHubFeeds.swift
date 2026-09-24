@@ -402,7 +402,9 @@ enum GitHubFeedFetch {
         guard let items = await IngestSupport.getJSON(
             "\(api)/notifications?per_page=30", auth: "Bearer \(token)") as? [[String: Any]]
         else { return nil }
-        return items.compactMap { item in
+        var things: [Thing] = []
+        var bodyTargets: [(thing: Thing, apiURL: String)] = []
+        for item in items {
             guard let id = item["id"] as? String,
                   let subject = item["subject"] as? [String: Any],
                   let title = subject["title"] as? String,
@@ -411,7 +413,7 @@ enum GitHubFeedFetch {
                   let apiURL = subject["url"] as? String,
                   let link = notificationHTMLURL(fromAPI: apiURL),
                   let repo = (item["repository"] as? [String: Any])?["full_name"] as? String
-            else { return nil }
+            else { continue }
             let raw = item["reason"] as? String
             let reason = notificationReason(raw)
             let t = thing(.link, title: "\(reason) · \(repo) · \(title)", content: link,
@@ -433,9 +435,32 @@ enum GitHubFeedFetch {
             // the REASON ("Mentioned you · org/repo · …"): the row never
             // claims this account did anything.
             stampWho(t, (item["repository"] as? [String: Any])?["owner"])
-            return t
+            things.append(t)
+            // The token goes ONLY to GitHub's own API host — the subject url
+            // is GitHub's, but a bearer header is never sent on a string's
+            // say-so.
+            if apiURL.hasPrefix("\(api)/") { bodyTargets.append((t, apiURL)) }
         }
+        // The subject's own words (prd §909). A notification names an issue
+        // or pull request and NOT its body — GitHub's payload carries the
+        // title alone — so the sheet under "Review requested · org/repo · …"
+        // had nothing to say but the link. One request per row against the
+        // subject's own API url, capped the way `involved` caps its CI
+        // verdicts, because this is the busiest feed here; a row past the
+        // cap keeps its title and its door.
+        let capped = Array(bodyTargets.prefix(notificationBodyCap))
+        _ = await IngestSupport.boundedGather(capped, maxConcurrent: 4) { target -> Void in
+            guard let subject = await IngestSupport.getJSON(target.apiURL,
+                                                            auth: "Bearer \(token)") as? [String: Any],
+                  let body = trimmedString(subject["body"]) else { return }
+            target.thing.summary = clampBody(body)
+        }
+        return things
     }
+
+    /// How many notifications per sweep get their subject's body read — the
+    /// `involved` feed's PR-verdict cap, on a feed that runs every sweep.
+    static let notificationBodyCap = 10
 
     /// A notification subject's API url (`.../repos/o/r/issues/N` or
     /// `.../pulls/N`) rewritten to the web page it names.
@@ -705,7 +730,7 @@ enum GitHubFeedFetch {
     }
 
     /// The head commit's own message for a push event, replacing the
-    /// branch-name fallback in `contributionLine` with what was actually
+    /// branch-name fallback in `GitHubEventShape.row` with what was actually
     /// pushed. GitHub's events feed no longer carries the message on the event
     /// itself (see below), so this is a follow-up call keyed off the `head`
     /// sha the payload does carry.
@@ -727,35 +752,6 @@ enum GitHubFeedFetch {
         return (subject, whole == subject ? nil : clampBody(whole))
     }
 
-    private static func contributionLine(_ type: String, repo: String,
-                                         payload: [String: Any]) -> String? {
-        switch type {
-        case "PushEvent":
-            // GitHub's events feed slimmed the PushEvent payload — it no longer
-            // carries `size`/`commits`, only ref/head/before — so a count is
-            // usually absent. Name the branch rather than claim "0 commits"
-            // (honesty rule); keep the count path for the rare feed that has it.
-            let n = (payload["size"] as? Int) ?? (payload["commits"] as? [Any])?.count
-            if let n, n > 0 {
-                return String(localized: "Pushed \(n) commit to \(repo)")
-            }
-            let branch = (payload["ref"] as? String)?
-                .replacingOccurrences(of: "refs/heads/", with: "") ?? ""
-            return branch.isEmpty ? "Pushed to \(repo)" : "Pushed to \(branch) in \(repo)"
-        case "PullRequestEvent":
-            return "\((payload["action"] as? String ?? "updated").capitalized) a pull request in \(repo)"
-        case "IssuesEvent":
-            return "\((payload["action"] as? String ?? "updated").capitalized) an issue in \(repo)"
-        case "CreateEvent":
-            return "Created a \(payload["ref_type"] as? String ?? "ref") in \(repo)"
-        case "ReleaseEvent":
-            let tag = (payload["release"] as? [String: Any])?["tag_name"] as? String ?? ""
-            return tag.isEmpty ? "Published a release in \(repo)" : "Released \(tag) in \(repo)"
-        case "ForkEvent":  return "Forked \(repo)"
-        case "WatchEvent": return "Starred \(repo)"
-        default:           return nil
-        }
-    }
 
     /// The tag a WATCHED PERSON's activity wears (prd §519). Deliberately NOT
     /// `.contributions`' own tag: that feed's blurb says "your own recent
@@ -786,11 +782,19 @@ enum GitHubFeedFetch {
         guard let id = ev["id"] as? String, let type = ev["type"] as? String,
               let repo = (ev["repo"] as? [String: Any])?["name"] as? String,
               let payload = ev["payload"] as? [String: Any],
-              let line = contributionLine(type, repo: repo, payload: payload)
+              let shape = GitHubEventShape.row(type: type, repo: repo, payload: payload)
         else { return nil }
-        let t = thing(.link, title: line, content: "https://github.com/\(repo)",
+        // Title, page and words all come off the payload in hand (prd §909):
+        // a pull request event is titled with the pull request, points at it
+        // and carries its description; a push points at its commit; a branch
+        // is named. No request is spent here — `GitHubEventShape` says why.
+        let t = thing(.link, title: shape.title, content: shape.url,
                       ref: "gh:event:\(id)", tag: tag,
                       at: IngestSupport.isoDate(ev["created_at"]))
+        // DISPLAY copy, the `involved` feed's reason (2026-08-06): GitHub's
+        // own payload authored these words, so they are `summary`, never the
+        // retrieval-only `enrichedText`.
+        t.summary = shape.body
         // The event's own actor — you on the contributions feed, the person
         // you watch on the other one. Measured 2026-08-14: `actor.avatar_url`
         // here comes back as `…/u/<id>?` with an empty query, unlike the `?v=4`
@@ -839,7 +843,7 @@ enum GitHubFeedFetch {
 
     /// `-ghPeopleProbe`'s read — the SHIPPED path, titles only, landing
     /// nothing. Titles rather than a count on purpose: a count cannot show
-    /// that the wording came out right, and `contributionLine` is where a
+    /// that the wording came out right, and `GitHubEventShape.row` is where a
     /// silently-wrong row would come from.
     @MainActor
     static func eventsProbe(login: String, token: String) async -> [String]? {
@@ -1011,12 +1015,12 @@ enum GitHubFeedFetch {
 
     /// A body clamped to the ceiling the chat/journal imports already use — a
     /// GitHub issue body has no length limit worth trusting, and an unbounded
+    /// one would be stored whole. The number is `GitHubEventShape.bodyCap`, so
+    /// an event's body and an issue's are clamped to ONE ceiling (prd §909).
     /// one would ride into the store, the embedding window and a sheet.
     private static func clampBody(_ text: String) -> String {
-        text.count > bodyCap ? String(text.prefix(bodyCap)) + "…" : text
+        GitHubEventShape.clamp(text)
     }
-
-    private static let bodyCap = 4000
 
     /// The `name`s of an issue's labels, deduped against the tags the thing
     /// already wears and bounded twice: a label longer than a short phrase is

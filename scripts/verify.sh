@@ -2185,6 +2185,15 @@ harness "GitHub row-tag pure-logic self-test" "github-rowtag self-test" "scripts
 # own account unconditionally and watching yourself reads nothing forever;
 # never drop it and one endpoint is read twice every sweep.
 harness "GitHub person-watch pure-logic self-test" "github-person self-test" "scripts/github-person-selftest.sh" "the GitHub person self-test failed — run scripts/github-person-selftest.sh"
+# What a GitHub EVENTS row says (prd §909). `GitHubFeeds.swift` touches `Thing`
+# and no harness can compile it, which is how "Opened a pull request in
+# owner/repo" — no title, no body, a door to the repo's README — shipped
+# unproven for two months while the payload carried all three. Every failure
+# here renders: a merged PR worded Closed, a door falling back to the repo, a
+# branch counted instead of named, an empty body as a blank block. It also
+# pins the feed builder to ONE wording and ONE body ceiling, and the
+# notification body read to its cap and to GitHub's own host.
+harness "GitHub event-shape pure-logic self-test" "github-event self-test" "scripts/github-event-selftest.sh" "the GitHub event-shape self-test failed — run scripts/github-event-selftest.sh"
 
 # The Wei/Gwei name services (prd §597). Nothing on this host can register a
 # name, so this is the ONLY proof the encodings are right — and every failure
