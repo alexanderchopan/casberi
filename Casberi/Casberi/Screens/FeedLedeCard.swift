@@ -54,16 +54,14 @@ struct FeedLedeCard: View {
     /// The room's head sentence when the head had nothing else to draw (prd
     /// §760) — "Nothing needs you" — under the cover, in the note's register.
     var note: String? = nil
-    /// Whether the cover may hold the lead's fixed height (prd §760). A room's
-    /// cover holds it when `fillsTheBox` says it has something to fill it with
-    /// (§772); the All feed's never does, and fits its words inside the same
-    /// well (prd §775).
-    var fillsLead: Bool = true
-    /// Hold the lead's full box whatever the cover carries (prd §815). A room
-    /// with kind tiles draws them under the cover, and a cover that shrank
-    /// with its words would move the tiles from one pick to the next — the
-    /// one exception to §772's give-way, taken for the template's sake.
-    var holdsLead: Bool = false
+    /// **EVERY COVER HOLDS THE BOX (prd §904).** There is no flag here for a
+    /// cover to shrink by. §772 let a thin `.words` cover give way to its
+    /// words, §775 made every All cover do so and §815 held the kind-tile
+    /// rooms' back open — three heights for one lead, decided by three rules
+    /// a reader had to know to see why Reading's well was taller than All's.
+    /// The user ruled the template over the fill ("it's better when all
+    /// screens have the same size"), so the one geometry is `leadHeight` in
+    /// every room, and the ladder below is what fills it.
 
     /// The art's height. Fixed rather than an aspect ratio so the card's own
     /// height is known before the image resolves — a ratio would restate the
@@ -104,38 +102,25 @@ struct FeedLedeCard: View {
         // lines while 176pt of black sat under it, so a note longer than three
         // lines was cut in a box with room for eight (§766 set the RUNG, and
         // said nothing about how many lines of it a lead may draw).
-        // THE ALL FEED'S COVER ALWAYS TAKES THE SHRINK PATH (prd §775): a payout
-        // is a figure face, which §772 lets hold the box, and it drew one line
-        // over ~180pt of well. The shrink path's reasoning below is unchanged.
-        let full = fillsLead && fillsTheBox(face, rungs: rungs)
         // Spelled out, never a `ForEach`: `ViewThatFits` measures its subviews,
         // and a `ForEach` is ONE subview however many rows it makes — so a loop
         // here would offer the layout a single candidate and the fit would
         // silently stop working.
         //
-        // **AND ONLY WHERE THE BOX IS DEFINITE.** `ViewThatFits` fits against
-        // the height it is PROPOSED, and the frame below proposes one only when
-        // `minHeight == maxHeight`. A `List` row proposes nil, so on the shrink
-        // path the ladder would be handed no box, take candidate 0 unconditionally
-        // — eight lines of statement — and hand it to a `maxHeight` + `.clipped()`
-        // that cuts the bottom, taking the pinned foot with it. That is worse
-        // than the air it replaces, so the shrink path draws ONE spelling whose
-        // statement cannot overrun: see `shortFit`.
-        Group {
-            if full {
-                ViewThatFits(in: .vertical) {
-                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[0])
-                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[1])
-                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[2])
-                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[3])
-                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[4])
-                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[5])
-                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[6])
-                    cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[7])
-                }
-            } else {
-                cover(face, receipt: receipt, rungs: rungs, fit: Self.shortFit)
-            }
+        // The ladder can choose because the box is DEFINITE: `ViewThatFits`
+        // fits against the height it is proposed, and the frame below proposes
+        // one because `minHeight == maxHeight` (prd §904). A `List` row proposes
+        // nil on its own, which is why the old shrink path could not run the
+        // ladder and drew one capped spelling instead.
+        ViewThatFits(in: .vertical) {
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[0])
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[1])
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[2])
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[3])
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[4])
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[5])
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[6])
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[7])
         }
         // Every room's lead is one height (prd §760), and since §766 the cover
         // draws it the way a head does: `dsRoomHeadBlock` — the inset, the air
@@ -143,17 +128,13 @@ struct FeedLedeCard: View {
         // the one lead with no inner padding, so its words started 15pt higher
         // than a head's in the room next door.
         //
-        // **AND THE BOX GIVES WAY WHEN THERE IS NOTHING TO PUT IN IT (prd
-        // §772).** This is the one place §760's fixed height is withdrawn, and
-        // it is withdrawn on §766's own terms: the rule was never "316pt", it
-        // was "nothing in it is air it could honestly fill". A cover that has
-        // reached the bottom of the ladder with a sentence and a couple of tags
-        // cannot fill it, and a uniform box around a void is the defect, not
-        // the uniformity. `fillsTheBox` is a MODEL question — does this thing
-        // carry a substantial rung — never a measurement, so the height is
-        // decided before layout and a lead cannot flicker between two of them.
+        // **AND THE BOX NEVER GIVES WAY (prd §904, reversing §772's give-way
+        // and §775).** `minHeight == maxHeight`, in every room and the All feed
+        // alike, so the same thing stands in the same well wherever it leads.
+        // What the ladder cannot fill stays air, on purpose: the user weighed
+        // the air against covers of three heights and chose one height.
         .frame(maxWidth: .infinity,
-               minHeight: full || holdsLead ? box : 0,
+               minHeight: box,
                maxHeight: box,
                alignment: .topLeading)
         .clipped()
@@ -536,24 +517,6 @@ struct FeedLedeCard: View {
         Fit(statementLines: 2, bodyLines: 1),
     ]
 
-    /// The ONE spelling a shrinking cover takes, with no fit ladder behind it.
-    ///
-    /// **Its statement limit is a proof, not a taste.** On the shrink path
-    /// nothing proposes a definite height, so `ViewThatFits` cannot choose and a
-    /// candidate that overruns would be cut by `maxHeight` — taking the pinned
-    /// foot with it, since the foot is last. So the cap is the largest statement
-    /// that cannot overrun the box on its own: the box is
-    /// `leadHeight - 2 × s4` = 286; the eyebrow and its gap are ~44 (`Face.list`
-    /// plus `s2`); the foot is ~23; the quietest body rung, a row of tag stamps
-    /// with its gap, is ~32. That leaves ~187, and a `heading24` line is ~29 —
-    /// six lines, with a line to spare. A statement longer than six lines is
-    /// clipped at the sixth, which is what `lineLimit` is for and where the cut
-    /// is visibly a cut; it is never the foot that goes.
-    ///
-    /// `bodyLines` is nominal here: the only rungs that reach this path are tags
-    /// and a short parts list, and neither reads it as a line count.
-    static let shortFit = Fit(statementLines: 6, bodyLines: 2)
-
     /// One thing a lead can put under its statement. See `DSLeadBody` for the
     /// drawings and for why the ladder exists at all.
     enum BodyRung {
@@ -569,17 +532,6 @@ struct FeedLedeCard: View {
         /// What it is filed under. The quietest rung, and the one nearly every
         /// thing has.
         case tags([String])
-
-        /// Whether this rung is enough to hold a 316pt box open on its own.
-        /// Tags are not: four stamps on one line under a sentence is a fuller
-        /// void, not a filled box.
-        var substantial: Bool {
-            switch self {
-            case .cast, .quote, .excerpt: return true
-            case .facts(let f):           return f.count >= 3
-            case .tags:                   return false
-            }
-        }
     }
 
     /// What this thing can fill its body with, richest first.
@@ -648,32 +600,6 @@ struct FeedLedeCard: View {
             DSLeadFacts(facts: facts, limit: min(fit.bodyLines, 3))
         case .tags(let tags):
             DSLeadTags(tags: tags)
-        }
-    }
-
-    /// **DOES THIS COVER EARN THE FULL BOX (prd §772).**
-    ///
-    /// A face with a figure always does: a picture is `leadArtHeight` already, a
-    /// receipt's `price40` and a countdown are drawn to be read at size, and
-    /// none of the three has ever left a void. A `.words` cover earns it when
-    /// the ladder gave it something substantial to say — a cast, a post, a lede,
-    /// a parts list — and does not when all it has is a sentence and the tags it
-    /// is filed under.
-    ///
-    /// A MODEL question, asked before layout, so the height is a property of the
-    /// thing rather than of a measurement that could resolve two ways on two
-    /// passes and leave a lead flickering between heights as a picture loads.
-    private func fillsTheBox(_ face: FeedLedeFace.Kind, rungs: [BodyRung]) -> Bool {
-        switch face {
-        // A picture is `leadArtHeight` of the box before a word is set, and a
-        // receipt's `price40` and a countdown are drawn to be read at size.
-        // None of the three has ever left a void, and the picture face is the
-        // one that passes no ladder at all (§734) — so a height rule keyed on
-        // the ladder would shrink exactly the face that least needs it.
-        case .picture, .money, .clock:
-            return true
-        case .words:
-            return rungs.prefix(Self.rungCap).contains { $0.substantial }
         }
     }
 }

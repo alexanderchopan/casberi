@@ -7369,8 +7369,8 @@ struct FeedScreen: View {
     /// one height in this room, Privy and the wallet family: the well at the
     /// top of the row, the tiles `contentGap` under it, the list `leadGap`
     /// under the tiles, all at the rows' inset. The cover holds the full box
-    /// (`holdsLead`) so the tiles never move between picks. With no coverable
-    /// thing the tiles still draw, at the top.
+    /// (every cover does, prd §904) so the tiles never move between picks.
+    /// With no coverable thing the tiles still draw, at the top.
     ///
     /// A room that DRAWS a head (prd §816: Safe, Stripe, PostHog) draws no
     /// cover and no tiles here — the head carries the tiles in its `scopes`
@@ -7419,8 +7419,7 @@ struct FeedScreen: View {
             }
         } else if let coverThing {
             Section {
-                ledeListRow(coverThing, top: 0,
-                            bottom: DSRoomChassis.contentGap, holdsLead: true)
+                ledeListRow(coverThing, top: 0, bottom: DSRoomChassis.contentGap)
             }
         } else if roomAgent != nil, visible.isEmpty {
             // AN EMPTY ROOM STILL HOLDS THE LEAD SLOT (user, 2026-09-20: "the
@@ -7500,8 +7499,7 @@ struct FeedScreen: View {
             Section {
                 ledeListRow(coverThing,
                             top: scopeTiles == nil ? DS.Space.s2 : 0,
-                            bottom: scopeTiles == nil ? DSRoomChassis.leadGap : DSRoomChassis.contentGap,
-                            holdsLead: true)
+                            bottom: scopeTiles == nil ? DSRoomChassis.leadGap : DSRoomChassis.contentGap)
             }
         } else if scopeTiles != nil, visible.isEmpty {
             Section {
@@ -8364,14 +8362,14 @@ struct FeedScreen: View {
     /// ↓ onto the cover would scroll to nothing and highlight nothing — the
     /// exact dead-walk failure `walkRowIDs`' own doc warns about.
     ///
-    /// `top`/`bottom`/`holdsLead` are the kind-tile rooms' (prd §815): there the
-    /// cover is the well at the top of the row with the tiles `contentGap`
-    /// under it — `DSRoomChassis.Head`'s geometry when it has tiles — and it
-    /// always holds the box, so the tiles never move.
+    /// `top`/`bottom` are the kind-tile rooms' (prd §815): there the cover is
+    /// the well at the top of the row with the tiles `contentGap` under it —
+    /// `DSRoomChassis.Head`'s geometry when it has tiles. The cover holds the
+    /// box in every room since prd §904, so the tiles never move and no
+    /// flag has to say so here.
     private func ledeListRow(_ thing: Thing,
                              top: CGFloat = DS.Space.s2,
-                             bottom: CGFloat = DSRoomChassis.leadGap,
-                             holdsLead: Bool = false) -> some View {
+                             bottom: CGFloat = DSRoomChassis.leadGap) -> some View {
         Button {
             openThing(thing)
         } label: {
@@ -8379,11 +8377,7 @@ struct FeedScreen: View {
                          selected: DS.isMac
                             && chrome.walkSelected == thing.id.uuidString,
                          // A quiet head's sentence, under the cover (prd §760).
-                         note: heads?.quietHead?.quietLine,
-                         // The All feed's cover fits its words; a room's may
-                         // hold the lead's height (prd §775).
-                         fillsLead: source != "All",
-                         holdsLead: holdsLead)
+                         note: heads?.quietHead?.quietLine)
                 .modifier(rowEntrance(0))
                 .contentShape(Rectangle())
         }

@@ -52,8 +52,8 @@ WHAT THIS DELIBERATELY DOES NOT CHECK, so it stays honest about its reach.
   · **Whether anything FITS.** Whether eight candidates are enough at AX5 type
     on an SE is a layout question, and layout needs a device. This file cannot
     see a clipped shelf and does not pretend to.
-  · **Whether `fillsTheBox` decides well.** It can see that the box is asked;
-    it cannot see whether a cover that drops it reads as a lead or as a big row.
+  · **Whether the box is filled.** Every cover holds `leadHeight` since prd
+    §904; whether the ladder fills it or leaves air is a device question.
   · **Other leads.** A room `Head` fills its box through `LeadFit` and its own
     rows, which `room-chassis-audit.py` already governs. This is the COVER's
     ladder only.

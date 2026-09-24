@@ -245,14 +245,17 @@ grep -q 'LeadFooter()' "$TMP/lede.nocomment" \
 grep -q 'heading40' "$TMP/lede.nocomment" \
   && { echo "✗ the cover sets its statement at heading40 again — a lead's words are"; \
        echo "  heading24 in every room (prd §766)"; exit 1; }
-# THE ALL FEED'S COVER NEVER HOLDS THE BOX (prd §775). Both halves: the switch on
-# the card gating `full`, and the one call site deciding it by feed.
-grep -q 'let full = fillsLead && fillsTheBox(face, rungs: rungs)' "$TMP/lede.nocomment" \
-  || { echo "✗ the cover's fixed box no longer yields to fillsLead — the All feed's"; \
-       echo "  payout draws one line over an empty well again (prd §775)"; exit 1; }
-grep -q 'fillsLead: source != "All"' "$TMP/feed.nocomment" \
-  || { echo "✗ the cover's mount no longer decides fillsLead by feed — either the"; \
-       echo "  All feed is held to leadHeight or a room stops being (prd §775)"; exit 1; }
+# EVERY COVER HOLDS THE BOX (prd §904, reversing §772's give-way and §775). The
+# frame's floor and ceiling are the same box, and nothing on the card or at its
+# mount can lower the floor: no `fillsLead`, no `holdsLead`, no `fillsTheBox`.
+grep -q 'minHeight: box,' "$TMP/lede.nocomment" && grep -q 'maxHeight: box,' "$TMP/lede.nocomment" \
+  || { echo "✗ the cover's frame no longer pins minHeight and maxHeight to the one box —"; \
+       echo "  a lead in one room would stand shorter than the same lead in another (prd §904)"; exit 1; }
+grep -qE 'minHeight: [^b]' "$TMP/lede.nocomment" \
+  && { echo "✗ the cover's minHeight is decided by something other than the box (prd §904)"; exit 1; }
+grep -qE 'fillsLead|holdsLead|fillsTheBox|shortFit' "$TMP/lede.nocomment" "$TMP/feed.nocomment" \
+  && { echo "✗ a switch that lets a cover shrink is back (prd §904 deleted fillsLead,"; \
+       echo "  holdsLead, fillsTheBox and shortFit — one height, every room)"; exit 1; }
 # ONE COPY OF THE POST'S TWO FACTS (prd §756, the §396a class). Three readers
 # now — the cover and the two post cards — and the two that existed before
 # carried the same lines under a comment saying they were the same lines.

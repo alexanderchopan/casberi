@@ -114,8 +114,12 @@ grep -qF 'RoomKindTiles.allows(pick, kind:' "$FEED" \
   || { echo "✗ the kind pick no longer narrows the room's rows"; exit 1; }
 grep -qF 'chrome.roomKind = .all' Casberi/Casberi/Shell/MainSurface.swift \
   || { echo "✗ the kind pick no longer resets on a room change — a room would open on a stale tile"; exit 1; }
-grep -qF 'holdsLead: true' "$FEED" \
-  || { echo "✗ the kind-tile rooms' cover no longer holds the box — the tiles would move between picks"; exit 1; }
+# The cover holds the box in EVERY room since prd §904 (the `holdsLead: true`
+# these rooms passed is deleted with the flag), so the tiles' anchor is the
+# card's own frame: floor and ceiling the one box.
+LEDE="Casberi/Casberi/Screens/FeedLedeCard.swift"
+grep -qF 'minHeight: box,' "$LEDE" && grep -qF 'maxHeight: box,' "$LEDE" \
+  || { echo "✗ the cover no longer holds the box — the kind tiles would move between picks (prd §904)"; exit 1; }
 # WHERE A ROOM HAS A HEAD, THE TILES RIDE ITS SCOPES SLOT (prd §816, user: "keep
 # the safe head the way it was"). Each head hands them to `DSRoomChassis.Head`
 # — its own geometry, no hand-placed frame — and the cover path stands them
