@@ -61049,3 +61049,18 @@ The question was asked of the feed as it stood that evening, so it was screensho
 **Guarded.** `feed-row-skeleton-audit.py` INVERTED its time rule: a feed row that draws `LiveTimeText` in its trailing slot is a finding unless named in `KNOWN_TIME` with why, and a `KNOWN_TIME` row that draws none is a snooze. `feed-grammar-selftest.sh` gained guards for the head's floor, the centred lead, the one-line title, the absent tail and the absent count, and six mutations (the alarm's age in the tint, a fold's figure, a fold's count, the title wrapping, the head losing its floor, the lead at the top).
 
 **Seen on the simulator** (iPhone 17 Pro, iOS 27, demo, both themes, top and scrolled): "Today" alone in pink, the card as before, then eleven rows at one pitch — Evening run with "7:43 PM" under it and "in 18 min" on the right, the two folds with the plate behind their marks and nothing on the right, "Mortgage Rates Today: A Little Low…" on one line, "Casberi Pro" with "$29.00" alone, "Telegram now supports gifting a sub…" over "Pavel Durov". **Unseen:** an alarm-class row (the red age), a real account's pull, a post row's words below the head in All, the Mac.
+
+## §903 — A fold's lead is the bare mark: the stacked plate is deleted (user: "in the All feed, what are these gray tiles behind the icons" → "it kind of looks like an error and won't all of them always have multiple things" → "remove that tile", 2026-09-24)
+
+**Ruling.** `DSFoldLead` is deleted. A fold row (`BundleRow`, `StripRow`) leads with `BridgeIcon(name: source, size: DS.Mark.row)`, the same lead a single row from that source draws. Nothing in the row says it is a fold. Its name is still its newest member (§900), its trailing slot still empty (§902), a strip still draws its tiles and a bundle its art below the head, and the tap still opens the source's room (§377, §896).
+
+**Why.** Two facts, both the user's, both true of the code:
+
+1. **It read as an error.** The plate was a second squircle in tertiary ink, 3pt up and right of the mark. No other mark in the app is drawn that way, so a reader has no word for it and lands on "misaligned" or "drawn twice". It was also a plate under a mark, which §782 rules out everywhere else in the app.
+2. **It was always there.** A source folds at three things a day (`FeedFold.bundleThreshold`). On X and GitHub three a day is the ordinary day, so the plate was those marks' standing look and only went away on a quiet day. That is §902's own argument, turned on the plate: a sign that is always present says nothing. §902 deleted "N more" because "there is always N more" and kept the plate as "the whole statement"; the statement was the same one.
+
+**What is lost.** A fold with no pictures — X's and GitHub's case — now looks like a single row until it is opened. That is accepted: the day header says when, the room says how many, and the row's job is to name what arrived.
+
+**Guarded.** `feed-grammar-selftest.sh` guards both fold rows leading with the bare mark and fails on any `DSFoldLead` in `ShapedRows.swift`. `lead-cycle-audit.py` rule D reads the two fold structs' bodies for `.leadCycle(` in place of the deleted name (a fold's lead still never cycles, §901), and its mutation plants the cycle on the bare mark.
+
+**Unseen:** the simulator — this pass ran on a Linux host with no Xcode. The change is two call sites swapping one view for the view the single row already draws; build it before the next TestFlight.

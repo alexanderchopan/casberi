@@ -1718,14 +1718,15 @@ struct BundleRow: View {
         // THE NEWEST MEMBER IS THE NAME (prd §900). §896 put it on the line
         // under the source's name, so the column still read "Gmail" where
         // every row around it read a thing. The lead says it is a fold
-        // (`DSFoldLead`), the count stands under the time, and a money clause
-        // is stripped: a figure beside "+3 more" reads as the total of all
-        // four, and it is only the newest one's.
+        // (a stacked plate), the count stands under the time, and a money
+        // clause is stripped: a figure beside "+3 more" reads as the total of
+        // all four, and it is only the newest one's.
         // NO COUNT, NO TIME (prd §902 — user: "N more also doesn't mean much
-        // b/c there is always N more"): the fold's lead already stands on a
-        // second plate, which is the whole statement.
+        // b/c there is always N more"), and NO PLATE (prd §903 — user: "it
+        // kind of looks like an error and won't all of them always have
+        // multiple things"): a fold's lead is the bare mark, like any row's.
         DSFeedRow(name: FoldName.of(lead, source: source), line: nil) {
-            DSFoldLead(source: source)
+            BridgeIcon(name: source, size: DS.Mark.row)
         } trailing: {
             EmptyView()
         } below: {
@@ -1842,10 +1843,10 @@ struct StripRow: View {
         // ONE ANATOMY (prd §744): the time sits in the trailing slot and the
         // tiles under the name (§719); the line is the newest member, the
         // count its tail (prd §896).
-        // The newest member names the row and the lead says it is a fold
-        // (prd §900, `BundleRow`'s reasoning).
+        // The newest member names the row (prd §900, `BundleRow`'s
+        // reasoning); the lead is the bare mark (prd §903).
         DSFeedRow(name: FoldName.of(lead, source: source), line: nil) {
-            DSFoldLead(source: source)
+            BridgeIcon(name: source, size: DS.Mark.row)
         } trailing: {
             EmptyView()
         } below: {

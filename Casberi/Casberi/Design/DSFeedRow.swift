@@ -88,8 +88,8 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                         // ONE fact, or none (prd §902): money, a clock still
                         // ahead of you, or Live. A row's age went — the day
                         // header already says when — and so did a fold's
-                        // count, which `DSFoldLead`'s second plate already
-                        // says without a word.
+                        // count (§902) and then the fold's stacked plate
+                        // (§903): a fold looks like any row.
                         trailing
                     }
                     if let line {
@@ -162,35 +162,6 @@ extension DSFeedRow where Below == EmptyView {
         self.init(name: name, emphasized: emphasized,
                   done: done, ripple: ripple, line: line, lineLines: lineLines,
                   lead: lead, trailing: trailing, below: { EmptyView() })
-    }
-}
-
-/// A FOLD'S LEAD (prd §900): the source's mark with a plate standing behind
-/// it, up and to the right. A fold used to say it was a fold by
-/// titling itself with the source's name and demoting its newest thing to the
-/// line, so the column read "Gmail" where every other row read a thing. The
-/// name is the newest member now, like any row, and the lead carries the one
-/// fact that is left: more than one of these. No word, no count badge, and
-/// since prd §902 no count anywhere: this plate is the whole statement.
-struct DSFoldLead: View {
-    let source: String
-    @Environment(\.colorScheme) private var scheme
-
-    var body: some View {
-        ZStack {
-            // A NEUTRAL plate, not a second copy of the mark: a white-plated
-            // icon (Gmail, ChatGPT) at 40% vanished into the light ground, so
-            // only coloured marks read as stacked. Tertiary ink shows behind
-            // every mark — stronger in dark, where 35% of tertiary on black
-            // measured as barely there.
-            RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.row),
-                             style: .continuous)
-                .fill(DS.textTertiary.opacity(scheme == .dark ? 0.6 : 0.35))
-                .frame(width: DS.Mark.row, height: DS.Mark.row)
-                .offset(x: 3, y: -3)
-            BridgeIcon(name: source, size: DS.Mark.row)
-        }
-        .accessibilityHidden(true)
     }
 }
 
