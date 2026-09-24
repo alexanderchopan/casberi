@@ -3396,7 +3396,12 @@ private struct PagerDrag<Content: View>: View {
             // at commit is the amount that ruling asked for, but nobody has
             // watched it arrive there.
             .rotationEffect(.degrees(heading * 4 * lift), anchor: .bottom)
-            .shadow(color: .black.opacity(0.5 * lift), radius: 28, y: 10)
+            // The shadow is WIDER since §898b and stays so under §898c: on
+            // the white table the shadow is the whole of the cardness (on the
+            // black one the lit edge is), so it is the one drawn at 40/24 and
+            // not §648's 28/10. One shadow, not two — a second full-screen
+            // shadow re-rasterised on every touch move is §651's cost.
+            .shadow(color: .black.opacity(0.5 * lift), radius: 40, y: 24)
             .offset(x: x)
     }
 }
@@ -3423,9 +3428,9 @@ private struct PagerDrag<Content: View>: View {
 /// (`PagerDrag`), so nothing double-exposes. Reads only the drag's own
 /// values, in a body of its own.
 ///
-/// The word is `DS.brandGroundInk` on the table (white in both themes,
-/// 8.4:1) and the page's own primary where the table stands down (a vivid
-/// page or a photo, `DS.brandGround == nil`).
+/// The word is `DS.swipeTableInk` on the table (the other page's ink,
+/// §898c) and the page's own primary where the table stands down (a vivid
+/// page or a photo, `DS.swipeTable == nil`).
 private struct PagerCover: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -3441,7 +3446,7 @@ private struct PagerCover: View {
             let landing = CategoryFold.isCategory(label)
                 ? (CategoryFold.landing(category: label, present: venues) ?? label)
                 : label
-            let ink = DS.brandGround == nil ? DS.textPrimary : DS.brandGroundInk
+            let ink = DS.swipeTable == nil ? DS.textPrimary : DS.swipeTableInk
             let edge: Alignment = side >= 0 ? .leading : .trailing
             VStack(alignment: side >= 0 ? .leading : .trailing,
                    spacing: DS.Space.s3) {
@@ -3471,21 +3476,27 @@ private struct PagerCover: View {
     }
 }
 
-/// The table under the swipe (prd §898): the shell's ground in the brand
-/// hue while a card is in the air, gone at rest. Rides `pageDragProgress` —
-/// the ramp the card's own cardness rides (§648), so the table is fully lit
-/// at the turn, holds through the flight (`deal` animates the progress to
-/// ±1) and fades back over the landing spring (`land` brings it home inside
-/// `DS.Motion.standard`), never a cut. A rubber-band pull at the strip's end
-/// has no neighbour and a progress of 0, so no table lights for a card that
-/// is not there (§648's honest-motion rule). A leaf with a body of its own,
-/// because the progress is written on every touch move. Draws nothing on a
-/// vivid page or a photo (`DS.brandGround`).
+/// The table under the swipe (prd §898, §898c): the shell's ground while a
+/// card is in the air, gone at rest — the OTHER page, flat (white under the
+/// dark card, black under the light one, `DS.swipeTable`). Rides
+/// `pageDragProgress` — the ramp the card's own cardness rides (§648), so
+/// the table is fully lit at the turn, holds through the flight (`deal`
+/// animates the progress to ±1) and fades back over the landing spring
+/// (`land` brings it home inside `DS.Motion.standard`), never a cut. A
+/// rubber-band pull at the strip's end has no neighbour and a progress of
+/// 0, so no table lights for a card that is not there (§648's honest-motion
+/// rule). A leaf with a body of its own, because the progress is written on
+/// every touch move. Draws nothing on a vivid page or a photo.
+///
+/// Flat on purpose: §898b's frosted sheet (`BrandSheet`, one rendered
+/// picture per window size) is deleted with the pink it was lit for. A white
+/// or black table is a surface already; the card's shadow and lit edge do
+/// the rest (§723: a feature off the surface is off the model).
 private struct SwipeGround: View {
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
-        if let ground = DS.brandGround {
+        if let ground = DS.swipeTable {
             ground.opacity(min(1, abs(chrome.pageDragProgress)))
         }
     }

@@ -765,15 +765,17 @@ for page in data notifications mcp diagnostics language dockOrder; do
 done
 
 
-# --- 12. THE SWIPE IS DEALT ON THE BRAND GROUND, AND THE COVER DRAWS NO GROUND (prd §898) --
-# The ground under a room swipe is the shell's own coat in the brand hue
-# (`SwipeGround`, `DS.brandGround`), lit on the turn's ramp and gone at rest;
-# the cover is the next room's bare mark and name and paints nothing behind
-# them. Three drifts a build cannot see: the ground mounted inside the pager
-# (it stops at the status bar and the band — "you have black in the
-# background still"); the cover painting a page or a picture again, which
-# hides the table; and a snapshot capture coming back for a reader that no
-# longer exists (§723).
+# --- 12. THE SWIPE IS DEALT ON THE OTHER PAGE, AND THE COVER DRAWS NO GROUND (prd §898, §898c) --
+# The ground under a room swipe is the shell's own coat as the OTHER page —
+# white under the dark card, black under the light one, flat (`SwipeGround`,
+# `DS.swipeTable`) — lit on the turn's ramp and gone at rest; the cover is
+# the next room's bare mark and name in the other page's ink and paints
+# nothing behind them. Drifts a build cannot see: the ground mounted inside
+# the pager (it stops at the status bar and the band — "you have black in
+# the background still"); the cover painting a page or a picture again,
+# which hides the table; a snapshot capture coming back for a reader that no
+# longer exists (§723); the table sliding back to a hue or a grey (§542);
+# the frosted sheet §898c deleted coming back with its per-size render.
 grep -q 'SwipeGround()' "$TMP/main.nc" \
   || { echo "✗ the shell's coat no longer mounts SwipeGround — the swipe is dealt on"; \
        echo "  the page colour again (prd §898)."; fail=1; }
@@ -784,20 +786,34 @@ awk '/^private struct PagerCover/,/^}/' "$TMP/main.nc" > "$TMP/cover.nc"
 [ -s "$TMP/cover.nc" ] \
   || { echo "✗ PagerCover is gone or renamed — the swipe no longer names its destination."; fail=1; }
 grep -qE 'dsPageBackground|RoomSnapshots|Image\(uiImage|themedPage|clipShape' "$TMP/cover.nc" \
-  && { echo "✗ PagerCover paints a ground, a picture or a card again — over the brand"; \
-       echo "  ground that is a black rectangle sliding in (prd §898)."; fail=1; }
-grep -q 'DS.brandGroundInk' "$TMP/cover.nc" \
-  || { echo "✗ the cover's word is not brandGroundInk — textPrimary is black on the light"; \
-       echo "  page and reads at 1.9:1 on the ground (prd §898, §898a)."; fail=1; }
+  && { echo "✗ PagerCover paints a ground, a picture or a card again — over the table"; \
+       echo "  that is a black rectangle sliding in (prd §898)."; fail=1; }
+grep -q 'DS.swipeTableInk' "$TMP/cover.nc" \
+  || { echo "✗ the cover's word is not swipeTableInk — textPrimary is the page's own ink"; \
+       echo "  and vanishes into the other page (prd §898c)."; fail=1; }
 grep -q 'drawHierarchy' "$TMP/main.nc" \
   && { echo "✗ a window snapshot is back in MainSurface — nothing reads one since §898."; fail=1; }
+awk '/^private struct SwipeGround/,/^}/' "$TMP/main.nc" > "$TMP/ground-view.nc"
+grep -qE 'BrandSheet|\.task\(|Image\(uiImage|GeometryReader' "$TMP/ground-view.nc" \
+  && { echo "✗ SwipeGround renders a sheet again — the table is the other page, flat, a"; \
+       echo "  colour and a ramp and nothing else (prd §898c)."; fail=1; }
+[ ! -f "Casberi/Casberi/Design/BrandSheet.swift" ] \
+  || { echo "✗ BrandSheet.swift is back — §898c deleted the frosted sheet with the pink"; \
+       echo "  it was lit for (§723)."; fail=1; }
+strip_comments "Casberi/Casberi/Design/DesignTokens.swift" > "$TMP/tokens.nc"
+awk '/static var swipeTable: Color\?/,/^    }/' "$TMP/tokens.nc" > "$TMP/ground.nc"
+[ -s "$TMP/ground.nc" ] \
+  || { echo "✗ DS.swipeTable is gone or renamed (prd §898c)."; fail=1; }
+grep -q 'if vividBackground { return nil }' "$TMP/ground.nc" \
+  || { echo "✗ swipeTable no longer stands down on a vivid page or a photo — the other"; \
+       echo "  page is undefined over a picture (prd §898, §740's rule)."; fail=1; }
+grep -q 'Color.adaptive(dark: "#f2f2f7", light: "#000000")' "$TMP/ground.nc" \
+  || { echo "✗ swipeTable is not the OTHER page (Apple's white #f2f2f7 under dark, black"; \
+       echo "  under light) — a hue, a grey or bare #ffffff is back (prd §898c, §898d, §542)."; fail=1; }
+grep -q 'static let swipeTableInk = Color.adaptive(dark: "#000000", light: "#ffffff")' "$TMP/tokens.nc" \
+  || { echo "✗ swipeTableInk is not the other page's ink (prd §898c)."; fail=1; }
 [ ! -f "Casberi/Casberi/Shell/RoomSnapshots.swift" ] \
   || { echo "✗ RoomSnapshots.swift is back — a store with no reader (prd §723, §898)."; fail=1; }
-strip_comments "Casberi/Casberi/Design/DesignTokens.swift" > "$TMP/tokens.nc"
-awk '/static var brandGround: Color\?/,/^    }/' "$TMP/tokens.nc" > "$TMP/ground.nc"
-grep -q 'if vividBackground { return nil }' "$TMP/ground.nc" \
-  || { echo "✗ brandGround no longer stands down on a vivid page or a photo — a pink table"; \
-       echo "  on the pink page is a table you cannot see (prd §898, §740's rule)."; fail=1; }
 
 if [ $fail -eq 0 ]; then
   echo "✓ dock self-test"

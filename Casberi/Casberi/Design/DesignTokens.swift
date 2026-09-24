@@ -389,49 +389,43 @@ enum DS {
         })
     }
 
-    /// **The brand hue as a GROUND — the table a room swipe is dealt on, and
-    /// nothing else (prd §898, user: "what if that background was pink").**
-    /// A room is a card; this is the surface under every one of them, seen
-    /// only while a card is in the air (`MainSurface.SwipeGround`) and gone
-    /// at rest. §8's boundary holds: it says WHAT IS HAPPENING (a turn, in
-    /// the app's own voice — §740's day-divider argument) and never where a
-    /// thing came from (§524 took every source hue off the pours; the room's
-    /// own colour was mocked and declined, because X, ChatGPT and ether.fi
-    /// are black or white and the rule died on a third of the dock).
+    /// **The table a swipe is dealt on is the OTHER PAGE (prd §898c, user:
+    /// "ok lets do L and M").** White under the dark card, black under the
+    /// light one, flat: no light, no frost, no hue. **The white is Apple's
+    /// (prd §898d, user: "the white is a bit bright" → "yes do P"):
+    /// `#f2f2f7`, the system grouped background, what iOS means by a white
+    /// page — a tenth less luminance than `#ffffff` and a cool cast, which
+    /// is what reads calm. The one system value the app borrows, and the
+    /// one exception to "nothing new enters the palette" below; `#f8f8f8`
+    /// (`surfaceRaised`) was the closed-palette alternative and dims half
+    /// as much. It does NOT fix a night flash — only the ramp can, and an
+    /// opacity cap on the ramp is grey by construction (§542).** A table under a card is
+    /// there for contrast with the card, and this is the most there is. Both
+    /// values are the app's own pages, so nothing new enters the palette and
+    /// no grey (§542). One rule, two values — themed by RULE, which §898's
+    /// "two tables" objection was not about.
     ///
-    /// **In shadow, on purpose (user: "it's like it's shadowed … make it more
-    /// shadowed to tone it down").** The hue angle is the mark's (334°) with
-    /// saturation held at `brandInk`'s notch and brightness down to 42 —
-    /// `#6b1c3e` — two registers below the mark, one below `brandInk`'s
-    /// light-page value (`#b8306b`, S 74 B 72). §898 landed B 55 (`#8c2451`);
-    /// §898a stepped it down off a six-panel board of the same screen at
-    /// B 55/48/42/36/30/24 (user: "mock up what different shades of this pink
-    /// darker would look like" → "ok do it"). 42 is the darkest step where the
-    /// eye still calls it pink and the dock's glass still stands off the
-    /// ground; 36 reads as wine beside the black card and is the fallback if
-    /// 42 still reads bright on an OLED at night. Full-chroma pink was mocked
-    /// and refused: a whole screen of it on every swipe is a flash, and at
-    /// night on an OLED a flashbulb. A third register of one hue, never a
-    /// second pink; `brand` stays the only spelling of the mark's value.
+    /// The pink is retired here, not deleted from the record: §898 dealt the
+    /// swipe on the mark's hue in shadow (`#8c2451`), §898a stepped it to
+    /// `#6b1c3e`, §898b put frosted glass over it, and the same evening the
+    /// user moved off the hue three times. The day divider already speaks
+    /// in the mark's hue once per screen (§740), so a second place for the
+    /// voice was never needed. `brand` and `brandInk` are untouched.
     ///
-    /// **FIXED across themes**, like the mark: a table that changes colour
-    /// between light and dark is two tables. What sits on it takes
-    /// `brandGroundInk`, not `textPrimary`.
-    ///
-    /// **Nil on a vivid page or a photo**, `brandInk`'s own rule: a ground the
-    /// person coloured themselves is louder than the app's voice, and a
-    /// pink table on the pink page is a table you cannot see. The swipe then
-    /// leaves the ground alone and the cover's word takes the page's ramp.
-    static var brandGround: Color? {
+    /// **Nil on a vivid page or a photo**, `brandInk`'s own rule: a ground
+    /// the person coloured themselves is louder than the app's, and "the
+    /// other page" is undefined over a photo. The swipe then leaves the
+    /// ground alone and the cover's word takes the page's ramp.
+    static var swipeTable: Color? {
         if vividBackground { return nil }
-        return Color.fixed("#6b1c3e")
+        return Color.adaptive(dark: "#f2f2f7", light: "#000000")
     }
 
-    /// What is written on `brandGround`: the room's mark and its name. White
-    /// in BOTH themes — 11.3:1 on the ground (7:1 is the enhanced bar, so
-    /// Increase Contrast needs no second value) — because `textPrimary` is
-    /// black on the light page and black on this ground measures 1.9:1.
-    static let brandGroundInk = Color.fixed("#ffffff")
+    /// What is written on `swipeTable`: the room's mark and its name, in the
+    /// OTHER page's ink — black on the white table (19.6:1 on `#f2f2f7`),
+    /// white on the black one (21:1), never `textPrimary`, which is the
+    /// page's own ink and vanishes into the table.
+    static let swipeTableInk = Color.adaptive(dark: "#000000", light: "#ffffff")
 
     // MARK: - Semantic state  — orange attention, red destructive, green confirm
 
