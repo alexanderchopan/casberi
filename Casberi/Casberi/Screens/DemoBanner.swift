@@ -75,22 +75,13 @@ struct DemoBanner: View {
                 // lozenge included — so a marker meaning "none of this is
                 // real" wore the colour that everywhere else means "this is
                 // yours and live". Amber is the platform's word for
-                // non-production, and it is used here as a DOT and a WORD,
+                // non-production, and it is used here as a WORD,
                 // never as the capsule's fill: `DS.attention` already means
                 // "a seat is broken" (the dashed ring, the catalogue door's
                 // mark), and every one of those is amber INK on a dark
                 // ground, so a filled amber pill would have read as that.
                 //
-                // The dot is an SF Symbol so the pulse stays a symbol effect
-                // — the render server drives it and the shell pays nothing
-                // per frame (§651, §660). The halo behind it is a static
-                // gradient, not a second animation.
-                // A flat dot (prd §783): the halo and the pulse were the tell.
-                Image(systemName: "circle.fill")
-                    .dsGlyph(.tick)
-                    .foregroundStyle(DS.attention)
-                    .frame(width: 20, height: 20)
-                    .accessibilityHidden(true)
+                // No dot (user, 2026-09-24): the amber word already says it.
                 Text("Demo")
                     .dsText(.label12)
                     .foregroundStyle(DS.attention)
