@@ -49,7 +49,7 @@ WHAT THIS DELIBERATELY DOES NOT CHECK, so it stays honest about its reach.
 
   · **Whether the rungs are the RIGHT ones, or in the right order.** That is
     §772's ruling and a person's judgement; a script can only hold the wiring.
-  · **Whether anything FITS.** Whether eight candidates are enough at AX5 type
+  · **Whether anything FITS.** Whether ten candidates are enough at AX5 type
     on an SE is a layout question, and layout needs a device. This file cannot
     see a clipped shelf and does not pretend to.
   · **Whether the box is filled.** Every cover holds `leadHeight` since prd

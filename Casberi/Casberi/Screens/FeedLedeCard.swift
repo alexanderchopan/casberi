@@ -121,6 +121,8 @@ struct FeedLedeCard: View {
             cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[5])
             cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[6])
             cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[7])
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[8])
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[9])
         }
         // Every room's lead is one height (prd §760), and since §766 the cover
         // draws it the way a head does: `dsRoomHeadBlock` — the inset, the air
@@ -269,9 +271,16 @@ struct FeedLedeCard: View {
     /// cap in a box with room for eight, so a note longer than three lines was
     /// cut with 176pt of black beneath the cut. Under a picture it stays at two:
     /// there the object is the picture (§734) and the words are its caption.
+    ///
+    /// **AND THE RUNG IS THE FIT'S TOO (prd §905).** §766 fixed the words at
+    /// `heading24` so two rooms' statements never sat two sizes apart by the
+    /// length of a string. §905 keeps that reason and moves the decision: the
+    /// rung is chosen by what FITS the box, not by a character count, so the
+    /// same thing takes the same rung in every room. Under a picture the words
+    /// are a caption (§734) and stay at `heading24` whatever the fit says.
     private func titleBlock(underArt: Bool, fit: Fit) -> some View {
         Text(words)
-            .dsText(.heading24)
+            .dsText(underArt ? .heading24 : fit.statementRung)
             .foregroundStyle(DS.textPrimary)
             .multilineTextAlignment(.leading)
             .lineLimit(underArt ? 2 : fit.statementLines)
@@ -493,28 +502,57 @@ struct FeedLedeCard: View {
 
     // MARK: - The body ladder (prd §772)
 
-    /// How many lines the statement and the body each get in one spelling of the
-    /// cover. `ViewThatFits` walks these richest-first and takes the first that
+    /// One spelling of the cover: a TIER (how large the words and the shelf
+    /// draw) and how many lines the statement and the body each get.
+    /// `ViewThatFits` walks the ladder richest-first and takes the first that
     /// fits the box.
+    ///
+    /// **THE TIER (prd §905).** §904 fixed the box in every room, and the two
+    /// covers the user then pointed at — an article with a one-line lede, a
+    /// notice with a cast — drew every rung they had and still stood over
+    /// half a well of air. The ladder only ever stepped DOWN: it started at
+    /// `heading24` and took lines away. `large` is the step up: the words at
+    /// `heading40`, the lede at `body17`, the cast on two rows. A large
+    /// spelling is tried first and kept only if it fits, so a thing with a
+    /// lot to say lands on the same regular spelling it did before, and a
+    /// thing with little to say fills the box with what it has.
     struct Fit: Hashable {
+        let large: Bool
         let statementLines: Int
         let bodyLines: Int
+
+        /// The words' rung — one of two, never a third (§762's ramp).
+        var statementRung: DSTextStyle { large ? .heading40 : .heading24 }
+        /// The lede's rung.
+        var ledeRung: DSTextStyle { large ? .body17 : .subhead12 }
+        /// How many rows of faces the cast shelf may take.
+        var castRows: Int { large ? 2 : 1 }
     }
 
-    /// Richest first. The statement gives way before the body does at the top of
-    /// the ladder — an eight-line sentence that crowds out the post a notice is
-    /// about has said less than a four-line one beside it — and the body gives
-    /// way last, because the last two rungs exist precisely to keep the box from
-    /// being empty.
+    /// Richest first, in two tiers (prd §905). The LARGE tier goes first and
+    /// has two spellings only: everything the thing has to say, at size, and
+    /// one step of give-way — a cover that would have to cut its content to
+    /// keep the big words should keep the content instead, which the regular
+    /// tier below does. Inside each tier the statement gives way before the
+    /// body does — an eight-line sentence that crowds out the post a notice
+    /// is about has said less than a four-line one beside it — and the body
+    /// gives way last, because the last two rungs exist precisely to keep the
+    /// box from being empty.
+    ///
+    /// TEN spellings. Each is measured in turn until one fits, so this list is
+    /// the cover's layout cost; a new tier is a reason to measure `HitchMeter`
+    /// on the room's open, not a free line here.
     static let fits: [Fit] = [
-        Fit(statementLines: 8, bodyLines: 6),
-        Fit(statementLines: 6, bodyLines: 6),
-        Fit(statementLines: 5, bodyLines: 4),
-        Fit(statementLines: 4, bodyLines: 3),
-        Fit(statementLines: 3, bodyLines: 3),
-        Fit(statementLines: 3, bodyLines: 2),
-        Fit(statementLines: 2, bodyLines: 2),
-        Fit(statementLines: 2, bodyLines: 1),
+        Fit(large: true,  statementLines: 8, bodyLines: 6),
+        Fit(large: true,  statementLines: 6, bodyLines: 4),
+        Fit(large: false, statementLines: 8, bodyLines: 6),
+        Fit(large: false, statementLines: 6, bodyLines: 6),
+        Fit(large: false, statementLines: 5, bodyLines: 4),
+        Fit(large: false, statementLines: 4, bodyLines: 3),
+        Fit(large: false, statementLines: 3, bodyLines: 3),
+        Fit(large: false, statementLines: 3, bodyLines: 2),
+        Fit(large: false, statementLines: 2, bodyLines: 2),
+        Fit(large: false, statementLines: 2, bodyLines: 1),
     ]
 
     /// One thing a lead can put under its statement. See `DSLeadBody` for the
@@ -541,7 +579,7 @@ struct FeedLedeCard: View {
     /// who it is about, then what it is about, then what it says about itself.
     ///
     /// Read once per body pass and handed down, never re-derived per fit — the
-    /// `ViewThatFits` above builds up to eight spellings of the cover and every
+    /// `ViewThatFits` above builds up to ten spellings of the cover and every
     /// one of them would otherwise decode `facts` and hit the cast store again
     /// (§626's per-render class, and §628's rule about reads in a body).
     private var bodyRungs: [BodyRung] {
@@ -587,12 +625,12 @@ struct FeedLedeCard: View {
     @ViewBuilder private func rungView(_ rung: BodyRung, fit: Fit) -> some View {
         switch rung {
         case .cast(let roll):
-            DSLeadCast(roll: roll, source: thing.source)
+            DSLeadCast(roll: roll, source: thing.source, rows: fit.castRows)
         case .quote(let card):
             DSLeadQuote(card: card, source: thing.source, lines: fit.bodyLines)
         case .excerpt(let text):
             Text(text)
-                .dsText(.subhead12)
+                .dsText(fit.ledeRung)
                 .foregroundStyle(DS.textSecondary)
                 .lineLimit(fit.bodyLines)
                 .fixedSize(horizontal: false, vertical: true)

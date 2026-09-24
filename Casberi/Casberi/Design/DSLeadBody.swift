@@ -76,6 +76,13 @@ struct DSLeadCast: View {
     /// size from the declaration it comes from, and a bare number resolves to
     /// nothing. `shelf` is the rung for a horizontal row of faces.
     var size: CGFloat = DS.Face.shelf
+    /// **How many rows the shelf may take (prd §905).** One is the shelf as
+    /// §772 drew it. The cover's large tier passes two, so a ten-person notice
+    /// shows ten faces rather than four and a "+6" — the faces are the lead's
+    /// payload, and a second row of them is content the box was holding air
+    /// for. The size never changes with the rows: a face stays on `shelf`, so
+    /// `face-ramp-audit.py`'s one rung per shelf still holds.
+    var rows: Int = 1
 
     /// The air between faces. Tight on purpose: the shelf reads as one object
     /// (a group of people) rather than as N objects in a row.
@@ -89,31 +96,89 @@ struct DSLeadCast: View {
         return max(Int((width + Self.spacing) / cell), 1)
     }
 
+    /// **THE NARROWEST ROW, declared (prd §905).** How many cells the shelf is
+    /// sure of on the narrowest phone: at 375pt the cover's inner width is
+    /// 311 (the row inset and the well's own padding off each side), and four
+    /// `shelf` cells with their spacing are 254. The ROWS the shelf reserves
+    /// are counted at this figure, before any width is read, so the frame is
+    /// decided the way §772 decides everything about the lead — from the
+    /// model, never from a measurement that could resolve two ways on two
+    /// passes and leave the fit flickering. The real width, read below, only
+    /// decides how many cells share each row.
+    private static let narrowestPerRow = 4
+
+    /// The rows the shelf takes for this cast and this `rows` cap: the cells
+    /// it has, at the narrowest row, capped. Width-independent, so the frame
+    /// below and the plan inside agree by construction.
+    private var rowsDrawn: Int {
+        let cells = roll.members.count + (roll.total > roll.members.count ? 1 : 0)
+        let needed = Int((Double(cells) / Double(Self.narrowestPerRow)).rounded(.up))
+        return min(max(needed, 1), max(rows, 1))
+    }
+
+    /// The faces to draw, the count after them, and the cells per row —
+    /// ONE arithmetic for every row, so the rows come out even.
+    ///
+    /// The counter takes a cell of its own, so the arithmetic asks for one
+    /// fewer face whenever there will be one — otherwise the shelf fills the
+    /// width with faces and the "+N" falls off the edge, which is the one
+    /// failure that loses the count rather than a face.
+    ///
+    /// The cells per row are the fewest that still fit the reserved rows, so
+    /// five cells on two rows draw three and two rather than five and none;
+    /// and they never exceed what the width holds, so nothing falls off the
+    /// edge. Because the width holds at least `narrowestPerRow` on every
+    /// phone, the rows drawn are exactly `rowsDrawn` — the frame never
+    /// reserves a row the shelf leaves empty.
+    private func plan(width: CGFloat) -> (shown: Int, rest: Int, perRow: Int) {
+        let holds = capacity(in: width)
+        let room = holds * rowsDrawn
+        let shownIfCounted = max(room - 1, 1)
+        let needsCounter = roll.members.count > room
+            || roll.remainder(afterShowing: min(roll.members.count, room)) > 0
+        let shown = needsCounter ? min(shownIfCounted, roll.members.count)
+                                 : min(room, roll.members.count)
+        let rest = roll.remainder(afterShowing: shown)
+        let cells = shown + (rest > 0 ? 1 : 0)
+        let even = Int((Double(cells) / Double(rowsDrawn)).rounded(.up))
+        return (shown, rest, max(min(holds, even), 1))
+    }
+
+    /// The shelf's height: its rows at `size`, with the spacing between.
+    private var height: CGFloat {
+        CGFloat(rowsDrawn) * size + CGFloat(max(rowsDrawn - 1, 0)) * Self.spacing
+    }
+
     var body: some View {
         GeometryReader { geo in
-            // The counter takes a cell of its own, so the arithmetic asks for
-            // one fewer face whenever there will be one — otherwise the shelf
-            // fills the width with faces and the "+N" falls off the edge, which
-            // is the one failure that loses the count rather than a face.
-            let room = capacity(in: geo.size.width)
-            let shownIfCounted = max(room - 1, 1)
-            let needsCounter = roll.members.count > room
-                || roll.remainder(afterShowing: min(roll.members.count, room)) > 0
-            let shown = needsCounter ? min(shownIfCounted, roll.members.count)
-                                     : min(room, roll.members.count)
-            let rest = roll.remainder(afterShowing: shown)
-            HStack(spacing: Self.spacing) {
-                ForEach(roll.members.prefix(shown), id: \.self) { member in
-                    face(member)
+            let p = plan(width: geo.size.width)
+            let cells: [Cell] = roll.members.prefix(p.shown).map { Cell.face($0) }
+                + (p.rest > 0 ? [Cell.counter(p.rest)] : [])
+            VStack(alignment: .leading, spacing: Self.spacing) {
+                ForEach(0..<rowsDrawn, id: \.self) { row in
+                    HStack(spacing: Self.spacing) {
+                        ForEach(Array(cells.dropFirst(row * p.perRow).prefix(p.perRow).enumerated()),
+                                id: \.offset) { _, cell in
+                            switch cell {
+                            case .face(let member): face(member)
+                            case .counter(let rest): counter(rest)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                    }
                 }
-                if rest > 0 { counter(rest) }
-                Spacer(minLength: 0)
             }
-            .frame(width: geo.size.width, height: size, alignment: .leading)
+            .frame(width: geo.size.width, height: height, alignment: .topLeading)
         }
-        .frame(height: size)
+        .frame(height: height)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spoken)
+    }
+
+    /// One slot on the shelf.
+    private enum Cell {
+        case face(ThingCastMember)
+        case counter(Int)
     }
 
     @ViewBuilder private func face(_ member: ThingCastMember) -> some View {

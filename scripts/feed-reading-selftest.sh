@@ -237,14 +237,37 @@ grep -q 'Text(words)' "$TMP/lede.nocomment" \
   || { echo "✗ the cover's title block no longer draws \`words\` (prd §756) — the post"; \
        echo "  branch would be computed and thrown away."; exit 1; }
 # THE COVER IS A LEAD LIKE ANY OTHER (prd §766): the head's block and well, the
-# pinned foot, and words at `heading24` — never a length-picked `heading40`.
+# pinned foot, and words at the FIT's rung — never a length-picked one.
 grep -q '\.dsRoomHeadBlock()' "$TMP/lede.nocomment" \
   || { echo "✗ the cover no longer draws the head template's block and well (prd §766)"; exit 1; }
 grep -q 'LeadFooter()' "$TMP/lede.nocomment" \
   || { echo "✗ the cover lost the lead's pinned foot (prd §766)"; exit 1; }
-grep -q 'heading40' "$TMP/lede.nocomment" \
-  && { echo "✗ the cover sets its statement at heading40 again — a lead's words are"; \
-       echo "  heading24 in every room (prd §766)"; exit 1; }
+# THE LADDER GROWS (prd §905): the words, the lede and the cast shelf take the
+# rung the FIT names, and the fit is chosen by what fits the box — never by a
+# string's length (§766's reason, kept) and never a third rung (§762's ramp).
+grep -q 'dsText(underArt ? .heading24 : fit.statementRung)' "$TMP/lede.nocomment" \
+  || { echo "✗ the cover's statement no longer takes the fit's rung, caption-fixed under art (prd §905)"; exit 1; }
+grep -q 'dsText(fit.ledeRung)' "$TMP/lede.nocomment" \
+  || { echo "✗ the cover's lede no longer takes the fit's rung (prd §905)"; exit 1; }
+grep -q 'rows: fit.castRows' "$TMP/lede.nocomment" \
+  || { echo "✗ the cast shelf no longer takes the fit's rows (prd §905)"; exit 1; }
+grep -q 'large ? .heading40 : .heading24' "$TMP/lede.nocomment" \
+  || { echo "✗ the fit's statement rung is not the two-rung switch (prd §905, §762)"; exit 1; }
+grep -E 'heading40|body17' "$TMP/lede.nocomment" | grep -vqE 'large \?' \
+  && { echo "✗ a large rung is spelled outside the fit's tier switch (prd §905)"; exit 1; }
+# The large tier is tried FIRST, and has exactly two spellings: the ladder
+# steps up before it steps down, and a cover that must cut content to keep
+# big words keeps the content instead.
+python3 - "$TMP/lede.nocomment" <<'PY2' || exit 1
+import re, sys
+src = open(sys.argv[1]).read()
+m = re.search(r"static let fits: \[Fit\] = \[(.*?)\]", src, re.S)
+if not m:
+    print("✗ the fit ladder is gone (prd §905)"); sys.exit(1)
+tiers = re.findall(r"large:\s*(true|false)", m.group(1))
+if tiers[:2] != ["true", "true"] or "true" in tiers[2:] or len(tiers) != 10:
+    print("✗ the fit ladder is not two large spellings then eight regular (prd §905):", tiers); sys.exit(1)
+PY2
 # EVERY COVER HOLDS THE BOX (prd §904, reversing §772's give-way and §775). The
 # frame's floor and ceiling are the same box, and nothing on the card or at its
 # mount can lower the floor: no `fillsLead`, no `holdsLead`, no `fillsTheBox`.
