@@ -60884,3 +60884,32 @@ a snapshot back under both spellings.
 self-tests and the static audits only — no simulator run. First things to
 watch: the landing's cut-and-fade, the deeper pink at night, and the light
 theme's white card on the ground.
+
+## §899 — The brand stays pink; orange was mocked and declined (user: "how would it look if the background was some shade of orange and so was our octopus icon? would orange fare better?" → "ok. keep pink", 2026-09-24)
+
+**Mocked, fairly.** The octopus (the mark's own geometry from
+`design/app-icon/casberi-mark.svg`), the §898 swipe ground and the §740 day
+divider, in the shipped pink beside an orange built at the pink's own three
+registers — hue 19° at S 82 B 100 (`#ff702e`), S 72 B 96 (`#f57c45`) and
+S 74 B 55 (`#8c4524`) — so the comparison measured the hue and nothing else.
+
+**Why orange fares worse, in this app.**
+
+- **Orange is already the ATTENTION colour** (`DS.attention`, system orange
+  `#ff9500`): every deadline row, warning stamp and fix-it line wears it. The
+  orange brand measured 1.26:1 against it — the same colour to the eye — so a
+  brand in that hue makes the app's own voice read as an alarm. The pink has
+  no semantic neighbour; the one pink source (Uniswap) is a mark, not a state.
+- **Orange in shadow is brown.** The swipe ground is the hue at B 55; pink
+  there is still pink, orange there is terracotta. Keeping it orange means
+  keeping it bright, which is the flash §898 moved away from.
+- **Orange is crowded on the dock**: Reminders is the same system orange,
+  Claude and Claude Code are rust (`#d97757`), and the Orange page background
+  is a hair off the brand.
+
+Where orange won — more weight on the light icon, a higher ratio for the ink
+on the black page — did not outweigh the collision with the state colour.
+
+**The ruling.** `DS.brand` stays `#FF2D87`; nothing in this entry changes
+code. Do not re-propose an orange brand without a new reason that answers the
+attention-colour collision.
