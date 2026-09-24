@@ -1391,11 +1391,24 @@ struct FeedScreen: View {
             return String(localized: "Couldn't send.")
         }
         do {
-            guard let sequence = await HegotaSend.currentNonceSequence(for: address) else {
+            // A LANE PER SEND (EIP-8250, §509). Consecutive sends take
+            // different nonce keys, so the second does not wait for the first
+            // to mine — which is what a keyed nonce is for, and what this seat
+            // could not do while `sendValue` hardcoded lane 0.
+            guard let take = await HegotaSend.nextLaneAndSequence(for: address) else {
                 return String(localized: "Couldn't reach the chain to read this account's sequence.")
             }
-            let hash = try await HegotaSend.sendValue(to: target, valueWei: valueWei,
-                                                      nonceSequence: sequence)
+            let hash: String
+            do {
+                hash = try await HegotaSend.sendValue(to: target, valueWei: valueWei,
+                                                      nonceSequence: take.sequence,
+                                                      nonceKey: take.lane)
+            } catch {
+                // Nothing was spent, so the lane reopens — otherwise every
+                // later send on it queues behind a sequence that never landed.
+                HegotaSend.forgetLanes(for: address)
+                throw error
+            }
             HegotaSend.landReceipt(txHash: hash, kind: .sent(to: to, amount: amount), in: modelContext)
             await HegotaLiveState.shared.refresh()
             return nil

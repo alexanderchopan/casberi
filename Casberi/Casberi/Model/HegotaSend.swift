@@ -168,6 +168,43 @@ enum HegotaSend {
         return value
     }
 
+    /// This address's sequence ON ONE LANE (EIP-8250).
+    ///
+    /// Key 0 keeps `eth_getTransactionCount`: it is the cheapest read and §504
+    /// made it the authority for that lane, because counting observed moves
+    /// undercounts (a send that moves no ETH emits no transfer log).
+    ///
+    /// Every OTHER key has no such RPC — `eth_getTransactionCount` reports a
+    /// lossy projection of the whole key set, not one lane — so the counter is
+    /// read out of the manager predeploy's storage at the slot §509 measured.
+    /// That predeploy's whole runtime is `PUSH0 PUSH0 REVERT`, so there is no
+    /// getter to call and this is the only way to learn the value.
+    ///
+    /// Returns nil rather than 0 when the slot cannot be derived or the node
+    /// does not answer: 0 is a legitimate sequence meaning "never sent on this
+    /// lane", and sending on a guessed 0 against a lane that has moved is a
+    /// transaction the chain refuses.
+    static func currentNonceSequence(for address: String,
+                                     nonceKey: UInt64) async -> UInt64? {
+        if nonceKey == 0 { return await currentNonceSequence(for: address) }
+        guard let slot = HegotaNonceStorage.slot(address: address,
+                                                 key: "0x" + String(nonceKey, radix: 16)),
+              let hex = await HegotaRPC.call(method: "eth_getStorageAt",
+                                             params: [HegotaChain.nonceManager, slot, "latest"]) as? String
+        else { return nil }
+        let body = hex.hasPrefix("0x") ? String(hex.dropFirst(2)) : hex
+        // An EMPTY body is not a zero. A node answering "0x" told us nothing,
+        // and reading that as "never sent on this lane" is exactly the wrong
+        // answer this function's nil exists to prevent: the caller would sign
+        // on sequence 0 against a lane that has already moved. A word of
+        // ZEROS is a real zero and is read as one.
+        guard !body.isEmpty, body.allSatisfy(\.isHexDigit) else { return nil }
+        let trimmed = String(body.drop(while: { $0 == "0" }))
+        if trimmed.isEmpty { return 0 }
+        guard trimmed.count <= 16, let value = UInt64(trimmed, radix: 16) else { return nil }
+        return value
+    }
+
     // MARK: - The one write that signs
 
     /// Broadcast. The only write verb in this app's Hegotá code that follows a
@@ -219,6 +256,40 @@ enum HegotaSend {
         throw Failure.chainUnreachable
     }
 
+    // MARK: - Lanes
+
+    /// The lane bookkeeping for this process (EIP-8250, §509's counter).
+    ///
+    /// `@MainActor` rather than an actor: every caller is already on the main
+    /// actor (the send is a view's own async work), so an actor here would add
+    /// a hop mid-send and buy nothing — the rotation is only ever touched from
+    /// one place. It is deliberately NOT persisted: the memory exists to cover
+    /// the gap between signing and mining, and after a relaunch the only
+    /// number worth trusting is the chain's.
+    @MainActor private static var lanes = HegotaLane()
+
+    /// The lane and sequence the next send from `address` should use, or nil
+    /// when the chain could not be read for that lane.
+    ///
+    /// Both halves together, because they are one decision: the lane chosen
+    /// determines which counter has to be read, and reading the wrong one
+    /// produces a signature that authorises a transaction the chain refuses.
+    @MainActor
+    static func nextLaneAndSequence(for address: String) async -> (lane: UInt64, sequence: UInt64)? {
+        let lane = lanes.nextLane(for: address)
+        let onChain = await currentNonceSequence(for: address, nonceKey: lane)
+        guard let sequence = lanes.sequence(for: address, lane: lane, chainSequence: onChain) else {
+            return nil
+        }
+        return (lane, sequence)
+    }
+
+    /// A send that never reached the chain never spent its sequence, so the
+    /// lane must reopen — otherwise every later send on it sits behind a hole
+    /// until the app restarts.
+    @MainActor
+    static func forgetLanes(for address: String) { lanes.forget(address: address) }
+
     // MARK: - Send a simple value transfer
 
     /// The two-frame shape measured on chain: a `self_verify` prefix (mode 1,
@@ -230,9 +301,22 @@ enum HegotaSend {
     /// `nonceSequence` and `chainID` are the caller's: this file does not read
     /// the chain, so it does not guess a nonce. A caller composing a real send
     /// reads the account's current sequence first.
+    /// `nonceKey` names the LANE this send occupies (EIP-8250). Two sends on
+    /// disjoint keys are both valid in either order, so one that is slow to
+    /// mine does not hold up the next — which is the whole point of a keyed
+    /// nonce and was unreachable while this function hardcoded `[0]`.
+    ///
+    /// ONE LANE PER SEND, deliberately. The envelope's field is a SET, and the
+    /// spec allows a transaction to occupy several keys at once — but a set has
+    /// no readable sequence here: `currentNonceSequence(for:nonceKey:)` derives
+    /// its slot from ONE key, so a multi-key send would be signed on a sequence
+    /// belonging to whichever key the caller happened to read. Widening this to
+    /// a set means answering that question first; until then the narrowing is
+    /// the honest shape rather than an oversight.
     static func sendValue(to target: Data,
                           valueWei: Data,
                           nonceSequence: UInt64,
+                          nonceKey: UInt64 = 0,
                           executionGas: UInt64 = 80_000,
                           maxPriorityFeePerGas: UInt64 = 1_000_000_000,
                           maxFeePerGas: UInt64 = 30_000_000_000) async throws -> String {
@@ -241,7 +325,7 @@ enum HegotaSend {
 
         var fields = HegotaTransaction.Fields(
             chainID: 0x30_1824,
-            nonceKeys: [0],
+            nonceKeys: [nonceKey],
             nonceSequence: nonceSequence,
             sender: sender,
             frames: [

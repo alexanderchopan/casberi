@@ -2617,6 +2617,14 @@ harness "Vibenet signer ladder self-test" "13 mutations, 6 drift guards" "script
 # they are deliberately not duplicated here.
 harness "Hegota frame transaction self-test" "11 mutations, real on-chain vectors, and the faucet verdict" "scripts/hegota-tx-selftest.sh" "the hegota transaction self-test failed — run scripts/hegota-tx-selftest.sh"
 
+# The LANE a send takes (EIP-8250). `sendValue` hardcoded `nonceKeys: [0]` from
+# §525 until 2026-09-24, so every send queued in one lane and the mechanism's
+# whole point was unreachable. The cost of getting a lane wrong is a send the
+# chain REFUSES — invisible to the build, to every static audit and to the
+# transaction harness, whose fixtures are real transactions and so already
+# correct. 18 assertions, 10 mutations, all on copies in $WORK.
+harness "Hegota lanes" "keyed nonces: the lane, its counter, and the rotation" "scripts/hegota-lane-selftest.sh" "the hegota lane self-test failed — run scripts/hegota-lane-selftest.sh"
+
 # THE OTHER DEVNET'S ENCODER, and it is a separate harness because the two
 # chains hash DIFFERENT LISTS (prd §548). Both run ethrex, both serve type
 # 0x06, both call it EIP-8141 — Hegotá's envelope is eleven flat fields with
