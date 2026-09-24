@@ -123,6 +123,8 @@ struct FeedLedeCard: View {
             cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[7])
             cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[8])
             cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[9])
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[10])
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[11])
         }
         // Every room's lead is one height (prd §760), and since §766 the cover
         // draws it the way a head does: `dsRoomHeadBlock` — the inset, the air
@@ -511,48 +513,66 @@ struct FeedLedeCard: View {
     /// covers the user then pointed at — an article with a one-line lede, a
     /// notice with a cast — drew every rung they had and still stood over
     /// half a well of air. The ladder only ever stepped DOWN: it started at
-    /// `heading24` and took lines away. `large` is the step up: the words at
-    /// `heading40`, the lede at `body17`, the cast on two rows. A large
-    /// spelling is tried first and kept only if it fits, so a thing with a
-    /// lot to say lands on the same regular spelling it did before, and a
-    /// thing with little to say fills the box with what it has.
+    /// `heading24` and took lines away. The tiers are the step up, tried
+    /// first and kept only if they fit, so a thing with a lot to say lands on
+    /// the same regular spelling it did before, and a thing with little to
+    /// say fills the box with what it has.
+    ///
+    /// **THREE tiers, not two (prd §905a).** §905 shipped with one large tier
+    /// that set the words at `heading40` AND the cast on two rows, so a
+    /// notice whose sentence could not take 40pt fell all the way to the
+    /// regular tier and drew four faces and a "+5" over a half-empty well —
+    /// build 664, the user's screenshot. `mid` is the spelling between: the
+    /// words at `heading24`, the lede and the shelf grown. What grows is
+    /// decided per tier, never as one switch.
+    enum Tier: Hashable {
+        /// `heading40` words, `body17` lede, two face rows.
+        case large
+        /// `heading24` words, `body17` lede, two face rows.
+        case mid
+        /// What §772 drew: `heading24`, `subhead12`, one row.
+        case regular
+    }
+
     struct Fit: Hashable {
-        let large: Bool
+        let tier: Tier
         let statementLines: Int
         let bodyLines: Int
 
         /// The words' rung — one of two, never a third (§762's ramp).
-        var statementRung: DSTextStyle { large ? .heading40 : .heading24 }
+        var statementRung: DSTextStyle { tier == .large ? .heading40 : .heading24 }
         /// The lede's rung.
-        var ledeRung: DSTextStyle { large ? .body17 : .subhead12 }
+        var ledeRung: DSTextStyle { tier == .regular ? .subhead12 : .body17 }
         /// How many rows of faces the cast shelf may take.
-        var castRows: Int { large ? 2 : 1 }
+        var castRows: Int { tier == .regular ? 1 : 2 }
     }
 
-    /// Richest first, in two tiers (prd §905). The LARGE tier goes first and
-    /// has two spellings only: everything the thing has to say, at size, and
-    /// one step of give-way — a cover that would have to cut its content to
-    /// keep the big words should keep the content instead, which the regular
-    /// tier below does. Inside each tier the statement gives way before the
-    /// body does — an eight-line sentence that crowds out the post a notice
-    /// is about has said less than a four-line one beside it — and the body
-    /// gives way last, because the last two rungs exist precisely to keep the
-    /// box from being empty.
+    /// Richest first, in three tiers (prd §905, §905a). The LARGE tier goes
+    /// first and the MID tier after it, two spellings each: everything the
+    /// thing has to say, grown, and one step of give-way — a cover that would
+    /// have to cut its content to keep the growth should keep the content
+    /// instead, which the regular tier below does. Inside each tier the
+    /// statement gives way before the body does — an eight-line sentence
+    /// that crowds out the post a notice is about has said less than a
+    /// four-line one beside it — and the body gives way last, because the
+    /// last two rungs exist precisely to keep the box from being empty.
     ///
-    /// TEN spellings. Each is measured in turn until one fits, so this list is
-    /// the cover's layout cost; a new tier is a reason to measure `HitchMeter`
-    /// on the room's open, not a free line here.
+    /// TWELVE spellings. Each is measured in turn until one fits, so this
+    /// list is the cover's layout cost; a new tier is a reason to measure
+    /// `HitchMeter` on the room's open, not a free line here.
     static let fits: [Fit] = [
-        Fit(large: true,  statementLines: 8, bodyLines: 6),
-        Fit(large: true,  statementLines: 6, bodyLines: 4),
-        Fit(large: false, statementLines: 8, bodyLines: 6),
-        Fit(large: false, statementLines: 6, bodyLines: 6),
-        Fit(large: false, statementLines: 5, bodyLines: 4),
-        Fit(large: false, statementLines: 4, bodyLines: 3),
-        Fit(large: false, statementLines: 3, bodyLines: 3),
-        Fit(large: false, statementLines: 3, bodyLines: 2),
-        Fit(large: false, statementLines: 2, bodyLines: 2),
-        Fit(large: false, statementLines: 2, bodyLines: 1),
+        Fit(tier: .large,   statementLines: 8, bodyLines: 6),
+        Fit(tier: .large,   statementLines: 6, bodyLines: 4),
+        Fit(tier: .mid,     statementLines: 8, bodyLines: 6),
+        Fit(tier: .mid,     statementLines: 6, bodyLines: 4),
+        Fit(tier: .regular, statementLines: 8, bodyLines: 6),
+        Fit(tier: .regular, statementLines: 6, bodyLines: 6),
+        Fit(tier: .regular, statementLines: 5, bodyLines: 4),
+        Fit(tier: .regular, statementLines: 4, bodyLines: 3),
+        Fit(tier: .regular, statementLines: 3, bodyLines: 3),
+        Fit(tier: .regular, statementLines: 3, bodyLines: 2),
+        Fit(tier: .regular, statementLines: 2, bodyLines: 2),
+        Fit(tier: .regular, statementLines: 2, bodyLines: 1),
     ]
 
     /// One thing a lead can put under its statement. See `DSLeadBody` for the
@@ -579,7 +599,7 @@ struct FeedLedeCard: View {
     /// who it is about, then what it is about, then what it says about itself.
     ///
     /// Read once per body pass and handed down, never re-derived per fit — the
-    /// `ViewThatFits` above builds up to ten spellings of the cover and every
+    /// `ViewThatFits` above builds up to twelve spellings of the cover and every
     /// one of them would otherwise decode `facts` and hit the cast store again
     /// (§626's per-render class, and §628's rule about reads in a body).
     private var bodyRungs: [BodyRung] {

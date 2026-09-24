@@ -251,22 +251,25 @@ grep -q 'dsText(fit.ledeRung)' "$TMP/lede.nocomment" \
   || { echo "✗ the cover's lede no longer takes the fit's rung (prd §905)"; exit 1; }
 grep -q 'rows: fit.castRows' "$TMP/lede.nocomment" \
   || { echo "✗ the cast shelf no longer takes the fit's rows (prd §905)"; exit 1; }
-grep -q 'large ? .heading40 : .heading24' "$TMP/lede.nocomment" \
-  || { echo "✗ the fit's statement rung is not the two-rung switch (prd §905, §762)"; exit 1; }
-grep -E 'heading40|body17' "$TMP/lede.nocomment" | grep -vqE 'large \?' \
-  && { echo "✗ a large rung is spelled outside the fit's tier switch (prd §905)"; exit 1; }
-# The large tier is tried FIRST, and has exactly two spellings: the ladder
-# steps up before it steps down, and a cover that must cut content to keep
-# big words keeps the content instead.
+grep -q 'tier == .large ? .heading40 : .heading24' "$TMP/lede.nocomment" \
+  || { echo "✗ the fit's statement rung is not the two-rung switch on the tier (prd §905, §762)"; exit 1; }
+grep -q 'tier == .regular ? 1 : 2' "$TMP/lede.nocomment" \
+  || { echo "✗ the shelf's rows are not the tier's — mid and large both grow it (prd §905a)"; exit 1; }
+grep -E 'heading40|body17' "$TMP/lede.nocomment" | grep -vqE 'tier == ' \
+  && { echo "✗ a large rung is spelled outside the fit's tier switches (prd §905)"; exit 1; }
+# The tiers are tried LARGE, then MID, then REGULAR, two spellings each for the
+# grown tiers: the ladder steps up before it steps down, a cover that must cut
+# content to keep the growth keeps the content instead, and a sentence that
+# cannot take 40pt still gets its two rows of faces (prd §905a, build 664).
 python3 - "$TMP/lede.nocomment" <<'PY2' || exit 1
 import re, sys
 src = open(sys.argv[1]).read()
 m = re.search(r"static let fits: \[Fit\] = \[(.*?)\]", src, re.S)
 if not m:
     print("✗ the fit ladder is gone (prd §905)"); sys.exit(1)
-tiers = re.findall(r"large:\s*(true|false)", m.group(1))
-if tiers[:2] != ["true", "true"] or "true" in tiers[2:] or len(tiers) != 10:
-    print("✗ the fit ladder is not two large spellings then eight regular (prd §905):", tiers); sys.exit(1)
+tiers = re.findall(r"tier:\s*\.(large|mid|regular)", m.group(1))
+if tiers != ["large"] * 2 + ["mid"] * 2 + ["regular"] * 8:
+    print("✗ the fit ladder is not two large, two mid, then eight regular (prd §905a):", tiers); sys.exit(1)
 PY2
 # EVERY COVER HOLDS THE BOX (prd §904, reversing §772's give-way and §775). The
 # frame's floor and ceiling are the same box, and nothing on the card or at its
