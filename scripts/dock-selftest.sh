@@ -791,6 +791,21 @@ grep -q 'DS.brandGroundInk' "$TMP/cover.nc" \
        echo "  page and reads at 1.9:1 on the ground (prd §898, §898a)."; fail=1; }
 grep -q 'drawHierarchy' "$TMP/main.nc" \
   && { echo "✗ a window snapshot is back in MainSurface — nothing reads one since §898."; fail=1; }
+# §898b: the table is BrandSheet's frosted glass, prepared from a task and
+# never from a body pass (§628), with the flat token standing in until the
+# picture exists; the sheet reads its pink through the token, never a hex.
+awk '/^private struct SwipeGround/,/^}/' "$TMP/main.nc" > "$TMP/ground-view.nc"
+grep -q 'BrandSheet.prepare' "$TMP/ground-view.nc" && grep -q '\.task(id:' "$TMP/ground-view.nc" \
+  || { echo "✗ SwipeGround no longer prepares BrandSheet from a .task — the frosted table"; \
+       echo "  is gone, or it is rendered in a body pass (prd §898b, §628)."; fail=1; }
+grep -qE 'Image\(uiImage: sheet\)' "$TMP/ground-view.nc" \
+  || { echo "✗ SwipeGround draws no sheet — the swipe is dealt on flat paint again (prd §898b)."; fail=1; }
+strip_comments "Casberi/Casberi/Design/BrandSheet.swift" > "$TMP/sheet.nc"
+grep -q 'DS.brandGround' "$TMP/sheet.nc" \
+  || { echo "✗ BrandSheet no longer reads its pink through DS.brandGround — a second spelling"; \
+       echo "  of the ground (prd §898, §898b)."; fail=1; }
+grep -qE 'UIColor\(red: 0x6b|"#6b1c3e"|#8c2451' "$TMP/sheet.nc" \
+  && { echo "✗ BrandSheet spells the ground's hex itself — the token is the one spelling."; fail=1; }
 [ ! -f "Casberi/Casberi/Shell/RoomSnapshots.swift" ] \
   || { echo "✗ RoomSnapshots.swift is back — a store with no reader (prd §723, §898)."; fail=1; }
 strip_comments "Casberi/Casberi/Design/DesignTokens.swift" > "$TMP/tokens.nc"

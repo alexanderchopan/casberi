@@ -418,6 +418,13 @@ enum DS {
     /// between light and dark is two tables. What sits on it takes
     /// `brandGroundInk`, not `textPrimary`.
     ///
+    /// **Since §898b this is the colour UNDER the light, not the whole
+    /// table.** `BrandSheet` draws the swipe's ground as frosted glass over
+    /// it — one light, a fall-off, one window reflection, darker corners,
+    /// 7% milk and grain — and reads the value through this token, so the
+    /// pink still has one spelling. The brightest point of the sheet keeps
+    /// white ink at 5.7:1 (`BrandSheet`'s comment has the numbers).
+    ///
     /// **Nil on a vivid page or a photo**, `brandInk`'s own rule: a ground the
     /// person coloured themselves is louder than the app's voice, and a
     /// pink table on the pink page is a table you cannot see. The swipe then

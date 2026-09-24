@@ -3396,7 +3396,11 @@ private struct PagerDrag<Content: View>: View {
             // at commit is the amount that ruling asked for, but nobody has
             // watched it arrive there.
             .rotationEffect(.degrees(heading * 4 * lift), anchor: .bottom)
-            .shadow(color: .black.opacity(0.5 * lift), radius: 28, y: 10)
+            // The shadow is WIDER since §898b: the table is frosted glass,
+            // and frost scatters light. One shadow still, not the mock's
+            // two — a second full-screen shadow re-rasterised on every
+            // touch move is the frame cost §651 took out.
+            .shadow(color: .black.opacity(0.5 * lift), radius: 40, y: 24)
             .offset(x: x)
     }
 }
@@ -3481,12 +3485,38 @@ private struct PagerCover: View {
 /// is not there (§648's honest-motion rule). A leaf with a body of its own,
 /// because the progress is written on every touch move. Draws nothing on a
 /// vivid page or a photo (`DS.brandGround`).
+///
+/// **The table is a sheet of frosted glass over the pink (prd §898b).** One
+/// static picture from `BrandSheet`, rendered once per window size off main
+/// from `.task` (never a body pass, §628) and drawn on the same ramp; until
+/// it exists the flat token stands in, so the first swipe after launch still
+/// has its table. The `@State` is written once per size, never per touch
+/// (§651).
 private struct SwipeGround: View {
     @Environment(ShellChrome.self) private var chrome
+    @State private var sheet: UIImage?
 
     var body: some View {
-        if let ground = DS.brandGround {
-            ground.opacity(min(1, abs(chrome.pageDragProgress)))
+        if let table = DS.brandGround {
+            GeometryReader { geo in
+                let size = geo.size
+                let moreContrast = ContrastStore.shared.increased
+                let ground = sheetOrTable(table)
+                ground.opacity(min(1, abs(chrome.pageDragProgress)))
+                    .task(id: "\(Int(size.width))x\(Int(size.height))\(moreContrast)") {
+                        await BrandSheet.prepare(for: size, moreContrast: moreContrast)
+                        sheet = BrandSheet.cached(for: size, moreContrast: moreContrast)
+                    }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func sheetOrTable(_ table: Color) -> some View {
+        if let sheet {
+            Image(uiImage: sheet).resizable()
+        } else {
+            table
         }
     }
 }
