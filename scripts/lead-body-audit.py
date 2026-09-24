@@ -280,7 +280,7 @@ def self_test() -> int:
 
         mutate(CARD, "bodyBlock(face.takesLadder ? rungs : [], fit: fit)", "EmptyView()",
                "never calls `bodyBlock`", "a cover with no ladder")
-        mutate(CARD, "cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[1])",
+        mutate(CARD, "cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[1], extra: extra)",
                "ForEach(Self.fits, id: \\.self) { f in EmptyView() }",
                "ONE subview", "a `ForEach` inside `ViewThatFits`")
         mutate(BODY, "RemoteThumb(urlString: url, size: size, fallback: source, circular: true)",
