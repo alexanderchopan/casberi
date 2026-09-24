@@ -64,6 +64,12 @@ ENTITLEMENT_DIRS = [
 # conscious "no automated screenshot of this screen exists", with the reason.
 # Adding one is a ruling; a NEW host must be swept or land here.
 KNOWN_UNSWEPT = {
+    "pair": (
+        "needs a LIVE `wc:` pairing URI, minted by a dapp's relay session "
+        "(prd §913). A made-up one fails in `SafePeer.pair` and flashes a "
+        "failure, so a sweep shot would certify an error toast. The screen it "
+        "lands on is the Safe account page, which `-openSetup \"Safe\"` reaches."
+    ),
     "brief": (
         "the brief STREAMS for ~20-25s (CLAUDE.md: a screenshot taken early "
         "shows skeleton rows and unloaded thumbnails). A 4s sweep shot would "

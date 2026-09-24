@@ -334,7 +334,10 @@ deny () { # $1 name, $2 file, $3 pattern
 # one glyph, a clamped title and the sync timestamp — which is the state §487
 # was written to end, and nothing else in the tree would notice it coming back.
 guard "the room has its own Shape case" "$FEED" 'case "CardPointers":        self = .cardPointers'
-guard "rows group by deadline, not by day" "$FEED" 'groupedSections(cardPointersGroups(visible)'
+# §911 bound the buckets first so the cover can be picked from them; the
+# grouping is the same, and both halves are pinned.
+guard "rows group by deadline, not by day" "$FEED" 'let buckets = cardPointersGroups(visible)'
+guard "…and the deadline buckets are what the room draws" "$FEED" 'groupedSections(buckets, nextEventID: nextEventID, dated: false,'
 guard "all three groups are named" "$FEED" '"Coming up"'
 guard "the dateless group is named, not hidden" "$FEED" '"No end date"'
 guard "finished offers get their own group" "$FEED" '"Not active"'

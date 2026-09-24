@@ -63,7 +63,9 @@ strip_comments() {
 import re, sys
 src = open(sys.argv[1]).read()
 src = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
-print("\n".join(re.sub(r"//.*$", "", line) for line in src.splitlines()))
+# `(?<!:)`: a URL's `//` is not a comment. Without it every `https://host`
+# read as `"https:`, and the host guard below had never seen a host.
+print("\n".join(re.sub(r"(?<!:)//.*$", "", line) for line in src.splitlines()))
 PY
 }
 
@@ -156,8 +158,12 @@ guard_check() {   # $1 = SafeStatementSigner path, $2 = SafeRecoverySigner path,
   printf '%s' "$rc_code" | grep -q 'guard nonce == request.nonce else { return .failure(.staleNonce(module: nonce)) }' || return 1
   printf '%s' "$rc_code" | grep -q 'SafeRecovery.getRecoveryHashCalldata(request)' || return 1
   printf '%s' "$rc_code" | grep -q 'guard chain.lowercased() == local.lowercased() else {' || return 1
-  # No write at all from the recovery signer.
-  printf '%s' "$rc_code" | grep -q 'postJSON\|https://' && return 1
+  # No write at all from the recovery signer, and no host but Safe's own web
+  # app — the page its landed row opens (§912), which is a door, not a read.
+  printf '%s' "$rc_code" | grep -q 'postJSON' && return 1
+  for host in $(printf '%s' "$rc_code" | grep -oE 'https://[a-z0-9.-]+' | sort -u); do
+    [[ "$host" == https://app.safe.global ]] || return 1
+  done
   # The Enclave assertion leaves only with the factory's magic value.
   printf '%s' "$es_code" | grep -q 'guard SafeWebAuthn.isMagic(answer) else { return .failure(.notAccepted) }' || return 1
   printf '%s' "$es_code" | grep -q 'else { return .failure(.chainUnreadable) }' || return 1
@@ -211,6 +217,14 @@ guard let mailTyped = EIP712.parse(mail) else { print("  ✗ the Ether Mail enve
 check("encodeType orders dependencies after the primary, alphabetically",
       EIP712.encodeType("Mail", types: mailTyped.types)
         == "Mail(Person from,Person to,string contents)Person(string name,address wallet)")
+// Ether Mail has ONE dependency, so it cannot tell sorted from discovered.
+// Two, met in the order Zeta then Alpha, must still print Alpha first.
+check("…and two dependencies met out of order are still sorted by name",
+      EIP712.encodeType("Order", types: [
+        "Order": [EIP712.Field(name: "z", type: "Zeta"), EIP712.Field(name: "a", type: "Alpha")],
+        "Zeta": [EIP712.Field(name: "y", type: "uint256")],
+        "Alpha": [EIP712.Field(name: "x", type: "uint256")],
+      ]) == "Order(Zeta z,Alpha a)Alpha(uint256 x)Zeta(uint256 y)")
 check("Ether Mail digest (EIP-712's published vector)",
       EIP712.digest(mailTyped).map(hex) == "0xbe609aee343fb3c4b28e1df9e632fca64fcfaede20f02e86244efddf30957bd2")
 
@@ -288,6 +302,11 @@ order["types"] = ["EIP712Domain": [["name": "name", "type": "string"], ["name": 
                   "Order": [["name": "from", "type": "address"]]]
 order["message"] = ["from": SAFE]
 check("typed data in another domain is unreadable", SafeStatement.read(message: order, safe: SAFE)?.statement.isNamed == false)
+// The Order above is refused by the Vote check too, so it cannot prove the
+// DOMAIN is read. The same vote, word for word, under another domain can.
+var foreignVote = voteObject; foreignVote["domain"] = ["name": "snapshot-lookalike", "version": "0.1.4"]
+check("a Snapshot-shaped vote under another domain is unreadable",
+      SafeStatement.read(message: foreignVote, safe: SAFE)?.statement.isNamed == false)
 check("getMessageHash(bytes) calldata",
       SafeMessageEncoder.getMessageHashCalldata(message: signIn.hash)
         == "0x0a1028c4" + "0000000000000000000000000000000000000000000000000000000000000020"
@@ -435,6 +454,12 @@ case .success(let parsed):
 case .failure(let refusal):
     check("an ExecuteRecovery envelope reads as a recovery ask (\(refusal))", false)
 }
+// The same ExecuteRecovery under another name is some other contract's
+// struct, and the door must not read it as this module's (§913 item 4).
+let lookalike = recoveryTyped.replacingOccurrences(of: "\"name\":\"Social Recovery Module\"", with: "\"name\":\"Social Recovery Modules\"")
+check("…the lookalike fixture differs only in its domain name", lookalike != recoveryTyped)
+check("an ExecuteRecovery under another domain name is not a recovery request",
+      EIP712.parse(lookalike).map { SafeRecovery.request(from: $0) == nil } == true)
 if case .failure(.notASafeShape(let primary)) = SafePeerRequest.parse(method: "eth_signTypedData_v4", params: [TO, mail], chainId: 1) {
     check("any other typed data is refused by its primary type", primary == "Mail")
 } else { check("any other typed data is refused by its primary type", false) }
@@ -485,14 +510,20 @@ echo "mutations (each must be caught):"
 # Every anchor must still exist in the shipped source, checked up front
 # (safetx-selftest's lesson: under `set -e` a drifted anchor reads as a run
 # that simply stopped).
-python3 - "$0" "${SOURCES[@]}" <<'ANCHORS'
+python3 - "$0" "${SOURCES[@]}" "$STATEMENT_SIGNER" "$RECOVERY_SIGNER" "$ENCLAVE_SIGNER" "$ENCLAVE_KEY" <<'ANCHORS'
 import re, sys
 sh = open(sys.argv[1]).read()
 srcs = {p: open(p).read() for p in sys.argv[2:]}
+# `guard_mutate` names its file by ROLE, `mutate` by file stem; both are
+# checked, and neither may be read as the other (`guard_mutate` contains
+# `mutate`, so an unanchored match took every role word for a stem).
+ROLES = {"statement": "SafeStatementSigner", "recovery": "SafeRecoverySigner",
+         "enclave": "SafeEnclaveSigner", "key": "SafeEnclaveKey"}
 dead = []
-for m in re.finditer(r"mutate \"([^\"]+)\" (\S+) \\\s*\n\s*'(.*?)' \\\s*\n\s*'(.*?)'\s*\n", sh, re.S):
-    name, which, frm = m.group(1), m.group(2), m.group(3)
-    path = next((p for p in srcs if p.endswith("/" + which + ".swift")), None)
+for m in re.finditer(r"(?m)^(guard_)?mutate \"([^\"]+)\" (\S+) \\\s*\n\s*'(.*?)' \\\s*\n\s*'(.*?)'\s*\n", sh, re.S):
+    guard, name, which, frm = m.group(1), m.group(2), m.group(3), m.group(4)
+    stem = ROLES.get(which) if guard else which
+    path = next((p for p in srcs if stem and p.endswith("/" + stem + ".swift")), None)
     if path is None or frm not in srcs[path]:
         dead.append(name)
 if dead:
@@ -657,6 +688,9 @@ guard_mutate "the statement signer grows a third write" statement \
 guard_mutate "the statement signer reaches a host that is not Safe's" statement \
   '"https://safe-client.safe.global/v1/chains/\(chainId)"' \
   '"https://safe-gateway.example.com/v1/chains/\(chainId)"'
+guard_mutate "the recovery signer reaches a host that is not Safe's web app" recovery \
+  '"https://app.safe.global/home?safe=' \
+  '"https://recovery.example.com/home?safe='
 guard_mutate "a contract that is not the module is signed for" recovery \
   'guard SafeRecovery.decodeString(nameHex) == SafeRecovery.moduleName else {' \
   'guard true else {'

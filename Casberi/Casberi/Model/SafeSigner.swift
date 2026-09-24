@@ -48,7 +48,7 @@ enum SafeSigner {
     /// 2026-07-26 through hosts it measured and `NetworkReach` discloses, so
     /// the cross-check has somewhere to run and the refusal no longer follows.
     /// See the rail's own comment for what remains unmeasured.
-    private struct Rail {
+    private struct Rail: Sendable {
         let seg: String
         let chainId: Int
         /// The `WalletApprovals` network id — its measured keyless hosts. Nil
@@ -82,7 +82,9 @@ enum SafeSigner {
         case gnosisChain
     }
 
-    private static let rails: [Rail] = [
+    /// A constant table, so `nonisolated`: the Enclave signer (not main-actor)
+    /// reads `chainIDs` off it (prd §913).
+    nonisolated private static let rails: [Rail] = [
         Rail(seg: "eth",  chainId: 1,     network: "eth-mainnet"),
         Rail(seg: "base", chainId: 8453,  network: "base-mainnet"),
         Rail(seg: "arb1", chainId: 42161, network: "arb-mainnet"),
@@ -122,7 +124,7 @@ enum SafeSigner {
     }
 
     /// Every chain the rail runs on, by id.
-    static var chainIDs: [Int] { rails.map(\.chainId) }
+    nonisolated static var chainIDs: [Int] { rails.map(\.chainId) }
 
     static func seg(chainId: Int) -> String? { rails.first { $0.chainId == chainId }?.seg }
     static func chainId(seg: String) -> Int? { rails.first { $0.seg == seg }?.chainId }

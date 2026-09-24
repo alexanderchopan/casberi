@@ -336,7 +336,9 @@ enum SafeStatementSigner {
         if let existing = try? context.fetch(descriptor), !existing.isEmpty { return }
         var title = title(for: ready.statement, signed: true)
         if !posted { title += " — " + String(localized: "Safe's service didn't take it") }
-        let thing = Thing(kind: .note, title: title, source: SafeBridge.sourceName, sourceRef: ref)
+        let thing = Thing(kind: .note, title: title,
+                          content: "https://app.safe.global/transactions/messages?safe=\(ready.seg):\(EIP55.checksum(ready.safeAddress))",
+                          source: SafeBridge.sourceName, sourceRef: ref)
         thing.walletAddress = ready.safeAddress
         context.insert(thing)
         SpotlightIndex.index([thing])
