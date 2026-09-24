@@ -788,7 +788,7 @@ grep -qE 'dsPageBackground|RoomSnapshots|Image\(uiImage|themedPage|clipShape' "$
        echo "  ground that is a black rectangle sliding in (prd §898)."; fail=1; }
 grep -q 'DS.brandGroundInk' "$TMP/cover.nc" \
   || { echo "✗ the cover's word is not brandGroundInk — textPrimary is black on the light"; \
-       echo "  page and reads at 2.5:1 on the ground (prd §898)."; fail=1; }
+       echo "  page and reads at 1.9:1 on the ground (prd §898, §898a)."; fail=1; }
 grep -q 'drawHierarchy' "$TMP/main.nc" \
   && { echo "✗ a window snapshot is back in MainSurface — nothing reads one since §898."; fail=1; }
 [ ! -f "Casberi/Casberi/Shell/RoomSnapshots.swift" ] \
