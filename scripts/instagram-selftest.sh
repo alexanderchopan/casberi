@@ -96,8 +96,13 @@ grep -qF '"Instagram": Facts(foldsThreads: false, hasRoster: false, leadsWithNew
 if grep -qE '^\s*case "Instagram":' "$INSIGHT"; then
   echo "✗ Instagram has a topic map again — the room leads with its newest thing (§821)"; exit 1
 fi
-grep -qF 'let (photoTiles, rest) = Self.splitTiles(uncovered, by: Self.isInstagramPhotoTile)' "$TMP/feed.nc" \
-  || { echo "✗ the Instagram grid is split before the cover is lifted out — the grid would decline the cover again"; exit 1; }
+grep -qF 'isTile: Self.isInstagramPhotoTile, tileShape: .square' "$TMP/feed.nc" \
+  || { echo "✗ the Instagram room's wordless pictures no longer tile under their day (prd §910)"; exit 1; }
+# The tiles are split PER DAY inside `daySection`, from the days built over
+# `uncovered` — so the cover is lifted out before any grid exists (§821), and a
+# grid can never decline it.
+grep -qF 'let (dayTiles, dayRows) = isTile.map { Self.splitTiles(rows, by: $0) } ?? ([], rows)' "$TMP/feed.nc" \
+  || { echo "✗ the day section no longer splits its tiles from its rows (prd §910)"; exit 1; }
 
 # THE FIELDS the rows read, stamped where the post card expects them.
 grep -qF 'thing.socialContext = marker' "$TMP/import.nc" \

@@ -103,7 +103,7 @@ python3 scripts/support/x-run-shape.py "$XARCH" || exit 1
 # is what folds on it — either half alone changes nothing on screen.
 grep -qF 'ref: row.parentID.flatMap { textByID[$0] == nil ? nil : "x:tweet:\($0)" }' "$XARCH" \
   || { echo "✗ a self-reply no longer names its parent — the room cannot fold a thread"; exit 1; }
-grep -qF 'let (roomThings, threadReplies) = foldThreadReplies(rest)' "$FEEDSCREEN_395" \
+grep -qF 'let (roomThings, threadReplies) = foldThreadReplies(uncovered)' "$FEEDSCREEN_395" \
   || { echo "✗ the X room no longer folds its threads — a twelve-post thread reads as twelve rows"; exit 1; }
 
 # (4) THE DOOR BACK TO X, and the one that heals rows landed before it existed.
@@ -508,8 +508,8 @@ grep -qF 'if row.wordless { tags.append(row.video ? "Video" : "Photo") }' "$XARC
   || { echo "✗ a wordless media post is no longer tagged with its medium"; exit 1; }
 grep -q 'thing.tags.contains("Photo")' "$FEEDSCREEN" \
   || { echo "✗ the X grid no longer reads the tag (matching the localized title 'Photo' would empty the grid outside English)"; exit 1; }
-grep -q 'photoGridSection(photoTiles)' "$FEEDSCREEN" \
-  || { echo "✗ the X room lost its picture half"; exit 1; }
+grep -q 'isTile: Self.isXPhotoTile, tileShape: .square' "$FEEDSCREEN" \
+  || { echo "✗ the X room lost its picture half — the wordless picture posts no longer tile under their day (prd §910)"; exit 1; }
 # (3) REPLY CONTEXT. Two halves: the free one (a self-reply's parent is in the
 # same file) and the one that costs a request. Either can be lost alone.
 grep -q 'text: parentPreview(row.parentID.flatMap { textByID' "$XARCH" \

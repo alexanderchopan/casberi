@@ -1952,16 +1952,48 @@ struct ApprovalCard: View {
 
 /// One grid cell (mock P1): the image, title riding the bottom edge over a
 /// scrim, day pill on the first photo of each day.
+/// One tile in a room's picture grid (prd §910): the picture in the ROOM'S
+/// shape, and the caption UNDER it, never on it.
+///
+/// Until §910 the cell was a 148pt landscape crop of whatever it held, with
+/// the day in a black capsule on its top corner and the title on a gradient
+/// over its foot. A phone screen is portrait, so the crop showed the middle
+/// band of every screenshot and lost the chrome that names one; the capsule
+/// was a third pill next to `Chip` and `DSStamp` (§746), carrying a fact the
+/// day header now carries; and the scrim put text over the one row you read
+/// by looking. The day pill is gone with the grid's own days (the tiles stand
+/// under the rows' header now), and the caption is `subhead12` under the
+/// picture, the way the Files app draws a name.
 struct PhotoCell: View {
+    /// The room's cell shape: the picture the room holds decides it, not the
+    /// cell.
+    enum Shape {
+        /// A phone screen — 3:4, cropped from the TOP. The app chrome and the
+        /// first line are what name a screenshot; the middle band is anyone's,
+        /// and the bottom is a keyboard or a tab bar.
+        case screenshot
+        /// A photograph — a square, centred. Files, Snapchat memories, and a
+        /// wordless picture post.
+        case square
+
+        var ratio: CGFloat { self == .screenshot ? 3.0 / 4.0 : 1 }
+        var anchor: Alignment { self == .screenshot ? .top : .center }
+    }
+
     let thing: Thing
-    var dayPill: String?
-    /// The line across the foot of the tile, or nil for none (2026-07-31).
-    /// Passed in rather than always read off `thing.title`: a screenshot's
-    /// title is what it SAYS and belongs on the tile, but a Snapchat memory's
-    /// is "Memory · Jan 3, 2019" — the same date the day pill above it already
-    /// carries, so the tile would state it twice. That room passes the capture
-    /// PLACE when the export named one, and nothing when it didn't.
+    var shape: Shape = .square
+    /// The line under the tile, or nil for none (2026-07-31, moved under the
+    /// picture by prd §910). Passed in rather than always read off
+    /// `thing.title`: a screenshot's title is what it SAYS, which at a tile's
+    /// width the pixels cannot show; a Snapchat memory's is "Memory · Jan 3,
+    /// 2019" — the day header's own fact — so that room passes the capture
+    /// PLACE when the export named one, and nothing when it didn't; a file the
+    /// camera named passes nothing (`FeedScreen.isCameraName`).
     var caption: String?
+    /// Keep the caption's line even when this tile has none: a row in which
+    /// another tile has one reserves the line on all three, so the three
+    /// pictures keep one height.
+    var reservesCaption = false
     /// This tile's picture is one frame of a video (2026-08-18, prd §396).
     /// Passed in rather than derived here, because the two rooms that can hold
     /// one answer the question differently — a connected folder by the file's
@@ -1980,46 +2012,33 @@ struct PhotoCell: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        PhotoWell(thing: thing, size: nil)
-            .frame(maxWidth: .infinity)
-            .frame(height: 148)
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-            .overlay(alignment: .bottomLeading) {
-                if let caption, !caption.isEmpty {
-                    LinearGradient(colors: [.clear, .black.opacity(0.65)],
-                                   startPoint: .center, endPoint: .bottom)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                        .allowsHitTesting(false)
-                    Text(caption)
-                        .dsText(.subhead12).foregroundStyle(.white)
-                        .lineLimit(1)
-                        .padding(DS.Space.s2)
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            // The box is the shape's, from the column's width; the well fills
+            // it (`PhotoWell`'s fill mode pins the picture to the space it is
+            // given, which is what stops a `scaledToFill` image reporting its
+            // own size back up and bleeding over its neighbour).
+            Color.clear
+                .aspectRatio(shape.ratio, contentMode: .fit)
+                .overlay { PhotoWell(thing: thing, size: nil, anchor: shape.anchor) }
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                // A poster frame says it is one. Bottom-trailing, the corner
+                // nothing else claims now that the pill and the scrim are gone.
+                .overlay(alignment: .bottomTrailing) {
+                    if video { VideoMark(size: 22).padding(DS.Space.s2) }
                 }
+            if let caption, !caption.isEmpty {
+                Text(caption)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else if reservesCaption {
+                Text(verbatim: " ").dsText(.subhead12).hidden()
             }
-            // A poster frame says it is one. BOTTOM-TRAILING, the one free
-            // corner: the caption scrim owns the bottom-leading edge and the
-            // day pill the top-leading one, and a mark stacked on either would
-            // be two labels fighting over one corner of a 148pt tile.
-            .overlay(alignment: .bottomTrailing) {
-                if video { VideoMark(size: 22).padding(DS.Space.s2) }
-            }
-            .overlay(alignment: .topLeading) {
-                if let dayPill {
-                    Text(dayPill)
-                        .dsText(.label12)
-                        .foregroundStyle(.white)
-                        // Vertical padding, not a pinned 22pt height: the pill
-                        // now grows with the label instead of clipping it.
-                        .padding(.horizontal, DS.Space.s2).padding(.vertical, 3)
-                        .background(Color.black.opacity(0.5), in: Capsule(style: .continuous))
-                        .padding(DS.Space.s2)
-                }
-            }
-            // The picture notices the cursor (Mac delight, 2026-08-03) —
-            // LAST in the chain so the caption scrim and day pill bloom with
-            // the tile instead of floating still over a scaled picture; the
-            // bloomed tile rises over its grid neighbours (`zIndex` inside).
-            .macHoverBloom()
+        }
+        // The picture notices the cursor (Mac delight, 2026-08-03) — LAST in
+        // the chain so the caption blooms with the tile; the bloomed tile
+        // rises over its grid neighbours (`zIndex` inside).
+        .macHoverBloom()
     }
 }
 
@@ -2028,6 +2047,10 @@ struct PhotoCell: View {
 struct PhotoWell: View {
     let thing: Thing
     var size: CGFloat?   // nil = fill available
+    /// Which part of a picture that overflows the well survives the crop, in
+    /// fill mode (prd §910): a screenshot keeps its top, a photograph its
+    /// centre. Ignored by the sized (square) mode, which is a mark.
+    var anchor: Alignment = .center
     @State private var image: UIImage?
     /// The snapshot hide is `PrivacyCover`'s window since 2026-09-05, and this
     /// guard is deliberately KEPT rather than deleted with the root
@@ -2069,7 +2092,8 @@ struct PhotoWell: View {
                 // whatever space the row actually allocated, same fix already
                 // proven in `GenMediaTile` for the same class of leak.
                 GeometryReader { geo in
-                    content.frame(width: geo.size.width, height: geo.size.height)
+                    content.frame(width: geo.size.width, height: geo.size.height,
+                                  alignment: anchor)
                 }
             }
         }

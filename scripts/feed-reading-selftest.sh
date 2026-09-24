@@ -318,8 +318,35 @@ grep -qE 'cover: heroShown \|\| !(memoryTiles|tiles|photoTiles|imageTiles)\.isEm
   && { echo "✗ a picture grid declines the cover again (prd §832)"; exit 1; }
 [ "$(grep -c 'let (cover, uncovered) = newestLead(visible, heroShown: heroShown)' "$FEED")" -eq 6 ] \
   || { echo "✗ a picture-grid room no longer leads with its newest thing above the grid (prd §821, §832)"; exit 1; }
-grep -q 'photoGridSection(visible)' "$FEED" \
-  && { echo "✗ the Photos room draws its whole grid with no cover again (prd §832)"; exit 1; }
+grep -q 'photoGridSection' "$FEED" \
+  && { echo "✗ a room draws one grid of every picture it holds again — the tiles stand under the rows' day headers since prd §910"; exit 1; }
+# THE DAY'S PICTURES TILE UNDER ITS HEADER (prd §910). Six rooms pass their
+# tile test to `groupedSections`, which hands it to every `daySection`; the
+# section splits its own rows and draws the tiles between its header and its
+# run. Photos tiles everything (a screenshot room holds only screenshots) in the
+# phone's own shape; the five mixed rooms tile what has pixels and nothing to
+# say, as squares.
+[ "$(grep -c 'isTile: ' "$FEED")" -ge 8 ] \
+  || { echo "✗ a picture room no longer tiles per day (prd §910) — expected six callers plus the two parameters"; exit 1; }
+grep -q 'isTile: { _ in true }, tileShape: .screenshot' "$FEED" \
+  || { echo "✗ the Photos room no longer tiles every screenshot in the phone's own shape (prd §910)"; exit 1; }
+grep -q 'if !tiles.isEmpty { tileRows(tiles, shape: tileShape) }' "$FEED" \
+  || { echo "✗ the day section no longer draws its tiles under its header (prd §910)"; exit 1; }
+# One List row per three tiles, and the count is FIXED — the grid used to
+# reflow from two-up to three-up on the day a room grew past twelve.
+grep -q 'let perRow = 3$' "$FEED" \
+  || { echo "✗ the grid's column count is no longer a fixed three (prd §910)"; exit 1; }
+grep -q 'perRow = items.count > 12' "$FEED" \
+  && { echo "✗ the grid reflows on its count again (prd §910)"; exit 1; }
+# THE CELL: the room's shape, the caption under the picture, no pill.
+grep -q 'case screenshot$' "$ROWS" && grep -q 'self == .screenshot ? .top : .center' "$ROWS" \
+  || { echo "✗ a screenshot tile is no longer cropped from its top (prd §910)"; exit 1; }
+grep -q 'dayPill' "$ROWS" \
+  && { echo "✗ the tile wears a day pill again — the day header says when (prd §910, §746)"; exit 1; }
+grep -q 'LinearGradient(colors: \[.clear, .black.opacity(0.65)\]' "$ROWS" \
+  && { echo "✗ the tile's caption rides a scrim over the picture again (prd §910)"; exit 1; }
+grep -q 'if thing.source == "Files", Self.isCameraName(thing.title) { return nil }' "$FEED" \
+  || { echo "✗ a camera-named file captions its tile with IMG_4021 again (prd §910)"; exit 1; }
 # THE COVER STANDS ABOVE THE FIRST DAY IN EVERY ROOM (prd §906). The day-grouped
 # rooms draw it from `groupedSections`, before the days; the All feed from
 # `bundledSections`, before the first divider; `daySection` only lifts the

@@ -5552,6 +5552,16 @@ struct FeedScreen: View {
             } else {
                 populatedRoom(visible)
             }
+        } else {
+            // A LIVE-CONTENT ROOM WHOSE HEAD IS NIL (prd §911) — Hegotá with
+            // nothing watched, Frames the same. Every arm above declined, and
+            // the chain used to fall through here and draw NOTHING: the black
+            // screen each of those arms' notes describes. The corpus-shaped
+            // empty state is the honest floor.
+            Group { emptyState }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
         }
     }
 
@@ -6803,41 +6813,50 @@ struct FeedScreen: View {
         switch shape {
         case .photos:
             // THE NEWEST SCREENSHOT LEADS, above the grid (prd §832): X's and
-            // Instagram's rule (§821). The room used to open on a wall of tiles
-            // with the newest one among them; the cover is lifted out first, so
-            // it draws once and the grid starts at the next one.
-            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
-            if let cover { Section { ledeListRow(cover) } }
-            if !uncovered.isEmpty { photoGridSection(uncovered) }
-        case .snapchat:
-            // The memories whose pictures actually came back lead as a grid;
-            // everything else — saved chats, videos (never fetched, see
-            // `SnapchatImport`), and memories whose 7-day download window
-            // closed before anyone pressed Get pictures — reads as rows.
-            // The split is the honest one: a tile promises a picture, so a
-            // row with no pixels stays a dated entry rather than a grey well
-            // pretending to be a photograph.
+            // Instagram's rule (§821). The cover is lifted out first, so it
+            // draws once and the grid starts at the next one.
             //
-            // The newest thing leads, above the grid (prd §832, X's rule §821).
+            // EVERY DAY'S SCREENSHOTS TILE UNDER THAT DAY'S HEADER (prd §910).
+            // The room used to draw one block of every screenshot it held, with
+            // a black day pill on the first tile of each day — a third pill next
+            // to `Chip` and `DSStamp` (§746), on the one room whose days the
+            // seam could not feel (§866). The days are the rows' own now, and
+            // every screenshot in the room is a tile.
             let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
             if let cover { Section { ledeListRow(cover) } }
-            let (memoryTiles, rest) = Self.splitTiles(uncovered, by: Self.isMemoryTile)
-            if !memoryTiles.isEmpty { photoGridSection(memoryTiles) }
-            let days = chronoGroups(rest)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            let days = chronoGroups(uncovered)
+            groupedSections(days, nextEventID: nextEventID,
+                            isTile: { _ in true }, tileShape: .screenshot)
+        case .snapchat:
+            // The memories whose pictures actually came back tile; everything
+            // else — saved chats, videos (never fetched, see `SnapchatImport`),
+            // and memories whose 7-day download window closed before anyone
+            // pressed Get pictures — reads as rows. The split is the honest
+            // one: a tile promises a picture, so a row with no pixels stays a
+            // dated entry rather than a grey well pretending to be a photograph.
+            //
+            // The newest thing leads, above everything (prd §832, X's rule §821),
+            // and the split is PER DAY (prd §910): a day's memories tile under its
+            // header, its other things row beneath them. Kind used to stand
+            // above time here — every picture in the export first, then the
+            // rest by day.
+            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
+            if let cover { Section { ledeListRow(cover) } }
+            let days = chronoGroups(uncovered)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                            isTile: Self.isMemoryTile, tileShape: .square)
         case .telegram:
             // The mixed room's fourth instance, and the widest: a followed
-            // channel's wordless pictures lead as a grid, while its captioned
-            // posts, your Saved Messages and whole imported conversations all
-            // read as rows beneath them.
+            // channel's wordless pictures tile, while its captioned posts, your
+            // Saved Messages and whole imported conversations read as rows —
+            // per day, under the day's header (prd §910).
             // The newest thing leads, above the grid (prd §832, X's rule §821).
             let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
             if let cover { Section { ledeListRow(cover) } }
-            let (tiles, rest) = Self.splitTiles(uncovered, by: Self.isTelegramPhotoTile)
-            if !tiles.isEmpty { photoGridSection(tiles) }
-            let telegramDays = chronoGroups(rest)
+            let telegramDays = chronoGroups(uncovered)
             groupedSections(telegramDays, nextEventID: nextEventID,
-                            boundary: boundaryThingID(in: telegramDays))
+                            boundary: boundaryThingID(in: telegramDays),
+                            isTile: Self.isTelegramPhotoTile, tileShape: .square)
         case .x:
             // The mixed room's third instance (2026-08-13, prd §375), and the
             // one that had to wait for the importer: until a wordless picture
@@ -6854,8 +6873,6 @@ struct FeedScreen: View {
             // lifted out of the room first, so a picture wall never declines it.
             let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
             if let cover { Section { ledeListRow(cover) } }
-            let (photoTiles, rest) = Self.splitTiles(uncovered, by: Self.isXPhotoTile)
-            if !photoTiles.isEmpty { photoGridSection(photoTiles) }
             // A THREAD READS AS A THREAD (2026-08-18, prd §396). The archive
             // has named a self-reply's parent since §308, and until this pass
             // the only place that fact reached was `enrichedText` — retrieval
@@ -6867,38 +6884,46 @@ struct FeedScreen: View {
             // names a parent post, which is §309's standing split between what
             // generalises across the import rooms and what is one export's own
             // fact.
-            let (roomThings, threadReplies) = foldThreadReplies(rest)
+            //
+            // The fold runs BEFORE the tile split since prd §910 (it used to
+            // run on the rows the split left), so a wordless picture you posted
+            // into your own thread folds under the thread, which is where it
+            // was said, rather than tiling on its own.
+            let (roomThings, threadReplies) = foldThreadReplies(uncovered)
             let days = chronoGroups(roomThings)
             groupedSections(days, nextEventID: nextEventID,
-                            boundary: boundaryThingID(in: days), replies: threadReplies)
+                            boundary: boundaryThingID(in: days), replies: threadReplies,
+                            isTile: Self.isXPhotoTile, tileShape: .square)
         case .instagram:
             // The mixed room's fourth instance (2026-08-18, prd §395), on
             // Snapchat's, Files' and X's terms: what has pixels AND nothing to
-            // say leads as a grid, everything else reads as rows.
+            // say tiles, everything else reads as rows — per day (prd §910).
             // The newest thing leads, above the grid (prd §821) — X's rule.
             let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
             if let cover { Section { ledeListRow(cover) } }
-            let (photoTiles, rest) = Self.splitTiles(uncovered, by: Self.isInstagramPhotoTile)
-            if !photoTiles.isEmpty { photoGridSection(photoTiles) }
-            let days = chronoGroups(rest)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            let days = chronoGroups(uncovered)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                            isTile: Self.isInstagramPhotoTile, tileShape: .square)
         case .files:
             // The Snapchat split for a connected folder (2026-08-02): images
-            // whose heal has landed a thumbnail lead as a grid, everything
-            // else — PDFs, text files, and images the throttled heal (40
-            // thumbnails a pass) hasn't reached yet — reads as rows until it
-            // has pixels to show. Same honesty rule as above: a tile promises
-            // a picture.
+            // whose heal has landed a thumbnail tile, everything else — PDFs,
+            // text files, and images the throttled heal (40 thumbnails a pass)
+            // hasn't reached yet — reads as rows until it has pixels to show.
+            // Same honesty rule as above: a tile promises a picture.
             //
             // The newest FILE leads, whatever it is, above the grid (prd §832).
             // A grid used to decline the cover, so a PDF saved a minute ago sat
             // under every picture in the folder.
+            //
+            // ONE TIMELINE (prd §910): a day's pictures tile under its header
+            // and its other files row beneath them. Every picture in the folder
+            // used to draw first, then the PDFs by day, so this morning's
+            // confirmation sat under Monday's photographs.
             let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
             if let cover { Section { ledeListRow(cover) } }
-            let (imageTiles, rest) = Self.splitTiles(uncovered, by: Self.isFileImageTile)
-            if !imageTiles.isEmpty { photoGridSection(imageTiles) }
-            let days = chronoGroups(rest)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            let days = chronoGroups(uncovered)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                            isTile: Self.isFileImageTile, tileShape: .square)
         case .wallet:
             // The reads first, then the stream (2026-07-20, the surface split):
             // balance + warnings side by side, the holdings treemap, DeFi, and
@@ -7146,13 +7171,21 @@ struct FeedScreen: View {
                                 boundary: boundaryThingID(in: days))
             }
         case .calendar:
-            calendarSections(visible, nextEventID: nextEventID)
+            calendarSections(visible, nextEventID: nextEventID, heroShown: heroShown)
         case .gmail:
-            if !heroShown { waitingSection(visible, nextEventID: nextEventID) }
+            // The newest mail is the cover, and what is waiting on you stands
+            // under it (prd §911): the waiting section is a list section, and a
+            // room that led with it — or with nothing — was the one Life room
+            // with no lead. The cover is drawn by hand so the waiting section
+            // can stand between it and the days.
             let days = chronoGroups(visible)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            let mailCoverID = heroShown ? nil : ledeThingID(in: days)
+            if let mailCover = coverThing(mailCoverID, in: visible) { Section { ledeListRow(mailCover) } }
+            if !heroShown { waitingSection(visible, nextEventID: nextEventID) }
+            groupedSections(liftingCover(days, id: mailCoverID), nextEventID: nextEventID,
+                            boundary: boundaryThingID(in: days))
         case .reminders:
-            reminderSections(visible, nextEventID: nextEventID)
+            reminderSections(visible, nextEventID: nextEventID, heroShown: heroShown)
         case .music:
             // Sessions, not days (2026-07-21) — a listening sitting is music's
             // real unit; boundary rides the same capturedAt-keyed helper.
@@ -7270,7 +7303,11 @@ struct FeedScreen: View {
         case .bitrefill:
             bitrefillLedeSection(visible)
             let days = chronoGroups(visible)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            // Disconnected, or no balance known yet: the newest order is the
+            // cover instead (prd §911), so the room never opens on a row.
+            let ledeStands = TokenBridge.bitrefill.connected && BitrefillBalance.formatted != nil
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                            cover: heroShown || ledeStands ? nil : ledeThingID(in: days))
         default:
             if Pinboard.isPinnedRoom(source) {
                 // ONE group, in the `@Query`'s own order — which is pin order,
@@ -7281,7 +7318,11 @@ struct FeedScreen: View {
                 // header, below things you pinned weeks ago. That is exactly
                 // the failure `Thing.pinnedAt` is a DATE rather than a Bool to
                 // avoid, and it would arrive by the back door.
-                daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false)
+                // The newest pin is the cover (prd §911), lifted out of the
+                // one group so it draws once.
+                let pinCoverID = ledeThingID(in: [(Pinboard.room, visible)])
+                if let pinCover = coverThing(pinCoverID, in: visible) { Section { ledeListRow(pinCover) } }
+                daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false, cover: pinCoverID)
             } else if filter.tag != "All" && shape == .all {
                 daySection(filterLabel, visible, nextEventID: nextEventID, dated: false)
             } else if shape == .all {
@@ -7556,13 +7597,65 @@ struct FeedScreen: View {
                 }
             }
         } else {
-            let rest: [(String, [Thing])] = coverID.map { id in
-                days.map { label, rows in
-                    (label, rows.filter { (thing: Thing) -> Bool in !(thing.isLive && thing.id == id) })
-                }
-                .filter { !$0.1.isEmpty }
-            } ?? days
+            let rest = liftingCover(days, id: coverID)
             groupedSections(rest, nextEventID: nextEventID, boundary: boundaryThingID(in: rest))
+        }
+    }
+
+    /// The live thing behind a cover id, against this render's rows — liveness
+    /// inside the filter, before any stored read (corollary 3).
+    private func coverThing(_ id: UUID?, in visible: [Thing]) -> Thing? {
+        id.flatMap { id in
+            visible.first(where: { (thing: Thing) -> Bool in thing.isLive && thing.id == id })
+        }
+    }
+
+    /// The groups with the covered thing lifted out, so it draws once (prd
+    /// §763) — for a room that draws its cover by hand because something
+    /// (tiles, a waiting section) must stand between the cover and the days.
+    private func liftingCover(_ groups: [(String, [Thing])], id: UUID?) -> [(String, [Thing])] {
+        guard let id else { return groups }
+        return groups.map { label, rows in
+            (label, rows.filter { (thing: Thing) -> Bool in !(thing.isLive && thing.id == id) })
+        }
+        .filter { !$0.1.isEmpty }
+    }
+
+    /// THE STANDALONE LEAD, WHERE NO HEAD IS DRAWN (prd §815, §862, §911): the
+    /// cover when there is one, the room's own empty state when the tiles
+    /// stand over nothing, then the tiles. One drawing for the kind-tile
+    /// rooms, Cursor's repositories, and Walletbeat's and L2BEAT's standing
+    /// reports — which used to lose their tiles with their head (§911).
+    ///
+    /// THE LEAD SLOT is held wherever the tiles stand (§862): without it the
+    /// tiles sat at the top of the screen — §752's one outright ban — on any
+    /// room emptied by its own pick.
+    @ViewBuilder
+    private func standaloneLead(cover: Thing?, tiles: DSScopeTiles<RoomKindTile>?,
+                                listEmpty: Bool) -> some View {
+        let leadHeld = cover != nil || (tiles != nil && listEmpty)
+        if let cover {
+            Section {
+                ledeListRow(cover,
+                            top: tiles == nil ? DS.Space.s2 : 0,
+                            bottom: tiles == nil ? DSRoomChassis.leadGap : DSRoomChassis.contentGap)
+            }
+        } else if tiles != nil, listEmpty {
+            Section {
+                emptyLeadRow(headline: DSProse.text("Nothing here yet."),
+                             words: Text(roomKindPick.summary))
+            }
+        }
+        if let tiles {
+            Section {
+                tiles
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: leadHeld ? 0 : DS.Space.s2,
+                                              leading: DSRoomChassis.inset,
+                                              bottom: DSRoomChassis.leadGap,
+                                              trailing: DSRoomChassis.inset))
+            }
         }
     }
 
@@ -7608,11 +7701,14 @@ struct FeedScreen: View {
 
     /// Tokens' lede: the watchlist's 24h at a glance — from the SAME cached
     /// pulses the rows wear, so the summary can never disagree with the rows.
-    /// Two watched tokens minimum: one token's row already says everything.
+    /// One watched token is enough since prd §911: it used to take two ("one
+    /// token's row already says everything"), which left the room with no
+    /// lead at all — a token pulse declines the cover — and every room's lead
+    /// is the box (§906). Flat stays flat: "1 up" is said only of a rise.
     @ViewBuilder
     private func watchlistLedeSection(_ visible: [Thing]) -> some View {
         let pulses = visible.compactMap { TokenPulse.shared.pulse(for: $0) }
-        if pulses.count >= 2 {
+        if pulses.count >= 1 {
             // Flat (exactly 0) is neither up nor down — "2 up" for two
             // stablecoins would claim a gain that didn't happen (honesty).
             ledeSection(WatchlistLede(
@@ -8499,7 +8595,12 @@ struct FeedScreen: View {
                                  // labels are localized, and a new room's
                                  // author should have to answer this.
                                  dated: Bool = true,
-                                 cover: UUID? = nil) -> some View {
+                                 cover: UUID? = nil,
+                                 // Which of a day's things TILE under its
+                                 // header (prd §910) — the six picture rooms
+                                 // pass their grid test, everything else none.
+                                 isTile: ((Thing) -> Bool)? = nil,
+                                 tileShape: PhotoCell.Shape = .square) -> some View {
         // Computed once for the whole feed rather than per section: every
         // shaped room routes its groups through here, so the folded tail's
         // lighter header (prd §254) reaches all of them from one place.
@@ -8524,7 +8625,7 @@ struct FeedScreen: View {
         ForEach(window.shown, id: \.0) { label, rows in
             daySection(label, rows, nextEventID: nextEventID, boundary: boundary,
                        replies: replies, coarse: coarse.contains(label),
-                       dated: dated, cover: cover)
+                       dated: dated, cover: cover, isTile: isTile, tileShape: tileShape)
         }
         if window.more { olderRow(hidden: window.hidden) }
     }
@@ -9683,92 +9784,84 @@ struct FeedScreen: View {
         // caption; its title is the placeholder word the importer gave it, and
         // printing that under every cell is a grid of identical labels.
         if thing.source == InstagramImport.source { return nil }
+        // A file the camera named says nothing a person wrote (prd §910):
+        // IMG_4021 under a photograph is a label saying nothing, the X and
+        // Instagram case one room over. A name a person gave keeps it, the
+        // way the Files app draws it.
+        if thing.source == "Files", Self.isCameraName(thing.title) { return nil }
         return thing.title
     }
 
-    /// Photos: one continuous grid — day labels are overlay pills on the first
-    /// photo of each day, never section breaks (mock P1).
-    private func photoGridSection(_ visible: [Thing]) -> some View {
-        Section {
-            let items = visible.live
-            // Day pills computed HERE, while every model is still valid, so
-            // the cell closure below compares plain strings instead of
-            // reaching back into `items[i - 1]` for a `capturedAt` a heal may
-            // have tombstoned by the time SwiftUI re-runs it (corollary 3,
-            // build 176 — see `ThingRowKeying`).
-            let dayLabels = items.map { dayLabel($0.capturedAt) }
-            // Hand-rolled row-chunking, NOT LazyVGrid: on iOS 26,
-            // `GridItem.spacing` and even `.padding()`'s horizontal
-            // component are silently ignored on a `.flexible()` column's
-            // cross axis — confirmed empirically (a 60pt spacing value and
-            // later an 80pt padding both only ever showed up as VERTICAL
-            // gap, never horizontal, no matter which mechanism carried it).
-            // `HStack`/`VStack` spacing has no such bug, so rows are built
-            // by hand instead (user, 2026-07-13 — tiles were touching edge
-            // to edge with no gutter at all).
-            let perRow = items.count > 12 ? 3 : 2
-            let rows = stride(from: 0, to: items.count, by: perRow).map {
-                Array(items[$0..<min($0 + perRow, items.count)])
-            }
-            // The real fix for the leak was in `PhotoWell` (a `scaledToFill`
-            // image reporting its own huge intrinsic size instead of
-            // respecting the cell) — with that fixed, a plain HStack's normal
-            // equal-flexible-child distribution is enough; no manual width
-            // math needed here.
-            VStack(spacing: DS.Space.s3) {
-                ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, row in
-                    HStack(spacing: DS.Space.s3) {
-                        ForEach(Array(keyed(row).enumerated()), id: \.element.id) { colIndex, item in
-                            // Corollary 3 (build 176) — see `ThingRowKeying`.
-                            if let thing = item.live {
-                                let i = rowIndex * perRow + colIndex
-                                let firstOfDay = i == 0 || dayLabels[i - 1] != dayLabels[i]
-                                Button {
-                                    openThing(thing)
-                                } label: {
-                                    PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabels[i] : nil,
-                                              caption: Self.tileCaption(thing),
-                                              video: Self.isVideoTile(thing))
-                                }
-                                // A photograph LIFTS under the finger (prd
-                                // §384) where every control tile dips — a
-                                // picture is picked up, not pushed. Was
-                                // `DSTileButtonStyle` (2026-07-10).
-                                .buttonStyle(PressLift())
-                                .dsHover()
-                                // …and BLOOMS under a cursor (2026-08-17). The
-                                // vocabulary's media treatment, on the app's
-                                // largest field of pictures: a photograph is
-                                // the one row whose content you read by
-                                // looking, so the cursor answers it by making
-                                // it bigger rather than by lifting a card.
-                                // Never paired with `macHoverLift` — one
-                                // motion treatment per element.
-                                .macHoverBloom()
-                                // Zoom source removed with the thing-open zoom (prd 232, 2026-07-30).
-                            }
+    /// Whether a file's name is the one its camera or its screenshot key gave
+    /// it — IMG_4021, DSC_0913, DSCF2210, PXL_2026…, PHOTO-2026-…, Screenshot
+    /// 2026-… — rather than one a person typed (prd §910). The stem is tested
+    /// so the extension never decides.
+    static func isCameraName(_ name: String) -> Bool {
+        let stem = name.split(separator: ".", maxSplits: 1).first.map(String.init) ?? name
+        let upper = stem.uppercased()
+        let cameraPrefixes = ["IMG_", "IMG-", "IMG ", "DSC_", "DSC-", "DSCF", "DSCN", "PXL_",
+                              "DCIM", "PHOTO-", "PHOTO_", "SCREENSHOT", "SCREEN SHOT"]
+        return cameraPrefixes.contains { upper.hasPrefix($0) }
+    }
+
+    /// A day's pictures, three to a row, under the day's header (prd §910).
+    ///
+    /// EACH ROW OF THREE IS ITS OWN `List` ROW. The grid used to be one row —
+    /// a `VStack` of every tile in the room — so a 300-screenshot room laid out
+    /// 300 cells in one cell and recycled none of them. Hand-rolled rather
+    /// than `LazyVGrid` for that reason now (the iOS 26 spacing bug the old
+    /// grid worked around is beside the point: a `LazyVGrid` cannot be split
+    /// across `List` rows at all). Three columns, FIXED: the grid used to be
+    /// two-up under thirteen tiles and three-up above, so a room reflowed on
+    /// the day it grew past twelve.
+    ///
+    /// The cell's shape is the room's (`PhotoCell.Shape`): a phone screen is
+    /// tall and cropped from the top, a photograph is a square. The caption
+    /// sits UNDER the tile, and a row in which any tile has one reserves the
+    /// line on all three, so the three pictures keep one height.
+    @ViewBuilder
+    private func tileRows(_ tiles: [Thing], shape: PhotoCell.Shape) -> some View {
+        let items = tiles.live
+        let perRow = 3
+        let rows = stride(from: 0, to: items.count, by: perRow).map {
+            Array(items[$0..<min($0 + perRow, items.count)])
+        }
+        ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+            // Captions computed HERE, while every model is still valid, so the
+            // cell closure below reads plain strings (corollary 3, build 176 —
+            // see `ThingRowKeying`).
+            let captions = row.map { Self.tileCaption($0) }
+            let reserves = captions.contains { !($0 ?? "").isEmpty }
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                ForEach(Array(keyed(row).enumerated()), id: \.element.id) { col, item in
+                    if let thing = item.live {
+                        Button {
+                            openThing(thing)
+                        } label: {
+                            PhotoCell(thing: thing, shape: shape, caption: captions[col],
+                                      reservesCaption: reserves, video: Self.isVideoTile(thing))
                         }
-                        // An incomplete last row keeps its tiles at the same
-                        // width as full rows rather than stretching to fill.
-                        if row.count < perRow {
-                            ForEach(0..<(perRow - row.count), id: \.self) { _ in
-                                Color.clear
-                            }
-                        }
+                        // A photograph LIFTS under the finger (prd §384) where
+                        // every control tile dips — a picture is picked up, not
+                        // pushed. The cursor bloom is the cell's own.
+                        .buttonStyle(PressLift())
+                        .dsHover()
+                    }
+                }
+                // An incomplete last row keeps its tiles at the same width as
+                // full rows rather than stretching to fill.
+                if row.count < perRow {
+                    ForEach(0..<(perRow - row.count), id: \.self) { _ in
+                        Color.clear
                     }
                 }
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            // The grid rides the same content gutter as every other feed row —
-            // tiles no longer bleed to the screen edge (which clipped the day
-            // pills), and the page background reads clearly between them so a
-            // run of light screenshots stops merging into one slab. **The
-            // gutter is the lead's (prd §763)**: in the five rooms where the
-            // grid is the head it stands in the rows' column with the lead's
-            // air above and below, like every other room's lead.
+            // The grid stands in the rows' column (prd §763), and its rows are
+            // one gutter apart: this inset's bottom plus the next one's top.
             .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.leadInset,
-                                 bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.leadInset))
+                                 bottom: DS.Space.s1, trailing: DSRoomChassis.leadInset))
         }
     }
 
@@ -9823,11 +9916,27 @@ struct FeedScreen: View {
     /// whichever way it's pointing, so expanding doesn't move the control out
     /// from under the finger that tapped it.
     @ViewBuilder
-    private func calendarSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
+    private func calendarSections(_ visible: [Thing], nextEventID: UUID?,
+                                  heroShown: Bool) -> some View {
         let split = agendaSplit(visible)
         let pastCount = split.past.reduce(0) { $0 + $1.1.count }
-        groupedSections(split.upcoming, nextEventID: nextEventID)
-        if split.upcoming.isEmpty { nothingAheadSection }
+        // THE NEXT EVENT IS THE COVER (prd §911) — §908 drew it a date tile and
+        // this shape had no cover path, so the room opened on a row. The
+        // agenda is soonest-first, so the first row of the first day is what
+        // is next; nothing ahead holds the lead as the room's empty state,
+        // because the visible agenda IS empty and the past sits behind a door.
+        groupedSections(split.upcoming, nextEventID: nextEventID,
+                        cover: heroShown ? nil : ledeThingID(in: split.upcoming))
+        if split.upcoming.isEmpty {
+            if heroShown {
+                nothingAheadSection
+            } else {
+                Section {
+                    emptyLeadRow(headline: DSProse.text("Nothing coming up."),
+                                 words: Text("Past events sit one tap below."))
+                }
+            }
+        }
         if pastCount > 0 {
             pastEventsToggle(count: pastCount)
             if pastEventsExpanded {
@@ -9936,9 +10045,17 @@ struct FeedScreen: View {
     /// Reminders: state groups — Doing, To do (stale todos collapse), Done
     /// (same-day only).
     @ViewBuilder
-    private func reminderSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
-        let doing = visible.filter { $0.mark == .doing }
-        let todos = visible.filter { $0.mark == .todo || $0.mark == .none }
+    private func reminderSections(_ visible: [Thing], nextEventID: UUID?,
+                                  heroShown: Bool) -> some View {
+        // THE NEWEST OPEN REMINDER IS THE COVER (prd §911): what you are doing
+        // first, then what is to do — the room's own order — lifted out of its
+        // group so it draws once. Done rows never cover.
+        let open = visible.filter { $0.mark == .doing }
+            + visible.filter { $0.mark == .todo || $0.mark == .none }
+        let reminderCover = coverThing(heroShown ? nil : ledeThingID(in: [("", open)]), in: visible)
+        if let reminderCover { Section { ledeListRow(reminderCover) } }
+        let doing = visible.filter { $0.mark == .doing && $0.id != reminderCover?.id }
+        let todos = visible.filter { ($0.mark == .todo || $0.mark == .none) && $0.id != reminderCover?.id }
         let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
         let fresh = todos.filter { $0.capturedAt > weekAgo }
         let stale = todos.filter { $0.capturedAt <= weekAgo }
@@ -10998,7 +11115,16 @@ struct FeedScreen: View {
                             // A shaped room's cover (prd §732): drawn as
                             // `FeedLedeCard` under the header of the group that
                             // holds it, and lifted out of that group's run.
-                            cover: UUID? = nil) -> some View {
+                            cover: UUID? = nil,
+                            // THE DAY'S PICTURES TILE UNDER ITS HEADER, and its
+                            // other things row beneath them (prd §910). Kind
+                            // used to stand above time in the picture rooms:
+                            // every tile in the room first, then the rows by
+                            // day, so a PDF saved this morning sat under
+                            // Monday's photographs, and the grid needed its
+                            // own day pills because it stood outside the days.
+                            isTile: ((Thing) -> Bool)? = nil,
+                            tileShape: PhotoCell.Shape = .square) -> some View {
         // LIVE ONLY, before anything reads a stored property (build 150 crash,
         // 2026-07-25 — pull-to-refresh, symbolicated to `countLabel` inside
         // this section's own header). `rows` is a DERIVED array (the day
@@ -11017,9 +11143,12 @@ struct FeedScreen: View {
         // rows, and the header at once — a row that just died drops out of the
         // day it was in, which is what the next `@Query` emission says anyway.
         let rows = rows.filter(\.isLive)
+        // The day's tiles and the rest (prd §910). The header counts both.
+        let (dayTiles, dayRows) = isTile.map { Self.splitTiles(rows, by: $0) } ?? ([], rows)
         // The header still counts the cover; only the run gives it up.
         let coverThing = cover.flatMap { id in rows.first { $0.id == id } }
-        let run = coverThing == nil ? rows : rows.filter { $0.id != cover }
+        let tiles = coverThing == nil ? dayTiles : dayTiles.filter { $0.id != cover }
+        let run = coverThing == nil ? dayRows : dayRows.filter { $0.id != cover }
         let positions = cardRunPositions(count: run.count,
                                          isBreaker: { standsAlone(run[$0]) },
                                          isBoundary: { run[$0].id == boundary })
@@ -11061,6 +11190,10 @@ struct FeedScreen: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                // The day's pictures, first (prd §910): a grid cannot interleave
+                // with rows by the minute, and the day is the grain the header
+                // promises.
+                if !tiles.isEmpty { tileRows(tiles, shape: tileShape) }
                 // Rows dispatch by shape (shaped feeds); the swipe stays triage —
                 // reads only, writes live in the sheet (ruling), Copy sheet-only.
                 // The cover is drawn by `groupedSections`, above this header
