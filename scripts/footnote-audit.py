@@ -113,6 +113,9 @@ ALLOWANCE = {
     # The watch form and the co-signer block: the second is the one place the
     # app says a key has no recovery phrase (b).
     "SafeScreen.swift": (2, "watch form + co-signer key custody (b)"),
+    # The statement's and the recovery's sign blocks — exclusive states on one
+    # sheet, each stating what its signature is NOT (b, prd §913).
+    "SafeAskSheet.swift": (2, "statement vs recovery, each says what it can't do (b)"),
     # A mail thing's header-only line (a) and a Home accessory's read-only
     # line (a) are two kinds' content blocks in one file.
     "ThingContent.swift": (2, "two kinds' blocks; (a)"),

@@ -981,6 +981,15 @@ struct ThingSheetView: View {
                             .padding(.top, DS.Space.s3)
                     }
                 }
+                // A STATEMENT waiting on this phone (prd §913) — the words
+                // behind the hash and the one Sign, on the row that said
+                // "your signature is needed". Only where a key exists.
+                if let ref = thing.sourceRef, ref.hasPrefix("wallet:safemsg:"),
+                   let safe = thing.walletAddress, !safe.isEmpty, SafeSigner.hasAnyKey {
+                    SafeStatementBlock(source: .landed(ref: ref, safe: safe))
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                }
                 if let nudge = namePrompt {
                     NameAddressPrompt(address: nudge.address, count: nudge.count,
                                       kind: nudge.kind) {

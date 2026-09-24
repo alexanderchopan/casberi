@@ -232,6 +232,12 @@ enum NotifySweep {
         if ref.hasPrefix("wallet:safe:"), thing.tags.contains("Your turn") {
             return .safeSignatureNeeded
         }
+        // — Safe: a STATEMENT (a sign-in, a vote) waiting on this phone's
+        //   signature (prd §913). The same "needs you" shape as a transaction,
+        //   so the same kind; tagged at landing by `SafeStatementSigner.sweep`.
+        if ref.hasPrefix("wallet:safemsg:"), thing.tags.contains("Your turn") {
+            return .safeSignatureNeeded
+        }
         // — Safe: a module was enabled that can move this Safe's funds
         //   WITHOUT a signature — the same "something new can move your
         //   funds" news an ERC-20/permit2 approval carries, so it reuses
@@ -451,7 +457,8 @@ enum NotifySweep {
                 return parts.count > 2 ? String(parts[2]) : nil
             }
             if ref.hasPrefix("hyperliquid:risk:") { return "Hyperliquid" }
-            if ref.hasPrefix("wallet:safe:") || ref.hasPrefix("wallet:safeconfig:") { return "Safe" }
+            if ref.hasPrefix("wallet:safe:") || ref.hasPrefix("wallet:safeconfig:")
+                || ref.hasPrefix("wallet:safemsg:") { return "Safe" }
         }
         // "1,250 USDC" → USDC. The symbol is the LAST word by construction
         // (`WalletIngest.transferThing`: amount, then asset), and a bare

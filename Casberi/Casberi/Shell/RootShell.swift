@@ -47,6 +47,9 @@ struct RootShell: View {
     @State private var deepLinkThing: Thing?
     /// `casberi://person/<Source>/<handle>` — the profile card, by name.
     @State private var deepLinkPerson: SocialProfile?
+    /// A paired app's ask (prd §913) — the first waiting one, mounted here
+    /// because the relay can ring on any screen.
+    @State private var safeAsk: SafePeer.PendingAsk?
     @AppStorage("onboarded") private var onboarded = false
     /// Mirrors `DemoMode.isActive` so the standing demo banner appears and
     /// disappears with the mode — see the banner's own gate in `shellBase`.
@@ -237,8 +240,13 @@ struct RootShell: View {
         // Escape otherwise. ONE expression over every presentation this view
         // owns, rather than a handler per flag each re-ORing the others.
         .onChange(of: composerOpen || deepLinkThing != nil
-                  || deepLinkPerson != nil || !onboarded, initial: true) { _, modal in
+                  || deepLinkPerson != nil || safeAsk != nil || !onboarded, initial: true) { _, modal in
             chrome.walkModalOpen = modal
+        }
+        // THE LIVE ASK (prd §913). `initial: true` for the sponsor sheet's
+        // reason: an ask can be waiting before this view mounts.
+        .onChange(of: SafePeer.state.asks.first?.id, initial: true) { _, _ in
+            safeAsk = SafePeer.state.asks.first
         }
         .onChange(of: composerOpen) { _, open in
             if open {
@@ -414,6 +422,11 @@ struct RootShell: View {
         // the newest thing's sheet (the widget-tap route).
         .onOpenURL { route($0) }
         .onAppear {
+            // A paired Safe app can ring while the app is anywhere (prd §913):
+            // subscribe at launch when this phone holds a key. No key, no
+            // relay socket — the peer never starts for a phone that signs
+            // nothing.
+            SafePeer.startIfNeeded { modelContext }
             // Landing (2026-07-13, simplified 2026-07-20 — the Pinned board
             // retired, docs/agent-brief.md rulings 11-12; reverted to
             // "always All" 2026-07-28 per user feedback — the §131 amendment
@@ -1717,6 +1730,9 @@ struct RootShell: View {
         .sheet(item: $deepLinkPerson) { person in
             rootPresented(SocialProfileCard(profile: person))
         }
+        .sheet(item: $safeAsk) { ask in
+            rootPresented(SafeAskSheet(ask: ask, paired: true))
+        }
         // THE FIRST-LAUNCH COVER IS GONE (2026-09-05). It was a
         // `.fullScreenCover` on `!onboarded` presenting `HowItWorksSheet` with
         // two doors, and it pinned the demo pour to its `onDismiss`. The
@@ -2699,6 +2715,20 @@ struct RootShell: View {
         // pay for a Frames transaction (prd §728c). Lands in the Frames room
         // and hands the request to it; a link that is not a readable request
         // says so rather than opening a room with nothing to explain.
+        // casberi://pair?uri=<wc:…> — a WalletConnect pairing link handed to
+        // this phone as a signer (prd §913). Pairs and lands on the Safe page,
+        // where the session and the ask show; a link that is not a pairing
+        // link says so.
+        case "pair":
+            guard let uri = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                    .queryItems?.first(where: { $0.name == "uri" })?.value else { return }
+            sceneState.route.present(.apps)
+            sceneState.route.openSetup(forOffer: "Safe")
+            Task { @MainActor in
+                if case .failure(let error) = await SafePeer.pair(uri: uri, context: { modelContext }) {
+                    chrome.flash(SafeScreen.pairSentence(error), tone: .failure)
+                }
+            }
         case "frames":
             sceneState.filter.source = FramesIdentity.source
             sceneState.filter.tag = "All"

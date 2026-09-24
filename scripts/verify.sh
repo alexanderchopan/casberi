@@ -2470,6 +2470,15 @@ harness "Wallet-room pure-logic self-test" "wallet-room self-test" "scripts/wall
 # Safe's own service) and the no-export-path assertion on the key.
 harness "Safe co-signer self-test" "safetx self-test" "scripts/safetx-selftest.sh" "the Safe co-signer self-test failed — run scripts/safetx-selftest.sh"
 
+# The co-signer's OTHER three preimages and its one door (prd §913): EIP-712
+# in general (pinned to the spec's own vector), a Safe message under the
+# Safe's domain, Candide's ExecuteRecovery under the module's, and the
+# WebAuthn digest the Secure Enclave owner signs — plus the peer's allowlist,
+# which is the whole of what a paired app may ask. Same shape as the harness
+# above: fixtures derived, not recalled; every refusal mutation-proven; the
+# writes counted and their hosts pinned to Safe's own.
+harness "Safe signer §913 self-test" "safe-signer self-test" "scripts/safe-signer-selftest.sh" "the §913 signer self-test failed — run scripts/safe-signer-selftest.sh"
+
 harness "Money-receipt pure-logic self-test" "money-receipt self-test" "scripts/money-receipt-selftest.sh" "the money-receipt logic self-test failed — run scripts/money-receipt-selftest.sh"
 
 # Pure-logic self-test for the agent's open (prd §332). This is the first screen

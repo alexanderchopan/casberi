@@ -164,6 +164,9 @@ struct AccountDetailSheet: View {
                             isPresented: $confirmDeleteSigner, titleVisibility: .visible) {
             Button("Delete the key", role: .destructive) {
                 SignerKey.delete()
+                // Both of this phone's Safe keys (prd §913): the verb says
+                // "signing key" and the Enclave one is a signing key too.
+                SafeEnclaveKey.delete()
                 deleteResult = String(localized: "The signing key is gone.")
             }
             Button("Cancel", role: .cancel) {}
@@ -221,7 +224,7 @@ struct AccountDetailSheet: View {
                 // re-pasted, while this key deleted by mistake needs somebody
                 // ELSE to send an on-chain `swapOwner` before the Safe works
                 // again. Different cost, different verb, different sentence.
-                if SignerKey.exists {
+                if SafeSigner.hasAnyKey {
                     Button { confirmDeleteSigner = true } label: {
                         dangerLabel("Delete signing key")
                     }

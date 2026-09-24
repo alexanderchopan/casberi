@@ -1471,8 +1471,14 @@ enum SafeBridge {
         let addresses = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
         guard !addresses.isEmpty else { return .landed(0) }
         let mark = SafeServiceGate.mark()
-        let added = await sync(context: context, addresses: addresses,
+        var added = await sync(context: context, addresses: addresses,
                                existing: IngestSupport.existingSourceRefs(context, source: sourceName))
+        // Statements waiting on this phone (prd §913) — read only when it
+        // holds a key, on the same pass, so "your signature is needed" says
+        // so for a vote as it does for a transaction.
+        let statements = await SafeStatementSigner.sweep(
+            context: context, existing: IngestSupport.existingSourceRefs(context, source: sourceName))
+        if statements > 0 { added += statements; context.saveHonestly() }
         switch SafeServiceGate.health(since: mark) {
         case .answered: return .landed(added)
         case .throttled(let until): return .throttled(until: until, landed: added)

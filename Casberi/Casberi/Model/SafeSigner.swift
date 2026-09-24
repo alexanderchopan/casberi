@@ -117,6 +117,66 @@ enum SafeSigner {
         rails.contains { $0.seg == seg }
     }
 
+    static func canSign(chainId: Int) -> Bool {
+        rails.contains { $0.chainId == chainId }
+    }
+
+    /// Every chain the rail runs on, by id.
+    static var chainIDs: [Int] { rails.map(\.chainId) }
+
+    static func seg(chainId: Int) -> String? { rails.first { $0.chainId == chainId }?.seg }
+    static func chainId(seg: String) -> Int? { rails.first { $0.seg == seg }?.chainId }
+
+    /// One `eth_call` on a rail chain, through the reader that owns and
+    /// discloses its hosts — lent to the statement, recovery and Enclave
+    /// signers (prd §913) so every signature in this app crosses the same
+    /// six rails and no other file names a host.
+    static func ethCall(chainId: Int, to: String, data: String) async -> String? {
+        guard let rail = rails.first(where: { $0.chainId == chainId }) else { return nil }
+        return await call(rail, to: to, data: data)
+    }
+
+    /// `eth_getCode`, same rails. Nil when the chain did not answer.
+    static func ethGetCode(chainId: Int, address: String) async -> String? {
+        guard let rail = rails.first(where: { $0.chainId == chainId }) else { return nil }
+        let params: [Any] = [address, "latest"]
+        switch rail.reader {
+        case .walletApprovals:
+            guard let network = rail.network else { return nil }
+            return await WalletApprovals.rpcRead(
+                network: network, method: "eth_getCode", params: params) as? String
+        case .gnosisChain:
+            return await GnosisPayBridge.read(method: "eth_getCode", params: params) as? String
+        }
+    }
+
+    // MARK: - Which key is speaking
+
+    /// One of this phone's two keys, and the address the Safe knows it by
+    /// (prd §913). The §425 key is an EOA and its address is its own; the
+    /// Secure Enclave key is a CONTRACT owner whose address is read from
+    /// Safe's passkey factory, per chain, so it is nil on a chain the
+    /// factory never reached.
+    struct Identity: Equatable {
+        enum Kind: Equatable { case k1, enclave }
+        let kind: Kind
+        let address: String
+    }
+
+    /// Both keys, where each can speak on this chain. The K1 key first: it
+    /// is the one §425 built and the one most Safes name.
+    static func identities(chainId: Int) async -> [Identity] {
+        var out: [Identity] = []
+        if let k1 = SignerKey.address() { out.append(Identity(kind: .k1, address: k1)) }
+        if SafeEnclaveKey.exists, let proxy = await SafeEnclaveSigner.signerAddress(chainId: chainId) {
+            out.append(Identity(kind: .enclave, address: proxy))
+        }
+        return out
+    }
+
+    /// Whether either key exists — the screen's "is this phone a signer".
+    static var hasAnyKey: Bool { SignerKey.exists || SafeEnclaveKey.exists }
+
     // MARK: - Where this phone stands, and the one way a Safe can die
 
     /// One Safe this phone is an owner of, read from the CHAIN.
@@ -173,10 +233,16 @@ enum SafeSigner {
     /// are then read from the chain, because a cached config is exactly what
     /// an attacker holding the desktop key would change.
     static func standing(budget: Duration = .seconds(8)) async -> StandingReport {
-        guard let me = SignerKey.address() else { return StandingReport() }
-        let lookup = await SafeBridge.signerSafes(for: [me], budget: budget,
+        // Both keys' addresses (prd §913). The Enclave owner's is the same on
+        // every chain the factory reached, so one cached read names it.
+        var mine: [String] = []
+        if let k1 = SignerKey.address() { mine.append(k1) }
+        if SafeEnclaveKey.exists, let proxy = SafeEnclaveSigner.anyCachedAddress() { mine.append(proxy) }
+        guard !mine.isEmpty else { return StandingReport() }
+        let lookup = await SafeBridge.signerSafes(for: mine, budget: budget,
                                                   requireExecuted: false)
         var report = StandingReport(reachable: lookup.reachable, truncated: lookup.truncated)
+        let lowered = Set(mine.map { $0.lowercased() })
         for found in lookup.safes {
             guard let rail = rails.first(where: { $0.seg == found.chain }) else { continue }
             async let ownersRead = call(rail, to: found.address, data: SafeCall.getOwnersSelector)
@@ -185,7 +251,7 @@ enum SafeSigner {
                   let owners = SafeCall.decodeAddressArray(ownersHex),
                   let thresholdHex = await thresholdRead,
                   let threshold = SafeCall.decodeUInt(thresholdHex),
-                  owners.contains(me.lowercased())
+                  owners.contains(where: { lowered.contains($0) })
             else { continue }
             report.safes.append(Standing(safeAddress: found.address, seg: found.chain,
                                          ownerCount: owners.count, threshold: threshold))
@@ -230,6 +296,17 @@ enum SafeSigner {
         case serviceHashMismatch(local: String, service: String)
         /// Already executed, or already signed by this phone.
         case nothingToDo
+        /// A paired app's own digest of the typed data it sent is not the
+        /// hash of the fields it sent — the service-mismatch refusal, for a
+        /// requester that is not Safe's service (prd §913).
+        case requesterHashMismatch(local: String, requester: String)
+        /// The Safe names this phone's Enclave owner, but the owner's proxy
+        /// has no code yet: the desktop has to run the factory's
+        /// `createSigner` before any signature from it can verify.
+        case signerNotDeployed(String)
+        /// The factory verified the Enclave assertion and did not accept it.
+        /// The bytes are discarded.
+        case signatureNotAccepted
     }
 
     /// A transaction that has passed every refusal and is ready for a tap.
@@ -249,6 +326,8 @@ enum SafeSigner {
         /// screen a second round trip to say whether this Safe has a spare
         /// owner.
         let standing: Standing
+        /// Which of this phone's keys the Safe lists (prd §913).
+        let signer: Identity
 
         /// This very transaction is the repair for `hasNoSpareOwner`: it adds
         /// an owner without raising the threshold to match. Worth naming,
@@ -333,7 +412,8 @@ enum SafeSigner {
 
     // MARK: - The six refusals
 
-    /// Everything that must be true before a Face ID prompt is worth raising.
+    /// Everything that must be true before a Face ID prompt is worth raising,
+    /// for a proposal read from Safe's own service.
     ///
     /// Ordered cheapest-first only where that is free: the threshold and the
     /// owner set are read from the CHAIN and not from a cached
@@ -341,7 +421,7 @@ enum SafeSigner {
     /// with the desktop key would change, and a cache is what they would beat.
     static func prepare(seg: String, safeTxHash: String) async -> Result<Ready, Refusal> {
         await ClearSign.warm()
-        guard let me = SignerKey.address() else { return .failure(.noKey) }
+        guard hasAnyKey else { return .failure(.noKey) }
         guard let rail = rails.first(where: { $0.seg == seg }) else {
             return .failure(.chainUnsupported(seg))
         }
@@ -354,8 +434,10 @@ enum SafeSigner {
 
         if (row["isExecuted"] as? Bool) == true { return .failure(.nothingToDo) }
         let confirmations = (row["confirmations"] as? [[String: Any]]) ?? []
+        let identities = await identities(chainId: rail.chainId)
+        let mine = Set(identities.map { $0.address.lowercased() })
         if confirmations.contains(where: {
-            ($0["owner"] as? String)?.lowercased() == me.lowercased()
+            mine.contains(($0["owner"] as? String)?.lowercased() ?? "")
         }) { return .failure(.nothingToDo) }
 
         // (3) The local encoder against the service's own claim. The service
@@ -369,7 +451,55 @@ enum SafeSigner {
         guard local.lowercased() == safeTxHash.lowercased() else {
             return .failure(.serviceHashMismatch(local: local, service: safeTxHash))
         }
+        return await verify(rail: rail, safeAddress: safeAddress, tx: tx, local: local,
+                            identities: identities, row: row)
+    }
 
+    /// The same refusals for a transaction that arrived IN HAND — from a
+    /// paired app over WalletConnect, or pasted (prd §913). There is no
+    /// service row to compare against; the requester's own digest of the
+    /// typed data stands in for the service's hash, and the chain decides.
+    /// The service is still asked, once, for what it knows — whether this
+    /// hash executed already or this phone already signed it — and a service
+    /// that does not know the hash yet is the ordinary case for the FIRST
+    /// signature, not a refusal.
+    static func prepare(chainId: Int, safe: String, tx: SafeTransaction,
+                        requesterHash: [UInt8]) async -> Result<Ready, Refusal> {
+        await ClearSign.warm()
+        guard hasAnyKey else { return .failure(.noKey) }
+        guard let rail = rails.first(where: { $0.chainId == chainId }) else {
+            return .failure(.chainUnsupported(String(chainId)))
+        }
+        guard let localBytes = SafeTxEncoder.safeTxHash(chainId: chainId, safe: safe, tx: tx)
+        else { return .failure(.proposalUnreadable) }
+        let local = SafeABI.hex(localBytes)
+        let requester = SafeABI.hex(requesterHash)
+        guard local.lowercased() == requester.lowercased() else {
+            return .failure(.requesterHashMismatch(local: local, requester: requester))
+        }
+        let identities = await identities(chainId: chainId)
+        let mine = Set(identities.map { $0.address.lowercased() })
+        // What the service knows, if it knows this hash at all. `.missing`
+        // is the first signature's ordinary state and leaves the row empty.
+        var row: [String: Any] = [:]
+        let read = await SafeServiceGate.get("\(gatewayURL(rail))/transactions/\(local)")
+        if let known = SafeGatewayShape.txRow(read.json) {
+            if (known["isExecuted"] as? Bool) == true { return .failure(.nothingToDo) }
+            let confirmations = (known["confirmations"] as? [[String: Any]]) ?? []
+            if confirmations.contains(where: {
+                mine.contains(($0["owner"] as? String)?.lowercased() ?? "")
+            }) { return .failure(.nothingToDo) }
+            row = known
+        }
+        return await verify(rail: rail, safeAddress: safe, tx: tx, local: local,
+                            identities: identities, row: row)
+    }
+
+    /// Refusals (1), (2) and (4), from the chain — ONE decision site for both
+    /// doors above, because the six refusals are the entire security
+    /// argument and a second copy is a second place to forget one.
+    private static func verify(rail: Rail, safeAddress: String, tx: SafeTransaction, local: String,
+                               identities: [Identity], row: [String: Any]) async -> Result<Ready, Refusal> {
         // (1) and (2) — from the chain, never from a local flag.
         guard let railCalldata = SafeCall.getTransactionHash(tx) else {
             return .failure(.proposalUnreadable)
@@ -386,6 +516,13 @@ enum SafeSigner {
         guard let ownersHex = await ownersRead,
               let owners = SafeCall.decodeAddressArray(ownersHex)
         else { return .failure(.chainUnreadable) }
+        // Whichever of this phone's keys the Safe lists speaks (prd §913);
+        // the guard below is the refusal, and it is one line so the harness
+        // can hold it.
+        guard let signer = identities.first(where: { owners.contains($0.address.lowercased()) })
+                ?? identities.first
+        else { return .failure(.noKey) }
+        let me = signer.address
         guard owners.contains(me.lowercased()) else { return .failure(.notAnOwner) }
 
         // (4) THE RAIL. A read failure is a refusal, not a pass — the whole
@@ -398,9 +535,20 @@ enum SafeSigner {
             return .failure(.hashMismatch(local: local, chain: chain))
         }
 
+        // An Enclave owner is a contract, and a contract with no code cannot
+        // answer `isValidSignature` — the desktop's `createSigner` is the
+        // missing step, and saying so beats a signature Safe's service
+        // rejects with a 422 nobody can read.
+        if signer.kind == .enclave {
+            guard let deployed = await SafeEnclaveSigner.proxyDeployed(chainId: rail.chainId, address: me)
+            else { return .failure(.chainUnreadable) }
+            guard deployed else { return .failure(.signerNotDeployed(me)) }
+        }
+
+        let confirmations = (row["confirmations"] as? [[String: Any]]) ?? []
         let required = (row["confirmationsRequired"] as? Int) ?? threshold
         return .success(Ready(
-            seg: seg, chainId: rail.chainId, safeAddress: safeAddress,
+            seg: rail.seg, chainId: rail.chainId, safeAddress: safeAddress,
             safeTxHash: local, tx: tx,
             // The chain opens the clear-signing registry for a call the
             // reader cannot name (prd §834). No token read here: this file
@@ -410,8 +558,9 @@ enum SafeSigner {
             reading: SafeCalldata.read(data: tx.data, to: tx.to, value: tx.value, safe: safeAddress,
                                        chainId: rail.chainId, style: .casberi()),
             have: confirmations.count, required: required,
-            standing: Standing(safeAddress: safeAddress, seg: seg,
-                               ownerCount: owners.count, threshold: threshold)))
+            standing: Standing(safeAddress: safeAddress, seg: rail.seg,
+                               ownerCount: owners.count, threshold: threshold),
+            signer: signer))
     }
 
     private static func call(_ rail: Rail, to: String, data: String) async -> String? {
@@ -433,10 +582,14 @@ enum SafeSigner {
         /// Signed, but the service would not take it. The 65 bytes are handed
         /// back so tier 0 (paste / share) still works — a signature this
         /// phone already made must never be thrown away because a third
-        /// party was down.
+        /// party was down. The paired-app door (prd §913) returns this on
+        /// purpose with `status: 0`: the app that asked delivers.
         case signedNotPosted(signature: String, status: Int)
         case refused(Refusal)
         case keyRefused(SignerKey.Failure)
+        /// The Enclave key would not sign — a cancelled prompt, a destroyed
+        /// item (prd §913). Its own case, because its sentences differ.
+        case enclaveRefused(SafeEnclaveKey.Failure)
     }
 
     /// Re-checks EVERY refusal, signs, and posts. The re-check is not
@@ -448,30 +601,72 @@ enum SafeSigner {
         case .success(let value): ready = value
         case .failure(let refusal): return .refused(refusal)
         }
+        return await signVerified(ready, post: true)
+    }
+
+    /// The paired-app door (prd §913): the same re-check over the fields in
+    /// hand, then the signature handed BACK rather than posted — the app
+    /// that asked is the one delivering it to Safe's service, and a second
+    /// post of the same signature is a 422 nobody reads.
+    static func sign(chainId: Int, safe: String, tx: SafeTransaction,
+                     requesterHash: [UInt8]) async -> Outcome {
+        let ready: Ready
+        switch await prepare(chainId: chainId, safe: safe, tx: tx, requesterHash: requesterHash) {
+        case .success(let value): ready = value
+        case .failure(let refusal): return .refused(refusal)
+        }
+        return await signVerified(ready, post: false)
+    }
+
+    /// The signature itself, by whichever key the Safe lists. Every refusal
+    /// has already passed on THIS `Ready`; nothing here decides anything.
+    private static func signVerified(_ ready: Ready, post: Bool) async -> Outcome {
         guard let hash = SafeABI.hexBytes(ready.safeTxHash), hash.count == 32 else {
             return .refused(.proposalUnreadable)
         }
-        let signature: [UInt8]
         let reason = String(localized: "Sign this Safe transaction")
-        do {
-            // OFF THE MAIN ACTOR, and not as a nicety. `SecItemCopyMatching`
-            // against a biometry-gated item BLOCKS until the person answers
-            // the Face ID prompt — on the main thread that is the whole UI
-            // frozen behind a system sheet, for as long as they take to look
-            // at it. This enum is `@MainActor` (it touches the model context
-            // and the screen state), so the one blocking call in the flow is
-            // the one thing that has to leave it.
-            signature = try await Task.detached(priority: .userInitiated) {
-                try SignerKey.sign(hash: hash, reason: reason)
-            }.value
-        } catch let failure as SignerKey.Failure {
-            return .keyRefused(failure)
-        } catch {
-            return .keyRefused(.curve)
+        let signature: [UInt8]
+        switch ready.signer.kind {
+        case .k1:
+            do {
+                // OFF THE MAIN ACTOR, and not as a nicety. `SecItemCopyMatching`
+                // against a biometry-gated item BLOCKS until the person answers
+                // the Face ID prompt — on the main thread that is the whole UI
+                // frozen behind a system sheet, for as long as they take to look
+                // at it. This enum is `@MainActor` (it touches the model context
+                // and the screen state), so the one blocking call in the flow is
+                // the one thing that has to leave it.
+                signature = try await Task.detached(priority: .userInitiated) {
+                    try SignerKey.sign(hash: hash, reason: reason)
+                }.value
+            } catch let failure as SignerKey.Failure {
+                return .keyRefused(failure)
+            } catch {
+                return .keyRefused(.curve)
+            }
+        case .enclave:
+            // The Enclave assertion, verified by Safe's factory before it
+            // leaves (prd §913), wrapped as the contract signature the Safe's
+            // own `checkNSignatures` reads (`v = 0`).
+            switch await SafeEnclaveSigner.assert(challenge: hash, chainId: ready.chainId, reason: reason) {
+            case .success(let bytes):
+                guard let wrapped = SafeWebAuthn.contractSignature(signer: ready.signer.address, data: bytes)
+                else { return .refused(.proposalUnreadable) }
+                signature = wrapped
+            case .failure(.noKey):
+                return .enclaveRefused(.noKey)
+            case .failure(.keyRefused(let failure)):
+                return .enclaveRefused(failure)
+            case .failure(.chainUnreadable):
+                return .refused(.chainUnreadable)
+            case .failure(.notAccepted), .failure(.encoding):
+                return .refused(.signatureNotAccepted)
+            }
         }
         let hexSignature = SafeABI.hex(signature)
-        let status = await post(seg: ready.seg, safeTxHash: ready.safeTxHash,
-                                signature: hexSignature)
+        guard post else { return .signedNotPosted(signature: hexSignature, status: 0) }
+        let status = await self.post(seg: ready.seg, safeTxHash: ready.safeTxHash,
+                                     signature: hexSignature)
         // 201 Created is the documented success; 200 is accepted too rather
         // than treated as a failure, since a signature that really did land
         // must not be reported as lost.

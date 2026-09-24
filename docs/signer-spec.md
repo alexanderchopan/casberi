@@ -331,3 +331,32 @@ signature; let `threshold == 1` through.
   existing reads are measured, this write is not.
 - Safe deployments differ per chain; the cross-check in §5 makes that safe
   by construction rather than by a table we maintain.
+
+---
+
+## 12. The §913 doors (2026-09-24) — appended, the file stays as written
+
+**Ruling: prd §913.** Four things the key (and a Secure Enclave sibling) now
+signs or answers, each with its own preimage and its own rail; the constants
+are derived by `scripts/support/safe-signer-vectors.py` and pinned by
+`scripts/safe-signer-selftest.sh`, the shape §3 and §10 set.
+
+| Door | Preimage | Rail (the chain's own answer) | Write |
+|---|---|---|---|
+| A paired app (tier 2) | the requester's EIP-712 digest, reproduced by `EIP712.digest` | the shape's own rail below | none — the app delivers |
+| A Safe message | `keccak(0x1901 ‖ safe.domainSeparator ‖ keccak(SAFE_MSG_TYPEHASH ‖ keccak(innerHash)))` | `getMessageHash(bytes)` on the Safe | one POST to Safe's service (add a signature, or create the message with its first) |
+| A recovery approval | `keccak(0x1901 ‖ module.domainSeparator ‖ keccak(EXECUTE_RECOVERY_TYPEHASH ‖ wallet ‖ keccak(packed owners) ‖ threshold ‖ nonce))` | `getRecoveryHash` on the module, after `NAME()`, `VERSION()`, `isModuleEnabled`, `isGuardian`, `threshold`, `nonce` | none — clipboard or the app |
+| The Enclave owner | `sha256(authenticatorData ‖ sha256(clientDataJSON))` on P-256, wrapped as a Safe contract signature (`v = 0`) | `isValidSignatureForSigner` on `SafeWebAuthnSignerFactory` — the exact bytes, verified before they leave | as the K1 key's |
+
+**Refusals added (each a harness assertion):** a method not in
+`SafePeerRequest.allowedMethods`; typed data whose primary type is not one of
+the three; a session chain that disagrees with the domain; a SafeTx or
+SafeMessage under a named domain; a statement this app cannot NAME (only a
+sign-in whose address is the Safe, or a Snapshot vote cast from it); words that
+do not hash to the ask; a guardian threshold of 1; a stale recovery nonce; a
+module whose `NAME()` is not Candide's, or which the wallet never enabled; an
+Enclave assertion the factory does not accept.
+
+**Known unknowns (2026-09-24):** authored on Linux, uncompiled — see §913's
+grade. Safe{Wallet}'s required WalletConnect methods; the Client Gateway's
+message list and detail shapes; `PairingInteracting.pair(uri:)` at 2.3.0.

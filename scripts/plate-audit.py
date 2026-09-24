@@ -93,6 +93,8 @@ WELL_ALLOWED = {
     "VibenetAccountSheet.swift": (1, "the note entry field"),
     "AddressBookViews.swift": (3, "the name entry field, the compact copy button's face, and an action tile's face"),
     "ConnectWalletRow.swift": (1, "the pairing URI, a monospaced value with its copy button"),
+    "SafeScreen.swift": (2, "two entry fields: a pairing link, a pasted signing request (prd §913)"),
+    "SafeAskSheet.swift": (1, "the pasted statement, an entry field (prd §913)"),
     "ThingContent.swift": (1, "a monospaced text block"),
     "NoteSheetViews.swift": (1, "a monospaced code block"),
 }

@@ -3739,6 +3739,113 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-safePeerProbe "<typed data JSON>"` — a paired app's request, read
+        // the way the peer reads it (prd §913): which of the three shapes it
+        // is, or which refusal; then the shape's own signer runs every
+        // refusal short of the tap. SIGNS NOTHING (`-signerProbe`'s rule).
+        // Pass a SafeTx, a SafeMessage or an ExecuteRecovery envelope; the
+        // chain id comes from the domain, as a pasted request's does.
+        Hook(key: "safePeerProbe") { spec, _ in
+            Task { @MainActor in
+                guard let typed = EIP712.parse(spec) else {
+                    NSLog("safePeer| unreadable typed data"); return
+                }
+                NSLog("safePeer| primaryType=%@ chain=%@ contract=%@ digest=%@",
+                      typed.primaryType, typed.chainId.map(String.init) ?? "-",
+                      typed.verifyingContract ?? "-",
+                      EIP712.digest(typed).map(SafeABI.hex) ?? "nil")
+                switch SafePeerRequest.ask(from: typed, chainId: nil) {
+                case .failure(let refusal):
+                    NSLog("safePeer| REFUSED %@", String(describing: refusal))
+                case .success(.safeTx(let chainId, let safe, let tx, let hash)):
+                    NSLog("safePeer| safeTx chain=%d safe=%@ nonce=%d", chainId, safe, tx.nonce)
+                    switch await SafeSigner.prepare(chainId: chainId, safe: safe, tx: tx, requesterHash: hash) {
+                    case .success(let ready):
+                        NSLog("safePeer| READY signer=%@ %@ have=%d/%d reading=%@",
+                              String(describing: ready.signer.kind), ready.signer.address,
+                              ready.have, ready.required, String(describing: ready.reading))
+                    case .failure(let refusal):
+                        NSLog("safePeer| REFUSED %@", String(describing: refusal))
+                    }
+                case .success(.safeMessage(let chainId, let safe, let inner, let hash)):
+                    NSLog("safePeer| safeMessage chain=%d safe=%@ inner=%@", chainId, safe, SafeABI.hex(inner))
+                    switch await SafeStatementSigner.prepare(chainId: chainId, safe: safe, innerHash: inner,
+                                                             requesterHash: hash, pasted: nil) {
+                    case .success(let ready):
+                        NSLog("safePeer| READY statement=%@ known=%@ have=%d/%d",
+                              String(describing: ready.statement), ready.knownToService ? "yes" : "no",
+                              ready.have, ready.required)
+                    case .failure(let refusal):
+                        NSLog("safePeer| REFUSED %@", String(describing: refusal))
+                    }
+                case .success(.recovery(let request, let hash)):
+                    NSLog("safePeer| recovery chain=%d module=%@ wallet=%@ owners=%d threshold=%d nonce=%d",
+                          request.chainId, request.module, request.wallet, request.newOwners.count,
+                          request.newThreshold, request.nonce)
+                    switch await SafeRecoverySigner.prepare(request, requesterHash: hash) {
+                    case .success(let ready):
+                        NSLog("safePeer| READY guardian=%@ guardians=%d/%d owners now=%d",
+                              ready.signer.address, ready.guardianThreshold, ready.guardianCount,
+                              ready.currentOwners.count)
+                    case .failure(let refusal):
+                        NSLog("safePeer| REFUSED %@", String(describing: refusal))
+                    }
+                }
+            }
+        },
+        // `-safeStatementProbe "<safe>|<text or typed data JSON>"` — what a
+        // statement READS as (prd §913): its inner hash, and whether Casberi
+        // names it. Pure; no network.
+        Hook(key: "safeStatementProbe") { spec, _ in
+            guard let bar = spec.firstIndex(of: "|") else { NSLog("safeStatement| need <safe>|<message>"); return }
+            let safe = String(spec[spec.startIndex..<bar])
+            let body = String(spec[spec.index(after: bar)...])
+            var message: Any = body
+            if let data = body.data(using: .utf8),
+               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                message = object
+            }
+            guard let reading = SafeStatement.read(message: message, safe: safe) else {
+                NSLog("safeStatement| unreadable envelope"); return
+            }
+            NSLog("safeStatement| inner=%@ named=%@ %@", SafeABI.hex(reading.hash),
+                  reading.statement.isNamed ? "yes" : "no", String(describing: reading.statement))
+            if let outer = SafeMessageEncoder.safeMessageHash(chainId: 1, safe: safe, message: reading.hash) {
+                NSLog("safeStatement| safeMessageHash(chain 1)=%@", SafeABI.hex(outer))
+            }
+        },
+        // `-safeEnclaveProbe YES` — the vault-chip key's presence, public
+        // half, cached signer address, and whether each rail chain has Safe's
+        // passkey factory. Always `enclave=no` on a simulator.
+        Hook(key: "safeEnclaveProbe") { _, _ in
+            Task { @MainActor in
+                NSLog("safeEnclave| enclave=%@ key=%@ publicKey=%@ address=%@",
+                      SafeEnclaveKey.enclaveAvailable ? "yes" : "no",
+                      String(describing: SafeEnclaveKey.presence()),
+                      SafeEnclaveKey.publicKey().map(Keccak256.hexString) ?? "-",
+                      SafeEnclaveSigner.anyCachedAddress() ?? "-")
+                for chainId in SafeSigner.chainIDs {
+                    let route = await SafeEnclaveSigner.routeAvailable(chainId: chainId)
+                    NSLog("safeEnclave| chain=%d factory=%@", chainId,
+                          route.map { $0 ? "yes" : "no" } ?? "unreadable")
+                }
+            }
+        },
+        // `-safeGuardProbe "<chainId>|<module>|<wallet>"` — what a recovery
+        // module says about this phone for one wallet.
+        Hook(key: "safeGuardProbe") { spec, _ in
+            let bits = spec.split(separator: "|").map(String.init)
+            guard bits.count == 3, let chainId = Int(bits[0]) else {
+                NSLog("safeGuard| need <chainId>|<module>|<wallet>"); return
+            }
+            Task { @MainActor in
+                guard let standing = await SafeRecoverySigner.standing(chainId: chainId, module: bits[1], wallet: bits[2])
+                else { NSLog("safeGuard| unreadable"); return }
+                NSLog("safeGuard| guardian=%@ threshold=%d count=%d lone=%@",
+                      standing.isGuardian ? "yes" : "no", standing.threshold, standing.count,
+                      standing.isLoneGuardian ? "YES" : "no")
+            }
+        },
         // `-safeProbe YES` NSLogs which watched wallets are detected Safes
         // per chain and their pending queue counts (or the honest
         // unreachable/none). Pairs with `-walletAddress` (a Safe address, to

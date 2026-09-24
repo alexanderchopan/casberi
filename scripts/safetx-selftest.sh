@@ -330,6 +330,9 @@ open(out, "w").write("\n".join([
     "import Foundation\n",
     "enum SafeSigner {",
     grab("struct Standing: Equatable"),
+    # `Ready` names which of this phone's two keys the Safe lists (prd §913),
+    # so the identity type rides along or the extraction stops compiling.
+    grab("struct Identity: Equatable"),
     grab("struct Ready: Equatable"),
     grab("static func amountField"),
     grab("static func addressField"),
@@ -886,7 +889,8 @@ print("…and the transaction that repairs it")
 func ready(_ reading: SafeCalldata, _ owners: Int, _ threshold: Int) -> SafeSigner.Ready {
     SafeSigner.Ready(seg: "eth", chainId: 1, safeAddress: SAFE,
                      safeTxHash: "0x00", tx: plainETH, reading: reading,
-                     have: 1, required: 2, standing: standing(owners, threshold))
+                     have: 1, required: 2, standing: standing(owners, threshold),
+                     signer: SafeSigner.Identity(kind: .k1, address: TO))
 }
 // Adding an owner WITHOUT raising the threshold is the fix; adding one AND
 // raising the threshold to match leaves the Safe exactly as stuck as before,

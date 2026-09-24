@@ -1,5 +1,7 @@
 import SwiftUI
 import SwiftData
+// `RPCID`, for the pasted ask that rides the paired ask's shape (prd §913).
+import WalletConnectSign
 
 /// Safe, connected — the pending signature queue for any Safe you watch
 /// directly, or any Safe that watches one of your own wallets as a signer
@@ -46,6 +48,27 @@ struct SafeScreen: View {
     /// and decoded the store once per roster row per render.
     @State private var queueReading: (outstanding: [String: Int], pending: Int) = ([:], 0)
 
+    // MARK: §913 — the vault-chip key, the paired apps, the guarded wallets
+
+    /// The Secure Enclave owner (prd §913): whether the key is there, the
+    /// proxy address the factory answered with, and whether this chain can
+    /// take the route at all. Read on appear, never in the body (§628).
+    @State private var enclavePresence: SafeEnclaveKey.Presence = SafeEnclaveKey.presence()
+    @State private var enclaveAddress: String? = SafeEnclaveSigner.anyCachedAddress()
+    /// nil until the chain answers; false is a chain with no factory.
+    @State private var enclaveRoute: Bool?
+    @State private var confirmDeleteEnclave = false
+    /// The `wc:` link a person pastes to pair a Safe app to this phone.
+    @State private var pairingLink = ""
+    @State private var confirmDisconnect: SafePeer.PeerSession?
+    /// A pasted typed-data request (tier 0), read into the same ask sheet a
+    /// paired app's request opens.
+    @State private var pastedRequest = ""
+    @State private var pastedAsk: SafePeer.PendingAsk?
+    /// What this phone guards, read live off each module on appear.
+    @State private var guards: [SafeRecoverySigner.GuardStanding] = []
+    @State private var confirmForgetGuard: GuardianLedger.Entry?
+
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }
     private var safeCount: Int { SafeBridge.detectedCount() }
@@ -76,6 +99,10 @@ struct SafeScreen: View {
             act: {
                 connectBlock
                 signerBlock
+                enclaveBlock
+                pairBlock
+                guardsBlock
+                requestBlock
                 // THE TWO LIMITS THAT MAKE THE SIGNING CLAIM SAFE TO PRINT
                 // (prd §641b, caught by `safetx-selftest.sh` after §641).
                 // They lived in the offer's `features` list, which the product
@@ -100,9 +127,56 @@ struct SafeScreen: View {
             signerAddress = SignerKey.address()
             signerPresence = SignerKey.presence()
             readQueue()
-            if SignerKey.exists {
+            if SafeSigner.hasAnyKey {
                 Task { signerStanding = await SafeSigner.standing() }
+                SafePeer.startIfNeeded { modelContext }
             }
+            enclavePresence = SafeEnclaveKey.presence()
+            enclaveAddress = SafeEnclaveSigner.anyCachedAddress()
+            Task { await readEnclave() }
+            Task { await readGuards() }
+        }
+        .sheet(item: $pastedAsk) { ask in
+            SafeAskSheet(ask: ask, paired: false)
+                .environment(chrome)
+        }
+        .confirmationDialog("Delete the vault-chip key?",
+                            isPresented: $confirmDeleteEnclave, titleVisibility: .visible) {
+            Button("Delete the key", role: .destructive) {
+                SafeEnclaveKey.delete()
+                enclavePresence = .none
+                enclaveAddress = nil
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The key lives only in this phone's Secure Enclave. Have another owner swap its signer address out of the Safe first, or the Safe is one signature short. No undo.")
+        }
+        .confirmationDialog("Disconnect this app?",
+                            isPresented: Binding(get: { confirmDisconnect != nil },
+                                                 set: { if !$0 { confirmDisconnect = nil } }),
+                            titleVisibility: .visible) {
+            Button("Disconnect", role: .destructive) {
+                if let session = confirmDisconnect {
+                    Task { await SafePeer.disconnect(topic: session.topic) }
+                }
+                confirmDisconnect = nil
+            }
+            Button("Cancel", role: .cancel) { confirmDisconnect = nil }
+        } message: {
+            Text("It can pair again with a new link. Nothing it asked for is affected.")
+        }
+        .confirmationDialog("Stop guarding this wallet?",
+                            isPresented: Binding(get: { confirmForgetGuard != nil },
+                                                 set: { if !$0 { confirmForgetGuard = nil } }),
+                            titleVisibility: .visible) {
+            Button("Forget it here", role: .destructive) {
+                if let entry = confirmForgetGuard { GuardianLedger.forget(entry) }
+                confirmForgetGuard = nil
+                Task { await readGuards() }
+            }
+            Button("Cancel", role: .cancel) { confirmForgetGuard = nil }
+        } message: {
+            Text("This forgets the wallet on this phone. The module still lists this phone as a guardian until the wallet's owner revokes it.")
         }
         // The one delete in this app whose undo is somebody ELSE's on-chain
         // transaction, so the confirm says so rather than counting rows.
@@ -328,6 +402,247 @@ struct SafeScreen: View {
             signerAddress = SignerKey.address()
         } catch {
             signerError = String(localized: "Couldn't make the key on this device.")
+        }
+    }
+
+    // MARK: - The vault-chip key (prd §913)
+
+    /// The Secure Enclave owner. Its bytes never exist in this process,
+    /// which is the one promise the §425 key cannot make; the cost is that
+    /// the Safe takes it only through a signer contract the desktop deploys.
+    ///
+    /// **Offered only where it can be checked**: the door draws when the
+    /// chip exists (never on a simulator) and the chain has answered that
+    /// Safe's passkey factory is there. A route nothing can verify is not
+    /// offered, because the first signature would be the test.
+    @ViewBuilder private var enclaveBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if enclavePresence == .destroyed {
+                DSProse.text("This phone's vault-chip key is gone — Face ID was re-enrolled, which erases it by design. Have another owner swap its signer address out of the Safe.")
+                    .dsText(.subhead12).foregroundStyle(DS.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+                DSSlabDoor(title: String(localized: "Make a new vault-chip key"), systemImage: "cpu") {
+                    SafeEnclaveKey.delete()
+                    enclavePresence = .none
+                    enclaveAddress = nil
+                    makeEnclaveKey()
+                }
+            } else if enclavePresence == .present {
+                HStack(spacing: DS.Space.s3) {
+                    if let address = enclaveAddress {
+                        WalletFace(address: address, size: DS.Face.row, circular: true)
+                    } else {
+                        Image(systemName: "cpu").dsGlyph(.body).foregroundStyle(DS.textSecondary)
+                            .frame(width: DS.Face.row, height: DS.Face.row)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("This phone · vault chip")
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        Text(verbatim: enclaveAddress.map(WalletStore.shortAddress)
+                             ?? String(localized: "reading its signer address…"))
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                if let address = enclaveAddress {
+                    DSSlabDoor(title: String(localized: "Copy signer address"), systemImage: "doc.on.doc") {
+                        DSPasteboard.copy(address)
+                        chrome.flash(String(localized: "Address copied"))
+                    }
+                    Text("From your other wallet: run createSigner on Safe's passkey factory for this key, then add this address as an owner — or swap it in for the plain key.")
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Button { confirmDeleteEnclave = true } label: {
+                    Text("Delete the vault-chip key")
+                        .dsText(.body17)
+                        .foregroundStyle(DS.destructive)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            } else if SafeEnclaveKey.enclaveAvailable, enclaveRoute == true {
+                DSSlabDoor(title: String(localized: "Make a vault-chip key"), systemImage: "cpu") {
+                    makeEnclaveKey()
+                }
+                Text("A P-256 key born in the Secure Enclave. Its bytes never exist in the app, so there is nothing to export — the Safe takes it through a signer contract your other wallet deploys once.")
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func makeEnclaveKey() {
+        signerError = nil
+        do {
+            _ = try SafeEnclaveKey.create()
+            enclavePresence = .present
+            chrome.flash(String(localized: "Vault-chip key made — reading its address"))
+            Task { await readEnclave() }
+        } catch SafeEnclaveKey.Failure.noBiometry {
+            signerError = String(localized: "This device has no Face ID or Touch ID set up. The key is only worth having behind one, so Casberi won't make it.")
+        } catch SafeEnclaveKey.Failure.alreadyExists {
+            enclavePresence = .present
+        } catch {
+            signerError = String(localized: "Couldn't make the key in this device's Secure Enclave.")
+        }
+    }
+
+    /// The factory's answer on mainnet: whether the route exists there, and
+    /// the proxy address once a key exists. Every rail chain shares the
+    /// address; mainnet is asked because it is the chain the factory reached
+    /// first and the one most Safes live on.
+    private func readEnclave() async {
+        enclaveRoute = await SafeEnclaveSigner.routeAvailable(chainId: 1)
+        guard SafeEnclaveKey.exists else { return }
+        if let address = await SafeEnclaveSigner.signerAddress(chainId: 1) {
+            enclaveAddress = address
+            _ = AddressBook.shared.setName(String(localized: "This phone (vault chip)"), for: address,
+                                           provenance: "Casberi · signing key", kind: .key)
+            if SafeSigner.hasAnyKey { signerStanding = await SafeSigner.standing() }
+        }
+    }
+
+    // MARK: - Paired apps (prd §913)
+
+    /// The Safe web app, paired to this phone the way it pairs to a hardware
+    /// wallet. A pasted `wc:` link in, one method offered out.
+    @ViewBuilder private var pairBlock: some View {
+        if SafeSigner.hasAnyKey {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                ForEach(SafePeer.state.sessions) { session in
+                    DSPushRow(title: Text(verbatim: session.name),
+                              subtitle: Text(verbatim: String(localized: "paired · until \(session.expires.formatted(.relative(presentation: .named)))")),
+                              fact: Text("Disconnect"), factTone: DS.destructive, opens: false) {
+                        confirmDisconnect = session
+                    }
+                }
+                TextField(String(localized: "Paste a wc: pairing link"), text: $pairingLink, axis: .vertical)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .tint(DS.tint)
+                    .keyboardType(.asciiCapable)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .lineLimit(1...3)
+                    .padding(.horizontal, DS.Space.s3)
+                    .frame(minHeight: 44)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .dsWell(cornerRadius: DS.Radius.control, recessed: true)
+                DSSlabDoor(title: SafePeer.state.pairing ? String(localized: "Pairing…") : String(localized: "Pair a Safe app"),
+                           systemImage: "link") {
+                    let link = pairingLink
+                    pairingLink = ""
+                    Task {
+                        switch await SafePeer.pair(uri: link, context: { modelContext }) {
+                        case .success:
+                            chrome.flash(String(localized: "Paired — the app can ask this phone to sign"), tone: .success)
+                        case .failure(let error):
+                            chrome.flash(Self.pairSentence(error), tone: .failure)
+                        }
+                    }
+                }
+                Text("In the Safe app, connect a wallet by WalletConnect and copy its link here. A paired app can ask this phone to sign a Safe transaction, statement or recovery, and nothing else — every other request is refused and lands in your feed.")
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    static func pairSentence(_ error: SafePeer.PairError) -> String {
+        switch error {
+        case .unavailable: return String(localized: "Pairing isn't available in this build.")
+        case .noKey: return String(localized: "Make this phone a signer first.")
+        case .notAPairingLink: return String(localized: "That isn't a WalletConnect pairing link.")
+        case .relayRefused: return String(localized: "The relay didn't take the link — it may have expired.")
+        }
+    }
+
+    // MARK: - Guarded wallets (prd §913)
+
+    /// The wallets this phone has approved a recovery for, with what the
+    /// module says about it now. A lone guardian is said in red: not a Safe
+    /// that can lock, a phone that could take.
+    @ViewBuilder private var guardsBlock: some View {
+        if !guards.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                ForEach(guards, id: \.wallet) { guardStanding in
+                    DSPushRow(title: Text(verbatim: WalletIngest.knownLabel(for: guardStanding.wallet)
+                                          ?? WalletStore.shortAddress(guardStanding.wallet)),
+                              subtitle: Text(verbatim: guardLine(guardStanding)),
+                              subtitleTone: guardStanding.isLoneGuardian ? DS.destructive : DS.textTertiary,
+                              fact: Text("Forget"), factTone: DS.textTertiary, opens: false) {
+                        confirmForgetGuard = GuardianLedger.Entry(chainId: guardStanding.chainId,
+                                                                  module: guardStanding.module,
+                                                                  wallet: guardStanding.wallet)
+                    }
+                }
+            }
+        }
+    }
+
+    private func guardLine(_ g: SafeRecoverySigner.GuardStanding) -> String {
+        guard g.isGuardian else { return String(localized: "no longer lists this phone as a guardian") }
+        if g.isLoneGuardian {
+            return String(localized: "this phone is its only guardian — it could replace the owners alone, so Casberi won't sign")
+        }
+        return String(localized: "guards it with \(g.count - 1) others · \(g.threshold) needed")
+    }
+
+    private func readGuards() async {
+        var out: [SafeRecoverySigner.GuardStanding] = []
+        for entry in GuardianLedger.all() {
+            if let standing = await SafeRecoverySigner.standing(chainId: entry.chainId,
+                                                                module: entry.module, wallet: entry.wallet) {
+                out.append(standing)
+            }
+        }
+        guards = out
+    }
+
+    // MARK: - A pasted request (prd §913, tier 0)
+
+    /// The paste door for what a paired app would send: the typed data of a
+    /// Safe transaction, a Safe message or a recovery, read into the same
+    /// sheet. The answer goes to the clipboard.
+    @ViewBuilder private var requestBlock: some View {
+        if SafeSigner.hasAnyKey {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                TextField(String(localized: "Paste a signing request (typed data)"), text: $pastedRequest, axis: .vertical)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .tint(DS.tint)
+                    .keyboardType(.asciiCapable)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .lineLimit(1...4)
+                    .padding(.horizontal, DS.Space.s3)
+                    .frame(minHeight: 44)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .dsWell(cornerRadius: DS.Radius.control, recessed: true)
+                DSSlabDoor(title: String(localized: "Read the request"), systemImage: "text.magnifyingglass") {
+                    readPastedRequest()
+                }
+            }
+        }
+    }
+
+    private func readPastedRequest() {
+        let text = pastedRequest.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        guard let typed = EIP712.parse(text) else {
+            chrome.flash(String(localized: "That isn't typed data Casberi can read."), tone: .failure)
+            return
+        }
+        switch SafePeerRequest.ask(from: typed, chainId: nil) {
+        case .success(let ask):
+            let address = signerAddress ?? enclaveAddress ?? ""
+            pastedAsk = SafePeer.PendingAsk(topic: "pasted", requestId: .left(UUID().uuidString),
+                                            app: String(localized: "A pasted request"),
+                                            address: address, ask: ask)
+            pastedRequest = ""
+        case .failure(let refusal):
+            chrome.flash(SafePeer.sentence(for: refusal, method: "paste"), tone: .failure)
         }
     }
 

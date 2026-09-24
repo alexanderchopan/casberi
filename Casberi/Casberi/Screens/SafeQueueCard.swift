@@ -323,8 +323,30 @@ struct SafeSignatureDisc: View {
 /// on-chain change, "not an owner" needs the address pasted into their other
 /// wallet, and a hash mismatch needs them to not sign anywhere.
 struct SafeSignBlock: View {
+    /// Where the transaction came from (prd §913). A landed row carries its
+    /// ref and the service is asked by hash; a request in hand — from a
+    /// paired app, or pasted — carries its fields, and the requester's own
+    /// digest stands where the service's hash would.
+    enum Source: Equatable {
+        case landed(ref: String)
+        case inHand(chainId: Int, safe: String, tx: SafeTransaction, requesterHash: [UInt8])
+    }
+    let source: Source
+    /// For an in-hand request: who takes the 65 bytes. nil means the
+    /// clipboard (tier 0); a paired app's sheet delivers them itself.
+    var onSigned: ((String) -> Void)? = nil
+
     /// `wallet:safe:<seg>:<safeTxHash>` — the thing's own ref.
-    let sourceRef: String
+    init(sourceRef: String) {
+        self.source = .landed(ref: sourceRef)
+    }
+
+    init(inHand chainId: Int, safe: String, tx: SafeTransaction, requesterHash: [UInt8],
+         onSigned: ((String) -> Void)?) {
+        self.source = .inHand(chainId: chainId, safe: safe, tx: tx, requesterHash: requesterHash)
+        self.onSigned = onSigned
+    }
+
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
 
@@ -344,9 +366,21 @@ struct SafeSignBlock: View {
     }
 
     private var parts: (seg: String, hash: String)? {
+        guard case .landed(let sourceRef) = source else { return nil }
         let bits = sourceRef.split(separator: ":", maxSplits: 3).map(String.init)
         guard bits.count == 4, bits[0] == "wallet", bits[1] == "safe" else { return nil }
         return (bits[2], bits[3])
+    }
+
+    /// The prepare for whichever source this is — one `Ready` either way.
+    private func prepare() async -> Result<SafeSigner.Ready, SafeSigner.Refusal>? {
+        switch source {
+        case .landed:
+            guard let parts else { return nil }
+            return await SafeSigner.prepare(seg: parts.seg, safeTxHash: parts.hash)
+        case .inHand(let chainId, let safe, let tx, let requesterHash):
+            return await SafeSigner.prepare(chainId: chainId, safe: safe, tx: tx, requesterHash: requesterHash)
+        }
     }
 
     var body: some View {
@@ -393,14 +427,15 @@ struct SafeSignBlock: View {
             }
         }
         .task(id: attempt) {
-            guard let parts else { return }
             // The key can be GONE rather than merely locked — `.biometryCurrentSet`
             // destroys the item when the enrolled set changes. Said here as well
             // as on the setup screen, because this is where somebody is standing
             // when they find out.
-            if SignerKey.presence() == .destroyed { phase = .keyDestroyed; return }
-            guard SignerKey.exists else { return }
-            switch await SafeSigner.prepare(seg: parts.seg, safeTxHash: parts.hash) {
+            if SignerKey.presence() == .destroyed || SafeEnclaveKey.presence() == .destroyed {
+                phase = .keyDestroyed; return
+            }
+            guard SafeSigner.hasAnyKey, let verdict = await prepare() else { return }
+            switch verdict {
             case .success(let ready): phase = .ready(ready)
             case .failure(let refusal): phase = .refused(refusal)
             }
@@ -659,34 +694,68 @@ struct SafeSignBlock: View {
                 return String(localized: "Safe paused reads right now, so Casberi couldn't check this transaction before signing.")
             }
             return String(localized: "Safe paused reads until \(until.formatted(date: .abbreviated, time: .shortened)), so Casberi couldn't check this transaction before signing.")
-        case .hashMismatch, .serviceHashMismatch:
+        case .hashMismatch, .serviceHashMismatch, .requesterHashMismatch:
             return String(localized: "The Safe's own hash for this transaction doesn't match what Casberi worked out. Don't sign this anywhere until you know why.")
+        case .signerNotDeployed:
+            return String(localized: "This Safe names this phone's vault-chip key, but its signer contract isn't deployed yet. Run createSigner on Safe's passkey factory from your other wallet first.")
+        case .signatureNotAccepted:
+            return String(localized: "Safe's passkey factory didn't accept the signature this phone made, so Casberi threw it away.")
         }
     }
 
     private func sign(_ ready: SafeSigner.Ready) async {
         signing = true
         defer { signing = false }
-        guard let parts else { return }
-        switch await SafeSigner.sign(seg: parts.seg, safeTxHash: parts.hash) {
+        let outcome: SafeSigner.Outcome
+        switch source {
+        case .landed:
+            guard let parts else { return }
+            outcome = await SafeSigner.sign(seg: parts.seg, safeTxHash: parts.hash)
+        case .inHand(let chainId, let safe, let tx, let requesterHash):
+            outcome = await SafeSigner.sign(chainId: chainId, safe: safe, tx: tx, requesterHash: requesterHash)
+        }
+        switch outcome {
         case .posted:
             phase = .done
             SafeSigner.land(context: modelContext, ready: ready, posted: true)
             chrome.flash(String(localized: "Signed"), tone: .success)
-        case .signedNotPosted(let signature, _):
+        case .signedNotPosted(let signature, let status):
+            phase = .done
+            if let onSigned {
+                // A paired app asked (prd §913): it delivers the bytes, and
+                // the row says the signature happened here.
+                SafeSigner.land(context: modelContext, ready: ready, posted: true)
+                onSigned(signature)
+                return
+            }
             // The signature EXISTS — a service outage must never throw away a
             // Face ID the person already gave, so it goes to the clipboard for
             // tier 0 (paste it into the Safe app) and lands as a thing.
-            phase = .done
-            SafeSigner.land(context: modelContext, ready: ready, posted: false)
+            SafeSigner.land(context: modelContext, ready: ready, posted: status != 0)
             DSPasteboard.copySensitive(signature)
-            chrome.flash(String(localized: "Signed, but Safe's service didn't take it — the signature is on your clipboard"),
-                         tone: .failure)
+            chrome.flash(status == 0
+                         ? String(localized: "Signed — the signature is on your clipboard")
+                         : String(localized: "Signed, but Safe's service didn't take it — the signature is on your clipboard"),
+                         tone: status == 0 ? .success : .failure)
         case .refused(let refusal):
             phase = .refused(refusal)
         case .keyRefused(let failure):
             phase = .refused(.noKey)
             chrome.flash(keySentence(failure), tone: .failure)
+        case .enclaveRefused(let failure):
+            phase = .refused(.noKey)
+            chrome.flash(enclaveSentence(failure), tone: .failure)
+        }
+    }
+
+    private func enclaveSentence(_ failure: SafeEnclaveKey.Failure) -> String {
+        switch failure {
+        case .signingRefused:
+            return String(localized: "Face ID didn't unlock the vault-chip key.")
+        case .noKey:
+            return String(localized: "This phone's vault-chip key is gone.")
+        default:
+            return String(localized: "Couldn't sign with the vault-chip key on this device.")
         }
     }
 
