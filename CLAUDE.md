@@ -87,24 +87,24 @@ deliberately does not check are in `docs/verify.md`.
 - **The wallet crown counts YOUR accounts, and Zerion answering does not end the read (prd §826).** Privy's app wallets are OUT of the total (toggle and model deleted, §723) — an app's money is stated in Privy's own room. `collectCandidates` is a UNION: Zerion serves the chains it maps, Alchemy is asked for the selected chains it does not, so a chain with no Zerion mapping is readable at all (**Robinhood was invisible and its picker row a dead control**; it is ON by default with a `seeded` row now, and the audit derives that rule for any unmapped selectable chain). The $1.99 dust floor rides `Candidate.trashFiltered` — a cent on Zerion's trash-filtered arm, $1.99 on Alchemy's — because $1.99 predates that filter by four days and was eating real small positions (§803j measured this and fixed one caller) → docs/hooks/wallet.md · prd §826
 - **One chain may not empty every wallet's balances, and a wallet we could not reach stands on its LAST READING, stamped (prd §825) — the room showed a Privy app wallet's stored figure and none of the person's own.** A chain filter is an optimisation: it is built from the caller's routed networks and a failed filtered read retries unfiltered (`ZerionAPI.holdings`/`.transactions`); an Alchemy body the endpoint REJECTS (a 4xx that is not a 429, never an outage) is re-asked one network at a time and the refusal is learned, persisted and re-tested weekly (`RefusedNetworks`, `-portfolioProbe`). `unprovenNetworks` is deleted — a hand-kept list could only name the chain we already knew about → docs/hooks/wallet.md · prd §825
 - **The address book's delight pass** → docs/hooks/wallet.md · prd §441
-- **Address-book shape self-test (scripts/address-book-selftest.sh, 2026-08-22)** → docs/verify.md · prd §440
-- **SwiftData liveness audit (scripts/swiftdata-liveness-audit.py, 2026-07-25)** → docs/verify.md
+- **Address-book shape self-test (scripts/address-book-selftest.sh)** → docs/verify.md · prd §440
+- **SwiftData liveness audit (scripts/swiftdata-liveness-audit.py)** → docs/verify.md
 - **Info.plist strings audit (scripts/infoplist-strings-audit.py, ITMS-90738)** → docs/verify.md
 - **Keychain policy audit (scripts/keychain-audit.py)** → docs/verify.md · prd §277
-- **Receipts coverage audit (scripts/receipts-coverage-audit.py, 2026-08-02)** → docs/verify.md · prd §277
-- **CloudKit schema audit (scripts/cloudkit-schema-audit.py, 2026-08-02)** → docs/verify.md
-- **Redaction coverage audit (scripts/redaction-coverage-audit.py, 2026-08-19)** → docs/verify.md · prd §277
-- **Ref-shape audit (scripts/ref-shape-audit.py, 2026-08-19)** → docs/verify.md
-- **Delete-guard audit (scripts/delete-guard-audit.py, 2026-08-19)** → docs/verify.md
-- **Clear-signing self-test (scripts/clearsign-selftest.sh, 2026-09-19) — the registry's OWN test vectors through `ClearSign` (528/530, one reasoned allowance), plus hostile calldata, `mustMatch`, a shared selector and the Safe reader's priority** → docs/verify.md · prd §834
-- **Wallet-total audit (scripts/wallet-total-audit.py, 2026-09-18, was `chain-filter-audit.py`) — what the wallet crown's number is made of and how it fails: no app-wallet money in it, no real position dropped as dust, no chain able to empty it, an Alchemy-only chain on by default and seeded, and an unreachable pass standing on its last reading with a date on it** → docs/verify.md · prd §825 · §826
-- **Card-spend audit (scripts/card-spend-audit.py, 2026-09-20) — the three onchain-card seats, and four failures that compile and look right: a mixed-case hex lookup key (it can never match a lowercased log address, so the seat reads as "no card" — the healthy answer for almost every wallet), a `priceValue` written outside its currency unwrap, a cursor advanced before its save, and a bridge nothing sweeps or unwatch never clears** → docs/verify.md · prd §857
-- **Demo-marking audit (scripts/demo-marking-audit.py, 2026-09-20) — the demo is said on the cover (falling letter tiles) and at the head of the All feed, and the capsule marks every other screen: one way out, the two markings never in one frame (driven by the VIEWPORT, never a `List`'s recycling), the cover's word read from the catalog so it translates, and `-hideDemoBanner` reaching BOTH markings** → docs/verify.md · prd §864
-- **Dead-closure audit (scripts/dead-closure-audit.py, 2026-09-10) — a control calling a closure property nothing ever supplies** → docs/verify.md · prd §669
-- **Defaults-lock audit (scripts/defaults-lock-audit.py, 2026-09-14) — a lock held across a `UserDefaults` write deadlocks with every view body (build 570)** → docs/verify.md · prd §721
-- **ShareLink style audit (scripts/sharelink-style-audit.py, 2026-09-11) — an unstyled share control in a `List` row becomes the row's action; give it `.buttonStyle(.plain)`** → docs/verify.md · prd §693
-- **Day-divider audit (scripts/day-divider-audit.py, 2026-09-15) — the day header wears `DS.brandInk` (the mark's hue, one notch softer, prd §742); a group named by something other than time passes `dated: false` and keeps the primary ramp** → docs/verify.md · prd §740
-- **Design-template audit (scripts/ds-template-audit.py, 2026-09-13) — reach for `DSSpinner`, `dsReadSheet`, `DSPushRow`/`DSChevron`/`DSMoreLink`, `DSToggleRow`, `DSEmptyState`, `DSCopyRow` and `Chip` before drawing one by hand** → prd §715
+- **Receipts coverage audit (scripts/receipts-coverage-audit.py)** → docs/verify.md · prd §277
+- **CloudKit schema audit (scripts/cloudkit-schema-audit.py)** → docs/verify.md
+- **Redaction coverage audit (scripts/redaction-coverage-audit.py)** → docs/verify.md · prd §277
+- **Ref-shape audit (scripts/ref-shape-audit.py)** → docs/verify.md
+- **Delete-guard audit (scripts/delete-guard-audit.py)** → docs/verify.md
+- **Clear-signing self-test (scripts/clearsign-selftest.sh) — the registry's OWN test vectors through `ClearSign` (528/530, one reasoned allowance), plus hostile calldata, `mustMatch`, a shared selector and the Safe reader's priority** → docs/verify.md · prd §834
+- **Wallet-total audit (scripts/wallet-total-audit.py, was `chain-filter-audit.py`) — what the wallet crown's number is made of and how it fails: no app-wallet money in it, no real position dropped as dust, no chain able to empty it, an Alchemy-only chain on by default and seeded, and an unreachable pass standing on its last reading with a date on it** → docs/verify.md · prd §825 · §826
+- **Card-spend audit (scripts/card-spend-audit.py) — the three onchain-card seats, and four failures that compile and look right: a mixed-case hex lookup key (it can never match a lowercased log address, so the seat reads as "no card" — the healthy answer for almost every wallet), a `priceValue` written outside its currency unwrap, a cursor advanced before its save, and a bridge nothing sweeps or unwatch never clears** → docs/verify.md · prd §857
+- **Demo-marking audit (scripts/demo-marking-audit.py) — the demo is said on the cover (falling letter tiles) and at the head of the All feed, and the capsule marks every other screen: one way out, the two markings never in one frame (driven by the VIEWPORT, never a `List`'s recycling), the cover's word read from the catalog so it translates, and `-hideDemoBanner` reaching BOTH markings** → docs/verify.md · prd §864
+- **Dead-closure audit (scripts/dead-closure-audit.py) — a control calling a closure property nothing ever supplies** → docs/verify.md · prd §669
+- **Defaults-lock audit (scripts/defaults-lock-audit.py) — a lock held across a `UserDefaults` write deadlocks with every view body (build 570)** → docs/verify.md · prd §721
+- **ShareLink style audit (scripts/sharelink-style-audit.py) — an unstyled share control in a `List` row becomes the row's action; give it `.buttonStyle(.plain)`** → docs/verify.md · prd §693
+- **Day-divider audit (scripts/day-divider-audit.py) — the day header wears `DS.brandInk` (the mark's hue, one notch softer, prd §742); a group named by something other than time passes `dated: false` and keeps the primary ramp** → docs/verify.md · prd §740
+- **Design-template audit (scripts/ds-template-audit.py) — reach for `DSSpinner`, `dsReadSheet`, `DSPushRow`/`DSChevron`/`DSMoreLink`, `DSToggleRow`, `DSEmptyState`, `DSCopyRow` and `Chip` before drawing one by hand** → prd §715
 - **Secret-scan self-test (scripts/secret-scan-selftest.py)** → docs/verify.md · prd §277
 - **On-device self-test (scripts/ondevice-selftest.sh)** → docs/verify.md · prd §282
 - **CI, at last (.github/workflows/static-checks.yml)** → docs/verify.md
@@ -112,27 +112,27 @@ deliberately does not check are in `docs/verify.md`.
 - **verify.sh's audit list is provably complete now** → docs/verify.md
 - **Live-integrations heartbeat (scripts/live-integrations.sh)** → docs/verify.md
 - **Demo census — every other surface, one launch (Shell/DemoCensus.swift + verify.sh "Demo census"; `DEMO_SHOTS=1` for room screenshots)** → docs/verify.md · prd §617
-- **Row-window self-test (scripts/row-window-selftest.sh, 2026-09-08)** → docs/verify.md · prd §657
+- **Row-window self-test (scripts/row-window-selftest.sh)** → docs/verify.md · prd §657
 - **Every account page is a `List` inside a draggable sheet, and its roster is bounded through `RowWindow` (`row-window-selftest.sh`, `row-cost-audit.py`)** → docs/hooks/system.md · prd §710
 - **RULE: a feature deleted from the surface is deleted from the model**, or it is §83's dead control one layer down where no screen sweep sees it (the ranked board and `roomScoped`) → docs/hooks/system.md · prd §723
 - **RULE: name every column a `propertiesToFetch` read touches** (the RSS page's sync) → docs/hooks/system.md · prd §722
-- **Feed-walk self-test (scripts/feed-walk-selftest.sh, 2026-09-08) — next/previous follows the list you opened from; `FeedSheetRoute.thing` carries a `WalkScope` value, never a `[Thing]`** → docs/verify.md · prd §645
+- **Feed-walk self-test (scripts/feed-walk-selftest.sh) — next/previous follows the list you opened from; `FeedSheetRoute.thing` carries a `WalkScope` value, never a `[Thing]`** → docs/verify.md · prd §645
 - **Web-session capture (Model/WebSessionCapture.swift + Screens/WebSessionCaptureView.swift, Diagnostics, DEBUG, 2026-09-16) — before writing a seat for a provider that publishes no API, MEASURE what its own web app calls. Reports endpoints and response SHAPES, never a value: a host outside the named target is dropped, a URL loses every query value, a path id becomes `<id>`, an Authorization header is its scheme (`web-session-selftest.sh`)** → prd §777
-- **Duolingo self-test (scripts/duolingo-selftest.sh, 2026-09-16) — a JWT payload read as plain base64 is nil for every token carrying a `-`; a practice day stamped at its UTC midnight files under yesterday; a 200 that is not a summaries array is not an empty history; the seat may never build a request that is not a GET** → docs/hooks/bridges.md · prd §776
-- **Mail-location self-test (scripts/mail-location-selftest.sh, 2026-09-15) — the message door: a `Message-ID` fence, and an unencoded `/` that turns Gmail's one search into a PATH** → docs/hooks/bridges.md · prd §735
-- **Readable-body self-test (scripts/readable-body-selftest.sh, 2026-09-08) — the page extractor: one 200-paragraph / 8,000-character bound across app and appex, and which hosts a scrape is fair on** → docs/verify.md · prd §645
-- **Reading-draw self-test (scripts/reading-draw-selftest.sh, 2026-09-08) — the sheet's `.link` arm: *has a body* draws, *could get one* fetches; an article draws the art, the words, then the door** → docs/verify.md · prd §645 · §709
-- **Health-riders self-test (scripts/health-riders-selftest.sh, 2026-09-06) — the Strava/Garmin seats and the activity dedupe** → docs/verify.md
-- **MetricKit self-test (scripts/metrics-selftest.sh, 2026-09-05) — the one check for logic no machine here can exercise, because no machine here can make a payload** → docs/verify.md · prd §622
+- **Duolingo self-test (scripts/duolingo-selftest.sh) — a JWT payload read as plain base64 is nil for every token carrying a `-`; a practice day stamped at its UTC midnight files under yesterday; a 200 that is not a summaries array is not an empty history; the seat may never build a request that is not a GET** → docs/hooks/bridges.md · prd §776
+- **Mail-location self-test (scripts/mail-location-selftest.sh) — the message door: a `Message-ID` fence, and an unencoded `/` that turns Gmail's one search into a PATH** → docs/hooks/bridges.md · prd §735
+- **Readable-body self-test (scripts/readable-body-selftest.sh) — the page extractor: one 200-paragraph / 8,000-character bound across app and appex, and which hosts a scrape is fair on** → docs/verify.md · prd §645
+- **Reading-draw self-test (scripts/reading-draw-selftest.sh) — the sheet's `.link` arm: *has a body* draws, *could get one* fetches; an article draws the art, the words, then the door** → docs/verify.md · prd §645 · §709
+- **Health-riders self-test (scripts/health-riders-selftest.sh) — the Strava/Garmin seats and the activity dedupe** → docs/verify.md
+- **MetricKit self-test (scripts/metrics-selftest.sh) — the one check for logic no machine here can exercise, because no machine here can make a payload** → docs/verify.md · prd §622
 
 - **live-integrations.sh covers YouTube and RUNS NIGHTLY (nightly-live.sh)** → docs/verify.md · prd §312 · §654
 - **Hero-tint audit (scripts/hero-tint-audit.py)** → docs/verify.md · prd §563
 - **Design-motion audit (scripts/design-motion-audit.py)** → docs/verify.md · prd §299
-- **Design-ramp audit (scripts/design-ramp-audit.py, 2026-08-11; check 5 added 2026-09-06 — every `widget*` rung must declare `macScales: false`)** → docs/verify.md · prd §631
+- **Design-ramp audit (scripts/design-ramp-audit.py; check 5 added 2026-09-06 — every `widget*` rung must declare `macScales: false`)** → docs/verify.md · prd §631
 - **App Store Connect self-test (scripts/appstoreconnect-selftest.sh)** → docs/verify.md · prd §323
 - **PRD index audit (scripts/prd-index-audit.py)** → docs/verify.md
 - **Setup-copy audit (scripts/setup-copy-audit.py)** → docs/verify.md · prd §315
-- **Figure self-test (scripts/agent-panel-selftest.sh, 2026-08-07) — the answer dial's floor and the one money formatter; the chip peek and its per-room figures are deleted (prd §836)** → docs/verify.md · prd §334 · §836
+- **Figure self-test (scripts/agent-panel-selftest.sh) — the answer dial's floor and the one money formatter; the chip peek and its per-room figures are deleted (prd §836)** → docs/verify.md · prd §334 · §836
 - **Room-head self-test (scripts/room-heads-selftest.sh)** → docs/verify.md · prd §298
 - **The social rooms became ONE room (Model/SocialRoom.swift + SocialRoomSource.swift, scripts/social-room-selftest.sh, 2026-08-26)** → docs/hooks/social.md · prd §489
 - **Retriever self-test (scripts/retriever-selftest.sh)** → docs/verify.md · prd §318
@@ -235,12 +235,12 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-metricsProbe` `-metricsForget` — what MetricKit has handed this app, one `metricKit|` line per Diagnostics line (`Model/AppMetrics.swift`). Always EMPTY on the simulator; delivery is a device check → docs/verify.md · prd §622
 - **The phone's own perf numbers, on the phone — the same spans MetricKit histograms, read seconds after they happen (`-perfReadingsProbe` `-perfMeasure` `-perfForget`)** → docs/hooks/system.md · prd §623
 - **The source room's light columns, behind an OS gate (`-sourceRoomLightColumns`, DEBUG) — the projection on iOS 26+ only, because a predicated partial fetch drops rows on 18.6** → docs/hooks/system.md · prd §623
-- **Perf-readings self-test (scripts/perf-readings-selftest.sh, 2026-09-06)** → docs/verify.md · prd §623
-- **Lead-body audit (scripts/lead-body-audit.py, 2026-09-15) — a lead face that never reaches the body ladder, a `ForEach` inside `ViewThatFits` (one subview, so the fit silently stops working), the cast drawn as an overlapping pile, a well inside the lead's well** → docs/verify.md · prd §772
-- **Harness-exists audit (scripts/harness-exists-audit.py, 2026-09-08) — a check the pass runs that is not in the repo** → docs/verify.md
-- **Rain-tiles audit (scripts/rain-tiles-audit.py, 2026-09-08) — rain when sources were asked or something arrived; call `refreshRooms()` when a list changed** → docs/verify.md · prd §655
-- **Source-alias audit (scripts/source-alias-audit.py, 2026-09-08) — a renamed seat's old rows must still resolve to the seat** → docs/verify.md · prd §647 · §650
-- **Background-launch audit (scripts/background-launch-audit.py, 2026-09-07) — the shell is not built for a scene connected in the background** → docs/verify.md · prd §642 · §642b
+- **Perf-readings self-test (scripts/perf-readings-selftest.sh)** → docs/verify.md · prd §623
+- **Lead-body audit (scripts/lead-body-audit.py) — a lead face that never reaches the body ladder, a `ForEach` inside `ViewThatFits` (one subview, so the fit silently stops working), the cast drawn as an overlapping pile, a well inside the lead's well** → docs/verify.md · prd §772
+- **Harness-exists audit (scripts/harness-exists-audit.py) — a check the pass runs that is not in the repo** → docs/verify.md
+- **Rain-tiles audit (scripts/rain-tiles-audit.py) — rain when sources were asked or something arrived; call `refreshRooms()` when a list changed** → docs/verify.md · prd §655
+- **Source-alias audit (scripts/source-alias-audit.py) — a renamed seat's old rows must still resolve to the seat** → docs/verify.md · prd §647 · §650
+- **Background-launch audit (scripts/background-launch-audit.py) — the shell is not built for a scene connected in the background** → docs/verify.md · prd §642 · §642b
 - **Every setup door opens the in-app Safari sheet; a slab that opens a page passes `url:`, never a closure calling the screen's `openURL`** (`catalog-mode-audit.py`) → docs/hooks/system.md · prd §653
 - **Every bridge setup screen is ONE account page (`Screens/AccountPage.swift`, `account-page-selftest.sh`)** → docs/hooks/system.md · prd §639
 - **Nothing on an account page is boxed but the entry well.** A row states a fact, a footer explains it, anything you change opens, and Notes stays inline. A line stays only if the door and the fields don't already say it (`setup-copy-audit.py` check 8) → docs/hooks/system.md · prd §708 · §729
@@ -253,7 +253,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **A bridge sweep's saves go through `SaveCoalescer`, `StoredPixels` decodes off main, and deferred work waits for a still hand (`ShellChrome.scrolling`, `dockBusy`)** → docs/verify.md · prd §658
 - **A `GestureGate` cap is for a stuck flag (8s), not a hand; a landing's scheduled save waits for a still hand** → docs/hooks/system.md · prd §725
 - **Row bodies stay cheap while scrolling: `RowVerbMenu` builds verbs when the press raises it, and a row met by scrolling shows at rest (`RowEntrance.cascadeWindow`)** → docs/verify.md · prd §661
-- **A mutation that changed nothing is not a passing mutation — it is one that did not run (scripts/mutation-liveness-audit.py, 2026-09-06)** → docs/verify.md · prd §627
+- **A mutation that changed nothing is not a passing mutation — it is one that did not run (scripts/mutation-liveness-audit.py)** → docs/verify.md · prd §627
 - **A fetch or a Keychain read belongs in `onAppear`/`.task`, never in a body or a computed property a body reads (build 525)** → docs/verify.md · prd §628
 - `-notifyProbe` — what would notify, WITHOUT notifying (prd §306, 2026-08-05, Model/NotifySweep.swift + Model/NotifyPlan.swift) → docs/hooks/system.md · prd §306
 - **Notifications are one digest per category, once a day at 18:00, one switch per category; only a dispute, a deadline, a liquidation or a Safe signature stands alone (`NotifyKind.standsAlone`)** → docs/hooks/system.md · prd §770 · §706
