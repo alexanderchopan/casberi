@@ -807,9 +807,9 @@ awk '/static var swipeTable: Color\?/,/^    }/' "$TMP/tokens.nc" > "$TMP/ground.
 grep -q 'if vividBackground { return nil }' "$TMP/ground.nc" \
   || { echo "✗ swipeTable no longer stands down on a vivid page or a photo — the other"; \
        echo "  page is undefined over a picture (prd §898, §740's rule)."; fail=1; }
-grep -q 'Color.adaptive(dark: "#ffffff", light: "#000000")' "$TMP/ground.nc" \
-  || { echo "✗ swipeTable is not the OTHER page (white under dark, black under light) —"; \
-       echo "  a hue or a grey is back on the table (prd §898c, §542)."; fail=1; }
+grep -q 'Color.adaptive(dark: "#f2f2f7", light: "#000000")' "$TMP/ground.nc" \
+  || { echo "✗ swipeTable is not the OTHER page (Apple's white #f2f2f7 under dark, black"; \
+       echo "  under light) — a hue, a grey or bare #ffffff is back (prd §898c, §898d, §542)."; fail=1; }
 grep -q 'static let swipeTableInk = Color.adaptive(dark: "#000000", light: "#ffffff")' "$TMP/tokens.nc" \
   || { echo "✗ swipeTableInk is not the other page's ink (prd §898c)."; fail=1; }
 [ ! -f "Casberi/Casberi/Shell/RoomSnapshots.swift" ] \

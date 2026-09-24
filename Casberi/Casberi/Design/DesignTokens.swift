@@ -391,7 +391,15 @@ enum DS {
 
     /// **The table a swipe is dealt on is the OTHER PAGE (prd §898c, user:
     /// "ok lets do L and M").** White under the dark card, black under the
-    /// light one, flat: no light, no frost, no hue. A table under a card is
+    /// light one, flat: no light, no frost, no hue. **The white is Apple's
+    /// (prd §898d, user: "the white is a bit bright" → "yes do P"):
+    /// `#f2f2f7`, the system grouped background, what iOS means by a white
+    /// page — a tenth less luminance than `#ffffff` and a cool cast, which
+    /// is what reads calm. The one system value the app borrows, and the
+    /// one exception to "nothing new enters the palette" below; `#f8f8f8`
+    /// (`surfaceRaised`) was the closed-palette alternative and dims half
+    /// as much. It does NOT fix a night flash — only the ramp can, and an
+    /// opacity cap on the ramp is grey by construction (§542).** A table under a card is
     /// there for contrast with the card, and this is the most there is. Both
     /// values are the app's own pages, so nothing new enters the palette and
     /// no grey (§542). One rule, two values — themed by RULE, which §898's
@@ -410,13 +418,13 @@ enum DS {
     /// ground alone and the cover's word takes the page's ramp.
     static var swipeTable: Color? {
         if vividBackground { return nil }
-        return Color.adaptive(dark: "#ffffff", light: "#000000")
+        return Color.adaptive(dark: "#f2f2f7", light: "#000000")
     }
 
     /// What is written on `swipeTable`: the room's mark and its name, in the
-    /// OTHER page's ink — black on the white table, white on the black one
-    /// (21:1 both ways), never `textPrimary`, which is the page's own ink
-    /// and vanishes into the table.
+    /// OTHER page's ink — black on the white table (19.6:1 on `#f2f2f7`),
+    /// white on the black one (21:1), never `textPrimary`, which is the
+    /// page's own ink and vanishes into the table.
     static let swipeTableInk = Color.adaptive(dark: "#000000", light: "#ffffff")
 
     // MARK: - Semantic state  — orange attention, red destructive, green confirm
