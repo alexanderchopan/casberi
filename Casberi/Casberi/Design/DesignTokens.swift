@@ -401,13 +401,18 @@ enum DS {
     ///
     /// **In shadow, on purpose (user: "it's like it's shadowed … make it more
     /// shadowed to tone it down").** The hue angle is the mark's (334°) with
-    /// saturation held at `brandInk`'s notch and brightness down to 55 —
-    /// `#8c2451` — two registers below the mark, one below `brandInk`'s
-    /// light-page value (`#b8306b`, S 74 B 72), which is the fallback if this
-    /// reads too dim on a device. Full-chroma pink was mocked and refused: a
-    /// whole screen of it on every swipe is a flash, and at night on an OLED
-    /// a flashbulb. A third register of one hue, never a second pink; `brand`
-    /// stays the only spelling of the mark's value.
+    /// saturation held at `brandInk`'s notch and brightness down to 42 —
+    /// `#6b1c3e` — two registers below the mark, one below `brandInk`'s
+    /// light-page value (`#b8306b`, S 74 B 72). §898 landed B 55 (`#8c2451`);
+    /// §898a stepped it down off a six-panel board of the same screen at
+    /// B 55/48/42/36/30/24 (user: "mock up what different shades of this pink
+    /// darker would look like" → "ok do it"). 42 is the darkest step where the
+    /// eye still calls it pink and the dock's glass still stands off the
+    /// ground; 36 reads as wine beside the black card and is the fallback if
+    /// 42 still reads bright on an OLED at night. Full-chroma pink was mocked
+    /// and refused: a whole screen of it on every swipe is a flash, and at
+    /// night on an OLED a flashbulb. A third register of one hue, never a
+    /// second pink; `brand` stays the only spelling of the mark's value.
     ///
     /// **FIXED across themes**, like the mark: a table that changes colour
     /// between light and dark is two tables. What sits on it takes
@@ -419,13 +424,13 @@ enum DS {
     /// leaves the ground alone and the cover's word takes the page's ramp.
     static var brandGround: Color? {
         if vividBackground { return nil }
-        return Color.fixed("#8c2451")
+        return Color.fixed("#6b1c3e")
     }
 
     /// What is written on `brandGround`: the room's mark and its name. White
-    /// in BOTH themes — 8.4:1 on the ground (7:1 is the enhanced bar, so
+    /// in BOTH themes — 11.3:1 on the ground (7:1 is the enhanced bar, so
     /// Increase Contrast needs no second value) — because `textPrimary` is
-    /// black on the light page and black on this ground measures 2.5:1.
+    /// black on the light page and black on this ground measures 1.9:1.
     static let brandGroundInk = Color.fixed("#ffffff")
 
     // MARK: - Semantic state  — orange attention, red destructive, green confirm
