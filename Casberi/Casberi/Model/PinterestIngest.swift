@@ -213,13 +213,19 @@ enum PinterestIngest {
                 guard seen.insert(ref).inserted else { continue }
                 let thing = Thing(
                     kind: .link,
-                    // Pins are often untitled — an empty row title reads broken.
-                    title: item.title.isEmpty ? "Pin" : item.title,
+                    // Pins are often untitled — an empty row title reads
+                    // broken. A pin with a description is named by its first
+                    // line before the literal word (prd §910).
+                    title: !item.title.isEmpty ? item.title
+                        : !item.summary.isEmpty ? IngestSupport.titleLine(item.summary) : "Pin",
                     content: item.link,
                     source: "Pinterest",
                     capturedAt: item.date ?? .now,
                     sourceRef: ref
                 )
+                // The pin's own description — the feed's `<description>`,
+                // parsed since 2026-07-22 and dropped here until §910.
+                if !item.summary.isEmpty { thing.summary = item.summary }
                 thing.authorHandle = follow
                 // The pin's image, so the feed row leads with a thumbnail (the
                 // whole point of a Pinterest feed) instead of the generic glyph.

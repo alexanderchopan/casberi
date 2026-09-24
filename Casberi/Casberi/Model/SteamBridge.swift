@@ -103,14 +103,24 @@ enum SteamIngest {
             let mins = (game["playtime_2weeks"] as? Int) ?? 0
             guard !existing.contains(ref) else { continue }
             let hours = String(format: "%.1f", Double(mins) / 60)
+            // `content` is the DOOR and nothing else (prd §910): the playtime
+            // line used to ride after the URL on the same field, so the row
+            // opened nothing. The hours are display copy on `summary`, and
+            // `playtime_forever` — already in the same payload — joins them.
             let thing = Thing(
                 kind: .link,
                 title: "Played \(name)",
-                content: "https://store.steampowered.com/app/\(appID) · \(hours)h past two weeks",
+                content: "https://store.steampowered.com/app/\(appID)",
                 source: "Steam",
                 capturedAt: .now,
                 sourceRef: ref
             )
+            if let totalMins = game["playtime_forever"] as? Int, totalMins > 0 {
+                let total = String(format: "%.1f", Double(totalMins) / 60)
+                thing.summary = "\(hours)h past two weeks · \(total)h all time"
+            } else {
+                thing.summary = "\(hours)h past two weeks"
+            }
             thing.previewImageURL = headerArt(appID)
             // The join key MediaMoments' Twitch×Steam crossing reads.
             thing.authorHandle = name

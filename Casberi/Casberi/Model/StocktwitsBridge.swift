@@ -318,6 +318,11 @@ enum StocktwitsIngest {
                 thing.authorHandle = post.username
                 thing.authorAvatarURL = IngestSupport.imageURL(post.avatar)
                 thing.previewImageURL = IngestSupport.imageURL(post.chart)
+                // The whole post, where a social post's words go (prd §910):
+                // the title above is the clamped door line, and a message
+                // past 80 characters lost its tail everywhere the row and
+                // sheet drew it. Decoded once, newlines kept.
+                thing.postText = IngestSupport.decodeHTMLEntities(post.body)
                 context.insert(thing)
                 existing.insert(ref)
                 SpotlightIndex.index([thing])

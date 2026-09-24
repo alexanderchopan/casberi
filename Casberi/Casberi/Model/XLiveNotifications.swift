@@ -734,8 +734,15 @@ enum XLiveNotifications {
     private static func thing(from entry: [String: Any], ref: String, at: Date) -> Thing? {
         guard let text = notificationText(entry) else { return nil }
         let subject = subject(from: entry)
+        let actor = actor(from: entry)
+        // A notice with no post behind it — a follow, a list add — opens the
+        // PERSON who is its whole news (prd §910), the way Instagram's and
+        // TikTok's follows do; the notifications root is for a notice that
+        // names nobody either.
         let permalink = subject?.permalink
-            ?? notificationPermalink(entry) ?? "https://x.com/notifications"
+            ?? notificationPermalink(entry)
+            ?? actor?.handle.map { "https://x.com/\($0)" }
+            ?? "https://x.com/notifications"
         let thing = Thing(
             kind: .link,
             title: IngestSupport.titleLine(IngestSupport.decodeHTMLEntities(text)),
@@ -746,7 +753,7 @@ enum XLiveNotifications {
         // The FACE, before the subject guard (prd §707): a follow or a list add
         // has no post hanging off it and would take the early return below, and
         // those are exactly the notices where a person is the whole news.
-        if let actor = actor(from: entry) { fillActor(thing, with: actor) }
+        if let actor { fillActor(thing, with: actor) }
         guard let subject else { return thing }
         fill(thing, with: subject)
         return thing

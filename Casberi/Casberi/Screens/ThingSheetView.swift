@@ -2610,6 +2610,22 @@ struct ThingSheetView: View {
     /// honest answer for a VIDEO post, which this app holds one frame of and
     /// cannot play: the mp4 lives in an archive folder we deliberately never
     /// copied, so the place to watch it is the place it came from.
+    /// THE DOOR TO DROPBOX (prd §910). A Dropbox row is a `.file` whose bytes
+    /// are not on this device, so `Verbs`' "Show in Receipts" is scoped away
+    /// from it and it had no door at all. `DropboxBridge` writes the file's
+    /// page — its folder on dropbox.com, previewing it — on `externalLink`,
+    /// and this opens it. Scoped by SOURCE for `episodeVerb`'s reason: that
+    /// field means something different for every writer. https only, and
+    /// never the row's own `content` (a `.file`'s content is its note, so the
+    /// two cannot coincide, but the guard costs nothing).
+    private var dropboxVerb: Verb? {
+        guard thing.isLive, thing.kind == .file, thing.source == "Dropbox",
+              let raw = thing.externalLink?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty, let url = URL(string: raw), url.scheme == "https"
+        else { return nil }
+        return Verb(label: "Dropbox", icon: "arrow.up.forward.app", action: .openURL(url))
+    }
+
     private var xPostVerb: Verb? {
         guard thing.isLive, thing.kind == .note,
               thing.source == XArchiveImport.source,
@@ -2656,7 +2672,7 @@ struct ThingSheetView: View {
            case .openURL = first.action {
             derived[0] = Verb(label: word, icon: first.icon, action: first.action)
         }
-        let extras = [joinVerb, episodeVerb, xPostVerb].compactMap { $0} + privyVerbs
+        let extras = [joinVerb, episodeVerb, xPostVerb, dropboxVerb].compactMap { $0} + privyVerbs
         guard !extras.isEmpty else { return derived }
         return Array((extras + derived).prefix(4))
     }

@@ -607,8 +607,10 @@ enum ASCShape {
         return nil
     }
 
-    static func buildURL(appID: String) -> String {
-        "https://appstoreconnect.apple.com/apps/\(appID)/testflight/ios"
+    /// The build's own TestFlight page (prd §910) — the id is in hand on
+    /// every build row, so the door is the build, not the list it sits in.
+    static func buildURL(appID: String, buildID: String) -> String {
+        "https://appstoreconnect.apple.com/apps/\(appID)/testflight/ios/\(buildID)"
     }
 }
 
@@ -1175,7 +1177,7 @@ enum ASCIngest {
                     kind: .link,
                     title: IngestSupport.titleLine(
                         ASCShape.buildTitle(app: app, build: build, state: state)),
-                    content: ASCShape.buildURL(appID: appID),
+                    content: ASCShape.buildURL(appID: appID, buildID: id),
                     source: ASCShape.source,
                     capturedAt: IngestSupport.isoDate(attributes["uploadedDate"]) ?? .now,
                     tags: [String(localized: "Build")],
@@ -1198,7 +1200,7 @@ enum ASCIngest {
                 kind: .reminder,
                 title: IngestSupport.titleLine(
                     ASCShape.expiryTitle(app: app, build: build)),
-                content: ASCShape.buildURL(appID: appID),
+                content: ASCShape.buildURL(appID: appID, buildID: id),
                 source: ASCShape.source,
                 capturedAt: .now,
                 tags: [String(localized: "Build")],

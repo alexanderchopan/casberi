@@ -15,6 +15,10 @@ enum DuolingoLiveAuth {
     /// profile read and shown on the account page.
     private static let whoKey = "duolingo.live.who"
     private static let courseKey = "duolingo.live.course"
+    /// The HANDLE alone, apart from `who` (which falls back to the display
+    /// name): a profile page is reached by username and by nothing else
+    /// (prd §910).
+    private static let usernameKey = "duolingo.live.username"
 
     static var token: String? {
         TokenVault.get(tokenKey).flatMap { $0.isEmpty ? nil : $0 }
@@ -30,6 +34,7 @@ enum DuolingoLiveAuth {
         // are learnt again rather than inherited (TikTok's rule, §731).
         UserDefaults.standard.removeObject(forKey: whoKey)
         UserDefaults.standard.removeObject(forKey: courseKey)
+        UserDefaults.standard.removeObject(forKey: usernameKey)
         TokenVault.set(token, for: tokenKey)
     }
 
@@ -39,6 +44,7 @@ enum DuolingoLiveAuth {
         TokenVault.delete(tokenKey)
         UserDefaults.standard.removeObject(forKey: whoKey)
         UserDefaults.standard.removeObject(forKey: courseKey)
+        UserDefaults.standard.removeObject(forKey: usernameKey)
     }
 
     static var who: String? {
@@ -49,9 +55,22 @@ enum DuolingoLiveAuth {
         UserDefaults.standard.string(forKey: courseKey).flatMap { $0.isEmpty ? nil : $0 }
     }
 
+    static var username: String? {
+        UserDefaults.standard.string(forKey: usernameKey).flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// Where a practice row opens (prd §910): the account's own profile page,
+    /// which exists only under a username. nil until one is learnt.
+    static var profileURL: String? {
+        username.map { "https://www.duolingo.com/profile/\($0)" }
+    }
+
     static func remember(_ profile: DuolingoFeed.Profile) {
         if let who = profile.who { UserDefaults.standard.set(who, forKey: whoKey) }
         if let course = profile.course { UserDefaults.standard.set(course, forKey: courseKey) }
+        if let username = profile.username, !username.isEmpty {
+            UserDefaults.standard.set(username, forKey: usernameKey)
+        }
     }
 }
 
@@ -100,6 +119,7 @@ enum DuolingoLive {
     private static func land(_ days: [DuolingoFeed.Day], context: ModelContext,
                              now: Date) -> Int {
         let course = DuolingoLiveAuth.course
+        let door = DuolingoLiveAuth.profileURL
         let landed = landedDays(context: context)
         var added = 0
         var rewritten = 0
@@ -107,6 +127,12 @@ enum DuolingoLive {
         for day in days where day.practised {
             let title = DuolingoFeed.title(day, course: course)
             let line = DuolingoFeed.line(day)
+            // The DOOR takes `content` once the profile is known (prd §910),
+            // and the "3 lessons · 14 min" line moves under it with the
+            // streak words; until then the line stays where it was, so a row
+            // never loses it.
+            let content = door ?? line ?? ""
+            let summary = words(for: day, line: door == nil ? nil : line)
             if let existing = landed[day.ref] {
                 // TODAY grows while you are still in it (§776), and a day
                 // whose row already says what this read says is left alone —
@@ -114,9 +140,11 @@ enum DuolingoLive {
                 // still re-indexes the row.
                 guard DuolingoFeed.rewrites(landedTitle: existing.title,
                                             landedLine: existing.content,
-                                            title: title, line: line) else { continue }
+                                            title: title, line: content)
+                        || (existing.summary ?? "") != (summary ?? "") else { continue }
                 existing.title = title
-                existing.content = line ?? ""
+                existing.content = content
+                existing.summary = summary
                 SpotlightIndex.index([existing])
                 rewritten += 1
                 continue
@@ -124,7 +152,7 @@ enum DuolingoLive {
             let thing = Thing(
                 kind: .event,
                 title: title,
-                content: line ?? "",
+                content: content,
                 source: DuolingoFeed.source,
                 capturedAt: DuolingoFeed.stamp(day, now: now),
                 // The facet the retriever narrows "what did I practise?" to,
@@ -134,12 +162,25 @@ enum DuolingoLive {
                 // tags).
                 tags: ["Practice"],
                 sourceRef: day.ref)
+            thing.summary = summary
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
         if added > 0 || rewritten > 0 { context.saveHonestly() }
         return added
+    }
+
+    /// What the row says under its title (prd §910): the lessons-and-minutes
+    /// line when the door displaced it from `content`, then the streak facts
+    /// the payload flags — only the ones set, never "streak not extended".
+    /// nil when there is nothing, never an empty line.
+    private static func words(for day: DuolingoFeed.Day, line: String?) -> String? {
+        var parts: [String] = []
+        if let line { parts.append(line) }
+        if day.streakExtended { parts.append(String(localized: "Streak extended")) }
+        if day.frozen { parts.append(String(localized: "Streak frozen")) }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     /// The days already here, scoped by PREFIX — a fortnight's read against a

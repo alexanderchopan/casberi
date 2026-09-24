@@ -329,13 +329,15 @@ enum InstagramLive {
     }
 
     /// The web permalink for a notice. A post, when the story names one; the
-    /// actor's own page for a follow; the activity page itself when neither —
-    /// never a guessed post.
+    /// actor's own page when the story names a person and no post (a follow,
+    /// and since prd §910 any media-less notice with a `profile_name` — the
+    /// activity root said nothing about WHO); the activity page itself when
+    /// neither — never a guessed post.
     static func permalink(for notice: Notice) -> String {
         if let code = notice.mediaID.flatMap(shortcode(fromMediaID:)) {
             return "https://www.instagram.com/p/\(code)/"
         }
-        if notice.isFollow, let name = notice.actorName {
+        if let name = notice.actorName {
             return "https://www.instagram.com/\(name)/"
         }
         return "https://www.instagram.com/accounts/activity/"
@@ -358,13 +360,20 @@ enum InstagramLive {
     }
 
     private static func thing(from notice: Notice, ref: String) -> Thing {
+        let words = IngestSupport.decodeHTMLEntities(notice.text)
+        let title = IngestSupport.titleLine(words)
         let thing = Thing(
             kind: .link,
-            title: IngestSupport.titleLine(IngestSupport.decodeHTMLEntities(notice.text)),
+            title: title,
             content: permalink(for: notice),
             source: "Instagram",
             capturedAt: notice.at,
             sourceRef: ref)
+        // The whole notice where the title line cut it (prd §910) — a
+        // comment's words past 80 characters were gone from every screen.
+        // Compared as strings, not counts: the clamp's ellipsis makes an
+        // 81-character text and its cut the same length.
+        if words != title { thing.summary = words }
         // WHO ACTED (§707's ruling): the face on the row is the person who
         // liked, commented or followed — never the source mark, never you.
         if let name = notice.actorName { thing.authorHandle = name }

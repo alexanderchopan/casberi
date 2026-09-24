@@ -235,6 +235,10 @@ enum RadicleWire {
         /// `merges[0].timestamp` — when it actually landed, and who landed it.
         let merged: Date?
         let mergedBy: Party?
+        /// `revisions[0].description` — the proposal's own words, trimmed;
+        /// nil when the author wrote none (prd §910). The FIRST revision for
+        /// the same reason `opened` reads it: later ones are fixups.
+        let body: String?
 
         var isMerged: Bool { status == "merged" }
     }
@@ -262,7 +266,8 @@ enum RadicleWire {
             }
             .sorted { $0.0 < $1.0 }
         return Patch(id: id, title: title, author: author, status: status,
-                     opened: opened, merged: merges.first?.0, mergedBy: merges.first?.1)
+                     opened: opened, merged: merges.first?.0, mergedBy: merges.first?.1,
+                     body: words(revisions.first?["description"]))
     }
 
     // MARK: - Issue
@@ -277,6 +282,9 @@ enum RadicleWire {
         /// IS the issue body, so the first comment's moment is when the issue
         /// was opened. Exact, not estimated.
         let opened: Date?
+        /// `discussion[0].body` — in the same COB model the root comment IS
+        /// the issue body, so its words are the issue's (prd §910).
+        let body: String?
 
         var isClosed: Bool { status == "closed" }
 
@@ -307,7 +315,15 @@ enum RadicleWire {
         let status = (state["status"] as? String)?.lowercased() ?? "open"
         let discussion = root["discussion"] as? [[String: Any]] ?? []
         return Issue(id: id, title: title, author: author, status: status,
-                     opened: date(epochSeconds: discussion.first?["timestamp"]))
+                     opened: date(epochSeconds: discussion.first?["timestamp"]),
+                     body: words(discussion.first?["body"]))
+    }
+
+    /// Author-written prose, trimmed; nil rather than a blank block.
+    private static func words(_ raw: Any?) -> String? {
+        guard let s = (raw as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty else { return nil }
+        return s
     }
 
     // MARK: - Identity

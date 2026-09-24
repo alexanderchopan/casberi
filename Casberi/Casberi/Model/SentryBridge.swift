@@ -371,6 +371,12 @@ enum SentryFetch {
         let level: String?
         let substatusRaw: String?
         let firstSeen: Date?
+        /// `shortId` — `CHECKOUT-1F`, the name Sentry's own UI and every
+        /// alert email uses for the issue (prd §910).
+        let shortId: String?
+        /// `metadata.value` — the exception's own message, without the type
+        /// the title already carries (prd §910).
+        let value: String?
     }
 
     /// The organization's unresolved issues, newest first.
@@ -440,7 +446,9 @@ enum SentryFetch {
             project: project,
             level: nonEmpty(row["level"]),
             substatusRaw: nonEmpty(row["substatus"]),
-            firstSeen: IngestSupport.isoDate(row["firstSeen"])
+            firstSeen: IngestSupport.isoDate(row["firstSeen"]),
+            shortId: nonEmpty(row["shortId"]),
+            value: nonEmpty((row["metadata"] as? [String: Any])?["value"])
         )
     }
 
@@ -553,10 +561,14 @@ enum SentryIngest {
     /// landed on first sight sorts back to when it actually broke.
     private static func thing(_ issue: SentryFetch.Issue,
                               crossing: SentrySubstatus?, ref: String) -> Thing {
+        // The short id leads the message (prd §910): it is how the issue is
+        // named everywhere else, and it survives the 80-char clamp where the
+        // tail of a long message does not.
+        let named = issue.shortId.map { "\($0) · \(issue.title)" } ?? issue.title
         let thing = Thing(
             kind: .link,
             title: IngestSupport.titleLine(
-                SentryShape.title(project: issue.project, title: issue.title,
+                SentryShape.title(project: issue.project, title: named,
                                   crossing: crossing)),
             content: issue.permalink ?? "",
             source: "Sentry",
@@ -568,7 +580,10 @@ enum SentryIngest {
         // and Cursor summary rule — because it is the one field that turns
         // "KeyError: 'id'" into something you can act on without opening
         // Sentry. Never the retrieval-only `enrichedText`.
-        if let culprit = issue.culprit { thing.summary = culprit }
+        // The exception's own value first (prd §910), unless it only repeats
+        // the title; the culprit stays the fallback.
+        if let value = issue.value, value != issue.title { thing.summary = value }
+        else if let culprit = issue.culprit { thing.summary = culprit }
         // The project as a FIELD (2026-08-12) — see `VercelBridge` for the
         // reasoning. `WorkStage` only ever draws a project it can read off a
         // stored field, never one sliced out of the joined title, because an

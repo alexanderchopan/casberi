@@ -527,6 +527,7 @@ enum BlueskyIngest {
             guard SocialInbound.landFollower(
                 id: did, handle: BlueskyStore.short(followerHandle),
                 displayName: profile["displayName"] as? String,
+                bio: profile["description"] as? String,   // the profileView's own, in hand (prd §910)
                 avatarURL: IngestSupport.imageURL(profile["avatar"] as? String),
                 profileURL: "https://bsky.app/profile/\(followerHandle)",
                 when: nil, source: "Bluesky", existing: &existing, context: context) != nil
@@ -711,10 +712,20 @@ enum BlueskyIngest {
                              context: ModelContext) async -> Bool {
         guard let uri = post["uri"] as? String,
               let record = post["record"] as? [String: Any],
-              let text = record["text"] as? String, !text.isEmpty,
               let author = post["author"] as? [String: Any],
               let authorHandle = author["handle"] as? String, !authorHandle.isEmpty
         else { return false }
+        let text = (record["text"] as? String) ?? ""
+        // A post with no words of its own is still a post (prd §910): a
+        // picture with alt text or a shared link with a headline is NAMED by
+        // that, where it used to be skipped outright. The alt stays retrieval
+        // copy on `enrichedText` below; here it is the title alone, and
+        // `postText` stays nil because the author wrote no post.
+        let name = text.isEmpty
+            ? (embedAlts(post) ?? linkEmbed(post)?.title?
+                .trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty)
+            : text
+        guard let name else { return false }
         if let ownHandle, authorHandle != ownHandle { return false }
         let ref = "bsky:\(uri)"
         let images = embedImages(post)
@@ -730,13 +741,13 @@ enum BlueskyIngest {
 
         let thing = Thing(
             kind: .chat,
-            title: IngestSupport.titleLine(text),
+            title: IngestSupport.titleLine(name),
             content: webURL(uri: uri, handle: authorHandle),
             source: "Bluesky",
             capturedAt: date ?? .now,
             sourceRef: ref
         )
-        thing.postText = text
+        thing.postText = text.nilIfEmpty
         thing.imageURLs = images.compactMap(IngestSupport.imageURL)
         thing.previewImageURL = thing.imageURLs.first
         // What the author says their pictures SHOW (2026-08-06) — retrieval
@@ -805,7 +816,9 @@ enum BlueskyIngest {
             thing.channelName = channel
             healed = true
         }
-        if thing.postText == nil {
+        // Never an empty string: a wordless post (§910) has no `postText`
+        // to fill, and "" would read as words on every screen that tests it.
+        if thing.postText == nil, !text.isEmpty {
             thing.postText = text
             healed = true
         }

@@ -142,6 +142,14 @@ enum TikTokLive {
             thing.quote = SocialCard(handle: author, text: notice.videoCaption ?? "",
                                      avatarURL: nil, url: notice.permalink)
         }
+        // The words the title line did not carry (prd §910): the comment
+        // behind TikTok's sentence, or — when the video named no maker, so no
+        // card could hold it — the video's own caption, which was dropped.
+        if let body = notice.body {
+            thing.summary = body
+        } else if notice.videoAuthor == nil, let caption = notice.videoCaption, !caption.isEmpty {
+            thing.summary = caption
+        }
         return thing
     }
 

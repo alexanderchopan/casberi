@@ -927,12 +927,11 @@ enum JiraAuth {
     static let jql = "assignee = currentUser() ORDER BY updated DESC"
     /// The selection is the ceiling (the Linear/App-Store-Connect lesson): a
     /// field not asked for here can never reach the corpus, no matter what
-    /// `TokenIngest.jira` tries to read off it. `description` is deliberately
-    /// NOT here — Jira v3 renders it as Atlassian Document Format, a JSON
-    /// node tree rather than a markdown string like Linear's, so a card-back
-    /// summary needs a tree walk this bridge doesn't do yet; asking for a
-    /// field nothing reads would cost a request for nothing.
-    static let fields = "summary,status,duedate,priority,project,updated,labels"
+    /// `TokenIngest.jira` tries to read off it. `description` joined in
+    /// prd §910: Jira v3 renders it as Atlassian Document Format, a JSON node
+    /// tree rather than a markdown string like Linear's, and
+    /// `TokenIngest.adfText` walks that tree to the plain words.
+    static let fields = "summary,status,duedate,priority,project,updated,labels,description"
 
     static func searchURL(domain: String) -> String {
         var c = URLComponents()
@@ -2354,8 +2353,50 @@ enum TokenIngest {
             thing.tags = tagList(names(in: fields["labels"])
                                  + [(fields["project"] as? [String: Any])?["name"] as? String]
                                     .compactMap { $0 })
+            // The description, flattened out of its ADF tree (prd §910) —
+            // DISPLAY copy, the Linear/Trello card-back rule, under GitHub's
+            // one body ceiling.
+            if let description = adfText(fields["description"]) {
+                thing.summary = GitHubEventShape.clamp(description)
+            }
             return thing
         }
+    }
+
+    /// Atlassian Document Format → plain text (prd §910). The tree is a
+    /// `doc` of block nodes (`paragraph`, `heading`, `bulletList` …) whose
+    /// leaves are `text` nodes; a walk joins the leaves and stacks the
+    /// blocks one per line. Marks (bold, links) are dropped — the words are
+    /// what a card back needs. nil for an empty or unreadable tree.
+    static func adfText(_ node: Any?) -> String? {
+        guard let root = node as? [String: Any] else { return nil }
+        let text = adfFlatten(root).trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : text
+    }
+
+    /// Inline node types — they run on within a line; everything else is a
+    /// block and takes its own.
+    private static let adfInline: Set<String> = [
+        "text", "hardBreak", "mention", "emoji", "inlineCard", "status", "date",
+    ]
+
+    private static func adfFlatten(_ node: [String: Any]) -> String {
+        switch node["type"] as? String ?? "" {
+        case "text": return node["text"] as? String ?? ""
+        case "hardBreak": return "\n"
+        case "mention", "emoji", "status":
+            return (node["attrs"] as? [String: Any])?["text"] as? String ?? ""
+        default: break
+        }
+        var out = ""
+        for child in node["content"] as? [[String: Any]] ?? [] {
+            let piece = adfFlatten(child)
+            let block = !adfInline.contains(child["type"] as? String ?? "")
+            if block, !out.isEmpty, !out.hasSuffix("\n") { out += "\n" }
+            out += piece
+            if block, !piece.isEmpty, !out.hasSuffix("\n") { out += "\n" }
+        }
+        return out
     }
 
     /// Jira's own status-category vocabulary → the corpus's mark. FIXED

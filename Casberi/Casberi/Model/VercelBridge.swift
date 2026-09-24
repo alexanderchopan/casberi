@@ -164,6 +164,17 @@ enum VercelShape {
             .filter { !$0.isEmpty }
         return parts.joined(separator: " · ")
     }
+
+    /// Everything after the subject line, trimmed — the message `title`
+    /// dropped on the floor (prd §910). nil for a one-line message.
+    static func commitBody(_ commitMessage: String?) -> String? {
+        guard let message = commitMessage else { return nil }
+        let rest = message.split(separator: "\n", omittingEmptySubsequences: false)
+            .dropFirst()
+            .joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return rest.isEmpty ? nil : rest
+    }
 }
 
 enum VercelFetch {
@@ -219,6 +230,9 @@ enum VercelFetch {
         if state == .ready, let host {
             link = host.hasPrefix("http") ? host : "https://\(host)"
         } else {
+            // No project dashboard to fall to (prd §910 looked): the list
+            // row carries no team or account slug, and a URL guessed from
+            // the creator's username is wrong for every team deploy.
             link = nonEmpty(row["inspectorUrl"]) ?? "https://vercel.com"
         }
 
@@ -251,11 +265,19 @@ enum VercelFetch {
         // card-back rule — because "which branch" is the first question a
         // failed build raises and the title has no room for it.
         var notes: [String] = []
-        if let branch = commitRef(meta) { notes.append(branch) }
+        // A failed deploy's own error first (prd §910). The v6 list carries
+        // `errorMessage` on some rows and documents it on none, so it is read
+        // when present and never assumed.
+        if state != .ready, let error = nonEmpty(row["errorMessage"]) { notes.append(error) }
+        // The commit message past its subject — the title took the subject.
+        if let body = VercelShape.commitBody(commitMessage(meta)) { notes.append(body) }
+        var line: [String] = []
+        if let branch = commitRef(meta) { line.append(branch) }
         if let who = nonEmpty((row["creator"] as? [String: Any])?["username"]) {
-            notes.append(who)
+            line.append(who)
         }
-        if !notes.isEmpty { thing.summary = notes.joined(separator: " · ") }
+        if !line.isEmpty { notes.append(line.joined(separator: " · ")) }
+        if !notes.isEmpty { thing.summary = GitHubEventShape.clamp(notes.joined(separator: "\n")) }
         return thing
     }
 

@@ -444,7 +444,7 @@ enum RadicleIngest {
                          title: RadicleWire.title(repo: repo.name, verb: "patch",
                                                   subject: patch.title),
                          link: link, when: opened, who: patch.author,
-                         tags: ["Patch", "Proposed"])
+                         tags: ["Patch", "Proposed"], summary: patch.body)
                     added += 1
                 }
             }
@@ -460,7 +460,7 @@ enum RadicleIngest {
                                                   subject: patch.title),
                          link: link, when: merged,
                          who: patch.mergedBy ?? patch.author,
-                         tags: ["Patch", "Merged"])
+                         tags: ["Patch", "Merged"], summary: patch.body)
                     added += 1
                 }
             }
@@ -485,7 +485,7 @@ enum RadicleIngest {
                          title: RadicleWire.title(repo: repo.name, verb: "issue",
                                                   subject: issue.title),
                          link: link, when: opened, who: issue.author,
-                         tags: ["Issue", "Opened"])
+                         tags: ["Issue", "Opened"], summary: issue.body)
                     added += 1
                 }
             }
@@ -502,7 +502,7 @@ enum RadicleIngest {
                          title: RadicleWire.title(repo: repo.name, verb: "closed",
                                                   subject: issue.title),
                          link: link, when: Date(), who: issue.author,
-                         tags: ["Issue", "Closed"])
+                         tags: ["Issue", "Closed"], summary: issue.body)
                     added += 1
                 }
             }
@@ -516,7 +516,8 @@ enum RadicleIngest {
     private static func land(ref: String, existing: inout Set<String>,
                              context: ModelContext,
                              title: String, link: String, when: Date,
-                             who: RadicleWire.Party, tags: [String]) {
+                             who: RadicleWire.Party, tags: [String],
+                             summary: String?) {
         let thing = Thing(
             kind: .link,
             // Patch and issue titles are author-controlled free text; the
@@ -532,6 +533,10 @@ enum RadicleIngest {
         // The alias when Radicle published one, else the DID's tail — never an
         // invented handle (`RadicleWire.Party.display`).
         thing.authorHandle = who.display
+        // The patch's or issue's own words, DISPLAY copy by the GitHub rule
+        // (prd §909/§910): the wire authored them, so they are `summary`,
+        // never the retrieval-only `enrichedText`. One ceiling, GitHub's.
+        if let summary { thing.summary = GitHubEventShape.clamp(summary) }
         context.insert(thing)
         existing.insert(ref)
         SpotlightIndex.index([thing])

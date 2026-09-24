@@ -107,6 +107,17 @@ enum PackageRegistry: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    /// The page for ONE version (prd §910) — a release row opens the
+    /// release, not the package's front page. PyPI's RSS item carries this
+    /// link itself (`Release.link`); npm's cheap endpoint does not, so it is
+    /// built on the same shape npm's site serves.
+    func releaseURL(_ name: String, version: String) -> String {
+        switch self {
+        case .npm:  "https://www.npmjs.com/package/\(name)/v/\(version)"
+        case .pypi: "https://pypi.org/project/\(name)/\(version)/"
+        }
+    }
+
     /// What a person types. npm names are lowercase by rule and may carry a
     /// scope (`@vercel/og`); PyPI names normalise per PEP 503 (case-insensitive,
     /// with `-`, `_` and `.` all equivalent) but the site accepts any spelling,
@@ -332,6 +343,9 @@ enum PackageFetch {
         /// npm's deprecation message. Non-nil means the maintainer marked this
         /// version dead and said what to do instead.
         let deprecated: String?
+        /// The version's own page when the registry named it (PyPI's RSS
+        /// `link`); nil means `PackageRegistry.releaseURL` builds it (prd §910).
+        let link: String?
     }
 
     // MARK: npm
@@ -345,7 +359,7 @@ enum PackageFetch {
             "https://registry.npmjs.org/\(escaped)/latest") as? [String: Any],
               let version = nonEmpty(root["version"]) else { return nil }
         return Release(version: version, published: nil,
-                       deprecated: nonEmpty(root["deprecated"]))
+                       deprecated: nonEmpty(root["deprecated"]), link: nil)
     }
 
     /// When a specific npm package was published, via the search index.
@@ -389,7 +403,8 @@ enum PackageFetch {
               case let version = newest.title.trimmingCharacters(in: .whitespacesAndNewlines),
               !version.isEmpty else { return nil }
         // PyPI has no deprecation concept in this feed — see the file note.
-        return Release(version: version, published: newest.date, deprecated: nil)
+        return Release(version: version, published: newest.date, deprecated: nil,
+                       link: nonEmpty(newest.link))
     }
 
     // MARK: Shared
@@ -510,7 +525,7 @@ enum PackageIngest {
                     kind: .link,
                     title: IngestSupport.titleLine(
                         PackageShape.releaseTitle(name: name, version: release.version)),
-                    content: registry.pageURL(name),
+                    content: release.link ?? registry.releaseURL(name, version: release.version),
                     source: registry.displayName,
                     // The REAL publish time when we know it. A version change
                     // detected on a pass with no date is one we watched happen,

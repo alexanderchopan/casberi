@@ -403,12 +403,14 @@ enum AWSFetch {
         return root?["MetricAlarms"] as? [[String: Any]]
     }
 
-    /// The REASON an alarm's state changed ("Threshold Crossed: 1 datapoint
-    /// [72.3] was greater than the threshold [70.0]"), off CloudWatch's own
+    /// Every PAST reason an alarm's state changed, off CloudWatch's own
     /// `HistoryItemType == StateUpdate` records. Deliberately NOT called from
     /// the main sweep — it costs one request PER alarm and most passes touch
     /// several alarms just to confirm nothing changed, so it is a diagnose-
-    /// time-only read (`AWSIngest.diagnose`), not landed into a Thing.
+    /// time-only read (`AWSIngest.diagnose`). The CURRENT reason ("Threshold
+    /// Crossed: 1 datapoint [72.3] was greater than the threshold [70.0]")
+    /// needs none of this: `DescribeAlarms` carries it as `StateReason`, and
+    /// the sweep lands it from the rows already in hand (prd §910).
     static func alarmHistory(alarm: String, region: String,
                              accessKeyID: String, secretKey: String) async
         -> [[String: Any]]? {
@@ -700,7 +702,15 @@ enum AWSIngest {
                 seen[name] = state
                 guard !firstSight, previous != state, previous != nil,
                       state == "ALARM" || state == "OK" else { continue }
-                let thing = alarmThing(name: name, state: state, region: region)
+                // The reason and the moment ride the same `DescribeAlarms`
+                // row (prd §910): `StateReason` is CloudWatch's own sentence
+                // for THIS transition, `AlarmDescription` the person's, and
+                // `StateUpdatedTimestamp` is when it actually flipped — a
+                // row stamped `.now` sorted an overnight alarm into the
+                // morning it was read.
+                let reason = trimmed(row["StateReason"]) ?? trimmed(row["AlarmDescription"])
+                let thing = alarmThing(name: name, state: state, region: region,
+                                       reason: reason, when: awsDate(row["StateUpdatedTimestamp"]))
                 landed.append(thing)
                 if state == "ALARM", let ref = thing.sourceRef { alarming.insert(ref) }
             }
@@ -725,7 +735,7 @@ enum AWSIngest {
                     if status == "Failed" {
                         standing.lastFailedPipeline = name
                         standing.lastFailedPipelineWhen =
-                            IngestSupport.isoDate(newest["lastUpdateTime"])
+                            awsDate(newest["lastUpdateTime"])
                     }
                 }
                 for row in execs {
@@ -794,10 +804,15 @@ enum AWSIngest {
 
     // MARK: Shaping
 
-    private static func alarmThing(name: String, state: String, region: String) -> Thing {
+    private static func alarmThing(name: String, state: String, region: String,
+                                   reason: String?, when: Date?) -> Thing {
         let title = state == "ALARM"
             ? String(localized: "Alarm · \(name)")
             : String(localized: "Cleared · \(name)")
+        // An alarm name may carry spaces and slashes; the console reads the
+        // fragment percent-encoded, and a raw slash there opens the alarm
+        // list instead of the alarm (prd §910).
+        let encodedName = name.addingPercentEncoding(withAllowedCharacters: consoleFragmentAllowed) ?? name
         let thing = Thing(
             kind: .link,
             title: IngestSupport.titleLine(title),
@@ -806,16 +821,41 @@ enum AWSIngest {
             // built-at-runtime check would read as a fetched host family
             // rather than the permalink this is (opened in the browser,
             // never called by the app).
-            content: "https://console.aws.amazon.com/cloudwatch/home?region=\(region)#alarmsV2:alarm/\(name)",
+            content: "https://console.aws.amazon.com/cloudwatch/home?region=\(region)#alarmsV2:alarm/\(encodedName)",
             source: AWSShape.source,
-            capturedAt: .now,
+            capturedAt: when ?? .now,
             tags: [String(localized: "Alarm")],
             // The STATE rides the ref, so an alarm that flaps ALARM→OK→ALARM
             // keeps every transition as its own row rather than one that
             // silently rewrites (the ASC version-ref shape).
             sourceRef: "aws:alarm:\(name):\(state):\(Int(Date().timeIntervalSince1970))"
         )
+        // DISPLAY copy (`summary`), the GitHub/Linear rule: CloudWatch wrote
+        // this sentence, so it is drawn, never the retrieval-only
+        // `enrichedText`.
+        thing.summary = reason
         return thing
+    }
+
+    /// Unreserved characters only — the console's own encoding of an alarm
+    /// name in the `alarmsV2:alarm/` fragment.
+    private static let consoleFragmentAllowed =
+        CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_.~"))
+
+    private static func trimmed(_ raw: Any?) -> String? {
+        guard let s = (raw as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty else { return nil }
+        return s
+    }
+
+    /// AWS's JSON protocols hand a timestamp back as EPOCH SECONDS (a Double,
+    /// `1758700000.123`), not the ISO string `IngestSupport.isoDate` reads —
+    /// so that reader alone answered nil for every CloudWatch and
+    /// CodePipeline date (prd §910). Both shapes, the number first.
+    static func awsDate(_ raw: Any?) -> Date? {
+        if let n = raw as? Double, n > 0 { return Date(timeIntervalSince1970: n) }
+        if let n = raw as? Int, n > 0 { return Date(timeIntervalSince1970: Double(n)) }
+        return IngestSupport.isoDate(raw)
     }
 
     private static func pipelineThing(_ row: [String: Any], pipeline: String, region: String) -> Thing? {
@@ -828,17 +868,25 @@ enum AWSIngest {
         // reading as a success is the fake status §83 bans (Cursor's/ASC's
         // rule, restated here rather than shared, since the three bridges
         // have no common status type to hang one function off).
-        let title = status == "Failed"
+        // WHAT was deployed, off the execution's own `sourceRevisions`
+        // (prd §910) — the commit message, so a row says "Fix the flaky
+        // widget test", not only which pipeline ran. No
+        // `ListActionExecutions`: the summary rides the list row in hand.
+        let revision = sourceRevisionSummary(row)
+        let subject = revision?.split(separator: "\n").first
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+        let lead = status == "Failed"
             ? String(localized: "Failed · \(pipeline)")
             : (status == "Superseded"
                ? String(localized: "Superseded · \(pipeline)")
                : pipeline)
+        let title = subject.map { $0.isEmpty ? lead : "\(lead) · \($0)" } ?? lead
         let thing = Thing(
             kind: .link,
             title: IngestSupport.titleLine(title),
             content: "https://console.aws.amazon.com/codesuite/codepipeline/pipelines/\(pipeline)/executions/\(id)/timeline?region=\(region)",
             source: AWSShape.source,
-            capturedAt: IngestSupport.isoDate(row["lastUpdateTime"]) ?? .now,
+            capturedAt: awsDate(row["lastUpdateTime"]) ?? .now,
             // `status` is a RUNTIME value from CodePipeline's own API
             // (Succeeded/Failed/Superseded), not a compile-time literal, so
             // it rides as-is rather than through `String(localized:)` — a
@@ -847,7 +895,23 @@ enum AWSIngest {
             sourceRef: "aws:pipeline:\(id)"
         )
         thing.authorHandle = pipeline
+        // The whole message is DISPLAY copy, the alarm row's rule.
+        thing.summary = revision
         return thing
+    }
+
+    /// `sourceRevisions[0].revisionSummary`. For a CodeStar/GitHub v2 source
+    /// it is a JSON STRING — `{"ProviderType":"GitHub","CommitMessage":"…"}`
+    /// — so that shape is opened and its `CommitMessage` read; anything else
+    /// (S3, CodeCommit, ECR) is the plain sentence it looks like (prd §910).
+    static func sourceRevisionSummary(_ row: [String: Any]) -> String? {
+        guard let first = (row["sourceRevisions"] as? [[String: Any]])?.first,
+              let raw = trimmed(first["revisionSummary"]) else { return nil }
+        if raw.hasPrefix("{"), let data = raw.data(using: .utf8),
+           let box = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
+            return trimmed(box["CommitMessage"]) ?? trimmed(box["commitMessage"])
+        }
+        return raw
     }
 
     private static func costAnomalyThing(day: String, amount: Double, baseline: Double) -> Thing {

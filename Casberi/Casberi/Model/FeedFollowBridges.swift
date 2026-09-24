@@ -896,6 +896,11 @@ enum FeedFollowIngest {
                            let author = itemAuthor(item.author, feedName: feedName) {
                             thing.postAuthor = author; extraPatched = true
                         }
+                        // The body, for a row that landed before the feed
+                        // published one — the NerdWallet line (prd §910).
+                        if (thing.summary ?? "").isEmpty, !item.summary.isEmpty {
+                            thing.summary = item.summary; extraPatched = true
+                        }
                         // Appended, never assigned — a row's other tags (its
                         // type tag, the `Shorts` one `YouTubeShorts` writes, a
                         // project's) are not this feed's to drop.
@@ -906,10 +911,14 @@ enum FeedFollowIngest {
                     }
                     continue
                 }
-                guard !item.title.isEmpty else { continue }
+                // A titleless item with a body is named by its first line —
+                // `telegramTitle`'s rule, for the feeds that reach here
+                // (prd §910). Only one with neither is skipped.
+                let rawTitle = item.title.isEmpty ? IngestSupport.titleLine(item.summary) : item.title
+                guard !rawTitle.isEmpty else { continue }
                 let thing = Thing(
                     kind: .link,
-                    title: IngestSupport.decodeHTMLEntities(item.title),
+                    title: IngestSupport.decodeHTMLEntities(rawTitle),
                     content: openURL,
                     source: kind.source,
                     capturedAt: item.date ?? .now,

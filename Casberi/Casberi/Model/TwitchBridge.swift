@@ -248,6 +248,14 @@ enum TwitchIngest {
                 sourceRef: ref
             )
             thing.previewImageURL = IngestSupport.imageURL(frame)
+            // What the streamer called tonight's stream — Helix's `title`,
+            // already in hand (prd §910). DISPLAY copy on `summary`; the row's
+            // own title keeps its exact "<name> live — <game>" shape, because
+            // `game(fromTitle:)` parses it back out.
+            if let streamTitle = (stream["title"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !streamTitle.isEmpty {
+                thing.summary = IngestSupport.decodeHTMLEntities(streamTitle)
+            }
             // The channel, for MediaMoments' quiet-return check (a followed
             // streamer live again after a real gap) — the same authorHandle
             // slot RSS/feed-follow already stamp with their own source's

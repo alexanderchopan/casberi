@@ -350,7 +350,17 @@ enum DropboxIngest {
             let size = (entry["size"] as? Int64) ?? Int64((entry["size"] as? Int) ?? 0)
             let modified = IngestSupport.isoDate(entry["client_modified"]) ?? .now
             let preview = await preview(id: id, name: name, size: size, token: token)
+            // `path_display` keeps the person's own casing; `path_lower` is the
+            // dedupe key and would open a folder spelt wrong on a
+            // case-sensitive listing.
+            let pathDisplay = (entry["path_display"] as? String) ?? pathLower
 
+            // A `.file` row's `content` is its NOTE — the text preview or the
+            // size line the file sheet draws under the name (`FileChip`) — so
+            // the page on dropbox.com rides `externalLink` (prd §910), and the
+            // sheet's `dropboxVerb` opens it: the folder, previewing this
+            // file. Until this pass a Dropbox row opened nothing, the one
+            // `.file` source whose bytes are not on this device.
             let thing = Thing(
                 kind: .file,
                 title: name,
@@ -359,12 +369,31 @@ enum DropboxIngest {
                 capturedAt: modified,
                 sourceRef: ref
             )
+            thing.externalLink = webURL(pathDisplay: pathDisplay, name: name)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
         if added > 0 || removed > 0 { context.saveHonestly() }
         return added
+    }
+
+    /// The file's page on dropbox.com (prd §910): the web app opens a FOLDER
+    /// and previews one file in it by name, so the door is
+    /// `/home/<folder>?preview=<name>`. Never fetched — a link written into a
+    /// row, opened in the person's browser. Each path segment and the name
+    /// are percent-encoded to the unreserved set, because a file name can
+    /// carry `&`, `#` or `?`, and `urlQueryAllowed` would let them through.
+    static func webURL(pathDisplay: String, name: String) -> String {
+        let unreserved = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-._~"))
+        func encode(_ s: String) -> String {
+            s.addingPercentEncoding(withAllowedCharacters: unreserved) ?? s
+        }
+        let folder = (pathDisplay as NSString).deletingLastPathComponent
+            .split(separator: "/").map { encode(String($0)) }.joined(separator: "/")
+        let home = folder.isEmpty ? "https://www.dropbox.com/home"
+                                  : "https://www.dropbox.com/home/\(folder)"
+        return "\(home)?preview=\(encode(name))"
     }
 
     /// A short line describing a landed file — its text (readable formats,

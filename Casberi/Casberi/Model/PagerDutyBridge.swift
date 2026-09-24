@@ -178,6 +178,13 @@ enum PagerDutyFetch {
         let htmlURL: String?
         let createdAt: Date?
         let resolvedAt: Date?
+        /// `description` — the incident's body, which PagerDuty fills with
+        /// the title by default and an integration fills with the alert's
+        /// own words (prd §910).
+        let description: String?
+        /// `last_status_change_by.summary` — who or what moved it last; on a
+        /// resolved incident, who resolved it (prd §910).
+        let resolvedBy: String?
 
         var isResolved: Bool { status.caseInsensitiveCompare("resolved") == .orderedSame }
         var isOpen: Bool { !isResolved }
@@ -245,7 +252,9 @@ enum PagerDutyFetch {
             urgency: nonEmpty(row["urgency"]),
             htmlURL: nonEmpty(row["html_url"]),
             createdAt: IngestSupport.isoDate(row["created_at"]),
-            resolvedAt: resolved
+            resolvedAt: resolved,
+            description: nonEmpty(row["description"]),
+            resolvedBy: nonEmpty((row["last_status_change_by"] as? [String: Any])?["summary"])
         )
     }
 
@@ -314,9 +323,17 @@ enum PagerDutyIngest {
                 // one word, it is the same word on most rows, and putting it in
                 // front would push the service out of the clamp on exactly the
                 // long machine-generated titles that need it most.
+                var lines: [String] = []
                 if let urgency = incident.urgency {
-                    thing.summary = String(localized: "\(urgency) urgency")
+                    lines.append(String(localized: "\(urgency) urgency"))
                 }
+                // The description only when it says more than the title
+                // (prd §910): PagerDuty copies the title into it by default,
+                // and an equal one would be said twice.
+                if let description = incident.description, description != incident.title {
+                    lines.append(description)
+                }
+                if !lines.isEmpty { thing.summary = GitHubEventShape.clamp(lines.joined(separator: "\n")) }
                 // The service as a FIELD (2026-08-12) — see `VercelBridge` for
                 // the reasoning; machine-generated incident titles are the
                 // worst case for slicing a name out of a joined string.
@@ -347,6 +364,8 @@ enum PagerDutyIngest {
                 tags: ["Resolved"],
                 sourceRef: resolvedRef
             )
+            // Who closed it (prd §910) — a person's name, or the integration's.
+            if let by = incident.resolvedBy { thing.summary = String(localized: "Resolved by \(by)") }
             thing.authorHandle = incident.service
             context.insert(thing)
             existing.insert(resolvedRef)

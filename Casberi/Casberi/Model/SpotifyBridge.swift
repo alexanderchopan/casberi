@@ -387,7 +387,11 @@ enum SpotifyIngest {
             guard seen.insert(ref).inserted, !existing.contains(ref) else { continue }
             let artists = ((track["artists"] as? [[String: Any]]) ?? [])
                 .compactMap { $0["name"] as? String }.joined(separator: ", ")
-            let link = ((track["external_urls"] as? [String: Any])?["spotify"] as? String) ?? ""
+            // The track's page, built from its id when `external_urls` is
+            // missing (prd §910) — a play with no door was a row that opened
+            // nothing. Same host, same shape Spotify serves in that field.
+            let link = ((track["external_urls"] as? [String: Any])?["spotify"] as? String)
+                .flatMap { $0.isEmpty ? nil : $0 } ?? "https://open.spotify.com/track/\(id)"
             let when = IngestSupport.isoDate(item["played_at"])
             let album = (track["album"] as? [String: Any]) ?? [:]
 
@@ -411,7 +415,13 @@ enum SpotifyIngest {
             // The album the track came off — the one fact the payload carries
             // that the title doesn't. `summary`, not `enrichedText`: Spotify
             // authored it and handed it over, so it's shown copy, not scraped.
-            thing.summary = albumLine(album, track: name)
+            // …and where it was played FROM, when the play says (prd §910):
+            // `context.type` is the one fact about the listening the payload
+            // carries. Its `uri` names no title, so the word is all there is.
+            let albumWords = albumLine(album, track: name)
+            let fromWords = playedFrom(item["context"], albumNamed: albumWords != nil)
+            let words = [albumWords, fromWords].compactMap { $0 }
+            thing.summary = words.isEmpty ? nil : words.joined(separator: " · ")
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
@@ -434,6 +444,22 @@ enum SpotifyIngest {
                 return ((image["width"] as? Int) ?? 0, url)
             }
         return sized.min { abs($0.width - 300) < abs($1.width - 300) }?.url
+    }
+
+    /// "from playlist" / "from album" — the play's `context`, when Spotify
+    /// sent one with a `uri` (a context without one is not a context). The
+    /// album word stands down when the album line already names it, so a
+    /// row never reads "From Blonde (2016) · from album". Other types (an
+    /// artist page, a show) are not worded: the ask was playlist or album.
+    private static func playedFrom(_ context: Any?, albumNamed: Bool) -> String? {
+        guard let context = context as? [String: Any],
+              let type = (context["type"] as? String)?.lowercased(),
+              let uri = context["uri"] as? String, !uri.isEmpty else { return nil }
+        switch type {
+        case "playlist": return String(localized: "from playlist")
+        case "album": return albumNamed ? nil : String(localized: "from album")
+        default: return nil
+        }
     }
 
     /// "From Blonde (2016)" — display copy under the track in the thing sheet.

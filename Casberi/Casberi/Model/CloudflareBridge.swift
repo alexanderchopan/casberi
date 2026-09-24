@@ -408,6 +408,9 @@ enum CloudflareFetch {
         let proxied: String
         let ttl: String
         let modifiedOn: String
+        /// The record's own note, when the person left one (prd §910). Not
+        /// in `fields`: a reworded comment is not a DNS change.
+        let comment: String?
 
         var fields: [String] { [type, name, content, proxied, ttl] }
 
@@ -422,6 +425,8 @@ enum CloudflareFetch {
             self.proxied = String(describing: (raw["proxied"] as? Bool) ?? false)
             self.ttl = String(describing: (raw["ttl"] as? Int) ?? 0)
             self.modifiedOn = (raw["modified_on"] as? String) ?? ""
+            let note = (raw["comment"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            self.comment = (note?.isEmpty == false) ? note : nil
         }
     }
 
@@ -529,9 +534,23 @@ enum CloudflareFetch {
                 capturedAt: .now,
                 sourceRef: dnsRef(change)
             )
-            if change.kind == .changed, let was = change.previousContent, !was.isEmpty {
-                thing.summary = String(localized: "Was: \(was)")
+            var lines: [String] = []
+            switch change.kind {
+            case .changed:
+                if let was = change.previousContent, !was.isEmpty {
+                    lines.append(String(localized: "Was: \(was)"))
+                }
+            case .removed:
+                // The ghost record's content IS the remembered `was[2]`
+                // (`diffDNS`), so a removal names what it pointed at (prd §910).
+                if !change.record.content.isEmpty {
+                    lines.append(String(localized: "Was: \(change.record.content)"))
+                }
+            case .added:
+                break
             }
+            if let comment = change.record.comment { lines.append(comment) }
+            if !lines.isEmpty { thing.summary = lines.joined(separator: "\n") }
             return thing
         }
     }
@@ -553,7 +572,10 @@ enum CloudflareFetch {
         let label = "\(change.record.type) \(change.record.name)"
         switch change.kind {
         case .added:
-            return String(localized: "\(zoneName) — DNS record added: \(label)")
+            // The target too (prd §910): "added: A api" says nothing without
+            // where it points.
+            let target = change.record.content.isEmpty ? label : "\(label) → \(change.record.content)"
+            return String(localized: "\(zoneName) — DNS record added: \(target)")
         case .removed:
             return String(localized: "\(zoneName) — DNS record removed: \(label)")
         case .changed:

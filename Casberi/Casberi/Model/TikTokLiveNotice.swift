@@ -164,6 +164,12 @@ enum TikTokLiveFeed {
         var videoCover: String?
         /// A payload's own `https` link, when it has one.
         var link: String?
+        /// The longer of the words the payload carried, when `text` is not
+        /// already all of them (prd §910): TikTok's own `content`/`title`
+        /// sentence and the comment's `text` are BOTH read now, and the one
+        /// that did not become `text` is kept here. nil when there is
+        /// nothing beyond `text`.
+        var body: String? = nil
 
         var isFollow: Bool { kind == "follow" }
 
@@ -211,10 +217,13 @@ enum TikTokLiveFeed {
             .lazy.compactMap { string($0)?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .first { !$0.isEmpty }
         let who = name ?? handle.map { "@\($0)" }
+        // The comment's own words, read whether or not TikTok also wrote a
+        // sentence (prd §910) — UNMEASURED, so optional like every other read.
+        let said = comment.flatMap { string($0["text"])?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .flatMap { $0.isEmpty ? nil : $0 }
         // TikTok's own words where it gave any. Where it gave none, the one
         // sentence the payload's NAME states — never an invented detail.
         let text: String? = own ?? {
-            let said = comment.flatMap { string($0["text"]) }
             switch payloadKey {
             case "digg": return who.map { "\($0) liked your video" } ?? "Liked your video"
             case "follow": return who.map { "\($0) followed you" } ?? "New follower"
@@ -226,6 +235,12 @@ enum TikTokLiveFeed {
             }
         }()
         guard let text, !text.isEmpty else { return nil }
+        // Whichever of the two the row's line did not take, when it says
+        // more: the comment behind TikTok's "bo commented on your video", or
+        // TikTok's sentence behind a bare comment. Never `text` again.
+        let body: String? = [own, said].compactMap { $0 }
+            .filter { $0 != text && !text.contains($0) }
+            .max { $0.count < $1.count }
 
         let stamp = (item["create_time"] as? Double) ?? (item["create_time"] as? Int).map(Double.init)
         let link = [payload["schema_url"], payload["web_url"], payload["url"]]
@@ -243,7 +258,8 @@ enum TikTokLiveFeed {
             videoAuthor: video.flatMap { ($0["author"] as? [String: Any]).flatMap { string($0["unique_id"]) } },
             videoCaption: video.flatMap { string($0["desc"]) },
             videoCover: video.flatMap { firstURL(($0["video"] as? [String: Any])?["cover"]) },
-            link: link)
+            link: link,
+            body: body)
     }
 
     /// The person who acted: a lone user, or the first of a list (a like

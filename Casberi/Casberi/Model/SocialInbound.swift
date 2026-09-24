@@ -247,6 +247,7 @@ enum SocialInbound {
     /// corpus.
     @MainActor
     static func landFollower(id: String, handle: String, displayName: String?,
+                             bio: String? = nil,
                              avatarURL: String?, profileURL: String,
                              when: Date?, source: String,
                              existing: inout Set<String>,
@@ -254,6 +255,11 @@ enum SocialInbound {
         let ref = "\(source.lowercased()):follower:\(id)"
         guard !existing.contains(ref) else { return nil }
         let name = displayName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        // Who they say they are (prd §910): the profile's own bio, which both
+        // networks hand over with the follower list. DISPLAY copy — they wrote
+        // it — and the one thing a "started following you" row can say about a
+        // stranger besides their name.
+        let about = bio?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         let thing = Thing(
             kind: .link,
             title: name.map { String(localized: "\($0) (@\(handle)) started following you") }
@@ -266,6 +272,7 @@ enum SocialInbound {
         thing.authorHandle = handle
         thing.authorAvatarURL = avatarURL
         thing.socialContext = "follow"
+        thing.summary = about
         context.insert(thing)
         SpotlightIndex.index([thing])
         existing.insert(ref)
