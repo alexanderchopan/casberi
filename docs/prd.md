@@ -61215,3 +61215,13 @@ The first screenshot of §898 on a device — a Calendar card mid-flight over th
 **Ruled without a mock, by the user:** Wallet stays as it is (the north star, §906); Agents keeps its thread. The All feed inherits the newest thing's own category face and has none of its own.
 
 **Unseen:** the simulator. First to look at on a phone: a screenshot at the top of the All feed, an event in the Calendar room, a GitHub issue's room, and an Obsidian note's room.
+
+## §901a — The turn is an ease, not a spring: two frames read as a flicker (user: "the tiles on the all feed are supposed to morph into their categories when a new item arrives, but it seems so fast and kind of glitchy", 2026-09-24)
+
+**Measured, not reasoned.** The probe (`-leadCycleProbe 4`) was recorded on the simulator at 30fps and the landing row's lead tiled frame by frame. On the shipped build each turn was TWO FRAMES — under 70ms — so a 26pt mark went from the full blue Trello tile to the dark Work disc in one hop, held 0.87s, and hopped back. §901 was "seen" at 0.4s screenshots, which is exactly the sampling that cannot see a two-frame turn. Two causes: the turn rode `DS.Motion.standard`, a 0.25s spring, and a spring is front-loaded, so the whole 180° crossing sat in its first ~80ms; and `perspective: 0.5` bulged the near edge of a mark that small, so mid-turn it read as shoved sideways.
+
+**Ruling.** `DS.Motion.turn` is a new token: `easeInOut(duration: 0.6)`, no bounce. A coin turns slowest at its faces and fastest edge-on, which is an ease; a spring was tried first at 0.5s with no bounce and recorded, and still crossed in four to six frames. An overshoot past the edge would show the wrong face for a frame, so no bounce. `LeadCycle` puts both turns on it, takes perspective to 0.25, and moves `back` from 1.2s to 1.9s so the glyph is still held about a second after the longer turn. Reach for `turn` for anything that turns over; `standard` stays for things that appear or grow.
+
+**Seen on the recording** (iPhone 17 Pro, iOS 26.5, 30fps): the row cascades in, rests nine frames as Trello, turns out over six visible frames with one edge-on frame in the middle, holds the Work disc ~1.4s, turns back over seven. The audit is unchanged: `lead-cycle-audit.py` pins `out`/`back` ordering and the reset, not the curve.
+
+**Trap paid for.** Repeated probe runs leave Trello rows on the same day, and at three they FOLD; a fold's lead never cycles (§901), so the second recording showed no turn at all until the stale probe rows were cleared from the sim's store. And `simctl recordVideo` fails with "Host recording is already in progress" when a killed recorder's `SimRenderServer` still holds the file — killing that service shuts the device down.

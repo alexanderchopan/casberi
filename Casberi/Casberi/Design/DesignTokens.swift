@@ -938,6 +938,16 @@ enum DS {
         /// finger is on the glass and the response has to feel attached to
         /// it. One token so every pressed control dips on the same clock.
         static let press = Animation.spring(duration: 0.2, bounce: 0.4)
+        /// A disc TURNING OVER (the lead cycle, prd §901). Not a spring: a
+        /// spring is front-loaded, so on `standard` the 180° turn of a 26pt
+        /// mark crossed its edge in TWO FRAMES at 30Hz and read as a swap,
+        /// and on a 0.5s no-bounce spring still in four to six (recorded
+        /// 2026-09-24, user: "so fast and kind of glitchy"). A coin turns
+        /// slowest at its faces and fastest edge-on, which is an ease-in-out;
+        /// no bounce, because an overshoot past the edge shows the wrong face
+        /// for a frame. Reach for it for anything that turns over.
+        static let turnDuration: Double = 0.6
+        static let turn = Animation.easeInOut(duration: turnDuration)
         // `tear` WAS HERE and is deleted (prd §583, 2026-09-03). It was the
         // spring the receipt's teeth cut in on when a record settled while
         // somebody was looking at it; §583 removed the paper, so there is no

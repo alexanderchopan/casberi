@@ -54,8 +54,13 @@ struct LeadCycle: ViewModifier {
     /// The clock, shared by both moments. `out` sits after the row's own
     /// entrance spring (`DS.Motion.duration`), so the cycle FOLLOWS the
     /// cascade rather than competing with it (§661: one animation per moment).
+    /// Each turn is `DS.Motion.turn` (0.6s ease-in-out), so the glyph is
+    /// held from 0.9s to `back`: about a second, what the first cut held
+    /// (measured 0.87s), with the turns themselves now readable — on
+    /// `standard` each was two frames at 30Hz and the whole thing read as a
+    /// flicker (2026-09-24, user: "so fast and kind of glitchy").
     static let out: TimeInterval = 0.3
-    static let back: TimeInterval = 1.2
+    static let back: TimeInterval = 1.9
     /// A landing is one that appeared within this of being captured.
     static let freshWindow: TimeInterval = 20
     /// Per-row stagger, `RowEntrance`'s own step, capped like its cascade.
@@ -101,11 +106,11 @@ struct LeadCycle: ViewModifier {
         glyph = CategoryFold.glyph(for: category)
         cycling = true
         let delay = Double(min(index, 12)) * Self.stagger
-        withAnimation(DS.Motion.standard.delay(delay + Self.out)) { angle = 180 }
+        withAnimation(DS.Motion.turn.delay(delay + Self.out)) { angle = 180 }
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(Int((delay + Self.back) * 1000)))
-            withAnimation(DS.Motion.standard) { angle = 360 }
-            try? await Task.sleep(for: .milliseconds(Int(DS.Motion.duration * 1000) + 150))
+            withAnimation(DS.Motion.turn) { angle = 360 }
+            try? await Task.sleep(for: .milliseconds(Int(DS.Motion.turnDuration * 1000) + 150))
             var still = Transaction()
             still.disablesAnimations = true
             withTransaction(still) {
@@ -130,8 +135,10 @@ struct LeadCycle: ViewModifier {
             let turned = angle.truncatingRemainder(dividingBy: 360)
             let frontShows = turned < 90 || turned > 270
             content
+                // Perspective 0.25, not 0.5: at 0.5 the near edge of a 26pt
+                // mark bulged and the mark read as shoved sideways mid-turn.
                 .rotation3DEffect(.degrees(angle + (back ? 180 : 0)),
-                                  axis: (x: 0, y: 1, z: 0), perspective: 0.5)
+                                  axis: (x: 0, y: 1, z: 0), perspective: 0.25)
                 .opacity(back ? (frontShows ? 0 : 1) : (frontShows ? 1 : 0))
         }
     }
