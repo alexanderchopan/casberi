@@ -583,6 +583,20 @@ step "Source alias audit"
 "$ROOT/scripts/source-alias-audit.py" || fail "a renamed source resolves to no seat — see the output above"
 print -P "%F{green}✓ source alias audit%f"
 
+# ONE CYCLE, NOT A SWITCH (prd §901, 2026-09-23). A feed row's lead turns over
+# to its dock CATEGORY's glyph and back when the row lands while you look or
+# its title moves in place. The two rules a later pass could undo while the
+# row still animates: the glyph comes from `CategoryFold.glyph(for:)` and
+# nothing else (a tick for "delivered" is a second vocabulary to learn), and
+# the turn comes BACK. Also: one caller, the ledger opted out of the change
+# cycle (§171's ripple is its motion), the wave set on the List, a fresh
+# window so a scrolled-to row never cycles, Reduce Motion at the fire.
+step "Lead-cycle audit"
+"$ROOT/scripts/lead-cycle-audit.py" --self-test >/dev/null \
+  || fail "the lead-cycle audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/lead-cycle-audit.py" || fail "a row lead turns to something other than its dock category's glyph, or does not turn back — see the output above"
+print -P "%F{green}✓ lead-cycle audit%f"
+
 # AN ACCOUNT MARKED `mine` LANDS ITS OWN REPLIES (2026-09-17). §239's inbound
 # half — who replied to you, who liked your posts — reads through
 # `SocialInbound.ownRecentPosts`, which walks YOUR posts out of the corpus. So

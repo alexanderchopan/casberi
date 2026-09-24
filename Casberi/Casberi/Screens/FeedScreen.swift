@@ -5801,6 +5801,10 @@ struct FeedScreen: View {
                 .listRowSeparator(.hidden)
         }
         .listStyle(.plain)
+        // The wave every row lead measures a landing against (prd §901,
+        // `LeadCycle`): a thing captured after this, appearing now, landed
+        // while you were looking; the corpus the page opened to did not.
+        .environment(\.feedWaveAt, shapeWaveAt)
         // ONE pull, both outcomes. This List carried TWO `.refreshable` until
         // 2026-07-16 — SwiftUI keeps the outermost, so the real bridge sync
         // never ran on a pull; only the 600ms pulse stub did.

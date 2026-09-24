@@ -664,6 +664,13 @@ struct BandRow: View {
                             .background(Circle().fill(.black.opacity(0.55)))
                     }
                 }
+                // ONE CYCLE (prd §901): a row that lands while you look, or
+                // whose title moves in place, turns its mark over to its dock
+                // category's glyph and back. The ledger's rows keep §171's
+                // ripple as their one motion on a retitle.
+                .leadCycle(source: thing.source, capturedAt: thing.capturedAt,
+                           fact: thing.title, index: rippleIndex,
+                           cyclesOnChange: !moneyColumn)
         } trailing: {
             VStack(alignment: .trailing, spacing: 1) {
                 if let money = moneyAmount {

@@ -914,6 +914,30 @@ struct RootShell: View {
                     NSLog("[Casberi] rainPulse: dealt \(roster.count) tiles")
                 }
             }
+            // `-leadCycleProbe <s>` (prd §901): after the delay, LAND one
+            // Trello-sourced thing so its row appears while you look (the
+            // lead turns to the Work glyph and back), then three seconds later
+            // MOVE its title in place (the second cycle). Both NSLog. The
+            // source needs a dock category ("You" has none and would not turn)
+            // and must land as ONE row: Calendar was tried first and folded
+            // with the demo's other events (§896), and a fold's lead is
+            // `DSFoldLead`, which never cycles.
+            let cycleDelay = UserDefaults.standard.double(forKey: "leadCycleProbe")
+            if cycleDelay > 0 {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(cycleDelay))
+                    let probe = Thing(kind: .note, title: "Lead cycle probe",
+                                      content: "", source: "Trello",
+                                      sourceRef: "leadCycleProbe:\(Date.now.timeIntervalSince1970)")
+                    modelContext.insert(probe)
+                    try? modelContext.save()
+                    NSLog("[Casberi] leadCycle: landed \(probe.id)")
+                    try? await Task.sleep(for: .seconds(3))
+                    probe.title = "Lead cycle probe · moved"
+                    try? modelContext.save()
+                    NSLog("[Casberi] leadCycle: moved \(probe.id)")
+                }
+            }
             // `-groupProbe YES` — is the REAL app-group container reachable and
             // writable (scripts/verify-mac.sh). The check 22 Mac builds needed
             // and no gate had.
