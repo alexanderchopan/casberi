@@ -55,7 +55,30 @@ enum IMAPClient {
     /// presence check fails AFTER a successful SELECT, and logging that as
     /// "select" would point at the wrong command in the one place this is
     /// read — the log line that says why a delete-sync did nothing.
-    enum IMAPError: Error { case connect, login, select, fetch, timeout }
+    enum IMAPError: Error {
+        case connect, login, select, fetch, timeout
+        /// Gmail refused the account's own password: with 2-Step Verification
+        /// on, IMAP takes only an app password (beta feedback, 2026-09-24 —
+        /// 2-Step Verification turned on, sign-in still refused, and the
+        /// screen said "check the address" over a cause the server had named).
+        case appPasswordRequired
+        /// Gmail wants one sign-in in a browser before IMAP is let in.
+        case webLoginRequired
+    }
+
+    /// What a refused LOGIN's tagged line names, where the cause is one the
+    /// person can act on. Gmail's two, in its own words:
+    /// `NO [ALERT] Application-specific password required: …` and
+    /// `NO [ALERT] Please log in via your web browser: …` (or `[WEBALERT …]`).
+    /// Anything else is a plain rejected login.
+    static func loginRefusal(_ tagged: String) -> IMAPError {
+        let line = tagged.uppercased()
+        if line.contains("APPLICATION-SPECIFIC PASSWORD REQUIRED") { return .appPasswordRequired }
+        if line.contains("WEBALERT") || line.contains("LOG IN VIA YOUR WEB BROWSER") {
+            return .webLoginRequired
+        }
+        return .login
+    }
 
     /// RFC 2047 encoded-word decoding, for callers outside the envelope parser
     /// (2026-08-14). `MailMIME.attachmentNames` needs exactly what a subject
@@ -193,7 +216,8 @@ private final class Session {
     func login(user: String, password: String) async throws {
         let t = nextTag()
         send(line: "\(t) LOGIN \(quote(user)) \(quote(password))")
-        guard try await readUntilTagged(t).ok else { throw IMAPClient.IMAPError.login }
+        let response = try await readUntilTagged(t)
+        guard response.ok else { throw IMAPClient.loginRefusal(response.tagged) }
     }
 
     /// The SELECT response's `[UIDVALIDITY n]` — set once per session by
@@ -355,7 +379,8 @@ private final class Session {
         conn.send(content: (line + "\r\n").data(using: .utf8), completion: .idempotent)
     }
 
-    struct Response { let ok: Bool; let lines: [String] }
+    /// `tagged` is the completion line itself — a refusal's reason rides it.
+    struct Response { let ok: Bool; let lines: [String]; let tagged: String }
 
     /// Reads until a line beginning with `tag ` (the tagged completion).
     private func readUntilTagged(_ tag: String) async throws -> Response {
@@ -363,7 +388,7 @@ private final class Session {
         while true {
             let line = try await readLine()
             if line.hasPrefix(tag + " ") {
-                return Response(ok: line.uppercased().contains(" OK"), lines: lines)
+                return Response(ok: line.uppercased().contains(" OK"), lines: lines, tagged: line)
             }
             lines.append(line)
         }

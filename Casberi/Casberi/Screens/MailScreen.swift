@@ -97,7 +97,12 @@ struct MailScreen: View {
         guard canConnect else { return }
         var p = provider
         p.address = addressField.trimmingCharacters(in: .whitespaces)
-        TokenVault.set(passwordField, for: provider.passwordKey)
+        // Google shows an app password as four groups of four ("abcd efgh
+        // ijkl mnop") and a copy from that page carries the spaces. Neither
+        // provider's app password contains one, so none reaches the server.
+        let password = passwordField.filter { !$0.isWhitespace }
+        guard !password.isEmpty else { return }
+        TokenVault.set(password, for: provider.passwordKey)
         passwordField = ""
         DSHaptic.tap()
         Task { await sync(justConnected: true) }
@@ -113,6 +118,10 @@ struct MailScreen: View {
             switch MailIngest.lastError {
             case .login:
                 result = .failed(String(localized: "Login rejected — check the address and app-specific password."))
+            case .appPasswordRequired:
+                result = .failed(String(localized: "That's your Google password. Gmail takes an app password here — tap Get an app password."))
+            case .webLoginRequired:
+                result = .failed(String(localized: "Google wants you to sign in at gmail.com once, then try again."))
             case .connect:
                 result = .failed(String(localized: "Couldn't reach the mail server — check your connection."))
             case .select, .fetch, .timeout:

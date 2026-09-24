@@ -116,6 +116,10 @@ KNOWN_NON_REACH=(
   blockscan.com
   venice.ai bankr.bot www.kraken.com portal.cdp.coinbase.com
   www.binance.com exchange.gemini.com console.x.ai
+  # www.binance.us — Binance.US's key page, the door for a US person
+  # (`ExchangeBridge.binanceUS`). Never fetched: the read is `api.binance.us`,
+  # disclosed in NetworkReach on the Binance entry.
+  www.binance.us
   # cloud.near.ai — where a NEAR AI key is minted (prd §848). Opened in the
   # browser, never fetched. The host this seat actually READS is
   # `cloud-api.near.ai`, a different host, disclosed in NetworkReach on the
