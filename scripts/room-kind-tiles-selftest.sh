@@ -124,7 +124,7 @@ grep -qF 'minHeight: box,' "$LEDE" && grep -qF 'maxHeight: box,' "$LEDE" \
 # the safe head the way it was"). Each head hands them to `DSRoomChassis.Head`
 # — its own geometry, no hand-placed frame — and the cover path stands them
 # only when no head is drawn, or a head room would draw them twice.
-for card in SafeRoomCard StripeRoomCard PostHogRoomCard L2beatRoomCard WalletbeatRoomCard; do
+for card in SafeRoomCard StripeRoomCard PostHogRoomCard L2beatRoomCard WalletbeatRoomCard PolarRoomCard DodoPaymentsRoomCard; do
   f="Casberi/Casberi/Screens/$card.swift"
   grep -qF 'var tiles: DSScopeTiles<RoomKindTile>? = nil' "$f" \
     || { echo "✗ $card no longer takes the room's kind tiles"; exit 1; }
@@ -134,7 +134,8 @@ done
 python3 - "$FEED" <<'PY'
 import re, sys
 feed = open(sys.argv[1]).read()
-bad = [c for c in ["SafeRoomCard", "StripeRoomCard", "PostHogRoomCard", "L2beatRoomCard", "WalletbeatRoomCard"]
+bad = [c for c in ["SafeRoomCard", "StripeRoomCard", "PostHogRoomCard", "L2beatRoomCard", "WalletbeatRoomCard",
+                   "PolarRoomCard", "DodoPaymentsRoomCard"]
        if not re.search(c + r'\([^{]*tiles: kindTilesInHead\)', feed)]
 for c in bad:
     print(f"✗ FeedScreen no longer hands {c} the kind tiles")
@@ -152,7 +153,9 @@ import sys
 src = "\n".join("" if l.strip().startswith("//") else l
                  for l in open(sys.argv[1]).read().splitlines())
 fails = []
-for fn, tiles in (("private func kindTileSections", "if let scopeTiles {"),
+# The kind-tile rooms' lead, tiles and empty state are one drawing since
+# prd §911 (`standaloneLead`, shared with Cursor, Walletbeat and L2BEAT).
+for fn, tiles in (("private func standaloneLead", "if let tiles {"),
                   ("private func agentRoomSections", "if let agentTiles {")):
     i = src.find(fn)
     if i < 0:
@@ -167,7 +170,7 @@ for fn, tiles in (("private func kindTileSections", "if let scopeTiles {"),
                      "the tiles stand at the top of the screen (\u00a7846)")
         continue
     arm = body[max(0, lead - 260):lead]
-    if "visible.isEmpty" not in arm:
+    if "visible.isEmpty" not in arm and "listEmpty" not in arm:
         fails.append(f"{fn}: the empty lead is not gated on an empty list — "
                      "it would draw a skeleton over a full one (\u00a783)")
 for f in fails:
@@ -202,7 +205,9 @@ else:
     for case in ["all", "queue", "activity", "permissions", "pullRequests", "issues",
                  "releases", "payments", "payouts", "disputes",
                  "versions", "reviews", "builds", "models", "datasets", "papers",
-                 "metrics", "annotations", "milestones", "chains", "wallets", "news", "revisions", "accounts"]:
+                 "metrics", "annotations", "milestones", "chains", "wallets", "news", "revisions", "accounts",
+                 "sales", "subscriptions", "errors", "regressions", "deploys", "failed",
+                 "alarms", "costs", "incidents", "resolved", "deprecations", "workouts", "sleep", "mood"]:
         if not re.search(r'case \.%s:\s+return ScopeTileGlyph\.%s\b' % (case, case), body):
             fails.append(f"RoomKindTile.{case} does not wear ScopeTileGlyph.{case}")
 # All is the dock's own glyph, read from its one table.
@@ -243,6 +248,10 @@ ALIASES = {
     ("HegotaSection", "coins"): "utxos",
     # A privacy root is the snapshot of the tree it was taken from.
     ("PrivacyDevnetSection", "roots"): "snapshots",
+    # GitLab's merge request and Radicle's patch ARE pull requests - one
+    # meaning under three words (prd §911), so one glyph.
+    ("RoomKindTile", "mergeRequests"): "pullRequests",
+    ("RoomKindTile", "patches"): "pullRequests",
 }
 seen_aliases = set()
 for m in re.finditer(r'extension ([\w.]+): DSTileScope \{(.*?)\n\}', glyphs, re.S):
@@ -267,6 +276,64 @@ for f in fails:
     print("✗ " + f)
 sys.exit(1 if fails else 0)
 PY
+# prd §911 — the twelve rooms' ref and tag shapes, at the one place each
+# bridge spells them. A moved shape makes a tile silently claim nothing.
+POL="Casberi/Casberi/Model/PolarBridge.swift"; DODO="Casberi/Casberi/Model/DodoPaymentsBridge.swift"
+for r in 'static let source = "Polar"' 'static let orderRefPrefix = "polar:order:"' 'sourceRef: "polar:refund:\(id)"' \
+         'sourceRef: "polar:dispute:\(refundID):opened"' 'sourceRef: "polar:subscription:\(id):\(status)"' \
+         'tag: "Dispute"' 'tag: "Refund"' 'tag: "Sale"' 'tag: "Subscription"'; do
+  grep -qF "$r" "$POL" || { echo "✗ Polar's shape moved: $r"; exit 1; }
+done
+for r in 'static let source = "Dodo Payments"' 'sourceRef: "dodopayments:payment:\(id)"' 'sourceRef: "dodopayments:refund:\(id)"' \
+         'sourceRef: "dodopayments:dispute:\(id):opened"' 'sourceRef: "dodopayments:subscription:\(id):\(status)"' \
+         'tag: "Payment"' 'tag: "Refund"' 'tag: "Dispute"' 'tag: "Subscription"'; do
+  grep -qF "$r" "$DODO" || { echo "✗ Dodo Payments' shape moved: $r"; exit 1; }
+done
+TB="Casberi/Casberi/Model/TokenBridges.swift"
+for r in 'source: "GitLab"' 'sourceRef: "gitlab:\(refPrefix):\(id)"' 'refPrefix: "issue"' 'refPrefix: "mr"'; do
+  grep -qF "$r" "$TB" || { echo "✗ GitLab's shape moved: $r"; exit 1; }
+done
+RAD="Casberi/Casberi/Model/RadicleBridge.swift"
+for r in 'source: "Radicle"' 'let ref = "radicle:patch:\(rid):\(patch.id):opened"' 'let ref = "radicle:issue:\(rid):\(issue.id):opened"' \
+         'tags: ["Patch", "Proposed"]' 'tags: ["Issue", "Opened"]'; do
+  grep -qF "$r" "$RAD" || { echo "✗ Radicle's shape moved: $r"; exit 1; }
+done
+SEN="Casberi/Casberi/Model/SentryBridge.swift"
+for r in 'source: "Sentry"' 'static func newRef(id: String) -> String { "sentry:issue:\(id)" }' \
+         '"sentry:\(substatus.rawValue):\(id):\(crossing)"' 'case regressed   = "regressed"' 'case escalating  = "escalating"'; do
+  grep -qF "$r" "$SEN" || { echo "✗ Sentry's shape moved: $r"; exit 1; }
+done
+VER="Casberi/Casberi/Model/VercelBridge.swift"
+for r in 'source: "Vercel"' 'sourceRef: "vercel:deploy:\(uid)"' '"Build failure"'; do
+  grep -qF "$r" "$VER" || { echo "✗ Vercel's shape moved: $r"; exit 1; }
+done
+PDB="Casberi/Casberi/Model/PagerDutyBridge.swift"
+for r in 'source: "PagerDuty"' '{ "pagerduty:incident:\(id)" }' '{ "pagerduty:resolved:\(id)" }'; do
+  grep -qF "$r" "$PDB" || { echo "✗ PagerDuty's shape moved: $r"; exit 1; }
+done
+PKG="Casberi/Casberi/Model/PackageWatchBridge.swift"
+for r in '"\(registry.rawValue):release:\(name.lowercased()):\(version)"' '"\(registry.rawValue):deprecated:\(name.lowercased())"' \
+         'case npm' 'case pypi' 'case .npm:  "npm"' 'case .pypi: "PyPI"'; do
+  grep -qF "$r" "$PKG" || { echo "✗ the package registries' shape moved: $r"; exit 1; }
+done
+AWSB="Casberi/Casberi/Model/AWSBridge.swift"
+for r in 'static let source = "AWS"' 'sourceRef: "aws:alarm:' 'sourceRef: "aws:pipeline:\(id)"' 'sourceRef: "aws:costanomaly:\(day)"'; do
+  grep -qF "$r" "$AWSB" || { echo "✗ AWS's shape moved: $r"; exit 1; }
+done
+CUR="Casberi/Casberi/Model/CursorBridge.swift"
+for r in 'source: "Cursor"' 'sourceRef: "cursor:agent:\(id)"' '"Failed"' '"Expired"' '"Cancelled"' 'tags.append("PR")'; do
+  grep -qF "$r" "$CUR" || { echo "✗ Cursor's shape moved: $r"; exit 1; }
+done
+HKI="Casberi/Casberi/Model/HealthIngest.swift"
+for r in 'source: "Apple Health"' '"hkworkout:\(record.activityID)"' 'let ref = "hksleep:\(night.dayKey)"' 'let ref = "hkmood:\(mood.uuid.uuidString)"'; do
+  grep -qF "$r" "$HKI" || { echo "✗ Apple Health's shape moved: $r"; exit 1; }
+done
+# The Cursor room draws its tiles by hand inside its repository shape, and
+# Walletbeat's and L2BEAT's stand alone when their head is nil (prd §911).
+grep -qF 'private func standaloneLead(cover: Thing?, tiles: DSScopeTiles<RoomKindTile>?,' "$FEED" \
+  || { echo "✗ FeedScreen lost standaloneLead — the cover, empty lead and tiles in one drawing"; exit 1; }
+[[ $(grep -c 'standaloneLead(cover:' "$FEED") -ge 4 ]] \
+  || { echo "✗ fewer than four rooms draw the standalone lead (kind-tile rooms, Cursor, Walletbeat, L2BEAT)"; exit 1; }
 echo "room-kind-tiles-selftest: drift guards ✓"
 
 TMP="$(mktemp -d)"
@@ -291,11 +358,21 @@ check(RoomKindTiles.Room(source: "Safe") == .safe
       && RoomKindTiles.Room(source: "PostHog") == .posthog
       && RoomKindTiles.Room(source: "L2BEAT") == .l2beat
       && RoomKindTiles.Room(source: "Walletbeat") == .walletbeat, "the eight rooms resolve from their sources")
+// prd §911 — the twelve rooms whose rows already carried a kind.
+for (source, room) in [("Polar", RoomKindTiles.Room.polar), ("Dodo Payments", .dodoPayments),
+                       ("GitLab", .gitlab), ("Radicle", .radicle), ("Sentry", .sentry),
+                       ("Vercel", .vercel), ("PagerDuty", .pagerduty), ("npm", .npm),
+                       ("PyPI", .pypi), ("AWS", .aws), ("Cursor", .cursor),
+                       ("Apple Health", .appleHealth)] {
+    check(RoomKindTiles.Room(source: source) == room, "\(source) resolves to its room (§911)")
+}
 check(RoomKindTiles.Room(source: "Wallet") == nil && RoomKindTiles.Room(source: "All") == nil,
       "no other room grows kind tiles")
-// The rooms §816 held: their lead is a figure with no scopes slot (a heatmap,
-// Cloudflare's runway), so tiles there would be hand-placed.
-for held in ["Cloudflare", "Apple Health"] {
+// The room §816 held: its lead is a figure with no scopes slot (Cloudflare's
+// runway), so tiles there would be hand-placed. Apple Health left this list
+// in §911 — the heatmap that held it is gone, and the room leads with its
+// cover like every other tile room.
+for held in ["Cloudflare"] {
     check(RoomKindTiles.Room(source: held) == nil, "\(held) grows no kind tiles — its lead has no scopes slot")
 }
 // The social rooms DECLINED tiles (§821): nearly everyone has only the live
@@ -440,6 +517,63 @@ check(RoomKindTiles.present(room: .splits, kinds: [.activity, .accounts]) == [.a
       "Splits with nothing waiting: no Queue tile")
 check(RoomKindTiles.present(room: .splits, kinds: [.accounts]) == [],
       "a team with accounts and no activity draws no tiles (§805)")
+
+// ── prd §911: the twelve rooms, one census each ─────────────────────────
+let polar = RoomKindTiles.Census(room: .polar, refs: [])
+check(polar.kind(ref: "polar:order:1", url: nil, tags: ["Sale"]) == .sales, "Polar: an order is Sales")
+check(polar.kind(ref: "polar:subscription:1:active", url: nil, tags: ["Subscription", "New"]) == .subscriptions, "Polar: a subscription")
+check(polar.kind(ref: "polar:refund:1", url: nil, tags: ["Refund"]) == nil, "Polar: a refund is All only (four tiles, one row)")
+check(polar.kind(ref: "polar:dispute:1:opened", url: nil, tags: ["Dispute", "Opened"]) == .disputes, "Polar: a dispute")
+check(polar.kind(ref: "demo:polar:1", url: nil, tags: ["Sale", "New subscriber"]) == .sales, "Polar: the demo's row sorts by its tag")
+check(polar.kind(ref: "polar:silence:1", url: nil, tags: []) == nil, "Polar: anything else is All only")
+check(RoomKindTiles.present(room: .polar, kinds: [.disputes, .sales, .subscriptions])
+      == [.all, .sales, .subscriptions, .disputes], "Polar: All · Sales · Subscriptions · Disputes")
+let dodo = RoomKindTiles.Census(room: .dodoPayments, refs: [])
+check(dodo.kind(ref: "dodopayments:payment:1", url: nil, tags: ["Payment"]) == .sales, "Dodo: a payment is Sales")
+check(dodo.kind(ref: "dodopayments:subscription:1:failed", url: nil, tags: ["Subscription", "Failed"]) == .subscriptions, "Dodo: a subscription")
+check(dodo.kind(ref: "dodopayments:refund:1", url: nil, tags: ["Refund"]) == nil, "Dodo: a refund is All only")
+check(dodo.kind(ref: "dodopayments:dispute:1:closed", url: nil, tags: ["Dispute", "Won"]) == .disputes, "Dodo: a dispute")
+let gl = RoomKindTiles.Census(room: .gitlab, refs: [])
+check(gl.kind(ref: "gitlab:mr:61", url: nil, tags: []) == .mergeRequests, "GitLab: an MR")
+check(gl.kind(ref: "gitlab:issue:58", url: nil, tags: []) == .issues, "GitLab: an issue")
+check(gl.kind(ref: nil, url: nil, tags: ["Issue"]) == nil, "GitLab: the ref decides, never a tag")
+let rad = RoomKindTiles.Census(room: .radicle, refs: [])
+check(rad.kind(ref: "radicle:patch:rad:1:abc:merged", url: nil, tags: ["Patch", "Merged"]) == .patches, "Radicle: a patch")
+check(rad.kind(ref: "radicle:issue:rad:1:abc:opened", url: nil, tags: ["Issue", "Opened"]) == .issues, "Radicle: an issue")
+check(rad.kind(ref: "demo:radicle:1", url: nil, tags: ["Patch", "Proposed"]) == .patches, "Radicle: the demo's row sorts by its tag")
+let sen = RoomKindTiles.Census(room: .sentry, refs: [])
+check(sen.kind(ref: "sentry:issue:1", url: nil, tags: ["Issue"]) == .errors, "Sentry: a new issue is Errors")
+check(sen.kind(ref: "sentry:regressed:1:2", url: nil, tags: ["Regression"]) == .regressions, "Sentry: a regression")
+check(sen.kind(ref: "sentry:escalating:1:1", url: nil, tags: ["Regression"]) == .regressions, "Sentry: an escalation is Regressions")
+check(sen.kind(ref: "sentry:ongoing:1:1", url: nil, tags: []) == nil, "Sentry: another crossing is All only")
+let ver = RoomKindTiles.Census(room: .vercel, refs: [])
+check(ver.kind(ref: "vercel:deploy:1", url: nil, tags: ["Deploy"]) == .deploys, "Vercel: a deploy")
+check(ver.kind(ref: "vercel:deploy:2", url: nil, tags: ["Build failure"]) == .failed, "Vercel: a build failure is Failed")
+check(ver.kind(ref: "vercel:other:2", url: nil, tags: ["Build failure"]) == nil, "Vercel: only a deploy row sorts")
+let pd = RoomKindTiles.Census(room: .pagerduty, refs: [])
+check(pd.kind(ref: "pagerduty:incident:1", url: nil, tags: ["Incident"]) == .incidents, "PagerDuty: triggered")
+check(pd.kind(ref: "pagerduty:resolved:1", url: nil, tags: ["Resolved"]) == .resolved, "PagerDuty: resolved")
+let npmc = RoomKindTiles.Census(room: .npm, refs: [])
+let pypic = RoomKindTiles.Census(room: .pypi, refs: [])
+check(npmc.kind(ref: "npm:release:left-pad:1.3.0", url: nil, tags: ["Release"]) == .releases, "npm: a release")
+check(npmc.kind(ref: "npm:deprecated:left-pad", url: nil, tags: ["Deprecated"]) == .deprecations, "npm: a deprecation")
+check(pypic.kind(ref: "pypi:release:requests:2.32.0", url: nil, tags: ["Release"]) == .releases, "PyPI: a release")
+check(npmc.kind(ref: "pypi:release:requests:2.32.0", url: nil, tags: ["Release"]) == nil, "npm's room never claims a PyPI row")
+let awsc = RoomKindTiles.Census(room: .aws, refs: [])
+check(awsc.kind(ref: "aws:alarm:prod:ALARM:1", url: nil, tags: ["Alarme"]) == .alarms, "AWS: the ref decides under a localized tag")
+check(awsc.kind(ref: "aws:pipeline:1", url: nil, tags: ["Deploy", "Failed"]) == .deploys, "AWS: a pipeline is Deploys")
+check(awsc.kind(ref: "aws:costanomaly:2026-09-24", url: nil, tags: ["Cost"]) == .costs, "AWS: a cost anomaly")
+check(awsc.kind(ref: "demo:aws:1", url: nil, tags: ["Alarm"]) == .alarms, "AWS: the demo's row sorts by its tag")
+let cur = RoomKindTiles.Census(room: .cursor, refs: [])
+check(cur.kind(ref: "cursor:agent:1", url: nil, tags: ["Agent run", "PR"]) == .pullRequests, "Cursor: a run with a PR")
+check(cur.kind(ref: "cursor:agent:2", url: nil, tags: ["Agent run", "Failed"]) == .failed, "Cursor: a failed run")
+check(cur.kind(ref: "cursor:agent:3", url: nil, tags: ["Agent run", "Expired", "PR"]) == .failed, "Cursor: Failed wins over PR")
+check(cur.kind(ref: "cursor:agent:4", url: nil, tags: ["Agent run"]) == nil, "Cursor: a finished run is All only")
+let hk = RoomKindTiles.Census(room: .appleHealth, refs: [])
+check(hk.kind(ref: "hkworkout:1", url: nil, tags: []) == .workouts, "Health: a workout")
+check(hk.kind(ref: "hksleep:2026-09-24", url: nil, tags: []) == .sleep, "Health: a night")
+check(hk.kind(ref: "hkmood:ABC", url: nil, tags: []) == .mood, "Health: a mood")
+check(hk.kind(ref: "demo:health:1", url: nil, tags: []) == nil, "Health: the demo's rows are All only")
 
 // ── Open disputes ───────────────────────────────────────────────────────
 let d1 = "https://dashboard.stripe.com/disputes/dp_1"

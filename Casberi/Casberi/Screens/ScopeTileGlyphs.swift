@@ -78,6 +78,25 @@ enum ScopeTileGlyph {
     /// by the user, though it was free as a tile glyph and its five other uses
     /// all mean compose. Do not re-propose it.
     static let chat         = "ellipsis.bubble"
+    /// The twelve rooms that grew tiles in prd §911, each a meaning no tile or
+    /// dock seat wore. A merge request and a patch ARE pull requests, so those
+    /// two cases wear `pullRequests` as declared aliases (the harness's
+    /// `ALIASES`), never a second glyph for one meaning. `cart` is Shopping's,
+    /// so a sale is a bag; `creditcard` is the wallet's, so a cost is a bar chart.
+    static let sales        = "bag"
+    static let subscriptions = "repeat"
+    static let errors       = "ladybug"
+    static let regressions  = "arrow.counterclockwise"
+    static let deploys      = "shippingbox"
+    static let failed       = "xmark.octagon"
+    static let alarms       = "bell"
+    static let costs        = "chart.bar"
+    static let incidents    = "light.beacon.max"
+    static let resolved     = "checkmark.circle"
+    static let deprecations = "archivebox"
+    static let workouts     = "figure.run"
+    static let sleep        = "bed.double"
+    static let mood         = "face.smiling"
 }
 
 /// The rooms' kind tiles (prd §815, §816). Activity and Permissions are the
@@ -113,6 +132,23 @@ extension RoomKindTile: DSTileScope {
         // Splits' accounts are the wallet family's Accounts by name, so they
         // wear its glyph rather than a second one (prd §820).
         case .accounts:     return ScopeTileGlyph.accounts
+        case .sales:         return ScopeTileGlyph.sales
+        case .subscriptions: return ScopeTileGlyph.subscriptions
+        // GitLab's and Radicle's words for a pull request (prd §911).
+        case .mergeRequests: return ScopeTileGlyph.pullRequests
+        case .patches:       return ScopeTileGlyph.pullRequests
+        case .errors:        return ScopeTileGlyph.errors
+        case .regressions:   return ScopeTileGlyph.regressions
+        case .deploys:       return ScopeTileGlyph.deploys
+        case .failed:        return ScopeTileGlyph.failed
+        case .alarms:        return ScopeTileGlyph.alarms
+        case .costs:         return ScopeTileGlyph.costs
+        case .incidents:     return ScopeTileGlyph.incidents
+        case .resolved:      return ScopeTileGlyph.resolved
+        case .deprecations:  return ScopeTileGlyph.deprecations
+        case .workouts:      return ScopeTileGlyph.workouts
+        case .sleep:         return ScopeTileGlyph.sleep
+        case .mood:          return ScopeTileGlyph.mood
         }
     }
 }

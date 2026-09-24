@@ -2,7 +2,9 @@ import Foundation
 
 /// THE KIND TILES OF THE SAFE, GITHUB AND STRIPE ROOMS (prd §815), AND OF
 /// APP STORE CONNECT, HUGGING FACE, POSTHOG, L2BEAT AND WALLETBEAT (prd §820), AND OF
-/// SPLITS (prd §820).
+/// SPLITS (prd §820), AND — SINCE prd §911 — OF EVERY ROOM WHOSE ROWS ALREADY
+/// CARRY A KIND: Polar, Dodo Payments, GitLab, Radicle, Sentry, Vercel,
+/// PagerDuty, npm, PyPI, AWS, Cursor and Apple Health.
 ///
 /// **Where a room has a head, the tiles ride its `scopes:` slot** — the Privy
 /// pattern, `DSRoomChassis.Head`'s own geometry — and the head stays exactly as
@@ -49,6 +51,18 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
     case chains, wallets, news, revisions
     // Splits (prd §820) — its Queue and Activity are Safe's cases above.
     case accounts
+    // prd §911 — the rooms whose rows already carried a kind and drew no
+    // tiles. A meaning two rooms share is one case (Sales and Disputes in
+    // Polar and Dodo Payments; Deploys in Vercel and AWS; Failed in Vercel
+    // and Cursor; Issues in GitLab and Radicle beside GitHub).
+    case sales, subscriptions
+    case mergeRequests, patches
+    case errors, regressions
+    case deploys, failed
+    case alarms, costs
+    case incidents, resolved
+    case deprecations
+    case workouts, sleep, mood
 
     var id: String { rawValue }
 
@@ -78,6 +92,22 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .news:         return String(localized: "News")
         case .revisions:    return String(localized: "Revisions")
         case .accounts:     return String(localized: "Accounts")
+        case .sales:         return String(localized: "Sales")
+        case .subscriptions: return String(localized: "Subscriptions")
+        case .mergeRequests: return String(localized: "Merge requests")
+        case .patches:       return String(localized: "Patches")
+        case .errors:        return String(localized: "Errors")
+        case .regressions:   return String(localized: "Regressions")
+        case .deploys:       return String(localized: "Deploys")
+        case .failed:        return String(localized: "Failed")
+        case .alarms:        return String(localized: "Alarms")
+        case .costs:         return String(localized: "Costs")
+        case .incidents:     return String(localized: "Incidents")
+        case .resolved:      return String(localized: "Resolved")
+        case .deprecations:  return String(localized: "Deprecations")
+        case .workouts:      return String(localized: "Workouts")
+        case .sleep:         return String(localized: "Sleep")
+        case .mood:          return String(localized: "Mood")
         }
     }
 
@@ -107,6 +137,22 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .news:         return String(localized: "Milestones and incidents")
         case .revisions:    return String(localized: "Changes to a rating")
         case .accounts:     return String(localized: "Your team's accounts")
+        case .sales:         return String(localized: "Money that came in")
+        case .subscriptions: return String(localized: "Started, renewed, canceled and recovered")
+        case .mergeRequests: return String(localized: "Merge requests")
+        case .patches:       return String(localized: "Patches proposed and merged")
+        case .errors:        return String(localized: "Issues that opened")
+        case .regressions:   return String(localized: "Issues that came back or escalated")
+        case .deploys:       return String(localized: "Deploys that went out")
+        case .failed:        return String(localized: "What did not finish")
+        case .alarms:        return String(localized: "Alarms that changed state")
+        case .costs:         return String(localized: "Spend that broke its pattern")
+        case .incidents:     return String(localized: "Incidents that triggered")
+        case .resolved:      return String(localized: "Incidents that resolved")
+        case .deprecations:  return String(localized: "Packages marked deprecated")
+        case .workouts:      return String(localized: "Workouts")
+        case .sleep:         return String(localized: "Nights of sleep")
+        case .mood:          return String(localized: "Moods you logged")
         }
     }
 }
@@ -119,6 +165,8 @@ enum RoomKindTiles {
     /// `ASCShape.source` and the Hugging Face seat.
     enum Room: String, CaseIterable, Sendable {
         case safe, github, stripe, appStoreConnect, huggingFace, posthog, l2beat, walletbeat, splits
+        // prd §911.
+        case polar, dodoPayments, gitlab, radicle, sentry, vercel, pagerduty, npm, pypi, aws, cursor, appleHealth
 
         init?(source: String) {
             switch source {
@@ -131,6 +179,18 @@ enum RoomKindTiles {
             case "L2BEAT":            self = .l2beat
             case "Walletbeat":        self = .walletbeat
             case "Splits":            self = .splits
+            case "Polar":             self = .polar
+            case "Dodo Payments":     self = .dodoPayments
+            case "GitLab":            self = .gitlab
+            case "Radicle":           self = .radicle
+            case "Sentry":            self = .sentry
+            case "Vercel":            self = .vercel
+            case "PagerDuty":         self = .pagerduty
+            case "npm":               self = .npm
+            case "PyPI":              self = .pypi
+            case "AWS":               self = .aws
+            case "Cursor":            self = .cursor
+            case "Apple Health":      self = .appleHealth
             default:                  return nil
             }
         }
@@ -146,6 +206,18 @@ enum RoomKindTiles {
             case .l2beat:          return "L2BEAT"
             case .walletbeat:      return "Walletbeat"
             case .splits:          return "Splits"
+            case .polar:           return "Polar"
+            case .dodoPayments:    return "Dodo Payments"
+            case .gitlab:          return "GitLab"
+            case .radicle:         return "Radicle"
+            case .sentry:          return "Sentry"
+            case .vercel:          return "Vercel"
+            case .pagerduty:       return "PagerDuty"
+            case .npm:             return "npm"
+            case .pypi:            return "PyPI"
+            case .aws:             return "AWS"
+            case .cursor:          return "Cursor"
+            case .appleHealth:     return "Apple Health"
             }
         }
 
@@ -161,6 +233,22 @@ enum RoomKindTiles {
             case .l2beat:          return [.all, .chains, .news, .revisions]
             case .walletbeat:      return [.all, .wallets, .news, .revisions]
             case .splits:          return [.all, .accounts, .queue, .activity]
+            // The two Merchants of Record share Stripe's Disputes and one
+            // Sales/Subscriptions vocabulary (prd §911). Four tiles, one full
+            // row: a fifth wrapped alone onto a second (measured), so a
+            // refund is All only.
+            case .polar, .dodoPayments: return [.all, .sales, .subscriptions, .disputes]
+            case .gitlab:          return [.all, .mergeRequests, .issues]
+            case .radicle:         return [.all, .patches, .issues]
+            case .sentry:          return [.all, .errors, .regressions]
+            case .vercel:          return [.all, .deploys, .failed]
+            case .pagerduty:       return [.all, .incidents, .resolved]
+            case .npm, .pypi:      return [.all, .releases, .deprecations]
+            case .aws:             return [.all, .alarms, .deploys, .costs]
+            // A run that opened a pull request, or one that did not finish;
+            // a plain finished run is All only.
+            case .cursor:          return [.all, .pullRequests, .failed]
+            case .appleHealth:     return [.all, .workouts, .sleep, .mood]
             }
         }
     }
@@ -216,6 +304,46 @@ enum RoomKindTiles {
     /// for the harness (prd §820).
     static let splitsAccount     = "splits:account:"
     static let splitsTx          = "splits:tx:"
+    /// prd §911 — the ref families the twelve new rooms land, spelled here
+    /// for the harness. Where a bridge ALSO tags the row (Polar's and Dodo's
+    /// `tag`, Radicle's, Vercel's, Cursor's facets), the tag is read as well,
+    /// because the demo's rows carry `demo:` refs and the real tags.
+    static let polarOrder        = "polar:order:"
+    static let polarSubscription = "polar:subscription:"
+    static let polarRefund       = "polar:refund:"
+    static let polarDispute      = "polar:dispute:"
+    static let dodoPayment       = "dodopayments:payment:"
+    static let dodoSubscription  = "dodopayments:subscription:"
+    static let dodoRefund        = "dodopayments:refund:"
+    static let dodoDispute       = "dodopayments:dispute:"
+    static let gitlabIssue       = "gitlab:issue:"
+    static let gitlabMR          = "gitlab:mr:"
+    static let radiclePatch      = "radicle:patch:"
+    static let radicleIssue      = "radicle:issue:"
+    /// `sentry:issue:<id>` is a new issue; a crossing is
+    /// `sentry:<substatus>:<id>:<n>` with `regressed` or `escalating`.
+    static let sentryIssue       = "sentry:issue:"
+    static let sentryRegressed   = "sentry:regressed:"
+    static let sentryEscalating  = "sentry:escalating:"
+    static let vercelDeploy      = "vercel:deploy:"
+    static let vercelFailureTag  = "Build failure"
+    static let pagerdutyIncident = "pagerduty:incident:"
+    static let pagerdutyResolved = "pagerduty:resolved:"
+    /// `<registry>:release:` / `<registry>:deprecated:` — the registry's raw
+    /// value, `npm` or `pypi`.
+    static let packageRelease    = ":release:"
+    static let packageDeprecated = ":deprecated:"
+    static let awsAlarm          = "aws:alarm:"
+    static let awsPipeline       = "aws:pipeline:"
+    static let awsCost           = "aws:costanomaly:"
+    /// Cursor's outcome facets (`CursorAgentStatus.facetTags`) and its PR
+    /// tag, spelled here for the harness.
+    static let cursorRun         = "cursor:agent:"
+    static let cursorFailedTags: Set<String> = ["Failed", "Expired", "Cancelled"]
+    static let cursorPRTag       = "PR"
+    static let healthWorkout     = "hkworkout:"
+    static let healthSleep       = "hksleep:"
+    static let healthMood        = "hkmood:"
 
     // MARK: - The census
 
@@ -311,6 +439,71 @@ enum RoomKindTiles {
                 // so Safe's case — and a scheduled payment lands as one
                 // (prd §820). `SplitsShape.waitingTag`.
                 if ref.hasPrefix(RoomKindTiles.splitsTx) { return tags.contains("Waiting") ? .queue : .activity }
+                return nil
+            case .polar:
+                // The bridge's own `tag` rides first in `tags`; the ref
+                // agrees. Read both so the demo's `demo:` rows sort too.
+                if ref?.hasPrefix(RoomKindTiles.polarDispute) == true || tags.contains("Dispute") { return .disputes }
+                // A refund is All only — checked before Sale so a refunded
+                // order never counts as money that came in.
+                if ref?.hasPrefix(RoomKindTiles.polarRefund) == true || tags.contains("Refund") { return nil }
+                if ref?.hasPrefix(RoomKindTiles.polarSubscription) == true || tags.contains("Subscription") { return .subscriptions }
+                if ref?.hasPrefix(RoomKindTiles.polarOrder) == true || tags.contains("Sale") { return .sales }
+                return nil
+            case .dodoPayments:
+                if ref?.hasPrefix(RoomKindTiles.dodoDispute) == true || tags.contains("Dispute") { return .disputes }
+                if ref?.hasPrefix(RoomKindTiles.dodoRefund) == true || tags.contains("Refund") { return nil }
+                if ref?.hasPrefix(RoomKindTiles.dodoSubscription) == true || tags.contains("Subscription") { return .subscriptions }
+                if ref?.hasPrefix(RoomKindTiles.dodoPayment) == true || tags.contains("Payment") { return .sales }
+                return nil
+            case .gitlab:
+                guard let ref else { return nil }
+                if ref.hasPrefix(RoomKindTiles.gitlabMR) { return .mergeRequests }
+                if ref.hasPrefix(RoomKindTiles.gitlabIssue) { return .issues }
+                return nil
+            case .radicle:
+                if ref?.hasPrefix(RoomKindTiles.radiclePatch) == true || tags.contains("Patch") { return .patches }
+                if ref?.hasPrefix(RoomKindTiles.radicleIssue) == true || tags.contains("Issue") { return .issues }
+                return nil
+            case .sentry:
+                guard let ref else { return nil }
+                if ref.hasPrefix(RoomKindTiles.sentryIssue) { return .errors }
+                if ref.hasPrefix(RoomKindTiles.sentryRegressed) || ref.hasPrefix(RoomKindTiles.sentryEscalating) {
+                    return .regressions
+                }
+                return nil
+            case .vercel:
+                guard ref?.hasPrefix(RoomKindTiles.vercelDeploy) == true else { return nil }
+                return tags.contains(RoomKindTiles.vercelFailureTag) ? .failed : .deploys
+            case .pagerduty:
+                guard let ref else { return nil }
+                if ref.hasPrefix(RoomKindTiles.pagerdutyIncident) { return .incidents }
+                if ref.hasPrefix(RoomKindTiles.pagerdutyResolved) { return .resolved }
+                return nil
+            case .npm, .pypi:
+                guard let ref, ref.hasPrefix(room == .npm ? "npm" : "pypi") else { return nil }
+                if ref.contains(RoomKindTiles.packageRelease) { return .releases }
+                if ref.contains(RoomKindTiles.packageDeprecated) { return .deprecations }
+                return nil
+            case .aws:
+                // The bridge's tags are LOCALIZED (`String(localized: "Alarm")`),
+                // so the ref decides for a real row and the tag only catches
+                // the demo's `demo:` rows, which are English.
+                if ref?.hasPrefix(RoomKindTiles.awsAlarm) == true || tags.contains("Alarm") { return .alarms }
+                if ref?.hasPrefix(RoomKindTiles.awsPipeline) == true || tags.contains("Deploy") { return .deploys }
+                if ref?.hasPrefix(RoomKindTiles.awsCost) == true || tags.contains("Cost") { return .costs }
+                return nil
+            case .cursor:
+                // Failed before PR: a run that opened a pull request and then
+                // expired is the one somebody has to go back to.
+                if tags.contains(where: { RoomKindTiles.cursorFailedTags.contains($0) }) { return .failed }
+                if tags.contains(RoomKindTiles.cursorPRTag) { return .pullRequests }
+                return nil
+            case .appleHealth:
+                guard let ref else { return nil }
+                if ref.hasPrefix(RoomKindTiles.healthWorkout) { return .workouts }
+                if ref.hasPrefix(RoomKindTiles.healthSleep) { return .sleep }
+                if ref.hasPrefix(RoomKindTiles.healthMood) { return .mood }
                 return nil
             }
         }

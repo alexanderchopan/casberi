@@ -208,8 +208,9 @@ enum FeedInsight {
         // them in prd §832: both rooms lead with their newest thing, the X and
         // Instagram way (§821), so a map there is a figure no room draws (§723).
         // Instagram, X and TikTok had cases here (§247, 2026-08-05) and lost
-        // them in prd §821: those rooms lead with their newest thing and carry
-        // kind tiles, so a map there is a figure no room draws (§723).
+        // them in prd §821: those rooms lead with their newest thing alone —
+        // no tiles either (`RoomKindTiles.Room` has no case for them) — so a
+        // map there is a figure no room draws (§723).
         // Obsidian, 2026-08-06. The room this card was always most obviously
         // for, and the last one to get it: a vault is nothing BUT the person's
         // own writing, one kind, no import receipt to exclude and no

@@ -1,19 +1,22 @@
 import SwiftUI
 
-/// The "act in this source" affordance — what a single-source feed offers at
-/// its top (user, 2026-07-12). Two honest flavors:
-///  A. compose — make a new item of the source's kind (a task, an email);
-///  B. expand — add another of a watch/follow source, routing to the bridge's
-///     own setup screen the app already owns.
-/// A source with neither returns nil, so nothing dead ever shows. The gate for
-/// a compose hand-off is the same as the thing sheet's: it only appears when
-/// the target can actually receive it.
+/// The "act in this source" affordance — what a single-source feed offers
+/// (user, 2026-07-12): COMPOSE, make a new item of the source's kind (a task,
+/// an email) in the app that owns it. A source with none returns nil, so
+/// nothing dead ever shows. The gate for a compose hand-off is the same as
+/// the thing sheet's: it only appears when the target can actually receive it.
+///
+/// There was a second flavour, EXPAND ("Watch another wallet", "Follow
+/// another feed", routing to the seat's setup screen). The source capsule
+/// that drew it went in prd §359 (managing a source happens in the app
+/// catalogue), and `FeedScreen` has drawn only `.openURL` since — so the
+/// seven phrases sat here with no caller for six weeks. Deleted in prd §911
+/// under §723: a feature deleted from the surface is deleted from the model.
 struct SourceAction {
     let label: String
     let icon: String
     enum Run {
-        case openURL(URL)                     // A: compose in another app
-        case route(BridgeRouter.Destination)  // B: expand via the bridge's setup
+        case openURL(URL)                     // compose in another app
     }
     let run: Run
 }
@@ -26,7 +29,7 @@ enum SourceActions {
     static func action(forSource name: String) -> SourceAction? {
         switch name.lowercased() {
 
-        // A — compose. Todoist rides its documented add URL, gated on the app
+        // Todoist rides its documented add URL, gated on the app
         // being installed (a connected token bridge doesn't imply the app).
         case "todoist":
             guard HandOffState.installedSchemes.contains("todoist"),
@@ -63,21 +66,8 @@ enum SourceActions {
             return SourceAction(label: "New reminder", icon: "plus",
                                 run: .openURL(url))
 
-        // B — expand. The verb differs per source; the destination is the
-        // bridge's own setup screen, reached through the one router.
         default:
-            let phrases: [String: String] = [
-                "wallet":      "Watch another wallet",
-                "tokens":      "Watch another token",
-                "bluesky":     "Track another account",
-                "farcaster":   "Track another account",
-                "twitch":      "Follow another channel",
-                "pinterest":   "Add another board",
-                "rss":         "Follow another feed",
-            ]
-            guard let phrase = phrases[name.lowercased()],
-                  let dest = BridgeRouter.destination(forOffer: name) else { return nil }
-            return SourceAction(label: phrase, icon: "plus", run: .route(dest))
+            return nil
         }
     }
 }

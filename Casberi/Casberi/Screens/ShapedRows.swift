@@ -2815,6 +2815,11 @@ struct BitrefillLede: View {
 struct WatchlistLede: View {
     let up: Int
     let down: Int
+    /// How many tokens the room watches, and whether any pulse has been
+    /// read: with none, the trailing word is the count, never "24h" (prd
+    /// §911 — the room draws this lede over one token, and before a read).
+    var watched: Int = 0
+    var read: Bool = true
 
     var body: some View {
         HStack(spacing: DS.Space.s2) {
@@ -2831,8 +2836,13 @@ struct WatchlistLede: View {
                     .dsText(.subhead12)
                     .foregroundStyle(DS.destructive)
             }
-            Text("24h")
-                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+            if read {
+                Text("24h")
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+            } else {
+                Text("^[\(watched) token](inflect: true) watched")
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+            }
         }
         .padding(.vertical, DS.Space.s2)
     }

@@ -295,6 +295,8 @@ enum DemoSeedAll {
                               // before the rid, so no single prefix covers a
                               // patch and an issue.
                               "radicle:patch:rad:zDEMO",
+                              // GitLab's two families (prd §911), the Radicle reason.
+                              "gitlab:issue:demo", "gitlab:mr:demo",
                               "radicle:issue:rad:zDEMO",
                               // Walletbeat (prd §419) carries the REAL ref
                               // shapes for the same reason as Radicle above —
@@ -4460,13 +4462,16 @@ enum DemoSeedAll {
         // the P4 rule (a real host with a fabricated path/id is a sharper
         // dead door than none), the same choice Trello/Linear/GitHub above
         // already made.
-        let gitlab: [(String, Mark, Double)] = [
-            ("casberi/casberi#58 · Fix the flat curve on refresh", .doing, 2),
-            ("casberi/casberi!61 · Serialize NLEmbedding inference", .done, 5),
-            ("casberi/casberi#54 · Receipts screen misses runtime hosts", .todo, 11),
+        // The fourth field is the bridge's own ref family (`issue` / `mr`),
+        // so the room's kind tiles sort the demo too (prd §911); `!` is
+        // GitLab's merge-request sigil, `#` an issue's.
+        let gitlab: [(String, Mark, Double, String)] = [
+            ("casberi/casberi#58 · Fix the flat curve on refresh", .doing, 2, "issue"),
+            ("casberi/casberi!61 · Serialize NLEmbedding inference", .done, 5, "mr"),
+            ("casberi/casberi#54 · Receipts screen misses runtime hosts", .todo, 11, "issue"),
         ]
         out += gitlab.enumerated().map { i, g in
-            row(.link, g.0, source: "GitLab", ref: "demo:gitlab:\(i)", days: g.2, hour: 13) { t in
+            row(.link, g.0, source: "GitLab", ref: "gitlab:\(g.3):demo\(i)", days: g.2, hour: 13) { t in
                 t.mark = g.1
                 // Same pair as Linear above, same bridge file, same two fields
                 // the demo never set — an issue's description and its due date.
@@ -4504,7 +4509,9 @@ enum DemoSeedAll {
                 t.authorHandle = "alexanderchopan/casberi"
                 // The tags `CursorBridge` stamps (prd §895) — without them no
                 // demo run ever read as finished or failed.
-                t.tags = i == 2 ? ["Agent run", "Failed"] : ["Agent run"]
+                // The PR tag rides the two runs whose summary says they opened
+                // one, so the room's Pull requests tile sorts the demo (prd §911).
+                t.tags = i == 2 ? ["Agent run", "Failed"] : ["Agent run", "PR"]
             }
         }
         // `ops` rows carry the tag their bridge stamps (2026-08-12), because
