@@ -1997,6 +1997,20 @@ struct FeedScreen: View {
             default: return false
             }
         }
+
+        /// Whether this shape can lead with a cover (`ledeListRow`) at all
+        /// (prd §906). A QUIET head — one with only its sentence — gives way
+        /// to the cover, which carries the sentence as its note (§760); in a
+        /// shape with no cover path that hand-off left the room with no
+        /// lead of any kind (Railgun with no tokens, CardPointers with no
+        /// deadlines). Where nothing can carry the line, the head stands.
+        var carriesCover: Bool {
+            switch self {
+            case .ledger, .calendar, .gmail, .reminders, .tokens, .bitrefill,
+                 .cardPointers, .walletbeat, .l2beat, .vibenet, .wallet: return false
+            default: return true
+            }
+        }
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -2216,7 +2230,11 @@ struct FeedScreen: View {
             // pure text while its thumbnails sat in the store undrawn.
             case "Notes", "Day One", "Apple Journal", "Obsidian": self = .notes
             case "You", "Voice":        self = .you
-            case "Apple Music": self = .music
+            // Spotify joins Apple Music here (prd §906): it took the `.plain`
+            // branch, so its room grouped by day and drew band rows while the
+            // other music room grouped by listening session and led with the
+            // cover through `MusicRow`. One music, one shape.
+            case "Apple Music", "Spotify": self = .music
             // The media room (prd §219, 2026-07-25): art at the medium's own
             // proportions instead of the All feed's 26pt square. Music is NOT
             // here — `MusicRow` has led with the cover since 2026-07-11 and is
@@ -2930,7 +2948,8 @@ struct FeedScreen: View {
         let base = fullRoomRows(fallback: onScreen)
         let rows = base
         let head = sourceHead(rows)
-        let quiet = head?.quietLine != nil
+        // A quiet head yields only where a cover can carry its line (§906).
+        let quiet = head?.quietLine != nil && Shape(source: source).carriesCover
         var computed = RoomHeads(
             sourceHead: quiet ? nil : head,
             topicMap: FeedInsight.topicMap(source: source, things: rows),
@@ -7646,19 +7665,30 @@ struct FeedScreen: View {
         }
     }
 
-    /// A shape's one glanceable block, bare like the rows below it — a lede
-    /// is part of the feed, not a foreign panel.
+    /// A shape's one glanceable block, in the room's lead box (prd §906).
+    ///
+    /// It stood bare at its own height with words at the row inset, the one
+    /// lead in the app outside the template. Now it is the cover's exact
+    /// geometry — the box inside `dsRoomHeadBlock`, the pinned foot, `s2`
+    /// above and `leadGap` below — so Tokens and Bitrefill open at the same
+    /// height as every other room.
     private func ledeSection(_ content: some View) -> some View {
-        Section {
-            // No plate (prd §782): the lede stands in the rows' column, and the
-            // air below it is what sets it apart from the run it heads.
-            content
-                .listRowBackground(Color.clear)
-                .listRowInsets(.init(top: DS.Space.s2,
-                                     leading: DSRoomChassis.inset,
-                                     bottom: DS.Space.s4,
-                                     trailing: DSRoomChassis.inset))
-                .listRowSeparator(.hidden)
+        let box = DSRoomChassis.leadHeight - 2 * DS.Space.s4
+        return Section {
+            VStack(alignment: .leading, spacing: 0) {
+                content
+                Spacer(minLength: 0)
+                DSRoomChassis.LeadFooter()
+            }
+            .frame(maxWidth: .infinity, minHeight: box, maxHeight: box, alignment: .topLeading)
+            .clipped()
+            .dsRoomHeadBlock()
+            .listRowBackground(Color.clear)
+            .listRowInsets(.init(top: DS.Space.s2,
+                                 leading: DSRoomChassis.inset,
+                                 bottom: DSRoomChassis.leadGap,
+                                 trailing: DSRoomChassis.inset))
+            .listRowSeparator(.hidden)
         }
     }
 
@@ -7847,7 +7877,6 @@ struct FeedScreen: View {
         let ledeThing = memo.lede.flatMap { id in
             memo.days.first?.1.first { $0.isLive && $0.id == id }
         }
-        let firstLabel = groups.first?.0
         let imageOnly = memo.imageOnly
         let wideArt = memo.wideArt
         let coarse = memo.coarse
@@ -7937,17 +7966,12 @@ struct FeedScreen: View {
         }
         #endif
         return Group {
+        // THE COVER STANDS ABOVE THE FIRST DIVIDER (prd §906): the same
+        // height as every room's lead, never under "Today". It is already
+        // absent from every group's rows (prd §389c), so the run positions
+        // below see the true row list with no filtering.
+        if let ledeThing, ledeThing.isLive { Section { ledeListRow(ledeThing) } }
         ForEach(groups, id: \.0) { label, rows in
-            // The cover draws above the FIRST group's run and is already absent
-            // from every group's rows (prd §389c) — so the run positions below
-            // see the true row list with no filtering, and the card's top
-            // shoulder lands on the real first row.
-            //
-            // The first group is named rather than indexed: `momentSplit` can
-            // rename or insert a leading group ("Since you left"), and the
-            // labels are the `ForEach` identity, so they are the one thing that
-            // is unique here by construction.
-            let cover = label == firstLabel ? ledeThing : nil
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
             let positions = cardRunPositions(
@@ -8006,7 +8030,6 @@ struct FeedScreen: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                if let cover, cover.isLive { ledeListRow(cover) }
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     if row.id == boundary { newSinceDivider }
                     if label == Self.momentLabel, let day = momentDays[row.id] {
@@ -8486,6 +8509,18 @@ struct FeedScreen: View {
         // when the window opens.
         let window = windowed(groups)
         let _ = { memo.windowHasMore = window.more }()
+        // THE COVER STANDS ABOVE THE FIRST DAY, in every room (prd §906).
+        // It used to draw INSIDE the first day's section, under that day's
+        // header, while the photo rooms, the kind-tile rooms and every head
+        // drew their lead above it — so the same card started at two heights
+        // depending on the room. §763's rule was always lead first, then the
+        // days; this is where the day-grouped rooms finally keep it. The day
+        // section still takes `cover` so the covered thing is lifted OUT of
+        // its run and draws once.
+        let coverThing: Thing? = cover.flatMap { id in
+            groups.flatMap { $0.1 }.first(where: { (thing: Thing) -> Bool in thing.isLive && thing.id == id })
+        }
+        if let coverThing { Section { ledeListRow(coverThing) } }
         ForEach(window.shown, id: \.0) { label, rows in
             daySection(label, rows, nextEventID: nextEventID, boundary: boundary,
                        replies: replies, coarse: coarse.contains(label),
@@ -11028,7 +11063,8 @@ struct FeedScreen: View {
                 .listRowSeparator(.hidden)
                 // Rows dispatch by shape (shaped feeds); the swipe stays triage —
                 // reads only, writes live in the sheet (ruling), Copy sheet-only.
-                if let coverThing, coverThing.isLive { ledeListRow(coverThing) }
+                // The cover is drawn by `groupedSections`, above this header
+                // (prd §906); here it is only lifted out of the run.
                 ForEach(Array(keyed(run).enumerated()), id: \.element.id) { i, item in
                     // The `rows.filter(\.isLive)` above runs when this view
                     // VALUE is made; this runs again each time the closure is

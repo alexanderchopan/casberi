@@ -61160,3 +61160,23 @@ The first screenshot of §898 on a device — a Calendar card mid-flight over th
 **Guarded** in `feed-reading-selftest.sh`: the shelf's rows switch on `regular`, not on `large`; the ladder is exactly `large ×2, mid ×2, regular ×8`. Mutated and caught.
 
 **Unseen:** the simulator again. The user runs `verify.sh` in a session on the Mac after this lands.
+
+## §906 — One box, one position: every room's lead is the wallet's box at the wallet's height (user: "i'm not sure they are all the same size and in same position" → "we need them to be at the same height in all rooms too" → "they should be in same positions" → "i want wallet to be the north star we base everything on and i think wallet looks appropriate in terms of height currently", 2026-09-24)
+
+**The inventory.** Nine drawers claimed the lead. Six kept the template exactly — the cover, the room heads, the gen-UI heroes, the journal's words hero, Cloudflare's runway, the empty lead. Three did not: the agent chat thread stood 356pt tall with its words 14pt further in (`leadHeight` spelled INSIDE `dsRoomHeadBlock`, §862's defect in its other copy); the Tokens and Bitrefill ledes had no well and their own height; the wallet crown's well is hand-built with `s2` vertical padding and a double horizontal inset. And the cover's POSITION depended on the shape: lifted above the days in the photo rooms, Cursor, the kind-tile and agent rooms, but drawn INSIDE the first day's section, under that day's header, in Music, Spotify, Bookmarks, Social, TikTok, Notes, Media, every `.plain` room and the All feed. Two rooms could go quiet and draw no lead at all (Railgun with no tokens, CardPointers with no deadlines). Spotify had no shape and fell through as plain band rows while Apple Music grouped by session with `MusicRow`.
+
+**The ruling.** The wallet's box is the north star: `leadHeight` (320pt) stays. Every lead is that box, at that position — its edge at `inset`, `s2` above (0 where tiles follow), `leadGap` below, and ABOVE the first day header in every room. Specifically:
+
+- `groupedSections` draws the cover as its own section before the days, and `bundledSections` before the All feed's first divider; `daySection` only lifts the covered thing out of its run. The All feed's "Today" now stands under the cover, as it does under every head.
+- `AgentChatThread`'s box is `leadHeight - 2 × s4` inside the block, its second padding deleted, so the tiles under it no longer move between All and Chat.
+- `ledeSection` (Tokens, Bitrefill) is the cover's exact geometry: the box, the block, the pinned foot.
+- `Shape.carriesCover` names the shapes with no cover path; a quiet head yields to the cover only where one can stand, so Railgun and CardPointers keep their head when quiet.
+- Spotify takes `.music`: listening sessions and `MusicRow`, like Apple Music.
+
+**Left as it is, on purpose.** The wallet crown's inner padding (`s2` vertical, figures at 46pt) — its figures are sized off `visualSlot` (300) and would clip inside a 284pt box; its OUTER box and position already match. The photo grid's 32pt column, which is the rows' words column, not a well. The two picture leads (the anniversary photo, a live stream) with no well and no foot.
+
+**Not changed:** the box's height. The user asked whether the box is too large; the wallet's 320pt was judged right, and every room now takes it. If a smaller box is ever wanted it is one constant, `visualSlot`, and the wallet's figures are the first thing to re-measure.
+
+**Guarded** in `feed-reading-selftest.sh`: the cover drawn by `groupedSections` and `bundledSections`, never inside a day section; the quiet rule gated on `carriesCover`.
+
+**Unseen:** the simulator — this pass ran on a Linux host with no Xcode. First to look at on a phone: the All feed with the cover above "Today", the Spotify room, the agent room's tiles on All then Chat, and the Tokens room's lede in its well.

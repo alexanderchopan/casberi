@@ -71,6 +71,14 @@ struct AgentChatThread: View {
     var body: some View {
         // The lead slot's own well and height, so Chat and All are the same
         // shape (`DSRoomChassis.leadHeight`, §766).
+        //
+        // **The box is `leadHeight` less the block's own padding (prd §906).**
+        // This spelled `leadHeight` INSIDE `dsRoomHeadBlock`, which adds
+        // `2 × s4` of its own, and padded the content a second time — so the
+        // thread stood 36pt taller than the cover it stands in for, with its
+        // words 14pt further in, and the tiles under it moved between All and
+        // Chat. §862 had fixed the same defect in `emptyLeadRow`; this is the
+        // other copy.
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 if turns.isEmpty && chrome.roomAskSource != source {
@@ -117,10 +125,8 @@ struct AgentChatThread: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s4)
         }
-        .frame(height: DSRoomChassis.leadHeight)
+        .frame(height: DSRoomChassis.leadHeight - 2 * DS.Space.s4)
         .dsRoomHeadBlock()
         .onAppear(perform: reparse)
         .onChange(of: key) { _, _ in reparse() }

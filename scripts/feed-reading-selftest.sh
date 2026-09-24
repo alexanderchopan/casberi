@@ -314,8 +314,20 @@ grep -qE 'cover: heroShown \|\| !(memoryTiles|tiles|photoTiles|imageTiles)\.isEm
   || { echo "✗ a picture-grid room no longer leads with its newest thing above the grid (prd §821, §832)"; exit 1; }
 grep -q 'photoGridSection(visible)' "$FEED" \
   && { echo "✗ the Photos room draws its whole grid with no cover again (prd §832)"; exit 1; }
-grep -q 'if let coverThing, coverThing.isLive { ledeListRow(coverThing) }' "$FEED" \
-  || { echo "✗ daySection no longer draws a shaped room's cover (prd §732)"; exit 1; }
+# THE COVER STANDS ABOVE THE FIRST DAY IN EVERY ROOM (prd §906). The day-grouped
+# rooms draw it from `groupedSections`, before the days; the All feed from
+# `bundledSections`, before the first divider; `daySection` only lifts the
+# covered thing out of its run. A cover drawn inside a day section again would
+# put the same card at two heights depending on the room.
+grep -q 'if let coverThing { Section { ledeListRow(coverThing) } }' "$FEED" \
+  || { echo "✗ groupedSections no longer draws a shaped room's cover above the days (prd §906)"; exit 1; }
+grep -q 'if let ledeThing, ledeThing.isLive { Section { ledeListRow(ledeThing) } }' "$FEED" \
+  || { echo "✗ the All feed no longer draws its cover above the first divider (prd §906)"; exit 1; }
+grep -qE 'coverThing.isLive \{ ledeListRow\(coverThing\) \}|if let cover, cover.isLive \{ ledeListRow\(cover\) \}' "$FEED" \
+  && { echo "✗ a cover is drawn inside a day section again — under its header, at a second height (prd §906)"; exit 1; }
+# A quiet head yields to the cover only where a cover can stand (prd §906).
+grep -q 'let quiet = head?.quietLine != nil && Shape(source: source).carriesCover' "$FEED" \
+  || { echo "✗ a quiet head in a shape with no cover path leaves the room with no lead again (prd §906)"; exit 1; }
 # A SUPPRESSION TERM IS NOT A HEAD (prd §755). `rosterAccounts` belongs in every
 # gate that picks a head card — it is why a social room draws no topic map, no
 # mosaic, no distribution and no density grid — and it draws NOTHING itself, so
