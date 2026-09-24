@@ -98,7 +98,7 @@ enum L2beatDirectory {
 		"If the Proposer fails, users can leverage the source available prover to submit proofs to the L1 bridge.",
 		"There is no window for users to exit in case of an unwanted upgrade since the Security Council can remove the delay on upgrades.",
 		"Proof construction and state derivation fully rely on data that is posted on Avail. Transaction data is checked against the Vector bridge data roots, signed off by Avail validators.",
-		"Users can force the sequencer to include a transaction by submitting a request through L1. If the sequencer censors or is down for for more than 14d, users can use the exit hatch to withdraw their funds.",
+		"Users can force the sequencer to include a transaction by submitting a request through L1. If the sequencer censors or is down for more than 14d, users can use the exit hatch to withdraw their funds.",
 		"Users are able to trustlessly exit by submitting a zero knowledge proof of funds.",
 		"There is no guaranteed mechanism to have transactions included if the sequencer is down or censoring. Although users can enqueue messages in the L1 delayed inbox and call forceInclusion on the SequencerInbox, the chain runs ArbOS 61 transaction filtering: an authorized filterer can register any transaction hash in the ArbFilteredTransactionsManager precompile (0x00…0074), after which the state transition function forcibly fails that transaction, including force-included ones, without delay.",
 		"There is no mechanism to have transactions be included if the sequencer is down or censoring. Eventually (after 6 months of no finalized blocks) the Operator role becomes public, theoretically allowing anyone to post data.",

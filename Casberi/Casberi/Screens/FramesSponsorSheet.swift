@@ -72,10 +72,10 @@ struct FramesSponsorSheet: View {
     @ViewBuilder private var head: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             WalletFace(address: request.sender, size: DS.Face.shelf, circular: true)
-            Text(String(localized: "\(FramesName.of(request.sender, mine: mine, watched: watched)) asks you to pay the fee"))
+            DSProse.text("\(FramesName.of(request.sender, mine: mine, watched: watched)) asks you to pay the fee")
                 .dsText(.reading17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-            Text(String(localized: "Only the fee leaves your account. What it sends comes from theirs."))
+            DSProse.text("Only the fee leaves your account. What it sends comes from theirs.")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

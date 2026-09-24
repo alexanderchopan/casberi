@@ -91,7 +91,7 @@ struct WalletbeatDirectoryScreen: View {
 			}
 
 			Section {
-				DSFootnote(Text(String(localized: "\(WalletbeatCopy.attribution) — not rated is not yet examined, never a verdict.\n\nAs of \(WalletbeatDirectory.generated); watched wallets are read live.")))
+				DSFootnote(prose: String(localized: "\(WalletbeatCopy.attribution) — not rated is not yet examined, never a verdict.\n\nAs of \(WalletbeatDirectory.generated); watched wallets are read live."))
 			}
 			.listRowSeparator(.hidden)
 			.listRowBackground(Color.clear)

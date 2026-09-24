@@ -18,7 +18,7 @@ struct FarcasterPackDoor: View {
 
     var body: some View {
         DSPushRow(title: Text("Follow a starter pack"),
-                  subtitle: Text("A hand-picked list, in one tap"),
+                  subtitle: DSProse.text("A hand-picked list, in one tap"),
                   action: { open = true }) {
             BridgeIcon(name: "Farcaster", size: DS.Mark.list, circular: false)
         }

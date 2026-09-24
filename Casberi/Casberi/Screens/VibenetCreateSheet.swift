@@ -353,7 +353,7 @@ struct VibenetCreateSheet: View {
                     .foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                DSFootnote(Text(String(localized: "Test money on an experimental network.")),
+                DSFootnote(prose: String(localized: "Test money on an experimental network."),
                            centered: true)
             }
         }

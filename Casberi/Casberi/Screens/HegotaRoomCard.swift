@@ -240,10 +240,10 @@ struct HegotaRoomFigure: View {
                 Text(String(localized: "Reading the chain…"))
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
             } else if head.everythingUnreached {
-                Text(String(localized: "Couldn't reach the chain — nothing below is current."))
+                DSProse.text("Couldn't reach the chain — nothing below is current.")
                     .dsText(.subhead12).foregroundStyle(DS.attention)
             } else if head.partial {
-                Text(String(localized: "\(String(head.watched - head.reached)) of \(String(head.watched)) couldn't be read"))
+                DSProse.text("\(String(head.watched - head.reached)) of \(String(head.watched)) couldn't be read")
                     .dsText(.subhead12).foregroundStyle(DS.attention)
             }
             if let account = primary, case let series = HegotaRoom.valueSamples(account),
@@ -3465,7 +3465,7 @@ struct HegotaCoinSheet: View {
     /// we have not earned.
     @ViewBuilder private var fate: some View {
         if !unspent.isEmpty, !unspent.contains(coin.index) {
-            Text(String(localized: "Spent. The vault records that it was, not which transaction spent it."))
+            DSProse.text("Spent. The vault records that it was, not which transaction spent it.")
                 .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s2)

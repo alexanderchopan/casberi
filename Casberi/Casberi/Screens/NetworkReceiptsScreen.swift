@@ -68,7 +68,7 @@ struct NetworkReceiptsScreen: View {
                 }
             } else {
                 Section {
-                    DSEmptyState(headline: Text("Nothing yet"),
+                    DSEmptyState(headline: DSProse.text("Nothing yet"),
                                  words: Text("Nothing yet. Every service reached shows up here."))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
@@ -97,7 +97,7 @@ struct NetworkReceiptsScreen: View {
                         row(receipt).dsListRow()
                     }
                 } footer: {
-                    DSFootnote(Text(ceiling), scale: .page)
+                    DSFootnote(prose: ceiling, scale: .page)
                 }
             }
 

@@ -1932,9 +1932,9 @@ struct AddressCard: View {
         // profile will never have a transfer, so promising one is a §83
         // claim about a thing that cannot happen.
         if things.isEmpty, !current.kind.isMonogram {
-            DSFootnote(Text(unnamed
+            DSFootnote(prose: unnamed
                  ? String(localized: "Transfers with this address land here as they arrive.")
-                 : String(localized: "Transfers with \(current.name) land here as they arrive.")))
+                 : String(localized: "Transfers with \(current.name) land here as they arrive."))
                 // THE ONE THING NAMING CHANGES ON A YOUNG CARD (prd §599).
                 // §441 built the retitle cascade so you can watch a name sweep
                 // down every landed transfer — and §462 says the common card

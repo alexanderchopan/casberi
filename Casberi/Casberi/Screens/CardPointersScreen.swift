@@ -90,7 +90,7 @@ struct CardPointersScreen: View {
         } else if needsPlus {
             // A real answer with a real door, not a failure. This account
             // signed in fine; it simply cannot read anything.
-            DSEmptyState(headline: Text("This account doesn't have CardPointers+"),
+            DSEmptyState(headline: DSProse.text("This account doesn't have CardPointers+"),
                          words: Text("Nothing was connected."),
                          scale: .list(rows: 2))
             if let upgradeURL {

@@ -410,7 +410,7 @@ struct IntroCover: View {
                     // noun and fit a notes app, a launcher or a bank equally.
                     // Both strings were already in the catalog, so the swap
                     // carried no translation debt.
-                    Text("One inbox for all your accounts.")
+                    DSProse.text("One inbox for all your accounts.")
                         .dsText(.heading40)
                         .foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)

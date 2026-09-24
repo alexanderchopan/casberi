@@ -31,7 +31,7 @@ struct PairClientSheet: View {
                 Spacer(minLength: 0)
 
                 // The honest gate: the token is real, the wire is not yet.
-                Text("Connecting goes live when your things sync. Code: \(MCPPairing.shortCode())")
+                DSProse.text("Connecting goes live when your things sync. Code: \(MCPPairing.shortCode())")
                     .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
             }

@@ -373,7 +373,7 @@ extension DSRoomChassis {
         private var face: some View {
             switch lead {
             case .sentence(let sentence):
-                Text(verbatim: sentence)
+                Text(verbatim: DSProse.unorphaned(sentence))
                     .dsText(.heading24)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -403,7 +403,7 @@ extension DSRoomChassis {
         }
 
         private var words: some View {
-            Text(verbatim: line.text)
+            Text(verbatim: DSProse.unorphaned(line.text))
                 .dsText(line.tone == .quiet ? .label12 : .subhead12)
                 .foregroundStyle(ink)
                 .fixedSize(horizontal: false, vertical: true)

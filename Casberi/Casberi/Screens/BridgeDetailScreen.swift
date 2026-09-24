@@ -89,7 +89,7 @@ struct BridgeDetailScreen: View {
     @ViewBuilder
     private var photosLimitedRemedy: some View {
         VStack(spacing: DS.Space.s2) {
-            Text("Only the photos you picked are visible, so new screenshots don't arrive on their own.")
+            DSProse.text("Only the photos you picked are visible, so new screenshots don't arrive on their own.")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             // The remedy is one verb and one door, so it is one slab and one

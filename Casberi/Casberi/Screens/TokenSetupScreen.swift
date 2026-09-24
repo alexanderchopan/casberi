@@ -408,7 +408,7 @@ struct TokenSetupScreen: View {
                 .background(DS.surfaceWell, in: DSSlab.shape)
                 // A row under the well, not a capsule inside it (prd §746).
                 DSCopyRow(value: code.userCode)
-                Text("Enter this code on GitHub — approval lands the token here by itself.")
+                DSProse.text("Enter this code on GitHub — approval lands the token here by itself.")
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 // Verb over address, the 2026-08-14 anatomy.

@@ -118,7 +118,7 @@ struct DiagnosticsScreen: View {
             Section {
                 ForEach(WebSessionCapture.targets) { target in
                     DSPushRow(title: Text("Measure \(target.name)"),
-                              subtitle: Text("Signs in through their own page and records what it asks for. Shapes only — no amounts, no values.")) {
+                              subtitle: DSProse.text("Signs in through their own page and records what it asks for. Shapes only — no amounts, no values.")) {
                         capturing = target
                     }
                     .dsListRow()
@@ -127,7 +127,7 @@ struct DiagnosticsScreen: View {
             #endif
             Section {
                 DSToggleRow(title: Text("Measure stalls"),
-                            detail: Text("Times the next launch and counts main-thread stalls during each foreground sweep. Costs a 16ms heartbeat while a sweep runs. Takes effect on the next launch."),
+                            detail: DSProse.text("Times the next launch and counts main-thread stalls during each foreground sweep. Costs a 16ms heartbeat while a sweep runs. Takes effect on the next launch."),
                             isOn: $measuring)
                 .dsListRow()
                 .onChange(of: measuring) { _, on in PerfReadings.measuring = on }

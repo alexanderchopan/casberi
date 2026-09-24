@@ -149,14 +149,14 @@ struct DSSheetHead<Disc: View>: View {
             }
             .padding(.top, DS.Space.s3)
             if let secondary {
-                Text(secondary)
+                Text(DSProse.unorphaned(secondary))
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
             }
             if let sentence {
-                Text(sentence)
+                Text(DSProse.unorphaned(sentence))
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)

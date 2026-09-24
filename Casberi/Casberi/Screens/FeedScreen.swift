@@ -7455,7 +7455,7 @@ struct FeedScreen: View {
             // by less. `FeedLedeCard` subtracts that padding; the helper is
             // the one place either of them says so.
             Section {
-                emptyLeadRow(headline: Text("Nothing asked yet"),
+                emptyLeadRow(headline: DSProse.text("Nothing asked yet"),
                              words: Text("Your conversations with \(source) appear here"))
             }
         }
@@ -7522,7 +7522,7 @@ struct FeedScreen: View {
             }
         } else if scopeTiles != nil, visible.isEmpty {
             Section {
-                emptyLeadRow(headline: Text("Nothing here yet."),
+                emptyLeadRow(headline: DSProse.text("Nothing here yet."),
                              words: Text(roomKindPick.summary))
             }
         }
@@ -11140,7 +11140,7 @@ struct FeedScreen: View {
                 VStack(alignment: .leading, spacing: 2) {
                     // "New things from X land here." is gone (prd §748): the
                     // line above already says this is everything SO FAR.
-                    Text("That's everything from \(source) so far · \(countLabel(rows))")
+                    DSProse.text("That's everything from \(source) so far · \(countLabel(rows))")
                         .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                 }

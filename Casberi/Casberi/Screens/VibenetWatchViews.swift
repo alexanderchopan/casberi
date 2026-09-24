@@ -177,7 +177,7 @@ struct VibenetDiscoverySection: View {
                     proof: nil)
             } else if discovered.isEmpty {
                 if discoveryAttempted {
-                    Text("Couldn't reach vibenet to find an account to suggest — paste an address above, or open the explorer to find one.")
+                    DSProse.text("Couldn't reach vibenet to find an account to suggest — paste an address above, or open the explorer to find one.")
                         .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)
                 }

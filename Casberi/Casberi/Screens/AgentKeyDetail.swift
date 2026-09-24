@@ -55,7 +55,7 @@ struct AgentModelRow: View {
                             .dsText(.body17).foregroundStyle(DS.textTertiary)
                     }
                 } else if readable == false {
-                    Text("Couldn't read \(provider.company)'s model list — keeping \(provider.defaultModel).")
+                    DSProse.text("Couldn't read \(provider.company)'s model list — keeping \(provider.defaultModel).")
                         .dsText(.subhead12).foregroundStyle(DS.attention)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if models.isEmpty {
@@ -275,13 +275,13 @@ struct OpenRouterRoutingRow: View {
                 DSToggleRow(title: AskSurface.enabled
                                 ? Text("Only providers that don't keep your question")
                                 : Text("Only providers that don't keep what you send"),
-                            detail: Text("Some models won't be served that way — you'll be told which."),
+                            detail: DSProse.text("Some models won't be served that way — you'll be told which."),
                             isOn: $privateRouting)
                 .onChange(of: privateRouting) { _, on in AgentOpenRouter.privateRouting = on }
                 // Web search only ever runs inside an ask (prd §718).
                 if AskSurface.enabled {
                     DSToggleRow(title: Text("Let it search the web"),
-                                detail: Text("Only when your own things fall short. Charged per result."),
+                                detail: DSProse.text("Only when your own things fall short. Charged per result."),
                                 isOn: $webSearch)
                     .onChange(of: webSearch) { _, on in AgentOpenRouter.webSearch = on }
                 }
@@ -329,7 +329,7 @@ struct AgentLibrarianRow: View {
                 DSToggleRow(title: AskSurface.enabled
                                 ? Text("Let your key organize too")
                                 : Text("Let your key organize"),
-                            detail: Text("Names screenshots and reads long chats so they can be found. No free on-device model here."),
+                            detail: DSProse.text("Names screenshots and reads long chats so they can be found. No free on-device model here."),
                             isOn: $enabled)
                 .onChange(of: enabled) { _, on in
                     AgentLibrarian.isEnabled = on
@@ -480,7 +480,7 @@ struct MCPServerRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             DSToggleRow(title: Text("Let agents on this Mac read your things"),
-                        detail: Text("127.0.0.1 only, never the network. Anything it offers to save waits for your approval."),
+                        detail: DSProse.text("127.0.0.1 only, never the network. Anything it offers to save waits for your approval."),
                         isOn: $enabled)
             .onChange(of: enabled) { _, on in
                 MCPServer.isEnabled = on

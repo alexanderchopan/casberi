@@ -2002,7 +2002,7 @@ struct VibenetRoomCard: View {
         // The connections map, empty (prd §771). No connector is drawn between
         // two real accounts; the skeleton's discs are nobody's.
         DSRoomSlot(headline: nil, reservesHeadline: false) {
-            DSEmptyState(headline: Text(String(localized: "Nothing is shared")),
+            DSEmptyState(headline: DSProse.text("Nothing is shared"),
                          words: Text(emptyAccountsLine),
                          scale: .room(.graph), clearance: DSRoomChassis.gearColumn)
         }
@@ -2277,7 +2277,7 @@ struct VibenetRoomCard: View {
                     .accessibilityHidden(true)
                     .dsGlyph(.feature, weight: .regular)
                     .foregroundStyle(DS.attention)
-                Text(String(localized: "The chain did not answer, so this room cannot say what can act for you."))
+                DSProse.text("The chain did not answer, so this room cannot say what can act for you.")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -2727,7 +2727,7 @@ struct VibenetRoomCard: View {
             // and the other does not, and that is the whole of how somebody
             // picks between them.
             DSPushRowLabel(title: Text(String(localized: "Watch an account")),
-                           subtitle: Text(String(localized: "Paste an address, or pick a new one")),
+                           subtitle: DSProse.text("Paste an address, or pick a new one"),
                            tint: Self.mark) {
                 ZStack {
                     Circle().fill(Self.mark.opacity(0.18))

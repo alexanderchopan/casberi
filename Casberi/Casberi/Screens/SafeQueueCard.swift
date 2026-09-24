@@ -379,7 +379,7 @@ struct SafeSignBlock: View {
                     }
                 }
             case .keyDestroyed:
-                Text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Make a new one in the Safe screen.")
+                DSProse.text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Make a new one in the Safe screen.")
                     .dsText(.subhead12).foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
             case .done:
@@ -511,7 +511,7 @@ struct SafeSignBlock: View {
             // array argument can carry thousands of values.
             if described.lines.count > Self.batchDrawCap {
                 let hidden = described.lines.count - Self.batchDrawCap
-                Text(verbatim: String(localized: "\(hidden) more values aren't shown here. Open it in your Safe app before signing."))
+                DSProse.text("\(hidden) more values aren't shown here. Open it in your Safe app before signing.")
                     .dsText(.subhead12).foregroundStyle(DS.attention)
                     .fixedSize(horizontal: false, vertical: true)
             }

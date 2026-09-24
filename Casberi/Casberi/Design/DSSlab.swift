@@ -862,7 +862,7 @@ struct DSSlabNote: View {
         // Drawn by `DSFootnote` (prd §748), the one view an explaining
         // sentence has, so `footnote-audit.py` counts this note with the rest.
         // 15pt inside an act (prd §729) is the footnote's own rule now.
-        DSFootnote(Text(LocalizedStringKey(text)), centered: !left)
+        DSFootnote(prose: text, centered: !left)
             .padding(.leading, accountAct ? DSActRow.inset : 0)
             .padding(.vertical, left ? DS.Space.s2 : 0)
             .padding(.top, left ? 0 : DS.Space.s1)
@@ -910,7 +910,7 @@ struct DSCheckList: View {
                             .dsGlyph(.caption, weight: .bold)
                             .foregroundStyle(tint ?? DS.confirm)
                     }
-                    Text(LocalizedStringKey(line))
+                    DSProse.text(resolving: line)
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)

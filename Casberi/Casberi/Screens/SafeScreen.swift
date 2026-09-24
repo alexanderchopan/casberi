@@ -177,7 +177,7 @@ struct SafeScreen: View {
                 // The key is GONE, not locked. Saying so is the whole
                 // point: the previous behaviour was a Sign button that
                 // failed with the same words a cancelled prompt gives.
-                Text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Have another owner swap the old address out of the Safe.")
+                DSProse.text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Have another owner swap the old address out of the Safe.")
                     .dsText(.subhead12).foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
                 DSSlabDoor(title: String(localized: "Make a new key"),
@@ -284,7 +284,7 @@ struct SafeScreen: View {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Image(systemName: "exclamationmark.triangle.fill").dsGlyph(.caption)
                         .foregroundStyle(DS.destructive)
-                    Text(verbatim: String(localized: "\(WalletStore.shortAddress(safe.safeAddress)) needs all \(safe.ownerCount) of its owners. Lose this phone and it can never be signed for again — or repaired, since that takes a signature too. Add one more owner."))
+                    DSProse.text("\(WalletStore.shortAddress(safe.safeAddress)) needs all \(safe.ownerCount) of its owners. Lose this phone and it can never be signed for again — or repaired, since that takes a signature too. Add one more owner.")
                         .dsText(.subhead12).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

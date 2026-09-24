@@ -133,9 +133,23 @@ struct BridgeStepLines: View {
     /// deleted with it, and so is every screen's step counter.
     @Environment(\.accountAct) private var accountAct
 
+    /// Unnumbered SENTENCES are facts, and facts read as one paragraph (user,
+    /// 2026-09-24, on Apple Wallet's three promises: "supposed to be three
+    /// lines it seems but instead looks like a jumble"). Stacked a spacing
+    /// apart, each wrapped on its own and the three read as one ragged block
+    /// with orphans. Fragments with no full stop ("Read-only is enough") are
+    /// still one line each — they are short and they are a list.
+    private var paragraph: String? {
+        guard !numbered, steps.count > 1,
+              steps.allSatisfy({ $0.last.map { ".!?".contains($0) } ?? false })
+        else { return nil }
+        return steps.map { String(localized: String.LocalizationValue($0)) }
+            .joined(separator: " ")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: accountAct ? DS.Space.s1 : DS.Space.s2) {
-            ForEach(Array(steps.enumerated()), id: \.offset) { i, text in
+            ForEach(Array((paragraph.map { [$0] } ?? steps).enumerated()), id: \.offset) { i, text in
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                     if numbered {
                         Text("\(i + startingAt)")
@@ -147,7 +161,7 @@ struct BridgeStepLines: View {
                     // unnecessarily small"). §640 dropped it to 13 because
                     // three steps out-weighed the rows they explained; the
                     // answer to that was fewer words, not smaller ones.
-                    Text(LocalizedStringKey(text))
+                    DSProse.text(resolving: text)
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -217,7 +231,7 @@ struct AgentActiveStatusRow: View {
                 if active == provider {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(DS.confirm)
-                    Text("\(provider.agent) is your active agent for \"Try with your key.\"")
+                    DSProse.text("\(provider.agent) is your active agent for \"Try with your key.\"")
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                 } else {
                     Text(active.map { "\($0.agent) is currently answering \"Try with your key.\"" }
@@ -279,7 +293,7 @@ struct BridgeSyncStatusRows: View {
         if syncing {
             HStack(spacing: DS.Space.s2) {
                 DSSpinner()
-                Text(syncingLine)
+                Text(DSProse.unorphaned(syncingLine))
                     .dsText(.body17)
                     .foregroundStyle(DS.textTertiary)
             }
@@ -295,7 +309,7 @@ struct BridgeSyncStatusRows: View {
                 }
                 Group {
                     if failed {
-                        Text(proof.line)
+                        Text(DSProse.unorphaned(proof.line))
                             .shake(on: shakes)
                             .onAppear { shakes += 1; DSHaptic.failure() }
                             .onChange(of: proof) { if proof.isFailure { shakes += 1; DSHaptic.failure() } }

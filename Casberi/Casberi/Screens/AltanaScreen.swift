@@ -199,7 +199,7 @@ struct AltanaScreen: View {
                     syncingLine: String(localized: "Looking for accounts in the keystore…"),
                     proof: nil)
             } else if discovered.isEmpty, discoveryAttempted {
-                Text("Couldn't reach the explorer to list accounts — paste an address above, or watch the example below.")
+                DSProse.text("Couldn't reach the explorer to list accounts — paste an address above, or watch the example below.")
                     .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
             } else if !discovered.isEmpty {

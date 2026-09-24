@@ -51,7 +51,7 @@ struct RoomLedeView: View {
                         .lineLimit(1)
                 }
             }
-            Text(lede.caption)
+            Text(DSProse.unorphaned(lede.caption))
                 // The quiet tier, and it stays quiet. §584 measured what
                 // happens when this is promoted: in an extreme-proportion
                 // system most text SHOULD whisper, or nothing shouts.

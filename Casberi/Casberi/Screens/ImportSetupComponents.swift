@@ -312,7 +312,7 @@ struct ImportUpkeepSection: View {
 
     /// The one sentence, drawn once for both layouts (prd §748).
     private var footnote: some View {
-        DSFootnote(Text(footerText), scale: plain ? .meta : .page)
+        DSFootnote(prose: footerText, scale: plain ? .meta : .page)
     }
 
     private var removeLine: some View {

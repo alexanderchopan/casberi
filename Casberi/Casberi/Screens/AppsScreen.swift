@@ -832,13 +832,13 @@ struct AppsScreen: View {
                 // Reachable only by choosing Manage with nothing connected —
                 // the seed opens a first run on Connect. One sentence, and the
                 // way out is the control the person just used.
-                DSEmptyState(headline: Text("Nothing connected yet"),
+                DSEmptyState(headline: DSProse.text("Nothing connected yet"),
                              words: Text("Nothing connected yet. Everything you can add is under Connect."))
                     .padding(.vertical, DS.Space.s4)
             } else if section == .all && ranked.isEmpty {
                 // Every app in the catalogue is connected (prd §812): Connect
                 // holds only what you have not added, so this is its honest end.
-                DSEmptyState(headline: Text("Everything is connected"),
+                DSEmptyState(headline: DSProse.text("Everything is connected"),
                              words: Text("Everything is connected."))
                     .padding(.vertical, DS.Space.s4)
             } else if scope.name == nil {

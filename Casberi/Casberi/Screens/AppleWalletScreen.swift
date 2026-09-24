@@ -87,7 +87,7 @@ struct AppleWalletScreen: View {
         // §220's rule, and numerals here would send the eye hunting for a
         // step 1 that doesn't exist.
         BridgeStepLines(steps: [
-            String(localized: "Read on this \(DS.device). Nothing is uploaded."),
+            String(localized: "Read on \(DS.device). Nothing is uploaded."),
             String(localized: "It can't spend or move money."),
             String(localized: "Disconnect deletes everything it brought in."),
         ], numbered: false)
@@ -112,7 +112,7 @@ struct AppleWalletScreen: View {
     /// rather than a Connect button that can only fail — the no-dead-controls
     /// rule (§83).
     @ViewBuilder private var unavailableBlock: some View {
-        Text("This \(DS.device) can't share financial data. It needs iOS 17.4 in the US, or iOS 18.4 in the UK.")
+        DSProse.text("This \(DS.device) can't share financial data. It needs iOS 17.4 in the US, or iOS 18.4 in the UK.")
             .dsText(.subhead12)
             .foregroundStyle(DS.textSecondary)
             .fixedSize(horizontal: false, vertical: true)

@@ -188,7 +188,7 @@ struct WalletNFTShelfCard: View {
                 DSSpinner()
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                DSEmptyState(headline: Text(String(localized: "Nothing to show yet")),
+                DSEmptyState(headline: DSProse.text("Nothing to show yet"),
                              words: Text(String(localized: "Nothing to draw from these collections yet.")),
                              scale: .room(.quad))
             }

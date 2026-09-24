@@ -528,7 +528,7 @@ extension PrivacyDevnetRoomCard {
         if walkCut.scannedTo != nil || walkCut.unread > 0 {
             VStack(alignment: .leading, spacing: 2) {
                 if let stopped = walkCut.scannedTo {
-                    Text(String(localized: "This chain is long enough that the search stopped at block \(String(stopped)) — anything before that wasn't looked at."))
+                    DSProse.text("This chain is long enough that the search stopped at block \(String(stopped)) — anything before that wasn't looked at.")
                 }
                 if walkCut.unread > 0 {
                     Text(walkCut.unread == 1
@@ -549,7 +549,7 @@ extension PrivacyDevnetRoomCard {
     /// transaction that emitted no log is invisible to this seat, so every
     /// count in every scope is a floor rather than a total.
     @ViewBuilder var walkFloor: some View {
-        Text(String(localized: "Found by following the chain's logs, so a transaction that emitted none isn't here."))
+        DSProse.text("Found by following the chain's logs, so a transaction that emitted none isn't here.")
             .dsText(.subhead12)
             .foregroundStyle(DS.textTertiary)
             .fixedSize(horizontal: false, vertical: true)

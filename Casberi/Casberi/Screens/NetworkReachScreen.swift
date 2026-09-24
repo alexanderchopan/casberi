@@ -70,7 +70,7 @@ struct NetworkReachScreen: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                Text("Every request below goes straight from \(DS.device) to the service named.")
+                DSProse.text("Every request below goes straight from \(DS.device) to the service named.")
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .listRowBackground(Color.clear)

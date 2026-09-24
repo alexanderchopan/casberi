@@ -605,7 +605,7 @@ struct DevnetAdvancedSheet: View {
                     // ONE sentence for the whole sheet, not one per field —
                     // it is the same fact three times over and §554's budget
                     // is spent on saying it well once.
-                    DSFootnote(Text(String(localized: "All three are signed with the transaction. The chain enforces the window; the note is public and permanent.")))
+                    DSFootnote(prose: String(localized: "All three are signed with the transaction. The chain enforces the window; the note is public and permanent."))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, DS.Space.s4)
@@ -1347,9 +1347,9 @@ struct DevnetSendSheet: View {
                 Text(String(localized: "Who pays the fee"))
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
-                DSFootnote(Text(payer == nil
+                DSFootnote(prose: payer == nil
                      ? String(localized: "You do, from this account.")
-                     : String(localized: "They sign it too. Nothing sends until they do.")))
+                     : String(localized: "They sign it too. Nothing sends until they do."))
             }
             Spacer(minLength: DS.Space.s2)
             Menu {
@@ -1412,7 +1412,7 @@ struct DevnetSendSheet: View {
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             if let expires {
-                DSFootnote(Text(String(localized: "It sends when they pay, and stops working at \(expires.formatted(date: .omitted, time: .shortened)).")))
+                DSFootnote(prose: String(localized: "It sends when they pay, and stops working at \(expires.formatted(date: .omitted, time: .shortened))."))
             }
             ShareLink(item: link,
                       message: Text(String(localized: "Can you pay the fee for this on \(venue)?"))) {

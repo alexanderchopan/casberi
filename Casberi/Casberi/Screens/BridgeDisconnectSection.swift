@@ -77,7 +77,7 @@ struct BridgeDisconnectSection: View {
             }
         } footer: {
             if let note {
-                DSFootnote(Text(note), scale: .page)
+                DSFootnote(prose: note, scale: .page)
             }
         }
     }

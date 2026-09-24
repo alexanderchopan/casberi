@@ -11,7 +11,7 @@ struct StarterPacksDoor: View {
 
     var body: some View {
         DSPushRow(title: Text("Follow a starter pack"),
-                  subtitle: Text("Someone's curated list, in one tap"),
+                  subtitle: DSProse.text("Someone's curated list, in one tap"),
                   action: { open = true }) {
             BridgeIcon(name: "Bluesky", size: DS.Mark.list, circular: false)
         }

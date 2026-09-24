@@ -450,9 +450,9 @@ struct AccountDetailSheet: View {
                         DSFootnote("The librarian sends things to \(keyedAgent.company) on its own to name and summarize them.")
                     }
                 } else if let keyedAgent {
-                    DSFootnote(Text(librarianOn
-                         ? "Your \(keyedAgent.agent) key answers when you tap, and the librarian sends things to \(keyedAgent.company) on its own to name and summarize them."
-                         : "Your \(keyedAgent.agent) key answers when you tap — that question and its matched things go to \(keyedAgent.company), per answer."))
+                    DSFootnote(prose: librarianOn
+                         ? String(localized: "Your \(keyedAgent.agent) key answers when you tap, and the librarian sends things to \(keyedAgent.company) on its own to name and summarize them.")
+                         : String(localized: "Your \(keyedAgent.agent) key answers when you tap — that question and its matched things go to \(keyedAgent.company), per answer."))
                 }
             }
             // iCloud sync. The container binds at launch, so a fresh flip says
@@ -606,7 +606,7 @@ struct AccountDetailSheet: View {
     private func door(_ title: String, _ subtitle: String,
                       subtitleTone: Color = DS.textTertiary,
                       action: @escaping () -> Void) -> some View {
-        DSPushRow(title: Text(title), subtitle: Text(subtitle),
+        DSPushRow(title: Text(title), subtitle: Text(DSProse.unorphaned(subtitle)),
                   subtitleTone: subtitleTone, action: action)
     }
 
@@ -728,7 +728,7 @@ struct AccountDetailSheet: View {
     private func toggleRow(_ title: String, _ subtitle: String,
                            subtitleTone: Color = DS.textTertiary,
                            isOn: Binding<Bool>) -> some View {
-        DSToggleRow(title: Text(title), detail: Text(subtitle),
+        DSToggleRow(title: Text(title), detail: Text(DSProse.unorphaned(subtitle)),
                     detailTone: subtitleTone, isOn: isOn)
     }
 

@@ -60,7 +60,7 @@ struct L2beatRiskCard: View {
 					.dsText(.subhead12)
 					.foregroundStyle(DS.textTertiary)
 			} else if failed {
-				Text(String(localized: "Couldn't reach L2BEAT, and this chain isn't in the copy bundled with the app."))
+				DSProse.text("Couldn't reach L2BEAT, and this chain isn't in the copy bundled with the app.")
 					.dsText(.subhead12)
 					.foregroundStyle(DS.textTertiary)
 					.fixedSize(horizontal: false, vertical: true)
@@ -141,7 +141,7 @@ struct L2beatRiskCard: View {
 				.foregroundStyle(DS.textPrimary)
 				.fixedSize(horizontal: false, vertical: true)
 			if project.underReview {
-				Text(String(localized: "L2BEAT is re-examining this chain, so these readings may change."))
+				DSProse.text("L2BEAT is re-examining this chain, so these readings may change.")
 					.dsText(.subhead12)
 					.foregroundStyle(DS.textSecondary)
 					.fixedSize(horizontal: false, vertical: true)

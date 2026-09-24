@@ -31,8 +31,20 @@ struct DSFootnote: View {
 
     @Environment(\.accountAct) private var accountAct
 
-    init(_ key: LocalizedStringKey, scale: Scale = .meta, centered: Bool = false) {
-        self.text = Text(key)
+    /// A literal is a `LocalizedStringResource`, not a `LocalizedStringKey`,
+    /// so it can be resolved to a string and bound against an orphaned last
+    /// word (`DSProse`) before it is drawn; Xcode extracts it the same way.
+    init(_ key: LocalizedStringResource, scale: Scale = .meta, centered: Bool = false) {
+        self.text = DSProse.text(key)
+        self.scale = scale
+        self.centered = centered
+    }
+
+    /// A sentence built at runtime (a ternary, a composed line): resolved and
+    /// bound like a literal. Labelled, because an unlabelled `String` init
+    /// would win every bare literal and stop Xcode extracting them.
+    init(prose: String, scale: Scale = .meta, centered: Bool = false) {
+        self.text = DSProse.text(resolving: prose)
         self.scale = scale
         self.centered = centered
     }

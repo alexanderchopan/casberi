@@ -85,7 +85,7 @@ struct PrivyScreen: View {
     @ViewBuilder private var displayBlock: some View {
         let store = PrivyHomeStore.shared
         DSToggleRow(title: Text("Show empty apps"),
-                    detail: Text("Apps holding nothing that you haven't used in 90 days."),
+                    detail: DSProse.text("Apps holding nothing that you haven't used in 90 days."),
                     isOn: Binding(get: { store.showEmpty }, set: { store.setShowEmpty($0) }))
         DSPushRow(title: Text("Hidden apps"),
                   fact: Text(store.hidden.isEmpty ? String(localized: "None")

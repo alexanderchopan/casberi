@@ -82,7 +82,7 @@ struct AgentChatThread: View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 if turns.isEmpty && chrome.roomAskSource != source {
-                    DSEmptyState(headline: Text("Nothing asked yet"),
+                    DSEmptyState(headline: DSProse.text("Nothing asked yet"),
                                  words: Text("Your conversation with \(source) appears here"),
                                  scale: .list(rows: 3))
                 } else {

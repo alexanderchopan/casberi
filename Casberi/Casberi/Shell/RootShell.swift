@@ -4727,7 +4727,7 @@ struct RootShell: View {
                 // whose news this is, said before a word is read.
                 BridgeIcon(name: mark, size: DS.Face.badge, circular: true)
             }
-            Text(text)
+            Text(DSProse.unorphaned(text))
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
             if let action = chrome.toastAction {

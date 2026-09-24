@@ -60,7 +60,7 @@ struct AppleIntelligenceScreen: View {
                              systemImage: "apple.intelligence",
                              action: turnOn)
             }
-            DSFootnote("Your question and the saved things that answer it go to Apple's Private Cloud Compute, which Apple says keeps none of it. Everything else stays on this \(DS.device).")
+            DSFootnote("Your question and the saved things that answer it go to Apple's Private Cloud Compute, which Apple says keeps none of it. Everything else stays on \(DS.device).")
         }
     }
 
