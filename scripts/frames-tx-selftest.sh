@@ -124,7 +124,10 @@ done
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-strip_comments() { sed -E 's://.*$::' "$1" | sed -E 's:/\*.*\*/::'; }
+# `(^|[^:])`: a URL's `//` is not a comment. Without it a `"https://host"`
+# literal was cut to `"https:`, and the host check below could only catch a host
+# written with no scheme (2026-09-24).
+strip_comments() { sed -E 's:(^|[^:])//.*$:\1:' "$1" | sed -E 's:/\*.*\*/::'; }
 strip_comments "$TX" > "$WORK/tx.nc"
 strip_comments "$KEY" > "$WORK/key.nc"
 strip_comments "$SEND" > "$WORK/send.nc"

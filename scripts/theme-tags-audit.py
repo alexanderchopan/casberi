@@ -150,7 +150,9 @@ def balanced(text, open_index):
 def strip_comments(text):
     """A doc comment naming a tag it excludes is prose, not a stamp."""
     text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
-    return "\n".join(re.sub(r"//.*$", "", line) for line in text.splitlines())
+    # `(?<!:)`: a URL's `//` is not a comment. Without it a `tags: [...]`
+    # after a URL on the same line was cut away unread (2026-09-24).
+    return "\n".join(re.sub(r"(?<!:)//.*$", "", line) for line in text.splitlines())
 
 
 def stamped_tags(sources):

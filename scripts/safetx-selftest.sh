@@ -83,7 +83,11 @@ strip_comments() {
 import re, sys
 src = open(sys.argv[1]).read()
 src = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
-print("\n".join(re.sub(r"//.*$", "", line) for line in src.splitlines()))
+# `(?<!:)`: a URL's `//` is not a comment. Without it every `https://host`
+# read as `"https:`, and the host guard below had never seen a host — it
+# passed vacuously from the day it was written (safe-signer-selftest.sh's
+# fix, 2026-09-24, applied here the same day).
+print("\n".join(re.sub(r"(?<!:)//.*$", "", line) for line in src.splitlines()))
 PY
 }
 CODE=$(strip_comments "$TX")
@@ -217,10 +221,24 @@ printf '%s' "$SIGNER_CODE" | grep -q 'multisig-transactions/\\(safeTxHash)/confi
 # the read there would have left SIGNING broken for the same reason the room
 # was. The rule is unchanged and is the point of the loop: this file reaches
 # Safe and nothing else. Adding a third host is still a decision, not a line.
-for host in $(printf '%s' "$SIGNER_CODE" | grep -oE 'https://[a-z0-9.-]+' | sort -u); do
-  [[ "$host" == "https://api.safe.global" || "$host" == "https://safe-client.safe.global" ]] \
-    || { echo "✗ SafeSigner.swift reaches $host — it may reach Safe's own hosts (api.safe.global, safe-client.safe.global) and nothing else"; exit 1; }
-done
+#
+# A FUNCTION, like `guard_check`, so the live run and the mutation below read
+# one body. It also refuses a file that names NO host: this file makes one POST
+# and one read, so an empty host list means the reader went blind (the stripper
+# ate every URL until 2026-09-24), never that the file became host-free.
+host_check() {   # $1 = SafeSigner.swift path; prints the offending host
+  local code host
+  local -a hosts
+  code=$(strip_comments "$1")
+  hosts=(${(f)"$(printf '%s' "$code" | grep -oE 'https://[a-z0-9.-]+' | sort -u || true)"})
+  (( ${#hosts} > 0 )) || { echo "(no host read at all)"; return 1; }
+  for host in $hosts; do
+    [[ "$host" == "https://api.safe.global" || "$host" == "https://safe-client.safe.global" ]] \
+      || { echo "$host"; return 1; }
+  done
+}
+BAD_HOST=$(host_check "$SIGNER") \
+  || { echo "✗ SafeSigner.swift reaches $BAD_HOST — it may reach Safe's own hosts (api.safe.global, safe-client.safe.global) and nothing else"; exit 1; }
 # EVERY RAIL MUST HAVE A READER (2026-09-07). The entire safety argument for
 # signing on a chain is that `getTransactionHash` can be read back from the
 # Safe there — "a chain where the cross-check cannot run is a chain this app
@@ -1314,6 +1332,32 @@ guard_mutate "the biometric gate is widened to any enrolled face" key \
 # The self-check that the signature really is this phone's.
 guard_mutate "the recovered-address self-check is dropped" key \
   'recoveredAddress.lowercased() == expected.lowercased()' 'true'
+
+# The host guard above, proven the same way. It had passed vacuously for its
+# whole life — the comment stripper cut every URL at its `//` — so this is the
+# mutation that would have caught that: a non-Safe host MUST turn it red.
+# PINNED APPLIER: an anchor that is missing or no longer unique fails loudly,
+# and so does a copy the replace left byte-identical, so this can never print
+# a pass over no change.
+cp "$SIGNER" "$TMP/SafeSigner.swift"
+FRM='"https://safe-client.safe.global/v1/chains/\(rail.chainId)"' \
+TO='"https://safe-gateway.example.com/v1/chains/\(rail.chainId)"' \
+python3 - "$TMP/SafeSigner.swift" <<'HMUT' || { echo "  ✗ a non-Safe host is named — the mutation did not apply (the anchor is gone or no longer unique)"; exit 1; }
+import os, sys
+path = sys.argv[1]
+src = open(path).read()
+frm, to = os.environ["FRM"], os.environ["TO"]
+if src.count(frm) != 1:
+    sys.exit(1)
+open(path, "w").write(src.replace(frm, to, 1))
+HMUT
+if cmp -s "$SIGNER" "$TMP/SafeSigner.swift"; then
+  echo "  ✗ a non-Safe host is named — the mutation did not apply (the shipped source moved)"; exit 1
+fi
+if host_check "$TMP/SafeSigner.swift" > /dev/null; then
+  echo "  ✗ a non-Safe host is named — host_check still passed, so nothing was guarding this"; exit 1
+fi
+echo "  ✓ a non-Safe host is named"
 
 echo ""
 echo "✓ safetx self-test: fixtures pinned, refusals proven, every mutation caught"

@@ -56,7 +56,9 @@ trap 'rm -rf "$WORK"' EXIT
 # has now cost this repo eight separate guards).
 # ---------------------------------------------------------------------------
 strip_comments() {
-  sed -E 's://.*$::' "$1" | sed -E 's:/\*.*\*/::'
+  # `(^|[^:])`: a URL's `//` is not a comment. Without it every `https://`
+  # was cut to `https:`, so the URL ban below could never fire (2026-09-24).
+  sed -E 's:(^|[^:])//.*$:\1:' "$1" | sed -E 's:/\*.*\*/::'
 }
 strip_comments "$DEVKEY" > "$WORK/devkey.nocomment"
 strip_comments "$SIGNER" > "$WORK/signer.nocomment"
