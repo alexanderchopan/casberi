@@ -416,11 +416,10 @@ def self_test():
          lambda t: t.replace(
              "    private func isAlarmClass(isNew: Bool) -> Bool {\n        isNew &&",
              "    private var isAlarmClass: Bool {\n        newSinceLastSeen &&")),
-        ("the row's time ink reads the facts itself again",
-         "Casberi/Casberi/Screens/ShapedRows.swift",
-         lambda t: t.replace(
-             "    private func timeInk(isNew: Bool, isAlarm: Bool) -> Color {\n        guard isNew else",
-             "    private var timeInk: Color {\n        guard newSinceLastSeen else")),
+        # "the row's time ink reads the facts itself again" is gone with
+        # `timeInk` itself (prd §902: the row's age left the trailing slot).
+        # The check's regex above still names `timeInk: Color`, so a computed
+        # property of that name coming back is still a finding.
     ]
 
     failures = 0
