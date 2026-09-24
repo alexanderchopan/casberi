@@ -410,7 +410,7 @@ enum AWSFetch {
     /// time-only read (`AWSIngest.diagnose`). The CURRENT reason ("Threshold
     /// Crossed: 1 datapoint [72.3] was greater than the threshold [70.0]")
     /// needs none of this: `DescribeAlarms` carries it as `StateReason`, and
-    /// the sweep lands it from the rows already in hand (prd §910).
+    /// the sweep lands it from the rows already in hand (prd §912).
     static func alarmHistory(alarm: String, region: String,
                              accessKeyID: String, secretKey: String) async
         -> [[String: Any]]? {
@@ -703,7 +703,7 @@ enum AWSIngest {
                 guard !firstSight, previous != state, previous != nil,
                       state == "ALARM" || state == "OK" else { continue }
                 // The reason and the moment ride the same `DescribeAlarms`
-                // row (prd §910): `StateReason` is CloudWatch's own sentence
+                // row (prd §912): `StateReason` is CloudWatch's own sentence
                 // for THIS transition, `AlarmDescription` the person's, and
                 // `StateUpdatedTimestamp` is when it actually flipped — a
                 // row stamped `.now` sorted an overnight alarm into the
@@ -811,7 +811,7 @@ enum AWSIngest {
             : String(localized: "Cleared · \(name)")
         // An alarm name may carry spaces and slashes; the console reads the
         // fragment percent-encoded, and a raw slash there opens the alarm
-        // list instead of the alarm (prd §910).
+        // list instead of the alarm (prd §912).
         let encodedName = name.addingPercentEncoding(withAllowedCharacters: consoleFragmentAllowed) ?? name
         let thing = Thing(
             kind: .link,
@@ -851,7 +851,7 @@ enum AWSIngest {
     /// AWS's JSON protocols hand a timestamp back as EPOCH SECONDS (a Double,
     /// `1758700000.123`), not the ISO string `IngestSupport.isoDate` reads —
     /// so that reader alone answered nil for every CloudWatch and
-    /// CodePipeline date (prd §910). Both shapes, the number first.
+    /// CodePipeline date (prd §912). Both shapes, the number first.
     static func awsDate(_ raw: Any?) -> Date? {
         if let n = raw as? Double, n > 0 { return Date(timeIntervalSince1970: n) }
         if let n = raw as? Int, n > 0 { return Date(timeIntervalSince1970: Double(n)) }
@@ -869,7 +869,7 @@ enum AWSIngest {
         // rule, restated here rather than shared, since the three bridges
         // have no common status type to hang one function off).
         // WHAT was deployed, off the execution's own `sourceRevisions`
-        // (prd §910) — the commit message, so a row says "Fix the flaky
+        // (prd §912) — the commit message, so a row says "Fix the flaky
         // widget test", not only which pipeline ran. No
         // `ListActionExecutions`: the summary rides the list row in hand.
         let revision = sourceRevisionSummary(row)
@@ -903,7 +903,7 @@ enum AWSIngest {
     /// `sourceRevisions[0].revisionSummary`. For a CodeStar/GitHub v2 source
     /// it is a JSON STRING — `{"ProviderType":"GitHub","CommitMessage":"…"}`
     /// — so that shape is opened and its `CommitMessage` read; anything else
-    /// (S3, CodeCommit, ECR) is the plain sentence it looks like (prd §910).
+    /// (S3, CodeCommit, ECR) is the plain sentence it looks like (prd §912).
     static func sourceRevisionSummary(_ row: [String: Any]) -> String? {
         guard let first = (row["sourceRevisions"] as? [[String: Any]])?.first,
               let raw = trimmed(first["revisionSummary"]) else { return nil }

@@ -17,7 +17,7 @@ enum DuolingoLiveAuth {
     private static let courseKey = "duolingo.live.course"
     /// The HANDLE alone, apart from `who` (which falls back to the display
     /// name): a profile page is reached by username and by nothing else
-    /// (prd §910).
+    /// (prd §912).
     private static let usernameKey = "duolingo.live.username"
 
     static var token: String? {
@@ -59,7 +59,7 @@ enum DuolingoLiveAuth {
         UserDefaults.standard.string(forKey: usernameKey).flatMap { $0.isEmpty ? nil : $0 }
     }
 
-    /// Where a practice row opens (prd §910): the account's own profile page,
+    /// Where a practice row opens (prd §912): the account's own profile page,
     /// which exists only under a username. nil until one is learnt.
     static var profileURL: String? {
         username.map { "https://www.duolingo.com/profile/\($0)" }
@@ -127,7 +127,7 @@ enum DuolingoLive {
         for day in days where day.practised {
             let title = DuolingoFeed.title(day, course: course)
             let line = DuolingoFeed.line(day)
-            // The DOOR takes `content` once the profile is known (prd §910),
+            // The DOOR takes `content` once the profile is known (prd §912),
             // and the "3 lessons · 14 min" line moves under it with the
             // streak words; until then the line stays where it was, so a row
             // never loses it.
@@ -171,7 +171,7 @@ enum DuolingoLive {
         return added
     }
 
-    /// What the row says under its title (prd §910): the lessons-and-minutes
+    /// What the row says under its title (prd §912): the lessons-and-minutes
     /// line when the door displaced it from `content`, then the streak facts
     /// the payload flags — only the ones set, never "streak not extended".
     /// nil when there is nothing, never an empty line.

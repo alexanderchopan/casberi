@@ -431,7 +431,7 @@ enum RSSIngest {
                             thing.postAuthor = author; touched = true
                         }
                         // The abstract, for a row that landed before the feed
-                        // published one — the NerdWallet line (prd §910).
+                        // published one — the NerdWallet line (prd §912).
                         if (thing.summary ?? "").isEmpty, !item.summary.isEmpty {
                             thing.summary = item.summary; touched = true
                         }
@@ -446,7 +446,7 @@ enum RSSIngest {
                 }
                 // A titleless item still has words when it has an abstract:
                 // its first line names it, the Telegram fallback's rule
-                // (prd §910). Only one with neither is skipped.
+                // (prd §912). Only one with neither is skipped.
                 let rawTitle = item.title.isEmpty ? IngestSupport.titleLine(item.summary) : item.title
                 guard !rawTitle.isEmpty else { continue }
                 let thing = Thing(

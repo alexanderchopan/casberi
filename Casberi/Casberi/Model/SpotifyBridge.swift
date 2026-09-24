@@ -388,7 +388,7 @@ enum SpotifyIngest {
             let artists = ((track["artists"] as? [[String: Any]]) ?? [])
                 .compactMap { $0["name"] as? String }.joined(separator: ", ")
             // The track's page, built from its id when `external_urls` is
-            // missing (prd §910) — a play with no door was a row that opened
+            // missing (prd §912) — a play with no door was a row that opened
             // nothing. Same host, same shape Spotify serves in that field.
             let link = ((track["external_urls"] as? [String: Any])?["spotify"] as? String)
                 .flatMap { $0.isEmpty ? nil : $0 } ?? "https://open.spotify.com/track/\(id)"
@@ -415,7 +415,7 @@ enum SpotifyIngest {
             // The album the track came off — the one fact the payload carries
             // that the title doesn't. `summary`, not `enrichedText`: Spotify
             // authored it and handed it over, so it's shown copy, not scraped.
-            // …and where it was played FROM, when the play says (prd §910):
+            // …and where it was played FROM, when the play says (prd §912):
             // `context.type` is the one fact about the listening the payload
             // carries. Its `uri` names no title, so the word is all there is.
             let albumWords = albumLine(album, track: name)

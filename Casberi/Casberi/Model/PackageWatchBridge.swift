@@ -107,7 +107,7 @@ enum PackageRegistry: String, CaseIterable, Identifiable, Codable {
         }
     }
 
-    /// The page for ONE version (prd §910) — a release row opens the
+    /// The page for ONE version (prd §912) — a release row opens the
     /// release, not the package's front page. PyPI's RSS item carries this
     /// link itself (`Release.link`); npm's cheap endpoint does not, so it is
     /// built on the same shape npm's site serves.
@@ -344,7 +344,7 @@ enum PackageFetch {
         /// version dead and said what to do instead.
         let deprecated: String?
         /// The version's own page when the registry named it (PyPI's RSS
-        /// `link`); nil means `PackageRegistry.releaseURL` builds it (prd §910).
+        /// `link`); nil means `PackageRegistry.releaseURL` builds it (prd §912).
         let link: String?
     }
 

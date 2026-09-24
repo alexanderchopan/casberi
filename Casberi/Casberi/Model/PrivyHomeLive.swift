@@ -361,11 +361,21 @@ enum PrivyHomeLive {
         var indexed: [Thing] = []
         for app in apps {
             let ref = PrivyHomeFeed.ref(app)
+            // The row's `content` is its DOOR (prd §912): the app's own site,
+            // else the wallet's explorer page. The wallet line the row draws
+            // comes from the store by ref (`PrivyAppRow`), not from here.
+            let door = PrivyHomeFeed.door(app)
+            // The wallet line (`shortAddress +N`) rides `summary`, because
+            // `PrivyAppRow` falls back to it when the store has no app for
+            // the ref — before the door moved into `content` that fallback
+            // read `content`, and would now draw a URL as the row's line.
             let line = PrivyHomeFeed.line(app)
             if let thing = existing[ref] {
-                guard thing.isLive, thing.title != app.name || thing.content != line else { continue }
+                guard thing.isLive, thing.title != app.name || thing.content != door
+                        || (thing.summary ?? "") != line else { continue }
                 thing.title = app.name
-                thing.content = line
+                thing.content = door
+                thing.summary = line.isEmpty ? nil : line
                 thing.embedding = nil
                 indexed.append(thing)
                 touched = true
@@ -373,10 +383,11 @@ enum PrivyHomeLive {
             }
             let thing = Thing(kind: .event,
                               title: app.name,
-                              content: line,
+                              content: door,
                               source: PrivyHomeFeed.source,
                               capturedAt: app.createdAt ?? now,
                               sourceRef: ref)
+            thing.summary = line.isEmpty ? nil : line
             context.insert(thing)
             existing[ref] = thing
             indexed.append(thing)
@@ -466,11 +477,19 @@ enum PrivyHomeLive {
                 let ref = PrivyHomeFeed.txRef(appID: target.appID, hash: transfer.hash,
                                               received: transfer.received, symbol: transfer.symbol)
                 guard !existing.contains(ref) else { continue }
+                // The other side by name where one is already known — a
+                // watched wallet's label, a known contract — never a lookup
+                // (prd §912). The door is the chain's own transaction page,
+                // through `WalletIngest`'s one explorer table.
+                let who = transfer.counterparty.flatMap(WalletIngest.knownLabel(for:))
+                let door = WalletIngest.explorerURL(forNetwork: transfer.network)
+                    .map { $0 + transfer.hash } ?? ""
                 let thing = Thing(kind: .transaction,
                                   title: PrivyHomeFeed.txTitle(received: transfer.received,
                                                                value: transfer.amount,
-                                                               symbol: transfer.symbol),
-                                  content: "",
+                                                               symbol: transfer.symbol,
+                                                               who: who),
+                                  content: door,
                                   source: PrivyHomeFeed.source,
                                   capturedAt: transfer.when,
                                   sourceRef: ref)

@@ -720,6 +720,9 @@ enum PeerBridge {
         let method: String?
         let currency: String?
         let conversionRateRaw: Double?
+        /// The log's own transaction (prd §912) — the page an expired intent's
+        /// row opens, instead of the escrow contract's whole address page.
+        let transactionHash: String?
     }
 
     /// Walks every watched maker deposit forward: new `IntentSignaled`s
@@ -780,7 +783,8 @@ enum PeerBridge {
                     rawAmount: WalletIngest.hexToDouble("0x" + amountWord),
                     method: word(data, 0).flatMap { paymentMethods["0x" + $0] },
                     currency: word(data, 4).flatMap { currencies["0x" + $0] },
-                    conversionRateRaw: word(data, 5).map { WalletIngest.hexToDouble("0x" + $0) }))
+                    conversionRateRaw: word(data, 5).map { WalletIngest.hexToDouble("0x" + $0) },
+                    transactionHash: log["transactionHash"] as? String))
             }
 
             var fulfilled: [String: [String: Any]] = [:]   // intentHash → its IntentFulfilled log
@@ -887,9 +891,13 @@ enum PeerBridge {
                 let title = signal.method.map {
                     String(localized: "A buyer's \($0) payment fell through — your \(what) is back on Peer")
                 } ?? String(localized: "A buyer's payment fell through — your \(what) is back on Peer")
+                // The signal's own transaction page (prd §912) — the moment
+                // the buyer committed, which is what fell through; the escrow's
+                // address page only when the log carried no hash.
                 let thing = Thing(
                     kind: .transaction, title: title,
-                    content: "https://basescan.org/address/\(escrow)",
+                    content: signal.transactionHash.map { "https://basescan.org/tx/\($0)" }
+                        ?? "https://basescan.org/address/\(escrow)",
                     source: "Peer", capturedAt: .now, sourceRef: ref)
                 thing.walletAddress = wallet
                 out.append(thing)

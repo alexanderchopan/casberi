@@ -389,10 +389,25 @@ enum PrivyHomeFeed {
         "\(value.formatted(.number.precision(.significantDigits(1...4)))) \(symbol)"
     }
 
-    static func txTitle(received: Bool, value: Double, symbol: String) -> String {
-        received
+    /// "Received 0.1 ETH from Uniswap" when the other side has a name (prd
+    /// §912); the bare verb when it does not — a title never wears raw hex.
+    /// `who` is resolved by the caller (`WalletIngest.knownLabel`), because
+    /// this file is compiled alone by its harness and names no wallet code.
+    static func txTitle(received: Bool, value: Double, symbol: String, who: String? = nil) -> String {
+        let head = received
             ? String(localized: "Received \(amount(value, symbol: symbol))")
             : String(localized: "Sent \(amount(value, symbol: symbol))")
+        guard let who else { return head }
+        return received
+            ? String(localized: "\(head) from \(who)")
+            : String(localized: "\(head) to \(who)")
+    }
+
+    /// Where an app row opens (prd §912): the app's own site when Privy names
+    /// one (`custom_origin`), else its first wallet's explorer page — a page
+    /// that exists for any address. Empty only for an app with no wallet.
+    static func door(_ app: App) -> String {
+        app.origin ?? app.wallets.first.map(explorerURL) ?? ""
     }
 
     // MARK: - The room's sections (prd §803f)

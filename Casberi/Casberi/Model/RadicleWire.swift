@@ -236,7 +236,7 @@ enum RadicleWire {
         let merged: Date?
         let mergedBy: Party?
         /// `revisions[0].description` — the proposal's own words, trimmed;
-        /// nil when the author wrote none (prd §910). The FIRST revision for
+        /// nil when the author wrote none (prd §912). The FIRST revision for
         /// the same reason `opened` reads it: later ones are fixups.
         let body: String?
 
@@ -283,7 +283,7 @@ enum RadicleWire {
         /// was opened. Exact, not estimated.
         let opened: Date?
         /// `discussion[0].body` — in the same COB model the root comment IS
-        /// the issue body, so its words are the issue's (prd §910).
+        /// the issue body, so its words are the issue's (prd §912).
         let body: String?
 
         var isClosed: Bool { status == "closed" }

@@ -319,7 +319,7 @@ enum SplitsIngest {
             }
             let thing = Thing(kind: .transaction,
                               title: IngestSupport.titleLine(SplitsShape.rowTitle(tx)),
-                              content: "",
+                              content: explorerURL(tx) ?? "",   // the door (§912); `apply` keeps it
                               source: SplitsShape.source,
                               capturedAt: tx.at ?? .now,
                               tags: SplitsShape.tags(tx),
@@ -346,18 +346,48 @@ enum SplitsIngest {
         // The ACCOUNT's name, which `BandRow.project` draws on the line — the
         // one fact the title does not carry. Never `walletAddress`.
         thing.authorHandle = tx.accountName
-        // Retrieval only (the 2026-07-15 ruling): the memo a person typed and
-        // the hash somebody may paste into a search.
-        let enriched = [tx.memo, tx.hash].compactMap { $0 }
-        thing.enrichedText = enriched.isEmpty ? nil : enriched.joined(separator: " · ")
+        // The door is the transaction's own explorer page (prd §912) — Splits
+        // publishes no per-transaction web route, and the hash is the one id
+        // every reader of this chain shares. A row with no hash yet (a proposal
+        // still waiting on signatures) has no page and keeps no door.
+        thing.content = explorerURL(tx) ?? ""
+        // The memo is DISPLAY copy (prd §912): a person typed it to say what
+        // the payment was for, and on the retrieval-only `enrichedText` it was
+        // invisible on every screen. The hash stays where a search can find it.
+        thing.summary = tx.memo.map(IngestSupport.titleLine)
+        thing.enrichedText = tx.hash
     }
+
+    /// The chain's own transaction page for a Splits row, resolved through
+    /// `WalletIngest`'s ONE explorer table so a chain the wallet cannot name is
+    /// a row with no door, never a link built from a guess. Splits names a
+    /// chain by EVM id; the table is keyed by Alchemy's network id, hence the
+    /// mapping. A chain missing here (a testnet, or one the wallet does not
+    /// read) yields nil.
+    private static func explorerURL(_ tx: SplitsShape.Transaction) -> String? {
+        guard let hash = tx.hash, !hash.isEmpty, let chainId = tx.chainId,
+              let network = networkID[chainId],
+              let prefix = WalletIngest.explorerURL(forNetwork: network)
+        else { return nil }
+        return prefix + hash
+    }
+
+    private static let networkID: [Int: String] = [
+        1: "eth-mainnet", 8453: "base-mainnet", 42161: "arb-mainnet", 10: "opt-mainnet",
+        137: "matic-mainnet", 999: "hyperliquid-mainnet", 143: "monad-mainnet",
+        480: "worldchain-mainnet", 5042: "arc-mainnet", 4217: "tempo-mainnet",
+        4663: "robinhood-mainnet",
+    ]
 
     @MainActor
     private static func heal(_ row: Thing, _ tx: SplitsShape.Transaction) -> Bool {
         guard row.isLive else { return false }
         let title = IngestSupport.titleLine(SplitsShape.rowTitle(tx))
         let tags = SplitsShape.tags(tx)
-        guard row.title != title || row.tags != tags else { return false }
+        // The door counts as a change (prd §912), so a row landed before it
+        // existed, or one whose proposal has since executed, gains its page.
+        guard row.title != title || row.tags != tags || row.content != (explorerURL(tx) ?? "")
+        else { return false }
         row.title = title
         row.tags = tags
         apply(tx, to: row)

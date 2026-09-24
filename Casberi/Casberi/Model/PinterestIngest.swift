@@ -215,7 +215,7 @@ enum PinterestIngest {
                     kind: .link,
                     // Pins are often untitled — an empty row title reads
                     // broken. A pin with a description is named by its first
-                    // line before the literal word (prd §910).
+                    // line before the literal word (prd §912).
                     title: !item.title.isEmpty ? item.title
                         : !item.summary.isEmpty ? IngestSupport.titleLine(item.summary) : "Pin",
                     content: item.link,
@@ -224,7 +224,7 @@ enum PinterestIngest {
                     sourceRef: ref
                 )
                 // The pin's own description — the feed's `<description>`,
-                // parsed since 2026-07-22 and dropped here until §910.
+                // parsed since 2026-07-22 and dropped here until §912.
                 if !item.summary.isEmpty { thing.summary = item.summary }
                 thing.authorHandle = follow
                 // The pin's image, so the feed row leads with a thumbnail (the

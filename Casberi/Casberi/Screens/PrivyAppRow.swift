@@ -28,7 +28,7 @@ struct PrivyAppRow: View {
 
         DSFeedRow(name: app?.name ?? thing.title,
                   line: DSFeed.line(PrivyHomeFeed.lastUsed(app?.lastActiveAt, now: .now)
-                                        ?? app.map(PrivyHomeFeed.line) ?? thing.content)) {
+                                        ?? app.map(PrivyHomeFeed.line) ?? thing.summary)) {
             PrivyAppMark(logoURL: app?.logoURL)
         } trailing: {
             if let usd, usd >= PrivyHomeFeed.fundedFloor {

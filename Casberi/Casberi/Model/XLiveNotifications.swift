@@ -736,7 +736,7 @@ enum XLiveNotifications {
         let subject = subject(from: entry)
         let actor = actor(from: entry)
         // A notice with no post behind it — a follow, a list add — opens the
-        // PERSON who is its whole news (prd §910), the way Instagram's and
+        // PERSON who is its whole news (prd §912), the way Instagram's and
         // TikTok's follows do; the notifications root is for a notice that
         // names nobody either.
         let permalink = subject?.permalink

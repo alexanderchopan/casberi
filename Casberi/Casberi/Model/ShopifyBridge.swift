@@ -164,14 +164,26 @@ enum ShopifyIngest {
         /// When the store published it — so "New drops" lands the newest first,
         /// regardless of the order products.json returns.
         let published: Date?
+        /// The brand, when it is not the store's own (prd §912): a multi-brand
+        /// shop names the maker on every product, and a single-brand shop's
+        /// `vendor` is its own name — which the row's store line already
+        /// says, so that one is dropped at the door (`brand(json:host:)`).
+        let vendor: String?
+        /// `body_html` as plain text (prd §912) — the store's own description,
+        /// DISPLAY copy on `summary`. nil when the store wrote none.
+        let body: String?
 
         /// Title carries the price in the store's real currency ("Cruiser ·
         /// $105"). No currency known → the bare name, never a faked symbol.
+        /// The brand rides between (prd §912): the NAME leads (§303's clamp),
+        /// the price is also on `priceValue`, so a long brand costs nothing
+        /// a reader cannot recover.
         var title: String {
+            let head = vendor.map { "\(name) · \($0)" } ?? name
             if let priceValue, let money = PriceFormat.string(priceValue, currency: currency) {
-                return IngestSupport.titleLine("\(name) · \(money)")
+                return IngestSupport.titleLine("\(head) · \(money)")
             }
-            return IngestSupport.titleLine(name)
+            return IngestSupport.titleLine(head)
         }
 
         init?(json: [String: Any], host: String, currency: String) {
@@ -202,6 +214,31 @@ enum ShopifyIngest {
             self.published = IngestSupport.isoDate(json["published_at"])
             self.url = "https://\(host)/products/\(handle)"
             self.image = Self.firstImage(json)
+            self.vendor = Self.brand(json, name: name, host: host)
+            self.body = Self.plainBody(json)
+        }
+
+        /// `vendor` when it says something the row does not already: not the
+        /// product's own name, and not the store's (a vendor whose letters are
+        /// the host's brand — "Allbirds" on allbirds.com — is the store line
+        /// repeated). Case-insensitive on purpose: stores type it both ways.
+        private static func brand(_ json: [String: Any], name: String, host: String) -> String? {
+            guard let vendor = (json["vendor"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !vendor.isEmpty, vendor.caseInsensitiveCompare(name) != .orderedSame
+            else { return nil }
+            let letters = vendor.lowercased().filter { $0.isLetter || $0.isNumber }
+            guard !letters.isEmpty, !host.lowercased().contains(letters) else { return nil }
+            return vendor
+        }
+
+        /// The description as words: tags out, entities decoded, clamped by
+        /// the journal importer's own HTML reader (one reader for storefront
+        /// HTML too — it is the same markup). nil when nothing is left.
+        private static func plainBody(_ json: [String: Any]) -> String? {
+            guard let html = json["body_html"] as? String, !html.isEmpty else { return nil }
+            let text = JournalImport.plainText(fromHTML: html)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return text.isEmpty ? nil : text
         }
 
         /// The first product image, normalized for RemoteThumb (https-only).
@@ -327,6 +364,10 @@ enum ShopifyIngest {
                 thing.previewImageURL = product.image
                 thing.priceValue = product.priceValue
                 thing.priceCurrency = product.currency
+                // The store's own description, as DISPLAY copy (prd §912):
+                // the storefront authored it, so it is `summary`, never the
+                // retrieval-only `enrichedText` (which `PriceHistory` owns here).
+                thing.summary = product.body
                 // Which store it came from — the row names it when more than
                 // one store is followed (the RSS/Wallet naming pattern).
                 thing.authorHandle = entry.shop.displayName

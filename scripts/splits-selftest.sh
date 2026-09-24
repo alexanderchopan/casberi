@@ -46,6 +46,16 @@ grep -qF 'for tx in transactions where !SplitsShape.isDust(tx)' "$BRIDGE" \
 if grep -n 'walletAddress\s*=' "$BRIDGE"; then
   echo "✗ SplitsBridge stamps walletAddress — it would enrol an unwatched account"; exit 1
 fi
+# The memo is DISPLAY copy and the hash is retrieval-only (prd §912): a memo
+# on `enrichedText` is invisible on every screen, and a hash on `summary` is a
+# hex block under a title.
+grep -qF 'thing.summary = tx.memo.map(IngestSupport.titleLine)' "$BRIDGE" \
+  || { echo "✗ a Splits memo no longer lands as display copy (summary)"; exit 1; }
+grep -qF 'thing.enrichedText = tx.hash' "$BRIDGE" \
+  || { echo "✗ a Splits hash left enrichedText — a pasted hash would find nothing"; exit 1; }
+# The door is the chain's own transaction page, through WalletIngest's one table.
+grep -qF 'thing.content = explorerURL(tx) ?? ""' "$BRIDGE" \
+  || { echo "✗ a Splits row lost its explorer door (prd §912)"; exit 1; }
 # The host is disclosed.
 grep -qF 'hosts: ["api.splits.org"]' Casberi/Casberi/Model/NetworkReach.swift \
   || { echo "✗ api.splits.org is not in NetworkReach"; exit 1; }

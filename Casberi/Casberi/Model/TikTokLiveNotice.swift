@@ -165,7 +165,7 @@ enum TikTokLiveFeed {
         /// A payload's own `https` link, when it has one.
         var link: String?
         /// The longer of the words the payload carried, when `text` is not
-        /// already all of them (prd §910): TikTok's own `content`/`title`
+        /// already all of them (prd §912): TikTok's own `content`/`title`
         /// sentence and the comment's `text` are BOTH read now, and the one
         /// that did not become `text` is kept here. nil when there is
         /// nothing beyond `text`.
@@ -218,7 +218,7 @@ enum TikTokLiveFeed {
             .first { !$0.isEmpty }
         let who = name ?? handle.map { "@\($0)" }
         // The comment's own words, read whether or not TikTok also wrote a
-        // sentence (prd §910) — UNMEASURED, so optional like every other read.
+        // sentence (prd §912) — UNMEASURED, so optional like every other read.
         let said = comment.flatMap { string($0["text"])?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .flatMap { $0.isEmpty ? nil : $0 }
         // TikTok's own words where it gave any. Where it gave none, the one

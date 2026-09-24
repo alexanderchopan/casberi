@@ -408,7 +408,7 @@ enum CloudflareFetch {
         let proxied: String
         let ttl: String
         let modifiedOn: String
-        /// The record's own note, when the person left one (prd §910). Not
+        /// The record's own note, when the person left one (prd §912). Not
         /// in `fields`: a reworded comment is not a DNS change.
         let comment: String?
 
@@ -542,7 +542,7 @@ enum CloudflareFetch {
                 }
             case .removed:
                 // The ghost record's content IS the remembered `was[2]`
-                // (`diffDNS`), so a removal names what it pointed at (prd §910).
+                // (`diffDNS`), so a removal names what it pointed at (prd §912).
                 if !change.record.content.isEmpty {
                     lines.append(String(localized: "Was: \(change.record.content)"))
                 }
@@ -572,7 +572,7 @@ enum CloudflareFetch {
         let label = "\(change.record.type) \(change.record.name)"
         switch change.kind {
         case .added:
-            // The target too (prd §910): "added: A api" says nothing without
+            // The target too (prd §912): "added: A api" says nothing without
             // where it points.
             let target = change.record.content.isEmpty ? label : "\(label) → \(change.record.content)"
             return String(localized: "\(zoneName) — DNS record added: \(target)")

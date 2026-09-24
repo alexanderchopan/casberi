@@ -607,7 +607,7 @@ enum ASCShape {
         return nil
     }
 
-    /// The build's own TestFlight page (prd §910) — the id is in hand on
+    /// The build's own TestFlight page (prd §912) — the id is in hand on
     /// every build row, so the door is the build, not the list it sits in.
     static func buildURL(appID: String, buildID: String) -> String {
         "https://appstoreconnect.apple.com/apps/\(appID)/testflight/ios/\(buildID)"

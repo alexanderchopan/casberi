@@ -994,7 +994,12 @@ enum WalletIngest {
                                   names: [String: String]) -> Thing? {
         guard !sent.hash.isEmpty else { return nil }
         let router = ((sent.t["to"] as? String) ?? (received.t["from"] as? String))?.lowercased()
+        // The table's label first; else Zerion's own name for the app (prd
+        // §912) — a swap through a router the table never met still says
+        // "on Uniswap" instead of falling back to the bare "Swapped".
         let venue = router.flatMap { names[$0] }
+            ?? (sent.t["zerionApplication"] as? String)
+            ?? (received.t["zerionApplication"] as? String)
         let sentAmount = sent.value > 0 ? format(sent.value) : ""
         let recvAmount = received.value > 0 ? format(received.value) : ""
         // A meeting the SHAPE explains better than "swapped" does (2026-07-21):
@@ -1363,6 +1368,9 @@ enum WalletIngest {
         // is exactly the signal that this leg came from the fallback path and
         // has to be decoded from shape instead (WalletVerbs).
         if let op = t.operationType { d["zerionOperation"] = op }
+        // The app Zerion says it went through (prd §912), Zerion-only for the
+        // same reason: the venue a title names when the table has no label.
+        if let app = t.applicationName { d["zerionApplication"] = app }
         // What the leg was WORTH when it moved (2026-08-01, the flow band).
         // Under a Zerion-only key beside the operation type, for the same
         // reason: the Alchemy arm can't supply it, so its absence is the
@@ -1545,7 +1553,9 @@ enum WalletIngest {
             title = "\(head) · \(from) → \(to)"
         } else if let op = WalletVerbs.operationVerb(
             operation: t["zerionOperation"] as? String, received: received,
-            asset: asset, amount: amount, venueName: cp.flatMap({ names[$0] })) {
+            asset: asset, amount: amount,
+            // Zerion's app name stands in where the table has no label (§912).
+            venueName: cp.flatMap({ names[$0] }) ?? (t["zerionApplication"] as? String)) {
             // Zerion already classified this transaction, so the verb is READ,
             // not inferred (2026-07-21) — "Claimed 12 CRV from Curve" where a
             // transfer read alone could only ever say "Received 12 CRV". Tried

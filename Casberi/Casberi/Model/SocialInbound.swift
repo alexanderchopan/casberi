@@ -255,7 +255,7 @@ enum SocialInbound {
         let ref = "\(source.lowercased()):follower:\(id)"
         guard !existing.contains(ref) else { return nil }
         let name = displayName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-        // Who they say they are (prd §910): the profile's own bio, which both
+        // Who they say they are (prd §912): the profile's own bio, which both
         // networks hand over with the follower list. DISPLAY copy — they wrote
         // it — and the one thing a "started following you" row can say about a
         // stranger besides their name.

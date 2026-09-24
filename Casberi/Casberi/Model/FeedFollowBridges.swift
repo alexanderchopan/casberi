@@ -897,7 +897,7 @@ enum FeedFollowIngest {
                             thing.postAuthor = author; extraPatched = true
                         }
                         // The body, for a row that landed before the feed
-                        // published one — the NerdWallet line (prd §910).
+                        // published one — the NerdWallet line (prd §912).
                         if (thing.summary ?? "").isEmpty, !item.summary.isEmpty {
                             thing.summary = item.summary; extraPatched = true
                         }
@@ -913,7 +913,7 @@ enum FeedFollowIngest {
                 }
                 // A titleless item with a body is named by its first line —
                 // `telegramTitle`'s rule, for the feeds that reach here
-                // (prd §910). Only one with neither is skipped.
+                // (prd §912). Only one with neither is skipped.
                 let rawTitle = item.title.isEmpty ? IngestSupport.titleLine(item.summary) : item.title
                 guard !rawTitle.isEmpty else { continue }
                 let thing = Thing(

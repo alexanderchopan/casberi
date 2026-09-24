@@ -534,7 +534,7 @@ enum RadicleIngest {
         // invented handle (`RadicleWire.Party.display`).
         thing.authorHandle = who.display
         // The patch's or issue's own words, DISPLAY copy by the GitHub rule
-        // (prd §909/§910): the wire authored them, so they are `summary`,
+        // (prd §909/§912): the wire authored them, so they are `summary`,
         // never the retrieval-only `enrichedText`. One ceiling, GitHub's.
         if let summary { thing.summary = GitHubEventShape.clamp(summary) }
         context.insert(thing)

@@ -113,6 +113,15 @@ enum BitrefillFetch {
         )
         thing.previewImageURL = IngestSupport.imageURL(product?["image"] as? String)
         applyAmount(product?["value"], product?["currency"], to: thing)
+        // The note a gift carried (prd §912), as DISPLAY copy — the person
+        // wrote it. `redemption_info` (the code itself) is NEVER read here:
+        // a gift card's code on a synced row is money in plain text. The door
+        // is unchanged: `gift_url`, else the orders page, as the doc says.
+        if let gift = order["gift_info"] as? [String: Any],
+           let message = (gift["message"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !message.isEmpty {
+            thing.summary = GitHubEventShape.clamp(message)
+        }
         // WHO you bought from, as a field rather than the head of a joined
         // title (2026-08-12, prd §368). `transferCounterparty` is "the other
         // side of the money" on every seat that writes it — Apple Wallet's

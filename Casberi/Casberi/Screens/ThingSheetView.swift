@@ -2610,7 +2610,7 @@ struct ThingSheetView: View {
     /// honest answer for a VIDEO post, which this app holds one frame of and
     /// cannot play: the mp4 lives in an archive folder we deliberately never
     /// copied, so the place to watch it is the place it came from.
-    /// THE DOOR TO DROPBOX (prd §910). A Dropbox row is a `.file` whose bytes
+    /// THE DOOR TO DROPBOX (prd §912). A Dropbox row is a `.file` whose bytes
     /// are not on this device, so `Verbs`' "Show in Receipts" is scoped away
     /// from it and it had no door at all. `DropboxBridge` writes the file's
     /// page — its folder on dropbox.com, previewing it — on `externalLink`,

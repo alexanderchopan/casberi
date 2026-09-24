@@ -527,7 +527,7 @@ enum BlueskyIngest {
             guard SocialInbound.landFollower(
                 id: did, handle: BlueskyStore.short(followerHandle),
                 displayName: profile["displayName"] as? String,
-                bio: profile["description"] as? String,   // the profileView's own, in hand (prd §910)
+                bio: profile["description"] as? String,   // the profileView's own, in hand (prd §912)
                 avatarURL: IngestSupport.imageURL(profile["avatar"] as? String),
                 profileURL: "https://bsky.app/profile/\(followerHandle)",
                 when: nil, source: "Bluesky", existing: &existing, context: context) != nil
@@ -716,7 +716,7 @@ enum BlueskyIngest {
               let authorHandle = author["handle"] as? String, !authorHandle.isEmpty
         else { return false }
         let text = (record["text"] as? String) ?? ""
-        // A post with no words of its own is still a post (prd §910): a
+        // A post with no words of its own is still a post (prd §912): a
         // picture with alt text or a shared link with a headline is NAMED by
         // that, where it used to be skipped outright. The alt stays retrieval
         // copy on `enrichedText` below; here it is the title alone, and
@@ -816,7 +816,7 @@ enum BlueskyIngest {
             thing.channelName = channel
             healed = true
         }
-        // Never an empty string: a wordless post (§910) has no `postText`
+        // Never an empty string: a wordless post (§912) has no `postText`
         // to fill, and "" would read as words on every screen that tests it.
         if thing.postText == nil, !text.isEmpty {
             thing.postText = text

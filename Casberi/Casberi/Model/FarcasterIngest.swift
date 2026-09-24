@@ -845,7 +845,7 @@ enum FarcasterIngest {
             let when = followers.first { $0.fid == followerFid }?.when
             guard SocialInbound.landFollower(
                 id: String(followerFid), handle: username, displayName: who.displayName,
-                bio: who.bio,   // the cached profile's own, no second read (prd §910)
+                bio: who.bio,   // the cached profile's own, no second read (prd §912)
                 avatarURL: who.avatarURL,
                 profileURL: "https://farcaster.xyz/\(username)",
                 when: when, source: "Farcaster", existing: &existing, context: context) != nil

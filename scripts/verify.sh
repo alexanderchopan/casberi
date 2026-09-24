@@ -847,12 +847,12 @@ step "Plate audit"
 "$ROOT/scripts/plate-audit.py" || fail "the elevated card is back on content — see the output above"
 print -P "%F{green}✓ plate audit%f"
 
-# A landed row carries its door (prd §909, §910). `Thing.init` defaults
+# A landed row carries its door (prd §909, §912). `Thing.init` defaults
 # `content` to "", so a row with nowhere to go is the path of least resistance
 # and looks like every other row in every screenshot — the Safe signature that
 # asks you to go and sign shipped that way, beside Splits, Wise and Privy, each
 # with the hash or id naming its page in hand. Only a grep over the
-# constructions catches it; the root-page case is §910's per-bridge list.
+# constructions catches it; the root-page case is §912's per-bridge list.
 step "Empty-door audit"
 "$ROOT/scripts/empty-door-audit.py" --self-test >/dev/null \
   || fail "the empty-door audit's own self-test failed — the check is broken, not the code"

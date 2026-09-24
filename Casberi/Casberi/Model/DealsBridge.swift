@@ -161,6 +161,11 @@ enum DealsIngest {
                 )
                 thing.previewImageURL = IngestSupport.imageURL(item.imageURL)
                 thing.authorHandle = source.publisher
+                // The item's own abstract, one line (prd §912): the feed's
+                // words under the headline — the price, the code, the catch —
+                // DISPLAY copy on `summary`, since the publisher authored it.
+                // `FeedParser` already stripped the tags; entities decode here.
+                thing.summary = abstract(item.summary)
                 context.insert(thing)
                 existing.insert(ref)
                 SpotlightIndex.index([thing])
@@ -169,5 +174,16 @@ enum DealsIngest {
         }
         if added > 0 || backfill.any { context.saveHonestly() }
         return reachedAny ? added : nil
+    }
+
+    /// A feed item's abstract flattened to ONE line, entities decoded, and nil
+    /// when nothing readable is left (prd §912) — a deal's summary is a
+    /// sentence, and a blank block under a title is not one.
+    static func abstract(_ raw: String) -> String? {
+        let words = IngestSupport.decodeHTMLEntities(raw)
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        return words.isEmpty ? nil : GitHubEventShape.clamp(words)
     }
 }

@@ -180,10 +180,10 @@ enum PagerDutyFetch {
         let resolvedAt: Date?
         /// `description` — the incident's body, which PagerDuty fills with
         /// the title by default and an integration fills with the alert's
-        /// own words (prd §910).
+        /// own words (prd §912).
         let description: String?
         /// `last_status_change_by.summary` — who or what moved it last; on a
-        /// resolved incident, who resolved it (prd §910).
+        /// resolved incident, who resolved it (prd §912).
         let resolvedBy: String?
 
         var isResolved: Bool { status.caseInsensitiveCompare("resolved") == .orderedSame }
@@ -328,7 +328,7 @@ enum PagerDutyIngest {
                     lines.append(String(localized: "\(urgency) urgency"))
                 }
                 // The description only when it says more than the title
-                // (prd §910): PagerDuty copies the title into it by default,
+                // (prd §912): PagerDuty copies the title into it by default,
                 // and an equal one would be said twice.
                 if let description = incident.description, description != incident.title {
                     lines.append(description)
@@ -364,7 +364,7 @@ enum PagerDutyIngest {
                 tags: ["Resolved"],
                 sourceRef: resolvedRef
             )
-            // Who closed it (prd §910) — a person's name, or the integration's.
+            // Who closed it (prd §912) — a person's name, or the integration's.
             if let by = incident.resolvedBy { thing.summary = String(localized: "Resolved by \(by)") }
             thing.authorHandle = incident.service
             context.insert(thing)

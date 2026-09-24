@@ -89,8 +89,8 @@ deliberately does not check are in `docs/verify.md`.
 - **The address book's delight pass** → docs/hooks/wallet.md · prd §441
 - **Address-book shape self-test (scripts/address-book-selftest.sh, 2026-08-22)** → docs/verify.md · prd §440
 - **SwiftData liveness audit (scripts/swiftdata-liveness-audit.py, 2026-07-25)** → docs/verify.md
-- **Info.plist strings audit (scripts/infoplist-strings-audit.py, 2026-08-04, ITMS-90738)** → docs/verify.md
-- **Keychain policy audit (scripts/keychain-audit.py, 2026-08-02)** → docs/verify.md · prd §277
+- **Info.plist strings audit (scripts/infoplist-strings-audit.py, ITMS-90738)** → docs/verify.md
+- **Keychain policy audit (scripts/keychain-audit.py)** → docs/verify.md · prd §277
 - **Receipts coverage audit (scripts/receipts-coverage-audit.py, 2026-08-02)** → docs/verify.md · prd §277
 - **CloudKit schema audit (scripts/cloudkit-schema-audit.py, 2026-08-02)** → docs/verify.md
 - **Redaction coverage audit (scripts/redaction-coverage-audit.py, 2026-08-19)** → docs/verify.md · prd §277
@@ -105,8 +105,8 @@ deliberately does not check are in `docs/verify.md`.
 - **ShareLink style audit (scripts/sharelink-style-audit.py, 2026-09-11) — an unstyled share control in a `List` row becomes the row's action; give it `.buttonStyle(.plain)`** → docs/verify.md · prd §693
 - **Day-divider audit (scripts/day-divider-audit.py, 2026-09-15) — the day header wears `DS.brandInk` (the mark's hue, one notch softer, prd §742); a group named by something other than time passes `dated: false` and keeps the primary ramp** → docs/verify.md · prd §740
 - **Design-template audit (scripts/ds-template-audit.py, 2026-09-13) — reach for `DSSpinner`, `dsReadSheet`, `DSPushRow`/`DSChevron`/`DSMoreLink`, `DSToggleRow`, `DSEmptyState`, `DSCopyRow` and `Chip` before drawing one by hand** → prd §715
-- **Secret-scan self-test (scripts/secret-scan-selftest.py, 2026-08-02)** → docs/verify.md · prd §277
-- **On-device self-test (scripts/ondevice-selftest.sh, 2026-08-02)** → docs/verify.md · prd §282
+- **Secret-scan self-test (scripts/secret-scan-selftest.py)** → docs/verify.md · prd §277
+- **On-device self-test (scripts/ondevice-selftest.sh)** → docs/verify.md · prd §282
 - **CI, at last (.github/workflows/static-checks.yml)** → docs/verify.md
 - **The logic self-tests could never pass on a hosted runner, three causes deep (2026-09-16): two harnesses imported `pysha3` (now `scripts/support/keccak.py`, vendored, self-proving, not the app's keccak), one assertion measured a zero where only a PROPORTION survives a contended machine, and the log artifact was never uploaded because `.selftest-out` is a dot directory** → docs/verify.md
 - **verify.sh's audit list is provably complete now** → docs/verify.md
@@ -126,17 +126,17 @@ deliberately does not check are in `docs/verify.md`.
 - **MetricKit self-test (scripts/metrics-selftest.sh, 2026-09-05) — the one check for logic no machine here can exercise, because no machine here can make a payload** → docs/verify.md · prd §622
 
 - **live-integrations.sh covers YouTube and RUNS NIGHTLY (nightly-live.sh)** → docs/verify.md · prd §312 · §654
-- **Hero-tint audit (scripts/hero-tint-audit.py, 2026-09-02)** → docs/verify.md · prd §563
-- **Design-motion audit (scripts/design-motion-audit.py, 2026-08-04)** → docs/verify.md · prd §299
+- **Hero-tint audit (scripts/hero-tint-audit.py)** → docs/verify.md · prd §563
+- **Design-motion audit (scripts/design-motion-audit.py)** → docs/verify.md · prd §299
 - **Design-ramp audit (scripts/design-ramp-audit.py, 2026-08-11; check 5 added 2026-09-06 — every `widget*` rung must declare `macScales: false`)** → docs/verify.md · prd §631
-- **App Store Connect self-test (scripts/appstoreconnect-selftest.sh, 2026-08-06)** → docs/verify.md · prd §323
-- **PRD index audit (scripts/prd-index-audit.py, 2026-08-11)** → docs/verify.md
-- **Setup-copy audit (scripts/setup-copy-audit.py, 2026-08-06)** → docs/verify.md · prd §315
+- **App Store Connect self-test (scripts/appstoreconnect-selftest.sh)** → docs/verify.md · prd §323
+- **PRD index audit (scripts/prd-index-audit.py)** → docs/verify.md
+- **Setup-copy audit (scripts/setup-copy-audit.py)** → docs/verify.md · prd §315
 - **Figure self-test (scripts/agent-panel-selftest.sh, 2026-08-07) — the answer dial's floor and the one money formatter; the chip peek and its per-room figures are deleted (prd §836)** → docs/verify.md · prd §334 · §836
-- **Room-head self-test (scripts/room-heads-selftest.sh, 2026-08-04)** → docs/verify.md · prd §298
+- **Room-head self-test (scripts/room-heads-selftest.sh)** → docs/verify.md · prd §298
 - **The social rooms became ONE room (Model/SocialRoom.swift + SocialRoomSource.swift, scripts/social-room-selftest.sh, 2026-08-26)** → docs/hooks/social.md · prd §489
-- **Retriever self-test (scripts/retriever-selftest.sh, 2026-08-06)** → docs/verify.md · prd §318
-- **Ranking sweep (-rankSweep "q1|q2|…", 2026-08-06 amendment)** (`-rankSweep` `-semanticFloor` `-expandDistance`) → docs/verify.md · prd §318
+- **Retriever self-test (scripts/retriever-selftest.sh)** → docs/verify.md · prd §318
+- **Ranking sweep (-rankSweep "q1|q2|…")** (`-rankSweep` `-semanticFloor` `-expandDistance`) → docs/verify.md · prd §318
 - **Perf pass (scripts/perf.sh)** (`-Onone`) → docs/verify.md · prd §257
 - **Mac verify (scripts/verify-mac.sh)** → docs/verify.md
 - **The Mac verify's cleanup is BOUNDED — a fix, not a precaution** → docs/verify.md
@@ -306,7 +306,8 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-for` — Stripe (2026-07-31, prd §250, Model/StripeBridge.swift, Screens/StripeScreen.swift) → docs/hooks/bridges.md · prd §250
 - Cursor (2026-08-04, prd §303, Model/CursorBridge.swift) — the cloud agents you launched, landing → docs/hooks/bridges.md · prd §303
 - **The GitHub room is ONE FEED: row types are tags (`Model/GitHubRowTag.swift`), watched repos and people scope it from a face rail (`github-rowtag-selftest.sh`)** → docs/hooks/bridges.md · prd §699
-- **A GitHub events row names its OBJECT, opens it and carries its words — a PR's title and body, a push's commit, a branch named — off the payload, no request (`GitHubEventShape`, `github-event-selftest.sh`); a notification reads its subject's body, capped at 10** → docs/hooks/bridges.md · prd §909
+- **A GitHub events row names its OBJECT, opens it and carries its words — a PR's title and body, a push's commit, a branch named — off the payload, no request (`GitHubEventShape`, `github-event-selftest.sh`); a notification reads its subject's body, capped at 10** → docs/hooks/bridges.md · prd §909 · §912
+- **Empty-door audit (scripts/empty-door-audit.py) — a landed row with no door; §909 applied to every bridge** → docs/verify.md · prd §912
 - **The App Store Connect ROOM** → docs/hooks/bridges.md · prd §324
 - App Store Connect (2026-08-06, prd §323, Model/AppStoreConnectBridge.swift, screen → docs/hooks/bridges.md · prd §323
 - Apple Wallet (2026-08-06, prd §313 + §317, Model/AppleWalletBridge.swift / AppleWalletRoom.swift / → docs/hooks/bridges.md · prd §313

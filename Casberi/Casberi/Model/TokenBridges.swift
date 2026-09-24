@@ -928,7 +928,7 @@ enum JiraAuth {
     /// The selection is the ceiling (the Linear/App-Store-Connect lesson): a
     /// field not asked for here can never reach the corpus, no matter what
     /// `TokenIngest.jira` tries to read off it. `description` joined in
-    /// prd §910: Jira v3 renders it as Atlassian Document Format, a JSON node
+    /// prd §912: Jira v3 renders it as Atlassian Document Format, a JSON node
     /// tree rather than a markdown string like Linear's, and
     /// `TokenIngest.adfText` walks that tree to the plain words.
     static let fields = "summary,status,duedate,priority,project,updated,labels,description"
@@ -2353,7 +2353,7 @@ enum TokenIngest {
             thing.tags = tagList(names(in: fields["labels"])
                                  + [(fields["project"] as? [String: Any])?["name"] as? String]
                                     .compactMap { $0 })
-            // The description, flattened out of its ADF tree (prd §910) —
+            // The description, flattened out of its ADF tree (prd §912) —
             // DISPLAY copy, the Linear/Trello card-back rule, under GitHub's
             // one body ceiling.
             if let description = adfText(fields["description"]) {
@@ -2363,7 +2363,7 @@ enum TokenIngest {
         }
     }
 
-    /// Atlassian Document Format → plain text (prd §910). The tree is a
+    /// Atlassian Document Format → plain text (prd §912). The tree is a
     /// `doc` of block nodes (`paragraph`, `heading`, `bulletList` …) whose
     /// leaves are `text` nodes; a walk joins the leaves and stacks the
     /// blocks one per line. Marks (bold, links) are dropped — the words are

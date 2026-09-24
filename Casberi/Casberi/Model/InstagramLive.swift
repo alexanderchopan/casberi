@@ -330,7 +330,7 @@ enum InstagramLive {
 
     /// The web permalink for a notice. A post, when the story names one; the
     /// actor's own page when the story names a person and no post (a follow,
-    /// and since prd §910 any media-less notice with a `profile_name` — the
+    /// and since prd §912 any media-less notice with a `profile_name` — the
     /// activity root said nothing about WHO); the activity page itself when
     /// neither — never a guessed post.
     static func permalink(for notice: Notice) -> String {
@@ -369,7 +369,7 @@ enum InstagramLive {
             source: "Instagram",
             capturedAt: notice.at,
             sourceRef: ref)
-        // The whole notice where the title line cut it (prd §910) — a
+        // The whole notice where the title line cut it (prd §912) — a
         // comment's words past 80 characters were gone from every screen.
         // Compared as strings, not counts: the clamp's ellipsis makes an
         // 81-character text and its cut the same length.

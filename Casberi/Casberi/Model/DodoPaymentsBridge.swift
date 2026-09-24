@@ -264,6 +264,19 @@ enum DodoPaymentsShape {
         var counterparty: String?
         var amountMajor: Double?
         var currency: String?
+        /// The payload's own words about the object (prd §912): the payment a
+        /// refund or dispute is against, a payment's rail and invoice. DISPLAY
+        /// copy on `Thing.summary` — Dodo authored it, so the retrieval-only
+        /// `enrichedText` rule does not apply.
+        var summary: String?
+    }
+
+    /// A non-empty trimmed string off the payload; nil for absent, blank or
+    /// another type (prd §912).
+    static func words(_ any: Any?) -> String? {
+        guard let text = (any as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty else { return nil }
+        return GitHubEventShape.clamp(text)
     }
 
     /// Dodo's timestamps are ISO 8601 strings, unlike Stripe's unix seconds.
@@ -287,13 +300,19 @@ enum DodoPaymentsShape {
         let name = (customer?["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
         let text = currency.isEmpty ? nil : StripeMoney.text(minor, currency: currency)
         let title = [name, text].compactMap { $0 }.joined(separator: " · ")
+        // HOW it was paid and WHICH invoice (prd §912): `payment_method` is
+        // Dodo's rail word ("card", "upi"), `invoice_id` the receipt's own id
+        // — the two facts a person matches against their books.
+        let facts = [words(row["payment_method"]).map { "Paid by \($0)" },
+                     words(row["invoice_id"]).map { "Invoice \($0)" }].compactMap { $0 }
         return Shaped(
             title: title.isEmpty ? "Payment received" : title,
             tag: "Payment",
             when: date(row["created_at"]) ?? .now,
             counterparty: name,
             amountMajor: currency.isEmpty ? nil : StripeMoney.value(minor, currency: currency),
-            currency: currency.isEmpty ? nil : currency.uppercased()
+            currency: currency.isEmpty ? nil : currency.uppercased(),
+            summary: facts.isEmpty ? nil : facts.joined(separator: " · ")
         )
     }
 
@@ -318,7 +337,10 @@ enum DodoPaymentsShape {
             title: title, tag: "Refund", facets: facets,
             when: date(row["created_at"]) ?? .now,
             amountMajor: amountMajor,
-            currency: currency.isEmpty ? nil : currency.uppercased()
+            currency: currency.isEmpty ? nil : currency.uppercased(),
+            // The payment it refunds, by id (prd §912) — the one fact that
+            // joins this row to the sale it undoes.
+            summary: words(row["payment_id"]).map { "Refunds payment \($0)" }
         )
     }
 
@@ -364,7 +386,8 @@ enum DodoPaymentsShape {
         return Shaped(title: title, tag: "Dispute", facets: ["Opened"],
                       when: date(row["created_at"]) ?? .now,
                       amountMajor: money?.major,
-                      currency: (row["currency"] as? String)?.uppercased())
+                      currency: (row["currency"] as? String)?.uppercased(),
+                      summary: disputedPayment(row))
     }
 
     static func disputeClosed(_ row: [String: Any], openedAt: Date?) -> Shaped? {
@@ -385,7 +408,14 @@ enum DodoPaymentsShape {
         if let openedAt, let clause = lasted(from: openedAt, to: when) { title += " — \(clause)" }
         return Shaped(title: title, tag: "Dispute", facets: [facet], when: when,
                       amountMajor: money?.major,
-                      currency: (row["currency"] as? String)?.uppercased())
+                      currency: (row["currency"] as? String)?.uppercased(),
+                      summary: disputedPayment(row))
+    }
+
+    /// The payment a dispute is against, by id (prd §912) — both halves of a
+    /// dispute name it, so the sheet reads the same line opened and closed.
+    private static func disputedPayment(_ row: [String: Any]) -> String? {
+        words(row["payment_id"]).map { "Disputes payment \($0)" }
     }
 
     /// Only the states worth a nudge — `pending`/`active` are the healthy
@@ -412,7 +442,14 @@ enum DodoPaymentsShape {
         }
         let customer = row["customer"] as? [String: Any]
         let name = (customer?["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-        let title = name.map { "\(verb) · \($0)" } ?? verb
+        var title = name.map { "\(verb) · \($0)" } ?? verb
+        // WHAT it was worth (prd §912): `recurring_pre_tax_amount` is minor
+        // units in `currency` by Dodo's own wording (the same sentence
+        // `total_amount` carries), so it goes through the one money reader.
+        let minor = intValue(row["recurring_pre_tax_amount"])
+        if minor > 0, let currency = row["currency"] as? String, !currency.isEmpty {
+            title += " · \(StripeMoney.text(minor, currency: currency))"
+        }
         let due = stillRecoverable ? DodoPaymentsShape.date(row["next_billing_date"]) : nil
         return Shaped(title: title, tag: "Subscription", facets: [facet],
                       when: .now, dueAt: due, counterparty: name)
@@ -561,6 +598,9 @@ enum DodoPaymentsIngest {
     }
 
     private static func thing(_ shaped: DodoPaymentsShape.Shaped, kind: ThingKind, sourceRef: String) -> Thing {
+        // The door stays the dashboard ROOT (prd §912, unchanged from §853):
+        // no per-object route is documented in this file or by Dodo, and a
+        // link that lands is worth more than one that guesses (§83).
         let t = Thing(kind: kind,
                       title: IngestSupport.titleLine(shaped.title),
                       content: DodoPaymentsAccount.dashboardURL,
@@ -569,6 +609,8 @@ enum DodoPaymentsIngest {
                       tags: [shaped.tag] + shaped.facets,
                       sourceRef: sourceRef)
         t.dueAt = shaped.dueAt
+        // DISPLAY copy (prd §912) — the sheet draws `summary`.
+        t.summary = shaped.summary
         t.transferCounterparty = shaped.counterparty
         if let amount = shaped.amountMajor, let currency = shaped.currency {
             t.priceValue = amount

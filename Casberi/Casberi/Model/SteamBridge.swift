@@ -103,7 +103,7 @@ enum SteamIngest {
             let mins = (game["playtime_2weeks"] as? Int) ?? 0
             guard !existing.contains(ref) else { continue }
             let hours = String(format: "%.1f", Double(mins) / 60)
-            // `content` is the DOOR and nothing else (prd §910): the playtime
+            // `content` is the DOOR and nothing else (prd §912): the playtime
             // line used to ride after the URL on the same field, so the row
             // opened nothing. The hours are display copy on `summary`, and
             // `playtime_forever` — already in the same payload — joins them.

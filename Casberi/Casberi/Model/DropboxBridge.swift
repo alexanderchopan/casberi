@@ -357,7 +357,7 @@ enum DropboxIngest {
 
             // A `.file` row's `content` is its NOTE — the text preview or the
             // size line the file sheet draws under the name (`FileChip`) — so
-            // the page on dropbox.com rides `externalLink` (prd §910), and the
+            // the page on dropbox.com rides `externalLink` (prd §912), and the
             // sheet's `dropboxVerb` opens it: the folder, previewing this
             // file. Until this pass a Dropbox row opened nothing, the one
             // `.file` source whose bytes are not on this device.
@@ -378,7 +378,7 @@ enum DropboxIngest {
         return added
     }
 
-    /// The file's page on dropbox.com (prd §910): the web app opens a FOLDER
+    /// The file's page on dropbox.com (prd §912): the web app opens a FOLDER
     /// and previews one file in it by name, so the door is
     /// `/home/<folder>?preview=<name>`. Never fetched — a link written into a
     /// row, opened in the person's browser. Each path segment and the name

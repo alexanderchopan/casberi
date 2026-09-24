@@ -680,6 +680,12 @@ enum StripeShape {
         /// Nil for the shapes that name no single amount (churn, silence).
         var amountMinor: Int?
         var currency: String?
+        /// The words the payload carries about the object (prd §912): an
+        /// invoice's line descriptions, a cancellation's comment, a dispute's
+        /// product description. DISPLAY copy — Stripe's payload authored it,
+        /// so it lands on `Thing.summary`, never the retrieval-only
+        /// `enrichedText` (the GitHub `involved` feed's standing reason).
+        var summary: String?
     }
 
     /// The event's payload object. Every Stripe event nests it identically.
@@ -708,6 +714,45 @@ enum StripeShape {
     private static let deadlineFormat: Date.FormatStyle =
         .dateTime.month(.abbreviated).day()
 
+    /// A non-empty, trimmed string off the payload, clamped to the one body
+    /// ceiling — nil for absent, blank or the wrong type (prd §912).
+    private static func words(_ any: Any?) -> String? {
+        guard let text = (any as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty else { return nil }
+        return GitHubEventShape.clamp(text)
+    }
+
+    /// WHO an invoice is for, off the invoice's own denormalised fields (prd
+    /// §912): `customer_name`, else `customer_email`. Both ride the invoice
+    /// object itself — no customer read — which is what the subscription
+    /// event below lacks. nil when Stripe filled neither.
+    private static func invoiceCustomer(_ payload: [String: Any]) -> String? {
+        words(payload["customer_name"]) ?? words(payload["customer_email"])
+    }
+
+    /// WHAT an invoice bills: each line's `description` (the plan's own
+    /// wording, "1 × Pro (at $49.00 / month)"), else the invoice's own
+    /// `description` memo. Joined one per line (prd §912).
+    private static func invoiceLines(_ payload: [String: Any]) -> String? {
+        let lines = ((payload["lines"] as? [String: Any])?["data"] as? [[String: Any]]) ?? []
+        let descriptions = lines.compactMap { words($0["description"]) }
+        if !descriptions.isEmpty { return GitHubEventShape.clamp(descriptions.joined(separator: "\n")) }
+        return words(payload["description"])
+    }
+
+    /// Stripe's dispute `reason` as words ("product not received"), or nil
+    /// for "general" — which says nothing a row should repeat (prd §912).
+    private static func disputeReason(_ payload: [String: Any]) -> String? {
+        guard let reason = words(payload["reason"]), reason != "general" else { return nil }
+        return reason.replacingOccurrences(of: "_", with: " ")
+    }
+
+    /// The cardholder's own account of the product, when Stripe carries one
+    /// on the dispute's evidence (prd §912). Read for display only.
+    private static func disputeWords(_ payload: [String: Any]) -> String? {
+        words((payload["evidence"] as? [String: Any])?["product_description"])
+    }
+
     static func shape(_ event: [String: Any]) -> Shaped? {
         guard let type = event["type"] as? String else { return nil }
         let payload = object(event)
@@ -722,12 +767,16 @@ enum StripeShape {
             let details = payload["evidence_details"] as? [String: Any]
             let due = StripeFetch.date(details?["due_by"])
             var title = "Dispute opened · \(money(payload))"
+            // The reason the cardholder gave, in the title (prd §912): what the
+            // bank was told is what the evidence has to answer.
+            if let reason = disputeReason(payload) { title += " · \(reason)" }
             if let due { title += " — evidence due \(due.formatted(deadlineFormat))" }
             let (minor, code) = amount(payload)
             return Shaped(title: title,
                           url: StripeAccount.dashboardURL("disputes/\(id)"),
                           tag: "Dispute", when: when, dueAt: due,
-                          amountMinor: minor, currency: code)
+                          amountMinor: minor, currency: code,
+                          summary: disputeWords(payload))
 
         case "charge.dispute.closed":
             // `status` carries the outcome. "won"/"lost" are the two that mean
@@ -750,13 +799,16 @@ enum StripeShape {
             default:     [String]()
             }
             let (minor, code) = amount(payload)
-            return Shaped(title: "\(verb) · \(money(payload))",
+            var closedTitle = "\(verb) · \(money(payload))"
+            if let reason = disputeReason(payload) { closedTitle += " · \(reason)" }   // prd §912
+            return Shaped(title: closedTitle,
                           url: url,
                           tag: "Dispute", when: when, dueAt: nil,
                           // Enrich-if-found, never required: a dispute closing
                           // is news even if we never saw it open.
                           resolves: url, celebrates: status == "won",
-                          facets: outcome, amountMinor: minor, currency: code)
+                          facets: outcome, amountMinor: minor, currency: code,
+                          summary: disputeWords(payload))
 
         case "payout.paid":
             let (minor, code) = amount(payload)
@@ -771,11 +823,16 @@ enum StripeShape {
             // friendlier name — see `watchedTypes`.
             let url = StripeAccount.dashboardURL("invoices/\(id)")
             let (minor, code) = amount(payload, amountKey: "amount_paid")
-            return Shaped(title: "Payment recovered · \(money(payload, amountKey: "amount_paid"))",
+            var recovered = "Payment recovered · \(money(payload, amountKey: "amount_paid"))"
+            // WHO paid, after the amount (prd §912): the invoice carries the
+            // customer's name, and a recovery is news about a person.
+            if let who = invoiceCustomer(payload) { recovered += " · \(who)" }
+            return Shaped(title: recovered,
                           url: url,
                           tag: "Dunning", when: when, dueAt: nil,
                           resolves: url, requiresPrior: true, celebrates: true,
-                          facets: ["Recovered"], amountMinor: minor, currency: code)
+                          facets: ["Recovered"], amountMinor: minor, currency: code,
+                          summary: invoiceLines(payload))
 
         case "payout.failed":
             // Stripe's own failure sentence when it gives one — it names the
@@ -803,21 +860,33 @@ enum StripeShape {
                 ?? ((payload["plan"] as? [String: Any])?["nickname"] as? String)
             let title = nickname.map { "Subscription canceled · \($0)" }
                 ?? "Subscription canceled"
+            // WHY, in the customer's words when they left any (prd §912):
+            // `cancellation_details.comment` is free text typed at the portal,
+            // `feedback` Stripe's fixed vocabulary ("too_expensive"), `reason`
+            // who ended it. The first that is filled, so a row never says
+            // "cancellation_requested" over a comment that explains it.
+            let details = payload["cancellation_details"] as? [String: Any]
+            let why = words(details?["comment"])
+                ?? (words(details?["feedback"]) ?? words(details?["reason"]))?
+                    .replacingOccurrences(of: "_", with: " ")
             return Shaped(title: title,
                           url: StripeAccount.dashboardURL("subscriptions/\(id)"),
-                          tag: "Churn", when: when, dueAt: nil)
+                          tag: "Churn", when: when, dueAt: nil,
+                          summary: why)
 
         case "invoice.payment_failed":
             // `amount_due` rather than `amount` — an invoice's `amount` field
             // doesn't exist, and the money at stake is what's still owed.
             let retry = StripeFetch.date(payload["next_payment_attempt"])
             var title = "Payment failed · \(money(payload, amountKey: "amount_due"))"
+            if let who = invoiceCustomer(payload) { title += " · \(who)" }   // prd §912
             if let retry { title += " — retries \(retry.formatted(deadlineFormat))" }
             let (minor, code) = amount(payload, amountKey: "amount_due")
             return Shaped(title: title,
                           url: StripeAccount.dashboardURL("invoices/\(id)"),
                           tag: "Dunning", when: when, dueAt: retry,
-                          amountMinor: minor, currency: code)
+                          amountMinor: minor, currency: code,
+                          summary: invoiceLines(payload))
 
         default:
             // A type we didn't ask for. Reachable only if Stripe widens what
@@ -947,6 +1016,9 @@ enum StripeIngest {
                 sourceRef: "stripe:event:\(id)"
             )
             thing.dueAt = shaped.dueAt
+            // The payload's own words about the object, as DISPLAY copy (prd
+            // §912) — the sheet draws `summary`; nothing draws `enrichedText`.
+            thing.summary = shaped.summary
             // The amount as a number, not just as characters inside the title
             // (2026-08-12). Both fields or neither: a value with no currency
             // is a bare number the sheet would have to guess a symbol for, and

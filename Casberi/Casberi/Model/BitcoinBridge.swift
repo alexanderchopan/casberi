@@ -186,6 +186,11 @@ enum BitcoinBridge {
                 thing.walletAddress = address
                 thing.transferDirection = received ? "received" : "sent"
                 thing.transferAmount = amount
+                // The other side (prd §912): who funded a receive, where a send
+                // went — so the sheet's Who row and the address-book verbs
+                // reach a Bitcoin row as they do an EVM one. Same walk as
+                // `netSats`, same `sameAddress` rule.
+                thing.counterpartyAddress = counterparty(tx: tx, address: address, received: received)
                 // The block as provenance (2026-07-27). A block is a NAMED
                 // moment on Bitcoin — numbered, ~10 minutes wide, permanent —
                 // in a way it simply isn't on a 2-second Base chain, where a
@@ -271,6 +276,32 @@ enum BitcoinBridge {
             net -= value
         }
         return net
+    }
+
+    /// The other side of a transaction, off the same vin/vout walk (prd §912):
+    /// for a receive, the largest input that is not ours (who paid); for a
+    /// send, the largest output that is not ours (where it went — an output
+    /// back to us is change, and skipped). nil for a coinbase receive (no
+    /// prevout) or a transaction whose other side is only ourselves.
+    private static func counterparty(tx: [String: Any], address: String, received: Bool) -> String? {
+        var best: (address: String, value: Int)?
+        if received {
+            for input in (tx["vin"] as? [[String: Any]]) ?? [] {
+                guard let prevout = input["prevout"] as? [String: Any],
+                      let other = prevout["scriptpubkey_address"] as? String, !other.isEmpty,
+                      !sameAddress(other, address),
+                      let value = prevout["value"] as? Int else { continue }
+                if best == nil || value > best!.value { best = (other, value) }
+            }
+        } else {
+            for out in (tx["vout"] as? [[String: Any]]) ?? [] {
+                guard let other = out["scriptpubkey_address"] as? String, !other.isEmpty,
+                      !sameAddress(other, address),
+                      let value = out["value"] as? Int else { continue }
+                if best == nil || value > best!.value { best = (other, value) }
+            }
+        }
+        return best?.address
     }
 
     /// Bech32 is lowercase by convention and case-INSENSITIVE as text;

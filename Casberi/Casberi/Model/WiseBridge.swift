@@ -588,7 +588,7 @@ enum WiseIngest {
     private static func shape(_ transfer: WiseTransfer, ref: String, moment: Date) -> Thing {
         let thing = Thing(kind: .transaction,
                           title: IngestSupport.titleLine(WiseShape.rowTitle(transfer)),
-                          content: "",
+                          content: door(transfer),
                           source: WiseShape.source,
                           capturedAt: moment,
                           tags: WiseShape.tags(transfer),
@@ -599,8 +599,17 @@ enum WiseIngest {
 
     /// Everything a row carries beyond its title, in one place so the landing
     /// and the heal can never disagree about what a row holds.
+    /// THIS transfer's activity page in Wise's own web app (prd §912) — the
+    /// route Wise's activity list links a transfer row to, keyed by the
+    /// transfer id the API already gave us. No recipient lookup: that is a
+    /// second request, and the page names them.
+    private static func door(_ transfer: WiseTransfer) -> String {
+        "https://wise.com/transactions/activities/by-resource/TRANSFER/\(transfer.id)"
+    }
+
     @MainActor
     private static func apply(_ transfer: WiseTransfer, to thing: Thing) {
+        thing.content = door(transfer)   // healed too, so an older row gains it (§912)
         thing.transferDirection = WiseShape.stage(transfer.status) == .returned
             ? "received" : "sent"
         // The SOURCE side is the money that left this person's account, which

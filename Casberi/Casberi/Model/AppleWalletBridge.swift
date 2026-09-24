@@ -408,6 +408,7 @@ enum AppleWalletBridge {
                     row.transferAmount = AppleWalletRoom.money(amount, currency)
                     row.tags = tags(isCard: isCard, isRefund: isRefund, isSettled: settled)
                     row.capturedAt = txn.postedDate ?? txn.transactionDate
+                    row.summary = statementLine(txn)
                 }
                 continue
             }
@@ -437,6 +438,12 @@ enum AppleWalletBridge {
             // pass exists to stop. `authorHandle` had no other writer for this
             // source, and it is an existing field — no CloudKit deploy.
             thing.authorHandle = accountNames[txn.accountID]
+            // The bank's own statement line, SHOWN (prd §912), when Apple
+            // resolved a merchant and the line says something else — the
+            // "SQ *BLUE BOTTLE 4821 SF" a person recognises from their
+            // statement when "Blue Bottle" alone is not enough. Display copy;
+            // the searchable copy below is unchanged.
+            thing.summary = statementLine(txn)
             var enriched = accountNames[txn.accountID].map { [$0] } ?? []
             if merchant != raw { enriched.append(raw) }
             if !enriched.isEmpty { thing.enrichedText = enriched.joined(separator: " · ") }
@@ -445,6 +452,19 @@ enum AppleWalletBridge {
             landed += 1
         }
         return landed
+    }
+
+    /// The statement descriptor beside a resolved merchant (prd §912): nil
+    /// when Apple has no merchant (the descriptor IS the title then, via
+    /// `merchantLabel`) or when the two read the same — a line that repeats
+    /// the title says nothing.
+    @available(iOS 17.4, *)
+    static func statementLine(_ txn: Transaction) -> String? {
+        guard let merchant = txn.merchantName?.trimmingCharacters(in: .whitespaces),
+              !merchant.isEmpty else { return nil }
+        let line = txn.transactionDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !line.isEmpty, line.caseInsensitiveCompare(merchant) != .orderedSame else { return nil }
+        return IngestSupport.titleLine(line)
     }
 
     /// The merchant, or the transaction's own description when Apple has no

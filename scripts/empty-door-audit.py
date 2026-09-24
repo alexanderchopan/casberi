@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A row that names a thing on the web carries its door (prd §909, §910).
+"""A row that names a thing on the web carries its door (prd §909, §912).
 
 `Thing.content` is the page the row's disc opens. Four bridges built rows with
 none at all — the Safe signature that asks you to go and sign, a Splits
@@ -23,7 +23,7 @@ comes down as doors are added.
 
 WHAT THIS DOES NOT CHECK. Rows built through a bridge's own helper (`thing(…)`,
 `Shaped`, `land(…)`) whose door is a ROOT page rather than the object's — that
-is a judgement per bridge (§910 lists them), not a grep. Nor the demo seeds
+is a judgement per bridge (§912 lists them), not a grep. Nor the demo seeds
 (`Demo*.swift`, a mode, not landed rows), DEBUG probes, the share extension or
 the import receipts, which are outside `Model/` or are not landed rows.
 
@@ -102,7 +102,7 @@ def scan(root: Path, tree: str = TREE) -> list[tuple[str, int, str]]:
         if len(hits) > cap:
             for line, why in hits:
                 findings.append((rel, line, f"a row with no door ({why}; {len(hits)} built, "
-                                            f"{cap} allowed, §910)"))
+                                            f"{cap} allowed, §912)"))
         elif path.name in ALLOWED and len(hits) < cap:
             findings.append((rel, 0, f"builds {len(hits)} doorless rows of its {cap} — the "
                                      f"allowance is stale, bring it down"))
@@ -118,7 +118,7 @@ def report(findings) -> int:
     for rel, line, msg in findings:
         print(f"  {rel}:{line}: {msg}" if line else f"  {rel}: {msg}")
     print()
-    print("  A row's `content` is the page its disc opens (prd §909, §910). If the")
+    print("  A row's `content` is the page its disc opens (prd §909, §912). If the")
     print("  payload names the object — a hash, an id, a handle — build that page.")
     print("  If the object has NO page, that is a ruling in docs/prd.md and a row")
     print("  in this audit's ALLOWED table with the reason, never an empty string.")

@@ -396,6 +396,12 @@ enum ZerionAPI {
         /// deposit/withdraw. Consumed by `WalletVerbs.operationVerb`; nil when
         /// absent so the caller degrades to its old sentence.
         let operationType: String?
+        /// Zerion's own name for the app the transaction went through
+        /// (`attributes.application_metadata.name`: "Uniswap", "Aave") — read
+        /// since prd §912 so a venue the known-contracts table has no row for
+        /// is still named ("Swapped … on Uniswap"). nil when Zerion names
+        /// none; a table label, when there is one, still wins.
+        let applicationName: String?
         /// What this leg was worth in USD when it moved — Zerion's own `value`,
         /// which the request has always asked for (`currency=usd`) and this
         /// parser used to discard (2026-08-01, for the flow band). nil when
@@ -464,6 +470,8 @@ enum ZerionAPI {
 
             let operation = (attrs["operation_type"] as? String)
                 .flatMap { $0.isEmpty ? nil : $0 }
+            let application = ((attrs["application_metadata"] as? [String: Any])?["name"] as? String)
+                .flatMap { $0.isEmpty ? nil : $0 }
             guard let transfers = attrs["transfers"] as? [[String: Any]] else { continue }
             for t in transfers {
                 // Fungible-only — an NFT transfer carries no `fungible_info`
@@ -487,13 +495,13 @@ enum ZerionAPI {
                     out.append(Transfer(hash: hash, network: network, received: true,
                                         symbol: clean(symbol), contract: contract, amount: amount,
                                         counterparty: sender, when: when, operationType: operation,
-                                        valueUSD: value))
+                                        applicationName: application, valueUSD: value))
                 }
                 if direction == "out" || direction == "self" {
                     out.append(Transfer(hash: hash, network: network, received: false,
                                         symbol: clean(symbol), contract: contract, amount: amount,
                                         counterparty: recipient, when: when, operationType: operation,
-                                        valueUSD: value))
+                                        applicationName: application, valueUSD: value))
                 }
             }
         }

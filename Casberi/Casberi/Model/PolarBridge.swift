@@ -523,9 +523,22 @@ enum PolarShape {
         var requiresPrior = false
         var amountMinor: Int?
         var currency: String?
+        /// The payload's own words about the object (prd §912): a customer's
+        /// cancellation comment, a refund's comment, an order's item labels.
+        /// DISPLAY copy on `Thing.summary` — Polar authored it, so the
+        /// retrieval-only `enrichedText` rule does not apply.
+        var summary: String?
     }
 
     static func intValue(_ any: Any?) -> Int { PolarFetch.intValue(any) }
+
+    /// A non-empty trimmed string off the payload, clamped to the one body
+    /// ceiling; nil for absent, blank or another type (prd §912).
+    static func words(_ any: Any?) -> String? {
+        guard let text = (any as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty else { return nil }
+        return GitHubEventShape.clamp(text)
+    }
 
     /// Polar's timestamps are ISO 8601 strings (unlike Stripe's unix
     /// seconds) — Dodo Payments' exact reader.
@@ -596,13 +609,20 @@ enum PolarShape {
         if let reason = row["reason"] as? String, !reason.isEmpty, reason != "customer_request" {
             title += " — \(reason.replacingOccurrences(of: "_", with: " "))"
         }
+        // The door stays the refunds LIST (prd §912): Polar's dashboard has no
+        // per-refund page this bridge has seen, and a link that 404s is worse
+        // than one that lands a page away (§83).
         return Shaped(title: title,
                       url: PolarAccount.dashboardURL("/finance/refunds"),
                       tag: "Refund",
                       facets: status == "failed" ? ["Failed"] : [],
                       when: date(row["created_at"]) ?? .now,
                       amountMinor: currency.isEmpty ? nil : minor,
-                      currency: currency.isEmpty ? nil : currency.uppercased())
+                      currency: currency.isEmpty ? nil : currency.uppercased(),
+                      // The refund's `comment` — what you or Polar wrote when
+                      // issuing it (prd §912). The refund's own field; never
+                      // the customer.
+                      summary: words(row["comment"]))
     }
 
     // MARK: Sales (prd §537)
@@ -652,16 +672,29 @@ enum PolarShape {
         // so a long product name must never push the thing that varies past
         // `titleLine`'s 80-character cut. The amount is also stamped on
         // `priceValue`, so a clamped title never loses it outright.
-        let product = ((row["product"] as? [String: Any])?["name"] as? String)
-            .flatMap { $0.isEmpty ? nil : $0 }
-        let title = (product ?? String(localized: "Sale")) + " · \(money(minor, currency: currency))"
+        let product = row["product"] as? [String: Any]
+        let productName = (product?["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        let title = (productName ?? String(localized: "Sale")) + " · \(money(minor, currency: currency))"
+        // WHAT sold, line by line (prd §912): each order item's `label` (the
+        // product or price as Polar names it on the receipt), else the
+        // product's own description. Still never `customer`.
+        let labels = ((row["items"] as? [[String: Any]]) ?? []).compactMap { words($0["label"]) }
+        let summary = labels.isEmpty
+            ? words(product?["description"])
+            : GitHubEventShape.clamp(labels.joined(separator: "\n"))
+        // The door is THIS order's page under the org's slug (prd §912) —
+        // `dashboardURL` already falls back to the dashboard root while the
+        // slug is unread, so this can never build a slug-less path that 404s.
+        // The order route is Polar's own (`/sales/<order id>`); UNMEASURED
+        // against a live org here, `-polarProbe` prints a landed row's door.
         return Shaped(title: title,
-                      url: PolarAccount.dashboardURL("/sales"),
+                      url: PolarAccount.dashboardURL("/sales/\(id)"),
                       tag: "Sale",
                       facets: reason == "subscription_create" ? ["New subscriber"] : [],
                       when: date(row["created_at"]) ?? .now,
                       amountMinor: minor,
-                      currency: currency.uppercased())
+                      currency: currency.uppercased(),
+                      summary: summary)
     }
 
     // MARK: Subscriptions
@@ -679,10 +712,28 @@ enum PolarShape {
         }
         let product = row["product"] as? [String: Any]
         let name = (product?["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-        let title = name.map { "\(verb) · \($0)" } ?? verb
+        var title = name.map { "\(verb) · \($0)" } ?? verb
+        // The price it was, where the row carries one (prd §912): `amount` in
+        // minor units, `currency`, and `recurring_interval` ("month"/"year")
+        // — "Subscription canceled · Pro · $49.00/month" says what left.
+        let minor = intValue(row["amount"])
+        if minor > 0, let currency = row["currency"] as? String, !currency.isEmpty {
+            var price = money(minor, currency: currency)
+            if let interval = words(row["recurring_interval"]) { price += "/\(interval)" }
+            title += " · \(price)"
+        }
+        // WHY, in the customer's words (prd §912): the comment they typed at
+        // the portal, else Polar's fixed reason ("too_expensive"), as words.
+        // These are the subscription's own fields — `customer` stays unread.
+        let why = words(row["customer_cancellation_comment"])
+            ?? words(row["customer_cancellation_reason"])?.replacingOccurrences(of: "_", with: " ")
+        // The door stays the subscriptions LIST (prd §912): this bridge has
+        // not seen Polar's per-subscription route, so it links the page it is
+        // sure of rather than one that may 404 (§83).
         return Shaped(title: title,
                       url: PolarAccount.dashboardURL("/subscriptions"),
-                      tag: "Subscription", facets: [facet], when: .now)
+                      tag: "Subscription", facets: [facet], when: .now,
+                      summary: why)
     }
 
     /// "Subscription recovered · Pro plan" — the loop-closer for a tracked
@@ -913,6 +964,8 @@ enum PolarIngest {
                       tags: [shaped.tag] + shaped.facets,
                       sourceRef: sourceRef)
         t.dueAt = shaped.dueAt
+        // DISPLAY copy (prd §912) — the sheet draws `summary`.
+        t.summary = shaped.summary
         if let minor = shaped.amountMinor, let code = shaped.currency,
            let value = StripeMoney.value(minor, currency: code) {
             t.priceValue = value

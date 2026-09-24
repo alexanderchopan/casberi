@@ -147,6 +147,40 @@ enum SafeBridge {
         "https://app.safe.global/transactions/queue?safe=\(chain.shortName):\(EIP55.checksum(safeAddress))"
     }
 
+    /// ONE transaction's page in Safe{Wallet} (prd §912) — the route the web
+    /// app itself links a queued or executed row to (`multisig_<safe>_<hash>`
+    /// is Safe's own id shape for a multisig transaction). Until this pass a
+    /// pending row had no door at all: the person read "your signature is
+    /// needed" and had nowhere to go and sign (§83's dead row). An executed
+    /// outcome takes the same page rather than an explorer: the gateway row
+    /// shape carries no on-chain `transactionHash` (`SafeGatewayShape.txRow`),
+    /// and Safe's page states the outcome either way.
+    private static func safeTxURL(chain: Chain, safeAddress: String, safeTxHash: String) -> String {
+        let safe = EIP55.checksum(safeAddress)
+        return "https://app.safe.global/transactions/tx?safe=\(chain.shortName):\(safe)&id=multisig_\(safe)_\(safeTxHash)"
+    }
+
+    /// What the proposer's app said about the transaction (prd §912): the
+    /// transaction service's `origin` is a JSON STRING, `{"name","url","note"}`
+    /// — the note a person typed when proposing, else the app that proposed
+    /// it. DISPLAY copy (`summary`): the payload authored it. nil whenever the
+    /// row does not carry the field, which is every gateway-shaped row today
+    /// (`SafeGatewayShape.txRow` maps no origin), so this reads nothing until
+    /// that mapping exists — a guarded read, never a guessed sentence.
+    private static func originNote(_ tx: [String: Any]) -> String? {
+        guard let raw = tx["origin"] as? String,
+              let data = raw.data(using: .utf8),
+              let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        else { return nil }
+        for key in ["note", "name"] {
+            if let text = (object[key] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !text.isEmpty {
+                return GitHubEventShape.clamp(text)   // the one body ceiling (§909)
+            }
+        }
+        return nil
+    }
+
     private static func isChainActive(_ chain: Chain) -> Bool {
         guard let network = chain.network else { return true }
         return WalletChainStore.activeNetworkIDs().contains(network)
@@ -893,10 +927,14 @@ enum SafeBridge {
                 let face = rowFace(have: have, required: required, yourTurn: yourTurn,
                                    knowsYou: candidate.viaOwner != nil, description: description,
                                    nonce: tx["nonce"] as? Int, safeNonce: currentNonce)
+                let door = safeTxURL(chain: chain, safeAddress: safeAddress, safeTxHash: safeTxHash)
                 if !existing.contains(ref) {
-                    let thing = Thing(kind: .transaction, title: face.title,
+                    // The door is this transaction's own page in Safe{Wallet}
+                    // (prd §912) — where the signature it asks for happens.
+                    let thing = Thing(kind: .transaction, title: face.title, content: door,
                                       source: sourceName, sourceRef: ref)
                     thing.walletAddress = candidate.viaOwner ?? safeAddress
+                    thing.summary = originNote(tx)
                     // Tagged structurally (not parsed from the title above) so
                     // `NotifySweep.classify` can tell "your turn" apart from
                     // "waiting on others" without the localized-string trap —
@@ -914,7 +952,7 @@ enum SafeBridge {
                     // Safe app, until execution finally landed a closing row;
                     // the head one line above it said something else. Collected
                     // as a value and applied after the loop — see `heals`.
-                    heals.append(Heal(ref: ref, title: face.title, tags: face.tags))
+                    heals.append(Heal(ref: ref, title: face.title, tags: face.tags, content: door))
                 }
                 // Seed/refresh tracking so this pending transaction's eventual
                 // resolution (executed, or replaced by a rival at the same
@@ -953,6 +991,9 @@ enum SafeBridge {
         let ref: String
         let title: String
         let tags: [String]
+        /// The row's door (prd §912) — healed too, so a row landed before the
+        /// door existed gains it on the next pass instead of never.
+        let content: String
     }
 
     /// Rewrites the landed rows whose face actually moved, and says whether
@@ -970,9 +1011,11 @@ enum SafeBridge {
         var changed = false
         for heal in heals {
             guard let thing = landed[heal.ref], thing.isLive else { continue }
-            guard thing.title != heal.title || thing.tags != heal.tags else { continue }
+            guard thing.title != heal.title || thing.tags != heal.tags
+                    || thing.content != heal.content else { continue }
             thing.title = heal.title
             thing.tags = heal.tags
+            thing.content = heal.content
             SpotlightIndex.index([thing])
             changed = true
         }
@@ -1234,8 +1277,13 @@ enum SafeBridge {
                 String(localized: "Replaced after \($0) — \(description) never executed; a rival transaction went through at the same nonce instead")
             } ?? String(localized: "Replaced — \(description) never executed; a rival transaction went through at the same nonce instead")
         }
-        let thing = Thing(kind: .transaction, title: title, source: sourceName, sourceRef: ref)
+        // The closing row opens the same transaction page the pending row did
+        // (prd §912): Safe's page states executed or replaced by itself.
+        let thing = Thing(kind: .transaction, title: title,
+                          content: safeTxURL(chain: chain, safeAddress: safeAddress, safeTxHash: hash),
+                          source: sourceName, sourceRef: ref)
         thing.walletAddress = ownerAddress ?? safeAddress
+        thing.summary = originNote(tx)
         context.insert(thing)
         SpotlightIndex.index([thing])
         return 1
@@ -1501,7 +1549,12 @@ enum SafeBridge {
         let title = phrases.count == 1
             ? String(localized: "Your Safe \(phrases[0])")
             : String(localized: "Your Safe's settings changed: \(phrases.joined(separator: ", "))")
-        let thing = Thing(kind: .transaction, title: title, source: sourceName, sourceRef: ref)
+        // A settings change opens the Safe itself (prd §912): there is no
+        // per-change page, and the queue is where the owners and modules it
+        // names are read and changed back.
+        let thing = Thing(kind: .transaction, title: title,
+                          content: safeAppURL(chain: chain, safeAddress: safeAddress),
+                          source: sourceName, sourceRef: ref)
         thing.walletAddress = ownerAddress
         // Tagged structurally, not parsed from `title` — a module can move
         // this Safe's funds WITHOUT a signature, which is the same shape of

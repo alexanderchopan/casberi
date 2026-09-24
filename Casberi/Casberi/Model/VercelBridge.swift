@@ -166,7 +166,7 @@ enum VercelShape {
     }
 
     /// Everything after the subject line, trimmed — the message `title`
-    /// dropped on the floor (prd §910). nil for a one-line message.
+    /// dropped on the floor (prd §912). nil for a one-line message.
     static func commitBody(_ commitMessage: String?) -> String? {
         guard let message = commitMessage else { return nil }
         let rest = message.split(separator: "\n", omittingEmptySubsequences: false)
@@ -230,7 +230,7 @@ enum VercelFetch {
         if state == .ready, let host {
             link = host.hasPrefix("http") ? host : "https://\(host)"
         } else {
-            // No project dashboard to fall to (prd §910 looked): the list
+            // No project dashboard to fall to (prd §912 looked): the list
             // row carries no team or account slug, and a URL guessed from
             // the creator's username is wrong for every team deploy.
             link = nonEmpty(row["inspectorUrl"]) ?? "https://vercel.com"
@@ -265,7 +265,7 @@ enum VercelFetch {
         // card-back rule — because "which branch" is the first question a
         // failed build raises and the title has no room for it.
         var notes: [String] = []
-        // A failed deploy's own error first (prd §910). The v6 list carries
+        // A failed deploy's own error first (prd §912). The v6 list carries
         // `errorMessage` on some rows and documents it on none, so it is read
         // when present and never assumed.
         if state != .ready, let error = nonEmpty(row["errorMessage"]) { notes.append(error) }

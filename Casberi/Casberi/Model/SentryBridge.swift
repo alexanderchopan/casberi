@@ -372,10 +372,10 @@ enum SentryFetch {
         let substatusRaw: String?
         let firstSeen: Date?
         /// `shortId` — `CHECKOUT-1F`, the name Sentry's own UI and every
-        /// alert email uses for the issue (prd §910).
+        /// alert email uses for the issue (prd §912).
         let shortId: String?
         /// `metadata.value` — the exception's own message, without the type
-        /// the title already carries (prd §910).
+        /// the title already carries (prd §912).
         let value: String?
     }
 
@@ -561,7 +561,7 @@ enum SentryIngest {
     /// landed on first sight sorts back to when it actually broke.
     private static func thing(_ issue: SentryFetch.Issue,
                               crossing: SentrySubstatus?, ref: String) -> Thing {
-        // The short id leads the message (prd §910): it is how the issue is
+        // The short id leads the message (prd §912): it is how the issue is
         // named everywhere else, and it survives the 80-char clamp where the
         // tail of a long message does not.
         let named = issue.shortId.map { "\($0) · \(issue.title)" } ?? issue.title
@@ -580,7 +580,7 @@ enum SentryIngest {
         // and Cursor summary rule — because it is the one field that turns
         // "KeyError: 'id'" into something you can act on without opening
         // Sentry. Never the retrieval-only `enrichedText`.
-        // The exception's own value first (prd §910), unless it only repeats
+        // The exception's own value first (prd §912), unless it only repeats
         // the title; the culprit stays the fallback.
         if let value = issue.value, value != issue.title { thing.summary = value }
         else if let culprit = issue.culprit { thing.summary = culprit }

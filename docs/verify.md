@@ -1131,3 +1131,8 @@ The same-name-**different**-runtime case is not an error (the newest wins) but i
 **Eleven mutations, all caught** — and the eleventh is why check 9 asserts two versions: a `normalize_pin` returning the constant `(26, 5)` for every input survived the first draft, because every asserted pin value was 26.5.
 
 **What it deliberately does not check.** That the device BOOTS, or that the runtime is installed correctly — a resolvable destination is not a working one. Which device is `booted`: that question is gone, because every caller passes a udid. Non-iOS runtimes at all.
+
+## Empty-door audit (scripts/empty-door-audit.py, 2026-09-24) — prd §912
+
+`Thing.init` defaults `content` to `""`, so a landed row with nowhere to go is the path of least resistance and looks like every other row in every screenshot. Safe's signature row, a Splits transfer, a Wise transfer and Privy's activity shipped that way with the hash or id naming their page in hand. The audit counts every `Thing(kind:` constructed under `Casberi/Casberi/Model` with no `content:` or an empty one against a reasoned allowance (FinanceKit, HealthKit, a photo, an import, the two unmeasured sign-in seats, a signature made on this phone, an MCP offer that names no URL) and fails a stale allowance. Demo seeds are excluded by name (`Demo*.swift`, a mode, not landed rows). It does not judge a door to a ROOT page — that is §912's per-bridge list. `--self-test` plants eight cases in both directions, including a file that only talks about a doorless row in a comment, and nested parentheses inside the call.
+

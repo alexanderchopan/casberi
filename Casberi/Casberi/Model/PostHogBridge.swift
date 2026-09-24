@@ -598,14 +598,14 @@ enum PostHogIngest {
             let thing = Thing(
                 kind: .link,
                 title: IngestSupport.titleLine(title),
-                // The project page stays the door: PostHog has no per-annotation page (prd §910).
+                // The project page stays the door: PostHog has no per-annotation page (prd §912).
                 content: PostHogAccount.projectURL(),
                 source: PostHogWatch.source,
                 capturedAt: note.date,
                 tags: ["Annotation"],
                 sourceRef: "posthog:annotation:\(note.id)"
             )
-            // The whole note when the title had to clamp it (prd §910) —
+            // The whole note when the title had to clamp it (prd §912) —
             // DISPLAY copy, the person wrote it; a note that fits its title
             // is said once. And who wrote it, already parsed and dropped.
             if IngestSupport.titleLine(note.content) != note.content {
