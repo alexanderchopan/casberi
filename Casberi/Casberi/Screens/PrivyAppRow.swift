@@ -14,7 +14,6 @@ import SwiftUI
 struct PrivyAppRow: View {
     let thing: Thing
     /// A cross-source room (All, Pinned) names the source on the line.
-    var sourceBadge = false
 
     var body: some View {
         if thing.isLive { liveBody }
@@ -27,9 +26,8 @@ struct PrivyAppRow: View {
         let usd = store.usd(ref)
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
 
-        DSFeedRow(name: app?.name ?? thing.title, nameLines: 1,
-                  line: DSFeed.line(sourceBadge ? PrivyHomeFeed.source : nil,
-                                    PrivyHomeFeed.lastUsed(app?.lastActiveAt, now: .now)
+        DSFeedRow(name: app?.name ?? thing.title,
+                  line: DSFeed.line(PrivyHomeFeed.lastUsed(app?.lastActiveAt, now: .now)
                                         ?? app.map(PrivyHomeFeed.line) ?? thing.content)) {
             PrivyAppMark(logoURL: app?.logoURL)
         } trailing: {
@@ -38,8 +36,6 @@ struct PrivyAppRow: View {
                     .dsText(.price17)
                     .monospacedDigit()
                     .foregroundStyle(DS.textPrimary)
-            } else {
-                LiveTimeText(date: thing.capturedAt)
             }
         }
         .accessibilityElement(children: .ignore)

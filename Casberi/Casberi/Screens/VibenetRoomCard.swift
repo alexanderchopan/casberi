@@ -3615,12 +3615,11 @@ struct VibenetEventRow: View {
         if thing.isLive {
             // ONE ANATOMY (prd §744): the event's glyph at the 26pt lead, not
             // `WalletRow`'s 36, so this room's column matches every other.
-            DSFeedRow(name: thing.summary ?? thing.title, nameLines: 2,
+            DSFeedRow(name: thing.summary ?? thing.title,
                       line: Text(accountLabel)) {
                 WalletMarkView(mark: mark, size: DS.Mark.row)
             } trailing: {
-                LiveTimeText(date: thing.capturedAt, color: DS.textTertiary)
-                    .lineLimit(1).fixedSize()
+                EmptyView()
             }
         }
     }

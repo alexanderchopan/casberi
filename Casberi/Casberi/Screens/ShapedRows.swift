@@ -65,20 +65,6 @@ struct BandRow: View {
     /// that gate is wordless screenshots, which carry no identity leader and
     /// so can never satisfy `artRidesBesideIdentity`.
     var wideArt: Bool = false
-    /// Which app a row is FROM, when the leading slot is already busy saying
-    /// something else (2026-08-09). The 26pt leader answers "who/what" — a
-    /// face, a publisher mark, a blockie, a sender initial, the thing's own
-    /// picture — and only falls back to the app glyph when none of those
-    /// apply; the trailing slot answers "why it's here" (`project`, above),
-    /// never "which app". So on every row EXCEPT the glyph fallback, nothing
-    /// on the row named the source at all — fine in a single-source room
-    /// (the room IS the source), a real gap in a mixed feed of faces and
-    /// pictures. A small brand mark rides the leader's own corner instead —
-    /// the iOS notification-badge move, not a second row element. Opt-in
-    /// from the feed, like `moneyColumn`/`imageOnly`/`wideArt`: only the
-    /// unscoped All room asks for it (see `leaderIsGlyph` for the
-    /// per-row suppression, and the flag overlay below for precedence).
-    var sourceBadge: Bool = false
 
     private var done: Bool { thing.mark == .done }
 
@@ -604,21 +590,6 @@ struct BandRow: View {
         isNew && NotifySweep.classify(thing, now: .now)?.cls == .alarm
     }
 
-    /// The trailing time's ink: ordinary tertiary, primary when new (the
-    /// weight goes medium with it, so a new row is DARKER and HEAVIER, never
-    /// blue — prd §900), `DS.destructive` when the new arrival is also
-    /// alarm-class, which is a state and keeps its colour.
-    ///
-    /// Takes both facts for `isAlarmClass`'s reason above: the weight, the
-    /// animation and the spoken label all need them too, so reading them here
-    /// made this the third of six reads rather than the first of one.
-    private func timeInk(isNew: Bool, isAlarm: Bool) -> Color {
-        guard isNew else { return DS.textTertiary }
-        // New is WEIGHT and primary ink, never the tint (prd §900): blue is
-        // what you can tap, and a time is not a control. An alarm keeps its
-        // red — that is a state, not a hue for decoration.
-        return isAlarm ? DS.destructive : DS.textPrimary
-    }
 
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
@@ -651,7 +622,6 @@ struct BandRow: View {
         // clause, because a badge over a face was the only row in the app that
         // put two marks in the lead.
         DSFeedRow(name: imageOnly ? thing.source : titleText,
-                  nameLines: imageOnly ? 1 : (thing.source == "Kalshi" ? 3 : 2),
                   emphasized: emphasized, done: done, ripple: rippleIndex,
                   line: imageOnly ? nil : line(project: project, leader: leader)) {
             leaderView
@@ -691,13 +661,17 @@ struct BandRow: View {
                     DSFeedLive()
                 } else if let countdown {
                     // Primary ink at `label12`'s medium weight (prd §900):
-                    // blue is for what you can tap, and this is a clock.
+                    // blue is for what you can tap, and this is a clock
+                    // still ahead of you — the one time a row keeps (§902).
                     Text(countdown).dsText(.label12).foregroundStyle(DS.textPrimary)
-                } else {
-                    LiveTimeText(date: thing.capturedAt,
-                                 color: timeInk(isNew: isNew, isAlarm: isAlarm))
-                        .fontWeight(isNew ? .medium : .regular)
-                        .animation(DS.Motion.standard, value: isNew)
+                } else if isAlarm {
+                    // THE AGE IS GONE (prd §902 — user: "do we even need the
+                    // time stamps? … who cares if it already says today").
+                    // The day header says when. The one age that stays is an
+                    // alarm-class arrival's, in the state's own red: a
+                    // dispute or a deadline that landed since you left is a
+                    // fact the row may not drop (§83).
+                    LiveTimeText(date: thing.capturedAt, color: DS.destructive)
                 }
             }
         } below: {
@@ -780,7 +754,10 @@ struct BandRow: View {
     /// title to make room. A face, a publisher's icon or a link's picture does
     /// not name the network, so those rows keep the name.
     private func line(project: String?, leader: Leader) -> Text? {
-        let named: String? = sourceBadge && leader != .glyph ? thing.source : nil
+        // THE LINE NEVER NAMES THE SOURCE (prd §902 — user: "i don't even
+        // want to say the name of the source b/c we have the icon"). §767 let
+        // it through where the lead was a face or a picture; the room's
+        // mixture is the dock's to say, and the sheet names the source.
         // The project clause is told apart by WEIGHT, in the line's own ink
         // (prd §900). It wore the source's brand hue (2026-08-14), and on one
         // screen that made Telegram's blue a shade from the tint, so "Pavel
@@ -790,7 +767,7 @@ struct BandRow: View {
         let labelled: Text? = project.map { p in
             Text(p).fontWeight(.medium)
         }
-        let parts = [eventClock.map { Text($0) }, named.map { Text($0) }, labelled]
+        let parts = [eventClock.map { Text($0) }, labelled]
             .compactMap { $0 }
         guard let first = parts.first else { return nil }
         return parts.dropFirst().reduce(first) { $0 + Text(verbatim: " · ") + $1 }
@@ -981,7 +958,7 @@ struct TokenRow: View {
         // ONE ANATOMY (prd §744): a 36pt disc and a semibold name made the
         // token the loudest row in any room it landed in. It keeps the one
         // thing that is its content — the price where the time would be.
-        DSFeedRow(name: tokenName, nameLines: 1, line: DSFeed.line(vitals)) {
+        DSFeedRow(name: tokenName, line: DSFeed.line(vitals)) {
             if let image = thing.previewImageURL, !image.isEmpty {
                 RemoteThumb(urlString: image, size: DS.Face.rowCircle, fallback: thing.source,
                             circular: true)
@@ -1530,7 +1507,7 @@ struct MediaRow: View {
         DSFeedRow(name: thing.title, done: done, line: DSFeed.line(byline)) {
             BridgeIcon(name: thing.source, size: DS.Mark.row)
         } trailing: {
-            if live { DSFeedLive() } else { LiveTimeText(date: thing.capturedAt) }
+            if live { DSFeedLive() }
         } below: {
             if let url = thing.previewImageURL, !url.isEmpty,
                thing.source != "Twitch" || live {
@@ -1589,11 +1566,11 @@ struct MusicRow: View {
         let parts = self.parts   // one split per render
         // ONE ANATOMY (prd §744): the album art was the 44pt lead; it is a
         // tile under the name now, and the source's mark leads like every row.
-        DSFeedRow(name: parts.title, nameLines: 1, done: done,
+        DSFeedRow(name: parts.title, done: done,
                   line: DSFeed.line(parts.artist)) {
             BridgeIcon(name: thing.source, size: DS.Mark.row)
         } trailing: {
-            LiveTimeText(date: thing.capturedAt)
+            EmptyView()
         } below: {
             if let art = thing.previewImageURL, !art.isEmpty {
                 DSFeedTiles {
@@ -1744,12 +1721,13 @@ struct BundleRow: View {
         // (`DSFoldLead`), the count stands under the time, and a money clause
         // is stripped: a figure beside "+3 more" reads as the total of all
         // four, and it is only the newest one's.
-        DSFeedRow(name: FoldName.of(lead, source: source),
-                  line: nil,
-                  lineTail: DSFeed.more(count - 1)) {
+        // NO COUNT, NO TIME (prd §902 — user: "N more also doesn't mean much
+        // b/c there is always N more"): the fold's lead already stands on a
+        // second plate, which is the whole statement.
+        DSFeedRow(name: FoldName.of(lead, source: source), line: nil) {
             DSFoldLead(source: source)
         } trailing: {
-            LiveTimeText(date: newest)
+            EmptyView()
         } below: {
             if !art.isEmpty {
                 DSFeedTiles {
@@ -1866,12 +1844,10 @@ struct StripRow: View {
         // count its tail (prd §896).
         // The newest member names the row and the lead says it is a fold
         // (prd §900, `BundleRow`'s reasoning).
-        DSFeedRow(name: FoldName.of(lead, source: source),
-                  line: nil,
-                  lineTail: DSFeed.more(count - 1)) {
+        DSFeedRow(name: FoldName.of(lead, source: source), line: nil) {
             DSFoldLead(source: source)
         } trailing: {
-            LiveTimeText(date: newest)
+            EmptyView()
         } below: {
             DSFeedTiles {
                 ForEach(tiles) { tile in
@@ -1960,8 +1936,6 @@ struct ApprovalCard: View {
                         .dsTapTarget(Capsule(style: .continuous))
                 }
                 .buttonStyle(PressSpring())
-                Spacer()
-                LiveTimeText(date: thing.capturedAt)
             }
             .padding(.top, DS.Space.s1)
         }
@@ -2186,11 +2160,11 @@ struct TakeawayCard: View {
     @ViewBuilder private var liveBody: some View {
         // ONE ANATOMY (prd §744): the source's name was a 12pt eyebrow over a
         // heading; the mark says the source, the title is the name.
-        DSFeedRow(name: thing.title, nameLines: 3,
+        DSFeedRow(name: thing.title,
                   line: DSFeed.line(thing.content), lineLines: 3) {
             BridgeIcon(name: thing.source, size: DS.Mark.row)
         } trailing: {
-            LiveTimeText(date: thing.capturedAt)
+            EmptyView()
         }
     }
 }
@@ -2250,14 +2224,9 @@ struct ExcerptRow: View {
         DSFeedRow(name: thing.title, line: DSFeed.line(excerpt), lineLines: lines) {
             BridgeIcon(name: thing.source, size: DS.Mark.row)
         } trailing: {
-            VStack(alignment: .trailing, spacing: 2) {
-                LiveTimeText(date: thing.capturedAt)
-                if let count = thing.messageCount, count > 1 {
-                    Text(Self.lengthLabel(count: count, source: thing.source))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                }
-            }
+            // No age and no length (prd §902): a count is not a fact you
+            // decide on, and the day header says when.
+            EmptyView()
         } below: {
             if thing.previewImageData != nil {
                 DSFeedTiles {
@@ -2366,7 +2335,7 @@ struct PostCard: View {
         // ONE ANATOMY (prd §744): the person is the name, at the same 17pt and
         // the same 26pt lead as every row, so the words sit on the column's one
         // left edge. The words, the quote and the media are the row's content.
-        DSFeedRow(name: author, nameLines: 1) {
+        DSFeedRow(name: author) {
             if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
                 RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
                             fallback: thing.source, circular: true)
@@ -2384,7 +2353,6 @@ struct PostCard: View {
                 if thing.mark == .doing {
                     Text("Doing").dsText(.label12).foregroundStyle(DS.tint)
                 }
-                LiveTimeText(date: thing.capturedAt)
             }
         } below: {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -2557,7 +2525,7 @@ struct SocialThreadCard: View {
         // ONE ANATOMY (prd §744), as `PostCard`. The 2pt rule that ran down the
         // replies is gone with it: it was a line, and nothing in this app draws
         // a line (§8). The replies are paragraphs of the same post, spaced.
-        DSFeedRow(name: author, nameLines: 1) {
+        DSFeedRow(name: author) {
             if let avatar = head.authorAvatarURL, !avatar.isEmpty {
                 RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
                             fallback: head.source, circular: true)
@@ -2572,7 +2540,6 @@ struct SocialThreadCard: View {
                         .foregroundStyle(DS.legibleInk(for: head.source) ?? DS.textTertiary)
                         .lineLimit(1)
                 }
-                LiveTimeText(date: head.capturedAt)
             }
         } below: {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -2778,7 +2745,7 @@ struct ReadingRow: View {
         DSFeedRow(name: thing.title, line: DSFeed.line(domain)) {
             BridgeIcon(name: thing.source, size: DS.Mark.row)
         } trailing: {
-            LiveTimeText(date: thing.capturedAt)
+            EmptyView()
         } below: {
             if let art = thing.previewImageURL, !art.isEmpty {
                 DSFeedTiles {
@@ -2891,7 +2858,7 @@ struct AppReviewRow: View {
         DSFeedRow(name: thing.title, line: DSFeed.line(bodyText), lineLines: 6) {
             BridgeIcon(name: thing.source, size: DS.Mark.row)
         } trailing: {
-            LiveTimeText(date: thing.capturedAt)
+            EmptyView()
         } below: {
             if let handle = thing.authorHandle, !handle.isEmpty {
                 Text(handle)

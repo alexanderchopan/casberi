@@ -16,7 +16,7 @@ skeleton, and nothing enforced it:
     HStack(alignment: .top, spacing: DS.Space.s3)
       mark            BridgeIcon at DS.Mark.row, or a thumb standing in for it
       VStack          title at body17, supporting line at subhead12/label12
-      trailing        LiveTimeText — the same fact, in the same corner
+      trailing        money, a clock ahead of you, or Live — never an age (§902)
     .padding(.vertical, DS.Space.s2)
 
 **This audit exists because the agreement was DISCOVERED, not designed.** Five
@@ -70,15 +70,15 @@ NOT_ROWS = {
                        "name below",
 }
 
-# A row that trails something other than a time, and why.
-KNOWN_NO_TIME = {
-    "TokenRow": "trails the live price (price17) — a watched token's row is "
-                "about what it costs now, and a timestamp would report when we "
-                "last fetched",
-    "WalletbeatWalletRow": "a watched wallet's standing rating trails its stage — "
-                           "a rating is not an event, so it has no when",
-    "L2beatChainRow": "a watched chain's standing assessment trails its stage — "
-                      "an assessment is not an event, so it has no when",
+# A row that DRAWS a time in its trailing slot, and why (prd §902). The age
+# left every feed row on 2026-09-23 (user: "do we even need the time stamps?
+# … who cares if it already says today and yesterday") — the day header says
+# when, the sheet has the exact time, and the right slot keeps only money, a
+# clock still ahead of you, or Live. The one exception is stated here so that
+# a second one cannot arrive quietly.
+KNOWN_TIME = {
+    "BandRow": "an alarm-class arrival (a dispute, a deadline) keeps its age in "
+               "the state's own red — a fact the row may not drop (§83)",
 }
 
 def body(src: str, name: str) -> str | None:
@@ -135,16 +135,17 @@ def check(src: str, only: "str | None" = None) -> list[str]:
         if "DSFeedRow(" not in b:
             bad.append(f"{name}: does not compose DSFeedRow — a row that draws its "
                        f"own HStack picks its own lead, name rung and edge (prd §744)")
-        if "LiveTimeText" not in b and name not in KNOWN_NO_TIME:
-            bad.append(f"{name}: nothing in the trailing slot — every feed row "
-                       f"says WHEN there, or is named in KNOWN_NO_TIME with why")
-    for name in KNOWN_NO_TIME:
+        if "LiveTimeText" in b and name not in KNOWN_TIME:
+            bad.append(f"{name}: draws an age in its trailing slot — the day header "
+                       f"says when (prd §902); a row that must keep one is named in "
+                       f"KNOWN_TIME with why")
+    for name in KNOWN_TIME:
         if only is not None and name != only:
             continue
         b = body(src, name)
-        if b and "LiveTimeText" in strip_comments(b):
-            bad.append(f"{name}: is exempted from the trailing time but draws one — "
-                       f"remove the exemption, it is now a snooze")
+        if b and "LiveTimeText" not in strip_comments(b):
+            bad.append(f"{name}: is named in KNOWN_TIME but draws no time — remove "
+                       f"the entry, it is now a snooze")
     return bad
 
 
@@ -202,7 +203,7 @@ MONEY_ROWS = {
 
 # An activity row with no amount, and why. `VibenetEventRow` draws EVENTS — a
 # key added, an account created — not transfers, so it has no figure to state.
-# The same shape as `KNOWN_NO_TIME` above: content, not drift.
+# The same shape as `KNOWN_TIME` above: content, not drift.
 KNOWN_NO_AMOUNT = {
     "VibenetEventRow": "draws events (a key added, an account created), not "
                        "transfers — there is no amount to state",
@@ -268,24 +269,25 @@ def check_rolls(files: "list[tuple[str, str]]") -> "list[str]":
 
 def self_test() -> None:
     good = ("struct ARow: View {\n  var body: some View {\n"
-            "    DSFeedRow(name: x) { m } trailing: {\n    LiveTimeText(date: d)\n"
+            "    DSFeedRow(name: x) { m } trailing: {\n    EmptyView()\n"
             "  } }\n}\n")
+    aged = good.replace("    EmptyView()\n", "    LiveTimeText(date: d)\n")
     cases = [
-        ("a row composing the template passes", good.replace("ARow", "BandRow"), False),
+        ("a row composing the template passes", good.replace("ARow", "TokenRow"), False),
         ("a row drawing its own HStack is flagged",
-         good.replace("ARow", "BandRow").replace("DSFeedRow(name: x)", "HStack"), True),
-        ("a row with no trailing time is flagged",
-         good.replace("ARow", "BandRow").replace("    LiveTimeText(date: d)\n", ""), True),
+         good.replace("ARow", "TokenRow").replace("DSFeedRow(name: x)", "HStack"), True),
+        ("a row that draws an age is flagged (prd §902)",
+         aged.replace("ARow", "TokenRow"), True),
         ("a missing row species is flagged, not skipped", "struct Other: View {}\n", True),
-        ("an exempt row keeps the template",
-         good.replace("ARow", "TokenRow").replace("    LiveTimeText(date: d)\n", ""), False),
-        ("an exemption that no longer applies is flagged",
-         good.replace("ARow", "TokenRow"), True),
+        ("the alarm exception keeps its age",
+         aged.replace("ARow", "BandRow"), False),
+        ("an exception that no longer applies is flagged",
+         good.replace("ARow", "BandRow"), True),
         ("a commented-out template does not satisfy the check",
-         good.replace("ARow", "BandRow").replace("DSFeedRow(name: x)", "// DSFeedRow(name: x)\n HStack"), True),
+         good.replace("ARow", "TokenRow").replace("DSFeedRow(name: x)", "// DSFeedRow(name: x)\n HStack"), True),
     ]
     for label, src, should_fail in cases:
-        name = "BandRow" if "BandRow" in src or "Other" in src else "TokenRow"
+        name = "BandRow" if "BandRow" in src else ("TokenRow" if "TokenRow" in src else "BandRow")
         failed = bool(check(src, only=name))
         if failed != should_fail:
             print(f"  ✗ self-test: {label}"); sys.exit(1)
@@ -378,7 +380,7 @@ if __name__ == "__main__":
         sys.exit(1)
     rolls = sum(s.count("numericText") for _, s in files)
     print(f"✓ feed row skeleton: {len(FEED_ROWS) + 1} row species compose DSFeedRow, "
-          f"{len(KNOWN_NO_TIME)} trailing something other than a time with a reason; "
+          f"{len(KNOWN_TIME)} keeping an age with a reason; "
           f"{rolls} rolling figures, all tabular; "
           f"{len(MONEY_ROWS)} money rows at one rung, "
           f"{len(KNOWN_NO_AMOUNT)} stating no amount with a reason")

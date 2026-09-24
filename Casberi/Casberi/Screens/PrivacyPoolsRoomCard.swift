@@ -274,7 +274,7 @@ struct PrivacyPoolsRoomCard: View {
                 DSHaptic.selection()
                 onOpen(row.slice)
             } label: {
-                DSFeedRow(name: PrivacyPoolsRoom.name(row.slice), nameLines: 1,
+                DSFeedRow(name: PrivacyPoolsRoom.name(row.slice),
                           lead: {
                               Circle()
                                   .fill(fill(row.slice))

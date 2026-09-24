@@ -94,7 +94,7 @@ struct PrivyAppHead: View {
                         .foregroundStyle(DS.textPrimary)
                         .padding(.bottom, DS.Space.s1)
                     ForEach(moved) { line in
-                        DSFeedRow(name: line.title, nameLines: 1,
+                        DSFeedRow(name: line.title,
                                   line: Text(line.when, format: .dateTime.month(.abbreviated).day().year())) {
                             DSGlyphLead(glyph: line.received ? "arrow.down" : "arrow.up",
                                         tint: line.received ? DS.confirm : DS.textPrimary)

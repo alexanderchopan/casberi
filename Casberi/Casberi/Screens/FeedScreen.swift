@@ -7991,43 +7991,16 @@ struct FeedScreen: View {
                 // "one", under a header already carrying the date.
                 // THE CLAUSE RIDES THE NAME'S BASELINE when it fits (prd §767),
                 // the shape a room's divider already had with its count.
+                // THE DAY ALONE (prd §902 — user: "ok re Today heading no
+                // numbers"). The divider carried §379's subject line, §385's
+                // whisper sentence and §389's "Last here …"; a header that
+                // reads a wallet figure or a count is a datum standing where
+                // a name belongs. The whisper keeps its capsule and the
+                // Since-you-left group keeps its name.
                 FeedDayDivider(label: label,
                                weight: coarse.contains(label) ? .semibold : .bold,
                                dated: label != Self.momentLabel) {
-                    // What the group was mostly about (prd §379) — coarse
-                    // groups only, and only when a term actually recurs, so
-                    // the recent days keep their bare date and nothing is
-                    // invented for a month with no topic terms in it.
-                    // Today's own line (prd §385) — the §379 subject line's
-                    // shape, on the one day it never covers (Today is never
-                    // coarse, so at most one of these two renders). The
-                    // whisper capsule shows this same sentence once a day and
-                    // then clears; this is its standing home, on the divider
-                    // the day already owns.
-                    //
-                    // Under a moment split (prd §389) the sentence follows the
-                    // TOP group, which is then "Since you left" and the day's
-                    // remainder is "Earlier today" — without this the whisper
-                    // would simply vanish on exactly the opens the split fires
-                    // on. Deliberately not "the first group": open the app
-                    // after a quiet week and that is a Saturday from August,
-                    // and today's sentence does not belong on it.
-                    if label == (split.moment ? Self.momentLabel : String(localized: "Today")),
-                       let whisper = dayLine {
-                        whisper.detailText(scheme: colorScheme)
-                            .dsText(.subhead12)
-                            .lineLimit(1)
-                    } else if label == Self.momentLabel {
-                        // No count here, by §218's own ruling on this header —
-                        // and the fact worth carrying is not how many landed
-                        // but when you were last here, which is what makes
-                        // "since you left" a measurable claim rather than a
-                        // mood.
-                        Text(String(localized: "Last here \(sinceLabel)"))
-                            .dsText(.subhead12)
-                            .foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
+                    EmptyView()
                 }
                 .textCase(nil)
                 .padding(.leading, DS.Space.s4 + DS.Space.s3)
@@ -10424,7 +10397,6 @@ struct FeedScreen: View {
                 // not `WalletRow`'s 36, so this room's column matches every other.
                 DSFeedRow(name: CardPointers.merchant(title: thing.title,
                                                       card: thing.authorHandle),
-                          nameLines: 1,
                           // Their words for what the offer gives, never a
                           // number we made (§420's no-total refusal, on the row
                           // this time).
@@ -10555,12 +10527,11 @@ struct FeedScreen: View {
                 } else if thing.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) == true {
                     // An app wallet (prd §803e): its own logo, when it was last
                     // used, and what it holds — in the room and in All alike.
-                    PrivyAppRow(thing: thing, sourceBadge: shape == .all || Pinboard.isPinnedRoom(source))
+                    PrivyAppRow(thing: thing)
                 } else if thing.sourceRef?.hasPrefix(PrivyHomeFeed.txPrefix) == true {
                     // What moved in an app wallet (prd §803f): the wallet
                     // room's money column, under the app's own logo.
-                    BandRow(thing: thing, moneyColumn: true,
-                            sourceBadge: shape == .all || Pinboard.isPinnedRoom(source))
+                    BandRow(thing: thing, moneyColumn: true)
                 } else {
                     // The source badge (2026-08-09): a CROSS-SOURCE room asks
                     // for it, a single-source room doesn't — there the room
@@ -10587,8 +10558,7 @@ struct FeedScreen: View {
                             emphasized: thing.id == nextEventID,
                             live: isLive(thing),
                             imageOnly: imageOnly,
-                            wideArt: wideArt,
-                            sourceBadge: shape == .all || Pinboard.isPinnedRoom(source))
+                            wideArt: wideArt)
                 }
             }
         }

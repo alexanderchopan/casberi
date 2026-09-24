@@ -35,11 +35,11 @@ struct CursorRow: View {
         // ONE ANATOMY (prd §744): it had no lead, and its outcome word sat
         // BEFORE the title. The outcome and the pull request are one quiet
         // line under the report.
-        DSFeedRow(name: CursorFetch.displayTitle(thing.title), nameLines: 3,
+        DSFeedRow(name: CursorFetch.displayTitle(thing.title),
                   line: DSFeed.line(report), lineLines: 6) {
             BridgeIcon(name: thing.source, size: DS.Mark.row)
         } trailing: {
-            LiveTimeText(date: thing.capturedAt)
+            EmptyView()
         } below: {
             if let quiet = quietLine {
                 quiet

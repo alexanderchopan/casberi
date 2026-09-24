@@ -178,7 +178,7 @@ struct CloudflareRunwayCard: View {
         } label: {
             // The feed row's anatomy (prd §763) — `DeadlineRow`'s slots, with
             // this room's own meta line under the name.
-            DSFeedRow(name: item.name, nameLines: 1, emphasized: true,
+            DSFeedRow(name: item.name, emphasized: true,
                       lead: { DSGlyphLead(glyph: "clock") },
                       trailing: {
                           Text(CloudflareRunway.value(days: item.days))

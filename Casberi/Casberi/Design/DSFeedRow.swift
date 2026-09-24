@@ -14,7 +14,7 @@ import SwiftUI
 /// ANATOMY, top to bottom, and nothing else:
 ///
 ///     lead      26pt (`DS.Mark.row`): a source mark, or a person's face
-///     name      17pt primary, up to `nameLines` · trailing slot on its baseline
+///     name      17pt primary, ONE line (prd §902) · trailing slot on its baseline
 ///     line      12pt secondary — who, where, the count, the excerpt
 ///     below     tiles at 44pt (`DS.Mark.tile`), a post's words and media,
 ///               a reading's bars — anything that is the row's CONTENT
@@ -35,9 +35,6 @@ import SwiftUI
 /// first-frame stack overflow in CLAUDE.md was paid three times by depth.
 struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     let name: String
-    /// A title worth reading gets two; a label (a person, a token, a source)
-    /// gets one.
-    var nameLines: Int = 2
     /// The next event on a calendar room — the one place weight carries a fact.
     var emphasized = false
     /// A done reminder: tertiary and struck, as `BandRow` drew it.
@@ -49,61 +46,61 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     /// one of into a one-word column — `WalletRow.subtitleText`'s lesson (§588).
     var line: Text? = nil
     var lineLines = 1
-    /// A clause pinned to the line's trailing edge that never truncates — a
-    /// fold's "+13 more" (prd §896). The line gives way before it does, so the
-    /// count survives a long title. Nil for every row that is one thing.
-    var lineTail: Text? = nil
     @ViewBuilder var lead: Lead
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var below: Below
 
     static var leadSize: CGFloat { DS.Mark.row }
 
+    /// THE HEAD EVERY ROW SHARES (prd §902, 2026-09-23 — user: "ok make the
+    /// change in terms of height"). A 52pt block the lead is CENTRED in: the
+    /// title on one line, the line on one line, and the same height whether
+    /// the row has a line or not, so the marks form a column and a scan down
+    /// All meets one rhythm instead of rows of 44, 60 and 82. With the list's
+    /// `FeedScreen.rowAir` either side the pitch is 60. It is a MINIMUM: a
+    /// row whose line runs to several lines (an excerpt, a report) grows,
+    /// like a row whose content rides below. A post's words and picture, a
+    /// music row's tiles, a fold's art — all of that is `below`, under the
+    /// head and untouched.
+    static var headHeight: CGFloat { 52 }
+
     var body: some View {
-        HStack(alignment: .top, spacing: DS.Space.s3) {
-            lead
-                .frame(width: Self.leadSize, height: Self.leadSize)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(name)
-                        .dsText(.body17)
-                        .fontWeight(emphasized ? .medium : .regular)
-                        .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
-                        .strikethrough(done, color: DS.textTertiary)
-                        .lineLimit(nameLines)
-                        .contentTransition(.opacity)
-                        .animation(DS.Motion.standard.delay(Double(ripple % 8) * 0.045),
-                                   value: name)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    trailing
-                }
-                // The tail's HStack is built only for a row that has one, so
-                // every single-thing row keeps the flat tree it had.
-                if let lineTail {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: DS.Space.s3) {
+                lead
+                    .frame(width: Self.leadSize, height: Self.leadSize)
+                VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        if let line {
-                            styledLine(line)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            // A fold names its newest member in the NAME
-                            // (prd §900), so its line is the count alone and
-                            // it stands under the time, in the trailing column.
-                            Spacer(minLength: 0)
-                        }
-                        lineTail
-                            .dsText(.subhead12)
-                            .monospacedDigit()
-                            .foregroundStyle(DS.textTertiary)
+                        // ONE LINE, always (prd §902 — user: "don't wrap
+                        // them"). A title that runs on is cut at its tail;
+                        // the line beneath says who and where, and the sheet
+                        // has the rest.
+                        Text(name)
+                            .dsText(.body17)
+                            .fontWeight(emphasized ? .medium : .regular)
+                            .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
+                            .strikethrough(done, color: DS.textTertiary)
                             .lineLimit(1)
-                            .fixedSize()
+                            .contentTransition(.opacity)
+                            .animation(DS.Motion.standard.delay(Double(ripple % 8) * 0.045),
+                                       value: name)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        // ONE fact, or none (prd §902): money, a clock still
+                        // ahead of you, or Live. A row's age went — the day
+                        // header already says when — and so did a fold's
+                        // count, which `DSFoldLead`'s second plate already
+                        // says without a word.
+                        trailing
                     }
-                } else if let line {
-                    styledLine(line)
+                    if let line {
+                        styledLine(line)
+                    }
                 }
-                below
             }
+            .frame(minHeight: Self.headHeight)
+            below
+                .padding(.leading, Self.leadSize + DS.Space.s3)
         }
-        .padding(.vertical, DS.Space.s2)
     }
 
     private func styledLine(_ line: Text) -> some View {
@@ -154,22 +151,15 @@ enum DSFeed {
         guard !kept.isEmpty else { return nil }
         return Text(kept.joined(separator: " · "))
     }
-
-    /// A fold's line tail — the members its line does not name (prd §896).
-    /// One word for every kind: the line's own title already says what they
-    /// are.
-    static func more(_ others: Int) -> Text {
-        Text("+\(others) more")
-    }
 }
 
 extension DSFeedRow where Below == EmptyView {
-    init(name: String, nameLines: Int = 2, emphasized: Bool = false,
+    init(name: String, emphasized: Bool = false,
          done: Bool = false, ripple: Int = 0,
          line: Text? = nil, lineLines: Int = 1,
          @ViewBuilder lead: () -> Lead,
          @ViewBuilder trailing: () -> Trailing) {
-        self.init(name: name, nameLines: nameLines, emphasized: emphasized,
+        self.init(name: name, emphasized: emphasized,
                   done: done, ripple: ripple, line: line, lineLines: lineLines,
                   lead: lead, trailing: trailing, below: { EmptyView() })
     }
@@ -180,8 +170,8 @@ extension DSFeedRow where Below == EmptyView {
 /// titling itself with the source's name and demoting its newest thing to the
 /// line, so the column read "Gmail" where every other row read a thing. The
 /// name is the newest member now, like any row, and the lead carries the one
-/// fact that is left: more than one of these. No word, no count badge — the
-/// count is the line's tail.
+/// fact that is left: more than one of these. No word, no count badge, and
+/// since prd §902 no count anywhere: this plate is the whole statement.
 struct DSFoldLead: View {
     let source: String
     @Environment(\.colorScheme) private var scheme

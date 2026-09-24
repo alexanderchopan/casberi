@@ -25,7 +25,7 @@ struct L2beatChainRow: View {
 
 		// ONE ANATOMY (prd §744): the 38pt mark is the 26pt lead, the stage
 		// takes the trailing slot, the risks and the summary are the content.
-		DSFeedRow(name: project?.name ?? thing.title, nameLines: 1,
+		DSFeedRow(name: project?.name ?? thing.title,
 				  line: Text(subtitle(project))) {
 			L2beatMark(name: project?.name ?? thing.title, chainID: chainID, size: DS.Mark.row)
 		} trailing: {
@@ -104,7 +104,7 @@ struct L2beatNewsRow: View {
 		let tags = thing.tags.filter { $0 != L2beatNewsParse.incidentTag }
 
 		// ONE ANATOMY (prd §744): as `WalletbeatNewsRow`.
-		DSFeedRow(name: thing.title, nameLines: 3,
+		DSFeedRow(name: thing.title,
 				  line: DSFeed.line(thing.summary), lineLines: 3) {
 			ZStack(alignment: .bottomTrailing) {
 				if let project {
@@ -129,7 +129,7 @@ struct L2beatNewsRow: View {
 			}
 			.accessibilityHidden(true)
 		} trailing: {
-			LiveTimeText(date: thing.capturedAt)
+			EmptyView()
 		} below: {
 			if mine || isIncident || !tags.isEmpty {
 				HStack(spacing: DS.Space.s2) {

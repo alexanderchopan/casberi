@@ -469,7 +469,7 @@ extension DSRoomChassis {
                 DSHaptic.selection()
                 action()
             } label: {
-                DSFeedRow(name: title, nameLines: 1,
+                DSFeedRow(name: title,
                           line: detail.map { Text(verbatim: $0) },
                           lead: { DSGlyphLead(glyph: glyph) },
                           trailing: {
@@ -515,7 +515,7 @@ extension DSRoomChassis {
                 // The feed row's anatomy (prd §763): a clock on the lead disc,
                 // the name, the days in the trailing slot, the stamp and the
                 // kind under it.
-                DSFeedRow(name: name, nameLines: 1,
+                DSFeedRow(name: name,
                           lead: { DSGlyphLead(glyph: "clock") },
                           trailing: {
                               Text(verbatim: value)
@@ -582,7 +582,7 @@ extension DSRoomChassis {
         /// varies what it puts in the slots, never the slots (§744); the flag
         /// is the one word that outranks the rating, and it is still said.
         var body: some View {
-            DSFeedRow(name: name, nameLines: 1,
+            DSFeedRow(name: name,
                       line: Text(verbatim: line), lineLines: 2,
                       lead: { mark },
                       trailing: {

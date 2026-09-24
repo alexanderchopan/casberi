@@ -27,7 +27,7 @@ struct WalletbeatWalletRow: View {
 
 		// ONE ANATOMY (prd §744): the 38pt mark is the 26pt lead, the stage
 		// takes the trailing slot, the bars and the summary are the content.
-		DSFeedRow(name: card?.name ?? thing.title, nameLines: 1,
+		DSFeedRow(name: card?.name ?? thing.title,
 				  line: Text(WalletbeatCopy.coverage(counts))) {
 			WalletbeatMark(name: card?.name ?? thing.title, walletID: walletID, size: DS.Mark.row)
 		} trailing: {
@@ -101,7 +101,7 @@ struct WalletbeatNewsRow: View {
 		let tags = thing.tags.filter { $0 != WalletbeatNewsParse.openTag }
 		// ONE ANATOMY (prd §744): the 38pt mark is the 26pt lead, its status
 		// dot scaled with it; the words that were a third row stay one.
-		DSFeedRow(name: thing.title, nameLines: 3,
+		DSFeedRow(name: thing.title,
 				  line: DSFeed.line(thing.summary), lineLines: 3) {
 			ZStack(alignment: .bottomTrailing) {
 				if let wallet {
@@ -124,7 +124,7 @@ struct WalletbeatNewsRow: View {
 			}
 			.accessibilityHidden(true)
 		} trailing: {
-			LiveTimeText(date: thing.capturedAt)
+			EmptyView()
 		} below: {
 			if mine || open || !tags.isEmpty {
 				HStack(spacing: DS.Space.s2) {

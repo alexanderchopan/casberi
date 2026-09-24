@@ -110,7 +110,7 @@ struct AltanaRoomCard: View {
             // The feed row's anatomy (prd §763): the seat mark on the 26pt
             // lead, the key's title as the name, the faces and the countdown
             // in the trailing slot, the detail as the line, the bar below.
-            DSFeedRow(name: row.title, nameLines: 1,
+            DSFeedRow(name: row.title,
                       line: row.detail.map { Text($0) },
                       lead: { seatMark(row) },
                       trailing: {

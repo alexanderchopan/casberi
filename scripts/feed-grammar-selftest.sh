@@ -136,9 +136,12 @@ guards() {
   grep -q -- 'DSFoldLead(source: source)' <<< "$bundle" \
     || echo "BundleRow no longer leads with the fold's stacked mark"
 
-  # Blue is for what you tap.
-  grep -q -- 'return isAlarm ? DS.destructive : DS.textPrimary' <<< "$R" \
-    || echo "a new row's time is no longer primary ink (the tint is for taps)"
+  # Blue is for what you tap. The age itself left the row in prd §902; the one
+  # that stays is an alarm-class arrival's, in the state's red.
+  grep -q -- 'LiveTimeText(date: thing.capturedAt, color: DS.destructive)' <<< "$R" \
+    || echo "an alarm-class arrival no longer keeps its age in red (prd §902)"
+  grep -q -- 'timeInk(' <<< "$R" \
+    && echo "a time ink ladder is back — the age left every ordinary row in prd §902"
   grep -q -- 'Text(countdown).dsText(.label12).foregroundStyle(DS.tint)' <<< "$R" \
     && echo "the countdown wears the tint again"
   grep -qE -- 'labelHue|legibleInk\(for: thing\.source\) \?\? DS\.textSecondary' <<< "$R" \
@@ -165,9 +168,18 @@ guards() {
   grep -q -- 'top: DS.Space.s2' <<< "$folds" \
     && echo "a fold row sits in the old s2 inset"
 
-  # A tail with no line stands in the trailing column.
-  grep -q -- 'Spacer(minLength: 0)' <<< "$T" \
-    || echo "DSFeedRow's line tail no longer yields to the trailing edge when there is no line"
+  # The head every row shares (prd §902): a minimum height the lead is
+  # centred in, the title on one line, and no count tail anywhere.
+  grep -q -- '.frame(minHeight: Self.headHeight)' <<< "$T" \
+    || echo "DSFeedRow's head is no longer a fixed-minimum block (prd §902)"
+  grep -q -- 'HStack(alignment: .center, spacing: DS.Space.s3)' <<< "$T" \
+    || echo "DSFeedRow's lead is no longer centred in the head (prd §902)"
+  grep -q -- '.lineLimit(1)' <<< "$T" \
+    || echo "DSFeedRow's title wraps again (prd §902: one line)"
+  grep -q -- 'lineTail' <<< "$T" \
+    && echo "a line tail is back on DSFeedRow — a fold's count left in prd §902"
+  grep -q -- 'DSFeed.more' <<< "$R" \
+    && echo "a fold counts its members again (prd §902)"
 
   # The demo's stream is not poured live.
   grep -q -- 'TwitchIngest.seedDemo(\[\])' <<< "$D" \
@@ -201,10 +213,18 @@ mutate() {  # label, file-var, perl expression
   fi
   echo "  ✓ caught: $label"
 }
-mutate "new time back in the tint" rows \
-  's/return isAlarm \? DS\.destructive : DS\.textPrimary/return isAlarm ? DS.destructive : DS.tint/'
+mutate "the alarm's age back in the tint" rows \
+  's/LiveTimeText\(date: thing\.capturedAt, color: DS\.destructive\)/LiveTimeText(date: thing.capturedAt, color: DS.tint)/'
 mutate "a fold draws its newest figure" rows \
-  's/(struct BundleRow.*?LiveTimeText\(date: newest\))/$1\n            Text("\$1").dsText(.price17)/s'
+  's/(struct BundleRow.*?\} trailing: \{\n\s*)EmptyView\(\)/$1Text("\$1").dsText(.price17)/s'
+mutate "a fold counts its members again (prd §902)" rows \
+  's/(struct StripRow.*?\} trailing: \{\n\s*)EmptyView\(\)/$1DSFeed.more(count - 1)/s'
+mutate "the title wraps again (prd §902)" template \
+  's/\.lineLimit\(1\)\n(\s*\.contentTransition\(\.opacity\))/.lineLimit(2)\n$1/'
+mutate "the head lost its floor (prd §902)" template \
+  's/\.frame\(minHeight: Self\.headHeight\)\n//'
+mutate "the lead back at the top of the head (prd §902)" template \
+  's/HStack\(alignment: \.center, spacing: DS\.Space\.s3\)/HStack(alignment: .top, spacing: DS.Space.s3)/'
 mutate "a fold names itself by its source again" rows \
   's/(struct StripRow.*?)DSFeedRow\(name: FoldName\.of\(lead, source: source\)/$1DSFeedRow(name: source/s'
 mutate "title money ungated" rows \
@@ -216,4 +236,4 @@ mutate "rows doubled again" feed \
 mutate "the demo stream live again" demo \
   's/TwitchIngest\.seedDemo\(\[\]\)/TwitchIngest.seedDemo(["demo:twitch:0"])/'
 
-echo "✓ feed grammar holds (prd §900)"
+echo "✓ feed grammar holds (prd §900, §902)"

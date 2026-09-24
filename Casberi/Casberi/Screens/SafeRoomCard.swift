@@ -124,7 +124,7 @@ struct SafeRoomCard: View {
             // 26pt lead, the subject as the name (two lines and then it wraps
             // — never a fixed width, which is what the caption box was and
             // what clipped), the state line under it.
-            DSFeedRow(name: SafeRoom.subject(entry), nameLines: 2,
+            DSFeedRow(name: SafeRoom.subject(entry),
                       lead: {
                           SafeSignatureDisc(have: entry.have, required: entry.required,
                                             size: DS.Mark.row)
