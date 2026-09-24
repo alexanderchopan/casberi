@@ -5552,16 +5552,6 @@ struct FeedScreen: View {
             } else {
                 populatedRoom(visible)
             }
-        } else {
-            // A LIVE-CONTENT ROOM WHOSE HEAD IS NIL (prd §911) — Hegotá with
-            // nothing watched, Frames the same. Every arm above declined, and
-            // the chain used to fall through here and draw NOTHING: the black
-            // screen each of those arms' notes describes. The corpus-shaped
-            // empty state is the honest floor.
-            Group { emptyState }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets())
         }
     }
 
@@ -7171,21 +7161,13 @@ struct FeedScreen: View {
                                 boundary: boundaryThingID(in: days))
             }
         case .calendar:
-            calendarSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+            calendarSections(visible, nextEventID: nextEventID)
         case .gmail:
-            // The newest mail is the cover, and what is waiting on you stands
-            // under it (prd §911): the waiting section is a list section, and a
-            // room that led with it — or with nothing — was the one Life room
-            // with no lead. The cover is drawn by hand so the waiting section
-            // can stand between it and the days.
-            let days = chronoGroups(visible)
-            let mailCoverID = heroShown ? nil : ledeThingID(in: days)
-            if let mailCover = coverThing(mailCoverID, in: visible) { Section { ledeListRow(mailCover) } }
             if !heroShown { waitingSection(visible, nextEventID: nextEventID) }
-            groupedSections(liftingCover(days, id: mailCoverID), nextEventID: nextEventID,
-                            boundary: boundaryThingID(in: days))
+            let days = chronoGroups(visible)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .reminders:
-            reminderSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+            reminderSections(visible, nextEventID: nextEventID)
         case .music:
             // Sessions, not days (2026-07-21) — a listening sitting is music's
             // real unit; boundary rides the same capturedAt-keyed helper.
@@ -7303,11 +7285,7 @@ struct FeedScreen: View {
         case .bitrefill:
             bitrefillLedeSection(visible)
             let days = chronoGroups(visible)
-            // Disconnected, or no balance known yet: the newest order is the
-            // cover instead (prd §911), so the room never opens on a row.
-            let ledeStands = TokenBridge.bitrefill.connected && BitrefillBalance.formatted != nil
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
-                            cover: heroShown || ledeStands ? nil : ledeThingID(in: days))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         default:
             if Pinboard.isPinnedRoom(source) {
                 // ONE group, in the `@Query`'s own order — which is pin order,
@@ -7318,11 +7296,7 @@ struct FeedScreen: View {
                 // header, below things you pinned weeks ago. That is exactly
                 // the failure `Thing.pinnedAt` is a DATE rather than a Bool to
                 // avoid, and it would arrive by the back door.
-                // The newest pin is the cover (prd §911), lifted out of the
-                // one group so it draws once.
-                let pinCoverID = ledeThingID(in: [(Pinboard.room, visible)])
-                if let pinCover = coverThing(pinCoverID, in: visible) { Section { ledeListRow(pinCover) } }
-                daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false, cover: pinCoverID)
+                daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false)
             } else if filter.tag != "All" && shape == .all {
                 daySection(filterLabel, visible, nextEventID: nextEventID, dated: false)
             } else if shape == .all {
@@ -7597,65 +7571,13 @@ struct FeedScreen: View {
                 }
             }
         } else {
-            let rest = liftingCover(days, id: coverID)
+            let rest: [(String, [Thing])] = coverID.map { id in
+                days.map { label, rows in
+                    (label, rows.filter { (thing: Thing) -> Bool in !(thing.isLive && thing.id == id) })
+                }
+                .filter { !$0.1.isEmpty }
+            } ?? days
             groupedSections(rest, nextEventID: nextEventID, boundary: boundaryThingID(in: rest))
-        }
-    }
-
-    /// The live thing behind a cover id, against this render's rows — liveness
-    /// inside the filter, before any stored read (corollary 3).
-    private func coverThing(_ id: UUID?, in visible: [Thing]) -> Thing? {
-        id.flatMap { id in
-            visible.first(where: { (thing: Thing) -> Bool in thing.isLive && thing.id == id })
-        }
-    }
-
-    /// The groups with the covered thing lifted out, so it draws once (prd
-    /// §763) — for a room that draws its cover by hand because something
-    /// (tiles, a waiting section) must stand between the cover and the days.
-    private func liftingCover(_ groups: [(String, [Thing])], id: UUID?) -> [(String, [Thing])] {
-        guard let id else { return groups }
-        return groups.map { label, rows in
-            (label, rows.filter { (thing: Thing) -> Bool in !(thing.isLive && thing.id == id) })
-        }
-        .filter { !$0.1.isEmpty }
-    }
-
-    /// THE STANDALONE LEAD, WHERE NO HEAD IS DRAWN (prd §815, §862, §911): the
-    /// cover when there is one, the room's own empty state when the tiles
-    /// stand over nothing, then the tiles. One drawing for the kind-tile
-    /// rooms, Cursor's repositories, and Walletbeat's and L2BEAT's standing
-    /// reports — which used to lose their tiles with their head (§911).
-    ///
-    /// THE LEAD SLOT is held wherever the tiles stand (§862): without it the
-    /// tiles sat at the top of the screen — §752's one outright ban — on any
-    /// room emptied by its own pick.
-    @ViewBuilder
-    private func standaloneLead(cover: Thing?, tiles: DSScopeTiles<RoomKindTile>?,
-                                listEmpty: Bool) -> some View {
-        let leadHeld = cover != nil || (tiles != nil && listEmpty)
-        if let cover {
-            Section {
-                ledeListRow(cover,
-                            top: tiles == nil ? DS.Space.s2 : 0,
-                            bottom: tiles == nil ? DSRoomChassis.leadGap : DSRoomChassis.contentGap)
-            }
-        } else if tiles != nil, listEmpty {
-            Section {
-                emptyLeadRow(headline: DSProse.text("Nothing here yet."),
-                             words: Text(roomKindPick.summary))
-            }
-        }
-        if let tiles {
-            Section {
-                tiles
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: leadHeld ? 0 : DS.Space.s2,
-                                              leading: DSRoomChassis.inset,
-                                              bottom: DSRoomChassis.leadGap,
-                                              trailing: DSRoomChassis.inset))
-            }
         }
     }
 
@@ -7701,14 +7623,11 @@ struct FeedScreen: View {
 
     /// Tokens' lede: the watchlist's 24h at a glance — from the SAME cached
     /// pulses the rows wear, so the summary can never disagree with the rows.
-    /// One watched token is enough since prd §911: it used to take two ("one
-    /// token's row already says everything"), which left the room with no
-    /// lead at all — a token pulse declines the cover — and every room's lead
-    /// is the box (§906). Flat stays flat: "1 up" is said only of a rise.
+    /// Two watched tokens minimum: one token's row already says everything.
     @ViewBuilder
     private func watchlistLedeSection(_ visible: [Thing]) -> some View {
         let pulses = visible.compactMap { TokenPulse.shared.pulse(for: $0) }
-        if pulses.count >= 1 {
+        if pulses.count >= 2 {
             // Flat (exactly 0) is neither up nor down — "2 up" for two
             // stablecoins would claim a gain that didn't happen (honesty).
             ledeSection(WatchlistLede(
@@ -9916,27 +9835,11 @@ struct FeedScreen: View {
     /// whichever way it's pointing, so expanding doesn't move the control out
     /// from under the finger that tapped it.
     @ViewBuilder
-    private func calendarSections(_ visible: [Thing], nextEventID: UUID?,
-                                  heroShown: Bool) -> some View {
+    private func calendarSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let split = agendaSplit(visible)
         let pastCount = split.past.reduce(0) { $0 + $1.1.count }
-        // THE NEXT EVENT IS THE COVER (prd §911) — §908 drew it a date tile and
-        // this shape had no cover path, so the room opened on a row. The
-        // agenda is soonest-first, so the first row of the first day is what
-        // is next; nothing ahead holds the lead as the room's empty state,
-        // because the visible agenda IS empty and the past sits behind a door.
-        groupedSections(split.upcoming, nextEventID: nextEventID,
-                        cover: heroShown ? nil : ledeThingID(in: split.upcoming))
-        if split.upcoming.isEmpty {
-            if heroShown {
-                nothingAheadSection
-            } else {
-                Section {
-                    emptyLeadRow(headline: DSProse.text("Nothing coming up."),
-                                 words: Text("Past events sit one tap below."))
-                }
-            }
-        }
+        groupedSections(split.upcoming, nextEventID: nextEventID)
+        if split.upcoming.isEmpty { nothingAheadSection }
         if pastCount > 0 {
             pastEventsToggle(count: pastCount)
             if pastEventsExpanded {
@@ -10045,17 +9948,9 @@ struct FeedScreen: View {
     /// Reminders: state groups — Doing, To do (stale todos collapse), Done
     /// (same-day only).
     @ViewBuilder
-    private func reminderSections(_ visible: [Thing], nextEventID: UUID?,
-                                  heroShown: Bool) -> some View {
-        // THE NEWEST OPEN REMINDER IS THE COVER (prd §911): what you are doing
-        // first, then what is to do — the room's own order — lifted out of its
-        // group so it draws once. Done rows never cover.
-        let open = visible.filter { $0.mark == .doing }
-            + visible.filter { $0.mark == .todo || $0.mark == .none }
-        let reminderCover = coverThing(heroShown ? nil : ledeThingID(in: [("", open)]), in: visible)
-        if let reminderCover { Section { ledeListRow(reminderCover) } }
-        let doing = visible.filter { $0.mark == .doing && $0.id != reminderCover?.id }
-        let todos = visible.filter { ($0.mark == .todo || $0.mark == .none) && $0.id != reminderCover?.id }
+    private func reminderSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
+        let doing = visible.filter { $0.mark == .doing }
+        let todos = visible.filter { $0.mark == .todo || $0.mark == .none }
         let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
         let fresh = todos.filter { $0.capturedAt > weekAgo }
         let stale = todos.filter { $0.capturedAt <= weekAgo }
