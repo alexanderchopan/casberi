@@ -2223,6 +2223,13 @@ harness "Transfer-times self-test" "transfer times self-test" "scripts/transfer-
 # Reduce Motion guard.
 harness "Feed-seam self-test" "feed seam self-test" "scripts/feed-seam-selftest.sh" "the feed-seam self-test failed — run scripts/feed-seam-selftest.sh"
 
+# One grammar down the feed's column (prd §900): a payment's money trails its
+# title and a fold never shows one, blue is only for what you tap, the older
+# door counts what it holds, and rows carry one padding. `MoneyClause` decides
+# what is money and a wrong split moves a word out of a title, so it is
+# compiled and driven over the titles the bridges actually land.
+harness "Feed-grammar self-test" "feed grammar self-test" "scripts/feed-grammar-selftest.sh" "the feed-grammar self-test failed — run scripts/feed-grammar-selftest.sh"
+
 # World App (prd §795). Every read answers with the same silence when wrong: a
 # mistyped selector reverts (this file's first draft had two), a vault balance
 # over 18.4 WLD overflows a UInt64 into nothing, an off-by-one grant month

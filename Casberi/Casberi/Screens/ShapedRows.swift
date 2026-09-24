@@ -491,49 +491,22 @@ struct BandRow: View {
            let range = thing.title.range(of: " \(amount)") {
             return thing.title.replacingCharacters(in: range, with: "")
         }
+        if let money = titleMoney { return money.title }
         return thing.title
     }
 
-    /// The trailing label's ink — the SOURCE's own brand hue, held to the text
-    /// ramp's contrast bar, falling back to the tertiary ramp when there is no
-    /// honest hue to show (2026-08-14, user ruling).
-    ///
-    /// THIS SLOT WAS COLORED BEFORE AND THE COLOR WAS PULLED ON 2026-07-30, so
-    /// read why this is not that. It ran through `ProjectHue`: a hash-picked
-    /// hue, from the days this slot held the person's own PROJECT TAG, where
-    /// the color was real identity ("Lisbon trip" wearing one hue everywhere).
-    /// That tag was dropped from the row on 2026-07-23 — but the coloring
-    /// wasn't, so the hash kept firing on whatever moved in behind it: "Liked",
-    /// "/design", "Mentions you", "BBC News", "★1.2k · Swift", "Cash App". A
-    /// stable color per arbitrary string is not identity, it's decoration with
-    /// a memory — exactly what §8's color law rules out ("identity, state, or
-    /// magnitude, never decoration").
-    ///
-    /// `DS.legibleInk` is the thing that ruling asked for rather than the thing
-    /// it removed: the hue is the SOURCE's own, so "Liked" on a Farcaster row
-    /// is Farcaster purple because the row is from Farcaster — identity, the
-    /// first item on the color law's own list, and the same treatment
-    /// `PostCard` already gives this exact label inside a social room ("color
-    /// lives in the tag, never in the card itself", 2026-07-27). It reaches the
-    /// All feed here, where a mixed river of sources is the case it helps most.
-    ///
-    /// The other half of that ruling was CONTRAST, and it is the reason the ink
-    /// is not simply `DS.washHue`: the old `ProjectHue` measured ~3.4:1 at
-    /// `label12`, under the 4.5:1 bar `DS.textTertiary` was raised to meet on
-    /// 2026-07-21, on the smallest text in the row. `legibleInk` moves each hue
-    /// until it clears that bar (7.0:1 under Increase Contrast) and returns nil
-    /// rather than show one that can't — so this slot cannot regress to the
-    /// measurement that took its color away.
-    ///
-    /// A source with no honest brand color (X's black, ChatGPT's white) and a
-    /// row on a vivid theme both land on `textTertiary`, unchanged — the tint
-    /// is never the only thing carrying the word, it is the word's own source
-    /// said twice.
-    /// Read ONCE per row at the call site, not through a `labelInk`/`labelIsTinted`
-    /// pair: a computed property caches nothing, so a second reader is a second
-    /// solve on the feed's hot path (the 2026-08-13 latency lesson — the source
-    /// rail resolving the same chips four to five times per body pass).
-    private var labelHue: Color? { DS.legibleInk(for: thing.source) }
+    /// A payment's figure, read out of its own title (prd §900): "Ada
+    /// Lovelace · $49.00" draws "Ada Lovelace" with $49.00 in the trailing
+    /// slot, where a transfer's amount already stands (§158, §764), so a
+    /// day's money reads as one column. Gated on the row having a stored
+    /// price, so a title that merely LOOKS like it ends in money is left
+    /// alone. No sign and no colour: the title says how much, and nothing on
+    /// the row says which way it moved (§83). A transfer keeps its own,
+    /// directional path above.
+    private var titleMoney: (title: String, amount: String)? {
+        guard moneyAmount == nil, thing.priceValue != nil else { return nil }
+        return MoneyClause.split(thing.title)
+    }
 
     private var countdown: String? {
         guard emphasized else { return nil }
@@ -631,17 +604,20 @@ struct BandRow: View {
         isNew && NotifySweep.classify(thing, now: .now)?.cls == .alarm
     }
 
-    /// The trailing time's ink: ordinary tertiary, `DS.tint` when new (the
-    /// same slot the next-event countdown already tints), `DS.destructive`
-    /// when the new arrival is also alarm-class — one more state in the row's
-    /// existing color-carries-state vocabulary, not a new visual language.
+    /// The trailing time's ink: ordinary tertiary, primary when new (the
+    /// weight goes medium with it, so a new row is DARKER and HEAVIER, never
+    /// blue — prd §900), `DS.destructive` when the new arrival is also
+    /// alarm-class, which is a state and keeps its colour.
     ///
     /// Takes both facts for `isAlarmClass`'s reason above: the weight, the
     /// animation and the spoken label all need them too, so reading them here
     /// made this the third of six reads rather than the first of one.
     private func timeInk(isNew: Bool, isAlarm: Bool) -> Color {
         guard isNew else { return DS.textTertiary }
-        return isAlarm ? DS.destructive : DS.tint
+        // New is WEIGHT and primary ink, never the tint (prd §900): blue is
+        // what you can tap, and a time is not a control. An alarm keeps its
+        // red — that is a state, not a hue for decoration.
+        return isAlarm ? DS.destructive : DS.textPrimary
     }
 
 
@@ -668,6 +644,7 @@ struct BandRow: View {
         // label reads both again. One read and one classify now.
         let isNew = newSinceLastSeen
         let isAlarm = isAlarmClass(isNew: isNew)
+        let titleFigure = titleMoney?.amount
         // ONE ANATOMY (prd §744). The title leads; the line says who and
         // where. `sourceBadge` still means "this room mixes sources" — what it
         // used to draw as a 17pt badge over the lead is now the line's first
@@ -696,11 +673,19 @@ struct BandRow: View {
                         .foregroundStyle(money.received && !thing.hasSecurityFlag("symbol")
                                          ? DS.confirm : DS.textPrimary)
                         .lineLimit(1)
+                } else if let figure = titleFigure {
+                    Text(figure)
+                        .dsText(.price17)
+                        .monospacedDigit()
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
                 }
                 if live {
                     DSFeedLive()
                 } else if let countdown {
-                    Text(countdown).dsText(.label12).foregroundStyle(DS.tint)
+                    // Primary ink at `label12`'s medium weight (prd §900):
+                    // blue is for what you can tap, and this is a clock.
+                    Text(countdown).dsText(.label12).foregroundStyle(DS.textPrimary)
                 } else {
                     LiveTimeText(date: thing.capturedAt,
                                  color: timeInk(isNew: isNew, isAlarm: isAlarm))
@@ -744,7 +729,9 @@ struct BandRow: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(ThingVoice.rowLabel(for: thing,
-                                                title: eventClock.map { "\(titleText), \($0)" } ?? titleText,
+                                                title: eventClock.map { "\(titleText), \($0)" }
+                                                    ?? titleFigure.map { "\(titleText), \($0)" }
+                                                    ?? titleText,
                                                 project: project, live: live,
                                                 countdown: countdown,
                                                 isNew: isNew,
@@ -787,11 +774,14 @@ struct BandRow: View {
     /// not name the network, so those rows keep the name.
     private func line(project: String?, leader: Leader) -> Text? {
         let named: String? = sourceBadge && leader != .glyph ? thing.source : nil
-        let hue = labelHue
+        // The project clause is told apart by WEIGHT, in the line's own ink
+        // (prd §900). It wore the source's brand hue (2026-08-14), and on one
+        // screen that made Telegram's blue a shade from the tint, so "Pavel
+        // Durov" read as a link inside a row that is one tap target. Colour
+        // that says where a row came from goes (§524); the lead already says
+        // it.
         let labelled: Text? = project.map { p in
-            Text(p)
-                .foregroundStyle(hue ?? DS.textSecondary)
-                .fontWeight(hue != nil ? .medium : .regular)
+            Text(p).fontWeight(.medium)
         }
         let parts = [eventClock.map { Text($0) }, named.map { Text($0) }, labelled]
             .compactMap { $0 }
@@ -1740,10 +1730,17 @@ struct BundleRow: View {
         // name. The line is the newest member with the rest counted on its
         // tail (prd §896), so a fold reads as the row its newest thing would
         // have been, plus how many came with it.
-        DSFeedRow(name: source, nameLines: 1,
-                  line: DSFeed.line(lead),
+        //
+        // THE NEWEST MEMBER IS THE NAME (prd §900). §896 put it on the line
+        // under the source's name, so the column still read "Gmail" where
+        // every row around it read a thing. The lead says it is a fold
+        // (`DSFoldLead`), the count stands under the time, and a money clause
+        // is stripped: a figure beside "+3 more" reads as the total of all
+        // four, and it is only the newest one's.
+        DSFeedRow(name: FoldName.of(lead, source: source),
+                  line: nil,
                   lineTail: DSFeed.more(count - 1)) {
-            BridgeIcon(name: source, size: DS.Mark.row)
+            DSFoldLead(source: source)
         } trailing: {
             LiveTimeText(date: newest)
         } below: {
@@ -1756,6 +1753,27 @@ struct BundleRow: View {
                 .accessibilityHidden(true)
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(FoldName.spoken(lead, source: source, count: count, newest: newest))
+    }
+}
+
+/// A fold's name and its spoken label (prd §900) — one spelling for
+/// `BundleRow` and `StripRow`.
+enum FoldName {
+    static func of(_ lead: String, source: String) -> String {
+        let name = MoneyClause.stripped(lead).trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? source : name
+    }
+
+    /// The source is SAID, because the lead that shows it is a picture.
+    static func spoken(_ lead: String, source: String, count: Int, newest: Date) -> String {
+        let name = of(lead, source: source)
+        let others = max(0, count - 1)
+        // A fold with no member title is named by its source; say it once.
+        let said = (name == source ? [source] : [source, name])
+            + [String(localized: "and \(others) more"), LiveTimeText.spoken(newest)]
+        return said.joined(separator: ", ")
     }
 }
 
@@ -1839,10 +1857,12 @@ struct StripRow: View {
         // ONE ANATOMY (prd §744): the time sits in the trailing slot and the
         // tiles under the name (§719); the line is the newest member, the
         // count its tail (prd §896).
-        DSFeedRow(name: source, nameLines: 1,
-                  line: DSFeed.line(lead),
+        // The newest member names the row and the lead says it is a fold
+        // (prd §900, `BundleRow`'s reasoning).
+        DSFeedRow(name: FoldName.of(lead, source: source),
+                  line: nil,
                   lineTail: DSFeed.more(count - 1)) {
-            BridgeIcon(name: source, size: DS.Mark.row)
+            DSFoldLead(source: source)
         } trailing: {
             LiveTimeText(date: newest)
         } below: {
@@ -1862,6 +1882,8 @@ struct StripRow: View {
             }
             .accessibilityHidden(true)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(FoldName.spoken(lead, source: source, count: count, newest: newest))
     }
 }
 

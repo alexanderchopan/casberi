@@ -216,7 +216,7 @@ enum DemoCorpus {
             Thing(kind: .reminder, title: "Gym — legs day",
                   source: "Reminders", capturedAt: ago(hours: 12), mark: .todo,
                   tags: ["Fitness"]),
-            Thing(kind: .voice, title: "Voice note: new PR on deadlift",
+            Thing(kind: .voice, title: "New PR on deadlift",
                   content: "Hit 140kg, felt clean.", source: "Voice",
                   capturedAt: ago(hours: 14), tags: ["Fitness"]),
 
@@ -270,7 +270,7 @@ enum DemoCorpus {
             Thing(kind: .link, title: "Article: on personal knowledge",
                   content: "https://example.com/pkm", source: "You",
                   capturedAt: ago(hours: 52), mark: .saved),
-            Thing(kind: .voice, title: "Voice note: idea for the weekend",
+            Thing(kind: .voice, title: "Idea for the weekend",
                   content: "Coastal drive, leave early.", source: "Voice",
                   capturedAt: ago(hours: 24)),
         ]

@@ -60913,3 +60913,101 @@ on the black page — did not outweigh the collision with the state colour.
 **The ruling.** `DS.brand` stays `#FF2D87`; nothing in this entry changes
 code. Do not re-propose an orange brand without a new reason that answers the
 attention-colour collision.
+
+## §900 — One grammar down the All feed's column: money on the right, blue only for taps, one padding, folds named by their newest thing (user: "design is pretty fantastic. think deeply tho and lmk how you would improve the All feed UI", then, off four phone boards, "ok re one gramma for title slot and money goes to right", "ok re blue", "ok re one padding", "agree", and "you can do the twitch stream ended or a totally different example", 2026-09-23)
+
+**The diagnosis.** Build 657's column made the reader evaluate every row: the
+title slot held a thing's name, a sentence, `Kind · detail` and `Person ·
+$49.00` on consecutive lines. §378 called that evaluation work what "not
+digestible" feels like. Nothing here adds a row, a card, a claim or a word;
+every change is grammar, ink or geometry — the only kind the feed has accepted
+since §254.
+
+**1. Money trails the title.** §764 already rules that money stands in
+`price17` in the trailing slot, but `BandRow` drew it only for a directional
+transfer, off `transferAmount`. A payment, sale or payout from Stripe, Polar or
+Dodo Payments titles itself "<who> · <amount>" and carries `priceValue`, so its
+figure rode the title at a different x on every line. `MoneyClause.split`
+(`Design/MoneyClause.swift`, Foundation only) finds that clause, and the row
+draws the title and the figure apart. It is deliberately narrow, because a
+wrong split moves a word out of a title: the clause is the LAST `" · "` or
+`" — "` part, it holds exactly one currency symbol around digits and
+separators, and something must stand before it. "$ETH", "€100 in bitcoin" and
+"$49.00 — evidence due Oct 2" stay whole. A single row does it only when it
+has a stored price.
+- **No sign and no colour on a title's figure.** The title says how much and
+  nothing on the row says which way it moved (§83). A transfer keeps its own
+  path: received in green with `+`, sent in primary ink with `−`. **Sent is
+  not red**: red is this row's alarm colour (a new arrival that needs you), and
+  spending is ordinary. The sign already says the direction, so the colour
+  would be the only thing red on most screens and would say nothing new.
+- **The spoken label keeps the figure** ("Ada Lovelace, $49.00").
+- **The demo's two voice notes lost "Voice note:"** — the lead already says it.
+  Real voice notes are titled by what was said, so this was demo-only.
+
+**2. A fold never shows money, and wears its newest thing as its name.**
+§896 put the newest member on the LINE under the source's name, so the column
+still read "Gmail" where every other row read a thing. The name is the newest
+member now (`FoldName.of`, money stripped), the count stands under the time as
+the line's tail, and the LEAD says it is a fold: the source's mark with a
+neutral plate behind it, up and to the right (`DSFoldLead`). A first cut put a
+second copy of the mark behind at 40%, and a white-plated mark (Gmail, ChatGPT)
+vanished into the light ground; the plate is tertiary ink, 35% in light and 60%
+in dark, where 35% measured as barely there. A figure beside "+3 more" reads
+as the total of all four and is only the newest one's, so `FoldName` strips it
+("Checking — $191.40" folds as "Checking"). VoiceOver hears the source, the
+name, "and N more" and the time, because the lead that shows the source is a
+picture. The tap still opens the source's room (§377, §896).
+
+**3. Blue is only for what you tap.** On one screen the tint meant a verb, a
+time that is new since you left, the next event's countdown, and — through the
+line's source hue (2026-08-14) — Telegram's blue on "Pavel Durov", a shade from
+the tint on a row that is one tap target. Now: a new row's time is primary ink
+at medium weight (an alarm keeps its red — a state, §8); the countdown is
+primary; the line's project clause is medium weight in the line's own ink.
+`BandRow.labelHue` is deleted with its only reader. Not changed: `PostCard`'s
+context label ("Liked", "/design") keeps its source hue inside a post, which
+§900 was not asked about.
+
+**4. One padding.** `DSFeedRow` pads itself s2, and every feed row also sat
+in an s2 list inset: 25pt of words in 40pt of air, a 65pt pitch, nine rows a
+screen. `FeedScreen.rowAir` is s1, so a row carries s3 a side: a 53pt pitch,
+eleven rows. The day divider keeps the big gap, so days still cluster — the
+2026-07-13 reason the inset went back to s2 was that EVERY gap was the same
+size, which is still not the case. A card that stands alone keeps s2, because
+it has no padding of its own. Rooms that draw through `shapedListRow` tighten
+too, on purpose: one row, one rhythm.
+
+**5. `Show older` is a row, and says what it holds.** It was the only centred
+element on a left-aligned screen, a 12pt word with no hint of how much was
+behind it. It is `DSPushRowLabel` now, on the rows' insets: a 26pt
+`arrow.down` lead, the verb where a title stands in the tint (the one row
+whose whole job is a tap), and "571 more" where a time stands. The count comes
+out of `windowed`, from the same walk as `more`, weighted so a fold counts as
+its members (`FeedScreen.things(in:)`); a room's section path counts rows,
+which is things there.
+
+**6. The demo's stream has ended.** It was poured live, and a live stream
+takes the All feed's cover slot by rule (§591b), so the most-seen screen in the
+app never showed the cover every real feed leads with, and led instead with
+its rarest head: an editor frame with a two-line title laid over it.
+`TwitchIngest.seedDemo([])` is still a write, so a device that poured the old
+demo is cleared on the next pour. The live hero itself is unchanged; its
+words-over-the-frame layout is §3 of the review and was marked N/A.
+
+**Not taken from the review.** The capsule's reserved top inset over
+`DemoLead` (~80pt of air on the demo) — changing it would move the content as
+the lead scrolls away. NerdWallet's bare mark — an asset, not a layout.
+
+**Guards.** `scripts/feed-grammar-selftest.sh` (wired in `verify.sh`):
+`MoneyClause` compiled whole and driven over 25 cases, the titles that must stay
+whole included; drift guards for every half above (both door sites, both fold
+rows, the price gate, the three inks, `rowAir`, the tail's spacer, the demo
+seed); seven mutations, each caught.
+
+**Seen on the simulator** (iPhone 17 Pro, iOS 27, demo re-poured, both
+themes): the cover leads the demo, "Ada Lovelace" and "Casberi Pro" with their
+figures on the right, "Pavel Durov" in grey medium, folds with the plate and
+"+2 more" under the time, "Show older" with "571 more". **Unseen:** a real
+account's Stripe or Polar day; AX5 type on a fold's trailing column; the Mac, where `rowAir` also
+applies.

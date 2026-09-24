@@ -5389,10 +5389,14 @@ enum DemoSeedAll {
     /// exactly what each reads — no request, no key, no network.
     @MainActor
     private static func seedBridgeState() {
-        // 0 · The live stream. `FeedScreen.isLive` reads
-        // `TwitchIngest.liveRefs`, so without this the Twitch room's hero
-        // card and float-to-top could never fire — see `TwitchIngest.seedDemo`.
-        TwitchIngest.seedDemo(["demo:twitch:0"])
+        // 0 · The stream has ENDED (prd §900). It was poured live, and a live
+        // stream takes the All feed's cover slot by rule (§591b), so the
+        // demo — the most-seen screen in the app — never showed the cover
+        // every real feed leads with, and led instead with its rarest head:
+        // a stream frame with words laid over it. An empty set is still a
+        // WRITE, so a device that poured the old demo has its live ref
+        // cleared on the next pour rather than kept.
+        TwitchIngest.seedDemo([])
 
         // 0b · Walletbeat's stored ratings (prd §419). Without these every seeded
         // wallet reads "not read yet" and the room head draws no bars at all — the

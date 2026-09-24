@@ -3396,6 +3396,16 @@ struct FeedScreen: View {
     /// keeps the diffing path off the model entirely; the model is only touched
     /// in the row body, which renders exclusively from the post-delete `@Query`
     /// snapshot that already excludes the deleted row.
+    /// How many things a feed row stands for — a fold its members, anything
+    /// else one (the `Show older` door's count, prd §900).
+    static func things(in row: FeedRow) -> Int {
+        switch row.kind {
+        case .single: 1
+        case .bundle(_, _, _, let count, _, _): count
+        case .strip(_, _, let count, _, _): count
+        }
+    }
+
     struct FeedRow: Identifiable {
         let id: String
         let date: Date
@@ -7812,7 +7822,7 @@ struct FeedScreen: View {
         let split = momentSplit(allGroups)
         // Windowed (prd §264). `boundary` and `lede` read the FULL set so
         // neither moves depending on whether the window is open.
-        let window = windowed(split.groups)
+        let window = windowed(split.groups, weight: Self.things(in:))
         let _ = { memo.windowHasMore = window.more }()
         let groups = window.shown
         // Suppressed under a moment split: the section header IS the boundary
@@ -8073,7 +8083,7 @@ struct FeedScreen: View {
                 if split.moment && momentWhole && label == Self.momentLabel { caughtUpSeam }
             }
         }
-        if window.more { olderRow }
+        if window.more { olderRow(hidden: window.hidden) }
         }
     }
 
@@ -8136,6 +8146,16 @@ struct FeedScreen: View {
     /// included — and colour reaches only text; it is also one modifier with
     /// no layout change, so nothing shifts as the boundary moves.
     private static let quietRow = 0.68
+
+    /// THE LIST'S SHARE OF A ROW'S AIR (prd §900). `DSFeedRow` pads itself by
+    /// s2 above and below, and every feed row ALSO sat in an s2 list inset, so
+    /// a one-line row was 25pt of words in 40pt of air: a 65pt pitch, nine
+    /// rows a screen. The list now adds s1, so a row carries s3 of air on each
+    /// side — one padding, a 53pt pitch, eleven rows. The day divider still
+    /// carries the big gap, so days keep clustering (the 2026-07-13 reason the
+    /// inset went back to s2 was that EVERY gap was the same size; that is
+    /// still not the case).
+    static let rowAir: CGFloat = DS.Space.s1
 
     /// Whether a row steps back on a skim — ambient, or already read.
     ///
@@ -8429,12 +8449,10 @@ struct FeedScreen: View {
             // bundle is the row most worth colouring: it stands for the whole
             // of that source's day.
             .listRowBackground(runBackground(position, bare: true, skin: skin))
-            // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
-            // every gap the same size, so days never clustered. Rows sit
-            // tight within their day; the day header carries the big gap.
-            .listRowInsets(.init(top: DS.Space.s2,
+            // Feed rhythm: `rowAir` (prd §900, see its doc).
+            .listRowInsets(.init(top: Self.rowAir,
                                  leading: DS.Space.s4 + DS.Space.s3,
-                                 bottom: DS.Space.s2,
+                                 bottom: Self.rowAir,
                                  trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
     }
@@ -8465,9 +8483,9 @@ struct FeedScreen: View {
             }
             .dsTapCard()
             .listRowBackground(runBackground(position, bare: true, skin: skin))
-            .listRowInsets(.init(top: DS.Space.s2,
+            .listRowInsets(.init(top: Self.rowAir,
                                  leading: DS.Space.s4 + DS.Space.s3,
-                                 bottom: DS.Space.s2,
+                                 bottom: Self.rowAir,
                                  trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
     }
@@ -8502,7 +8520,7 @@ struct FeedScreen: View {
                        replies: replies, coarse: coarse.contains(label),
                        dated: dated, cover: cover)
         }
-        if window.more { olderRow }
+        if window.more { olderRow(hidden: window.hidden) }
     }
 
     /// The cross-source Themes treemap (2026-07-18: moved off Home — "should
@@ -9973,9 +9991,9 @@ struct FeedScreen: View {
                         .onTapGesture { withAnimation(DS.Motion.standard) { staleExpanded = true } }
                         .dsTapCard()
                         .listRowBackground(Color.clear)   // bare, like every row (prd §749)
-                        .listRowInsets(.init(top: DS.Space.s2,
+                        .listRowInsets(.init(top: Self.rowAir,
                                              leading: DS.Space.s4 + DS.Space.s3,
-                                             bottom: DS.Space.s2,
+                                             bottom: Self.rowAir,
                                              trailing: DS.Space.s4 + DS.Space.s3))
                         .listRowSeparator(.hidden)
                     }
@@ -10264,12 +10282,11 @@ struct FeedScreen: View {
                                              selected: DS.isMac
                                                 && chrome.walkSelected == thing.id.uuidString,
                                              skin: skin))
-            // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
-            // every gap the same size, so days never clustered. Rows sit
-            // tight within their day; the day header carries the big gap.
-            .listRowInsets(.init(top: DS.Space.s2,
+            // Feed rhythm: `rowAir` (prd §900, see its doc). A card that
+            // stands alone keeps s2 — it has no padding of its own inside.
+            .listRowInsets(.init(top: standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
                                  leading: DS.Space.s4 + DS.Space.s3,
-                                 bottom: DS.Space.s2,
+                                 bottom: standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
                                  trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
             // A row is draggable OUT of the window on Mac (prd §631) — its
@@ -11297,23 +11314,36 @@ struct FeedScreen: View {
     /// truncated rather than allowed to unbound the room. Its header keeps
     /// stating the day's REAL total (`daySection` is handed the full day for
     /// counting), so the count stays true and "Show older" explains the gap.
-    private func windowed<T>(_ groups: [(String, [T])]) -> (shown: [(String, [T])], more: Bool) {
+    ///
+    /// `hidden` is how many THINGS the door holds back (prd §900), so it can
+    /// say so: `weight` counts a fold as its members, and everything else as
+    /// one. It is the total minus what is drawn, over the same groups, so it
+    /// cannot disagree with `more`.
+    private func windowed<T>(_ groups: [(String, [T])],
+                             weight: (T) -> Int = { _ in 1 })
+        -> (shown: [(String, [T])], more: Bool, hidden: Int) {
         var shown: [(String, [T])] = []
         var rows = 0
+        func result(_ more: Bool) -> (shown: [(String, [T])], more: Bool, hidden: Int) {
+            guard more else { return (shown, false, 0) }
+            let all = groups.reduce(0) { $0 + $1.1.reduce(0) { $0 + weight($1) } }
+            let drawn = shown.reduce(0) { $0 + $1.1.reduce(0) { $0 + weight($1) } }
+            return (shown, true, max(0, all - drawn))
+        }
         for group in groups {
             let remaining = windowRowBudget - rows
             if shown.isEmpty && group.1.count > windowRowBudget {
                 // One day bigger than the whole budget: take a screenful of it
                 // rather than the day, or this bounds nothing.
                 shown.append((group.0, Array(group.1.prefix(windowRowBudget))))
-                return (shown, true)
+                return result(true)
             }
-            if rows > 0 && group.1.count > remaining { return (shown, true) }
+            if rows > 0 && group.1.count > remaining { return result(true) }
             shown.append(group)
             rows += group.1.count
             if rows >= windowRowBudget { break }
         }
-        return (shown, shown.count < groups.count)
+        return result(shown.count < groups.count)
     }
 
     /// The row that opens the next step — a TAP, deliberately, not an
@@ -11329,20 +11359,33 @@ struct FeedScreen: View {
     ///
     /// While this is on screen the room is NOT whole, so `caughtUpFooter`
     /// stands down; `memo.windowHasMore` carries that (see `feedList`).
-    private var olderRow: some View {
+    ///
+    /// **A ROW IN THE COLUMN, and it says what it holds (prd §900).** It was
+    /// the only centred element on a left-aligned screen, a 12pt word with
+    /// nothing saying how much was behind it. It is the rows' own anatomy now
+    /// — a 26pt lead, the verb where a title stands, the count where a time
+    /// stands — in the tint, because it is the one row on the screen whose
+    /// whole job is a tap.
+    private func olderRow(hidden: Int) -> some View {
         Button {
             DSHaptic.tap()
             withAnimation(DS.Motion.standard) { windowSteps += 1 }
         } label: {
-            Text("Show older")
-                .dsText(.subhead12)
-                .foregroundStyle(DS.tint)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, DS.Space.s4)
-                .contentShape(Rectangle())
+            DSPushRowLabel(title: Text("Show older"),
+                           fact: hidden > 0 ? Text("\(hidden) more") : nil,
+                           tint: DS.tint,
+                           opens: false) {
+                DSGlyphLead(glyph: "arrow.down", tint: DS.tint)
+            }
+            .padding(.vertical, DS.Space.s2)
+            .frame(minHeight: DS.Hit.min)
         }
         .buttonStyle(.plain)
         .listRowBackground(Color.clear)
+        .listRowInsets(.init(top: Self.rowAir,
+                             leading: DS.Space.s4 + DS.Space.s3,
+                             bottom: Self.rowAir,
+                             trailing: DS.Space.s4 + DS.Space.s3))
         .listRowSeparator(.hidden)
     }
 
