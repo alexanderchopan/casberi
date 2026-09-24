@@ -30,8 +30,17 @@ enum FeedLedeFace {
         /// READING A (prd §907): the page's picture tall, the title under it,
         /// the source line under that.
         case pictureAspect
-        /// MEDIA A (prd §907): the art IS the well, the words on a scrim.
+        /// MEDIA A (prd §907) and PHOTOS A (prd §908): the art IS the well,
+        /// the words on a scrim. One drawing, two rulings.
         case mediaArt
+        /// LIFE B (prd §908): the date tile beside the title, the moment's
+        /// line under, the place and the tags from the ladder.
+        case dateTile
+        /// WORK B (prd §908): the state word leads at size, the title under.
+        case stateWord
+        /// NOTES B (prd §908): the note reads — its title small, its first
+        /// lines as prose.
+        case prose
         /// SOCIAL C (prd §907): the cast is the picture, the sentence its
         /// caption.
         case cast
@@ -55,8 +64,8 @@ enum FeedLedeFace {
         /// shelf under it would clip.
         var takesLadder: Bool {
             switch self {
-            case .picture, .pictureAspect, .mediaArt, .cast: return false
-            case .money, .clock, .words: return true
+            case .picture, .pictureAspect, .mediaArt, .cast, .prose: return false
+            case .money, .clock, .words, .dateTile, .stateWord: return true
             }
         }
     }
@@ -78,13 +87,25 @@ enum FeedLedeFace {
     /// thing carries one (an X notice, a GitHub roster, a group chat);
     /// Reading's picture stands tall; every other picture keeps the band
     /// until its batch; a clock, then words.
+    ///
+    /// **Batch two (prd §908):** Photos takes Media's drawing (a screenshot is
+    /// Life's picture); a Life thing with a moment takes the date tile; a
+    /// Work thing with a state word leads with it; a Notes thing with a body
+    /// reads. `hasMoment` is an event's start or a reminder's due; `hasState`
+    /// is `WorkStage.reading(...)?.statusWord`; `hasProse` is a non-empty
+    /// `NoteSheetSource.body`. All three are facts the card reads once.
     static func kind(isMoney: Bool, hasArt: Bool, hasClock: Bool,
-                     category: String? = nil, hasCast: Bool = false) -> Kind {
+                     category: String? = nil, hasCast: Bool = false,
+                     hasMoment: Bool = false, hasState: Bool = false,
+                     hasProse: Bool = false) -> Kind {
         if isMoney { return .money }
-        if hasArt, category == "Media" { return .mediaArt }
+        if hasArt, category == "Media" || category == "Life" { return .mediaArt }
         if hasCast { return .cast }
         if hasArt, category == "Reading" { return .pictureAspect }
         if hasArt { return .picture }
+        if hasMoment, category == "Life" { return .dateTile }
+        if hasState, category == "Work" { return .stateWord }
+        if hasProse, category == "Notes" { return .prose }
         if hasClock { return .clock }
         return .words
     }

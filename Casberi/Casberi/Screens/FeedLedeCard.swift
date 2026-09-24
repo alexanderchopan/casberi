@@ -95,11 +95,20 @@ struct FeedLedeCard: View {
         // cast, so the roll is never fetched twice.
         let rungs = bodyRungs
         let hasCast = rungs.contains { if case .cast = $0 { return true } else { return false } }
+        let category = BridgeCatalog.category(forSource: thing.source)
+        // The three batch-two facts (prd §908), each read only where its
+        // category could use it — a note body is a string walk and a work
+        // reading a table lookup, neither owed to a song.
+        let stateWord = category == "Work" ? WorkStage.reading(workRow)?.statusWord : nil
+        let prose = category == "Notes" ? NoteSheetSource.body(for: thing).text : ""
         let face = FeedLedeFace.kind(isMoney: receipt != nil,
                                      hasArt: artURL != nil || thing.previewImageData != nil,
                                      hasClock: thing.dueAt != nil,
-                                     category: BridgeCatalog.category(forSource: thing.source),
-                                     hasCast: hasCast)
+                                     category: category,
+                                     hasCast: hasCast,
+                                     hasMoment: moment != nil,
+                                     hasState: !(stateWord ?? "").isEmpty,
+                                     hasProse: !prose.isEmpty)
         // MEDIA A (prd §907): the art is the well. No block, no inner padding,
         // no ladder — the picture fills the lead's box edge to edge, at the
         // box's own radius, the way a live stream and the anniversary photo
@@ -108,13 +117,15 @@ struct FeedLedeCard: View {
         if face == .mediaArt {
             mediaWell
         } else {
-            wellBody(face: face, receipt: receipt, rungs: rungs)
+            wellBody(face: face, receipt: receipt, rungs: rungs,
+                     stateWord: stateWord, prose: prose)
         }
     }
 
     /// Every face but Media's: the block, the well, the box, the ladder.
     @ViewBuilder private func wellBody(face: FeedLedeFace.Kind, receipt: MoneyReceipt?,
-                                       rungs: [BodyRung]) -> some View {
+                                       rungs: [BodyRung], stateWord: String?,
+                                       prose: String) -> some View {
         let box = DSRoomChassis.leadHeight - 2 * DS.Space.s4
         // THE LONGEST COMPOSITION THAT FITS THE LEAD'S BOX (prd §760, widened
         // by §772). It used to vary one number — the excerpt's line count, six
@@ -133,19 +144,20 @@ struct FeedLedeCard: View {
         // one because `minHeight == maxHeight` (prd §904). A `List` row proposes
         // nil on its own, which is why the old shrink path could not run the
         // ladder and drew one capped spelling instead.
+        let extra = Extra(stateWord: stateWord, prose: prose)
         ViewThatFits(in: .vertical) {
-            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[0])
-            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[1])
-            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[2])
-            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[3])
-            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[4])
-            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[5])
-            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[6])
-            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[7])
-            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[8])
-            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[9])
-            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[10])
-            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[11])
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[0], extra: extra)
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[1], extra: extra)
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[2], extra: extra)
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[3], extra: extra)
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[4], extra: extra)
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[5], extra: extra)
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[6], extra: extra)
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[7], extra: extra)
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[8], extra: extra)
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[9], extra: extra)
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[10], extra: extra)
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[11], extra: extra)
         }
         // Every room's lead is one height (prd §760), and since §766 the cover
         // draws it the way a head does: `dsRoomHeadBlock` — the inset, the air
@@ -174,9 +186,16 @@ struct FeedLedeCard: View {
         }
     }
 
+    /// The two batch-two strings a face may need (prd §908), read once in
+    /// `liveBody` and carried down so no spelling of the cover re-reads them.
+    struct Extra {
+        var stateWord: String?
+        var prose: String
+    }
+
     /// One spelling of the cover at a fit (prd §760, §772).
     private func cover(_ face: FeedLedeFace.Kind, receipt: MoneyReceipt?,
-                       rungs: [BodyRung], fit: Fit) -> some View {
+                       rungs: [BodyRung], fit: Fit, extra: Extra = Extra(stateWord: nil, prose: "")) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             if face == .picture || face == .pictureAspect {
                 art(height: face == .pictureAspect ? Self.tallArtHeight : Self.artHeight)
@@ -208,6 +227,9 @@ struct FeedLedeCard: View {
                     case .picture:         titleBlock(underArt: true, fit: fit)
                     case .pictureAspect:   tallPictureBlock
                     case .cast:            castBlock(rungs)
+                    case .dateTile:        dateTileBlock
+                    case .stateWord:       stateWordBlock(extra.stateWord ?? "", fit: fit)
+                    case .prose:           proseBlock(extra.prose)
                     // Drawn by `mediaWell`, never here — see `liveBody`.
                     case .mediaArt:        EmptyView()
                     case .words:           titleBlock(underArt: false, fit: fit)
@@ -579,6 +601,114 @@ struct FeedLedeCard: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
+
+    /// The moment a Life thing is about (prd §908): an event's start rides
+    /// `capturedAt` (`ScheduleIngest`'s rule), a reminder's due `dueAt`.
+    private var moment: Date? {
+        thing.kind == .event ? thing.capturedAt : thing.dueAt
+    }
+
+    /// The primitives `WorkStage` reads — `ThingSheetView.workRow`'s own
+    /// spelling, so the cover's state word can never differ from the sheet's.
+    private var workRow: WorkStage.Row {
+        WorkStage.Row(source: thing.source,
+                      sourceRef: thing.sourceRef,
+                      title: thing.title,
+                      tags: thing.tags,
+                      mark: thing.mark.rawValue,
+                      projectField: thing.authorHandle,
+                      hasPrice: thing.priceValue != nil && thing.priceCurrency != nil)
+    }
+
+    /// LIFE B: the date tile beside the title — the day at `heading24`, the
+    /// month at `label12`, on the faint fill — and the moment's line under
+    /// the title: the time (or the day, further out) and how far off it is.
+    /// The place and the tags are the ladder's (`facts`, `tags`), so nothing
+    /// here says them twice.
+    @ViewBuilder private var dateTileBlock: some View {
+        if let when = moment {
+            HStack(alignment: .center, spacing: DS.Space.s3) {
+                VStack(spacing: 2) {
+                    Text(verbatim: when.formatted(.dateTime.day()))
+                        .dsText(.heading24)
+                        .foregroundStyle(DS.textPrimary)
+                    Text(verbatim: when.formatted(.dateTime.month(.abbreviated)).uppercased())
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                }
+                .frame(width: Self.dateTileSide, height: Self.dateTileSide)
+                .background(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .fill(DS.fillFaint))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(words)
+                        .dsText(.heading24)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(verbatim: "\(momentClock(when)) · \(FeedLedeFace.dueLine(when))")
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+        }
+    }
+
+    /// The tile is the shelf face's size, so a date and a person stand at
+    /// one scale across the faces.
+    private static let dateTileSide: CGFloat = DS.Face.shelf
+
+    /// "3:00 PM" today or tomorrow, "Tuesday, Oct 7" further out — the sheet's
+    /// own grain (`dueDetail`), for a moment rather than a due.
+    private func momentClock(_ when: Date) -> String {
+        if Calendar.current.isDateInToday(when) || Calendar.current.isDateInTomorrow(when) {
+            return when.formatted(date: .omitted, time: .shortened)
+        }
+        return when.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+    }
+
+    /// WORK B: the state word leads at the ladder's large rung, the title
+    /// under it at `heading24`. The parts (`#412 · 2 comments`) are the
+    /// ladder's facts, drawn below by `bodyBlock`.
+    private func stateWordBlock(_ state: String, fit: Fit) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text(verbatim: state)
+                .dsText(.heading40)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(words)
+                .dsText(.heading24)
+                .foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(fit.statementLines)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// NOTES B: the note reads. Its title small (`heading17`), its first
+    /// lines as prose at `body17`, as many as the box holds under the eyebrow
+    /// and above the foot. The body is `NoteSheetSource.body(for:)` — the
+    /// sheet's own words, never a model's (§645) — read once in `liveBody`.
+    private func proseBlock(_ prose: String) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text(words)
+                .dsText(.heading17)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+            Text(verbatim: prose)
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(Self.proseLines)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// The box is 284 on a phone: the eyebrow and its gap (~46), the title
+    /// (24) and its gap (10), the foot (~25) leave ~179, and a `body17` line
+    /// is 25 — seven lines, none clipped.
+    private static let proseLines = 7
 
     /// MEDIA A: the art is the well. `LiveStreamHero`'s anatomy — the box at
     /// `leadHeight`, the picture filling it at the widget radius, a scrim

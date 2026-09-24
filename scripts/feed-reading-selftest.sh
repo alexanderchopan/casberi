@@ -258,8 +258,11 @@ grep -q 'tier == .regular ? 1 : 2' "$TMP/lede.nocomment" \
 # `heading40` is the LADDER's rung and lives only in the tier switch. `body17`
 # is the app's body rung and the §907 faces draw it on their own terms (a
 # cast's caption, the media scrim's line), so it is not fenced here.
-grep -E 'heading40' "$TMP/lede.nocomment" | grep -vqE 'tier == ' \
-  && { echo "✗ the ladder's large words rung is spelled outside the fit's tier switch (prd §905)"; exit 1; }
+# Outside the switch exactly ONE line spells it: WORK B's state word (prd §908),
+# a face's own statement at the large rung. A second is the ladder leaking.
+[ "$(grep -E 'heading40' "$TMP/lede.nocomment" | grep -vcE 'tier == ')" -eq 1 ] \
+  || { echo "✗ the large words rung is spelled outside the fit's tier switch more than the"; \
+       echo "  one place §908 allows (the state word) — the ladder is leaking (prd §905)"; exit 1; }
 # The tiers are tried LARGE, then MID, then REGULAR, two spellings each for the
 # grown tiers: the ladder steps up before it steps down, a cover that must cut
 # content to keep the growth keeps the content instead, and a sentence that

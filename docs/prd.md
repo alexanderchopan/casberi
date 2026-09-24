@@ -61198,3 +61198,20 @@ The first screenshot of §898 on a device — a Calendar card mid-flight over th
 **Guarded** by `lead-body-audit.py` (every `Kind` arm reaches `cover`, the ladder once, outside the switch) and `feed-reading-selftest.sh` (the tier switch fences `heading40` only; `body17` is a face's own).
 
 **Unseen:** the simulator. First to look at on a phone: the Spotify room's cover, an X notice with ten faces, and an RSS article with a page picture.
+
+## §908 — The face pass, batch two: Photos A, Life B, Work B, Notes B (user, from the batched mocks — "photos A / life B / work B / Notes B", 2026-09-24)
+
+**The rulings.**
+
+- **Photos A — the shot is the well.** Media A's drawing (§907, `FeedLedeCard.mediaWell`) for a Life thing with a picture: the screenshot fills the box, the OCR line and "Photos · 2m" ride the scrim. One drawing, two rulings; the picker sends both categories to `.mediaArt`.
+- **Life B — the date tile.** A Life thing with a moment — an event's start (`capturedAt`, `ScheduleIngest`'s rule) or a reminder's due — leads with a `shelf`-sized tile (the day at `heading24`, the month at `label12`, on the faint fill) beside the title, and the moment's line under the title: the time today or tomorrow, the day further out, then how far off it is. The place and the tags are the ladder's (`facts`, `tags`), so nothing is said twice.
+- **Work B — the state word leads.** `WorkStage.reading(...)?.statusWord` at `heading40`, the title under it at `heading24`, the parts from the ladder. The reading is built from `ThingSheetView.workRow`'s own primitives, so the cover and the sheet can never disagree on the word. A work thing with no state word keeps the words face.
+- **Notes B — the note reads.** The title at `heading17`, then `NoteSheetSource.body(for:)` — the sheet's own words, never a model's (§645) — at `body17`, seven lines, no ladder. A note with no body keeps the words face.
+
+**The picker** grows three facts, each read once in `liveBody` and only where its category could use it: `hasMoment`, `hasState`, `hasProse`. Order after batch one: a Life or Media picture, a cast, Reading's picture, the band, then Life's moment, Work's state, Notes' prose, a clock, words.
+
+**The one exception to §905's fence.** `heading40` outside the tier switch is now allowed exactly once, for the state word; `feed-reading-selftest.sh` counts it.
+
+**Ruled without a mock, by the user:** Wallet stays as it is (the north star, §906); Agents keeps its thread. The All feed inherits the newest thing's own category face and has none of its own.
+
+**Unseen:** the simulator. First to look at on a phone: a screenshot at the top of the All feed, an event in the Calendar room, a GitHub issue's room, and an Obsidian note's room.
