@@ -278,7 +278,7 @@ def self_test() -> int:
                 failures.append(f"{label}: not caught")
             p.write_text(keep)
 
-        mutate(CARD, "bodyBlock(face == .picture ? [] : rungs, fit: fit)", "EmptyView()",
+        mutate(CARD, "bodyBlock(face.takesLadder ? rungs : [], fit: fit)", "EmptyView()",
                "never calls `bodyBlock`", "a cover with no ladder")
         mutate(CARD, "cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[1])",
                "ForEach(Self.fits, id: \\.self) { f in EmptyView() }",

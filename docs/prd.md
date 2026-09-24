@@ -61180,3 +61180,21 @@ The first screenshot of §898 on a device — a Calendar card mid-flight over th
 **Guarded** in `feed-reading-selftest.sh`: the cover drawn by `groupedSections` and `bundledSections`, never inside a day section; the quiet rule gated on `carriesCover`.
 
 **Unseen:** the simulator — this pass ran on a Linux host with no Xcode. First to look at on a phone: the All feed with the cover above "Today", the Spotify room, the agent room's tiles on All then Chat, and the Tokens room's lede in its well.
+
+## §907 — The face pass, batch one: Media A, Social C, Reading A (user, from the batched mocks — "media A / social C / reading A", 2026-09-24)
+
+**The pass.** §906 gave every room one box at one position, the wallet's. This is the second half the user asked for ("even though same size we will have to design what each category's look like"), run the way the thing sheets were (§882 to §895): one face per dock category, three directions mocked per category, batches ruled together. Batch one is Media, Social and Reading.
+
+**The rulings.**
+
+- **Media A — the art is the well.** A song's, a video's or a game's picture fills the lead's box edge to edge at the widget radius, with the words on a scrim at its foot: the name at `heading24`, the artist and the album (`MusicRow`'s " — " split, then `summary`) at `body17`, the source and the age under. `LiveStreamHero`'s anatomy, in `FeedLedeCard.mediaWell`; no block, no inner padding, no ladder. This is the album cover back — §766's 120pt band showed the middle third of a square.
+- **Social C — the cast is the picture.** A thing that carries a cast leads with every face on two rows at `shelf`, and its sentence is the caption at `body17`, three lines. The cast rung is read once from the ladder and drawn by the face; the ladder gets nothing, so the shelf is never drawn twice. It applies wherever a cast is (§772's store is generic), not only under the Social chip.
+- **Reading A — the page's picture, tall.** A Reading thing with a picture draws it at `tallArtHeight` (170: the box less a two-line title, the source line and the foot), the title under it at `heading24`, and the source line under that ("RSS · OBA Research · 4m"). The eyebrow gives its place to the picture on this face only.
+
+**The picker.** `FeedLedeFace.kind` takes the dock category (`BridgeCatalog.category(forSource:)`) and whether the ladder holds a cast, and stays pure: money, then Media's art, then a cast, then Reading's picture, then the band every other category keeps until its batch, then a clock, then words. `Kind.takesLadder` says which faces draw the body.
+
+**Not yet ruled:** Photos and Life, Wallet, Work, Notes, Agents, and what the All feed inherits (the newest thing's own category face, so All never has a face of its own). Batch two.
+
+**Guarded** by `lead-body-audit.py` (every `Kind` arm reaches `cover`, the ladder once, outside the switch) and `feed-reading-selftest.sh` (the tier switch fences `heading40` only; `body17` is a face's own).
+
+**Unseen:** the simulator. First to look at on a phone: the Spotify room's cover, an X notice with ten faces, and an RSS article with a page picture.

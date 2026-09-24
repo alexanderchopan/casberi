@@ -90,10 +90,31 @@ struct FeedLedeCard: View {
     /// pictureless cover was the one that showed a card, as a brand hue.
     @ViewBuilder private var liveBody: some View {
         let receipt = MoneyReceiptSource.receipt(for: thing)
+        // Read ONCE per body pass (§626, §628): the ladder, then the face
+        // decided from it — the cast face asks whether the ladder holds a
+        // cast, so the roll is never fetched twice.
+        let rungs = bodyRungs
+        let hasCast = rungs.contains { if case .cast = $0 { return true } else { return false } }
         let face = FeedLedeFace.kind(isMoney: receipt != nil,
                                      hasArt: artURL != nil || thing.previewImageData != nil,
-                                     hasClock: thing.dueAt != nil)
-        let rungs = bodyRungs
+                                     hasClock: thing.dueAt != nil,
+                                     category: BridgeCatalog.category(forSource: thing.source),
+                                     hasCast: hasCast)
+        // MEDIA A (prd §907): the art is the well. No block, no inner padding,
+        // no ladder — the picture fills the lead's box edge to edge, at the
+        // box's own radius, the way a live stream and the anniversary photo
+        // already do, and the words ride a scrim at its foot. The row's
+        // insets are the same, so the box stands where every other lead does.
+        if face == .mediaArt {
+            mediaWell
+        } else {
+            wellBody(face: face, receipt: receipt, rungs: rungs)
+        }
+    }
+
+    /// Every face but Media's: the block, the well, the box, the ladder.
+    @ViewBuilder private func wellBody(face: FeedLedeFace.Kind, receipt: MoneyReceipt?,
+                                       rungs: [BodyRung]) -> some View {
         let box = DSRoomChassis.leadHeight - 2 * DS.Space.s4
         // THE LONGEST COMPOSITION THAT FITS THE LEAD'S BOX (prd §760, widened
         // by §772). It used to vary one number — the excerpt's line count, six
@@ -157,8 +178,8 @@ struct FeedLedeCard: View {
     private func cover(_ face: FeedLedeFace.Kind, receipt: MoneyReceipt?,
                        rungs: [BodyRung], fit: Fit) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            if face == .picture {
-                art
+            if face == .picture || face == .pictureAspect {
+                art(height: face == .pictureAspect ? Self.tallArtHeight : Self.artHeight)
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                     .padding(.bottom, DS.Space.s3)
             }
@@ -177,16 +198,24 @@ struct FeedLedeCard: View {
                 // sat under it, so a post, an article and a receipt each put
                 // their statement at a different y. The eyebrow first makes it
                 // one y in every room.
-                eyebrow
+                // READING A (prd §907) moves the source line UNDER the title,
+                // where the mock put it: the picture leads, the title names
+                // it, the source says where it is from. Every other face keeps
+                // the eyebrow first (§766: one y for the statement).
+                if face != .pictureAspect { eyebrow }
                 Group {
                     switch face {
                     case .picture:         titleBlock(underArt: true, fit: fit)
+                    case .pictureAspect:   tallPictureBlock
+                    case .cast:            castBlock(rungs)
+                    // Drawn by `mediaWell`, never here — see `liveBody`.
+                    case .mediaArt:        EmptyView()
                     case .words:           titleBlock(underArt: false, fit: fit)
                     case .money:           moneyBlock(receipt)
                     case .clock:           clockBlock
                     }
                 }
-                .padding(.top, DS.Space.s2)
+                .padding(.top, face == .pictureAspect ? 0 : DS.Space.s2)
                 // THE BODY (prd §772). Under the statement, above the note and
                 // the foot. `bodyBlock` draws nothing on an empty ladder, so a
                 // thing with no rung pays nothing for this — not even the gap.
@@ -200,7 +229,7 @@ struct FeedLedeCard: View {
                 // air it replaces. §734 took the excerpt off this face for the
                 // same reason and on the user's own report ("the header card
                 // seems too large … it basically takes up half the screen").
-                bodyBlock(face == .picture ? [] : rungs, fit: fit)
+                bodyBlock(face.takesLadder ? rungs : [], fit: fit)
                 if let note {
                     Text(note)
                         .dsText(.subhead12)
@@ -474,21 +503,157 @@ struct FeedLedeCard: View {
     /// report an intrinsic size upward (the `scaledToFill`-in-a-ZStack trap,
     /// CLAUDE.md; `PhotoWell`'s fill mode carries its own `GeometryReader` for
     /// the same reason).
-    @ViewBuilder private var art: some View {
+    @ViewBuilder private func art(height: CGFloat) -> some View {
         if thing.previewImageData != nil {
             PhotoWell(thing: thing)
-                .frame(height: Self.artHeight)
+                .frame(height: height)
                 .clipped()
         } else if let url = artURL {
             GeometryReader { geo in
                 RemoteArt(urlString: url,
                           width: geo.size.width,
-                          height: Self.artHeight,
+                          height: height,
                           fallback: thing.source,
                           cornerRadius: 0)
             }
-            .frame(height: Self.artHeight)
+            .frame(height: height)
         }
+    }
+
+    // MARK: - The faces the face pass ruled (prd §907)
+
+    /// READING A's picture height. The box is 284 on a phone; under the art
+    /// go a two-line title (56), its gap (14), the source line (17) and the
+    /// foot (~25) — 112 — so the picture takes the rest and a 16:9 page
+    /// picture (190 at a phone's width) is cropped by a tenth, never a third.
+    static let tallArtHeight: CGFloat = 170
+
+    /// READING A: the title under the picture, two lines, then where it is
+    /// from — source, the feed's name, the age — in one quiet line.
+    private var tallPictureBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            Text(words)
+                .dsText(.heading24)
+                .foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            sourceLine
+        }
+    }
+
+    /// "RSS · OBA Research · 4m": the eyebrow's facts as a line, for the face
+    /// whose picture takes the eyebrow's place.
+    private var sourceLine: some View {
+        HStack(spacing: DS.Space.s1) {
+            Text(thing.source)
+            if let by = thing.authorHandle, !by.isEmpty {
+                Text(verbatim: "·")
+                Text(verbatim: by)
+            }
+            Text(verbatim: "·")
+            LiveTimeText(date: thing.capturedAt)
+        }
+        .dsText(.subhead12)
+        .foregroundStyle(DS.textSecondary)
+        .lineLimit(1)
+    }
+
+    /// SOCIAL C: the cast is the picture — every face on two rows at `shelf`
+    /// — and the sentence is its caption at `body17`, three lines. The roll is
+    /// the ladder's own cast rung, read once in `liveBody`; this face draws
+    /// it itself and passes the ladder nothing, so the shelf is never drawn
+    /// twice.
+    @ViewBuilder private func castBlock(_ rungs: [BodyRung]) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            ForEach(Array(rungs.enumerated()), id: \.offset) { _, rung in
+                if case .cast(let roll) = rung {
+                    DSLeadCast(roll: roll, source: thing.source, rows: 2)
+                }
+            }
+            Text(words)
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// MEDIA A: the art is the well. `LiveStreamHero`'s anatomy — the box at
+    /// `leadHeight`, the picture filling it at the widget radius, a scrim
+    /// over its foot, the words on the scrim — for a song, a video, a game:
+    /// the title, then the artist and the album (or the summary the bridge
+    /// landed), then the source and the age.
+    private var mediaWell: some View {
+        Color.clear
+            .frame(height: DSRoomChassis.leadHeight)
+            .overlay {
+                GeometryReader { geo in
+                    if thing.previewImageData != nil {
+                        PhotoWell(thing: thing)
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .clipped()
+                    } else if let url = artURL {
+                        RemoteArt(urlString: url,
+                                  width: geo.size.width, height: geo.size.height,
+                                  fallback: thing.source,
+                                  cornerRadius: DS.Radius.widget)
+                    }
+                }
+            }
+            .overlay(alignment: .bottom) {
+                LinearGradient(colors: [.clear, .black.opacity(0.78)],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: 132)
+                    .allowsHitTesting(false)
+            }
+            .overlay(alignment: .bottomLeading) {
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    Text(mediaTitle)
+                        .dsText(.heading24)
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    if let line = mediaLine {
+                        Text(verbatim: line)
+                            .dsText(.body17)
+                            .foregroundStyle(.white.opacity(0.9))
+                            .lineLimit(1)
+                    }
+                    HStack(spacing: DS.Space.s1) {
+                        Text(thing.source)
+                        Text(verbatim: "·")
+                        LiveTimeText(date: thing.capturedAt)
+                    }
+                    .dsText(.subhead12)
+                    .foregroundStyle(.white.opacity(0.7))
+                }
+                .padding(DS.Space.s3)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .background {
+                if selected {
+                    RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                        .fill(DS.tintDim)
+                }
+            }
+    }
+
+    /// A media title is "Nightcall — Kavinsky" (`MusicRow`'s own split); the
+    /// scrim shows the name at size and the artist on the line under it,
+    /// beside the album the bridge landed as `summary`.
+    private var mediaTitle: String {
+        let comps = thing.title.components(separatedBy: " — ")
+        return comps.count > 1 ? comps.dropLast().joined(separator: " — ") : thing.title
+    }
+
+    private var mediaLine: String? {
+        let comps = thing.title.components(separatedBy: " — ")
+        let artist = comps.count > 1 ? comps.last : nil
+        let album = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = [artist, album].compactMap { $0 }.filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     /// The card's second line of words. `summary` only — it is the one field
