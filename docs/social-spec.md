@@ -11,11 +11,14 @@ post as a post), §867 (every disc presses).
 
 **Grade: SECTIONS 2, 3 AND 6.3 BUILT (2026-09-24, commits `17dc737f` and
 the one after it); 6.1 waits on a phone with Developer Mode on; 6.2 waits on
-half B's `ContactIndex`; section 4 is BLOCKED on a ruling** — the 2026-07-15
-ledger entry "every bridge stays read-only" (Goal ③ reversed, `docs/prd.md`
-~2874) declined exactly the acts section 4 lists, GitHub, Calendar and the
-social replies by name. Building any of them reverses that ruling, which
-only the user can do. Each pass says what it draws, what it writes, and what
+half B's `ContactIndex`; section 4 is DECLINED** (user, 2026-09-24, after weighing
+it seat by seat and last of all Slack: "ok skip it"). The 2026-07-15 ruling
+"every bridge stays read-only" (`docs/prd.md` ~2874) stands. The social half
+goes out through Apple's composers and the share card, which need no write
+scope. Two facts found on the way, for whoever reopens it: EventKit cannot
+answer a calendar invitation at all, and a Slack reply needs the user scope
+`chat:write` added in the Slack app's dashboard, requested by a separate
+"Allow replies" consent so the read-only connect never breaks. Each pass says what it draws, what it writes, and what
 it will not do.
 
 **Room cards, as built (6.3).** `Model/RoomShareCard.swift`: a door row
